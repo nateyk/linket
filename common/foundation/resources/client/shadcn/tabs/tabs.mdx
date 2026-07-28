@@ -1,0 +1,120 @@
+import {
+  Canvas,
+  Controls,
+  Description,
+  Meta,
+  Stories,
+} from '@storybook/addon-docs/blocks';
+
+import * as TabsStories from './tabs.stories';
+
+<Meta of={TabsStories} />
+
+# Tabs
+
+<Description of={TabsStories} />
+
+<Canvas of={TabsStories.Default} />
+<Controls of={TabsStories.Default} />
+
+## Composition
+
+Use the following composition to build `Tabs`:
+
+```text
+Tabs.Root
+├── Tabs.List
+│   ├── Tabs.Tab
+│   └── Tabs.LinkTab
+└── Tabs.Panel
+```
+
+Use `Tabs.Tab` for tabs that switch between panels on the same page. Use `Tabs.LinkTab` for tabs that
+navigate to another route.
+
+## Tabs state
+
+Use `value` and `onValueChange` when the active tab should be controlled from state or routing.
+
+```jsx title="Controlled tabs"
+const [selectedTab, setSelectedTab] = useState('overview');
+
+return (
+  <Tabs.Root value={selectedTab} onValueChange={setSelectedTab}>
+    <Tabs.List>
+      <Tabs.Tab value="overview">
+        <Trans message="Overview" />
+      </Tabs.Tab>
+      <Tabs.Tab value="settings">
+        <Trans message="Settings" />
+      </Tabs.Tab>
+    </Tabs.List>
+    <Tabs.Panel value="overview">...</Tabs.Panel>
+    <Tabs.Panel value="settings">...</Tabs.Panel>
+  </Tabs.Root>
+);
+```
+
+## Link tabs
+
+Use `Tabs.LinkTab` when selecting a tab should navigate. The `value` on `Tabs.Root` should be derived from
+the current route, and each `Tabs.LinkTab` should use the matching `value`.
+
+```jsx title="Route tabs"
+const selectedTab = pathname.endsWith('insights') ? 'insights' : 'settings';
+
+return (
+  <Tabs.Root value={selectedTab}>
+    <Tabs.List variant="line">
+      <Tabs.LinkTab value="settings" to="settings" replace>
+        <Trans message="Settings" />
+      </Tabs.LinkTab>
+      <Tabs.LinkTab value="insights" to="insights" replace>
+        <Trans message="Insights" />
+      </Tabs.LinkTab>
+    </Tabs.List>
+  </Tabs.Root>
+);
+```
+
+## Migrating from legacy Tabs
+
+Replace legacy `@ui/tabs/tabs`, `@ui/tabs/tab-list`, and `@ui/tabs/tab` imports with
+`@shadcn/tabs/tabs`.
+
+```jsx title="Legacy route tabs"
+<Tabs selectedTab={0}>
+  <TabList>
+    <Tab elementType={RouterLink} to="settings" replace>
+      <Trans message="Settings" />
+    </Tab>
+    <Tab elementType={RouterLink} to="insights" replace>
+      <Trans message="Insights" />
+    </Tab>
+  </TabList>
+</Tabs>
+```
+
+```jsx title="Shadcn route tabs"
+<Tabs.Root value={selectedTab}>
+  <Tabs.List variant="line">
+    <Tabs.LinkTab value="settings" to="settings" replace>
+      <Trans message="Settings" />
+    </Tabs.LinkTab>
+    <Tabs.LinkTab value="insights" to="insights" replace>
+      <Trans message="Insights" />
+    </Tabs.LinkTab>
+  </Tabs.List>
+</Tabs.Root>
+```
+
+### Migration checklist
+
+1. Replace `selectedTab` on the legacy root with `value` or `defaultValue` on `Tabs.Root`.
+2. Use stable string values like `"settings"` or `"insights"` instead of legacy index-based selection.
+3. Add a matching `value` prop to each `Tabs.Tab`, `Tabs.LinkTab`, and `Tabs.Panel`; legacy individual tabs did not need a `value`.
+4. Use `Tabs.LinkTab` for route links instead of passing `elementType={RouterLink}` to `Tab`.
+5. Move list props to `Tabs.List`; use `variant="line"` for the underline style.
+6. To add a border below all tabs when using `variant="line"`, wrap `Tabs.List` in a `div` with a `border-b` class.
+
+<Stories of={TabsStories} />

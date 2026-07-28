@@ -1,0 +1,82 @@
+import {useEffect, useState} from 'react';
+
+interface StoreEvent {
+  detail: {
+    key: string;
+    newValue: any;
+  };
+}
+
+export type SetValue<T> = (value: T | ((val: T) => T)) => void;
+export function useLocalStorage<T>(
+  key: string,
+  initialValue: T,
+): readonly [T, SetValue<T>];
+
+export function useLocalStorage<T>(key: string, initialValue: T | null = null) {
+  const [storedValue, setStoredValue] = useState<T | null>(() => {
+    return getFromLocalStorage<T>(key, initialValue);
+  });
+
+  const setValue: SetValue<T> = value => {
+    const valueToStore =
+      value instanceof Function ? value(storedValue as T) : value;
+    setStoredValue(valueToStore);
+    setInLocalStorage(key, valueToStore);
+  };
+
+  // update state value using custom storage event. This will re-render
+  // component even if local storage value was set from different hook instance
+  useEffect(() => {
+    const handleStorageChange = (event: StoreEvent) => {
+      if (event.detail?.key === key) {
+        setStoredValue(event.detail.newValue);
+      }
+    };
+    window.addEventListener('storage', handleStorageChange as any);
+    return () =>
+      window.removeEventListener('storage', handleStorageChange as any);
+  }, [key]);
+
+  return [storedValue, setValue] as const;
+}
+
+export function getFromLocalStorage<T>(
+  key: string,
+  initialValue: T | null = null,
+) {
+  if (typeof window === 'undefined') {
+    return initialValue;
+  }
+  try {
+    const item = window.localStorage.getItem(key);
+    return item != null ? (JSON.parse(item) as T) : initialValue;
+  } catch {
+    return initialValue;
+  }
+}
+
+export function setInLocalStorage<T>(key: string, value: T) {
+  try {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(key, JSON.stringify(value));
+      window.dispatchEvent(
+        new CustomEvent('storage', {
+          detail: {key, newValue: value},
+        }),
+      );
+    }
+  } catch {
+    //
+  }
+}
+
+export function removeFromLocalStorage(key: string) {
+  try {
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem(key);
+    }
+  } catch {
+    //
+  }
+}

@@ -1,0 +1,79 @@
+import {
+  Canvas,
+  Meta,
+  Stories,
+  Story,
+  Primary,
+  Controls,
+  Description,
+  Source,
+} from '@storybook/addon-docs/blocks';
+
+import * as ComboboxStories from './combobox.stories';
+
+<Meta of={ComboboxStories} />
+
+# Combobox
+
+<Description of={ComboboxStories} />
+
+<Canvas of={ComboboxStories.Basic} />
+<Controls of={ComboboxStories.Basic} />
+
+## Composition
+
+### Simple
+
+A single-line input and a flat list.
+
+```text
+Combobox.Root
+├── Combobox.Input
+└── Combobox.Content
+    ├── Combobox.Empty
+    └── Combobox.List
+        ├── Combobox.Item
+        └── Combobox.Item
+```
+
+### With chips
+
+Multi-select with `multiple`, chips, and a chips input.
+
+```text
+Combobox.Root
+├── Combobox.Chips
+│   ├── Combobox.Value
+│   │   └── Combobox.Chip
+│   └── Combobox.ChipsInput
+└── Combobox.Content
+    ├── Combobox.Empty
+    └── Combobox.List
+        ├── Combobox.Item
+        └── Combobox.Item
+```
+
+### With groups and collection
+
+Nested items per group using `ComboboxCollection` inside each `ComboboxGroup`, with a separator between groups.
+
+```text
+Combobox.Root
+├── ComboboxInput
+└── Combobox.Content
+    ├── Combobox.Empty
+    └── Combobox.List
+        ├── Combobox.Group
+        │   ├── Combobox.GroupLabel
+        │   └── Combobox.Collection
+        │       ├── Combobox.Item
+        │       └── Combobox.Item
+        ├── Combobox.Separator
+        └── Combobox.Group
+            ├── Combobox.GroupLabel
+            └── Combobox.Collection
+                ├── Combobox.Item
+                └── Combobox.Item
+```
+
+<Stories of={ComboboxStories} />

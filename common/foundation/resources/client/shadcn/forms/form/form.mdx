@@ -1,0 +1,135 @@
+import {
+  Canvas,
+  Controls,
+  Description,
+  Meta,
+  Stories,
+} from '@storybook/addon-docs/blocks';
+
+import * as FormStories from './form.stories';
+
+<Meta of={FormStories} />
+
+# Form
+
+A native form element or react-hook-form backed form with consolidated error handling.
+
+<Canvas of={FormStories.NativeFormExample} />
+<Controls of={FormStories.NativeFormExample} />
+
+## Composition
+
+Use `Form` for simple forms and `HookForm.Root` with `HookForm.Field` for more complex forms managed by
+`react-hook-form`.
+
+```text
+Form
+└── Field.Group
+    └── Field.Root
+        ├── Field.Label
+        ├── Input | Select | Checkbox | ...
+        ├── Field.Description
+        └── Field.Error
+
+HookForm.Root
+└── Field.Group
+    └── HookForm.Field
+        ├── Field.Label
+        ├── Input | Select | Checkbox | ...
+        ├── Field.Description
+        └── Field.Error
+```
+
+## Validation
+
+Validation is done using native browser validation and is handled automatically by the `Form`, `HookForm.Root` and `Field` components, with server errors passed through either to `react-hook-form` or the `Form` component. Always include `Field.Error` inside every `Field.Root` and `HookForm.Field` so errors surface consistently.
+
+## Native form
+
+Use `Form` with `Field.Root` for for simple forms that do not required default values or have dependent fields.Custom errors can optionally be passed through the `errors` prop with field names as
+keys.
+
+```jsx title="Native form"
+<Form action={formAction} errors={state.serverErrors} id="bug-report-form">
+  <Field.Group>
+    <Field.Root name="title">
+      <Field.Label>Bug Title</Field.Label>
+      <Input required minLength={5} maxLength={32} />
+      <Field.Error />
+    </Field.Root>
+  </Field.Group>
+  <Button type="submit">Submit</Button>
+</Form>
+```
+
+## React Hook Form
+
+Use `HookForm.Root` to provide `FormProvider`, submit handling, and optional server errors. Wrap
+each RHF-controlled field in `HookForm.Field` so form controls are wired to hook form automatically.
+
+```jsx title="Hook form"
+const form = useForm({
+  defaultValues: {
+    serverName: '',
+  },
+});
+
+return (
+  <HookForm.Root
+    id="server-form"
+    form={form}
+    onSubmit={values => {
+      console.log(values);
+    }}
+  >
+    <Field.Group>
+      <HookForm.Field name="serverName">
+        <Field.Label>Server name</Field.Label>
+        <Input required minLength={3} />
+        <Field.Description>Must be 3 or more characters long</Field.Description>
+        <Field.Error />
+      </HookForm.Field>
+    </Field.Group>
+  </HookForm.Root>
+);
+```
+
+## Migrating from legacy form fields
+
+Legacy forms usually imported wrapper and field components from `@ui/forms/...`. The shadcn form
+system splits field layout from the concrete control:
+
+```jsx title="Legacy field"
+<Form onSubmit={handleSubmit}>
+  <TextField name="title" label="Title" description="Shown in reports" />
+</Form>
+```
+
+```jsx title="shadcn field"
+<HookForm.Root form={form} onSubmit={handleSubmit}>
+  <HookForm.Field name="title">
+    <Field.Label>Title</Field.Label>
+    <Input />
+    <Field.Description>Shown in reports</Field.Description>
+    <Field.Error />
+  </HookForm.Field>
+</HookForm.Root>
+```
+
+### Migration checklist
+
+1. Replace the legacy `@ui/forms/form` wrapper with `HookForm.Root` for RHF forms, or `Form` for
+   native forms.
+2. Replace single legacy field components with `Field` primitives plus the actual control
+   (`Input`, `Textarea`, `Select`, `Combobox`, `Checkbox`, `Switch`, `Slider`, `RadioGroup`,
+   `NumberField`, etc.).
+3. Use `HookForm.Field name="..."` for every RHF-controlled field; use `Field.Root name="..."` only
+   for native or manually wired fields.
+4. Keep labels, descriptions, and errors as explicit children: `Field.Label`,
+   `Field.Description`, and `Field.Error`.
+5. Do not look for separate form-specific controls like `FormInput`; use the same control
+   components everywhere.
+6. Shadcn form controls do not expose a `size` prop. Use default sizing, or adjust with
+   `className` when a screen needs custom density.
+
+<Stories of={FormStories} />

@@ -1,0 +1,139 @@
+@import './common-tailwind.css';
+@import '../ui/library/progress/animation.css';
+@import '../ui/library/skeleton/skeleton.css';
+@import '../text-editor/highlight/editor-styles.css';
+@import '../admin/ads/ad-host.css';
+@import '../uploads/file-type-colors.css';
+@import '../player/player-styles.css';
+@import '../custom-page/custom-page-body.css';
+@import './scrollbar.css';
+
+@layer base {
+  html,
+  body,
+  #root {
+    @apply min-h-screen;
+    @apply antialiased;
+  }
+
+  .is-settings-preview {
+    pointer-events: none;
+  }
+
+  html {
+    font-family: var(--be-font-family, var(--font-sans));
+    color-scheme: light;
+    scroll-padding-top: var(--html-spt, 0px);
+
+    &.dark {
+      color-scheme: dark;
+    }
+  }
+
+  body {
+    position: relative;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  #root {
+    @apply isolate bg-background text-foreground;
+  }
+
+  .diagonal-lines {
+    background:
+      linear-gradient(
+        to top left,
+        rgba(0, 0, 0, 0) 0%,
+        rgba(0, 0, 0, 0) calc(50% - 1px),
+        rgba(239, 68, 68, 0.4) 50%,
+        rgba(0, 0, 0, 0) calc(50% + 1px),
+        rgba(0, 0, 0, 0) 100%
+      ),
+      linear-gradient(
+        to top right,
+        rgba(0, 0, 0, 0) 0%,
+        rgba(0, 0, 0, 0) calc(50% - 1px),
+        rgba(239, 68, 68, 0.4) 50%,
+        rgba(0, 0, 0, 0) calc(50% + 1px),
+        rgba(0, 0, 0, 0) 100%
+      );
+  }
+
+  .bg-points {
+    background: radial-gradient(
+        circle,
+        rgb(from var(--be-foreground) r g b / 0.2) 10%,
+        #0000 12%
+      )
+      0 0/16px 16px;
+    mask-composite: intersect;
+    mask-image:
+      linear-gradient(rgb(255, 255, 255), rgb(255, 255, 255)),
+      radial-gradient(rgb(0, 0, 0) 0%, rgba(0, 0, 0, 0) 100%),
+      linear-gradient(rgb(255, 255, 255), rgb(255, 255, 255));
+  }
+
+  .no-tap-highlight {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .svg-image-container svg {
+    width: inherit;
+    height: inherit;
+    max-width: 100%;
+  }
+
+  .no-page-overflow {
+    overflow: hidden;
+  }
+  .no-page-overflow body {
+    overflow: hidden;
+  }
+  .no-page-overflow #root {
+    overflow: hidden;
+  }
+
+  .content-editable-placeholder:empty:before {
+    content: attr(data-placeholder);
+    @apply pointer-events-none block text-foreground opacity-40;
+  }
+
+  .progress-bar-indeterminate-animate {
+    animation: progress-bar-indeterminate 1s infinite;
+  }
+
+  @keyframes progress-bar-indeterminate {
+    from {
+      transform: translate(calc(100% * -1));
+    }
+    to {
+      transform: translate(100%);
+    }
+  }
+
+  .hide-number-input-arrows {
+    &::-webkit-inner-spin-button,
+    &::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    & {
+      -moz-appearance: textfield;
+    }
+  }
+
+  .chart-grid {
+    @apply grid grid-cols-12;
+    min-width: 1100px;
+    grid-auto-rows: 20px;
+    gap: 20px;
+  }
+
+  .text-trim-both {
+    text-box: trim-both cap alphabetic;
+  }
+}
+
+.prose li > p {
+  margin: 0;
+}

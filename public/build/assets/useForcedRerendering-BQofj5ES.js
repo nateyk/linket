@@ -1,0 +1,1 @@
+import{a as e}from"./rolldown-runtime-Cyuzqnbw.js";import{Zr as t}from"./icons-Cr9rzYDV.js";var n=e(t());function r(){let[,e]=n.useState({});return n.useCallback(()=>{e({})},[])}export{r as t};

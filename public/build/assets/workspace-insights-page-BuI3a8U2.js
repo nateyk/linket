@@ -1,0 +1,1 @@
+import{Xr as e}from"./icons-Cr9rzYDV.js";import{v as t}from"./chunk-6CSD65Y2-DB1nYL3F.js";import{t as n}from"./tracked-events-filters-DwZcLAQA.js";import{t as r}from"./tracked-events-insights-Cv-GAz1U.js";var i=e();function a(){return(0,i.jsx)(r,{dateRange:t(),allFilters:n()})}export{a as Component};

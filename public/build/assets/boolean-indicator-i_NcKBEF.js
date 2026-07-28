@@ -1,0 +1,1 @@
+import{O as e,Xr as t,yr as n}from"./icons-Cr9rzYDV.js";var r=t();function i({value:t}){return t?(0,r.jsx)(n,{className:`size-4 text-positive`}):(0,r.jsx)(e,{className:`size-4 text-destructive`})}export{i as t};

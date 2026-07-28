@@ -1,0 +1,70 @@
+.tiptap p.is-editor-empty:first-child::before {
+  @apply text-muted-foreground/50;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+.ProseMirror {
+  min-height: inherit;
+  outline-style: none;
+
+  &:focus-visible {
+    outline: none;
+  }
+}
+
+.ProseMirror img.ProseMirror-selectednode,
+.ProseMirror iframe.ProseMirror-selectednode {
+  @apply ring-primary rounded-sm ring;
+}
+
+.prose [data-indent='1'] {
+  @apply pl-5;
+}
+.prose [data-indent='2'] {
+  @apply pl-10;
+}
+.prose [data-indent='3'] {
+  @apply pl-15;
+}
+.prose [data-indent='4'] {
+  @apply pl-20;
+}
+.prose [data-indent='5'] {
+  @apply pl-25;
+}
+.prose [data-indent='6'] {
+  @apply pl-32;
+}
+
+.prose iframe {
+  @apply aspect-video w-full;
+}
+
+.info-block {
+  @apply rounded-card border-positive/20 bg-positive/10 dark:bg-positive/20 my-6 max-w-full border p-4 text-sm leading-6 wrap-break-word;
+  & > :first-child {
+    margin-top: 0;
+  }
+  & > :last-child {
+    margin-bottom: 0;
+  }
+}
+
+.info-block .title {
+  @apply text-base font-medium text-[#43484d];
+}
+
+.info-block.important {
+  @apply border-warning/20 bg-warning/10 dark:bg-warning/20;
+}
+
+.info-block.warning {
+  @apply border-destructive/20 bg-destructive/10 dark:bg-destructive/20;
+}
+
+.info-block p {
+  @apply mt-1.5 mb-0;
+}

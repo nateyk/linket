@@ -1,0 +1,39 @@
+{
+  "compilerOptions": {
+    "paths": {
+      "@ui/*": ["./common/foundation/resources/client/ui/library/*"],
+      "@shadcn/*": ["./common/foundation/resources/client/shadcn/*"],
+      "@common/*": ["./common/foundation/resources/client/*"],
+      "@app/*": ["./resources/client/*"],
+      "@storybook/*": ["./common/foundation/resources/client/.storybook/*"]
+    },
+    "target": "ESNext",
+    "useDefineForClassFields": true,
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "allowJs": false,
+    "skipLibCheck": false,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx"
+  },
+  "include": [
+    "resources/client",
+    "common/foundation/resources/client",
+    "common/foundation/.storybook/stories/autocomplete.stories.tsx",
+    "common/foundation/resources/client/.storybook"
+  ],
+  "exclude": [
+    "*.stories.tsx",
+    "common/foundation/resources/client/admin/channels/*",
+    "common/foundation/resources/client/channels/*",
+    "common/foundation/resources/client/comments/*",
+    "common/foundation/resources/client/ui/infinite-scroll/*"
+  ],
+  "references": [{"path": "./tsconfig.node.json"}]
+}

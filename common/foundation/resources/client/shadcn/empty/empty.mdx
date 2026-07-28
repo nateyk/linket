@@ -1,0 +1,33 @@
+import {
+  Canvas,
+  Controls,
+  Description,
+  Meta,
+  Stories,
+} from '@storybook/addon-docs/blocks';
+
+import * as EmptyStories from './empty.stories';
+
+<Meta of={EmptyStories} />
+
+# Empty
+
+<Description of={EmptyStories} />
+
+<Canvas of={EmptyStories.Default} />
+<Controls of={EmptyStories.Default} />
+
+## Composition
+
+Use the following composition to build an `Empty` state:
+
+```text
+Empty
+├── Empty.Header
+│   ├── Empty.Media
+│   ├── Empty.Title
+│   └── Empty.Description
+├── Empty.Content
+```
+
+<Stories of={EmptyStories} />

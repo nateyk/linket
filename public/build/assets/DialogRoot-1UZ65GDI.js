@@ -1,0 +1,1 @@
+import{a as e}from"./rolldown-runtime-Cyuzqnbw.js";import{Zr as t}from"./icons-Cr9rzYDV.js";import{i as n,u as r}from"./DialogTrigger-wUnnmRm9.js";var i=e(t());function a(e){return n(e,i.useContext(r)?`drawer`:`dialog`)}export{a as t};

@@ -1,0 +1,162 @@
+[
+  {
+    "domain": "https://www.google.com/search/howsearchworks",
+    "title": "Google Search - What Is Google Search And How Does It Work",
+    "description": ""
+  },
+  {
+    "domain": "https://www.youtube.com/watch?v=s86-Z-CbaHA",
+    "title": "YouTube",
+    "description": "Enjoy the videos and music you love, upload original content, and share it all with friends, family, and the world on YouTube."
+  },
+  {
+    "domain": "https://www.facebook.com/javascriptJS",
+    "title": "Facebook",
+    "description": "Create an account or log into Facebook. Connect with friends, family and other people you know. Share photos and videos, send messages and get updates."
+  },
+  {
+    "domain": "https://x.com/laravelphp",
+    "title": "Laravel (@laravelphp) / X",
+    "description": "The clean stack for Artisans and agents."
+  },
+  {
+    "domain": "https://www.instagram.com/php_programing/",
+    "title": "Php (@php_programing) • Instagram photos and videos",
+    "description": "9,612 Followers, 6 Following, 62 Posts"
+  },
+  {
+    "domain": "https://en.wikipedia.org/wiki/United_States",
+    "title": "United States - Wikipedia",
+    "description": "Wikipedia is a free online encyclopedia, created and edited by volunteers around the world and hosted by the Wikimedia Foundation."
+  },
+  {
+    "domain": "https://www.rottentomatoes.com/m/the_dark_knight",
+    "title": "The Dark Knight | Rotten Tomatoes",
+    "description": "Discover reviews, ratings, and trailers for The Dark Knight on Rotten Tomatoes. Stay updated with critic and audience scores today!"
+  },
+  {
+    "domain": "https://weather.yahoo.com/us/ny/new-york/",
+    "title": "New York, NY Weather Forecast, Conditions, and Maps – Yahoo Weather",
+    "description": "Showers today with a high of 80°F and a low of 69°F. There is a 60% chance of precipitation."
+  },
+  {
+    "domain": "https://blog.whatsapp.com/celebrating-football-with-new-features-on-whatsapp",
+    "title": "Celebrating Football with New Features on WhatsApp - WhatsApp Blog",
+    "description": "Nothing brings people together quite like football: last-minute goals, the unbelievable saves, and the moments that make you jump and shout."
+  },
+  {
+    "domain": "https://www.amazon.com/gp/video/detail/B0GHRP44BL/ref=atv_hm_hom_c_mfXhxu_brws_2_1?jic=8%7CEgRzdm9k",
+    "title": "Watch Spider-Noir - Season 1 | Prime Video",
+    "description": "Private investigator Ben Reilly is hired on a couple of straightforward cases... until mobsters, monsters, and a mysterious femme fatale spin a web that brings him face to face with his form..."
+  },
+  {
+    "domain": "https://www.microsoft.com/en-us/microsoft-365/outlook/outlook-for-windows",
+    "title": "Outlook \u2013 free personal email and calendar from Microsoft",
+    "description": "Get free Outlook email and calendar, plus Office Online apps like Word, Excel and PowerPoint. Sign in to access your Outlook, Hotmail or Live email account."
+  },
+  {
+    "domain": "https://www.netflix.com/lt/title/81040344",
+    "title": "Watch Squid Game | Netflix Official Site",
+    "description": "Watch Netflix movies & TV shows online or stream right to your smart TV, game console, PC, Mac, mobile, tablet and more."
+  },
+  {
+    "domain": "reddit.com",
+    "title": "Reddit - Dive into anything",
+    "description": "Reddit is a network of communities based on people's interests. Find communities you're interested in, and become part of an online community!"
+  },
+  {
+    "domain": "tiktok.com",
+    "title": "Make Your Day - TikTok",
+    "description": "TikTok - trends start here. On a device or on the web, viewers can watch and discover millions of personalized short videos. Download the app to get ..."
+  },
+  {
+    "domain": "linkedin.com",
+    "title": "LinkedIn: Log In or Sign Up",
+    "description": "750 million+ members | Manage your professional identity. Build and engage with your professional network. Access knowledge, insights and opportunities."
+  },
+  {
+    "domain": "office.com",
+    "title": "Office 365 Login | Microsoft Office",
+    "description": "Collaborate for free with online versions of Microsoft Word, PowerPoint, Excel, and OneNote. Save documents, workbooks, and presentations online."
+  },
+  {
+    "domain": "https://www.gamespot.com/reviews/mario-kart-world-review/1900-6418371",
+    "title": "Mario Kart World Review – A Worthy Marquee Launch Game",
+    "description": "Mario Kart World expands on almost everything that made Mario Kart 8 such an enduring success, laying the foundation for years of raucous racing to come."
+  },
+  {
+    "domain": "https://www.twitch.tv/directory/category/league-of-legends",
+    "title": "Leage of Legends - Twitch",
+    "description": "Twitch is an interactive livestreaming service for content spanning gaming, entertainment, sports, music, and more. There\u2019s something for everyone on Twitch."
+  },
+  {
+    "domain": "https://support.discord.com/hc/en-us/categories/115000217151",
+    "title": "Discord | Your Place to Talk and Hang Out",
+    "description": "Discord is the easiest way to talk over voice, video, and text. Talk, chat, hang out, and stay close with your friends and communities."
+  },
+  {
+    "domain": "bing.com",
+    "title": "Bing",
+    "description": "Bing helps you turn information into action, making it faster and easier to go from searching to doing."
+  },
+  {
+    "domain": "roblox.com",
+    "title": "Roblox",
+    "description": "Roblox is ushering in the next generation of entertainment. Imagine, create, and play together with millions of people across an infinite variety of immersive, user-generated 3D worlds."
+  },
+  {
+    "domain": "pinterest.com",
+    "title": "Pinterest",
+    "description": "Discover recipes, home ideas, style inspiration and other ideas to try."
+  },
+  {
+    "domain": "zoom.us",
+    "title": "Video Conferencing, Cloud Phone, Webinars, Chat, Virtual Events | Zoom",
+    "description": "Zoom's secure, reliable video platform powers all of your communication needs, including meetings, chat, phone, webinars, and online events."
+  },
+  {
+    "domain": "duckduckgo.com",
+    "title": "DuckDuckGo \u2014 Privacy, simplified.",
+    "description": "The Internet privacy company that empowers you to seamlessly take control of your personal information online, without any tradeoffs."
+  },
+  {
+    "domain": "microsoft.com",
+    "title": "Microsoft Corporation",
+    "description": "Explore Microsoft products and services for your home or business. Shop Surface, Microsoft 365, Xbox, Windows, Azure, and more."
+  },
+  {
+    "domain": "fandom.com",
+    "title": "Fandom",
+    "description": "The entertainment site where fans come first. Your daily source for all things TV, movies, and games, including Star Wars, Fallout, Marvel, DC and more."
+  },
+  {
+    "domain": "quora.com",
+    "title": "Quora - A place to share knowledge and better understand the world",
+    "description": "Quora is a place to gain and share knowledge. It's a platform to ask questions and connect with people who contribute unique insights and quality answers."
+  },
+  {
+    "domain": "ebay.com",
+    "title": "Electronics, Cars, Fashion, Collectibles & More | eBay",
+    "description": "Buy & sell electronics, cars, clothes, collectibles & more on eBay, the world's online marketplace. Top brands, low prices & free shipping on many items."
+  },
+  {
+    "domain": "msn.com",
+    "title": "MSN | Outlook, Office, Skype, Bing, Breaking News",
+    "description": "Your customizable and curated collection of the best in trusted news plus coverage of sports, entertainment, money, weather, travel, health and lifestyle, ..."
+  },
+  {
+    "domain": "https://www.metacritic.com/movie/star-wars-episode-iv---a-new-hope",
+    "title": "Star Wars: Episode IV - A New Hope Reviews - Metacritic",
+    "description": "A long time ago in a galaxy far, far away... Princess Leia (Carrie Fisher) is held hostage by the evil Imperial forces in their effort to quell the rebellion against the Galactic Empire. Luk..."
+  },
+  {
+    "domain": "https://www.imdb.com/title/tt0068646/",
+    "title": "The Godfather (1972) - IMDb",
+    "description": "The Godfather: Directed by Francis Ford Coppola. With Marlon Brando, Al Pacino, James Caan, Richard S. Castellano. The aging patriarch of an organized crime dynasty transfers control of his clandestine empire to his reluctant son."
+  },
+  {
+    "domain": "booking.com",
+    "title": "Booking.com | Official site | The best hotels, flights, car rentals & accommodations",
+    "description": "Whether you\u2019re looking for hotels, homes, or vacation rentals, you\u2019ll always find the guaranteed best price. Browse our 2,563,380 accommodations in over 85,000 destinations."
+  }
+]

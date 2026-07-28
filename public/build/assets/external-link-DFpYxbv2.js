@@ -1,0 +1,1 @@
+import{Xr as e}from"./icons-Cr9rzYDV.js";var t=e(),n=`text-primary hover:underline focus-visible:ring focus-visible:ring-2 focus-visible:ring-offset-2 outline-hidden rounded-sm transition-colors`;function r({children:e,className:r,target:i=`_blank`,...a}){return(0,t.jsx)(`a`,{className:n,target:i,...a,children:e})}export{n,r as t};

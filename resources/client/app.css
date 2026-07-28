@@ -1,0 +1,8 @@
+@import 'tailwindcss' source(none);
+
+@import '../../common/foundation/resources/client/core/common.css';
+
+@source '../../resources/client/**/*.ts*';
+@source '../../common/foundation/resources/client/**/*.ts*';
+@source '../../common/foundation/resources/views/install/**/*.blade.php';
+@source '../../common/foundation/resources/views/framework.blade.php';

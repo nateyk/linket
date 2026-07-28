@@ -1,0 +1,1 @@
+var e=function(e){return e.image=`image/*`,e.audio=`audio/*`,e.text=`text/*`,e.json=`application/json`,e.video=`video/mp4,video/mpeg,video/x-m4v,video/*`,e}({});export{e as t};

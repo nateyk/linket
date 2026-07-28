@@ -1,0 +1,120 @@
+import {
+  Canvas,
+  Controls,
+  Description,
+  Meta,
+  Stories,
+} from '@storybook/addon-docs/blocks';
+
+import * as ButtonStories from './button.stories';
+
+<Meta of={ButtonStories} />
+
+# Button
+
+<Description of={ButtonStories} />
+
+<Canvas of={ButtonStories.Default} />
+<Controls of={ButtonStories.Default} />
+
+## Variants and colors
+
+Use `variant` for button treatment and `color` for intent. When `color` is omitted, `Button` uses
+`primary` for `variant="default"` and `default` for `outline`, `ghost`, and `link`.
+
+```jsx title="Button variants"
+<Button>Primary</Button>
+<Button variant="outline" color="danger">Delete</Button>
+<Button variant="ghost">Cancel</Button>
+<Button variant="link">Learn more</Button>
+```
+
+Use `buttonVariants` when you need button styles outside of the `Button` component.
+
+```jsx title="Button styles on another component"
+<a className={buttonVariants({variant: 'outline', size: 'sm'})} href="/billing">
+  Billing
+</a>
+```
+
+## Icons
+
+Pass icons as children. Button styles automatically size plain SVG icons, so avoid setting icon sizes
+unless a custom size is intentional.
+
+```jsx title="Button with icon"
+<Button>
+  <PlusIcon />
+  Create link
+</Button>
+```
+
+For trailing icons, add `data-icon="inline-end"` so the button adjusts its right padding.
+
+```jsx title="Button with trailing icon"
+<Button variant="outline">
+  Options
+  <ChevronDownIcon data-icon="inline-end" />
+</Button>
+```
+
+## Link buttons
+
+Use `LinkButton` for React Router navigation. Use a native `a` element with `buttonVariants` for external
+links.
+
+```jsx title="React Router link button"
+<LinkButton to="/settings">Settings</LinkButton>
+```
+
+## Migrating from legacy Button
+
+Replace legacy `@ui/buttons/button` imports with `@shadcn/button/button`.
+
+```jsx title="Legacy button"
+<Button variant="flat" color="primary" startIcon={<LucideIcon icon={PlusIcon} size="xs" />}>
+  Create link
+</Button>
+```
+
+```jsx title="Shadcn button"
+<Button variant="default" color="primary">
+  <PlusIcon />
+  Create link
+</Button>
+```
+
+### Variant and color mapping
+
+| Legacy prop | Shadcn prop | Notes |
+| ----------- | ----------- | ----- |
+| `variant="outline"` | `variant="outline"` | Pair with `color` as needed. |
+| `variant="text"` | `variant="ghost"` | Minimal text-on-background style. |
+| `variant="flat"` / `variant="raised"` | `variant="default"` | Add `className` only if raised shadow parity is required. |
+| `variant="link"` | `variant="link"` |  |
+| `color="chip"` | `variant="default" color="default"` | Uses the new secondary surface. |
+| `color="primary"` / `danger` / `positive` | Same `color` value |  |
+| `color="white"` | `color="white"` | Available on default, outline, and ghost variants. |
+
+### Size mapping
+
+| Legacy `size` | Shadcn `size` | Notes |
+| ------------- | ------------- | ----- |
+| `2xs` | `xs` | Exact height match. |
+| `xs` | `sm` | Closest height match. |
+| `sm` | `default` | Exact height match. |
+| `md` | `lg` | Closest height match. |
+| `lg` / `xl` | `lg` | Add `className` height only when the layout depends on the larger legacy size. |
+
+For square icon buttons, use `icon-xs`, `icon-sm`, `icon`, or `icon-lg` by matching the closest old
+square size. For legacy `link` buttons, choose the shadcn size by matching text size or nearby controls.
+
+### Migration checklist
+
+1. Replace `startIcon` / `endIcon` with direct Lucide icon children; use `data-icon="inline-end"` on trailing icons.
+2. Map legacy `variant` and `color` using the tables above.
+3. Map `size` deliberately and use `type ButtonSize` from the shadcn button when needed.
+4. Replace legacy navigation props like `to` and `href` with `LinkButton`, an `a` element, or `buttonVariants`.
+5. Use `SeparatorInsideButton` when a design needs an internal vertical separator.
+
+<Stories of={ButtonStories} />

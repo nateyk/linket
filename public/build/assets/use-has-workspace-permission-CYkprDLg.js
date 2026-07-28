@@ -1,0 +1,1 @@
+import{n as e}from"./use-auth--K7Bv-DW.js";function t(t,n){let{user:r}=e(),i=t.members?.find(e=>e.id===r?.id);return i?i.is_owner||!!i.permissions?.find(e=>e.name===n):!1}export{t};

@@ -1,0 +1,21 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+    - vendor/nesbot/carbon/extension.neon
+
+parameters:
+
+    paths:
+        - app/
+        - common/foundation/src/
+
+    # Level 10 is the highest level
+    level: 0
+
+    excludePaths:
+        - common/foundation/src/Channels
+        - common/foundation/src/Comments
+
+#    ignoreErrors:
+#        - '#PHPDoc tag @var#'
+#
+

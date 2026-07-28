@@ -1,0 +1,1 @@
+function e(e,t,n){return(e-t)*100/(n-t)}export{e as t};

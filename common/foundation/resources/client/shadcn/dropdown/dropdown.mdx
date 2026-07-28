@@ -1,0 +1,132 @@
+import {
+  Canvas,
+  Controls,
+  Description,
+  Meta,
+  Stories,
+} from '@storybook/addon-docs/blocks';
+
+import * as DropdownStories from './dropdown.stories';
+
+<Meta of={DropdownStories} />
+
+# Dropdown
+
+<Description of={DropdownStories} />
+
+<Canvas of={DropdownStories.Default} />
+<Controls of={DropdownStories.Default} />
+
+## Composition
+
+Use the following composition to build a `Dropdown`:
+
+```text
+Dropdown.Root
+├── Dropdown.Trigger
+└── Dropdown.Content
+    ├── Dropdown.Group
+    │   ├── Dropdown.GroupLabel
+    │   └── Dropdown.Item
+    ├── Dropdown.LinkItem
+    ├── Dropdown.Sub
+    │   ├── Dropdown.SubTrigger
+    │   └── Dropdown.SubContent
+    ├── Dropdown.CheckboxItem
+    ├── Dropdown.RadioGroup
+    │   └── Dropdown.RadioItem
+    ├── Dropdown.Separator
+    └── Dropdown.Shortcut
+```
+
+## Trigger
+
+`Dropdown.Trigger` renders a `button` by default. Use `render`
+when the trigger should be a preconfigured Button element.
+
+```jsx title="Dropdown trigger"
+<Dropdown.Root>
+  <Dropdown.Trigger render={<Button variant="outline" color="default" />}>
+    Open menu
+  </Dropdown.Trigger>
+  <Dropdown.Content>
+    <Dropdown.Item>Profile</Dropdown.Item>
+    <Dropdown.Item>Settings</Dropdown.Item>
+  </Dropdown.Content>
+</Dropdown.Root>
+```
+
+## Positioning
+
+Use `side`, `align`, `sideOffset`, and `alignOffset` on `Dropdown.Content` to place the popup.
+
+```jsx title="Positioned dropdown"
+<Dropdown.Content side="bottom" align="end" sideOffset={8}>
+  <Dropdown.Item>Account settings</Dropdown.Item>
+  <Dropdown.Item>Billing</Dropdown.Item>
+</Dropdown.Content>
+```
+
+## Items
+
+Use `Dropdown.Item` for actions and `Dropdown.LinkItem` for navigation. Prefer
+`Dropdown.LinkItem` over manual `onSelect` / `onClick` navigation handlers.
+
+```jsx title="Dropdown items"
+<Dropdown.Content>
+  <Dropdown.Item>
+    <SettingsIcon />
+    Settings
+    <Dropdown.Shortcut>Cmd+S</Dropdown.Shortcut>
+  </Dropdown.Item>
+  <Dropdown.LinkItem href="/billing">
+    <CreditCardIcon />
+    Billing
+  </Dropdown.LinkItem>
+  <Dropdown.Separator />
+  <Dropdown.Item variant="destructive">
+    <LogOutIcon />
+    Log out
+  </Dropdown.Item>
+</Dropdown.Content>
+```
+
+## Migrating from legacy MenuTrigger
+
+Replace legacy `MenuTrigger`, `Menu`, `MenuItem`, and `MenuSection` with explicit
+`Dropdown.Root`, `Dropdown.Trigger`, `Dropdown.Content`, and item composition.
+
+```jsx title="Legacy menu trigger"
+<MenuTrigger placement="bottom end" offset={8}>
+  <Button>Open menu</Button>
+  <Menu>
+    <MenuSection title="Account">
+      <MenuItem onSelected={openSettings}>Settings</MenuItem>
+    </MenuSection>
+  </Menu>
+</MenuTrigger>
+```
+
+```jsx title="Dropdown"
+<Dropdown.Root>
+  <Dropdown.Trigger render={<Button />}>Open menu</Dropdown.Trigger>
+  <Dropdown.Content side="bottom" align="end" sideOffset={8}>
+    <Dropdown.Group>
+      <Dropdown.GroupLabel>Account</Dropdown.GroupLabel>
+      <Dropdown.Item onClick={openSettings}>Settings</Dropdown.Item>
+    </Dropdown.Group>
+  </Dropdown.Content>
+</Dropdown.Root>
+```
+
+### Migration checklist
+
+1. Convert tuple children into explicit `Dropdown.Trigger` and `Dropdown.Content`.
+2. Replace `MenuItem` with `Dropdown.Item` or `Dropdown.LinkItem` for route navigation.
+3. Replace `MenuSection` with `Dropdown.Group` and add `Dropdown.GroupLabel` only when there is a visible heading.
+4. Map `placement` and `offset` to `side`, `align`, `sideOffset`, and `alignOffset` by intent.
+5. Remove `dontBindEventsToTrigger`; trigger behavior is handled by `Dropdown.Trigger`.
+6. Rebuild searchable menus with a dedicated combobox or autocomplete instead of `Dropdown`.
+7. Let `Dropdown.Item` handle icon sizing unless a custom icon size is intentional.
+
+<Stories of={DropdownStories} />

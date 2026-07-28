@@ -1,0 +1,21 @@
+.dark .compact-scrollbar {
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+.compact-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(193 193 193) transparent;
+}
+
+@utility no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.stable-scrollbar {
+  scrollbar-gutter: stable;
+}

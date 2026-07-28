@@ -1,0 +1,632 @@
+<h2>2026 July 04 - Version 4.0.0</h2>
+<ul>
+  <li>new: full modern redesign for both user dashboard and admin area</li>
+  <li>new: full landing page redesign along with new landing page editor in admin area</li>
+  <li>
+    new: full support for QR code generation and customization. Qr codes can be created manually for
+    links or automatically for existing short links and folders.
+  </li>
+  <li>new: improved design for link in bio as well as biolink appearance editor.</li>
+  <li>
+    new: added more options in biolink apperance editor, including custom backgrounds, patterns,
+    effects and glass buttons.
+  </li>
+  <li>new: webhooks functionality for link, qr code, folder and tracked events.</li>
+  <li>
+    new: improved upgrade badges and notifications for features that are not available in current
+    subscription plan.
+  </li>
+  <li>new: better API documentation and full support for all operations via API.</li>
+  <li>
+    new: workspace improvements, including separate pages for managing workspaces and members.
+  </li>
+  <li>new: updated chart appearance for all analytics pages.</li>
+  <li>new: improvments to folders/link groups functionality.</li>
+  <li>new: unified and redisgned account settings and subscription management pages.</li>
+  <li>new: better link preview, title and description when shortening links.</li>
+  <li>new: improved filtering, sorting and layout options in user dashboard and admin area.</li>
+  <li>new: support for trials in subscriptions</li>
+  <li>
+    new: auto update functionality in admin area. You will now be notified of new updates to BeLink
+    in admin area and can update directly from "admin > settings > system > update" page.
+  </li>
+  <li>new: upgraded "admin > settings > uploading" page.</li>
+  <li>new: merged appearance editor and settings pages in admin area.</li>
+  <li>new: Purchase code can now be activated from "admin > settings > system > licenses" page.</li>
+  <li>fix: 100+ bugs and other minor issues.</li>
+</ul>
+
+<h2>2024 May 24 - Version 3.0.8</h2>
+<ul>
+  <li>new: errors on the site will now show more details, if logged in as admin.</li>
+  <li>new: translations can now be downloaded and uploaded as .json file</li>
+  <li>new: added CRON, outgoing email and error logs in admin area</li>
+  <li>new: changed email verification to use one time password, instead of verification link</li>
+  <li>new: improve link image positioning in biolink page</li>
+  <li>fix: outline button color change in biolink editor</li>
+  <li>fix: shortening urls without providing protocol</li>
+  <li>fix: some layout issues in user profile page</li>
+</ul>
+
+<h2>2024 May 11 - Version 3.0.7</h2>
+<ul>
+  <li>new: request password before allowing user to delete account</li>
+  <li>new: allow sitemap generation via command line</li>
+  <li>fix: subscription activation sometimes being delayed when using stripe</li>
+  <li>fix: paypal subscription state sometimes not syncing with the site</li>
+  <li>fix: hidden plans being used for discount calculation</li>
+  <li>fix: incorrect link in checkout error page</li>
+  <li>fix: urls with unicode characters sometimes not working</li>
+  <li>fix: some issues with colorpicker in biolink editor</li>
+  <li>fix: old settings sometimes being cached</li>
+  <li>fix: article editor info block duplicating sometimes</li>
+  <li>fix: resending email verification from admin area</li>
+  <li>fix: some issues with appearance editor color pickers</li>
+  <li>fix: seo tags being duplicated sometimes</li>
+  <li>
+    fix: mark all notification as unread, instead of just visible ones via mark as unread button
+  </li>
+  <li>fix: api docs authentication</li>
+  <li>fix: mobile menu sometimes opening links in new window</li>
+  <li>fix: cookie notice layout on mobile</li>
+</ul>
+
+<h2>2024 January 05 - Version 3.0.6</h2>
+<ul>
+  <li>
+    new: it's now possible to change default font, border radius and navbar color from appearance
+    editor.
+  </li>
+  <li>fix: a few issues with user passwords and login</li>
+  <li>fix: issue with when switching from stripe test mode to live</li>
+  <li>fix: custom landing page SEO tags not showing sometimes</li>
+  <li>fix: date range picker issue when starting selection from end date</li>
+</ul>
+
+<h2>2023 November 11 - Version 3.0.5</h2>
+<ul>
+  <li>new: link page options can now be disabled via permissions</li>
+  <li>new: check branded domains against blacklisted domain list</li>
+  <li>new: check alias against blacklisted keywords</li>
+  <li>new: added social icons in the icon selector in menu manager</li>
+  <li>new: added logout button to verify email page</li>
+  <li>new: show user suspension reason on edit user page</li>
+  <li>fix: same alias not working on different branded domains</li>
+  <li>fix: landing page input text color in dark mode</li>
+  <li>fix: make default alias searchable</li>
+  <li>fix: hide upgrade button in navbar if subscriptions are disabled</li>
+  <li>fix: default logo broken after installation</li>
+  <li>fix: wrong endpoints in api documentation</li>
+  <li>fix: plan not allowing removal of all permissions</li>
+  <li>fix: disable user change plan button if subscription is created from admin area</li>
+  <li>fix: reset scroll position when navigating between custom pages</li>
+  <li>fix: datepicker keyboard input not working sometimes</li>
+</ul>
+
+<h2>2023 October 7 - Version 3.0.4</h2>
+<ul>
+  <li>new: improved first page load speed</li>
+  <li>new: improved SEO tags editor in admin area</li>
+  <li>new: SEO tags for link, biolink and link group can now be configured separately.</li>
+  <li>fix: global custom domains added from admin area not working sometimes.</li>
+  <li>fix: some translation issues on landing page</li>
+  <li>fix: clicking on geochart region sometimes not working</li>
+  <li>ix: biolink save button not activating after editing alias field</li>
+  <li>fix: appearance editor values not updating sometimes without page reload</li>
+  <li>fix: mobile logo sometimes getting deleted</li>
+  <li>fix: permission issue with guest role</li>
+  <li>fix: allow removing sentry dsn in settings page</li>
+  <li>fix: hidden plans still visible on change plan page</li>
+  <li>fix: annual subscription sometimes not getting selected</li>
+  <li>fix: file upload field not clearing when there's an error</li>
+  <li>fix: paypal subscription issue</li>
+  <li>fix: issues with "api.access" permission</li>
+  <li>fix: confirmation dialog not closing sometimes</li>
+  <li>fix: landing page background issues on iOS</li>
+</ul>
+
+<h2>2023 May 17 - Version 3.0.3</h2>
+<ul>
+  <li>new: click report can now be filtered by country and can display cities in geo chart</li>
+  <li>new: added an option to show branding logo on biolink pages</li>
+  <li>new: added two factor authentication support</li>
+  <li>new: users can now be suspended/baned from admin area</li>
+  <li>new: added full size social login buttons as an option in login and register pages</li>
+  <li>
+    new: it's now possible to prevent emails from certain domains from registering new accounts
+  </li>
+  <li>new: added active sessions panel in account settings page</li>
+  <li>new: Improved responsiveness of all tables across the site.</li>
+  <li>new: added "stop_on_error" option to batch link shortening API method.</li>
+  <li>fix: some drag and drop issues</li>
+  <li>fix: last week option in date picker</li>
+  <li>fix: savings calculation in pricing page</li>
+  <li>fix: role names not being translatable</li>
+  <li>fix: prevent admin user from being deleted</li>
+  <li>fix: clicks not being logged properly when queue driver is set to redis</li>
+  <li>fix: somes linkedin links not passing validation</li>
+  <li>fix: wrong site url sometimes being set during installation</li>
+  <li>fix: google tag manager snippet not being inserted correctly sometimes</li>
+  <li>fix: external link not working when added in 'auth-dropdown' position via menu manager</li>
+  <li>fix: some visual issues on checkout page</li>
+  <li>fix: light theme still being default, event if dark theme is selected in settings page</li>
+  <li>fix: hide theme change button if theme changing is disabled in settings page</li>
+</ul>
+
+<h2>2023 January 04 - Version 3.0.2</h2>
+<h4>Bug Fixes</h4>
+<ul>
+  <li>Disabled links will now properly show an error page.</li>
+  <li>Updated GEOIP database for resolving user location from IP.</li>
+  <li>Fixed text color when shortening link on landing page in dark mode.</li>
+  <li>Fixed logout sometimes not working until page reload.</li>
+  <li>Some improvements to ad positioning in built-in slots.</li>
+  <li>Fixed some permission issues when viewing links via API.</li>
+  <li>fixed long links overflowing biolink editor container</li>
+  <li>Removed extra whitespace on some spotify embeds.</li>
+  <li>Fixed direct link type not redirecting to long url if password is set for the link.</li>
+</ul>
+
+<h2>2022 December 06 - Version 3.0.1</h2>
+
+<h4>Bug Fixes</h4>
+<ul>
+  <li>Hide workspace selector if user has no permission to create workspaces.</li>
+  <li>Fix logo sizing on email confirmation page.</li>
+  <li>Fix an issue with ads added in previous versions not working sometimes.</li>
+  <li>Invalid dates will no longer cause error pages to show.</li>
+  <li>Only show "Developers" menu item if user has "api.access" permission.</li>
+  <li>Fix incorrect url for tags page in admin area.</li>
+  <li>Fix a few spelling issues in biolink widget dialog.</li>
+  <li>Allow deleting subscription plan if it was deleted on stripe already.</li>
+  <li>Fixed a few responsive issues on mobile.</li>
+</ul>
+
+<h2>2022 December 03 - Version 3.0.0</h2>
+
+<h4>New Features</h4>
+<ul>
+  <li>
+    Fully rewritten BeLink in React. This results in many improvements from previous version,
+    including better performance, bundle size reduction by nearly 2x (with bigger reduction in
+    future updates), better animations and many bugfixes.
+  </li>
+  <li>Refreshed the design for most pages across the site.</li>
+  <li>It's now possible to upload files directly from browser to s3 and s3 compatible services.</li>
+  <li>Updated biolink editor page design and functionality.</li>
+  <li>Regular and button text color can now be changed separately in biolink editor.</li>
+  <li>Widgets can now be pinned to the top in biolink editor.</li>
+  <li>Added custom gradient generator to biolink appearance editor.</li>
+</ul>
+
+<h4>Enhancements</h4>
+<ul>
+  <li>Migrated Google Analytics integration to v4.</li>
+  <li>It's now possible to add custom query parameters to links as well as UTM tags.</li>
+  <li>CSV for link groups can now be exported.</li>
+  <li>Link table share button now allows to copy qr code and share to facebook and twitter.</li>
+  <li>It's now possible to move multiple links to a group at the same time.</li>
+  <li>Added several new filters to link groups table.</li>
+  <li>Added documentation links for all tracking pixel types.</li>
+  <li>Show link image (if available) instead of favicon in links table.</li>
+  <li>Added a setting to remove "All my domains" option when shortening links.</li>
+  <li>Updated landing page design and added a few more options in landing page editor.</li>
+  <li>Pricing table can now be shown inlined in the landing page.</li>
+  <li>
+    If recaptcha is enabled in settings page, it will now protect link groups and biolink pages.
+  </li>
+  <li>Admin sidebar can now be edited from menu manager.</li>
+  <li>Updated to the latest version of Laravel.</li>
+  <li>
+    Updated Stripe integration to the latest version. It now accepts payments from Google/Apple pay
+    and other, country specific providers, in addition to credit cards.
+  </li>
+  <li>
+    Updated PayPal integration to the latest version. It can now accept a number of other payment
+    sources including cards.
+  </li>
+  <li>Many improvements to subscription flow and plan creation in admin area.</li>
+  <li>Added compatibility with PHP 8.1+</li>
+  <li>It's now possible to preview files from "admin -> files" page.</li>
+  <li>
+    When email confirmation is enabled, user will now see a special page where they can resend
+    confirmation email.
+  </li>
+  <li>Appearance editor themes section now has fewer colors that need to be overwritten.</li>
+  <li>Added a lot more icons in appearance editor icon selector.</li>
+  <li>
+    Call to action buttons in landing page editor and gdpr settings in admin area now have the same
+    options as menu editor items.
+  </li>
+  <li>Improved filtering for data tables in admin area.</li>
+  <li>Menus can now be assigned to multiple positions.</li>
+  <li>
+    Menu items in menu manager can now be configured to show based on user roles or permissions.
+  </li>
+  <li>Added region option to mailgun mail provider in settings page.</li>
+  <li>Upgraded GDPR EU location check.</li>
+  <li>Added postmark mail provider.</li>
+  <li>Update translation manager in admin area, there should no longer be any missing strings.</li>
+</ul>
+
+<h4>Bug Fixes</h4>
+<ul>
+  <li>Link group csv export will now correctly only export links for that group.</li>
+  <li>Fixed a few issue with filter having a wrong value in links table.</li>
+  <li>Fixed an issue with updating existing tracking pixels from dashboard.</li>
+  <li>
+    Default host selected in settings page will now correctly show in new link dialog and biolink
+    page.
+  </li>
+  <li>Click charts will now be correctly scoped to active workspace.</li>
+  <li>Fixed a number of issues related to timezones and daylight savings time in charts.</li>
+  <li>Don't remove @ sign from email address in biolink socials widget.</li>
+  <li>Prevent biolink content item from being dragged when not clicking on drag handle.</li>
+  <li>Prevent biolink owner from being changed when editing from admin area.</li>
+  <li>Allow both www and non-www version urls for socials widget in biolink editor.</li>
+  <li>Resending workspace invite will no longer trigger maximum workspace members error.</li>
+  <li>
+    Fixed an issue where ordering in admin data tables would not work properly when certain filters
+    were active.
+  </li>
+  <li>Prevent user from being logged out when changing password in account settings page.</li>
+  <li>
+    Default browser language will no longer take priority over one selected in admin settings.
+  </li>
+  <li>
+    Fixed an issue where disabling registration from settings page would leave API registration
+    route active.
+  </li>
+</ul>
+
+<h2>2021 July 06 - Version 2.0.1</h2>
+
+<h4>Enhancements</h4>
+<ul>
+  <li>Improved link clicks report load time.</li>
+  <li>Updated chart appearance and labeling for date axis.</li>
+  <li>
+    Link charts will now automatically calculate most comfortable time granularity based on date
+    range, instead of requiring user to select yearly, monthly, daily or hourly.
+  </li>
+</ul>
+
+<h4>Bug Fixes</h4>
+<ul>
+  <li>Fixed a few issues that could have occurred when upgrading from older versions to 2.0.0</li>
+</ul>
+
+<h2>2021 July 05 - Version 2.0.0</h2>
+
+<h4>New Features</h4>
+<li>Added fully featured biolink (link in bio) functionality.</li>
+<li>Added a UTM builder for links.</li>
+<li>It's now possible to export links and users as CSV from dashboard and admin area.</li>
+<li>
+  Subdomain short links (linkId.site.com) are now supported. Can be enabled from "admin > settings >
+  links > domains" page.
+</li>
+<li>
+  Added permissions for link alias, expiration password and utm builder. If subscriptions are
+  enabled upgrade message will be shown if user does not have the permission.
+</li>
+<li>Maximum amount of clicks after which link will expire can now be specified.</li>
+<li>Date on which link will become active can now be specified.</li>
+<li>
+  App footer can now be shown in dashboard, allows changing language, dark mode and has an extra
+  social menu.
+</li>
+<li>
+  Implemented a fully featured, token based API. It can be used to integrate Belink into existing
+  projects, native apps and more.
+</li>
+<li>
+  Added <strong>Manage API Access Tokens</strong> section in
+  <a href="https://belink.vebto.com/account/settings" target="_blank" rel="noopener"
+    >account settings</a
+  >
+  page for creating or revoking API access tokens.
+</li>
+<li>
+  Added functional API docs. They can be accessed at
+  <a href="https://belink.vebto.com/api-docs" target="_blank" rel="noopener"
+    >your-site.com/api-docs</a
+  >
+  url, there's also a link in account settings page.
+</li>
+
+<h4>Enhancements</h4>
+<li>Updated filtering and search in all data tables in dashboard and admin area.</li>
+<li>Added a number of new filters to all data tables.</li>
+<li>Background image can now be uploaded for link overlays.</li>
+<li>Same link alias can now be used on different domains.</li>
+<li>
+  Added options to specify minimum and maximum link length in settings page and increased default
+  max link length to 1000 characters.
+</li>
+<li>
+  It's now possible to specify what custom alias can contain (letters, numbers, both, or both +
+  dash/underscore)
+</li>
+<li>User will now be warned of unsaved changes when leaving link overlay page.</li>
+<li>Added platform based retargeting (windows, macos, android, ios etc)</li>
+<li>Link groups now support custom domains, same as links.</li>
+<li>Compatibility with latest Stripe API version.</li>
+<li>Users can now delete their own account from their account settings page.</li>
+<li>Added support for IDN domains.</li>
+<li>Advanced features are now available in batch link creation mode.</li>
+<li>Added a new option to expire links created from homepage after specified time.</li>
+<li>Added a new "last click at" column for links table.</li>
+<li>
+  QR code and other share buttons will now be shown after creating a link without having to edit it
+  again.
+</li>
+<li>
+  It's not possible to change "get started" and "learn more" button links in landing page editor.
+</li>
+<li>
+  Url input when creating or editing link can now expand in size so long urls are fully visible.
+</li>
+<li>If custom domain attaching fails a more specific reason will now be shown.</li>
+<li>Custom pages will now support code highlighting for more languages.</li>
+<li>Split single and batch link creation into separate buttons for easier management.</li>
+<li>Improved "upgrade plan" popup design in user dashboard.</li>
+<li>A more descriptive error message will now be shown if incompatible PHP version is detected.</li>
+
+<h4>Bug Fixes</h4>
+<ul>
+  <li>
+    User will now be able to select custom domains from any workspace they are part of when creating
+    a link.
+  </li>
+  <li>Delete user from admin area will now correctly remove all resources attached to them.</li>
+  <li>
+    Server IP will now be shown properly instead of site url when attaching via A record and not
+    CNAME.
+  </li>
+  <li>Disable free plan selection on upgrade plan page.</li>
+  <li>Fixed a few issues with favicon generation.</li>
+  <li>Usage information will now update automatically when deleting links or other resources.</li>
+  <li>
+    Registering from pricing page will now correctly redirect user to payment page after
+    registration.
+  </li>
+  <li>
+    Clicking on logo will now redirect to dashboard instead of landing page if user is logged in.
+  </li>
+  <li>Link password field should not be prefilled anymore by browser when creating new links</li>
+  <li>Several fixes to link usage reporting when in workspace.</li>
+  <li>
+    Adblock should no longer prevent deletion of tracking pixels from dashboard and admin area.
+  </li>
+  <li>Fixed an issue where installation might not start properly on some hosting environments.</li>
+  <li>
+    It's no longer possible to invite non-registered users to workspace, if registration is disabled
+    in settings page.
+  </li>
+  <li>
+    When attaching links to existing group from admin area all links will now be searchable, instead
+    of just current user links.
+  </li>
+  <li>
+    Default workspace editor role generated during installation will now correctly have "*.view" and
+    *.create" permissions.
+  </li>
+  <li>QR code for link will now work properly on custom domains.</li>
+  <li>A number of other smaller fixes.</li>
+</ul>
+
+<h2>2020 August 20 - Version 1.0.5</h2>
+
+<h4>New Features</h4>
+<ul>
+  <li>Link groups can now act as link rotators and redirect to a random link from that group.</li>
+  <li>Added "hourly" and custom date filters to link click analytics.</li>
+  <li>Only one device can now be allowed to be logged into user account at the same time.</li>
+</ul>
+
+<h4>Enhancements</h4>
+<ul>
+  <li>
+    Failed link redirects will now show a more descriptive error message to link owner (over click
+    quota, invalid domain etc)
+  </li>
+  <li>Updated link overlay edit page design and added a few more options.</li>
+  <li>Notification will now be sent to user if they reach their click quota for the month.</li>
+  <li>
+    If subscriptions are enabled and user is over their click quota or their plan does not have a
+    specific permission, a popover when hovered over some buttons will now inform them that they can
+    upgrade to remove that restriction.
+  </li>
+  <li>Link group page now longer has a limit on the number of links that can be shown.</li>
+  <li>Links can now be attached to a group when creating/editing a link.</li>
+  <li>
+    og:title, og:description and og:image tags for destination site will now be checked as well.
+  </li>
+  <li>Added separate pages for link group analytics and links list.</li>
+  <li>
+    Updated Laravel to latest version. BeLink now requires at least PHP 7.2.5 version to work
+    properly.
+  </li>
+  <li>Updated login, register, forgot password and reset password pages design.</li>
+  <li>
+    If some server error occurs a more descriptive message will now be shown if user is logged in as
+    admin.
+  </li>
+  <li>All email templates will now have the same design.</li>
+  <li>Added separate address for contact page in mail settings page.</li>
+  <li>
+    Show notification in "settings -> general" page if specified base site url and current url don't
+    match.
+  </li>
+  <li>Improved input focus outline design.</li>
+  <li>Google analytics integration will now use newer .json key file instead of .p12</li>
+  <li>Free plan can now be selected in pricing page and will redirect to sign up page.</li>
+  <li>Improved contrast for several widgets in dark mode.</li>
+  <li>
+    Removed "force subscription" setting. Same functionality can now be achieved by removing all
+    permissions from "users" and "guests" roles in admin area.
+  </li>
+</ul>
+
+<h4>Bug Fixes</h4>
+<ul>
+  <li>
+    Fixed an issue where admin area charts would only show data for currently logged in user only
+    sometimes.
+  </li>
+  <li>
+    Fixed an issue where device and location targeting selects would show incorrect value sometimes.
+  </li>
+  <li>Cache method changes in settings page will now be properly validated.</li>
+  <li>Clearing cache will now work if "proc_open" function was disabled on the server.</li>
+  <li>Make sure text logo does not push login button offsreen.</li>
+  <li>
+    Always store appearance editor custom css and js locally, regardless of storage method in
+    settings page.
+  </li>
+  <li>
+    If placeholders can't be replaced in tags provided in "admin > appearance > seo" page, hide
+    those tags when displaying the page.
+  </li>
+  <li>A number of other smaller fixes.</li>
+</ul>
+
+<h2>2020 March 24 - Version 1.0.4</h2>
+<h4>Bug Fixes</h4>
+<ul>
+  <li>Fixed an issue where update was not applying properly sometimes.</li>
+</ul>
+
+<h2>2020 March 23 - Version 1.0.3</h2>
+
+<h4>New Features</h4>
+<ul>
+  <li>
+    Link groups now have a publicly accessible page where all links in that group are displayed.
+  </li>
+  <li>Integrated v3 recaptcha for link creation in user dashboard and landing page.</li>
+  <li>Added configurable GDPR cookie notice.</li>
+  <li>Added configurable confirmation policies to register page.</li>
+  <li>
+    Added chunked uploading. This allows BeLink to upload large files in smaller chunks for better
+    upload reliability and avoid server file size limits.
+  </li>
+  <li>Added resumable uploads functionality.</li>
+  <li>
+    Public uploads (like user avatars) can now be stored on cloud services (s3, digitalocean,
+    backblaze etc.).
+  </li>
+  <li>
+    Added support for XSendFile and XAcceleratedResponse for reducing server RAM and CPU usage when
+    previewing or downloading files.
+  </li>
+</ul>
+
+<h4>Enhancements</h4>
+<ul>
+  <li>
+    Redirect without a delay if there are no tracking pixels applied to link and type is set to
+    "direct".
+  </li>
+  <li>Custom link alias minimum and maximum length can now be specified from settings page.</li>
+  <li>Show warning to user in dashboard if they are over their click quota for the month.</li>
+  <li>Improved chart responsiveness and animations.</li>
+  <li>Pricing page can now be shown to non logged in users.</li>
+  <li>
+    Custom domain and link dialog will now accept domain/url with and without protocol specified.
+  </li>
+  <li>Clear all filters and reset sorting in data tables after creating a new record.</li>
+  <li>Light or dark mode can now be forced via "?be-mode=light" query parameter.</li>
+  <li>Redirect to link statistics page if "+" is added at the end of the url.</li>
+  <li>Landing page header and footer images can now be changed from appearance editor.</li>
+  <li>Improved page load times across the site.</li>
+  <li>Localization settings page will now show all available timezones.</li>
+  <li>
+    Accented characters (like chinese and cyrillic) will now work properly in custom page url slugs.
+  </li>
+  <li>Default user avatars will now be generated automatically based on their email address.</li>
+  <li>Update link dialog will now indicate whether password is set for that link.</li>
+  <li>"iframe" and "script" tags are not supported in custom pages.</li>
+  <li>
+    Expired links will now be shown in links table in user dashboard and can be restored by removing
+    expiration date.
+  </li>
+  <li>Chart legend items will now wrap to new line if there's not enough space.</li>
+</ul>
+
+<h4>Bug Fixes</h4>
+<ul>
+  <li>
+    Fixed an issue where location and device targeting would only show a single url sometimes when
+    editing a link.
+  </li>
+  <li>Link table will now correctly show selected custom domain in link short url.</li>
+  <li>Properly detach custom domains from links when custom domain is deleted.</li>
+  <li>Fixed a few issues with automatically generated url slugs.</li>
+  <li>Don't automatically pre-fill "expires at" field when creating link.</li>
+  <li>Code snippets in custom pages will now be properly highlighted.</li>
+  <li>Link table "password" column will now work properly without page reload.</li>
+  <li>Fixed an issue where incorrect tracking pixel id would be inserted sometimes.</li>
+  <li>
+    Editing tracking pixel with "custom" type will not correctly show "head" and "body" fields.
+  </li>
+  <li>
+    Top location chart will now properly update when switching between weekly, monthly and yearly
+    views.
+  </li>
+  <li>Newly created pixels will now be properly selectable without a page reload.</li>
+  <li>Fixed a few non translatable words across the site.</li>
+  <li>Landing page footer will now collapse properly on smaller screen sizes.</li>
+  <li>A number of other smaller fixes and improvements.</li>
+</ul>
+
+<h2>2019 August 21 - Version 1.0.2</h2>
+
+<h4>New Features</h4>
+<ul>
+  <li>Links can now be created via built-in API.</li>
+</ul>
+
+<h4>Enhancements</h4>
+<ul>
+  <li>Default domain for links can now be set from settings page.</li>
+  <li>Domain selection can now be disabled.</li>
+  <li>Improved responsiveness of link splash page.</li>
+</ul>
+
+<h4>Bug Fixes</h4>
+<ul>
+  <li>Properly set status code to 301 for "direct" type links.</li>
+  <li>After adding new link from group page, only links for that group will now be shown.</li>
+  <li>Statistic titles on landing page can now be translated.</li>
+  <li>Top devices chart will not correctly show devices instead of platforms.</li>
+</ul>
+
+<h2>2019 August 18 - Version 1.0.1</h2>
+
+<h4>Enhancements</h4>
+<ul>
+  <li>Link overlay "label" and "button" can now be hidden.</li>
+  <li>
+    Default preview image will now be shown on splash page, if destination site is not reachable and
+    preview image can't be generated.
+  </li>
+  <li>
+    When link overlay is deleted all links it was attached to will have their type set to "direct"
+    automatically.
+  </li>
+  <li>Invalid url formats should now be better detected.</li>
+</ul>
+
+<h4>Bug Fixes</h4>
+<ul>
+  <li>Homepage will now properly use SEO content from "admin -> appearance -> SEO" page.</li>
+  <li>Link overlay type will now be properly displayed.</li>
+  <li>Fixed an issue where link overlay or tracking pixels sometimes would not be deletable.</li>
+</ul>
+
+<h2>2019 August 15 - Version 1.0.0</h2>
+<ul>
+  <li>Initial version.</li>
+</ul>

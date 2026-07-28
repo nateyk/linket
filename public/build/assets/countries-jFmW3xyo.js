@@ -1,0 +1,1 @@
+import{a as e}from"./trans-DzGLMyji.js";var t=e((e=`en`)=>{let t=new Intl.DisplayNames([e],{type:`region`}),n=[];for(let e=65;e<=90;++e)for(let r=65;r<=90;++r){let i=String.fromCharCode(e)+String.fromCharCode(r),a=t.of(i);i!==a&&a&&n.push({code:i.toLowerCase(),name:a})}return n});export{t};

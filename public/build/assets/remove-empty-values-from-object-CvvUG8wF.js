@@ -1,0 +1,1 @@
+function e(t,n){let r=n?.copy??!0,i=r?{...t}:t;return Object.keys(i).forEach(t=>{let r=t;n?.arrays&&Array.isArray(i[r])&&i[r].length===0?delete i[r]:n?.deep&&i[r]&&typeof i[r]==`object`?(i[r]=e(i[r],n),Object.keys(i[r]).length===0&&delete i[r]):(i[r]==null||i[r]===``)&&delete i[r]}),r?i:t}export{e as t};

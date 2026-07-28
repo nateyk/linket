@@ -1,0 +1,34 @@
+import {
+  Canvas,
+  Controls,
+  Description,
+  Meta,
+  Stories,
+} from '@storybook/addon-docs/blocks';
+
+import * as CardStories from './card.stories';
+
+<Meta of={CardStories} />
+
+# Card
+
+<Description of={CardStories} />
+
+<Canvas of={CardStories.Default} />
+<Controls of={CardStories.Default} />
+
+## Composition
+
+Use the following composition to build a `Card`:
+
+```text
+Card
+├── Card.Header
+│   ├── Card.Title
+│   ├── Card.Description
+│   └── Card.Action
+├── Card.Content
+└── Card.Footer
+```
+
+<Stories of={CardStories} />

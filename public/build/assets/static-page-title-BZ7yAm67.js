@@ -1,0 +1,1 @@
+import{Xr as e}from"./icons-Cr9rzYDV.js";import{t}from"./use-settings-Db6w4Add.js";import{t as n}from"./helmet-_TpIRWZv.js";var r=e();function i({children:e}){let{branding:{site_name:i}}=t();return(0,r.jsx)(n,{children:e?(0,r.jsxs)(`title`,{children:[e,` - `,i]}):void 0})}export{i as t};

@@ -1,0 +1,1 @@
+function e(e,t){if(!e)return!1;e.match(/^[a-zA-Z]+:\/\//)||(e=`https://`+e);try{let n=new URL(e);if(t?.checkForDomain){let e=n.hostname.split(`.`),t=e.at(-1);return e.length>1&&!!t&&/^[a-zA-Z]{2,}$/.test(t)}else return!0}catch{}return!1}export{e as t};

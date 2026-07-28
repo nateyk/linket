@@ -1,0 +1,39 @@
+import {
+  Canvas,
+  Controls,
+  Description,
+  Meta,
+  Stories,
+} from '@storybook/addon-docs/blocks';
+
+import * as ItemStories from './item.stories';
+
+<Meta of={ItemStories} />
+
+# Item
+
+<Description of={ItemStories} />
+
+<Canvas of={ItemStories.Basic} />
+<Controls of={ItemStories.Basic} />
+
+## Composition
+
+Use the following composition to build an `Item`:
+
+```text
+Item.Root
+├── Item.Header
+├── Item.Media
+├── Item.Content
+│   ├── Item.Row
+│   │   └── Item.Title
+│   ├── Item.Title
+│   └── Item.Description
+├── Item.Actions
+└── Item.Footer
+```
+
+Use `Item.Row` only when the row needs more than plain text—for example, a badge beside the title, or action buttons where a description would normally go. For title-only or title + description layouts, use `Item.Title` and `Item.Description` directly under `Item.Content` without wrapping them in `Item.Row`.
+
+<Stories of={ItemStories} />

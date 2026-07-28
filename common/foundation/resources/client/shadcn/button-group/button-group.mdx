@@ -1,0 +1,32 @@
+import {
+  Canvas,
+  Controls,
+  Description,
+  Meta,
+  Stories,
+} from '@storybook/addon-docs/blocks';
+
+import * as ButtonGroupStories from './button-group.stories';
+
+<Meta of={ButtonGroupStories} />
+
+# Button Group
+
+<Description of={ButtonGroupStories} />
+
+<Canvas of={ButtonGroupStories.Default} />
+<Controls of={ButtonGroupStories.Default} />
+
+## Composition
+
+Use the following composition to build a `ButtonGroup`:
+
+```text
+ButtonGroup.Root
+├── Button
+├── Button
+├── ButtonGroup.Separator (optional)
+└── ButtonGroup.Text (optional)
+```
+
+<Stories of={ButtonGroupStories} />

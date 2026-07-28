@@ -1,0 +1,36 @@
+import {
+  Canvas,
+  Meta,
+  Stories,
+  Story,
+  Primary,
+  Controls,
+  Description,
+} from '@storybook/addon-docs/blocks';
+
+import * as AccordionStories from './accordion.stories';
+
+<Meta of={AccordionStories} />
+
+# Accordion
+
+<Description of={AccordionStories} />
+
+<Canvas of={AccordionStories.Basic} />
+<Controls of={AccordionStories.Basic} />
+
+## Composition
+
+Use the following composition to build an `Accordion`:
+
+```text
+Accordion.Root
+├── Accordion.Item
+│   ├── Accordion.Trigger
+│   └── Accordion.Content
+└── Accordion.Item
+    ├── Accordion.Trigger
+    └── Accordion.Content
+```
+
+<Stories of={AccordionStories} />

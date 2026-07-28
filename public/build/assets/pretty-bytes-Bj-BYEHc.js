@@ -1,0 +1,1 @@
+function e(e,t=1){if(e==null||Number.isNaN(e))return``;let n=e<0,r=[`B`,`KB`,`MB`,`GB`,`TB`,`PB`,`EB`,`ZB`,`YB`];if(n&&(e=-e),e<1)return`${(n?`-`:``)+e} B`;let i=Math.min(Math.floor(Math.log(e)/Math.log(1024)),r.length-1);e=Number(e/1024**i);let a=r[i];return e>=10||e%1==0?`${(n?`-`:``)+e.toFixed(0)} ${a}`:`${(n?`-`:``)+e.toFixed(t)} ${a}`}export{e as t};

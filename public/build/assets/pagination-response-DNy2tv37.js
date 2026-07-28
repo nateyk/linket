@@ -1,0 +1,1 @@
+var e=[{key:15},{key:30},{key:60},{key:100}];function t(e){return e.links.prev?`prev_cursor`in e.meta?e.meta.prev_cursor:e.meta.current_page-1:null}function n(e){return e.links.next?`next_cursor`in e.meta?e.meta.next_cursor:e.meta.current_page+1:null}export{t as n,e as r,n as t};

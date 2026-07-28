@@ -1,0 +1,262 @@
+<?php
+
+use Common\Admin\SiteAlertsController;
+use Common\Admin\CacheController;
+use Common\Admin\ImpersonateUserController;
+use Common\Admin\Sitemap\SitemapController;
+use Common\Auth\Controllers\AccessTokenController;
+use Common\Auth\Controllers\BanUsersController;
+use Common\Auth\Controllers\MobileAuthController;
+use Common\Permissions\Controllers\PermissionsController;
+use Common\Auth\Controllers\SocialAuthController;
+use Common\Auth\Controllers\FollowedUsersController;
+use Common\Auth\Controllers\FollowersController;
+use Common\Auth\Controllers\UserSessionsController;
+use Common\Auth\Middleware\VerifyApiAccessMiddleware;
+use Common\Roles\Controllers\RoleUsersController;
+use Common\Roles\Controllers\RolesController;
+use Common\Billing\Gateways\Paypal\PaypalController;
+use Common\Billing\Gateways\Stripe\StripeController;
+use Common\Billing\Products\ProductsController;
+use Common\Billing\Subscriptions\SubscriptionsController;
+use Common\Comments\Controllers\CommentableController;
+use Common\Comments\Controllers\CommentController;
+use Common\Core\Controllers\BootstrapController;
+use Common\Core\Install\LicenseController;
+use Common\Core\Install\UpdateController;
+use Common\Core\Values\ValueListsController;
+use Common\Files\Controllers\AddPreviewTokenController;
+use Common\Files\Controllers\DownloadFileController;
+use Common\Files\Controllers\FileEntriesController;
+use Common\Files\Controllers\RestoreDeletedEntriesController;
+use Common\Files\Controllers\ValidateBackendCredentialsController;
+use Common\Files\S3\S3CorsController;
+use Common\Files\S3\S3FileEntryController;
+use Common\Files\S3\S3MultipartUploadController;
+use Common\Files\S3\S3SimpleUploadController;
+use Common\Files\Tus\TusFileEntryController;
+use Common\Files\Tus\TusServerController;
+use Common\images\UnsplashImagesController;
+use Common\Localizations\LocalizationsController;
+use Common\Localizations\UserLocaleController;
+use Common\Logging\Error\ErrorLogController;
+use Common\Logging\Mail\OutgoingEmailLogController;
+use Common\Logging\Schedule\ScheduleLogController;
+use Common\Notifications\Controllers\NotificationController;
+use Common\Notifications\Controllers\NotificationSubscriptionsController;
+use Common\Pages\ContactPageController;
+use Common\Pages\CustomPageController;
+use Common\Reports\ReportController;
+use Common\Search\Controllers\NormalizedModelsController;
+use Common\Search\Controllers\SearchSettingsController;
+use Common\Settings\Manager\SettingsController;
+use Common\Users\Controllers\AccountSettingsController;
+use Common\Users\Controllers\UsersController;
+use Common\Votes\VoteController;
+use Common\Workspaces\Controllers\WorkspacesController;
+use Common\Workspaces\Controllers\WorkspaceInvitesController;
+use Common\Workspaces\Controllers\WorkspaceMembersController;
+use Illuminate\Support\Facades\Route;
+use Laravel\Fortify\Http\Controllers\PasswordResetLinkController;
+
+// prettier-ignore
+Route::group(['prefix' => 'v1'], function () {
+    Route::group(['middleware' => ['optionalAuth:sanctum', 'verified', 'verifyApiAccess']], function () {
+        // FILE ENTRIES
+        Route::get('file-entries/{fileEntry}/model', [FileEntriesController::class, 'showModel']);
+        Route::get('file-entries/{fileEntry}', [FileEntriesController::class, 'show'])
+          ->withoutMiddleware(VerifyApiAccessMiddleware::class);
+        Route::get('file-entries', [FileEntriesController::class, 'index']);
+        Route::post('file-entries', [FileEntriesController::class, 'store']);
+        Route::put('file-entries/{id}', [FileEntriesController::class, 'update']);
+        Route::post('file-entries/bulk-delete', [FileEntriesController::class, 'bulkDelete']);
+        Route::get('file-entries/download/{hashes}', [DownloadFileController::class, 'download']);
+        Route::post('file-entries/restore', [RestoreDeletedEntriesController::class, 'restore']);
+        Route::post('file-entries/{id}/add-preview-token', [AddPreviewTokenController::class, 'store']);
+
+        // S3 UPLOADS
+        Route::post('s3/multipart/create', [S3MultipartUploadController::class, 'create']);
+        Route::post('s3/multipart/batch-sign-part-urls', [S3MultipartUploadController::class, 'batchSignPartUrls']);
+        Route::post('s3/multipart/get-uploaded-parts', [S3MultipartUploadController::class, 'getUploadedParts']);
+        Route::post('s3/multipart/complete', [S3MultipartUploadController::class, 'complete']);
+        Route::post('s3/multipart/abort', [S3MultipartUploadController::class, 'abort']);
+        Route::post('s3/simple/presign', [S3SimpleUploadController::class, 'presignPost']);
+        Route::post('s3/entries', [S3FileEntryController::class, 'store']);
+        Route::post('s3/cors/upload', [S3CorsController::class, 'uploadCors']);
+
+        // TUS UPLOADS
+        Route::post('tus/entries', [TusFileEntryController::class, 'store']);
+        Route::any('/tus/upload/{any?}', TusServerController::class)->where('any', '.*');
+
+        // NOTIFICATIONS
+        Route::get('notifications', [NotificationController::class, 'index']);
+        Route::delete('notifications/bulk', [NotificationController::class, 'bulkDelete']);
+        Route::post('notifications/mark-as-read', [NotificationController::class, 'markAsRead']);
+        Route::get('notifications/subscriptions', [NotificationSubscriptionsController::class, 'index']);
+        Route::put('notifications/subscriptions', [NotificationSubscriptionsController::class, 'update']);
+
+        //ROLES
+        Route::get('roles/{id}/users', [RoleUsersController::class, 'index']);
+        Route::post('roles/{id}/users/add', [RoleUsersController::class, 'addUsers']);
+        Route::post('roles/{id}/users/remove', [RoleUsersController::class, 'removeUsers']);
+        Route::get('roles', [RolesController::class, 'index']);
+        Route::get('roles/{id}', [RolesController::class, 'show']);
+        Route::post('roles', [RolesController::class, 'store']);
+        Route::put('roles/{id}', [RolesController::class, 'update']);
+        Route::delete('roles/{id}', [RolesController::class, 'destroy']);
+        Route::post('roles/csv/export', [RolesController::class, 'exportCsv']);
+        Route::get('permissions', [PermissionsController::class, 'index']);
+
+        //USERS
+        Route::get('account-settings', AccountSettingsController::class);
+        Route::get('users', [UsersController::class, 'index']);
+        Route::get('users/{id}', [UsersController::class, 'show'])->withoutMiddleware('verified');
+        Route::post('users', [UsersController::class, 'store']);
+        Route::put('users/{id}', [UsersController::class, 'update']);
+        Route::delete('users/bulk', [UsersController::class, 'bulkeDelete']);
+        Route::post('access-tokens', [AccessTokenController::class, 'store']);
+        Route::delete('access-tokens/{tokenId}', [AccessTokenController::class, 'destroy']);
+        Route::post('users/csv/export', [UsersController::class, 'exportCsv']);
+        Route::get('users/{user}/followers', [FollowersController::class, 'index']);
+        Route::post('users/{user}/follow', [FollowersController::class, 'follow']);
+        Route::post('users/{user}/unfollow', [FollowersController::class, 'unfollow']);
+        Route::get('users/{user}/followed-users', [FollowedUsersController::class, 'index']);
+        Route::get('users/{user}/followed-users/ids', [FollowedUsersController::class, 'ids']);
+
+        // USER BANS
+        Route::post('users/ban/{userIds}', [BanUsersController::class, 'store']);
+        Route::delete('users/unban/{userIds}', [BanUsersController::class, 'destroy']);
+
+        // USER SESSIONS
+        Route::get('user-sessions', [UserSessionsController::class, 'index'])->middleware('auth');
+        Route::post('user-sessions/logout-other', [UserSessionsController::class, 'LogoutOtherSessions'])->middleware(['auth', 'password.confirm']);
+
+        // WORKSPACES
+        Route::get('workspaces', [WorkspacesController::class, 'index']);
+        Route::get('workspaces/{id}', [WorkspacesController::class, 'show']);
+        Route::post('workspaces', [WorkspacesController::class, 'store']);
+        Route::put('workspaces/{id}', [WorkspacesController::class, 'update']);
+        Route::delete('workspaces/{id}', [WorkspacesController::class, 'destroy']);
+        Route::get('workspace/{id}/members', [WorkspaceMembersController::class, 'index']);
+        Route::get('workspace/{id}/invites', [WorkspaceInvitesController::class, 'index']);
+        Route::delete('workspace/{id}/member/{userId}', [WorkspaceMembersController::class, 'destroy']);
+        Route::post('workspace/{id}/invite', [WorkspaceInvitesController::class, 'store']);
+        Route::post('workspace/{id}/{inviteId}/resend', [WorkspaceInvitesController::class, 'resend']);
+        Route::post('workspace/{id}/member/{memberId}/change-role', [WorkspaceMembersController::class, 'changeRole']);
+        Route::post('workspace/{id}/invite/{inviteId}/change-role', [WorkspaceInvitesController::class, 'changeRole']);
+        Route::delete('workspace/invite/{inviteId}', [WorkspaceInvitesController::class, 'destroy']);
+        Route::get('workspace/join/{inviteId}', [WorkspaceMembersController::class, 'join']);
+
+        // SETTINGS
+        Route::get('settings', [SettingsController::class, 'index']);
+        Route::get('settings/seo-tags', [SettingsController::class, 'loadSeoTags']);
+        Route::get('settings/menu-editor-config', [SettingsController::class, 'loadMenuEditorConfig']);
+        Route::post('settings', [SettingsController::class, 'update']);
+        Route::put('settings/uploading/validate-backend-credentials', ValidateBackendCredentialsController::class);
+
+        // SITEMAP
+        Route::post('sitemap/generate', [SitemapController::class, 'generate']);
+
+        // CUSTOM PAGES
+        Route::apiResource('custom-pages', CustomPageController::class);
+
+        // COMMENTS
+        Route::apiResource('comment', CommentController::class);
+        Route::post('comment/restore', [CommentController::class, 'restore']);
+        Route::get('commentable/comments', [CommentableController::class, 'index']);
+
+        // VOTES
+        Route::post('vote', [VoteController::class, 'store']);
+
+        // REPORTS
+        Route::post('report', [ReportController::class, 'store']);
+        Route::delete('report/{modelType}/{modelId}', [ReportController::class, 'destroy']);
+
+        // CONTACT PAGE
+        Route::post('contact-page', [ContactPageController::class, 'sendMessage']);
+
+        // SEARCH
+        Route::get('normalized-models/{modelType}', [NormalizedModelsController::class, 'index']);
+        Route::get('normalized-models/{modelType}/{modelId}', [NormalizedModelsController::class, 'show']);
+
+        // PRODUCTS
+        Route::apiResource('billing/products', ProductsController::class);
+        Route::post('billing/products/sync', [ProductsController::class, 'syncProducts']);
+
+        // SUBSCRIPTIONS
+        Route::get('billing/subscriptions', [SubscriptionsController::class, 'index']);
+        Route::post('billing/subscriptions', [SubscriptionsController::class, 'store']);
+        Route::post('billing/subscriptions/{id}/cancel', [SubscriptionsController::class, 'cancel']);
+        Route::put('billing/subscriptions/{id}', [SubscriptionsController::class, 'update']);
+        Route::post('billing/subscriptions/{id}/resume', [SubscriptionsController::class, 'resume']);
+        Route::post('billing/subscriptions/{id}/change-plan', [SubscriptionsController::class, 'changePlan']);
+        Route::post('billing/stripe/create-partial-subscription', [StripeController::class, 'createPartialSubscription']);
+        Route::post('billing/stripe/create-setup-intent', [StripeController::class, 'createSetupIntent']);
+        Route::post('billing/stripe/change-default-payment-method', [StripeController::class, 'changeDefaultPaymentMethod']);
+        Route::post('billing/stripe/store-subscription-details-locally', [StripeController::class, 'storeSubscriptionDetailsLocally']);
+        Route::post('billing/paypal/store-subscription-details-locally', [PaypalController::class, 'storeSubscriptionDetailsLocally']);
+
+        // ADMIN
+        Route::get('settings/server-max-file-size', [SettingsController::class, 'getServerMaxUploadSize']);
+        Route::get('admin/site-alerts', [SiteAlertsController::class, 'index']);
+        Route::post('cache/flush', [CacheController::class, 'flush']);
+        Route::post('admin/users/impersonate/{userId}', [ImpersonateUserController::class, 'impersonate']);
+        Route::get('admin/search/models', [SearchSettingsController::class, 'getSearchableModels']);
+        Route::post('admin/search/import', [SearchSettingsController::class, 'import']);
+
+        // LOCALIZATIONS
+        Route::post('localizations', [LocalizationsController::class, 'store']);
+        Route::put('localizations/{langCode}', [LocalizationsController::class, 'update']);
+        Route::delete('localizations/{id}', [LocalizationsController::class, 'destroy']);
+        Route::get('localizations/{id}/download', [LocalizationsController::class, 'download']);
+        Route::post('localizations/{id}/upload', [LocalizationsController::class, 'upload']);
+        Route::post('users/me/locale', [UserLocaleController::class, 'update']);
+        Route::get('localizations', [LocalizationsController::class, 'index']);
+        Route::get('localizations/{id}', [LocalizationsController::class, 'show']);
+
+        // VALUE LISTS
+        Route::get('value-lists/{names}', [ValueListsController::class, 'index'])->withoutMiddleware('verified');
+
+        // SCHEDULE LOG
+        Route::get('logs/schedule', [ScheduleLogController::class, 'index']);
+        Route::post('logs/schedule/rerun/{id}', [ScheduleLogController::class, 'rerun']);
+        Route::get('logs/schedule/download', [ScheduleLogController::class, 'download']);
+
+        // OUTGOING EMAIL LOG
+        Route::get('logs/outgoing-email/download', [OutgoingEmailLogController::class, 'downloadLog']);
+        Route::get('logs/outgoing-email/{id}', [OutgoingEmailLogController::class, 'show']);
+        Route::get('logs/outgoing-email', [OutgoingEmailLogController::class, 'index']);
+        Route::get('logs/outgoing-email/{id}/download', [OutgoingEmailLogController::class, 'downloadLogItem']);
+
+        // ERROR LOG
+        Route::get('logs/error', [ErrorLogController::class, 'index']);
+        Route::get('logs/error/{identifier}/download', [ErrorLogController::class, 'download']);
+        Route::delete('logs/error/{identifier}', [ErrorLogController::class, 'destroy']);
+
+        // IMAGES
+        Route::get('images/unsplash', [UnsplashImagesController::class, 'index']);
+        Route::post('images/unsplash/{id}/download', [UnsplashImagesController::class, 'trackDownload']);
+
+        // BOOTSTRAP
+        Route::get('bootstrap-data', [BootstrapController::class, 'getBootstrapData']);
+        Route::get('remote-config/mobile', [BootstrapController::class, 'getMobileBootstrapData'])->withoutMiddleware('verifyApiAccess');
+
+        // UPDATE
+        Route::post('update', [UpdateController::class, 'runUpdate']);
+
+        // PURCHASE CODES
+        Route::post('license/register-purchase-code', [LicenseController::class, 'registerPurchaseCode']);
+
+        $verificationLimiter = config('fortify.limiters.verification', '6,1');
+        Route::post('auth/email/verification-notification', [MobileAuthController::class, 'sendEmailVerificationNotification'])->middleware(['throttle:'.$verificationLimiter]);
+    });
+
+    // Mobile app auth
+    $limiter = config('fortify.limiters.login');
+    Route::post('auth/login', [MobileAuthController::class, 'login'])->middleware(array_filter([
+        $limiter ? 'throttle:'.$limiter : null,
+    ]))->withoutMiddleware('verifyApiAccess');
+    Route::post('auth/register', [MobileAuthController::class, 'register'])->withoutMiddleware('verifyApiAccess');
+    Route::get('auth/social/{provider}/callback', [SocialAuthController::class, 'loginCallback']);
+    Route::post('auth/password/email', [PasswordResetLinkController::class, 'store'])->middleware(['guest:'.config('fortify.guard')]);
+});

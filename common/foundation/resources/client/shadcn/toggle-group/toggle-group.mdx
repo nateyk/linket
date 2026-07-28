@@ -1,0 +1,31 @@
+import {
+  Canvas,
+  Meta,
+  Stories,
+  Controls,
+  Description,
+} from '@storybook/addon-docs/blocks';
+
+import * as ToggleGroupStories from './toggle-group.stories';
+
+<Meta of={ToggleGroupStories} />
+
+# Toggle Group
+
+<Description of={ToggleGroupStories} />
+
+<Canvas of={ToggleGroupStories.ToggleGroupDemo} />
+<Controls of={ToggleGroupStories.ToggleGroupDemo} />
+
+## Composition
+
+Use the following composition to build a `ToggleGroup`:
+
+```text
+ToggleGroup
+├── Toggle
+├── Toggle
+└── Toggle
+```
+
+<Stories of={ToggleGroupStories} />

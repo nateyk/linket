@@ -1,0 +1,1 @@
+function e(e){return e&&e.replace(/(^\w+:|^)\/\//,``)}export{e as t};

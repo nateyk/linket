@@ -1,0 +1,1 @@
+function e(e,t){let n=new ResizeObserver(e=>{e.length&&t({width:e[0].borderBoxSize[0].inlineSize,height:e[0].borderBoxSize[0].blockSize})});return e.current&&n.observe(e.current),()=>{e.current&&n.unobserve(e.current)}}export{e as t};

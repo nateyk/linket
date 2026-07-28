@@ -1,0 +1,1 @@
+import{a as e}from"./rolldown-runtime-Cyuzqnbw.js";import{Zr as t}from"./icons-Cr9rzYDV.js";import{n,r}from"./trans-DzGLMyji.js";var i=e(t());function a(e){let t=(0,i.useRef)(null);e&&t.current&&n(e,t.current)&&(e=t.current),t.current=e;let{localeCode:a}=r();return(0,i.useMemo)(()=>new Intl.DateTimeFormat(a,e),[a,e])}export{a as t};

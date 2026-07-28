@@ -1,0 +1,92 @@
+import {
+  Canvas,
+  Controls,
+  Description,
+  Meta,
+  Stories,
+} from '@storybook/addon-docs/blocks';
+
+import * as BreadcrumbStories from './breadcrumb.stories';
+
+<Meta of={BreadcrumbStories} />
+
+# Breadcrumb
+
+<Description of={BreadcrumbStories} />
+
+<Canvas of={BreadcrumbStories.Link} />
+<Controls of={BreadcrumbStories.Link} />
+
+## Composition
+
+Use the following composition to build a `Breadcrumb`:
+
+```text
+Breadcrumb.Root
+├── Breadcrumb.Item
+│   └── Breadcrumb.Link
+├── Breadcrumb.Separator
+├── Breadcrumb.Item
+│   └── Breadcrumb.Link
+├── Breadcrumb.Separator
+└── Breadcrumb.Item
+    └── Breadcrumb.Page
+```
+
+## Sizing
+
+```jsx title="Large breadcrumb"
+<Breadcrumb.Root className="text-xl">
+  <Breadcrumb.Item>
+    <Breadcrumb.Link to="/dashboard/links">
+      <Trans message="Links" />
+    </Breadcrumb.Link>
+  </Breadcrumb.Item>
+  <Breadcrumb.Separator />
+  <Breadcrumb.Item>
+    <Breadcrumb.Page>{linkName}</Breadcrumb.Page>
+  </Breadcrumb.Item>
+</Breadcrumb.Root>
+```
+
+## Migrating from legacy Breadcrumb
+
+Replace legacy `@ui/breadcrumbs/breadcrumb` and `@ui/breadcrumbs/breadcrumb-item` imports with
+`@shadcn/breadcrumb/breadcrumb`.
+
+The shadcn breadcrumb does not have a `size` prop. Use Tailwind text size classes on the root instead.
+Separators and default icons use the current font size.
+
+```jsx title="Legacy breadcrumb"
+<Breadcrumb size="xl">
+  <BreadcrumbItem to="/dashboard/links">
+    <Trans message="Links" />
+  </BreadcrumbItem>
+  <BreadcrumbItem>{linkName}</BreadcrumbItem>
+</Breadcrumb>
+```
+
+```jsx title="Shadcn breadcrumb"
+<Breadcrumb.Root className="text-xl">
+  <Breadcrumb.Item>
+    <Breadcrumb.Link to="/dashboard/links">
+      <Trans message="Links" />
+    </Breadcrumb.Link>
+  </Breadcrumb.Item>
+  <Breadcrumb.Separator />
+  <Breadcrumb.Item>
+    <Breadcrumb.Page>{linkName}</Breadcrumb.Page>
+  </Breadcrumb.Item>
+</Breadcrumb.Root>
+```
+
+### Migration checklist
+
+1. Replace each `BreadcrumbItem` with `Breadcrumb.Item`.
+2. Wrap navigable crumbs in `Breadcrumb.Link` and move `to`, `href`, or routing props onto it.
+3. Wrap the current crumb in `Breadcrumb.Page` so it gets `aria-current="page"` and current-page styling.
+4. Add `Breadcrumb.Separator` manually between breadcrumb items.
+5. Replace `size` with a Tailwind text size class on `Breadcrumb.Root`, for example `className="text-xl"`.
+6. Replace `onSelected` crumbs with a `Breadcrumb.Button` or `Breadcrumb.Link`, depending on whether the crumb performs an action or navigation.
+
+<Stories of={BreadcrumbStories} />
