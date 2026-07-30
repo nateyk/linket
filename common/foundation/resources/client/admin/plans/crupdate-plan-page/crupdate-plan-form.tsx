@@ -210,7 +210,7 @@ function PricingListForm() {
                   <FormattedPrice
                     price={{
                       amount: Number(field.amount ?? 0),
-                      currency: field.currency ?? 'USD',
+                      currency: field.currency ?? 'ETB',
                       interval: field.interval ?? 'month',
                       interval_count: field.interval_count ?? 1,
                     }}
@@ -233,7 +233,7 @@ function PricingListForm() {
           size="sm"
           onClick={() =>
             append({
-              currency: 'USD',
+              currency: 'ETB',
               amount: 1,
               interval_count: 1,
               interval: 'month',

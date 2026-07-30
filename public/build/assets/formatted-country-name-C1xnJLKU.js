@@ -1,1 +1,0 @@
-import{a as e}from"./rolldown-runtime-Cyuzqnbw.js";import{Xr as t,Zr as n}from"./icons-Cr9rzYDV.js";import{r}from"./trans-DzGLMyji.js";var i=e(n()),a=t(),o=(0,i.memo)(({code:e})=>{let{localeCode:t}=r(),n=new Intl.DisplayNames([t],{type:`region`}),o;try{o=n.of(e.toUpperCase())}catch{}return(0,a.jsx)(i.Fragment,{children:o})});export{o as t};

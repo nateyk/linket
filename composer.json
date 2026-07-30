@@ -13,6 +13,7 @@
     "adbario/php-dot-notation": "^3.3",
     "axisofstevil/stop-words": "^1.0",
     "bacon/bacon-qr-code": "^3.0",
+    "chapa/chapa-laravel": "dev-main",
     "cocur/slugify": "^4.5",
     "dedoc/scramble": "^0.13.22",
     "ezyang/htmlpurifier": "^4.18",
@@ -79,7 +80,8 @@
     "larastan/larastan": "^3.0",
     "laravel/pail": "^1.2",
     "nunomaduro/collision": "^8.1",
-    "phpstan/phpstan": "^2.1.54"
+    "phpstan/phpstan": "2.1.44",
+    "phpunit/phpunit": "11.5.50"
   },
   "config": {
     "optimize-autoloader": true,
@@ -118,9 +120,9 @@
     "classmap": []
   },
   "autoload-dev": {
-    "classmap": [
-      "tests/TestCase.php"
-    ]
+    "psr-4": {
+      "Tests\\": "tests/"
+    }
   },
   "minimum-stability": "dev",
   "prefer-stable": true,

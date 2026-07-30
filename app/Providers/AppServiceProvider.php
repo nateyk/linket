@@ -28,6 +28,7 @@ use Common\Pages\CustomPage;
 use Common\API\PublicApiDocsFilter;
 use Common\Workspaces\Actions\CreateWorkspace;
 use Common\Workspaces\Listeners\AttachWorkspaceToUser;
+use Chapa\Chapa\ChapaServiceProvider;
 use Dedoc\Scramble\Scramble;
 use Dedoc\Scramble\Support\Generator\OpenApi;
 use Dedoc\Scramble\Support\Generator\SecurityScheme;
@@ -114,6 +115,7 @@ class AppServiceProvider extends ServiceProvider
 
     public function register()
     {
+        $this->app->register(ChapaServiceProvider::class);
         Scramble::ignoreDefaultRoutes();
 
         $this->commands([

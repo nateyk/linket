@@ -45,9 +45,13 @@ export const appRouter = createBrowserRouter(
           path: '/',
           loader: async () => {
             const isLoggedIn = auth.isLoggedIn;
-            const linkeableData = getBootstrapData().loaders?.linkeablePage;
+            const loaders = getBootstrapData().loaders;
+            const linkeableData = loaders?.linkeablePage;
+            const publicDigitalProductPage =
+              loaders?.digitalProductPage ||
+              loaders?.digitalProductOrderSuccessPage;
 
-            if (!linkeableData) {
+            if (!linkeableData && !publicDigitalProductPage) {
               if (
                 !isLoggedIn &&
                 getBootstrapData().settings.homepage.type === 'loginPage' &&
@@ -69,7 +73,12 @@ export const appRouter = createBrowserRouter(
             );
           },
           lazy: () => {
-            if (getBootstrapData().loaders?.linkeablePage) {
+            const loaders = getBootstrapData().loaders;
+            if (
+              loaders?.linkeablePage ||
+              loaders?.digitalProductPage ||
+              loaders?.digitalProductOrderSuccessPage
+            ) {
               return import('@app/short-links/linkeable-renderer');
             }
             return import('@app/landing/landing-page');

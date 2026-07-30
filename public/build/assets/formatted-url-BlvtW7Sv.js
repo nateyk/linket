@@ -1,1 +1,0 @@
-import{a as e}from"./rolldown-runtime-Cyuzqnbw.js";import{Zr as t}from"./icons-Cr9rzYDV.js";import{t as n}from"./remove-protocol-thgeqZv_.js";var r=(0,e(t()).memo)(({url:e})=>n(e));export{r as t};

@@ -1,1 +1,0 @@
-import{en as e}from"./useBaseUiId-BSVaSIqf.js";import{s as t}from"./ReactStore-CJasCKCx.js";var n=t();function r(){return e}function i(){return!1}function a(){return!0}function o(){return(0,n.useSyncExternalStore)(r,i,a)}export{o as t};

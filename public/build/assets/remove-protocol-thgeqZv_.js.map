@@ -1,0 +1,1 @@
+{"version":3,"file":"remove-protocol-thgeqZv_.js","names":[],"sources":["../../../common/foundation/resources/client/ui/library/utils/urls/remove-protocol.ts"],"sourcesContent":["export function removeProtocol(url: string) {\n  if (!url) return url;\n  return url.replace(/(^\\w+:|^)\\/\\//, '');\n}\n"],"mappings":"AAAA,SAAgB,EAAe,EAAa,CAE1C,OADK,GACE,EAAI,QAAQ,gBAAiB,EAAE,CACxC"}

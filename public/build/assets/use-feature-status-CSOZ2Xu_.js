@@ -1,1 +1,0 @@
-import{Ir as e}from"./main-Cvh0vTuM.js";function t(t){let{data:n}=e();return{disabled:n?!n.data.links[t]:!1}}function n(t){let{data:n}=e();return{disabled:n?!n.data.qr_codes[t]:!1}}export{n,t};

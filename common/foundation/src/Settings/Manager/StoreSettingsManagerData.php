@@ -15,6 +15,8 @@ class StoreSettingsManagerData
 {
     public function execute(array $data)
     {
+        $this->storeChapaWebhookSecret($data);
+
         if (isset($data['server']) && !empty($data['server'])) {
             (new DotEnvEditor())->write($data['server']);
         }
@@ -30,6 +32,16 @@ class StoreSettingsManagerData
         Cache::flush();
 
         event(new SettingsSaved($data['client'], $data['server']));
+    }
+
+    private function storeChapaWebhookSecret(array &$data): void
+    {
+        $secret = data_get($data, 'server.chapa_webhook_secret');
+        data_forget($data, 'server.chapa_webhook_secret');
+
+        if (filled($secret)) {
+            settings()->save(['billing.chapa.webhook_secret' => $secret]);
+        }
     }
 
     protected function saveDatabaseSettings(array $data)

@@ -73,4 +73,5 @@ export const SiteConfig: Partial<SiteConfigContextValue> = {
 export const UploadType = {
   ...CommonUploadType,
   linkImages: 'linkImages',
+  digitalProductFiles: 'digitalProductFiles',
 } as const;

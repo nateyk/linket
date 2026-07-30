@@ -17,6 +17,7 @@ use Common\Roles\Controllers\RoleUsersController;
 use Common\Roles\Controllers\RolesController;
 use Common\Billing\Gateways\Paypal\PaypalController;
 use Common\Billing\Gateways\Stripe\StripeController;
+use Common\Billing\Gateways\Chapa\ChapaController;
 use Common\Billing\Products\ProductsController;
 use Common\Billing\Subscriptions\SubscriptionsController;
 use Common\Comments\Controllers\CommentableController;
@@ -47,6 +48,8 @@ use Common\Notifications\Controllers\NotificationSubscriptionsController;
 use Common\Pages\ContactPageController;
 use Common\Pages\CustomPageController;
 use Common\Reports\ReportController;
+use Common\Core\Middleware\VerifyCsrfToken;
+use Common\Core\Middleware\EnsureFrontendRequestsAreStateful;
 use Common\Search\Controllers\NormalizedModelsController;
 use Common\Search\Controllers\SearchSettingsController;
 use Common\Settings\Manager\SettingsController;
@@ -56,6 +59,15 @@ use Common\Votes\VoteController;
 use Common\Workspaces\Controllers\WorkspacesController;
 use Common\Workspaces\Controllers\WorkspaceInvitesController;
 use Common\Workspaces\Controllers\WorkspaceMembersController;
+use App\Storefront\Controllers\AdminDigitalProductsController;
+use App\Storefront\Controllers\DigitalProductsController;
+use App\Storefront\Controllers\PayoutRequestsController;
+use App\Storefront\Controllers\StorefrontSalesController;
+use App\Storefront\Controllers\StorefrontCheckoutController;
+use App\Storefront\Controllers\DigitalProductPayoutMethodController;
+use App\Storefront\Controllers\PublicDigitalProductsController;
+use App\Payments\Controllers\AdminPaymentTransactionsController;
+use App\Payments\Controllers\AdminPaymentHealthController;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Http\Controllers\PasswordResetLinkController;
 
@@ -195,6 +207,37 @@ Route::group(['prefix' => 'v1'], function () {
         Route::post('billing/stripe/change-default-payment-method', [StripeController::class, 'changeDefaultPaymentMethod']);
         Route::post('billing/stripe/store-subscription-details-locally', [StripeController::class, 'storeSubscriptionDetailsLocally']);
         Route::post('billing/paypal/store-subscription-details-locally', [PaypalController::class, 'storeSubscriptionDetailsLocally']);
+        Route::post('billing/chapa/checkout', [ChapaController::class, 'checkout'])->middleware('throttle:10,1');
+        Route::get('billing/chapa/transactions/{txRef}', [ChapaController::class, 'status'])->middleware('throttle:60,1');
+
+        // CREATOR STOREFRONT
+        Route::apiResource('storefront/products', DigitalProductsController::class);
+        Route::post('storefront/products/{digitalProduct}/submit', [DigitalProductsController::class, 'submit']);
+        Route::get('storefront/payout-requests', [PayoutRequestsController::class, 'index']);
+        Route::post('storefront/payout-requests', [PayoutRequestsController::class, 'store']);
+        Route::get('storefront/sales', [StorefrontSalesController::class, 'index']);
+        Route::get('admin/storefront/products', [AdminDigitalProductsController::class, 'index']);
+        Route::post('admin/storefront/products/{digitalProduct}/approve', [AdminDigitalProductsController::class, 'approve']);
+        Route::post('admin/storefront/products/{digitalProduct}/reject', [AdminDigitalProductsController::class, 'reject']);
+        Route::get('admin/storefront/payout-requests', [PayoutRequestsController::class, 'adminIndex']);
+        Route::post('admin/storefront/payout-requests/{payoutRequest}/mark-paid', [PayoutRequestsController::class, 'markPaid']);
+
+        // DIGITAL PRODUCTS (preferred public interface; storefront aliases remain for compatibility)
+        Route::get('digital-products/sales', [StorefrontSalesController::class, 'index']);
+        Route::get('digital-products/payout-requests', [PayoutRequestsController::class, 'index']);
+        Route::post('digital-products/payout-requests', [PayoutRequestsController::class, 'store']);
+        Route::get('digital-products/payout-method', [DigitalProductPayoutMethodController::class, 'show']);
+        Route::put('digital-products/payout-method', [DigitalProductPayoutMethodController::class, 'update']);
+        Route::apiResource('digital-products', DigitalProductsController::class);
+        Route::post('digital-products/{digitalProduct}/submit', [DigitalProductsController::class, 'submit']);
+        Route::get('admin/digital-products', [AdminDigitalProductsController::class, 'index']);
+        Route::post('admin/digital-products/{digitalProduct}/approve', [AdminDigitalProductsController::class, 'approve']);
+        Route::post('admin/digital-products/{digitalProduct}/reject', [AdminDigitalProductsController::class, 'reject']);
+        Route::get('admin/digital-products/payout-requests', [PayoutRequestsController::class, 'adminIndex']);
+        Route::post('admin/digital-products/payout-requests/{payoutRequest}/mark-paid', [PayoutRequestsController::class, 'markPaid']);
+        Route::get('admin/payment-transactions', [AdminPaymentTransactionsController::class, 'index']);
+        Route::get('admin/payment-health', [AdminPaymentHealthController::class, 'index']);
+        Route::post('admin/payment-health/test-email', [AdminPaymentHealthController::class, 'sendTestEmail']);
 
         // ADMIN
         Route::get('settings/server-max-file-size', [SettingsController::class, 'getServerMaxUploadSize']);
@@ -259,4 +302,18 @@ Route::group(['prefix' => 'v1'], function () {
     Route::post('auth/register', [MobileAuthController::class, 'register'])->withoutMiddleware('verifyApiAccess');
     Route::get('auth/social/{provider}/callback', [SocialAuthController::class, 'loginCallback']);
     Route::post('auth/password/email', [PasswordResetLinkController::class, 'store'])->middleware(['guest:'.config('fortify.guard')]);
+    Route::get('public/biolinks/{biolink}/digital-products', [PublicDigitalProductsController::class, 'index']);
+    Route::get('public/biolinks/{biolink}/digital-products/{digitalProduct}', [PublicDigitalProductsController::class, 'show']);
+    Route::post('public/biolinks/{biolink}/digital-products/{digitalProduct}/checkout', [PublicDigitalProductsController::class, 'checkout'])
+        ->middleware('throttle:20,1')
+        ->withoutMiddleware([
+            EnsureFrontendRequestsAreStateful::class,
+            VerifyCsrfToken::class,
+            VerifyApiAccessMiddleware::class,
+        ]);
+    Route::get('public/biolinks/{biolink}/digital-products/{digitalProduct}/orders/{order}', [PublicDigitalProductsController::class, 'order'])->middleware('throttle:60,1');
+    Route::get('storefront/products/{digitalProduct}/public', [StorefrontCheckoutController::class, 'show']);
+    Route::post('storefront/products/{digitalProduct}/checkout', [StorefrontCheckoutController::class, 'store'])->middleware('throttle:20,1');
+    Route::get('digital-products/{digitalProduct}/public', [StorefrontCheckoutController::class, 'show']);
+    Route::post('digital-products/{digitalProduct}/checkout', [StorefrontCheckoutController::class, 'store'])->middleware('throttle:20,1');
 });

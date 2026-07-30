@@ -10,6 +10,7 @@ import {
   NotebookTextIcon,
   SettingsIcon,
   SquareStackIcon,
+  StoreIcon,
   TagsIcon,
   UserIcon,
   UserRoundKeyIcon,
@@ -33,6 +34,8 @@ export const AdminSidebarIcons: Record<
   '/admin/files': <FilesIcon />,
   '/admin/localizations': <GlobeIcon />,
   '/admin/logs': <ClipboardClockIcon />,
+  '/admin/digital-products': <StoreIcon />,
+  '/admin/payment-activity': <CircleDollarSignIcon />,
 };
 
 for (const [key, value] of Object.entries(sharedDashboardIcons)) {

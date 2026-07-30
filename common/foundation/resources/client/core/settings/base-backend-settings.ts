@@ -104,6 +104,9 @@ export interface BaseBackendSettings {
     stripe?: {
       enable?: boolean;
     };
+    chapa?: {
+      enable?: boolean;
+    };
   };
   notifications: {
     integrated: boolean;

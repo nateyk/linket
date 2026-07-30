@@ -22,6 +22,7 @@ class Product extends BaseModel
         'position' => 'int',
         'trial_period_days' => 'int',
         'hidden' => 'boolean',
+        'storefront_benefits' => 'array',
     ];
 
     public const MODEL_TYPE = 'product';

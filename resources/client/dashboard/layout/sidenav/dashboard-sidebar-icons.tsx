@@ -9,6 +9,8 @@ import {
   PictureInPicture2Icon,
   QrCodeIcon,
   SearchIcon,
+  StoreIcon,
+  WalletCardsIcon,
 } from 'lucide-react';
 import {ComponentProps, ReactElement} from 'react';
 
@@ -32,6 +34,8 @@ export const dashboardSidebarIcons: Record<
 > = {
   '/dashboard/insights': <ChartColumnBigIcon />,
   '/dashboard/search': <SearchIcon />,
+  '/dashboard/my-products': <StoreIcon />,
+  '/dashboard/sales-payouts': <WalletCardsIcon />,
 };
 
 for (const [key, value] of Object.entries(sharedDashboardIcons)) {

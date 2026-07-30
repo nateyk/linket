@@ -1,0 +1,2 @@
+import{li as e}from"./icons-D3_jG86k.js";import{t}from"./dashboard-layout-DnzOEZTJ.js";var n=e();function r({children:e,title:r,headerRightContent:i}){return(0,n.jsxs)(t.MainSection,{children:[(0,n.jsxs)(t.SectionHeader,{children:[(0,n.jsx)(t.SidebarToggle,{}),(0,n.jsx)(t.SectionTitle,{children:(0,n.jsx)(`h1`,{children:r})}),i]}),(0,n.jsx)(`div`,{className:`w-full flex-auto overflow-y-auto`,children:(0,n.jsx)(`div`,{className:`mx-auto w-full max-w-6xl p-6`,children:e})})]})}export{r as t};
+//# sourceMappingURL=account-settings-page-layout-BcBoI9CM.js.map

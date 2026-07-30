@@ -15,6 +15,7 @@ use Illuminate\Routing\Controller;
 use Stripe\Invoice as StripeInvoice;
 use Stripe\Subscription as StripeSubscription;
 use Stripe\Webhook;
+use App\Storefront\StorefrontWebhookHandler;
 
 class StripeWebhookController extends Controller
 {
@@ -26,6 +27,12 @@ class StripeWebhookController extends Controller
     public function handleWebhook(Request $request): Response|JsonResponse
     {
         $webhookSecret = config('services.stripe.webhook_secret');
+        if (!$webhookSecret && in_array($request->input('type'), [
+            'checkout.session.completed',
+            'checkout.session.async_payment_succeeded',
+        ], true)) {
+            return response()->json(['message' => 'Stripe webhook signing secret is required for storefront payments.'], 403);
+        }
         if ($webhookSecret) {
             try {
                 $event = Webhook::constructEvent(
@@ -41,6 +48,8 @@ class StripeWebhookController extends Controller
         }
 
         return match ($event['type']) {
+            'checkout.session.completed',
+            'checkout.session.async_payment_succeeded' => $this->handleStorefrontCheckout($event),
             'invoice.paid' => $this->handleInvoicePaid($event),
             // sync user payment methods with local database
             'customer.updated' => $this->handleCustomerUpdated($event),
@@ -60,6 +69,12 @@ class StripeWebhookController extends Controller
                 => $this->handleSubscriptionCreatedAndUpdated($event),
             default => response('Webhook handled', 200),
         };
+    }
+
+    protected function handleStorefrontCheckout(array $payload): Response
+    {
+        app(StorefrontWebhookHandler::class)->handleCheckoutCompleted($payload['data']['object']);
+        return response('Webhook handled', 200);
     }
 
     protected function handleInvoicePaid(

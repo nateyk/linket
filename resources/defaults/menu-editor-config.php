@@ -52,5 +52,7 @@ return [
         '/dashboard/link-overlays',
         '/dashboard/link-pages',
         '/dashboard/pixels',
+        '/dashboard/my-products',
+        '/dashboard/sales-payouts',
     ],
 ];

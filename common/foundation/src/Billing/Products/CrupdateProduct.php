@@ -33,6 +33,7 @@ class CrupdateProduct
             'trial_period_days' => $data['trial_period_days'] ?? 0,
             'position' => $data['position'] ?? 0,
             'feature_list' => $data['feature_list'] ?? [],
+            'storefront_benefits' => $data['storefront_benefits'] ?? null,
         ];
 
         $product = $product->fill($newData);

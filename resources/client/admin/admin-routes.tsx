@@ -100,6 +100,18 @@ export const adminRoutes: RouteObject[] = [
             }),
           ),
       },
+      {
+        path: 'digital-products',
+        lazy: () => import('@app/admin/digital-products/admin-digital-products-page'),
+      },
+      {
+        path: 'digital-products/payouts',
+        lazy: () => import('@app/admin/digital-products/admin-digital-product-payouts-page'),
+      },
+      {
+        path: 'payment-activity',
+        lazy: () => import('@app/admin/digital-products/admin-payment-activity-page'),
+      },
     ],
   },
 ];

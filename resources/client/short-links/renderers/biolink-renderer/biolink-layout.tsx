@@ -99,7 +99,13 @@ export function BiolinkLayout({
                   );
                 } else {
                   const Widget = WidgetRenderers[item.type];
-                  renderedItem = <Widget widget={item} variant="biolinkPage" />;
+                  renderedItem = (
+                    <Widget
+                      widget={item}
+                      variant="biolinkPage"
+                      biolink={biolink}
+                    />
+                  );
                 }
 
                 return (

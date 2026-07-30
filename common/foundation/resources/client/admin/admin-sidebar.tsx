@@ -1,5 +1,6 @@
 import {AdminSidebarIcons} from '@app/admin/admin-config';
 import {useAuth} from '@common/auth/use-auth';
+import {useCustomMenu} from '@common/menus/use-custom-menu';
 import {
   NotificationsDialog,
   NotificationsTriggerBadge,
@@ -12,12 +13,20 @@ import {Avatar} from '@shadcn/avatar/avatar';
 import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {Popover} from '@shadcn/popover/popover';
 import {Trans} from '@ui/i18n/trans';
-import {BellIcon, ChevronUpIcon} from 'lucide-react';
+import {BellIcon, ChevronUpIcon, StoreIcon, WalletCardsIcon} from 'lucide-react';
 import {use} from 'react';
+import {NavLink} from 'react-router';
 
 export function AdminSidebar() {
   const {isMobileMode, leftSidebar} = use(DashboardLayoutContext);
   const isCompactMode = !isMobileMode && leftSidebar.status === 'collapsed';
+  const adminMenu = useCustomMenu('admin-sidebar');
+  const hasDigitalProducts = adminMenu?.items.some(
+    item => item.action === '/admin/digital-products',
+  );
+  const hasTransactions = adminMenu?.items.some(
+    item => item.action === '/admin/payment-activity',
+  );
 
   return (
     <Sidebar.Root
@@ -44,6 +53,30 @@ export function AdminSidebar() {
               defaultIcons={AdminSidebarIcons}
               end={item => item.action === '/admin'}
             />
+            {(!hasDigitalProducts || !hasTransactions) && (
+              <Sidebar.Menu>
+                {!hasDigitalProducts && (
+                  <Sidebar.MenuItem>
+                    <Sidebar.MenuButton
+                      render={<NavLink to="/admin/digital-products" />}
+                      icon={<StoreIcon />}
+                    >
+                      <Trans message="Digital Products" />
+                    </Sidebar.MenuButton>
+                  </Sidebar.MenuItem>
+                )}
+                {!hasTransactions && (
+                  <Sidebar.MenuItem>
+                    <Sidebar.MenuButton
+                      render={<NavLink to="/admin/payment-activity" />}
+                      icon={<WalletCardsIcon />}
+                    >
+                      <Trans message="Transactions" />
+                    </Sidebar.MenuButton>
+                  </Sidebar.MenuItem>
+                )}
+              </Sidebar.Menu>
+            )}
           </Sidebar.GroupContent>
         </Sidebar.Group>
       </Sidebar.Content>

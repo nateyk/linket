@@ -1,0 +1,2 @@
+import{a as e}from"./rolldown-runtime-Cyuzqnbw.js";import{li as t,ui as n}from"./icons-D3_jG86k.js";import{n as r}from"./trans-C5C2g3TN.js";import{t as i}from"./use-number-formatter-DqO6L4qe.js";var a=e(n()),o=t(),s=(0,a.memo)(({value:e,...t})=>{let n=i(t);return isNaN(e)&&(e=0),(0,o.jsx)(a.Fragment,{children:n.format(e)})},r);export{s as t};
+//# sourceMappingURL=formatted-number-BiIzBS4j.js.map

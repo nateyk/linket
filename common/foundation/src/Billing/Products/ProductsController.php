@@ -2,13 +2,9 @@
 
 namespace Common\Billing\Products;
 
-use Common\Billing\GatewayException;
 use Common\Billing\Gateways\Actions\SyncProductOnEnabledGateways;
-use Common\Billing\Gateways\Paypal\Paypal;
-use Common\Billing\Gateways\Stripe\Stripe;
 use Common\Billing\Models\Product;
 use Common\Core\Demo\BlockedOnDemoSite;
-use Exception;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -20,11 +16,6 @@ use Illuminate\Support\Facades\Gate;
  */
 class ProductsController extends Controller
 {
-    public function __construct(
-        protected Stripe $stripe,
-        protected Paypal $paypal,
-    ) {}
-
     /**
      * List all products.
      *
@@ -137,17 +128,6 @@ class ProductsController extends Controller
             ),
         );
 
-        try {
-            if ($this->stripe->isEnabled()) {
-                $this->stripe->deletePlan($product);
-            }
-            if ($this->paypal->isEnabled()) {
-                $this->paypal->deletePlan($product);
-            }
-        } catch (Exception $e) {
-            abort(422, $e->getMessage());
-        }
-
         $product->delete();
 
         return response()->noContent();
@@ -165,16 +145,7 @@ class ProductsController extends Controller
 
         $products = Product::where('free', false)->whereHas('prices')->get();
 
-        foreach ($products as $product) {
-            try {
-                app(SyncProductOnEnabledGateways::class)->execute($product);
-            } catch (GatewayException $e) {
-                abort(
-                    422,
-                    "Could not sync \"$product->name\" product: {$e->getMessage()}",
-                );
-            }
-        }
+        $products->each(fn(Product $product) => app(SyncProductOnEnabledGateways::class)->execute($product));
 
         return response()->noContent();
     }

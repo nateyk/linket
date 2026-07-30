@@ -11,6 +11,7 @@ use App\Links\Models\Linkeable;
 use App\Links\Models\LinkeableRule;
 use App\TrackingPixels\Models\TrackingPixel;
 use App\Models\User;
+use App\Storefront\Models\DigitalProduct;
 use App\Tags\Models\Tag;
 use Common\Domains\CustomDomain;
 use Common\Workspaces\Traits\BelongsToWorkspace;
@@ -104,6 +105,14 @@ class Biolink extends Linkeable
     public function widgets(): HasMany
     {
         return $this->hasMany(BiolinkWidget::class);
+    }
+
+    public function digitalProducts(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            DigitalProduct::class,
+            'digital_product_biolinks',
+        )->withTimestamps();
     }
 
     public function appearance(): HasOne

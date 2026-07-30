@@ -1,0 +1,2 @@
+import{t as e}from"./workspace-store-Djd6P6fE.js";import{h as t}from"./chunk-6CSD65Y2-BFeLhPrr.js";function n(){let n=t(),r=e(e=>e.activeWorkspace),i=n.some(e=>e.handle?.belinkRoutesType===`dashboard`)?`dashboard`:`admin`;return{routeType:i,isForCurrentUser:i===`dashboard`?!r||r.is_personal:!1}}export{n as t};
+//# sourceMappingURL=use-datatable-route-type-Dti6BAqu.js.map

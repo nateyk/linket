@@ -1,1 +1,0 @@
-import{Xr as e}from"./icons-Cr9rzYDV.js";import{On as t}from"./useBaseUiId-BSVaSIqf.js";import{t as n}from"./remote-favicon-V8J2dZUQ.js";var r=e();function i({link:e,className:i,size:a=`size-4`}){return e.image?(0,r.jsx)(`img`,{className:t(`object-cover`,a,i),alt:``,src:e.image}):(0,r.jsx)(n,{className:i,size:a,url:e.long_url})}export{i as t};

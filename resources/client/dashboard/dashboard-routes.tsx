@@ -352,6 +352,26 @@ export const dashboardRoutes: RouteObject[] = [
           },
         ],
       },
+      {
+        path: 'my-products',
+        lazy: () =>
+          import('@app/dashboard/digital-products/digital-products-page'),
+      },
+      {
+        path: 'my-products/new',
+        lazy: () =>
+          import('@app/dashboard/digital-products/digital-product-form-page'),
+      },
+      {
+        path: 'my-products/:productId/edit',
+        lazy: () =>
+          import('@app/dashboard/digital-products/digital-product-form-page'),
+      },
+      {
+        path: 'sales-payouts',
+        lazy: () =>
+          import('@app/dashboard/digital-products/sales-payouts-page'),
+      },
 
       // biolinks
       {

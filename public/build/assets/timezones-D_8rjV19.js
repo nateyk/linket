@@ -1,0 +1,2 @@
+import{a as e}from"./trans-C5C2g3TN.js";var t=e(()=>Intl.supportedValuesOf(`timeZone`)),n=e(()=>{let e=t(),n={};for(let t of e){let[e,r]=t.split(`/`);n[e]||(n[e]=[]),n[e].push(t)}return n});export{t as n,n as t};
+//# sourceMappingURL=timezones-D_8rjV19.js.map

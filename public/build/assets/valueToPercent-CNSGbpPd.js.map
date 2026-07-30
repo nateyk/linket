@@ -1,0 +1,1 @@
+{"version":3,"file":"valueToPercent-CNSGbpPd.js","names":[],"sources":["../../../node_modules/@base-ui/react/esm/utils/valueToPercent.js"],"sourcesContent":["export function valueToPercent(value, min, max) {\n  return (value - min) * 100 / (max - min);\n}"],"x_google_ignoreList":[0],"mappings":"AAAA,SAAgB,EAAe,EAAO,EAAK,EAAK,CAC9C,OAAQ,EAAQ,GAAO,KAAO,EAAM,EACtC"}

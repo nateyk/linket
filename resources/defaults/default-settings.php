@@ -306,6 +306,12 @@ return [
                     ],
                     [
                         'type' => 'route',
+                        'label' => 'Digital Products',
+                        'action' => '/dashboard/my-products',
+                        'id' => 'digital-products-dashboard',
+                    ],
+                    [
+                        'type' => 'route',
                         'label' => 'Insights',
                         'action' => '/dashboard/insights',
                         'id' => 318,
@@ -346,6 +352,12 @@ return [
                         'label' => 'Link pages',
                         'action' => '/dashboard/link-pages',
                         'id' => 637,
+                    ],
+                    [
+                        'type' => 'route',
+                        'label' => 'Sales & Payouts',
+                        'action' => '/dashboard/sales-payouts',
+                        'id' => 'sales-payouts-dashboard',
                     ],
                 ],
             ],
@@ -599,6 +611,12 @@ return [
                         'action' => '/admin/logs',
                         'type' => 'route',
                         'id' => '8j435f',
+                    ],
+                    [
+                        'label' => 'Digital Products',
+                        'action' => '/admin/digital-products',
+                        'type' => 'route',
+                        'id' => 'digital-products-admin',
                     ],
                 ],
                 'positions' => ['admin-sidebar'],

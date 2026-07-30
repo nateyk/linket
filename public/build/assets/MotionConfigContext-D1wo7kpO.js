@@ -1,0 +1,2 @@
+import{a as e}from"./rolldown-runtime-Cyuzqnbw.js";import{ui as t}from"./icons-D3_jG86k.js";var n=e(t(),1),r=(0,n.createContext)({});function i(e){let t=(0,n.useRef)(null);return t.current===null&&(t.current=e()),t.current}var a=typeof window<`u`?n.useLayoutEffect:n.useEffect,o=(0,n.createContext)(null),s=(0,n.createContext)({transformPagePoint:e=>e,isStatic:!1,reducedMotion:`never`});export{r as a,i,o as n,a as r,s as t};
+//# sourceMappingURL=MotionConfigContext-D1wo7kpO.js.map

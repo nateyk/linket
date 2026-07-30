@@ -35,6 +35,10 @@ class CrupdateProductRequest extends FormRequest
             'hidden' => 'boolean',
             'free' => 'boolean',
             'feature_list' => 'array',
+            'storefront_benefits' => 'nullable|array',
+            'storefront_benefits.max_products' => 'nullable|integer|min:1',
+            'storefront_benefits.commission_bps' => 'nullable|integer|min:0|max:10000',
+            'storefront_benefits.max_upload_bytes' => 'nullable|integer|min:1',
             'trial_period_days' => 'integer|min:0|max:14',
             'prices' => [
                 'array',
@@ -45,6 +49,7 @@ class CrupdateProductRequest extends FormRequest
             'prices.*.id' => 'integer',
             'prices.*.currency' => [
                 Rule::when($this->isCreating(), 'required'),
+                Rule::when($this->isCreating(), 'in:etb,ETB'),
                 'string',
                 'max:50',
             ],

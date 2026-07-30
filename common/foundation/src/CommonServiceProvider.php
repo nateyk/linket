@@ -3,6 +3,7 @@
 namespace Common;
 
 use App\Models\Channel;
+use App\Payments\Commands\ProcessChapaSubscriptionRenewals;
 use App\Models\User;
 use App\Policies\ChannelPolicy;
 use Clockwork\Support\Laravel\ClockworkServiceProvider;
@@ -540,6 +541,7 @@ class CommonServiceProvider extends ServiceProvider
             CountUploadingBackendFiles::class,
             CheckIfUpdateAvailableCommand::class,
             UpdateAppCommand::class,
+            ProcessChapaSubscriptionRenewals::class,
         ];
 
         if ($this->app->environment() !== 'production') {
@@ -582,6 +584,11 @@ class CommonServiceProvider extends ServiceProvider
             $schedule
                 ->command(CountUploadingBackendFiles::class)
                 ->everyFifteenMinutes();
+            $schedule
+                ->command(ProcessChapaSubscriptionRenewals::class)
+                ->hourly()
+                ->withoutOverlapping()
+                ->onOneServer();
 
             if (config('app.envato_purchase_code')) {
                 $schedule

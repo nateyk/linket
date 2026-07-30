@@ -1,15 +1,22 @@
 import {CompactUsageTrigger} from '@app/dashboard/layout/sidenav/compact-usage-trigger';
 import {dashboardSidebarIcons} from '@app/dashboard/layout/sidenav/dashboard-sidebar-icons';
+import {useCustomMenu} from '@common/menus/use-custom-menu';
 import {DashboardLayoutContext} from '@common/ui/dashboard/dashboard-layout-context';
 import {Sidebar} from '@common/ui/dashboard/sidebar';
 import {Logo} from '@common/ui/navigation/navbar/logo';
 import {WorkspaceSelector} from '@common/workspace/workspace-selector';
 import {Trans} from '@ui/i18n/trans';
+import {StoreIcon} from 'lucide-react';
 import {use} from 'react';
+import {NavLink} from 'react-router';
 import {UsageMeter} from './usage-meter';
 
 export function AppDashboardSidebar() {
   const {isMobileMode, leftSidebar} = use(DashboardLayoutContext);
+  const primaryMenu = useCustomMenu('dashboard-primary');
+  const hasDigitalProducts = primaryMenu?.items.some(
+    item => item.action === '/dashboard/my-products',
+  );
 
   return (
     <Sidebar.Root
@@ -32,6 +39,18 @@ export function AppDashboardSidebar() {
               defaultIcons={dashboardSidebarIcons}
               end={item => item.action === '/dashboard'}
             />
+            {!hasDigitalProducts && (
+              <Sidebar.Menu>
+                <Sidebar.MenuItem>
+                  <Sidebar.MenuButton
+                    render={<NavLink to="/dashboard/my-products" />}
+                    icon={<StoreIcon />}
+                  >
+                    <Trans message="Digital Products" />
+                  </Sidebar.MenuButton>
+                </Sidebar.MenuItem>
+              </Sidebar.Menu>
+            )}
           </Sidebar.GroupContent>
         </Sidebar.Group>
 

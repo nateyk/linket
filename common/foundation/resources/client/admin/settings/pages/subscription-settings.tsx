@@ -7,6 +7,7 @@ import {SettingsPanel} from '@common/admin/settings/layout/settings-panel';
 import {useAdminSettings} from '@common/admin/settings/use-admin-settings';
 import {FormTextField} from '@ui/forms/input-field/text-field/text-field';
 import {FormSwitch} from '@ui/forms/toggle/switch';
+import {Alert} from '@shadcn/alert/alert';
 import {Trans} from '@ui/i18n/trans';
 import {useTrans} from '@ui/i18n/use-trans';
 import {Fragment} from 'react';
@@ -27,6 +28,9 @@ export function Component() {
           stripe: {
             enable: data.client.billing?.stripe?.enable ?? false,
           },
+          chapa: {
+            enable: data.client.billing?.chapa?.enable ?? true,
+          },
           invoice: {
             address: data.client.billing?.invoice?.address ?? '',
             notes: data.client.billing?.invoice?.notes ?? '',
@@ -40,6 +44,8 @@ export function Component() {
         stripe_key: data.server?.stripe_key ?? '',
         stripe_secret: data.server?.stripe_secret ?? '',
         stripe_webhook_secret: data.server?.stripe_webhook_secret ?? '',
+        chapa_secret_key: data.server?.chapa_secret_key ?? '',
+        chapa_webhook_secret: data.server?.chapa_webhook_secret ?? '',
       },
     },
   });
@@ -47,11 +53,67 @@ export function Component() {
   return (
     <AdminSettingsLayout form={form} title={<Trans message="Subscriptions" />}>
       <GeneralSection />
-      <PaypalSection />
-      <StripeSection />
+      <ChapaSection />
       <InvoiceAddressSection />
       <InvoiceNotesSection />
     </AdminSettingsLayout>
+  );
+}
+
+function ChapaSection() {
+  const {watch} = useFormContext<AdminSettings>();
+  const chapaIsEnabled = watch('client.billing.chapa.enable');
+
+  return (
+    <SettingsPanel
+      className="mb-6"
+      title={<Trans message="Chapa Gateway" />}
+      description={
+        <Trans message="Accept ETB payments for subscriptions and Digital Products through Chapa." />
+      }
+      link={
+        <DocsLink link="https://developer.chapa.co/laravel-sdk/">
+          <Trans message="How to set up Chapa" />
+        </DocsLink>
+      }
+    >
+      <FormSwitch name="client.billing.chapa.enable">
+        <Trans message="Enable Chapa" />
+      </FormSwitch>
+      {chapaIsEnabled && (
+        <SettingsErrorGroup
+          name="chapa_group"
+          separatorTop={false}
+          separatorBottom={false}
+        >
+          {isInvalid => (
+            <Fragment>
+              <FormTextField
+                size="sm"
+                name="server.chapa_secret_key"
+                label={<Trans message="Chapa secret key" />}
+                required
+                invalid={isInvalid}
+                className="mt-5"
+              />
+              <FormTextField
+                size="sm"
+                name="server.chapa_webhook_secret"
+                label={<Trans message="Chapa webhook signing secret" />}
+                invalid={isInvalid}
+                className="mt-5"
+              />
+              <Alert className="mt-5" variant="default" fillStyle="subtleFill">
+                <Alert.Title><Trans message="Webhook setup" /></Alert.Title>
+                <Alert.Description>
+                  <Trans message="In Chapa, send payment.authorized webhooks to /billing/chapa/webhook on your public HTTPS Linket URL. Paste the signing secret here; it is stored encrypted and is never shown again." />
+                </Alert.Description>
+              </Alert>
+            </Fragment>
+          )}
+        </SettingsErrorGroup>
+      )}
+    </SettingsPanel>
   );
 }
 

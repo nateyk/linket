@@ -30,6 +30,7 @@ export function PriceForm({index, onRemovePrice}: PriceFormProps) {
     useWatch({control, name: 'prices'})?.some(price => price.id != null) ??
     false;
   const isNewPrice = useWatch({control, name: `prices.${index}.id`}) == null;
+  const currentCurrency = useWatch({control, name: `prices.${index}.currency`});
   const subscriberCount =
     Number(
       useWatch({
@@ -51,11 +52,11 @@ export function PriceForm({index, onRemovePrice}: PriceFormProps) {
 
   const currencyItems = useMemo(
     () =>
-      currencies.map(currency => ({
+      currencies.filter(currency => currency.code === 'ETB' || currency.code === currentCurrency).map(currency => ({
         value: currency.code,
         label: `${currency.code}: ${currency.name}`,
       })),
-    [currencies],
+    [currencies, currentCurrency],
   );
 
   const billingPeriodItems = useMemo(

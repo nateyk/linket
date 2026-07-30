@@ -18,6 +18,8 @@ export interface AdminServerSettings {
   stripe_key?: string;
   stripe_secret?: string;
   stripe_webhook_secret?: string;
+  chapa_secret_key?: string;
+  chapa_webhook_secret?: string;
 
   // social login
   envato_id?: string;
