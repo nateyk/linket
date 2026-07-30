@@ -253,6 +253,11 @@ export const appRouter = createBrowserRouter(
           loader: () => queryClient.ensureQueryData(listProductsOptions()),
         },
 
+        {
+          path: 'order-lookup',
+          lazy: () =>
+            import('@app/digital-products/public/order-lookup-page'),
+        },
         ...commonRoutes,
         {
           path: '/link-pages/:pageId/preview',

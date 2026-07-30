@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "dev": "vite --host",
+    "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
     "storybook": "storybook dev -p 6006 -c common/foundation/resources/client/.storybook",

@@ -14,4 +14,5 @@ export type BiolinkAppearanceConfig = {
   btnConfig?: BiolinkAppearanceConfigBtnConfig;
   fontConfig?: BiolinkAppearanceConfigFontConfig;
   hideBranding?: boolean;
+  layout?: 'default' | 'profile-sidebar';
 };

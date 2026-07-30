@@ -180,6 +180,7 @@ class SeedDemoData extends Command
                     'radius' => 'rounded-full',
                     'textColor' => '#ffffff',
                 ],
+                'layout' => 'profile-sidebar',
             ],
         ]);
 

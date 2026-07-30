@@ -1,6 +1,7 @@
 import {BackgroundStyle} from '@app/dashboard/biolink/biolink-editor/appearance/background-style';
 import {ButtonStyle} from '@app/dashboard/biolink/biolink-editor/appearance/button-style';
 import {appearanceHeaderClassnames} from '@app/dashboard/biolink/biolink-editor/appearance/header-classnames';
+import {LayoutStyle} from '@app/dashboard/biolink/biolink-editor/appearance/layout-style';
 import {useBiolinkEditorStore} from '@app/dashboard/biolink/biolink-editor/biolink-editor-store';
 import {useAuth} from '@common/auth/use-auth';
 import {NoFeaturePermissionPopover} from '@common/billing/upgrade/no-permission-button';
@@ -23,6 +24,7 @@ export function Component() {
       <BackgroundStyle />
       <ButtonStyle />
       <TextStyle />
+      <LayoutStyle />
       <BrandingStyle />
     </div>
   );

@@ -14,16 +14,23 @@ import {StoreIcon} from 'lucide-react';
 import {ReactElement} from 'react';
 import {useForm} from 'react-hook-form';
 
-export interface ShopWidget extends BiolinkWidget {
+export type ShopWidgetConfig = {
+  title?: string;
+  layout?: 'list' | 'grid';
+  source?: 'digital-products';
+  product_ids?: number[];
+};
+
+export type ShopWidget = Omit<BiolinkWidget, 'type' | 'config'> & {
   type: 'shop';
-  config: {title?: string; layout?: 'list' | 'grid'; source?: 'digital-products'; product_ids?: number[]};
-}
+  config: ShopWidgetConfig;
+};
 
 export function ShopWidgetDialog({children, widget, open: propsOpen, onOpenChange: propsOnOpenChange}: {children?: ReactElement<typeof Dialog.Trigger>; widget?: ShopWidget; open?: boolean; onOpenChange?: (open: boolean) => void}) {
   const [open, setOpen] = useControlledState(propsOpen, false, propsOnOpenChange);
   const {biolinkId} = useRequiredParams(['biolinkId']);
-  const form = useForm<ShopWidget['config']>({defaultValues: {title: widget?.config.title ?? '', layout: widget?.config.layout ?? 'list', source: 'digital-products', product_ids: widget?.config.product_ids ?? []}});
+  const form = useForm<ShopWidgetConfig>({defaultValues: {title: widget?.config.title ?? '', layout: widget?.config.layout ?? 'list', source: 'digital-products', product_ids: widget?.config.product_ids ?? []}});
   const mutation = useCrupdateBiolinkWidget(biolinkId, form, widget?.id);
   const layouts = [{value: 'list', label: <Trans message="List" />}, {value: 'grid', label: <Trans message="Grid" />}];
-  return <Dialog.Root open={open} onOpenChange={setOpen}>{children}<Dialog.Portal><Dialog.Backdrop /><HookForm.Root form={form} onSubmit={values => mutation.mutate({type: 'shop', config: values}, {onSuccess: () => setOpen(false), onError: error => onFormQueryError(error, form)})}><Dialog.Content><Dialog.Header><Dialog.Title><StoreIcon /><Trans message="Digital Products" /></Dialog.Title></Dialog.Header><Dialog.Body><Field.Group><HookForm.Field name="title"><Field.Label><Trans message="Section title" /></Field.Label><Input placeholder="Shop" /><Field.Description><Trans message="Choose which products appear from the Digital Products page." /></Field.Description></HookForm.Field><HookForm.Field name="layout"><Field.Label><Trans message="Layout" /></Field.Label><Select.Root items={layouts}><Select.Trigger className="w-full"><Select.Value /></Select.Trigger><Select.Content>{layouts.map(item => <Select.Item key={item.value} value={item.value}>{item.label}</Select.Item>)}</Select.Content></Select.Root></HookForm.Field></Field.Group></Dialog.Body><Dialog.Footer><Dialog.CloseButton><Trans message="Cancel" /></Dialog.CloseButton><Button type="submit" disabled={mutation.isPending || !form.formState.isDirty}>{widget ? <Trans message="Update" /> : <Trans message="Add" />}</Button></Dialog.Footer></Dialog.Content></HookForm.Root></Dialog.Portal></Dialog.Root>;
+  return <Dialog.Root open={open} onOpenChange={setOpen}>{children}<Dialog.Portal><Dialog.Backdrop /><HookForm.Root form={form} onSubmit={values => mutation.mutate({type: 'shop', config: values as unknown as BiolinkWidget['config']}, {onSuccess: () => setOpen(false), onError: error => onFormQueryError(error, form)})}><Dialog.Content><Dialog.Header><Dialog.Title><StoreIcon /><Trans message="Digital Products" /></Dialog.Title></Dialog.Header><Dialog.Body><Field.Group><HookForm.Field name="title"><Field.Label><Trans message="Section title" /></Field.Label><Input placeholder="Shop" /><Field.Description><Trans message="Choose which products appear from the Digital Products page." /></Field.Description></HookForm.Field><HookForm.Field name="layout"><Field.Label><Trans message="Layout" /></Field.Label><Select.Root items={layouts}><Select.Trigger className="w-full"><Select.Value /></Select.Trigger><Select.Content>{layouts.map(item => <Select.Item key={item.value} value={item.value}>{item.label}</Select.Item>)}</Select.Content></Select.Root></HookForm.Field></Field.Group></Dialog.Body><Dialog.Footer><Dialog.CloseButton><Trans message="Cancel" /></Dialog.CloseButton><Button type="submit" disabled={mutation.isPending || !form.formState.isDirty}>{widget ? <Trans message="Update" /> : <Trans message="Add" />}</Button></Dialog.Footer></Dialog.Content></HookForm.Root></Dialog.Portal></Dialog.Root>;
 }

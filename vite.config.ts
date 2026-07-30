@@ -25,6 +25,11 @@ function isIconsChunk(id: string): boolean {
 
 export default defineConfig({
   base: '',
+  server: {
+    host: '127.0.0.1',
+    port: 5173,
+    strictPort: false,
+  },
   resolve: {
     preserveSymlinks: true,
     tsconfigPaths: true,

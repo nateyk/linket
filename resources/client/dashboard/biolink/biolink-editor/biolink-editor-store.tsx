@@ -21,6 +21,7 @@ const defaultAppearance: Appearance = {
     backgroundColor: '',
     color: '',
   },
+  layout: 'default',
 };
 
 export const createBiolinkEditorStore = (biolink: Biolink) => {

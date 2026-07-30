@@ -68,6 +68,7 @@ use App\Storefront\Controllers\DigitalProductPayoutMethodController;
 use App\Storefront\Controllers\PublicDigitalProductsController;
 use App\Payments\Controllers\AdminPaymentTransactionsController;
 use App\Payments\Controllers\AdminPaymentHealthController;
+use App\Storefront\Controllers\OrderLookupController;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Http\Controllers\PasswordResetLinkController;
 
@@ -312,6 +313,16 @@ Route::group(['prefix' => 'v1'], function () {
             VerifyApiAccessMiddleware::class,
         ]);
     Route::get('public/biolinks/{biolink}/digital-products/{digitalProduct}/orders/{order}', [PublicDigitalProductsController::class, 'order'])->middleware('throttle:60,1');
+    Route::post('public/order-lookup', [OrderLookupController::class, 'lookup'])->middleware('throttle:20,1')->withoutMiddleware([
+        EnsureFrontendRequestsAreStateful::class,
+        VerifyCsrfToken::class,
+        VerifyApiAccessMiddleware::class,
+    ]);
+    Route::post('public/order-lookup/resend-receipt', [OrderLookupController::class, 'resendReceipt'])->middleware('throttle:10,1')->withoutMiddleware([
+        EnsureFrontendRequestsAreStateful::class,
+        VerifyCsrfToken::class,
+        VerifyApiAccessMiddleware::class,
+    ]);
     Route::get('storefront/products/{digitalProduct}/public', [StorefrontCheckoutController::class, 'show']);
     Route::post('storefront/products/{digitalProduct}/checkout', [StorefrontCheckoutController::class, 'store'])->middleware('throttle:20,1');
     Route::get('digital-products/{digitalProduct}/public', [StorefrontCheckoutController::class, 'show']);

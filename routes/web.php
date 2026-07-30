@@ -19,6 +19,7 @@ Route::get('qr/{hashOrAlias}', [QrCodesController::class, 'redirectToDestination
 Route::get('contact', [HomeController::class, 'render']);
 Route::get('pages/{slugOrId}', [CustomPageController::class, 'show']);
 Route::get('forgot-password', [HomeController::class, 'render']);
+Route::get('order-lookup', [HomeController::class, 'render']);
 
 Route::get('{linkHash}/img', [LinkImageController::class, 'show']);
 
