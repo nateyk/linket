@@ -1,8 +1,7 @@
 import {
-  listCurrentUserBiolinksOptions,
+  listBiolinksOptions,
   retrieveBiolinkOptions,
 } from '@app/dashboard/biolink/biolinks-queries';
-import {getSelectedBiolinkId} from '@app/dashboard/biolink/use-selected-biolink-id';
 import {retrieveDomainOptions} from '@app/dashboard/custom-domains/domains-queries';
 import {
   listFoldersOptions,
@@ -376,32 +375,11 @@ export const dashboardRoutes: RouteObject[] = [
       // biolinks
       {
         path: 'biolinks',
-        middleware: [
-          async ({params}) => {
-            const biolinks =
-              (await queryClient.fetchQuery(listCurrentUserBiolinksOptions()))
-                .data ?? [];
-
-            // first check route params
-            let biolinkId: number | string | null = params.biolinkId ?? null;
-
-            // then see if user has selected active biolink previously
-            if (!biolinkId) {
-              biolinkId = getSelectedBiolinkId() || null;
-            }
-
-            // get selected biolink, or default to first one available
-            let biolink = biolinkId
-              ? biolinks.find(b => b.id === biolinkId)
-              : null;
-            if (!biolink) biolink = biolinks[0];
-
-            if (biolink) {
-              throw redirect(`/dashboard/biolinks/${biolink.id}`);
-            }
-          },
-        ],
-        lazy: () => import('@app/dashboard/biolink/no-biolinks-page'),
+        lazy: () => import('@app/dashboard/biolink/biolinks-page'),
+        loader: ({request}) =>
+          queryClient.ensureQueryData(
+            listBiolinksOptions('dashboard', searchParamsFromUrl(request.url)),
+          ),
       },
 
       ...sharedDashboardRoutes('dashboard'),

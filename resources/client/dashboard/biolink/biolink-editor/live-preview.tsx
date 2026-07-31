@@ -36,6 +36,7 @@ export function LivePreview() {
             content={content}
             appearance={appearance}
             className="h-full"
+            isPreview
           />
         </PhoneSkeleton>
         <div className="mt-3.5 text-center text-sm text-muted-foreground">
@@ -51,7 +52,7 @@ interface PhoneSkeletonProps {
 }
 function PhoneSkeleton({children}: PhoneSkeletonProps) {
   return (
-    <div className="h-181 w-87.5 overflow-hidden rounded-[64px] border-12 border-[#444546] shadow-lg">
+    <div className="h-181 w-87.5 overflow-hidden rounded-panel border bg-background shadow-sm">
       {children}
     </div>
   );

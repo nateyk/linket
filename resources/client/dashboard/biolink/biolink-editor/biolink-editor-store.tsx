@@ -21,13 +21,17 @@ const defaultAppearance: Appearance = {
     backgroundColor: '',
     color: '',
   },
-  layout: 'default',
+  layout: 'profile-sidebar',
 };
 
 export const createBiolinkEditorStore = (biolink: Biolink) => {
   return create<BiolinkEditorState>()((set, get) => ({
     getState: () => get(),
-    appearance: biolink.appearance?.config ?? defaultAppearance,
+    appearance: {
+      ...defaultAppearance,
+      ...(biolink.appearance?.config ?? {}),
+      layout: 'profile-sidebar',
+    },
     appearanceIsDirty: false,
     setAppearanceIsDirty: (isDirty: boolean) => {
       set(() => ({appearanceIsDirty: isDirty}));

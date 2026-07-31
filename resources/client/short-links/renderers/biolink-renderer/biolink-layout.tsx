@@ -20,12 +20,10 @@ import {message} from '@ui/i18n/message';
 import {useTrans} from '@ui/i18n/use-trans';
 import {useSettings} from '@ui/settings/use-settings';
 import {useIsDarkMode} from '@ui/themes/use-is-dark-mode';
-import {Avatar} from '@shadcn/avatar/avatar';
 import {cn} from '@ui/utils/cn';
 import Color from 'colorjs.io';
 import {ReactElement, useEffect, useMemo} from 'react';
 import {Link} from 'react-router';
-import {UserIcon} from 'lucide-react';
 
 interface BiolinkLayoutProps {
   biolink: Biolink;
@@ -34,6 +32,7 @@ interface BiolinkLayoutProps {
   className?: string;
   enableLinkAnimations?: boolean;
   showAds?: boolean;
+  isPreview?: boolean;
 }
 export function BiolinkLayout({
   biolink,
@@ -42,6 +41,7 @@ export function BiolinkLayout({
   content,
   enableLinkAnimations,
   showAds,
+  isPreview,
 }: BiolinkLayoutProps) {
   if (!appearance) {
     appearance = biolink.appearance?.config ?? null;
@@ -66,36 +66,47 @@ export function BiolinkLayout({
     }
   }, [enableLinkAnimations, content]);
 
-  const isSidebar = appearance?.layout === 'profile-sidebar';
+  const isSidebar = true;
 
   return (
     <div className="@container">
       <div
-        className={cn('isolate', !isSidebar && '@2xl:pt-10', className)}
+        className={cn(
+          'isolate',
+          isPreview && 'relative h-full overflow-hidden',
+          !isPreview && !isSidebar && '@2xl:pt-10',
+          className,
+        )}
         style={{
           fontFamily: appearance?.fontConfig?.family,
         }}
       >
-        <div
-          className={cn(
-            'fixed inset-0 z-1 after:absolute after:inset-0 after:bg-black/20 after:backdrop-blur-sm',
-            !isSidebar && 'hidden @2xl:block',
-          )}
-        >
-          <Background appearance={appearance} />
-        </div>
+        {!isPreview && (
+          <div
+            className={cn(
+              'fixed inset-0 z-1 after:absolute after:inset-0 after:bg-black/20 after:backdrop-blur-sm',
+              !isSidebar && 'hidden @2xl:block',
+            )}
+          >
+            <Background appearance={appearance} />
+          </div>
+        )}
 
         <div
           className={cn(
-            isSidebar
-              ? 'relative z-2 min-h-screen overflow-hidden'
-              : 'relative z-2 mx-auto min-h-screen max-w-2xl overflow-hidden @2xl:min-h-[calc(100vh-2.5rem)] @2xl:rounded-t-card @2xl:shadow-2xl',
+            isPreview
+              ? 'relative z-2 min-h-full overflow-hidden'
+              : isSidebar
+                ? 'relative z-2 min-h-screen overflow-hidden'
+                : 'relative z-2 mx-auto min-h-screen max-w-2xl overflow-hidden @2xl:min-h-[calc(100vh-2.5rem)] @2xl:rounded-t-card @2xl:shadow-2xl',
           )}
           style={{
             color: appearance?.bgConfig?.color,
           }}
         >
-          {!isSidebar && <Background className="z-3" appearance={appearance} />}
+          {(!isSidebar || isPreview) && (
+            <Background className="z-3" appearance={appearance} />
+          )}
 
           {isSidebar ? (
             <SidebarLayout
@@ -136,13 +147,7 @@ function SidebarLayout({
     return true;
   });
 
-  const socialsWidget = activeContent.find(
-    item => item.model_type === 'biolinkWidget' && item.type === 'socials',
-  ) as BiolinkWidget | undefined;
-
   const nonShopContent = activeContent.filter(item => {
-    if (item.model_type === 'biolinkWidget' && item.type === 'socials')
-      return false;
     if (item.model_type === 'biolinkWidget' && item.type === 'shop')
       return false;
     return true;
@@ -153,32 +158,22 @@ function SidebarLayout({
   ) as BiolinkWidget[];
   const shopWidget = shopWidgets.at(-1);
 
-  if (!shopWidget) {
-    return (
-      <DefaultLayout
-        biolink={biolink}
-        appearance={appearance}
-        content={content}
-        showAds={showAds}
-      />
-    );
-  }
-
   return (
     <main className="relative z-4 px-4 py-5 sm:px-6 sm:py-7 @2xl:px-8 @2xl:py-8">
-      <div className="mx-auto grid w-full max-w-[92rem] gap-8 @2xl:grid-cols-[minmax(0,360px)_minmax(0,1fr)] @2xl:items-start @2xl:gap-10">
+      <div
+        className={cn(
+          'mx-auto grid w-full max-w-[92rem] gap-8 @2xl:items-start @2xl:gap-10',
+          shopWidget && '@2xl:grid-cols-[minmax(0,360px)_minmax(0,1fr)]',
+          !shopWidget && '@2xl:max-w-[420px]',
+        )}
+      >
         <section
           className="min-w-0 overflow-hidden rounded-card bg-background/45 p-4 text-foreground shadow-lg shadow-black/10 ring-1 ring-white/15 backdrop-blur-sm sm:p-5"
           aria-label="Biolink profile and links"
         >
-          <ProfileCard
-            biolink={biolink}
-            socialsWidget={socialsWidget}
-          />
+          {showAds && <AdHost slot="biolink_top" className="mb-6" />}
 
-          {showAds && <AdHost slot="biolink_top" className="mt-6" />}
-
-          <div className="mt-6 flex w-full flex-col gap-3.5 @2xl:gap-4">
+          <div className="flex w-full flex-col gap-3.5 @2xl:gap-4">
             {nonShopContent.map(item => {
               const key = `${item.model_type}-${item.id}`;
               let renderedItem: ReactElement;
@@ -209,12 +204,14 @@ function SidebarLayout({
           </div>
         </section>
 
-        <section
-          className="min-w-0 @2xl:pt-1"
-          aria-label="Digital products"
-        >
-          <ShopColumn widget={shopWidget} biolink={biolink} />
-        </section>
+        {shopWidget && (
+          <section
+            className="min-w-0 @2xl:pt-1"
+            aria-label="Digital products"
+          >
+            <ShopColumn widget={shopWidget} biolink={biolink} />
+          </section>
+        )}
       </div>
     </main>
   );
@@ -292,50 +289,6 @@ function DefaultLayout({
         })}
       </div>
       <Branding appearance={appearance} />
-    </div>
-  );
-}
-
-interface ProfileCardProps {
-  biolink: Biolink;
-  socialsWidget?: BiolinkWidget;
-}
-
-function ProfileCard({biolink, socialsWidget}: ProfileCardProps) {
-  const displayName = biolink.user?.name || biolink.name;
-  const avatar = biolink.user?.image;
-
-  return (
-    <div className="flex flex-col items-center text-center">
-      <Avatar.Root size="lg" className="size-20 ring-2 ring-background">
-        {avatar ? (
-          <Avatar.Image src={avatar} alt={displayName} />
-        ) : (
-          <Avatar.ColorFallback className="text-3xl">
-            {displayName?.charAt(0)?.toUpperCase() ?? <UserIcon />}
-          </Avatar.ColorFallback>
-        )}
-      </Avatar.Root>
-
-      <h1 className="mt-4 text-xl font-semibold leading-tight">{displayName}</h1>
-      {biolink.name && biolink.name !== displayName && (
-        <p className="mt-1 text-sm opacity-70">@{biolink.name}</p>
-      )}
-
-      {socialsWidget && (
-        <div className="mt-4 w-full">
-          {(() => {
-            const Widget = WidgetRenderers[socialsWidget.type];
-            return (
-              <Widget
-                widget={socialsWidget}
-                variant="biolinkPage"
-                biolink={biolink}
-              />
-            );
-          })()}
-        </div>
-      )}
     </div>
   );
 }
