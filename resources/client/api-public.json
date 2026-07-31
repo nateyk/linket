@@ -3045,6 +3045,110 @@
                 }
             }
         },
+        "/admin/payment-transactions/{paymentTransaction}/refunds": {
+            "post": {
+                "operationId": "adminDigitalProductRefunds.store",
+                "tags": [
+                    "AdminDigitalProductRefunds"
+                ],
+                "parameters": [
+                    {
+                        "name": "paymentTransaction",
+                        "in": "path",
+                        "required": true,
+                        "description": "The payment transaction ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "amount_cents": {
+                                        "type": "integer",
+                                        "minimum": 1
+                                    },
+                                    "reason": {
+                                        "type": "string",
+                                        "maxLength": 2000
+                                    },
+                                    "external_reference": {
+                                        "type": "string",
+                                        "maxLength": 190
+                                    },
+                                    "refunded_at": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "format": "date-time"
+                                    }
+                                },
+                                "required": [
+                                    "amount_cents",
+                                    "reason",
+                                    "external_reference"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "id": {
+                                                    "type": "string"
+                                                },
+                                                "amount_cents": {
+                                                    "type": "string"
+                                                },
+                                                "reason": {
+                                                    "type": "string"
+                                                },
+                                                "refunded_at": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "id",
+                                                "amount_cents",
+                                                "reason",
+                                                "refunded_at"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            }
+        },
         "/admin/storefront/products": {
             "get": {
                 "operationId": "storefront.adminDigitalProducts.index_0",
@@ -4355,8 +4459,17 @@
                             "schema": {
                                 "type": "object",
                                 "properties": {
+                                    "withdrawal_method_id": {
+                                        "type": [
+                                            "integer",
+                                            "null"
+                                        ]
+                                    },
                                     "type": {
-                                        "type": "string",
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
                                         "enum": [
                                             "bank_transfer",
                                             "paypal",
@@ -4373,7 +4486,6 @@
                                     }
                                 },
                                 "required": [
-                                    "type",
                                     "account_holder",
                                     "destination"
                                 ]
@@ -4402,6 +4514,159 @@
                     },
                     "422": {
                         "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/digital-products/withdrawal-methods": {
+            "get": {
+                "operationId": "digitalProductWithdrawalMethods.index",
+                "tags": [
+                    "DigitalProductWithdrawalMethods"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of `DigitalProductWithdrawalMethodResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/DigitalProductWithdrawalMethodResource"
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/digital-products/withdrawal-methods": {
+            "get": {
+                "operationId": "digitalProductWithdrawalMethods.adminIndex",
+                "tags": [
+                    "DigitalProductWithdrawalMethods"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of `DigitalProductWithdrawalMethodResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/DigitalProductWithdrawalMethodResource"
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "digitalProductWithdrawalMethods.store",
+                "tags": [
+                    "DigitalProductWithdrawalMethods"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`DigitalProductWithdrawalMethodResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/DigitalProductWithdrawalMethodResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    }
+                }
+            }
+        },
+        "/admin/digital-products/withdrawal-methods/{withdrawalMethod}": {
+            "put": {
+                "operationId": "digitalProductWithdrawalMethods.update",
+                "tags": [
+                    "DigitalProductWithdrawalMethods"
+                ],
+                "parameters": [
+                    {
+                        "name": "withdrawalMethod",
+                        "in": "path",
+                        "required": true,
+                        "description": "The withdrawal method ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`DigitalProductWithdrawalMethodResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/DigitalProductWithdrawalMethodResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
                     }
                 }
             }
@@ -5986,6 +6251,167 @@
                 }
             }
         },
+        "/public/order-lookup": {
+            "post": {
+                "operationId": "orderLookup.lookup",
+                "tags": [
+                    "OrderLookup"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "maxLength": 254
+                                    },
+                                    "reference": {
+                                        "type": "string",
+                                        "maxLength": 120
+                                    }
+                                },
+                                "required": [
+                                    "email",
+                                    "reference"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "orders": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "string"
+                                                    },
+                                                    "product_title": {
+                                                        "type": "string"
+                                                    },
+                                                    "currency": {
+                                                        "type": "string"
+                                                    },
+                                                    "gross_amount_cents": {
+                                                        "type": "integer"
+                                                    },
+                                                    "paid_at": {
+                                                        "type": "string"
+                                                    },
+                                                    "receipt_sent_at": {
+                                                        "type": "string"
+                                                    },
+                                                    "downloads": {
+                                                        "type": "string"
+                                                    }
+                                                },
+                                                "required": [
+                                                    "id",
+                                                    "product_title",
+                                                    "currency",
+                                                    "gross_amount_cents",
+                                                    "paid_at",
+                                                    "receipt_sent_at",
+                                                    "downloads"
+                                                ]
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "orders"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/public/order-lookup/resend-receipt": {
+            "post": {
+                "operationId": "orderLookup.resendReceipt",
+                "tags": [
+                    "OrderLookup"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "maxLength": 254
+                                    },
+                                    "order_id": {
+                                        "type": "string",
+                                        "maxLength": 120
+                                    }
+                                },
+                                "required": [
+                                    "email",
+                                    "order_id"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "anyOf": [
+                                                {
+                                                    "type": "null"
+                                                },
+                                                {
+                                                    "type": "array",
+                                                    "items": {}
+                                                },
+                                                {
+                                                    "type": "string"
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            }
+        },
         "/storefront/payout-requests": {
             "get": {
                 "operationId": "storefront.payoutRequests.index_0",
@@ -6160,11 +6586,19 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "",
+                        "description": "`PayoutRequest`",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "string"
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/PayoutRequest"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
                                 }
                             }
                         }
@@ -6344,6 +6778,32 @@
                         }
                     }
                 ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "transfer_reference": {
+                                        "type": "string",
+                                        "maxLength": 190
+                                    },
+                                    "note": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "maxLength": 2000
+                                    }
+                                },
+                                "required": [
+                                    "transfer_reference"
+                                ]
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "200": {
                         "description": "`PayoutRequest`",
@@ -6363,28 +6823,11 @@
                             }
                         }
                     },
-                    "422": {
-                        "description": "An error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "description": "Error overview.",
-                                            "example": ""
-                                        }
-                                    },
-                                    "required": [
-                                        "message"
-                                    ]
-                                }
-                            }
-                        }
-                    },
                     "403": {
                         "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
                     },
                     "404": {
                         "$ref": "#/components/responses/ModelNotFoundException"
@@ -6566,17 +7009,67 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "",
+                        "description": "`PayoutRequest`",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "string"
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/PayoutRequest"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
                                 }
                             }
                         }
                     },
                     "422": {
                         "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/digital-products/payout-requests/{payoutRequest}/cancel": {
+            "post": {
+                "operationId": "payoutRequests.cancel",
+                "tags": [
+                    "PayoutRequests"
+                ],
+                "parameters": [
+                    {
+                        "name": "payoutRequest",
+                        "in": "path",
+                        "required": true,
+                        "description": "The payout request ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`PayoutRequest`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/PayoutRequest"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
                     }
                 }
             }
@@ -6733,9 +7226,9 @@
                 }
             }
         },
-        "/admin/digital-products/payout-requests/{payoutRequest}/mark-paid": {
+        "/admin/digital-products/payout-requests/{payoutRequest}/processing": {
             "post": {
-                "operationId": "storefront.payoutRequests.markPaid_0",
+                "operationId": "payoutRequests.startProcessing",
                 "tags": [
                     "PayoutRequests"
                 ],
@@ -6750,6 +7243,24 @@
                         }
                     }
                 ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "note": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "maxLength": 2000
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
                 "responses": {
                     "200": {
                         "description": "`PayoutRequest`",
@@ -6769,21 +7280,68 @@
                             }
                         }
                     },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
                     "422": {
-                        "description": "An error",
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            }
+        },
+        "/admin/digital-products/payout-requests/{payoutRequest}/reject": {
+            "post": {
+                "operationId": "payoutRequests.reject",
+                "tags": [
+                    "PayoutRequests"
+                ],
+                "parameters": [
+                    {
+                        "name": "payoutRequest",
+                        "in": "path",
+                        "required": true,
+                        "description": "The payout request ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "reason": {
+                                        "type": "string",
+                                        "maxLength": 2000
+                                    }
+                                },
+                                "required": [
+                                    "reason"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`PayoutRequest`",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "type": "object",
                                     "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "description": "Error overview.",
-                                            "example": ""
+                                        "data": {
+                                            "$ref": "#/components/schemas/PayoutRequest"
                                         }
                                     },
                                     "required": [
-                                        "message"
+                                        "data"
                                     ]
                                 }
                             }
@@ -6791,6 +7349,149 @@
                     },
                     "403": {
                         "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            }
+        },
+        "/admin/digital-products/payout-requests/{payoutRequest}/reveal-destination": {
+            "post": {
+                "operationId": "payoutRequests.revealDestination",
+                "tags": [
+                    "PayoutRequests"
+                ],
+                "parameters": [
+                    {
+                        "name": "payoutRequest",
+                        "in": "path",
+                        "required": true,
+                        "description": "The payout request ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "reason": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "maxLength": 500
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "destination": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "destination"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            }
+        },
+        "/admin/digital-products/payout-requests/{payoutRequest}/mark-paid": {
+            "post": {
+                "operationId": "storefront.payoutRequests.markPaid_0",
+                "tags": [
+                    "PayoutRequests"
+                ],
+                "parameters": [
+                    {
+                        "name": "payoutRequest",
+                        "in": "path",
+                        "required": true,
+                        "description": "The payout request ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "transfer_reference": {
+                                        "type": "string",
+                                        "maxLength": 190
+                                    },
+                                    "note": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "maxLength": 2000
+                                    }
+                                },
+                                "required": [
+                                    "transfer_reference"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`PayoutRequest`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/PayoutRequest"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
                     },
                     "404": {
                         "$ref": "#/components/responses/ModelNotFoundException"
@@ -9652,6 +10353,13 @@
                             },
                             "hideBranding": {
                                 "type": "boolean"
+                            },
+                            "layout": {
+                                "type": "string",
+                                "enum": [
+                                    "default",
+                                    "profile-sidebar"
+                                ]
                             }
                         }
                     }
@@ -12137,6 +12845,12 @@
                     "type": {
                         "type": "string"
                     },
+                    "withdrawal_method_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
                     "account_holder": {
                         "type": "string"
                     },
@@ -12161,12 +12875,57 @@
                 "required": [
                     "id",
                     "type",
+                    "withdrawal_method_id",
                     "account_holder",
                     "display_label",
                     "created_at",
                     "updated_at"
                 ],
                 "title": "DigitalProductPayoutMethodResource"
+            },
+            "DigitalProductWithdrawalMethodResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "code": {
+                        "type": "string"
+                    },
+                    "destination_label": {
+                        "type": "string"
+                    },
+                    "instructions": {
+                        "type": "string"
+                    },
+                    "minimum_amount_cents": {
+                        "type": "string"
+                    },
+                    "maximum_amount_cents": {
+                        "type": "string"
+                    },
+                    "is_active": {
+                        "type": "string"
+                    },
+                    "position": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "name",
+                    "code",
+                    "destination_label",
+                    "instructions",
+                    "minimum_amount_cents",
+                    "maximum_amount_cents",
+                    "is_active",
+                    "position"
+                ],
+                "title": "DigitalProductWithdrawalMethodResource"
             },
             "ErrorLogItem": {
                 "type": "object",
@@ -13211,6 +13970,27 @@
                             "null"
                         ]
                     },
+                    "withdrawal_method_name": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "withdrawal_method": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "string"
+                            },
+                            "name": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "name"
+                        ]
+                    },
                     "status": {
                         "type": "string"
                     },
@@ -13220,6 +14000,45 @@
                             "null"
                         ],
                         "format": "date-time"
+                    },
+                    "processing_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "rejected_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "cancelled_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "transfer_reference": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "admin_notes": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "rejection_reason": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
                     },
                     "created_at": {
                         "type": [
@@ -13249,6 +14068,57 @@
                             "name",
                             "email"
                         ]
+                    },
+                    "activities": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "action": {
+                                    "type": "string"
+                                },
+                                "note": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ]
+                                },
+                                "created_at": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
+                                    "format": "date-time"
+                                },
+                                "actor": {
+                                    "type": [
+                                        "object",
+                                        "null"
+                                    ],
+                                    "properties": {
+                                        "name": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "name"
+                                    ]
+                                }
+                            },
+                            "required": [
+                                "id",
+                                "action",
+                                "note",
+                                "created_at",
+                                "actor"
+                            ]
+                        }
                     }
                 },
                 "required": [
@@ -13256,8 +14126,13 @@
                     "amount_cents",
                     "currency",
                     "payout_method_label",
+                    "withdrawal_method_name",
                     "status",
                     "paid_at",
+                    "processing_at",
+                    "rejected_at",
+                    "cancelled_at",
+                    "rejection_reason",
                     "created_at"
                 ],
                 "title": "PayoutRequest"

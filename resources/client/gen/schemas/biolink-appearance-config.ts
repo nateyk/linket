@@ -8,11 +8,12 @@
 import type {BiolinkAppearanceConfigBgConfig} from './biolink-appearance-config-bg-config';
 import type {BiolinkAppearanceConfigBtnConfig} from './biolink-appearance-config-btn-config';
 import type {BiolinkAppearanceConfigFontConfig} from './biolink-appearance-config-font-config';
+import type {BiolinkAppearanceConfigLayout} from './biolink-appearance-config-layout';
 
 export type BiolinkAppearanceConfig = {
   bgConfig?: BiolinkAppearanceConfigBgConfig;
   btnConfig?: BiolinkAppearanceConfigBtnConfig;
   fontConfig?: BiolinkAppearanceConfigFontConfig;
   hideBranding?: boolean;
-  layout?: 'default' | 'profile-sidebar';
+  layout?: BiolinkAppearanceConfigLayout;
 };

@@ -12,6 +12,7 @@ class DownloadController extends Controller
     {
         abort_unless($request->hasValidSignature(), 403, __('This download link is invalid or has expired.'));
         $entitlement = DownloadEntitlement::query()->where('token', $token)->with('file')->firstOrFail();
+        abort_if($entitlement->revoked_at, 410, __('This download is no longer available because the order was refunded.'));
         abort_if($entitlement->expires_at->isPast(), 410, __('This download link is no longer available.'));
         $wasCounted = DownloadEntitlement::query()
             ->whereKey($entitlement->id)

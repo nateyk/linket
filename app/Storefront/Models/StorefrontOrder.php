@@ -16,4 +16,6 @@ class StorefrontOrder extends StorefrontModel
     public function creator(): BelongsTo { return $this->belongsTo(User::class, 'creator_id'); }
     public function items(): HasMany { return $this->hasMany(StorefrontOrderItem::class); }
     public function entitlements(): HasMany { return $this->hasMany(DownloadEntitlement::class); }
+    public function earningsLedger(): HasMany { return $this->hasMany(DigitalProductEarningsLedger::class); }
+    public function refunds(): HasMany { return $this->hasMany(DigitalProductPaymentRefund::class); }
 }

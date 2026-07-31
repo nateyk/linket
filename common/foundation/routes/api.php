@@ -65,6 +65,8 @@ use App\Storefront\Controllers\PayoutRequestsController;
 use App\Storefront\Controllers\StorefrontSalesController;
 use App\Storefront\Controllers\StorefrontCheckoutController;
 use App\Storefront\Controllers\DigitalProductPayoutMethodController;
+use App\Storefront\Controllers\DigitalProductWithdrawalMethodsController;
+use App\Storefront\Controllers\AdminDigitalProductRefundsController;
 use App\Storefront\Controllers\PublicDigitalProductsController;
 use App\Payments\Controllers\AdminPaymentTransactionsController;
 use App\Payments\Controllers\AdminPaymentHealthController;
@@ -227,6 +229,8 @@ Route::group(['prefix' => 'v1'], function () {
         Route::get('digital-products/sales', [StorefrontSalesController::class, 'index']);
         Route::get('digital-products/payout-requests', [PayoutRequestsController::class, 'index']);
         Route::post('digital-products/payout-requests', [PayoutRequestsController::class, 'store']);
+        Route::post('digital-products/payout-requests/{payoutRequest}/cancel', [PayoutRequestsController::class, 'cancel']);
+        Route::get('digital-products/withdrawal-methods', [DigitalProductWithdrawalMethodsController::class, 'index']);
         Route::get('digital-products/payout-method', [DigitalProductPayoutMethodController::class, 'show']);
         Route::put('digital-products/payout-method', [DigitalProductPayoutMethodController::class, 'update']);
         Route::apiResource('digital-products', DigitalProductsController::class);
@@ -235,8 +239,15 @@ Route::group(['prefix' => 'v1'], function () {
         Route::post('admin/digital-products/{digitalProduct}/approve', [AdminDigitalProductsController::class, 'approve']);
         Route::post('admin/digital-products/{digitalProduct}/reject', [AdminDigitalProductsController::class, 'reject']);
         Route::get('admin/digital-products/payout-requests', [PayoutRequestsController::class, 'adminIndex']);
+        Route::post('admin/digital-products/payout-requests/{payoutRequest}/processing', [PayoutRequestsController::class, 'startProcessing']);
+        Route::post('admin/digital-products/payout-requests/{payoutRequest}/reject', [PayoutRequestsController::class, 'reject']);
+        Route::post('admin/digital-products/payout-requests/{payoutRequest}/reveal-destination', [PayoutRequestsController::class, 'revealDestination']);
         Route::post('admin/digital-products/payout-requests/{payoutRequest}/mark-paid', [PayoutRequestsController::class, 'markPaid']);
+        Route::get('admin/digital-products/withdrawal-methods', [DigitalProductWithdrawalMethodsController::class, 'adminIndex']);
+        Route::post('admin/digital-products/withdrawal-methods', [DigitalProductWithdrawalMethodsController::class, 'store']);
+        Route::put('admin/digital-products/withdrawal-methods/{withdrawalMethod}', [DigitalProductWithdrawalMethodsController::class, 'update']);
         Route::get('admin/payment-transactions', [AdminPaymentTransactionsController::class, 'index']);
+        Route::post('admin/payment-transactions/{paymentTransaction}/refunds', [AdminDigitalProductRefundsController::class, 'store']);
         Route::get('admin/payment-health', [AdminPaymentHealthController::class, 'index']);
         Route::post('admin/payment-health/test-email', [AdminPaymentHealthController::class, 'sendTestEmail']);
 

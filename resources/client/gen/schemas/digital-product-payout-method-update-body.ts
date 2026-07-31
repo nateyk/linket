@@ -8,7 +8,10 @@
 import type {DigitalProductPayoutMethodUpdateBodyType} from './digital-product-payout-method-update-body-type';
 
 export type DigitalProductPayoutMethodUpdateBody = {
-  type: DigitalProductPayoutMethodUpdateBodyType;
+  /** @nullable */
+  withdrawal_method_id?: number | null;
+  /** @nullable */
+  type?: DigitalProductPayoutMethodUpdateBodyType;
   /** @maxLength 160 */
   account_holder: string;
   /** @maxLength 500 */

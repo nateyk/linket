@@ -6,8 +6,12 @@
  * OpenAPI spec version: 1.0.0
  */
 
+/**
+ * @nullable
+ */
 export type DigitalProductPayoutMethodUpdateBodyType =
-  (typeof DigitalProductPayoutMethodUpdateBodyType)[keyof typeof DigitalProductPayoutMethodUpdateBodyType];
+  | (typeof DigitalProductPayoutMethodUpdateBodyType)[keyof typeof DigitalProductPayoutMethodUpdateBodyType]
+  | null;
 
 export const DigitalProductPayoutMethodUpdateBodyType = {
   bank_transfer: 'bank_transfer',

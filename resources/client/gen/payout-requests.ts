@@ -5,13 +5,31 @@
  * In the documentation API requests will be sent from currently logged in user so you do not need to provide a bearer token manually. <br><br> When calling API from outside the documentation, you will need to provide an access token for all requests in authorization header: `Authorization: Bearer <Token>` <br> You can create a new access token in your account settings page.
  * OpenAPI spec version: 1.0.0
  */
+import type {PayoutRequestsCancel200} from './schemas/payout-requests-cancel200';
+
+import type {PayoutRequestsRejectBody} from './schemas/payout-requests-reject-body';
+
+import type {PayoutRequestsReject200} from './schemas/payout-requests-reject200';
+
+import type {PayoutRequestsRevealDestinationBody} from './schemas/payout-requests-reveal-destination-body';
+
+import type {PayoutRequestsRevealDestination200} from './schemas/payout-requests-reveal-destination200';
+
+import type {PayoutRequestsStartProcessingBody} from './schemas/payout-requests-start-processing-body';
+
+import type {PayoutRequestsStartProcessing200} from './schemas/payout-requests-start-processing200';
+
 import type {StorefrontPayoutRequestsAdminIndex0200} from './schemas/storefront-payout-requests-admin-index0200';
 
 import type {StorefrontPayoutRequestsIndex0200} from './schemas/storefront-payout-requests-index0200';
 
+import type {StorefrontPayoutRequestsMarkPaid0Body} from './schemas/storefront-payout-requests-mark-paid0-body';
+
 import type {StorefrontPayoutRequestsMarkPaid0200} from './schemas/storefront-payout-requests-mark-paid0200';
 
 import type {StorefrontPayoutRequestsStore1Body} from './schemas/storefront-payout-requests-store1-body';
+
+import type {StorefrontPayoutRequestsStore1200} from './schemas/storefront-payout-requests-store1200';
 
 import {orvalApiFetch} from '../../../common/foundation/resources/client/http/query-client';
 
@@ -29,9 +47,11 @@ export const storefrontPayoutRequestsIndex0 = (
 };
 export const storefrontPayoutRequestsStore1 = (
   storefrontPayoutRequestsStore1Body: StorefrontPayoutRequestsStore1Body,
-  options?: SecondParameter<typeof orvalApiFetch<string>>,
+  options?: SecondParameter<
+    typeof orvalApiFetch<StorefrontPayoutRequestsStore1200>
+  >,
 ) => {
-  return orvalApiFetch<string>(
+  return orvalApiFetch<StorefrontPayoutRequestsStore1200>(
     {
       url: `/digital-products/payout-requests`,
       method: 'POST',
@@ -53,6 +73,7 @@ export const storefrontPayoutRequestsAdminIndex0 = (
 };
 export const storefrontPayoutRequestsMarkPaid0 = (
   payoutRequest: number,
+  storefrontPayoutRequestsMarkPaid0Body: StorefrontPayoutRequestsMarkPaid0Body,
   options?: SecondParameter<
     typeof orvalApiFetch<StorefrontPayoutRequestsMarkPaid0200>
   >,
@@ -61,6 +82,69 @@ export const storefrontPayoutRequestsMarkPaid0 = (
     {
       url: `/admin/digital-products/payout-requests/${payoutRequest}/mark-paid`,
       method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      data: storefrontPayoutRequestsMarkPaid0Body,
+    },
+    options,
+  );
+};
+export const payoutRequestsCancel = (
+  payoutRequest: number,
+  options?: SecondParameter<typeof orvalApiFetch<PayoutRequestsCancel200>>,
+) => {
+  return orvalApiFetch<PayoutRequestsCancel200>(
+    {
+      url: `/digital-products/payout-requests/${payoutRequest}/cancel`,
+      method: 'POST',
+    },
+    options,
+  );
+};
+export const payoutRequestsStartProcessing = (
+  payoutRequest: number,
+  payoutRequestsStartProcessingBody?: PayoutRequestsStartProcessingBody,
+  options?: SecondParameter<
+    typeof orvalApiFetch<PayoutRequestsStartProcessing200>
+  >,
+) => {
+  return orvalApiFetch<PayoutRequestsStartProcessing200>(
+    {
+      url: `/admin/digital-products/payout-requests/${payoutRequest}/processing`,
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      data: payoutRequestsStartProcessingBody,
+    },
+    options,
+  );
+};
+export const payoutRequestsReject = (
+  payoutRequest: number,
+  payoutRequestsRejectBody: PayoutRequestsRejectBody,
+  options?: SecondParameter<typeof orvalApiFetch<PayoutRequestsReject200>>,
+) => {
+  return orvalApiFetch<PayoutRequestsReject200>(
+    {
+      url: `/admin/digital-products/payout-requests/${payoutRequest}/reject`,
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      data: payoutRequestsRejectBody,
+    },
+    options,
+  );
+};
+export const payoutRequestsRevealDestination = (
+  payoutRequest: number,
+  payoutRequestsRevealDestinationBody?: PayoutRequestsRevealDestinationBody,
+  options?: SecondParameter<
+    typeof orvalApiFetch<PayoutRequestsRevealDestination200>
+  >,
+) => {
+  return orvalApiFetch<PayoutRequestsRevealDestination200>(
+    {
+      url: `/admin/digital-products/payout-requests/${payoutRequest}/reveal-destination`,
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      data: payoutRequestsRevealDestinationBody,
     },
     options,
   );
@@ -76,4 +160,16 @@ export type StorefrontPayoutRequestsAdminIndex0Result = NonNullable<
 >;
 export type StorefrontPayoutRequestsMarkPaid0Result = NonNullable<
   Awaited<ReturnType<typeof storefrontPayoutRequestsMarkPaid0>>
+>;
+export type PayoutRequestsCancelResult = NonNullable<
+  Awaited<ReturnType<typeof payoutRequestsCancel>>
+>;
+export type PayoutRequestsStartProcessingResult = NonNullable<
+  Awaited<ReturnType<typeof payoutRequestsStartProcessing>>
+>;
+export type PayoutRequestsRejectResult = NonNullable<
+  Awaited<ReturnType<typeof payoutRequestsReject>>
+>;
+export type PayoutRequestsRevealDestinationResult = NonNullable<
+  Awaited<ReturnType<typeof payoutRequestsRevealDestination>>
 >;

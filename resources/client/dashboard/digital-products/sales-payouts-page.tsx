@@ -4,6 +4,7 @@ import {Badge} from '@shadcn/badge/badge';
 import {Button} from '@shadcn/button/button';
 import {Field} from '@shadcn/forms/field';
 import {Input} from '@shadcn/forms/input/input';
+import {Select} from '@shadcn/forms/select/select';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {Table} from '@shadcn/table/table';
 import {Trans} from '@ui/i18n/trans';
@@ -11,6 +12,7 @@ import {
   BanknoteArrowUpIcon,
   CircleDollarSignIcon,
   LandmarkIcon,
+  Clock3Icon,
   RefreshCwIcon,
   WalletCardsIcon,
 } from 'lucide-react';
@@ -20,6 +22,10 @@ type Summary = {
   gross_sales_cents: number;
   creator_earnings_cents: number;
   available_for_payout_cents: number;
+  held_earnings_cents: number;
+  reserved_payout_cents: number;
+  paid_out_cents: number;
+  lifetime_earnings_cents: number;
 };
 
 type Order = {
@@ -45,13 +51,18 @@ type PayoutMethod = {
   type: 'bank_transfer' | 'paypal' | 'other';
   account_holder: string;
   display_label: string;
+  withdrawal_method_id?: number | null;
 };
+
+type WithdrawalMethod = {id: number; name: string; destination_label: string; instructions?: string | null};
 
 export function Component() {
   const [summary, setSummary] = useState<Summary>();
   const [orders, setOrders] = useState<Order[]>([]);
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [method, setMethod] = useState<PayoutMethod>();
+  const [withdrawalMethods, setWithdrawalMethods] = useState<WithdrawalMethod[]>([]);
+  const [withdrawalMethodId, setWithdrawalMethodId] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
   const [payoutAmount, setPayoutAmount] = useState('');
@@ -67,7 +78,7 @@ export function Component() {
     setError(undefined);
 
     try {
-      const [salesResponse, payoutsResponse, methodResponse] = await Promise.all([
+      const [salesResponse, payoutsResponse, methodResponse, methodsResponse] = await Promise.all([
         fetch('/api/v1/digital-products/sales', {
           credentials: 'same-origin',
           headers: {Accept: 'application/json'},
@@ -77,6 +88,10 @@ export function Component() {
           headers: {Accept: 'application/json'},
         }),
         fetch('/api/v1/digital-products/payout-method', {
+          credentials: 'same-origin',
+          headers: {Accept: 'application/json'},
+        }),
+        fetch('/api/v1/digital-products/withdrawal-methods', {
           credentials: 'same-origin',
           headers: {Accept: 'application/json'},
         }),
@@ -93,12 +108,18 @@ export function Component() {
       setSummary(sales.summary ?? {});
       setOrders(sales.orders?.data ?? sales.orders ?? []);
       setPayouts(payoutCollection.data ?? []);
+      if (methodsResponse.ok) {
+        const methods = (await methodsResponse.json()).data ?? [];
+        setWithdrawalMethods(methods);
+        if (!methodResponse.ok && methods[0]) setWithdrawalMethodId(String(methods[0].id));
+      }
 
       if (methodResponse.ok) {
         const item = (await methodResponse.json()).data as PayoutMethod | null;
         if (item) {
           setMethod(item);
           setMethodType(item.type);
+          setWithdrawalMethodId(item.withdrawal_method_id ? String(item.withdrawal_method_id) : '');
           setAccountHolder(item.account_holder);
         }
       }
@@ -131,6 +152,7 @@ export function Component() {
         '/api/v1/digital-products/payout-method',
         {
           type: methodType,
+          withdrawal_method_id: Number(withdrawalMethodId),
           account_holder: accountHolder.trim(),
           destination: destination.trim(),
         },
@@ -171,6 +193,16 @@ export function Component() {
     }
   };
 
+  const cancelPayout = async (payout: Payout) => {
+    setError(undefined);
+    try {
+      await apiClient.post(`/api/v1/digital-products/payout-requests/${payout.id}/cancel`);
+      await load();
+    } catch {
+      setError('Unable to cancel this payout request.');
+    }
+  };
+
   return (
     <DashboardLayout.MainSection>
       <DashboardLayout.SectionHeader>
@@ -196,16 +228,17 @@ export function Component() {
           <div className="grid items-start gap-8 xl:grid-cols-[minmax(0,1fr)_20rem]">
             <main className="min-w-0 space-y-8">
               <SalesTable orders={orders} loading={loading} />
-              <PayoutHistory payouts={payouts} />
+              <PayoutHistory payouts={payouts} onCancel={payout => void cancelPayout(payout)} />
             </main>
             <aside className="space-y-7 border-t pt-6 xl:border-t-0 xl:border-l xl:pt-0 xl:pl-7">
               <WithdrawalMethod
                 method={method}
-                type={methodType}
+                methods={withdrawalMethods}
+                withdrawalMethodId={withdrawalMethodId}
                 accountHolder={accountHolder}
                 destination={destination}
                 saving={savingMethod}
-                onType={setMethodType}
+                onWithdrawalMethod={setWithdrawalMethodId}
                 onAccountHolder={setAccountHolder}
                 onDestination={setDestination}
                 onSave={() => void saveMethod()}
@@ -251,10 +284,12 @@ function SummaryStrip({
       value: summary?.available_for_payout_cents ?? 0,
       icon: BanknoteArrowUpIcon,
     },
+    {label: 'On hold', value: summary?.held_earnings_cents ?? 0, icon: Clock3Icon},
+    {label: 'Reserved', value: summary?.reserved_payout_cents ?? 0, icon: LandmarkIcon},
   ];
 
   return (
-    <section className="grid border-y sm:grid-cols-3">
+    <section className="grid border-y sm:grid-cols-3 xl:grid-cols-5">
       {items.map((item, index) => {
         const Icon = item.icon;
 
@@ -340,7 +375,7 @@ function SalesTable({orders, loading}: {orders: Order[]; loading: boolean}) {
   );
 }
 
-function PayoutHistory({payouts}: {payouts: Payout[]}) {
+function PayoutHistory({payouts, onCancel}: {payouts: Payout[]; onCancel: (payout: Payout) => void}) {
   return (
     <section>
       <SectionHeading title="Payout history" />
@@ -360,6 +395,7 @@ function PayoutHistory({payouts}: {payouts: Payout[]}) {
               <Table.Head className="text-end">
                 <Trans message="Amount" />
               </Table.Head>
+              <Table.Head><span className="sr-only"><Trans message="Actions" /></span></Table.Head>
             </Table.Row>
           </Table.Header>
           <Table.Body>
@@ -383,12 +419,13 @@ function PayoutHistory({payouts}: {payouts: Payout[]}) {
                   <Table.Cell className="text-end font-medium">
                     {formatMoney(payout.amount_cents, payout.currency)}
                   </Table.Cell>
+                  <Table.Cell className="text-end">{payout.status === 'requested' && <Button size="sm" variant="ghost" onClick={() => onCancel(payout)}><Trans message="Cancel" /></Button>}</Table.Cell>
                 </Table.Row>
               ))
             ) : (
               <Table.Row>
                 <Table.Cell
-                  colSpan={4}
+                  colSpan={5}
                   className="h-24 text-center text-muted-foreground"
                 >
                   <Trans message="No payout requests yet." />
@@ -412,30 +449,28 @@ function SectionHeading({title}: {title: string}) {
 
 function WithdrawalMethod({
   method,
-  type,
+  methods,
+  withdrawalMethodId,
   accountHolder,
   destination,
   saving,
-  onType,
+  onWithdrawalMethod,
   onAccountHolder,
   onDestination,
   onSave,
 }: {
   method?: PayoutMethod;
-  type: PayoutMethod['type'];
+  methods: WithdrawalMethod[];
+  withdrawalMethodId: string;
   accountHolder: string;
   destination: string;
   saving: boolean;
-  onType: (value: PayoutMethod['type']) => void;
+  onWithdrawalMethod: (value: string) => void;
   onAccountHolder: (value: string) => void;
   onDestination: (value: string) => void;
   onSave: () => void;
 }) {
-  const types = [
-    {value: 'bank_transfer', label: 'Bank'},
-    {value: 'paypal', label: 'PayPal'},
-    {value: 'other', label: 'Other'},
-  ] as const;
+  const selectedMethod = methods.find(item => String(item.id) === withdrawalMethodId);
 
   return (
     <section>
@@ -446,18 +481,14 @@ function WithdrawalMethod({
         </p>
       )}
       <div className="space-y-4">
-        <div className="grid grid-cols-3 gap-2">
-          {types.map(item => (
-            <Button
-              key={item.value}
-              size="sm"
-              variant={type === item.value ? 'default' : 'outline'}
-              onClick={() => onType(item.value)}
-            >
-              <Trans message={item.label} />
-            </Button>
-          ))}
-        </div>
+        <Field.Root>
+          <Field.Label><Trans message="Withdrawal method" /></Field.Label>
+          <Select.Root value={withdrawalMethodId} onValueChange={value => onWithdrawalMethod(String(value))}>
+            <Select.Trigger><Select.Value placeholder={<Trans message="Choose a method" />} /></Select.Trigger>
+            <Select.Content>{methods.map(item => <Select.Item key={item.id} value={String(item.id)}>{item.name}</Select.Item>)}</Select.Content>
+          </Select.Root>
+          {selectedMethod?.instructions && <p className="mt-2 text-xs text-muted-foreground">{selectedMethod.instructions}</p>}
+        </Field.Root>
         <Field.Root>
           <Field.Label>
             <Trans message="Account holder" />
@@ -470,7 +501,7 @@ function WithdrawalMethod({
         </Field.Root>
         <Field.Root>
           <Field.Label>
-            <Trans message="Payout destination" />
+            <Trans message={selectedMethod?.destination_label ?? 'Payout destination'} />
           </Field.Label>
           <Input
             value={destination}

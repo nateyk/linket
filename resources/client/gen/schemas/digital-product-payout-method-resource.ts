@@ -9,6 +9,8 @@
 export type DigitalProductPayoutMethodResource = {
   id: number;
   type: string;
+  /** @nullable */
+  withdrawal_method_id: number | null;
   account_holder: string;
   display_label: string;
   /** @nullable */

@@ -39,6 +39,7 @@ class StorefrontWebhookHandler
             'paid_at' => now(),
             ...$gatewayAttributes,
         ]);
+        app(DigitalProductFinance::class)->creditOrder($order->fresh('product'));
         $order->loadMissing('product.files');
         foreach ($order->product->files as $file) {
             DownloadEntitlement::firstOrCreate([

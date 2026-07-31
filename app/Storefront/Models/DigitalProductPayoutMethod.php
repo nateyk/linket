@@ -13,6 +13,7 @@ class DigitalProductPayoutMethod extends StorefrontModel
     protected $fillable = [
         'workspace_id',
         'creator_id',
+        'withdrawal_method_id',
         'type',
         'account_holder',
         'destination',
@@ -30,5 +31,10 @@ class DigitalProductPayoutMethod extends StorefrontModel
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'creator_id');
+    }
+
+    public function withdrawalMethod(): BelongsTo
+    {
+        return $this->belongsTo(DigitalProductWithdrawalMethod::class);
     }
 }

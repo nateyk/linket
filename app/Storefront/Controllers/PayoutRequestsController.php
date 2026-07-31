@@ -3,9 +3,8 @@
 namespace App\Storefront\Controllers;
 
 use App\Storefront\Models\PayoutRequest;
-use App\Storefront\Models\DigitalProductPayoutMethod;
 use App\Storefront\Resources\PayoutRequestResource;
-use App\Storefront\StorefrontEarnings;
+use App\Storefront\PayoutRequestService;
 use Common\Workspaces\ActiveWorkspace;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -14,37 +13,21 @@ use Illuminate\Support\Facades\Gate;
 
 class PayoutRequestsController extends Controller
 {
-    public function index(Request $request) { return PayoutRequestResource::collection(PayoutRequest::query()->where('workspace_id', ActiveWorkspace::get()->id)->where('creator_id', $request->user()->id)->latest()->paginate()); }
+    public function index(Request $request) { return PayoutRequestResource::collection(PayoutRequest::query()->with('activities.actor')->where('workspace_id', ActiveWorkspace::get()->id)->where('creator_id', $request->user()->id)->latest()->paginate()); }
     public function store(Request $request)
     {
         $data = $request->validate(['amount_cents' => 'required|integer|min:1']);
-        $workspaceId = ActiveWorkspace::get()->id;
-        $payoutMethod = DigitalProductPayoutMethod::query()
-            ->where('workspace_id', $workspaceId)
-            ->where('creator_id', $request->user()->id)
-            ->first();
-        abort_unless($payoutMethod, 422, __('Add a withdrawal method before requesting a payout.'));
-
-        return DB::transaction(function () use ($data, $request, $workspaceId, $payoutMethod) {
-            $available = app(StorefrontEarnings::class)->forCreator($request->user()->id, $workspaceId, true)['available_for_payout_cents'];
-            abort_if($data['amount_cents'] > $available, 422, __('The requested payout exceeds your available balance.'));
-
-            return new PayoutRequestResource(PayoutRequest::create([
-                ...$data,
-                'workspace_id' => $workspaceId,
-                'creator_id' => $request->user()->id,
-                'digital_product_payout_method_id' => $payoutMethod->id,
-                'payout_method_label' => $payoutMethod->display_label,
-                'currency' => config('storefront.currency'),
-            ]));
-        });
+        return new PayoutRequestResource(app(PayoutRequestService::class)->create($request->user()->id, ActiveWorkspace::get()->id, $data['amount_cents']));
     }
-    public function adminIndex() { Gate::authorize('admin.access'); return PayoutRequestResource::collection(PayoutRequest::query()->with('creator')->latest()->paginate()); }
+    public function adminIndex() { Gate::authorize('admin.access'); return PayoutRequestResource::collection(PayoutRequest::query()->with(['creator', 'withdrawalMethod', 'activities.actor'])->latest()->paginate()); }
     public function markPaid(Request $request, PayoutRequest $payoutRequest)
     {
         Gate::authorize('admin.access');
-        abort_unless($payoutRequest->status === 'pending', 422);
-        $payoutRequest->update(['status' => 'paid', 'processed_by' => $request->user()->id, 'paid_at' => now()]);
-        return new PayoutRequestResource($payoutRequest->fresh());
+        return new PayoutRequestResource(app(PayoutRequestService::class)->transition($payoutRequest, 'mark_paid', $request->user()->id, $request->validate(['transfer_reference' => 'required|string|max:190', 'note' => 'nullable|string|max:2000'])));
     }
+
+    public function cancel(Request $request, PayoutRequest $payoutRequest): PayoutRequestResource { abort_unless($payoutRequest->creator_id === $request->user()->id && $payoutRequest->workspace_id === ActiveWorkspace::get()->id, 404); return new PayoutRequestResource(app(PayoutRequestService::class)->transition($payoutRequest, 'cancel', $request->user()->id)); }
+    public function startProcessing(Request $request, PayoutRequest $payoutRequest): PayoutRequestResource { Gate::authorize('admin.access'); return new PayoutRequestResource(app(PayoutRequestService::class)->transition($payoutRequest, 'start_processing', $request->user()->id, $request->validate(['note' => 'nullable|string|max:2000']))); }
+    public function reject(Request $request, PayoutRequest $payoutRequest): PayoutRequestResource { Gate::authorize('admin.access'); return new PayoutRequestResource(app(PayoutRequestService::class)->transition($payoutRequest, 'reject', $request->user()->id, $request->validate(['reason' => 'required|string|max:2000']))); }
+    public function revealDestination(Request $request, PayoutRequest $payoutRequest): array { Gate::authorize('admin.access'); return ['destination' => app(PayoutRequestService::class)->revealDestination($payoutRequest, $request->user()->id, $request->validate(['reason' => 'nullable|string|max:500'])['reason'] ?? null)]; }
 }
