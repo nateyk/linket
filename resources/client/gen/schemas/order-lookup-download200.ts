@@ -5,8 +5,7 @@
  * In the documentation API requests will be sent from currently logged in user so you do not need to provide a bearer token manually. <br><br> When calling API from outside the documentation, you will need to provide an access token for all requests in authorization header: `Authorization: Bearer <Token>` <br> You can create a new access token in your account settings page.
  * OpenAPI spec version: 1.0.0
  */
-import type {OrderLookupLookup200OrdersItem} from './order-lookup-lookup200-orders-item';
 
-export type OrderLookupLookup200 = {
-  orders: OrderLookupLookup200OrdersItem[];
+export type OrderLookupDownload200 = {
+  url: string;
 };

@@ -181,6 +181,10 @@ export function Component() {
             <ArrowLeftIcon />
             <Trans message="Digital Products" />
           </Button>
+          <Button variant="outline" render={<Link to="/admin/digital-products/delivery-history" />}>
+            <MailCheckIcon />
+            <Trans message="Delivery history" />
+          </Button>
           <Button variant="outline" onClick={() => void sendTestEmail()} disabled={sendingTestEmail}>
             <SendIcon />
             <Trans message="Send test email" />

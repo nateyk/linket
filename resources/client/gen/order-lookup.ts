@@ -5,11 +5,11 @@
  * In the documentation API requests will be sent from currently logged in user so you do not need to provide a bearer token manually. <br><br> When calling API from outside the documentation, you will need to provide an access token for all requests in authorization header: `Authorization: Bearer <Token>` <br> You can create a new access token in your account settings page.
  * OpenAPI spec version: 1.0.0
  */
-import type {OrderLookupLookupBody} from './schemas/order-lookup-lookup-body';
+import type {OrderLookupDownload200} from './schemas/order-lookup-download200';
 
-import type {OrderLookupLookup200} from './schemas/order-lookup-lookup200';
+import type {OrderLookupOrders200} from './schemas/order-lookup-orders200';
 
-import type {OrderLookupResendReceiptBody} from './schemas/order-lookup-resend-receipt-body';
+import type {OrderLookupRequestRecovery200} from './schemas/order-lookup-request-recovery200';
 
 import type {OrderLookupResendReceipt200} from './schemas/order-lookup-resend-receipt200';
 
@@ -17,36 +17,57 @@ import {orvalApiFetch} from '../../../common/foundation/resources/client/http/qu
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
-export const orderLookupLookup = (
-  orderLookupLookupBody: OrderLookupLookupBody,
-  options?: SecondParameter<typeof orvalApiFetch<OrderLookupLookup200>>,
+export const orderLookupRequestRecovery = (
+  options?: SecondParameter<
+    typeof orvalApiFetch<OrderLookupRequestRecovery200>
+  >,
 ) => {
-  return orvalApiFetch<OrderLookupLookup200>(
+  return orvalApiFetch<OrderLookupRequestRecovery200>(
+    {url: `/public/order-lookup/request`, method: 'POST'},
+    options,
+  );
+};
+export const orderLookupOrders = (
+  options?: SecondParameter<typeof orvalApiFetch<OrderLookupOrders200>>,
+) => {
+  return orvalApiFetch<OrderLookupOrders200>(
+    {url: `/public/order-lookup/orders`, method: 'GET'},
+    options,
+  );
+};
+export const orderLookupDownload = (
+  order: string,
+  entitlement: number,
+  options?: SecondParameter<typeof orvalApiFetch<OrderLookupDownload200>>,
+) => {
+  return orvalApiFetch<OrderLookupDownload200>(
     {
-      url: `/public/order-lookup`,
+      url: `/public/order-lookup/orders/${order}/downloads/${entitlement}`,
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      data: orderLookupLookupBody,
     },
     options,
   );
 };
 export const orderLookupResendReceipt = (
-  orderLookupResendReceiptBody: OrderLookupResendReceiptBody,
+  order: string,
   options?: SecondParameter<typeof orvalApiFetch<OrderLookupResendReceipt200>>,
 ) => {
   return orvalApiFetch<OrderLookupResendReceipt200>(
     {
-      url: `/public/order-lookup/resend-receipt`,
+      url: `/public/order-lookup/orders/${order}/resend-receipt`,
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      data: orderLookupResendReceiptBody,
     },
     options,
   );
 };
-export type OrderLookupLookupResult = NonNullable<
-  Awaited<ReturnType<typeof orderLookupLookup>>
+export type OrderLookupRequestRecoveryResult = NonNullable<
+  Awaited<ReturnType<typeof orderLookupRequestRecovery>>
+>;
+export type OrderLookupOrdersResult = NonNullable<
+  Awaited<ReturnType<typeof orderLookupOrders>>
+>;
+export type OrderLookupDownloadResult = NonNullable<
+  Awaited<ReturnType<typeof orderLookupDownload>>
 >;
 export type OrderLookupResendReceiptResult = NonNullable<
   Awaited<ReturnType<typeof orderLookupResendReceipt>>

@@ -3,6 +3,7 @@
 namespace App\Storefront\Jobs;
 
 use App\Storefront\Models\StorefrontOrder;
+use App\Storefront\Models\DigitalProductOrderRecoveryDelivery;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -24,6 +25,7 @@ class SendStorefrontReceipt implements ShouldQueue
     public function __construct(
         private readonly int $orderId,
         private readonly bool $force = false,
+        private readonly ?int $deliveryId = null,
     ) {
         $this->onQueue('mail');
     }
@@ -48,7 +50,9 @@ class SendStorefrontReceipt implements ShouldQueue
                 return;
             }
 
-            $links = $order->entitlements->map(fn($entitlement) => [
+            $links = $order->entitlements
+                ->filter(fn($entitlement) => $entitlement->file && !$entitlement->revoked_at && !$entitlement->expires_at->isPast() && $entitlement->download_count < $entitlement->download_limit)
+                ->map(fn($entitlement) => [
                 'name' => $entitlement->file->getNameWithExtension(),
                 'url' => URL::temporarySignedRoute('storefront.download', $entitlement->expires_at, ['token' => $entitlement->token]),
             ]);
@@ -62,6 +66,18 @@ class SendStorefrontReceipt implements ShouldQueue
             );
 
             $order->update(['receipt_sent_at' => now()]);
+            $this->deliveryId && DigitalProductOrderRecoveryDelivery::query()
+                ->whereKey($this->deliveryId)
+                ->where('status', 'queued')
+                ->update(['status' => 'sent', 'failure_code' => null]);
         });
+    }
+
+    public function failed(\Throwable $exception): void
+    {
+        $this->deliveryId && DigitalProductOrderRecoveryDelivery::query()
+            ->whereKey($this->deliveryId)
+            ->where('status', 'queued')
+            ->update(['status' => 'failed', 'failure_code' => 'mail_delivery_failed']);
     }
 }

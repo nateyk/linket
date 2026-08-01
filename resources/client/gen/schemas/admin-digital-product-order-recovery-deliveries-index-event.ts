@@ -6,9 +6,13 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export type OrderLookupLookupBody = {
-  /** @maxLength 254 */
-  email: string;
-  /** @maxLength 120 */
-  reference: string;
-};
+export type AdminDigitalProductOrderRecoveryDeliveriesIndexEvent =
+  | (typeof AdminDigitalProductOrderRecoveryDeliveriesIndexEvent)[keyof typeof AdminDigitalProductOrderRecoveryDeliveriesIndexEvent]
+  | null;
+
+export const AdminDigitalProductOrderRecoveryDeliveriesIndexEvent = {
+  recovery_requested: 'recovery_requested',
+  recovery_email: 'recovery_email',
+  receipt_resend_requested: 'receipt_resend_requested',
+  receipt_email: 'receipt_email',
+} as const;

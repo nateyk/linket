@@ -6,9 +6,7 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export type OrderLookupResendReceiptBody = {
-  /** @maxLength 254 */
-  email: string;
-  /** @maxLength 120 */
-  order_id: string;
+export type OrderLookupDownload410 = {
+  /** Error overview. */
+  message: string;
 };

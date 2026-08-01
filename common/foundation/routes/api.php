@@ -71,6 +71,7 @@ use App\Storefront\Controllers\PublicDigitalProductsController;
 use App\Payments\Controllers\AdminPaymentTransactionsController;
 use App\Payments\Controllers\AdminPaymentHealthController;
 use App\Storefront\Controllers\OrderLookupController;
+use App\Storefront\Controllers\AdminDigitalProductOrderRecoveryDeliveriesController;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Http\Controllers\PasswordResetLinkController;
 
@@ -247,6 +248,7 @@ Route::group(['prefix' => 'v1'], function () {
         Route::post('admin/digital-products/withdrawal-methods', [DigitalProductWithdrawalMethodsController::class, 'store']);
         Route::put('admin/digital-products/withdrawal-methods/{withdrawalMethod}', [DigitalProductWithdrawalMethodsController::class, 'update']);
         Route::get('admin/payment-transactions', [AdminPaymentTransactionsController::class, 'index']);
+        Route::get('admin/digital-products/order-recovery-deliveries', [AdminDigitalProductOrderRecoveryDeliveriesController::class, 'index']);
         Route::post('admin/payment-transactions/{paymentTransaction}/refunds', [AdminDigitalProductRefundsController::class, 'store']);
         Route::get('admin/payment-health', [AdminPaymentHealthController::class, 'index']);
         Route::post('admin/payment-health/test-email', [AdminPaymentHealthController::class, 'sendTestEmail']);
@@ -324,16 +326,16 @@ Route::group(['prefix' => 'v1'], function () {
             VerifyApiAccessMiddleware::class,
         ]);
     Route::get('public/biolinks/{biolink}/digital-products/{digitalProduct}/orders/{order}', [PublicDigitalProductsController::class, 'order'])->middleware('throttle:60,1');
-    Route::post('public/order-lookup', [OrderLookupController::class, 'lookup'])->middleware('throttle:20,1')->withoutMiddleware([
+    Route::post('public/order-lookup/request', [OrderLookupController::class, 'requestRecovery'])->middleware('throttle:20,1')->withoutMiddleware([
         EnsureFrontendRequestsAreStateful::class,
         VerifyCsrfToken::class,
         VerifyApiAccessMiddleware::class,
     ]);
-    Route::post('public/order-lookup/resend-receipt', [OrderLookupController::class, 'resendReceipt'])->middleware('throttle:10,1')->withoutMiddleware([
-        EnsureFrontendRequestsAreStateful::class,
-        VerifyCsrfToken::class,
+    Route::get('public/order-lookup/orders', [OrderLookupController::class, 'orders'])->middleware('throttle:60,1')->withoutMiddleware([
         VerifyApiAccessMiddleware::class,
     ]);
+    Route::post('public/order-lookup/orders/{order}/downloads/{entitlement}', [OrderLookupController::class, 'download'])->middleware('throttle:30,1')->withoutMiddleware(VerifyApiAccessMiddleware::class);
+    Route::post('public/order-lookup/orders/{order}/resend-receipt', [OrderLookupController::class, 'resendReceipt'])->middleware('throttle:10,1')->withoutMiddleware(VerifyApiAccessMiddleware::class);
     Route::get('storefront/products/{digitalProduct}/public', [StorefrontCheckoutController::class, 'show']);
     Route::post('storefront/products/{digitalProduct}/checkout', [StorefrontCheckoutController::class, 'store'])->middleware('throttle:20,1');
     Route::get('digital-products/{digitalProduct}/public', [StorefrontCheckoutController::class, 'show']);

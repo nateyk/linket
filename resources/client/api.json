@@ -4462,6 +4462,129 @@
                 }
             }
         },
+        "/admin/digital-products/order-recovery-deliveries": {
+            "get": {
+                "operationId": "adminDigitalProductOrderRecoveryDeliveries.index",
+                "tags": [
+                    "AdminDigitalProductOrderRecoveryDeliveries"
+                ],
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "accepted",
+                                "queued",
+                                "sent",
+                                "failed"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "event",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "recovery_requested",
+                                "recovery_email",
+                                "receipt_resend_requested",
+                                "receipt_email"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 120
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "": {
+                                            "type": "array",
+                                            "items": {}
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "string"
+                                                    },
+                                                    "masked_email": {
+                                                        "type": "string"
+                                                    },
+                                                    "event": {
+                                                        "type": "string"
+                                                    },
+                                                    "status": {
+                                                        "type": "string"
+                                                    },
+                                                    "failure_code": {
+                                                        "type": "string"
+                                                    },
+                                                    "created_at": {
+                                                        "type": "string"
+                                                    },
+                                                    "order_reference": {
+                                                        "type": "string"
+                                                    },
+                                                    "product_title": {
+                                                        "type": "string"
+                                                    }
+                                                },
+                                                "required": [
+                                                    "id",
+                                                    "masked_email",
+                                                    "event",
+                                                    "status",
+                                                    "failure_code",
+                                                    "created_at",
+                                                    "order_reference",
+                                                    "product_title"
+                                                ]
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        null,
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
         "/admin/payment-transactions/{paymentTransaction}/refunds": {
             "post": {
                 "operationId": "adminDigitalProductRefunds.store",
@@ -12329,37 +12452,51 @@
                 }
             }
         },
-        "/public/order-lookup": {
+        "/public/order-lookup/request": {
             "post": {
-                "operationId": "orderLookup.lookup",
+                "operationId": "orderLookup.requestRecovery",
                 "tags": [
                     "OrderLookup"
                 ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "properties": {
-                                    "email": {
-                                        "type": "string",
-                                        "format": "email",
-                                        "maxLength": 254
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "anyOf": [
+                                                {
+                                                    "type": "null"
+                                                },
+                                                {
+                                                    "type": "array",
+                                                    "items": {}
+                                                },
+                                                {
+                                                    "type": "string"
+                                                }
+                                            ]
+                                        }
                                     },
-                                    "reference": {
-                                        "type": "string",
-                                        "maxLength": 120
-                                    }
-                                },
-                                "required": [
-                                    "email",
-                                    "reference"
-                                ]
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
                             }
                         }
                     }
-                },
+                }
+            }
+        },
+        "/public/order-lookup/orders": {
+            "get": {
+                "operationId": "orderLookup.orders",
+                "tags": [
+                    "OrderLookup"
+                ],
                 "responses": {
                     "200": {
                         "description": "",
@@ -12369,42 +12506,7 @@
                                     "type": "object",
                                     "properties": {
                                         "orders": {
-                                            "type": "array",
-                                            "items": {
-                                                "type": "object",
-                                                "properties": {
-                                                    "id": {
-                                                        "type": "string"
-                                                    },
-                                                    "product_title": {
-                                                        "type": "string"
-                                                    },
-                                                    "currency": {
-                                                        "type": "string"
-                                                    },
-                                                    "gross_amount_cents": {
-                                                        "type": "integer"
-                                                    },
-                                                    "paid_at": {
-                                                        "type": "string"
-                                                    },
-                                                    "receipt_sent_at": {
-                                                        "type": "string"
-                                                    },
-                                                    "downloads": {
-                                                        "type": "string"
-                                                    }
-                                                },
-                                                "required": [
-                                                    "id",
-                                                    "product_title",
-                                                    "currency",
-                                                    "gross_amount_cents",
-                                                    "paid_at",
-                                                    "receipt_sent_at",
-                                                    "downloads"
-                                                ]
-                                            }
+                                            "type": "string"
                                         }
                                     },
                                     "required": [
@@ -12413,44 +12515,95 @@
                                 }
                             }
                         }
-                    },
-                    "422": {
-                        "$ref": "#/components/responses/ValidationException"
                     }
                 }
             }
         },
-        "/public/order-lookup/resend-receipt": {
+        "/public/order-lookup/orders/{order}/downloads/{entitlement}": {
+            "post": {
+                "operationId": "orderLookup.download",
+                "tags": [
+                    "OrderLookup"
+                ],
+                "parameters": [
+                    {
+                        "name": "order",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "entitlement",
+                        "in": "path",
+                        "required": true,
+                        "description": "The entitlement ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "url": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "url"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "410": {
+                        "description": "An error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Error overview."
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            }
+        },
+        "/public/order-lookup/orders/{order}/resend-receipt": {
             "post": {
                 "operationId": "orderLookup.resendReceipt",
                 "tags": [
                     "OrderLookup"
                 ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "properties": {
-                                    "email": {
-                                        "type": "string",
-                                        "format": "email",
-                                        "maxLength": 254
-                                    },
-                                    "order_id": {
-                                        "type": "string",
-                                        "maxLength": 120
-                                    }
-                                },
-                                "required": [
-                                    "email",
-                                    "order_id"
-                                ]
-                            }
+                "parameters": [
+                    {
+                        "name": "order",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
                         }
                     }
-                },
+                ],
                 "responses": {
                     "200": {
                         "description": "",
@@ -12481,11 +12634,24 @@
                             }
                         }
                     },
-                    "422": {
-                        "$ref": "#/components/responses/ValidationException"
-                    },
-                    "404": {
-                        "$ref": "#/components/responses/ModelNotFoundException"
+                    "429": {
+                        "description": "An error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Error overview."
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
                     }
                 }
             }
