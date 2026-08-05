@@ -10,6 +10,8 @@ import {WidgetList} from '@app/dashboard/biolink/biolink-editor/content/widgets/
 import {SelectWidgetDialog} from '@app/dashboard/biolink/biolink-editor/content/widgets/widget-selector/select-widget-dialog';
 import {CreateBiolinkDialog} from '@app/dashboard/biolink/biolink-editor/create-biolink-dialog';
 import {DeleteBiolinkDialog} from '@app/dashboard/biolink/biolink-editor/delete-biolink-dialog';
+import {CreatorProfileEditor} from '@app/dashboard/biolink/biolink-editor/creator-profile-editor';
+import {isCreatorProfileBiolink} from '@app/dashboard/biolink/biolink-editor/creator-profile-types';
 import {LivePreview} from '@app/dashboard/biolink/biolink-editor/live-preview';
 import {
   listCurrentUserBiolinksOptions,
@@ -22,6 +24,8 @@ import {useDatatableRouteType} from '@app/dashboard/use-datatable-route-type';
 import {BiolinkWidget} from '@app/gen/schemas/biolink-widget';
 import {AdHost} from '@common/admin/ads/ad-host';
 import {showHttpErrorToast} from '@common/http/errors/show-http-error-toast';
+import {queryClient} from '@common/http/query-client';
+import {convertBiolinkToCreatorProfile} from '@app/gen/biolinks';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {useRequiredParams} from '@common/ui/navigation/use-required-params';
 import {Breadcrumb} from '@shadcn/breadcrumb/breadcrumb';
@@ -29,6 +33,7 @@ import {Button} from '@shadcn/button/button';
 import {Dialog} from '@shadcn/dialog/dialog';
 import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {Empty} from '@shadcn/empty/empty';
+import {Alert} from '@shadcn/alert/alert';
 import {Tabs} from '@shadcn/tabs/tabs';
 import {toast} from '@shadcn/toast/toast';
 import {useMutation, useSuspenseQuery} from '@tanstack/react-query';
@@ -42,6 +47,7 @@ import {
   PlusIcon,
   SettingsIcon,
   TrashIcon,
+  SparklesIcon,
 } from 'lucide-react';
 import {useState} from 'react';
 import {Outlet, useLocation, useNavigate} from 'react-router';
@@ -62,7 +68,10 @@ export function Component() {
 
   // re-create store provider when biolink changes
   return (
-    <BiolinkEditorStoreProvider data={biolink} key={biolink.id}>
+    <BiolinkEditorStoreProvider
+      data={biolink}
+      key={`${biolink.id}-${biolink.builder_mode}`}
+    >
       <DashboardLayout.MainSection>
         <BiolinkEditorHeader />
         <Tabs.Root value={selectedTab}>
@@ -286,10 +295,16 @@ function MoreActionsButton() {
 }
 
 export function BiolinkContentTab() {
+  const biolink = useBiolinkEditorStore(s => s.biolink);
   const content = useBiolinkEditorStore(s => s.content);
+
+  if (isCreatorProfileBiolink(biolink)) {
+    return <CreatorProfileEditor />;
+  }
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6">
+      <CreatorProfileUpgrade />
       <div>
         <AddNewLinkButton />
         <AddNewWidgetButton />
@@ -312,6 +327,40 @@ export function BiolinkContentTab() {
         </Empty.Root>
       )}
     </div>
+  );
+}
+
+function CreatorProfileUpgrade() {
+  const biolink = useBiolinkEditorStore(s => s.biolink);
+  const convert = useMutation({
+    mutationFn: () => convertBiolinkToCreatorProfile(biolink.id),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({queryKey: ['biolinks']});
+      toast.success(<Trans message="Creator profile is ready" />);
+    },
+    onError: error => showHttpErrorToast(error),
+  });
+
+  return (
+    <Alert.Root>
+      <SparklesIcon />
+      <Alert.Title>
+        <Trans message="Turn this page into a creator profile" />
+      </Alert.Title>
+      <Alert.Description>
+        <Trans message="Use a focused profile, work showcase, and Digital Products layout. Your existing content will be preserved." />
+      </Alert.Description>
+      <Alert.Action>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={convert.isPending}
+          onClick={() => convert.mutate()}
+        >
+          <Trans message="Upgrade" />
+        </Button>
+      </Alert.Action>
+    </Alert.Root>
   );
 }
 

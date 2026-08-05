@@ -6,9 +6,10 @@
  * OpenAPI spec version: 1.0.0
  */
 import type {CreateBiolinkWidgetBodyConfig} from './create-biolink-widget-body-config';
+import type {CreateBiolinkWidgetBodyType} from './create-biolink-widget-body-type';
 
 export type CreateBiolinkWidgetBody = {
-  type: string;
+  type: CreateBiolinkWidgetBodyType;
   position?: number;
   /** @nullable */
   config?: CreateBiolinkWidgetBodyConfig;

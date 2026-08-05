@@ -1,3 +1,4 @@
+
 import {apiClient} from '@common/http/query-client';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {Badge} from '@shadcn/badge/badge';
@@ -216,21 +217,21 @@ export function Component() {
         </Button>
       </DashboardLayout.SectionHeader>
       <DashboardLayout.SectionContent className="overflow-y-auto">
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-7 py-6">
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 py-4">
           {error && (
-            <div className="rounded-input border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+            <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
               {error}
             </div>
           )}
 
           <SummaryStrip summary={summary} currency={currency} loading={loading} />
 
-          <div className="grid items-start gap-8 xl:grid-cols-[minmax(0,1fr)_20rem]">
-            <main className="min-w-0 space-y-8">
+          <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_18rem]">
+            <main className="min-w-0 space-y-5">
               <SalesTable orders={orders} loading={loading} />
               <PayoutHistory payouts={payouts} onCancel={payout => void cancelPayout(payout)} />
             </main>
-            <aside className="space-y-7 border-t pt-6 xl:border-t-0 xl:border-l xl:pt-0 xl:pl-7">
+            <aside className="space-y-5 xl:border-l xl:pl-5">
               <WithdrawalMethod
                 method={method}
                 methods={withdrawalMethods}
@@ -289,26 +290,21 @@ function SummaryStrip({
   ];
 
   return (
-    <section className="grid border-y sm:grid-cols-3 xl:grid-cols-5">
-      {items.map((item, index) => {
+    <div className="flex flex-wrap gap-4 sm:gap-6">
+      {items.map(item => {
         const Icon = item.icon;
 
         return (
-          <div
-            key={item.label}
-            className={`flex items-center gap-3 px-4 py-4 ${
-              index > 0 ? 'sm:border-l' : ''
-            }`}
-          >
+          <div key={item.label} className="flex items-center gap-2">
             <Icon className="size-4 text-muted-foreground" />
             <div>
               <p className="text-xs text-muted-foreground">
                 <Trans message={item.label} />
               </p>
               {loading ? (
-                <Skeleton className="mt-2 h-5 w-20" />
+                <Skeleton className="mt-1 h-4 w-16" />
               ) : (
-                <p className="mt-0.5 text-lg font-semibold tracking-tight">
+                <p className="text-sm font-semibold">
                   {formatMoney(item.value, currency)}
                 </p>
               )}
@@ -316,7 +312,7 @@ function SummaryStrip({
           </div>
         );
       })}
-    </section>
+    </div>
   );
 }
 
@@ -324,53 +320,51 @@ function SalesTable({orders, loading}: {orders: Order[]; loading: boolean}) {
   return (
     <section>
       <SectionHeading title="Recent sales" />
-      <div className="overflow-x-auto border-y">
-        {loading ? (
-          <Skeleton className="m-4 h-32 w-[calc(100%-2rem)]" />
-        ) : (
-          <Table.Root>
-            <Table.Header>
-              <Table.Row>
-                <Table.Head>
-                  <Trans message="Product" />
-                </Table.Head>
-                <Table.Head>
-                  <Trans message="Date" />
-                </Table.Head>
-                <Table.Head className="text-end">
-                  <Trans message="You earned" />
-                </Table.Head>
-              </Table.Row>
-            </Table.Header>
-            <Table.Body>
-              {orders.length ? (
-                orders.slice(0, 10).map(order => (
-                  <Table.Row key={order.id}>
-                    <Table.Cell className="font-medium">
-                      {order.product?.title ?? <Trans message="Digital product" />}
-                    </Table.Cell>
-                    <Table.Cell className="text-muted-foreground">
-                      {formatDate(order.paid_at ?? order.created_at)}
-                    </Table.Cell>
-                    <Table.Cell className="text-end font-medium">
-                      {formatMoney(order.creator_earnings_cents, order.currency)}
-                    </Table.Cell>
-                  </Table.Row>
-                ))
-              ) : (
-                <Table.Row>
-                  <Table.Cell
-                    colSpan={3}
-                    className="h-28 text-center text-muted-foreground"
-                  >
-                    <Trans message="No sales yet." />
+      {loading ? (
+        <Skeleton className="h-32 w-full" />
+      ) : (
+        <Table.Root>
+          <Table.Header>
+            <Table.Row>
+              <Table.Head>
+                <Trans message="Product" />
+              </Table.Head>
+              <Table.Head>
+                <Trans message="Date" />
+              </Table.Head>
+              <Table.Head className="text-end">
+                <Trans message="You earned" />
+              </Table.Head>
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
+            {orders.length ? (
+              orders.slice(0, 10).map(order => (
+                <Table.Row key={order.id}>
+                  <Table.Cell className="font-medium">
+                    {order.product?.title ?? <Trans message="Digital product" />}
+                  </Table.Cell>
+                  <Table.Cell className="text-muted-foreground">
+                    {formatDate(order.paid_at ?? order.created_at)}
+                  </Table.Cell>
+                  <Table.Cell className="text-end font-medium">
+                    {formatMoney(order.creator_earnings_cents, order.currency)}
                   </Table.Cell>
                 </Table.Row>
-              )}
-            </Table.Body>
-          </Table.Root>
-        )}
-      </div>
+              ))
+            ) : (
+              <Table.Row>
+                <Table.Cell
+                  colSpan={3}
+                  className="h-20 text-center text-muted-foreground"
+                >
+                  <Trans message="No sales yet." />
+                </Table.Cell>
+              </Table.Row>
+            )}
+          </Table.Body>
+        </Table.Root>
+      )}
     </section>
   );
 }
@@ -379,69 +373,67 @@ function PayoutHistory({payouts, onCancel}: {payouts: Payout[]; onCancel: (payou
   return (
     <section>
       <SectionHeading title="Payout history" />
-      <div className="overflow-x-auto border-y">
-        <Table.Root>
-          <Table.Header>
-            <Table.Row>
-              <Table.Head>
-                <Trans message="Requested" />
-              </Table.Head>
-              <Table.Head>
-                <Trans message="Method" />
-              </Table.Head>
-              <Table.Head>
-                <Trans message="Status" />
-              </Table.Head>
-              <Table.Head className="text-end">
-                <Trans message="Amount" />
-              </Table.Head>
-              <Table.Head><span className="sr-only"><Trans message="Actions" /></span></Table.Head>
-            </Table.Row>
-          </Table.Header>
-          <Table.Body>
-            {payouts.length ? (
-              payouts.map(payout => (
-                <Table.Row key={payout.id}>
-                  <Table.Cell>{formatDate(payout.created_at)}</Table.Cell>
-                  <Table.Cell className="text-muted-foreground">
-                    {payout.payout_method_label ?? (
-                      <Trans message="Not specified" />
-                    )}
-                  </Table.Cell>
-                  <Table.Cell>
-                    <Badge
-                      color={payout.status === 'paid' ? 'positive' : 'warning'}
-                      variant="outline"
-                    >
-                      <Trans message={payout.status} />
-                    </Badge>
-                  </Table.Cell>
-                  <Table.Cell className="text-end font-medium">
-                    {formatMoney(payout.amount_cents, payout.currency)}
-                  </Table.Cell>
-                  <Table.Cell className="text-end">{payout.status === 'requested' && <Button size="sm" variant="ghost" onClick={() => onCancel(payout)}><Trans message="Cancel" /></Button>}</Table.Cell>
-                </Table.Row>
-              ))
-            ) : (
-              <Table.Row>
-                <Table.Cell
-                  colSpan={5}
-                  className="h-24 text-center text-muted-foreground"
-                >
-                  <Trans message="No payout requests yet." />
+      <Table.Root>
+        <Table.Header>
+          <Table.Row>
+            <Table.Head>
+              <Trans message="Requested" />
+            </Table.Head>
+            <Table.Head>
+              <Trans message="Method" />
+            </Table.Head>
+            <Table.Head>
+              <Trans message="Status" />
+            </Table.Head>
+            <Table.Head className="text-end">
+              <Trans message="Amount" />
+            </Table.Head>
+            <Table.Head><span className="sr-only"><Trans message="Actions" /></span></Table.Head>
+          </Table.Row>
+        </Table.Header>
+        <Table.Body>
+          {payouts.length ? (
+            payouts.map(payout => (
+              <Table.Row key={payout.id}>
+                <Table.Cell>{formatDate(payout.created_at)}</Table.Cell>
+                <Table.Cell className="text-muted-foreground">
+                  {payout.payout_method_label ?? (
+                    <Trans message="Not specified" />
+                  )}
                 </Table.Cell>
+                <Table.Cell>
+                  <Badge
+                    color={payout.status === 'paid' ? 'positive' : 'warning'}
+                    variant="outline"
+                  >
+                    <Trans message={payout.status} />
+                  </Badge>
+                </Table.Cell>
+                <Table.Cell className="text-end font-medium">
+                  {formatMoney(payout.amount_cents, payout.currency)}
+                </Table.Cell>
+                <Table.Cell className="text-end">{payout.status === 'requested' && <Button size="sm" variant="ghost" onClick={() => onCancel(payout)}><Trans message="Cancel" /></Button>}</Table.Cell>
               </Table.Row>
-            )}
-          </Table.Body>
-        </Table.Root>
-      </div>
+            ))
+          ) : (
+            <Table.Row>
+              <Table.Cell
+                colSpan={5}
+                className="h-20 text-center text-muted-foreground"
+              >
+                <Trans message="No payout requests yet." />
+              </Table.Cell>
+            </Table.Row>
+          )}
+        </Table.Body>
+      </Table.Root>
     </section>
   );
 }
 
 function SectionHeading({title}: {title: string}) {
   return (
-    <h2 className="mb-3 text-sm font-medium">
+    <h2 className="mb-2 text-sm font-medium text-muted-foreground">
       <Trans message={title} />
     </h2>
   );
@@ -476,11 +468,11 @@ function WithdrawalMethod({
     <section>
       <SectionHeading title="Withdrawal method" />
       {method && (
-        <p className="mb-4 text-sm text-muted-foreground">
+        <p className="mb-3 text-sm">
           {method.display_label}
         </p>
       )}
-      <div className="space-y-4">
+      <div className="space-y-3">
         <Field.Root>
           <Field.Label><Trans message="Withdrawal method" /></Field.Label>
           <Select.Root value={withdrawalMethodId} onValueChange={value => onWithdrawalMethod(String(value))}>
@@ -543,9 +535,9 @@ function RequestPayout({
   onRequest: () => void;
 }) {
   return (
-    <section className="border-t pt-6">
+    <section className="border-t pt-4">
       <SectionHeading title="Request payout" />
-      <p className="mb-4 text-sm text-muted-foreground">
+      <p className="mb-3 text-sm">
         <Trans
           message="Available: :amount"
           values={{amount: formatMoney(available, currency)}}

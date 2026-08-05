@@ -1,2 +1,0 @@
-import{li as e}from"./icons-D3_jG86k.js";import{i as t}from"./chunk-6CSD65Y2-BFeLhPrr.js";import{Xt as n,Yi as r}from"./main-DSxFy8RK.js";import{t as i}from"./billing-page-breadcrumb-Dz-lbi7v.js";import{t as a}from"./account-settings-page-layout-BcBoI9CM.js";var o=e();function s(){let e=r(n());return(0,o.jsx)(a,{title:(0,o.jsx)(i,{className:`text-xl`}),children:(0,o.jsx)(t,{context:e.data.data})})}export{s as Component};
-//# sourceMappingURL=app-billing-page-layout-BLW0GNBB.js.map

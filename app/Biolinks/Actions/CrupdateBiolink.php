@@ -37,16 +37,27 @@ class CrupdateBiolink extends CrupdateLinkeable
         ];
 
         if ($isCreating) {
+            $creator = isset($inlineData['user_id'])
+                ? User::query()->find($inlineData['user_id'])
+                : Auth::user();
             $biolink = Biolink::query()->create([
                 ...$inlineData,
                 'user_id' => $inlineData['user_id'] ?? Auth::id(),
                 'back_half' => $inlineData['back_half'] ?? Str::random(5),
+                'builder_mode' => Biolink::BUILDER_MODE_CREATOR_PROFILE,
+                'profile_config' => [
+                    'display_name' => $creator?->name ?? $inlineData['name'],
+                    'profile_title' => '',
+                    'bio' => '',
+                    'avatar_url' => $creator?->image,
+                    'cover_url' => null,
+                    'available_for_work' => false,
+                    'skills' => [],
+                    'follow_url' => null,
+                    'contact_url' => null,
+                    'social_links' => [],
+                ],
             ]);
-
-            (new AddInitialContentToBiolink())->execute(
-                $biolink['id'],
-                $biolink->user,
-            );
         } else {
             $biolink->fill($inlineData)->save();
         }

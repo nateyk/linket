@@ -1,2 +1,0 @@
-import{li as e}from"./icons-D3_jG86k.js";import{t}from"./popover-CN7y3xDg.js";import{It as n,Lt as r}from"./main-DSxFy8RK.js";var i=e();function a({resourcesName:e,reason:a,action:o,children:s}){let c=(0,i.jsx)(r,{resourcesName:e,embedActionLink:!1,reason:a,action:o});return(0,i.jsxs)(t.Root,{children:[s,(0,i.jsx)(t.Portal,{children:(0,i.jsxs)(t.Content,{children:[(0,i.jsx)(`p`,{className:`text-center leading-snug text-pretty`,children:c}),(0,i.jsx)(n,{reason:a,className:`w-full`})]})})]})}export{a as t};
-//# sourceMappingURL=policy-fail-message-popover-BS3cuetR.js.map

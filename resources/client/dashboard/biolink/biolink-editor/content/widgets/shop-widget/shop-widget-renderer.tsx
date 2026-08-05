@@ -3,6 +3,7 @@ import {WidgetRendererProps} from '@app/dashboard/biolink/biolink-editor/content
 import {Trans} from '@ui/i18n/trans';
 import {useEffect, useState} from 'react';
 import {ArrowUpRightIcon, ShoppingBagIcon} from 'lucide-react';
+import type {ReactNode} from 'react';
 
 type Product = {
   id: number;
@@ -17,7 +18,10 @@ export function ShopWidgetRenderer({
   widget,
   variant,
   biolink,
-}: WidgetRendererProps) {
+  titleOverride,
+}: WidgetRendererProps & {
+  titleOverride?: ReactNode;
+}) {
   const config = widget.config as ShopWidgetConfig;
   const productIds = Array.isArray(config.product_ids)
     ? config.product_ids
@@ -72,9 +76,7 @@ export function ShopWidgetRenderer({
   if (variant === 'editor') {
     return (
       <div className="text-sm text-muted-foreground">
-        <Trans
-          message="Digital Products section"
-        />
+        <Trans message="Digital Products section" />
       </div>
     );
   }
@@ -84,10 +86,12 @@ export function ShopWidgetRenderer({
     <section className="w-full min-w-0">
       <div className="mb-3 flex min-w-0 flex-col gap-0.5 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
-          <h2 className="truncate text-2xl font-semibold leading-tight">
-            {config.title || <Trans message="Digital Products" />}
+          <h2 className="truncate text-2xl leading-tight font-semibold">
+            {titleOverride || config.title || (
+              <Trans message="Digital Products" />
+            )}
           </h2>
-          <p className="text-sm text-muted-foreground/85">
+          <p className="text-sm text-[var(--biolink-muted-text)]">
             {products.length === 1 ? (
               <Trans
                 message=":count published item"
@@ -118,10 +122,10 @@ export function ShopWidgetRenderer({
 function ProductCard({product, href}: {product: Product; href: string}) {
   return (
     <a
-      className="group flex h-full min-w-0 flex-col overflow-hidden rounded-md bg-background/90 text-foreground no-underline shadow-sm ring-1 ring-black/10 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2"
+      className="group flex h-full min-w-0 flex-col overflow-hidden rounded-card bg-[var(--biolink-surface)] text-[var(--biolink-text)] no-underline shadow-sm ring-1 ring-[var(--biolink-border)] backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--biolink-text)]"
       href={href}
     >
-      <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted">
+      <div className="relative aspect-[4/3] w-full overflow-hidden bg-[var(--biolink-surface-muted)] sm:aspect-[3/2]">
         {product.cover?.url ? (
           <img
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
@@ -131,29 +135,29 @@ function ProductCard({product, href}: {product: Product; href: string}) {
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
-            <ShoppingBagIcon className="size-8 text-muted-foreground/35" />
+            <ShoppingBagIcon className="size-8 text-[var(--biolink-muted-text)] opacity-45" />
           </div>
         )}
-        <span className="absolute bottom-2 right-2 rounded-full bg-background/92 px-2.5 py-1 text-xs font-semibold shadow-sm backdrop-blur-sm">
+        <span className="absolute right-2 bottom-2 rounded-card-sm bg-[var(--biolink-surface-strong)] px-2.5 py-1 text-xs font-semibold text-[var(--biolink-text)] shadow-sm ring-1 ring-[var(--biolink-border)] backdrop-blur-sm">
           {formatMoney(product.price_cents, product.currency)}
         </span>
       </div>
-      <div className="flex flex-1 flex-col gap-2.5 p-3">
+      <div className="flex flex-1 flex-col gap-2 p-3">
         <div className="min-w-0">
-          <div className="line-clamp-2 text-sm font-semibold leading-snug">
+          <div className="line-clamp-2 text-sm leading-snug font-semibold">
             {product.title}
           </div>
           {product.description && (
-            <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+            <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-[var(--biolink-muted-text)]">
               {product.description}
             </p>
           )}
         </div>
-        <div className="mt-auto flex items-center justify-between border-t border-border/50 pt-2.5 text-xs font-medium">
+        <div className="mt-auto flex items-center justify-between border-t border-[var(--biolink-border)] pt-2 text-xs font-medium">
           <span>
             <Trans message="View product" />
           </span>
-          <span className="inline-flex size-7 items-center justify-center rounded-sm bg-muted text-muted-foreground transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+          <span className="inline-flex size-7 items-center justify-center rounded-card-xs bg-[var(--biolink-surface-muted)] text-[var(--biolink-muted-text)] transition-colors group-hover:bg-[var(--biolink-surface-strong)] group-hover:text-[var(--biolink-text)]">
             <ArrowUpRightIcon className="size-3.5" />
           </span>
         </div>

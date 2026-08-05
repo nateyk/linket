@@ -1,0 +1,2 @@
+import{O as e}from"./query-client-G5gIUUZe.js";import{At as t,kt as n}from"./main-CUwAxYE3.js";function r(r,a,o=[],s=!1){let c=(e,n,r)=>{o[0]===`*`||o.includes(e)||e===`captcha_token`||s&&!(e in a.getValues())?t.error(n):a.setError(e,{message:n},{shouldFocus:r})},l=e(r);i(l.errors)?n(r):Object.entries(l.errors).forEach(([e,t],n)=>{typeof t==`string`?c(e,t,n===0):t.forEach((t,r)=>{c(e,t,n===0&&r===0)})})}function i(e){return!e||Array.isArray(e)&&e.length===0||Object.keys(e).length===0}export{r as t};
+//# sourceMappingURL=on-form-query-error-jnQ7Nzax.js.map

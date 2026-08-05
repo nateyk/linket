@@ -170,5 +170,11 @@ export const updateBiolinkAppearanceOptions = (
   return mutationOptions({
     mutationFn: (body: SecondParam<typeof updateBiolinkAppearance>) =>
       updateBiolinkAppearance(biolinkId, body),
+    onSuccess: response => {
+      queryClient.setQueryData([...biolinksBaseKey, `${biolinkId}`], response);
+      queryClient.invalidateQueries({
+        queryKey: [...biolinksBaseKey, 'current-user'],
+      });
+    },
   });
 };

@@ -7,11 +7,12 @@
  */
 
 export type AdminDigitalProductOrderRecoveryDeliveriesIndex200DataItem = {
-  id: string;
+  id: number;
   masked_email: string;
   event: string;
   status: string;
-  failure_code: string;
+  /** @nullable */
+  failure_code: string | null;
   created_at: string;
   order_reference: string;
   product_title: string;

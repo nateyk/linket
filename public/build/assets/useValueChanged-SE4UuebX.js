@@ -1,0 +1,2 @@
+import{a as e}from"./rolldown-runtime-Cyuzqnbw.js";import{_i as t}from"./icons-BEdJcK9h.js";import{lt as n,ut as r}from"./useBaseUiId-OVBLdjQD.js";var i=e(t());function a(e,t){let a=i.useRef(e),o=r(t);n(()=>{a.current!==e&&o(a.current)},[e,o]),n(()=>{a.current=e},[e])}export{a as t};
+//# sourceMappingURL=useValueChanged-SE4UuebX.js.map

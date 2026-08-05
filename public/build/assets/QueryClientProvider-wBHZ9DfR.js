@@ -1,0 +1,2 @@
+import{a as e}from"./rolldown-runtime-Cyuzqnbw.js";import{_i as t,gi as n}from"./icons-BEdJcK9h.js";var r=e(t(),1),i=n(),a=r.createContext(void 0),o=e=>{let t=r.useContext(a);if(e)return e;if(!t)throw Error(`No QueryClient set, use QueryClientProvider to set one`);return t},s=({client:e,children:t})=>(r.useEffect(()=>(e.mount(),()=>{e.unmount()}),[e]),(0,i.jsx)(a.Provider,{value:e,children:t}));export{o as n,s as t};
+//# sourceMappingURL=QueryClientProvider-wBHZ9DfR.js.map

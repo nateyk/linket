@@ -1,14 +1,22 @@
+import {articleEditorTipTapExtensions} from '@common/article-editor/article-editor-tiptap-extensions';
+import {apiClient} from '@common/http/query-client';
+import {ClearFormatButton} from '@common/text-editor/menubar/clear-format-button';
+import {Divider} from '@common/text-editor/menubar/divider';
+import {FontStyleButtons} from '@common/text-editor/menubar/font-style-buttons';
+import {FormatDropdown} from '@common/text-editor/menubar/format-dropdown';
+import {LinkButton} from '@common/text-editor/menubar/link-button';
+import {ListButtons} from '@common/text-editor/menubar/list-buttons';
+import {TiptapEditorContent} from '@common/text-editor/tiptap-editor-content';
+import {TipTapEditorProvider} from '@common/text-editor/tiptap-editor-provider';
+import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {ImageSelector} from '@common/uploads/components/image-selector';
 import {FileUploadProvider} from '@common/uploads/uploader/file-upload-provider';
 import {useActiveUpload} from '@common/uploads/uploader/use-active-upload';
-import {apiClient} from '@common/http/query-client';
-import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {Badge} from '@shadcn/badge/badge';
 import {Button} from '@shadcn/button/button';
 import {Checkbox} from '@shadcn/forms/checkbox/checkbox';
 import {Field} from '@shadcn/forms/field';
 import {Input} from '@shadcn/forms/input/input';
-import {Textarea} from '@shadcn/forms/textarea/textarea';
 import {Progress} from '@shadcn/progress/progress';
 import {Trans} from '@ui/i18n/trans';
 import {
@@ -24,7 +32,7 @@ import {
   UploadIcon,
 } from 'lucide-react';
 import {type ChangeEvent, useCallback, useEffect, useState} from 'react';
-import {Link, useNavigate, useParams} from 'react-router';
+import {Link, useNavigate, useParams, useSearchParams} from 'react-router';
 
 type FileEntry = {
   id: number;
@@ -48,7 +56,15 @@ type Product = {
   status: string;
 };
 
+import type {ProductType} from './product-type-selection-page';
+
 type SetupSection = 'details' | 'files' | 'bio-pages';
+
+const PRODUCT_TYPE_LABELS: Record<ProductType, string> = {
+  digital: 'Digital product',
+  ebook: 'E-book',
+  audio: 'Audio',
+};
 
 export function Component() {
   return (
@@ -60,7 +76,9 @@ export function Component() {
 
 function DigitalProductForm() {
   const {productId} = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const productType = searchParams.get('type') as ProductType | null;
   const [product, setProduct] = useState<Product | null>(null);
   const [biolinks, setBiolinks] = useState<Biolink[]>([]);
   const [title, setTitle] = useState('');
@@ -237,17 +255,22 @@ function DigitalProductForm() {
       <DashboardLayout.SectionHeader>
         <DashboardLayout.SidebarToggle />
         <DashboardLayout.SectionTitle>
-          <Trans message={product ? 'Edit digital product' : 'Create digital product'} />
+          <Trans message={product ? 'Edit digital product' : productType ? `Create ${PRODUCT_TYPE_LABELS[productType] ?? 'digital product'}` : 'Create digital product'} />
         </DashboardLayout.SectionTitle>
         {product && <ProductStatus status={product.status} />}
       </DashboardLayout.SectionHeader>
       <DashboardLayout.SectionContent className="overflow-y-auto">
         <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-4 py-4">
           <div className="flex items-center justify-between gap-3">
-            <Button variant="ghost" render={<Link to="/dashboard/my-products" />}>
+            <Button variant="ghost" render={<Link to={product ? '/dashboard/my-products' : '/dashboard/my-products/new'} />}>
               <ArrowLeftIcon />
-              <Trans message="All products" />
+              <Trans message={product ? 'All products' : 'Choose product type'} />
             </Button>
+            {productType && !product && (
+              <Badge variant="secondary">
+                <Trans message={PRODUCT_TYPE_LABELS[productType] ?? 'Digital product'} />
+              </Badge>
+            )}
             <div className="flex items-center gap-2">
               {product && (
                 <Button
@@ -291,7 +314,7 @@ function DigitalProductForm() {
           {loading ? (
             <BuilderSkeleton />
           ) : (
-            <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_21rem]">
+            <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_28rem]">
               <section className="min-w-0">
                 <div className="flex items-center gap-2 border-b pb-3">
                   <span className="text-sm font-medium">
@@ -483,13 +506,7 @@ function DetailsPanel({
         <Field.Label>
           <Trans message="Description" />
         </Field.Label>
-        <Textarea
-          value={description}
-          rows={5}
-          maxLength={5000}
-          onChange={event => onDescriptionChange(event.target.value)}
-          placeholder="What will customers receive?"
-        />
+        <DescriptionEditor value={description} onChange={onDescriptionChange} />
       </Field.Root>
       <Field.Root>
         <Field.Label>
@@ -503,6 +520,37 @@ function DetailsPanel({
         />
       </Field.Root>
     </div>
+  );
+}
+
+function DescriptionEditor({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <TipTapEditorProvider
+      extensions={articleEditorTipTapExtensions}
+      initialContent={value}
+      onChange={onChange}
+    >
+      <div className="overflow-hidden rounded-input border">
+        <div className="no-scrollbar flex shrink-0 items-center overflow-x-auto border-b px-1 py-0.5 text-muted-foreground">
+          <FormatDropdown />
+          <Divider />
+          <FontStyleButtons />
+          <Divider />
+          <ListButtons />
+          <Divider />
+          <LinkButton />
+          <Divider />
+          <ClearFormatButton />
+        </div>
+        <TiptapEditorContent className="prose prose-sm max-w-none min-h-40 px-3 py-2 dark:prose-invert" />
+      </div>
+    </TipTapEditorProvider>
   );
 }
 
@@ -627,11 +675,16 @@ function ProductPagePreview({
               <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
                 {previewTitle}
               </h1>
-              <p className="mt-4 whitespace-pre-line text-sm leading-6 text-muted-foreground">
-                {description || (
+              {description ? (
+                <div
+                  className="prose prose-sm mt-4 max-w-none text-muted-foreground dark:prose-invert"
+                  dangerouslySetInnerHTML={{__html: description}}
+                />
+              ) : (
+                <p className="mt-4 text-sm leading-6 text-muted-foreground">
                   <Trans message="Your product description will appear here." />
-                )}
-              </p>
+                </p>
+              )}
             </div>
             <div className="flex flex-col justify-between gap-5 p-5">
               <div>
@@ -683,7 +736,7 @@ function DownloadUploader({onUploaded}: {onUploaded: (file: FileEntry) => void})
           id: entry.id,
           name: entry.name,
           file_size: entry.file_size,
-          extension: entry.extension,
+          extension: entry.extension ?? undefined,
         }),
     });
     event.target.value = '';
@@ -727,7 +780,7 @@ function DownloadUploader({onUploaded}: {onUploaded: (file: FileEntry) => void})
 
 function BuilderSkeleton() {
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_21rem]">
+    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_28rem]">
       <div className="space-y-4">
         <div className="h-5 w-30 animate-pulse rounded bg-muted" />
         <div className="aspect-[16/10] animate-pulse rounded-card bg-muted" />

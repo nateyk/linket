@@ -1,2 +1,0 @@
-import{li as e}from"./icons-D3_jG86k.js";import{O as t}from"./main-DSxFy8RK.js";var n=e();function r({children:e,onBeforeSubmit:r,onSubmit:i,form:a,className:o,id:s,onBlur:c,disableNativeValidation:l}){return(0,n.jsx)(t,{...a,children:(0,n.jsx)(`form`,{noValidate:l,id:s,onBlur:c,className:o,onSubmit:e=>{e.stopPropagation(),r?.(),a.handleSubmit(i)(e)},children:e})})}export{r as t};
-//# sourceMappingURL=form-CBarJKzS.js.map

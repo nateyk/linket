@@ -1,0 +1,2 @@
+import{gi as e}from"./icons-BEdJcK9h.js";import{t}from"./trans-Bt2QZcsI.js";import{n}from"./usage-dialog-ht84N-n3.js";import{t as r}from"./billing-plan-panel-izqsaG-0.js";import{Component as i}from"./billing-page-C7w1S1zh.js";var a=e();function o(){return(0,a.jsx)(`div`,{className:`flex flex-col gap-6`,children:(0,a.jsx)(i,{children:(0,a.jsx)(s,{})})})}function s(){return(0,a.jsx)(r,{title:(0,a.jsx)(t,{message:`Usage`}),children:(0,a.jsx)(n,{})})}export{o as Component};
+//# sourceMappingURL=billing-page-CMxfp36q.js.map

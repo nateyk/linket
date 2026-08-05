@@ -1,2 +1,0 @@
-import{$t as e,Qt as t,Xt as n}from"./useBaseUiId-DgamyRyd.js";import{t as r}from"./useCompositeItem-DqdE0rqm.js";function i(i){let{render:a,className:o,style:s,state:c=e,props:l=t,refs:u=t,metadata:d,stateAttributesMapping:f,tag:p=`div`,...m}=i,{compositeProps:h,compositeRef:g}=r({metadata:d});return n(p,i,{state:c,ref:[...u,g],props:[h,...l,m],stateAttributesMapping:f})}export{i as t};
-//# sourceMappingURL=CompositeItem-DhbBaV3P.js.map

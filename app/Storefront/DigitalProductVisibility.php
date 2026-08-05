@@ -30,6 +30,13 @@ class DigitalProductVisibility
             ->each(fn(Biolink $biolink) => $this->syncShopWidget($biolink));
     }
 
+    /** @param array<int> $productIds */
+    public function syncForBiolink(Biolink $biolink, array $productIds): void
+    {
+        $biolink->digitalProducts()->sync($productIds);
+        $this->syncShopWidget($biolink);
+    }
+
     private function syncShopWidget(Biolink $biolink): void
     {
         $productIds = $biolink->digitalProducts()

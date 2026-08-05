@@ -1,2 +1,0 @@
-import{li as e}from"./icons-D3_jG86k.js";import{n as t}from"./use-auth-CSINFGlg.js";import{t as n}from"./trans-C5C2g3TN.js";import{r}from"./button-CpfJsfir.js";var i=e();function a(e){let{isSubscribed:a}=t();return(0,i.jsx)(r,{to:a?`/account-settings/billing/change-plan`:`/pricing`,variant:`outline`,color:`primary`,...e,children:(0,i.jsx)(n,{message:`Upgrade`})})}export{a as t};
-//# sourceMappingURL=upgrade-button-6e1rOtAb.js.map

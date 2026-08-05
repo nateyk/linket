@@ -41,5 +41,7 @@ data.ms
 /playwright-report/
 /playwright/.cache/
 storageState.json
+.phpunit.cache/
+.tmp/
 # translation files (include default "en"), will be created during installation
 resources/lang/*.json

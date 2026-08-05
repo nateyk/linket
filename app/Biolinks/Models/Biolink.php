@@ -25,6 +25,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Collection;
 use Laravel\Scout\Searchable;
 
 class Biolink extends Linkeable
@@ -36,13 +37,21 @@ class Biolink extends Linkeable
         BelongsToWorkspace;
 
     const MODEL_TYPE = 'biolink';
+    const BUILDER_MODE_LEGACY = 'legacy';
+    const BUILDER_MODE_CREATOR_PROFILE = 'creator_profile';
+    const CREATOR_WORK_ITEM_LIMIT = 6;
 
     protected $guarded = [];
+
+    protected $attributes = [
+        'builder_mode' => self::BUILDER_MODE_LEGACY,
+    ];
 
     protected $casts = [
         'id' => 'integer',
         'domain_id' => 'integer',
         'user_id' => 'integer',
+        'profile_config' => 'array',
         'expires_at' => 'datetime',
         'clicked_at' => 'datetime',
         'activates_at' => 'datetime',
@@ -165,9 +174,84 @@ class Biolink extends Linkeable
             'rules',
             'pixels',
             'domain',
+            'user',
+            'digitalProducts' => fn(BelongsToMany $query) => $query
+                ->where('status', 'approved')
+                ->whereNull('digital_products.deleted_at'),
         ]);
 
         return $this;
+    }
+
+    public function isCreatorProfile(): bool
+    {
+        return $this->builder_mode === self::BUILDER_MODE_CREATOR_PROFILE;
+    }
+
+    /** @return array<int> */
+    public function creatorProfileSourceWidgetIds(): array
+    {
+        return collect($this->profile_config['source_widget_ids'] ?? [])
+            ->filter(fn(mixed $id): bool => is_numeric($id))
+            ->map(fn(mixed $id): int => (int) $id)
+            ->values()
+            ->all();
+    }
+
+    public function creatorWorkItemCount(): int
+    {
+        $widgetCount = $this->widgets()
+            ->where('active', true)
+            ->whereIn('type', ['image', 'text'])
+            ->whereNotIn('id', $this->creatorProfileSourceWidgetIds())
+            ->count();
+
+        return $widgetCount + $this->links()->wherePivot('active', true)->count();
+    }
+
+    public function creatorWorkContent(): Collection
+    {
+        if (!$this->relationLoaded('links') || !$this->relationLoaded('widgets')) {
+            return collect();
+        }
+
+        $sourceWidgetIds = $this->creatorProfileSourceWidgetIds();
+
+        return $this->links
+            ->concat($this->widgets)
+            ->sortBy(
+                fn(mixed $item): array => [
+                    $item->pinned === 'top' ? 0 : 1,
+                    $item->position,
+                ],
+            )
+            ->filter(function (mixed $item) use ($sourceWidgetIds): bool {
+                if (!$item->active) {
+                    return false;
+                }
+
+                if ($item->model_type === BiolinkLink::MODEL_TYPE) {
+                    return true;
+                }
+
+                return in_array($item->type, ['image', 'text'], true) &&
+                    !in_array($item->id, $sourceWidgetIds, true);
+            })
+            ->take(self::CREATOR_WORK_ITEM_LIMIT)
+            ->values();
+    }
+
+    public function publicItemCount(): int
+    {
+        $products = $this->relationLoaded('digitalProducts')
+            ? $this->digitalProducts->count()
+            : 0;
+
+        if ($this->isCreatorProfile()) {
+            return $products;
+        }
+
+        return $products + $this->creatorWorkContent()->count();
     }
 
     public function adjustPositions(

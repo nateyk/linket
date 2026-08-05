@@ -10,6 +10,7 @@ export function LivePreview() {
   const biolink = useBiolinkEditorStore(s => s.biolink);
   const appearance = useBiolinkEditorStore(s => s.appearance);
   const content = useBiolinkEditorStore(s => s.content);
+  const profileConfig = useBiolinkEditorStore(s => s.profileConfig);
 
   const {pathname} = useLocation();
   const isInsightsTab = pathname.split('/').pop() === 'insights';
@@ -18,7 +19,7 @@ export function LivePreview() {
     <Activity>
       <div
         className={cn(
-          'compact-scrollbar shrink-0 overflow-x-hidden overflow-y-auto border-l p-6 max-xl:hidden',
+          'compact-scrollbar flex w-112 shrink-0 flex-col items-center overflow-x-hidden overflow-y-auto border-l px-6 py-5 max-xl:hidden',
           isInsightsTab && 'hidden',
         )}
       >
@@ -26,7 +27,7 @@ export function LivePreview() {
           size="sm"
           color="positive"
           radius="rounded"
-          className="m-auto mb-6 w-max"
+          className="mb-5 w-max shrink-0"
         >
           <Trans message="Live preview" />
         </Chip>
@@ -37,9 +38,11 @@ export function LivePreview() {
             appearance={appearance}
             className="h-full"
             isPreview
+            creatorProfileOnly
+            profileConfig={profileConfig}
           />
         </PhoneSkeleton>
-        <div className="mt-3.5 text-center text-sm text-muted-foreground">
+        <div className="mt-3.5 shrink-0 text-center text-sm text-muted-foreground">
           <Trans message="Scheduled and disabled content is not shown" />
         </div>
       </div>
@@ -52,8 +55,15 @@ interface PhoneSkeletonProps {
 }
 function PhoneSkeleton({children}: PhoneSkeletonProps) {
   return (
-    <div className="h-181 w-87.5 overflow-hidden rounded-panel border bg-background shadow-sm">
-      {children}
+    <div className="aspect-[9/19.5] w-full max-w-96 shrink-0 rounded-[calc(var(--radius-card)+1.5rem)] border border-foreground/20 bg-foreground/90 p-1.5">
+      <div className="flex size-full flex-col overflow-hidden rounded-[calc(var(--radius-card)+1rem)] bg-background">
+        <div className="flex h-8 shrink-0 items-center justify-center bg-foreground/90">
+          <div className="h-3.5 w-22 rounded-full bg-background/15" />
+        </div>
+        <div className="compact-scrollbar min-h-0 flex-1 overflow-x-hidden overflow-y-auto bg-background">
+          {children}
+        </div>
+      </div>
     </div>
   );
 }

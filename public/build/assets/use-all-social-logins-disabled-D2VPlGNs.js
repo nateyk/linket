@@ -1,0 +1,2 @@
+import{t as e}from"./use-settings-C6jxAGuQ.js";function t({isUsingInvite:t}={}){let{social:n}=e();return!n?.google?.enable&&!n?.facebook?.enable&&!n?.twitter?.enable&&(!n?.envato?.enable||!!t)}export{t};
+//# sourceMappingURL=use-all-social-logins-disabled-D2VPlGNs.js.map

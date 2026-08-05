@@ -161,7 +161,10 @@ abstract class WorkspacedResourcePolicy extends BasePolicy
         }
 
         // workspace for resource does not exist in database, should generally not happen
-        if ($activeWorkspace->id !== $resource->workspace_id) {
+        if (
+            !$activeWorkspace ||
+            $activeWorkspace->id !== $resource->workspace_id
+        ) {
             return Response::deny(
                 'No workspace found',
                 PolicyFailReason::NO_PERMISSION,

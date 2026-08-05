@@ -1,0 +1,2 @@
+import{a as e}from"./rolldown-runtime-Cyuzqnbw.js";import{_i as t}from"./icons-BEdJcK9h.js";import{t as n}from"./bootstrap-data-store-8pDqnxeL.js";import{ft as r,it as i,xt as a}from"./main-CUwAxYE3.js";var o=e(t());function s(){let e=n()?.settings.dates?.default_timezone,t=n()?.user?.timezone||e||`auto`;return!t||t===`auto`?a():t}function c(){let e=i();return(0,o.useMemo)(()=>{try{return r(e)}catch{return r(`UTC`)}},[e])}function l(){let e=s();try{return r(e)}catch{return r(`UTC`)}}export{c as n,l as t};
+//# sourceMappingURL=use-current-date-time-C6O9FzYV.js.map

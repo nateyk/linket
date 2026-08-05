@@ -1535,6 +1535,109 @@
                 }
             }
         },
+        "/biolinks/{id}/creator-profile": {
+            "put": {
+                "operationId": "updateCreatorProfile",
+                "summary": "Update the fixed creator profile",
+                "tags": [
+                    "Biolinks"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateCreatorProfileRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`Biolink`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Biolink"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            }
+        },
+        "/biolinks/{id}/creator-profile/convert": {
+            "post": {
+                "operationId": "convertBiolinkToCreatorProfile",
+                "summary": "Convert a legacy biolink without deleting its widget records",
+                "tags": [
+                    "Biolinks"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`Biolink`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Biolink"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            }
+        },
         "/biolink/{biolinkId}/link": {
             "post": {
                 "operationId": "createBiolinkLink",
@@ -1580,14 +1683,14 @@
                             }
                         }
                     },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
                     "403": {
                         "$ref": "#/components/responses/AuthorizationException"
                     },
                     "404": {
                         "$ref": "#/components/responses/ModelNotFoundException"
-                    },
-                    "422": {
-                        "$ref": "#/components/responses/ValidationException"
                     }
                 }
             }
@@ -1736,7 +1839,19 @@
                                 "type": "object",
                                 "properties": {
                                     "type": {
-                                        "type": "string"
+                                        "type": "string",
+                                        "enum": [
+                                            "image",
+                                            "text",
+                                            "socials",
+                                            "youtube",
+                                            "soundcloud",
+                                            "vimeo",
+                                            "spotify",
+                                            "twitch",
+                                            "tiktok",
+                                            "shop"
+                                        ]
                                     },
                                     "position": {
                                         "type": "integer"
@@ -1777,11 +1892,11 @@
                             }
                         }
                     },
-                    "403": {
-                        "$ref": "#/components/responses/AuthorizationException"
-                    },
                     "422": {
                         "$ref": "#/components/responses/ValidationException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
                     }
                 }
             }
@@ -1863,11 +1978,11 @@
                             }
                         }
                     },
-                    "403": {
-                        "$ref": "#/components/responses/AuthorizationException"
-                    },
                     "422": {
                         "$ref": "#/components/responses/ValidationException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
                     }
                 }
             },
@@ -4531,7 +4646,7 @@
                                                 "type": "object",
                                                 "properties": {
                                                     "id": {
-                                                        "type": "string"
+                                                        "type": "integer"
                                                     },
                                                     "masked_email": {
                                                         "type": "string"
@@ -4543,7 +4658,10 @@
                                                         "type": "string"
                                                     },
                                                     "failure_code": {
-                                                        "type": "string"
+                                                        "type": [
+                                                            "string",
+                                                            "null"
+                                                        ]
                                                     },
                                                     "created_at": {
                                                         "type": "string"
@@ -19629,6 +19747,84 @@
                     "workspace_id": {
                         "type": "integer"
                     },
+                    "builder_mode": {
+                        "type": "string",
+                        "enum": [
+                            "legacy",
+                            "creator_profile"
+                        ]
+                    },
+                    "profile_config": {
+                        "type": "object",
+                        "properties": {
+                            "display_name": {
+                                "type": "string"
+                            },
+                            "profile_title": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "bio": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "avatar_url": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "cover_url": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "available_for_work": {
+                                "type": "boolean"
+                            },
+                            "skills": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            },
+                            "follow_url": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "contact_url": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "social_links": {
+                                "type": "object",
+                                "additionalProperties": {
+                                    "type": "string"
+                                }
+                            },
+                            "source_widget_ids": {
+                                "type": "array",
+                                "items": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    },
+                    "public_item_count": {
+                        "type": "integer"
+                    },
+                    "is_verified": {
+                        "type": "boolean"
+                    },
                     "model_type": {
                         "type": "string",
                         "const": "biolink"
@@ -19826,6 +20022,8 @@
                     "back_half",
                     "name",
                     "workspace_id",
+                    "builder_mode",
+                    "profile_config",
                     "model_type",
                     "short_url",
                     "domain_id"
@@ -25368,6 +25566,237 @@
                     "model_type"
                 ],
                 "title": "TrackingPixel"
+            },
+            "UpdateCreatorProfileRequest": {
+                "type": "object",
+                "properties": {
+                    "display_name": {
+                        "type": "string",
+                        "maxLength": 80
+                    },
+                    "profile_title": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 120
+                    },
+                    "bio": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 600
+                    },
+                    "avatar_url": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "uri",
+                        "maxLength": 2048
+                    },
+                    "cover_url": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "uri",
+                        "maxLength": 2048
+                    },
+                    "available_for_work": {
+                        "type": "boolean"
+                    },
+                    "follow_url": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "uri",
+                        "maxLength": 2048
+                    },
+                    "contact_url": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 2048
+                    },
+                    "skills": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "maxLength": 32
+                        },
+                        "maxItems": 8
+                    },
+                    "social_links": {
+                        "type": "object",
+                        "properties": {
+                            "mail": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "maxLength": 2048
+                            },
+                            "facebook": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "maxLength": 2048
+                            },
+                            "twitter": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "maxLength": 2048
+                            },
+                            "instagram": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "maxLength": 2048
+                            },
+                            "tiktok": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "maxLength": 2048
+                            },
+                            "youtube": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "maxLength": 2048
+                            },
+                            "soundcloud": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "maxLength": 2048
+                            },
+                            "bandcamp": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "maxLength": 2048
+                            },
+                            "linkedin": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "maxLength": 2048
+                            },
+                            "whatsapp": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "maxLength": 2048
+                            },
+                            "telegram": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "maxLength": 2048
+                            },
+                            "twitch": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "maxLength": 2048
+                            },
+                            "patreon": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "maxLength": 2048
+                            },
+                            "pinterest": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "maxLength": 2048
+                            },
+                            "spotify": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "maxLength": 2048
+                            },
+                            "amazon": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "maxLength": 2048
+                            },
+                            "snapchat": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "maxLength": 2048
+                            },
+                            "apple": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "maxLength": 2048
+                            }
+                        },
+                        "required": [
+                            "mail",
+                            "facebook",
+                            "twitter",
+                            "instagram",
+                            "tiktok",
+                            "youtube",
+                            "soundcloud",
+                            "bandcamp",
+                            "linkedin",
+                            "whatsapp",
+                            "telegram",
+                            "twitch",
+                            "patreon",
+                            "pinterest",
+                            "spotify",
+                            "amazon",
+                            "snapchat",
+                            "apple"
+                        ]
+                    },
+                    "featured_product_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        },
+                        "maxItems": 6
+                    }
+                },
+                "required": [
+                    "display_name",
+                    "available_for_work",
+                    "skills",
+                    "social_links",
+                    "featured_product_ids"
+                ],
+                "title": "UpdateCreatorProfileRequest"
             },
             "UpdateRoleBody": {
                 "type": "object",

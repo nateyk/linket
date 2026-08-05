@@ -1,2 +1,0 @@
-import{ei as e,li as t}from"./icons-D3_jG86k.js";import{On as n}from"./useBaseUiId-DgamyRyd.js";import{t as r}from"./button-CpfJsfir.js";var i=t();function a({column:t,children:a,className:o}){let s=t.getIsSorted(),c=()=>{s===!1?t.toggleSorting(!1):s===`asc`?t.toggleSorting(!0):t.clearSorting()};return(0,i.jsxs)(r,{variant:`link`,className:n(`px-0`,o),onClick:()=>c(),children:[a,(0,i.jsx)(e,{className:n(!s&&`invisible`,s===`asc`&&`rotate-180`)})]})}export{a as t};
-//# sourceMappingURL=sortable-header-DKo-BRdY.js.map

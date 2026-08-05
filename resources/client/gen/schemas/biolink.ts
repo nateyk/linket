@@ -6,9 +6,11 @@
  * OpenAPI spec version: 1.0.0
  */
 import type {BiolinkAppearance} from './biolink-appearance';
+import type {BiolinkBuilderMode} from './biolink-builder-mode';
 import type {BiolinkDomain} from './biolink-domain';
 import type {BiolinkLink} from './biolink-link';
 import type {BiolinkPixelsItem} from './biolink-pixels-item';
+import type {BiolinkProfileConfig} from './biolink-profile-config';
 import type {BiolinkRulesItem} from './biolink-rules-item';
 import type {BiolinkTagsItem} from './biolink-tags-item';
 import type {BiolinkUser} from './biolink-user';
@@ -20,6 +22,10 @@ export type Biolink = {
   back_half: string;
   name: string;
   workspace_id: number;
+  builder_mode: BiolinkBuilderMode;
+  profile_config: BiolinkProfileConfig;
+  public_item_count?: number;
+  is_verified?: boolean;
   model_type: 'biolink';
   /** @nullable */
   created_at?: string | null;

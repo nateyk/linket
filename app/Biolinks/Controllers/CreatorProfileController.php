@@ -1,0 +1,87 @@
+<?php
+
+namespace App\Biolinks\Controllers;
+
+use App\Biolinks\Actions\ConvertBiolinkToCreatorProfile;
+use App\Biolinks\Models\Biolink;
+use App\Biolinks\Requests\UpdateCreatorProfileRequest;
+use App\Biolinks\Resources\BiolinkResource;
+use App\Storefront\DigitalProductVisibility;
+use App\Storefront\Models\DigitalProduct;
+use Dedoc\Scramble\Attributes\Group;
+use Illuminate\Routing\Controller;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
+
+#[Group('Biolinks', weight: 4)]
+class CreatorProfileController extends Controller
+{
+    /**
+     * Update the fixed creator profile.
+     *
+     * @operationId updateCreatorProfile
+     */
+    public function update(
+        int $id,
+        UpdateCreatorProfileRequest $request,
+    ): BiolinkResource {
+        $biolink = Biolink::query()->findOrFail($id);
+        Gate::authorize('update', $biolink);
+
+        abort_unless(
+            $biolink->isCreatorProfile(),
+            422,
+            __('Upgrade this page to a creator profile before editing it.'),
+        );
+
+        $validated = $request->validated();
+        $featuredProductIds = $validated['featured_product_ids'];
+        $featuredProducts = DigitalProduct::query()
+            ->where('workspace_id', $biolink->workspace_id)
+            ->where('user_id', $request->user()->id)
+            ->where('status', 'approved')
+            ->whereIn('id', $featuredProductIds)
+            ->whereHas('files')
+            ->get();
+
+        abort_if(
+            $featuredProducts->count() !== count($featuredProductIds),
+            422,
+            __('Every featured product must be approved, downloadable, and owned by you.'),
+        );
+
+        DB::transaction(function () use ($biolink, $validated, $featuredProductIds): void {
+            $biolink->update([
+                'profile_config' => [
+                    ...Arr::except($validated, ['featured_product_ids']),
+                    'source_widget_ids' => $biolink->creatorProfileSourceWidgetIds(),
+                ],
+            ]);
+
+            app(DigitalProductVisibility::class)->syncForBiolink(
+                $biolink,
+                $featuredProductIds,
+            );
+        });
+
+        return new BiolinkResource($biolink->fresh()->loadContent());
+    }
+
+    /**
+     * Convert a legacy biolink without deleting its widget records.
+     *
+     * @operationId convertBiolinkToCreatorProfile
+     */
+    public function convert(int $id): BiolinkResource
+    {
+        $biolink = Biolink::query()->findOrFail($id);
+        Gate::authorize('update', $biolink);
+
+        $biolink = app(ConvertBiolinkToCreatorProfile::class)->execute(
+            $biolink,
+        );
+
+        return new BiolinkResource($biolink->fresh()->loadContent());
+    }
+}

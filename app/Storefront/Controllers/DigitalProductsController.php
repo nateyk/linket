@@ -15,7 +15,19 @@ use Illuminate\Support\Arr;
 
 class DigitalProductsController extends Controller
 {
-    public function index(Request $request) { return DigitalProductResource::collection(DigitalProduct::query()->where('workspace_id', ActiveWorkspace::get()->id)->where('user_id', $request->user()->id)->with(['files', 'cover', 'biolinks'])->latest()->paginate()); }
+    public function index(Request $request)
+    {
+        $perPage = min(max($request->integer('per_page', 15), 1), 100);
+
+        return DigitalProductResource::collection(
+            DigitalProduct::query()
+                ->where('workspace_id', ActiveWorkspace::get()->id)
+                ->where('user_id', $request->user()->id)
+                ->with(['files', 'cover', 'biolinks'])
+                ->latest()
+                ->paginate($perPage),
+        );
+    }
     public function show(Request $request, DigitalProduct $digitalProduct) { $this->assertOwner($digitalProduct, $request); return new DigitalProductResource($digitalProduct->load(['files', 'cover', 'biolinks'])); }
 
     public function store(Request $request)
@@ -59,7 +71,7 @@ class DigitalProductsController extends Controller
     private function validated(Request $request): array
     {
         return $request->validate([
-            'title' => 'required|string|max:160', 'description' => 'nullable|string|max:5000', 'price_cents' => 'required|integer|min:50',
+            'title' => 'required|string|max:160', 'description' => 'nullable|string|max:20000', 'price_cents' => 'required|integer|min:50',
             'currency' => 'nullable|in:etb,ETB', 'cover_file_entry_id' => 'nullable|integer|exists:file_entries,id',
             'file_ids' => 'required|array|min:1', 'file_ids.*' => 'integer|distinct|exists:file_entries,id',
             'biolink_ids' => 'nullable|array', 'biolink_ids.*' => 'integer|distinct|exists:biolinks,id',

@@ -1,0 +1,2 @@
+import{gi as e}from"./icons-BEdJcK9h.js";import{t}from"./trans-Bt2QZcsI.js";import{F as n}from"./main-CUwAxYE3.js";import{n as r}from"./formatted-date-C1IPGlMF.js";var i=e();function a({linkeable:e}){return e.name?e.name:(0,i.jsx)(t,{message:`Untitled :dateCreated`,values:{dateCreated:(0,i.jsx)(r,{date:e.created_at})}})}function o(e){return e.name?e.name:n(`Untitled :dateCreated`,{values:{dateCreated:e.created_at?e.created_at.split(`T`)[0]:``}})}export{o as n,a as t};
+//# sourceMappingURL=linkeable-name-o8jy5Mpu.js.map

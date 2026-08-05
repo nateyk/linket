@@ -1,0 +1,2 @@
+import{a as e}from"./trans-Bt2QZcsI.js";import{t}from"./countries-CIA_OCyN.js";var n=e((e=`en`)=>{let n=new Intl.DisplayNames([e],{type:`language`}),r=t(e),i=[],a=[];for(let e=0;e<r.length;e++){let t=r[e].code.toLowerCase(),o=new Intl.Locale(`und`,{region:t}).maximize().language;try{let e=n.of(o);e&&!a.includes(o)&&o!==e&&(a.push(o),i.push({code:o,name:e}))}catch{}}return i});export{n as t};
+//# sourceMappingURL=languages-DjygdWTn.js.map

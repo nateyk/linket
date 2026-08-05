@@ -1,2 +1,0 @@
-import{li as e}from"./icons-D3_jG86k.js";import{v as t}from"./chunk-6CSD65Y2-BFeLhPrr.js";import{t as n}from"./access-token-panel-ChhZ2NB7.js";var r=e();function i(){return(0,r.jsx)(n,{user:t()})}export{i as Component};
-//# sourceMappingURL=update-user-api-tab-DH-qI6BX.js.map

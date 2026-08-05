@@ -1,2 +1,0 @@
-import{r as e}from"./query-client-Cy_ZaGPv.js";var t=(t,n)=>e({url:`/tracked-events/report`,method:`GET`,params:t},n),n=(t,n)=>e({url:`/tracked-events`,method:`GET`,params:t},n),r=(t,n)=>e({url:`/admin/analytics/cards-data`,method:`GET`,params:t},n),i=(t,n)=>e({url:`/admin/analytics/report`,method:`GET`,params:t},n);export{n as i,i as n,r,t};
-//# sourceMappingURL=analytics-iyO6rmua.js.map

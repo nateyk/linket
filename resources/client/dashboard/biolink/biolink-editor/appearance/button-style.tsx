@@ -3,8 +3,11 @@ import {useBiolinkEditorStore} from '@app/dashboard/biolink/biolink-editor/bioli
 import {BiolinkAppearanceConfigBtnConfig} from '@app/gen/schemas/biolink-appearance-config-btn-config';
 import {ColorField} from '@ui/color-picker/color-field';
 import {Trans} from '@ui/i18n/trans';
+import {useIsDarkMode} from '@ui/themes/use-is-dark-mode';
 import {cn} from '@ui/utils/cn';
-import {ReactNode, useCallback, useId} from 'react';
+import Color from 'colorjs.io';
+import {useCallback, useId} from 'react';
+import type {ReactNode} from 'react';
 
 export function ButtonStyle() {
   const updateAppearance = useBiolinkEditorStore(s => s.updateAppearance);
@@ -23,16 +26,11 @@ export function ButtonStyle() {
   );
 
   return (
-    <div>
-      <h2 className={appearanceHeaderClassnames.h2}>
-        <Trans message="Buttons" />
-      </h2>
-      <div className="flex flex-col gap-6">
-        <StyleSelector value={value} onChange={setValue} />
-        <RadiusSelector value={value} onChange={setValue} />
-        <ShadowSelector value={value} onChange={setValue} />
-        <ColorSelector />
-      </div>
+    <div className="flex flex-col gap-5">
+      <StyleSelector value={value} onChange={setValue} />
+      <RadiusSelector value={value} onChange={setValue} />
+      <ShadowSelector value={value} onChange={setValue} />
+      <ColorSelector />
     </div>
   );
 }
@@ -42,14 +40,14 @@ interface StyleSelectorProps {
   onChange: (newValue: BiolinkAppearanceConfigBtnConfig) => void;
 }
 function StyleSelector({value, onChange}: StyleSelectorProps) {
-  const selectedVariant = value?.variant ?? 'flat';
+  const selectedVariant = value?.variant ?? 'solid';
 
   return (
     <div>
       <h3 className={appearanceHeaderClassnames.h3}>
         <Trans message="Style" />
       </h3>
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3">
         <ButtonStyleItem
           label={<Trans message="Solid" />}
           active={selectedVariant === 'solid'}
@@ -77,13 +75,13 @@ function StyleSelector({value, onChange}: StyleSelectorProps) {
 }
 
 function RadiusSelector({value, onChange}: StyleSelectorProps) {
-  const selectedValue = value?.radius ?? 'rounded-none';
+  const selectedValue = value?.radius ?? 'rounded-sm';
   return (
     <div>
       <h3 className={appearanceHeaderClassnames.h3}>
         <Trans message="Corner roundness" />
       </h3>
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
         <ButtonStyleItem
           label={<Trans message="Square" />}
           active={selectedValue === 'rounded-none'}
@@ -144,7 +142,7 @@ function ShadowSelector({value, onChange}: StyleSelectorProps) {
       <h3 className={appearanceHeaderClassnames.h3}>
         <Trans message="Shadow" />
       </h3>
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
         <ButtonStyleItem
           active={selectedValue === 'none'}
           onClick={() => onChange({...value, shadow: 'none'})}
@@ -177,13 +175,19 @@ function ShadowSelector({value, onChange}: StyleSelectorProps) {
 function ColorSelector() {
   const updateAppearance = useBiolinkEditorStore(s => s.updateAppearance);
   const btnConfig = useBiolinkEditorStore(s => s.appearance?.btnConfig);
+  useIsDarkMode();
+  const defaultButtonColor = resolveThemeColor('--be-primary', '#3b82f6');
+  const defaultTextColor = resolveThemeColor(
+    '--be-primary-foreground',
+    '#ffffff',
+  );
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="grid gap-4 sm:grid-cols-2">
       <ColorField
-        className="max-w-57"
+        className="w-full max-w-none"
         label={<Trans message="Color" />}
-        value={btnConfig?.color || '#000'}
+        value={btnConfig?.color || defaultButtonColor}
         onChange={newValue => {
           updateAppearance({
             btnConfig: {
@@ -194,9 +198,9 @@ function ColorSelector() {
         }}
       />
       <ColorField
-        className="max-w-57"
+        className="w-full max-w-none"
         label={<Trans message="Text color" />}
-        value={btnConfig?.textColor || '#000'}
+        value={btnConfig?.textColor || defaultTextColor}
         onChange={newValue => {
           updateAppearance({
             btnConfig: {
@@ -208,6 +212,22 @@ function ColorSelector() {
       />
     </div>
   );
+}
+
+function resolveThemeColor(variable: string, fallback: string): string {
+  if (typeof document === 'undefined') return fallback;
+
+  const value = getComputedStyle(document.documentElement)
+    .getPropertyValue(variable)
+    .trim();
+
+  try {
+    return value
+      ? new Color(value).to('srgb').toString({format: 'hex'})
+      : fallback;
+  } catch {
+    return fallback;
+  }
 }
 
 type ButtonStyleItemProps = {
@@ -231,7 +251,7 @@ function ButtonStyleItem({
     >
       <button
         id={id}
-        aria-labelledby={id}
+        aria-labelledby={label ? `${id}-label` : undefined}
         onClick={onClick}
         type="button"
         className={cn(
@@ -241,7 +261,7 @@ function ButtonStyleItem({
         {children}
       </button>
       {label ? (
-        <div className="text-xs" id={id}>
+        <div className="text-xs" id={`${id}-label`}>
           {label}
         </div>
       ) : null}

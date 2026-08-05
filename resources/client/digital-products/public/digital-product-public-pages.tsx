@@ -180,11 +180,17 @@ export function PublicDigitalProductPage({
             </h1>
           </div>
 
-          {data.product.description && (
-            <p className="whitespace-pre-line text-sm leading-6 text-muted-foreground">
-              {data.product.description}
-            </p>
-          )}
+          {data.product.description &&
+            (looksLikeHtml(data.product.description) ? (
+              <div
+                className="prose prose-sm max-w-none leading-6 text-muted-foreground dark:prose-invert"
+                dangerouslySetInnerHTML={{__html: data.product.description}}
+              />
+            ) : (
+              <p className="whitespace-pre-line text-sm leading-6 text-muted-foreground">
+                {data.product.description}
+              </p>
+            ))}
 
           {checkoutCancelled && (
             <Alert variant="warning" fillStyle="subtleFill">
@@ -686,6 +692,10 @@ function ProductBackground({
 
 function isPaid(order: DigitalProductOrder) {
   return order.status === 'paid' || order.payment_status === 'paid';
+}
+
+function looksLikeHtml(value: string) {
+  return /<[a-z][\s\S]*>/i.test(value);
 }
 
 function formatPrice(priceCents: number, currency: string) {

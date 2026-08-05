@@ -1,0 +1,2 @@
+import{a as e}from"./rolldown-runtime-Cyuzqnbw.js";import{_i as t}from"./icons-BEdJcK9h.js";var n=e(t());function r(e){let t=typeof window<`u`&&typeof window.matchMedia==`function`,[r,i]=(0,n.useState)(()=>t?window.matchMedia(e).matches:!1);return(0,n.useEffect)(()=>{if(!t)return;let n=window.matchMedia(e),r=()=>{i(n.matches)};return n.addEventListener(`change`,r),r(),()=>{n.removeEventListener(`change`,r)}},[t,e]),typeof window>`u`?null:r}export{r as t};
+//# sourceMappingURL=use-media-query-HfFEqC80.js.map

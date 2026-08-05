@@ -7,6 +7,8 @@
  */
 import type {ChangeBiolinkContentOrderBody} from './schemas/change-biolink-content-order-body';
 
+import type {ConvertBiolinkToCreatorProfile200} from './schemas/convert-biolink-to-creator-profile200';
+
 import type {CreateBiolinkLink200} from './schemas/create-biolink-link200';
 
 import type {CreateBiolinkWidgetBody} from './schemas/create-biolink-widget-body';
@@ -40,6 +42,10 @@ import type {UpdateBiolinkWidgetBody} from './schemas/update-biolink-widget-body
 import type {UpdateBiolinkWidget200} from './schemas/update-biolink-widget200';
 
 import type {UpdateBiolink200} from './schemas/update-biolink200';
+
+import type {UpdateCreatorProfileRequest} from './schemas/update-creator-profile-request';
+
+import type {UpdateCreatorProfile200} from './schemas/update-creator-profile200';
 
 import {orvalApiFetch} from '../../../common/foundation/resources/client/http/query-client';
 
@@ -113,6 +119,38 @@ export const deleteBiolink = (
 ) => {
   return orvalApiFetch<void>(
     {url: `/biolinks/${id}`, method: 'DELETE'},
+    options,
+  );
+};
+/**
+ * @summary Update the fixed creator profile
+ */
+export const updateCreatorProfile = (
+  id: number,
+  updateCreatorProfileRequest: UpdateCreatorProfileRequest,
+  options?: SecondParameter<typeof orvalApiFetch<UpdateCreatorProfile200>>,
+) => {
+  return orvalApiFetch<UpdateCreatorProfile200>(
+    {
+      url: `/biolinks/${id}/creator-profile`,
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      data: updateCreatorProfileRequest,
+    },
+    options,
+  );
+};
+/**
+ * @summary Convert a legacy biolink without deleting its widget records
+ */
+export const convertBiolinkToCreatorProfile = (
+  id: number,
+  options?: SecondParameter<
+    typeof orvalApiFetch<ConvertBiolinkToCreatorProfile200>
+  >,
+) => {
+  return orvalApiFetch<ConvertBiolinkToCreatorProfile200>(
+    {url: `/biolinks/${id}/creator-profile/convert`, method: 'POST'},
     options,
   );
 };
@@ -267,6 +305,12 @@ export type UpdateBiolinkResult = NonNullable<
 >;
 export type DeleteBiolinkResult = NonNullable<
   Awaited<ReturnType<typeof deleteBiolink>>
+>;
+export type UpdateCreatorProfileResult = NonNullable<
+  Awaited<ReturnType<typeof updateCreatorProfile>>
+>;
+export type ConvertBiolinkToCreatorProfileResult = NonNullable<
+  Awaited<ReturnType<typeof convertBiolinkToCreatorProfile>>
 >;
 export type CreateBiolinkLinkResult = NonNullable<
   Awaited<ReturnType<typeof createBiolinkLink>>

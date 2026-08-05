@@ -1,2 +1,0 @@
-import{Ar as e,O as t,li as n}from"./icons-D3_jG86k.js";var r=n();function i({value:n}){return n?(0,r.jsx)(e,{className:`size-4 text-positive`}):(0,r.jsx)(t,{className:`size-4 text-destructive`})}export{i as t};
-//# sourceMappingURL=boolean-indicator-CNBdMaNJ.js.map

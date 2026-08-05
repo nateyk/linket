@@ -29,6 +29,7 @@ use App\Biolinks\Controllers\BiolinkContentOrderController;
 use App\Biolinks\Controllers\BiolinkLinkController;
 use App\Biolinks\Controllers\BiolinksController;
 use App\Biolinks\Controllers\BiolinkWidgetsController;
+use App\Biolinks\Controllers\CreatorProfileController;
 use App\TrackingPixels\Controllers\TrackingPixelsController;
 use App\Webhooks\Controllers\WebhookAttemptsController;
 use App\Webhooks\Controllers\WebhooksController;
@@ -80,6 +81,8 @@ Route::group(['prefix' => 'v1'], function() {
         Route::post('biolinks', [BiolinksController::class, 'store']);
         Route::put('biolinks/{id}', [BiolinksController::class, 'update']);
         Route::delete('biolinks/{id}', [BiolinksController::class, 'destroy']);
+        Route::put('biolinks/{id}/creator-profile', [CreatorProfileController::class, 'update']);
+        Route::post('biolinks/{id}/creator-profile/convert', [CreatorProfileController::class, 'convert']);
         Route::post('biolink/{id}/change-order', [BiolinkContentOrderController::class, 'changeOrder']);
         Route::post('biolink/{id}/appearance', [BiolinkAppearanceController::class, 'update']);
 

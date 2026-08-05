@@ -1,0 +1,2 @@
+import{$ as e,nt as t,tt as n}from"./useBaseUiId-OVBLdjQD.js";import{t as r}from"./useCompositeItem-CnKnxGU_.js";function i(i){let{render:a,className:o,style:s,state:c=t,props:l=n,refs:u=n,metadata:d,stateAttributesMapping:f,tag:p=`div`,...m}=i,{compositeProps:h,compositeRef:g}=r({metadata:d});return e(p,i,{state:c,ref:[...u,g],props:[h,...l,m],stateAttributesMapping:f})}export{i as t};
+//# sourceMappingURL=CompositeItem-Bl26EFS3.js.map

@@ -1,0 +1,2 @@
+import{a as e}from"./rolldown-runtime-Cyuzqnbw.js";import{_i as t}from"./icons-BEdJcK9h.js";import{lt as n}from"./useBaseUiId-OVBLdjQD.js";import{h as r}from"./field-DWLx0Ldv.js";var i=e(t());function a(e,t,a,o,s=!0){let{registerFieldControl:c}=r(),l=i.useRef(null);l.current||=Symbol(),n(()=>{let n=l.current;if(!(!n||!s))return c(n,{controlRef:e,getValue:o,id:t,value:a}),()=>{c(n,void 0)}},[e,s,o,t,c,a])}export{a as t};
+//# sourceMappingURL=useRegisterFieldControl-eJ8-_Dff.js.map

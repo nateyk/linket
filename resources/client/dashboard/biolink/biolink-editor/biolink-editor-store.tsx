@@ -1,4 +1,8 @@
 import {Biolink} from '@app/gen/schemas/biolink';
+import {
+  CreatorProfileConfig,
+  getCreatorProfileConfig,
+} from '@app/dashboard/biolink/biolink-editor/creator-profile-types';
 import {createContext, ReactNode, use, useState} from 'react';
 import {create} from 'zustand';
 import {useStoreWithEqualityFn} from 'zustand/traditional';
@@ -9,9 +13,13 @@ interface BiolinkEditorState {
   appearance: Appearance;
   appearanceIsDirty: boolean;
   content: NonNullable<Biolink['content']>;
+  profileConfig: CreatorProfileConfig;
+  profileIsDirty: boolean;
   setAppearanceIsDirty: (isDirty: boolean) => void;
   biolink: Omit<Biolink, 'appearance' | 'content'>;
   updateAppearance: (payload: Appearance) => void;
+  updateProfileConfig: (payload: CreatorProfileConfig) => void;
+  setProfileIsDirty: (isDirty: boolean) => void;
   overrideContent: (content: Biolink['content']) => void;
   getState: () => BiolinkEditorState;
 }
@@ -20,6 +28,11 @@ const defaultAppearance: Appearance = {
   bgConfig: {
     backgroundColor: '',
     color: '',
+  },
+  btnConfig: {
+    variant: 'solid',
+    radius: 'rounded-sm',
+    shadow: 'none',
   },
   layout: 'profile-sidebar',
 };
@@ -33,8 +46,13 @@ export const createBiolinkEditorStore = (biolink: Biolink) => {
       layout: 'profile-sidebar',
     },
     appearanceIsDirty: false,
+    profileConfig: getCreatorProfileConfig(biolink),
+    profileIsDirty: false,
     setAppearanceIsDirty: (isDirty: boolean) => {
       set(() => ({appearanceIsDirty: isDirty}));
+    },
+    setProfileIsDirty: (isDirty: boolean) => {
+      set(() => ({profileIsDirty: isDirty}));
     },
     biolink: {
       ...biolink,
@@ -52,6 +70,12 @@ export const createBiolinkEditorStore = (biolink: Biolink) => {
           ...state.appearance,
           ...payload,
         },
+      }));
+    },
+    updateProfileConfig(payload: CreatorProfileConfig) {
+      set(() => ({
+        profileConfig: payload,
+        profileIsDirty: true,
       }));
     },
   }));
