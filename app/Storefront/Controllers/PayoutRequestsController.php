@@ -23,7 +23,11 @@ class PayoutRequestsController extends Controller
     public function markPaid(Request $request, PayoutRequest $payoutRequest)
     {
         Gate::authorize('admin.access');
-        return new PayoutRequestResource(app(PayoutRequestService::class)->transition($payoutRequest, 'mark_paid', $request->user()->id, $request->validate(['transfer_reference' => 'required|string|max:190', 'note' => 'nullable|string|max:2000'])));
+        return new PayoutRequestResource(app(PayoutRequestService::class)->transition($payoutRequest, 'mark_paid', $request->user()->id, $request->validate([
+            'transfer_reference' => 'required_without:auto_transfer|string|max:190',
+            'note' => 'nullable|string|max:2000',
+            'auto_transfer' => 'sometimes|boolean',
+        ])));
     }
 
     public function cancel(Request $request, PayoutRequest $payoutRequest): PayoutRequestResource { abort_unless($payoutRequest->creator_id === $request->user()->id && $payoutRequest->workspace_id === ActiveWorkspace::get()->id, 404); return new PayoutRequestResource(app(PayoutRequestService::class)->transition($payoutRequest, 'cancel', $request->user()->id)); }

@@ -173,16 +173,26 @@ export const appRouter = createBrowserRouter(
                   ]);
                 },
                 children: [
-                  {
-                    index: true,
-                    lazy: () =>
-                      import('@common/workspace/workspace-page/workspace-members-table'),
-                  },
-                  {
-                    path: 'invites',
-                    lazy: () =>
-                      import('@common/workspace/workspace-page/workspace-invites-table'),
-                  },
+{
+                index: true,
+                lazy: () =>
+                  import('@common/workspace/workspace-page/workspace-members-table'),
+              },
+              {
+                path: 'invites',
+                lazy: () =>
+                  import('@common/workspace/workspace-page/workspace-invites-table'),
+              },
+              {
+                path: 'payouts',
+                lazy: () =>
+                  import('@common/workspace/workspace-page/workspace-payouts-page'),
+                loader: async ({params}) => {
+                  await queryClient.ensureQueryData(
+                    retrieveWorkspaceOptions(Number(params.workspaceId!)),
+                  );
+                },
+              },
                 ],
               },
 

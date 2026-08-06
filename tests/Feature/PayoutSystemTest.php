@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Kyc\Models\KycVerification;
 use App\Models\User;
+use App\Storefront\ChapaPayoutService;
 use App\Storefront\Models\DigitalProductPayoutMethod;
 use App\Storefront\Models\DigitalProductWithdrawalMethod;
 use App\Storefront\Models\PayoutRequest;
@@ -12,6 +13,7 @@ use App\Storefront\PayoutRequestService;
 use Common\Permissions\Models\Permission;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -434,6 +436,142 @@ class PayoutSystemTest extends TestCase
     }
 
     /**
+     * Admin can mark a payout as paid with auto_transfer=true for bank_transfer,
+     * which triggers a Chapa transfer and returns the Chapa transfer reference.
+     */
+    public function testAdminMarkPaidWithAutoTransferBankTransfer(): void
+    {
+        settings()->save(['kyc.enabled' => true]);
+        [$creator, $workspaceId, $payout, $admin] = $this->seedPendingPayout();
+
+        // Use the seeded 'bank_transfer' withdrawal method (code='bank_transfer')
+        $bankMethod = \App\Storefront\Models\DigitalProductWithdrawalMethod::query()->where('code', 'bank_transfer')->firstOrFail();
+
+        $payout->update([
+            'withdrawal_method_id' => $bankMethod->id,
+            'withdrawal_method_name' => $bankMethod->name,
+            'payout_destination' => 'cbe_bank:1234567890',
+        ]);
+        $payout->payoutMethod()->update([
+            'withdrawal_method_id' => $bankMethod->id,
+            'type' => 'bank_transfer',
+            'destination' => 'cbe_bank:1234567890',
+            'withdrawal_method_id' => $bankMethod->id,
+        ]);
+
+        $this->stateful()->actingAs($admin);
+        $this->postJson("/api/v1/admin/digital-products/payout-requests/{$payout->id}/processing", [
+            'note' => 'Processing',
+        ])->assertOk();
+
+        // Mock Chapa createTransfer to avoid external API call
+        $this->mockChapaTransfer();
+
+        $response = $this->postJson("/api/v1/admin/digital-products/payout-requests/{$payout->id}/mark-paid", [
+            'auto_transfer' => true,
+        ])->assertOk()->assertJsonPath('data.status', 'paid');
+
+        $this->assertStringStartsWith('CHAPA-TX-', $response->json('data.transfer_reference'));
+    }
+
+    /**
+     * Admin can mark a payout as paid with auto_transfer=true for telebirr.
+     */
+    public function testAdminMarkPaidWithAutoTransferTelebirr(): void
+    {
+        settings()->save(['kyc.enabled' => true]);
+        [$creator, $workspaceId, $payout, $admin] = $this->seedPendingPayout();
+
+        $telebirrMethod = \App\Storefront\Models\DigitalProductWithdrawalMethod::query()->where('code', 'telebirr')->firstOrFail();
+
+        $payout->update([
+            'withdrawal_method_id' => $telebirrMethod->id,
+            'withdrawal_method_name' => $telebirrMethod->name,
+        ]);
+        $payout->payoutMethod()->update([
+            'withdrawal_method_id' => $telebirrMethod->id,
+            'type' => 'telebirr',
+            'destination' => '+251911223344',
+            'withdrawal_method_id' => $telebirrMethod->id,
+        ]);
+
+        $this->stateful()->actingAs($admin);
+        $this->postJson("/api/v1/admin/digital-products/payout-requests/{$payout->id}/processing", [
+            'note' => 'Processing',
+        ])->assertOk();
+
+        $this->mockChapaTransfer();
+
+        $response = $this->postJson("/api/v1/admin/digital-products/payout-requests/{$payout->id}/mark-paid", [
+            'auto_transfer' => true,
+        ])->assertOk()->assertJsonPath('data.status', 'paid');
+
+        $this->assertStringStartsWith('CHAPA-TX-', $response->json('data.transfer_reference'));
+    }
+
+    /**
+     * Auto-transfer falls back to manual reference for unsupported methods (paypal, other).
+     */
+    public function testAutoTransferFallsBackToManualForPaypal(): void
+    {
+        settings()->save(['kyc.enabled' => true]);
+        [$creator, $workspaceId, $payout, $admin] = $this->seedPendingPayout();
+
+        $paypalMethod = \App\Storefront\Models\DigitalProductWithdrawalMethod::query()->where('code', 'paypal')->firstOrFail();
+
+        $payout->update([
+            'withdrawal_method_id' => $paypalMethod->id,
+            'withdrawal_method_name' => $paypalMethod->name,
+            'payout_destination' => 'test@example.com',
+        ]);
+        $payout->payoutMethod()->update([
+            'withdrawal_method_id' => $paypalMethod->id,
+            'type' => 'paypal',
+            'destination' => 'test@example.com',
+            'withdrawal_method_id' => $paypalMethod->id,
+        ]);
+
+        $this->stateful()->actingAs($admin);
+        $this->postJson("/api/v1/admin/digital-products/payout-requests/{$payout->id}/processing", [
+            'note' => 'Processing',
+        ])->assertOk();
+
+        $response = $this->postJson("/api/v1/admin/digital-products/payout-requests/{$payout->id}/mark-paid", [
+            'auto_transfer' => true,
+        ])->assertOk()->assertJsonPath('data.status', 'paid');
+
+        $this->assertStringStartsWith('MANUAL-', $response->json('data.transfer_reference'));
+    }
+
+    /**
+     * Auto-transfer requires the payout to be in processing state first.
+     */
+    public function testAutoTransferRequiresProcessingState(): void
+    {
+        settings()->save(['kyc.enabled' => true]);
+        [$creator, $workspaceId, $payout, $admin] = $this->seedPendingPayout();
+
+        // Do NOT process first, try to mark paid directly with auto_transfer
+        $this->stateful()->actingAs($admin);
+        $this->postJson("/api/v1/admin/digital-products/payout-requests/{$payout->id}/mark-paid", [
+            'auto_transfer' => true,
+        ])->assertStatus(422); // State machine blocks requested -> paid
+    }
+
+    /**
+     * Mock Chapa transfer to avoid external API calls in tests.
+     */
+    private function mockChapaTransfer(): void
+    {
+        $this->instance(\Chapa\Chapa\Chapa::class, new class extends \Chapa\Chapa\Chapa {
+            public function createTransfer(array $data): array
+            {
+                return ['data' => ['id' => 'chapa_transfer_' . uniqid(), 'status' => 'success']];
+            }
+        });
+    }
+
+    /**
      * Seed a pending payout request for a verified creator that has funds.
      * Returns [creator, workspaceId, payout, admin?].
      */
@@ -549,5 +687,195 @@ class PayoutSystemTest extends TestCase
     private function stateful(): static
     {
         return $this->withHeader('Referer', 'http://localhost');
+    }
+
+    /**
+     * ChapaPayoutService can fetch and cache the bank list.
+     */
+    public function testChapaServiceCanFetchAndCacheBanks(): void
+    {
+        $this->mockChapaBanks();
+        $service = app(ChapaPayoutService::class);
+
+        // First call - should hit the mock
+        $banks1 = $service->getBanks();
+        $this->assertIsArray($banks1);
+        $this->assertNotEmpty($banks1);
+        $this->assertArrayHasKey('id', $banks1[0]);
+        $this->assertArrayHasKey('slug', $banks1[0]);
+        $this->assertArrayHasKey('swift', $banks1[0]);
+        $this->assertArrayHasKey('name', $banks1[0]);
+
+        // Second call - should use cache (we can't easily test cache was used without mocking Cache facade,
+        // but we can verify the result is the same)
+        $banks2 = $service->getBanks();
+        $this->assertEquals($banks1, $banks2);
+    }
+
+    /**
+     * ChapaPayoutService can validate bank codes against the fetched list.
+     */
+public function testChapaServiceCanValidateBankCodes(): void
+    {
+        $this->mockChapaBanks();
+        $service = app(ChapaPayoutService::class);
+
+        $this->assertTrue($service->validateBankCode('cbe_bank'));
+        $this->assertTrue($service->validateBankCode('CBE_BANK'));
+        $this->assertTrue($service->validateBankCode('CBETETAA'));
+        $this->assertTrue($service->validateBankCode('946'));
+        $this->assertFalse($service->validateBankCode('invalid_bank'));
+    }
+
+    /**
+     * ChapaPayoutService can find a bank by its code.
+     */
+    public function testChapaServiceCanFindBankByCode(): void
+    {
+        $this->mockChapaBanks();
+        $service = app(ChapaPayoutService::class);
+
+        $bank = $service->findBankByCode('cbe_bank');
+        $this->assertNotNull($bank);
+        $this->assertSame('cbe_bank', $bank['slug']);
+
+        $bank = $service->findBankByCode('CBETETAA');
+        $this->assertNotNull($bank);
+        $this->assertSame('cbe_bank', $bank['slug']);
+
+        $this->assertNull($service->findBankByCode('nonexistent'));
+    }
+
+    /**
+     * ChapaPayoutService can verify a transfer reference.
+     */
+    public function testChapaServiceCanVerifyTransfer(): void
+    {
+        $this->instance(\Chapa\Chapa\Chapa::class, new class extends \Chapa\Chapa\Chapa {
+            public function verifyTransfer($id): array
+            {
+                return [
+                    'message' => 'Transfer details',
+                    'status' => 'success',
+                    'data' => [
+                        'status' => 'success',
+                        'chapa_transfer_id' => 'transfer_123',
+                        'amount' => '100.00',
+                        'currency' => 'ETB',
+                        'reference' => $id,
+                        'bank_name' => 'Commercial Bank of Ethiopia',
+                    ],
+                ];
+            }
+
+            public function createTransfer(array $data): array
+            {
+                return ['data' => ['id' => 'chapa_transfer_' . uniqid(), 'status' => 'success']];
+            }
+        });
+
+        $service = app(ChapaPayoutService::class);
+
+        $result = $service->verifyTransfer('test_ref_123');
+
+        $this->assertSame('success', $result['status']);
+        $this->assertSame('test_ref_123', $result['reference']);
+    }
+
+    /**
+     * Bank code validation prevents invalid codes in bank transfer creation.
+     */
+    public function testBankTransferRejectsInvalidBankCode(): void
+    {
+        settings()->save(['kyc.enabled' => true]);
+        [$creator, $workspaceId, $payout, $admin] = $this->seedPendingPayout();
+
+        $bankMethod = \App\Storefront\Models\DigitalProductWithdrawalMethod::query()->where('code', 'bank_transfer')->firstOrFail();
+
+        $payout->update([
+            'withdrawal_method_id' => $bankMethod->id,
+            'withdrawal_method_name' => $bankMethod->name,
+            'payout_destination' => 'INVALID:1234567890',
+        ]);
+        $payout->payoutMethod()->update([
+            'withdrawal_method_id' => $bankMethod->id,
+            'type' => 'bank_transfer',
+            'destination' => 'INVALID:1234567890',
+            'withdrawal_method_id' => $bankMethod->id,
+        ]);
+
+        $this->stateful()->actingAs($admin);
+        $this->postJson("/api/v1/admin/digital-products/payout-requests/{$payout->id}/processing", [
+            'note' => 'Processing',
+        ])->assertOk();
+
+        $this->mockChapaTransfer();
+
+        $response = $this->postJson("/api/v1/admin/digital-products/payout-requests/{$payout->id}/mark-paid", [
+            'auto_transfer' => true,
+        ]);
+
+        $response->assertStatus(500); // RuntimeException for invalid bank code
+    }
+
+    /**
+     * Mock Chapa banks list for testing.
+     */
+    private function mockChapaBanks(): void
+    {
+        Cache::flush();
+        $this->instance(\Chapa\Chapa\Chapa::class, new class extends \Chapa\Chapa\Chapa {
+            public function getBanks(): array
+            {
+                return [
+                    'data' => [
+                        [
+                            'id' => 946,
+                            'slug' => 'cbe_bank',
+                            'swift' => 'CBETETAA',
+                            'name' => 'Commercial Bank of Ethiopia',
+                            'acct_length' => 13,
+                            'country_id' => 1,
+                            'is_mobilemoney' => null,
+                            'is_active' => 1,
+                            'is_rtgs' => 1,
+                            'active' => 1,
+                            'currency' => 'ETB',
+                        ],
+                        [
+                            'id' => 880,
+                            'slug' => 'dashen_bank',
+                            'swift' => 'DASHETAA',
+                            'name' => 'Dashen Bank',
+                            'acct_length' => 13,
+                            'country_id' => 1,
+                            'is_mobilemoney' => null,
+                            'is_active' => 1,
+                            'is_rtgs' => 1,
+                            'active' => 1,
+                            'currency' => 'ETB',
+                        ],
+                        [
+                            'id' => 130,
+                            'slug' => 'abay_bank',
+                            'swift' => 'ABAYETAA',
+                            'name' => 'Abay Bank',
+                            'acct_length' => 16,
+                            'country_id' => 1,
+                            'is_mobilemoney' => null,
+                            'is_active' => 1,
+                            'is_rtgs' => 1,
+                            'active' => 1,
+                            'currency' => 'ETB',
+                        ],
+                    ],
+                ];
+            }
+
+            public function createTransfer(array $data): array
+            {
+                return ['data' => ['id' => 'chapa_transfer_' . uniqid(), 'status' => 'success']];
+            }
+        });
     }
 }

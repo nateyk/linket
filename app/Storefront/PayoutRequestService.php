@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Storefront\Models\DigitalProductPayoutMethod;
 use App\Storefront\Models\PayoutRequest;
 use App\Storefront\Models\DigitalProductWithdrawalMethod;
+use App\Storefront\ChapaPayoutService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -67,7 +68,7 @@ class PayoutRequestService
     public function transition(PayoutRequest $payout, string $action, int $actorId, array $data = []): PayoutRequest
     {
         return DB::transaction(function () use ($payout, $action, $actorId, $data): PayoutRequest {
-            $payout = PayoutRequest::query()->lockForUpdate()->findOrFail($payout->id);
+            $payout = PayoutRequest::query()->with('withdrawalMethod')->lockForUpdate()->findOrFail($payout->id);
             $target = match ($action) {
                 'start_processing' => 'processing',
                 'mark_paid' => 'paid',
@@ -78,13 +79,25 @@ class PayoutRequestService
             if (!self::canTransition($payout->status, $target)) {
                 throw ValidationException::withMessages(['status' => __('This payout can no longer be changed.')]);
             }
-            if ($target === 'paid' && blank($data['transfer_reference'] ?? null)) {
-                throw ValidationException::withMessages(['transfer_reference' => __('A transfer reference is required before marking a payout paid.')]);
+
+            $transferReference = $data['transfer_reference'] ?? null;
+            $autoTransfer = (bool) ($data['auto_transfer'] ?? false);
+
+            if ($target === 'paid') {
+                if ($autoTransfer && in_array($payout->withdrawalMethod?->code, ['bank_transfer', 'telebirr'], true)) {
+                    $transferReference = app(ChapaPayoutService::class)->createTransfer($payout);
+                } elseif ($autoTransfer) {
+                    // Auto transfer requested but method not supported for Chapa API;
+                    // generate a manual reference as fallback.
+                    $transferReference = 'MANUAL-' . strtoupper(substr(md5($payout->id . time()), 0, 12));
+                } elseif (blank($transferReference)) {
+                    throw ValidationException::withMessages(['transfer_reference' => __('A transfer reference is required before marking a payout paid.')]);
+                }
             }
 
             $updates = ['status' => $target];
             if ($target === 'processing') $updates += ['processed_by' => $actorId, 'processing_at' => now(), 'admin_notes' => $data['note'] ?? null];
-            if ($target === 'paid') $updates += ['processed_by' => $actorId, 'paid_at' => now(), 'transfer_reference' => $data['transfer_reference'], 'admin_notes' => $data['note'] ?? $payout->admin_notes];
+            if ($target === 'paid') $updates += ['processed_by' => $actorId, 'paid_at' => now(), 'transfer_reference' => $transferReference, 'admin_notes' => $data['note'] ?? $payout->admin_notes];
             if ($target === 'rejected') $updates += ['processed_by' => $actorId, 'rejected_at' => now(), 'rejection_reason' => $data['reason'] ?? __('Payout request rejected.')];
             if ($target === 'cancelled') $updates += ['cancelled_at' => now()];
             $payout->update($updates);

@@ -37,6 +37,7 @@ use App\Webhooks\Controllers\WebhookAttemptsController;
 use App\Webhooks\Controllers\WebhooksController;
 use App\Tags\Controllers\TagsController;
 use Common\Domains\CustomDomainsController;
+use App\Storefront\Controllers\WorkspacePayoutConfigController;
 use Illuminate\Support\Facades\Route;
 
 Route::group(['prefix' => 'v1'], function() {
@@ -175,5 +176,9 @@ Route::group(['prefix' => 'v1'], function() {
         ]);
         Route::post('webhooks/{id}/enable', [WebhooksController::class, 'enable']);
         Route::post('webhooks/{id}/disable', [WebhooksController::class, 'disable']);
+
+        // WORKSPACE PAYOUT CONFIG
+        Route::get('workspaces/{workspaceId}/payout-config', [WorkspacePayoutConfigController::class, 'show']);
+        Route::post('workspaces/{workspaceId}/payout-config', [WorkspacePayoutConfigController::class, 'update']);
     });
 });
