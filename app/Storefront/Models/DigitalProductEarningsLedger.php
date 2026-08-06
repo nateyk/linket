@@ -10,6 +10,8 @@ class DigitalProductEarningsLedger extends StorefrontModel
 {
     use BelongsToWorkspace;
 
+    protected $table = 'digital_product_earnings_ledger';
+
     protected $guarded = [];
 
     protected $casts = [
