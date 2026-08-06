@@ -25,6 +25,9 @@ class PublicDigitalProductResource extends JsonResource
             ] : null),
             'creator' => $this->whenLoaded('creator', fn() => [
                 'name' => $this->creator->name,
+                'verified' => settings('kyc.enabled', false)
+                    ? $this->creator->isKycVerified()
+                    : $this->creator->email_verified_at !== null,
             ]),
         ];
     }

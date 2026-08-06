@@ -123,6 +123,11 @@ export const appRouter = createBrowserRouter(
                 },
               },
               {
+                path: 'verification',
+                lazy: () =>
+                  import('@app/account-settings/kyc/kyc-page'),
+              },
+              {
                 path: 'api-keys',
                 lazy: () => import('@app/account-settings/access-tokens-page'),
                 middleware: [

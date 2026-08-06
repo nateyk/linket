@@ -20,6 +20,7 @@ import {Trans} from '@ui/i18n/trans';
 import {useSettings} from '@ui/settings/use-settings';
 import {useMediaQuery} from '@ui/utils/hooks/use-media-query';
 import {
+  BadgeCheckIcon,
   ChevronLeftIcon,
   KeyIcon,
   LockIcon,
@@ -135,6 +136,14 @@ function AccountSettingsSidebar() {
                   icon={<LockIcon />}
                 >
                   <Trans message="Security" />
+                </Sidebar.MenuButton>
+              </Sidebar.MenuItem>
+              <Sidebar.MenuItem>
+                <Sidebar.MenuButton
+                  render={<NavLink to="/account-settings/verification" />}
+                  icon={<BadgeCheckIcon />}
+                >
+                  <Trans message="Verification" />
                 </Sidebar.MenuButton>
               </Sidebar.MenuItem>
               <Sidebar.MenuItem>

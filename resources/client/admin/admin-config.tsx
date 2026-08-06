@@ -9,6 +9,7 @@ import {
   GlobeIcon,
   NotebookTextIcon,
   SettingsIcon,
+  ShieldCheckIcon,
   SquareStackIcon,
   StoreIcon,
   TagsIcon,
@@ -36,6 +37,7 @@ export const AdminSidebarIcons: Record<
   '/admin/logs': <ClipboardClockIcon />,
   '/admin/digital-products': <StoreIcon />,
   '/admin/payment-activity': <CircleDollarSignIcon />,
+  '/admin/kyc-verifications': <ShieldCheckIcon />,
 };
 
 for (const [key, value] of Object.entries(sharedDashboardIcons)) {
@@ -46,6 +48,7 @@ for (const [key, value] of Object.entries(sharedDashboardIcons)) {
 export const AppSettingsNavConfig: SettingsNavItem[] = [
   {label: message('Links'), to: 'links', position: 2},
   {label: message('Biolinks'), to: 'biolinks', position: 2},
+  {label: message('Verification'), to: 'kyc', position: 2},
   {label: message('Landing page'), to: 'landing-page', position: 2},
   {label: message('Ads'), to: 'ads', position: 20},
 ];

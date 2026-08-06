@@ -13,7 +13,7 @@ import {Avatar} from '@shadcn/avatar/avatar';
 import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {Popover} from '@shadcn/popover/popover';
 import {Trans} from '@ui/i18n/trans';
-import {BellIcon, ChevronUpIcon, StoreIcon, WalletCardsIcon} from 'lucide-react';
+import {BellIcon, ChevronUpIcon, ShieldCheckIcon, StoreIcon, WalletCardsIcon} from 'lucide-react';
 import {use} from 'react';
 import {NavLink} from 'react-router';
 
@@ -26,6 +26,9 @@ export function AdminSidebar() {
   );
   const hasTransactions = adminMenu?.items.some(
     item => item.action === '/admin/payment-activity',
+  );
+  const hasKyc = adminMenu?.items.some(
+    item => item.action === '/admin/kyc-verifications',
   );
 
   return (
@@ -53,7 +56,7 @@ export function AdminSidebar() {
               defaultIcons={AdminSidebarIcons}
               end={item => item.action === '/admin'}
             />
-            {(!hasDigitalProducts || !hasTransactions) && (
+            {(!hasDigitalProducts || !hasTransactions || !hasKyc) && (
               <Sidebar.Menu>
                 {!hasDigitalProducts && (
                   <Sidebar.MenuItem>
@@ -72,6 +75,16 @@ export function AdminSidebar() {
                       icon={<WalletCardsIcon />}
                     >
                       <Trans message="Transactions" />
+                    </Sidebar.MenuButton>
+                  </Sidebar.MenuItem>
+                )}
+                {!hasKyc && (
+                  <Sidebar.MenuItem>
+                    <Sidebar.MenuButton
+                      render={<NavLink to="/admin/kyc-verifications" />}
+                      icon={<ShieldCheckIcon />}
+                    >
+                      <Trans message="Verification" />
                     </Sidebar.MenuButton>
                   </Sidebar.MenuItem>
                 )}

@@ -14,6 +14,8 @@
 
 use App\Analytics\Controllers\AdminAnalyticsController;
 use App\Http\Controllers\LandingPageController;
+use App\Kyc\Controllers\AdminKycVerificationsController;
+use App\Kyc\Controllers\KycVerificationsController;
 use App\Links\Controllers\LinksController;
 use App\Folders\Controllers\FolderLinksController;
 use App\QrCodes\Controllers\QrCodesController;
@@ -49,6 +51,16 @@ Route::group(['prefix' => 'v1'], function() {
         Route::get('tracked-events', [TrackedEventsController::class, 'index']);
 
         Route::get('usage', UsageController::class);
+
+        // KYC VERIFICATION
+        Route::get('kyc/status', [KycVerificationsController::class, 'status']);
+        Route::post('kyc', [KycVerificationsController::class, 'store']);
+        Route::get('kyc/documents/{key}', [KycVerificationsController::class, 'document']);
+        Route::get('admin/kyc-verifications', [AdminKycVerificationsController::class, 'index']);
+        Route::get('admin/kyc-verifications/{kycVerification}', [AdminKycVerificationsController::class, 'show']);
+        Route::post('admin/kyc-verifications/{kycVerification}/approve', [AdminKycVerificationsController::class, 'approve']);
+        Route::post('admin/kyc-verifications/{kycVerification}/reject', [AdminKycVerificationsController::class, 'reject']);
+        Route::get('admin/kyc-verifications/{kycVerification}/documents/{key}', [AdminKycVerificationsController::class, 'document']);
 
         // LINK
         Route::get('links', [LinksController::class, 'index']);

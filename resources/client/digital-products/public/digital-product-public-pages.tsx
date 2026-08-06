@@ -22,6 +22,7 @@ import {Trans} from '@ui/i18n/trans';
 import {cn} from '@ui/utils/cn';
 import {
   ArrowLeftIcon,
+  BadgeCheckIcon,
   CheckCircle2Icon,
   DownloadIcon,
   FileDownIcon,
@@ -52,6 +53,7 @@ type PublicBiolink = {
 type PublicCreator = {
   name?: string | null;
   avatar?: string | null;
+  verified?: boolean;
 };
 
 export type DigitalProductPageData = {
@@ -574,6 +576,9 @@ function CreatorIdentity({
         </Avatar.ColorFallback>
       </Avatar.Root>
       <Trans message="By :creator" values={{creator: name}} />
+      {creator?.verified && (
+        <BadgeCheckIcon className="size-4 fill-current" aria-hidden="true" />
+      )}
     </div>
   );
 }

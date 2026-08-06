@@ -58,7 +58,9 @@ class BiolinkResource extends LinkeableResource
             ),
             'is_verified' => $this->when(
                 $this->relationLoaded('user'),
-                fn(): bool => $this->user?->email_verified_at !== null,
+                fn(): bool => settings('kyc.enabled', false)
+                    ? $this->user?->isKycVerified()
+                    : $this->user?->email_verified_at !== null,
             ),
 
             /** @var 'biolink' */

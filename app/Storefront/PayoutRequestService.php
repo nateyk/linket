@@ -2,6 +2,7 @@
 
 namespace App\Storefront;
 
+use App\Models\User;
 use App\Storefront\Models\DigitalProductPayoutMethod;
 use App\Storefront\Models\PayoutRequest;
 use App\Storefront\Models\DigitalProductWithdrawalMethod;
@@ -12,6 +13,11 @@ class PayoutRequestService
 {
     public function create(int $creatorId, int $workspaceId, int $amountCents): PayoutRequest
     {
+        if (settings('kyc.enabled', false)) {
+            $creator = User::query()->find($creatorId);
+            abort_unless($creator && $creator->isKycVerified(), 422, __('Complete identity verification before requesting a payout.'));
+        }
+
         return DB::transaction(function () use ($creatorId, $workspaceId, $amountCents): PayoutRequest {
             $account = DigitalProductPayoutMethod::query()
                 ->with('withdrawalMethod')

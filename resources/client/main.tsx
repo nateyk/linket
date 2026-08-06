@@ -86,6 +86,10 @@ declare module '@ui/settings/settings' {
       show_branding?: boolean;
       branding_img?: string;
     };
+    kyc?: {
+      enabled?: boolean;
+      selfie_verification?: boolean;
+    };
     ads?: {
       biolink_top?: string;
       splash_top?: string;

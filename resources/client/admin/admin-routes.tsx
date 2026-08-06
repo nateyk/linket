@@ -70,6 +70,10 @@ export const adminRoutes: RouteObject[] = [
             lazy: () => import('@app/admin/settings/biolink-settings'),
           },
           {
+            path: 'kyc',
+            lazy: () => import('@app/admin/settings/kyc-settings'),
+          },
+          {
             path: 'landing-page',
             lazy: () => import('@app/admin/settings/landing-page-settings'),
           },
@@ -111,6 +115,11 @@ export const adminRoutes: RouteObject[] = [
       {
         path: 'payment-activity',
         lazy: () => import('@app/admin/digital-products/admin-payment-activity-page'),
+      },
+      {
+        path: 'kyc-verifications',
+        lazy: () =>
+          import('@app/admin/kyc/admin-kyc-verifications-page'),
       },
       {
         path: 'digital-products/delivery-history',

@@ -645,4 +645,8 @@ return [
 
     // custom domains
     ['name' => 'custom_domains.allow_select', 'value' => true],
+
+    // KYC verification
+    ['name' => 'kyc.enabled', 'value' => true],
+    ['name' => 'kyc.selfie_verification', 'value' => true],
 ];
