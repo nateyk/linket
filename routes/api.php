@@ -37,6 +37,8 @@ use App\Webhooks\Controllers\WebhookAttemptsController;
 use App\Webhooks\Controllers\WebhooksController;
 use App\Tags\Controllers\TagsController;
 use Common\Domains\CustomDomainsController;
+use App\Storefront\Controllers\AdminPayoutRequestsController;
+use App\Storefront\Controllers\DigitalProductWithdrawalMethodsController;
 use App\Storefront\Controllers\WorkspacePayoutConfigController;
 use Illuminate\Support\Facades\Route;
 
@@ -180,5 +182,17 @@ Route::group(['prefix' => 'v1'], function() {
         // WORKSPACE PAYOUT CONFIG
         Route::get('workspaces/{workspaceId}/payout-config', [WorkspacePayoutConfigController::class, 'show']);
         Route::post('workspaces/{workspaceId}/payout-config', [WorkspacePayoutConfigController::class, 'update']);
+
+        // ADMIN WITHDRAWALS
+        Route::get('admin/withdrawals', [AdminPayoutRequestsController::class, 'index'])->name('admin.withdrawals.index');
+        Route::get('admin/withdrawals/{payoutRequest}/review', [AdminPayoutRequestsController::class, 'review'])->name('admin.withdrawals.review');
+        Route::post('admin/withdrawals/{payoutRequest}/review', [AdminPayoutRequestsController::class, 'update'])->name('admin.withdrawals.update');
+        Route::delete('admin/withdrawals/{payoutRequest}', [AdminPayoutRequestsController::class, 'destroy'])->name('admin.withdrawals.destroy');
+
+        // ADMIN WITHDRAWAL METHODS
+        Route::get('admin/financial/withdrawal-methods', [DigitalProductWithdrawalMethodsController::class, 'adminIndex'])->name('admin.withdrawal-methods.index');
+        Route::post('admin/financial/withdrawal-methods', [DigitalProductWithdrawalMethodsController::class, 'store'])->name('admin.withdrawal-methods.store');
+        Route::put('admin/financial/withdrawal-methods/{withdrawalMethod}', [DigitalProductWithdrawalMethodsController::class, 'update'])->name('admin.withdrawal-methods.update');
+        Route::delete('admin/financial/withdrawal-methods/{withdrawalMethod}', [DigitalProductWithdrawalMethodsController::class, 'destroy'])->name('admin.withdrawal-methods.destroy');
     });
 });

@@ -15,6 +15,9 @@ import {
   TagsIcon,
   UserIcon,
   UserRoundKeyIcon,
+  CreditCardIcon,
+  LandmarkIcon,
+  CoinsIcon,
 } from 'lucide-react';
 import {ComponentProps, ReactElement} from 'react';
 
@@ -38,6 +41,9 @@ export const AdminSidebarIcons: Record<
   '/admin/digital-products': <StoreIcon />,
   '/admin/payment-activity': <CircleDollarSignIcon />,
   '/admin/kyc-verifications': <ShieldCheckIcon />,
+  '/admin/withdrawals': <CreditCardIcon />,
+  '/admin/financial/withdrawal-methods': <CoinsIcon />,
+  '/admin/financial': <LandmarkIcon />,
 };
 
 for (const [key, value] of Object.entries(sharedDashboardIcons)) {

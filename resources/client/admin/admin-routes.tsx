@@ -122,6 +122,26 @@ export const adminRoutes: RouteObject[] = [
           import('@app/admin/kyc/admin-kyc-verifications-page'),
       },
       {
+        path: 'withdrawals',
+        lazy: () => import('@app/admin/withdrawals/admin-withdrawals-page'),
+      },
+      {
+        path: 'withdrawals/:withdrawalId/review',
+        lazy: () => import('@app/admin/withdrawals/admin-withdrawal-review-page'),
+      },
+      {
+        path: 'financial/withdrawal-methods',
+        lazy: () => import('@app/admin/financial/admin-withdrawal-methods-page'),
+      },
+      {
+        path: 'financial/withdrawal-methods/create',
+        lazy: () => import('@app/admin/financial/admin-withdrawal-method-create-page'),
+      },
+      {
+        path: 'financial/withdrawal-methods/:methodId/edit',
+        lazy: () => import('@app/admin/financial/admin-withdrawal-method-edit-page'),
+      },
+      {
         path: 'digital-products/delivery-history',
         lazy: () => import('@app/admin/digital-products/admin-order-recovery-deliveries-page'),
       },

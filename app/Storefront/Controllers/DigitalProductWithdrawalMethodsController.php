@@ -4,6 +4,7 @@ namespace App\Storefront\Controllers;
 
 use App\Storefront\Models\DigitalProductWithdrawalMethod;
 use App\Storefront\Resources\DigitalProductWithdrawalMethodResource;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Gate;
@@ -34,6 +35,14 @@ class DigitalProductWithdrawalMethodsController extends Controller
         Gate::authorize('admin.access');
         $withdrawalMethod->update($this->validated($request, false));
         return new DigitalProductWithdrawalMethodResource($withdrawalMethod->fresh());
+    }
+
+    public function destroy(DigitalProductWithdrawalMethod $withdrawalMethod): JsonResponse
+    {
+        Gate::authorize('admin.access');
+        $withdrawalMethod->delete();
+
+        return response()->json(['message' => __('Deleted Successfully')]);
     }
 
     private function validated(Request $request, bool $create = true): array

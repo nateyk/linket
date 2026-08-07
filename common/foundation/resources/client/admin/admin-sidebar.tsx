@@ -13,7 +13,7 @@ import {Avatar} from '@shadcn/avatar/avatar';
 import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {Popover} from '@shadcn/popover/popover';
 import {Trans} from '@ui/i18n/trans';
-import {BellIcon, ChevronUpIcon, ShieldCheckIcon, StoreIcon, WalletCardsIcon} from 'lucide-react';
+import {BellIcon, ChevronUpIcon, ShieldCheckIcon, StoreIcon, WalletCardsIcon, CreditCardIcon, CoinsIcon, LandmarkIcon} from 'lucide-react';
 import {use} from 'react';
 import {NavLink} from 'react-router';
 
@@ -29,6 +29,12 @@ export function AdminSidebar() {
   );
   const hasKyc = adminMenu?.items.some(
     item => item.action === '/admin/kyc-verifications',
+  );
+  const hasWithdrawals = adminMenu?.items.some(
+    item => item.action === '/admin/withdrawals',
+  );
+  const hasWithdrawalMethods = adminMenu?.items.some(
+    item => item.action === '/admin/financial/withdrawal-methods',
   );
 
   return (
@@ -56,7 +62,7 @@ export function AdminSidebar() {
               defaultIcons={AdminSidebarIcons}
               end={item => item.action === '/admin'}
             />
-            {(!hasDigitalProducts || !hasTransactions || !hasKyc) && (
+            {(!hasDigitalProducts || !hasTransactions || !hasKyc || !hasWithdrawals || !hasWithdrawalMethods) && (
               <Sidebar.Menu>
                 {!hasDigitalProducts && (
                   <Sidebar.MenuItem>
@@ -85,6 +91,26 @@ export function AdminSidebar() {
                       icon={<ShieldCheckIcon />}
                     >
                       <Trans message="Verification" />
+                    </Sidebar.MenuButton>
+                  </Sidebar.MenuItem>
+                )}
+                {!hasWithdrawals && (
+                  <Sidebar.MenuItem>
+                    <Sidebar.MenuButton
+                      render={<NavLink to="/admin/withdrawals" />}
+                      icon={<CreditCardIcon />}
+                    >
+                      <Trans message="Withdrawals" />
+                    </Sidebar.MenuButton>
+                  </Sidebar.MenuItem>
+                )}
+                {!hasWithdrawalMethods && (
+                  <Sidebar.MenuItem>
+                    <Sidebar.MenuButton
+                      render={<NavLink to="/admin/financial/withdrawal-methods" />}
+                      icon={<CoinsIcon />}
+                    >
+                      <Trans message="Withdrawal Methods" />
                     </Sidebar.MenuButton>
                   </Sidebar.MenuItem>
                 )}
