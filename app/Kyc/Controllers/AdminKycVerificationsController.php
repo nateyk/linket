@@ -16,29 +16,44 @@ class AdminKycVerificationsController extends Controller
     public function index(Request $request)
     {
         Gate::authorize('admin.access');
-        return KycVerificationResource::collection(
-            KycVerification::query()
-                ->with('user')
-                ->when(
-                    $request->string('status')->isNotEmpty(),
-                    fn($query) => $query->where('status', $request->string('status')),
-                )
-                ->when(
-                    $request->string('query')->isNotEmpty(),
-                    fn($query) => $query->where(function ($q) use ($request) {
-                        $q
-                            ->where('document_number', 'like', "%{$request->string('query')}%")
-                            ->orWhereHas(
-                                'user',
-                                fn($uq) => $uq
-                                    ->where('name', 'like', "%{$request->string('query')}%")
-                                    ->orWhere('email', 'like', "%{$request->string('query')}%"),
-                            );
-                    }),
-                )
-                ->latest()
-                ->paginate(15),
-        );
+
+        $search = $request->string('search');
+        $status = $request->string('status');
+        $documentType = $request->string('document_type');
+
+        $query = KycVerification::query()->with('user');
+
+        $query->when($search->isNotEmpty(), function ($q) use ($search) {
+            $q->where(function ($q) use ($search) {
+                $q->where('document_number', 'like', "%{$search}%")
+                    ->orWhereHas('user', function ($uq) use ($search) {
+                        $uq->where('name', 'like', "%{$search}%")
+                            ->orWhere('username', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%");
+                    });
+            });
+        });
+
+        $query->when($status->isNotEmpty(), fn($q) => $q->where('status', $status));
+        $query->when($documentType->isNotEmpty(), fn($q) => $q->where('document_type', $documentType));
+
+        $counters = [
+            'pending' => [
+                'total' => KycVerification::where('status', KycVerification::STATUS_PENDING)->count(),
+            ],
+            'approved' => [
+                'total' => KycVerification::where('status', KycVerification::STATUS_APPROVED)->count(),
+            ],
+            'rejected' => [
+                'total' => KycVerification::where('status', KycVerification::STATUS_REJECTED)->count(),
+            ],
+        ];
+
+        $verifications = $query->latest()->paginate((int) $request->input('perPage', 15));
+        $verifications->appends($request->only(['search', 'status', 'document_type', 'perPage']));
+
+        return (KycVerificationResource::collection($verifications))
+            ->additional(['meta' => ['counters' => $counters]]);
     }
 
     public function show(KycVerification $kycVerification): KycVerificationResource
@@ -87,5 +102,13 @@ class AdminKycVerificationsController extends Controller
         abort_unless($path && Storage::disk('local')->exists($path), 404);
 
         return Storage::disk('local')->response($path);
+    }
+
+    public function destroy(KycVerification $kycVerification): \Illuminate\Http\JsonResponse
+    {
+        Gate::authorize('admin.access');
+        $kycVerification->delete();
+
+        return response()->json(['message' => __('Deleted Successfully')]);
     }
 }

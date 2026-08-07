@@ -213,6 +213,64 @@ $this->stateful()->actingAs($admin);
             ->assertJsonCount(0, 'data');
     }
 
+    public function testAdminIndexReturnsCountersAndSupportsSearchAndDocumentTypeFilters(): void
+    {
+        $user = $this->createUser();
+        $pending = $this->createSubmittedVerification($user);
+        $approvedUser = $this->createUser();
+        $approved = $this->createSubmittedVerification(
+            $approvedUser,
+            KycVerification::DOCUMENT_TYPE_PASSPORT,
+        );
+        $approved->update(['status' => KycVerification::STATUS_APPROVED]);
+        $admin = $this->createAdmin();
+        $this->stateful()->actingAs($admin);
+
+        $this->getJson('/api/v1/admin/kyc-verifications')
+            ->assertOk()
+            ->assertJsonPath('meta.counters.pending.total', 1)
+            ->assertJsonPath('meta.counters.approved.total', 1)
+            ->assertJsonPath('meta.counters.rejected.total', 0)
+            ->assertJsonCount(2, 'data');
+
+        $this->getJson('/api/v1/admin/kyc-verifications?document_type=passport')
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $approved->id)
+            ->assertJsonCount(1, 'data');
+
+        $this->getJson('/api/v1/admin/kyc-verifications?search=' . urlencode($user->name))
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $pending->id)
+            ->assertJsonCount(1, 'data');
+    }
+
+    public function testAdminCanDeleteVerification(): void
+    {
+        $user = $this->createUser();
+        $verification = $this->createSubmittedVerification($user);
+        $admin = $this->createAdmin();
+        $this->stateful()->actingAs($admin);
+
+        $this->deleteJson("/api/v1/admin/kyc-verifications/{$verification->id}")
+            ->assertOk();
+
+        $this->assertDatabaseMissing(
+            'kyc_verifications',
+            ['id' => $verification->id],
+        );
+    }
+
+    public function testNonAdminCannotDeleteVerification(): void
+    {
+        $user = $this->createUser();
+        $verification = $this->createSubmittedVerification($user);
+
+        $this->withHeader('Referer', 'http://localhost')
+            ->actingAs($user)
+            ->deleteJson("/api/v1/admin/kyc-verifications/{$verification->id}")
+            ->assertForbidden();
+    }
+
     public function testNonAdminCannotAccessAdminEndpoints(): void
     {
         $user = $this->createUser();
@@ -284,14 +342,22 @@ $this->stateful()->actingAs($admin);
         }
     }
 
-    private function createSubmittedVerification(User $user): KycVerification
-    {
+    private function createSubmittedVerification(
+        User $user,
+        string $documentType = KycVerification::DOCUMENT_TYPE_NATIONAL_ID,
+    ): KycVerification {
+        $payload = $documentType === KycVerification::DOCUMENT_TYPE_PASSPORT
+            ? ['passport_file' => UploadedFile::fake()->image('passport.jpg')]
+            : [
+                'front_of_id_file' => UploadedFile::fake()->image('front.jpg'),
+                'back_of_id_file' => UploadedFile::fake()->image('back.jpg'),
+            ];
+
         return app(\App\Kyc\KycVerificationService::class)->submit($user, [
-            'document_type' => KycVerification::DOCUMENT_TYPE_NATIONAL_ID,
+            'document_type' => $documentType,
             'document_number' => 'ID-' . Str::random(6),
-            'front_of_id_file' => UploadedFile::fake()->image('front.jpg'),
-            'back_of_id_file' => UploadedFile::fake()->image('back.jpg'),
             'selfie_file' => UploadedFile::fake()->image('selfie.jpg'),
+            ...$payload,
         ]);
     }
 

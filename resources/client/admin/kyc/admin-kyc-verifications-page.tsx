@@ -4,26 +4,36 @@ import {Badge} from '@shadcn/badge/badge';
 import {Button} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
 import {Dialog} from '@shadcn/dialog/dialog';
+import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {Field} from '@shadcn/forms/field';
+import {Input} from '@shadcn/forms/input/input';
 import {Textarea} from '@shadcn/forms/textarea/textarea';
 import {Table} from '@shadcn/table/table';
 import {Trans} from '@ui/i18n/trans';
+import {Select} from '@shadcn/forms/select/select';
 import {
   BadgeCheckIcon,
   CheckIcon,
+  ClockIcon,
+  EllipsisVerticalIcon,
   EyeIcon,
   FileClockIcon,
   FileX2Icon,
+  HashIcon,
+  SearchIcon,
   ShieldCheckIcon,
+  TrashIcon,
+  XCircleIcon,
   XIcon,
 } from 'lucide-react';
-import {useCallback, useEffect, useMemo, useState} from 'react';
+import {useCallback, useEffect, useState} from 'react';
 
 type KycStatus = 'pending' | 'approved' | 'rejected';
+type DocumentType = 'national_id' | 'passport';
 
 type KycVerification = {
   id: number;
-  document_type: 'national_id' | 'passport';
+  document_type: DocumentType;
   document_number: string;
   status: KycStatus;
   rejection_reason?: string | null;
@@ -33,63 +43,100 @@ type KycVerification = {
   user?: {id: number; name: string; email: string; image?: string | null};
 };
 
-type PaginatedResponse = {
-  data: KycVerification[];
-  links?: Record<string, string | null>;
-  meta?: {
-    current_page: number;
-    last_page: number;
-    total: number;
+type PaginationLinks = Record<string, string | null>;
+type PaginationMeta = {
+  current_page: number;
+  last_page: number;
+  total: number;
+};
+
+type CountersMeta = {
+  counters: {
+    pending: {total: number};
+    approved: {total: number};
+    rejected: {total: number};
   };
 };
 
-const filters: Array<{key: string; label: React.ReactNode; value?: KycStatus}> =
-  [
-    {key: 'all', label: <Trans message="All" />},
-    {key: 'pending', label: <Trans message="Pending" />, value: 'pending'},
-    {key: 'approved', label: <Trans message="Approved" />, value: 'approved'},
-    {key: 'rejected', label: <Trans message="Rejected" />, value: 'rejected'},
-  ];
+function formatDate(value?: string) {
+  if (!value) return '—';
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(value));
+}
 
 export function Component() {
   const [verifications, setVerifications] = useState<KycVerification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
-  const [filter, setFilter] = useState<string>('all');
+
+  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [status, setStatus] = useState('');
+  const [documentType, setDocumentType] = useState('');
+
+  const [links, setLinks] = useState<PaginationLinks>();
+  const [meta, setMeta] = useState<PaginationMeta & CountersMeta>();
+
+  const [currentPage, setCurrentPage] = useState(1);
+
   const [selected, setSelected] = useState<KycVerification>();
+  const [deleteTarget, setDeleteTarget] = useState<KycVerification>();
   const [reason, setReason] = useState('');
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams({perPage: '15'});
-      if (filter !== 'all') {
-        params.set('status', filter);
+  const load = useCallback(
+    async (page: number = currentPage) => {
+      setLoading(true);
+      try {
+        const params = new URLSearchParams({perPage: '15'});
+        if (search) params.set('search', search);
+        if (status) params.set('status', status);
+        if (documentType) params.set('document_type', documentType);
+        if (page > 1) params.set('page', String(page));
+
+        const response = await apiClient.get(
+          `/api/v1/admin/kyc-verifications?${params.toString()}`,
+        );
+        setVerifications(response.data.data ?? []);
+        setLinks(response.data.links ?? {});
+        setMeta({
+          ...response.data.meta,
+          counters: response.data.meta?.counters ?? {
+            pending: {total: 0},
+            approved: {total: 0},
+            rejected: {total: 0},
+          },
+        });
+        setCurrentPage(response.data.meta?.current_page ?? 1);
+        setError(undefined);
+      } catch {
+        setError('Unable to load verification requests.');
+      } finally {
+        setLoading(false);
       }
-      const response = await fetch(
-        `/api/v1/admin/kyc-verifications?${params.toString()}`,
-        {credentials: 'same-origin', headers: {Accept: 'application/json'}},
-      );
-      if (!response.ok) {
-        throw new Error('Unable to load verification requests.');
-      }
-      const payload: PaginatedResponse = await response.json();
-      setVerifications(payload.data ?? []);
-    } catch (reason) {
-      setError(
-        reason instanceof Error
-          ? reason.message
-          : 'Unable to load verification requests.',
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [filter]);
+    },
+    [search, status, documentType, currentPage],
+  );
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  const applyFilters = () => {
+    setSearch(searchInput);
+    setCurrentPage(1);
+  };
+
+  const resetFilters = () => {
+    setSearchInput('');
+    setSearch('');
+    setStatus('');
+    setDocumentType('');
+    setCurrentPage(1);
+  };
 
   const approve = async (verification: KycVerification) => {
     setSaving(true);
@@ -124,10 +171,23 @@ export function Component() {
     }
   };
 
-  const pendingCount = useMemo(
-    () => verifications.filter(v => v.status === 'pending').length,
-    [verifications],
-  );
+  const destroy = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await apiClient.delete(
+        `/api/v1/admin/kyc-verifications/${deleteTarget.id}`,
+      );
+      setDeleteTarget(undefined);
+      await load();
+    } catch {
+      setError('Unable to delete verification request.');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const counters = meta?.counters;
 
   return (
     <DashboardLayout.MainSection>
@@ -135,7 +195,7 @@ export function Component() {
         <DashboardLayout.SidebarToggle />
         <div>
           <DashboardLayout.SectionTitle>
-            <Trans message="KYC Verification" />
+            <Trans message="KYC Verifications" />
           </DashboardLayout.SectionTitle>
           <p className="mt-0.5 text-sm text-muted-foreground">
             <Trans message="Review creator identity verification requests." />
@@ -149,118 +209,227 @@ export function Component() {
               {error}
             </div>
           )}
+
+          <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <CounterCard
+              title="Pending"
+              count={counters?.pending?.total ?? 0}
+              icon={<ClockIcon className="size-6" />}
+              tone="amber"
+            />
+            <CounterCard
+              title="Approved"
+              count={counters?.approved?.total ?? 0}
+              icon={<BadgeCheckIcon className="size-6" />}
+              tone="green"
+            />
+            <CounterCard
+              title="Rejected"
+              count={counters?.rejected?.total ?? 0}
+              icon={<XCircleIcon className="size-6" />}
+              tone="red"
+            />
+          </div>
+
           <Card.Root>
-            <Card.Header>
-              <Card.Title>
-                <Trans message="Verification requests" />
-              </Card.Title>
-              <Card.Description>
-                <Trans message="Review identity documents and approve or reject creators." />
-              </Card.Description>
-            </Card.Header>
-            <Card.Content className="overflow-x-auto">
-              <div className="mb-5 flex flex-wrap items-center gap-2">
-                {filters.map(item => (
-                  <Button
-                    key={item.key}
-                    size="xs"
-                    variant={filter === item.key ? 'default' : 'outline'}
-                    color={filter === item.key ? 'primary' : undefined}
-                    onClick={() => setFilter(item.key)}
+            <div className="border-b p-4">
+              <form
+                className="grid grid-cols-1 gap-3 sm:grid-cols-12"
+                onSubmit={e => {
+                  e.preventDefault();
+                  applyFilters();
+                }}
+              >
+                <div className="sm:col-span-5">
+                  <Input
+                    value={searchInput}
+                    onChange={e => setSearchInput(e.target.value)}
+                    placeholder="Search..."
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <Select.Root
+                    value={documentType}
+                    onValueChange={value =>
+                      setDocumentType((value as string) ?? '')
+                    }
                   >
-                    {item.label}
-                    {item.key === 'pending' && (
-                      <span className="text-muted-foreground">
-                        ({pendingCount})
-                      </span>
-                    )}
+                    <Select.Trigger>
+                      <Select.Value placeholder="Document Type" />
+                    </Select.Trigger>
+                    <Select.Content>
+                      <Select.Item value="">
+                        <Trans message="All types" />
+                      </Select.Item>
+                      <Select.Item value="national_id">
+                        <Trans message="National ID" />
+                      </Select.Item>
+                      <Select.Item value="passport">
+                        <Trans message="Passport" />
+                      </Select.Item>
+                    </Select.Content>
+                  </Select.Root>
+                </div>
+                <div className="sm:col-span-2">
+                  <Select.Root
+                    value={status}
+                    onValueChange={value => setStatus((value as string) ?? '')}
+                  >
+                    <Select.Trigger>
+                      <Select.Value placeholder="Status" />
+                    </Select.Trigger>
+                    <Select.Content>
+                      <Select.Item value="">
+                        <Trans message="All statuses" />
+                      </Select.Item>
+                      <Select.Item value="pending">
+                        <Trans message="Pending" />
+                      </Select.Item>
+                      <Select.Item value="approved">
+                        <Trans message="Approved" />
+                      </Select.Item>
+                      <Select.Item value="rejected">
+                        <Trans message="Rejected" />
+                      </Select.Item>
+                    </Select.Content>
+                  </Select.Root>
+                </div>
+                <div className="sm:col-span-1">
+                  <Button type="submit" className="w-full">
+                    <SearchIcon />
                   </Button>
-                ))}
-              </div>
+                </div>
+                <div className="sm:col-span-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    onClick={resetFilters}
+                  >
+                    <Trans message="Reset" />
+                  </Button>
+                </div>
+              </form>
+            </div>
+            <div className="overflow-x-auto">
               <Table.Root>
                 <Table.Header>
                   <Table.Row>
                     <Table.Head>
-                      <Trans message="User" />
+                      <Trans message="ID" />
                     </Table.Head>
                     <Table.Head>
-                      <Trans message="Document" />
+                      <Trans message="User details" />
                     </Table.Head>
-                    <Table.Head>
-                      <Trans message="Document number" />
+                    <Table.Head className="text-center">
+                      <Trans message="Document Type" />
                     </Table.Head>
-                    <Table.Head>
+                    <Table.Head className="text-center">
+                      <Trans message="Document Number" />
+                    </Table.Head>
+                    <Table.Head className="text-center">
                       <Trans message="Status" />
                     </Table.Head>
-                    <Table.Head className="text-end">
-                      <Trans message="Actions" />
+                    <Table.Head className="text-center">
+                      <Trans message="Submitted Date" />
                     </Table.Head>
+                    <Table.Head />
                   </Table.Row>
                 </Table.Header>
                 <Table.Body>
                   {loading ? (
                     <Table.Row>
                       <Table.Cell
-                        colSpan={5}
+                        colSpan={7}
                         className="h-28 text-center text-muted-foreground"
                       >
                         <Trans message="Loading…" />
                       </Table.Cell>
                     </Table.Row>
                   ) : verifications.length ? (
-                    verifications.map(verification => (
-                      <Table.Row key={verification.id}>
+                    verifications.map(v => (
+                      <Table.Row key={v.id}>
+                        <Table.Cell>
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1.5 text-foreground hover:underline"
+                            onClick={() => setSelected(v)}
+                          >
+                            <HashIcon className="size-3.5 text-muted-foreground" />
+                            <span>{v.id}</span>
+                          </button>
+                        </Table.Cell>
                         <Table.Cell>
                           <div className="flex items-center gap-3">
-                            {verification.user?.image ? (
+                            {v.user?.image ? (
                               <img
-                                className="size-9 rounded-full object-cover"
-                                src={verification.user.image}
+                                className="rounded-3 size-9 object-cover"
+                                src={v.user.image}
                                 alt=""
                               />
                             ) : (
-                              <div className="flex size-9 items-center justify-center rounded-full bg-muted">
+                              <div className="rounded-3 flex size-9 items-center justify-center bg-muted">
                                 <ShieldCheckIcon className="size-4" />
                               </div>
                             )}
                             <div>
                               <p className="font-medium">
-                                {verification.user?.name ?? '—'}
+                                {v.user?.name ?? '—'}
                               </p>
                               <p className="text-xs text-muted-foreground">
-                                {verification.user?.email}
+                                {v.user?.email}
                               </p>
                             </div>
                           </div>
                         </Table.Cell>
-                        <Table.Cell>
-                          {verification.document_type === 'passport' ? (
+                        <Table.Cell className="text-center">
+                          {v.document_type === 'passport' ? (
                             <Trans message="Passport" />
                           ) : (
                             <Trans message="National ID" />
                           )}
                         </Table.Cell>
-                        <Table.Cell>{verification.document_number}</Table.Cell>
-                        <Table.Cell>
-                          <StatusBadge status={verification.status} />
+                        <Table.Cell className="text-center">
+                          {v.document_number}
                         </Table.Cell>
-                        <Table.Cell className="text-end">
-                          <Button
-                            size="xs"
-                            variant="outline"
-                            color="primary"
-                            onClick={() => setSelected(verification)}
-                          >
-                            <EyeIcon />
-                            <Trans message="Review" />
-                          </Button>
+                        <Table.Cell className="text-center">
+                          <StatusBadge status={v.status} />
+                        </Table.Cell>
+                        <Table.Cell className="text-center">
+                          {formatDate(v.created_at)}
+                        </Table.Cell>
+                        <Table.Cell>
+                          <div className="flex justify-end">
+                            <Dropdown>
+                              <Dropdown.Trigger
+                                className="flex size-8 items-center justify-center rounded-input hover:bg-muted"
+                                aria-label="Actions"
+                              >
+                                <EllipsisVerticalIcon className="size-4 text-muted-foreground" />
+                              </Dropdown.Trigger>
+                              <Dropdown.Content align="end">
+                                <Dropdown.Item onClick={() => setSelected(v)}>
+                                  <EyeIcon />
+                                  <Trans message="Details" />
+                                </Dropdown.Item>
+                                <Dropdown.Separator />
+                                <Dropdown.Item
+                                  className="text-destructive focus:text-destructive"
+                                  onClick={() => setDeleteTarget(v)}
+                                >
+                                  <TrashIcon />
+                                  <Trans message="Delete" />
+                                </Dropdown.Item>
+                              </Dropdown.Content>
+                            </Dropdown>
+                          </div>
                         </Table.Cell>
                       </Table.Row>
                     ))
                   ) : (
                     <Table.Row>
                       <Table.Cell
-                        colSpan={5}
+                        colSpan={7}
                         className="h-28 text-center text-muted-foreground"
                       >
                         <Trans message="No verification requests found." />
@@ -269,7 +438,43 @@ export function Component() {
                   )}
                 </Table.Body>
               </Table.Root>
-            </Card.Content>
+            </div>
+            {meta && meta.last_page > 1 && (
+              <div className="flex items-center justify-between border-t px-4 py-3">
+                <p className="text-sm text-muted-foreground">
+                  <Trans
+                    message="Showing :from - :to of :total"
+                    values={{
+                      from: (meta.current_page - 1) * 15 + 1,
+                      to: Math.min(meta.current_page * 15, meta.total),
+                      total: meta.total,
+                    }}
+                  />
+                </p>
+                <div className="flex gap-1">
+                  <Button
+                    size="xs"
+                    variant="outline"
+                    disabled={!links?.prev}
+                    onClick={() => {
+                      if (links?.prev) void load(currentPage - 1);
+                    }}
+                  >
+                    <Trans message="Previous" />
+                  </Button>
+                  <Button
+                    size="xs"
+                    variant="outline"
+                    disabled={!links?.next}
+                    onClick={() => {
+                      if (links?.next) void load(currentPage + 1);
+                    }}
+                  >
+                    <Trans message="Next" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </Card.Root>
         </div>
       </DashboardLayout.SectionContent>
@@ -285,7 +490,87 @@ export function Component() {
           onReject={() => void reject()}
         />
       )}
+
+      {deleteTarget && (
+        <Dialog.Root
+          open={!!deleteTarget}
+          onOpenChange={open => !open && setDeleteTarget(undefined)}
+        >
+          <Dialog.Portal>
+            <Dialog.Backdrop />
+            <Dialog.Content className="sm:max-w-md">
+              <Dialog.Header>
+                <Dialog.Title>
+                  <Trans message="Delete verification request" />
+                </Dialog.Title>
+              </Dialog.Header>
+              <Dialog.Body>
+                <Trans
+                  message="Are you sure you want to delete verification request #:id for :name? This action cannot be undone."
+                  values={{
+                    id: deleteTarget.id,
+                    name: deleteTarget.user?.name ?? '',
+                  }}
+                />
+              </Dialog.Body>
+              <Dialog.Footer>
+                <Button
+                  variant="outline"
+                  onClick={() => setDeleteTarget(undefined)}
+                  disabled={deleting}
+                >
+                  <Trans message="Cancel" />
+                </Button>
+                <Button
+                  color="danger"
+                  onClick={() => void destroy()}
+                  disabled={deleting}
+                >
+                  <TrashIcon />
+                  <Trans message="Delete" />
+                </Button>
+              </Dialog.Footer>
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog.Root>
+      )}
     </DashboardLayout.MainSection>
+  );
+}
+
+function CounterCard({
+  title,
+  count,
+  icon,
+  tone,
+}: {
+  title: string;
+  count: number;
+  icon: React.ReactNode;
+  tone: 'amber' | 'green' | 'red';
+}) {
+  const tones: Record<string, string> = {
+    amber: 'border-amber-200 bg-amber-50 text-amber-700',
+    green: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+    red: 'border-red-200 bg-red-50 text-red-700',
+  };
+  const iconTones: Record<string, string> = {
+    amber: 'text-amber-500',
+    green: 'text-emerald-500',
+    red: 'text-red-500',
+  };
+  return (
+    <div
+      className={`relative overflow-hidden rounded-card border p-5 ${tones[tone]}`}
+    >
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium opacity-80">{title}</p>
+          <p className="mt-1 text-3xl font-bold text-foreground">{count}</p>
+        </div>
+        <div className={iconTones[tone]}>{icon}</div>
+      </div>
+    </div>
   );
 }
 

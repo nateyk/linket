@@ -64,6 +64,7 @@ Route::group(['prefix' => 'v1'], function() {
         Route::post('admin/kyc-verifications/{kycVerification}/approve', [AdminKycVerificationsController::class, 'approve']);
         Route::post('admin/kyc-verifications/{kycVerification}/reject', [AdminKycVerificationsController::class, 'reject']);
         Route::get('admin/kyc-verifications/{kycVerification}/documents/{key}', [AdminKycVerificationsController::class, 'document']);
+        Route::delete('admin/kyc-verifications/{kycVerification}', [AdminKycVerificationsController::class, 'destroy']);
 
         // LINK
         Route::get('links', [LinksController::class, 'index']);

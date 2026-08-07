@@ -21,6 +21,8 @@ class AdminPaymentTransactionsController extends Controller
             'status' => 'nullable|in:pending,paid,failed',
             'purpose' => 'nullable|in:digital_product,subscription',
             'search' => 'nullable|string|max:120',
+            'date_from' => 'nullable|date',
+            'date_to' => 'nullable|date',
         ]);
 
         $applyFilters = function (Builder $query) use ($filters): void {
@@ -32,6 +34,14 @@ class AdminPaymentTransactionsController extends Controller
                 ->when(
                     $filters['purpose'] ?? null,
                     fn(Builder $query, string $purpose) => $query->where('purpose', $purpose),
+                )
+                ->when(
+                    $filters['date_from'] ?? null,
+                    fn(Builder $query, string $date) => $query->whereDate('created_at', '>=', $date),
+                )
+                ->when(
+                    $filters['date_to'] ?? null,
+                    fn(Builder $query, string $date) => $query->whereDate('created_at', '<=', $date),
                 )
                 ->when($filters['search'] ?? null, function (Builder $query, string $search): void {
                     $query->where(function (Builder $query) use ($search): void {
@@ -64,7 +74,7 @@ class AdminPaymentTransactionsController extends Controller
             ])
             ->latest()
             ->tap($applyFilters)
-            ->paginate(25)
+            ->paginate((int) $request->input('perPage', 25))
             ->through(fn(PaymentTransaction $transaction) => [
                 'id' => $transaction->id,
                 'uuid' => $transaction->uuid,
