@@ -24,7 +24,12 @@ import {useCallback, useEffect, useState} from 'react';
 import {BackendPagination} from '@shadcn/table/utils/table-pagination';
 import {Link} from 'react-router';
 
-type PayoutStatus = 'requested' | 'processing' | 'paid' | 'rejected' | 'cancelled';
+type PayoutStatus =
+  | 'requested'
+  | 'processing'
+  | 'paid'
+  | 'rejected'
+  | 'cancelled';
 
 type Payout = {
   id: number;
@@ -95,7 +100,9 @@ export function Component() {
       if (dateTo) params.set('date_to', dateTo);
       if (status) params.set('status', status);
       if (method) params.set('withdrawal_method', method);
-      const response = await apiClient.get(`/api/v1/admin/withdrawals?${params.toString()}`);
+      const response = await apiClient.get(
+        `/api/v1/admin/withdrawals?${params.toString()}`,
+      );
       setPayouts(response.data.data ?? []);
       setPagination(response.data);
       setMeta(response.data.meta);
@@ -211,21 +218,37 @@ export function Component() {
                   <Field.Label>
                     <Trans message="From" />
                   </Field.Label>
-                  <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
+                  <Input
+                    type="date"
+                    value={dateFrom}
+                    onChange={e => setDateFrom(e.target.value)}
+                  />
                 </Field.Root>
                 <Field.Root className="w-40">
                   <Field.Label>
                     <Trans message="To" />
                   </Field.Label>
-                  <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} />
+                  <Input
+                    type="date"
+                    value={dateTo}
+                    onChange={e => setDateTo(e.target.value)}
+                  />
                 </Field.Root>
                 <Field.Root className="w-44">
                   <Field.Label>
                     <Trans message="Status" />
                   </Field.Label>
-                  <Select.Root value={status} onValueChange={value => { setStatus(value ?? ''); setPage(1); }}>
+                  <Select.Root
+                    value={status}
+                    onValueChange={value => {
+                      setStatus(value ?? '');
+                      setPage(1);
+                    }}
+                  >
                     <Select.Trigger>
-                      <Select.Value placeholder={<Trans message="All statuses" />} />
+                      <Select.Value
+                        placeholder={<Trans message="All statuses" />}
+                      />
                     </Select.Trigger>
                     <Select.Content>
                       {statusOrder.map(key => (
@@ -240,9 +263,17 @@ export function Component() {
                   <Field.Label>
                     <Trans message="Method" />
                   </Field.Label>
-                  <Select.Root value={method} onValueChange={value => { setMethod(value ?? ''); setPage(1); }}>
+                  <Select.Root
+                    value={method}
+                    onValueChange={value => {
+                      setMethod(value ?? '');
+                      setPage(1);
+                    }}
+                  >
                     <Select.Trigger>
-                      <Select.Value placeholder={<Trans message="All methods" />} />
+                      <Select.Value
+                        placeholder={<Trans message="All methods" />}
+                      />
                     </Select.Trigger>
                     <Select.Content>
                       {methods.map(item => (
@@ -294,22 +325,32 @@ export function Component() {
                   <Table.Body>
                     {loading ? (
                       <Table.Row>
-                        <Table.Cell colSpan={7} className="h-28 text-center text-muted-foreground">
+                        <Table.Cell
+                          colSpan={7}
+                          className="h-28 text-center text-muted-foreground"
+                        >
                           <Trans message="Loading…" />
                         </Table.Cell>
                       </Table.Row>
                     ) : payouts.length ? (
                       payouts.map(payout => (
                         <Table.Row key={payout.id}>
-                          <Table.Cell className="font-mono text-sm">#{payout.id}</Table.Cell>
+                          <Table.Cell className="font-mono text-sm">
+                            #{payout.id}
+                          </Table.Cell>
                           <Table.Cell>
-                            <p className="font-medium">{payout.creator?.name ?? '—'}</p>
-                            <p className="text-xs text-muted-foreground">{payout.creator?.email}</p>
+                            <p className="font-medium">
+                              {payout.creator?.name ?? '—'}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {payout.creator?.email}
+                            </p>
                           </Table.Cell>
                           <Table.Cell className="text-muted-foreground">
-                            {payout.withdrawal_method_name ?? payout.payout_method_label ?? (
-                              <Trans message="Not specified" />
-                            )}
+                            {payout.withdrawal_method_name ??
+                              payout.payout_method_label ?? (
+                                <Trans message="Not specified" />
+                              )}
                           </Table.Cell>
                           <Table.Cell className="font-semibold">
                             {formatMoney(payout.amount_cents, payout.currency)}
@@ -327,7 +368,9 @@ export function Component() {
                                 variant="outline"
                                 color="primary"
                                 render={
-                                  <Link to={`/admin/withdrawals/${payout.id}/review`} />
+                                  <Link
+                                    to={`/admin/withdrawals/${payout.id}/review`}
+                                  />
                                 }
                               >
                                 <EyeIcon />
@@ -347,7 +390,10 @@ export function Component() {
                       ))
                     ) : (
                       <Table.Row>
-                        <Table.Cell colSpan={7} className="h-28 text-center text-muted-foreground">
+                        <Table.Cell
+                          colSpan={7}
+                          className="h-28 text-center text-muted-foreground"
+                        >
                           <Trans message="No withdrawal requests found." />
                         </Table.Cell>
                       </Table.Row>
@@ -381,29 +427,43 @@ export function Component() {
         </div>
       </DashboardLayout.SectionContent>
 
-      <Dialog.Root open={!!deleteTarget} onOpenChange={open => !open && setDeleteTarget(undefined)}>
-        <Dialog.Content className="sm:max-w-md">
-          <Dialog.Header>
-            <Dialog.Title>
-              <Trans message="Delete withdrawal request" />
-            </Dialog.Title>
-          </Dialog.Header>
-          <Dialog.Body>
-            <Trans
-              message="Are you sure you want to delete withdrawal request #:id? This action cannot be undone."
-              values={{id: deleteTarget?.id ?? ''}}
-            />
-          </Dialog.Body>
-          <Dialog.Footer>
-            <Button variant="outline" onClick={() => setDeleteTarget(undefined)} disabled={deleting}>
-              <Trans message="Cancel" />
-            </Button>
-            <Button color="danger" onClick={() => void destroy()} disabled={deleting}>
-              <TrashIcon />
-              <Trans message="Delete" />
-            </Button>
-          </Dialog.Footer>
-        </Dialog.Content>
+      <Dialog.Root
+        open={!!deleteTarget}
+        onOpenChange={open => !open && setDeleteTarget(undefined)}
+      >
+        <Dialog.Portal>
+          <Dialog.Backdrop />
+          <Dialog.Content className="sm:max-w-md">
+            <Dialog.Header>
+              <Dialog.Title>
+                <Trans message="Delete withdrawal request" />
+              </Dialog.Title>
+            </Dialog.Header>
+            <Dialog.Body>
+              <Trans
+                message="Are you sure you want to delete withdrawal request #:id? This action cannot be undone."
+                values={{id: deleteTarget?.id ?? ''}}
+              />
+            </Dialog.Body>
+            <Dialog.Footer>
+              <Button
+                variant="outline"
+                onClick={() => setDeleteTarget(undefined)}
+                disabled={deleting}
+              >
+                <Trans message="Cancel" />
+              </Button>
+              <Button
+                color="danger"
+                onClick={() => void destroy()}
+                disabled={deleting}
+              >
+                <TrashIcon />
+                <Trans message="Delete" />
+              </Button>
+            </Dialog.Footer>
+          </Dialog.Content>
+        </Dialog.Portal>
       </Dialog.Root>
     </DashboardLayout.MainSection>
   );
@@ -438,19 +498,22 @@ function CounterCard({
         {icons[status]}
       </div>
       <p className="text-xl font-semibold">{counter?.total ?? 0}</p>
-      <p className="text-sm text-muted-foreground">{formatMoney(counter?.amount ?? 0, 'USD')}</p>
+      <p className="text-sm text-muted-foreground">
+        {formatMoney(counter?.amount ?? 0, 'USD')}
+      </p>
     </button>
   );
 }
 
 function StatusBadge({status}: {status: PayoutStatus}) {
-  const variants: Record<PayoutStatus, 'outline' | 'positive' | 'destructive'> = {
-    requested: 'outline',
-    processing: 'outline',
-    paid: 'positive',
-    rejected: 'destructive',
-    cancelled: 'destructive',
-  };
+  const variants: Record<PayoutStatus, 'outline' | 'positive' | 'destructive'> =
+    {
+      requested: 'outline',
+      processing: 'outline',
+      paid: 'positive',
+      rejected: 'destructive',
+      cancelled: 'destructive',
+    };
   return (
     <Badge variant={variants[status]}>
       <Trans message={statusLabels[status]} />
@@ -459,11 +522,14 @@ function StatusBadge({status}: {status: PayoutStatus}) {
 }
 
 function formatMoney(cents: number, currency: string) {
-  return new Intl.NumberFormat(undefined, {style: 'currency', currency}).format(cents / 100);
+  return new Intl.NumberFormat(undefined, {style: 'currency', currency}).format(
+    cents / 100,
+  );
 }
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat(undefined, {dateStyle: 'medium', timeStyle: 'short'}).format(
-    new Date(value),
-  );
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(value));
 }

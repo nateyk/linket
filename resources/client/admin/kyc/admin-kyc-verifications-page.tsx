@@ -43,12 +43,13 @@ type PaginatedResponse = {
   };
 };
 
-const filters: Array<{key: string; label: React.ReactNode; value?: KycStatus}> = [
-  {key: 'all', label: <Trans message="All" />},
-  {key: 'pending', label: <Trans message="Pending" />, value: 'pending'},
-  {key: 'approved', label: <Trans message="Approved" />, value: 'approved'},
-  {key: 'rejected', label: <Trans message="Rejected" />, value: 'rejected'},
-];
+const filters: Array<{key: string; label: React.ReactNode; value?: KycStatus}> =
+  [
+    {key: 'all', label: <Trans message="All" />},
+    {key: 'pending', label: <Trans message="Pending" />, value: 'pending'},
+    {key: 'approved', label: <Trans message="Approved" />, value: 'approved'},
+    {key: 'rejected', label: <Trans message="Rejected" />, value: 'rejected'},
+  ];
 
 export function Component() {
   const [verifications, setVerifications] = useState<KycVerification[]>([]);
@@ -239,9 +240,7 @@ export function Component() {
                             <Trans message="National ID" />
                           )}
                         </Table.Cell>
-                        <Table.Cell>
-                          {verification.document_number}
-                        </Table.Cell>
+                        <Table.Cell>{verification.document_number}</Table.Cell>
                         <Table.Cell>
                           <StatusBadge status={verification.status} />
                         </Table.Cell>
@@ -344,86 +343,96 @@ function ReviewDialog({
 
   return (
     <Dialog.Root open onOpenChange={onClose}>
-      <Dialog.Content className="sm:max-w-2xl">
-        <Dialog.Header>
-          <Dialog.Title>
-            <Trans message="Review verification request" />
-          </Dialog.Title>
-          <Dialog.Description>
-            {verification.user?.name} ({verification.user?.email})
-          </Dialog.Description>
-        </Dialog.Header>
-        <div className="mb-4 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-          <StatusBadge status={verification.status} />
-          <span>
-            <Trans message="Document type: :type" values={{type: verification.document_type}} />
-          </span>
-          <span>
-            <Trans message="Document number: :number" values={{number: verification.document_number}} />
-          </span>
-        </div>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {allKeys.map(key => (
-            <DocumentImage
-              key={key}
-              label={key}
-              src={verification.documents?.[key]}
-            />
-          ))}
-        </div>
-        {verification.status === 'rejected' && verification.rejection_reason && (
-          <p className="mt-4 rounded-input border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
-            <Trans
-              message="Previously rejected: :reason"
-              values={{reason: verification.rejection_reason}}
-            />
-          </p>
-        )}
-        {verification.status === 'pending' && (
-          <div className="mt-5">
-            <Field.Root name="reason">
-              <Field.Label>
-                <Trans message="Rejection reason (optional)" />
-              </Field.Label>
-              <Textarea
-                value={reason}
-                onChange={e => setReason(e.target.value)}
-                rows={3}
-                placeholder="Documents are not readable or do not match the user."
+      <Dialog.Portal>
+        <Dialog.Backdrop />
+        <Dialog.Content className="sm:max-w-2xl">
+          <Dialog.Header>
+            <Dialog.Title>
+              <Trans message="Review verification request" />
+            </Dialog.Title>
+            <Dialog.Description>
+              {verification.user?.name} ({verification.user?.email})
+            </Dialog.Description>
+          </Dialog.Header>
+          <div className="mb-4 flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+            <StatusBadge status={verification.status} />
+            <span>
+              <Trans
+                message="Document type: :type"
+                values={{type: verification.document_type}}
               />
-              <Field.Description>
-                <Trans message="The reason is only shown to the creator if the request is rejected." />
-              </Field.Description>
-            </Field.Root>
+            </span>
+            <span>
+              <Trans
+                message="Document number: :number"
+                values={{number: verification.document_number}}
+              />
+            </span>
           </div>
-        )}
-        <Dialog.Footer>
-          <Button variant="outline" onClick={onClose} disabled={saving}>
-            <Trans message="Close" />
-          </Button>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {allKeys.map(key => (
+              <DocumentImage
+                key={key}
+                label={key}
+                src={verification.documents?.[key]}
+              />
+            ))}
+          </div>
+          {verification.status === 'rejected' &&
+            verification.rejection_reason && (
+              <p className="mt-4 rounded-input border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
+                <Trans
+                  message="Previously rejected: :reason"
+                  values={{reason: verification.rejection_reason}}
+                />
+              </p>
+            )}
           {verification.status === 'pending' && (
-            <>
-              <Button
-                variant="outline"
-                color="danger"
-                onClick={onReject}
-                disabled={saving}
-              >
-                <XIcon />
-                <Trans message="Reject" />
-              </Button>
-              <Button color="primary" onClick={onApprove} disabled={saving}>
-                <CheckIcon />
-                {saving ? (
-                  <Trans message="Saving…" />
-                ) : (
-                  <Trans message="Approve" />
-                )}
-              </Button>
-            </>
+            <div className="mt-5">
+              <Field.Root name="reason">
+                <Field.Label>
+                  <Trans message="Rejection reason (optional)" />
+                </Field.Label>
+                <Textarea
+                  value={reason}
+                  onChange={e => setReason(e.target.value)}
+                  rows={3}
+                  placeholder="Documents are not readable or do not match the user."
+                />
+                <Field.Description>
+                  <Trans message="The reason is only shown to the creator if the request is rejected." />
+                </Field.Description>
+              </Field.Root>
+            </div>
           )}
-        </Dialog.Footer>
-      </Dialog.Content>
+          <Dialog.Footer>
+            <Button variant="outline" onClick={onClose} disabled={saving}>
+              <Trans message="Close" />
+            </Button>
+            {verification.status === 'pending' && (
+              <>
+                <Button
+                  variant="outline"
+                  color="danger"
+                  onClick={onReject}
+                  disabled={saving}
+                >
+                  <XIcon />
+                  <Trans message="Reject" />
+                </Button>
+                <Button color="primary" onClick={onApprove} disabled={saving}>
+                  <CheckIcon />
+                  {saving ? (
+                    <Trans message="Saving…" />
+                  ) : (
+                    <Trans message="Approve" />
+                  )}
+                </Button>
+              </>
+            )}
+          </Dialog.Footer>
+        </Dialog.Content>
+      </Dialog.Portal>
     </Dialog.Root>
   );
 }

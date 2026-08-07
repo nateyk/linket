@@ -26,17 +26,24 @@ export function Component() {
     setSaving(true);
     setError(undefined);
     try {
-      const response = await apiClient.post('/api/v1/admin/financial/withdrawal-methods', {
-        name,
-        destination_label: destinationLabel,
-        instructions: instructions || undefined,
-        minimum_amount_cents: dollarsToCents(minimumAmountCents),
-        maximum_amount_cents: dollarsToCents(maximumAmountCents),
-        position: position ? Number(position) : undefined,
-        is_active: isActive,
-      });
+      const response = await apiClient.post(
+        '/api/v1/admin/financial/withdrawal-methods',
+        {
+          name,
+          destination_label: destinationLabel,
+          instructions: instructions || undefined,
+          minimum_amount_cents: dollarsToCents(minimumAmountCents),
+          maximum_amount_cents: dollarsToCents(maximumAmountCents),
+          position: position ? Number(position) : undefined,
+          is_active: isActive,
+        },
+      );
       const id = response.data?.data?.id;
-      navigate(id ? `/admin/financial/withdrawal-methods/${id}/edit` : '/admin/financial/withdrawal-methods');
+      navigate(
+        id
+          ? `/admin/financial/withdrawal-methods/${id}/edit`
+          : '/admin/financial/withdrawal-methods',
+      );
     } catch (e: unknown) {
       setError(extractError(e));
     } finally {
@@ -171,7 +178,11 @@ export function Component() {
               </Field.Root>
             </Card.Content>
             <Card.Footer>
-              <Button color="primary" disabled={saving} onClick={() => void submit()}>
+              <Button
+                color="primary"
+                disabled={saving}
+                onClick={() => void submit()}
+              >
                 <SaveIcon />
                 {saving ? (
                   <Trans message="Saving…" />

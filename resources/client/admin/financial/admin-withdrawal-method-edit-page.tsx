@@ -43,7 +43,9 @@ export function Component() {
         '/api/v1/admin/financial/withdrawal-methods',
       );
       const methods = response.data?.data ?? [];
-      const method = methods.find((item: WithdrawalMethod) => item.id === Number(methodId));
+      const method = methods.find(
+        (item: WithdrawalMethod) => item.id === Number(methodId),
+      );
       if (!method) {
         setError('Unable to load this withdrawal method.');
         return;
@@ -70,15 +72,18 @@ export function Component() {
     setSaving(true);
     setError(undefined);
     try {
-      await apiClient.put(`/api/v1/admin/financial/withdrawal-methods/${methodId}`, {
-        name,
-        destination_label: destinationLabel,
-        instructions: instructions || undefined,
-        minimum_amount_cents: dollarsToCents(minimumAmountCents),
-        maximum_amount_cents: dollarsToCents(maximumAmountCents),
-        position: position ? Number(position) : undefined,
-        is_active: isActive,
-      });
+      await apiClient.put(
+        `/api/v1/admin/financial/withdrawal-methods/${methodId}`,
+        {
+          name,
+          destination_label: destinationLabel,
+          instructions: instructions || undefined,
+          minimum_amount_cents: dollarsToCents(minimumAmountCents),
+          maximum_amount_cents: dollarsToCents(maximumAmountCents),
+          position: position ? Number(position) : undefined,
+          is_active: isActive,
+        },
+      );
       navigate('/admin/financial/withdrawal-methods');
     } catch (e: unknown) {
       setError(extractError(e));
@@ -224,7 +229,11 @@ export function Component() {
               </Field.Root>
             </Card.Content>
             <Card.Footer>
-              <Button color="primary" disabled={saving} onClick={() => void submit()}>
+              <Button
+                color="primary"
+                disabled={saving}
+                onClick={() => void submit()}
+              >
                 <SaveIcon />
                 {saving ? (
                   <Trans message="Saving…" />

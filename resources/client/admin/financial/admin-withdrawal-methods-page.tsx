@@ -85,7 +85,10 @@ export function Component() {
           <ArrowLeftIcon />
           <Trans message="Withdrawals" />
         </Button>
-        <Button color="primary" render={<Link to="/admin/financial/withdrawal-methods/create" />}>
+        <Button
+          color="primary"
+          render={<Link to="/admin/financial/withdrawal-methods/create" />}
+        >
           <PlusIcon />
           <Trans message="New method" />
         </Button>
@@ -130,7 +133,10 @@ export function Component() {
                 <Table.Body>
                   {loading ? (
                     <Table.Row>
-                      <Table.Cell colSpan={5} className="h-28 text-center text-muted-foreground">
+                      <Table.Cell
+                        colSpan={5}
+                        className="h-28 text-center text-muted-foreground"
+                      >
                         <Trans message="Loading…" />
                       </Table.Cell>
                     </Table.Row>
@@ -195,7 +201,10 @@ export function Component() {
                     ))
                   ) : (
                     <Table.Row>
-                      <Table.Cell colSpan={5} className="h-28 text-center text-muted-foreground">
+                      <Table.Cell
+                        colSpan={5}
+                        className="h-28 text-center text-muted-foreground"
+                      >
                         <Trans message="No withdrawal methods found." />
                       </Table.Cell>
                     </Table.Row>
@@ -207,29 +216,43 @@ export function Component() {
         </div>
       </DashboardLayout.SectionContent>
 
-      <Dialog.Root open={!!deleteTarget} onOpenChange={open => !open && setDeleteTarget(undefined)}>
-        <Dialog.Content className="sm:max-w-md">
-          <Dialog.Header>
-            <Dialog.Title>
-              <Trans message="Delete withdrawal method" />
-            </Dialog.Title>
-          </Dialog.Header>
-          <Dialog.Body>
-            <Trans
-              message="Are you sure you want to delete the “:name” withdrawal method? Creators with pending requests using it will be affected."
-              values={{name: deleteTarget?.name ?? ''}}
-            />
-          </Dialog.Body>
-          <Dialog.Footer>
-            <Button variant="outline" onClick={() => setDeleteTarget(undefined)} disabled={deleting}>
-              <Trans message="Cancel" />
-            </Button>
-            <Button color="danger" onClick={() => void destroy()} disabled={deleting}>
-              <TrashIcon />
-              <Trans message="Delete" />
-            </Button>
-          </Dialog.Footer>
-        </Dialog.Content>
+      <Dialog.Root
+        open={!!deleteTarget}
+        onOpenChange={open => !open && setDeleteTarget(undefined)}
+      >
+        <Dialog.Portal>
+          <Dialog.Backdrop />
+          <Dialog.Content className="sm:max-w-md">
+            <Dialog.Header>
+              <Dialog.Title>
+                <Trans message="Delete withdrawal method" />
+              </Dialog.Title>
+            </Dialog.Header>
+            <Dialog.Body>
+              <Trans
+                message="Are you sure you want to delete the “:name” withdrawal method? Creators with pending requests using it will be affected."
+                values={{name: deleteTarget?.name ?? ''}}
+              />
+            </Dialog.Body>
+            <Dialog.Footer>
+              <Button
+                variant="outline"
+                onClick={() => setDeleteTarget(undefined)}
+                disabled={deleting}
+              >
+                <Trans message="Cancel" />
+              </Button>
+              <Button
+                color="danger"
+                onClick={() => void destroy()}
+                disabled={deleting}
+              >
+                <TrashIcon />
+                <Trans message="Delete" />
+              </Button>
+            </Dialog.Footer>
+          </Dialog.Content>
+        </Dialog.Portal>
       </Dialog.Root>
     </DashboardLayout.MainSection>
   );
@@ -243,7 +266,8 @@ function formatRange(method: WithdrawalMethod) {
 }
 
 function formatMoney(cents: number) {
-  return new Intl.NumberFormat(undefined, {style: 'currency', currency: 'USD'}).format(
-    cents / 100,
-  );
+  return new Intl.NumberFormat(undefined, {
+    style: 'currency',
+    currency: 'USD',
+  }).format(cents / 100);
 }

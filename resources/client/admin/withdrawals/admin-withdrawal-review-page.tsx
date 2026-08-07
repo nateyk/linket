@@ -9,13 +9,16 @@ import {Select} from '@shadcn/forms/select/select';
 import {Textarea} from '@shadcn/forms/textarea/textarea';
 import {Table} from '@shadcn/table/table';
 import {Trans} from '@ui/i18n/trans';
-import {
-  ArrowLeftIcon,
-} from 'lucide-react';
+import {ArrowLeftIcon} from 'lucide-react';
 import {useCallback, useEffect, useState} from 'react';
 import {Link, useParams} from 'react-router';
 
-type PayoutStatus = 'requested' | 'processing' | 'paid' | 'rejected' | 'cancelled';
+type PayoutStatus =
+  | 'requested'
+  | 'processing'
+  | 'paid'
+  | 'rejected'
+  | 'cancelled';
 
 type Payout = {
   id: number;
@@ -49,7 +52,13 @@ type Payout = {
     account_holder?: string | null;
     display_label?: string | null;
   } | null;
-  activities?: {id: number; action: string; note?: string | null; created_at?: string; actor?: {name: string} | null}[];
+  activities?: {
+    id: number;
+    action: string;
+    note?: string | null;
+    created_at?: string;
+    actor?: {name: string} | null;
+  }[];
 };
 
 const statusLabels: Record<PayoutStatus, string> = {
@@ -115,7 +124,10 @@ export function Component() {
     setSaving(true);
     setError(undefined);
     try {
-      await apiClient.post(`/api/v1/admin/withdrawals/${payout.id}/review`, body);
+      await apiClient.post(
+        `/api/v1/admin/withdrawals/${payout.id}/review`,
+        body,
+      );
       setAction(undefined);
       setNote('');
       setReference('');
@@ -143,7 +155,9 @@ export function Component() {
 
   if (!payout) return null;
 
-  const isActionable = !['paid', 'rejected', 'cancelled'].includes(payout.status);
+  const isActionable = !['paid', 'rejected', 'cancelled'].includes(
+    payout.status,
+  );
 
   return (
     <DashboardLayout.MainSection>
@@ -154,10 +168,7 @@ export function Component() {
             <Trans message="Withdrawal review" />
           </DashboardLayout.SectionTitle>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            <Trans
-              message="Withdrawal request #:id"
-              values={{id: payout.id}}
-            />
+            <Trans message="Withdrawal request #:id" values={{id: payout.id}} />
           </p>
         </div>
         <Button variant="outline" render={<Link to="/admin/withdrawals" />}>
@@ -190,7 +201,9 @@ export function Component() {
                       <Table.Cell className="w-48 text-muted-foreground">
                         <Trans message="ID" />
                       </Table.Cell>
-                      <Table.Cell className="font-mono">#{payout.id}</Table.Cell>
+                      <Table.Cell className="font-mono">
+                        #{payout.id}
+                      </Table.Cell>
                     </Table.Row>
                     <Table.Row>
                       <Table.Cell className="text-muted-foreground">
@@ -218,16 +231,17 @@ export function Component() {
                         <Trans message="Withdrawal method" />
                       </Table.Cell>
                       <Table.Cell>
-                        {payout.withdrawal_method_name ?? payout.payout_method_label ?? (
-                          <Trans message="Not specified" />
-                        )}
+                        {payout.withdrawal_method_name ??
+                          payout.payout_method_label ?? (
+                            <Trans message="Not specified" />
+                          )}
                       </Table.Cell>
                     </Table.Row>
                     <Table.Row>
                       <Table.Cell className="text-muted-foreground">
                         <Trans message="Payout destination" />
                       </Table.Cell>
-                      <Table.Cell className="break-all font-mono text-sm">
+                      <Table.Cell className="font-mono text-sm break-all">
                         {payout.payout_destination ?? '—'}
                       </Table.Cell>
                     </Table.Row>
@@ -242,7 +256,9 @@ export function Component() {
                         <Table.Cell className="text-muted-foreground">
                           <Trans message="Processed at" />
                         </Table.Cell>
-                        <Table.Cell>{formatDate(payout.processed_at)}</Table.Cell>
+                        <Table.Cell>
+                          {formatDate(payout.processed_at)}
+                        </Table.Cell>
                       </Table.Row>
                     )}
                     {payout.paid_at && (
@@ -258,7 +274,9 @@ export function Component() {
                         <Table.Cell className="text-muted-foreground">
                           <Trans message="Rejected at" />
                         </Table.Cell>
-                        <Table.Cell>{formatDate(payout.rejected_at)}</Table.Cell>
+                        <Table.Cell>
+                          {formatDate(payout.rejected_at)}
+                        </Table.Cell>
                       </Table.Row>
                     )}
                     {payout.cancelled_at && (
@@ -266,7 +284,9 @@ export function Component() {
                         <Table.Cell className="text-muted-foreground">
                           <Trans message="Cancelled at" />
                         </Table.Cell>
-                        <Table.Cell>{formatDate(payout.cancelled_at)}</Table.Cell>
+                        <Table.Cell>
+                          {formatDate(payout.cancelled_at)}
+                        </Table.Cell>
                       </Table.Row>
                     )}
                     {payout.transfer_reference && (
@@ -323,7 +343,7 @@ export function Component() {
                   <div className="space-y-4 border-l pl-4">
                     {payout.activities.map(activity => (
                       <div key={activity.id} className="relative">
-                        <div className="absolute -left-5 top-1 size-2 rounded-full bg-primary" />
+                        <div className="absolute top-1 -left-5 size-2 rounded-full bg-primary" />
                         <p className="font-medium">
                           <Trans message={activity.action} />
                           {activity.actor?.name && (
@@ -372,7 +392,14 @@ export function Component() {
                         />
                       </Select.Trigger>
                       <Select.Content>
-                        {(['processing', 'paid', 'rejected', 'cancelled'] as PayoutStatus[])
+                        {(
+                          [
+                            'processing',
+                            'paid',
+                            'rejected',
+                            'cancelled',
+                          ] as PayoutStatus[]
+                        )
                           .filter(status => status !== payout.status)
                           .map(status => (
                             <Select.Item key={status} value={status}>
