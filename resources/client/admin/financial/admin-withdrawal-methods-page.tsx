@@ -4,12 +4,18 @@ import {Badge} from '@shadcn/badge/badge';
 import {Button} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
 import {Dialog} from '@shadcn/dialog/dialog';
+import {Dropdown} from '@shadcn/dropdown/dropdown';
+import {Input} from '@shadcn/forms/input/input';
+import {Popover} from '@shadcn/popover/popover';
 import {Table} from '@shadcn/table/table';
 import {Trans} from '@ui/i18n/trans';
 import {
-  BanknoteIcon,
   ArrowLeftIcon,
+  BanknoteIcon,
+  CircleQuestionMarkIcon,
   EditIcon,
+  EllipsisVerticalIcon,
+  InboxIcon,
   PlusIcon,
   TrashIcon,
 } from 'lucide-react';
@@ -73,20 +79,21 @@ export function Component() {
     <DashboardLayout.MainSection>
       <DashboardLayout.SectionHeader>
         <DashboardLayout.SidebarToggle />
-        <div>
-          <DashboardLayout.SectionTitle>
-            <Trans message="Withdrawal methods" />
-          </DashboardLayout.SectionTitle>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            <Trans message="Configure the payout methods creators can withdraw to." />
-          </p>
-        </div>
-        <Button variant="outline" render={<Link to="/admin/withdrawals" />}>
+        <DashboardLayout.SectionTitle>
+          <Trans message="Withdrawal methods" />
+          <InfoTrigger />
+        </DashboardLayout.SectionTitle>
+        <Button
+          variant="outline"
+          nativeButton={false}
+          render={<Link to="/admin/withdrawals" />}
+        >
           <ArrowLeftIcon />
           <Trans message="Withdrawals" />
         </Button>
         <Button
           color="primary"
+          nativeButton={false}
           render={<Link to="/admin/financial/withdrawal-methods/create" />}
         >
           <PlusIcon />
@@ -105,9 +112,6 @@ export function Component() {
               <Card.Title>
                 <Trans message="Payout methods" />
               </Card.Title>
-              <Card.Description>
-                <Trans message="These methods are shown to creators when requesting a withdrawal." />
-              </Card.Description>
             </Card.Header>
             <Card.Content className="overflow-x-auto">
               <Table.Root>
@@ -125,21 +129,12 @@ export function Component() {
                     <Table.Head>
                       <Trans message="Status" />
                     </Table.Head>
-                    <Table.Head className="text-end">
-                      <Trans message="Actions" />
-                    </Table.Head>
+                    <Table.Head />
                   </Table.Row>
                 </Table.Header>
                 <Table.Body>
                   {loading ? (
-                    <Table.Row>
-                      <Table.Cell
-                        colSpan={5}
-                        className="h-28 text-center text-muted-foreground"
-                      >
-                        <Trans message="Loading…" />
-                      </Table.Cell>
-                    </Table.Row>
+                    <LoadingRows />
                   ) : methods.length ? (
                     methods.map(method => (
                       <Table.Row key={method.id}>
@@ -173,39 +168,50 @@ export function Component() {
                             </Badge>
                           )}
                         </Table.Cell>
-                        <Table.Cell className="text-end">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              size="icon-sm"
-                              variant="outline"
-                              color="primary"
-                              render={
-                                <Link
-                                  to={`/admin/financial/withdrawal-methods/${method.id}/edit`}
-                                />
-                              }
-                            >
-                              <EditIcon />
-                            </Button>
-                            <Button
-                              size="icon-sm"
-                              variant="outline"
-                              color="danger"
-                              onClick={() => setDeleteTarget(method)}
-                            >
-                              <TrashIcon />
-                            </Button>
+                        <Table.Cell>
+                          <div className="flex justify-end">
+                            <Dropdown>
+                              <Dropdown.Trigger
+                                className="flex size-8 items-center justify-center rounded-input hover:bg-muted"
+                                aria-label="Actions"
+                              >
+                                <EllipsisVerticalIcon className="size-4 text-muted-foreground" />
+                              </Dropdown.Trigger>
+                              <Dropdown.Content align="end">
+                                <Dropdown.Item
+                                  onClick={() =>
+                                    (window.location.href = `/admin/financial/withdrawal-methods/${method.id}/edit`)
+                                  }
+                                >
+                                  <EditIcon className="size-4" />
+                                  <Trans message="Edit" />
+                                </Dropdown.Item>
+                                <Dropdown.Separator />
+                                <Dropdown.Item
+                                  className="text-destructive focus:text-destructive"
+                                  onClick={() => setDeleteTarget(method)}
+                                >
+                                  <TrashIcon className="size-4" />
+                                  <Trans message="Delete" />
+                                </Dropdown.Item>
+                              </Dropdown.Content>
+                            </Dropdown>
                           </div>
                         </Table.Cell>
                       </Table.Row>
                     ))
                   ) : (
                     <Table.Row>
-                      <Table.Cell
-                        colSpan={5}
-                        className="h-28 text-center text-muted-foreground"
-                      >
-                        <Trans message="No withdrawal methods found." />
+                      <Table.Cell colSpan={5}>
+                        <div className="flex flex-col items-center py-12 text-center">
+                          <InboxIcon className="mb-3 size-10 text-muted-foreground/50" />
+                          <p className="font-medium">
+                            <Trans message="No withdrawal methods" />
+                          </p>
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            <Trans message="Create a method so creators can request payouts." />
+                          </p>
+                        </div>
                       </Table.Cell>
                     </Table.Row>
                   )}
@@ -270,4 +276,37 @@ function formatMoney(cents: number) {
     style: 'currency',
     currency: 'USD',
   }).format(cents / 100);
+}
+
+function LoadingRows() {
+  return (
+    <>
+      {Array.from({length: 5}, (_, index) => (
+        <Table.Row key={index}>
+          <Table.Cell colSpan={5}>
+            <div className="h-7 animate-pulse rounded-input bg-muted" />
+          </Table.Cell>
+        </Table.Row>
+      ))}
+    </>
+  );
+}
+
+function InfoTrigger() {
+  return (
+    <Popover.Root>
+      <Popover.Trigger
+        render={<Button variant="ghost" size="icon-sm" />}
+        className="text-muted-foreground"
+        openOnHover
+      >
+        <CircleQuestionMarkIcon />
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content>
+          <Trans message="Configure payout methods creators can use to withdraw their earnings." />
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  );
 }
