@@ -55,16 +55,12 @@ export function Component() {
     <DashboardLayout.MainSection>
       <DashboardLayout.SectionHeader>
         <DashboardLayout.SidebarToggle />
-        <div>
-          <DashboardLayout.SectionTitle>
-            <Trans message="New withdrawal method" />
-          </DashboardLayout.SectionTitle>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            <Trans message="Add a payout method creators can use for withdrawals." />
-          </p>
-        </div>
+        <DashboardLayout.SectionTitle>
+          <Trans message="New withdrawal method" />
+        </DashboardLayout.SectionTitle>
         <Button
           variant="outline"
+          nativeButton={false}
           render={<Link to="/admin/financial/withdrawal-methods" />}
         >
           <ArrowLeftIcon />
@@ -83,9 +79,6 @@ export function Component() {
               <Card.Title>
                 <Trans message="Method details" />
               </Card.Title>
-              <Card.Description>
-                <Trans message="Configure how this payout method is presented to creators." />
-              </Card.Description>
             </Card.Header>
             <Card.Content className="space-y-4">
               <Field.Root name="name">
