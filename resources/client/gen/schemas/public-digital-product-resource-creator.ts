@@ -9,4 +9,5 @@
 export type PublicDigitalProductResourceCreator = {
   /** @nullable */
   name: string | null;
+  verified: boolean;
 };

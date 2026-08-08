@@ -3398,6 +3398,13 @@
                 ],
                 "parameters": [
                     {
+                        "name": "search",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
                         "name": "status",
                         "in": "query",
                         "schema": {
@@ -3407,124 +3414,20 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Paginated set of `DigitalProduct`",
+                        "description": "",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "current_page": {
-                                            "type": "integer",
-                                            "minimum": 1
-                                        },
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/components/schemas/DigitalProduct"
+                                    "type": "array",
+                                    "items": {
+                                        "anyOf": [
+                                            {},
+                                            {
+                                                "type": "array",
+                                                "items": {}
                                             }
-                                        },
-                                        "first_page_url": {
-                                            "type": [
-                                                "string",
-                                                "null"
-                                            ]
-                                        },
-                                        "from": {
-                                            "type": [
-                                                "integer",
-                                                "null"
-                                            ],
-                                            "minimum": 1
-                                        },
-                                        "last_page_url": {
-                                            "type": [
-                                                "string",
-                                                "null"
-                                            ]
-                                        },
-                                        "last_page": {
-                                            "type": "integer",
-                                            "minimum": 1
-                                        },
-                                        "links": {
-                                            "type": "array",
-                                            "description": "Generated paginator links.",
-                                            "items": {
-                                                "type": "object",
-                                                "properties": {
-                                                    "url": {
-                                                        "type": [
-                                                            "string",
-                                                            "null"
-                                                        ]
-                                                    },
-                                                    "label": {
-                                                        "type": "string"
-                                                    },
-                                                    "active": {
-                                                        "type": "boolean"
-                                                    }
-                                                },
-                                                "required": [
-                                                    "url",
-                                                    "label",
-                                                    "active"
-                                                ]
-                                            }
-                                        },
-                                        "next_page_url": {
-                                            "type": [
-                                                "string",
-                                                "null"
-                                            ]
-                                        },
-                                        "path": {
-                                            "type": [
-                                                "string",
-                                                "null"
-                                            ],
-                                            "description": "Base path for paginator generated URLs."
-                                        },
-                                        "per_page": {
-                                            "type": "integer",
-                                            "description": "Number of items shown per page.",
-                                            "minimum": 0
-                                        },
-                                        "prev_page_url": {
-                                            "type": [
-                                                "string",
-                                                "null"
-                                            ]
-                                        },
-                                        "to": {
-                                            "type": [
-                                                "integer",
-                                                "null"
-                                            ],
-                                            "description": "Number of the last item in the slice.",
-                                            "minimum": 1
-                                        },
-                                        "total": {
-                                            "type": "integer",
-                                            "description": "Total number of items being paginated.",
-                                            "minimum": 0
-                                        }
-                                    },
-                                    "required": [
-                                        "current_page",
-                                        "data",
-                                        "first_page_url",
-                                        "from",
-                                        "last_page_url",
-                                        "last_page",
-                                        "links",
-                                        "next_page_url",
-                                        "path",
-                                        "per_page",
-                                        "prev_page_url",
-                                        "to",
-                                        "total"
-                                    ]
+                                        ]
+                                    }
                                 }
                             }
                         }
@@ -3672,124 +3575,20 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Paginated set of `DigitalProduct`",
+                        "description": "",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "current_page": {
-                                            "type": "integer",
-                                            "minimum": 1
-                                        },
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/components/schemas/DigitalProduct"
+                                    "type": "array",
+                                    "items": {
+                                        "anyOf": [
+                                            {},
+                                            {
+                                                "type": "array",
+                                                "items": {}
                                             }
-                                        },
-                                        "first_page_url": {
-                                            "type": [
-                                                "string",
-                                                "null"
-                                            ]
-                                        },
-                                        "from": {
-                                            "type": [
-                                                "integer",
-                                                "null"
-                                            ],
-                                            "minimum": 1
-                                        },
-                                        "last_page_url": {
-                                            "type": [
-                                                "string",
-                                                "null"
-                                            ]
-                                        },
-                                        "last_page": {
-                                            "type": "integer",
-                                            "minimum": 1
-                                        },
-                                        "links": {
-                                            "type": "array",
-                                            "description": "Generated paginator links.",
-                                            "items": {
-                                                "type": "object",
-                                                "properties": {
-                                                    "url": {
-                                                        "type": [
-                                                            "string",
-                                                            "null"
-                                                        ]
-                                                    },
-                                                    "label": {
-                                                        "type": "string"
-                                                    },
-                                                    "active": {
-                                                        "type": "boolean"
-                                                    }
-                                                },
-                                                "required": [
-                                                    "url",
-                                                    "label",
-                                                    "active"
-                                                ]
-                                            }
-                                        },
-                                        "next_page_url": {
-                                            "type": [
-                                                "string",
-                                                "null"
-                                            ]
-                                        },
-                                        "path": {
-                                            "type": [
-                                                "string",
-                                                "null"
-                                            ],
-                                            "description": "Base path for paginator generated URLs."
-                                        },
-                                        "per_page": {
-                                            "type": "integer",
-                                            "description": "Number of items shown per page.",
-                                            "minimum": 0
-                                        },
-                                        "prev_page_url": {
-                                            "type": [
-                                                "string",
-                                                "null"
-                                            ]
-                                        },
-                                        "to": {
-                                            "type": [
-                                                "integer",
-                                                "null"
-                                            ],
-                                            "description": "Number of the last item in the slice.",
-                                            "minimum": 1
-                                        },
-                                        "total": {
-                                            "type": "integer",
-                                            "description": "Total number of items being paginated.",
-                                            "minimum": 0
-                                        }
-                                    },
-                                    "required": [
-                                        "current_page",
-                                        "data",
-                                        "first_page_url",
-                                        "from",
-                                        "last_page_url",
-                                        "last_page",
-                                        "links",
-                                        "next_page_url",
-                                        "path",
-                                        "per_page",
-                                        "prev_page_url",
-                                        "to",
-                                        "total"
-                                    ]
+                                        ]
+                                    }
                                 }
                             }
                         }
@@ -3919,6 +3718,484 @@
                     },
                     "422": {
                         "$ref": "#/components/responses/ValidationException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            }
+        },
+        "/admin/kyc-verifications": {
+            "get": {
+                "operationId": "adminKycVerifications.index",
+                "tags": [
+                    "AdminKycVerifications"
+                ],
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "document_type",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated set of `KycVerificationResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/KycVerificationResource"
+                                            }
+                                        },
+                                        "links": {
+                                            "type": "object",
+                                            "properties": {
+                                                "first": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "last": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "prev": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "next": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "first",
+                                                "last",
+                                                "prev",
+                                                "next"
+                                            ]
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "current_page": {
+                                                    "type": "integer",
+                                                    "minimum": 1
+                                                },
+                                                "from": {
+                                                    "type": [
+                                                        "integer",
+                                                        "null"
+                                                    ],
+                                                    "minimum": 1
+                                                },
+                                                "last_page": {
+                                                    "type": "integer",
+                                                    "minimum": 1
+                                                },
+                                                "links": {
+                                                    "type": "array",
+                                                    "description": "Generated paginator links.",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "url": {
+                                                                "type": [
+                                                                    "string",
+                                                                    "null"
+                                                                ]
+                                                            },
+                                                            "label": {
+                                                                "type": "string"
+                                                            },
+                                                            "active": {
+                                                                "type": "boolean"
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "url",
+                                                            "label",
+                                                            "active"
+                                                        ]
+                                                    }
+                                                },
+                                                "path": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ],
+                                                    "description": "Base path for paginator generated URLs."
+                                                },
+                                                "per_page": {
+                                                    "type": "integer",
+                                                    "description": "Number of items shown per page.",
+                                                    "minimum": 0
+                                                },
+                                                "to": {
+                                                    "type": [
+                                                        "integer",
+                                                        "null"
+                                                    ],
+                                                    "description": "Number of the last item in the slice.",
+                                                    "minimum": 1
+                                                },
+                                                "total": {
+                                                    "type": "integer",
+                                                    "description": "Total number of items being paginated.",
+                                                    "minimum": 0
+                                                },
+                                                "counters": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "pending": {
+                                                            "type": "object",
+                                                            "properties": {
+                                                                "total": {
+                                                                    "type": "integer",
+                                                                    "minimum": 0
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "total"
+                                                            ]
+                                                        },
+                                                        "approved": {
+                                                            "type": "object",
+                                                            "properties": {
+                                                                "total": {
+                                                                    "type": "integer",
+                                                                    "minimum": 0
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "total"
+                                                            ]
+                                                        },
+                                                        "rejected": {
+                                                            "type": "object",
+                                                            "properties": {
+                                                                "total": {
+                                                                    "type": "integer",
+                                                                    "minimum": 0
+                                                                }
+                                                            },
+                                                            "required": [
+                                                                "total"
+                                                            ]
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "pending",
+                                                        "approved",
+                                                        "rejected"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "current_page",
+                                                "from",
+                                                "last_page",
+                                                "links",
+                                                "path",
+                                                "per_page",
+                                                "to",
+                                                "total",
+                                                "counters"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "links",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    }
+                }
+            }
+        },
+        "/admin/kyc-verifications/{kycVerification}": {
+            "get": {
+                "operationId": "adminKycVerifications.show",
+                "tags": [
+                    "AdminKycVerifications"
+                ],
+                "parameters": [
+                    {
+                        "name": "kycVerification",
+                        "in": "path",
+                        "required": true,
+                        "description": "The kyc verification ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`KycVerificationResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/KycVerificationResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "adminKycVerifications.destroy",
+                "tags": [
+                    "AdminKycVerifications"
+                ],
+                "parameters": [
+                    {
+                        "name": "kycVerification",
+                        "in": "path",
+                        "required": true,
+                        "description": "The kyc verification ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "anyOf": [
+                                                {
+                                                    "type": "null"
+                                                },
+                                                {
+                                                    "type": "array",
+                                                    "items": {}
+                                                },
+                                                {
+                                                    "type": "string"
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            }
+        },
+        "/admin/kyc-verifications/{kycVerification}/approve": {
+            "post": {
+                "operationId": "adminKycVerifications.approve",
+                "tags": [
+                    "AdminKycVerifications"
+                ],
+                "parameters": [
+                    {
+                        "name": "kycVerification",
+                        "in": "path",
+                        "required": true,
+                        "description": "The kyc verification ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`KycVerificationResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/KycVerificationResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            }
+        },
+        "/admin/kyc-verifications/{kycVerification}/reject": {
+            "post": {
+                "operationId": "adminKycVerifications.reject",
+                "tags": [
+                    "AdminKycVerifications"
+                ],
+                "parameters": [
+                    {
+                        "name": "kycVerification",
+                        "in": "path",
+                        "required": true,
+                        "description": "The kyc verification ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "reason": {
+                                        "type": "string",
+                                        "maxLength": 2000
+                                    }
+                                },
+                                "required": [
+                                    "reason"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`KycVerificationResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/KycVerificationResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            }
+        },
+        "/admin/kyc-verifications/{kycVerification}/documents/{key}": {
+            "get": {
+                "operationId": "adminKycVerifications.document",
+                "tags": [
+                    "AdminKycVerifications"
+                ],
+                "parameters": [
+                    {
+                        "name": "kycVerification",
+                        "in": "path",
+                        "required": true,
+                        "description": "The kyc verification ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "key",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "403": {
                         "$ref": "#/components/responses/AuthorizationException"
@@ -4205,6 +4482,28 @@
                             ],
                             "maxLength": 120
                         }
+                    },
+                    {
+                        "name": "date_from",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "format": "date-time"
+                        }
+                    },
+                    {
+                        "name": "date_to",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "format": "date-time"
+                        }
                     }
                 ],
                 "responses": {
@@ -4260,6 +4559,344 @@
                     },
                     "422": {
                         "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/admin/withdrawals": {
+            "get": {
+                "operationId": "admin.withdrawals.index",
+                "tags": [
+                    "AdminPayoutRequests"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated set of `AdminPayoutRequestResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/AdminPayoutRequestResource"
+                                            }
+                                        },
+                                        "links": {
+                                            "type": "object",
+                                            "properties": {
+                                                "first": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "last": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "prev": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "next": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "first",
+                                                "last",
+                                                "prev",
+                                                "next"
+                                            ]
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "current_page": {
+                                                    "type": "integer",
+                                                    "minimum": 1
+                                                },
+                                                "from": {
+                                                    "type": [
+                                                        "integer",
+                                                        "null"
+                                                    ],
+                                                    "minimum": 1
+                                                },
+                                                "last_page": {
+                                                    "type": "integer",
+                                                    "minimum": 1
+                                                },
+                                                "links": {
+                                                    "type": "array",
+                                                    "description": "Generated paginator links.",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "url": {
+                                                                "type": [
+                                                                    "string",
+                                                                    "null"
+                                                                ]
+                                                            },
+                                                            "label": {
+                                                                "type": "string"
+                                                            },
+                                                            "active": {
+                                                                "type": "boolean"
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "url",
+                                                            "label",
+                                                            "active"
+                                                        ]
+                                                    }
+                                                },
+                                                "path": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ],
+                                                    "description": "Base path for paginator generated URLs."
+                                                },
+                                                "per_page": {
+                                                    "type": "integer",
+                                                    "description": "Number of items shown per page.",
+                                                    "minimum": 0
+                                                },
+                                                "to": {
+                                                    "type": [
+                                                        "integer",
+                                                        "null"
+                                                    ],
+                                                    "description": "Number of the last item in the slice.",
+                                                    "minimum": 1
+                                                },
+                                                "total": {
+                                                    "type": "integer",
+                                                    "description": "Total number of items being paginated.",
+                                                    "minimum": 0
+                                                },
+                                                "counters": {
+                                                    "type": "string"
+                                                },
+                                                "withdrawal_methods": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "$ref": "#/components/schemas/DigitalProductWithdrawalMethod"
+                                                    }
+                                                }
+                                            },
+                                            "required": [
+                                                "current_page",
+                                                "from",
+                                                "last_page",
+                                                "links",
+                                                "path",
+                                                "per_page",
+                                                "to",
+                                                "total",
+                                                "counters",
+                                                "withdrawal_methods"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "links",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    }
+                }
+            }
+        },
+        "/admin/withdrawals/{payoutRequest}/review": {
+            "get": {
+                "operationId": "admin.withdrawals.review",
+                "tags": [
+                    "AdminPayoutRequests"
+                ],
+                "parameters": [
+                    {
+                        "name": "payoutRequest",
+                        "in": "path",
+                        "required": true,
+                        "description": "The payout request ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`AdminPayoutRequestResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/AdminPayoutRequestResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "admin.withdrawals.update",
+                "tags": [
+                    "AdminPayoutRequests"
+                ],
+                "parameters": [
+                    {
+                        "name": "payoutRequest",
+                        "in": "path",
+                        "required": true,
+                        "description": "The payout request ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "requested",
+                                            "processing",
+                                            "paid",
+                                            "rejected",
+                                            "cancelled"
+                                        ]
+                                    },
+                                    "note": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "status"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`AdminPayoutRequestResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/AdminPayoutRequestResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            }
+        },
+        "/admin/withdrawals/{payoutRequest}": {
+            "delete": {
+                "operationId": "admin.withdrawals.destroy",
+                "tags": [
+                    "AdminPayoutRequests"
+                ],
+                "parameters": [
+                    {
+                        "name": "payoutRequest",
+                        "in": "path",
+                        "required": true,
+                        "description": "The payout request ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "anyOf": [
+                                                {
+                                                    "type": "null"
+                                                },
+                                                {
+                                                    "type": "array",
+                                                    "items": {}
+                                                },
+                                                {
+                                                    "type": "string"
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
                     }
                 }
             }
@@ -4792,7 +5429,7 @@
         },
         "/admin/digital-products/withdrawal-methods": {
             "get": {
-                "operationId": "digitalProductWithdrawalMethods.adminIndex",
+                "operationId": "storefront.digitalProductWithdrawalMethods.adminIndex_0",
                 "tags": [
                     "DigitalProductWithdrawalMethods"
                 ],
@@ -4824,7 +5461,7 @@
                 }
             },
             "post": {
-                "operationId": "digitalProductWithdrawalMethods.store",
+                "operationId": "storefront.digitalProductWithdrawalMethods.store_1",
                 "tags": [
                     "DigitalProductWithdrawalMethods"
                 ],
@@ -4869,7 +5506,7 @@
         },
         "/admin/digital-products/withdrawal-methods/{withdrawalMethod}": {
             "put": {
-                "operationId": "digitalProductWithdrawalMethods.update",
+                "operationId": "storefront.digitalProductWithdrawalMethods.update_0",
                 "tags": [
                     "DigitalProductWithdrawalMethods"
                 ],
@@ -4912,11 +5549,183 @@
                 }
             }
         },
+        "/admin/financial/withdrawal-methods": {
+            "get": {
+                "operationId": "admin.withdrawal-methods.index",
+                "tags": [
+                    "DigitalProductWithdrawalMethods"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of `DigitalProductWithdrawalMethodResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/DigitalProductWithdrawalMethodResource"
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "admin.withdrawal-methods.store",
+                "tags": [
+                    "DigitalProductWithdrawalMethods"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`DigitalProductWithdrawalMethodResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/DigitalProductWithdrawalMethodResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    }
+                }
+            }
+        },
+        "/admin/financial/withdrawal-methods/{withdrawalMethod}": {
+            "put": {
+                "operationId": "admin.withdrawal-methods.update",
+                "tags": [
+                    "DigitalProductWithdrawalMethods"
+                ],
+                "parameters": [
+                    {
+                        "name": "withdrawalMethod",
+                        "in": "path",
+                        "required": true,
+                        "description": "The withdrawal method ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`DigitalProductWithdrawalMethodResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/DigitalProductWithdrawalMethodResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "admin.withdrawal-methods.destroy",
+                "tags": [
+                    "DigitalProductWithdrawalMethods"
+                ],
+                "parameters": [
+                    {
+                        "name": "withdrawalMethod",
+                        "in": "path",
+                        "required": true,
+                        "description": "The withdrawal method ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "anyOf": [
+                                                {
+                                                    "type": "null"
+                                                },
+                                                {
+                                                    "type": "array",
+                                                    "items": {}
+                                                },
+                                                {
+                                                    "type": "string"
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            }
+        },
         "/storefront/products": {
             "get": {
                 "operationId": "products.index",
                 "tags": [
                     "DigitalProducts"
+                ],
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
                 ],
                 "responses": {
                     "200": {
@@ -5577,6 +6386,130 @@
                                         "message": {
                                             "type": "string",
                                             "description": "Error overview."
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            }
+        },
+        "/kyc/status": {
+            "get": {
+                "operationId": "kycVerifications.status",
+                "tags": [
+                    "KycVerifications"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string"
+                                        },
+                                        "is_required": {
+                                            "type": "string"
+                                        },
+                                        "verification": {
+                                            "anyOf": [
+                                                {
+                                                    "$ref": "#/components/schemas/KycVerificationResource"
+                                                },
+                                                {
+                                                    "type": "null"
+                                                }
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "status",
+                                        "is_required",
+                                        "verification"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/kyc": {
+            "post": {
+                "operationId": "kycVerifications.store",
+                "tags": [
+                    "KycVerifications"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`KycVerificationResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/KycVerificationResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/kyc/documents/{key}": {
+            "get": {
+                "operationId": "kycVerifications.document",
+                "tags": [
+                    "KycVerifications"
+                ],
+                "parameters": [
+                    {
+                        "name": "key",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "An error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Error overview.",
+                                            "example": ""
                                         }
                                     },
                                     "required": [
@@ -7063,7 +7996,6 @@
                     }
                 ],
                 "requestBody": {
-                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
@@ -7079,11 +8011,11 @@
                                             "null"
                                         ],
                                         "maxLength": 2000
+                                    },
+                                    "auto_transfer": {
+                                        "type": "boolean"
                                     }
-                                },
-                                "required": [
-                                    "transfer_reference"
-                                ]
+                                }
                             }
                         }
                     }
@@ -7727,7 +8659,6 @@
                     }
                 ],
                 "requestBody": {
-                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
@@ -7743,11 +8674,11 @@
                                             "null"
                                         ],
                                         "maxLength": 2000
+                                    },
+                                    "auto_transfer": {
+                                        "type": "boolean"
                                     }
-                                },
-                                "required": [
-                                    "transfer_reference"
-                                ]
+                                }
                             }
                         }
                     }
@@ -9617,6 +10548,112 @@
                 }
             }
         },
+        "/workspaces/{workspaceId}/payout-config": {
+            "get": {
+                "operationId": "workspacePayoutConfig.show",
+                "tags": [
+                    "WorkspacePayoutConfig"
+                ],
+                "parameters": [
+                    {
+                        "name": "workspaceId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`WorkspacePayoutConfigResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/WorkspacePayoutConfigResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "workspacePayoutConfig.update",
+                "tags": [
+                    "WorkspacePayoutConfig"
+                ],
+                "parameters": [
+                    {
+                        "name": "workspaceId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "withdrawal_method_id": {
+                                        "type": "integer"
+                                    },
+                                    "withdrawal_account": {
+                                        "type": "string",
+                                        "maxLength": 500
+                                    }
+                                },
+                                "required": [
+                                    "withdrawal_method_id",
+                                    "withdrawal_account"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`WorkspacePayoutConfigResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/WorkspacePayoutConfigResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
         "/workspaces": {
             "get": {
                 "operationId": "listWorkspaces",
@@ -10279,6 +11316,281 @@
             }
         },
         "schemas": {
+            "AdminPayoutRequestResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "amount_cents": {
+                        "type": "integer"
+                    },
+                    "currency": {
+                        "type": "string"
+                    },
+                    "payout_method_label": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "withdrawal_method_name": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "withdrawal_method": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "string"
+                            },
+                            "name": {
+                                "type": "string"
+                            },
+                            "code": {
+                                "type": "string"
+                            },
+                            "minimum_amount_cents": {
+                                "type": "string"
+                            },
+                            "maximum_amount_cents": {
+                                "type": "string"
+                            },
+                            "destination_label": {
+                                "type": "string"
+                            },
+                            "instructions": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "name",
+                            "code",
+                            "minimum_amount_cents",
+                            "maximum_amount_cents",
+                            "destination_label",
+                            "instructions"
+                        ]
+                    },
+                    "payout_destination": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "transfer_reference": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "admin_notes": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "rejection_reason": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "processed_at": {
+                        "type": "string"
+                    },
+                    "paid_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "rejected_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "cancelled_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "creator": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "email": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "name",
+                            "email"
+                        ]
+                    },
+                    "processor": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "name"
+                        ]
+                    },
+                    "withdrawalMethod": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "string"
+                            },
+                            "name": {
+                                "type": "string"
+                            },
+                            "code": {
+                                "type": "string"
+                            },
+                            "minimum_amount_cents": {
+                                "type": "string"
+                            },
+                            "maximum_amount_cents": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "name",
+                            "code",
+                            "minimum_amount_cents",
+                            "maximum_amount_cents"
+                        ]
+                    },
+                    "activities": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "action": {
+                                    "type": "string"
+                                },
+                                "note": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ]
+                                },
+                                "created_at": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
+                                    "format": "date-time"
+                                },
+                                "actor": {
+                                    "type": [
+                                        "object",
+                                        "null"
+                                    ],
+                                    "properties": {
+                                        "name": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "name"
+                                    ]
+                                }
+                            },
+                            "required": [
+                                "id",
+                                "action",
+                                "note",
+                                "created_at",
+                                "actor"
+                            ]
+                        }
+                    },
+                    "payoutMethod": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "string"
+                            },
+                            "type": {
+                                "type": "string"
+                            },
+                            "account_holder": {
+                                "type": "string"
+                            },
+                            "display_label": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "type",
+                            "account_holder",
+                            "display_label"
+                        ]
+                    }
+                },
+                "required": [
+                    "id",
+                    "amount_cents",
+                    "currency",
+                    "payout_method_label",
+                    "withdrawal_method_name",
+                    "status",
+                    "rejection_reason",
+                    "created_at",
+                    "processed_at",
+                    "paid_at",
+                    "rejected_at",
+                    "cancelled_at"
+                ],
+                "title": "AdminPayoutRequestResource"
+            },
             "Biolink": {
                 "type": "object",
                 "properties": {
@@ -10314,6 +11626,12 @@
                                 ]
                             },
                             "bio": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "about_html": {
                                 "type": [
                                     "string",
                                     "null"
@@ -10370,7 +11688,14 @@
                         "type": "integer"
                     },
                     "is_verified": {
-                        "type": "boolean"
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "boolean"
+                            }
+                        ]
                     },
                     "model_type": {
                         "type": "string",
@@ -13247,6 +14572,72 @@
                 ],
                 "title": "DigitalProductPayoutMethodResource"
             },
+            "DigitalProductWithdrawalMethod": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "code": {
+                        "type": "string"
+                    },
+                    "destination_label": {
+                        "type": "string"
+                    },
+                    "instructions": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "minimum_amount_cents": {
+                        "type": "integer"
+                    },
+                    "maximum_amount_cents": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "is_active": {
+                        "type": "boolean"
+                    },
+                    "position": {
+                        "type": "integer"
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "id",
+                    "name",
+                    "code",
+                    "destination_label",
+                    "instructions",
+                    "minimum_amount_cents",
+                    "maximum_amount_cents",
+                    "is_active",
+                    "position",
+                    "created_at",
+                    "updated_at"
+                ],
+                "title": "DigitalProductWithdrawalMethod"
+            },
             "DigitalProductWithdrawalMethodResource": {
                 "type": "object",
                 "properties": {
@@ -13653,6 +15044,86 @@
                     "domain_id"
                 ],
                 "title": "Folder"
+            },
+            "KycVerificationResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "document_type": {
+                        "type": "string"
+                    },
+                    "document_number": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "rejection_reason": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "reviewed_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "documents": {
+                        "type": "array",
+                        "items": {}
+                    },
+                    "user": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "email": {
+                                "type": "string"
+                            },
+                            "image": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "name",
+                            "email",
+                            "image"
+                        ]
+                    }
+                },
+                "required": [
+                    "id",
+                    "document_type",
+                    "document_number",
+                    "status",
+                    "rejection_reason",
+                    "created_at",
+                    "reviewed_at"
+                ],
+                "title": "KycVerificationResource"
             },
             "Link": {
                 "type": "object",
@@ -14826,10 +16297,14 @@
                                     "string",
                                     "null"
                                 ]
+                            },
+                            "verified": {
+                                "type": "boolean"
                             }
                         },
                         "required": [
-                            "name"
+                            "name",
+                            "verified"
                         ]
                     }
                 },
@@ -15937,12 +17412,18 @@
                         ],
                         "maxLength": 600
                     },
+                    "about_html": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 20000
+                    },
                     "avatar_url": {
                         "type": [
                             "string",
                             "null"
                         ],
-                        "format": "uri",
                         "maxLength": 2048
                     },
                     "cover_url": {
@@ -15950,7 +17431,6 @@
                             "string",
                             "null"
                         ],
-                        "format": "uri",
                         "maxLength": 2048
                     },
                     "available_for_work": {
@@ -17000,6 +18480,84 @@
                     "is_owner"
                 ],
                 "title": "WorkspaceMember"
+            },
+            "WorkspacePayoutConfigResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "workspace_id": {
+                        "type": "integer"
+                    },
+                    "withdrawal_method_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "withdrawal_account": {
+                        "type": "string"
+                    },
+                    "withdrawal_method": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "string"
+                            },
+                            "name": {
+                                "type": "string"
+                            },
+                            "code": {
+                                "type": "string"
+                            },
+                            "minimum_amount_cents": {
+                                "type": "string"
+                            },
+                            "maximum_amount_cents": {
+                                "type": "string"
+                            },
+                            "destination_label": {
+                                "type": "string"
+                            },
+                            "instructions": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "name",
+                            "code",
+                            "minimum_amount_cents",
+                            "maximum_amount_cents",
+                            "destination_label",
+                            "instructions"
+                        ]
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "id",
+                    "workspace_id",
+                    "withdrawal_method_id",
+                    "withdrawal_account",
+                    "created_at",
+                    "updated_at"
+                ],
+                "title": "WorkspacePayoutConfigResource"
             }
         },
         "responses": {

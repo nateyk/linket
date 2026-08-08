@@ -131,6 +131,7 @@ export function BiolinkLayout({
               biolink={biolink}
               appearance={appearance}
               profileConfig={profileConfig}
+              content={content}
             />
           ) : isCreatorProfileBiolink(biolink) ? (
             <CreatorProfileLayout

@@ -18,14 +18,18 @@ import {Checkbox} from '@shadcn/forms/checkbox/checkbox';
 import {Field} from '@shadcn/forms/field';
 import {Input} from '@shadcn/forms/input/input';
 import {Progress} from '@shadcn/progress/progress';
+import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {Trans} from '@ui/i18n/trans';
 import {
   ArrowLeftIcon,
-  CheckIcon,
+  BookIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+  DownloadIcon,
   FileIcon,
   FileTextIcon,
+  HeadphonesIcon,
   Link2Icon,
-  PackageCheckIcon,
   SaveIcon,
   SendIcon,
   Trash2Icon,
@@ -60,10 +64,18 @@ import type {ProductType} from './product-type-selection-page';
 
 type SetupSection = 'details' | 'files' | 'bio-pages';
 
-const PRODUCT_TYPE_LABELS: Record<ProductType, string> = {
-  digital: 'Digital product',
-  ebook: 'E-book',
-  audio: 'Audio',
+const PRODUCT_TYPE_CONFIG: Record<ProductType, {label: string; icon: typeof DownloadIcon}> = {
+  digital: {label: 'Digital product', icon: DownloadIcon},
+  ebook: {label: 'E-book', icon: BookIcon},
+  audio: {label: 'Audio', icon: HeadphonesIcon},
+};
+
+const SECTION_ORDER: SetupSection[] = ['details', 'files', 'bio-pages'];
+
+const SECTION_META: Record<SetupSection, {label: string; icon: typeof FileTextIcon; description: string}> = {
+  details: {label: 'Product details', icon: FileTextIcon, description: 'Add the basic information customers will see before purchasing.'},
+  files: {label: 'Product files', icon: FileIcon, description: 'Upload the files customers will receive after purchase.'},
+  'bio-pages': {label: 'Bio pages', icon: Link2Icon, description: 'Select the bio pages where this product will be displayed.'},
 };
 
 export function Component() {
@@ -88,12 +100,20 @@ function DigitalProductForm() {
   const [coverFileId, setCoverFileId] = useState<number | null>(null);
   const [files, setFiles] = useState<FileEntry[]>([]);
   const [biolinkIds, setBiolinkIds] = useState<number[]>([]);
-  const [activeSection, setActiveSection] = useState<SetupSection>('details');
+  const [openSections, setOpenSections] = useState<Set<SetupSection>>(new Set(['details']));
   const [loading, setLoading] = useState(!!productId);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string>();
   const [convertToEtb, setConvertToEtb] = useState(false);
+
+  const typeConfig = productType ? PRODUCT_TYPE_CONFIG[productType] : null;
+  const TypeIcon = typeConfig?.icon ?? DownloadIcon;
+  const pageTitle = product
+    ? 'Edit digital product'
+    : typeConfig
+      ? `Create ${typeConfig.label}`
+      : 'Create digital product';
 
   useEffect(() => {
     void (async () => {
@@ -162,12 +182,12 @@ function DigitalProductForm() {
         !files.length
       ) {
         setError('Add a title, a price of at least ETB 0.50, and one downloadable file.');
-        setActiveSection(!title.trim() || priceCents < 50 ? 'details' : 'files');
+        setOpenSections(new Set(['details', 'files']));
         return;
       }
       if (product && product.currency.toLowerCase() !== 'etb' && !convertToEtb) {
         setError('Enter the correct ETB price and confirm the currency conversion before saving this product.');
-        setActiveSection('details');
+        setOpenSections(new Set(['details']));
         return;
       }
 
@@ -223,177 +243,175 @@ function DigitalProductForm() {
     }
   };
 
-  const displayPrice = formatPrice(price, product?.currency ?? 'ETB');
-  const sections: Array<{
-    id: SetupSection;
-    label: string;
-    complete: boolean;
-    icon: typeof FileTextIcon;
-  }> = [
-    {
-      id: 'details',
-      label: 'Product details',
-      complete: Boolean(title.trim()) && Number(price) >= 0.5,
-      icon: FileTextIcon,
-    },
-    {
-      id: 'files',
-      label: 'Product files',
-      complete: files.length > 0,
-      icon: PackageCheckIcon,
-    },
-    {
-      id: 'bio-pages',
-      label: 'Bio pages',
-      complete: biolinkIds.length > 0,
-      icon: Link2Icon,
-    },
-  ];
+  const toggleSection = (section: SetupSection) => {
+    setOpenSections(prev => {
+      const next = new Set(prev);
+      if (next.has(section)) {
+        next.delete(section);
+      } else {
+        next.add(section);
+      }
+      return next;
+    });
+  };
+
+  const isSectionComplete = (section: SetupSection) => {
+    if (section === 'details') return title.trim().length > 0 && price.trim().length > 0;
+    if (section === 'files') return files.length > 0;
+    return biolinkIds.length > 0;
+  };
 
   return (
     <DashboardLayout.MainSection>
-      <DashboardLayout.SectionHeader>
+      {/* Page Header */}
+      <header className="flex h-14 w-full shrink-0 items-center gap-3 border-b px-4 md:px-6">
         <DashboardLayout.SidebarToggle />
-        <DashboardLayout.SectionTitle>
-          <Trans message={product ? 'Edit digital product' : productType ? `Create ${PRODUCT_TYPE_LABELS[productType] ?? 'digital product'}` : 'Create digital product'} />
-        </DashboardLayout.SectionTitle>
-        {product && <ProductStatus status={product.status} />}
-      </DashboardLayout.SectionHeader>
-      <DashboardLayout.SectionContent className="overflow-y-auto">
-        <div className="mx-auto flex w-full max-w-[1500px] flex-col gap-4 py-4">
-          <div className="flex items-center justify-between gap-3">
-            <Button variant="ghost" render={<Link to={product ? '/dashboard/my-products' : '/dashboard/my-products/new'} />}>
-              <ArrowLeftIcon />
-              <Trans message={product ? 'All products' : 'Choose product type'} />
+        <div className="flex min-w-0 items-center gap-2.5">
+          <TypeIcon className="size-4 shrink-0 text-muted-foreground" />
+          <h1 className="truncate text-[15px] font-semibold">
+            <Trans message={pageTitle} />
+          </h1>
+          {product && <ProductStatus status={product.status} />}
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          {product && (
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={saving}
+              onClick={() => void remove()}
+            >
+              <Trash2Icon className="size-4" />
+              <span className="max-sm:hidden"><Trans message="Delete" /></span>
             </Button>
-            {productType && !product && (
-              <Badge variant="secondary">
-                <Trans message={PRODUCT_TYPE_LABELS[productType] ?? 'Digital product'} />
-              </Badge>
-            )}
-            <div className="flex items-center gap-2">
-              {product && (
-                <Button
-                  color="danger"
-                  variant="ghost"
-                  disabled={saving}
-                  onClick={() => void remove()}
-                >
-                  <Trash2Icon />
-                  <Trans message="Delete" />
-                </Button>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={saving || submitting}
+            onClick={() => void save(false)}
+          >
+            <SaveIcon className="size-4" />
+            <span className="max-sm:hidden">
+              {saving ? <Trans message="Saving..." /> : <Trans message="Save draft" />}
+            </span>
+          </Button>
+          <Button
+            size="sm"
+            disabled={saving || submitting}
+            onClick={() => void save(true)}
+          >
+            <SendIcon className="size-4" />
+            <span className="max-sm:hidden">
+              {submitting ? (
+                <Trans message="Submitting..." />
+              ) : (
+                <Trans message="Submit for review" />
               )}
-              <Button
-                variant="outline"
-                disabled={saving || submitting}
-                onClick={() => void save(false)}
-              >
-                <SaveIcon />
-                {saving ? <Trans message="Saving..." /> : <Trans message="Save draft" />}
-              </Button>
-              <Button
-                disabled={saving || submitting}
-                onClick={() => void save(true)}
-              >
-                <SendIcon />
-                {submitting ? (
-                  <Trans message="Submitting..." />
-                ) : (
-                  <Trans message="Submit for review" />
-                )}
-              </Button>
-            </div>
-          </div>
+            </span>
+          </Button>
+        </div>
+      </header>
 
+      <DashboardLayout.SectionContent className="overflow-y-auto">
+        <div className="mx-auto max-w-2xl px-4 py-6">
           {error && (
-            <div className="rounded-input border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-              {error}
+            <div className="mb-5 flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+              <span className="min-w-0 flex-1">{error}</span>
             </div>
           )}
 
           {loading ? (
             <BuilderSkeleton />
           ) : (
-            <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_28rem]">
-              <section className="min-w-0">
-                <div className="flex items-center gap-2 border-b pb-3">
-                  <span className="text-sm font-medium">
-                    <Trans message="Product page" />
-                  </span>
-                  <Badge variant="secondary">
-                    <Trans message="Live preview" />
-                  </Badge>
-                </div>
-                <div className="bg-muted/30 p-4 sm:p-5">
-                  <ProductPagePreview
-                    title={title}
-                    description={description}
-                    price={displayPrice}
-                    coverUrl={coverUrl}
-                    files={files.length}
-                  />
-                </div>
-              </section>
+            /* Accordion Sections */
+            <div className="space-y-2">
+              {SECTION_ORDER.map(section => {
+                const meta = SECTION_META[section];
+                const Icon = meta.icon;
+                const isOpen = openSections.has(section);
+                const isComplete = isSectionComplete(section);
+                const count = section === 'files' ? files.length : section === 'bio-pages' ? biolinkIds.length : null;
 
-              <aside className="border-t pt-4 xl:sticky xl:top-5 xl:border-t-0 xl:border-l xl:pt-0 xl:pl-6">
-                <h2 className="text-sm font-medium">
-                  <Trans message="Product setup" />
-                </h2>
-                <div className="mt-3 space-y-1">
-                  {sections.map(section => (
-                    <SetupSectionButton
-                      key={section.id}
-                      icon={section.icon}
-                      label={section.label}
-                      active={activeSection === section.id}
-                      complete={section.complete}
-                      onClick={() => setActiveSection(section.id)}
-                    />
-                  ))}
-                </div>
-                <div className="mt-5 border-t pt-5">
-                  {activeSection === 'details' && (
-                    <DetailsPanel
-                      title={title}
-                      description={description}
-                      price={price}
-                      coverUrl={coverUrl}
-                      onTitleChange={setTitle}
-                      onDescriptionChange={setDescription}
-                      onPriceChange={setPrice}
-                      legacyCurrency={product?.currency}
-                      convertToEtb={convertToEtb}
-                      onConvertToEtbChange={setConvertToEtb}
-                      onCoverChange={(url, entry) => {
-                        setCoverUrl(url);
-                        setCoverFileId(entry?.id ?? null);
-                      }}
-                    />
-                  )}
-                  {activeSection === 'files' && (
-                    <FilesPanel
-                      files={files}
-                      onUploaded={file =>
-                        setFiles(current =>
-                          current.some(item => item.id === file.id)
-                            ? current
-                            : [...current, file],
-                        )
-                      }
-                      onRemove={id =>
-                        setFiles(current => current.filter(file => file.id !== id))
-                      }
-                    />
-                  )}
-                  {activeSection === 'bio-pages' && (
-                    <BioPagesPanel
-                      biolinks={biolinks}
-                      selectedIds={biolinkIds}
-                      onChange={setBiolinkIds}
-                    />
-                  )}
-                </div>
-              </aside>
+                return (
+                  <div
+                    key={section}
+                    className="overflow-hidden rounded-lg border bg-background"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => toggleSection(section)}
+                      className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-muted/40"
+                    >
+                      <div className={`flex size-7 items-center justify-center rounded-md ${isComplete ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                        {isComplete ? (
+                          <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                        ) : (
+                          <Icon className="size-4" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[14px] font-medium"><Trans message={meta.label} /></span>
+                          {count !== null && count > 0 && (
+                            <Badge variant="secondary" className="h-4 min-w-[16px] px-1 text-[10px]">
+                              {count}
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="mt-0.5 text-[12px] text-muted-foreground"><Trans message={meta.description} /></p>
+                      </div>
+                      <div className="shrink-0 text-muted-foreground">
+                        {isOpen ? <ChevronUpIcon className="size-4" /> : <ChevronDownIcon className="size-4" />}
+                      </div>
+                    </button>
+                    {isOpen && (
+                      <div className="border-t px-4 py-4">
+                        {section === 'details' && (
+                          <DetailsPanel
+                            title={title}
+                            description={description}
+                            price={price}
+                            coverUrl={coverUrl}
+                            onTitleChange={setTitle}
+                            onDescriptionChange={setDescription}
+                            onPriceChange={setPrice}
+                            legacyCurrency={product?.currency}
+                            convertToEtb={convertToEtb}
+                            onConvertToEtbChange={setConvertToEtb}
+                            onCoverChange={(url, entry) => {
+                              setCoverUrl(url);
+                              setCoverFileId(entry?.id ?? null);
+                            }}
+                          />
+                        )}
+                        {section === 'files' && (
+                          <FilesPanel
+                            files={files}
+                            onUploaded={file =>
+                              setFiles(current =>
+                                current.some(item => item.id === file.id)
+                                  ? current
+                                  : [...current, file],
+                              )
+                            }
+                            onRemove={id =>
+                              setFiles(current => current.filter(file => file.id !== id))
+                            }
+                          />
+                        )}
+                        {section === 'bio-pages' && (
+                          <BioPagesPanel
+                            biolinks={biolinks}
+                            selectedIds={biolinkIds}
+                            onChange={setBiolinkIds}
+                          />
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -402,43 +420,7 @@ function DigitalProductForm() {
   );
 }
 
-function SetupSectionButton({
-  icon: Icon,
-  label,
-  active,
-  complete,
-  onClick,
-}: {
-  icon: typeof FileTextIcon;
-  label: string;
-  active: boolean;
-  complete: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      className={`flex w-full items-center gap-3 rounded-input px-3 py-2.5 text-left text-sm transition-colors ${
-        active ? 'bg-muted font-medium text-foreground' : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
-      }`}
-      type="button"
-      onClick={onClick}
-    >
-      <Icon className="size-4" />
-      <span className="min-w-0 flex-1 truncate">
-        <Trans message={label} />
-      </span>
-      <span
-        className={`grid size-5 place-items-center rounded-full border ${
-          complete
-            ? 'border-positive bg-positive text-positive-foreground'
-            : 'border-muted-foreground/30 text-transparent'
-        }`}
-      >
-        <CheckIcon className="size-3" />
-      </span>
-    </button>
-  );
-}
+/* ─── Details Panel ── */
 
 function DetailsPanel({
   title,
@@ -471,6 +453,9 @@ function DetailsPanel({
         <Field.Label>
           <Trans message="Product title" />
         </Field.Label>
+        <Field.Description>
+          <Trans message="Choose a clear title customers can easily understand." />
+        </Field.Description>
         <Input
           value={title}
           maxLength={160}
@@ -478,40 +463,58 @@ function DetailsPanel({
           placeholder="My digital guide"
         />
       </Field.Root>
-      {legacyCurrency && legacyCurrency.toLowerCase() !== 'etb' && (
-        <label className="flex items-start gap-3 rounded-input border bg-muted/30 p-3 text-sm">
-          <Checkbox checked={convertToEtb} onCheckedChange={value => onConvertToEtbChange(value === true)} />
-          <span>
-            <span className="block font-medium"><Trans message="Convert this product price to ETB" /></span>
-            <span className="mt-0.5 block text-xs text-muted-foreground">
-              <Trans message="Set the correct Ethiopian birr amount above. Existing sales remain in their original currency." />
-            </span>
-          </span>
-        </label>
-      )}
+
       <Field.Root>
         <Field.Label>
           <Trans message="Price" />
         </Field.Label>
-        <Input
-          type="number"
-          min="0.50"
-          step="0.01"
-          value={price}
-          onChange={event => onPriceChange(event.target.value)}
-          placeholder="9.00"
-        />
+        <Field.Description>
+          <Trans message="Set the amount customers will pay." />
+        </Field.Description>
+        <div className="flex items-center gap-2">
+          <span className="flex h-9 items-center rounded-md border bg-muted/50 px-3 text-[13px] font-medium text-muted-foreground">
+            ETB
+          </span>
+          <Input
+            type="number"
+            min="0.50"
+            step="0.01"
+            value={price}
+            onChange={event => onPriceChange(event.target.value)}
+            placeholder="9.00"
+            className="flex-1"
+          />
+        </div>
+        {legacyCurrency && legacyCurrency.toLowerCase() !== 'etb' && (
+          <label className="mt-2 flex items-start gap-3 rounded-lg border bg-muted/30 p-3 text-sm">
+            <Checkbox checked={convertToEtb} onCheckedChange={value => onConvertToEtbChange(value === true)} />
+            <span>
+              <span className="block font-medium"><Trans message="Convert this product price to ETB" /></span>
+              <span className="mt-0.5 block text-[13px] text-muted-foreground">
+                <Trans message="Set the correct Ethiopian birr amount above. Existing sales remain in their original currency." />
+              </span>
+            </span>
+          </label>
+        )}
       </Field.Root>
+
       <Field.Root>
         <Field.Label>
           <Trans message="Description" />
         </Field.Label>
+        <Field.Description>
+          <Trans message="Describe what customers will receive." />
+        </Field.Description>
         <DescriptionEditor value={description} onChange={onDescriptionChange} />
       </Field.Root>
+
       <Field.Root>
         <Field.Label>
           <Trans message="Cover image" />
         </Field.Label>
+        <Field.Description>
+          <Trans message="Shown on your product listing and bio pages." />
+        </Field.Description>
         <ImageSelector.Square
           value={coverUrl}
           onChange={onCoverChange}
@@ -522,6 +525,8 @@ function DetailsPanel({
     </div>
   );
 }
+
+/* ─ Description Editor ─── */
 
 function DescriptionEditor({
   value,
@@ -536,8 +541,8 @@ function DescriptionEditor({
       initialContent={value}
       onChange={onChange}
     >
-      <div className="overflow-hidden rounded-input border">
-        <div className="no-scrollbar flex shrink-0 items-center overflow-x-auto border-b px-1 py-0.5 text-muted-foreground">
+      <div className="overflow-hidden rounded-lg border">
+        <div className="no-scrollbar flex shrink-0 items-center gap-0.5 overflow-x-auto border-b px-1.5 py-1 text-muted-foreground">
           <FormatDropdown />
           <Divider />
           <FontStyleButtons />
@@ -548,11 +553,13 @@ function DescriptionEditor({
           <Divider />
           <ClearFormatButton />
         </div>
-        <TiptapEditorContent className="prose prose-sm max-w-none min-h-40 px-3 py-2 dark:prose-invert" />
+        <TiptapEditorContent className="prose prose-sm max-w-none min-h-[180px] px-3 py-2.5 dark:prose-invert" />
       </div>
     </TipTapEditorProvider>
   );
 }
+
+/* ── Files Panel ─── */
 
 function FilesPanel({
   files,
@@ -569,20 +576,27 @@ function FilesPanel({
       {files.map(file => (
         <div
           key={file.id}
-          className="flex items-center gap-3 border-b py-3 text-sm last:border-b-0"
+          className="flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm"
         >
-          <div className="flex size-8 items-center justify-center rounded-input bg-muted text-muted-foreground">
+          <div className="flex size-8 items-center justify-center rounded-md bg-muted text-muted-foreground">
             <FileIcon className="size-4" />
           </div>
           <span className="min-w-0 flex-1 truncate font-medium">{file.name}</span>
+          {file.file_size && (
+            <span className="shrink-0 text-[12px] text-muted-foreground">
+              {formatFileSize(file.file_size)}
+            </span>
+          )}
           <Button size="icon-xs" variant="ghost" onClick={() => onRemove(file.id)}>
-            <Trash2Icon />
+            <Trash2Icon className="size-4" />
           </Button>
         </div>
       ))}
     </div>
   );
 }
+
+/* ─── Bio Pages Panel ─── */
 
 function BioPagesPanel({
   biolinks,
@@ -595,14 +609,14 @@ function BioPagesPanel({
 }) {
   if (!biolinks.length) {
     return (
-      <p className="text-sm text-muted-foreground">
+      <p className="py-4 text-[13px] text-muted-foreground">
         <Trans message="Create a bio page first, then return here to display this product." />
       </p>
     );
   }
 
   return (
-    <div className="divide-y border-y">
+    <div className="divide-y">
       {biolinks.map(page => (
         <label
           key={page.id}
@@ -622,7 +636,7 @@ function BioPagesPanel({
           <span className="min-w-0">
             <span className="block truncate font-medium">{page.name}</span>
             {page.short_url && (
-              <span className="block truncate text-xs text-muted-foreground">
+              <span className="block truncate text-[12px] text-muted-foreground">
                 {page.short_url}
               </span>
             )}
@@ -633,80 +647,7 @@ function BioPagesPanel({
   );
 }
 
-function ProductPagePreview({
-  title,
-  description,
-  price,
-  coverUrl,
-  files,
-}: {
-  title: string;
-  description: string;
-  price: string;
-  coverUrl: string;
-  files: number;
-}) {
-  const previewTitle = title || 'Your digital product';
-
-  return (
-    <div className="w-full max-w-4xl overflow-hidden rounded-card border bg-background shadow-sm">
-      <div className="flex items-center justify-between border-b px-4 py-3">
-        <span className="truncate text-sm font-semibold">{previewTitle}</span>
-        <div className="flex shrink-0 items-center gap-3">
-          <span className="font-semibold">{price}</span>
-          <Button size="sm" disabled>
-            <Trans message="Buy now" />
-          </Button>
-        </div>
-      </div>
-      <div className="aspect-[16/9] bg-gradient-to-br from-primary/30 via-primary/10 to-muted">
-        {coverUrl ? (
-          <img className="size-full object-cover" src={coverUrl} alt="" />
-        ) : (
-          <div className="flex size-full items-end p-5">
-            <Badge className="bg-background/90 text-foreground shadow-sm">
-              <Trans message="Digital download" />
-            </Badge>
-          </div>
-        )}
-      </div>
-      <div className="grid divide-y sm:grid-cols-[minmax(0,1fr)_13rem] sm:divide-x sm:divide-y-0">
-            <div className="p-5 sm:p-6">
-              <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-                {previewTitle}
-              </h1>
-              {description ? (
-                <div
-                  className="prose prose-sm mt-4 max-w-none text-muted-foreground dark:prose-invert"
-                  dangerouslySetInnerHTML={{__html: description}}
-                />
-              ) : (
-                <p className="mt-4 text-sm leading-6 text-muted-foreground">
-                  <Trans message="Your product description will appear here." />
-                </p>
-              )}
-            </div>
-            <div className="flex flex-col justify-between gap-5 p-5">
-              <div>
-                <p className="text-2xl font-semibold tracking-tight">{price}</p>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  <Trans message="One-time payment" />
-                </p>
-              </div>
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <FileIcon className="size-3.5" />
-                  <Trans message=":count download files" values={{count: files}} />
-                </div>
-                <Button className="w-full" disabled>
-                  <Trans message="Buy now" />
-                </Button>
-              </div>
-            </div>
-      </div>
-    </div>
-  );
-}
+/* ─── Product Status ─── */
 
 function ProductStatus({status}: {status: string}) {
   const labels: Record<string, string> = {
@@ -719,6 +660,8 @@ function ProductStatus({status}: {status: string}) {
 
   return <Badge variant="outline"><Trans message={labels[status] ?? 'Draft'} /></Badge>;
 }
+
+/* ─── Download Uploader ─── */
 
 function DownloadUploader({onUploaded}: {onUploaded: (file: FileEntry) => void}) {
   const {uploadFile, uploadStatus, percentage} = useActiveUpload();
@@ -743,7 +686,7 @@ function DownloadUploader({onUploaded}: {onUploaded: (file: FileEntry) => void})
   };
 
   return (
-    <label className="relative flex cursor-pointer flex-col items-center gap-2 rounded-input border border-dashed px-5 py-8 text-center transition-colors hover:bg-muted/40">
+    <label className="relative flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-dashed px-5 py-6 text-center transition-colors hover:bg-muted/40">
       <input
         className="absolute inset-0 cursor-pointer opacity-0"
         type="file"
@@ -751,17 +694,17 @@ function DownloadUploader({onUploaded}: {onUploaded: (file: FileEntry) => void})
         disabled={uploading}
         onChange={onChange}
       />
-      <div className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-        <UploadIcon className="size-5" />
+      <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+        <UploadIcon className="size-4" />
       </div>
-      <span className="text-sm font-medium">
+      <span className="text-[13px] font-medium">
         {uploading ? (
           <Trans message="Uploading file..." />
         ) : (
           <Trans message="Add product file" />
         )}
       </span>
-      <span className="text-xs text-muted-foreground">
+      <span className="text-[12px] text-muted-foreground">
         <Trans message="PDF, ZIP, EPUB, or TXT" />
       </span>
       {uploading && (
@@ -778,27 +721,33 @@ function DownloadUploader({onUploaded}: {onUploaded: (file: FileEntry) => void})
   );
 }
 
+/* ── Skeleton ─── */
+
 function BuilderSkeleton() {
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_28rem]">
-      <div className="space-y-4">
-        <div className="h-5 w-30 animate-pulse rounded bg-muted" />
-        <div className="aspect-[16/10] animate-pulse rounded-card bg-muted" />
-      </div>
-      <div className="space-y-4 border-t pt-4 xl:border-t-0 xl:border-l xl:pl-6 xl:pt-0">
-          {[1, 2, 3, 4].map(item => (
-            <div key={item} className="h-10 animate-pulse rounded-input bg-muted" />
-          ))}
+    <div className="space-y-3">
+      <Skeleton className="h-9 w-48" />
+      <div className="rounded-lg border">
+        <div className="border-b px-4 py-3.5">
+          <Skeleton className="h-5 w-36" />
+          <Skeleton className="mt-1 h-3.5 w-56" />
+        </div>
+        <div className="space-y-4 px-4 py-4">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-44 w-full" />
+        </div>
       </div>
     </div>
   );
 }
 
-function formatPrice(price: string, currency: string) {
-  const value = Number(price);
-  return value > 0
-    ? new Intl.NumberFormat(undefined, {style: 'currency', currency}).format(value)
-    : 'ETB 0.00';
+/* ─── Helpers ─── */
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 async function responseErrorMessage(response: Response, fallback: string) {

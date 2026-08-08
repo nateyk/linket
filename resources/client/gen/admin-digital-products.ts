@@ -7,8 +7,6 @@
  */
 import type {DigitalProduct} from './schemas/digital-product';
 
-import type {StorefrontAdminDigitalProductsIndex0200} from './schemas/storefront-admin-digital-products-index0200';
-
 import type {StorefrontAdminDigitalProductsReject0Body} from './schemas/storefront-admin-digital-products-reject0-body';
 
 import {orvalApiFetch} from '../../../common/foundation/resources/client/http/query-client';
@@ -16,11 +14,9 @@ import {orvalApiFetch} from '../../../common/foundation/resources/client/http/qu
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 export const storefrontAdminDigitalProductsIndex0 = (
-  options?: SecondParameter<
-    typeof orvalApiFetch<StorefrontAdminDigitalProductsIndex0200>
-  >,
+  options?: SecondParameter<typeof orvalApiFetch<(unknown | unknown[])[]>>,
 ) => {
-  return orvalApiFetch<StorefrontAdminDigitalProductsIndex0200>(
+  return orvalApiFetch<(unknown | unknown[])[]>(
     {url: `/admin/digital-products`, method: 'GET'},
     options,
   );

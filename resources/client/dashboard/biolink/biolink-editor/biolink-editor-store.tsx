@@ -15,13 +15,16 @@ interface BiolinkEditorState {
   content: NonNullable<Biolink['content']>;
   profileConfig: CreatorProfileConfig;
   profileIsDirty: boolean;
+  featuredProductIds: number[];
   setAppearanceIsDirty: (isDirty: boolean) => void;
   biolink: Omit<Biolink, 'appearance' | 'content'>;
   updateAppearance: (payload: Appearance) => void;
   updateProfileConfig: (payload: CreatorProfileConfig) => void;
   setProfileIsDirty: (isDirty: boolean) => void;
+  setFeaturedProductIds: (ids: number[]) => void;
   overrideContent: (content: Biolink['content']) => void;
   getState: () => BiolinkEditorState;
+  hasUnsavedChanges: () => boolean;
 }
 
 const defaultAppearance: Appearance = {
@@ -48,11 +51,15 @@ export const createBiolinkEditorStore = (biolink: Biolink) => {
     appearanceIsDirty: false,
     profileConfig: getCreatorProfileConfig(biolink),
     profileIsDirty: false,
+    featuredProductIds: [],
     setAppearanceIsDirty: (isDirty: boolean) => {
       set(() => ({appearanceIsDirty: isDirty}));
     },
     setProfileIsDirty: (isDirty: boolean) => {
       set(() => ({profileIsDirty: isDirty}));
+    },
+    setFeaturedProductIds: (ids: number[]) => {
+      set(() => ({featuredProductIds: ids}));
     },
     biolink: {
       ...biolink,
@@ -62,6 +69,10 @@ export const createBiolinkEditorStore = (biolink: Biolink) => {
     content: biolink.content ?? [],
     overrideContent: content => {
       set(() => ({content}));
+    },
+    hasUnsavedChanges: () => {
+      const state = get();
+      return state.appearanceIsDirty || state.profileIsDirty;
     },
     updateAppearance(payload: Appearance) {
       set(state => ({

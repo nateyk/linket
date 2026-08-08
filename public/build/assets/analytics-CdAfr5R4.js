@@ -1,0 +1,2 @@
+import{r as e}from"./query-client-DoI0o2YE.js";var t=(t,n)=>e({url:`/tracked-events/report`,method:`GET`,params:t},n),n=(t,n)=>e({url:`/tracked-events`,method:`GET`,params:t},n),r=(t,n)=>e({url:`/admin/analytics/cards-data`,method:`GET`,params:t},n),i=(t,n)=>e({url:`/admin/analytics/report`,method:`GET`,params:t},n);export{n as i,i as n,r,t};
+//# sourceMappingURL=analytics-CdAfr5R4.js.map

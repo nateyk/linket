@@ -9,6 +9,8 @@ import type {DigitalProductsIndex200} from './schemas/digital-products-index200'
 
 import type {DigitalProductsShow200} from './schemas/digital-products-show200';
 
+import type {ProductsIndexParams} from './schemas/products-index-params';
+
 import type {ProductsIndex200} from './schemas/products-index200';
 
 import type {ProductsShow200} from './schemas/products-show200';
@@ -20,10 +22,11 @@ import {orvalApiFetch} from '../../../common/foundation/resources/client/http/qu
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 export const productsIndex = (
+  params?: ProductsIndexParams,
   options?: SecondParameter<typeof orvalApiFetch<ProductsIndex200>>,
 ) => {
   return orvalApiFetch<ProductsIndex200>(
-    {url: `/storefront/products`, method: 'GET'},
+    {url: `/storefront/products`, method: 'GET', params},
     options,
   );
 };

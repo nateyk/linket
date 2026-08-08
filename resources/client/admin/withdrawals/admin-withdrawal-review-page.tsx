@@ -171,7 +171,11 @@ export function Component() {
             <Trans message="Withdrawal request #:id" values={{id: payout.id}} />
           </p>
         </div>
-        <Button variant="outline" render={<Link to="/admin/withdrawals" />}>
+        <Button
+          variant="outline"
+          nativeButton={false}
+          render={<Link to="/admin/withdrawals" />}
+        >
           <ArrowLeftIcon />
           <Trans message="Withdrawals" />
         </Button>

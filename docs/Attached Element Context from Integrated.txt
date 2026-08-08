@@ -1,0 +1,115 @@
+Attached Element Context from Integrated Browser
+
+Element: div.fixed.inset-0.z-1.hidden.after:absolute.after:inset-0.after:bg-black/20.after:backdrop-blur-sm.@2xl:block
+
+URL: http://127.0.0.1:8000/zlQR8A
+
+HTML Path: div#root > div.@container > div.isolate.@2xl:pt-10 > div.fixed.inset-0.z-1.hidden.after:absolute.after:inset-0.after:bg-black/20.after:backdrop-blur-sm.@2xl:block
+
+Outer HTML:
+```html
+<div class="fixed inset-0 z-1 hidden after:absolute after:inset-0 after:bg-black/20 after:backdrop-blur-sm @2xl:block"><div class="pointer-events-none absolute size-full overflow-hidden"><div class="absolute inset-0 mx-auto" style="background-image: linear-gradient(45deg, rgb(225, 225, 221), rgb(226, 225, 221), rgb(237, 147, 163), rgb(237, 50, 112), rgb(125, 19, 97), rgb(12, 4, 30)); background-color: rgb(226, 225, 221); --bg-pattern-front: rgba(255, 255, 255, 0.3); --bg-pattern-back: rgb(226, 225, 221); --bg-pattern-size: 5px;"></div></div></div>
+```
+
+Dimensions:
+- top: 0px
+- left: 0px
+- width: 1211px
+- height: 473px
+
+CSS:
+```css
+*, ::after, ::before, ::backdrop, ::file-selector-button { box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    border: 0 solid; }
+*, ::after, ::before, ::backdrop, ::file-selector-button { border-color: var(--be-border);
+    outline-color: var(--be-primary); }
+.dark, .dark * { scrollbar-color: var(--be-foreground) transparent; }
+ { scrollbar-color: color-mix(in oklab, var(--be-foreground) 20%, transparent) transparent; }
+.fixed { position: fixed; }
+.inset-0 { inset: 0; }
+.z-1 { z-index: 1; }
+.hidden { display: none; }
+.after\:absolute { &::after {
+      content: var(--tw-content);
+      position: absolute;
+    } }
+.after\:inset-0 { &::after {
+      content: var(--tw-content);
+      inset: 0;
+    } }
+.after\:bg-black\/20 { &::after {
+      content: var(--tw-content);
+      background-color: color-mix(in srgb, #000 20%, transparent);
+      @supports (color: color-mix(in lab, red, red)) {
+        background-color: color-mix(in oklab, var(--color-black) 20%, transparent);
+      }
+    } }
+.after\:backdrop-blur-sm { &::after {
+      content: var(--tw-content);
+      --tw-backdrop-blur: blur(var(--blur-sm));
+      -webkit-backdrop-filter: var(--tw-backdrop-blur,) var(--tw-backdrop-brightness,) var(--tw-backdrop-contrast,) var(--tw-backdrop-grayscale,) var(--tw-backdrop-hue-rotate,) var(--tw-backdrop-invert,) var(--tw-backdrop-opacity,) var(--tw-backdrop-saturate,) var(--tw-backdrop-sepia,);
+      backdrop-filter: var(--tw-backdrop-blur,) var(--tw-backdrop-brightness,) var(--tw-backdrop-contrast,) var(--tw-backdrop-grayscale,) var(--tw-backdrop-hue-rotate,) var(--tw-backdrop-invert,) var(--tw-backdrop-opacity,) var(--tw-backdrop-saturate,) var(--tw-backdrop-sepia,);
+    } }
+.\@2xl\:block { @container (width >= 42rem) {
+      display: block;
+    } }
+ { display: block; }
+
+/* Pseudo-elements */
+&::after { content: var(--tw-content);
+      position: absolute; }
+&::after { content: var(--tw-content);
+      inset: 0; }
+&::after { content: var(--tw-content);
+      background-color: color-mix(in srgb, #000 20%, transparent); }
+ { background-color: color-mix(in oklab, var(--color-black) 20%, transparent); }
+&::after { content: var(--tw-content);
+      --tw-backdrop-blur: blur(var(--blur-sm));
+      -webkit-backdrop-filter: var(--tw-backdrop-blur,) var(--tw-backdrop-brightness,) var(--tw-backdrop-contrast,) var(--tw-backdrop-grayscale,) var(--tw-backdrop-hue-rotate,) var(--tw-backdrop-invert,) var(--tw-backdrop-opacity,) var(--tw-backdrop-saturate,) var(--tw-backdrop-sepia,);
+      backdrop-filter: var(--tw-backdrop-blur,) var(--tw-backdrop-brightness,) var(--tw-backdrop-contrast,) var(--tw-backdrop-grayscale,) var(--tw-backdrop-hue-rotate,) var(--tw-backdrop-invert,) var(--tw-backdrop-opacity,) var(--tw-backdrop-saturate,) var(--tw-backdrop-sepia,); }
+
+/* Inherited */
+#root { color: var(--be-foreground) }
+html, :host { line-height: 1.5; tab-size: 4; font-family: var(--default-font-family, ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"); font-feature-settings: var(--default-font-feature-settings, normal) }
+html { font-family: var(--be-font-family, var(--font-sans)) }
+
+/* Resolved values */
+margin: 0px;
+padding: 0px;
+border: 0px solid oklch(1 0 0 / 0.1);
+backdrop-filter: none;
+background-color: rgba(0, 0, 0, 0);
+bottom: 0px;
+box-sizing: border-box;
+color: oklch(0.985 0 0);
+content: normal;
+display: block;
+font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+font-feature-settings: normal;
+height: 473.333px;
+left: 0px;
+line-height: 24px;
+outline-color: oklch(0.882 0.059 254.128);
+position: fixed;
+right: 0px;
+scrollbar-color: oklab(0.985 0 0 / 0.2) rgba(0, 0, 0, 0);
+tab-size: 4;
+top: 0px;
+unicode-bidi: isolate /*UA*/;
+width: 1210.67px;
+z-index: 1;
+
+/* CSS variables */
+--font-sans: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
+      "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+--default-font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
+      "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+--be-border: oklch(1 0 0 / 10%);
+--be-primary: oklch(88.2% 0.059 254.128);
+--be-foreground: oklch(0.985 0 0);
+--tw-content: "";
+--color-black: #000;
+--blur-sm: 8px;
+```

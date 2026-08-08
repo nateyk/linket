@@ -4,10 +4,14 @@ import {
   SocialsList,
   SocialsType,
 } from '@app/dashboard/biolink/biolink-editor/content/widgets/socials-widget/socials-list';
-import {updateCreatorProfile} from '@app/gen/biolinks';
 import {digitalProductsIndex} from '@app/gen/digital-products';
-import {queryClient} from '@common/http/query-client';
-import {showHttpErrorToast} from '@common/http/errors/show-http-error-toast';
+import {ClearFormatButton} from '@common/text-editor/menubar/clear-format-button';
+import {Divider} from '@common/text-editor/menubar/divider';
+import {FontStyleButtons} from '@common/text-editor/menubar/font-style-buttons';
+import {LinkButton as EditorLinkButton} from '@common/text-editor/menubar/link-button';
+import {ListButtons} from '@common/text-editor/menubar/list-buttons';
+import {TiptapEditorContent} from '@common/text-editor/tiptap-editor-content';
+import {TipTapEditorProvider} from '@common/text-editor/tiptap-editor-provider';
 import {ImageSelector} from '@common/uploads/components/image-selector';
 import {FileUploadProvider} from '@common/uploads/uploader/file-upload-provider';
 import {Accordion} from '@shadcn/accordion/accordion';
@@ -16,6 +20,7 @@ import {Button} from '@shadcn/button/button';
 import {Checkbox} from '@shadcn/forms/checkbox/checkbox';
 import {Combobox} from '@shadcn/forms/combobox/combobox';
 import {Dialog} from '@shadcn/dialog/dialog';
+import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {Empty} from '@shadcn/empty/empty';
 import {Field} from '@shadcn/forms/field';
 import {HookForm} from '@shadcn/forms/form/hook-form';
@@ -27,22 +32,26 @@ import {
 } from '@shadcn/forms/input-group/input-group';
 import {Switch} from '@shadcn/forms/switch/switch';
 import {Textarea} from '@shadcn/forms/textarea/textarea';
-import {Separator} from '@shadcn/separator';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {toast} from '@shadcn/toast/toast';
-import {useMutation, useQuery} from '@tanstack/react-query';
+import {useQuery} from '@tanstack/react-query';
+import {Placeholder} from '@tiptap/extensions';
+import StarterKit from '@tiptap/starter-kit';
+import {useCurrentTextEditor} from '@common/text-editor/tiptap-editor-context';
 import {message} from '@ui/i18n/message';
 import {Trans} from '@ui/i18n/trans';
 import {useTrans} from '@ui/i18n/use-trans';
 import {
   AtSignIcon,
+  BookOpenTextIcon,
+  ChevronDownIcon,
   LinkIcon,
   PackageCheckIcon,
   PackageIcon,
   PlusIcon,
   RefreshCwIcon,
-  SaveIcon,
   UserRoundIcon,
+  XIcon,
 } from 'lucide-react';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {useForm, useWatch} from 'react-hook-form';
@@ -125,6 +134,22 @@ const primarySocials: SocialsType[] = [
   SocialsType.Mail,
 ];
 
+const creatorAboutExtensions = [
+  StarterKit.configure({
+    heading: {levels: [2, 3]},
+    code: false,
+    codeBlock: false,
+    strike: false,
+    underline: {},
+    link: {
+      shouldAutoLink: value => /^https?:\/\//.test(value),
+    },
+  }),
+  Placeholder.configure({
+    placeholder: 'Share your story, experience, and approach...',
+  }),
+];
+
 export function CreatorProfileEditor() {
   const {trans} = useTrans();
   const biolink = useBiolinkEditorStore(s => s.biolink);
@@ -133,6 +158,9 @@ export function CreatorProfileEditor() {
   const initialSelectedProductIds = useRef<number[] | null>(null);
   const updateProfileConfig = useBiolinkEditorStore(s => s.updateProfileConfig);
   const setProfileIsDirty = useBiolinkEditorStore(s => s.setProfileIsDirty);
+  const setFeaturedProductIds = useBiolinkEditorStore(
+    s => s.setFeaturedProductIds,
+  );
   const [showAllSocials, setShowAllSocials] = useState(false);
   const [selectedProductIds, setSelectedProductIds] = useState<number[]>([]);
   const visibleSocials = useMemo(
@@ -217,11 +245,21 @@ export function CreatorProfileEditor() {
 
     initialSelectedProductIds.current = attachedProductIds;
     setSelectedProductIds(attachedProductIds);
-  }, [biolink.id, productsQuery.data]);
+    setFeaturedProductIds(attachedProductIds);
+  }, [biolink.id, productsQuery.data, setFeaturedProductIds]);
+
+  useEffect(() => {
+    setFeaturedProductIds(selectedProductIds);
+  }, [selectedProductIds, setFeaturedProductIds]);
 
   useEffect(() => {
     if (form.formState.isDirty) {
-      updateProfileConfig(normalizeProfileValues(values, initialProfileConfig));
+      updateProfileConfig(
+        normalizeProfileValues(
+          values as Partial<CreatorProfileForm>,
+          initialProfileConfig,
+        ),
+      );
     }
     setProfileIsDirty(form.formState.isDirty || productsAreDirty);
   }, [
@@ -233,66 +271,10 @@ export function CreatorProfileEditor() {
     values,
   ]);
 
-  const saveProfile = useMutation({
-    mutationFn: (
-      payload: CreatorProfileConfig & {featured_product_ids: number[]},
-    ) =>
-      updateCreatorProfile(
-        biolink.id,
-        payload as Parameters<typeof updateCreatorProfile>[1],
-      ),
-    onSuccess: (_response, payload) => {
-      const {featured_product_ids: savedProductIds, ...savedProfile} = payload;
-      form.reset({
-        ...savedProfile,
-        skills: savedProfile.skills.join(', '),
-      });
-      initialSelectedProductIds.current = savedProductIds;
-      updateProfileConfig(savedProfile);
-      setProfileIsDirty(false);
-      queryClient.invalidateQueries({queryKey: ['biolinks']});
-      queryClient.invalidateQueries({queryKey: ['digital-products']});
-      toast.success(<Trans message="Creator profile saved" />);
-    },
-    onError: error => showHttpErrorToast(error),
-  });
-
-  const handleSubmit = () => {
-    const normalized = normalizeProfileValues(form.getValues(), profileConfig);
-    saveProfile.mutate({
-      ...normalized,
-      featured_product_ids: selectedProductIds,
-    });
-  };
-
   return (
     <FileUploadProvider>
-      <HookForm.Root form={form} onSubmit={handleSubmit}>
-        <div className="mx-auto flex max-w-2xl flex-col gap-6">
-          <div className="flex flex-col gap-4 border-b pb-5 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
-              <h2 className="text-lg font-semibold">
-                <Trans message="Creator profile" />
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                <Trans message="Shape the profile your audience sees." />
-              </p>
-            </div>
-            <Button
-              type="submit"
-              className="w-full sm:w-auto"
-              disabled={
-                (!form.formState.isDirty && !productsAreDirty) ||
-                productsQuery.isPending ||
-                productsQuery.isError ||
-                saveProfile.isPending
-              }
-            >
-              <SaveIcon data-icon="inline-start" />
-              <Trans message="Save changes" />
-            </Button>
-          </div>
-
+      <HookForm.Root form={form} onSubmit={() => {}}>
+        <div className="mx-auto max-w-2xl">
           <Accordion.Root
             multiple
             variant="bordered"
@@ -300,8 +282,17 @@ export function CreatorProfileEditor() {
           >
             <Accordion.Item value="profile">
               <Accordion.Trigger>
-                <UserRoundIcon />
-                <Trans message="Profile" />
+                <span className="flex min-w-0 flex-1 items-center gap-3">
+                  <UserRoundIcon />
+                  <span className="flex min-w-0 flex-col gap-0.5">
+                    <span>
+                      <Trans message="Profile" />
+                    </span>
+                    <span className="text-xs font-normal text-muted-foreground">
+                      <Trans message="Name, photo, bio, and skills." />
+                    </span>
+                  </span>
+                </span>
               </Accordion.Trigger>
               <Accordion.Content>
                 <Field.Group>
@@ -438,10 +429,54 @@ export function CreatorProfileEditor() {
               </Accordion.Content>
             </Accordion.Item>
 
+            <Accordion.Item value="about">
+              <Accordion.Trigger>
+                <span className="flex min-w-0 flex-1 items-center gap-3">
+                  <BookOpenTextIcon />
+                  <span className="flex min-w-0 flex-col gap-0.5">
+                    <span>
+                      <Trans message="About page" />
+                    </span>
+                    <span className="text-xs font-normal text-muted-foreground">
+                      <Trans message="Tell visitors more about your work." />
+                    </span>
+                  </span>
+                </span>
+              </Accordion.Trigger>
+              <Accordion.Content>
+                <Field.Root>
+                  <Field.Label>
+                    <Trans message="About content" />
+                  </Field.Label>
+                  <CreatorAboutEditor
+                    key={biolink.id}
+                    value={values.about_html || ''}
+                    onChange={aboutHtml =>
+                      form.setValue('about_html', aboutHtml, {
+                        shouldDirty: true,
+                      })
+                    }
+                  />
+                  <Field.Description>
+                    <Trans message="This appears in the About tab on your public profile." />
+                  </Field.Description>
+                </Field.Root>
+              </Accordion.Content>
+            </Accordion.Item>
+
             <Accordion.Item value="socials">
               <Accordion.Trigger>
-                <AtSignIcon />
-                <Trans message="Social links" />
+                <span className="flex min-w-0 flex-1 items-center gap-3">
+                  <AtSignIcon />
+                  <span className="flex min-w-0 flex-col gap-0.5">
+                    <span>
+                      <Trans message="Social links" />
+                    </span>
+                    <span className="text-xs font-normal text-muted-foreground">
+                      <Trans message="Instagram, X, TikTok, and more." />
+                    </span>
+                  </span>
+                </span>
               </Accordion.Trigger>
               <Accordion.Content>
                 <Field.Group>
@@ -485,8 +520,17 @@ export function CreatorProfileEditor() {
 
             <Accordion.Item value="actions">
               <Accordion.Trigger>
-                <LinkIcon />
-                <Trans message="Actions" />
+                <span className="flex min-w-0 flex-1 items-center gap-3">
+                  <LinkIcon />
+                  <span className="flex min-w-0 flex-col gap-0.5">
+                    <span>
+                      <Trans message="Actions" />
+                    </span>
+                    <span className="text-xs font-normal text-muted-foreground">
+                      <Trans message="Follow and message buttons." />
+                    </span>
+                  </span>
+                </span>
               </Accordion.Trigger>
               <Accordion.Content>
                 <Field.Group>
@@ -517,105 +561,202 @@ export function CreatorProfileEditor() {
                 </Field.Group>
               </Accordion.Content>
             </Accordion.Item>
-          </Accordion.Root>
 
-          <Separator />
-
-          <section className="flex flex-col gap-4" aria-labelledby="work-title">
-            <div className="flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 id="work-title" className="text-lg font-semibold">
-                    <Trans message="Work" />
-                  </h2>
-                  <Badge variant="outline">{selectedProductIds.length}/6</Badge>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  <Trans message="Choose up to six approved Digital Products to feature on this profile." />
-                </p>
-              </div>
-              {!productsQuery.isError && (
-                <ProductPickerDialog
-                  products={approvedProducts}
-                  selectedProductIds={selectedProductIds}
-                  onSelectionChange={setSelectedProductIds}
-                />
-              )}
-            </div>
-
-            {productsQuery.isPending ? (
-              <div className="grid gap-3 sm:grid-cols-2">
-                {Array.from({length: 2}).map((_, index) => (
-                  <Skeleton key={index} className="h-20 rounded-card" />
-                ))}
-              </div>
-            ) : productsQuery.isError ? (
-              <Empty.Root className="min-h-40 border p-6">
-                <Empty.Media variant="icon">
-                  <PackageIcon />
-                </Empty.Media>
-                <Empty.Header>
-                  <Empty.Title>
-                    <Trans message="Products could not be loaded" />
-                  </Empty.Title>
-                  <Empty.Description>
-                    <Trans message="Retry before saving so your current profile products stay unchanged." />
-                  </Empty.Description>
-                </Empty.Header>
-                <Empty.Content>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => void productsQuery.refetch()}
-                  >
-                    <RefreshCwIcon data-icon="inline-start" />
-                    <Trans message="Retry" />
-                  </Button>
-                </Empty.Content>
-              </Empty.Root>
-            ) : selectedProducts.length ? (
-              <div className="grid gap-3 sm:grid-cols-2">
-                {selectedProducts.map(product => (
-                  <SelectedProduct key={product.id} product={product} />
-                ))}
-              </div>
-            ) : (
-              <Empty.Root className="min-h-40 border p-6">
-                <Empty.Media variant="icon">
+            <Accordion.Item value="products">
+              <Accordion.Trigger>
+                <span className="flex min-w-0 flex-1 items-center gap-3">
                   <PackageCheckIcon />
-                </Empty.Media>
-                <Empty.Header>
-                  <Empty.Title>
-                    <Trans message="Feature your Digital Products" />
-                  </Empty.Title>
-                  <Empty.Description>
-                    {approvedProducts.length ? (
-                      <Trans message="Choose the products visitors should see on this profile." />
-                    ) : (
-                      <Trans message="Approved products will be available here after review." />
+                  <span className="flex min-w-0 flex-col gap-0.5">
+                    <span>
+                      <Trans message="Products" />
+                    </span>
+                    <span className="text-xs font-normal text-muted-foreground">
+                      <Trans message="Feature up to six Digital Products." />
+                    </span>
+                  </span>
+                </span>
+                <Badge variant="outline" className="font-mono tabular-nums">
+                  {selectedProductIds.length}/6
+                </Badge>
+              </Accordion.Trigger>
+              <Accordion.Content>
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-muted-foreground">
+                      <Trans message="Showcase approved products on your profile." />
+                    </p>
+                    {!productsQuery.isError && (
+                      <ProductPickerDialog
+                        products={approvedProducts}
+                        selectedProductIds={selectedProductIds}
+                        onSelectionChange={setSelectedProductIds}
+                      />
                     )}
-                  </Empty.Description>
-                </Empty.Header>
-                {!approvedProducts.length && (
-                  <Empty.Content>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      render={<Link to="/dashboard/my-products" />}
-                    >
-                      <PackageIcon data-icon="inline-start" />
-                      <Trans message="Manage Digital Products" />
-                    </Button>
-                  </Empty.Content>
-                )}
-              </Empty.Root>
-            )}
-          </section>
+                  </div>
+
+                  {productsQuery.isPending ? (
+                    <div className="grid gap-2.5 sm:grid-cols-2">
+                      {Array.from({length: 2}).map((_, index) => (
+                        <Skeleton
+                          key={index}
+                          className="h-16 rounded-card-sm"
+                        />
+                      ))}
+                    </div>
+                  ) : productsQuery.isError ? (
+                    <Empty.Root className="min-h-32 rounded-card-sm border border-dashed p-4">
+                      <Empty.Media variant="icon">
+                        <PackageIcon />
+                      </Empty.Media>
+                      <Empty.Header>
+                        <Empty.Title>
+                          <Trans message="Could not load products" />
+                        </Empty.Title>
+                        <Empty.Description>
+                          <Trans message="Retry before saving." />
+                        </Empty.Description>
+                      </Empty.Header>
+                      <Empty.Content>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => void productsQuery.refetch()}
+                        >
+                          <RefreshCwIcon data-icon="inline-start" />
+                          <Trans message="Retry" />
+                        </Button>
+                      </Empty.Content>
+                    </Empty.Root>
+                  ) : selectedProducts.length ? (
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {selectedProducts.map(product => (
+                        <SelectedProduct
+                          key={product.id}
+                          product={product}
+                          onRemove={() =>
+                            setSelectedProductIds(
+                              selectedProductIds.filter(
+                                id => id !== product.id,
+                              ),
+                            )
+                          }
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <Empty.Root className="min-h-32 rounded-card-sm border border-dashed p-4">
+                      <Empty.Media variant="icon">
+                        <PackageCheckIcon />
+                      </Empty.Media>
+                      <Empty.Header>
+                        <Empty.Title>
+                          <Trans message="No products yet" />
+                        </Empty.Title>
+                        <Empty.Description>
+                          {approvedProducts.length ? (
+                            <Trans message="Add products to showcase them." />
+                          ) : (
+                            <Trans message="Approved products will appear here." />
+                          )}
+                        </Empty.Description>
+                      </Empty.Header>
+                      {!approvedProducts.length && (
+                        <Empty.Content>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            render={<Link to="/dashboard/my-products" />}
+                          >
+                            <PackageIcon data-icon="inline-start" />
+                            <Trans message="Manage products" />
+                          </Button>
+                        </Empty.Content>
+                      )}
+                    </Empty.Root>
+                  )}
+                </div>
+              </Accordion.Content>
+            </Accordion.Item>
+          </Accordion.Root>
         </div>
       </HookForm.Root>
     </FileUploadProvider>
+  );
+}
+
+function CreatorAboutEditor({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <TipTapEditorProvider
+      extensions={creatorAboutExtensions}
+      initialContent={value}
+      onChange={onChange}
+    >
+      <div className="overflow-hidden rounded-card-sm border bg-background focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/30">
+        <div className="no-scrollbar flex items-center gap-0.5 overflow-x-auto border-b px-1.5 py-1 text-muted-foreground">
+          <AboutFormatDropdown />
+          <Divider />
+          <FontStyleButtons />
+          <Divider />
+          <ListButtons />
+          <Divider />
+          <EditorLinkButton />
+          <Divider />
+          <ClearFormatButton />
+        </div>
+        <TiptapEditorContent className="prose prose-sm min-h-52 max-w-none px-3.5 py-3 text-foreground dark:prose-invert" />
+      </div>
+    </TipTapEditorProvider>
+  );
+}
+
+function AboutFormatDropdown() {
+  const editor = useCurrentTextEditor();
+
+  return (
+    <Dropdown.Root>
+      <Dropdown.Trigger
+        render={
+          <Button type="button" variant="ghost" size="sm" disabled={!editor} />
+        }
+      >
+        <Trans message="Format" />
+        <ChevronDownIcon data-icon="inline-end" />
+      </Dropdown.Trigger>
+      <Dropdown.Content>
+        <Dropdown.Item
+          onClick={() => editor?.chain().focus().setParagraph().run()}
+        >
+          <Trans message="Paragraph" />
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() =>
+            editor?.chain().focus().toggleHeading({level: 2}).run()
+          }
+        >
+          <Trans message="Heading :number" values={{number: 2}} />
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() =>
+            editor?.chain().focus().toggleHeading({level: 3}).run()
+          }
+        >
+          <Trans message="Heading :number" values={{number: 3}} />
+        </Dropdown.Item>
+        <Dropdown.Item
+          onClick={() => editor?.chain().focus().toggleBlockquote().run()}
+        >
+          <Trans message="Blockquote" />
+        </Dropdown.Item>
+      </Dropdown.Content>
+    </Dropdown.Root>
   );
 }
 
@@ -643,9 +784,11 @@ function ProductPickerDialog({
 
   return (
     <Dialog.Root>
-      <Dialog.Trigger render={<Button type="button" size="sm" />}>
+      <Dialog.Trigger
+        render={<Button type="button" size="sm" variant="outline" />}
+      >
         <PlusIcon data-icon="inline-start" />
-        <Trans message="Choose products" />
+        <Trans message="Add products" />
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Backdrop />
@@ -720,19 +863,33 @@ function ProductPickerDialog({
   );
 }
 
-function SelectedProduct({product}: {product: CreatorProduct}) {
+function SelectedProduct({
+  product,
+  onRemove,
+}: {
+  product: CreatorProduct;
+  onRemove: () => void;
+}) {
   return (
-    <div className="flex min-w-0 items-center gap-3 rounded-card border p-3">
+    <div className="group flex min-w-0 items-center gap-3 rounded-card-sm border bg-card p-2.5 transition-colors hover:bg-accent/50">
       <ProductThumbnail product={product} />
       <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-medium">{product.title}</div>
-        <div className="text-xs text-muted-foreground">
+        <div className="truncate text-sm leading-tight font-medium">
+          {product.title}
+        </div>
+        <div className="mt-0.5 text-xs text-muted-foreground">
           {formatMoney(product.price_cents, product.currency)}
         </div>
       </div>
-      <Badge variant="secondary">
-        <Trans message="Featured" />
-      </Badge>
+      <Button
+        type="button"
+        size="icon-xs"
+        variant="ghost"
+        onClick={onRemove}
+        className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+      >
+        <XIcon />
+      </Button>
     </div>
   );
 }
@@ -742,11 +899,11 @@ function ProductThumbnail({product}: {product: CreatorProduct}) {
     <img
       src={product.cover.url}
       alt=""
-      className="size-12 shrink-0 rounded-input object-cover"
+      className="rounded-object size-10 shrink-0 object-cover"
     />
   ) : (
-    <span className="flex size-12 shrink-0 items-center justify-center rounded-input bg-muted text-muted-foreground">
-      <PackageIcon />
+    <span className="rounded-object flex size-10 shrink-0 items-center justify-center bg-muted text-muted-foreground">
+      <PackageIcon className="size-4" />
     </span>
   );
 }
@@ -759,6 +916,7 @@ function normalizeProfileValues(
     display_name: values.display_name?.trim() || fallback.display_name,
     profile_title: values.profile_title?.trim() || '',
     bio: values.bio?.trim() || '',
+    about_html: values.about_html || '',
     avatar_url: values.avatar_url || '',
     cover_url: values.cover_url || '',
     available_for_work: values.available_for_work ?? false,

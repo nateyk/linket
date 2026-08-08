@@ -1,2 +1,0 @@
-import{t as e}from"./queryOptions-Dfvzj6n2.js";import{i as t,t as n}from"./analytics-BSHh83gb.js";var r=[`tracked-events`],i=(n,i)=>{let a={...i};return n===`admin`&&(a.workspace_id=`all`),e({queryKey:[...r,a],queryFn:()=>t(a)})},a=t=>e({queryKey:[...r,`report`,t],queryFn:()=>n(t)});export{a as n,i as t};
-//# sourceMappingURL=tracked-events-queries-CgFQFvhx.js.map

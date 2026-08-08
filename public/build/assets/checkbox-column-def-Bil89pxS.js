@@ -1,0 +1,2 @@
+import{Ei as e}from"./icons-Cr69SQk-.js";import{t}from"./checkbox-Bm-EeTlo.js";var n=e();function r(){return{id:`select`,enableSorting:!1,enableHiding:!1,header:({table:e})=>(0,n.jsx)(t,{checked:e.getIsAllPageRowsSelected(),indeterminate:e.getIsSomePageRowsSelected(),onCheckedChange:t=>e.toggleAllPageRowsSelected(!!t),"aria-label":`Select all`}),cell:({row:e})=>(0,n.jsx)(t,{checked:e.getIsSelected(),onCheckedChange:t=>e.toggleSelected(!!t),"aria-label":`Select row`})}}export{r as t};
+//# sourceMappingURL=checkbox-column-def-Bil89pxS.js.map

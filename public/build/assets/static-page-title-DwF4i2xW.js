@@ -1,0 +1,2 @@
+import{Ei as e}from"./icons-Cr69SQk-.js";import{t}from"./use-settings-CqiYh2wJ.js";import{t as n}from"./helmet-C4_Fv69Z.js";var r=e();function i({children:e}){let{branding:{site_name:i}}=t();return(0,r.jsx)(n,{children:e?(0,r.jsxs)(`title`,{children:[e,` - `,i]}):void 0})}export{i as t};
+//# sourceMappingURL=static-page-title-DwF4i2xW.js.map

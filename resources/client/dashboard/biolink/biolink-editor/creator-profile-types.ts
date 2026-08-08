@@ -6,6 +6,7 @@ export interface CreatorProfileConfig {
   profile_title: string;
   headline?: string;
   bio: string;
+  about_html: string;
   avatar_url: string;
   cover_url: string;
   available_for_work: boolean;
@@ -28,10 +29,10 @@ export function getCreatorProfileConfig(
       biolink.profile_config?.display_name ||
       biolink.user?.name ||
       biolink.name,
-    profile_title:
-      profileConfig?.profile_title || profileConfig?.headline || '',
-    headline: profileConfig?.headline || '',
+    profile_title: profileConfig?.profile_title || '',
+    headline: '',
     bio: biolink.profile_config?.bio || '',
+    about_html: biolink.profile_config?.about_html || '',
     avatar_url: biolink.profile_config?.avatar_url || biolink.user?.image || '',
     cover_url: biolink.profile_config?.cover_url || '',
     available_for_work: biolink.profile_config?.available_for_work ?? false,

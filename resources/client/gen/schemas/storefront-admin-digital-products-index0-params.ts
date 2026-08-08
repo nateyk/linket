@@ -7,5 +7,6 @@
  */
 
 export type StorefrontAdminDigitalProductsIndex0Params = {
+  search?: string;
   status?: string;
 };

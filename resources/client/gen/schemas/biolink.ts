@@ -25,7 +25,7 @@ export type Biolink = {
   builder_mode: BiolinkBuilderMode;
   profile_config: BiolinkProfileConfig;
   public_item_count?: number;
-  is_verified?: boolean;
+  is_verified?: string | boolean;
   model_type: 'biolink';
   /** @nullable */
   created_at?: string | null;

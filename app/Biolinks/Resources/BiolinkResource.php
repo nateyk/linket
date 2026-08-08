@@ -39,6 +39,7 @@ class BiolinkResource extends LinkeableResource
              *   display_name?: string,
              *   profile_title?: string|null,
              *   bio?: string|null,
+             *   about_html?: string|null,
              *   avatar_url?: string|null,
              *   cover_url?: string|null,
              *   available_for_work?: bool,

@@ -73,7 +73,7 @@ export const storefrontPayoutRequestsAdminIndex0 = (
 };
 export const storefrontPayoutRequestsMarkPaid0 = (
   payoutRequest: number,
-  storefrontPayoutRequestsMarkPaid0Body: StorefrontPayoutRequestsMarkPaid0Body,
+  storefrontPayoutRequestsMarkPaid0Body?: StorefrontPayoutRequestsMarkPaid0Body,
   options?: SecondParameter<
     typeof orvalApiFetch<StorefrontPayoutRequestsMarkPaid0200>
   >,

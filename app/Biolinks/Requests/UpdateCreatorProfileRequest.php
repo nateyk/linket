@@ -41,6 +41,7 @@ class UpdateCreatorProfileRequest extends FormRequest
             'display_name' => ['required', 'string', 'max:80'],
             'profile_title' => ['nullable', 'string', 'max:120'],
             'bio' => ['nullable', 'string', 'max:600'],
+            'about_html' => ['nullable', 'string', 'max:20000'],
             'avatar_url' => ['nullable', 'string', 'max:2048', $this->profileImageRule(...)],
             'cover_url' => ['nullable', 'string', 'max:2048', $this->profileImageRule(...)],
             'available_for_work' => ['required', 'boolean'],

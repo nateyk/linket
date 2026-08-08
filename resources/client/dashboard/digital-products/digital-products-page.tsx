@@ -7,9 +7,9 @@ import {Empty} from '@shadcn/empty/empty';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {Tooltip} from '@shadcn/tooltip/tooltip';
 import {Trans} from '@ui/i18n/trans';
+import {useTrans} from '@ui/i18n/use-trans';
 import {
   CircleAlertIcon,
-  EllipsisIcon,
   FileDownIcon,
   LayoutGridIcon,
   PackagePlusIcon,
@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import {useCallback, useEffect, useState} from 'react';
 import {Link} from 'react-router';
+import {CreateProductDialog} from './create-product-dialog';
 
 type ProductStatus =
   | 'draft'
@@ -44,6 +45,7 @@ export function Component() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
   const [submittingId, setSubmittingId] = useState<number>();
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -101,7 +103,7 @@ export function Component() {
         <DashboardLayout.SectionTitle>
           <Trans message="Digital Products" />
         </DashboardLayout.SectionTitle>
-        <Button render={<Link to="/dashboard/my-products/new" />}>
+        <Button onClick={() => setCreateDialogOpen(true)}>
           <PackagePlusIcon />
           <Trans message="New product" />
         </Button>
@@ -135,10 +137,14 @@ export function Component() {
               ))}
             </div>
           ) : (
-            <EmptyProducts />
+            <EmptyProducts onNewProduct={() => setCreateDialogOpen(true)} />
           )}
         </div>
       </DashboardLayout.SectionContent>
+      <CreateProductDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+      />
     </DashboardLayout.MainSection>
   );
 }
@@ -151,7 +157,11 @@ function ErrorNotice({
   onRetry: () => void;
 }) {
   return (
-    <div className="mb-5 flex items-center gap-3 rounded-input border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+    <div
+      role="alert"
+      aria-live="polite"
+      className="mb-5 flex items-center gap-3 rounded-input border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+    >
       <CircleAlertIcon className="size-4 shrink-0" />
       <span className="min-w-0 flex-1">{message}</span>
       <Button size="sm" variant="outline" onClick={onRetry}>
@@ -170,7 +180,9 @@ function ProductCard({
   submitting: boolean;
   onSubmit: () => void;
 }) {
-  const needsSetup = product.status === 'draft' || product.status === 'rejected';
+  const {trans} = useTrans();
+  const isDraft = product.status === 'draft';
+  const canSubmit = isDraft || product.status === 'rejected';
 
   return (
     <Card.Root className="group overflow-hidden gap-0 border-border/80 transition-shadow hover:shadow-md">
@@ -179,13 +191,13 @@ function ProductCard({
           <img
             className="size-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
             src={product.cover.url}
-            alt=""
+            alt={product.title}
           />
         ) : (
           <MockCover title={product.title} />
         )}
         <div className="absolute top-3 left-3">
-          {needsSetup ? (
+          {isDraft ? (
             <Badge color="warning" className="bg-background/95 shadow-sm">
               <Trans message="Needs setup" />
             </Badge>
@@ -202,14 +214,21 @@ function ProductCard({
           </p>
         </div>
         <p className="mt-2 line-clamp-2 min-h-10 text-sm text-muted-foreground">
-          {product.description || (
+          {product.description ? plainTextDescription(product.description) : (
             <Trans message="Add a description so customers know what they will receive." />
           )}
         </p>
         <div className="mt-auto pt-4">
           <div className="mb-3 flex items-center justify-between text-xs text-muted-foreground">
             <span>
-              <Trans message="No sales yet" />
+              {(product.files?.length ?? 0) === 1 ? (
+                <Trans message=":count file" values={{count: 1}} />
+              ) : (
+                <Trans
+                  message=":count files"
+                  values={{count: product.files?.length ?? 0}}
+                />
+              )}
             </span>
             <span>
               <Trans
@@ -226,8 +245,10 @@ function ProductCard({
             <div className="flex items-center gap-1">
               <Tooltip label={<Trans message="Edit product" />}>
                 <Button
+                  aria-label={trans({message: 'Edit product'})}
                   size="icon-xs"
                   variant="ghost"
+                  nativeButton={false}
                   render={
                     <Link to={`/dashboard/my-products/${product.id}/edit`} />
                   }
@@ -235,9 +256,10 @@ function ProductCard({
                   <PencilIcon />
                 </Button>
               </Tooltip>
-              {needsSetup && (
+              {canSubmit && (
                 <Tooltip label={<Trans message="Submit for review" />}>
                   <Button
+                    aria-label={trans({message: 'Submit for review'})}
                     size="icon-xs"
                     disabled={submitting || !product.files?.length}
                     onClick={onSubmit}
@@ -246,11 +268,6 @@ function ProductCard({
                   </Button>
                 </Tooltip>
               )}
-              <Tooltip label={<Trans message="More actions coming soon" />}>
-                <Button size="icon-xs" variant="ghost">
-                  <EllipsisIcon />
-                </Button>
-              </Tooltip>
             </div>
           </div>
         </div>
@@ -290,7 +307,7 @@ function StatusBadge({status}: {status: ProductStatus}) {
   );
 }
 
-function EmptyProducts() {
+function EmptyProducts({onNewProduct}: {onNewProduct: () => void}) {
   return (
     <Empty.Root className="border-y py-20">
       <Empty.Header>
@@ -305,7 +322,7 @@ function EmptyProducts() {
         </Empty.Description>
       </Empty.Header>
       <Empty.Content>
-        <Button render={<Link to="/dashboard/my-products/new" />}>
+        <Button onClick={onNewProduct}>
           <PackagePlusIcon />
           <Trans message="Create product" />
         </Button>
@@ -341,4 +358,13 @@ function formatMoney(cents: number, currency: string) {
     style: 'currency',
     currency,
   }).format(cents / 100);
+}
+
+function plainTextDescription(description: string): string {
+  if (typeof DOMParser !== 'undefined') {
+    const document = new DOMParser().parseFromString(description, 'text/html');
+    return document.body.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+  }
+
+  return description.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 }

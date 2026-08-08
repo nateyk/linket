@@ -22,4 +22,12 @@ export type AdminPaymentTransactionsIndexParams = {
    * @nullable
    */
   search?: string | null;
+  /**
+   * @nullable
+   */
+  date_from?: string | null;
+  /**
+   * @nullable
+   */
+  date_to?: string | null;
 };

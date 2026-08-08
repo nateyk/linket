@@ -46,6 +46,7 @@ class ConvertBiolinkToCreatorProfile
             'display_name' => $biolink->user?->name ?: $biolink->name,
             'profile_title' => $text?->config['title'] ?? '',
             'bio' => $text?->config['description'] ?? '',
+            'about_html' => '',
             'avatar_url' => $avatar?->config['url'] ?? $biolink->user?->image,
             'cover_url' => $cover?->config['url'] ?? null,
             'available_for_work' => false,

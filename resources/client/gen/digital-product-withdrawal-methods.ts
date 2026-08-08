@@ -5,15 +5,23 @@
  * In the documentation API requests will be sent from currently logged in user so you do not need to provide a bearer token manually. <br><br> When calling API from outside the documentation, you will need to provide an access token for all requests in authorization header: `Authorization: Bearer <Token>` <br> You can create a new access token in your account settings page.
  * OpenAPI spec version: 1.0.0
  */
-import type {DigitalProductWithdrawalMethodsAdminIndex200} from './schemas/digital-product-withdrawal-methods-admin-index200';
+import type {AdminWithdrawalMethodsDestroy200} from './schemas/admin-withdrawal-methods-destroy200';
+
+import type {AdminWithdrawalMethodsIndex200} from './schemas/admin-withdrawal-methods-index200';
+
+import type {AdminWithdrawalMethodsStore200} from './schemas/admin-withdrawal-methods-store200';
+
+import type {AdminWithdrawalMethodsUpdate200} from './schemas/admin-withdrawal-methods-update200';
 
 import type {DigitalProductWithdrawalMethodsIndex200} from './schemas/digital-product-withdrawal-methods-index200';
 
-import type {DigitalProductWithdrawalMethodsStoreBody} from './schemas/digital-product-withdrawal-methods-store-body';
+import type {StorefrontDigitalProductWithdrawalMethodsAdminIndex0200} from './schemas/storefront-digital-product-withdrawal-methods-admin-index0200';
 
-import type {DigitalProductWithdrawalMethodsStore200} from './schemas/digital-product-withdrawal-methods-store200';
+import type {StorefrontDigitalProductWithdrawalMethodsStore1Body} from './schemas/storefront-digital-product-withdrawal-methods-store1-body';
 
-import type {DigitalProductWithdrawalMethodsUpdate200} from './schemas/digital-product-withdrawal-methods-update200';
+import type {StorefrontDigitalProductWithdrawalMethodsStore1200} from './schemas/storefront-digital-product-withdrawal-methods-store1200';
+
+import type {StorefrontDigitalProductWithdrawalMethodsUpdate0200} from './schemas/storefront-digital-product-withdrawal-methods-update0200';
 
 import {orvalApiFetch} from '../../../common/foundation/resources/client/http/query-client';
 
@@ -29,39 +37,39 @@ export const digitalProductWithdrawalMethodsIndex = (
     options,
   );
 };
-export const digitalProductWithdrawalMethodsAdminIndex = (
+export const storefrontDigitalProductWithdrawalMethodsAdminIndex0 = (
   options?: SecondParameter<
-    typeof orvalApiFetch<DigitalProductWithdrawalMethodsAdminIndex200>
+    typeof orvalApiFetch<StorefrontDigitalProductWithdrawalMethodsAdminIndex0200>
   >,
 ) => {
-  return orvalApiFetch<DigitalProductWithdrawalMethodsAdminIndex200>(
+  return orvalApiFetch<StorefrontDigitalProductWithdrawalMethodsAdminIndex0200>(
     {url: `/admin/digital-products/withdrawal-methods`, method: 'GET'},
     options,
   );
 };
-export const digitalProductWithdrawalMethodsStore = (
-  digitalProductWithdrawalMethodsStoreBody?: DigitalProductWithdrawalMethodsStoreBody,
+export const storefrontDigitalProductWithdrawalMethodsStore1 = (
+  storefrontDigitalProductWithdrawalMethodsStore1Body?: StorefrontDigitalProductWithdrawalMethodsStore1Body,
   options?: SecondParameter<
-    typeof orvalApiFetch<DigitalProductWithdrawalMethodsStore200>
+    typeof orvalApiFetch<StorefrontDigitalProductWithdrawalMethodsStore1200>
   >,
 ) => {
-  return orvalApiFetch<DigitalProductWithdrawalMethodsStore200>(
+  return orvalApiFetch<StorefrontDigitalProductWithdrawalMethodsStore1200>(
     {
       url: `/admin/digital-products/withdrawal-methods`,
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      data: digitalProductWithdrawalMethodsStoreBody,
+      data: storefrontDigitalProductWithdrawalMethodsStore1Body,
     },
     options,
   );
 };
-export const digitalProductWithdrawalMethodsUpdate = (
+export const storefrontDigitalProductWithdrawalMethodsUpdate0 = (
   withdrawalMethod: number,
   options?: SecondParameter<
-    typeof orvalApiFetch<DigitalProductWithdrawalMethodsUpdate200>
+    typeof orvalApiFetch<StorefrontDigitalProductWithdrawalMethodsUpdate0200>
   >,
 ) => {
-  return orvalApiFetch<DigitalProductWithdrawalMethodsUpdate200>(
+  return orvalApiFetch<StorefrontDigitalProductWithdrawalMethodsUpdate0200>(
     {
       url: `/admin/digital-products/withdrawal-methods/${withdrawalMethod}`,
       method: 'PUT',
@@ -69,15 +77,79 @@ export const digitalProductWithdrawalMethodsUpdate = (
     options,
   );
 };
+export const adminWithdrawalMethodsIndex = (
+  options?: SecondParameter<
+    typeof orvalApiFetch<AdminWithdrawalMethodsIndex200>
+  >,
+) => {
+  return orvalApiFetch<AdminWithdrawalMethodsIndex200>(
+    {url: `/admin/financial/withdrawal-methods`, method: 'GET'},
+    options,
+  );
+};
+export const adminWithdrawalMethodsStore = (
+  options?: SecondParameter<
+    typeof orvalApiFetch<AdminWithdrawalMethodsStore200>
+  >,
+) => {
+  return orvalApiFetch<AdminWithdrawalMethodsStore200>(
+    {url: `/admin/financial/withdrawal-methods`, method: 'POST'},
+    options,
+  );
+};
+export const adminWithdrawalMethodsUpdate = (
+  withdrawalMethod: number,
+  options?: SecondParameter<
+    typeof orvalApiFetch<AdminWithdrawalMethodsUpdate200>
+  >,
+) => {
+  return orvalApiFetch<AdminWithdrawalMethodsUpdate200>(
+    {
+      url: `/admin/financial/withdrawal-methods/${withdrawalMethod}`,
+      method: 'PUT',
+    },
+    options,
+  );
+};
+export const adminWithdrawalMethodsDestroy = (
+  withdrawalMethod: number,
+  options?: SecondParameter<
+    typeof orvalApiFetch<AdminWithdrawalMethodsDestroy200>
+  >,
+) => {
+  return orvalApiFetch<AdminWithdrawalMethodsDestroy200>(
+    {
+      url: `/admin/financial/withdrawal-methods/${withdrawalMethod}`,
+      method: 'DELETE',
+    },
+    options,
+  );
+};
 export type DigitalProductWithdrawalMethodsIndexResult = NonNullable<
   Awaited<ReturnType<typeof digitalProductWithdrawalMethodsIndex>>
 >;
-export type DigitalProductWithdrawalMethodsAdminIndexResult = NonNullable<
-  Awaited<ReturnType<typeof digitalProductWithdrawalMethodsAdminIndex>>
+export type StorefrontDigitalProductWithdrawalMethodsAdminIndex0Result =
+  NonNullable<
+    Awaited<
+      ReturnType<typeof storefrontDigitalProductWithdrawalMethodsAdminIndex0>
+    >
+  >;
+export type StorefrontDigitalProductWithdrawalMethodsStore1Result = NonNullable<
+  Awaited<ReturnType<typeof storefrontDigitalProductWithdrawalMethodsStore1>>
 >;
-export type DigitalProductWithdrawalMethodsStoreResult = NonNullable<
-  Awaited<ReturnType<typeof digitalProductWithdrawalMethodsStore>>
+export type StorefrontDigitalProductWithdrawalMethodsUpdate0Result =
+  NonNullable<
+    Awaited<ReturnType<typeof storefrontDigitalProductWithdrawalMethodsUpdate0>>
+  >;
+export type AdminWithdrawalMethodsIndexResult = NonNullable<
+  Awaited<ReturnType<typeof adminWithdrawalMethodsIndex>>
 >;
-export type DigitalProductWithdrawalMethodsUpdateResult = NonNullable<
-  Awaited<ReturnType<typeof digitalProductWithdrawalMethodsUpdate>>
+export type AdminWithdrawalMethodsStoreResult = NonNullable<
+  Awaited<ReturnType<typeof adminWithdrawalMethodsStore>>
+>;
+export type AdminWithdrawalMethodsUpdateResult = NonNullable<
+  Awaited<ReturnType<typeof adminWithdrawalMethodsUpdate>>
+>;
+export type AdminWithdrawalMethodsDestroyResult = NonNullable<
+  Awaited<ReturnType<typeof adminWithdrawalMethodsDestroy>>
 >;

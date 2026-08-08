@@ -21,6 +21,11 @@ export type UpdateCreatorProfileRequest = {
    */
   bio?: string | null;
   /**
+   * @maxLength 20000
+   * @nullable
+   */
+  about_html?: string | null;
+  /**
    * @maxLength 2048
    * @nullable
    */

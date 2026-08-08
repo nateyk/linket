@@ -25,7 +25,7 @@ import {BiolinkWidget} from '@app/gen/schemas/biolink-widget';
 import {AdHost} from '@common/admin/ads/ad-host';
 import {showHttpErrorToast} from '@common/http/errors/show-http-error-toast';
 import {queryClient} from '@common/http/query-client';
-import {convertBiolinkToCreatorProfile} from '@app/gen/biolinks';
+import {convertBiolinkToCreatorProfile, updateCreatorProfile} from '@app/gen/biolinks';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {useRequiredParams} from '@common/ui/navigation/use-required-params';
 import {Breadcrumb} from '@shadcn/breadcrumb/breadcrumb';
@@ -45,6 +45,7 @@ import {
   LayoutGridIcon,
   LayoutPanelTop,
   PlusIcon,
+  SaveIcon,
   SettingsIcon,
   TrashIcon,
   SparklesIcon,
@@ -120,33 +121,59 @@ function BiolinkEditorHeader() {
   const {routeType} = useDatatableRouteType();
   const biolink = useBiolinkEditorStore(s => s.biolink);
   const getState = useBiolinkEditorStore(s => s.getState);
-  const saveAppearance = useMutation(
-    updateBiolinkAppearanceOptions(biolink.id),
-  );
   const appearanceIsDirty = useBiolinkEditorStore(s => s.appearanceIsDirty);
   const setAppearanceIsDirty = useBiolinkEditorStore(
     s => s.setAppearanceIsDirty,
   );
+  const profileIsDirty = useBiolinkEditorStore(s => s.profileIsDirty);
+  const setProfileIsDirty = useBiolinkEditorStore(s => s.setProfileIsDirty);
   const location = useLocation();
   const isAppearanceTab = location.pathname.endsWith('appearance');
+  const isContentTab = !isAppearanceTab && !location.pathname.endsWith('insights');
 
-  const handleSaveAppearance = () => {
-    saveAppearance.mutate(
-      {config: getState().appearance},
-      {
-        onSuccess: () => {
-          setAppearanceIsDirty(false);
-          toast.success(<Trans message="Changes saved" />);
+  const saveAppearance = useMutation(
+    updateBiolinkAppearanceOptions(biolink.id),
+  );
+  const saveProfile = useMutation({
+    mutationFn: (payload: Parameters<typeof updateCreatorProfile>[1]) =>
+      updateCreatorProfile(biolink.id, payload),
+    onSuccess: () => {
+      setProfileIsDirty(false);
+      queryClient.invalidateQueries({queryKey: ['biolinks']});
+      queryClient.invalidateQueries({queryKey: ['digital-products']});
+      toast.success(<Trans message="Changes saved" />);
+    },
+    onError: error => showHttpErrorToast(error),
+  });
+
+  const handleSave = () => {
+    const state = getState();
+    if (isAppearanceTab && state.appearanceIsDirty) {
+      saveAppearance.mutate(
+        {config: state.appearance},
+        {
+          onSuccess: () => {
+            setAppearanceIsDirty(false);
+            toast.success(<Trans message="Changes saved" />);
+          },
+          onError: err => {
+            showHttpErrorToast(err, <Trans message="Could not save appearance" />);
+          },
         },
-        onError: err => {
-          showHttpErrorToast(
-            err,
-            <Trans message="Could not save appearance" />,
-          );
-        },
-      },
-    );
+      );
+    } else if (isContentTab && state.profileIsDirty) {
+      saveProfile.mutate({
+        ...state.profileConfig,
+        skills: state.profileConfig.skills.slice(0, 8),
+        featured_product_ids: state.featuredProductIds.slice(0, 6),
+      } as Parameters<typeof updateCreatorProfile>[1]);
+    }
   };
+
+  const showSaveButton =
+    (isAppearanceTab && appearanceIsDirty) ||
+    (isContentTab && profileIsDirty);
+  const isSaving = saveAppearance.isPending || saveProfile.isPending;
 
   return (
     <DashboardLayout.SectionHeader className="border-none">
@@ -159,11 +186,12 @@ function BiolinkEditorHeader() {
         variant="outline"
         className="max-md:hidden"
       />
-      {isAppearanceTab && (
+      {(isContentTab || isAppearanceTab) && (
         <Button
-          onClick={() => handleSaveAppearance()}
-          disabled={!appearanceIsDirty || saveAppearance.isPending}
+          onClick={handleSave}
+          disabled={!showSaveButton || isSaving}
         >
+          <SaveIcon data-icon="inline-start" />
           <Trans message="Save changes" />
         </Button>
       )}
@@ -303,29 +331,41 @@ export function BiolinkContentTab() {
   }
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-6">
-      <CreatorProfileUpgrade />
-      <div>
-        <AddNewLinkButton />
-        <AddNewWidgetButton />
+    <div className="mx-auto max-w-2xl">
+      <div className="flex flex-col gap-4">
+        <div className="min-w-0">
+          <h2 className="text-lg font-semibold">
+            <Trans message="Content" />
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            <Trans message="Add links and widgets to build your page." />
+          </p>
+        </div>
+        <CreatorProfileUpgrade />
+        <div className="flex flex-wrap gap-3">
+          <AddNewLinkButton />
+          <AddNewWidgetButton />
+        </div>
       </div>
-      {content.length ? (
-        <BiolinkItemList />
-      ) : (
-        <Empty.Root>
-          <Empty.Header>
-            <Empty.Media variant="icon">
-              <LayoutPanelTop />
-            </Empty.Media>
-            <Empty.Title>
-              <Trans message="No content yet." />
-            </Empty.Title>
-            <Empty.Description>
-              <Trans message="Get started by adding a link or widget." />
-            </Empty.Description>
-          </Empty.Header>
-        </Empty.Root>
-      )}
+      <div className="mt-6">
+        {content.length ? (
+          <BiolinkItemList />
+        ) : (
+          <Empty.Root>
+            <Empty.Header>
+              <Empty.Media variant="icon">
+                <LayoutPanelTop />
+              </Empty.Media>
+              <Empty.Title>
+                <Trans message="No content yet." />
+              </Empty.Title>
+              <Empty.Description>
+                <Trans message="Get started by adding a link or widget." />
+              </Empty.Description>
+            </Empty.Header>
+          </Empty.Root>
+        )}
+      </div>
     </div>
   );
 }

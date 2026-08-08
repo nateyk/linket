@@ -45,6 +45,7 @@ class CreatorProfileTest extends TestCase
         $this->assertSame('Nate Creator', $profile['display_name']);
         $this->assertSame('Product designer', $profile['profile_title']);
         $this->assertSame('I build useful products.', $profile['bio']);
+        $this->assertSame('', $profile['about_html']);
         $this->assertSame('https://example.test/profile.jpg', $profile['avatar_url']);
         $this->assertSame('https://example.test/cover.jpg', $profile['cover_url']);
         $this->assertSame(['instagram' => '@nate'], $profile['social_links']);
@@ -96,7 +97,69 @@ class CreatorProfileTest extends TestCase
         $this->assertSame(Biolink::BUILDER_MODE_CREATOR_PROFILE, $biolink->builder_mode);
         $this->assertSame($user->name, $biolink->profile_config['display_name']);
         $this->assertSame($user->image, $biolink->profile_config['avatar_url']);
+        $this->assertSame('', $biolink->profile_config['about_html']);
         $this->assertCount(0, $biolink->widgets);
+    }
+
+    public function testOwnerCanSaveSanitizedRichAboutContent(): void
+    {
+        $user = $this->createUser();
+        $workspace = $this->createWorkspace($user);
+        $biolink = $this->createBiolink([
+            'user_id' => $user->id,
+            'workspace_id' => $workspace->id,
+            'builder_mode' => Biolink::BUILDER_MODE_CREATOR_PROFILE,
+            'profile_config' => [],
+        ]);
+
+        $this->withoutMiddleware();
+        $this->actingAs($user);
+
+        $response = $this->putJson("/api/v1/biolinks/{$biolink->id}/creator-profile", [
+            ...$this->validProfilePayload(),
+            'about_html' => '<h2>My story</h2><p onclick="alert(1)"><strong>Useful work</strong></p><a href="javascript:alert(1)">Unsafe</a><a href="https://example.test/work">Portfolio</a><img src="https://example.test/tracker.png"><script>alert(1)</script>',
+            'featured_product_ids' => [],
+        ])->assertOk();
+
+        $aboutHtml = $biolink->fresh()->profile_config['about_html'];
+
+        $this->assertStringContainsString('<h2>My story</h2>', $aboutHtml);
+        $this->assertStringContainsString('<strong>Useful work</strong>', $aboutHtml);
+        $this->assertStringContainsString('https://example.test/work', $aboutHtml);
+        $this->assertStringNotContainsString('onclick', $aboutHtml);
+        $this->assertStringNotContainsString('javascript:', $aboutHtml);
+        $this->assertStringNotContainsString('<img', $aboutHtml);
+        $this->assertStringNotContainsString('<script', $aboutHtml);
+        $response->assertJsonPath('data.profile_config.about_html', $aboutHtml);
+    }
+
+    public function testOlderProfileClientsDoNotEraseExistingAboutContent(): void
+    {
+        $user = $this->createUser();
+        $workspace = $this->createWorkspace($user);
+        $biolink = $this->createBiolink([
+            'user_id' => $user->id,
+            'workspace_id' => $workspace->id,
+            'builder_mode' => Biolink::BUILDER_MODE_CREATOR_PROFILE,
+            'profile_config' => [
+                'about_html' => '<p>Existing creator story.</p>',
+            ],
+        ]);
+        $payload = $this->validProfilePayload();
+        unset($payload['about_html']);
+
+        $this->withoutMiddleware();
+        $this->actingAs($user);
+
+        $this->putJson("/api/v1/biolinks/{$biolink->id}/creator-profile", [
+            ...$payload,
+            'featured_product_ids' => [],
+        ])->assertOk();
+
+        $this->assertSame(
+            '<p>Existing creator story.</p>',
+            $biolink->fresh()->profile_config['about_html'],
+        );
     }
 
     public function testOwnerCanConvertAndUpdateAProfileWithoutLosingSourceWidgetIds(): void
@@ -418,6 +481,7 @@ class CreatorProfileTest extends TestCase
             'display_name' => 'Nate Creator',
             'profile_title' => 'Product designer',
             'bio' => 'Independent creator.',
+            'about_html' => '<p>I make practical digital products.</p>',
             'available_for_work' => true,
             'skills' => ['Laravel', 'React'],
             'contact_url' => 'creator@example.test',

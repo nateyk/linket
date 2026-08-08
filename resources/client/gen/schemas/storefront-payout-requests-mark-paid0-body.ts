@@ -8,20 +8,22 @@
 
 export type StorefrontPayoutRequestsMarkPaid0Body = {
   /** @maxLength 190 */
-  transfer_reference: string;
+  transfer_reference?: string;
   /**
    * @maxLength 2000
    * @nullable
    */
   note?: string | null;
+  auto_transfer?: boolean;
 };
 
 export type StorefrontPayoutRequestsMarkPaid0Body = {
   /** @maxLength 190 */
-  transfer_reference: string;
+  transfer_reference?: string;
   /**
    * @maxLength 2000
    * @nullable
    */
   note?: string | null;
+  auto_transfer?: boolean;
 };

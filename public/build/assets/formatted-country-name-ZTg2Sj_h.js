@@ -1,2 +1,0 @@
-import{a as e}from"./rolldown-runtime-Cyuzqnbw.js";import{_i as t,gi as n}from"./icons-BEdJcK9h.js";import{r}from"./trans-Bt2QZcsI.js";var i=e(t()),a=n(),o=(0,i.memo)(({code:e})=>{let{localeCode:t}=r(),n=new Intl.DisplayNames([t],{type:`region`}),o;try{o=n.of(e.toUpperCase())}catch{}return(0,a.jsx)(i.Fragment,{children:o})});export{o as t};
-//# sourceMappingURL=formatted-country-name-ZTg2Sj_h.js.map

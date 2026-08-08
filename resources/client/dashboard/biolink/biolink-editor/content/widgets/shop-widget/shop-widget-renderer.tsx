@@ -19,8 +19,10 @@ export function ShopWidgetRenderer({
   variant,
   biolink,
   titleOverride,
+  showHeading = true,
 }: WidgetRendererProps & {
   titleOverride?: ReactNode;
+  showHeading?: boolean;
 }) {
   const config = widget.config as ShopWidgetConfig;
   const productIds = Array.isArray(config.product_ids)
@@ -84,28 +86,30 @@ export function ShopWidgetRenderer({
 
   return (
     <section className="w-full min-w-0">
-      <div className="mb-3 flex min-w-0 flex-col gap-0.5 sm:flex-row sm:items-end sm:justify-between">
-        <div className="min-w-0">
-          <h2 className="truncate text-2xl leading-tight font-semibold">
-            {titleOverride || config.title || (
-              <Trans message="Digital Products" />
-            )}
-          </h2>
-          <p className="text-sm text-[var(--biolink-muted-text)]">
-            {products.length === 1 ? (
-              <Trans
-                message=":count published item"
-                values={{count: products.length}}
-              />
-            ) : (
-              <Trans
-                message=":count published items"
-                values={{count: products.length}}
-              />
-            )}
-          </p>
+      {showHeading && (
+        <div className="mb-3 flex min-w-0 flex-col gap-0.5 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0">
+            <h2 className="truncate text-2xl leading-tight font-semibold">
+              {titleOverride || config.title || (
+                <Trans message="Digital Products" />
+              )}
+            </h2>
+            <p className="text-sm text-[var(--biolink-muted-text)]">
+              {products.length === 1 ? (
+                <Trans
+                  message=":count published item"
+                  values={{count: products.length}}
+                />
+              ) : (
+                <Trans
+                  message=":count published items"
+                  values={{count: products.length}}
+                />
+              )}
+            </p>
+          </div>
         </div>
-      </div>
+      )}
       <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 @4xl:grid-cols-3">
         {products.map(product => (
           <ProductCard
@@ -149,7 +153,7 @@ function ProductCard({product, href}: {product: Product; href: string}) {
           </div>
           {product.description && (
             <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-[var(--biolink-muted-text)]">
-              {product.description}
+              {plainTextDescription(product.description)}
             </p>
           )}
         </div>
@@ -170,4 +174,16 @@ function formatMoney(cents: number, currency: string) {
   return new Intl.NumberFormat(undefined, {style: 'currency', currency}).format(
     cents / 100,
   );
+}
+
+function plainTextDescription(description: string): string {
+  if (typeof DOMParser !== 'undefined') {
+    const document = new DOMParser().parseFromString(description, 'text/html');
+    return document.body.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+  }
+
+  return description
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }

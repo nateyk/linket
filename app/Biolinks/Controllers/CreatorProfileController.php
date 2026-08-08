@@ -3,6 +3,7 @@
 namespace App\Biolinks\Controllers;
 
 use App\Biolinks\Actions\ConvertBiolinkToCreatorProfile;
+use App\Biolinks\Actions\SanitizeCreatorAbout;
 use App\Biolinks\Models\Biolink;
 use App\Biolinks\Requests\UpdateCreatorProfileRequest;
 use App\Biolinks\Resources\BiolinkResource;
@@ -36,6 +37,11 @@ class CreatorProfileController extends Controller
         );
 
         $validated = $request->validated();
+        $validated['about_html'] = $request->exists('about_html')
+            ? app(SanitizeCreatorAbout::class)->execute(
+                $validated['about_html'] ?? null,
+            )
+            : ($biolink->profile_config['about_html'] ?? '');
         $featuredProductIds = $validated['featured_product_ids'];
         $featuredProducts = DigitalProduct::query()
             ->where('workspace_id', $biolink->workspace_id)

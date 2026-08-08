@@ -49,6 +49,7 @@ class CrupdateBiolink extends CrupdateLinkeable
                     'display_name' => $creator?->name ?? $inlineData['name'],
                     'profile_title' => '',
                     'bio' => '',
+                    'about_html' => '',
                     'avatar_url' => $creator?->image,
                     'cover_url' => null,
                     'available_for_work' => false,

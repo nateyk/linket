@@ -14,6 +14,8 @@ export type BiolinkProfileConfig = {
   /** @nullable */
   bio?: string | null;
   /** @nullable */
+  about_html?: string | null;
+  /** @nullable */
   avatar_url?: string | null;
   /** @nullable */
   cover_url?: string | null;

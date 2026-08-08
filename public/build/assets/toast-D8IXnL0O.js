@@ -1,0 +1,2 @@
+import{p as e}from"./main-BAcsbrKX.js";function t(t,n){e().add(t,n)}t.danger=(t,n)=>{e().add(t,{...n,type:`danger`})},t.positive=(t,n)=>{e().add(t,{...n,type:`positive`})},t.loading=(t,n)=>{e().add(t,{...n,type:`loading`})};export{t};
+//# sourceMappingURL=toast-D8IXnL0O.js.map
