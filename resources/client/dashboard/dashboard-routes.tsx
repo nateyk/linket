@@ -26,275 +26,299 @@ import {
 import {listTrackingPixelsOptions} from '@app/dashboard/tracking-pixels/tracking-pixels-queries';
 import {DatatableRouteType} from '@app/dashboard/use-datatable-route-type';
 import {usageOptions} from '@app/dashboard/use-usage';
-import {getSettingsPreviewMode} from '@common/admin/settings/preview/use-settings-preview-mode';
 import {auth} from '@common/auth/use-auth';
 import {queryClient} from '@common/http/query-client';
 import {listWorkspacesOptions} from '@common/workspace/workspace-queries';
 import {useWorkspaceStore} from '@common/workspace/workspace-store';
-import {getBootstrapData} from '@ui/bootstrap-data/bootstrap-data-store';
 import {searchParamsFromUrl} from '@ui/utils/urls/search-params-from-url';
 import {redirect, RouteObject} from 'react-router';
-import {Fragment} from 'react/jsx-runtime';
 
 export const sharedDashboardRoutes = (routeType: DatatableRouteType) => {
-  const routes: RouteObject[] = [
-    // links
-    {
-      path: 'links',
-      lazy: () =>
-        import('@app/dashboard/links/links-datatable-page/links-datatable-page'),
-      loader: ({request}) =>
-        queryClient.ensureQueryData(
-          listLinksOptions(routeType, searchParamsFromUrl(request.url)),
-        ),
-    },
-    {
-      path: 'links/:linkId',
-      lazy: () =>
-        import('@app/dashboard/links/link-details-page/link-details-page'),
-      loader: ({params}) =>
-        queryClient.ensureQueryData(
-          retrieveLinkOptions(Number(params.linkId!)),
-        ),
-      children: [
-        {
-          index: true,
-          lazy: () =>
-            import('@app/dashboard/links/link-details-page/link-settings-page'),
-        },
-        {
-          path: 'insights',
-          lazy: () =>
-            import('@app/dashboard/links/link-details-page/link-insights-page'),
-        },
-      ],
-    },
+  const isDashboard = routeType === 'dashboard';
+  const routes: RouteObject[] = [];
 
-    // qr codes
-    {
-      path: 'qr-codes',
-      lazy: () =>
-        import('@app/dashboard/qr-codes/qr-codes-datatable-page/qr-codes-datatable-page'),
-      loader: ({request}) =>
-        queryClient.ensureQueryData(
-          listQrCodesOptions(routeType, searchParamsFromUrl(request.url)),
-        ),
-    },
-    {
-      path: 'qr-codes/:qrCodeId',
-      lazy: () =>
-        import('@app/dashboard/qr-codes/qr-code-details-page/qr-code-details-page'),
-      loader: ({params}) =>
-        queryClient.ensureQueryData(
-          retrieveQrCodeOptions(Number(params.qrCodeId!)),
-        ),
-      children: [
-        {
-          index: true,
-          lazy: () =>
-            import('@app/dashboard/qr-codes/qr-code-details-page/qr-code-settings-page'),
-        },
-        {
-          path: 'insights',
-          lazy: () =>
-            import('@app/dashboard/qr-codes/qr-code-details-page/qr-code-insights-page'),
-        },
-      ],
-    },
-
-    // biolinks
-    {
-      path: 'biolinks/:biolinkId',
-      lazy: () =>
-        import('@app/dashboard/biolink/biolink-editor/biolink-editor-page'),
-      loader: ({params}) =>
-        queryClient.ensureQueryData(
-          retrieveBiolinkOptions(Number(params.biolinkId!)),
-        ),
-      children: [
-        {
-          index: true,
-          lazy: async () => {
-            const {BiolinkContentTab} =
-              await import('@app/dashboard/biolink/biolink-editor/biolink-editor-page');
-            return {Component: BiolinkContentTab};
+  // links — admin only (internalized for creator dashboard)
+  if (!isDashboard) {
+    routes.push(
+      {
+        path: 'links',
+        lazy: () =>
+          import('@app/dashboard/links/links-datatable-page/links-datatable-page'),
+        loader: ({request}) =>
+          queryClient.ensureQueryData(
+            listLinksOptions(routeType, searchParamsFromUrl(request.url)),
+          ),
+      },
+      {
+        path: 'links/:linkId',
+        lazy: () =>
+          import('@app/dashboard/links/link-details-page/link-details-page'),
+        loader: ({params}) =>
+          queryClient.ensureQueryData(
+            retrieveLinkOptions(Number(params.linkId!)),
+          ),
+        children: [
+          {
+            index: true,
+            lazy: () =>
+              import('@app/dashboard/links/link-details-page/link-settings-page'),
           },
-        },
-        {
-          path: 'appearance',
-          lazy: () =>
-            import('@app/dashboard/biolink/biolink-editor/appearance/biolink-appearance-tab'),
-        },
-        {
-          path: 'insights',
-          lazy: () => import('@app/dashboard/biolink/biolink-insights-page'),
-        },
-      ],
-    },
+          {
+            path: 'insights',
+            lazy: () =>
+              import('@app/dashboard/links/link-details-page/link-insights-page'),
+          },
+        ],
+      },
+    );
+  }
 
-    // folders
-    {
-      path: 'folders',
-      lazy: () =>
-        import('@app/dashboard/folders/folders-datatable-page/folders-datatable-page'),
-      loader: ({request}) =>
-        queryClient.ensureQueryData(
-          listFoldersOptions(routeType, searchParamsFromUrl(request.url)),
-        ),
-    },
-    {
-      path: 'folders/:folderId',
-      lazy: () =>
-        import('@app/dashboard/folders/folder-details-page/folder-details-page'),
-      loader: ({params}) =>
-        queryClient.ensureQueryData(
-          retrieveFolderOptions(Number(params.folderId!)),
-        ),
-      children: [
-        {
-          index: true,
-          lazy: () =>
-            import('@app/dashboard/folders/folder-details-page/folder-settings-page'),
+  // qr codes — admin only (disabled from creator dashboard)
+  if (!isDashboard) {
+    routes.push(
+      {
+        path: 'qr-codes',
+        lazy: () =>
+          import('@app/dashboard/qr-codes/qr-codes-datatable-page/qr-codes-datatable-page'),
+        loader: ({request}) =>
+          queryClient.ensureQueryData(
+            listQrCodesOptions(routeType, searchParamsFromUrl(request.url)),
+          ),
+      },
+      {
+        path: 'qr-codes/:qrCodeId',
+        lazy: () =>
+          import('@app/dashboard/qr-codes/qr-code-details-page/qr-code-details-page'),
+        loader: ({params}) =>
+          queryClient.ensureQueryData(
+            retrieveQrCodeOptions(Number(params.qrCodeId!)),
+          ),
+        children: [
+          {
+            index: true,
+            lazy: () =>
+              import('@app/dashboard/qr-codes/qr-code-details-page/qr-code-settings-page'),
+          },
+          {
+            path: 'insights',
+            lazy: () =>
+              import('@app/dashboard/qr-codes/qr-code-details-page/qr-code-insights-page'),
+          },
+        ],
+      },
+    );
+  }
+
+  // biolinks — kept for both dashboard and admin (storefront editor)
+  routes.push({
+    path: 'biolinks/:biolinkId',
+    lazy: () =>
+      import('@app/dashboard/biolink/biolink-editor/biolink-editor-page'),
+    loader: ({params}) =>
+      queryClient.ensureQueryData(
+        retrieveBiolinkOptions(Number(params.biolinkId!)),
+      ),
+    children: [
+      {
+        index: true,
+        lazy: async () => {
+          const {BiolinkContentTab} =
+            await import('@app/dashboard/biolink/biolink-editor/biolink-editor-page');
+          return {Component: BiolinkContentTab};
         },
-        {
-          path: 'insights',
-          lazy: () =>
-            import('@app/dashboard/folders/folder-details-page/folder-insights-page'),
-        },
-        {
-          path: 'links',
-          lazy: () =>
-            import('@app/dashboard/folders/folder-links-datatable-page/folder-links-datatable-page'),
-          loader: ({request, params}) =>
+      },
+      {
+        path: 'appearance',
+        lazy: () =>
+          import('@app/dashboard/biolink/biolink-editor/appearance/biolink-appearance-tab'),
+      },
+      {
+        path: 'insights',
+        lazy: () => import('@app/dashboard/biolink/biolink-insights-page'),
+      },
+    ],
+  });
+
+  // folders — admin only (disabled from creator dashboard)
+  if (!isDashboard) {
+    routes.push(
+      {
+        path: 'folders',
+        lazy: () =>
+          import('@app/dashboard/folders/folders-datatable-page/folders-datatable-page'),
+        loader: ({request}) =>
+          queryClient.ensureQueryData(
+            listFoldersOptions(routeType, searchParamsFromUrl(request.url)),
+          ),
+      },
+      {
+        path: 'folders/:folderId',
+        lazy: () =>
+          import('@app/dashboard/folders/folder-details-page/folder-details-page'),
+        loader: ({params}) =>
+          queryClient.ensureQueryData(
+            retrieveFolderOptions(Number(params.folderId!)),
+          ),
+        children: [
+          {
+            index: true,
+            lazy: () =>
+              import('@app/dashboard/folders/folder-details-page/folder-settings-page'),
+          },
+          {
+            path: 'insights',
+            lazy: () =>
+              import('@app/dashboard/folders/folder-details-page/folder-insights-page'),
+          },
+          {
+            path: 'links',
+            lazy: () =>
+              import('@app/dashboard/folders/folder-links-datatable-page/folder-links-datatable-page'),
+            loader: ({request, params}) =>
+              queryClient.ensureQueryData(
+                listLinksOptions(routeType, {
+                  ...searchParamsFromUrl(request.url),
+                  folder_id: Number(params.folderId!),
+                }),
+              ),
+          },
+        ],
+      },
+      {
+        path: 'folders/:folderId/links/:linkId',
+        lazy: () =>
+          import('@app/dashboard/links/link-details-page/link-details-page'),
+        loader: ({params}) =>
+          Promise.allSettled([
             queryClient.ensureQueryData(
-              listLinksOptions(routeType, {
-                ...searchParamsFromUrl(request.url),
-                folder_id: Number(params.folderId!),
-              }),
+              retrieveFolderOptions(Number(params.folderId!)),
             ),
-        },
-      ],
-    },
-    {
-      path: 'folders/:folderId/links/:linkId',
-      lazy: () =>
-        import('@app/dashboard/links/link-details-page/link-details-page'),
-      loader: ({params}) =>
-        Promise.allSettled([
-          queryClient.ensureQueryData(
-            retrieveFolderOptions(Number(params.folderId!)),
-          ),
-          queryClient.ensureQueryData(
-            retrieveLinkOptions(Number(params.linkId!)),
-          ),
-        ]),
-      children: [
-        {
-          index: true,
-          lazy: () =>
-            import('@app/dashboard/links/link-details-page/link-settings-page'),
-        },
-        {
-          path: 'insights',
-          lazy: () =>
-            import('@app/dashboard/links/link-details-page/link-insights-page'),
-        },
-      ],
-    },
-    {
-      path: 'folders/:folderId/links/:linkId/edit',
-      lazy: () =>
-        import('@app/dashboard/links/link-details-page/link-settings-page'),
-      loader: ({params}) =>
-        Promise.allSettled([
-          queryClient.ensureQueryData(
-            retrieveFolderOptions(Number(params.folderId!)),
-          ),
-          queryClient.ensureQueryData(
-            retrieveLinkOptions(Number(params.linkId!)),
-          ),
-        ]),
-    },
+            queryClient.ensureQueryData(
+              retrieveLinkOptions(Number(params.linkId!)),
+            ),
+          ]),
+        children: [
+          {
+            index: true,
+            lazy: () =>
+              import('@app/dashboard/links/link-details-page/link-settings-page'),
+          },
+          {
+            path: 'insights',
+            lazy: () =>
+              import('@app/dashboard/links/link-details-page/link-insights-page'),
+          },
+        ],
+      },
+      {
+        path: 'folders/:folderId/links/:linkId/edit',
+        lazy: () =>
+          import('@app/dashboard/links/link-details-page/link-settings-page'),
+        loader: ({params}) =>
+          Promise.allSettled([
+            queryClient.ensureQueryData(
+              retrieveFolderOptions(Number(params.folderId!)),
+            ),
+            queryClient.ensureQueryData(
+              retrieveLinkOptions(Number(params.linkId!)),
+            ),
+          ]),
+      },
+    );
+  }
 
-    // domains
-    {
-      path: 'custom-domains',
-      lazy: () =>
-        import('@app/dashboard/custom-domains/domains-datatable-page'),
-    },
-    {
-      path: 'custom-domains/:domainId',
-      lazy: () => import('@app/dashboard/custom-domains/domain-insights-page'),
-      loader: ({params}) =>
-        queryClient.ensureQueryData(
-          retrieveDomainOptions(Number(params.domainId!)),
-        ),
-    },
-
-    // tracking pixels
-    {
-      path: 'pixels',
-      shouldRevalidate: () => false,
-      lazy: () =>
-        import('@app/dashboard/tracking-pixels/tracking-pixels-datatable-page'),
-      loader: ({request}) =>
-        queryClient.ensureQueryData(
-          listTrackingPixelsOptions(
-            routeType,
-            searchParamsFromUrl(request.url),
+  // custom domains — admin only (disabled from creator dashboard)
+  if (!isDashboard) {
+    routes.push(
+      {
+        path: 'custom-domains',
+        lazy: () =>
+          import('@app/dashboard/custom-domains/domains-datatable-page'),
+      },
+      {
+        path: 'custom-domains/:domainId',
+        lazy: () =>
+          import('@app/dashboard/custom-domains/domain-insights-page'),
+        loader: ({params}) =>
+          queryClient.ensureQueryData(
+            retrieveDomainOptions(Number(params.domainId!)),
           ),
-        ),
-    },
+      },
+    );
+  }
 
-    // overlays
-    {
-      path: 'link-overlays',
-      shouldRevalidate: () => false,
-      lazy: () =>
-        import('@app/dashboard/link-overlays/link-overlays-datatable-page/link-overlays-datatable-page'),
-      loader: ({request}) =>
-        queryClient.ensureQueryData(
-          listLinkOverlaysOptions(routeType, searchParamsFromUrl(request.url)),
-        ),
-    },
-    {
-      path: 'link-overlays/new',
-      lazy: () =>
-        import('@app/dashboard/link-overlays/crupdate/create-link-overlay-page'),
-    },
-    {
-      path: 'link-overlays/:overlayId',
-      lazy: () =>
-        import('@app/dashboard/link-overlays/crupdate/update-link-overlay-page'),
-      loader: ({params}) =>
-        queryClient.ensureQueryData(
-          retrieveLinkOverlayOptions(Number(params.overlayId!)),
-        ),
-    },
+  // tracking pixels — kept for both (PRO growth tool)
+  routes.push({
+    path: 'pixels',
+    shouldRevalidate: () => false,
+    lazy: () =>
+      import('@app/dashboard/tracking-pixels/tracking-pixels-datatable-page'),
+    loader: ({request}) =>
+      queryClient.ensureQueryData(
+        listTrackingPixelsOptions(routeType, searchParamsFromUrl(request.url)),
+      ),
+  });
 
-    // link pages
-    {
-      path: 'link-pages',
-      lazy: () =>
-        import('@app/dashboard/link-pages/link-pages-datatable-page/link-pages-datatable-page'),
-      loader: ({request}) =>
-        queryClient.ensureQueryData(
-          listLinkPagesOptions(routeType, searchParamsFromUrl(request.url)),
-        ),
-    },
-    {
-      path: 'link-pages/new',
-      lazy: () => import('@app/dashboard/link-pages/create-link-page'),
-    },
-    {
-      path: 'link-pages/:pageId',
-      lazy: () => import('@app/dashboard/link-pages/edit-link-page'),
-      loader: ({params}) =>
-        queryClient.ensureQueryData(
-          retrieveLinkPageOptions(Number(params.pageId!)),
-        ),
-    },
-  ];
+  // CTA overlays — admin only (disabled from creator dashboard)
+  if (!isDashboard) {
+    routes.push(
+      {
+        path: 'link-overlays',
+        shouldRevalidate: () => false,
+        lazy: () =>
+          import('@app/dashboard/link-overlays/link-overlays-datatable-page/link-overlays-datatable-page'),
+        loader: ({request}) =>
+          queryClient.ensureQueryData(
+            listLinkOverlaysOptions(
+              routeType,
+              searchParamsFromUrl(request.url),
+            ),
+          ),
+      },
+      {
+        path: 'link-overlays/new',
+        lazy: () =>
+          import('@app/dashboard/link-overlays/crupdate/create-link-overlay-page'),
+      },
+      {
+        path: 'link-overlays/:overlayId',
+        lazy: () =>
+          import('@app/dashboard/link-overlays/crupdate/update-link-overlay-page'),
+        loader: ({params}) =>
+          queryClient.ensureQueryData(
+            retrieveLinkOverlayOptions(Number(params.overlayId!)),
+          ),
+      },
+    );
+  }
+
+  // link pages — admin only (disabled from creator dashboard)
+  if (!isDashboard) {
+    routes.push(
+      {
+        path: 'link-pages',
+        lazy: () =>
+          import('@app/dashboard/link-pages/link-pages-datatable-page/link-pages-datatable-page'),
+        loader: ({request}) =>
+          queryClient.ensureQueryData(
+            listLinkPagesOptions(routeType, searchParamsFromUrl(request.url)),
+          ),
+      },
+      {
+        path: 'link-pages/new',
+        lazy: () => import('@app/dashboard/link-pages/create-link-page'),
+      },
+      {
+        path: 'link-pages/:pageId',
+        lazy: () => import('@app/dashboard/link-pages/edit-link-page'),
+        loader: ({params}) =>
+          queryClient.ensureQueryData(
+            retrieveLinkPageOptions(Number(params.pageId!)),
+          ),
+      },
+    );
+  }
+
   return routes;
 };
 
@@ -326,14 +350,7 @@ export const dashboardRoutes: RouteObject[] = [
     children: [
       {
         index: true,
-        element: <Fragment />,
-        middleware: [
-          () => {
-            if (!getSettingsPreviewMode().isInsideSettingsPreview) {
-              throw redirect(getBootstrapData().auth_redirect_uri);
-            }
-          },
-        ],
+        lazy: () => import('@app/dashboard/dashboard-home-page'),
       },
       {
         path: 'insights',

@@ -10,8 +10,7 @@ return [
         'jpeg', 'webp', 'gif', 'svg', 'ttf', 'otf', 'woff', 'woff2', 'txt', 'csv',
     ],
     'default_benefits' => [
-        'free' => ['max_products' => 7, 'commission_bps' => 1000, 'max_upload_bytes' => 104857600],
-        'pro' => ['max_products' => 50, 'commission_bps' => 500, 'max_upload_bytes' => 524288000],
-        'business' => ['max_products' => null, 'commission_bps' => 200, 'max_upload_bytes' => 2147483648],
+        'free' => ['max_products' => 5, 'commission_bps' => 500, 'max_upload_bytes' => 1073741824],
+        'pro' => ['max_products' => null, 'commission_bps' => 0, 'max_upload_bytes' => 26843545600],
     ],
 ];

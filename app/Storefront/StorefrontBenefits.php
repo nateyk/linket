@@ -17,8 +17,7 @@ class StorefrontBenefits
             return $configured;
         }
 
-        $name = strtolower((string) $plan?->name);
-        $tier = str_contains($name, 'business') ? 'business' : (str_contains($name, 'pro') ? 'pro' : 'free');
+        $tier = $plan?->free ? 'free' : 'pro';
         return config("storefront.default_benefits.$tier");
     }
 }

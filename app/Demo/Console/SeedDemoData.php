@@ -70,8 +70,7 @@ class SeedDemoData extends Command
 
         try {
             if (Product::query()->count() === 0) {
-                $this->generateBasicPlan();
-                $this->generateStandardPlan();
+                $this->generateFreePlan();
                 $this->generateProPlan();
             }
         } catch (\Exception $e) {
@@ -368,7 +367,7 @@ class SeedDemoData extends Command
         DB::commit();
     }
 
-    protected function generateBasicPlan()
+    protected function generateFreePlan()
     {
         [$featureList, $permissions] = $this->getPlanFeaturesAndPermission([
             'visitors' => 1000,
@@ -378,77 +377,27 @@ class SeedDemoData extends Command
             'folders' => 10,
             'pages' => 10,
             'overlays' => 10,
-            'pixels' => 10,
+            'pixels' => 0,
         ]);
 
         (new CrupdateProduct())->execute(
             [
-                'name' => 'Basic',
+                'name' => 'Free',
+                'free' => true,
                 'position' => 1,
                 'feature_list' => $featureList,
                 'permissions' => $permissions,
-                'prices' => [
-                    [
-                        'amount' => 10,
-                        'currency' => 'USD',
-                        'interval' => 'month',
-                        'interval_count' => 1,
-                    ],
-                    [
-                        'amount' => 54,
-                        'currency' => 'USD',
-                        'interval' => 'month',
-                        'interval_count' => 6,
-                    ],
-                    [
-                        'amount' => 96,
-                        'currency' => 'USD',
-                        'interval' => 'month',
-                        'interval_count' => 12,
-                    ],
+                'storefront_benefits' => [
+                    'max_products' => 5,
+                    'commission_bps' => 500,
+                    'max_upload_bytes' => 1073741824,
                 ],
-            ],
-            syncProduct: true,
-        );
-    }
-
-    protected function generateStandardPlan()
-    {
-        [$featureList, $permissions] = $this->getPlanFeaturesAndPermission([
-            'visitors' => 3000,
-            'links' => 150,
-            'biolinks' => 1,
-            'qr_codes' => 150,
-            'folders' => 30,
-            'pages' => 30,
-            'overlays' => 30,
-            'pixels' => 30,
-        ]);
-        (new CrupdateProduct())->execute(
-            [
-                'name' => 'Standard',
-                'position' => 2,
-                'feature_list' => $featureList,
-                'permissions' => $permissions,
-                'recommended' => true,
                 'prices' => [
                     [
-                        'amount' => 15,
+                        'amount' => 0,
                         'currency' => 'USD',
                         'interval' => 'month',
                         'interval_count' => 1,
-                    ],
-                    [
-                        'amount' => 81,
-                        'currency' => 'USD',
-                        'interval' => 'month',
-                        'interval_count' => 6,
-                    ],
-                    [
-                        'amount' => 144,
-                        'currency' => 'USD',
-                        'interval' => 'month',
-                        'interval_count' => 12,
                     ],
                 ],
             ],
@@ -462,24 +411,30 @@ class SeedDemoData extends Command
         (new CrupdateProduct())->execute(
             [
                 'name' => 'Pro',
-                'position' => 3,
+                'position' => 2,
+                'recommended' => true,
                 'feature_list' => $featureList,
                 'permissions' => $permissions,
+                'storefront_benefits' => [
+                    'max_products' => null,
+                    'commission_bps' => 0,
+                    'max_upload_bytes' => 26843545600,
+                ],
                 'prices' => [
                     [
-                        'amount' => 20,
+                        'amount' => 9.99,
                         'currency' => 'USD',
                         'interval' => 'month',
                         'interval_count' => 1,
                     ],
                     [
-                        'amount' => 135,
+                        'amount' => 54,
                         'currency' => 'USD',
                         'interval' => 'month',
                         'interval_count' => 6,
                     ],
                     [
-                        'amount' => 240,
+                        'amount' => 96,
                         'currency' => 'USD',
                         'interval' => 'month',
                         'interval_count' => 12,

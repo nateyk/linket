@@ -14,7 +14,12 @@ import {FormattedDate} from '@ui/i18n/formatted-date';
 import {FormattedNumber} from '@ui/i18n/formatted-number';
 import {Trans} from '@ui/i18n/trans';
 import {Skeleton} from '@ui/skeleton/skeleton';
-import {MousePointerClickIcon} from 'lucide-react';
+import {
+  CircleDollarSignIcon,
+  MousePointerClickIcon,
+  StoreIcon,
+  WalletCardsIcon,
+} from 'lucide-react';
 import {ReactNode} from 'react';
 
 export const usageLabels: Partial<
@@ -26,33 +31,13 @@ export const usageLabels: Partial<
     }
   >
 > = {
-  links: {
-    label: <Trans message="Links" />,
-    icon: sharedDashboardIcons.links,
-  },
-  qr_codes: {
-    label: <Trans message="QR codes" />,
-    icon: sharedDashboardIcons['qr-codes'],
-  },
   biolinks: {
-    label: <Trans message="Link in bio" />,
-    icon: sharedDashboardIcons.biolinks,
+    label: <Trans message="Storefronts" />,
+    icon: <StoreIcon className="size-4" />,
   },
   tracked_events: {
     label: <Trans message="Tracked events" />,
-    icon: <MousePointerClickIcon />,
-  },
-  custom_domains: {
-    label: <Trans message="Custom domains" />,
-    icon: sharedDashboardIcons['custom-domains'],
-  },
-  link_overlays: {
-    label: <Trans message="Link overlays" />,
-    icon: sharedDashboardIcons['link-overlays'],
-  },
-  folders: {
-    label: <Trans message="Folders" />,
-    icon: sharedDashboardIcons.folders,
+    icon: <MousePointerClickIcon className="size-4" />,
   },
   tracking_pixels: {
     label: <Trans message="Tracking pixels" />,
