@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 return new class extends Migration
 {
@@ -38,6 +39,7 @@ return new class extends Migration
             if (!$existingFree) {
                 DB::table('products')->insert([
                     'name' => 'Free',
+                    'uuid' => Str::uuid()->toString(),
                     'free' => true,
                     'recommended' => false,
                     'position' => 1,
