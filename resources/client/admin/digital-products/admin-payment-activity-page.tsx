@@ -6,6 +6,7 @@ import {Card} from '@shadcn/card/card';
 import {Dialog} from '@shadcn/dialog/dialog';
 import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {Input} from '@shadcn/forms/input/input';
+import {Popover} from '@shadcn/popover/popover';
 import {Select} from '@shadcn/forms/select/select';
 import {Table} from '@shadcn/table/table';
 import {Trans} from '@ui/i18n/trans';
@@ -16,6 +17,7 @@ import {
   CalendarClockIcon,
   CheckCircle2Icon,
   CircleAlertIcon,
+  CircleQuestionMarkIcon,
   Clock3Icon,
   EllipsisVerticalIcon,
   ExternalLinkIcon,
@@ -194,14 +196,10 @@ export function Component() {
     <DashboardLayout.MainSection>
       <DashboardLayout.SectionHeader>
         <DashboardLayout.SidebarToggle />
-        <div>
-          <DashboardLayout.SectionTitle>
-            <Trans message="Payment activity" />
-          </DashboardLayout.SectionTitle>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            <Trans message="Review Chapa checkout attempts and their verified payment state." />
-          </p>
-        </div>
+        <DashboardLayout.SectionTitle>
+          <Trans message="Payment activity" />
+          <InfoTrigger />
+        </DashboardLayout.SectionTitle>
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
@@ -279,9 +277,6 @@ export function Component() {
                 <Card.Title>
                   <Trans message="Transactions" />
                 </Card.Title>
-                <Card.Description>
-                  <Trans message="Only Chapa verification can change a payment to paid." />
-                </Card.Description>
               </div>
               {isFiltering && (
                 <Button size="sm" variant="ghost" onClick={clearFilters}>
@@ -895,4 +890,23 @@ function formatDate(value: string) {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
+}
+
+function InfoTrigger() {
+  return (
+    <Popover.Root>
+      <Popover.Trigger
+        render={<Button variant="ghost" size="icon-sm" />}
+        className="text-muted-foreground"
+        openOnHover
+      >
+        <CircleQuestionMarkIcon />
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content>
+          <Trans message="Review Chapa checkout attempts and their verified payment state. Only Chapa verification can change a payment to paid." />
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  );
 }

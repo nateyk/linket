@@ -7,6 +7,7 @@ import {Dialog} from '@shadcn/dialog/dialog';
 import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {Field} from '@shadcn/forms/field';
 import {Input} from '@shadcn/forms/input/input';
+import {Popover} from '@shadcn/popover/popover';
 import {Select} from '@shadcn/forms/select/select';
 import {Textarea} from '@shadcn/forms/textarea/textarea';
 import {Table} from '@shadcn/table/table';
@@ -14,6 +15,7 @@ import {Trans} from '@ui/i18n/trans';
 import {
   BadgeCheckIcon,
   CheckIcon,
+  CircleQuestionMarkIcon,
   ClockIcon,
   EllipsisVerticalIcon,
   EyeIcon,
@@ -184,14 +186,10 @@ export function Component() {
     <DashboardLayout.MainSection>
       <DashboardLayout.SectionHeader>
         <DashboardLayout.SidebarToggle />
-        <div>
-          <DashboardLayout.SectionTitle>
-            <Trans message="Digital Products" />
-          </DashboardLayout.SectionTitle>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            <Trans message="Review creator products before they can be sold on bio pages." />
-          </p>
-        </div>
+        <DashboardLayout.SectionTitle>
+          <Trans message="Digital Products" />
+          <InfoTrigger />
+        </DashboardLayout.SectionTitle>
         <Button
           variant="outline"
           nativeButton={false}
@@ -610,5 +608,24 @@ function StatusBadge({status}: {status: ProductStatus}) {
       <ClockIcon />
       <Trans message="Pending" />
     </Badge>
+  );
+}
+
+function InfoTrigger() {
+  return (
+    <Popover.Root>
+      <Popover.Trigger
+        render={<Button variant="ghost" size="icon-sm" />}
+        className="text-muted-foreground"
+        openOnHover
+      >
+        <CircleQuestionMarkIcon />
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content>
+          <Trans message="Review creator products before they can be sold on bio pages. Approve or reject submissions." />
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   );
 }

@@ -8,12 +8,14 @@ import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {Field} from '@shadcn/forms/field';
 import {Input} from '@shadcn/forms/input/input';
 import {Textarea} from '@shadcn/forms/textarea/textarea';
+import {Popover} from '@shadcn/popover/popover';
 import {Table} from '@shadcn/table/table';
 import {Trans} from '@ui/i18n/trans';
 import {Select} from '@shadcn/forms/select/select';
 import {
   BadgeCheckIcon,
   CheckIcon,
+  CircleQuestionMarkIcon,
   ClockIcon,
   EllipsisVerticalIcon,
   EyeIcon,
@@ -73,8 +75,8 @@ export function Component() {
 
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
-  const [status, setStatus] = useState('');
-  const [documentType, setDocumentType] = useState('');
+  const [status, setStatus] = useState('all');
+  const [documentType, setDocumentType] = useState('all');
 
   const [links, setLinks] = useState<PaginationLinks>();
   const [meta, setMeta] = useState<PaginationMeta & CountersMeta>();
@@ -93,8 +95,8 @@ export function Component() {
       try {
         const params = new URLSearchParams({perPage: '15'});
         if (search) params.set('search', search);
-        if (status) params.set('status', status);
-        if (documentType) params.set('document_type', documentType);
+        if (status !== 'all') params.set('status', status);
+        if (documentType !== 'all') params.set('document_type', documentType);
         if (page > 1) params.set('page', String(page));
 
         const response = await apiClient.get(
@@ -133,8 +135,8 @@ export function Component() {
   const resetFilters = () => {
     setSearchInput('');
     setSearch('');
-    setStatus('');
-    setDocumentType('');
+    setStatus('all');
+    setDocumentType('all');
     setCurrentPage(1);
   };
 
@@ -193,14 +195,10 @@ export function Component() {
     <DashboardLayout.MainSection>
       <DashboardLayout.SectionHeader>
         <DashboardLayout.SidebarToggle />
-        <div>
-          <DashboardLayout.SectionTitle>
-            <Trans message="KYC Verifications" />
-          </DashboardLayout.SectionTitle>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            <Trans message="Review creator identity verification requests." />
-          </p>
-        </div>
+        <DashboardLayout.SectionTitle>
+          <Trans message="KYC Verifications" />
+          <InfoTrigger />
+        </DashboardLayout.SectionTitle>
       </DashboardLayout.SectionHeader>
       <DashboardLayout.SectionContent className="overflow-y-auto">
         <div className="mx-auto w-full max-w-6xl py-6">
@@ -251,14 +249,14 @@ export function Component() {
                   <Select.Root
                     value={documentType}
                     onValueChange={value =>
-                      setDocumentType((value as string) ?? '')
+                      setDocumentType(String(value ?? 'all'))
                     }
                   >
                     <Select.Trigger>
                       <Select.Value placeholder="Document Type" />
                     </Select.Trigger>
                     <Select.Content>
-                      <Select.Item value="">
+                      <Select.Item value="all">
                         <Trans message="All types" />
                       </Select.Item>
                       <Select.Item value="national_id">
@@ -273,13 +271,13 @@ export function Component() {
                 <div className="sm:col-span-2">
                   <Select.Root
                     value={status}
-                    onValueChange={value => setStatus((value as string) ?? '')}
+                    onValueChange={value => setStatus(String(value ?? 'all'))}
                   >
                     <Select.Trigger>
                       <Select.Value placeholder="Status" />
                     </Select.Trigger>
                     <Select.Content>
-                      <Select.Item value="">
+                      <Select.Item value="all">
                         <Trans message="All statuses" />
                       </Select.Item>
                       <Select.Item value="pending">
@@ -748,5 +746,24 @@ function DocumentImage({label, src}: {label: string; src?: string}) {
         </div>
       )}
     </div>
+  );
+}
+
+function InfoTrigger() {
+  return (
+    <Popover.Root>
+      <Popover.Trigger
+        render={<Button variant="ghost" size="icon-sm" />}
+        className="text-muted-foreground"
+        openOnHover
+      >
+        <CircleQuestionMarkIcon />
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content>
+          <Trans message="Review and approve or reject identity documents submitted by creators for KYC verification." />
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   );
 }

@@ -7,12 +7,14 @@ import {Card} from '@shadcn/card/card';
 import {Dialog} from '@shadcn/dialog/dialog';
 import {Field} from '@shadcn/forms/field';
 import {Input} from '@shadcn/forms/input/input';
+import {Popover} from '@shadcn/popover/popover';
 import {Select} from '@shadcn/forms/select/select';
 import {Table} from '@shadcn/table/table';
 import {Trans} from '@ui/i18n/trans';
 import {
   BanknoteIcon,
   CheckCircleIcon,
+  CircleQuestionMarkIcon,
   ClockIcon,
   EyeIcon,
   SendIcon,
@@ -153,16 +155,13 @@ export function Component() {
     <DashboardLayout.MainSection>
       <DashboardLayout.SectionHeader>
         <DashboardLayout.SidebarToggle />
-        <div>
-          <DashboardLayout.SectionTitle>
-            <Trans message="Withdrawals" />
-          </DashboardLayout.SectionTitle>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            <Trans message="Review and manage creator withdrawal requests." />
-          </p>
-        </div>
+        <DashboardLayout.SectionTitle>
+          <Trans message="Withdrawals" />
+          <InfoTrigger />
+        </DashboardLayout.SectionTitle>
         <Button
           variant="outline"
+          nativeButton={false}
           render={<Link to="/admin/financial/withdrawal-methods" />}
         >
           <BanknoteIcon />
@@ -197,9 +196,6 @@ export function Component() {
               <Card.Title>
                 <Trans message="Withdrawal requests" />
               </Card.Title>
-              <Card.Description>
-                <Trans message="Search, filter and manage payout requests submitted by creators." />
-              </Card.Description>
             </Card.Header>
             <Card.Content>
               <div className="mb-5 flex flex-wrap items-end gap-3">
@@ -532,4 +528,23 @@ function formatDate(value: string) {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
+}
+
+function InfoTrigger() {
+  return (
+    <Popover.Root>
+      <Popover.Trigger
+        render={<Button variant="ghost" size="icon-sm" />}
+        className="text-muted-foreground"
+        openOnHover
+      >
+        <CircleQuestionMarkIcon />
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content>
+          <Trans message="Review and manage creator withdrawal requests. Approve, process, or reject payout requests." />
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  );
 }
