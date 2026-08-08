@@ -5,7 +5,7 @@ import {Badge} from '@shadcn/badge/badge';
 import {Button} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
 import {Dialog} from '@shadcn/dialog/dialog';
-import {Field} from '@shadcn/forms/field';
+import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {Input} from '@shadcn/forms/input/input';
 import {Popover} from '@shadcn/popover/popover';
 import {Select} from '@shadcn/forms/select/select';
@@ -16,7 +16,9 @@ import {
   CheckCircleIcon,
   CircleQuestionMarkIcon,
   ClockIcon,
+  EllipsisVerticalIcon,
   EyeIcon,
+  InboxIcon,
   SendIcon,
   TrashIcon,
   XCircleIcon,
@@ -198,97 +200,76 @@ export function Component() {
               </Card.Title>
             </Card.Header>
             <Card.Content>
-              <div className="mb-5 flex flex-wrap items-end gap-3">
-                <Field.Root className="w-full max-w-60">
-                  <Field.Label>
-                    <Trans message="Search" />
-                  </Field.Label>
-                  <Input
-                    value={searchInput}
-                    onChange={e => setSearchInput(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && submitSearch()}
-                    placeholder="ID, user, method, destination…"
-                  />
-                </Field.Root>
-                <Field.Root className="w-40">
-                  <Field.Label>
-                    <Trans message="From" />
-                  </Field.Label>
-                  <Input
-                    type="date"
-                    value={dateFrom}
-                    onChange={e => setDateFrom(e.target.value)}
-                  />
-                </Field.Root>
-                <Field.Root className="w-40">
-                  <Field.Label>
-                    <Trans message="To" />
-                  </Field.Label>
-                  <Input
-                    type="date"
-                    value={dateTo}
-                    onChange={e => setDateTo(e.target.value)}
-                  />
-                </Field.Root>
-                <Field.Root className="w-44">
-                  <Field.Label>
-                    <Trans message="Status" />
-                  </Field.Label>
-                  <Select.Root
-                    value={status}
-                    onValueChange={value => {
-                      setStatus(value ?? '');
-                      setPage(1);
-                    }}
-                  >
-                    <Select.Trigger>
-                      <Select.Value
-                        placeholder={<Trans message="All statuses" />}
-                      />
-                    </Select.Trigger>
-                    <Select.Content>
-                      {statusOrder.map(key => (
-                        <Select.Item key={key} value={key}>
-                          <Trans message={statusLabels[key]} />
-                        </Select.Item>
-                      ))}
-                    </Select.Content>
-                  </Select.Root>
-                </Field.Root>
-                <Field.Root className="w-44">
-                  <Field.Label>
-                    <Trans message="Method" />
-                  </Field.Label>
-                  <Select.Root
-                    value={method}
-                    onValueChange={value => {
-                      setMethod(value ?? '');
-                      setPage(1);
-                    }}
-                  >
-                    <Select.Trigger>
-                      <Select.Value
-                        placeholder={<Trans message="All methods" />}
-                      />
-                    </Select.Trigger>
-                    <Select.Content>
-                      {methods.map(item => (
-                        <Select.Item key={item.id} value={item.name}>
-                          {item.name}
-                        </Select.Item>
-                      ))}
-                    </Select.Content>
-                  </Select.Root>
-                </Field.Root>
-                <div className="flex gap-2">
-                  <Button color="primary" onClick={submitSearch}>
-                    <Trans message="Search" />
-                  </Button>
-                  <Button variant="outline" onClick={resetFilters}>
-                    <XIcon />
-                    <Trans message="Reset" />
-                  </Button>
-                </div>
+              <div className="border-b p-4">
+                <form
+                  className="grid grid-cols-1 gap-3 sm:grid-cols-12"
+                  onSubmit={e => {
+                    e.preventDefault();
+                    submitSearch();
+                  }}
+                >
+                  <div className="sm:col-span-4">
+                    <Input
+                      value={searchInput}
+                      onChange={e => setSearchInput(e.target.value)}
+                      placeholder="ID, user, method, destination…"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Input
+                      type="date"
+                      value={dateFrom}
+                      onChange={e => setDateFrom(e.target.value)}
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Input
+                      type="date"
+                      value={dateTo}
+                      onChange={e => setDateTo(e.target.value)}
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Select.Root
+                      value={status}
+                      onValueChange={value => {
+                        setStatus(value ?? '');
+                        setPage(1);
+                      }}
+                    >
+                      <Select.Trigger>
+                        <Select.Value placeholder="All statuses" />
+                      </Select.Trigger>
+                      <Select.Content>
+                        {statusOrder.map(key => (
+                          <Select.Item key={key} value={key}>
+                            <Trans message={statusLabels[key]} />
+                          </Select.Item>
+                        ))}
+                      </Select.Content>
+                    </Select.Root>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Select.Root
+                      value={method}
+                      onValueChange={value => {
+                        setMethod(value ?? '');
+                        setPage(1);
+                      }}
+                    >
+                      <Select.Trigger>
+                        <Select.Value placeholder="All methods" />
+                      </Select.Trigger>
+                      <Select.Content>
+                        {methods.map(item => (
+                          <Select.Item key={item.id} value={item.name}>
+                            {item.name}
+                          </Select.Item>
+                        ))}
+                      </Select.Content>
+                    </Select.Root>
+                  </div>
+                </form>
               </div>
 
               <div className="overflow-x-auto">
@@ -320,14 +301,7 @@ export function Component() {
                   </Table.Header>
                   <Table.Body>
                     {loading ? (
-                      <Table.Row>
-                        <Table.Cell
-                          colSpan={7}
-                          className="h-28 text-center text-muted-foreground"
-                        >
-                          <Trans message="Loading…" />
-                        </Table.Cell>
-                      </Table.Row>
+                      <LoadingRows />
                     ) : payouts.length ? (
                       payouts.map(payout => (
                         <Table.Row key={payout.id}>
@@ -357,40 +331,50 @@ export function Component() {
                           <Table.Cell className="text-muted-foreground">
                             {formatDate(payout.created_at)}
                           </Table.Cell>
-                          <Table.Cell className="text-end">
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                size="xs"
-                                variant="outline"
-                                color="primary"
-                                render={
-                                  <Link
-                                    to={`/admin/withdrawals/${payout.id}/review`}
-                                  />
-                                }
-                              >
-                                <EyeIcon />
-                                <Trans message="Review" />
-                              </Button>
-                              <Button
-                                size="icon-sm"
-                                variant="outline"
-                                color="danger"
-                                onClick={() => setDeleteTarget(payout)}
-                              >
-                                <TrashIcon />
-                              </Button>
+                          <Table.Cell>
+                            <div className="flex justify-end">
+                              <Dropdown>
+                                <Dropdown.Trigger
+                                  className="flex size-8 items-center justify-center rounded-input hover:bg-muted"
+                                  aria-label="Actions"
+                                >
+                                  <EllipsisVerticalIcon className="size-4 text-muted-foreground" />
+                                </Dropdown.Trigger>
+                                <Dropdown.Content align="end">
+                                  <Dropdown.Item
+                                    onClick={() =>
+                                      (window.location.href = `/admin/withdrawals/${payout.id}/review`)
+                                    }
+                                  >
+                                    <EyeIcon className="size-4" />
+                                    <Trans message="Review" />
+                                  </Dropdown.Item>
+                                  <Dropdown.Separator />
+                                  <Dropdown.Item
+                                    className="text-destructive focus:text-destructive"
+                                    onClick={() => setDeleteTarget(payout)}
+                                  >
+                                    <TrashIcon className="size-4" />
+                                    <Trans message="Delete" />
+                                  </Dropdown.Item>
+                                </Dropdown.Content>
+                              </Dropdown>
                             </div>
                           </Table.Cell>
                         </Table.Row>
                       ))
                     ) : (
                       <Table.Row>
-                        <Table.Cell
-                          colSpan={7}
-                          className="h-28 text-center text-muted-foreground"
-                        >
-                          <Trans message="No withdrawal requests found." />
+                        <Table.Cell colSpan={7}>
+                          <div className="flex flex-col items-center py-12 text-center">
+                            <InboxIcon className="mb-3 size-10 text-muted-foreground/50" />
+                            <p className="font-medium">
+                              <Trans message="No withdrawal requests found" />
+                            </p>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              <Trans message="Requests will appear here when creators request payouts." />
+                            </p>
+                          </div>
                         </Table.Cell>
                       </Table.Row>
                     )}
@@ -498,6 +482,20 @@ function CounterCard({
         {formatMoney(counter?.amount ?? 0, 'USD')}
       </p>
     </button>
+  );
+}
+
+function LoadingRows() {
+  return (
+    <>
+      {Array.from({length: 5}, (_, index) => (
+        <Table.Row key={index}>
+          <Table.Cell colSpan={7}>
+            <div className="h-7 animate-pulse rounded-input bg-muted" />
+          </Table.Cell>
+        </Table.Row>
+      ))}
+    </>
   );
 }
 
