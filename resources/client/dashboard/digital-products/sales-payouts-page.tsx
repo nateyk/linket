@@ -1,21 +1,27 @@
 import {apiClient} from '@common/http/query-client';
+import {getApiErrorMessage} from '@common/http/errors/parsed-api-error';
+import {PaginatedResource} from '@common/http/backend-response/pagination-response';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {Badge} from '@shadcn/badge/badge';
 import {Button} from '@shadcn/button/button';
-import {Field} from '@shadcn/forms/field';
-import {Input} from '@shadcn/forms/input/input';
+import {Card} from '@shadcn/card/card';
+import {Dialog} from '@shadcn/dialog/dialog';
+import {Popover} from '@shadcn/popover/popover';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {Table} from '@shadcn/table/table';
 import {Trans} from '@ui/i18n/trans';
+import {BackendPagination} from '@shadcn/table/utils/table-pagination';
+import {Link} from 'react-router';
 import {
   BanknoteArrowUpIcon,
-  CircleDollarSignIcon,
-  LandmarkIcon,
+  CheckCircleIcon,
+  CircleQuestionMarkIcon,
   Clock3Icon,
+  InboxIcon,
   RefreshCwIcon,
-  WalletCardsIcon,
+  TriangleAlertIcon,
 } from 'lucide-react';
-import {useCallback, useEffect, useState} from 'react';
+import {ReactNode, useCallback, useEffect, useState} from 'react';
 
 type Summary = {
   gross_sales_cents: number;
@@ -25,6 +31,7 @@ type Summary = {
   reserved_payout_cents: number;
   paid_out_cents: number;
   lifetime_earnings_cents: number;
+  currency: string;
 };
 
 type Order = {
@@ -36,112 +43,100 @@ type Order = {
   product?: {title: string};
 };
 
+type PayoutStatus =
+  | 'requested'
+  | 'processing'
+  | 'paid'
+  | 'rejected'
+  | 'cancelled';
+
 type Payout = {
   id: number;
   amount_cents: number;
   currency: string;
-  status: string;
+  status: PayoutStatus;
   payout_method_label?: string | null;
+  withdrawal_method_name?: string | null;
   created_at: string;
 };
 
 type PayoutMethod = {
   id: number;
   type: 'bank_transfer' | 'paypal' | 'other';
+  withdrawal_method_id?: number | null;
   account_holder: string;
   display_label: string;
-  withdrawal_method_id?: number | null;
+};
+
+const statusLabels: Record<PayoutStatus, string> = {
+  requested: 'Requested',
+  processing: 'Processing',
+  paid: 'Paid',
+  rejected: 'Rejected',
+  cancelled: 'Cancelled',
 };
 
 export function Component() {
   const [summary, setSummary] = useState<Summary>();
   const [orders, setOrders] = useState<Order[]>([]);
   const [payouts, setPayouts] = useState<Payout[]>([]);
+  const [payoutsPagination, setPayoutsPagination] =
+    useState<PaginatedResource>();
   const [method, setMethod] = useState<PayoutMethod>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
-  const [payoutAmount, setPayoutAmount] = useState('');
+  const [page, setPage] = useState(1);
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [withdrawError, setWithdrawError] = useState<string>();
   const [requesting, setRequesting] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(undefined);
-
     try {
-      const [salesResponse, payoutsResponse, methodResponse] =
-        await Promise.all([
-          fetch('/api/v1/digital-products/sales', {
-            credentials: 'same-origin',
-            headers: {Accept: 'application/json'},
-          }),
-          fetch('/api/v1/digital-products/payout-requests', {
-            credentials: 'same-origin',
-            headers: {Accept: 'application/json'},
-          }),
-          fetch('/api/v1/digital-products/payout-method', {
-            credentials: 'same-origin',
-            headers: {Accept: 'application/json'},
-          }),
-        ]);
-
-      if (!salesResponse.ok || !payoutsResponse.ok) {
-        throw new Error('Unable to load sales and payouts.');
-      }
-
-      const [sales, payoutCollection] = await Promise.all([
-        salesResponse.json(),
-        payoutsResponse.json(),
+      const [salesResponse, payoutsResponse] = await Promise.all([
+        apiClient.get('/api/v1/digital-products/sales'),
+        apiClient.get(`/api/v1/digital-products/payout-requests?page=${page}`),
       ]);
-      setSummary(sales.summary ?? {});
-      setOrders(sales.orders?.data ?? sales.orders ?? []);
-      setPayouts(payoutCollection.data ?? []);
-
-      if (methodResponse.ok) {
-        const item = (await methodResponse.json()).data as PayoutMethod | null;
-        if (item) {
-          setMethod(item);
-        }
+      const sales = salesResponse.data;
+      setSummary(sales.summary);
+      setOrders(sales.orders?.data ?? []);
+      setPayouts(payoutsResponse.data.data ?? []);
+      setPayoutsPagination(payoutsResponse.data);
+      // payout-method may 404 if the creator hasn't set one up yet
+      try {
+        const methodResponse = await apiClient.get(
+          '/api/v1/digital-products/payout-method',
+        );
+        setMethod(methodResponse.data.data ?? undefined);
+      } catch {
+        setMethod(undefined);
       }
     } catch (reason) {
-      setError(
-        reason instanceof Error
-          ? reason.message
-          : 'Unable to load sales and payouts.',
-      );
+      setError(getApiErrorMessage(reason));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  const currency = orders[0]?.currency ?? payouts[0]?.currency ?? 'ETB';
+  const currency = summary?.currency ?? 'ETB';
   const available = summary?.available_for_payout_cents ?? 0;
 
   const requestPayout = async () => {
-    const amount = Math.round(Number(payoutAmount) * 100);
-
-    if (!method) {
-      setError('Add a withdrawal method before requesting a payout.');
-      return;
-    }
-    if (!amount || amount > available) {
-      setError('Enter an amount within your available balance.');
-      return;
-    }
-
     setRequesting(true);
-    setError(undefined);
+    setWithdrawError(undefined);
     try {
       await apiClient.post('/api/v1/digital-products/payout-requests', {
-        amount_cents: amount,
+        amount_cents: available,
       });
-      setPayoutAmount('');
+      setWithdrawOpen(false);
       await load();
-    } catch {
-      setError('Unable to request payout.');
+    } catch (reason) {
+      setWithdrawError(getApiErrorMessage(reason, 'amount_cents'));
     } finally {
       setRequesting(false);
     }
@@ -154,8 +149,8 @@ export function Component() {
         `/api/v1/digital-products/payout-requests/${payout.id}/cancel`,
       );
       await load();
-    } catch {
-      setError('Unable to cancel this payout request.');
+    } catch (reason) {
+      setError(getApiErrorMessage(reason));
     }
   };
 
@@ -165,6 +160,7 @@ export function Component() {
         <DashboardLayout.SidebarToggle />
         <DashboardLayout.SectionTitle>
           <Trans message="Sales & Payouts" />
+          <InfoTrigger />
         </DashboardLayout.SectionTitle>
         <Button
           variant="outline"
@@ -174,117 +170,121 @@ export function Component() {
           <RefreshCwIcon />
           <Trans message="Refresh" />
         </Button>
+        <Button disabled={loading} onClick={() => setWithdrawOpen(true)}>
+          <BanknoteArrowUpIcon />
+          <Trans message="Withdraw" />
+        </Button>
       </DashboardLayout.SectionHeader>
       <DashboardLayout.SectionContent className="overflow-y-auto">
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 py-4">
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 py-6">
           {error && (
-            <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+            <div className="rounded-input border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
               {error}
             </div>
           )}
 
-          <SummaryStrip
-            summary={summary}
-            currency={currency}
-            loading={loading}
-          />
-
-          <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_18rem]">
-            <main className="min-w-0 space-y-5">
-              <SalesTable orders={orders} loading={loading} />
-              <PayoutHistory
-                payouts={payouts}
-                onCancel={payout => void cancelPayout(payout)}
-              />
-            </main>
-            <aside className="space-y-5 xl:border-l xl:pl-5">
-              <RequestPayout
-                available={available}
-                currency={currency}
-                amount={payoutAmount}
-                disabled={!method || available < 1 || requesting}
-                onAmountChange={setPayoutAmount}
-                onRequest={() => void requestPayout()}
-              />
-            </aside>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <CounterCard
+              icon={<BanknoteArrowUpIcon />}
+              label="Available balance"
+              value={formatMoney(available, currency)}
+              loading={loading}
+            />
+            <CounterCard
+              icon={<Clock3Icon />}
+              label="Pending withdrawals"
+              value={formatMoney(summary?.reserved_payout_cents ?? 0, currency)}
+              loading={loading}
+            />
+            <CounterCard
+              icon={<CheckCircleIcon />}
+              label="Total withdrawn"
+              value={formatMoney(summary?.paid_out_cents ?? 0, currency)}
+              loading={loading}
+            />
           </div>
+
+          <SalesTable orders={orders} loading={loading} />
+          <PayoutHistory
+            payouts={payouts}
+            loading={loading}
+            pagination={payoutsPagination}
+            onPageChange={setPage}
+            onCancel={payout => void cancelPayout(payout)}
+          />
         </div>
       </DashboardLayout.SectionContent>
+
+      <WithdrawDialog
+        open={withdrawOpen}
+        onOpenChange={setWithdrawOpen}
+        method={method}
+        available={available}
+        currency={currency}
+        requesting={requesting}
+        error={withdrawError}
+        onConfirm={() => void requestPayout()}
+      />
     </DashboardLayout.MainSection>
   );
 }
 
-function SummaryStrip({
-  summary,
-  currency,
+function CounterCard({
+  icon,
+  label,
+  value,
   loading,
 }: {
-  summary?: Summary;
-  currency: string;
+  icon: ReactNode;
+  label: string;
+  value: string;
   loading: boolean;
 }) {
-  const items = [
-    {
-      label: 'Gross sales',
-      value: summary?.gross_sales_cents ?? 0,
-      icon: CircleDollarSignIcon,
-    },
-    {
-      label: 'Your earnings',
-      value: summary?.creator_earnings_cents ?? 0,
-      icon: WalletCardsIcon,
-    },
-    {
-      label: 'Available now',
-      value: summary?.available_for_payout_cents ?? 0,
-      icon: BanknoteArrowUpIcon,
-    },
-    {
-      label: 'On hold',
-      value: summary?.held_earnings_cents ?? 0,
-      icon: Clock3Icon,
-    },
-    {
-      label: 'Reserved',
-      value: summary?.reserved_payout_cents ?? 0,
-      icon: LandmarkIcon,
-    },
-  ];
-
   return (
-    <div className="flex flex-wrap gap-4 sm:gap-6">
-      {items.map(item => {
-        const Icon = item.icon;
-
-        return (
-          <div key={item.label} className="flex items-center gap-2">
-            <Icon className="size-4 text-muted-foreground" />
-            <div>
-              <p className="text-xs text-muted-foreground">
-                <Trans message={item.label} />
-              </p>
-              {loading ? (
-                <Skeleton className="mt-1 h-4 w-16" />
-              ) : (
-                <p className="text-sm font-semibold">
-                  {formatMoney(item.value, currency)}
-                </p>
-              )}
-            </div>
-          </div>
-        );
-      })}
+    <div className="rounded-card border bg-card p-4">
+      <div className="mb-3 flex items-center gap-2 text-muted-foreground">
+        {icon}
+        <p className="text-sm font-medium">
+          <Trans message={label} />
+        </p>
+      </div>
+      {loading ? (
+        <Skeleton className="h-7 w-24" />
+      ) : (
+        <p className="text-2xl font-semibold">{value}</p>
+      )}
     </div>
+  );
+}
+
+function InfoTrigger() {
+  return (
+    <Popover.Root>
+      <Popover.Trigger
+        render={<Button variant="ghost" size="icon-sm" />}
+        className="text-muted-foreground"
+        openOnHover
+      >
+        <CircleQuestionMarkIcon />
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content>
+          <Trans message="Track your digital product sales and withdraw your creator earnings. Payouts are sent to your configured withdrawal method." />
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   );
 }
 
 function SalesTable({orders, loading}: {orders: Order[]; loading: boolean}) {
   return (
-    <section>
-      <SectionHeading title="Recent sales" />
-      {loading ? (
-        <Skeleton className="h-32 w-full" />
-      ) : (
+    <Card.Root>
+      <Card.Header>
+        <Card.Title>
+          <Trans message="Recent sales" />
+        </Card.Title>
+      </Card.Header>
+      <Card.Content>
         <Table.Root>
           <Table.Header>
             <Table.Row>
@@ -300,7 +300,9 @@ function SalesTable({orders, loading}: {orders: Order[]; loading: boolean}) {
             </Table.Row>
           </Table.Header>
           <Table.Body>
-            {orders.length ? (
+            {loading ? (
+              <LoadingRows colSpan={3} />
+            ) : orders.length ? (
               orders.slice(0, 10).map(order => (
                 <Table.Row key={order.id}>
                   <Table.Cell className="font-medium">
@@ -318,162 +320,274 @@ function SalesTable({orders, loading}: {orders: Order[]; loading: boolean}) {
               ))
             ) : (
               <Table.Row>
-                <Table.Cell
-                  colSpan={3}
-                  className="h-20 text-center text-muted-foreground"
-                >
-                  <Trans message="No sales yet." />
+                <Table.Cell colSpan={3}>
+                  <EmptyState
+                    message="No sales yet"
+                    description="Your recent digital product sales will appear here."
+                  />
                 </Table.Cell>
               </Table.Row>
             )}
           </Table.Body>
         </Table.Root>
-      )}
-    </section>
+      </Card.Content>
+    </Card.Root>
   );
 }
 
 function PayoutHistory({
   payouts,
+  loading,
+  pagination,
+  onPageChange,
   onCancel,
 }: {
   payouts: Payout[];
+  loading: boolean;
+  pagination?: PaginatedResource;
+  onPageChange: (page: number) => void;
   onCancel: (payout: Payout) => void;
 }) {
   return (
-    <section>
-      <SectionHeading title="Payout history" />
-      <Table.Root>
-        <Table.Header>
-          <Table.Row>
-            <Table.Head>
-              <Trans message="Requested" />
-            </Table.Head>
-            <Table.Head>
-              <Trans message="Method" />
-            </Table.Head>
-            <Table.Head>
-              <Trans message="Status" />
-            </Table.Head>
-            <Table.Head className="text-end">
-              <Trans message="Amount" />
-            </Table.Head>
-            <Table.Head>
-              <span className="sr-only">
-                <Trans message="Actions" />
-              </span>
-            </Table.Head>
-          </Table.Row>
-        </Table.Header>
-        <Table.Body>
-          {payouts.length ? (
-            payouts.map(payout => (
-              <Table.Row key={payout.id}>
-                <Table.Cell>{formatDate(payout.created_at)}</Table.Cell>
-                <Table.Cell className="text-muted-foreground">
-                  {payout.payout_method_label ?? (
-                    <Trans message="Not specified" />
-                  )}
-                </Table.Cell>
-                <Table.Cell>
-                  <Badge
-                    color={payout.status === 'paid' ? 'positive' : 'warning'}
-                    variant="outline"
-                  >
-                    <Trans message={payout.status} />
-                  </Badge>
-                </Table.Cell>
-                <Table.Cell className="text-end font-medium">
-                  {formatMoney(payout.amount_cents, payout.currency)}
-                </Table.Cell>
-                <Table.Cell className="text-end">
-                  {payout.status === 'requested' && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => onCancel(payout)}
-                    >
-                      <Trans message="Cancel" />
-                    </Button>
-                  )}
+    <Card.Root>
+      <Card.Header>
+        <Card.Title>
+          <Trans message="Payout history" />
+        </Card.Title>
+      </Card.Header>
+      <Card.Content>
+        <Table.Root>
+          <Table.Header>
+            <Table.Row>
+              <Table.Head>
+                <Trans message="Requested" />
+              </Table.Head>
+              <Table.Head>
+                <Trans message="Method" />
+              </Table.Head>
+              <Table.Head>
+                <Trans message="Status" />
+              </Table.Head>
+              <Table.Head className="text-end">
+                <Trans message="Amount" />
+              </Table.Head>
+              <Table.Head>
+                <span className="sr-only">
+                  <Trans message="Actions" />
+                </span>
+              </Table.Head>
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
+            {loading ? (
+              <LoadingRows colSpan={5} />
+            ) : payouts.length ? (
+              payouts.map(payout => (
+                <Table.Row key={payout.id}>
+                  <Table.Cell>{formatDate(payout.created_at)}</Table.Cell>
+                  <Table.Cell className="text-muted-foreground">
+                    {payout.withdrawal_method_name ??
+                      payout.payout_method_label ?? (
+                        <Trans message="Not specified" />
+                      )}
+                  </Table.Cell>
+                  <Table.Cell>
+                    <StatusBadge status={payout.status} />
+                  </Table.Cell>
+                  <Table.Cell className="text-end font-medium">
+                    {formatMoney(payout.amount_cents, payout.currency)}
+                  </Table.Cell>
+                  <Table.Cell className="text-end">
+                    {payout.status === 'requested' && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => onCancel(payout)}
+                      >
+                        <Trans message="Cancel" />
+                      </Button>
+                    )}
+                  </Table.Cell>
+                </Table.Row>
+              ))
+            ) : (
+              <Table.Row>
+                <Table.Cell colSpan={5}>
+                  <EmptyState
+                    message="No payout requests yet"
+                    description="Your withdrawal requests will appear here once you make one."
+                  />
                 </Table.Cell>
               </Table.Row>
-            ))
-          ) : (
-            <Table.Row>
-              <Table.Cell
-                colSpan={5}
-                className="h-20 text-center text-muted-foreground"
-              >
-                <Trans message="No payout requests yet." />
-              </Table.Cell>
-            </Table.Row>
-          )}
-        </Table.Body>
-      </Table.Root>
-    </section>
+            )}
+          </Table.Body>
+        </Table.Root>
+        {pagination && (
+          <BackendPagination
+            response={pagination}
+            onPageChange={onPageChange}
+          />
+        )}
+      </Card.Content>
+    </Card.Root>
   );
 }
 
-function SectionHeading({title}: {title: string}) {
+function StatusBadge({status}: {status: PayoutStatus}) {
+  const variants: Record<PayoutStatus, 'outline' | 'positive' | 'destructive'> =
+    {
+      requested: 'outline',
+      processing: 'outline',
+      paid: 'positive',
+      rejected: 'destructive',
+      cancelled: 'destructive',
+    };
   return (
-    <h2 className="mb-2 text-sm font-medium text-muted-foreground">
-      <Trans message={title} />
-    </h2>
+    <Badge variant={variants[status]}>
+      <Trans message={statusLabels[status]} />
+    </Badge>
   );
 }
 
-function RequestPayout({
-  available,
-  currency,
-  amount,
-  disabled,
-  onAmountChange,
-  onRequest,
+function LoadingRows({colSpan}: {colSpan: number}) {
+  return (
+    <>
+      {Array.from({length: 5}, (_, index) => (
+        <Table.Row key={index}>
+          <Table.Cell colSpan={colSpan}>
+            <div className="h-7 animate-pulse rounded-input bg-muted" />
+          </Table.Cell>
+        </Table.Row>
+      ))}
+    </>
+  );
+}
+
+function EmptyState({
+  message,
+  description,
 }: {
-  available: number;
-  currency: string;
-  amount: string;
-  disabled: boolean;
-  onAmountChange: (value: string) => void;
-  onRequest: () => void;
+  message: string;
+  description: string;
 }) {
   return (
-    <section className="border-t pt-4">
-      <SectionHeading title="Request payout" />
-      <p className="mb-3 text-sm">
-        <Trans
-          message="Available: :amount"
-          values={{amount: formatMoney(available, currency)}}
-        />
+    <div className="flex flex-col items-center py-12 text-center">
+      <InboxIcon className="mb-3 size-10 text-muted-foreground/50" />
+      <p className="font-medium">
+        <Trans message={message} />
       </p>
-      <div className="space-y-3">
-        <Field.Root>
-          <Field.Label>
-            <Trans message="Amount" />
-          </Field.Label>
-          <Input
-            type="number"
-            min="0.01"
-            step="0.01"
-            value={amount}
-            onChange={event => onAmountChange(event.target.value)}
-            placeholder="0.00"
-          />
-        </Field.Root>
-        <Button className="w-full" disabled={disabled} onClick={onRequest}>
-          <BanknoteArrowUpIcon />
-          <Trans message="Request payout" />
-        </Button>
-      </div>
-    </section>
+      <p className="mt-1 text-sm text-muted-foreground">
+        <Trans message={description} />
+      </p>
+    </div>
+  );
+}
+
+function WithdrawDialog({
+  open,
+  onOpenChange,
+  method,
+  available,
+  currency,
+  requesting,
+  error,
+  onConfirm,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  method?: PayoutMethod;
+  available: number;
+  currency: string;
+  requesting: boolean;
+  error?: string;
+  onConfirm: () => void;
+}) {
+  return (
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+      <Dialog.Portal>
+        <Dialog.Backdrop />
+        <Dialog.Content className="sm:max-w-md">
+          <Dialog.Header>
+            <Dialog.Title>
+              <BanknoteArrowUpIcon />
+              <Trans message="Withdraw earnings" />
+            </Dialog.Title>
+          </Dialog.Header>
+          <Dialog.Body>
+            {!method ? (
+              <div className="flex items-start gap-3 rounded-input border border-primary/30 bg-primary/5 p-4">
+                <TriangleAlertIcon className="mt-0.5 size-5 text-primary" />
+                <div className="text-sm">
+                  <p className="font-medium">
+                    <Trans message="No payout method set up" />
+                  </p>
+                  <p className="mt-1 text-muted-foreground">
+                    <Trans message="Add a withdrawal method in your account settings before requesting a payout." />
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-3"
+                    nativeButton={false}
+                    render={<Link to="/account-settings/billing" />}
+                  >
+                    <Trans message="Set up now" />
+                  </Button>
+                </div>
+              </div>
+            ) : available <= 0 ? (
+              <div className="flex items-start gap-3 rounded-input border border-warning/30 bg-warning/5 p-4">
+                <TriangleAlertIcon className="mt-0.5 size-5 text-warning" />
+                <div className="text-sm">
+                  <p className="font-medium">
+                    <Trans message="Not enough balance" />
+                  </p>
+                  <p className="mt-1 text-muted-foreground">
+                    <Trans message="You don't have enough available balance to withdraw yet. Keep selling to build up your earnings." />
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p>
+                  <Trans
+                    message="Withdraw :amount to :account via :method?"
+                    values={{
+                      amount: formatMoney(available, currency),
+                      account: method.account_holder,
+                      method: method.display_label,
+                    }}
+                  />
+                </p>
+                {error && (
+                  <div className="rounded-input border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
+                    {error}
+                  </div>
+                )}
+              </div>
+            )}
+          </Dialog.Body>
+          <Dialog.Footer>
+            <Dialog.CloseButton variant="outline">
+              <Trans message="Cancel" />
+            </Dialog.CloseButton>
+            {method && available > 0 && (
+              <Button disabled={requesting} onClick={onConfirm}>
+                <Trans message="Confirm withdrawal" />
+              </Button>
+            )}
+          </Dialog.Footer>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }
 
 function formatMoney(cents: number, currency: string) {
-  return new Intl.NumberFormat(undefined, {style: 'currency', currency}).format(
-    cents / 100,
-  );
+  return new Intl.NumberFormat(undefined, {
+    style: 'currency',
+    currency,
+  }).format(cents / 100);
 }
 
 function formatDate(value: string) {
