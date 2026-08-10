@@ -1,3 +1,4 @@
+import {BuilderCollapsibleSection} from '@app/dashboard/biolink/biolink-editor/builder-section-header';
 import {articleEditorTipTapExtensions} from '@common/article-editor/article-editor-tiptap-extensions';
 import {apiClient} from '@common/http/query-client';
 import {ClearFormatButton} from '@common/text-editor/menubar/clear-format-button';
@@ -18,13 +19,11 @@ import {Checkbox} from '@shadcn/forms/checkbox/checkbox';
 import {Field} from '@shadcn/forms/field';
 import {Input} from '@shadcn/forms/input/input';
 import {Progress} from '@shadcn/progress/progress';
+import {Separator} from '@shadcn/separator';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {Trans} from '@ui/i18n/trans';
 import {
-  ArrowLeftIcon,
   BookIcon,
-  ChevronDownIcon,
-  ChevronUpIcon,
   DownloadIcon,
   FileIcon,
   FileTextIcon,
@@ -34,9 +33,10 @@ import {
   SendIcon,
   Trash2Icon,
   UploadIcon,
+  PackageOpenIcon,
 } from 'lucide-react';
 import {type ChangeEvent, useCallback, useEffect, useState} from 'react';
-import {Link, useNavigate, useParams, useSearchParams} from 'react-router';
+import {useNavigate, useParams, useSearchParams} from 'react-router';
 
 type FileEntry = {
   id: number;
@@ -64,7 +64,10 @@ import type {ProductType} from './product-type-selection-page';
 
 type SetupSection = 'details' | 'files' | 'bio-pages';
 
-const PRODUCT_TYPE_CONFIG: Record<ProductType, {label: string; icon: typeof DownloadIcon}> = {
+const PRODUCT_TYPE_CONFIG: Record<
+  ProductType,
+  {label: string; icon: typeof DownloadIcon}
+> = {
   digital: {label: 'Digital product', icon: DownloadIcon},
   ebook: {label: 'E-book', icon: BookIcon},
   audio: {label: 'Audio', icon: HeadphonesIcon},
@@ -72,10 +75,26 @@ const PRODUCT_TYPE_CONFIG: Record<ProductType, {label: string; icon: typeof Down
 
 const SECTION_ORDER: SetupSection[] = ['details', 'files', 'bio-pages'];
 
-const SECTION_META: Record<SetupSection, {label: string; icon: typeof FileTextIcon; description: string}> = {
-  details: {label: 'Product details', icon: FileTextIcon, description: 'Add the basic information customers will see before purchasing.'},
-  files: {label: 'Product files', icon: FileIcon, description: 'Upload the files customers will receive after purchase.'},
-  'bio-pages': {label: 'Bio pages', icon: Link2Icon, description: 'Select the bio pages where this product will be displayed.'},
+const SECTION_META: Record<
+  SetupSection,
+  {label: string; icon: typeof FileTextIcon; description: string}
+> = {
+  details: {
+    label: 'Product details',
+    icon: FileTextIcon,
+    description:
+      'Add the basic information customers will see before purchasing.',
+  },
+  files: {
+    label: 'Product files',
+    icon: FileIcon,
+    description: 'Upload the files customers will receive after purchase.',
+  },
+  'bio-pages': {
+    label: 'Bio pages',
+    icon: Link2Icon,
+    description: 'Select the bio pages where this product will be displayed.',
+  },
 };
 
 export function Component() {
@@ -100,12 +119,14 @@ function DigitalProductForm() {
   const [coverFileId, setCoverFileId] = useState<number | null>(null);
   const [files, setFiles] = useState<FileEntry[]>([]);
   const [biolinkIds, setBiolinkIds] = useState<number[]>([]);
-  const [openSections, setOpenSections] = useState<Set<SetupSection>>(new Set(['details']));
   const [loading, setLoading] = useState(!!productId);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string>();
   const [convertToEtb, setConvertToEtb] = useState(false);
+  const [openSection, setOpenSection] = useState<SetupSection | null>(
+    'details',
+  );
 
   const typeConfig = productType ? PRODUCT_TYPE_CONFIG[productType] : null;
   const TypeIcon = typeConfig?.icon ?? DownloadIcon;
@@ -133,13 +154,10 @@ function DigitalProductForm() {
 
         if (!productId) return;
 
-        const response = await fetch(
-          `/api/v1/digital-products/${productId}`,
-          {
-            credentials: 'same-origin',
-            headers: {Accept: 'application/json'},
-          },
-        );
+        const response = await fetch(`/api/v1/digital-products/${productId}`, {
+          credentials: 'same-origin',
+          headers: {Accept: 'application/json'},
+        });
 
         if (!response.ok) {
           throw new Error(
@@ -181,13 +199,25 @@ function DigitalProductForm() {
         priceCents < 50 ||
         !files.length
       ) {
-        setError('Add a title, a price of at least ETB 0.50, and one downloadable file.');
-        setOpenSections(new Set(['details', 'files']));
+        setOpenSection(
+          !title.trim() || !Number.isFinite(priceCents) || priceCents < 50
+            ? 'details'
+            : 'files',
+        );
+        setError(
+          'Add a title, a price of at least ETB 0.50, and one downloadable file.',
+        );
         return;
       }
-      if (product && product.currency.toLowerCase() !== 'etb' && !convertToEtb) {
-        setError('Enter the correct ETB price and confirm the currency conversion before saving this product.');
-        setOpenSections(new Set(['details']));
+      if (
+        product &&
+        product.currency.toLowerCase() !== 'etb' &&
+        !convertToEtb
+      ) {
+        setOpenSection('details');
+        setError(
+          'Enter the correct ETB price and confirm the currency conversion before saving this product.',
+        );
         return;
       }
 
@@ -226,7 +256,17 @@ function DigitalProductForm() {
         setSubmitting(false);
       }
     },
-    [biolinkIds, convertToEtb, coverFileId, description, files, navigate, price, product, title],
+    [
+      biolinkIds,
+      convertToEtb,
+      coverFileId,
+      description,
+      files,
+      navigate,
+      price,
+      product,
+      title,
+    ],
   );
 
   const remove = async () => {
@@ -243,23 +283,14 @@ function DigitalProductForm() {
     }
   };
 
-  const toggleSection = (section: SetupSection) => {
-    setOpenSections(prev => {
-      const next = new Set(prev);
-      if (next.has(section)) {
-        next.delete(section);
-      } else {
-        next.add(section);
-      }
-      return next;
-    });
-  };
-
   const isSectionComplete = (section: SetupSection) => {
-    if (section === 'details') return title.trim().length > 0 && price.trim().length > 0;
+    if (section === 'details')
+      return title.trim().length > 0 && price.trim().length > 0;
     if (section === 'files') return files.length > 0;
     return biolinkIds.length > 0;
   };
+
+  const completedSections = SECTION_ORDER.filter(isSectionComplete).length;
 
   return (
     <DashboardLayout.MainSection>
@@ -282,7 +313,9 @@ function DigitalProductForm() {
               onClick={() => void remove()}
             >
               <Trash2Icon className="size-4" />
-              <span className="max-sm:hidden"><Trans message="Delete" /></span>
+              <span className="max-sm:hidden">
+                <Trans message="Delete" />
+              </span>
             </Button>
           )}
           <Button
@@ -293,7 +326,11 @@ function DigitalProductForm() {
           >
             <SaveIcon className="size-4" />
             <span className="max-sm:hidden">
-              {saving ? <Trans message="Saving..." /> : <Trans message="Save draft" />}
+              {saving ? (
+                <Trans message="Saving..." />
+              ) : (
+                <Trans message="Save draft" />
+              )}
             </span>
           </Button>
           <Button
@@ -314,9 +351,9 @@ function DigitalProductForm() {
       </header>
 
       <DashboardLayout.SectionContent className="overflow-y-auto">
-        <div className="mx-auto max-w-2xl px-4 py-6">
+        <div className="mx-auto w-full max-w-7xl px-4 py-5 md:px-6 md:py-6">
           {error && (
-            <div className="mb-5 flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+            <div className="mb-5 flex items-start gap-3 rounded-card-sm border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
               <span className="min-w-0 flex-1">{error}</span>
             </div>
           )}
@@ -324,99 +361,212 @@ function DigitalProductForm() {
           {loading ? (
             <BuilderSkeleton />
           ) : (
-            /* Accordion Sections */
-            <div className="space-y-2">
-              {SECTION_ORDER.map(section => {
-                const meta = SECTION_META[section];
-                const Icon = meta.icon;
-                const isOpen = openSections.has(section);
-                const isComplete = isSectionComplete(section);
-                const count = section === 'files' ? files.length : section === 'bio-pages' ? biolinkIds.length : null;
-
-                return (
-                  <div
-                    key={section}
-                    className="overflow-hidden rounded-lg border bg-background"
+            <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_24rem] xl:gap-6">
+              <div className="flex min-w-0 flex-col gap-4">
+                <div className="flex flex-col gap-3 border-b pb-4 lg:flex-row lg:items-end lg:justify-between">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">
+                      <Trans message="Product setup" />
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      <Trans
+                        message=":completed of 3 sections complete"
+                        values={{completed: completedSections}}
+                      />
+                    </p>
+                  </div>
+                  <Progress.Root
+                    value={(completedSections / SECTION_ORDER.length) * 100}
+                    className="w-full lg:w-48"
+                    aria-label="Product setup progress"
                   >
-                    <button
-                      type="button"
-                      onClick={() => toggleSection(section)}
-                      className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-muted/40"
-                    >
-                      <div className={`flex size-7 items-center justify-center rounded-md ${isComplete ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
-                        {isComplete ? (
-                          <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-                        ) : (
-                          <Icon className="size-4" />
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[14px] font-medium"><Trans message={meta.label} /></span>
-                          {count !== null && count > 0 && (
-                            <Badge variant="secondary" className="h-4 min-w-[16px] px-1 text-[10px]">
+                    <Progress.Track className="h-1.5">
+                      <Progress.Indicator />
+                    </Progress.Track>
+                  </Progress.Root>
+                </div>
+
+                <div className="min-w-0 divide-y overflow-hidden rounded-card border bg-card">
+                  {SECTION_ORDER.map(section => {
+                    const meta = SECTION_META[section];
+                    const Icon = meta.icon;
+                    const isComplete = isSectionComplete(section);
+                    const count =
+                      section === 'files'
+                        ? files.length
+                        : section === 'bio-pages'
+                          ? biolinkIds.length
+                          : null;
+
+                    return (
+                      <BuilderCollapsibleSection
+                        key={section}
+                        open={openSection === section}
+                        onOpenChange={open =>
+                          setOpenSection(open ? section : null)
+                        }
+                        icon={Icon}
+                        isComplete={isComplete}
+                        title={<Trans message={meta.label} />}
+                        description={<Trans message={meta.description} />}
+                        trailing={
+                          count !== null && count > 0 ? (
+                            <Badge
+                              variant="secondary"
+                              className="h-4 min-w-[16px] px-1 text-[10px]"
+                            >
                               {count}
                             </Badge>
+                          ) : undefined
+                        }
+                      >
+                        <div className="max-w-2xl">
+                          {section === 'details' && (
+                            <DetailsPanel
+                              title={title}
+                              description={description}
+                              price={price}
+                              coverUrl={coverUrl}
+                              onTitleChange={setTitle}
+                              onDescriptionChange={setDescription}
+                              onPriceChange={setPrice}
+                              legacyCurrency={product?.currency}
+                              convertToEtb={convertToEtb}
+                              onConvertToEtbChange={setConvertToEtb}
+                              onCoverChange={(url, entry) => {
+                                setCoverUrl(url);
+                                setCoverFileId(entry?.id ?? null);
+                              }}
+                            />
+                          )}
+                          {section === 'files' && (
+                            <FilesPanel
+                              files={files}
+                              onUploaded={file =>
+                                setFiles(current =>
+                                  current.some(item => item.id === file.id)
+                                    ? current
+                                    : [...current, file],
+                                )
+                              }
+                              onRemove={id =>
+                                setFiles(current =>
+                                  current.filter(file => file.id !== id),
+                                )
+                              }
+                            />
+                          )}
+                          {section === 'bio-pages' && (
+                            <BioPagesPanel
+                              biolinks={biolinks}
+                              selectedIds={biolinkIds}
+                              onChange={setBiolinkIds}
+                            />
                           )}
                         </div>
-                        <p className="mt-0.5 text-[12px] text-muted-foreground"><Trans message={meta.description} /></p>
-                      </div>
-                      <div className="shrink-0 text-muted-foreground">
-                        {isOpen ? <ChevronUpIcon className="size-4" /> : <ChevronDownIcon className="size-4" />}
-                      </div>
-                    </button>
-                    {isOpen && (
-                      <div className="border-t px-4 py-4">
-                        {section === 'details' && (
-                          <DetailsPanel
-                            title={title}
-                            description={description}
-                            price={price}
-                            coverUrl={coverUrl}
-                            onTitleChange={setTitle}
-                            onDescriptionChange={setDescription}
-                            onPriceChange={setPrice}
-                            legacyCurrency={product?.currency}
-                            convertToEtb={convertToEtb}
-                            onConvertToEtbChange={setConvertToEtb}
-                            onCoverChange={(url, entry) => {
-                              setCoverUrl(url);
-                              setCoverFileId(entry?.id ?? null);
-                            }}
-                          />
-                        )}
-                        {section === 'files' && (
-                          <FilesPanel
-                            files={files}
-                            onUploaded={file =>
-                              setFiles(current =>
-                                current.some(item => item.id === file.id)
-                                  ? current
-                                  : [...current, file],
-                              )
-                            }
-                            onRemove={id =>
-                              setFiles(current => current.filter(file => file.id !== id))
-                            }
-                          />
-                        )}
-                        {section === 'bio-pages' && (
-                          <BioPagesPanel
-                            biolinks={biolinks}
-                            selectedIds={biolinkIds}
-                            onChange={setBiolinkIds}
-                          />
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                      </BuilderCollapsibleSection>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <aside className="min-w-0 lg:sticky lg:top-6">
+                <ProductBuilderPreview
+                  title={title}
+                  description={description}
+                  price={price}
+                  coverUrl={coverUrl}
+                  fileCount={files.length}
+                  productTypeLabel={typeConfig?.label ?? 'Digital product'}
+                />
+              </aside>
             </div>
           )}
         </div>
       </DashboardLayout.SectionContent>
     </DashboardLayout.MainSection>
+  );
+}
+
+function ProductBuilderPreview({
+  title,
+  description,
+  price,
+  coverUrl,
+  fileCount,
+  productTypeLabel,
+}: {
+  title: string;
+  description: string;
+  price: string;
+  coverUrl: string;
+  fileCount: number;
+  productTypeLabel: string;
+}) {
+  const previewDescription = description
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const numericPrice = Number(price);
+  const formattedPrice = Number.isFinite(numericPrice)
+    ? `ETB ${numericPrice.toFixed(2)}`
+    : 'ETB 0.00';
+
+  return (
+    <div className="overflow-hidden rounded-card border border-border bg-background shadow-sm">
+      <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
+        <div>
+          <p className="text-sm font-medium">
+            <Trans message="Customer preview" />
+          </p>
+          <p className="text-xs text-muted-foreground">
+            <Trans message="Updates as you build" />
+          </p>
+        </div>
+        <Badge variant="secondary">
+          <Trans message="Live" />
+        </Badge>
+      </div>
+      <div className="relative aspect-[4/3] bg-muted">
+        {coverUrl ? (
+          <img className="size-full object-cover" src={coverUrl} alt="" />
+        ) : (
+          <div className="flex size-full flex-col items-center justify-center gap-2 text-muted-foreground">
+            <PackageOpenIcon className="size-8" />
+            <span className="text-xs">
+              <Trans message="Add a cover image" />
+            </span>
+          </div>
+        )}
+        <Badge className="absolute right-3 bottom-3 bg-background/95 text-foreground shadow-sm">
+          {formattedPrice}
+        </Badge>
+      </div>
+      <Separator />
+      <div className="flex flex-col gap-4 p-4">
+        <div className="flex flex-col gap-1.5">
+          <Badge variant="outline" className="w-fit">
+            <Trans message={productTypeLabel} />
+          </Badge>
+          <h2 className="text-lg leading-tight font-semibold text-pretty">
+            {title.trim() || <Trans message="Your digital product" />}
+          </h2>
+          <p className="line-clamp-3 text-sm leading-5 text-muted-foreground">
+            {previewDescription || (
+              <Trans message="Your product description will appear here." />
+            )}
+          </p>
+        </div>
+        <div className="flex items-center gap-2 border-t pt-3 text-xs text-muted-foreground">
+          <FileIcon className="size-4" />
+          <Trans message=":count download files" values={{count: fileCount}} />
+        </div>
+        <Button disabled className="w-full">
+          <Trans message="Buy now" />
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -448,7 +598,7 @@ function DetailsPanel({
   onCoverChange: (url: string, entry?: {id: number}) => void;
 }) {
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <Field.Root>
         <Field.Label>
           <Trans message="Product title" />
@@ -472,7 +622,7 @@ function DetailsPanel({
           <Trans message="Set the amount customers will pay." />
         </Field.Description>
         <div className="flex items-center gap-2">
-          <span className="flex h-9 items-center rounded-md border bg-muted/50 px-3 text-[13px] font-medium text-muted-foreground">
+          <span className="flex h-9 items-center rounded-card-sm border border-border bg-muted/50 px-3 text-[13px] font-medium text-muted-foreground">
             ETB
           </span>
           <Input
@@ -486,10 +636,15 @@ function DetailsPanel({
           />
         </div>
         {legacyCurrency && legacyCurrency.toLowerCase() !== 'etb' && (
-          <label className="mt-2 flex items-start gap-3 rounded-lg border bg-muted/30 p-3 text-sm">
-            <Checkbox checked={convertToEtb} onCheckedChange={value => onConvertToEtbChange(value === true)} />
+          <label className="mt-2 flex items-start gap-3 rounded-card-sm border border-border bg-muted/30 p-3 text-sm">
+            <Checkbox
+              checked={convertToEtb}
+              onCheckedChange={value => onConvertToEtbChange(value === true)}
+            />
             <span>
-              <span className="block font-medium"><Trans message="Convert this product price to ETB" /></span>
+              <span className="block font-medium">
+                <Trans message="Convert this product price to ETB" />
+              </span>
               <span className="mt-0.5 block text-[13px] text-muted-foreground">
                 <Trans message="Set the correct Ethiopian birr amount above. Existing sales remain in their original currency." />
               </span>
@@ -541,7 +696,7 @@ function DescriptionEditor({
       initialContent={value}
       onChange={onChange}
     >
-      <div className="overflow-hidden rounded-lg border">
+      <div className="overflow-hidden rounded-card-sm border border-border">
         <div className="no-scrollbar flex shrink-0 items-center gap-0.5 overflow-x-auto border-b px-1.5 py-1 text-muted-foreground">
           <FormatDropdown />
           <Divider />
@@ -553,7 +708,7 @@ function DescriptionEditor({
           <Divider />
           <ClearFormatButton />
         </div>
-        <TiptapEditorContent className="prose prose-sm max-w-none min-h-[180px] px-3 py-2.5 dark:prose-invert" />
+        <TiptapEditorContent className="prose prose-sm min-h-[180px] max-w-none px-3 py-2.5 dark:prose-invert" />
       </div>
     </TipTapEditorProvider>
   );
@@ -573,25 +728,35 @@ function FilesPanel({
   return (
     <div className="space-y-3">
       <DownloadUploader onUploaded={onUploaded} />
-      {files.map(file => (
-        <div
-          key={file.id}
-          className="flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm"
-        >
-          <div className="flex size-8 items-center justify-center rounded-md bg-muted text-muted-foreground">
-            <FileIcon className="size-4" />
-          </div>
-          <span className="min-w-0 flex-1 truncate font-medium">{file.name}</span>
-          {file.file_size && (
-            <span className="shrink-0 text-[12px] text-muted-foreground">
-              {formatFileSize(file.file_size)}
-            </span>
-          )}
-          <Button size="icon-xs" variant="ghost" onClick={() => onRemove(file.id)}>
-            <Trash2Icon className="size-4" />
-          </Button>
+      {!!files.length && (
+        <div className="divide-y">
+          {files.map(file => (
+            <div
+              key={file.id}
+              className="flex items-center gap-3 px-1 py-2.5 text-sm transition-colors hover:bg-muted/40"
+            >
+              <div className="flex size-8 items-center justify-center rounded-card-sm bg-muted text-muted-foreground">
+                <FileIcon className="size-4" />
+              </div>
+              <span className="min-w-0 flex-1 truncate font-medium">
+                {file.name}
+              </span>
+              {file.file_size && (
+                <span className="shrink-0 text-[12px] text-muted-foreground">
+                  {formatFileSize(file.file_size)}
+                </span>
+              )}
+              <Button
+                size="icon-xs"
+                variant="ghost"
+                onClick={() => onRemove(file.id)}
+              >
+                <Trash2Icon className="size-4" />
+              </Button>
+            </div>
+          ))}
         </div>
-      ))}
+      )}
     </div>
   );
 }
@@ -658,12 +823,20 @@ function ProductStatus({status}: {status: string}) {
     archived: 'Archived',
   };
 
-  return <Badge variant="outline"><Trans message={labels[status] ?? 'Draft'} /></Badge>;
+  return (
+    <Badge variant="outline">
+      <Trans message={labels[status] ?? 'Draft'} />
+    </Badge>
+  );
 }
 
 /* ─── Download Uploader ─── */
 
-function DownloadUploader({onUploaded}: {onUploaded: (file: FileEntry) => void}) {
+function DownloadUploader({
+  onUploaded,
+}: {
+  onUploaded: (file: FileEntry) => void;
+}) {
   const {uploadFile, uploadStatus, percentage} = useActiveUpload();
   const uploading = uploadStatus === 'inProgress';
 
@@ -686,7 +859,7 @@ function DownloadUploader({onUploaded}: {onUploaded: (file: FileEntry) => void})
   };
 
   return (
-    <label className="relative flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-dashed px-5 py-6 text-center transition-colors hover:bg-muted/40">
+    <label className="relative flex cursor-pointer flex-col items-center gap-2 rounded-card-sm border border-dashed border-border px-5 py-6 text-center transition-colors hover:bg-muted/40">
       <input
         className="absolute inset-0 cursor-pointer opacity-0"
         type="file"
@@ -694,7 +867,7 @@ function DownloadUploader({onUploaded}: {onUploaded: (file: FileEntry) => void})
         disabled={uploading}
         onChange={onChange}
       />
-      <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+      <div className="flex size-9 items-center justify-center rounded-card-sm bg-primary/10 text-primary">
         <UploadIcon className="size-4" />
       </div>
       <span className="text-[13px] font-medium">
@@ -727,7 +900,7 @@ function BuilderSkeleton() {
   return (
     <div className="space-y-3">
       <Skeleton className="h-9 w-48" />
-      <div className="rounded-lg border">
+      <div className="rounded-card border border-border">
         <div className="border-b px-4 py-3.5">
           <Skeleton className="h-5 w-36" />
           <Skeleton className="mt-1 h-3.5 w-56" />

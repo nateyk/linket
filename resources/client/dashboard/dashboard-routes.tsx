@@ -128,6 +128,14 @@ export const sharedDashboardRoutes = (routeType: DatatableRouteType) => {
         },
       },
       {
+        path: 'about',
+        lazy: async () => {
+          const {BiolinkAboutTab} =
+            await import('@app/dashboard/biolink/biolink-editor/biolink-editor-page');
+          return {Component: BiolinkAboutTab};
+        },
+      },
+      {
         path: 'appearance',
         lazy: () =>
           import('@app/dashboard/biolink/biolink-editor/appearance/biolink-appearance-tab'),

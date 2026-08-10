@@ -203,14 +203,13 @@ function MobileCreatorProfile({
           <div
             className={cn(
               'w-full',
-              compact ? 'max-w-64' : 'max-w-sm',
+              compact ? 'max-w-60' : 'max-w-72',
             )}
           >
             <Tabs.List
               aria-label={trans(message('Creator profile sections'))}
               className={cn(
-                'pointer-events-auto flex h-auto w-full min-w-0 gap-1 border border-[var(--biolink-border)] bg-[var(--biolink-surface-strong)] text-[var(--biolink-muted-text)] shadow-lg backdrop-blur-xl [&>span:last-child]:rounded-[inherit] [&>span:last-child]:border [&>span:last-child]:border-[var(--biolink-button-border)] [&>span:last-child]:[background:var(--biolink-button-background)] [&>span:last-child]:shadow-sm',
-                compact ? 'p-1' : 'p-1.5',
+                'pointer-events-auto flex h-auto w-full min-w-0 gap-0.5 border border-[var(--biolink-border)] bg-[var(--biolink-surface-strong)] p-1 text-[var(--biolink-muted-text)] shadow-lg backdrop-blur-xl [&>span:last-child]:rounded-[inherit] [&>span:last-child]:border [&>span:last-child]:border-[var(--biolink-button-border)] [&>span:last-child]:[background:var(--biolink-button-background)] [&>span:last-child]:shadow-sm',
                 buttonAppearance.radius,
               )}
               style={buttonAppearance.style}
@@ -263,14 +262,14 @@ function MobileSectionTab({
     <Tabs.Tab
       value={value}
       className={cn(
-        'min-w-0 flex-1 gap-1.5 rounded-[inherit] px-2 text-[var(--biolink-muted-text)] transition-colors duration-200 hover:text-[var(--biolink-text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--biolink-button-focus)] data-active:text-[var(--biolink-button-text)]',
+        'group/creator-nav min-w-0 flex-1 gap-0 rounded-[inherit] px-1.5 text-[var(--biolink-muted-text)] transition-[color,gap] duration-200 ease-out hover:text-[var(--biolink-text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--biolink-button-focus)] data-active:gap-1 data-active:text-[var(--biolink-button-text)]',
         compact ? 'h-9' : 'h-11',
       )}
     >
       {icon}
       <span
         className={cn(
-          'truncate leading-none font-medium',
+          'max-w-0 overflow-hidden leading-none font-medium whitespace-nowrap opacity-0 transition-[max-width,opacity] duration-200 ease-out group-data-active/creator-nav:max-w-20 group-data-active/creator-nav:opacity-100',
           compact ? 'text-[0.6875rem]' : 'text-xs',
         )}
       >

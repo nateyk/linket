@@ -28,10 +28,18 @@ export function Component() {
   const {biolink} = useSettings();
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="mx-auto flex max-w-2xl flex-col gap-5">
+      <div className="flex flex-col gap-1">
+        <h2 className="text-lg font-semibold">
+          <Trans message="Appearance" />
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          <Trans message="Customize the look of your creator profile." />
+        </p>
+      </div>
       <Accordion.Root
         multiple
-        variant="bordered"
+        variant="separated"
         defaultValue={['background', 'buttons']}
       >
         <Accordion.Item value="background">
@@ -44,7 +52,7 @@ export function Component() {
               }
             />
           </Accordion.Trigger>
-          <Accordion.Content>
+          <Accordion.Content className="border-t pt-4">
             <BackgroundStyle />
           </Accordion.Content>
         </Accordion.Item>
@@ -59,7 +67,7 @@ export function Component() {
               }
             />
           </Accordion.Trigger>
-          <Accordion.Content>
+          <Accordion.Content className="border-t pt-4">
             <ButtonStyle />
           </Accordion.Content>
         </Accordion.Item>
@@ -74,7 +82,7 @@ export function Component() {
               }
             />
           </Accordion.Trigger>
-          <Accordion.Content>
+          <Accordion.Content className="border-t pt-4">
             <TextStyle />
           </Accordion.Content>
         </Accordion.Item>
@@ -90,7 +98,7 @@ export function Component() {
                 }
               />
             </Accordion.Trigger>
-            <Accordion.Content>
+            <Accordion.Content className="border-t pt-4">
               <BrandingStyle />
             </Accordion.Content>
           </Accordion.Item>
@@ -110,8 +118,10 @@ function AppearanceSectionLabel({
   description: ReactNode;
 }) {
   return (
-    <span className="flex min-w-0 flex-1 items-start gap-3">
-      <span className="mt-0.5 shrink-0 text-muted-foreground">{icon}</span>
+    <span className="flex min-w-0 flex-1 items-start gap-3 py-1">
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-card-sm bg-muted text-muted-foreground">
+        {icon}
+      </span>
       <span className="flex min-w-0 flex-col gap-0.5">
         <span>{title}</span>
         <span className="text-xs font-normal text-muted-foreground">

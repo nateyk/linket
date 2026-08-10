@@ -5,6 +5,7 @@ import {Biolink} from '@app/gen/schemas/biolink';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {Button} from '@shadcn/button/button';
 import {Dialog} from '@shadcn/dialog/dialog';
+import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {Empty} from '@shadcn/empty/empty';
 import {Item} from '@shadcn/item/item';
 import {BackendPagination} from '@shadcn/table/utils/table-pagination';
@@ -15,7 +16,15 @@ import {FormattedRelativeTime} from '@ui/i18n/formatted-relative-time';
 import {Trans} from '@ui/i18n/trans';
 import {ignoreEventsFromPortal} from '@ui/utils/dom/ignore-events-from-portal';
 import {removeProtocol} from '@ui/utils/urls/remove-protocol';
-import {LayoutPanelTop, MousePointerClick, PlusIcon} from 'lucide-react';
+import {
+  ArrowUpRightIcon,
+  BarChart3Icon,
+  Clock3Icon,
+  EllipsisVerticalIcon,
+  LayoutPanelTop,
+  MousePointerClick,
+  PlusIcon,
+} from 'lucide-react';
 import {useNavigate} from 'react-router';
 
 export function Component() {
@@ -30,26 +39,53 @@ export function Component() {
     <DashboardLayout.MainSection>
       <DashboardLayout.SectionHeader>
         <DashboardLayout.SidebarToggle />
-        <DashboardLayout.SectionTitle>
-          <Trans message="Link in bio" />
-        </DashboardLayout.SectionTitle>
+        <div className="mr-auto min-w-0">
+          <DashboardLayout.SectionTitle>
+            <Trans message="Link in bio" />
+          </DashboardLayout.SectionTitle>
+          <p className="hidden text-sm text-muted-foreground sm:block">
+            <Trans message="Manage your public creator profiles." />
+          </p>
+        </div>
         <CreateBiolinkDialog>
           <Dialog.Trigger render={<Button variant="default" color="primary" />}>
-            <PlusIcon />
-            <Trans message="New" />
+            <PlusIcon data-icon="inline-start" />
+            <Trans message="New profile" />
           </Dialog.Trigger>
         </CreateBiolinkDialog>
       </DashboardLayout.SectionHeader>
 
       <DashboardLayout.SectionContent>
-        <DashboardLayout.SectionScrollContainer className="mx-0 flex flex-col gap-4 px-0">
-          {items.map(biolink => (
-            <BiolinkCard
-              key={biolink.id}
-              biolink={biolink}
-              onClick={() => navigate(`/${routeType}/biolinks/${biolink.id}`)}
-            />
-          ))}
+        <DashboardLayout.SectionScrollContainer className="mx-0 px-0">
+          {items.length > 0 && (
+            <div className="mx-auto flex w-full max-w-5xl flex-col gap-3">
+              <div className="flex items-center justify-between gap-4 px-1">
+                <p className="text-sm font-medium">
+                  <Trans
+                    message=":count profiles"
+                    values={{count: items.length}}
+                  />
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  <Trans message="Select a profile to edit it" />
+                </p>
+              </div>
+              <Item.Group>
+                {items.map(biolink => (
+                  <BiolinkCard
+                    key={biolink.id}
+                    biolink={biolink}
+                    onClick={() =>
+                      navigate(`/${routeType}/biolinks/${biolink.id}`)
+                    }
+                    onInsights={() =>
+                      navigate(`/${routeType}/biolinks/${biolink.id}/insights`)
+                    }
+                  />
+                ))}
+              </Item.Group>
+            </div>
+          )}
           <BackendPagination
             response={query.data}
             onPageChange={page => setQueryState({page})}
@@ -63,7 +99,7 @@ export function Component() {
 
 function EmptyState() {
   return (
-    <Empty.Root>
+    <Empty.Root className="mx-auto min-h-96 max-w-2xl rounded-card border border-dashed">
       <Empty.Header className="max-w-md">
         <Empty.Media variant="icon">
           <LayoutPanelTop />
@@ -78,7 +114,7 @@ function EmptyState() {
       <Empty.Content>
         <CreateBiolinkDialog>
           <Dialog.Trigger render={<Button variant="default" color="primary" />}>
-            <PlusIcon />
+            <PlusIcon data-icon="inline-start" />
             <Trans message="Create link in bio" />
           </Dialog.Trigger>
         </CreateBiolinkDialog>
@@ -90,29 +126,42 @@ function EmptyState() {
 type BiolinkCardProps = {
   biolink: Biolink;
   onClick: () => void;
+  onInsights: () => void;
 };
 
-function BiolinkCard({biolink, onClick}: BiolinkCardProps) {
+function BiolinkCard({biolink, onClick, onInsights}: BiolinkCardProps) {
   return (
     <Item.Root
       variant="outline"
-      className="bg-card transition-shadow hover:shadow-sm"
+      size="sm"
+      role="button"
+      tabIndex={0}
+      className="cursor-pointer bg-card transition-[border-color,background-color,box-shadow] hover:border-foreground/20 hover:bg-muted/30 hover:shadow-sm"
+      onKeyDown={event => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onClick();
+        }
+      }}
       onClick={ignoreEventsFromPortal(e => {
         if (
-          !(e.target as HTMLElement).closest('a, button, input, [role="checkbox"]')
+          !(e.target as HTMLElement).closest(
+            'a, button, input, [role="checkbox"]',
+          )
         ) {
           onClick();
         }
       })}
     >
-      <Item.Media align="center" className="size-9.5 rounded-full border p-2">
-        <LayoutPanelTop className="size-5" />
+      <Item.Media
+        align="center"
+        className="size-10 rounded-card-sm border bg-muted/40 text-muted-foreground"
+      >
+        <LayoutPanelTop />
       </Item.Media>
       <Item.Content className="gap-0">
         <Item.Row>
-          <Item.Title className="font-semibold">
-            {biolink.name}
-          </Item.Title>
+          <Item.Title className="font-semibold">{biolink.name}</Item.Title>
         </Item.Row>
         <Item.Row>
           <div className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
@@ -122,21 +171,35 @@ function BiolinkCard({biolink, onClick}: BiolinkCardProps) {
           </div>
         </Item.Row>
       </Item.Content>
-      <Item.Actions className="gap-2">
-        <Button
-          variant="outline"
-          size="xs"
-          className="text-[13px]"
-          onClick={e => {
-            e.stopPropagation();
-            onClick();
-          }}
-        >
+      <Item.Actions className="basis-full justify-between gap-3 border-t pt-2.5 sm:ml-6 sm:basis-auto sm:justify-end sm:border-0 sm:pt-0">
+        <span className="flex items-center gap-1.5 text-xs whitespace-nowrap text-muted-foreground">
           <MousePointerClick />
           <FormattedNumber value={biolink.clicks_count ?? 0} />
-        </Button>
-        <span className="whitespace-nowrap text-xs text-muted-foreground">
+          <Trans message="clicks" />
+        </span>
+        <span className="flex items-center gap-1.5 text-xs whitespace-nowrap text-muted-foreground">
+          <Clock3Icon />
           <FormattedRelativeTime date={biolink.created_at} style="narrow" />
+        </span>
+        <Dropdown.Root>
+          <Dropdown.Trigger
+            render={<Button variant="outline" size="icon-sm" />}
+            aria-label="Profile actions"
+          >
+            <EllipsisVerticalIcon />
+          </Dropdown.Trigger>
+          <Dropdown.Content align="end">
+            <Dropdown.Item onClick={onInsights}>
+              <BarChart3Icon />
+              <Trans message="Insights" />
+            </Dropdown.Item>
+          </Dropdown.Content>
+        </Dropdown.Root>
+        <span
+          aria-hidden="true"
+          className="flex size-7 shrink-0 items-center justify-center rounded-button text-muted-foreground transition-colors group-hover/item:bg-muted group-hover/item:text-foreground"
+        >
+          <ArrowUpRightIcon />
         </span>
       </Item.Actions>
     </Item.Root>

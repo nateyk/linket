@@ -25,7 +25,10 @@ import {BiolinkWidget} from '@app/gen/schemas/biolink-widget';
 import {AdHost} from '@common/admin/ads/ad-host';
 import {showHttpErrorToast} from '@common/http/errors/show-http-error-toast';
 import {queryClient} from '@common/http/query-client';
-import {convertBiolinkToCreatorProfile, updateCreatorProfile} from '@app/gen/biolinks';
+import {
+  convertBiolinkToCreatorProfile,
+  updateCreatorProfile,
+} from '@app/gen/biolinks';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {useRequiredParams} from '@common/ui/navigation/use-required-params';
 import {Breadcrumb} from '@shadcn/breadcrumb/breadcrumb';
@@ -61,10 +64,10 @@ export function Component() {
   const biolink = query.data.data;
 
   const {pathname} = useLocation();
-  const selectedTab = pathname.endsWith('insights')
-    ? 'insights'
-    : pathname.endsWith('appearance')
+  const selectedTab = pathname.endsWith('appearance')
       ? 'appearance'
+      : pathname.endsWith('about')
+        ? 'about'
       : 'content';
 
   // re-create store provider when biolink changes
@@ -75,40 +78,50 @@ export function Component() {
     >
       <DashboardLayout.MainSection>
         <BiolinkEditorHeader />
-        <Tabs.Root value={selectedTab}>
-          <div className="border-b px-6">
-            <Tabs.List variant="line">
-              <Tabs.LinkTab
-                className="min-w-35"
-                value="content"
-                to={baseUrl}
-                replace
-              >
-                <Trans message="Content" />
-              </Tabs.LinkTab>
-              <Tabs.LinkTab
-                className="min-w-35"
-                value="appearance"
-                to={`${baseUrl}/appearance`}
-                replace
-              >
-                <Trans message="Appearance" />
-              </Tabs.LinkTab>
-              <Tabs.LinkTab
-                className="min-w-35"
-                value="insights"
-                to={`${baseUrl}/insights`}
-                replace
-              >
-                <Trans message="Insights" />
-              </Tabs.LinkTab>
-            </Tabs.List>
-          </div>
-        </Tabs.Root>
-        <section className="flex flex-auto overflow-hidden">
-          <div className="compact-scrollbar min-w-0 flex-auto overflow-y-auto p-(--section-spacing)">
-            <AdHost slot="dashboard" className="mb-6" />
-            <Outlet />
+        <section className="flex min-h-0 flex-auto flex-col overflow-y-auto lg:flex-row lg:overflow-hidden">
+          <div className="flex min-w-0 shrink-0 flex-col lg:min-h-0 lg:flex-auto">
+            <Tabs.Root
+              value={selectedTab}
+              className="shrink-0 border-b"
+            >
+              <div className="w-full max-w-3xl px-4 sm:px-6 lg:px-8">
+                <Tabs.List
+                  variant="line"
+                  className="w-fit min-w-full justify-start overflow-x-auto"
+                >
+                  <Tabs.LinkTab
+                    className="min-w-24 flex-none"
+                    value="content"
+                    to={baseUrl}
+                    replace
+                  >
+                    <Trans message="Content" />
+                  </Tabs.LinkTab>
+                  <Tabs.LinkTab
+                    className="min-w-24 flex-none"
+                    value="about"
+                    to={`${baseUrl}/about`}
+                    replace
+                  >
+                    <Trans message="About" />
+                  </Tabs.LinkTab>
+                  <Tabs.LinkTab
+                    className="min-w-28 flex-none"
+                    value="appearance"
+                    to={`${baseUrl}/appearance`}
+                    replace
+                  >
+                    <Trans message="Appearance" />
+                  </Tabs.LinkTab>
+                </Tabs.List>
+              </div>
+            </Tabs.Root>
+            <div className="min-w-0 lg:flex-auto lg:overflow-y-auto">
+              <div className="w-full max-w-3xl p-4 sm:p-6 lg:p-8">
+                <AdHost slot="dashboard" className="mb-6" />
+                <Outlet />
+              </div>
+            </div>
           </div>
           <LivePreview />
         </section>
@@ -129,7 +142,8 @@ function BiolinkEditorHeader() {
   const setProfileIsDirty = useBiolinkEditorStore(s => s.setProfileIsDirty);
   const location = useLocation();
   const isAppearanceTab = location.pathname.endsWith('appearance');
-  const isContentTab = !isAppearanceTab && !location.pathname.endsWith('insights');
+  const isProfileTab =
+    !isAppearanceTab && !location.pathname.endsWith('insights');
 
   const saveAppearance = useMutation(
     updateBiolinkAppearanceOptions(biolink.id),
@@ -157,11 +171,14 @@ function BiolinkEditorHeader() {
             toast.success(<Trans message="Changes saved" />);
           },
           onError: err => {
-            showHttpErrorToast(err, <Trans message="Could not save appearance" />);
+            showHttpErrorToast(
+              err,
+              <Trans message="Could not save appearance" />,
+            );
           },
         },
       );
-    } else if (isContentTab && state.profileIsDirty) {
+    } else if (isProfileTab && state.profileIsDirty) {
       saveProfile.mutate({
         ...state.profileConfig,
         skills: state.profileConfig.skills.slice(0, 8),
@@ -171,12 +188,11 @@ function BiolinkEditorHeader() {
   };
 
   const showSaveButton =
-    (isAppearanceTab && appearanceIsDirty) ||
-    (isContentTab && profileIsDirty);
+    (isAppearanceTab && appearanceIsDirty) || (isProfileTab && profileIsDirty);
   const isSaving = saveAppearance.isPending || saveProfile.isPending;
 
   return (
-    <DashboardLayout.SectionHeader className="border-none">
+    <DashboardLayout.SectionHeader className="min-h-16 gap-2 border-none px-4 sm:px-6">
       <DashboardLayout.SidebarToggle />
       {routeType === 'admin' ? <AdminBreadcrumb /> : <BiolinkSelector />}
       <MoreActionsButton />
@@ -184,15 +200,17 @@ function BiolinkEditorHeader() {
         type="text"
         url={biolink.short_url}
         variant="outline"
-        className="max-md:hidden"
+        className="max-lg:hidden"
       />
-      {(isContentTab || isAppearanceTab) && (
-        <Button
-          onClick={handleSave}
-          disabled={!showSaveButton || isSaving}
-        >
+      {(isProfileTab || isAppearanceTab) && (
+        <Button onClick={handleSave} disabled={!showSaveButton || isSaving}>
           <SaveIcon data-icon="inline-start" />
-          <Trans message="Save changes" />
+          <span className="hidden sm:inline">
+            <Trans message="Save changes" />
+          </span>
+          <span className="sm:hidden">
+            <Trans message="Save" />
+          </span>
         </Button>
       )}
     </DashboardLayout.SectionHeader>
@@ -219,10 +237,13 @@ function BiolinkSelector() {
       <Dropdown.Root>
         <Dropdown.Trigger
           render={
-            <Button variant="outline" className="mr-auto justify-between" />
+            <Button
+              variant="outline"
+              className="mr-auto max-w-64 justify-between"
+            />
           }
         >
-          {selectedBiolink.name}
+          <span className="truncate">{selectedBiolink.name}</span>
           <ChevronDownIcon />
         </Dropdown.Trigger>
         <Dropdown.Content>
@@ -366,6 +387,28 @@ export function BiolinkContentTab() {
           </Empty.Root>
         )}
       </div>
+    </div>
+  );
+}
+
+export function BiolinkAboutTab() {
+  const biolink = useBiolinkEditorStore(s => s.biolink);
+
+  if (isCreatorProfileBiolink(biolink)) {
+    return <CreatorProfileEditor tab="about" />;
+  }
+
+  return (
+    <div className="mx-auto flex max-w-2xl flex-col gap-4 py-2">
+      <div>
+        <h2 className="text-lg font-semibold">
+          <Trans message="About" />
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          <Trans message="Add a fuller introduction after converting this page into a creator profile." />
+        </p>
+      </div>
+      <CreatorProfileUpgrade />
     </div>
   );
 }

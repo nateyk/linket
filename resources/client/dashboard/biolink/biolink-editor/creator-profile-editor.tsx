@@ -1,4 +1,5 @@
 import {useBiolinkEditorStore} from '@app/dashboard/biolink/biolink-editor/biolink-editor-store';
+import {BuilderCollapsibleSection} from '@app/dashboard/biolink/biolink-editor/builder-section-header';
 import {CreatorProfileConfig} from '@app/dashboard/biolink/biolink-editor/creator-profile-types';
 import {
   SocialsList,
@@ -14,7 +15,6 @@ import {TiptapEditorContent} from '@common/text-editor/tiptap-editor-content';
 import {TipTapEditorProvider} from '@common/text-editor/tiptap-editor-provider';
 import {ImageSelector} from '@common/uploads/components/image-selector';
 import {FileUploadProvider} from '@common/uploads/uploader/file-upload-provider';
-import {Accordion} from '@shadcn/accordion/accordion';
 import {Badge} from '@shadcn/badge/badge';
 import {Button} from '@shadcn/button/button';
 import {Checkbox} from '@shadcn/forms/checkbox/checkbox';
@@ -43,7 +43,6 @@ import {Trans} from '@ui/i18n/trans';
 import {useTrans} from '@ui/i18n/use-trans';
 import {
   AtSignIcon,
-  BookOpenTextIcon,
   ChevronDownIcon,
   LinkIcon,
   PackageCheckIcon,
@@ -60,6 +59,12 @@ import {Link} from 'react-router';
 type CreatorProfileForm = Omit<CreatorProfileConfig, 'skills'> & {
   skills: string;
 };
+
+type CreatorProfileSection =
+  | 'actions'
+  | 'products'
+  | 'profile'
+  | 'socials';
 
 type CreatorProduct = {
   id: number;
@@ -150,7 +155,7 @@ const creatorAboutExtensions = [
   }),
 ];
 
-export function CreatorProfileEditor() {
+export function CreatorProfileEditor({tab = 'content'}: {tab?: 'about' | 'content'}) {
   const {trans} = useTrans();
   const biolink = useBiolinkEditorStore(s => s.biolink);
   const profileConfig = useBiolinkEditorStore(s => s.profileConfig);
@@ -160,6 +165,9 @@ export function CreatorProfileEditor() {
   const setProfileIsDirty = useBiolinkEditorStore(s => s.setProfileIsDirty);
   const setFeaturedProductIds = useBiolinkEditorStore(
     s => s.setFeaturedProductIds,
+  );
+  const [openSection, setOpenSection] = useState<CreatorProfileSection | null>(
+    tab === 'content' ? 'profile' : null,
   );
   const [showAllSocials, setShowAllSocials] = useState(false);
   const [selectedProductIds, setSelectedProductIds] = useState<number[]>([]);
@@ -274,412 +282,365 @@ export function CreatorProfileEditor() {
   return (
     <FileUploadProvider>
       <HookForm.Root form={form} onSubmit={() => {}}>
-        <div className="mx-auto max-w-2xl">
-          <Accordion.Root
-            multiple
-            variant="bordered"
-            defaultValue={['profile']}
-          >
-            <Accordion.Item value="profile">
-              <Accordion.Trigger>
-                <span className="flex min-w-0 flex-1 items-center gap-3">
-                  <UserRoundIcon />
-                  <span className="flex min-w-0 flex-col gap-0.5">
-                    <span>
-                      <Trans message="Profile" />
-                    </span>
-                    <span className="text-xs font-normal text-muted-foreground">
-                      <Trans message="Name, photo, bio, and skills." />
-                    </span>
-                  </span>
-                </span>
-              </Accordion.Trigger>
-              <Accordion.Content>
-                <Field.Group>
-                  <HookForm.Field name="cover_url">
+        <div className="w-full max-w-3xl">
+          {tab === 'about' ? (
+            <section className="flex max-w-2xl flex-col gap-4 py-2">
+              <div>
+                <h2 className="text-lg font-semibold">
+                  <Trans message="About" />
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  <Trans message="Share the story, experience, and approach behind your work." />
+                </p>
+              </div>
+              <Field.Root>
+                <Field.Label>
+                  <Trans message="About content" />
+                </Field.Label>
+                <CreatorAboutEditor
+                  key={biolink.id}
+                  value={values.about_html || ''}
+                  onChange={aboutHtml =>
+                    form.setValue('about_html', aboutHtml, {
+                      shouldDirty: true,
+                    })
+                  }
+                />
+                <Field.Description>
+                  <Trans message="This appears in the About tab on your public profile." />
+                </Field.Description>
+              </Field.Root>
+            </section>
+          ) : (
+          <div className="divide-y overflow-hidden rounded-card border bg-card">
+            <BuilderCollapsibleSection
+              open={openSection === 'profile'}
+              onOpenChange={open => setOpenSection(open ? 'profile' : null)}
+              icon={UserRoundIcon}
+              title={<Trans message="Profile" />}
+              description={<Trans message="Name, photo, bio, and skills." />}
+            >
+              <Field.Group className="max-w-2xl gap-3">
+                <HookForm.Field name="cover_url">
+                  <Field.Label>
+                    <Trans message="Cover image" />
+                  </Field.Label>
+                  <ImageSelector.Square
+                    className="h-28 w-full rounded-card-sm sm:h-32"
+                    fit="cover"
+                    value={values.cover_url || ''}
+                    onChange={value =>
+                      form.setValue('cover_url', value || '', {
+                        shouldDirty: true,
+                      })
+                    }
+                    uploadType="linkImages"
+                    placeholderVariant="dropzone"
+                  />
+                </HookForm.Field>
+
+                <div className="grid gap-4 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-start sm:gap-5">
+                  <HookForm.Field name="avatar_url">
                     <Field.Label>
-                      <Trans message="Cover image" />
+                      <Trans message="Profile photo" />
                     </Field.Label>
-                    <ImageSelector.Square
-                      className="h-28 w-full rounded-card-sm sm:h-32"
-                      value={values.cover_url || ''}
+                    <ImageSelector.Avatar
+                      className="size-22 rounded-card-sm bg-background p-1"
+                      previewClassName="rounded-card-xs"
+                      value={values.avatar_url || ''}
                       onChange={value =>
-                        form.setValue('cover_url', value || '', {
+                        form.setValue('avatar_url', value || '', {
                           shouldDirty: true,
                         })
                       }
                       uploadType="linkImages"
-                      placeholderVariant="dropzone"
                     />
                   </HookForm.Field>
 
-                  <div className="grid gap-4 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-start sm:gap-5">
-                    <HookForm.Field name="avatar_url">
+                  <Field.Group>
+                    <HookForm.Field name="display_name">
                       <Field.Label>
-                        <Trans message="Profile photo" />
+                        <Trans message="Display name" />
                       </Field.Label>
-                      <ImageSelector.Avatar
-                        className="size-22 rounded-card-sm bg-background p-1"
-                        previewClassName="rounded-card-xs"
-                        value={values.avatar_url || ''}
-                        onChange={value =>
-                          form.setValue('avatar_url', value || '', {
+                      <Input required maxLength={80} />
+                      <Field.Error />
+                    </HookForm.Field>
+                    <HookForm.Field name="profile_title">
+                      <Field.Label>
+                        <Trans message="Profile title" />
+                      </Field.Label>
+                      <Combobox.Root<ProfessionOption>
+                        bindToHookForm={false}
+                        items={professionItems}
+                        value={selectedProfession}
+                        onValueChange={option =>
+                          form.setValue('profile_title', option?.value || '', {
                             shouldDirty: true,
                           })
                         }
-                        uploadType="linkImages"
-                      />
-                    </HookForm.Field>
-
-                    <Field.Group>
-                      <HookForm.Field name="display_name">
-                        <Field.Label>
-                          <Trans message="Display name" />
-                        </Field.Label>
-                        <Input required maxLength={80} />
-                        <Field.Error />
-                      </HookForm.Field>
-                      <HookForm.Field name="profile_title">
-                        <Field.Label>
-                          <Trans message="Profile title" />
-                        </Field.Label>
-                        <Combobox.Root<ProfessionOption>
-                          bindToHookForm={false}
-                          items={professionItems}
-                          value={selectedProfession}
-                          onValueChange={option =>
-                            form.setValue(
-                              'profile_title',
-                              option?.value || '',
-                              {shouldDirty: true},
-                            )
-                          }
-                          itemToStringLabel={option => trans(option.label)}
-                          isItemEqualToValue={(option, value) =>
-                            option.value === value.value
-                          }
-                        >
-                          <Combobox.Input
-                            placeholder={trans(message('Choose a profession'))}
-                          />
-                          <Combobox.Content>
-                            <Combobox.Empty>
-                              <Trans message="No professions found." />
-                            </Combobox.Empty>
-                            <Combobox.List>
-                              {(option: ProfessionOption) => (
-                                <Combobox.Item
-                                  key={option.value}
-                                  value={option}
-                                >
-                                  <Trans {...option.label} />
-                                </Combobox.Item>
-                              )}
-                            </Combobox.List>
-                          </Combobox.Content>
-                        </Combobox.Root>
-                        <Field.Description>
-                          <Trans message="Choose the professional title shown below your name." />
-                        </Field.Description>
-                        <Field.Error />
-                      </HookForm.Field>
-                    </Field.Group>
-                  </div>
-                  <HookForm.Field name="bio">
-                    <Field.Label>
-                      <Trans message="About" />
-                    </Field.Label>
-                    <Textarea rows={4} maxLength={600} />
-                    <Field.Description>
-                      <Trans message="A short introduction to your work and audience." />
-                    </Field.Description>
-                    <Field.Error />
-                  </HookForm.Field>
-                  <HookForm.Field name="skills">
-                    <Field.Label>
-                      <Trans message="Skills" />
-                    </Field.Label>
-                    <Input
-                      placeholder={trans(
-                        message('Design, Photography, Coaching'),
-                      )}
-                    />
-                    <Field.Description>
-                      <Trans message="Separate skills with commas. The first eight are shown." />
-                    </Field.Description>
-                    <Field.Error />
-                  </HookForm.Field>
-                  <HookForm.Field name="available_for_work">
-                    <Field.Root orientation="horizontal">
-                      <div
-                        data-slot="field-content"
-                        className="flex min-w-0 flex-1 flex-col gap-1"
+                        itemToStringLabel={option => trans(option.label)}
+                        isItemEqualToValue={(option, value) =>
+                          option.value === value.value
+                        }
                       >
-                        <Field.Label>
-                          <Trans message="Available for work" />
-                        </Field.Label>
-                        <Field.Description>
-                          <Trans message="Show a small availability badge on your profile." />
-                        </Field.Description>
-                      </div>
-                      <Switch />
-                    </Field.Root>
-                  </HookForm.Field>
-                </Field.Group>
-              </Accordion.Content>
-            </Accordion.Item>
-
-            <Accordion.Item value="about">
-              <Accordion.Trigger>
-                <span className="flex min-w-0 flex-1 items-center gap-3">
-                  <BookOpenTextIcon />
-                  <span className="flex min-w-0 flex-col gap-0.5">
-                    <span>
-                      <Trans message="About page" />
-                    </span>
-                    <span className="text-xs font-normal text-muted-foreground">
-                      <Trans message="Tell visitors more about your work." />
-                    </span>
-                  </span>
-                </span>
-              </Accordion.Trigger>
-              <Accordion.Content>
-                <Field.Root>
+                        <Combobox.Input
+                          placeholder={trans(message('Choose a profession'))}
+                        />
+                        <Combobox.Content>
+                          <Combobox.Empty>
+                            <Trans message="No professions found." />
+                          </Combobox.Empty>
+                          <Combobox.List>
+                            {(option: ProfessionOption) => (
+                              <Combobox.Item key={option.value} value={option}>
+                                <Trans {...option.label} />
+                              </Combobox.Item>
+                            )}
+                          </Combobox.List>
+                        </Combobox.Content>
+                      </Combobox.Root>
+                      <Field.Description>
+                        <Trans message="Choose the professional title shown below your name." />
+                      </Field.Description>
+                      <Field.Error />
+                    </HookForm.Field>
+                  </Field.Group>
+                </div>
+                <HookForm.Field name="bio">
                   <Field.Label>
-                    <Trans message="About content" />
+                    <Trans message="About" />
                   </Field.Label>
-                  <CreatorAboutEditor
-                    key={biolink.id}
-                    value={values.about_html || ''}
-                    onChange={aboutHtml =>
-                      form.setValue('about_html', aboutHtml, {
-                        shouldDirty: true,
-                      })
-                    }
+                  <Textarea rows={4} maxLength={600} />
+                  <Field.Description>
+                    <Trans message="A short introduction to your work and audience." />
+                  </Field.Description>
+                  <Field.Error />
+                </HookForm.Field>
+                <HookForm.Field name="skills">
+                  <Field.Label>
+                    <Trans message="Skills" />
+                  </Field.Label>
+                  <Input
+                    placeholder={trans(
+                      message('Design, Photography, Coaching'),
+                    )}
                   />
                   <Field.Description>
-                    <Trans message="This appears in the About tab on your public profile." />
+                    <Trans message="Separate skills with commas. The first eight are shown." />
                   </Field.Description>
-                </Field.Root>
-              </Accordion.Content>
-            </Accordion.Item>
+                  <Field.Error />
+                </HookForm.Field>
+                <HookForm.Field name="available_for_work">
+                  <Field.Root orientation="horizontal">
+                    <div
+                      data-slot="field-content"
+                      className="flex min-w-0 flex-1 flex-col gap-1"
+                    >
+                      <Field.Label>
+                        <Trans message="Available for work" />
+                      </Field.Label>
+                      <Field.Description>
+                        <Trans message="Show a small availability badge on your profile." />
+                      </Field.Description>
+                    </div>
+                    <Switch />
+                  </Field.Root>
+                </HookForm.Field>
+              </Field.Group>
+            </BuilderCollapsibleSection>
 
-            <Accordion.Item value="socials">
-              <Accordion.Trigger>
-                <span className="flex min-w-0 flex-1 items-center gap-3">
-                  <AtSignIcon />
-                  <span className="flex min-w-0 flex-col gap-0.5">
-                    <span>
-                      <Trans message="Social links" />
-                    </span>
-                    <span className="text-xs font-normal text-muted-foreground">
-                      <Trans message="Instagram, X, TikTok, and more." />
-                    </span>
-                  </span>
-                </span>
-              </Accordion.Trigger>
-              <Accordion.Content>
-                <Field.Group>
-                  {visibleSocials.map(type => {
-                    const social = SocialsList[type];
-                    return (
-                      <HookForm.Field key={type} name={`social_links.${type}`}>
-                        <Field.Label>
-                          <Trans {...social.name} />
-                        </Field.Label>
-                        <InputGroup>
-                          <InputGroupAddon align="inline-start">
-                            {social.icon}
-                          </InputGroupAddon>
-                          <InputGroupInput
-                            type={social.inputType}
-                            pattern={social.pattern}
-                            placeholder={social.placeholder}
-                          />
-                        </InputGroup>
-                        <Field.Error />
-                      </HookForm.Field>
-                    );
-                  })}
-                  {!showAllSocials &&
-                    visibleSocials.length < supportedSocials.length && (
+            <BuilderCollapsibleSection
+              open={openSection === 'socials'}
+              onOpenChange={open => setOpenSection(open ? 'socials' : null)}
+              icon={AtSignIcon}
+              title={<Trans message="Social links" />}
+              description={<Trans message="Instagram, X, TikTok, and more." />}
+            >
+              <Field.Group className="max-w-2xl gap-3">
+                {visibleSocials.map(type => {
+                  const social = SocialsList[type];
+                  return (
+                    <HookForm.Field key={type} name={`social_links.${type}`}>
+                      <Field.Label>
+                        <Trans {...social.name} />
+                      </Field.Label>
+                      <InputGroup>
+                        <InputGroupAddon align="inline-start">
+                          {social.icon}
+                        </InputGroupAddon>
+                        <InputGroupInput
+                          type={social.inputType}
+                          pattern={social.pattern}
+                          placeholder={social.placeholder}
+                        />
+                      </InputGroup>
+                      <Field.Error />
+                    </HookForm.Field>
+                  );
+                })}
+                {!showAllSocials &&
+                  visibleSocials.length < supportedSocials.length && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="w-fit"
+                      onClick={() => setShowAllSocials(true)}
+                    >
+                      <PlusIcon data-icon="inline-start" />
+                      <Trans message="Show all networks" />
+                    </Button>
+                  )}
+              </Field.Group>
+            </BuilderCollapsibleSection>
+
+            <BuilderCollapsibleSection
+              open={openSection === 'actions'}
+              onOpenChange={open => setOpenSection(open ? 'actions' : null)}
+              icon={LinkIcon}
+              title={<Trans message="Actions" />}
+              description={<Trans message="Follow and message buttons." />}
+            >
+              <Field.Group className="max-w-2xl gap-3">
+                <HookForm.Field name="follow_url">
+                  <Field.Label>
+                    <Trans message="Follow link" />
+                  </Field.Label>
+                  <Input type="url" placeholder="https://" />
+                  <Field.Description>
+                    <Trans message="The Follow button stays hidden until this is configured." />
+                  </Field.Description>
+                  <Field.Error />
+                </HookForm.Field>
+                <HookForm.Field name="contact_url">
+                  <Field.Label>
+                    <Trans message="Message link" />
+                  </Field.Label>
+                  <Input
+                    type="text"
+                    inputMode="email"
+                    placeholder="hello@example.com"
+                  />
+                  <Field.Description>
+                    <Trans message="Use an email, booking, or contact-page link." />
+                  </Field.Description>
+                  <Field.Error />
+                </HookForm.Field>
+              </Field.Group>
+            </BuilderCollapsibleSection>
+
+            <BuilderCollapsibleSection
+              open={openSection === 'products'}
+              onOpenChange={open => setOpenSection(open ? 'products' : null)}
+              icon={PackageCheckIcon}
+              title={<Trans message="Products" />}
+              description={
+                <Trans message="Feature up to six Digital Products." />
+              }
+              trailing={
+                <Badge variant="outline" className="font-mono tabular-nums">
+                  {selectedProductIds.length}/6
+                </Badge>
+              }
+            >
+              <div className="flex max-w-2xl flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground">
+                    <Trans message="Showcase approved products on your profile." />
+                  </p>
+                  {!productsQuery.isError && (
+                    <ProductPickerDialog
+                      products={approvedProducts}
+                      selectedProductIds={selectedProductIds}
+                      onSelectionChange={setSelectedProductIds}
+                    />
+                  )}
+                </div>
+
+                {productsQuery.isPending ? (
+                  <div className="divide-y">
+                    {Array.from({length: 2}).map((_, index) => (
+                      <Skeleton
+                        key={index}
+                        className="my-2 h-10 rounded-card-sm"
+                      />
+                    ))}
+                  </div>
+                ) : productsQuery.isError ? (
+                  <Empty.Root className="min-h-28 p-3">
+                    <Empty.Media variant="icon">
+                      <PackageIcon />
+                    </Empty.Media>
+                    <Empty.Header>
+                      <Empty.Title>
+                        <Trans message="Could not load products" />
+                      </Empty.Title>
+                      <Empty.Description>
+                        <Trans message="Retry before saving." />
+                      </Empty.Description>
+                    </Empty.Header>
+                    <Empty.Content>
                       <Button
                         type="button"
                         size="sm"
                         variant="outline"
-                        className="w-fit"
-                        onClick={() => setShowAllSocials(true)}
+                        onClick={() => void productsQuery.refetch()}
                       >
-                        <PlusIcon data-icon="inline-start" />
-                        <Trans message="Show all networks" />
+                        <RefreshCwIcon data-icon="inline-start" />
+                        <Trans message="Retry" />
                       </Button>
-                    )}
-                </Field.Group>
-              </Accordion.Content>
-            </Accordion.Item>
-
-            <Accordion.Item value="actions">
-              <Accordion.Trigger>
-                <span className="flex min-w-0 flex-1 items-center gap-3">
-                  <LinkIcon />
-                  <span className="flex min-w-0 flex-col gap-0.5">
-                    <span>
-                      <Trans message="Actions" />
-                    </span>
-                    <span className="text-xs font-normal text-muted-foreground">
-                      <Trans message="Follow and message buttons." />
-                    </span>
-                  </span>
-                </span>
-              </Accordion.Trigger>
-              <Accordion.Content>
-                <Field.Group>
-                  <HookForm.Field name="follow_url">
-                    <Field.Label>
-                      <Trans message="Follow link" />
-                    </Field.Label>
-                    <Input type="url" placeholder="https://" />
-                    <Field.Description>
-                      <Trans message="The Follow button stays hidden until this is configured." />
-                    </Field.Description>
-                    <Field.Error />
-                  </HookForm.Field>
-                  <HookForm.Field name="contact_url">
-                    <Field.Label>
-                      <Trans message="Message link" />
-                    </Field.Label>
-                    <Input
-                      type="text"
-                      inputMode="email"
-                      placeholder="hello@example.com"
-                    />
-                    <Field.Description>
-                      <Trans message="Use an email, booking, or contact-page link." />
-                    </Field.Description>
-                    <Field.Error />
-                  </HookForm.Field>
-                </Field.Group>
-              </Accordion.Content>
-            </Accordion.Item>
-
-            <Accordion.Item value="products">
-              <Accordion.Trigger>
-                <span className="flex min-w-0 flex-1 items-center gap-3">
-                  <PackageCheckIcon />
-                  <span className="flex min-w-0 flex-col gap-0.5">
-                    <span>
-                      <Trans message="Products" />
-                    </span>
-                    <span className="text-xs font-normal text-muted-foreground">
-                      <Trans message="Feature up to six Digital Products." />
-                    </span>
-                  </span>
-                </span>
-                <Badge variant="outline" className="font-mono tabular-nums">
-                  {selectedProductIds.length}/6
-                </Badge>
-              </Accordion.Trigger>
-              <Accordion.Content>
-                <div className="flex flex-col gap-4">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs text-muted-foreground">
-                      <Trans message="Showcase approved products on your profile." />
-                    </p>
-                    {!productsQuery.isError && (
-                      <ProductPickerDialog
-                        products={approvedProducts}
-                        selectedProductIds={selectedProductIds}
-                        onSelectionChange={setSelectedProductIds}
+                    </Empty.Content>
+                  </Empty.Root>
+                ) : selectedProducts.length ? (
+                  <div className="divide-y">
+                    {selectedProducts.map(product => (
+                      <SelectedProduct
+                        key={product.id}
+                        product={product}
+                        onRemove={() =>
+                          setSelectedProductIds(
+                            selectedProductIds.filter(id => id !== product.id),
+                          )
+                        }
                       />
-                    )}
+                    ))}
                   </div>
-
-                  {productsQuery.isPending ? (
-                    <div className="grid gap-2.5 sm:grid-cols-2">
-                      {Array.from({length: 2}).map((_, index) => (
-                        <Skeleton
-                          key={index}
-                          className="h-16 rounded-card-sm"
-                        />
-                      ))}
-                    </div>
-                  ) : productsQuery.isError ? (
-                    <Empty.Root className="min-h-32 rounded-card-sm border border-dashed p-4">
-                      <Empty.Media variant="icon">
-                        <PackageIcon />
-                      </Empty.Media>
-                      <Empty.Header>
-                        <Empty.Title>
-                          <Trans message="Could not load products" />
-                        </Empty.Title>
-                        <Empty.Description>
-                          <Trans message="Retry before saving." />
-                        </Empty.Description>
-                      </Empty.Header>
+                ) : (
+                  <Empty.Root className="min-h-28 p-3">
+                    <Empty.Media variant="icon">
+                      <PackageCheckIcon />
+                    </Empty.Media>
+                    <Empty.Header>
+                      <Empty.Title>
+                        <Trans message="No products yet" />
+                      </Empty.Title>
+                      <Empty.Description>
+                        {approvedProducts.length ? (
+                          <Trans message="Add products to showcase them." />
+                        ) : (
+                          <Trans message="Approved products will appear here." />
+                        )}
+                      </Empty.Description>
+                    </Empty.Header>
+                    {!approvedProducts.length && (
                       <Empty.Content>
                         <Button
                           type="button"
                           size="sm"
                           variant="outline"
-                          onClick={() => void productsQuery.refetch()}
+                          render={<Link to="/dashboard/my-products" />}
                         >
-                          <RefreshCwIcon data-icon="inline-start" />
-                          <Trans message="Retry" />
+                          <PackageIcon data-icon="inline-start" />
+                          <Trans message="Manage products" />
                         </Button>
                       </Empty.Content>
-                    </Empty.Root>
-                  ) : selectedProducts.length ? (
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      {selectedProducts.map(product => (
-                        <SelectedProduct
-                          key={product.id}
-                          product={product}
-                          onRemove={() =>
-                            setSelectedProductIds(
-                              selectedProductIds.filter(
-                                id => id !== product.id,
-                              ),
-                            )
-                          }
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    <Empty.Root className="min-h-32 rounded-card-sm border border-dashed p-4">
-                      <Empty.Media variant="icon">
-                        <PackageCheckIcon />
-                      </Empty.Media>
-                      <Empty.Header>
-                        <Empty.Title>
-                          <Trans message="No products yet" />
-                        </Empty.Title>
-                        <Empty.Description>
-                          {approvedProducts.length ? (
-                            <Trans message="Add products to showcase them." />
-                          ) : (
-                            <Trans message="Approved products will appear here." />
-                          )}
-                        </Empty.Description>
-                      </Empty.Header>
-                      {!approvedProducts.length && (
-                        <Empty.Content>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            render={<Link to="/dashboard/my-products" />}
-                          >
-                            <PackageIcon data-icon="inline-start" />
-                            <Trans message="Manage products" />
-                          </Button>
-                        </Empty.Content>
-                      )}
-                    </Empty.Root>
-                  )}
-                </div>
-              </Accordion.Content>
-            </Accordion.Item>
-          </Accordion.Root>
+                    )}
+                  </Empty.Root>
+                )}
+              </div>
+            </BuilderCollapsibleSection>
+          </div>
+          )}
         </div>
       </HookForm.Root>
     </FileUploadProvider>
@@ -804,14 +765,14 @@ function ProductPickerDialog({
           </Dialog.Header>
           <Dialog.Body>
             {products.length ? (
-              <div className="flex flex-col gap-2">
+              <div className="divide-y">
                 {products.map(product => {
                   const checked = selectedProductIds.includes(product.id);
                   const disabled = !checked && selectedProductIds.length >= 6;
                   return (
                     <label
                       key={product.id}
-                      className="flex cursor-pointer items-center gap-3 rounded-card border p-3 has-data-checked:border-primary has-data-checked:bg-primary/5 has-data-disabled:cursor-not-allowed has-data-disabled:opacity-60"
+                      className="flex cursor-pointer items-center gap-3 px-1 py-3 transition-colors hover:bg-muted/40 has-data-checked:bg-primary/5 has-data-disabled:cursor-not-allowed has-data-disabled:opacity-60"
                       data-disabled={disabled || undefined}
                     >
                       <ProductThumbnail product={product} />
@@ -871,7 +832,7 @@ function SelectedProduct({
   onRemove: () => void;
 }) {
   return (
-    <div className="group flex min-w-0 items-center gap-3 rounded-card-sm border bg-card p-2.5 transition-colors hover:bg-accent/50">
+    <div className="group flex min-w-0 items-center gap-3 px-1 py-2.5 transition-colors hover:bg-accent/50">
       <ProductThumbnail product={product} />
       <div className="min-w-0 flex-1">
         <div className="truncate text-sm leading-tight font-medium">

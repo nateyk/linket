@@ -19,7 +19,7 @@ export function LivePreview() {
     <Activity>
       <div
         className={cn(
-          'compact-scrollbar flex w-112 shrink-0 flex-col items-center overflow-x-hidden overflow-y-auto border-l px-6 py-5 max-xl:hidden',
+          'flex w-full min-w-0 shrink-0 flex-col items-center overflow-x-hidden border-t bg-background px-4 py-5 lg:w-[min(34vw,26rem)] lg:min-w-84 lg:overflow-y-auto lg:border-t-0 lg:border-l lg:px-5 lg:py-5',
           isInsightsTab && 'hidden',
         )}
       >
@@ -27,7 +27,7 @@ export function LivePreview() {
           size="sm"
           color="positive"
           radius="rounded"
-          className="mb-5 w-max shrink-0"
+          className="mb-4 w-max shrink-0"
         >
           <Trans message="Live preview" />
         </Chip>
@@ -42,7 +42,7 @@ export function LivePreview() {
             profileConfig={profileConfig}
           />
         </PhoneSkeleton>
-        <div className="mt-3.5 shrink-0 text-center text-sm text-muted-foreground">
+        <div className="mt-3 shrink-0 text-center text-xs text-muted-foreground">
           <Trans message="Scheduled and disabled content is not shown" />
         </div>
       </div>
@@ -55,7 +55,7 @@ interface PhoneSkeletonProps {
 }
 function PhoneSkeleton({children}: PhoneSkeletonProps) {
   return (
-    <div className="aspect-[9/19.5] w-full max-w-96 shrink-0 rounded-[calc(var(--radius-card)+1.5rem)] border border-foreground/20 bg-foreground/90 p-1.5">
+    <div className="aspect-[9/19.5] w-full max-w-64 shrink-0 rounded-[calc(var(--radius-card)+1.5rem)] border border-foreground/20 bg-foreground/90 p-1.5 sm:max-w-72 lg:max-w-96">
       <div className="flex size-full flex-col overflow-hidden rounded-[calc(var(--radius-card)+1rem)] bg-background">
         <div className="flex h-8 shrink-0 items-center justify-center bg-foreground/90">
           <div className="h-3.5 w-22 rounded-full bg-background/15" />

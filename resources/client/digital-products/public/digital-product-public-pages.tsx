@@ -113,9 +113,8 @@ export function PublicDigitalProductPage({
   const [buyerPhone, setBuyerPhone] = useState('');
   const [buyerError, setBuyerError] = useState<'name' | 'email'>();
   const [checkoutFailed, setCheckoutFailed] = useState(false);
-  const checkoutCancelled = new URLSearchParams(window.location.search).get(
-    'checkout',
-  ) === 'cancelled';
+  const checkoutCancelled =
+    new URLSearchParams(window.location.search).get('checkout') === 'cancelled';
 
   const beginCheckout = async () => {
     if (buyerName.trim().length < 2) {
@@ -138,7 +137,10 @@ export function PublicDigitalProductPage({
         {
           method: 'POST',
           credentials: 'same-origin',
-          headers: {Accept: 'application/json', 'Content-Type': 'application/json'},
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+          },
           body: JSON.stringify({
             buyer_name: buyerName.trim(),
             buyer_email: buyerEmail.trim(),
@@ -165,79 +167,118 @@ export function PublicDigitalProductPage({
       appearance={data.appearance}
       backUrl={data.back_url}
       backLabel={<Trans message="Back to bio" />}
+      wide
     >
-      <Card.Root className="w-full max-w-xl gap-0 overflow-hidden bg-[var(--biolink-surface-strong)] py-0 text-[var(--biolink-text)] shadow-xl ring-1 ring-[var(--biolink-border)] backdrop-blur-xl">
-        <ProductCover
-          product={data.product}
-          creator={data.creator}
-          biolink={data.biolink}
-        />
-        <div className="space-y-5 p-5 sm:p-6">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex min-w-0 items-center gap-2 text-xs font-medium text-[var(--biolink-muted-text)]">
-              <FileDownIcon className="size-4 shrink-0" />
-              <Trans
-                message=":count download files"
-                values={{count: data.product.files_count ?? 1}}
-              />
+      <div className="flex w-full max-w-5xl flex-col gap-4 sm:gap-5">
+        <Card.Root className="gap-0 bg-[var(--biolink-surface-strong)] py-0 text-[var(--biolink-text)] shadow-lg ring-1 ring-[var(--biolink-border)] backdrop-blur-xl">
+          <Card.Content className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+            <div className="flex min-w-0 flex-col gap-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge className="bg-[var(--biolink-surface)] text-[var(--biolink-text)] ring-1 ring-[var(--biolink-border)]">
+                  <FileDownIcon />
+                  <Trans message="Digital download" />
+                </Badge>
+                <span className="flex items-center gap-1.5 text-xs font-medium text-[var(--biolink-muted-text)]">
+                  <FileIcon className="size-4 shrink-0" />
+                  <Trans
+                    message=":count files"
+                    values={{count: data.product.files_count ?? 1}}
+                  />
+                </span>
+              </div>
+              <div className="min-w-0">
+                <h1 className="text-2xl leading-tight font-semibold tracking-tight text-pretty sm:text-3xl">
+                  {data.product.title}
+                </h1>
+                <div className="mt-2">
+                  <CreatorIdentity
+                    creator={data.creator}
+                    biolink={data.biolink}
+                  />
+                </div>
+              </div>
             </div>
-            <p className="shrink-0 text-lg font-semibold tracking-tight">
-              {formatPrice(data.product.price_cents, data.product.currency)}
-            </p>
-          </div>
+          </Card.Content>
+        </Card.Root>
 
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-pretty sm:text-3xl">
-              {data.product.title}
-            </h1>
-          </div>
+        <div className="grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-5">
+          <Card.Root className="gap-0 overflow-hidden bg-[var(--biolink-surface-strong)] py-0 text-[var(--biolink-text)] shadow-lg ring-1 ring-[var(--biolink-border)] backdrop-blur-xl">
+            <ProductCover product={data.product} />
+            {data.product.description && (
+              <Card.Content className="border-t border-[var(--biolink-border)] p-5 sm:p-6">
+                <h2 className="mb-2 text-sm font-semibold">
+                  <Trans message="About this product" />
+                </h2>
+                <p className="text-sm leading-6 whitespace-pre-line text-[var(--biolink-muted-text)]">
+                  {plainTextDescription(data.product.description)}
+                </p>
+              </Card.Content>
+            )}
+          </Card.Root>
 
-          {data.product.description && (
-            <p className="whitespace-pre-line text-sm leading-6 text-[var(--biolink-muted-text)]">
-              {plainTextDescription(data.product.description)}
-            </p>
-          )}
+          <Card.Root className="gap-0 bg-[var(--biolink-surface-strong)] py-0 text-[var(--biolink-text)] shadow-lg ring-1 ring-[var(--biolink-border)] backdrop-blur-xl lg:sticky lg:top-6">
+            <Card.Content className="flex flex-col gap-5 p-5 sm:p-6">
+              <div className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-[var(--biolink-muted-text)]">
+                  <Trans message="One-time purchase" />
+                </span>
+                <p className="text-3xl font-semibold tracking-tight">
+                  {formatPrice(data.product.price_cents, data.product.currency)}
+                </p>
+              </div>
 
-          {checkoutCancelled && (
-            <Alert variant="warning" fillStyle="subtleFill">
-              <RefreshCwIcon />
-              <Alert.Title>
-                <Trans message="Checkout cancelled" />
-              </Alert.Title>
-              <Alert.Description>
-                <Trans message="Your product is still available when you are ready." />
-              </Alert.Description>
-            </Alert>
-          )}
-          {checkoutFailed && (
-            <Alert variant="destructive" fillStyle="subtleFill">
-              <RefreshCwIcon />
-              <Alert.Title>
-                <Trans message="Unable to start checkout" />
-              </Alert.Title>
-              <Alert.Description>
-                <Trans message="Please try again in a moment." />
-              </Alert.Description>
-            </Alert>
-          )}
+              <div className="flex flex-col gap-3 border-y border-[var(--biolink-border)] py-4 text-sm text-[var(--biolink-muted-text)]">
+                <div className="flex items-center gap-2">
+                  <FileDownIcon className="size-4 shrink-0" />
+                  <Trans
+                    message=":count files included"
+                    values={{count: data.product.files_count ?? 1}}
+                  />
+                </div>
+                <div className="flex items-start gap-2">
+                  <ShieldCheckIcon className="mt-0.5 size-4 shrink-0 text-positive" />
+                  <Trans message="Secure payment with protected access after confirmation." />
+                </div>
+              </div>
 
-          <div className="flex items-center gap-2 border-t border-[var(--biolink-border)] pt-4 text-xs text-[var(--biolink-muted-text)]">
-            <ShieldCheckIcon className="size-4 shrink-0 text-positive" />
-            <Trans message="Secure payment. Your files unlock after payment is confirmed." />
-          </div>
-          <Button
-            variant="ghost"
-            className={cn('w-full', buttonAppearance.className)}
-            style={buttonAppearance.style}
-            size="lg"
-            disabled={submitting}
-            onClick={() => setBuyerDialogOpen(true)}
-          >
-            <LockKeyholeIcon />
-            <Trans message="Buy now" />
-          </Button>
+              {checkoutCancelled && (
+                <Alert variant="warning" fillStyle="subtleFill">
+                  <RefreshCwIcon />
+                  <Alert.Title>
+                    <Trans message="Checkout cancelled" />
+                  </Alert.Title>
+                  <Alert.Description>
+                    <Trans message="Your product is still available when you are ready." />
+                  </Alert.Description>
+                </Alert>
+              )}
+              {checkoutFailed && (
+                <Alert variant="destructive" fillStyle="subtleFill">
+                  <RefreshCwIcon />
+                  <Alert.Title>
+                    <Trans message="Unable to start checkout" />
+                  </Alert.Title>
+                  <Alert.Description>
+                    <Trans message="Please try again in a moment." />
+                  </Alert.Description>
+                </Alert>
+              )}
+
+              <Button
+                variant="ghost"
+                className={cn('w-full', buttonAppearance.className)}
+                style={buttonAppearance.style}
+                size="lg"
+                disabled={submitting}
+                onClick={() => setBuyerDialogOpen(true)}
+              >
+                <LockKeyholeIcon />
+                <Trans message="Buy now" />
+              </Button>
+            </Card.Content>
+          </Card.Root>
         </div>
-      </Card.Root>
+      </div>
       <BuyerDetailsDialog
         appearance={data.appearance}
         open={buyerDialogOpen}
@@ -319,7 +360,10 @@ export function PublicDigitalProductOrderSuccessPage({
                   <Trans message="Your download is ready" />
                 </h1>
                 <p className="mt-1 text-sm text-[var(--biolink-muted-text)]">
-                  <Trans message="Thanks for your purchase of :product." values={{product: data.product.title}} />
+                  <Trans
+                    message="Thanks for your purchase of :product."
+                    values={{product: data.product.title}}
+                  />
                 </p>
               </div>
             </div>
@@ -343,7 +387,10 @@ export function PublicDigitalProductOrderSuccessPage({
         <div className="space-y-5 p-5 sm:p-6">
           {order.buyer_email && (
             <p className="text-sm text-[var(--biolink-muted-text)]">
-              <Trans message="Your receipt is being sent to :email." values={{email: order.buyer_email}} />
+              <Trans
+                message="Your receipt is being sent to :email."
+                values={{email: order.buyer_email}}
+              />
             </p>
           )}
 
@@ -418,7 +465,10 @@ function BuyerDetailsDialog({
           }}
         >
           <Dialog.Header>
-            <Dialog.Title><LockKeyholeIcon /><Trans message="Continue to secure payment" /></Dialog.Title>
+            <Dialog.Title>
+              <LockKeyholeIcon />
+              <Trans message="Continue to secure payment" />
+            </Dialog.Title>
             <Dialog.Description className="text-[var(--biolink-muted-text)]">
               <Trans message="We use your email to send your receipt and protected download links." />
             </Dialog.Description>
@@ -433,28 +483,80 @@ function BuyerDetailsDialog({
               }}
             >
               <Field.Root invalid={error === 'name' ? true : undefined}>
-                <Field.Label><Trans message="Name" /></Field.Label>
-                <Input aria-invalid={error === 'name' ? true : undefined} aria-describedby={error === 'name' ? 'digital-product-buyer-name-error' : undefined} className="border-[var(--biolink-border)] bg-[var(--biolink-surface)] text-[var(--biolink-text)]" bindToHookForm={false} autoComplete="name" value={name} onChange={event => onNameChange(event.target.value)} />
+                <Field.Label>
+                  <Trans message="Name" />
+                </Field.Label>
+                <Input
+                  aria-invalid={error === 'name' ? true : undefined}
+                  aria-describedby={
+                    error === 'name'
+                      ? 'digital-product-buyer-name-error'
+                      : undefined
+                  }
+                  className="border-[var(--biolink-border)] bg-[var(--biolink-surface)] text-[var(--biolink-text)]"
+                  bindToHookForm={false}
+                  autoComplete="name"
+                  value={name}
+                  onChange={event => onNameChange(event.target.value)}
+                />
                 {error === 'name' && (
-                  <Field.Error id="digital-product-buyer-name-error"><Trans message="Enter your name to continue." /></Field.Error>
+                  <Field.Error id="digital-product-buyer-name-error">
+                    <Trans message="Enter your name to continue." />
+                  </Field.Error>
                 )}
               </Field.Root>
               <Field.Root invalid={error === 'email' ? true : undefined}>
-                <Field.Label><Trans message="Email" /></Field.Label>
-                <Input aria-invalid={error === 'email' ? true : undefined} aria-describedby={error === 'email' ? 'digital-product-buyer-email-error' : undefined} className="border-[var(--biolink-border)] bg-[var(--biolink-surface)] text-[var(--biolink-text)]" bindToHookForm={false} type="email" autoComplete="email" value={email} onChange={event => onEmailChange(event.target.value)} />
+                <Field.Label>
+                  <Trans message="Email" />
+                </Field.Label>
+                <Input
+                  aria-invalid={error === 'email' ? true : undefined}
+                  aria-describedby={
+                    error === 'email'
+                      ? 'digital-product-buyer-email-error'
+                      : undefined
+                  }
+                  className="border-[var(--biolink-border)] bg-[var(--biolink-surface)] text-[var(--biolink-text)]"
+                  bindToHookForm={false}
+                  type="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={event => onEmailChange(event.target.value)}
+                />
                 {error === 'email' && (
-                  <Field.Error id="digital-product-buyer-email-error"><Trans message="Enter a valid email address to receive your receipt." /></Field.Error>
+                  <Field.Error id="digital-product-buyer-email-error">
+                    <Trans message="Enter a valid email address to receive your receipt." />
+                  </Field.Error>
                 )}
               </Field.Root>
               <Field.Root>
-                <Field.Label><Trans message="Phone (optional)" /></Field.Label>
-                <Input className="border-[var(--biolink-border)] bg-[var(--biolink-surface)] text-[var(--biolink-text)]" bindToHookForm={false} type="tel" autoComplete="tel" value={phone} onChange={event => onPhoneChange(event.target.value)} />
-                <Field.Description className="text-[var(--biolink-muted-text)]"><Trans message="Only shared with Chapa to support this payment." /></Field.Description>
+                <Field.Label>
+                  <Trans message="Phone (optional)" />
+                </Field.Label>
+                <Input
+                  className="border-[var(--biolink-border)] bg-[var(--biolink-surface)] text-[var(--biolink-text)]"
+                  bindToHookForm={false}
+                  type="tel"
+                  autoComplete="tel"
+                  value={phone}
+                  onChange={event => onPhoneChange(event.target.value)}
+                />
+                <Field.Description className="text-[var(--biolink-muted-text)]">
+                  <Trans message="Only shared with Chapa to support this payment." />
+                </Field.Description>
               </Field.Root>
             </form>
           </Dialog.Body>
-          <Dialog.Footer className="border-[var(--biolink-border)] bg-[var(--biolink-surface)]" variant="muted">
-            <Dialog.CloseButton className="border-[var(--biolink-border)] bg-transparent text-[var(--biolink-text)]" disabled={submitting}><Trans message="Cancel" /></Dialog.CloseButton>
+          <Dialog.Footer
+            className="border-[var(--biolink-border)] bg-[var(--biolink-surface)]"
+            variant="muted"
+          >
+            <Dialog.CloseButton
+              className="border-[var(--biolink-border)] bg-transparent text-[var(--biolink-text)]"
+              disabled={submitting}
+            >
+              <Trans message="Cancel" />
+            </Dialog.CloseButton>
             <Button
               form="digital-product-buyer-details"
               type="submit"
@@ -464,7 +566,13 @@ function BuyerDetailsDialog({
               disabled={submitting}
             >
               {submitting ? <Spinner /> : <LockKeyholeIcon />}
-              <Trans message={submitting ? 'Opening secure checkout...' : 'Continue to payment'} />
+              <Trans
+                message={
+                  submitting
+                    ? 'Opening secure checkout...'
+                    : 'Continue to payment'
+                }
+              />
             </Button>
           </Dialog.Footer>
         </Dialog.Content>
@@ -480,9 +588,13 @@ function OrderSummary({
   order: DigitalProductOrder;
   product: PublicDigitalProduct;
 }) {
-  const total = typeof order.gross_amount_cents === 'number'
-    ? formatPrice(order.gross_amount_cents, order.currency ?? product.currency)
-    : formatPrice(product.price_cents, product.currency);
+  const total =
+    typeof order.gross_amount_cents === 'number'
+      ? formatPrice(
+          order.gross_amount_cents,
+          order.currency ?? product.currency,
+        )
+      : formatPrice(product.price_cents, product.currency);
 
   return (
     <section
@@ -490,21 +602,38 @@ function OrderSummary({
       aria-label="Order summary"
     >
       <div className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
-        <span className="text-[var(--biolink-muted-text)]"><Trans message="Product" /></span>
-        <span className="text-end font-medium">{order.product_title ?? product.title}</span>
+        <span className="text-[var(--biolink-muted-text)]">
+          <Trans message="Product" />
+        </span>
+        <span className="text-end font-medium">
+          {order.product_title ?? product.title}
+        </span>
       </div>
       <div className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
-        <span className="text-[var(--biolink-muted-text)]"><Trans message="Total paid" /></span>
+        <span className="text-[var(--biolink-muted-text)]">
+          <Trans message="Total paid" />
+        </span>
         <span className="font-medium">{total}</span>
       </div>
       <div className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
-        <span className="text-[var(--biolink-muted-text)]"><Trans message="Order reference" /></span>
-        <span className="max-w-48 truncate font-mono text-xs" title={order.id ?? order.uuid}>{shortReference(order.id ?? order.uuid)}</span>
+        <span className="text-[var(--biolink-muted-text)]">
+          <Trans message="Order reference" />
+        </span>
+        <span
+          className="max-w-48 truncate font-mono text-xs"
+          title={order.id ?? order.uuid}
+        >
+          {shortReference(order.id ?? order.uuid)}
+        </span>
       </div>
-      {order.paid_at && <div className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
-        <span className="text-[var(--biolink-muted-text)]"><Trans message="Paid" /></span>
-        <span>{formatDate(order.paid_at)}</span>
-      </div>}
+      {order.paid_at && (
+        <div className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
+          <span className="text-[var(--biolink-muted-text)]">
+            <Trans message="Paid" />
+          </span>
+          <span>{formatDate(order.paid_at)}</span>
+        </div>
+      )}
     </section>
   );
 }
@@ -513,11 +642,13 @@ function PublicProductShell({
   appearance,
   backUrl,
   backLabel,
+  wide = false,
   children,
 }: {
   appearance?: BiolinkAppearanceConfig | null;
   backUrl?: string | null;
   backLabel: React.ReactNode;
+  wide?: boolean;
   children: React.ReactNode;
 }) {
   useEffect(() => {
@@ -534,7 +665,12 @@ function PublicProductShell({
       }}
     >
       <ProductBackground appearance={appearance ?? null} />
-      <main className="relative mx-auto flex w-full max-w-xl flex-col gap-4">
+      <main
+        className={cn(
+          'relative mx-auto flex w-full flex-col gap-4',
+          wide ? 'max-w-5xl' : 'max-w-xl',
+        )}
+      >
         <BackToBio backUrl={backUrl}>{backLabel}</BackToBio>
         {children}
       </main>
@@ -562,24 +698,20 @@ function BackToBio({
   }
 
   return (
-    <button className={className} type="button" onClick={() => window.history.back()}>
+    <button
+      className={className}
+      type="button"
+      onClick={() => window.history.back()}
+    >
       <ArrowLeftIcon className="size-4" />
       {children}
     </button>
   );
 }
 
-function ProductCover({
-  product,
-  creator,
-  biolink,
-}: {
-  product: PublicDigitalProduct;
-  creator?: PublicCreator | null;
-  biolink: PublicBiolink;
-}) {
+function ProductCover({product}: {product: PublicDigitalProduct}) {
   return (
-    <div className="relative aspect-[5/4] overflow-hidden bg-[var(--biolink-surface)]">
+    <div className="relative aspect-[4/3] overflow-hidden bg-[var(--biolink-surface)] sm:aspect-[16/10]">
       {product.cover?.url ? (
         <img
           className="size-full object-cover"
@@ -587,22 +719,15 @@ function ProductCover({
           alt={product.title}
         />
       ) : (
-        <div className="flex size-full flex-col items-center justify-center gap-3 text-[var(--biolink-muted-text)]">
-          <span className="grid size-12 place-items-center rounded-full bg-[var(--biolink-surface-strong)] shadow-sm ring-1 ring-[var(--biolink-border)]">
-            <PackageOpenIcon className="size-6" />
+        <div className="flex size-full min-h-48 flex-col items-center justify-center gap-3 bg-[radial-gradient(circle_at_center,var(--biolink-surface-strong),transparent_70%)] px-6 text-center text-[var(--biolink-muted-text)] sm:min-h-64">
+          <span className="grid size-11 place-items-center rounded-card-sm bg-[var(--biolink-surface-strong)] ring-1 ring-[var(--biolink-border)]">
+            <PackageOpenIcon className="size-5" />
           </span>
           <span className="text-sm font-medium">
             <Trans message="Digital product" />
           </span>
         </div>
       )}
-      <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 bg-linear-to-t from-black/80 via-black/35 to-transparent px-5 pt-14 pb-4 text-white sm:px-6">
-        <CreatorIdentity creator={creator} biolink={biolink} inverted />
-        <Badge className="shrink-0 bg-white/90 text-foreground shadow-sm">
-          <FileDownIcon className="size-3" />
-          <Trans message="Digital download" />
-        </Badge>
-      </div>
     </div>
   );
 }
@@ -630,7 +755,9 @@ function CreatorIdentity({
     >
       <Avatar.Root size="sm">
         <Avatar.Image src={avatar} alt="" />
-        <Avatar.ColorFallback className={inverted ? 'bg-white/90 text-foreground' : undefined}>
+        <Avatar.ColorFallback
+          className={inverted ? 'bg-white/90 text-foreground' : undefined}
+        >
           {name}
         </Avatar.ColorFallback>
       </Avatar.Root>
@@ -640,7 +767,9 @@ function CreatorIdentity({
       {verified && (
         <>
           <BadgeCheckIcon className="size-4 fill-current" aria-hidden="true" />
-          <span className="sr-only"><Trans message="Verified creator" /></span>
+          <span className="sr-only">
+            <Trans message="Verified creator" />
+          </span>
         </>
       )}
     </div>
@@ -735,7 +864,10 @@ function DownloadList({
             </span>
             {typeof download.remaining_downloads === 'number' && (
               <span className="hidden text-xs text-[var(--biolink-muted-text)] sm:inline">
-                <Trans message=":count left" values={{count: download.remaining_downloads}} />
+                <Trans
+                  message=":count left"
+                  values={{count: download.remaining_downloads}}
+                />
               </span>
             )}
             <Button
@@ -772,7 +904,9 @@ function ProductBackground({
         className="absolute inset-0"
         style={{...cssPropsFromBgConfig(appearance?.bgConfig), ...effectStyle}}
       />
-      <ImageBackgroundEffectOverlay effect={appearance?.bgConfig?.imageEffect} />
+      <ImageBackgroundEffectOverlay
+        effect={appearance?.bgConfig?.imageEffect}
+      />
       {tintStyle && <div className="absolute inset-0" style={tintStyle} />}
       {appearance?.bgConfig?.noise && <NoiseFilter />}
     </div>
@@ -789,7 +923,10 @@ function plainTextDescription(value: string) {
     return document.body.textContent?.trim() ?? '';
   }
 
-  return value.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+  return value
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function formatPrice(priceCents: number, currency: string) {
@@ -800,7 +937,10 @@ function formatPrice(priceCents: number, currency: string) {
 }
 
 function formatDate(value: string) {
-  return new Intl.DateTimeFormat(undefined, {dateStyle: 'medium', timeStyle: 'short'}).format(new Date(value));
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(value));
 }
 
 function shortReference(reference: string) {
