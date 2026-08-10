@@ -19,7 +19,8 @@ class StorefrontCheckout
     {
         $benefits = app(StorefrontBenefits::class)->forCreator($product->creator);
         $gross = $product->price_cents;
-        $fee = (int) round($gross * ((int) $benefits['commission_bps'] / 10000));
+        $feePercent = $benefits['platform_fee_percent'];
+        $fee = (int) round($gross * ($feePercent / 100));
 
         $order = StorefrontOrder::create([
             'uuid' => (string) Str::uuid(),
@@ -31,6 +32,7 @@ class StorefrontCheckout
             'currency' => $product->currency,
             'gross_amount_cents' => $gross,
             'commission_bps' => $benefits['commission_bps'],
+            'platform_fee_percent' => $feePercent,
             'platform_fee_cents' => $fee,
             'creator_earnings_cents' => $gross - $fee,
         ]);

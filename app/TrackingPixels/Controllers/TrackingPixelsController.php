@@ -2,6 +2,7 @@
 
 namespace App\TrackingPixels\Controllers;
 
+use App\Storefront\StorefrontBenefits;
 use App\TrackingPixels\Actions\CrupdateTrackingPixel;
 use App\TrackingPixels\Actions\DeleteTrackingPixels;
 use App\TrackingPixels\Models\TrackingPixel;
@@ -67,6 +68,9 @@ class TrackingPixelsController extends Controller
     public function store(CrupdateTrackingPixelRequest $request)
     {
         Gate::authorize('store', TrackingPixel::class);
+
+        $benefits = app(StorefrontBenefits::class)->forCreator($request->user());
+        abort_if(!$benefits['tracking_pixels_enabled'], 403, __('Tracking Pixels are available on Pro.'));
 
         $pixel = (new CrupdateTrackingPixel())->execute($request->validated());
 

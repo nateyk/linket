@@ -27,8 +27,10 @@ class ProductResource extends JsonResource
             'position' => $this->position,
             'recommended' => $this->recommended,
             'free' => $this->free,
+            'is_default' => $this->is_default ?? false,
             'hidden' => $this->hidden,
             'trial_period_days' => $this->trial_period_days,
+            'storefront_benefits' => $this->storefront_benefits,
             'created_at' => $this->created_at,
             'permissions' => $this->whenLoaded(
                 'permissions',

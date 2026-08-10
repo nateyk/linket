@@ -18,6 +18,7 @@ class Product extends BaseModel
 
     protected $casts = [
         'free' => 'bool',
+        'is_default' => 'bool',
         'recommended' => 'bool',
         'position' => 'int',
         'trial_period_days' => 'int',

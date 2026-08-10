@@ -29,6 +29,7 @@ class CrupdateProduct
             'description' => $data['description'] ?? null,
             'hidden' => $data['hidden'] ?? false,
             'free' => $data['free'] ?? false,
+            'is_default' => $data['is_default'] ?? false,
             'recommended' => $data['recommended'] ?? false,
             'trial_period_days' => $data['trial_period_days'] ?? 0,
             'position' => $data['position'] ?? 0,
@@ -38,6 +39,10 @@ class CrupdateProduct
 
         $product = $product->fill($newData);
         $product->save();
+
+        if (!empty($newData['is_default'])) {
+            Product::where('id', '!=', $product->id)->update(['is_default' => false]);
+        }
 
         if (
             array_key_exists('permissions', $data) &&
