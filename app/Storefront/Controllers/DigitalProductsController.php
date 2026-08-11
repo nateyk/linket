@@ -114,7 +114,24 @@ class DigitalProductsController extends Controller
         }), 422, $maxBytes !== null && $files->max('file_size') > $maxBytes
             ? __("One or more files exceed your plan's storage allowance per file.")
             : __('One or more files are not allowed for sale.'));
+
+        if ($maxBytes !== null) {
+            $existingBytes = (int) DB::table('digital_product_files')
+                ->where('digital_product_id', '!=', $product->id)
+                ->join('file_entries', 'file_entries.id', '=', 'digital_product_files.file_entry_id')
+                ->where('file_entries.workspace_id', $product->workspace_id)
+                ->sum('file_entries.file_size');
+            $newBytes = $files->sum('file_size');
+            abort_if($existingBytes + $newBytes > $maxBytes, 422, __("Uploading these files would exceed your plan's storage allowance of :limit.", ['limit' => $this->formatBytes($maxBytes)]));
+        }
+
         $product->files()->sync($ids);
+    }
+    private function formatBytes(int $bytes): string
+    {
+        $gb = 1073741824;
+        $mb = 1048576;
+        return $bytes >= $gb ? round($bytes / $gb, 1) . ' GB' : round($bytes / $mb, 1) . ' MB';
     }
     private function assertCoverBelongsToWorkspace(DigitalProduct $product): void
     {

@@ -384,13 +384,21 @@ class SeedDemoData extends Command
             [
                 'name' => 'Free',
                 'free' => true,
+                'is_default' => true,
                 'position' => 1,
                 'feature_list' => $featureList,
                 'permissions' => $permissions,
                 'storefront_benefits' => [
-                    'max_products' => 5,
+                    'platform_fee_percent' => 5.0,
                     'commission_bps' => 500,
+                    'max_products' => 5,
+                    'max_free_products' => 5,
+                    'max_paid_products' => 5,
                     'max_upload_bytes' => 1073741824,
+                    'max_storefronts' => 1,
+                    'max_workspaces' => 1,
+                    'tracking_pixels_enabled' => false,
+                    'advanced_analytics_enabled' => false,
                 ],
                 'prices' => [
                     [
@@ -416,9 +424,16 @@ class SeedDemoData extends Command
                 'feature_list' => $featureList,
                 'permissions' => $permissions,
                 'storefront_benefits' => [
-                    'max_products' => null,
+                    'platform_fee_percent' => 0.0,
                     'commission_bps' => 0,
+                    'max_products' => null,
+                    'max_free_products' => null,
+                    'max_paid_products' => null,
                     'max_upload_bytes' => 26843545600,
+                    'max_storefronts' => null,
+                    'max_workspaces' => 3,
+                    'tracking_pixels_enabled' => true,
+                    'advanced_analytics_enabled' => true,
                 ],
                 'prices' => [
                     [
