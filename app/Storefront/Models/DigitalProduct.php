@@ -4,6 +4,7 @@ namespace App\Storefront\Models;
 
 use App\Models\User;
 use App\Biolinks\Models\Biolink;
+use Codebyray\ReviewRateable\Traits\ReviewRateable;
 use Common\Files\FileEntry;
 use Common\Workspaces\Traits\BelongsToWorkspace;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -13,7 +14,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class DigitalProduct extends StorefrontModel
 {
-    use BelongsToWorkspace, SoftDeletes;
+    use BelongsToWorkspace, ReviewRateable, SoftDeletes;
 
     protected $fillable = [
         'workspace_id',
