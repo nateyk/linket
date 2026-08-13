@@ -72,6 +72,7 @@ use App\Payments\Controllers\AdminPaymentTransactionsController;
 use App\Payments\Controllers\AdminPaymentHealthController;
 use App\Storefront\Controllers\OrderLookupController;
 use App\Storefront\Controllers\AdminDigitalProductOrderRecoveryDeliveriesController;
+use App\Storefront\Controllers\ProductReviewsController;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Http\Controllers\PasswordResetLinkController;
 
@@ -326,6 +327,15 @@ Route::group(['prefix' => 'v1'], function () {
             VerifyApiAccessMiddleware::class,
         ]);
     Route::get('public/biolinks/{biolink}/digital-products/{digitalProduct}/orders/{order}', [PublicDigitalProductsController::class, 'order'])->middleware('throttle:60,1');
+    Route::get('public/biolinks/{biolink}/digital-products/{digitalProduct}/reviews', [ProductReviewsController::class, 'index']);
+    Route::post('public/biolinks/{biolink}/digital-products/{digitalProduct}/reviews', [ProductReviewsController::class, 'store'])
+        ->middleware('throttle:20,1')
+        ->withoutMiddleware([
+            EnsureFrontendRequestsAreStateful::class,
+            VerifyCsrfToken::class,
+            VerifyApiAccessMiddleware::class,
+        ]);
+    Route::get('public/biolinks/{biolink}/digital-products/{digitalProduct}/reviews/{order}', [ProductReviewsController::class, 'show']);
     Route::post('public/order-lookup/request', [OrderLookupController::class, 'requestRecovery'])->middleware('throttle:20,1')->withoutMiddleware([
         EnsureFrontendRequestsAreStateful::class,
         VerifyCsrfToken::class,

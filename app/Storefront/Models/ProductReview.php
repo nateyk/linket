@@ -2,11 +2,15 @@
 
 namespace App\Storefront\Models;
 
+use Codebyray\ReviewRateable\Models\Rating;
 use Codebyray\ReviewRateable\Models\Review;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ProductReview extends Review
 {
+    protected $table = 'reviews';
+
     protected $fillable = [
         'reviewable_id',
         'reviewable_type',
@@ -33,6 +37,11 @@ class ProductReview extends Review
     public function order(): BelongsTo
     {
         return $this->belongsTo(StorefrontOrder::class, 'storefront_order_id');
+    }
+
+    public function ratings(): HasMany
+    {
+        return $this->hasMany(Rating::class, 'review_id');
     }
 
     public function product(): BelongsTo
