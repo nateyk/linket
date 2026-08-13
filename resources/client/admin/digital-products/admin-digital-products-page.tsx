@@ -24,6 +24,7 @@ import {
   LandmarkIcon,
   SearchIcon,
   ShieldCheckIcon,
+  StarIcon,
   XCircleIcon,
   XIcon,
 } from 'lucide-react';
@@ -197,6 +198,14 @@ export function Component() {
         >
           <LandmarkIcon />
           <Trans message="Payout requests" />
+        </Button>
+        <Button
+          variant="outline"
+          nativeButton={false}
+          render={<Link to="/admin/digital-products/reviews" />}
+        >
+          <StarIcon />
+          <Trans message="Product reviews" />
         </Button>
       </DashboardLayout.SectionHeader>
       <DashboardLayout.SectionContent className="overflow-y-auto">

@@ -117,6 +117,6 @@ class ProductReviewsController extends Controller
 
     private function assertEnabled(): void
     {
-        abort_unless(settings('storefront.reviews_enabled', true), 404);
+        abort_unless(settings('storefront.reviews_enabled', false), 404);
     }
 }

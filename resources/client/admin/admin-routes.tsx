@@ -113,6 +113,11 @@ export const adminRoutes: RouteObject[] = [
         lazy: () => import('@app/admin/digital-products/admin-digital-product-payouts-page'),
       },
       {
+        path: 'digital-products/reviews',
+        lazy: () =>
+          import('@app/admin/digital-products/admin-product-reviews-page'),
+      },
+      {
         path: 'payment-activity',
         lazy: () => import('@app/admin/digital-products/admin-payment-activity-page'),
       },

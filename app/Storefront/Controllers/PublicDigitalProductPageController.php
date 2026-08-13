@@ -31,7 +31,7 @@ class PublicDigitalProductPageController extends Controller
                     'creator' => ['name' => $product->creator->name],
                     'product' => (new PublicDigitalProductResource($product))->resolve(),
                     'checkout_endpoint' => "/api/v1/public/biolinks/{$biolink->id}/digital-products/{$product->id}/checkout",
-                    'reviews_enabled' => (bool) settings('storefront.reviews_enabled', true),
+                    'reviews_enabled' => (bool) settings('storefront.reviews_enabled', false),
                     'back_url' => $biolink->short_url,
                 ],
             ],

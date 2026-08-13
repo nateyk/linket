@@ -90,6 +90,9 @@ declare module '@ui/settings/settings' {
       enabled?: boolean;
       selfie_verification?: boolean;
     };
+    storefront?: {
+      reviews_enabled?: boolean;
+    };
     ads?: {
       biolink_top?: string;
       splash_top?: string;

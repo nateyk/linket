@@ -598,4 +598,7 @@ return [
     // KYC verification
     ['name' => 'kyc.enabled', 'value' => true],
     ['name' => 'kyc.selfie_verification', 'value' => true],
+
+    // storefront
+    ['name' => 'storefront.reviews_enabled', 'value' => true],
 ];
