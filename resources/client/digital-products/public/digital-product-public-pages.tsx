@@ -37,6 +37,7 @@ import {
   ShieldCheckIcon,
 } from 'lucide-react';
 import {useCallback, useEffect, useState} from 'react';
+import {ProductReviewsBlock} from './product-reviews-block';
 
 export type PublicDigitalProduct = {
   id: number;
@@ -72,6 +73,7 @@ export type DigitalProductPageData = {
   product: PublicDigitalProduct;
   checkout_endpoint?: string;
   back_url?: string | null;
+  reviews_enabled?: boolean;
 };
 
 export type DigitalProductDownload = {
@@ -169,76 +171,64 @@ export function PublicDigitalProductPage({
       backLabel={<Trans message="Back to bio" />}
       wide
     >
-      <div className="flex w-full max-w-5xl flex-col gap-4 sm:gap-5">
-        <Card.Root className="gap-0 bg-[var(--biolink-surface-strong)] py-0 text-[var(--biolink-text)] shadow-lg ring-1 ring-[var(--biolink-border)] backdrop-blur-xl">
-          <Card.Content className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-            <div className="flex min-w-0 flex-col gap-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge className="bg-[var(--biolink-surface)] text-[var(--biolink-text)] ring-1 ring-[var(--biolink-border)]">
-                  <FileDownIcon />
-                  <Trans message="Digital download" />
-                </Badge>
-                <span className="flex items-center gap-1.5 text-xs font-medium text-[var(--biolink-muted-text)]">
-                  <FileIcon className="size-4 shrink-0" />
-                  <Trans
-                    message=":count files"
-                    values={{count: data.product.files_count ?? 1}}
-                  />
-                </span>
-              </div>
-              <div className="min-w-0">
-                <h1 className="text-2xl leading-tight font-semibold tracking-tight text-pretty sm:text-3xl">
+      <div className="flex w-full max-w-6xl flex-col gap-4 sm:gap-5">
+        <div className="grid min-w-0 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-6">
+          <Card.Root className="gap-0 overflow-hidden bg-[var(--biolink-surface-strong)] py-0 text-[var(--biolink-text)] shadow-xl ring-1 ring-[var(--biolink-border)] backdrop-blur-xl">
+            <ProductCover product={data.product} />
+            <Card.Content className="flex min-w-0 flex-col gap-6 p-5 sm:p-7">
+              <div className="flex min-w-0 flex-col gap-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge className="bg-[var(--biolink-surface)] text-[var(--biolink-text)] ring-1 ring-[var(--biolink-border)]">
+                    <FileDownIcon />
+                    <Trans message="Digital download" />
+                  </Badge>
+                  <span className="flex items-center gap-1.5 text-xs font-medium text-[var(--biolink-muted-text)]">
+                    <FileIcon className="size-4 shrink-0" />
+                    <Trans
+                      message=":count files"
+                      values={{count: data.product.files_count ?? 1}}
+                    />
+                  </span>
+                </div>
+                <h1 className="max-w-3xl text-3xl leading-tight font-semibold tracking-tight text-balance sm:text-4xl">
                   {data.product.title}
                 </h1>
-                <div className="mt-2">
-                  <CreatorIdentity
-                    creator={data.creator}
-                    biolink={data.biolink}
-                  />
-                </div>
+                <CreatorIdentity
+                  creator={data.creator}
+                  biolink={data.biolink}
+                />
               </div>
-            </div>
-          </Card.Content>
-        </Card.Root>
 
-        <div className="grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] lg:gap-5">
-          <Card.Root className="gap-0 overflow-hidden bg-[var(--biolink-surface-strong)] py-0 text-[var(--biolink-text)] shadow-lg ring-1 ring-[var(--biolink-border)] backdrop-blur-xl">
-            <ProductCover product={data.product} />
-            {data.product.description && (
-              <Card.Content className="border-t border-[var(--biolink-border)] p-5 sm:p-6">
-                <h2 className="mb-2 text-sm font-semibold">
-                  <Trans message="About this product" />
-                </h2>
-                <p className="text-sm leading-6 whitespace-pre-line text-[var(--biolink-muted-text)]">
-                  {plainTextDescription(data.product.description)}
-                </p>
-              </Card.Content>
-            )}
+              {data.product.description && (
+                <section className="flex flex-col gap-2 border-t border-[var(--biolink-border)] pt-5">
+                  <h2 className="text-sm font-semibold">
+                    <Trans message="Product details" />
+                  </h2>
+                  <p className="text-sm leading-6 whitespace-pre-line text-[var(--biolink-muted-text)]">
+                    {plainTextDescription(data.product.description)}
+                  </p>
+                </section>
+              )}
+            </Card.Content>
           </Card.Root>
 
-          <Card.Root className="gap-0 bg-[var(--biolink-surface-strong)] py-0 text-[var(--biolink-text)] shadow-lg ring-1 ring-[var(--biolink-border)] backdrop-blur-xl lg:sticky lg:top-6">
+          <Card.Root className="gap-0 overflow-hidden bg-[var(--biolink-surface-strong)] py-0 text-[var(--biolink-text)] shadow-xl ring-1 ring-[var(--biolink-border)] backdrop-blur-xl lg:sticky lg:top-6">
             <Card.Content className="flex flex-col gap-5 p-5 sm:p-6">
-              <div className="flex flex-col gap-1">
-                <span className="text-xs font-medium text-[var(--biolink-muted-text)]">
-                  <Trans message="One-time purchase" />
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex min-w-0 flex-col gap-1.5">
+                  <span className="text-xs font-medium tracking-wide text-[var(--biolink-muted-text)] uppercase">
+                    <Trans message="One-time purchase" />
+                  </span>
+                  <p className="text-4xl leading-none font-semibold tracking-tight">
+                    {formatPrice(
+                      data.product.price_cents,
+                      data.product.currency,
+                    )}
+                  </p>
+                </div>
+                <span className="grid size-10 shrink-0 place-items-center rounded-card-sm bg-[var(--biolink-surface)] text-[var(--biolink-muted-text)] ring-1 ring-[var(--biolink-border)]">
+                  <FileDownIcon className="size-5" />
                 </span>
-                <p className="text-3xl font-semibold tracking-tight">
-                  {formatPrice(data.product.price_cents, data.product.currency)}
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-3 border-y border-[var(--biolink-border)] py-4 text-sm text-[var(--biolink-muted-text)]">
-                <div className="flex items-center gap-2">
-                  <FileDownIcon className="size-4 shrink-0" />
-                  <Trans
-                    message=":count files included"
-                    values={{count: data.product.files_count ?? 1}}
-                  />
-                </div>
-                <div className="flex items-start gap-2">
-                  <ShieldCheckIcon className="mt-0.5 size-4 shrink-0 text-positive" />
-                  <Trans message="Secure payment with protected access after confirmation." />
-                </div>
               </div>
 
               {checkoutCancelled && (
@@ -275,10 +265,30 @@ export function PublicDigitalProductPage({
                 <LockKeyholeIcon />
                 <Trans message="Buy now" />
               </Button>
+
+              <div className="grid gap-3 border-t border-[var(--biolink-border)] pt-4 text-sm text-[var(--biolink-muted-text)]">
+                <div className="flex items-center gap-2">
+                  <FileDownIcon className="size-4 shrink-0" />
+                  <Trans
+                    message=":count files included"
+                    values={{count: data.product.files_count ?? 1}}
+                  />
+                </div>
+                <div className="flex items-start gap-2">
+                  <ShieldCheckIcon className="mt-0.5 size-4 shrink-0 text-positive" />
+                  <Trans message="Secure payment with protected access after confirmation." />
+                </div>
+              </div>
             </Card.Content>
           </Card.Root>
         </div>
       </div>
+      {data.reviews_enabled !== false && (
+        <ProductReviewsBlock
+          product={data.product}
+          biolinkId={data.biolink.id}
+        />
+      )}
       <BuyerDetailsDialog
         appearance={data.appearance}
         open={buyerDialogOpen}
@@ -711,7 +721,12 @@ function BackToBio({
 
 function ProductCover({product}: {product: PublicDigitalProduct}) {
   return (
-    <div className="relative aspect-[4/3] overflow-hidden bg-[var(--biolink-surface)] sm:aspect-[16/10]">
+    <div
+      className={cn(
+        'relative overflow-hidden bg-[var(--biolink-surface)]',
+        product.cover?.url ? 'aspect-video' : 'min-h-64 sm:min-h-80',
+      )}
+    >
       {product.cover?.url ? (
         <img
           className="size-full object-cover"
@@ -719,13 +734,18 @@ function ProductCover({product}: {product: PublicDigitalProduct}) {
           alt={product.title}
         />
       ) : (
-        <div className="flex size-full min-h-48 flex-col items-center justify-center gap-3 bg-[radial-gradient(circle_at_center,var(--biolink-surface-strong),transparent_70%)] px-6 text-center text-[var(--biolink-muted-text)] sm:min-h-64">
-          <span className="grid size-11 place-items-center rounded-card-sm bg-[var(--biolink-surface-strong)] ring-1 ring-[var(--biolink-border)]">
+        <div className="flex size-full min-h-64 flex-col items-center justify-center gap-3 bg-[radial-gradient(circle_at_center,var(--biolink-surface-strong),transparent_68%)] px-6 text-center text-[var(--biolink-muted-text)] sm:min-h-80">
+          <span className="grid size-14 place-items-center rounded-card bg-[var(--biolink-surface-strong)] shadow-sm ring-1 ring-[var(--biolink-border)]">
             <PackageOpenIcon className="size-5" />
           </span>
-          <span className="text-sm font-medium">
-            <Trans message="Digital product" />
-          </span>
+          <div className="flex flex-col gap-1">
+            <span className="text-sm font-semibold text-[var(--biolink-text)]">
+              <Trans message="Digital download" />
+            </span>
+            <span className="text-xs">
+              <Trans message="Secure access after purchase" />
+            </span>
+          </div>
         </div>
       )}
     </div>
