@@ -30,6 +30,7 @@ import {auth} from '@common/auth/use-auth';
 import {queryClient} from '@common/http/query-client';
 import {listWorkspacesOptions} from '@common/workspace/workspace-queries';
 import {useWorkspaceStore} from '@common/workspace/workspace-store';
+import {getBootstrapData} from '@ui/bootstrap-data/bootstrap-data-store';
 import {searchParamsFromUrl} from '@ui/utils/urls/search-params-from-url';
 import {redirect, RouteObject} from 'react-router';
 
@@ -358,6 +359,18 @@ export const dashboardRoutes: RouteObject[] = [
     children: [
       {
         index: true,
+        loader: () => {
+          const homepage = getBootstrapData().settings.dashboard?.homepage;
+          const homepageRoutes: Record<string, string> = {
+            biolinks: '/dashboard/biolinks',
+            'digital-products': '/dashboard/my-products',
+            'sales-payouts': '/dashboard/sales-payouts',
+            insights: '/dashboard/insights',
+          };
+          const destination = homepage ? homepageRoutes[homepage] : undefined;
+
+          return destination ? redirect(destination) : null;
+        },
         lazy: () => import('@app/dashboard/dashboard-home-page'),
       },
       {
@@ -395,6 +408,11 @@ export const dashboardRoutes: RouteObject[] = [
         path: 'my-products/:productId/edit',
         lazy: () =>
           import('@app/dashboard/digital-products/digital-product-form-page'),
+      },
+      {
+        path: 'my-products/:productId/reviews',
+        lazy: () =>
+          import('@app/dashboard/digital-products/product-reviews-page'),
       },
       {
         path: 'sales-payouts',
