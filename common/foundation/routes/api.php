@@ -73,6 +73,7 @@ use App\Payments\Controllers\AdminPaymentHealthController;
 use App\Storefront\Controllers\OrderLookupController;
 use App\Storefront\Controllers\AdminDigitalProductOrderRecoveryDeliveriesController;
 use App\Storefront\Controllers\ProductReviewsController;
+use App\Storefront\Controllers\CreatorProductReviewsController;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Http\Controllers\PasswordResetLinkController;
 
@@ -236,6 +237,7 @@ Route::group(['prefix' => 'v1'], function () {
         Route::get('digital-products/payout-method', [DigitalProductPayoutMethodController::class, 'show']);
         Route::put('digital-products/payout-method', [DigitalProductPayoutMethodController::class, 'update']);
         Route::apiResource('digital-products', DigitalProductsController::class);
+        Route::get('digital-products/{digitalProduct}/reviews', [CreatorProductReviewsController::class, 'index']);
         Route::post('digital-products/{digitalProduct}/submit', [DigitalProductsController::class, 'submit']);
         Route::get('admin/digital-products', [AdminDigitalProductsController::class, 'index']);
         Route::post('admin/digital-products/{digitalProduct}/approve', [AdminDigitalProductsController::class, 'approve']);

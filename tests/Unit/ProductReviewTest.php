@@ -243,6 +243,57 @@ class ProductReviewTest extends TestCase
         $this->assertInstanceOf(PublicProductReviewResource::class, $response);
     }
 
+    public function testCreatorIndexReturnsReviewsWithHiddenFlagAndEnforcesOwnership(): void
+    {
+        [$product, $biolink] = $this->makeProductOnBiolink();
+        $user = \App\Models\User::query()->find($biolink->user_id);
+        \Illuminate\Support\Facades\Auth::login($user);
+        \Common\Workspaces\ActiveWorkspace::clearCache();
+        ProductReview::unguarded(fn() => $product->addReview([
+            'review' => 'Shown',
+            'approved' => true,
+            'ratings' => ['overall' => 5],
+        ]));
+        ProductReview::unguarded(fn() => $product->addReview([
+            'review' => 'Hidden',
+            'approved' => false,
+            'ratings' => ['overall' => 2],
+        ]));
+        ProductReview::query()
+            ->where('reviewable_id', $product->id)
+            ->where('review', 'Hidden')
+            ->update(['hidden_at' => now(), 'hidden_by' => 9, 'hidden_reason' => 'Spam']);
+
+        $request = Request::create('http://127.0.0.1/api/v1/digital-products/' . $product->id . '/reviews', 'GET');
+        $request->setUserResolver(fn() => $user);
+        $response = (new \App\Storefront\Controllers\CreatorProductReviewsController())->index($request, $product);
+
+        $collection = $response->collection->map(fn($resource) => $resource->resolve());
+        $this->assertCount(2, $collection);
+        $hidden = $collection->firstWhere('review', 'Hidden');
+        $this->assertNotNull($hidden['hidden_at']);
+        $this->assertSame('Spam', $hidden['hidden_reason']);
+        $shown = $collection->firstWhere('review', 'Shown');
+        $this->assertNull($shown['hidden_at']);
+    }
+
+    public function testCreatorIndexRejectsNonOwner(): void
+    {
+        [$product, $biolink] = $this->makeProductOnBiolink();
+        $user = $this->makeUser();
+        $workspaceId = $this->makeWorkspace($user->id);
+        \Illuminate\Support\Facades\Auth::login($user);
+        \Common\Workspaces\ActiveWorkspace::clearCache();
+        $product->update(['workspace_id' => $workspaceId]);
+
+        $request = Request::create('http://127.0.0.1/api/v1/digital-products/' . $product->id . '/reviews', 'GET');
+        $request->setUserResolver(fn() => $user);
+
+        $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+
+        (new \App\Storefront\Controllers\CreatorProductReviewsController())->index($request, $product);
+    }
+
     public function testResourceMasksBuyerName(): void
     {
         $resource = new PublicProductReviewResource(new ProductReview([
