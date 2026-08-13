@@ -294,6 +294,83 @@ class ProductReviewTest extends TestCase
         (new \App\Storefront\Controllers\CreatorProductReviewsController())->index($request, $product);
     }
 
+    public function testAdminHideAndUnhideToggleApprovalAndAuditFields(): void
+    {
+        [$product] = $this->makeProductOnBiolink();
+        ProductReview::unguarded(fn() => $product->addReview([
+            'review' => 'Fine',
+            'approved' => true,
+            'ratings' => ['overall' => 4],
+        ]));
+        $review = ProductReview::query()->where('reviewable_id', $product->id)->first();
+
+        $controller = new \App\Storefront\Controllers\AdminProductReviewsController();
+        $hideRequest = Request::create('http://127.0.0.1/api/v1/admin/digital-products/reviews/1/hide', 'POST', ['reason' => 'Spam']);
+        $hideRequest->setUserResolver(fn() => (object) ['id' => 7]);
+
+        $controller->hide($hideRequest, $review);
+        $review->refresh();
+        $this->assertFalse($review->approved);
+        $this->assertSame(7, $review->hidden_by);
+        $this->assertSame('Spam', $review->hidden_reason);
+        $this->assertNotNull($review->hidden_at);
+
+        $unhideRequest = Request::create('http://127.0.0.1/api/v1/admin/digital-products/reviews/1/unhide', 'POST');
+        $unhideRequest->setUserResolver(fn() => (object) ['id' => 7]);
+        $controller->unhide($unhideRequest, $review);
+        $review->refresh();
+        $this->assertTrue($review->approved);
+        $this->assertNull($review->hidden_by);
+        $this->assertNull($review->hidden_reason);
+        $this->assertNull($review->hidden_at);
+    }
+
+    public function testAdminDestroyDeletesReview(): void
+    {
+        [$product] = $this->makeProductOnBiolink();
+        ProductReview::unguarded(fn() => $product->addReview([
+            'review' => 'Bye',
+            'approved' => true,
+            'ratings' => ['overall' => 3],
+        ]));
+        $review = ProductReview::query()->where('reviewable_id', $product->id)->first();
+
+        (new \App\Storefront\Controllers\AdminProductReviewsController())->destroy(
+            Request::create('http://127.0.0.1/api/v1/admin/digital-products/reviews/1', 'DELETE'),
+            $review,
+        );
+
+        $this->assertDatabaseMissing('reviews', ['id' => $review->id, 'review' => 'Bye']);
+    }
+
+    public function testAdminIndexFiltersByStatusAndSearch(): void
+    {
+        [$product] = $this->makeProductOnBiolink();
+        ProductReview::unguarded(fn() => $product->addReview([
+            'review' => 'Keep',
+            'approved' => true,
+            'ratings' => ['overall' => 5],
+        ]));
+        ProductReview::unguarded(fn() => $product->addReview([
+            'review' => 'Drop',
+            'approved' => false,
+            'ratings' => ['overall' => 2],
+        ]));
+        ProductReview::query()
+            ->where('reviewable_id', $product->id)
+            ->where('review', 'Drop')
+            ->update(['hidden_at' => now(), 'hidden_by' => 7]);
+
+        $response = (new \App\Storefront\Controllers\AdminProductReviewsController())->index(
+            Request::create('http://127.0.0.1/api/v1/admin/digital-products/reviews', 'GET', ['status' => 'hidden']),
+        );
+
+        $this->assertSame(15, $response->resource->perPage());
+        $items = $response->collection->map(fn($resource) => $resource->resolve());
+        $this->assertCount(1, $items->where('review', 'Drop'));
+        $this->assertEmpty($items->where('review', 'Keep'));
+    }
+
     public function testResourceMasksBuyerName(): void
     {
         $resource = new PublicProductReviewResource(new ProductReview([

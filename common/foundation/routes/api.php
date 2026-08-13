@@ -74,6 +74,7 @@ use App\Storefront\Controllers\OrderLookupController;
 use App\Storefront\Controllers\AdminDigitalProductOrderRecoveryDeliveriesController;
 use App\Storefront\Controllers\ProductReviewsController;
 use App\Storefront\Controllers\CreatorProductReviewsController;
+use App\Storefront\Controllers\AdminProductReviewsController;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Http\Controllers\PasswordResetLinkController;
 
@@ -252,6 +253,10 @@ Route::group(['prefix' => 'v1'], function () {
         Route::put('admin/digital-products/withdrawal-methods/{withdrawalMethod}', [DigitalProductWithdrawalMethodsController::class, 'update']);
         Route::get('admin/payment-transactions', [AdminPaymentTransactionsController::class, 'index']);
         Route::get('admin/digital-products/order-recovery-deliveries', [AdminDigitalProductOrderRecoveryDeliveriesController::class, 'index']);
+        Route::get('admin/digital-products/reviews', [AdminProductReviewsController::class, 'index']);
+        Route::post('admin/digital-products/reviews/{productReview}/hide', [AdminProductReviewsController::class, 'hide']);
+        Route::post('admin/digital-products/reviews/{productReview}/unhide', [AdminProductReviewsController::class, 'unhide']);
+        Route::delete('admin/digital-products/reviews/{productReview}', [AdminProductReviewsController::class, 'destroy']);
         Route::post('admin/payment-transactions/{paymentTransaction}/refunds', [AdminDigitalProductRefundsController::class, 'store']);
         Route::get('admin/payment-health', [AdminPaymentHealthController::class, 'index']);
         Route::post('admin/payment-health/test-email', [AdminPaymentHealthController::class, 'sendTestEmail']);
