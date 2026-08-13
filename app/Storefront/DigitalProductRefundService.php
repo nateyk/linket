@@ -4,6 +4,7 @@ namespace App\Storefront;
 
 use App\Payments\Models\PaymentTransaction;
 use App\Storefront\Models\DigitalProductPaymentRefund;
+use App\Storefront\Models\ProductReview;
 use App\Storefront\Models\StorefrontOrder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -62,6 +63,9 @@ class DigitalProductRefundService
 
             if ($isFull) {
                 $order->entitlements()->update(['revoked_at' => now()]);
+                ProductReview::query()
+                    ->where('storefront_order_id', $order->id)
+                    ->delete();
             }
 
             return $refund;

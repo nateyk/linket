@@ -3,6 +3,7 @@
 namespace App\Storefront\Controllers;
 
 use App\Biolinks\Models\Biolink;
+use App\Storefront\Jobs\SendStorefrontReviewNotification;
 use App\Storefront\Models\DigitalProduct;
 use App\Storefront\Models\ProductReview;
 use App\Storefront\Models\StorefrontOrder;
@@ -90,6 +91,10 @@ class ProductReviewsController extends Controller
 
             return $review->fresh('ratings');
         });
+
+        if ($created) {
+            SendStorefrontReviewNotification::dispatch($review->id)->afterCommit();
+        }
 
         return (new PublicProductReviewResource($review))
             ->response()

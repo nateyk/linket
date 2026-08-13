@@ -117,6 +117,7 @@ class ProductReviewTest extends TestCase
 
     public function testStoreCreatesApprovedReviewWithOverallRatingTiedToOrder(): void
     {
+        \Illuminate\Support\Facades\Mail::fake();
         [$product, $biolink] = $this->makeProductOnBiolink();
         $order = $this->makeOrder($product, $biolink);
 
@@ -369,6 +370,96 @@ class ProductReviewTest extends TestCase
         $items = $response->collection->map(fn($resource) => $resource->resolve());
         $this->assertCount(1, $items->where('review', 'Drop'));
         $this->assertEmpty($items->where('review', 'Keep'));
+    }
+
+    public function testReviewNotificationJobUsesMailQueueAndSendsToCreator(): void
+    {
+        [$product, $biolink] = $this->makeProductOnBiolink();
+        ProductReview::unguarded(fn() => $product->addReview([
+            'review' => 'Nice work',
+            'approved' => true,
+            'ratings' => ['overall' => 5],
+        ]));
+        $review = ProductReview::query()->where('reviewable_id', $product->id)->first();
+
+        $job = new \App\Storefront\Jobs\SendStorefrontReviewNotification($review->id);
+        $this->assertSame('mail', $job->queue);
+        $this->assertSame(3, $job->tries);
+        $this->assertSame([60, 300, 900], $job->backoff);
+
+        $mailer = new class {
+            public array $rawCalls = [];
+
+            public function raw(string $text, $callback): void
+            {
+                $this->rawCalls[] = [$text, $callback];
+            }
+        };
+        \Illuminate\Support\Facades\Mail::swap($mailer);
+        $job->handle();
+
+        $this->assertCount(1, $mailer->rawCalls);
+        [$text, $callback] = $mailer->rawCalls[0];
+        $this->assertStringContainsString('5-star', $text);
+        $this->assertStringContainsString($product->title, $text);
+        $this->assertInstanceOf(\Closure::class, $callback);
+    }
+
+    public function testFullRefundDeletesOrderReviewAndRevokesEntitlement(): void
+    {
+        [$product, $biolink] = $this->makeProductOnBiolink();
+        $user = \App\Models\User::query()->find($biolink->user_id);
+        $order = $this->makeOrder($product, $biolink);
+        ProductReview::unguarded(fn() => $product->addReview([
+            'review' => 'Refund me',
+            'approved' => true,
+            'ratings' => ['overall' => 2],
+        ]));
+        ProductReview::query()
+            ->where('reviewable_id', $product->id)
+            ->update(['storefront_order_id' => $order->id]);
+
+        $file = \Common\Files\FileEntry::create([
+            'name' => 'ebook.pdf',
+            'file_name' => 'ebook-' . Str::random(6) . '.pdf',
+            'file_size' => 2048,
+            'mime' => 'application/pdf',
+            'extension' => 'pdf',
+            'type' => 'file',
+            'public' => 1,
+            'user_id' => (string) $user->id,
+            'disk_prefix' => 'uploads',
+            'workspace_id' => $product->workspace_id,
+        ]);
+        $entitlement = $order->entitlements()->create([
+            'token' => (string) Str::uuid(),
+            'file_entry_id' => $file->id,
+            'expires_at' => now()->addDay(),
+        ]);
+
+        $transaction = \App\Payments\Models\PaymentTransaction::create([
+            'uuid' => (string) Str::uuid(),
+            'gateway' => 'chapa',
+            'payable_type' => \App\Storefront\Models\StorefrontOrder::class,
+            'payable_id' => $order->id,
+            'purpose' => 'digital_product',
+            'tx_ref' => 'tx-' . Str::random(10),
+            'amount' => 99.00,
+            'currency' => 'ETB',
+            'status' => 'paid',
+            'buyer_email' => 'buyer@example.test',
+            'buyer_name' => 'Jane Doe',
+            'verified_at' => now(),
+        ]);
+
+        (new \App\Storefront\DigitalProductRefundService())->record($transaction, $user->id, [
+            'amount_cents' => 9900,
+            'reason' => 'Not as described',
+            'external_reference' => 'ext-' . Str::random(6),
+        ]);
+
+        $this->assertSame(0, ProductReview::query()->where('storefront_order_id', $order->id)->count());
+        $this->assertNotNull($entitlement->fresh()->revoked_at);
     }
 
     public function testResourceMasksBuyerName(): void
