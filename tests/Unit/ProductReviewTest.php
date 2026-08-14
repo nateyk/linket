@@ -512,4 +512,41 @@ class ProductReviewTest extends TestCase
 
         $this->assertSame('J***e', $payload['buyer_name']);
     }
+
+    public function testAdminProductsListIncludesReviewCounts(): void
+    {
+        $admin = \App\Models\User::query()->forceCreate([
+            'name' => 'Admin ' . Str::random(8),
+            'username' => Str::lower(Str::random(12)),
+            'email' => Str::random(12) . '@example.test',
+            'password' => bcrypt('password'),
+            'email_verified_at' => now(),
+        ]);
+        $admin->permissions()->attach(
+            \Common\Permissions\Models\Permission::query()->firstOrCreate(['name' => 'admin']),
+        );
+        \Illuminate\Support\Facades\Auth::login($admin);
+
+        [$product] = $this->makeProductOnBiolink();
+        [$otherProduct] = $this->makeProductOnBiolink();
+        ProductReview::unguarded(fn() => $product->addReview([
+            'review' => 'A', 'approved' => true, 'ratings' => ['overall' => 5],
+        ]));
+        ProductReview::unguarded(fn() => $product->addReview([
+            'review' => 'B', 'approved' => false, 'ratings' => ['overall' => 2],
+        ]));
+
+        $request = Request::create('http://127.0.0.1/api/v1/admin/digital-products', 'GET');
+        $request->setUserResolver(fn() => $admin);
+        $response = (new \App\Storefront\Controllers\AdminDigitalProductsController())->index($request);
+
+        $products = collect($response->getData(true)['data']);
+        $withReviews = $products->firstWhere('id', $product->id);
+        $withoutReviews = $products->firstWhere('id', $otherProduct->id);
+
+        $this->assertSame(2, $withReviews['reviews_count']);
+        $this->assertSame(1, $withReviews['hidden_reviews_count']);
+        $this->assertSame(0, $withoutReviews['reviews_count']);
+        $this->assertSame(0, $withoutReviews['hidden_reviews_count']);
+    }
 }

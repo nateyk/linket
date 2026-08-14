@@ -16,7 +16,12 @@ class AdminDigitalProductsController extends Controller
         $search = $request->string('search');
         $status = $request->string('status');
 
-        $query = DigitalProduct::query()->with(['creator', 'cover', 'files', 'biolinks']);
+        $query = DigitalProduct::query()
+            ->with(['creator', 'cover', 'files', 'biolinks'])
+            ->withCount([
+                'reviews',
+                'reviews as hidden_reviews_count' => fn ($q) => $q->where('approved', false),
+            ]);
 
         $query->when($search->isNotEmpty(), function ($q) use ($search) {
             $q->where(function ($q) use ($search) {
