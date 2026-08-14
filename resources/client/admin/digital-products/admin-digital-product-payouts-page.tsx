@@ -18,6 +18,7 @@ import {
   XIcon,
 } from 'lucide-react';
 import {useCallback, useEffect, useState} from 'react';
+import type {ReactNode} from 'react';
 import {Link} from 'react-router';
 
 type Payout = {
@@ -50,7 +51,7 @@ export function Component() {
   const [destination, setDestination] = useState<string>();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string>();
+  const [error, setError] = useState<ReactNode>();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -60,7 +61,7 @@ export function Component() {
       );
       setPayouts(response.data.data ?? []);
     } catch {
-      setError('Unable to load payout requests.');
+        setError(<Trans message="Unable to load payout requests." />);
     } finally {
       setLoading(false);
     }
@@ -72,11 +73,11 @@ export function Component() {
   const submit = async () => {
     if (!selected || !action) return;
     if (action === 'paid' && !reference.trim()) {
-      setError('Enter the completed transfer reference.');
+      setError(<Trans message="Enter the completed transfer reference." />);
       return;
     }
     if (action === 'reject' && !note.trim()) {
-      setError('Enter a reason for rejecting this request.');
+      setError(<Trans message="Enter a reason for rejecting this request." />);
       return;
     }
     const path =
@@ -103,7 +104,7 @@ export function Component() {
       setReference('');
       await load();
     } catch {
-      setError('Unable to update this payout request.');
+      setError(<Trans message="Unable to update this payout request." />);
     } finally {
       setSaving(false);
     }
@@ -117,7 +118,7 @@ export function Component() {
       );
       setDestination(response.data.destination);
     } catch {
-      setError('Unable to reveal this payout destination.');
+      setError(<Trans message="Unable to reveal this payout destination." />);
     }
   };
 
@@ -168,7 +169,7 @@ export function Component() {
                     <Table.Head>
                       <Trans message="Method" />
                     </Table.Head>
-                    <Table.Head>
+                    <Table.Head className="text-end">
                       <Trans message="Amount" />
                     </Table.Head>
                     <Table.Head>
@@ -204,7 +205,7 @@ export function Component() {
                               <Trans message="Not specified" />
                             )}
                         </Table.Cell>
-                        <Table.Cell className="font-medium">
+                        <Table.Cell className="text-end font-medium">
                           {formatMoney(payout.amount_cents, payout.currency)}
                         </Table.Cell>
                         <Table.Cell>
@@ -362,7 +363,7 @@ export function Component() {
                     <Input
                       value={reference}
                       onChange={event => setReference(event.target.value)}
-                      placeholder="Bank or payment reference"
+                      placeholder="Bank or payment reference…"
                     />
                   </Field.Root>
                 )}
