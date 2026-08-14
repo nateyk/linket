@@ -36,3 +36,11 @@ public/build
 # IDE helper (generated)
 _ide_helper*.php
 .phpunit.cache/
+# Session logs
+session-*.md
+
+# Ddev database dumps
+*.sql
+
+# Coverage
+/coverage
