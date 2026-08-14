@@ -7,41 +7,31 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
 vendor
-dist
-dist-ssr
-*.local
 
-# Editor directories and files
+# Environment
+.env
+.env.*
+
+# Editor
 .vscode/*
 !.vscode/extensions.json
-.idea
+.idea/*
 .DS_Store
-Thumbs.db
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
 
-# misc
-.htaccess
-public/.htaccess
-public/favicon
-public/favicon.ico
-install_files
-/public/hot
-/storage/*.key
-Homestead.json
-Homestead.yaml
-.env
-data.ms
-/test-results/
-/playwright-report/
-/playwright/.cache/
-storageState.json
-.phpunit.cache/
-.tmp/
-# translation files (include default "en"), will be created during installation
-resources/lang/*.json
+# Build output
+dist
+dist-ssr
+public/build
+#
+
+# Laravel specific
+.php-cs-fixer.cache
+
+# Superpowers SDD workspace
+.superpowers/sdd/
+
+# IDE helper (generated)
+_ide_helper*.php
