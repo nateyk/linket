@@ -13,6 +13,7 @@ import {Textarea} from '@shadcn/forms/textarea/textarea';
 import {Table} from '@shadcn/table/table';
 import {Trans} from '@ui/i18n/trans';
 import {
+  ArrowLeftIcon,
   EyeIcon,
   EyeOffIcon,
   HashIcon,
@@ -20,6 +21,7 @@ import {
   StarIcon,
   Trash2Icon,
 } from 'lucide-react';
+import {Link, useParams} from 'react-router';
 import {useCallback, useEffect, useState} from 'react';
 
 type Review = {
@@ -51,6 +53,8 @@ function formatDate(value?: string | null) {
 }
 
 export function Component() {
+  const {productId} = useParams();
+  const [product, setProduct] = useState<{id: number; title: string}>();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
@@ -77,9 +81,10 @@ export function Component() {
         if (page > 1) params.set('page', String(page));
 
         const response = await apiClient.get(
-          `/api/v1/admin/digital-products/reviews?${params.toString()}`,
+          `/api/v1/admin/digital-products/${productId}/reviews?${params.toString()}`,
         );
         setReviews(response.data.data ?? []);
+        setProduct(response.data.product);
         setMeta(response.data.meta);
         setCurrentPage(response.data.meta?.current_page ?? 1);
         setError(undefined);
@@ -89,7 +94,7 @@ export function Component() {
         setLoading(false);
       }
     },
-    [search, status, currentPage],
+    [search, status, currentPage, productId],
   );
 
   useEffect(() => {
@@ -163,6 +168,14 @@ export function Component() {
         <DashboardLayout.SectionTitle>
           <Trans message="Product Reviews" />
         </DashboardLayout.SectionTitle>
+        <Button
+          variant="outline"
+          nativeButton={false}
+          render={<Link to="/admin/digital-products" />}
+        >
+          <ArrowLeftIcon />
+          <Trans message="Back to products" />
+        </Button>
       </DashboardLayout.SectionHeader>
       <DashboardLayout.SectionContent className="overflow-y-auto">
         <div className="mx-auto w-full max-w-6xl py-6">
@@ -170,6 +183,10 @@ export function Component() {
             <div className="mb-5 rounded-input border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
               {error}
             </div>
+          )}
+
+          {product && (
+            <h1 className="mb-4 text-lg font-semibold">{product.title}</h1>
           )}
 
           <Card.Root>
