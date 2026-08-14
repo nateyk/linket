@@ -8,6 +8,7 @@ import {Select} from '@shadcn/forms/select/select';
 import {Textarea} from '@shadcn/forms/textarea/textarea';
 import {Accordion} from '@shadcn/accordion/accordion';
 import {Card} from '@shadcn/card/card';
+import {toast} from '@shadcn/toast/toast';
 import {Loader2Icon, SaveIcon, HelpCircleIcon} from 'lucide-react';
 
 type WithdrawalMethod = {
@@ -28,6 +29,14 @@ type PayoutConfig = {
 export function Component() {
   const {workspaceId} = useRequiredParams(['workspaceId']);
 
+  return <WorkspacePayoutsPage workspaceId={workspaceId} />;
+}
+
+interface WorkspacePayoutsPageProps {
+  workspaceId: string | number;
+}
+
+export function WorkspacePayoutsPage({workspaceId}: WorkspacePayoutsPageProps) {
   const [config, setConfig] = useState<PayoutConfig>({
     withdrawal_method_id: null,
     withdrawal_account: '',
@@ -77,6 +86,7 @@ export function Component() {
         withdrawal_account: config.withdrawal_account.trim(),
       });
       await load();
+      toast.success(<Trans message="Payout settings saved" />);
     } catch {
       setError('Unable to save payout configuration.');
     } finally {

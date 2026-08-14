@@ -1,43 +1,13 @@
 import {Dialog} from '@shadcn/dialog/dialog';
 import {Button} from '@shadcn/button/button';
 import {Trans} from '@ui/i18n/trans';
-import {
-  BookIcon,
-  DownloadIcon,
-  HeadphonesIcon,
-} from 'lucide-react';
 import {useNavigate} from 'react-router';
 import {useState} from 'react';
-
-export type ProductType = 'digital' | 'ebook' | 'audio';
-
-type ProductTypeOption = {
-  id: ProductType;
-  icon: typeof DownloadIcon;
-  title: string;
-  description: string;
-};
-
-const PRODUCT_TYPES: ProductTypeOption[] = [
-  {
-    id: 'digital',
-    icon: DownloadIcon,
-    title: 'Digital product',
-    description: 'Any set of files to download or stream.',
-  },
-  {
-    id: 'ebook',
-    icon: BookIcon,
-    title: 'E-book',
-    description: 'Offer a book or comic in PDF, ePub, and Mobi formats.',
-  },
-  {
-    id: 'audio',
-    icon: HeadphonesIcon,
-    title: 'Audio',
-    description: 'Sell music, podcasts, or any audio content.',
-  },
-];
+import {ArrowRightIcon, PackagePlusIcon} from 'lucide-react';
+import {
+  ProductTypePicker,
+  type ProductType,
+} from './product-type-picker';
 
 interface CreateProductDialogProps {
   open: boolean;
@@ -69,28 +39,32 @@ export function CreateProductDialog({
     <Dialog.Root open={open} onOpenChange={handleOpenChange}>
       <Dialog.Portal>
         <Dialog.Backdrop />
-        <Dialog.Content className="sm:max-w-2xl">
-          <Dialog.Header>
-            <Dialog.Title>
-              <Trans message="Create a new product" />
-            </Dialog.Title>
-            <Dialog.Description>
-              <Trans message="Choose the type of product you want to create." />
-            </Dialog.Description>
-          </Dialog.Header>
-          <Dialog.Body>
-            <div className="grid gap-3 sm:grid-cols-3">
-              {PRODUCT_TYPES.map(type => (
-                <ProductTypeCard
-                  key={type.id}
-                  type={type}
-                  selected={selectedType === type.id}
-                  onSelect={() => setSelectedType(type.id)}
-                />
-              ))}
+        <Dialog.Content className="gap-0 overflow-hidden p-0 shadow-2xl sm:max-w-xl">
+          <Dialog.Header className="border-b px-6 py-5 pe-14">
+            <div className="flex items-start gap-3">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-card-sm bg-primary/8 text-primary ring-1 ring-primary/15">
+                <PackagePlusIcon className="size-5" />
+              </span>
+              <div className="min-w-0">
+                <Dialog.Title className="text-lg leading-tight font-semibold">
+                  <Trans message="Create a new product" />
+                </Dialog.Title>
+                <Dialog.Description className="mt-1 max-w-md leading-relaxed">
+                  <Trans message="Choose the best format for what you want to sell." />
+                </Dialog.Description>
+              </div>
             </div>
+          </Dialog.Header>
+          <Dialog.Body className="mx-0 px-6 py-5">
+            <ProductTypePicker
+              value={selectedType}
+              onValueChange={setSelectedType}
+            />
           </Dialog.Body>
-          <Dialog.Footer>
+          <Dialog.Footer
+            variant="muted"
+            className="mx-0 mb-0 px-6 py-4 sm:items-center"
+          >
             <Dialog.CloseButton render={<Button variant="outline" />}>
               <Trans message="Cancel" />
             </Dialog.CloseButton>
@@ -99,52 +73,11 @@ export function CreateProductDialog({
               onClick={handleContinue}
             >
               <Trans message="Continue" />
+              <ArrowRightIcon data-icon="inline-end" />
             </Button>
           </Dialog.Footer>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
-  );
-}
-
-function ProductTypeCard({
-  type,
-  selected,
-  onSelect,
-}: {
-  type: ProductTypeOption;
-  selected: boolean;
-  onSelect: () => void;
-}) {
-  const Icon = type.icon;
-
-  return (
-    <button
-      type="button"
-      role="radio"
-      aria-checked={selected}
-      onClick={onSelect}
-      className={`flex cursor-pointer flex-col items-start gap-3 rounded-card border p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-md ${
-        selected
-          ? 'border-primary bg-primary/5 ring-2 ring-primary'
-          : 'border-border bg-background hover:border-primary/50'
-      }`}
-    >
-      <div
-        className={`flex size-10 items-center justify-center rounded-lg ${
-          selected ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-        }`}
-      >
-        <Icon className="size-5" />
-      </div>
-      <div>
-        <h4 className="font-semibold">
-          <Trans message={type.title} />
-        </h4>
-        <p className="mt-1 text-sm text-muted-foreground">
-          <Trans message={type.description} />
-        </p>
-      </div>
-    </button>
   );
 }

@@ -2,14 +2,12 @@
 
 namespace App\Storefront\Controllers;
 
-use App\Storefront\Models\DigitalProductWithdrawalMethod;
 use App\Storefront\Models\WorkspacePayoutConfig;
 use App\Storefront\Resources\WorkspacePayoutConfigResource;
 use Common\Workspaces\Models\Workspace;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Validation\ValidationException;
 
 class WorkspacePayoutConfigController extends Controller
 {
@@ -19,7 +17,13 @@ class WorkspacePayoutConfigController extends Controller
 
         $config = WorkspacePayoutConfig::query()
             ->where('workspace_id', $workspaceId)
-            ->firstOrFail();
+            ->first();
+
+        $config ??= new WorkspacePayoutConfig([
+            'workspace_id' => $workspaceId,
+            'withdrawal_method_id' => null,
+            'withdrawal_account' => '',
+        ]);
 
         return new WorkspacePayoutConfigResource($config);
     }

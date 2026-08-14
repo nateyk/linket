@@ -1,2 +1,0 @@
-import{Ei as e,O as t,Vr as n}from"./icons-Cr69SQk-.js";var r=e();function i({value:e}){return e?(0,r.jsx)(n,{className:`size-4 text-positive`}):(0,r.jsx)(t,{className:`size-4 text-destructive`})}export{i as t};
-//# sourceMappingURL=boolean-indicator-Dky0hl81.js.map

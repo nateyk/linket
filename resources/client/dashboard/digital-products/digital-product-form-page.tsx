@@ -1,4 +1,4 @@
-import {BuilderCollapsibleSection} from '@app/dashboard/biolink/biolink-editor/builder-section-header';
+import {BuilderSectionHeader} from '@app/dashboard/biolink/biolink-editor/builder-section-header';
 import {articleEditorTipTapExtensions} from '@common/article-editor/article-editor-tiptap-extensions';
 import {apiClient} from '@common/http/query-client';
 import {ClearFormatButton} from '@common/text-editor/menubar/clear-format-button';
@@ -14,12 +14,12 @@ import {ImageSelector} from '@common/uploads/components/image-selector';
 import {FileUploadProvider} from '@common/uploads/uploader/file-upload-provider';
 import {useActiveUpload} from '@common/uploads/uploader/use-active-upload';
 import {Badge} from '@shadcn/badge/badge';
+import {Accordion} from '@shadcn/accordion/accordion';
 import {Button} from '@shadcn/button/button';
 import {Checkbox} from '@shadcn/forms/checkbox/checkbox';
 import {Field} from '@shadcn/forms/field';
 import {Input} from '@shadcn/forms/input/input';
 import {Progress} from '@shadcn/progress/progress';
-import {Separator} from '@shadcn/separator';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {Trans} from '@ui/i18n/trans';
 import {
@@ -129,7 +129,6 @@ function DigitalProductForm() {
   );
 
   const typeConfig = productType ? PRODUCT_TYPE_CONFIG[productType] : null;
-  const TypeIcon = typeConfig?.icon ?? DownloadIcon;
   const pageTitle = product
     ? 'Edit digital product'
     : typeConfig
@@ -298,7 +297,6 @@ function DigitalProductForm() {
       <header className="flex h-14 w-full shrink-0 items-center gap-3 border-b px-4 md:px-6">
         <DashboardLayout.SidebarToggle />
         <div className="flex min-w-0 items-center gap-2.5">
-          <TypeIcon className="size-4 shrink-0 text-muted-foreground" />
           <h1 className="truncate text-[15px] font-semibold">
             <Trans message={pageTitle} />
           </h1>
@@ -351,7 +349,7 @@ function DigitalProductForm() {
       </header>
 
       <DashboardLayout.SectionContent className="overflow-y-auto">
-        <div className="mx-auto w-full max-w-7xl px-4 py-5 md:px-6 md:py-6">
+        <div className="mx-auto w-full max-w-6xl">
           {error && (
             <div className="mb-5 flex items-start gap-3 rounded-card-sm border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
               <span className="min-w-0 flex-1">{error}</span>
@@ -386,7 +384,15 @@ function DigitalProductForm() {
                   </Progress.Root>
                 </div>
 
-                <div className="min-w-0 divide-y overflow-hidden rounded-card border bg-card">
+                <Accordion.Root
+                  variant="bordered"
+                  value={openSection ? [openSection] : []}
+                  onValueChange={value =>
+                    setOpenSection(
+                      (value[0] as SetupSection | undefined) ?? null,
+                    )
+                  }
+                >
                   {SECTION_ORDER.map(section => {
                     const meta = SECTION_META[section];
                     const Icon = meta.icon;
@@ -399,81 +405,80 @@ function DigitalProductForm() {
                           : null;
 
                     return (
-                      <BuilderCollapsibleSection
-                        key={section}
-                        open={openSection === section}
-                        onOpenChange={open =>
-                          setOpenSection(open ? section : null)
-                        }
-                        icon={Icon}
-                        isComplete={isComplete}
-                        title={<Trans message={meta.label} />}
-                        description={<Trans message={meta.description} />}
-                        trailing={
-                          count !== null && count > 0 ? (
-                            <Badge
-                              variant="secondary"
-                              className="h-4 min-w-[16px] px-1 text-[10px]"
-                            >
-                              {count}
-                            </Badge>
-                          ) : undefined
-                        }
-                      >
-                        <div className="max-w-2xl">
-                          {section === 'details' && (
-                            <DetailsPanel
-                              title={title}
-                              description={description}
-                              price={price}
-                              coverUrl={coverUrl}
-                              onTitleChange={setTitle}
-                              onDescriptionChange={setDescription}
-                              onPriceChange={setPrice}
-                              legacyCurrency={product?.currency}
-                              convertToEtb={convertToEtb}
-                              onConvertToEtbChange={setConvertToEtb}
-                              onCoverChange={(url, entry) => {
-                                setCoverUrl(url);
-                                setCoverFileId(entry?.id ?? null);
-                              }}
-                            />
-                          )}
-                          {section === 'files' && (
-                            <FilesPanel
-                              files={files}
-                              onUploaded={file =>
-                                setFiles(current =>
-                                  current.some(item => item.id === file.id)
-                                    ? current
-                                    : [...current, file],
-                                )
-                              }
-                              onRemove={id =>
-                                setFiles(current =>
-                                  current.filter(file => file.id !== id),
-                                )
-                              }
-                            />
-                          )}
-                          {section === 'bio-pages' && (
-                            <BioPagesPanel
-                              biolinks={biolinks}
-                              selectedIds={biolinkIds}
-                              onChange={setBiolinkIds}
-                            />
-                          )}
-                        </div>
-                      </BuilderCollapsibleSection>
+                      <Accordion.Item key={section} value={section}>
+                        <Accordion.Trigger>
+                          <BuilderSectionHeader
+                            icon={Icon}
+                            isComplete={isComplete}
+                            title={<Trans message={meta.label} />}
+                            description={<Trans message={meta.description} />}
+                            trailing={
+                              count !== null && count > 0 ? (
+                                <Badge
+                                  variant="secondary"
+                                  className="h-4 min-w-[16px] px-1 text-[10px]"
+                                >
+                                  {count}
+                                </Badge>
+                              ) : undefined
+                            }
+                          />
+                        </Accordion.Trigger>
+                        <Accordion.Content className="border-t pt-4">
+                          <div className="max-w-2xl">
+                            {section === 'details' && (
+                              <DetailsPanel
+                                title={title}
+                                description={description}
+                                price={price}
+                                coverUrl={coverUrl}
+                                onTitleChange={setTitle}
+                                onDescriptionChange={setDescription}
+                                onPriceChange={setPrice}
+                                legacyCurrency={product?.currency}
+                                convertToEtb={convertToEtb}
+                                onConvertToEtbChange={setConvertToEtb}
+                                onCoverChange={(url, entry) => {
+                                  setCoverUrl(url);
+                                  setCoverFileId(entry?.id ?? null);
+                                }}
+                              />
+                            )}
+                            {section === 'files' && (
+                              <FilesPanel
+                                files={files}
+                                onUploaded={file =>
+                                  setFiles(current =>
+                                    current.some(item => item.id === file.id)
+                                      ? current
+                                      : [...current, file],
+                                  )
+                                }
+                                onRemove={id =>
+                                  setFiles(current =>
+                                    current.filter(file => file.id !== id),
+                                  )
+                                }
+                              />
+                            )}
+                            {section === 'bio-pages' && (
+                              <BioPagesPanel
+                                biolinks={biolinks}
+                                selectedIds={biolinkIds}
+                                onChange={setBiolinkIds}
+                              />
+                            )}
+                          </div>
+                        </Accordion.Content>
+                      </Accordion.Item>
                     );
                   })}
-                </div>
+                </Accordion.Root>
               </div>
 
               <aside className="min-w-0 lg:sticky lg:top-6">
                 <ProductBuilderPreview
                   title={title}
-                  description={description}
                   price={price}
                   coverUrl={coverUrl}
                   fileCount={files.length}
@@ -490,45 +495,33 @@ function DigitalProductForm() {
 
 function ProductBuilderPreview({
   title,
-  description,
   price,
   coverUrl,
   fileCount,
   productTypeLabel,
 }: {
   title: string;
-  description: string;
   price: string;
   coverUrl: string;
   fileCount: number;
   productTypeLabel: string;
 }) {
-  const previewDescription = description
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
   const numericPrice = Number(price);
   const formattedPrice = Number.isFinite(numericPrice)
     ? `ETB ${numericPrice.toFixed(2)}`
     : 'ETB 0.00';
 
   return (
-    <div className="overflow-hidden rounded-card border border-border bg-background shadow-sm">
+    <div className="overflow-hidden rounded-card-sm border bg-background">
       <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
-        <div>
-          <p className="text-sm font-medium">
-            <Trans message="Customer preview" />
-          </p>
-          <p className="text-xs text-muted-foreground">
-            <Trans message="Updates as you build" />
-          </p>
-        </div>
+        <p className="text-sm font-medium">
+          <Trans message="Customer preview" />
+        </p>
         <Badge variant="secondary">
           <Trans message="Live" />
         </Badge>
       </div>
-      <div className="relative aspect-[4/3] bg-muted">
+      <div className="aspect-video bg-muted">
         {coverUrl ? (
           <img className="size-full object-cover" src={coverUrl} alt="" />
         ) : (
@@ -539,26 +532,18 @@ function ProductBuilderPreview({
             </span>
           </div>
         )}
-        <Badge className="absolute right-3 bottom-3 bg-background/95 text-foreground shadow-sm">
-          {formattedPrice}
-        </Badge>
       </div>
-      <Separator />
-      <div className="flex flex-col gap-4 p-4">
-        <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-3 p-4">
+        <div className="flex flex-col gap-2">
           <Badge variant="outline" className="w-fit">
             <Trans message={productTypeLabel} />
           </Badge>
           <h2 className="text-lg leading-tight font-semibold text-pretty">
             {title.trim() || <Trans message="Your digital product" />}
           </h2>
-          <p className="line-clamp-3 text-sm leading-5 text-muted-foreground">
-            {previewDescription || (
-              <Trans message="Your product description will appear here." />
-            )}
-          </p>
+          <p className="text-lg leading-7 font-semibold">{formattedPrice}</p>
         </div>
-        <div className="flex items-center gap-2 border-t pt-3 text-xs text-muted-foreground">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <FileIcon className="size-4" />
           <Trans message=":count download files" values={{count: fileCount}} />
         </div>

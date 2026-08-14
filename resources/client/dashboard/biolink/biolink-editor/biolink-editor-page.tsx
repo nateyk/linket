@@ -45,6 +45,7 @@ import {
   ChevronDownIcon,
   EllipsisVerticalIcon,
   ExternalLinkIcon,
+  ChartNoAxesCombinedIcon,
   LayoutGridIcon,
   LayoutPanelTop,
   PlusIcon,
@@ -52,6 +53,7 @@ import {
   SettingsIcon,
   TrashIcon,
   SparklesIcon,
+  UserRoundPenIcon,
 } from 'lucide-react';
 import {useState} from 'react';
 import {Outlet, useLocation, useNavigate} from 'react-router';
@@ -64,11 +66,14 @@ export function Component() {
   const biolink = query.data.data;
 
   const {pathname} = useLocation();
-  const selectedTab = pathname.endsWith('appearance')
+  const selectedTab = pathname.endsWith('insights')
+    ? 'insights'
+    : pathname.endsWith('appearance')
       ? 'appearance'
       : pathname.endsWith('about')
         ? 'about'
-      : 'content';
+        : 'content';
+  const isInsightsTab = selectedTab === 'insights';
 
   // re-create store provider when biolink changes
   return (
@@ -78,46 +83,41 @@ export function Component() {
     >
       <DashboardLayout.MainSection>
         <BiolinkEditorHeader />
-        <section className="flex min-h-0 flex-auto flex-col overflow-y-auto lg:flex-row lg:overflow-hidden">
-          <div className="flex min-w-0 shrink-0 flex-col lg:min-h-0 lg:flex-auto">
-            <Tabs.Root
-              value={selectedTab}
-              className="shrink-0 border-b"
-            >
-              <div className="w-full max-w-3xl px-4 sm:px-6 lg:px-8">
-                <Tabs.List
-                  variant="line"
-                  className="w-fit min-w-full justify-start overflow-x-auto"
-                >
-                  <Tabs.LinkTab
-                    className="min-w-24 flex-none"
-                    value="content"
-                    to={baseUrl}
-                    replace
-                  >
-                    <Trans message="Content" />
-                  </Tabs.LinkTab>
-                  <Tabs.LinkTab
-                    className="min-w-24 flex-none"
-                    value="about"
-                    to={`${baseUrl}/about`}
-                    replace
-                  >
-                    <Trans message="About" />
-                  </Tabs.LinkTab>
-                  <Tabs.LinkTab
-                    className="min-w-28 flex-none"
-                    value="appearance"
-                    to={`${baseUrl}/appearance`}
-                    replace
-                  >
-                    <Trans message="Appearance" />
-                  </Tabs.LinkTab>
-                </Tabs.List>
-              </div>
-            </Tabs.Root>
-            <div className="min-w-0 lg:flex-auto lg:overflow-y-auto">
-              <div className="w-full max-w-3xl p-4 sm:p-6 lg:p-8">
+        <section className="flex min-h-0 flex-auto flex-col overflow-x-hidden overflow-y-auto lg:flex-row lg:overflow-hidden">
+          <div className="flex min-w-0 shrink-0 flex-col lg:min-h-0 lg:flex-auto lg:overflow-hidden">
+            {!isInsightsTab && (
+              <Tabs.Root value={selectedTab} className="shrink-0 border-b">
+                <div className="w-full max-w-3xl px-4 sm:px-6 lg:px-8">
+                  <Tabs.List variant="line" className="w-full justify-start">
+                    <Tabs.LinkTab value="content" to={baseUrl} replace>
+                      <Trans message="Content" />
+                    </Tabs.LinkTab>
+                    <Tabs.LinkTab
+                      value="about"
+                      to={`${baseUrl}/about`}
+                      replace
+                    >
+                      <Trans message="About" />
+                    </Tabs.LinkTab>
+                    <Tabs.LinkTab
+                      value="appearance"
+                      to={`${baseUrl}/appearance`}
+                      replace
+                    >
+                      <Trans message="Appearance" />
+                    </Tabs.LinkTab>
+                  </Tabs.List>
+                </div>
+              </Tabs.Root>
+            )}
+            <div className="compact-scrollbar min-w-0 overflow-x-hidden lg:min-h-0 lg:flex-auto lg:overflow-y-auto">
+              <div
+                className={
+                  isInsightsTab
+                    ? 'mx-auto flex w-full max-w-7xl flex-col p-4 sm:p-6 lg:p-8'
+                    : 'w-full max-w-3xl p-4 sm:p-6 lg:p-8'
+                }
+              >
                 <AdHost slot="dashboard" className="mb-6" />
                 <Outlet />
               </div>
@@ -289,8 +289,13 @@ function AdminBreadcrumb() {
 
 function MoreActionsButton() {
   const {routeType} = useDatatableRouteType();
+  const {biolinkId} = useRequiredParams(['biolinkId']);
   const biolink = useBiolinkEditorStore(s => s.biolink);
   const listQuery = useSuspenseQuery(listCurrentUserBiolinksOptions());
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isInsightsTab = location.pathname.endsWith('/insights');
+  const baseUrl = `/${routeType}/biolinks/${biolinkId}`;
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -325,6 +330,18 @@ function MoreActionsButton() {
           >
             <ExternalLinkIcon />
             <Trans message="Open in new tab" />
+          </Dropdown.Item>
+          <Dropdown.Item
+            onClick={() =>
+              navigate(isInsightsTab ? baseUrl : `${baseUrl}/insights`)
+            }
+          >
+            {isInsightsTab ? (
+              <UserRoundPenIcon />
+            ) : (
+              <ChartNoAxesCombinedIcon />
+            )}
+            <Trans message={isInsightsTab ? 'Edit profile' : 'Insights'} />
           </Dropdown.Item>
           <Dropdown.Separator />
           <Dropdown.Item

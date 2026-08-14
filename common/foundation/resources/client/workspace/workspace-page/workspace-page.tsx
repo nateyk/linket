@@ -24,7 +24,7 @@ export function Component() {
   const {workspaceId} = useRequiredParams(['workspaceId']);
   const query = useSuspenseQuery(retrieveWorkspaceOptions(Number(workspaceId)));
   const {pathname} = useLocation();
-  const selectedTab = pathname.endsWith('/invites') ? 'invites' : pathname.endsWith('/payouts') ? 'payouts' : 'members';
+  const selectedTab = pathname.endsWith('/invites') ? 'invites' : 'members';
   const workspace = query.data.data;
 
   const canInvite = useHasWorkspacePermission(
@@ -72,12 +72,6 @@ export function Component() {
               to={`/account-settings/workspaces/${workspaceId}/invites`}
             >
               <Trans message="Invites" />
-            </Tabs.LinkTab>
-            <Tabs.LinkTab
-              value="payouts"
-              to={`/account-settings/workspaces/${workspaceId}/payouts`}
-            >
-              <Trans message="Payouts" />
             </Tabs.LinkTab>
           </Tabs.List>
         </div>

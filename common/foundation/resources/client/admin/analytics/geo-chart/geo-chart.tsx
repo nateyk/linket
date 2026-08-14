@@ -57,7 +57,7 @@ export function GeoChart({
   const isEmpty = !isLoading && !data?.length;
 
   return (
-    <Card size="sm" className={cn('col-span-6 row-span-11', className)}>
+    <Card size="sm" className={cn('min-w-0', className)}>
       <Card.Header>
         <Card.Title>
           <Trans message="Top Locations" />
@@ -71,13 +71,13 @@ export function GeoChart({
       </Card.Header>
       <Card.Content
         ref={contentRef}
-        className="compact-scrollbar relative flex-1 overflow-auto overscroll-contain"
+        className="compact-scrollbar relative min-h-80 min-w-0 overflow-hidden overscroll-contain"
       >
         {!isEmpty && (
-          <div className="flex gap-6">
-            <div ref={placeholderRef} className="min-h-85 w-120 flex-auto" />
-            <div className="w-42.5">
-              <div className="max-h-85 w-full flex-initial text-sm">
+          <div className="grid min-h-80 min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_10rem]">
+            <div ref={placeholderRef} className="min-h-72 min-w-0" />
+            <div className="min-w-0">
+              <div className="max-h-72 w-full overflow-y-auto text-sm">
                 {data.map(location => (
                   <div
                     key={location.label}

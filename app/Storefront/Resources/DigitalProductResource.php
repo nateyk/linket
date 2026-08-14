@@ -23,6 +23,8 @@ class DigitalProductResource extends JsonResource
             'currency' => $this->currency,
             'status' => $this->status,
             'rejection_reason' => $this->rejection_reason,
+            'sales_count' => (int) ($this->sales_count ?? 0),
+            'gross_revenue_cents' => (int) ($this->gross_revenue_cents ?? 0),
             'cover_file_entry_id' => $this->cover_file_entry_id,
             'cover' => $this->whenLoaded('cover', fn() => $this->cover ? [
                 'id' => $this->cover->id,

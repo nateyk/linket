@@ -1,2 +1,0 @@
-import{Ei as e,_i as t}from"./icons-Cr69SQk-.js";import{jt as n}from"./useBaseUiId-Q5wQ5wLk.js";import{t as r}from"./button-PhBet3-b.js";var i=e();function a({column:e,children:a,className:o}){let s=e.getIsSorted(),c=()=>{s===!1?e.toggleSorting(!1):s===`asc`?e.toggleSorting(!0):e.clearSorting()};return(0,i.jsxs)(r,{variant:`link`,className:n(`px-0`,o),onClick:()=>c(),children:[a,(0,i.jsx)(t,{className:n(!s&&`invisible`,s===`asc`&&`rotate-180`)})]})}export{a as t};
-//# sourceMappingURL=sortable-header-BMEJCjyv.js.map

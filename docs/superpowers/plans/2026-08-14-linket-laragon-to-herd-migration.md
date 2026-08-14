@@ -2,11 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Move the linket Laravel 12 project (MySQL-backed) from Laragon (`C:\laragon\www\linket`) to Laravel Herd (`C:\Users\Nate\Herd\linket`, served at `http://linket.test`), migrating the `belink` MySQL database to dbngin, then remove the old Laragon copy after verification.
+**Goal:** Move the linket Laravel 12 project (MySQL-backed) from Laragon (`C:\laragon\www\linket`) to Laravel Herd (`C:\Users\Nate\Herd\linket`, served at `http://linket.test`), migrating the `belink` MySQL database to a standalone MySQL Community Server 8.4 install, then remove the old Laragon copy after verification.
 
-**Architecture:** Dump `belink` from Laragon's MySQL 8.4 with `mysqldump`, import into a new dbngin MySQL 8.4 instance, copy the git working tree (with populated `common` submodule) to Herd's parked directory (`%USERPROFILE%\Herd`), reinstall Composer + npm dependencies, update `.env` (`APP_URL` + MySQL credentials), verify DB and site, then delete the backup after user confirmation.
+**Architecture:** Dump `belink` from Laragon's MySQL 8.4 with `mysqldump`, import into a new official MySQL Community Server 8.4.3 install (`C:\Users\Nate\.local\mysql\mysql-8.4.3`, port 3306), copy the git working tree (with populated `common` submodule) to Herd's parked directory (`%USERPROFILE%\Herd`), reinstall Composer + npm dependencies, update `.env` (`APP_URL` + MySQL credentials), verify DB and site, then delete the backup after user confirmation.
 
-**Tech Stack:** Laravel 12, PHP 8.4 (Herd-managed), MySQL 8.4 (dbngin), Vite, npm, Composer.
+**Tech Stack:** Laravel 12, PHP 8.4 (Herd-managed), MySQL 8.4 (official Community Server, standalone — no dbngin; dbngin 2.0.4 on Windows is broken per upstream bug #152), Vite, npm, Composer.
 
 ## Global Constraints
 
@@ -80,51 +80,64 @@ Expected: dump contains `CREATE DATABASE /*!32312 IF NOT EXISTS*/ \`belink\``, e
 
 ---
 
-### Task 2: Install dbngin, create and import belink
+### Task 2: Install MySQL Community Server 8.4 (official, standalone) and import belink
+
+> **PLAN DEVIATION (user-approved, 2026-08-14):** original brief used dbngin, which is non-functional on this machine (dbngin-go 2.0.4 Windows build never spawns mysqld and persists no engine state — upstream bug; the GUI even falsely reports "Running"). Replaced with an official MySQL Community Server 8.4.3 noinstall-archive install at `C:\Users\Nate\.local\mysql\mysql-8.4.3`. No Laragon involvement.
 
 **Files:**
 - Consumes: `C:\Users\Nate\AppData\Local\Temp\opencode\linket\belink.sql`
+- Creates: MySQL install at `C:\Users\Nate\.local\mysql\mysql-8.4.3` (data dir `...\data`)
 - No repo files created.
 
 **Interfaces:**
 - Consumes: Task 1 dump file.
-- Produces: a running MySQL 8.4 instance on dbngin's default port (3306) with database `belink` fully populated (table count and row counts match Laragon's original).
+- Produces: a running MySQL 8.4 instance on port 3306 with database `belink` fully populated (table count and row counts match Laragon's original). MySQL left running for Task 3+.
 
-- [ ] **Step 1: Install dbngin**
+- [x] **Step 1: Download the official MySQL 8.4.3 noinstall archive**
 
-Download and run the dbngin installer (winget preferred, fallback to the official installer):
 ```powershell
-winget install --id=Gelio.dbngin -e --accept-source-agreements --accept-package-agreements
+curl.exe -L -o "C:\Users\Nate\AppData\Local\Temp\opencode\linket\mysql-8.4.3-winx64.zip" "https://cdn.mysql.com/archives/mysql-8.4/mysql-8.4.3-winx64.zip"
 ```
-Expected: installed. If winget fails, download the installer from dbngin.com and run it silently. Verify install: `Test-Path "$env:LOCALAPPDATA\Programs\Dbngin"` or `Get-Command dbngin*`.
+Expected: 259,751,071 bytes, exit 0. (URL pre-verified HTTP 200.)
 
-- [ ] **Step 2: Create a MySQL 8.4 instance in dbngin**
+- [x] **Step 2: Extract to a neutral install location**
 
-Via dbngin's GUI: create a MySQL 8.4 instance (default port 3306, root, no password). If CLI automation is unavailable, launch dbngin and note that the user creates the instance — report as DONE_WITH_CONCERNS with the exact click path. Verify the instance is listening:
 ```powershell
+Expand-Archive "C:\Users\Nate\AppData\Local\Temp\opencode\linket\mysql-8.4.3-winx64.zip" -DestinationPath "C:\Users\Nate\.local\mysql\mysql-8.4.3-tmp" -Force
+```
+Then move contents to `C:\Users\Nate\.local\mysql\mysql-8.4.3` (folder named without the `-winx64` suffix). Expected: `C:\Users\Nate\.local\mysql\mysql-8.4.3\bin\mysqld.exe` exists.
+
+- [x] **Step 3: Initialize the data directory (root, no password)**
+
+```powershell
+& "C:\Users\Nate\.local\mysql\mysql-8.4.3\bin\mysqld.exe" --initialize-insecure --datadir="C:\Users\Nate\.local\mysql\mysql-8.4.3\data"
+```
+Expected: `data\*.err` log shows "MySQL Server Initialization - end" and "root@localhost is created with an empty password". System schemas (mysql, performance_schema, sys) created automatically.
+
+- [x] **Step 4: Start mysqld on port 3306 (background)**
+
+```powershell
+$p = Start-Process -FilePath "C:\Users\Nate\.local\mysql\mysql-8.4.3\bin\mysqld.exe" -ArgumentList "--datadir=C:\Users\Nate\.local\mysql\mysql-8.4.3\data","--port=3306","--console" -RedirectStandardError "C:\Users\Nate\.local\mysql\mysql-8.4.3\mysql.err" -PassThru
+Start-Sleep -Seconds 8
 Get-NetTCPConnection -LocalPort 3306 -State Listen -ErrorAction SilentlyContinue
 ```
-Expected: listener on 3306. (If the instance is running on a different port, record the ACTUAL port — the .env update in Task 3 must use it.)
+Expected: listener on 3306 owned by mysqld. NOTE: `--console` spawns a parent wrapper process (idle, no port) plus the real server — the PARENT wrapper is an orphan; the real server owns the port. Do not kill the wrapper if the real server is healthy. If mysqld exits immediately, read `mysql.err` (missing VC++ runtime → `winget install Microsoft.VCRedist.2015+.x64`).
 
-- [ ] **Step 3: Import the dump**
+- [x] **Step 5: Import the dump**
 
-Run:
 ```powershell
-& "C:\laragon\bin\mysql\mysql-8.4.3-winx64\bin\mysql.exe" -u root -h 127.0.0.1 -P 3306 < "C:\Users\Nate\AppData\Local\Temp\opencode\linket\belink.sql"
+cmd /c "\"C:\Users\Nate\.local\mysql\mysql-8.4.3\bin\mysql.exe\" -u root -h 127.0.0.1 -P 3306 < \"C:\Users\Nate\AppData\Local\Temp\opencode\linket\belink.sql\""
 ```
-NOTE: if the dump's `CREATE DATABASE` contains a `DEFAULT CHARACTER SET` clause, the import handles it. If the pipe redirect `<` fails in PowerShell, use `Get-Content -Raw ... | & mysql.exe ...` instead. Expected: exit 0, no errors.
+Expected: exit 0, no errors. (The dump contains `CREATE DATABASE`, so no manual DB creation.)
 
-- [ ] **Step 4: Verify import**
+- [x] **Step 6: Verify import**
 
-Run:
 ```powershell
-& "C:\laragon\bin\mysql\mysql-8.4.3-winx64\bin\mysql.exe" -u root -h 127.0.0.1 -P 3306 -e "USE belink; SHOW TABLES; SELECT COUNT(*) AS tables_count FROM information_schema.tables WHERE table_schema='belink';"
+& "C:\Users\Nate\.local\mysql\mysql-8.4.3\bin\mysql.exe" -u root -h 127.0.0.1 -P 3306 -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='belink';"
 ```
-Expected: `belink` present, tables listed. Record the table count. Also verify a known table has rows:
-```powershell
-& "...\mysql.exe" -u root -h 127.0.0.1 -P 3306 -e "SELECT COUNT(*) FROM belink.users;" 2>&1
-```
-Expected: succeeds (users table exists — adjust to any table from the SHOW TABLES output if users is absent).
+Expected: `81`. Also verify a known table has rows (e.g. `SELECT COUNT(*) FROM belink.users;`).
+
+> **FOLLOW-UP (not blocking):** mysqld is started manually and will NOT survive a reboot. Register it as a Windows service (`sc.exe create MySQL84 binPath= ... --install`) or document the manual start command in the final migration summary.
 
 ---
 

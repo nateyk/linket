@@ -8,11 +8,18 @@ import {ComponentProps} from 'react';
 /**
  * Provides a shared state to a series of toggle buttons.
  */
-export function ToggleGroup(
-  props: Omit<
-    ToggleGroupPrimitive.Props & ComponentProps<typeof ButtonGroup.Root>,
-    'onChange'
-  >,
-) {
-  return <ToggleGroupPrimitive render={<ButtonGroup.Root />} {...props} />;
+export function ToggleGroup({
+  orientation = 'horizontal',
+  ...props
+}: Omit<
+  ToggleGroupPrimitive.Props & ComponentProps<typeof ButtonGroup.Root>,
+  'onChange'
+>) {
+  return (
+    <ToggleGroupPrimitive
+      orientation={orientation}
+      render={<ButtonGroup.Root orientation={orientation} />}
+      {...props}
+    />
+  );
 }

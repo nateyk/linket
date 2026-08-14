@@ -1,2 +1,0 @@
-import{Ei as e}from"./icons-Cr69SQk-.js";import{v as t}from"./chunk-6CSD65Y2-CHr4cZEe.js";import{n,o as r,r as i,t as a}from"./two-factor-panel-DJfXMHF0.js";var o=e();function s(){let e=t();return(0,o.jsxs)(`div`,{children:[(0,o.jsx)(r,{}),(0,o.jsx)(a,{user:e}),(0,o.jsx)(n,{user:e}),(0,o.jsx)(i,{})]})}export{s as Component};
-//# sourceMappingURL=update-user-security-tab-yWRVULmy.js.map

@@ -1,2 +1,0 @@
-import{n as e,t}from"./bootstrap-data-store-DoilCKox.js";import{Cn as n,kt as r,qi as i}from"./main-BAcsbrKX.js";function a(){return i({mutationFn:e=>n(e),onSuccess:n=>{e({i18n:{locales:t().i18n.locales.map(e=>e.language===n.data.language?{...e,lines:n.data.lines??{}}:e),active:n.data.language,direction:n.data.direction}}),document.documentElement.dir=n.data.direction,document.documentElement.lang=n.data.language},onError:e=>r(e)})}export{a as t};
-//# sourceMappingURL=change-locale-DYS325F7.js.map

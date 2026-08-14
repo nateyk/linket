@@ -18,7 +18,6 @@ import {AdHost} from '@common/admin/ads/ad-host';
 import {Avatar} from '@shadcn/avatar/avatar';
 import {Badge} from '@shadcn/badge/badge';
 import {LinkButton} from '@shadcn/button/button';
-import {Separator} from '@shadcn/separator';
 import {Tabs} from '@shadcn/tabs/tabs';
 import {Trans} from '@ui/i18n/trans';
 import {message} from '@ui/i18n/message';
@@ -33,7 +32,6 @@ import {
   InfoIcon,
   MailIcon,
   PackageIcon,
-  PlusIcon,
   UserIcon,
 } from 'lucide-react';
 import {Link} from 'react-router';
@@ -116,7 +114,7 @@ export function CreatorProfilePreview({
     .at(-1) as BiolinkWidget | undefined;
 
   return (
-    <main className="relative z-4 px-2.5 pt-2.5 pb-4">
+    <main className="relative z-4 flex min-h-full flex-col px-2 pt-2 pb-2">
       <MobileCreatorProfile
         biolink={biolink}
         appearance={appearance}
@@ -155,13 +153,23 @@ function MobileCreatorProfile({
   const hasAbout = hasVisibleAbout(profile.about_html);
   const showNavigation = hasProducts || hasAbout;
   const buttonAppearance = resolveBiolinkButtonAppearance(appearance);
+  const navigationAppearanceStyle = {
+    ...buttonAppearance.style,
+    boxShadow: undefined,
+  };
 
   return (
     <Tabs.Root
       defaultValue="profile"
-      className={cn('relative min-w-0 gap-0', compact && 'min-h-full')}
+      className={cn(
+        'relative min-w-0 gap-0',
+        compact && 'flex min-h-full flex-col justify-start',
+      )}
     >
-      <Tabs.Panel value="profile" className="min-w-0 pb-20">
+      <Tabs.Panel
+        value="profile"
+        className={cn('min-w-0', compact ? 'pb-0' : 'pb-20')}
+      >
         <CreatorCard
           biolink={biolink}
           appearance={appearance}
@@ -176,13 +184,19 @@ function MobileCreatorProfile({
       </Tabs.Panel>
 
       {hasProducts && (
-        <Tabs.Panel value="products" className="min-w-0 pb-20">
+        <Tabs.Panel
+          value="products"
+          className={cn('min-w-0', compact ? 'pb-0' : 'pb-20')}
+        >
           <ShopSection widget={shopWidget} biolink={biolink} />
         </Tabs.Panel>
       )}
 
       {hasAbout && (
-        <Tabs.Panel value="about" className="min-w-0 pb-20">
+        <Tabs.Panel
+          value="about"
+          className={cn('min-w-0', compact ? 'pb-0' : 'pb-20')}
+        >
           <AboutSection
             profile={profile}
             appearance={appearance}
@@ -196,23 +210,24 @@ function MobileCreatorProfile({
           className={cn(
             'pointer-events-none z-10 flex justify-center',
             compact
-              ? 'absolute inset-x-0 bottom-3 px-3'
-              : 'fixed inset-x-0 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] px-4 @4xl:hidden',
+              ? 'relative mt-3 px-3 pb-1'
+              : 'fixed inset-x-0 bottom-[calc(1rem+env(safe-area-inset-bottom))] px-4 @4xl:hidden',
           )}
         >
           <div
             className={cn(
-              'w-full',
-              compact ? 'max-w-60' : 'max-w-72',
+              'mx-auto w-fit max-w-[calc(100vw-2rem)]',
+              compact && 'max-w-[calc(100%-1.5rem)]',
             )}
           >
             <Tabs.List
               aria-label={trans(message('Creator profile sections'))}
               className={cn(
-                'pointer-events-auto flex h-auto w-full min-w-0 gap-0.5 border border-[var(--biolink-border)] bg-[var(--biolink-surface-strong)] p-1 text-[var(--biolink-muted-text)] shadow-lg backdrop-blur-xl [&>span:last-child]:rounded-[inherit] [&>span:last-child]:border [&>span:last-child]:border-[var(--biolink-button-border)] [&>span:last-child]:[background:var(--biolink-button-background)] [&>span:last-child]:shadow-sm',
+                'pointer-events-auto flex h-auto w-fit min-w-0 items-center gap-1 border border-[var(--biolink-border)] bg-[var(--biolink-surface-strong)] p-1 text-[var(--biolink-muted-text)] shadow-md shadow-black/10 backdrop-blur-xl [&>span:last-child]:hidden',
+                compact && 'shadow-sm',
                 buttonAppearance.radius,
               )}
-              style={buttonAppearance.style}
+              style={navigationAppearanceStyle}
             >
               <MobileSectionTab
                 value="profile"
@@ -262,14 +277,16 @@ function MobileSectionTab({
     <Tabs.Tab
       value={value}
       className={cn(
-        'group/creator-nav min-w-0 flex-1 gap-0 rounded-[inherit] px-1.5 text-[var(--biolink-muted-text)] transition-[color,gap] duration-200 ease-out hover:text-[var(--biolink-text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--biolink-button-focus)] data-active:gap-1 data-active:text-[var(--biolink-button-text)]',
-        compact ? 'h-9' : 'h-11',
+        'group/mobile-section-tab min-w-0 flex-none gap-0 rounded-[inherit] border border-transparent px-0 text-[var(--biolink-muted-text)] transition-colors duration-150 hover:[background:var(--biolink-surface-muted)] hover:text-[var(--biolink-text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--biolink-button-focus)] data-active:gap-1.5 data-active:border-[var(--biolink-button-border)]! data-active:[background:var(--biolink-button-background)] data-active:text-[var(--biolink-button-text)]! data-active:hover:[background:var(--biolink-button-hover)]',
+        compact
+          ? 'size-9 data-active:w-auto data-active:px-2.5'
+          : 'size-10 data-active:w-auto data-active:px-3',
       )}
     >
       {icon}
       <span
         className={cn(
-          'max-w-0 overflow-hidden leading-none font-medium whitespace-nowrap opacity-0 transition-[max-width,opacity] duration-200 ease-out group-data-active/creator-nav:max-w-20 group-data-active/creator-nav:opacity-100',
+          'max-w-0 overflow-hidden leading-none font-medium whitespace-nowrap opacity-0 transition-opacity duration-150 group-data-[active]/mobile-section-tab:max-w-20 group-data-[active]/mobile-section-tab:opacity-100',
           compact ? 'text-[0.6875rem]' : 'text-xs',
         )}
       >
@@ -296,8 +313,6 @@ function CreatorCard({
   );
   const visibleSkills = profile.skills.slice(0, compact ? 4 : 8);
   const visibleSocialLinks = compact ? socialLinks.slice(0, 6) : socialLinks;
-  const showFollowAction =
-    !!profile.follow_url && (!compact || !profile.contact_url);
   const showContactAction = !!profile.contact_url;
   const buttonAppearance = resolveBiolinkButtonAppearance(appearance);
 
@@ -306,7 +321,7 @@ function CreatorCard({
       className={cn(
         'overflow-hidden rounded-card bg-[var(--biolink-surface)] text-[var(--biolink-text)] ring-1 ring-[var(--biolink-border)] backdrop-blur-md',
         compact
-          ? 'bg-[var(--biolink-surface-strong)] backdrop-blur-xl'
+          ? 'bg-[var(--biolink-surface-strong)] shadow-sm backdrop-blur-xl'
           : 'shadow-sm',
         !compact && '@4xl:sticky @4xl:top-8',
       )}
@@ -338,7 +353,13 @@ function CreatorCard({
         )}
       </div>
 
-      <div className={cn('px-4 pb-4', !compact && 'sm:px-5 sm:pb-5')}>
+      <div
+        className={cn(
+          'px-4 pb-4',
+          compact && 'flex flex-col',
+          !compact && 'sm:px-5 sm:pb-5',
+        )}
+      >
         <div className="grid grid-cols-[auto_minmax(0,1fr)] items-end gap-3">
           <Avatar.Root className="-mt-10 aspect-square size-20 overflow-hidden rounded-card-sm bg-[var(--biolink-surface-strong)] shadow-sm ring-1 ring-[var(--biolink-surface-strong)] after:hidden">
             <Avatar.Image
@@ -377,44 +398,27 @@ function CreatorCard({
         </div>
 
         <div
-          className={cn('mt-4 flex flex-col gap-4', compact && 'mt-3 gap-3')}
+          className={cn(
+            'mt-4 flex flex-col gap-4',
+            compact && 'mt-3 gap-3',
+          )}
         >
-          {(showFollowAction || showContactAction) && (
-            <div
-              className={cn('grid grid-cols-2 gap-2', compact && 'grid-cols-1')}
-            >
-              {showFollowAction && (
-                <LinkButton
-                  to={profile.follow_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  variant="ghost"
-                  className={cn(
-                    buttonAppearance.className,
-                    !profile.contact_url && 'col-span-2',
-                  )}
-                  style={buttonAppearance.style}
-                >
-                  <PlusIcon data-icon="inline-start" />
-                  <Trans message="Follow" />
-                </LinkButton>
-              )}
-              {showContactAction && (
-                <LinkButton
-                  to={normalizeContactUrl(profile.contact_url)}
-                  target="_blank"
-                  rel="noreferrer"
-                  variant="ghost"
-                  className={cn(
-                    buttonAppearance.className,
-                    !profile.follow_url && 'col-span-2',
-                  )}
-                  style={buttonAppearance.style}
-                >
-                  <MailIcon data-icon="inline-start" />
-                  <Trans message="Message" />
-                </LinkButton>
-              )}
+          {showContactAction && (
+            <div className="flex justify-start">
+              <LinkButton
+                to={normalizeContactUrl(profile.contact_url)}
+                target="_blank"
+                rel="noreferrer"
+                variant="ghost"
+                className={cn(
+                  buttonAppearance.className,
+                  'w-[52%] min-w-40 max-w-56',
+                )}
+                style={buttonAppearance.style}
+              >
+                <MailIcon data-icon="inline-start" />
+                <Trans message="Message" />
+              </LinkButton>
             </div>
           )}
 
@@ -470,17 +474,7 @@ function CreatorCard({
             </div>
           )}
 
-          <Separator className="bg-[var(--biolink-border)]" />
-
-          <div className="flex items-end justify-between gap-4">
-            <div>
-              <div className="text-xl font-semibold tabular-nums">
-                {biolink.public_item_count ?? 0}
-              </div>
-              <div className="text-xs text-[var(--biolink-muted-text)]">
-                <Trans message="Items" />
-              </div>
-            </div>
+          <div className="flex justify-center pt-1">
             <CreatorBranding appearance={appearance} />
           </div>
         </div>
@@ -648,9 +642,13 @@ function CreatorBranding({
   if (!src || appearance?.hideBranding) return null;
 
   return (
-    <Link to="/" aria-label={branding.site_name}>
+    <Link
+      to="/"
+      aria-label={branding.site_name}
+      className="inline-flex items-center justify-center opacity-70 transition-opacity duration-150 hover:opacity-100"
+    >
       <img
-        className="h-5 w-auto"
+        className="h-4.5 w-auto"
         src={src}
         alt={trans(message(':site logo', {values: {site: branding.site_name}}))}
       />

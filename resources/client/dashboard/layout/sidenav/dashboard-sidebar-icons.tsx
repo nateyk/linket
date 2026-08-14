@@ -3,6 +3,7 @@ import {
   FolderIcon,
   FormIcon,
   GlobeIcon,
+  HomeIcon,
   LayoutPanelTopIcon,
   LinkIcon,
   MousePointerClickIcon,
@@ -32,6 +33,7 @@ export const dashboardSidebarIcons: Record<
   string,
   ReactElement<ComponentProps<'svg'>>
 > = {
+  '/dashboard': <HomeIcon />,
   '/dashboard/insights': <ChartColumnBigIcon />,
   '/dashboard/search': <SearchIcon />,
   '/dashboard/my-products': <StoreIcon />,

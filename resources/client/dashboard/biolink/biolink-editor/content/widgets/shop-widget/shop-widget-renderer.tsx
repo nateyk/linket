@@ -129,7 +129,7 @@ function ProductCard({product, href}: {product: Product; href: string}) {
       className="group flex h-full min-w-0 flex-col overflow-hidden rounded-card bg-[var(--biolink-surface)] text-[var(--biolink-text)] no-underline shadow-sm ring-1 ring-[var(--biolink-border)] backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--biolink-text)]"
       href={href}
     >
-      <div className="relative aspect-[4/3] w-full overflow-hidden bg-[var(--biolink-surface-muted)] sm:aspect-[3/2]">
+      <div className="aspect-video w-full overflow-hidden bg-[var(--biolink-surface-muted)]">
         {product.cover?.url ? (
           <img
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
@@ -139,25 +139,22 @@ function ProductCard({product, href}: {product: Product; href: string}) {
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
-            <ShoppingBagIcon className="size-8 text-[var(--biolink-muted-text)] opacity-45" />
+            <span className="grid size-11 place-items-center rounded-card-sm bg-[var(--biolink-surface-strong)] ring-1 ring-[var(--biolink-border)]">
+              <ShoppingBagIcon className="size-5 text-[var(--biolink-muted-text)] opacity-65" />
+            </span>
           </div>
         )}
-        <span className="absolute right-2 bottom-2 rounded-card-sm bg-[var(--biolink-surface-strong)] px-2.5 py-1 text-xs font-semibold text-[var(--biolink-text)] shadow-sm ring-1 ring-[var(--biolink-border)] backdrop-blur-sm">
-          {formatMoney(product.price_cents, product.currency)}
-        </span>
       </div>
-      <div className="flex flex-1 flex-col gap-2 p-3">
-        <div className="min-w-0">
+      <div className="flex flex-1 flex-col gap-3 p-3">
+        <div className="flex min-w-0 flex-col gap-1">
           <div className="line-clamp-2 text-sm leading-snug font-semibold">
             {product.title}
           </div>
-          {product.description && (
-            <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-[var(--biolink-muted-text)]">
-              {plainTextDescription(product.description)}
-            </p>
-          )}
+          <div className="text-sm leading-none font-semibold">
+            {formatMoney(product.price_cents, product.currency)}
+          </div>
         </div>
-        <div className="mt-auto flex items-center justify-between border-t border-[var(--biolink-border)] pt-2 text-xs font-medium">
+        <div className="mt-auto flex items-center justify-between border-t border-[var(--biolink-border)] pt-2 text-xs font-medium text-[var(--biolink-muted-text)]">
           <span>
             <Trans message="View product" />
           </span>
@@ -174,16 +171,4 @@ function formatMoney(cents: number, currency: string) {
   return new Intl.NumberFormat(undefined, {style: 'currency', currency}).format(
     cents / 100,
   );
-}
-
-function plainTextDescription(description: string): string {
-  if (typeof DOMParser !== 'undefined') {
-    const document = new DOMParser().parseFromString(description, 'text/html');
-    return document.body.textContent?.replace(/\s+/g, ' ').trim() ?? '';
-  }
-
-  return description
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
 }

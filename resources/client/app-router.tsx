@@ -128,6 +128,13 @@ export const appRouter = createBrowserRouter(
                   import('@app/account-settings/kyc/kyc-page'),
               },
               {
+                path: 'payouts',
+                lazy: () =>
+                  import('@app/account-settings/payout-settings-page'),
+                loader: () =>
+                  queryClient.ensureQueryData(listWorkspacesOptions()),
+              },
+              {
                 path: 'api-keys',
                 lazy: () => import('@app/account-settings/access-tokens-page'),
                 middleware: [

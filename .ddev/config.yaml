@@ -1,0 +1,13 @@
+﻿name: linket
+type: laravel
+docroot: public
+php_version: "8.4"
+database:
+  type: mysql
+  version: "8.0"
+nodejs_version: "20"
+hooks:
+  post-start:
+    - exec: composer install --no-interaction --prefer-dist
+    - exec: php artisan config:cache
+    - exec: php artisan event:cache

@@ -8,6 +8,7 @@ use App\Storefront\ChapaPayoutService;
 use App\Storefront\Models\DigitalProductPayoutMethod;
 use App\Storefront\Models\DigitalProductWithdrawalMethod;
 use App\Storefront\Models\PayoutRequest;
+use App\Storefront\Models\WorkspacePayoutConfig;
 use App\Storefront\DigitalProductFinance;
 use App\Storefront\PayoutRequestService;
 use Common\Permissions\Models\Permission;
@@ -433,6 +434,23 @@ class PayoutSystemTest extends TestCase
         $this->postJson('/api/v1/digital-products/payout-requests', ['amount_cents' => 1000])
             ->assertCreated()
             ->assertJsonPath('data.status', 'requested');
+    }
+
+    public function testWorkspacePayoutConfigShowReturnsEmptyConfigWhenUnset(): void
+    {
+        $creator = $this->createCreator();
+        $workspaceId = $creator->workspaces()->first()->id;
+
+        $this->stateful()->actingAs($creator);
+        $this->getJson("/api/v1/workspaces/{$workspaceId}/payout-config")
+            ->assertOk()
+            ->assertJsonPath('data.workspace_id', $workspaceId)
+            ->assertJsonPath('data.withdrawal_method_id', null)
+            ->assertJsonPath('data.withdrawal_account', '');
+
+        $this->assertDatabaseMissing((new WorkspacePayoutConfig())->getTable(), [
+            'workspace_id' => $workspaceId,
+        ]);
     }
 
     /**

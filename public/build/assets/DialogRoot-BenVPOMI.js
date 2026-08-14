@@ -1,2 +1,0 @@
-import{a as e}from"./rolldown-runtime-Cyuzqnbw.js";import{Di as t}from"./icons-Cr69SQk-.js";import{i as n,u as r}from"./DialogTrigger-Ci4oTFCG.js";var i=e(t());function a(e){return n(e,i.useContext(r)?`drawer`:`dialog`)}export{a as t};
-//# sourceMappingURL=DialogRoot-BenVPOMI.js.map

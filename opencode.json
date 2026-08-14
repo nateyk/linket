@@ -25,7 +25,7 @@
         },
         "php": {
             "command": [
-                "C:\\Users\\Nate\\AppData\\Roaming\\npm\\intelephense.cmd",
+                "intelephense",
                 "--stdio"
             ],
             "extensions": [
@@ -58,7 +58,7 @@
                 "npx",
                 "-y",
                 "@modelcontextprotocol/server-filesystem",
-                "C:/laragon/www/linket"
+                "/home/nate/projects/linket"
             ],
             "enabled": true
         },
@@ -69,7 +69,7 @@
                 "-y",
                 "@modelcontextprotocol/server-github"
             ],
-            "env": {
+            "environment": {
                 "GITHUB_TOKEN": "env:GITHUB_TOKEN"
             },
             "enabled": true
@@ -78,6 +78,8 @@
             "type": "local",
             "enabled": true,
             "command": [
+                "ddev",
+                "exec",
                 "php",
                 "artisan",
                 "boost:mcp"

@@ -1,2 +1,0 @@
-import{a as e}from"./rolldown-runtime-Cyuzqnbw.js";import{Di as t,Ei as n}from"./icons-Cr69SQk-.js";import{n as r}from"./auth-layout-DUu8Qk_V.js";import{n as i,t as a}from"./login-page-WQ4MgPaN.js";var o=e(t()),s=n();function c({bottomMessages:e}){let[t,n]=(0,o.useState)(!1);return(0,s.jsx)(r,{children:t?(0,s.jsx)(i,{}):(0,s.jsx)(a,{onTwoFactorChallenge:()=>n(!0),bottomMessages:e})})}export{c as LoginPageWrapper};
-//# sourceMappingURL=login-page-wrapper-Chh4Mzpc.js.map

@@ -27,6 +27,7 @@ import {
   SettingsIcon,
   StoreIcon,
   UsersIcon,
+  WalletCardsIcon,
   WebhookIcon,
 } from 'lucide-react';
 import {use} from 'react';
@@ -144,6 +145,14 @@ function AccountSettingsSidebar() {
                   icon={<BadgeCheckIcon />}
                 >
                   <Trans message="Verification" />
+                </Sidebar.MenuButton>
+              </Sidebar.MenuItem>
+              <Sidebar.MenuItem>
+                <Sidebar.MenuButton
+                  render={<NavLink to="/account-settings/payouts" />}
+                  icon={<WalletCardsIcon />}
+                >
+                  <Trans message="Payout settings" />
                 </Sidebar.MenuButton>
               </Sidebar.MenuItem>
               <Sidebar.MenuItem>
