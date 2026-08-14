@@ -2,6 +2,7 @@
 
 namespace App\Storefront\Controllers;
 
+use App\Storefront\Models\DigitalProduct;
 use App\Storefront\Models\ProductReview;
 use App\Storefront\Resources\AdminProductReviewResource;
 use Illuminate\Http\Request;
@@ -10,10 +11,12 @@ use Illuminate\Routing\Controller;
 
 class AdminProductReviewsController extends Controller
 {
-    public function index(Request $request): AnonymousResourceCollection
+    public function index(Request $request, DigitalProduct $digitalProduct): AnonymousResourceCollection
     {
         $perPage = min(max($request->integer('per_page', 15), 1), 100);
         $query = ProductReview::query()
+            ->where('reviewable_type', DigitalProduct::class)
+            ->where('reviewable_id', $digitalProduct->id)
             ->with(['ratings', 'product']);
 
         if ($search = $request->string('search')->trim()) {
@@ -29,7 +32,11 @@ class AdminProductReviewsController extends Controller
             $query->where('approved', $request->string('status')->is('visible'));
         }
 
-        return AdminProductReviewResource::collection($query->latest()->paginate($perPage));
+        return AdminProductReviewResource::collection($query->latest()->paginate($perPage))
+            ->additional(['product' => [
+                'id' => $digitalProduct->id,
+                'title' => $digitalProduct->title,
+            ]]);
     }
 
     public function hide(Request $request, ProductReview $productReview): AdminProductReviewResource

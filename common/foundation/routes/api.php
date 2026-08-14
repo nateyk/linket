@@ -253,7 +253,7 @@ Route::group(['prefix' => 'v1'], function () {
         Route::put('admin/digital-products/withdrawal-methods/{withdrawalMethod}', [DigitalProductWithdrawalMethodsController::class, 'update']);
         Route::get('admin/payment-transactions', [AdminPaymentTransactionsController::class, 'index']);
         Route::get('admin/digital-products/order-recovery-deliveries', [AdminDigitalProductOrderRecoveryDeliveriesController::class, 'index']);
-        Route::get('admin/digital-products/reviews', [AdminProductReviewsController::class, 'index']);
+        Route::get('admin/digital-products/{digitalProduct}/reviews', [AdminProductReviewsController::class, 'index']);
         Route::post('admin/digital-products/reviews/{productReview}/hide', [AdminProductReviewsController::class, 'hide']);
         Route::post('admin/digital-products/reviews/{productReview}/unhide', [AdminProductReviewsController::class, 'unhide']);
         Route::delete('admin/digital-products/reviews/{productReview}', [AdminProductReviewsController::class, 'destroy']);

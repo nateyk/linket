@@ -344,9 +344,10 @@ class ProductReviewTest extends TestCase
         $this->assertDatabaseMissing('reviews', ['id' => $review->id, 'review' => 'Bye']);
     }
 
-    public function testAdminIndexFiltersByStatusAndSearch(): void
+    public function testAdminIndexFiltersByStatusAndSearchScopedToProduct(): void
     {
         [$product] = $this->makeProductOnBiolink();
+        [$otherProduct] = $this->makeProductOnBiolink();
         ProductReview::unguarded(fn() => $product->addReview([
             'review' => 'Keep',
             'approved' => true,
@@ -362,14 +363,49 @@ class ProductReviewTest extends TestCase
             ->where('review', 'Drop')
             ->update(['hidden_at' => now(), 'hidden_by' => 7]);
 
+        // review on the *other* product must never appear for this product
+        ProductReview::unguarded(fn() => $otherProduct->addReview([
+            'review' => 'Other',
+            'approved' => true,
+            'ratings' => ['overall' => 4],
+        ]));
+
         $response = (new \App\Storefront\Controllers\AdminProductReviewsController())->index(
-            Request::create('http://127.0.0.1/api/v1/admin/digital-products/reviews', 'GET', ['status' => 'hidden']),
+            Request::create('http://127.0.0.1/api/v1/admin/digital-products/' . $product->id . '/reviews', 'GET', ['status' => 'hidden']),
+            $product,
         );
 
         $this->assertSame(15, $response->resource->perPage());
-        $items = $response->collection->map(fn($resource) => $resource->resolve());
-        $this->assertCount(1, $items->where('review', 'Drop'));
-        $this->assertEmpty($items->where('review', 'Keep'));
+        $payload = $response->response()->getData(true);
+        $this->assertSame(['id' => $product->id, 'title' => 'Ebook'], $payload['product']);
+        $reviews = collect($payload['data']);
+        $this->assertCount(1, $reviews->where('review', 'Drop'));
+        $this->assertEmpty($reviews->where('review', 'Keep'));
+        $this->assertEmpty($reviews->where('review', 'Other'));
+    }
+
+    public function testAdminIndexIsScopedToProduct(): void
+    {
+        [$product] = $this->makeProductOnBiolink();
+        [$otherProduct] = $this->makeProductOnBiolink();
+        ProductReview::unguarded(fn() => $product->addReview([
+            'review' => 'Mine',
+            'approved' => true,
+            'ratings' => ['overall' => 5],
+        ]));
+        ProductReview::unguarded(fn() => $otherProduct->addReview([
+            'review' => 'Theirs',
+            'approved' => true,
+            'ratings' => ['overall' => 4],
+        ]));
+
+        $response = (new \App\Storefront\Controllers\AdminProductReviewsController())->index(
+            Request::create('http://127.0.0.1/api/v1/admin/digital-products/' . $product->id . '/reviews', 'GET'),
+            $product,
+        );
+        $reviews = collect($response->response()->getData(true)['data']);
+        $this->assertCount(1, $reviews);
+        $this->assertSame('Mine', $reviews->first()['review']);
     }
 
     public function testReviewNotificationJobUsesMailQueueAndSendsToCreator(): void
