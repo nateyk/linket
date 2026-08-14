@@ -29,7 +29,7 @@ import {
   XIcon,
 } from 'lucide-react';
 import {useCallback, useEffect, useState} from 'react';
-import {Link} from 'react-router';
+import {Link, useNavigate} from 'react-router';
 
 type ProductStatus = 'pending_approval' | 'approved' | 'rejected';
 
@@ -46,6 +46,8 @@ type Product = {
   cover?: {url: string} | null;
   files?: Array<{id: number; name: string}>;
   biolinks?: Array<{name: string}>;
+  reviews_count?: number;
+  hidden_reviews_count?: number;
 };
 
 type PaginationLinks = Record<string, string | null>;
@@ -83,6 +85,7 @@ function looksLikeHtml(value: string) {
 }
 
 export function Component() {
+  const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
@@ -199,14 +202,6 @@ export function Component() {
           <LandmarkIcon />
           <Trans message="Payout requests" />
         </Button>
-        <Button
-          variant="outline"
-          nativeButton={false}
-          render={<Link to="/admin/digital-products/reviews" />}
-        >
-          <StarIcon />
-          <Trans message="Product reviews" />
-        </Button>
       </DashboardLayout.SectionHeader>
       <DashboardLayout.SectionContent className="overflow-y-auto">
         <div className="mx-auto w-full max-w-6xl py-6">
@@ -312,6 +307,9 @@ export function Component() {
                       <Trans message="Status" />
                     </Table.Head>
                     <Table.Head className="text-center">
+                      <Trans message="Reviews" />
+                    </Table.Head>
+                    <Table.Head className="text-center">
                       <Trans message="Submitted Date" />
                     </Table.Head>
                     <Table.Head />
@@ -321,7 +319,7 @@ export function Component() {
                   {loading ? (
                     <Table.Row>
                       <Table.Cell
-                        colSpan={7}
+                        colSpan={8}
                         className="h-28 text-center text-muted-foreground"
                       >
                         <Trans message="Loading…" />
@@ -377,6 +375,22 @@ export function Component() {
                           <StatusBadge status={product.status} />
                         </Table.Cell>
                         <Table.Cell className="text-center">
+                          <div className="inline-flex flex-col items-center">
+                            <span className="inline-flex items-center gap-1 text-foreground">
+                              <StarIcon className="size-3.5 text-amber-500" />
+                              {product.reviews_count ?? 0}
+                            </span>
+                            {(product.hidden_reviews_count ?? 0) > 0 && (
+                              <span className="text-xs text-muted-foreground">
+                                <Trans
+                                  message=":count hidden"
+                                  values={{count: product.hidden_reviews_count}}
+                                />
+                              </span>
+                            )}
+                          </div>
+                        </Table.Cell>
+                        <Table.Cell className="text-center">
                           {formatDate(product.created_at)}
                         </Table.Cell>
                         <Table.Cell>
@@ -395,6 +409,16 @@ export function Component() {
                                   <EyeIcon />
                                   <Trans message="Details" />
                                 </Dropdown.Item>
+                                <Dropdown.Item
+                                  onClick={() =>
+                                    navigate(
+                                      `/admin/digital-products/${product.id}/reviews`,
+                                    )
+                                  }
+                                >
+                                  <StarIcon />
+                                  <Trans message="Reviews" />
+                                </Dropdown.Item>
                               </Dropdown.Content>
                             </Dropdown>
                           </div>
@@ -404,7 +428,7 @@ export function Component() {
                   ) : (
                     <Table.Row>
                       <Table.Cell
-                        colSpan={7}
+                        colSpan={8}
                         className="h-28 text-center text-muted-foreground"
                       >
                         <Trans message="No products found." />
