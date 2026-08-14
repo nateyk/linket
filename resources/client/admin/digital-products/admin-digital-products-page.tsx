@@ -31,7 +31,13 @@ import {
 import {useCallback, useEffect, useState} from 'react';
 import {Link, useNavigate} from 'react-router';
 
-type ProductStatus = 'pending_approval' | 'approved' | 'rejected';
+const ProductStatus = {
+  pending_approval: 'pending_approval',
+  approved: 'approved',
+  rejected: 'rejected',
+} as const;
+
+type ProductStatus = (typeof ProductStatus)[keyof typeof ProductStatus] | '';
 
 type Product = {
   id: number;
@@ -92,7 +98,14 @@ export function Component() {
 
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
-  const [status, setStatus] = useState('pending_approval');
+  const [status, setStatus] = useState<ProductStatus | ''>('pending_approval');
+
+  const statusLabels = {
+    '': <Trans message="All statuses" />,
+    pending_approval: 'Pending',
+    approved: 'Approved',
+    rejected: 'Rejected',
+  } as const;
 
   const [links, setLinks] = useState<PaginationLinks>();
   const [meta, setMeta] = useState<PaginationMeta & CountersMeta>();
@@ -245,16 +258,18 @@ export function Component() {
                   <Input
                     value={searchInput}
                     onChange={e => setSearchInput(e.target.value)}
-                    placeholder="Search..."
+                    placeholder="Search…"
                   />
                 </div>
                 <div className="sm:col-span-3">
                   <Select.Root
                     value={status}
-                    onValueChange={value => setStatus((value as string) ?? '')}
+                    onValueChange={value => setStatus((value as ProductStatus) || '')}
                   >
-                    <Select.Trigger>
-                      <Select.Value placeholder="Status" />
+                     <Select.Trigger>
+                      <Select.Value placeholder={<Trans message="Status" />}>
+                        {value => statusLabels[value as keyof typeof statusLabels] ?? <Trans message="Status" />}
+                      </Select.Value>
                     </Select.Trigger>
                     <Select.Content>
                       <Select.Item value="">

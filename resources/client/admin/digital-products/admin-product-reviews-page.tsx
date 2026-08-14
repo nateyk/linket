@@ -202,7 +202,7 @@ export function Component() {
                   <Input
                     value={searchInput}
                     onChange={e => setSearchInput(e.target.value)}
-                    placeholder="Search reviews, buyers..."
+                    placeholder="Search reviews, buyers…"
                   />
                 </div>
                 <div className="sm:col-span-3">
@@ -211,7 +211,7 @@ export function Component() {
                     onValueChange={value => setStatus((value as string) ?? '')}
                   >
                     <Select.Trigger>
-                      <Select.Value placeholder="Status" />
+                      <Select.Value placeholder={<Trans message="Status" />} />
                     </Select.Trigger>
                     <Select.Content>
                       <Select.Item value="">
@@ -452,7 +452,7 @@ export function Component() {
                     value={hideReason}
                     onChange={e => setHideReason(e.target.value)}
                     bindToHookForm={false}
-                    placeholder="e.g. Contains inaccurate claims"
+                     placeholder="e.g. Contains inaccurate claims…"
                   />
                 </Field.Root>
               </Dialog.Body>
