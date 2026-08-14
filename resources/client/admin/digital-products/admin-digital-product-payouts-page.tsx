@@ -410,9 +410,16 @@ function Status({payout}: {payout: Payout}) {
       : payout.status === 'rejected' || payout.status === 'cancelled'
         ? 'danger'
         : 'warning';
+  const labels: Record<Payout['status'], string> = {
+    requested: 'Requested',
+    processing: 'Processing',
+    paid: 'Paid',
+    rejected: 'Rejected',
+    cancelled: 'Cancelled',
+  };
   return (
     <Badge color={color} variant="outline">
-      <Trans message={payout.status} />
+      <Trans message={labels[payout.status]} />
     </Badge>
   );
 }

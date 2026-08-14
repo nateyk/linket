@@ -238,7 +238,7 @@ export function Component() {
                       }}
                     >
                       <Select.Trigger>
-                        <Select.Value placeholder="All statuses" />
+                        <Select.Value placeholder={<Trans message="All statuses" />} />
                       </Select.Trigger>
                       <Select.Content>
                         {statusOrder.map(key => (
@@ -258,7 +258,7 @@ export function Component() {
                       }}
                     >
                       <Select.Trigger>
-                        <Select.Value placeholder="All methods" />
+                        <Select.Value placeholder={<Trans message="All methods" />} />
                       </Select.Trigger>
                       <Select.Content>
                         {methods.map(item => (
