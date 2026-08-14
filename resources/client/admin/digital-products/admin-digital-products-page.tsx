@@ -98,7 +98,7 @@ export function Component() {
 
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
-  const [status, setStatus] = useState<ProductStatus | ''>('pending_approval');
+  const [status, setStatus] = useState<ProductStatus | ''>('');
 
   const statusLabels = {
     '': <Trans message="All statuses" />,
