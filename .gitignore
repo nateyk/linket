@@ -35,3 +35,4 @@ public/build
 
 # IDE helper (generated)
 _ide_helper*.php
+.phpunit.cache/
