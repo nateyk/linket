@@ -107,7 +107,7 @@ export function WorkspacePayoutsPage({workspaceId}: WorkspacePayoutsPageProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="grid gap-6 md:grid-cols-2">
       <AccountSettingsPanel
         id="withdrawal-details"
         title={<Trans message="Withdrawal Details" />}
