@@ -1,9 +1,8 @@
 import {AccountSettingsPageLayout} from '@app/account-settings/account-settings-page-layout';
+import {AccountSettingsPanel} from '@common/auth/ui/account-settings/account-settings-panel';
 import {apiClient} from '@common/http/query-client';
-import {Alert} from '@shadcn/alert/alert';
 import {Badge} from '@shadcn/badge/badge';
 import {Button} from '@shadcn/button/button';
-import {Card} from '@shadcn/card/card';
 import {Checkbox} from '@shadcn/forms/checkbox/checkbox';
 import {Field} from '@shadcn/forms/field';
 import {Input} from '@shadcn/forms/input/input';
@@ -15,20 +14,17 @@ import {
   BadgeCheckIcon,
   BookUserIcon,
   CheckIcon,
-  FileCheck2Icon,
   FileClockIcon,
   FileX2Icon,
   IdCardIcon,
-  InfoIcon,
-  ShieldCheckIcon,
   UploadIcon,
-  UserIcon,
   XIcon,
 } from 'lucide-react';
 import {
   FormEvent,
   useCallback,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -216,85 +212,66 @@ function StatusBadge({status}: {status: KycStatus}) {
 
 function ApprovedCard({verification}: {verification?: KycVerification}) {
   return (
-    <Card.Root className="mb-6">
-      <Card.Header>
-        <Card.Title>
-          <BadgeCheckIcon className="size-5 text-primary" />
-          <Trans message="You are verified" />
-        </Card.Title>
-        <Card.Description>
-          <Trans message="Your identity has been verified. You are eligible for payouts and will be shown as a verified creator on your public pages." />
-        </Card.Description>
-      </Card.Header>
-      {verification && (
-        <Card.Content>
-          <VerificationDetails verification={verification} />
-        </Card.Content>
-      )}
-    </Card.Root>
+    <AccountSettingsPanel
+      id="kyc-approved"
+      title={<Trans message="You are verified" />}
+      titleSuffix={<StatusBadge status="approved" />}
+    >
+      <p className="text-sm text-muted-foreground">
+        <Trans message="Your identity has been verified. You are eligible for payouts and will be shown as a verified creator on your public pages." />
+      </p>
+      {verification && <VerificationDetails verification={verification} />}
+    </AccountSettingsPanel>
   );
 }
 
 function PendingCard({verification}: {verification?: KycVerification}) {
   return (
-    <Card.Root className="mb-6">
-      <Card.Header>
-        <Card.Title>
-          <FileCheck2Icon className="size-5 text-primary" />
-          <Trans message="Verification in progress" />
-        </Card.Title>
-        <Card.Description>
-          <Trans message="Your verification request is being reviewed by our team. You will be notified once a decision has been made." />
-        </Card.Description>
-      </Card.Header>
-      {verification && (
-        <Card.Content>
-          <VerificationDetails verification={verification} />
-        </Card.Content>
-      )}
-    </Card.Root>
+    <AccountSettingsPanel
+      id="kyc-pending"
+      title={<Trans message="Verification in progress" />}
+      titleSuffix={<StatusBadge status="pending" />}
+    >
+      <p className="text-sm text-muted-foreground">
+        <Trans message="Your verification request is being reviewed by our team. You will be notified once a decision has been made." />
+      </p>
+      {verification && <VerificationDetails verification={verification} />}
+    </AccountSettingsPanel>
   );
 }
 
 function RejectedCard({verification}: {verification?: KycVerification}) {
   return (
-    <Card.Root className="mb-6 border-destructive/40">
-      <Card.Header>
-        <Card.Title>
-          <FileX2Icon className="size-5 text-destructive" />
-          <Trans message="Verification rejected" />
-        </Card.Title>
-        <Card.Description>
-          {verification?.rejection_reason ? (
-            <Trans
-              message="Reason: :reason"
-              values={{reason: verification.rejection_reason}}
-            />
-          ) : (
-            <Trans message="Your verification request was rejected. You can submit a new request below." />
-          )}
-        </Card.Description>
-      </Card.Header>
-      {verification && (
-        <Card.Content>
-          <VerificationDetails verification={verification} />
-        </Card.Content>
-      )}
-    </Card.Root>
+    <AccountSettingsPanel
+      id="kyc-rejected"
+      title={<Trans message="Verification rejected" />}
+      titleSuffix={<StatusBadge status="rejected" />}
+    >
+      <p className="text-sm text-muted-foreground">
+        {verification?.rejection_reason ? (
+          <Trans
+            message="Reason: :reason"
+            values={{reason: verification.rejection_reason}}
+          />
+        ) : (
+          <Trans message="Your verification request was rejected. You can submit a new request below." />
+        )}
+      </p>
+      {verification && <VerificationDetails verification={verification} />}
+    </AccountSettingsPanel>
   );
 }
 
 function VerificationDetails({verification}: {verification: KycVerification}) {
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      <StatusBadge status={verification.status} />
-      <span className="text-sm text-muted-foreground">
+    <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-border pt-4 text-sm text-muted-foreground">
+      <span>
         <Trans
           message="Document type: :type"
           values={{type: verification.document_type}}
         />
       </span>
-      <span className="text-sm text-muted-foreground">
+      <span>
         <Trans
           message="Document number: :number"
           values={{number: verification.document_number}}
@@ -345,145 +322,98 @@ function SubmissionForm({
   canSubmit,
   onSubmit,
 }: SubmissionFormProps) {
+  const formId = useId();
   return (
-    <Card.Root>
-      <Card.Header>
-        <Card.Title>
-          <Trans message="Submit for KYC Review" />
-        </Card.Title>
-        <Card.Description>
-          <Trans message="Verify your identity to request payouts and get the verified badge on your public pages. Your documents will be reviewed by our team." />
-        </Card.Description>
-      </Card.Header>
-      <Card.Content>
-        <form onSubmit={onSubmit} className="flex flex-col gap-6">
-          <Alert.Root>
-            <InfoIcon />
-            <Alert.Description>
-              <Trans message="Max 4 MB per file. Accepted formats: JPEG, PNG." />
-            </Alert.Description>
-          </Alert.Root>
-
-          <section className="flex flex-col gap-4">
-            <StepHeading
-              icon={<UserIcon />}
-              title={<Trans message="Identity Information" />}
+    <AccountSettingsPanel
+      id="kyc-submit"
+      title={<Trans message="Submit for KYC Review" />}
+      actions={
+        <Button
+          type="submit"
+          form={formId}
+          variant="default"
+          color="primary"
+          size="sm"
+          disabled={!canSubmit || submitting}
+        >
+          {submitting ? (
+            <Trans message="Submitting…" />
+          ) : (
+            <>
+              <UploadIcon />
+              <Trans message="Submit for review" />
+            </>
+          )}
+        </Button>
+      }
+    >
+      <form id={formId} onSubmit={onSubmit} className="flex flex-col gap-5">
+        <Field.Root name="document_type">
+          <Field.Label>
+            <Trans message="ID type" />
+          </Field.Label>
+          <DocumentTypeTiles value={documentType} onChange={setDocumentType} />
+          <Field.Description>
+            <Trans message="Passport is a single document, National ID requires front and back." />
+          </Field.Description>
+        </Field.Root>
+        <Field.Root name="document_number">
+          <Field.Label>
+            <Trans message="Document number" />
+          </Field.Label>
+          <Input
+            value={documentNumber}
+            onChange={e => setDocumentNumber(e.target.value)}
+            placeholder="e.g. 123456789"
+          />
+        </Field.Root>
+        {documentType === 'passport' ? (
+          <FileDropzone
+            sample="passport"
+            label={<Trans message="Passport" />}
+            file={passportFile}
+            setFile={setPassportFile}
+          />
+        ) : (
+          <>
+            <FileDropzone
+              sample="id-front"
+              label={<Trans message="Front of National ID" />}
+              file={frontOfIdFile}
+              setFile={setFrontOfIdFile}
             />
-            <Field.Root name="document_type">
-              <Field.Label>
-                <Trans message="ID type" />
-              </Field.Label>
-              <DocumentTypeTiles value={documentType} onChange={setDocumentType} />
-              <Field.Description>
-                <Trans message="Passport is a single document, National ID requires front and back." />
-              </Field.Description>
-            </Field.Root>
-            <Field.Root name="document_number">
-              <Field.Label>
-                <Trans message="Document number" />
-              </Field.Label>
-              <Input
-                value={documentNumber}
-                onChange={e => setDocumentNumber(e.target.value)}
-                placeholder="e.g. 123456789"
-              />
-            </Field.Root>
-          </section>
-
-          <section className="flex flex-col gap-4 border-t border-border pt-6">
-            <StepHeading
-              icon={<FileCheck2Icon />}
-              title={<Trans message="Identity Documents" />}
+            <FileDropzone
+              sample="id-back"
+              label={<Trans message="Back of National ID" />}
+              file={backOfIdFile}
+              setFile={setBackOfIdFile}
             />
-            {documentType === 'passport' ? (
-              <FileDropzone
-                sample="passport"
-                label={<Trans message="Passport" />}
-                file={passportFile}
-                setFile={setPassportFile}
-              />
-            ) : (
-              <>
-                <FileDropzone
-                  sample="id-front"
-                  label={<Trans message="Front of National ID" />}
-                  file={frontOfIdFile}
-                  setFile={setFrontOfIdFile}
-                />
-                <FileDropzone
-                  sample="id-back"
-                  label={<Trans message="Back of National ID" />}
-                  file={backOfIdFile}
-                  setFile={setBackOfIdFile}
-                />
-              </>
-            )}
-            {selfieRequired && (
-              <FileDropzone
-                sample="selfie"
-                label={<Trans message="Selfie" />}
-                description={
-                  <Trans message="A clear photo of your face, matching the document above." />
-                }
-                file={selfieFile}
-                setFile={setSelfieFile}
-              />
-            )}
-          </section>
-
-          <section className="flex flex-col gap-4 border-t border-border pt-6">
-            <StepHeading
-              icon={<ShieldCheckIcon />}
-              title={<Trans message="Review &amp; Submit" />}
-            />
-            <label className="flex cursor-pointer items-start gap-2.5 text-sm text-muted-foreground">
-              <Checkbox
-                className="mt-0.5"
-                checked={termsAccepted}
-                onCheckedChange={next => setTermsAccepted(next === true)}
-                bindToHookForm={false}
-              />
-              <span>
-                <Trans message="I confirm the submitted information is accurate and I consent to KYC verification." />
-              </span>
-            </label>
-            <div>
-              <Button
-                type="submit"
-                disabled={!canSubmit || submitting}
-                color="primary"
-              >
-                {submitting ? (
-                  <Trans message="Submitting…" />
-                ) : (
-                  <>
-                    <UploadIcon />
-                    <Trans message="Submit for review" />
-                  </>
-                )}
-              </Button>
-            </div>
-          </section>
-        </form>
-      </Card.Content>
-    </Card.Root>
-  );
-}
-
-function StepHeading({
-  icon,
-  title,
-}: {
-  icon: React.ReactNode;
-  title: React.ReactNode;
-}) {
-  return (
-    <h3 className="flex items-center gap-2 text-sm font-semibold">
-      <span className="grid size-7 place-items-center rounded-full bg-primary/10 text-primary [&>svg]:size-4">
-        {icon}
-      </span>
-      {title}
-    </h3>
+          </>
+        )}
+        {selfieRequired && (
+          <FileDropzone
+            sample="selfie"
+            label={<Trans message="Selfie" />}
+            description={
+              <Trans message="A clear photo of your face, matching the document above." />
+            }
+            file={selfieFile}
+            setFile={setSelfieFile}
+          />
+        )}
+        <label className="flex cursor-pointer items-start gap-2.5 text-sm text-muted-foreground">
+          <Checkbox
+            className="mt-0.5"
+            checked={termsAccepted}
+            onCheckedChange={next => setTermsAccepted(next === true)}
+            bindToHookForm={false}
+          />
+          <span>
+            <Trans message="I confirm the submitted information is accurate and I consent to KYC verification." />
+          </span>
+        </label>
+      </form>
+    </AccountSettingsPanel>
   );
 }
 
