@@ -1,8 +1,8 @@
 import {AccountSettingsPageLayout} from '@app/account-settings/account-settings-page-layout';
+import {AccountSettingsPanel} from '@common/auth/ui/account-settings/account-settings-panel';
 import {WorkspacePayoutsPage} from '@common/workspace/workspace-page/workspace-payouts-page';
 import {listWorkspacesOptions} from '@common/workspace/workspace-queries';
 import {useWorkspaceStore} from '@common/workspace/workspace-store';
-import {Card} from '@shadcn/card/card';
 import {Field} from '@shadcn/forms/field';
 import {Select} from '@shadcn/forms/select/select';
 import {useSuspenseQuery} from '@tanstack/react-query';
@@ -59,7 +59,7 @@ export function Component() {
                 </Field.Label>
                 <Select.Root
                   value={String(workspace.id)}
-                  onValueChange={selectWorkspace}
+                  onValueChange={value => selectWorkspace(value ?? '')}
                 >
                   <Select.Trigger>
                     <Select.Value />
@@ -78,16 +78,14 @@ export function Component() {
           <WorkspacePayoutsPage workspaceId={workspace.id} />
         </div>
       ) : (
-        <Card className="max-w-2xl">
-          <Card.Header>
-            <Card.Title>
-              <Trans message="No workspace found" />
-            </Card.Title>
-            <Card.Description>
-              <Trans message="Create a workspace before setting up payout details." />
-            </Card.Description>
-          </Card.Header>
-        </Card>
+        <AccountSettingsPanel
+          id="no-workspace"
+          title={<Trans message="No workspace found" />}
+        >
+          <p className="text-sm text-muted-foreground">
+            <Trans message="Create a workspace before setting up payout details." />
+          </p>
+        </AccountSettingsPanel>
       )}
     </AccountSettingsPageLayout>
   );

@@ -2,14 +2,16 @@ import {apiClient} from '@common/http/query-client';
 import {useRequiredParams} from '@common/ui/navigation/use-required-params';
 import {useCallback, useEffect, useState} from 'react';
 import {Trans} from '@ui/i18n/trans';
+import {AccountSettingsPanel} from '@common/auth/ui/account-settings/account-settings-panel';
+import {Alert} from '@shadcn/alert/alert';
 import {Button} from '@shadcn/button/button';
 import {Field} from '@shadcn/forms/field';
 import {Select} from '@shadcn/forms/select/select';
 import {Textarea} from '@shadcn/forms/textarea/textarea';
 import {Accordion} from '@shadcn/accordion/accordion';
-import {Card} from '@shadcn/card/card';
 import {toast} from '@shadcn/toast/toast';
-import {Loader2Icon, SaveIcon, HelpCircleIcon} from 'lucide-react';
+import {Loader2Icon, SaveIcon} from 'lucide-react';
+import {FormEvent, useId} from 'react';
 
 type WithdrawalMethod = {
   id: number;
@@ -45,6 +47,7 @@ export function WorkspacePayoutsPage({workspaceId}: WorkspacePayoutsPageProps) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string>();
+  const formId = useId();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -72,7 +75,8 @@ export function WorkspacePayoutsPage({workspaceId}: WorkspacePayoutsPageProps) {
     void load();
   }, [load]);
 
-  const handleSave = async () => {
+  const handleSave = async (e: FormEvent) => {
+    e.preventDefault();
     if (!config.withdrawal_method_id || !config.withdrawal_account.trim()) {
       setError('Select a withdrawal method and enter the account details.');
       return;
@@ -104,128 +108,120 @@ export function WorkspacePayoutsPage({workspaceId}: WorkspacePayoutsPageProps) {
 
   return (
     <div className="space-y-6">
-      {error && (
-        <div className="rounded-md border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive" role="alert">
-          {error}
-        </div>
-      )}
+      <AccountSettingsPanel
+        id="withdrawal-details"
+        title={<Trans message="Withdrawal Details" />}
+        actions={
+          <Button
+            type="submit"
+            form={formId}
+            variant="default"
+            color="primary"
+            size="sm"
+            disabled={saving}
+          >
+            <SaveIcon />
+            {saving ? <Trans message="Saving..." /> : <Trans message="Save Changes" />}
+          </Button>
+        }
+      >
+        {error && (
+          <Alert.Root variant="destructive" fillStyle="subtleFill" className="mb-5">
+            <Alert.Description>{error}</Alert.Description>
+          </Alert.Root>
+        )}
+        <form id={formId} onSubmit={handleSave} className="flex flex-col gap-5">
+          <Field.Root>
+            <Field.Label>
+              <Trans message="Withdrawal Method" />
+            </Field.Label>
+            <Select.Root
+              value={config.withdrawal_method_id ? String(config.withdrawal_method_id) : ''}
+              onValueChange={value => setConfig({...config, withdrawal_method_id: value ? Number(value) : null})}
+            >
+              <Select.Trigger>
+                <Select.Value placeholder={<Trans message="Choose a method" />} />
+              </Select.Trigger>
+              <Select.Content>
+                {methods.map(method => (
+                  <Select.Item key={method.id} value={String(method.id)}>
+                    {method.name}
+                  </Select.Item>
+                ))}
+              </Select.Content>
+            </Select.Root>
+          </Field.Root>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <Card.Header>
-            <Card.Title>
-              <Trans message="Withdrawal Details" />
-            </Card.Title>
-            <Card.Description>
-              <Trans message="Configure your default withdrawal method and account for this workspace." />
-            </Card.Description>
-          </Card.Header>
-          <Card.Content className="space-y-4">
-            <Field.Root>
-              <Field.Label>
-                <Trans message="Withdrawal Method" />
-              </Field.Label>
-              <Select.Root
-                value={config.withdrawal_method_id ? String(config.withdrawal_method_id) : ''}
-                onValueChange={value => setConfig({...config, withdrawal_method_id: value ? Number(value) : null})}
-              >
-                <Select.Trigger>
-                  <Select.Value placeholder={<Trans message="Choose a method" />} />
-                </Select.Trigger>
-                <Select.Content>
-                  {methods.map(method => (
-                    <Select.Item key={method.id} value={String(method.id)}>
-                      {method.name}
-                    </Select.Item>
-                  ))}
-                </Select.Content>
-              </Select.Root>
-            </Field.Root>
+          <Field.Root>
+            <Field.Label>
+              <Trans message="Withdrawal Account" />
+            </Field.Label>
+            <Textarea
+              value={config.withdrawal_account}
+              onChange={event => setConfig({...config, withdrawal_account: event.target.value})}
+              rows={5}
+              placeholder="Enter your withdrawal account details (e.g., email, wallet address, bank details)"
+            />
+          </Field.Root>
+        </form>
+      </AccountSettingsPanel>
 
-            <Field.Root>
-              <Field.Label>
-                <Trans message="Withdrawal Account" />
-              </Field.Label>
-              <Textarea
-                value={config.withdrawal_account}
-                onChange={event => setConfig({...config, withdrawal_account: event.target.value})}
-                rows={5}
-                placeholder="Enter your withdrawal account details (e.g., email, wallet address, bank details)"
-              />
-            </Field.Root>
-
-            <Button className="w-full" disabled={saving} onClick={handleSave}>
-              <SaveIcon className="mr-2 h-4 w-4" />
-              {saving ? <Trans message="Saving..." /> : <Trans message="Save Changes" />}
-            </Button>
-          </Card.Content>
-        </Card>
-
-        <Card>
-          <Card.Header>
-            <Card.Title className="flex items-center gap-2">
-              <Trans message="Withdrawal Methods" />
-              <HelpCircleIcon className="h-4 w-4 text-muted-foreground" />
-            </Card.Title>
-            <Card.Description>
-              <Trans message="Available withdrawal methods with their minimum amounts and details." />
-            </Card.Description>
-          </Card.Header>
-          <Card.Content>
-            <Accordion className="w-full">
-              {methods.length ? (
-                methods.map(method => (
-                  <Accordion.Item key={method.id} value={String(method.id)}>
-                    <Accordion.Trigger>
-                      {method.name}
-                    </Accordion.Trigger>
-                    <Accordion.Content className="space-y-3">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">
-                          <Trans message="Minimum Withdrawal Amount" />
-                        </span>
-                        <strong>
-                          {new Intl.NumberFormat(undefined, {
-                            style: 'currency',
-                            currency: 'USD',
-                          }).format(method.minimum_amount_cents / 100)}
-                        </strong>
-                      </div>
-                      {method.maximum_amount_cents && (
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">
-                            <Trans message="Maximum Withdrawal Amount" />
-                          </span>
-                          <strong>
-                            {new Intl.NumberFormat(undefined, {
-                              style: 'currency',
-                              currency: 'USD',
-                            }).format(method.maximum_amount_cents / 100)}
-                          </strong>
-                        </div>
-                      )}
-                      {method.instructions && (
-                        <div className="text-sm text-muted-foreground">
-                          {method.instructions}
-                        </div>
-                      )}
-                    </Accordion.Content>
-                  </Accordion.Item>
-                ))
-              ) : (
-                <Accordion.Item value="none">
-                  <Accordion.Trigger>
-                    <Trans message="No withdrawal methods available" />
-                  </Accordion.Trigger>
-                  <Accordion.Content>
-                    <Trans message="No withdrawal methods have been configured yet." />
-                  </Accordion.Content>
-                </Accordion.Item>
-              )}
-            </Accordion>
-          </Card.Content>
-        </Card>
-      </div>
+      <AccountSettingsPanel
+        id="withdrawal-methods"
+        title={<Trans message="Withdrawal Methods" />}
+      >
+        <Accordion className="w-full">
+          {methods.length ? (
+            methods.map(method => (
+              <Accordion.Item key={method.id} value={String(method.id)}>
+                <Accordion.Trigger>
+                  {method.name}
+                </Accordion.Trigger>
+                <Accordion.Content className="space-y-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      <Trans message="Minimum Withdrawal Amount" />
+                    </span>
+                    <strong>
+                      {new Intl.NumberFormat(undefined, {
+                        style: 'currency',
+                        currency: 'USD',
+                      }).format(method.minimum_amount_cents / 100)}
+                    </strong>
+                  </div>
+                  {method.maximum_amount_cents && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        <Trans message="Maximum Withdrawal Amount" />
+                      </span>
+                      <strong>
+                        {new Intl.NumberFormat(undefined, {
+                          style: 'currency',
+                          currency: 'USD',
+                        }).format(method.maximum_amount_cents / 100)}
+                      </strong>
+                    </div>
+                  )}
+                  {method.instructions && (
+                    <div className="text-sm text-muted-foreground">
+                      {method.instructions}
+                    </div>
+                  )}
+                </Accordion.Content>
+              </Accordion.Item>
+            ))
+          ) : (
+            <Accordion.Item value="none">
+              <Accordion.Trigger>
+                <Trans message="No withdrawal methods available" />
+              </Accordion.Trigger>
+              <Accordion.Content>
+                <Trans message="No withdrawal methods have been configured yet." />
+              </Accordion.Content>
+            </Accordion.Item>
+          )}
+        </Accordion>
+      </AccountSettingsPanel>
     </div>
   );
 }
