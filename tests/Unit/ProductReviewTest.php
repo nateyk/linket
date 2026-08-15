@@ -511,6 +511,21 @@ class ProductReviewTest extends TestCase
         $payload = $resource->resolve();
 
         $this->assertSame('J***e', $payload['buyer_name']);
+        $this->assertFalse($payload['verified']);
+    }
+
+    public function testResourceFlagsVerifiedPurchases(): void
+    {
+        $review = new ProductReview([
+            'reviewable_id' => 1,
+            'reviewable_type' => DigitalProduct::class,
+            'buyer_name' => 'Jane Doe',
+        ]);
+        $review->forceFill(['storefront_order_id' => 999]);
+
+        $payload = (new PublicProductReviewResource($review))->resolve();
+
+        $this->assertTrue($payload['verified']);
     }
 
     public function testAdminProductsListIncludesReviewCounts(): void

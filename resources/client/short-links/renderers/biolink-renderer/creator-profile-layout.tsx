@@ -531,24 +531,26 @@ function CreatorProfileContent({
   if (hasProducts && hasAbout) {
     return (
       <Tabs.Root defaultValue="products" className="min-w-0 gap-4">
-        <Tabs.List
-          variant="line"
-          aria-label="Creator profile sections"
-          className="w-full justify-start gap-6 border-b border-[var(--biolink-border)] p-0 text-[var(--biolink-muted-text)] [&>span:last-child]:bg-[var(--biolink-text)]"
-        >
-          <Tabs.Tab
-            value="products"
-            className="h-10 flex-none rounded-none px-0 text-[var(--biolink-muted-text)] data-active:text-[var(--biolink-text)]"
+        <div className="border-b border-[var(--biolink-border)]">
+          <Tabs.List
+            variant="line"
+            aria-label="Creator profile sections"
+            className="w-fit gap-1 bg-transparent p-1 text-[var(--biolink-muted-text)] [&>span:last-child]:bg-[var(--biolink-text)]"
           >
-            <Trans message="Products" />
-          </Tabs.Tab>
-          <Tabs.Tab
-            value="about"
-            className="h-10 flex-none rounded-none px-0 text-[var(--biolink-muted-text)] data-active:text-[var(--biolink-text)]"
-          >
-            <Trans message="About" />
-          </Tabs.Tab>
-        </Tabs.List>
+            <Tabs.Tab
+              value="products"
+              className="h-[calc(100%-1px)] flex-none rounded-full px-3 py-1 text-[var(--biolink-muted-text)] data-active:text-[var(--biolink-text)]"
+            >
+              <Trans message="Products" />
+            </Tabs.Tab>
+            <Tabs.Tab
+              value="about"
+              className="h-[calc(100%-1px)] flex-none rounded-full px-3 py-1 text-[var(--biolink-muted-text)] data-active:text-[var(--biolink-text)]"
+            >
+              <Trans message="About" />
+            </Tabs.Tab>
+          </Tabs.List>
+        </div>
         <Tabs.Panel value="products">
           <ShopSection
             widget={shopWidget}

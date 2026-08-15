@@ -21,6 +21,7 @@ class PublicProductReviewResource extends JsonResource
             'title' => $this->title,
             'review' => $this->review,
             'buyer_name' => self::maskBuyerName($this->buyer_name),
+            'verified' => $this->storefront_order_id !== null,
             'created_at' => $this->created_at?->toIso8601String(),
         ];
     }

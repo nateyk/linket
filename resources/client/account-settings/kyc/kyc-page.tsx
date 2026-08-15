@@ -3,20 +3,42 @@ import {apiClient} from '@common/http/query-client';
 import {Badge} from '@shadcn/badge/badge';
 import {Button} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
+import {Checkbox} from '@shadcn/forms/checkbox/checkbox';
 import {Field} from '@shadcn/forms/field';
 import {Input} from '@shadcn/forms/input/input';
-import {Select} from '@shadcn/forms/select/select';
 import {Trans} from '@ui/i18n/trans';
 import {useSettings} from '@ui/settings/use-settings';
 import {toast} from '@ui/toast/toast';
-import {BadgeCheckIcon, FileCheck2Icon, FileClockIcon, FileX2Icon} from 'lucide-react';
-import {FormEvent, useCallback, useEffect, useMemo, useState} from 'react';
+import {cn} from '@ui/utils/cn';
+import {
+  BadgeCheckIcon,
+  BookUserIcon,
+  CheckIcon,
+  FileCheck2Icon,
+  FileClockIcon,
+  FileX2Icon,
+  IdCardIcon,
+  ShieldCheckIcon,
+  UploadIcon,
+  UserIcon,
+  XIcon,
+} from 'lucide-react';
+import {
+  FormEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 type KycStatus = 'pending' | 'approved' | 'rejected';
 
+type KycDocumentType = 'national_id' | 'passport';
+
 type KycVerification = {
   id: number;
-  document_type: 'national_id' | 'passport';
+  document_type: KycDocumentType;
   document_number: string;
   status: KycStatus;
   rejection_reason?: string | null;
@@ -35,7 +57,7 @@ export function Component() {
   const selfieRequired = kyc?.selfie_verification ?? true;
   const [status, setStatus] = useState<StatusResponse>();
   const [loading, setLoading] = useState(true);
-  const [documentType, setDocumentType] = useState<'national_id' | 'passport'>(
+  const [documentType, setDocumentType] = useState<KycDocumentType>(
     'national_id',
   );
   const [documentNumber, setDocumentNumber] = useState('');
@@ -43,6 +65,7 @@ export function Component() {
   const [backOfIdFile, setBackOfIdFile] = useState<File>();
   const [passportFile, setPassportFile] = useState<File>();
   const [selfieFile, setSelfieFile] = useState<File>();
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const loadStatus = useCallback(async () => {
@@ -86,6 +109,7 @@ export function Component() {
       setBackOfIdFile(undefined);
       setPassportFile(undefined);
       setSelfieFile(undefined);
+      setTermsAccepted(false);
       await loadStatus();
     } catch (err: any) {
       const message =
@@ -104,7 +128,10 @@ export function Component() {
       status?.status !== 'pending' &&
       status?.status !== 'approved' &&
       !!documentNumber.trim() &&
-      (documentType === 'passport' ? !!passportFile : !!frontOfIdFile && !!backOfIdFile) &&
+      termsAccepted &&
+      (documentType === 'passport'
+        ? !!passportFile
+        : !!frontOfIdFile && !!backOfIdFile) &&
       (!selfieRequired || !!selfieFile),
     [
       backOfIdFile,
@@ -116,6 +143,7 @@ export function Component() {
       selfieFile,
       selfieRequired,
       status,
+      termsAccepted,
     ],
   );
 
@@ -131,7 +159,9 @@ export function Component() {
         <RejectedCard verification={status.verification} />
       )}
       {!loading &&
-        (!status?.status || status.status === 'unsubmitted' || status.status === 'rejected') && (
+        (!status?.status ||
+          status.status === 'unsubmitted' ||
+          status.status === 'rejected') && (
           <SubmissionForm
             documentType={documentType}
             setDocumentType={setDocumentType}
@@ -146,6 +176,8 @@ export function Component() {
             selfieFile={selfieFile}
             setSelfieFile={setSelfieFile}
             selfieRequired={selfieRequired}
+            termsAccepted={termsAccepted}
+            setTermsAccepted={setTermsAccepted}
             submitting={submitting}
             canSubmit={canSubmit}
             onSubmit={submit}
@@ -255,18 +287,24 @@ function VerificationDetails({verification}: {verification: KycVerification}) {
     <div className="flex flex-wrap items-center gap-3">
       <StatusBadge status={verification.status} />
       <span className="text-sm text-muted-foreground">
-        <Trans message="Document type: :type" values={{type: verification.document_type}} />
+        <Trans
+          message="Document type: :type"
+          values={{type: verification.document_type}}
+        />
       </span>
       <span className="text-sm text-muted-foreground">
-        <Trans message="Document number: :number" values={{number: verification.document_number}} />
+        <Trans
+          message="Document number: :number"
+          values={{number: verification.document_number}}
+        />
       </span>
     </div>
   );
 }
 
 interface SubmissionFormProps {
-  documentType: 'national_id' | 'passport';
-  setDocumentType: (value: 'national_id' | 'passport') => void;
+  documentType: KycDocumentType;
+  setDocumentType: (value: KycDocumentType) => void;
   documentNumber: string;
   setDocumentNumber: (value: string) => void;
   frontOfIdFile?: File;
@@ -278,6 +316,8 @@ interface SubmissionFormProps {
   selfieFile?: File;
   setSelfieFile: (value?: File) => void;
   selfieRequired: boolean;
+  termsAccepted: boolean;
+  setTermsAccepted: (value: boolean) => void;
   submitting: boolean;
   canSubmit: boolean;
   onSubmit: (e: FormEvent) => void;
@@ -297,6 +337,8 @@ function SubmissionForm({
   selfieFile,
   setSelfieFile,
   selfieRequired,
+  termsAccepted,
+  setTermsAccepted,
   submitting,
   canSubmit,
   onSubmit,
@@ -305,7 +347,7 @@ function SubmissionForm({
     <Card.Root>
       <Card.Header>
         <Card.Title>
-          <Trans message="Verify your identity" />
+          <Trans message="Submit for KYC Review" />
         </Card.Title>
         <Card.Description>
           <Trans message="Verify your identity to request payouts and get the verified badge on your public pages. Your documents will be reviewed by our team." />
@@ -313,117 +355,385 @@ function SubmissionForm({
       </Card.Header>
       <Card.Content>
         <form onSubmit={onSubmit} className="flex flex-col gap-6">
-          <Field.Root name="document_type">
-            <Field.Label>
-              <Trans message="Document type" />
-            </Field.Label>
-            <Select
-              value={documentType}
-              onValueChange={value =>
-                setDocumentType(value as 'national_id' | 'passport')
-              }
-            >
-              <Select.Trigger />
-              <Select.Content>
-                <Select.Item value="national_id">
-                  <Trans message="National ID" />
-                </Select.Item>
-                <Select.Item value="passport">
-                  <Trans message="Passport" />
-                </Select.Item>
-              </Select.Content>
-            </Select>
-            <Field.Description>
-              <Trans message="Passport is a single document, National ID requires front and back." />
-            </Field.Description>
-          </Field.Root>
-
-          <Field.Root name="document_number">
-            <Field.Label>
-              <Trans message="Document number" />
-            </Field.Label>
-            <Input
-              value={documentNumber}
-              onChange={e => setDocumentNumber(e.target.value)}
-              placeholder="123456789"
-            />
-          </Field.Root>
-
-          {documentType === 'passport' ? (
-            <FileField
-              label={<Trans message="Passport" />}
-              file={passportFile}
-              setFile={setPassportFile}
-            />
-          ) : (
-            <>
-              <FileField
-                label={<Trans message="Front of National ID" />}
-                file={frontOfIdFile}
-                setFile={setFrontOfIdFile}
-              />
-              <FileField
-                label={<Trans message="Back of National ID" />}
-                file={backOfIdFile}
-                setFile={setBackOfIdFile}
-              />
-            </>
-          )}
-
-          {selfieRequired && (
-            <FileField
-              label={<Trans message="Selfie" />}
-              description={
-                <Trans message="A clear photo of your face, matching the document above." />
-              }
-              file={selfieFile}
-              setFile={setSelfieFile}
-            />
-          )}
-
-          <div>
-            <Button
-              type="submit"
-              disabled={!canSubmit || submitting}
-              color="primary"
-            >
-              {submitting ? (
-                <Trans message="Submitting…" />
-              ) : (
-                <Trans message="Submit verification request" />
-              )}
-            </Button>
+          <div className="rounded-input bg-muted p-3 text-xs text-muted-foreground">
+            <Trans message="Max 4 MB per file. Accepted formats: JPEG, PNG." />
           </div>
+
+          <section className="flex flex-col gap-4">
+            <StepHeading
+              icon={<UserIcon />}
+              title={<Trans message="Identity Information" />}
+            />
+            <Field.Root name="document_type">
+              <Field.Label>
+                <Trans message="ID type" />
+              </Field.Label>
+              <DocumentTypeTiles value={documentType} onChange={setDocumentType} />
+              <Field.Description>
+                <Trans message="Passport is a single document, National ID requires front and back." />
+              </Field.Description>
+            </Field.Root>
+            <Field.Root name="document_number">
+              <Field.Label>
+                <Trans message="Document number" />
+              </Field.Label>
+              <Input
+                value={documentNumber}
+                onChange={e => setDocumentNumber(e.target.value)}
+                placeholder="e.g. 123456789"
+              />
+            </Field.Root>
+          </section>
+
+          <section className="flex flex-col gap-4 border-t border-border pt-6">
+            <StepHeading
+              icon={<FileCheck2Icon />}
+              title={<Trans message="Identity Documents" />}
+            />
+            {documentType === 'passport' ? (
+              <FileDropzone
+                sample="passport"
+                label={<Trans message="Passport" />}
+                file={passportFile}
+                setFile={setPassportFile}
+              />
+            ) : (
+              <>
+                <FileDropzone
+                  sample="id-front"
+                  label={<Trans message="Front of National ID" />}
+                  file={frontOfIdFile}
+                  setFile={setFrontOfIdFile}
+                />
+                <FileDropzone
+                  sample="id-back"
+                  label={<Trans message="Back of National ID" />}
+                  file={backOfIdFile}
+                  setFile={setBackOfIdFile}
+                />
+              </>
+            )}
+            {selfieRequired && (
+              <FileDropzone
+                sample="selfie"
+                label={<Trans message="Selfie" />}
+                description={
+                  <Trans message="A clear photo of your face, matching the document above." />
+                }
+                file={selfieFile}
+                setFile={setSelfieFile}
+              />
+            )}
+          </section>
+
+          <section className="flex flex-col gap-4 border-t border-border pt-6">
+            <StepHeading
+              icon={<ShieldCheckIcon />}
+              title={<Trans message="Review &amp; Submit" />}
+            />
+            <label className="flex cursor-pointer items-start gap-2.5 text-sm text-muted-foreground">
+              <Checkbox
+                className="mt-0.5"
+                checked={termsAccepted}
+                onCheckedChange={next => setTermsAccepted(next === true)}
+                bindToHookForm={false}
+              />
+              <span>
+                <Trans message="I confirm the submitted information is accurate and I consent to KYC verification." />
+              </span>
+            </label>
+            <div>
+              <Button
+                type="submit"
+                disabled={!canSubmit || submitting}
+                color="primary"
+              >
+                {submitting ? (
+                  <Trans message="Submitting…" />
+                ) : (
+                  <>
+                    <UploadIcon />
+                    <Trans message="Submit for review" />
+                  </>
+                )}
+              </Button>
+            </div>
+          </section>
         </form>
       </Card.Content>
     </Card.Root>
   );
 }
 
-interface FileFieldProps {
+function StepHeading({
+  icon,
+  title,
+}: {
+  icon: React.ReactNode;
+  title: React.ReactNode;
+}) {
+  return (
+    <h3 className="flex items-center gap-2 text-sm font-semibold">
+      <span className="grid size-7 place-items-center rounded-full bg-primary/10 text-primary [&>svg]:size-4">
+        {icon}
+      </span>
+      {title}
+    </h3>
+  );
+}
+
+const DOCUMENT_TYPE_TILES: {
+  value: KycDocumentType;
+  label: React.ReactNode;
+  icon: React.ReactNode;
+}[] = [
+  {
+    value: 'national_id',
+    label: <Trans message="National ID" />,
+    icon: <IdCardIcon />,
+  },
+  {
+    value: 'passport',
+    label: <Trans message="Passport" />,
+    icon: <BookUserIcon />,
+  },
+];
+
+function DocumentTypeTiles({
+  value,
+  onChange,
+}: {
+  value: KycDocumentType;
+  onChange: (value: KycDocumentType) => void;
+}) {
+  return (
+    <div role="radiogroup" className="grid gap-3 sm:grid-cols-2">
+      {DOCUMENT_TYPE_TILES.map(type => {
+        const selected = value === type.value;
+        return (
+          <button
+            key={type.value}
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            onClick={() => onChange(type.value)}
+            className={cn(
+              'relative flex items-center gap-3 rounded-card border p-3.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2',
+              selected
+                ? 'border-primary bg-primary/5 text-foreground'
+                : 'border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground',
+            )}
+          >
+            <span
+              className={cn(
+                'grid size-9 shrink-0 place-items-center rounded-card-sm bg-background ring-1 ring-border [&>svg]:size-5',
+                selected && 'text-primary',
+              )}
+            >
+              {type.icon}
+            </span>
+            {type.label}
+            {selected && (
+              <span className="absolute top-2 right-2 grid size-4.5 place-items-center rounded-full bg-primary text-primary-foreground">
+                <CheckIcon className="size-3" />
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+type DropzoneSample = 'passport' | 'id-front' | 'id-back' | 'selfie';
+
+interface FileDropzoneProps {
   label: React.ReactNode;
   description?: React.ReactNode;
   file?: File;
   setFile: (value?: File) => void;
+  sample: DropzoneSample;
 }
 
-function FileField({label, description, file, setFile}: FileFieldProps) {
+function FileDropzone({
+  label,
+  description,
+  file,
+  setFile,
+  sample,
+}: FileDropzoneProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [dragOver, setDragOver] = useState(false);
+  const previewUrl = useMemo(
+    () => (file ? URL.createObjectURL(file) : null),
+    [file],
+  );
+
   return (
     <Field.Root>
       <Field.Label>{label}</Field.Label>
       {description && <Field.Description>{description}</Field.Description>}
-      <div className="flex items-center gap-3">
-        <Input
+      <div
+        role="button"
+        tabIndex={0}
+        aria-label="Upload file"
+        onClick={() => inputRef.current?.click()}
+        onKeyDown={e => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            inputRef.current?.click();
+          }
+        }}
+        onDragOver={e => {
+          e.preventDefault();
+          setDragOver(true);
+        }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={e => {
+          e.preventDefault();
+          setDragOver(false);
+          const dropped = e.dataTransfer.files?.[0];
+          if (dropped) setFile(dropped);
+        }}
+        className={cn(
+          'flex cursor-pointer flex-col items-center justify-center gap-2 rounded-card border border-dashed p-6 text-center transition-colors focus-visible:outline-2 focus-visible:outline-offset-2',
+          dragOver
+            ? 'border-primary bg-primary/5'
+            : 'border-border hover:bg-muted/50',
+        )}
+      >
+        {file && previewUrl ? (
+          <>
+            <img
+              src={previewUrl}
+              alt=""
+              className="max-h-36 rounded-card-sm object-cover ring-1 ring-border"
+            />
+            <div className="flex items-center gap-2 text-sm">
+              <span className="max-w-56 truncate font-medium">
+                {file.name}
+              </span>
+              <button
+                type="button"
+                onClick={e => {
+                  e.stopPropagation();
+                  setFile(undefined);
+                }}
+                className="grid size-6 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                aria-label="Remove file"
+              >
+                <XIcon className="size-3.5" />
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <DocumentSample variant={sample} />
+            <UploadIcon className="size-5 text-muted-foreground" />
+            <p className="text-sm font-medium">
+              <Trans message="Click to upload" />
+              <span className="font-normal text-muted-foreground">
+                {' '}
+                <Trans message="or drag and drop" />
+              </span>
+            </p>
+            <p className="text-xs text-muted-foreground">
+              <Trans message="JPG, JPEG, PNG · Max 4 MB" />
+            </p>
+          </>
+        )}
+        <input
+          ref={inputRef}
           type="file"
           accept="image/jpeg,image/jpg,image/png"
+          className="hidden"
           onChange={e => setFile(e.target.files?.[0] ?? undefined)}
         />
-        {file && (
-          <span className="max-w-48 truncate text-sm text-muted-foreground">
-            {file.name}
-          </span>
-        )}
       </div>
     </Field.Root>
+  );
+}
+
+function DocumentSample({variant}: {variant: DropzoneSample}) {
+  const common = {
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 1.5,
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+    className: 'size-20 text-muted-foreground/80',
+    'aria-hidden': true,
+  };
+
+  if (variant === 'id-back') {
+    return (
+      <svg viewBox="0 0 120 75" xmlns="http://www.w3.org/2000/svg" {...common}>
+        <rect
+          x="2"
+          y="2"
+          width="116"
+          height="71"
+          rx="6"
+          fill="currentColor"
+          fillOpacity=".08"
+        />
+        <rect
+          x="10"
+          y="12"
+          width="100"
+          height="14"
+          fill="currentColor"
+          fillOpacity=".2"
+          stroke="none"
+        />
+        <line x1="14" y1="36" x2="106" y2="36" />
+        <line x1="14" y1="42" x2="100" y2="42" />
+        <line x1="14" y1="48" x2="106" y2="48" />
+        <g strokeWidth="2">
+          <line x1="14" y1="58" x2="14" y2="68" />
+          <line x1="18" y1="58" x2="18" y2="68" />
+          <line x1="22" y1="58" x2="22" y2="68" />
+          <line x1="28" y1="58" x2="28" y2="68" />
+          <line x1="32" y1="58" x2="32" y2="68" />
+          <line x1="38" y1="58" x2="38" y2="68" />
+          <line x1="42" y1="58" x2="42" y2="68" />
+          <line x1="48" y1="58" x2="48" y2="68" />
+          <line x1="54" y1="58" x2="54" y2="68" />
+        </g>
+      </svg>
+    );
+  }
+
+  if (variant === 'selfie') {
+    return (
+      <svg viewBox="0 0 120 90" xmlns="http://www.w3.org/2000/svg" {...common}>
+        <rect
+          x="2"
+          y="2"
+          width="116"
+          height="86"
+          rx="10"
+          fill="currentColor"
+          fillOpacity=".08"
+        />
+        <circle cx="60" cy="32" r="13" />
+        <path d="M28 74 a32 26 0 0 1 64 0" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg viewBox="0 0 120 90" xmlns="http://www.w3.org/2000/svg" {...common}>
+      <path
+        d="M30 8 h44 l24 24 v50 q0 4 -4 4 h-64 q-4 0 -4 -4 v-70 q0 -4 4 -4 z"
+        fill="currentColor"
+        fillOpacity=".08"
+      />
+      <path d="M74 8 v24 h24" />
+      <line x1="36" y1="46" x2="92" y2="46" />
+      <line x1="36" y1="54" x2="92" y2="54" />
+      <line x1="36" y1="62" x2="86" y2="62" />
+      <line x1="36" y1="70" x2="92" y2="70" />
+    </svg>
   );
 }
