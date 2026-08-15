@@ -1,5 +1,6 @@
 import {AccountSettingsPageLayout} from '@app/account-settings/account-settings-page-layout';
 import {apiClient} from '@common/http/query-client';
+import {Alert} from '@shadcn/alert/alert';
 import {Badge} from '@shadcn/badge/badge';
 import {Button} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
@@ -18,6 +19,7 @@ import {
   FileClockIcon,
   FileX2Icon,
   IdCardIcon,
+  InfoIcon,
   ShieldCheckIcon,
   UploadIcon,
   UserIcon,
@@ -355,9 +357,12 @@ function SubmissionForm({
       </Card.Header>
       <Card.Content>
         <form onSubmit={onSubmit} className="flex flex-col gap-6">
-          <div className="rounded-input bg-muted p-3 text-xs text-muted-foreground">
-            <Trans message="Max 4 MB per file. Accepted formats: JPEG, PNG." />
-          </div>
+          <Alert.Root>
+            <InfoIcon />
+            <Alert.Description>
+              <Trans message="Max 4 MB per file. Accepted formats: JPEG, PNG." />
+            </Alert.Description>
+          </Alert.Root>
 
           <section className="flex flex-col gap-4">
             <StepHeading
@@ -521,7 +526,7 @@ function DocumentTypeTiles({
               'relative flex items-center gap-3 rounded-card border p-3.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2',
               selected
                 ? 'border-primary bg-primary/5 text-foreground'
-                : 'border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground',
+                : 'border-border text-muted-foreground hover:bg-accent hover:text-foreground',
             )}
           >
             <span
