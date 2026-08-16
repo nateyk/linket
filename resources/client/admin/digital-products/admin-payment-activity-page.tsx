@@ -1,5 +1,6 @@
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {apiClient} from '@common/http/query-client';
+import {Alert} from '@shadcn/alert/alert';
 import {Badge} from '@shadcn/badge/badge';
 import {Button} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
@@ -17,7 +18,7 @@ import {
   CalendarClockIcon,
   CheckCircle2Icon,
   CircleAlertIcon,
-  Clock3Icon,
+  CircleDollarSignIcon,
   EllipsisVerticalIcon,
   ExternalLinkIcon,
   EyeIcon,
@@ -239,9 +240,9 @@ export function Component() {
       <DashboardLayout.SectionContent className="overflow-y-auto">
         <div className="mx-auto w-full max-w-6xl space-y-5 py-6">
           {error && (
-            <div className="rounded-input border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
-              {error}
-            </div>
+            <Alert.Root variant="destructive" fillStyle="subtleFill">
+              <Alert.Description>{error}</Alert.Description>
+            </Alert.Root>
           )}
 
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -265,7 +266,7 @@ export function Component() {
             <MetricCard
               label="Verified revenue"
               value={formatMoney(summary.paid_total, 'ETB')}
-              icon={<Clock3Icon />}
+              icon={<CircleDollarSignIcon />}
             />
           </div>
 
@@ -434,10 +435,12 @@ export function Component() {
                             <div className="flex justify-end">
                               <Dropdown.Root>
                                 <Dropdown.Trigger
-                                  className="flex size-8 items-center justify-center rounded-input hover:bg-muted"
                                   aria-label="Actions"
+                                  render={
+                                    <Button variant="ghost" size="icon-sm" />
+                                  }
                                 >
-                                  <EllipsisVerticalIcon className="size-4 text-muted-foreground" />
+                                  <EllipsisVerticalIcon />
                                 </Dropdown.Trigger>
                                 <Dropdown.Content align="end">
                                   <Dropdown.Item
@@ -501,26 +504,30 @@ function MetricCard({
 }) {
   const iconClass =
     tone === 'positive'
-      ? 'bg-positive/10 text-positive'
+      ? 'text-positive bg-positive/10'
       : tone === 'warning'
-        ? 'bg-warning/10 text-warning'
-        : 'bg-muted text-muted-foreground';
+        ? 'text-amber-600 bg-amber-500/10 dark:text-amber-400'
+        : 'text-muted-foreground bg-muted';
   return (
-    <Card.Root>
-      <Card.Content className="flex items-center justify-between p-4">
-        <div>
-          <p className="text-sm text-muted-foreground">
-            <Trans message={label} />
-          </p>
-          <p className="mt-1 text-xl font-semibold tracking-tight">{value}</p>
-        </div>
-        <div
-          className={`flex size-9 items-center justify-center rounded-input ${iconClass}`}
-        >
-          {icon}
-        </div>
+    <Card size="sm" className="gap-3">
+      <Card.Header>
+        <Card.Title className="truncate text-sm font-normal text-muted-foreground">
+          <Trans message={label} />
+        </Card.Title>
+        <Card.Action>
+          <span
+            className={`flex size-9 items-center justify-center rounded-card-sm [&>svg]:size-4 ${iconClass}`}
+          >
+            {icon}
+          </span>
+        </Card.Action>
+      </Card.Header>
+      <Card.Content>
+        <p className="truncate text-2xl font-semibold tracking-tight tabular-nums">
+          {value}
+        </p>
       </Card.Content>
-    </Card.Root>
+    </Card>
   );
 }
 
@@ -645,8 +652,8 @@ function HealthCard({
 }) {
   const iconClass =
     tone === 'positive'
-      ? 'bg-positive/10 text-positive'
-      : 'bg-warning/10 text-warning';
+      ? 'text-positive bg-positive/10'
+      : 'text-amber-600 bg-amber-500/10 dark:text-amber-400';
   return (
     <div className="rounded-card border p-4">
       <div className="flex items-start justify-between gap-3">
@@ -658,11 +665,11 @@ function HealthCard({
             <Trans message={value} />
           </p>
         </div>
-        <div
-          className={`flex size-8 shrink-0 items-center justify-center rounded-input ${iconClass}`}
+        <span
+          className={`flex size-9 shrink-0 items-center justify-center rounded-card-sm [&>svg]:size-4 ${iconClass}`}
         >
           {icon}
-        </div>
+        </span>
       </div>
       <p className="mt-3 text-xs leading-5 text-muted-foreground">
         <Trans message={description} />
@@ -725,18 +732,18 @@ function TransactionType({transaction}: {transaction: Transaction}) {
 function StatusBadge({status}: {status: Transaction['status']}) {
   if (status === 'paid')
     return (
-      <Badge color="positive" variant="outline">
+      <Badge variant="positive">
         <Trans message="Paid" />
       </Badge>
     );
   if (status === 'failed')
     return (
-      <Badge color="danger" variant="outline">
+      <Badge variant="destructive">
         <Trans message="Failed" />
       </Badge>
     );
   return (
-    <Badge color="warning" variant="outline">
+    <Badge variant="outline">
       <Trans message="Pending" />
     </Badge>
   );
@@ -835,11 +842,11 @@ function TransactionDetails({
 
 function PaymentGuidance({transaction}: {transaction: Transaction}) {
   return (
-    <div className="text-warning-foreground rounded-input border border-warning/30 bg-warning/5 p-3 text-sm">
-      <p className="font-medium">
+    <Alert.Root variant="warning" fillStyle="subtleFill">
+      <Alert.Title>
         <Trans message="Safe next step" />
-      </p>
-      <p className="mt-1">
+      </Alert.Title>
+      <Alert.Description>
         {transaction.status === 'pending' ? (
           <Trans message="Waiting for Chapa verification. Check the reference in Chapa and allow the signed webhook or callback to finish processing." />
         ) : transaction.failure_reason === 'payment_initialization_failed' ||
@@ -848,11 +855,11 @@ function PaymentGuidance({transaction}: {transaction: Transaction}) {
         ) : (
           <Trans message="Payment verification did not match the expected reference, amount, or ETB currency. Review the Chapa reference before asking the customer to start again." />
         )}
-      </p>
-      <p className="mt-2 text-xs">
+      </Alert.Description>
+      <Alert.Description className="text-xs">
         <Trans message="Do not grant access manually. Only verified Chapa payments can unlock purchases." />
-      </p>
-    </div>
+      </Alert.Description>
+    </Alert.Root>
   );
 }
 
