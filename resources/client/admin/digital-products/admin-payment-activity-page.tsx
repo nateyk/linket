@@ -6,7 +6,7 @@ import {Card} from '@shadcn/card/card';
 import {Dialog} from '@shadcn/dialog/dialog';
 import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {Input} from '@shadcn/forms/input/input';
-import {Popover} from '@shadcn/popover/popover';
+import {Tooltip} from '@shadcn/tooltip/tooltip';
 import {Select} from '@shadcn/forms/select/select';
 import {Table} from '@shadcn/table/table';
 import {Trans} from '@ui/i18n/trans';
@@ -17,11 +17,11 @@ import {
   CalendarClockIcon,
   CheckCircle2Icon,
   CircleAlertIcon,
-  CircleQuestionMarkIcon,
   Clock3Icon,
   EllipsisVerticalIcon,
   ExternalLinkIcon,
   EyeIcon,
+  InfoIcon,
   MailCheckIcon,
   RefreshCwIcon,
   SearchIcon,
@@ -894,19 +894,22 @@ function formatDate(value: string) {
 
 function InfoTrigger() {
   return (
-    <Popover.Root>
-      <Popover.Trigger
-        render={<Button variant="ghost" size="icon-sm" />}
-        className="text-muted-foreground"
-        openOnHover
+    <Tooltip.Root>
+      <Tooltip.Trigger
+        render={
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="text-muted-foreground"
+            aria-label="Review Chapa checkout attempts and their verified payment state. Only Chapa verification can change a payment to paid."
+          />
+        }
       >
-        <CircleQuestionMarkIcon />
-      </Popover.Trigger>
-      <Popover.Portal>
-        <Popover.Content>
-          <Trans message="Review Chapa checkout attempts and their verified payment state. Only Chapa verification can change a payment to paid." />
-        </Popover.Content>
-      </Popover.Portal>
-    </Popover.Root>
+        <InfoIcon className="size-4" />
+      </Tooltip.Trigger>
+      <Tooltip.Content>
+        <Trans message="Review Chapa checkout attempts and their verified payment state. Only Chapa verification can change a payment to paid." />
+      </Tooltip.Content>
+    </Tooltip.Root>
   );
 }
