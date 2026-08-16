@@ -294,7 +294,7 @@ return [
                     ],
                     [
                         'type' => 'route',
-                        'label' => 'Storefront',
+                        'label' => 'My Card',
                         'action' => '/dashboard/biolinks',
                         'id' => 239,
                     ],
@@ -344,7 +344,7 @@ return [
                     ],
                     [
                         'type' => 'route',
-                        'label' => 'Storefront',
+                        'label' => 'My Card',
                         'action' => '/dashboard/biolinks',
                         'id' => 239,
                     ],
