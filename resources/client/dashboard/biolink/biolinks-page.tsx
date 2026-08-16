@@ -10,6 +10,7 @@ import {Empty} from '@shadcn/empty/empty';
 import {Item} from '@shadcn/item/item';
 import {BackendPagination} from '@shadcn/table/utils/table-pagination';
 import {useTableQueryState} from '@shadcn/table/utils/use-table-query-state';
+import {Tooltip} from '@shadcn/tooltip/tooltip';
 import {useSuspenseQuery} from '@tanstack/react-query';
 import {FormattedNumber} from '@ui/i18n/formatted-number';
 import {FormattedRelativeTime} from '@ui/i18n/formatted-relative-time';
@@ -20,6 +21,7 @@ import {
   BarChart3Icon,
   Clock3Icon,
   EllipsisVerticalIcon,
+  InfoIcon,
   LayoutPanelTop,
   MousePointerClick,
   PencilIcon,
@@ -39,14 +41,26 @@ export function Component() {
     <DashboardLayout.MainSection>
       <DashboardLayout.SectionHeader>
         <DashboardLayout.SidebarToggle />
-        <div className="mr-auto min-w-0">
-          <DashboardLayout.SectionTitle>
-            <Trans message="Link in bio" />
-          </DashboardLayout.SectionTitle>
-          <p className="hidden text-sm text-muted-foreground sm:block">
-            <Trans message="Manage your public creator profiles." />
-          </p>
-        </div>
+        <DashboardLayout.SectionTitle>
+          <Trans message="Link in bio" />
+          <Tooltip.Root>
+            <Tooltip.Trigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-6 text-muted-foreground"
+                  aria-label="Manage your public creator profiles."
+                />
+              }
+            >
+              <InfoIcon className="size-4" />
+            </Tooltip.Trigger>
+            <Tooltip.Content>
+              <Trans message="Manage your public creator profiles." />
+            </Tooltip.Content>
+          </Tooltip.Root>
+        </DashboardLayout.SectionTitle>
         <CreateBiolinkDialog>
           <Dialog.Trigger render={<Button variant="default" color="primary" />}>
             <PlusIcon data-icon="inline-start" />
