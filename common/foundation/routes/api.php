@@ -23,8 +23,6 @@ use Common\Billing\Subscriptions\SubscriptionsController;
 use Common\Comments\Controllers\CommentableController;
 use Common\Comments\Controllers\CommentController;
 use Common\Core\Controllers\BootstrapController;
-use Common\Core\Install\LicenseController;
-use Common\Core\Install\UpdateController;
 use Common\Core\Values\ValueListsController;
 use Common\Files\Controllers\AddPreviewTokenController;
 use Common\Files\Controllers\DownloadFileController;
@@ -305,12 +303,6 @@ Route::group(['prefix' => 'v1'], function () {
         // BOOTSTRAP
         Route::get('bootstrap-data', [BootstrapController::class, 'getBootstrapData']);
         Route::get('remote-config/mobile', [BootstrapController::class, 'getMobileBootstrapData'])->withoutMiddleware('verifyApiAccess');
-
-        // UPDATE
-        Route::post('update', [UpdateController::class, 'runUpdate']);
-
-        // PURCHASE CODES
-        Route::post('license/register-purchase-code', [LicenseController::class, 'registerPurchaseCode']);
 
         $verificationLimiter = config('fortify.limiters.verification', '6,1');
         Route::post('auth/email/verification-notification', [MobileAuthController::class, 'sendEmailVerificationNotification'])->middleware(['throttle:'.$verificationLimiter]);
