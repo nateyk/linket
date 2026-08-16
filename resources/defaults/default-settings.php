@@ -48,7 +48,7 @@ return [
                     'title' => 'Every link you share, built to convert',
                     'description' =>
                         'Shorten URLs, launch beautiful link-in-bio pages, and track every click — all from one dashboard. Branded domains, deep analytics, and tools your whole team can use.',
-                    'showSearchBarSlot' => false,
+                    'showSearchBarSlot' => true,
                     'image' => [
                         'src' => 'images/landing/links.webp',
                         'width' => 2432,
