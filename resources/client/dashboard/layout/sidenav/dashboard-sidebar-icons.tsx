@@ -4,7 +4,6 @@ import {
   FormIcon,
   GlobeIcon,
   HomeIcon,
-  LayoutPanelTopIcon,
   LinkIcon,
   MousePointerClickIcon,
   PictureInPicture2Icon,
@@ -21,7 +20,7 @@ export const sharedDashboardIcons: Record<
 > = {
   links: <LinkIcon />,
   'qr-codes': <QrCodeIcon />,
-  biolinks: <LayoutPanelTopIcon />,
+  biolinks: <StoreIcon />,
   folders: <FolderIcon />,
   'custom-domains': <GlobeIcon />,
   'link-overlays': <PictureInPicture2Icon />,
