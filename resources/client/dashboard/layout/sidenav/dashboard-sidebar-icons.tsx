@@ -6,6 +6,7 @@ import {
   HomeIcon,
   LinkIcon,
   MousePointerClickIcon,
+  PackageIcon,
   PictureInPicture2Icon,
   QrCodeIcon,
   SearchIcon,
@@ -35,7 +36,7 @@ export const dashboardSidebarIcons: Record<
   '/dashboard': <HomeIcon />,
   '/dashboard/insights': <ChartColumnBigIcon />,
   '/dashboard/search': <SearchIcon />,
-  '/dashboard/my-products': <StoreIcon />,
+  '/dashboard/my-products': <PackageIcon />,
   '/dashboard/sales-payouts': <WalletCardsIcon />,
 };
 
