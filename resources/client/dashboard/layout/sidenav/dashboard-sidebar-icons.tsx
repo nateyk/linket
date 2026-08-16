@@ -4,13 +4,13 @@ import {
   FormIcon,
   GlobeIcon,
   HomeIcon,
+  IdCardIcon,
   LinkIcon,
   MousePointerClickIcon,
   PackageIcon,
   PictureInPicture2Icon,
   QrCodeIcon,
   SearchIcon,
-  StoreIcon,
   WalletCardsIcon,
 } from 'lucide-react';
 import {ComponentProps, ReactElement} from 'react';
@@ -21,7 +21,7 @@ export const sharedDashboardIcons: Record<
 > = {
   links: <LinkIcon />,
   'qr-codes': <QrCodeIcon />,
-  biolinks: <StoreIcon />,
+  biolinks: <IdCardIcon />,
   folders: <FolderIcon />,
   'custom-domains': <GlobeIcon />,
   'link-overlays': <PictureInPicture2Icon />,
