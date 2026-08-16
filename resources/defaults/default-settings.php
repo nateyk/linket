@@ -300,7 +300,7 @@ return [
                     ],
                     [
                         'type' => 'route',
-                        'label' => 'Digital Products',
+                        'label' => 'My Products',
                         'action' => '/dashboard/my-products',
                         'id' => 'digital-products-dashboard',
                     ],
@@ -350,7 +350,7 @@ return [
                     ],
                     [
                         'type' => 'route',
-                        'label' => 'Digital Products',
+                        'label' => 'My Products',
                         'action' => '/dashboard/my-products',
                         'id' => 'digital-products-mobile',
                     ],

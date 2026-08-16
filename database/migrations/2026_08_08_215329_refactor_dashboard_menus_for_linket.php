@@ -70,7 +70,7 @@ return new class extends Migration
         $desired = [
             ['type' => 'route', 'label' => 'Home', 'action' => '/dashboard', 'id' => 'dashboard-home'],
             ['type' => 'route', 'label' => 'Storefront', 'action' => '/dashboard/biolinks', 'id' => 239],
-            ['type' => 'route', 'label' => 'Digital Products', 'action' => '/dashboard/my-products', 'id' => 'digital-products-dashboard'],
+            ['type' => 'route', 'label' => 'My Products', 'action' => '/dashboard/my-products', 'id' => 'digital-products-dashboard'],
             ['type' => 'route', 'label' => 'Sales & Payouts', 'action' => '/dashboard/sales-payouts', 'id' => 'sales-payouts-dashboard'],
         ];
 
@@ -124,7 +124,7 @@ return new class extends Migration
         $desired = [
             ['type' => 'route', 'label' => 'Home', 'action' => '/dashboard', 'id' => 'dashboard-home-mobile'],
             ['type' => 'route', 'label' => 'Storefront', 'action' => '/dashboard/biolinks', 'id' => 239],
-            ['type' => 'route', 'label' => 'Digital Products', 'action' => '/dashboard/my-products', 'id' => 'digital-products-mobile'],
+            ['type' => 'route', 'label' => 'My Products', 'action' => '/dashboard/my-products', 'id' => 'digital-products-mobile'],
             ['type' => 'route', 'label' => 'Sales & Payouts', 'action' => '/dashboard/sales-payouts', 'id' => 'sales-payouts-mobile'],
         ];
 
