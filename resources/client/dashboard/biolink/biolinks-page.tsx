@@ -17,12 +17,12 @@ import {Trans} from '@ui/i18n/trans';
 import {ignoreEventsFromPortal} from '@ui/utils/dom/ignore-events-from-portal';
 import {removeProtocol} from '@ui/utils/urls/remove-protocol';
 import {
-  ArrowUpRightIcon,
   BarChart3Icon,
   Clock3Icon,
   EllipsisVerticalIcon,
   LayoutPanelTop,
   MousePointerClick,
+  PencilIcon,
   PlusIcon,
 } from 'lucide-react';
 import {useNavigate} from 'react-router';
@@ -189,18 +189,16 @@ function BiolinkCard({biolink, onClick, onInsights}: BiolinkCardProps) {
             <EllipsisVerticalIcon />
           </Dropdown.Trigger>
           <Dropdown.Content align="end">
+            <Dropdown.Item onClick={onClick}>
+              <PencilIcon />
+              <Trans message="Edit" />
+            </Dropdown.Item>
             <Dropdown.Item onClick={onInsights}>
               <BarChart3Icon />
               <Trans message="Insights" />
             </Dropdown.Item>
           </Dropdown.Content>
         </Dropdown.Root>
-        <span
-          aria-hidden="true"
-          className="flex size-7 shrink-0 items-center justify-center rounded-button text-muted-foreground transition-colors group-hover/item:bg-muted group-hover/item:text-foreground"
-        >
-          <ArrowUpRightIcon />
-        </span>
       </Item.Actions>
     </Item.Root>
   );
