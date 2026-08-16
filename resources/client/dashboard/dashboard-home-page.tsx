@@ -120,6 +120,7 @@ function StatCards({dateRange}: {dateRange: DateRangeValue}) {
     value: number | null | undefined;
     icon: LucideIcon;
     format: 'currency' | 'number';
+    tone: string;
   }> = [
     {
       key: 'gross-sales',
@@ -132,6 +133,7 @@ function StatCards({dateRange}: {dateRange: DateRangeValue}) {
           : (summary?.gross_sales_cents ?? 0),
       icon: CircleDollarSignIcon,
       format: 'currency',
+      tone: 'text-primary bg-primary/10',
     },
     {
       key: 'creator-earnings',
@@ -144,6 +146,7 @@ function StatCards({dateRange}: {dateRange: DateRangeValue}) {
           : (summary?.creator_earnings_cents ?? 0),
       icon: WalletCardsIcon,
       format: 'currency',
+      tone: 'text-positive bg-positive/10',
     },
     {
       key: 'available-payout',
@@ -156,6 +159,7 @@ function StatCards({dateRange}: {dateRange: DateRangeValue}) {
           : (summary?.available_for_payout_cents ?? 0),
       icon: LandmarkIcon,
       format: 'currency',
+      tone: 'text-amber-600 bg-amber-500/10 dark:text-amber-400',
     },
     {
       key: 'engagements',
@@ -168,6 +172,7 @@ function StatCards({dateRange}: {dateRange: DateRangeValue}) {
           : engagements,
       icon: MousePointerClickIcon,
       format: 'number',
+      tone: 'text-muted-foreground bg-muted',
     },
   ];
 
@@ -186,7 +191,9 @@ function StatCards({dateRange}: {dateRange: DateRangeValue}) {
                 {card.scope}
               </Card.Description>
               <Card.Action>
-                <span className="flex size-9 items-center justify-center rounded-card-sm bg-primary/10 text-primary [&>svg]:size-4">
+                <span
+                  className={`flex size-9 items-center justify-center rounded-card-sm [&>svg]:size-4 ${card.tone}`}
+                >
                   <Icon aria-hidden="true" />
                 </span>
               </Card.Action>
@@ -572,32 +579,36 @@ function TopReferrers({dateRange}: {dateRange: DateRangeValue}) {
         ) : referrers.length ? (
           <ol className="flex flex-col gap-4">
             {referrers.map((referrer, index) => (
-              <li
-                key={`${referrer.label}-${index}`}
-                className="flex min-w-0 items-center gap-3"
-              >
-                <Badge variant="outline" className="w-6 px-0 tabular-nums">
-                  {index + 1}
-                </Badge>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">
+              <li key={`${referrer.label}-${index}`}>
+                <div className="flex min-w-0 items-center gap-2 text-sm">
+                  <span className="w-5 shrink-0 text-xs text-muted-foreground tabular-nums">
+                    {index + 1}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate font-medium">
                     {referrer.label ? (
                       formatReferrer(referrer.label)
                     ) : (
                       <Trans message="Direct, email or SMS" />
                     )}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
+                  </span>
+                  <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+                    <FormattedNumber value={referrer.value} /> ·{' '}
                     <FormattedNumber
                       value={referrer.percentage / 100}
                       style="percent"
                       maximumFractionDigits={0}
                     />
-                  </p>
+                  </span>
                 </div>
-                <Badge variant="secondary">
-                  <FormattedNumber value={referrer.value} />
-                </Badge>
+                <Progress.Root
+                  aria-label={referrer.label}
+                  value={Math.min(referrer.percentage, 100)}
+                  className="mt-2"
+                >
+                  <Progress.Track>
+                    <Progress.Indicator />
+                  </Progress.Track>
+                </Progress.Root>
               </li>
             ))}
           </ol>
