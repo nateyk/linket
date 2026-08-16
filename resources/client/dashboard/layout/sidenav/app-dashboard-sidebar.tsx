@@ -70,14 +70,15 @@ export function AppDashboardSidebar() {
             </Sidebar.GroupContent>
           </Sidebar.Group>
         )}
-
-        {leftSidebar.status === 'expanded' && <UsageMeter />}
       </Sidebar.Content>
       <Sidebar.Footer>
         {leftSidebar.status === 'collapsed' ? (
           <CompactUsageTrigger className="mx-auto mb-2.5 shrink-0" />
         ) : (
-          <WorkspaceSelector />
+          <>
+            <UsageMeter />
+            <WorkspaceSelector />
+          </>
         )}
       </Sidebar.Footer>
     </Sidebar.Root>
