@@ -23,7 +23,6 @@ import {
   Clock3Icon,
   CopyIcon,
   ExternalLinkIcon,
-  FileDownIcon,
   MoreHorizontalIcon,
   PackageIcon,
   PackagePlusIcon,
@@ -308,7 +307,9 @@ function ProductCard({
             <span className="line-clamp-2">{product.rejection_reason}</span>
           </div>
         )}
+      </Card.Content>
 
+      <Card.Footer className="justify-between gap-3 px-4 py-4">
         <div className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
           <SalesLabel count={product.sales_count} />
           <span className="size-1 rounded-full bg-muted-foreground/40" />
@@ -320,13 +321,6 @@ function ProductCard({
             <Trans message="revenue" />
           </span>
         </div>
-      </Card.Content>
-
-      <Card.Footer className="justify-between gap-3 px-4 py-4">
-        <Badge variant="secondary">
-          <FileDownIcon />
-          <Trans message="Digital download" />
-        </Badge>
 
         <Tooltip.Provider>
           <div className="flex items-center gap-1">
@@ -381,27 +375,6 @@ function ProductCard({
                 </Tooltip.Root>
               </>
             )}
-
-            <Tooltip.Root>
-              <Tooltip.Trigger
-                render={
-                  <Button
-                    aria-label={trans({message: 'Edit product'})}
-                    size="icon-sm"
-                    variant="ghost"
-                    nativeButton={false}
-                    render={
-                      <Link to={`/dashboard/my-products/${product.id}/edit`} />
-                    }
-                  >
-                    <PencilIcon />
-                  </Button>
-                }
-              />
-              <Tooltip.Content>
-                <Trans message="Edit product" />
-              </Tooltip.Content>
-            </Tooltip.Root>
 
             <ProductActions
               product={product}
