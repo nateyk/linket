@@ -310,13 +310,6 @@ return [
                         'action' => '/dashboard/sales-payouts',
                         'id' => 'sales-payouts-dashboard',
                     ],
-                ],
-            ],
-            [
-                'name' => 'Dashboard secondary',
-                'id' => 'a02',
-                'positions' => ['dashboard-secondary'],
-                'items' => [
                     [
                         'type' => 'route',
                         'label' => 'Insights',
@@ -330,6 +323,12 @@ return [
                         'id' => 303,
                     ],
                 ],
+            ],
+            [
+                'name' => 'Dashboard secondary',
+                'id' => 'a02',
+                'positions' => ['dashboard-secondary'],
+                'items' => [],
             ],
             [
                 'name' => 'Dashboard mobile',

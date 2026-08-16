@@ -72,6 +72,8 @@ return new class extends Migration
             ['type' => 'route', 'label' => 'My Card', 'action' => '/dashboard/biolinks', 'id' => 239],
             ['type' => 'route', 'label' => 'My Products', 'action' => '/dashboard/my-products', 'id' => 'digital-products-dashboard'],
             ['type' => 'route', 'label' => 'Sales & Payouts', 'action' => '/dashboard/sales-payouts', 'id' => 'sales-payouts-dashboard'],
+            ['type' => 'route', 'label' => 'Insights', 'action' => '/dashboard/insights', 'id' => 318],
+            ['type' => 'route', 'label' => 'Tracking pixels', 'action' => '/dashboard/pixels', 'id' => 303],
         ];
 
         foreach ($desired as $item) {
@@ -92,28 +94,8 @@ return new class extends Migration
 
     private function buildDashboardSecondaryItems(array $existing): array
     {
-        $newItems = [];
-        $seenActions = [];
-
-        $desired = [
-            ['type' => 'route', 'label' => 'Insights', 'action' => '/dashboard/insights', 'id' => 318],
-            ['type' => 'route', 'label' => 'Tracking pixels', 'action' => '/dashboard/pixels', 'id' => 303],
-        ];
-
-        foreach ($desired as $item) {
-            $newItems[] = $item;
-            $seenActions[] = $item['action'];
-        }
-
-        foreach ($existing as $item) {
-            $action = $item['action'] ?? '';
-            if (!in_array($action, $seenActions) && !$this->isLinkAction($action) && $action !== '/dashboard/sales-payouts') {
-                $newItems[] = $item;
-                $seenActions[] = $action;
-            }
-        }
-
-        return $newItems;
+        // secondary menu moved into dashboard-primary; keep it empty
+        return [];
     }
 
     private function buildDashboardMobileItems(array $existing): array

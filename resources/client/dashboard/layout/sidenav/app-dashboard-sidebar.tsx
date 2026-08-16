@@ -14,9 +14,11 @@ import {UsageMeter} from './usage-meter';
 export function AppDashboardSidebar() {
   const {isMobileMode, leftSidebar} = use(DashboardLayoutContext);
   const primaryMenu = useCustomMenu('dashboard-primary');
+  const secondaryMenu = useCustomMenu('dashboard-secondary');
   const hasDigitalProducts = primaryMenu?.items.some(
     item => item.action === '/dashboard/my-products',
   );
+  const hasSecondaryItems = !!secondaryMenu?.items.length;
 
   return (
     <Sidebar.Root
@@ -54,18 +56,20 @@ export function AppDashboardSidebar() {
           </Sidebar.GroupContent>
         </Sidebar.Group>
 
-        <Sidebar.Group>
-          <Sidebar.GroupLabel>
-            <Trans message="Resources" />
-          </Sidebar.GroupLabel>
-          <Sidebar.GroupContent>
-            <Sidebar.MenuFromConfig
-              position="dashboard-secondary"
-              defaultIcons={dashboardSidebarIcons}
-              end={item => item.action === '/dashboard'}
-            />
-          </Sidebar.GroupContent>
-        </Sidebar.Group>
+        {hasSecondaryItems && (
+          <Sidebar.Group>
+            <Sidebar.GroupLabel>
+              <Trans message="Resources" />
+            </Sidebar.GroupLabel>
+            <Sidebar.GroupContent>
+              <Sidebar.MenuFromConfig
+                position="dashboard-secondary"
+                defaultIcons={dashboardSidebarIcons}
+                end={item => item.action === '/dashboard'}
+              />
+            </Sidebar.GroupContent>
+          </Sidebar.Group>
+        )}
 
         {leftSidebar.status === 'expanded' && <UsageMeter />}
       </Sidebar.Content>
