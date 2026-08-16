@@ -15,9 +15,17 @@ import {FileUploadProvider} from '@common/uploads/uploader/file-upload-provider'
 import {useActiveUpload} from '@common/uploads/uploader/use-active-upload';
 import {Badge} from '@shadcn/badge/badge';
 import {Accordion} from '@shadcn/accordion/accordion';
+import {Alert} from '@shadcn/alert/alert';
+import {AlertDialog} from '@shadcn/alert-dialog/alert-dialog';
 import {Button} from '@shadcn/button/button';
 import {Checkbox} from '@shadcn/forms/checkbox/checkbox';
 import {Field} from '@shadcn/forms/field';
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+  InputGroupText,
+} from '@shadcn/forms/input-group/input-group';
 import {Input} from '@shadcn/forms/input/input';
 import {Progress} from '@shadcn/progress/progress';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
@@ -37,6 +45,7 @@ import {
 } from 'lucide-react';
 import {type ChangeEvent, useCallback, useEffect, useState} from 'react';
 import {useNavigate, useParams, useSearchParams} from 'react-router';
+import type {ProductType} from './product-type-picker';
 
 type FileEntry = {
   id: number;
@@ -59,8 +68,6 @@ type Product = {
   biolink_ids?: number[];
   status: string;
 };
-
-import type {ProductType} from './product-type-selection-page';
 
 type SetupSection = 'details' | 'files' | 'bio-pages';
 
@@ -124,6 +131,7 @@ function DigitalProductForm() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string>();
   const [convertToEtb, setConvertToEtb] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [openSection, setOpenSection] = useState<SetupSection | null>(
     'details',
   );
@@ -268,15 +276,17 @@ function DigitalProductForm() {
     ],
   );
 
-  const remove = async () => {
-    if (!product || !window.confirm('Delete this digital product?')) return;
+  const remove = async (): Promise<boolean> => {
+    if (!product) return false;
 
     setSaving(true);
     try {
       await apiClient.delete(`/api/v1/digital-products/${product.id}`);
       navigate('/dashboard/my-products');
+      return true;
     } catch {
       setError('Unable to delete product.');
+      return false;
     } finally {
       setSaving(false);
     }
@@ -293,22 +303,19 @@ function DigitalProductForm() {
 
   return (
     <DashboardLayout.MainSection>
-      {/* Page Header */}
-      <header className="flex h-14 w-full shrink-0 items-center gap-3 border-b px-4 md:px-6">
+      <DashboardLayout.SectionHeader>
         <DashboardLayout.SidebarToggle />
-        <div className="flex min-w-0 items-center gap-2.5">
-          <h1 className="truncate text-[15px] font-semibold">
-            <Trans message={pageTitle} />
-          </h1>
+        <DashboardLayout.SectionTitle>
+          <Trans message={pageTitle} />
           {product && <ProductStatus status={product.status} />}
-        </div>
-        <div className="ml-auto flex items-center gap-2">
+        </DashboardLayout.SectionTitle>
+        <div className="flex items-center gap-2">
           {product && (
             <Button
               variant="ghost"
               size="sm"
               disabled={saving}
-              onClick={() => void remove()}
+              onClick={() => setDeleteDialogOpen(true)}
             >
               <Trash2Icon className="size-4" />
               <span className="max-sm:hidden">
@@ -346,14 +353,18 @@ function DigitalProductForm() {
             </span>
           </Button>
         </div>
-      </header>
+      </DashboardLayout.SectionHeader>
 
       <DashboardLayout.SectionContent className="overflow-y-auto">
         <div className="mx-auto w-full max-w-6xl">
           {error && (
-            <div className="mb-5 flex items-start gap-3 rounded-card-sm border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
-              <span className="min-w-0 flex-1">{error}</span>
-            </div>
+            <Alert.Root
+              variant="destructive"
+              fillStyle="subtleFill"
+              className="mb-5"
+            >
+              <Alert.Description>{error}</Alert.Description>
+            </Alert.Root>
           )}
 
           {loading ? (
@@ -483,12 +494,55 @@ function DigitalProductForm() {
                   coverUrl={coverUrl}
                   fileCount={files.length}
                   productTypeLabel={typeConfig?.label ?? 'Digital product'}
+                  status={product?.status ?? 'draft'}
                 />
               </aside>
             </div>
           )}
         </div>
       </DashboardLayout.SectionContent>
+
+      <AlertDialog.Root
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+      >
+        <AlertDialog.Portal>
+          <AlertDialog.Backdrop />
+          <AlertDialog.Content size="sm">
+            <AlertDialog.Header>
+              <AlertDialog.Media className="bg-destructive/10 text-destructive">
+                <Trash2Icon />
+              </AlertDialog.Media>
+              <AlertDialog.Title>
+                <Trans message="Delete this product?" />
+              </AlertDialog.Title>
+              <AlertDialog.Description>
+                <Trans message="This removes the product from every storefront. This action cannot be undone." />
+              </AlertDialog.Description>
+            </AlertDialog.Header>
+            <AlertDialog.Footer>
+              <AlertDialog.Cancel disabled={saving}>
+                <Trans message="Cancel" />
+              </AlertDialog.Cancel>
+              <AlertDialog.Action
+                color="danger"
+                disabled={saving}
+                onClick={async () => {
+                  if (await remove()) {
+                    setDeleteDialogOpen(false);
+                  }
+                }}
+              >
+                {saving ? (
+                  <Trans message="Deleting..." />
+                ) : (
+                  <Trans message="Delete product" />
+                )}
+              </AlertDialog.Action>
+            </AlertDialog.Footer>
+          </AlertDialog.Content>
+        </AlertDialog.Portal>
+      </AlertDialog.Root>
     </DashboardLayout.MainSection>
   );
 }
@@ -499,12 +553,14 @@ function ProductBuilderPreview({
   coverUrl,
   fileCount,
   productTypeLabel,
+  status,
 }: {
   title: string;
   price: string;
   coverUrl: string;
   fileCount: number;
   productTypeLabel: string;
+  status: string;
 }) {
   const numericPrice = Number(price);
   const formattedPrice = Number.isFinite(numericPrice)
@@ -517,9 +573,7 @@ function ProductBuilderPreview({
         <p className="text-sm font-medium">
           <Trans message="Customer preview" />
         </p>
-        <Badge variant="secondary">
-          <Trans message="Live" />
-        </Badge>
+        <ProductStatus status={status} />
       </div>
       <div className="aspect-video bg-muted">
         {coverUrl ? (
@@ -588,38 +642,37 @@ function DetailsPanel({
         <Field.Label>
           <Trans message="Product title" />
         </Field.Label>
-        <Field.Description>
-          <Trans message="Choose a clear title customers can easily understand." />
-        </Field.Description>
         <Input
           value={title}
           maxLength={160}
           onChange={event => onTitleChange(event.target.value)}
           placeholder="My digital guide"
         />
+        <Field.Description>
+          <Trans message="Choose a clear title customers can easily understand." />
+        </Field.Description>
       </Field.Root>
 
       <Field.Root>
         <Field.Label>
           <Trans message="Price" />
         </Field.Label>
-        <Field.Description>
-          <Trans message="Set the amount customers will pay." />
-        </Field.Description>
-        <div className="flex items-center gap-2">
-          <span className="flex h-9 items-center rounded-card-sm border border-border bg-muted/50 px-3 text-[13px] font-medium text-muted-foreground">
-            ETB
-          </span>
-          <Input
+        <InputGroup>
+          <InputGroupAddon align="inline-start">
+            <InputGroupText>ETB</InputGroupText>
+          </InputGroupAddon>
+          <InputGroupInput
             type="number"
             min="0.50"
             step="0.01"
             value={price}
             onChange={event => onPriceChange(event.target.value)}
             placeholder="9.00"
-            className="flex-1"
           />
-        </div>
+        </InputGroup>
+        <Field.Description>
+          <Trans message="Set the amount customers will pay." />
+        </Field.Description>
         {legacyCurrency && legacyCurrency.toLowerCase() !== 'etb' && (
           <label className="mt-2 flex items-start gap-3 rounded-card-sm border border-border bg-muted/30 p-3 text-sm">
             <Checkbox
@@ -642,25 +695,25 @@ function DetailsPanel({
         <Field.Label>
           <Trans message="Description" />
         </Field.Label>
+        <DescriptionEditor value={description} onChange={onDescriptionChange} />
         <Field.Description>
           <Trans message="Describe what customers will receive." />
         </Field.Description>
-        <DescriptionEditor value={description} onChange={onDescriptionChange} />
       </Field.Root>
 
       <Field.Root>
         <Field.Label>
           <Trans message="Cover image" />
         </Field.Label>
-        <Field.Description>
-          <Trans message="Shown on your product listing and bio pages." />
-        </Field.Description>
         <ImageSelector.Square
           value={coverUrl}
           onChange={onCoverChange}
           uploadType="linkImages"
           placeholderVariant="dropzone"
         />
+        <Field.Description>
+          <Trans message="Shown on your product listing and bio pages." />
+        </Field.Description>
       </Field.Root>
     </div>
   );
