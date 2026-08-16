@@ -29,19 +29,26 @@ import {
 import {Input} from '@shadcn/forms/input/input';
 import {Progress} from '@shadcn/progress/progress';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
+import {Tooltip} from '@shadcn/tooltip/tooltip';
 import {Trans} from '@ui/i18n/trans';
 import {
+  ArchiveIcon,
   BookIcon,
+  CheckIcon,
+  Clock3Icon,
   DownloadIcon,
   FileIcon,
   FileTextIcon,
   HeadphonesIcon,
   Link2Icon,
+  PencilIcon,
   SaveIcon,
   SendIcon,
   Trash2Icon,
   UploadIcon,
   PackageOpenIcon,
+  TriangleAlertIcon,
+  type LucideIcon,
 } from 'lucide-react';
 import {type ChangeEvent, useCallback, useEffect, useState} from 'react';
 import {useNavigate, useParams, useSearchParams} from 'react-router';
@@ -853,18 +860,56 @@ function BioPagesPanel({
 /* ─── Product Status ─── */
 
 function ProductStatus({status}: {status: string}) {
-  const labels: Record<string, string> = {
-    draft: 'Draft',
-    pending_approval: 'In review',
-    approved: 'Approved',
-    rejected: 'Needs changes',
-    archived: 'Archived',
+  const configs: Record<
+    string,
+    {icon: LucideIcon; tone: string; label: string}
+  > = {
+    draft: {
+      icon: PencilIcon,
+      tone: 'text-muted-foreground bg-muted',
+      label: 'Draft',
+    },
+    pending_approval: {
+      icon: Clock3Icon,
+      tone: 'text-amber-600 bg-amber-500/10 dark:text-amber-400',
+      label: 'In review',
+    },
+    approved: {
+      icon: CheckIcon,
+      tone: 'text-primary bg-primary/10',
+      label: 'Approved',
+    },
+    rejected: {
+      icon: TriangleAlertIcon,
+      tone: 'text-destructive bg-destructive/10',
+      label: 'Needs changes',
+    },
+    archived: {
+      icon: ArchiveIcon,
+      tone: 'text-muted-foreground bg-muted',
+      label: 'Archived',
+    },
   };
 
+  const config = configs[status] ?? configs.draft;
+  const Icon = config.icon;
+
   return (
-    <Badge variant="outline">
-      <Trans message={labels[status] ?? 'Draft'} />
-    </Badge>
+    <Tooltip.Root>
+      <Tooltip.Trigger
+        aria-label={config.label}
+        render={
+          <span
+            className={`flex size-9 shrink-0 items-center justify-center rounded-card-sm ${config.tone}`}
+          />
+        }
+      >
+        <Icon className="size-4" aria-hidden="true" />
+      </Tooltip.Trigger>
+      <Tooltip.Content>
+        <Trans message={config.label} />
+      </Tooltip.Content>
+    </Tooltip.Root>
   );
 }
 
