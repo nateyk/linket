@@ -150,8 +150,8 @@ Refactor `crupdate-plan-form.tsx` into sections:
   storage (number + GB unit select + Unlimited toggle; normalized to bytes).
 - **Creator**: storefronts (number + Unlimited), workspaces (number +
   Unlimited).
-- **Growth**: tracking pixels (switch), advanced analytics (switch, hidden
-  behind "advanced" disclosure or omitted).
+- **Growth**: tracking pixels (switch). The `advanced_analytics_enabled` field
+  is not rendered (no real functionality; stored only for forward compat).
 - Legacy permission-feature editor (links/qr/folders/...) collapsed behind an
   "Advanced" disclosure, labeled deprecated.
 
@@ -195,7 +195,7 @@ paid products."). Upgrade CTA data flows through existing
 
 ## Testing
 
-Extend `tests/Feature/EntitlementSystemTest.php` (Pest):
+Extend `tests/Feature/EntitlementSystemTest.php` (PHPUnit, Laravel feature tests):
 
 1. New creator resolves default Free entitlement without payment/subscription.
 2. Exactly one default plan; changing default is transactional; disabling/
