@@ -256,6 +256,55 @@ class EntitlementSystemTest extends TestCase
         $this->assertTrue($plan->is_default || $plan->free);
     }
 
+    public function testEntitlementsServiceResolvesPlanLimitsAndFees(): void
+    {
+        $creator = $this->createCreator();
+        $entitlements = app(\App\Entitlements\Entitlements::class);
+
+        $plan = $entitlements->planFor($creator);
+        $this->assertNotNull($plan);
+        $this->assertTrue($plan->is_default || $plan->free);
+
+        $this->assertIsInt($entitlements->limit($creator, 'max_free_products'));
+        $this->assertSame(
+            (int) config('storefront.default_benefits.commission_bps'),
+            $entitlements->feeBps($creator),
+        );
+        $this->assertIsBool($entitlements->enabled($creator, 'tracking_pixels_enabled'));
+        $this->assertSame(
+            (int) config('storefront.default_benefits.max_upload_bytes'),
+            $entitlements->limit($creator, 'max_upload_bytes'),
+        );
+    }
+
+    public function testPlanWithoutBenefitsFallsBackToDefaultPlanBenefits(): void
+    {
+        $creator = $this->createCreator();
+        $defaultPlan = $creator->getSubscriptionProduct();
+        $noBenefitsPlan = \Common\Billing\Models\Product::create([
+            'name' => 'No Benefits',
+            'uuid' => Str::uuid(),
+            'free' => false,
+            'position' => 99,
+            'storefront_benefits' => [],
+        ]);
+
+        $benefits = app(\App\Entitlements\Entitlements::class)->benefitsFor($noBenefitsPlan);
+
+        $this->assertSame(
+            (int) $defaultPlan->storefront_benefits['commission_bps'],
+            $benefits['commission_bps'],
+        );
+    }
+
+    public function testFormatBytes(): void
+    {
+        $this->assertSame('1 GB', \App\Entitlements\Entitlements::formatBytes(1073741824));
+        $this->assertSame('25 GB', \App\Entitlements\Entitlements::formatBytes(26843545600));
+        $this->assertSame('5 MB', \App\Entitlements\Entitlements::formatBytes(5242880));
+        $this->assertSame('1.5 GB', \App\Entitlements\Entitlements::formatBytes(1610612736));
+    }
+
     private function stateful(): static
     {
         return $this->withHeader('Referer', 'http://localhost');

@@ -10,6 +10,18 @@ return [
         'jpeg', 'webp', 'gif', 'svg', 'ttf', 'otf', 'woff', 'woff2', 'txt', 'csv',
     ],
     'default_benefits' => [
+        'platform_fee_percent' => 5.0,
+        'commission_bps' => 500,
+        'max_products' => 5,
+        'max_free_products' => 5,
+        'max_paid_products' => 5,
+        'max_upload_bytes' => 1073741824,
+        'max_storefronts' => 1,
+        'max_workspaces' => 1,
+        'tracking_pixels_enabled' => false,
+        'advanced_analytics_enabled' => false,
+    ],
+    'demo_benefits' => [
         'free' => [
             'platform_fee_percent' => 5.0,
             'commission_bps' => 500,
