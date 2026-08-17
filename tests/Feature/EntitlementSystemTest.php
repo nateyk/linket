@@ -38,7 +38,7 @@ class EntitlementSystemTest extends TestCase
                     'free' => true,
                     'is_default' => true,
                     'position' => 1,
-                    'storefront_benefits' => config('storefront.default_benefits.free'),
+                    'storefront_benefits' => config('storefront.default_benefits'),
                 ]);
             }
         }

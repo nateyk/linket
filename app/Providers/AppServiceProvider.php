@@ -14,8 +14,8 @@ use App\LinkOverlays\Models\LinkOverlay;
 use App\LinkPages\Models\LinkPage;
 use App\Links\Actions\CrupdateLink;
 use App\Links\Console\ArchiveExpiredLinkeables;
+use App\Entitlements\Entitlements;
 use App\QrCodes\Models\QrCode;
-use App\Storefront\StorefrontBenefits;
 use App\TrackingPixels\Models\TrackingPixel;
 use App\Models\User;
 use App\Webhooks\Models\Webhook;
@@ -87,13 +87,16 @@ class AppServiceProvider extends ServiceProvider
             if (!$owner) {
                 return;
             }
-            $benefits = app(StorefrontBenefits::class)->forCreator($owner);
-            $limit = $benefits['max_workspaces'] ?? null;
+            $entitlements = app(Entitlements::class);
+            $limit = $entitlements->limit($owner, 'max_workspaces');
             if ($limit === null) {
                 return;
             }
             $count = Workspace::where('owner_id', $owner->id)->where('is_personal', false)->count();
-            abort_if($count >= $limit, 422, __("You've reached your plan limit of :limit workspaces.", ['limit' => $limit]));
+            abort_if($count >= $limit, 422, __(
+                "You've reached your :plan limit of :count workspaces.",
+                ['plan' => $entitlements->planFor($owner)?->name ?? 'plan', 'count' => $limit],
+            ));
         });
 
         Scramble::throwOnError(true);

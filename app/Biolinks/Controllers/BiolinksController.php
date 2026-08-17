@@ -8,7 +8,7 @@ use App\Biolinks\Models\Biolink;
 use App\Biolinks\BiolinksQueryBuilder;
 use App\Biolinks\Requests\CrupdateBiolinkRequest;
 use App\Biolinks\Resources\BiolinkResource;
-use App\Storefront\StorefrontBenefits;
+use App\Entitlements\Entitlements;
 use Common\Workspaces\ActiveWorkspace;
 use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Http\Request;
@@ -69,14 +69,18 @@ class BiolinksController extends Controller
     {
         Gate::authorize('store', Biolink::class);
 
-        $benefits = app(StorefrontBenefits::class)->forCreator($request->user());
-        $maxStorefronts = $benefits['max_storefronts'] ?? null;
+        $entitlements = app(Entitlements::class);
+        $creator = $request->user();
+        $maxStorefronts = $entitlements->limit($creator, 'max_storefronts');
         if ($maxStorefronts !== null) {
             $count = Biolink::query()
                 ->where('workspace_id', ActiveWorkspace::get()->id)
                 ->whereNull('deleted_at')
                 ->count();
-            abort_if($count >= $maxStorefronts, 422, __("You've reached your plan limit of :limit storefronts.", ['limit' => $maxStorefronts]));
+            abort_if($count >= $maxStorefronts, 422, __(
+                "You've reached your :plan limit of :count storefronts.",
+                ['plan' => $entitlements->planFor($creator)?->name ?? 'plan', 'count' => $maxStorefronts],
+            ));
         }
 
         $biolink = (new CrupdateBiolink())->execute($request->validated());
