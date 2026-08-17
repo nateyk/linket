@@ -120,6 +120,12 @@ class ProductsController extends Controller
         Gate::authorize('destroy', $product);
 
         abort_if(
+            $product->is_default,
+            422,
+            __('The default plan cannot be deleted.'),
+        );
+
+        abort_if(
             $product->subscriptions->isNotEmpty(),
             422,
             __(

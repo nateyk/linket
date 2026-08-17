@@ -7,6 +7,7 @@ use Common\Billing\Gateways\Actions\SyncProductOnEnabledGateways;
 use Common\Billing\Models\Price;
 use Common\Billing\Models\Product;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class CrupdateProduct
@@ -18,31 +19,47 @@ class CrupdateProduct
         Product|null $originalProduct = null,
         $syncProduct = true,
     ): Product {
-        $product =
-            $originalProduct?->load('prices') ?:
-            app(Product::class)->newModelInstance([
-                'uuid' => Str::uuid(),
-            ]);
+        return DB::transaction(function () use (
+            $data,
+            $originalProduct,
+            $syncProduct,
+        ): Product {
+            $product =
+                $originalProduct?->load('prices') ?:
+                app(Product::class)->newModelInstance([
+                    'uuid' => Str::uuid(),
+                ]);
 
-        $newData = [
-            'name' => $data['name'],
-            'description' => $data['description'] ?? null,
-            'hidden' => $data['hidden'] ?? false,
-            'free' => $data['free'] ?? false,
-            'is_default' => $data['is_default'] ?? false,
-            'recommended' => $data['recommended'] ?? false,
-            'trial_period_days' => $data['trial_period_days'] ?? 0,
-            'position' => $data['position'] ?? 0,
-            'feature_list' => $data['feature_list'] ?? [],
-            'storefront_benefits' => $data['storefront_benefits'] ?? null,
-        ];
+            $newData = [
+                'name' => $data['name'],
+                'description' => $data['description'] ?? null,
+                'hidden' => $data['hidden'] ?? false,
+                'free' => $data['free'] ?? false,
+                'active' => $data['active'] ?? $originalProduct?->active ?? true,
+                'is_default' => $data['is_default'] ?? false,
+                'recommended' => $data['recommended'] ?? false,
+                'trial_period_days' => $data['trial_period_days'] ?? 0,
+                'position' => $data['position'] ?? 0,
+                'feature_list' => $data['feature_list'] ?? [],
+                'storefront_benefits' => $data['storefront_benefits'] ?? null,
+            ];
 
-        $product = $product->fill($newData);
-        $product->save();
+            $isDefault =
+                $newData['is_default'] || ($originalProduct?->is_default ?? false);
+            abort_if(
+                $isDefault && !$newData['active'],
+                422,
+                __('The default plan cannot be disabled.'),
+            );
 
-        if (!empty($newData['is_default'])) {
-            Product::where('id', '!=', $product->id)->update(['is_default' => false]);
-        }
+            $product = $product->fill($newData);
+            $product->save();
+
+            if (!empty($newData['is_default'])) {
+                Product::where('id', '!=', $product->id)->update([
+                    'is_default' => false,
+                ]);
+            }
 
         if (
             array_key_exists('permissions', $data) &&
@@ -92,5 +109,6 @@ class CrupdateProduct
         }
 
         return $product;
+        });
     }
 }

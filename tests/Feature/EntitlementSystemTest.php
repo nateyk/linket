@@ -10,6 +10,7 @@ use App\Storefront\StorefrontBenefits;
 use App\Storefront\StorefrontCheckout;
 use Common\Billing\Models\Product;
 use Common\Files\FileEntry;
+use Common\Permissions\Models\Permission;
 use Common\Workspaces\Actions\CreateWorkspace;
 use Common\Workspaces\Models\Workspace;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
@@ -347,6 +348,77 @@ class EntitlementSystemTest extends TestCase
         $this->assertSame('25 GB', \App\Entitlements\Entitlements::formatBytes(26843545600));
         $this->assertSame('5 MB', \App\Entitlements\Entitlements::formatBytes(5242880));
         $this->assertSame('1.5 GB', \App\Entitlements\Entitlements::formatBytes(1610612736));
+    }
+
+    public function testDefaultPlanCannotBeDeleted(): void
+    {
+        $admin = $this->createAdmin();
+        $defaultPlan = Product::create([
+            'name' => 'Default Cannot Delete',
+            'uuid' => Str::uuid(),
+            'free' => true,
+            'position' => 51,
+            'is_default' => true,
+        ]);
+
+        $response = $this->stateful()->actingAs($admin)
+            ->delete("/api/v1/billing/products/{$defaultPlan->id}");
+
+        $response->assertStatus(422);
+    }
+
+    public function testDefaultPlanCannotBeDisabled(): void
+    {
+        $admin = $this->createAdmin();
+        $defaultPlan = Product::where('is_default', true)->first();
+
+        $response = $this->stateful()->actingAs($admin)
+            ->put("/api/v1/billing/products/{$defaultPlan->id}", [
+                'name' => $defaultPlan->name,
+                'is_default' => true,
+                'active' => false,
+            ]);
+
+        $response->assertStatus(422);
+    }
+
+    public function testMarkingNewDefaultPlanClearsOldDefault(): void
+    {
+        $admin = $this->createAdmin();
+        $defaultPlan = Product::where('is_default', true)->first();
+        // free = true avoids gateway sync (SyncProductOnEnabledGateways) in the test env
+        $newPlan = Product::create([
+            'name' => 'New Default',
+            'uuid' => Str::uuid(),
+            'free' => true,
+            'position' => 50,
+        ]);
+
+        $response = $this->stateful()->actingAs($admin)
+            ->put("/api/v1/billing/products/{$newPlan->id}", [
+                'name' => 'New Default',
+                'is_default' => true,
+            ]);
+
+        $response->assertStatus(200);
+        $this->assertSame(1, Product::where('is_default', true)->count());
+        $this->assertFalse($defaultPlan->fresh()->is_default);
+    }
+
+    private function createAdmin(): User
+    {
+        $user = User::query()->forceCreate([
+            'name' => 'Admin ' . Str::random(6),
+            'username' => Str::lower(Str::random(10)),
+            'email' => Str::random(8) . '@example.test',
+            'password' => bcrypt('password'),
+            'email_verified_at' => now(),
+        ]);
+        $user->permissions()->attach(
+            Permission::query()->firstOrCreate(['name' => 'admin']),
+        );
+
+        return $user;
     }
 
     private function stateful(): static

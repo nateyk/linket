@@ -34,6 +34,7 @@ class CrupdateProductRequest extends FormRequest
             'position' => 'integer',
             'hidden' => 'boolean',
             'free' => 'boolean',
+            'active' => 'boolean',
             'feature_list' => 'array',
             'is_default' => 'boolean',
             'storefront_benefits' => 'nullable|array',

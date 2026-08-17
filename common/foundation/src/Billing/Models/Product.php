@@ -23,6 +23,7 @@ class Product extends BaseModel
         'position' => 'int',
         'trial_period_days' => 'int',
         'hidden' => 'boolean',
+        'active' => 'boolean',
         'storefront_benefits' => 'array',
     ];
 
