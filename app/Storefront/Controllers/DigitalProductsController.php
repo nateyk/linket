@@ -3,8 +3,8 @@
 namespace App\Storefront\Controllers;
 
 use App\Storefront\Models\DigitalProduct;
+use App\Entitlements\Entitlements;
 use App\Storefront\Resources\DigitalProductResource;
-use App\Storefront\StorefrontBenefits;
 use App\Storefront\DigitalProductVisibility;
 use Common\Files\FileEntry;
 use Common\Workspaces\ActiveWorkspace;
@@ -42,13 +42,28 @@ class DigitalProductsController extends Controller
     {
         $data = $this->validated($request);
         $creator = $request->user();
-        $benefits = app(StorefrontBenefits::class)->forCreator($creator);
-        $this->enforceProductLimit($benefits, $data['price_cents'], null);
+        $entitlements = app(Entitlements::class);
+        $this->enforceProductLimit(
+            $entitlements->limit($creator, 'max_free_products'),
+            $entitlements->limit($creator, 'max_paid_products'),
+            $data['price_cents'],
+            $entitlements->planFor($creator)?->name,
+            null,
+        );
 
-        return DB::transaction(function () use ($data, $creator, $benefits): DigitalProduct {
-            $product = DigitalProduct::create([...Arr::except($data, ['file_ids', 'biolink_ids']), 'user_id' => $creator->id, 'currency' => $data['currency'] ?? config('storefront.currency')]);
-            $this->syncFiles($product, $data['file_ids'], $benefits['max_upload_bytes']);
+        return DB::transaction(function () use ($data, $creator, $entitlements): DigitalProductResource {
+            $product = DigitalProduct::create([
+                ...Arr::except($data, ['file_ids', 'biolink_ids']),
+                'user_id' => $creator->id,
+                'currency' => $data['currency'] ?? config('storefront.currency'),
+            ]);
+            $this->syncFiles(
+                $product,
+                $data['file_ids'],
+                $entitlements->limit($creator, 'max_upload_bytes'),
+            );
             app(DigitalProductVisibility::class)->sync($product, $data['biolink_ids'] ?? []);
+
             return new DigitalProductResource($product->load(['files', 'cover', 'biolinks']));
         });
     }
@@ -57,11 +72,32 @@ class DigitalProductsController extends Controller
     {
         $this->assertOwner($digitalProduct, $request);
         $data = $this->validated($request);
-        $benefits = app(StorefrontBenefits::class)->forCreator($request->user());
-        return DB::transaction(function () use ($digitalProduct, $data, $request, $benefits): DigitalProduct {
-            $digitalProduct->update([...Arr::except($data, ['file_ids', 'biolink_ids']), 'currency' => $data['currency'] ?? $digitalProduct->currency, 'status' => $digitalProduct->status === 'approved' ? 'draft' : $digitalProduct->status]);
-            $this->syncFiles($digitalProduct, $data['file_ids'], $benefits['max_upload_bytes'] ?? null);
-            app(DigitalProductVisibility::class)->sync($digitalProduct, $data['biolink_ids'] ?? $digitalProduct->biolinks()->pluck('biolinks.id')->all());
+        $creator = $request->user();
+        $entitlements = app(Entitlements::class);
+        $this->enforceProductLimit(
+            $entitlements->limit($creator, 'max_free_products'),
+            $entitlements->limit($creator, 'max_paid_products'),
+            $data['price_cents'],
+            $entitlements->planFor($creator)?->name,
+            $digitalProduct->id,
+        );
+
+        return DB::transaction(function () use ($digitalProduct, $data, $creator, $entitlements): DigitalProductResource {
+            $digitalProduct->update([
+                ...Arr::except($data, ['file_ids', 'biolink_ids']),
+                'currency' => $data['currency'] ?? $digitalProduct->currency,
+                'status' => $digitalProduct->status === 'approved' ? 'draft' : $digitalProduct->status,
+            ]);
+            $this->syncFiles(
+                $digitalProduct,
+                $data['file_ids'],
+                $entitlements->limit($creator, 'max_upload_bytes'),
+            );
+            app(DigitalProductVisibility::class)->sync(
+                $digitalProduct,
+                $data['biolink_ids'] ?? $digitalProduct->biolinks()->pluck('biolinks.id')->all(),
+            );
+
             return new DigitalProductResource($digitalProduct->fresh()->load(['files', 'cover', 'biolinks']));
         });
     }
@@ -85,24 +121,29 @@ class DigitalProductsController extends Controller
             'biolink_ids' => 'nullable|array', 'biolink_ids.*' => 'integer|distinct|exists:biolinks,id',
         ]);
     }
-    private function enforceProductLimit(array $benefits, int $priceCents, ?int $existingId): void
-    {
+    private function enforceProductLimit(
+        ?int $freeLimit,
+        ?int $paidLimit,
+        int $priceCents,
+        ?string $planName,
+        ?int $existingId,
+    ): void {
         $isFree = $priceCents <= 0;
-        $key = $isFree ? 'max_free_products' : 'max_paid_products';
-        $limit = $benefits[$key] ?? null;
+        $limit = $isFree ? $freeLimit : $paidLimit;
         if ($limit === null) {
             return;
         }
-        $query = DigitalProduct::query()->where('workspace_id', ActiveWorkspace::get()->id)->whereNull('deleted_at');
+        $query = DigitalProduct::query()
+            ->where('workspace_id', ActiveWorkspace::get()->id)
+            ->whereNull('deleted_at');
         if ($existingId !== null) {
             $query->where('id', '!=', $existingId);
         }
         $query->where('price_cents', $isFree ? '<=' : '>', 0);
         $count = $query->count();
         abort_if($count >= $limit, 422, $isFree
-            ? __("You've reached your plan limit of :limit free products.", ['limit' => $limit])
-            : __("You've reached your plan limit of :limit paid products.", ['limit' => $limit])
-        );
+            ? __("You've reached your :plan limit of :count free products.", ['plan' => $planName ?? 'plan', 'count' => $limit])
+            : __("You've reached your :plan limit of :count paid products.", ['plan' => $planName ?? 'plan', 'count' => $limit]));
     }
     private function syncFiles(DigitalProduct $product, array $ids, ?int $maxBytes): void
     {
@@ -122,16 +163,10 @@ class DigitalProductsController extends Controller
                 ->where('file_entries.workspace_id', $product->workspace_id)
                 ->sum('file_entries.file_size');
             $newBytes = $files->sum('file_size');
-            abort_if($existingBytes + $newBytes > $maxBytes, 422, __("Uploading these files would exceed your plan's storage allowance of :limit.", ['limit' => $this->formatBytes($maxBytes)]));
+            abort_if($existingBytes + $newBytes > $maxBytes, 422, __("Uploading these files would exceed your plan's storage allowance of :limit.", ['limit' => Entitlements::formatBytes($maxBytes)]));
         }
 
         $product->files()->sync($ids);
-    }
-    private function formatBytes(int $bytes): string
-    {
-        $gb = 1073741824;
-        $mb = 1048576;
-        return $bytes >= $gb ? round($bytes / $gb, 1) . ' GB' : round($bytes / $mb, 1) . ' MB';
     }
     private function assertCoverBelongsToWorkspace(DigitalProduct $product): void
     {

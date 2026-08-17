@@ -114,6 +114,73 @@ class EntitlementSystemTest extends TestCase
         $response->assertStatus(422);
     }
 
+    public function testProductUpdateReChecksPaidLimitWhenPriceChanges(): void
+    {
+        $creator = $this->createCreator();
+        $workspace = $creator->workspaces()->first();
+
+        $plan = $creator->getSubscriptionProduct();
+        $plan->update(['storefront_benefits' => array_merge($plan->storefront_benefits ?? [], [
+            'max_free_products' => 1,
+            'max_paid_products' => 1,
+        ])]);
+        $creator->refresh();
+
+        $file = FileEntry::query()->create([
+            'name' => 'test.pdf',
+            'file_name' => 'test.pdf',
+            'mime' => 'application/pdf',
+            'extension' => 'pdf',
+            'file_size' => 100,
+            'workspace_id' => $workspace->id,
+            'owner_id' => $creator->id,
+        ]);
+
+        DigitalProduct::query()->create([
+            'uuid' => Str::uuid(),
+            'workspace_id' => $workspace->id,
+            'user_id' => $creator->id,
+            'title' => 'Existing Paid',
+            'price_cents' => 1000,
+            'currency' => 'ETB',
+            'status' => 'draft',
+        ]);
+        $freeProduct = DigitalProduct::query()->create([
+            'uuid' => Str::uuid(),
+            'workspace_id' => $workspace->id,
+            'user_id' => $creator->id,
+            'title' => 'Existing Free',
+            'price_cents' => 0,
+            'currency' => 'ETB',
+            'status' => 'draft',
+        ]);
+
+        $response = $this->stateful()->actingAs($creator)
+            ->put("/api/v1/digital-products/{$freeProduct->id}", [
+                'title' => 'Existing Free',
+                'price_cents' => 1500,
+                'currency' => 'ETB',
+                'file_ids' => [$file->id],
+            ]);
+
+        $response->assertStatus(422);
+
+        $plan->update(['storefront_benefits' => array_merge($plan->storefront_benefits ?? [], [
+            'max_paid_products' => 2,
+        ])]);
+        $creator->refresh();
+
+        $response = $this->stateful()->actingAs($creator)
+            ->put("/api/v1/digital-products/{$freeProduct->id}", [
+                'title' => 'Existing Free',
+                'price_cents' => 1500,
+                'currency' => 'ETB',
+                'file_ids' => [$file->id],
+            ]);
+
+        $response->assertStatus(200);
+    }
+
     public function testStorefrontLimitEnforcedOnBiolinkCreationViaHttp(): void
     {
         $creator = $this->createCreator();
