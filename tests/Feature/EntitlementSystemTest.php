@@ -211,6 +211,50 @@ class EntitlementSystemTest extends TestCase
         $this->assertSame(5.0, (float) $order->platform_fee_percent);
     }
 
+    public function testFeeMathUsesIntegerBasisPoints(): void
+    {
+        $creator = $this->createCreator();
+        $workspace = $creator->workspaces()->first();
+
+        $plan = $creator->getSubscriptionProduct();
+        $plan->update(['storefront_benefits' => array_merge($plan->storefront_benefits ?? [], [
+            'commission_bps' => 337,
+        ])]);
+        $creator->refresh();
+
+        $product = DigitalProduct::query()->create([
+            'uuid' => Str::uuid(),
+            'workspace_id' => $workspace->id,
+            'user_id' => $creator->id,
+            'title' => 'Fee Math Product',
+            'price_cents' => 10000,
+            'currency' => 'ETB',
+            'status' => 'approved',
+        ]);
+
+        $mockGateway = $this->getMockBuilder(ChapaGateway::class)
+            ->disableOriginalConstructor()
+            ->getMock();
+        $mockGateway->method('createTransaction')->willReturn(
+            new PaymentTransaction([
+                'tx_ref' => 'test_tx_ref',
+                'checkout_url' => 'https://checkout.chapa.com/test',
+            ]),
+        );
+        app()->instance(ChapaGateway::class, $mockGateway);
+
+        $order = app(StorefrontCheckout::class)->create(
+            $product,
+            null,
+            ['name' => 'Buyer', 'email' => 'buyer@test.com'],
+        );
+
+        $this->assertSame(337, $order->commission_bps);
+        $this->assertSame(337, $order->platform_fee_cents);
+        $this->assertSame(9663, $order->creator_earnings_cents);
+        $this->assertSame(3.37, (float) $order->platform_fee_percent);
+    }
+
     public function testAdminConfigChangeDrivesBackend(): void
     {
         $creator = $this->createCreator();

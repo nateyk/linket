@@ -3,6 +3,7 @@
 namespace App\Storefront;
 
 use App\Biolinks\Models\Biolink;
+use App\Entitlements\Entitlements;
 use App\Payments\ChapaGateway;
 use App\Payments\Models\PaymentTransaction;
 use App\Storefront\Models\DigitalProduct;
@@ -17,10 +18,11 @@ class StorefrontCheckout
         array $buyer = [],
     ): StorefrontOrder
     {
-        $benefits = app(StorefrontBenefits::class)->forCreator($product->creator);
+        $entitlements = app(Entitlements::class);
         $gross = $product->price_cents;
-        $feePercent = $benefits['platform_fee_percent'];
-        $fee = (int) round($gross * ($feePercent / 100));
+        $bps = $entitlements->feeBps($product->creator);
+        $fee = (int) round($gross * $bps / 10000);
+        $feePercent = round($bps / 100, 4);
 
         $order = StorefrontOrder::create([
             'uuid' => (string) Str::uuid(),
@@ -31,7 +33,7 @@ class StorefrontCheckout
             'buyer_email' => $buyer['email'] ?? null,
             'currency' => $product->currency,
             'gross_amount_cents' => $gross,
-            'commission_bps' => $benefits['commission_bps'],
+            'commission_bps' => $bps,
             'platform_fee_percent' => $feePercent,
             'platform_fee_cents' => $fee,
             'creator_earnings_cents' => $gross - $fee,
