@@ -1,6 +1,7 @@
 import memoize from 'nano-memoize';
 
 const primary = [
+  'ETB',
   'USD',
   'EUR',
   'JPY',

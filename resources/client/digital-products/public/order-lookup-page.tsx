@@ -4,6 +4,7 @@ import {Card} from '@shadcn/card/card';
 import {Input} from '@shadcn/forms/input/input';
 import {Spinner} from '@shadcn/spinner/spinner';
 import {Trans} from '@ui/i18n/trans';
+import {formatMoney as formatPrice} from '@ui/i18n/format-money';
 import {message} from '@ui/i18n/message';
 import {toast} from '@ui/toast/toast';
 import {
@@ -166,5 +167,3 @@ function PublicShell({children}: {children: ReactNode}) {
   return <div className="min-h-screen bg-muted/30 px-4 py-10 sm:px-6"><main className="mx-auto flex w-full max-w-2xl flex-col gap-6">{children}</main></div>;
 }
 
-function formatPrice(priceCents: number, currency: string) { return new Intl.NumberFormat(undefined, {style: 'currency', currency}).format(priceCents / 100); }
-function formatDate(value: string) { return new Intl.DateTimeFormat(undefined, {dateStyle: 'medium', timeStyle: 'short'}).format(new Date(value)); }

@@ -9,6 +9,7 @@ import {Input} from '@shadcn/forms/input/input';
 import {Popover} from '@shadcn/popover/popover';
 import {Table} from '@shadcn/table/table';
 import {Trans} from '@ui/i18n/trans';
+import {formatMoney} from '@ui/i18n/format-money';
 import {
   ArrowLeftIcon,
   BanknoteIcon,
@@ -271,12 +272,6 @@ function formatRange(method: WithdrawalMethod) {
   return max != null || min > 0 ? range : '—';
 }
 
-function formatMoney(cents: number) {
-  return new Intl.NumberFormat(undefined, {
-    style: 'currency',
-    currency: 'USD',
-  }).format(cents / 100);
-}
 
 function LoadingRows() {
   return (

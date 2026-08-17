@@ -11,6 +11,7 @@ import {Tooltip} from '@shadcn/tooltip/tooltip';
 import {Select} from '@shadcn/forms/select/select';
 import {Table} from '@shadcn/table/table';
 import {Trans} from '@ui/i18n/trans';
+import {formatMoney as formatMoneyFromCents} from '@ui/i18n/format-money';
 import {message} from '@ui/i18n/message';
 import {toast} from '@ui/toast/toast';
 import {
@@ -886,17 +887,18 @@ function DetailRow({
   );
 }
 
-function formatMoney(amount: number, currency: string) {
-  return new Intl.NumberFormat(undefined, {style: 'currency', currency}).format(
-    amount,
-  );
-}
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat(undefined, {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
+}
+
+// amounts from the payments API are in main units (e.g. 234.50), convert to cents
+// before delegating to the shared formatter
+function formatMoney(amount: number, currency: string) {
+  return formatMoneyFromCents(amount * 100, currency);
 }
 
 function InfoTrigger() {

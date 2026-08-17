@@ -93,6 +93,9 @@ export interface BaseBackendSettings {
     enable?: boolean;
     paypal_test_mode?: boolean;
     stripe_public_key?: string;
+    currency?: string;
+    currency_symbol?: string;
+    currency_symbol_position?: 'before' | 'after';
     invoice?: {
       address?: string;
       notes?: string;

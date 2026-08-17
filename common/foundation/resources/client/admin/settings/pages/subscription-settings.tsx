@@ -7,14 +7,15 @@ import {SettingsPanel} from '@common/admin/settings/layout/settings-panel';
 import {useAdminSettings} from '@common/admin/settings/use-admin-settings';
 import {FormTextField} from '@ui/forms/input-field/text-field/text-field';
 import {FormSwitch} from '@ui/forms/toggle/switch';
+import {Select} from '@shadcn/forms/select/select';
+import {HookForm} from '@shadcn/forms/form/hook-form';
+import {Field} from '@shadcn/forms/field';
 import {Alert} from '@shadcn/alert/alert';
 import {Trans} from '@ui/i18n/trans';
-import {useTrans} from '@ui/i18n/use-trans';
 import {Fragment} from 'react';
 import {useForm, useFormContext} from 'react-hook-form';
 
 export function Component() {
-  const {trans} = useTrans();
   const {data} = useAdminSettings();
   const form = useForm<AdminSettings>({
     defaultValues: {
@@ -31,6 +32,10 @@ export function Component() {
           chapa: {
             enable: data.client.billing?.chapa?.enable ?? true,
           },
+          currency: data.client.billing?.currency ?? 'ETB',
+          currency_symbol: data.client.billing?.currency_symbol ?? 'Br',
+          currency_symbol_position:
+            data.client.billing?.currency_symbol_position ?? 'after',
           invoice: {
             address: data.client.billing?.invoice?.address ?? '',
             notes: data.client.billing?.invoice?.notes ?? '',
@@ -53,12 +58,63 @@ export function Component() {
   return (
     <AdminSettingsLayout form={form} title={<Trans message="Subscriptions" />}>
       <GeneralSection />
+      <CurrencySection />
       <ChapaSection />
       <InvoiceAddressSection />
       <InvoiceNotesSection />
     </AdminSettingsLayout>
   );
 }
+
+function CurrencySection() {
+  return (
+    <SettingsPanel
+      className="mb-6"
+      title={<Trans message="Currency" />}
+      description={
+        <Trans message="Site-wide currency used for Chapa payments, payouts, and price displays. Amounts are shown as 234.00 Br (symbol after the amount) by default." />
+      }
+    >
+      <FormTextField
+        size="sm"
+        name="client.billing.currency"
+        label={<Trans message="Currency code" />}
+        required
+        className="max-w-sm"
+      />
+      <FormTextField
+        size="sm"
+        name="client.billing.currency_symbol"
+        label={<Trans message="Currency symbol" />}
+        required
+        className="mt-5 max-w-sm"
+      />
+      <HookForm.Field name="client.billing.currency_symbol_position">
+        <Field.Label>
+          <Trans message="Currency symbol position" />
+        </Field.Label>
+        <Select.Root items={symbolPositionOptions}>
+          <Select.Trigger className="w-full sm:w-sm">
+            <Select.Value />
+          </Select.Trigger>
+          <Select.Content>
+            {symbolPositionOptions.map(option => (
+              <Select.Item key={option.value} value={option.value}>
+                {option.label}
+              </Select.Item>
+            ))}
+          </Select.Content>
+        </Select.Root>
+        <Field.Error />
+      </HookForm.Field>
+    </SettingsPanel>
+  );
+}
+
+const symbolPositionOptions = [
+  {label: 'After amount (234.00 Br)', value: 'after'},
+  {label: 'Before amount (Br 234.00)', value: 'before'},
+];
 
 function ChapaSection() {
   const {watch} = useFormContext<AdminSettings>();
@@ -134,130 +190,6 @@ function GeneralSection() {
       <FormSwitch name="client.billing.enable">
         <Trans message="Enable subscriptions" />
       </FormSwitch>
-    </SettingsPanel>
-  );
-}
-
-function PaypalSection() {
-  const {watch} = useFormContext<AdminSettings>();
-  const paypalIsEnabled = watch('client.billing.paypal.enable');
-  return (
-    <SettingsPanel
-      className="mb-6"
-      title={<Trans message="PayPal Gateway" />}
-      description={
-        <Trans message="Configure PayPal payment gateway integration." />
-      }
-      link={
-        <DocsLink link="https://support.vebto.com/hc/articles/147/configuring-paypal">
-          <Trans message="How to set up PayPal" />
-        </DocsLink>
-      }
-    >
-      <FormSwitch name="client.billing.paypal.enable">
-        <Trans message="Enable PayPal" />
-      </FormSwitch>
-      {paypalIsEnabled && (
-        <SettingsErrorGroup
-          name="paypal_group"
-          separatorTop={false}
-          separatorBottom={false}
-        >
-          {isInvalid => (
-            <Fragment>
-              <FormTextField
-                size="sm"
-                name="server.paypal_client_id"
-                label={<Trans message="PayPal Client ID" />}
-                required
-                invalid={isInvalid}
-                className="mt-5"
-              />
-              <FormTextField
-                size="sm"
-                name="server.paypal_secret"
-                label={<Trans message="PayPal Secret" />}
-                required
-                invalid={isInvalid}
-                className="mt-5"
-              />
-              <FormTextField
-                size="sm"
-                name="server.paypal_webhook_id"
-                label={<Trans message="PayPal Webhook ID" />}
-                required
-                invalid={isInvalid}
-                className="mt-5"
-              />
-              <FormSwitch
-                name="client.billing.paypal_test_mode"
-                invalid={isInvalid}
-                className="mt-5"
-              >
-                <Trans message="PayPal test mode" />
-              </FormSwitch>
-            </Fragment>
-          )}
-        </SettingsErrorGroup>
-      )}
-    </SettingsPanel>
-  );
-}
-
-function StripeSection() {
-  const {watch} = useFormContext<AdminSettings>();
-  const stripeEnabled = watch('client.billing.stripe.enable');
-  return (
-    <SettingsPanel
-      className="mb-6"
-      title={<Trans message="Stripe Gateway" />}
-      description={
-        <Trans message="Configure Stripe payment gateway integration." />
-      }
-      link={
-        <DocsLink link="https://support.vebto.com/hc/articles/148/configuring-stripe">
-          <Trans message="How to set up Stripe" />
-        </DocsLink>
-      }
-    >
-      <FormSwitch name="client.billing.stripe.enable">
-        <Trans message="Enable Stripe" />
-      </FormSwitch>
-      {stripeEnabled && (
-        <SettingsErrorGroup
-          name="stripe_group"
-          separatorTop={false}
-          separatorBottom={false}
-        >
-          {isInvalid => (
-            <Fragment>
-              <FormTextField
-                size="sm"
-                name="server.stripe_key"
-                label={<Trans message="Stripe publishable key" />}
-                required
-                className="mt-5"
-                invalid={isInvalid}
-              />
-              <FormTextField
-                size="sm"
-                name="server.stripe_secret"
-                label={<Trans message="Stripe secret key" />}
-                required
-                className="mt-5"
-                invalid={isInvalid}
-              />
-              <FormTextField
-                size="sm"
-                name="server.stripe_webhook_secret"
-                label={<Trans message="Stripe webhook signing secret" />}
-                className="mt-5"
-                invalid={isInvalid}
-              />
-            </Fragment>
-          )}
-        </SettingsErrorGroup>
-      )}
     </SettingsPanel>
   );
 }

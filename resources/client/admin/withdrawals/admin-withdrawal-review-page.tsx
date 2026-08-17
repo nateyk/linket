@@ -9,6 +9,7 @@ import {Select} from '@shadcn/forms/select/select';
 import {Textarea} from '@shadcn/forms/textarea/textarea';
 import {Table} from '@shadcn/table/table';
 import {Trans} from '@ui/i18n/trans';
+import {formatMoney} from '@ui/i18n/format-money';
 import {ArrowLeftIcon} from 'lucide-react';
 import {useCallback, useEffect, useState} from 'react';
 import {Link, useParams} from 'react-router';
@@ -507,11 +508,6 @@ function StatusBadge({status}: {status: PayoutStatus}) {
   );
 }
 
-function formatMoney(cents: number, currency: string) {
-  return new Intl.NumberFormat(undefined, {style: 'currency', currency}).format(
-    cents / 100,
-  );
-}
 
 function formatDate(value?: string) {
   if (!value) return '—';

@@ -41,6 +41,7 @@ import {Placeholder} from '@tiptap/extensions';
 import StarterKit from '@tiptap/starter-kit';
 import {useCurrentTextEditor} from '@common/text-editor/tiptap-editor-context';
 import {message} from '@ui/i18n/message';
+import {formatMoney} from '@ui/i18n/format-money';
 import {Trans} from '@ui/i18n/trans';
 import {useTrans} from '@ui/i18n/use-trans';
 import {
@@ -989,8 +990,3 @@ function sameProductSelection(first: number[], second: number[]): boolean {
   return sortedFirst.every((id, index) => id === sortedSecond[index]);
 }
 
-function formatMoney(cents: number, currency: string): string {
-  return new Intl.NumberFormat(undefined, {style: 'currency', currency}).format(
-    cents / 100,
-  );
-}

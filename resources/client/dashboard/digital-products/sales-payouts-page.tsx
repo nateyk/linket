@@ -10,6 +10,7 @@ import {Popover} from '@shadcn/popover/popover';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {Table} from '@shadcn/table/table';
 import {Trans} from '@ui/i18n/trans';
+import {formatMoney} from '@ui/i18n/format-money';
 import {BackendPagination} from '@shadcn/table/utils/table-pagination';
 import {Link} from 'react-router';
 import {
@@ -583,12 +584,6 @@ function WithdrawDialog({
   );
 }
 
-function formatMoney(cents: number, currency: string) {
-  return new Intl.NumberFormat(undefined, {
-    style: 'currency',
-    currency,
-  }).format(cents / 100);
-}
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat(undefined, {dateStyle: 'medium'}).format(

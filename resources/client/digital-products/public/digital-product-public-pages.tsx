@@ -22,6 +22,7 @@ import {
   getBgTintStyle,
 } from '@common/background-selector/utils/css-props-from-bg-config';
 import {loadFonts} from '@ui/fonts/font-picker/load-fonts';
+import {formatMoney as formatPrice} from '@ui/i18n/format-money';
 import {Trans} from '@ui/i18n/trans';
 import {cn} from '@ui/utils/cn';
 import {
@@ -949,12 +950,6 @@ function plainTextDescription(value: string) {
     .trim();
 }
 
-function formatPrice(priceCents: number, currency: string) {
-  return new Intl.NumberFormat(undefined, {
-    style: 'currency',
-    currency,
-  }).format(priceCents / 100);
-}
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat(undefined, {

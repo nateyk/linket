@@ -1,5 +1,5 @@
-import {useNumberFormatter} from '@ui/i18n/use-number-formatter';
-import {Fragment, memo} from 'react';
+import {formatMoney} from '@ui/i18n/format-money';
+import {memo} from 'react';
 
 interface FormattedCurrencyProps {
   value?: number;
@@ -8,26 +8,7 @@ interface FormattedCurrencyProps {
 }
 export const FormattedCurrency = memo(
   ({value, valueInCents, currency}: FormattedCurrencyProps) => {
-    const formatter = useNumberFormatter({
-      style: 'currency',
-      currency,
-      currencyDisplay: 'narrowSymbol',
-    });
-
-    let finalValue = valueInCents
-      ? centsToMain(valueInCents, formatter)
-      : value;
-
-    if (finalValue == null || isNaN(finalValue)) {
-      finalValue = 0;
-    }
-
-    return <Fragment>{formatter.format(finalValue)}</Fragment>;
+    const cents = valueInCents != null ? valueInCents : (value ?? 0) * 100;
+    return <>{formatMoney(cents, currency)}</>;
   },
 );
-
-function centsToMain(cents: number, formatter: Intl.NumberFormat): number {
-  const {minimumFractionDigits} = formatter.resolvedOptions();
-  const divisor = Math.pow(10, minimumFractionDigits ?? 2);
-  return cents / divisor;
-}

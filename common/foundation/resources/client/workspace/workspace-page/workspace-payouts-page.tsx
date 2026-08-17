@@ -2,6 +2,7 @@ import {apiClient} from '@common/http/query-client';
 import {useRequiredParams} from '@common/ui/navigation/use-required-params';
 import {useCallback, useEffect, useState} from 'react';
 import {Trans} from '@ui/i18n/trans';
+import {formatMoney} from '@ui/i18n/format-money';
 import {AccountSettingsPanel} from '@common/auth/ui/account-settings/account-settings-panel';
 import {Alert} from '@shadcn/alert/alert';
 import {Button} from '@shadcn/button/button';
@@ -183,10 +184,7 @@ export function WorkspacePayoutsPage({workspaceId}: WorkspacePayoutsPageProps) {
                       <Trans message="Minimum Withdrawal Amount" />
                     </span>
                     <strong>
-                      {new Intl.NumberFormat(undefined, {
-                        style: 'currency',
-                        currency: 'USD',
-                      }).format(method.minimum_amount_cents / 100)}
+                      {formatMoney(method.minimum_amount_cents)}
                     </strong>
                   </div>
                   {method.maximum_amount_cents && (
@@ -195,10 +193,7 @@ export function WorkspacePayoutsPage({workspaceId}: WorkspacePayoutsPageProps) {
                         <Trans message="Maximum Withdrawal Amount" />
                       </span>
                       <strong>
-                        {new Intl.NumberFormat(undefined, {
-                          style: 'currency',
-                          currency: 'USD',
-                        }).format(method.maximum_amount_cents / 100)}
+                        {formatMoney(method.maximum_amount_cents)}
                       </strong>
                     </div>
                   )}

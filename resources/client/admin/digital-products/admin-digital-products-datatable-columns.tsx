@@ -11,6 +11,7 @@ import {toast} from '@shadcn/toast/toast';
 import {useMutation, useQueryClient} from '@tanstack/react-query';
 import {ColumnDef} from '@tanstack/react-table';
 import {FormattedDate} from '@ui/i18n/formatted-date';
+import {formatMoney} from '@ui/i18n/format-money';
 import {Trans} from '@ui/i18n/trans';
 import {
   BadgeCheckIcon,
@@ -363,12 +364,6 @@ export function ProductStatusBadge({
   );
 }
 
-function formatMoney(cents: number, currency: string) {
-  return new Intl.NumberFormat(undefined, {
-    style: 'currency',
-    currency,
-  }).format(cents / 100);
-}
 
 function looksLikeHtml(value: string) {
   return /<[a-z][\s\S]*>/i.test(value);

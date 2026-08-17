@@ -9,6 +9,7 @@ import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {Table} from '@shadcn/table/table';
 import {Tooltip} from '@shadcn/tooltip/tooltip';
 import {message} from '@ui/i18n/message';
+import {formatMoney, getSiteCurrency} from '@ui/i18n/format-money';
 import {Trans} from '@ui/i18n/trans';
 import {
   ArrowUpRightIcon,
@@ -150,7 +151,7 @@ export function Component() {
     void loadStorefront();
   }, [loadStorefront]);
 
-  const currency = data.summary.currency ?? data.products[0]?.currency ?? 'USD';
+  const currency = data.summary.currency ?? data.products[0]?.currency ?? getSiteCurrency();
   const availableForPayout =
     data.summary.available_for_payout_cents ??
     data.summary.creator_earnings_cents ??
@@ -913,12 +914,6 @@ function getErrorMessage(reason: unknown) {
     : message('Unable to load storefront data.');
 }
 
-function formatMoney(amountCents: number, currency: string) {
-  return new Intl.NumberFormat(undefined, {
-    style: 'currency',
-    currency: currency.toUpperCase(),
-  }).format(amountCents / 100);
-}
 
 function formatDate(date: string) {
   return new Intl.DateTimeFormat(undefined, {

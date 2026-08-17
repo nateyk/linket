@@ -11,6 +11,7 @@ import {toast} from '@shadcn/toast/toast';
 import {useMutation, useQueryClient} from '@tanstack/react-query';
 import {ColumnDef} from '@tanstack/react-table';
 import {Trans} from '@ui/i18n/trans';
+import {formatMoney} from '@ui/i18n/format-money';
 import {
   CheckIcon,
   EllipsisIcon,
@@ -431,8 +432,3 @@ function Activity({items}: {items: NonNullable<DigitalProductPayout['activities'
   );
 }
 
-function formatMoney(cents: number, currency: string) {
-  return new Intl.NumberFormat(undefined, {style: 'currency', currency}).format(
-    cents / 100,
-  );
-}

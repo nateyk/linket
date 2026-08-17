@@ -8,6 +8,7 @@ import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {Badge} from '@shadcn/badge/badge';
 import {Card} from '@shadcn/card/card';
 import {Chart} from '@shadcn/chart/chart';
+import {getSiteCurrency} from '@ui/i18n/format-money';
 import {
   generateTimeChartLabel,
   generateTimeChartTooltip,
@@ -110,7 +111,7 @@ function StatCards({dateRange}: {dateRange: DateRangeValue}) {
   });
 
   const summary = salesData?.summary;
-  const currency = summary?.currency ?? 'USD';
+  const currency = summary?.currency ?? getSiteCurrency();
   const engagements = engagementReport?.data?.events?.total ?? 0;
 
   const cards: Array<{

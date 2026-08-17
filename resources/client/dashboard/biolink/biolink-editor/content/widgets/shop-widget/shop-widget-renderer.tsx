@@ -1,6 +1,7 @@
 import {ShopWidgetConfig} from '@app/dashboard/biolink/biolink-editor/content/widgets/shop-widget/shop-widget-dialog';
 import {WidgetRendererProps} from '@app/dashboard/biolink/biolink-editor/content/widgets/widget-renderer-props';
 import {Trans} from '@ui/i18n/trans';
+import {formatMoney} from '@ui/i18n/format-money';
 import {useEffect, useState} from 'react';
 import {ArrowUpRightIcon, ShoppingBagIcon} from 'lucide-react';
 import type {ReactNode} from 'react';
@@ -167,8 +168,3 @@ function ProductCard({product, href}: {product: Product; href: string}) {
   );
 }
 
-function formatMoney(cents: number, currency: string) {
-  return new Intl.NumberFormat(undefined, {style: 'currency', currency}).format(
-    cents / 100,
-  );
-}
