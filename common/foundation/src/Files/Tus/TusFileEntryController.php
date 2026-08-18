@@ -49,6 +49,14 @@ class TusFileEntryController extends Controller
             $uploadType,
         ]);
 
+        if (
+            $payload->uploadType->name === 'digitalProductFiles' &&
+            $payload->workspaceId
+        ) {
+            app(\App\Entitlements\AssertDigitalProductUploadAllowed::class)
+                ->execute($payload->size, $payload->workspaceId);
+        }
+
         (new StoreFile())->execute($payload, [
             'path' => $tusFilePath,
             'moveFile' => true,

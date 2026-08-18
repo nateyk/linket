@@ -449,6 +449,46 @@ class EntitlementSystemTest extends TestCase
         $response->assertStatus(422);
     }
 
+    public function testUploadTimeStorageQuotaEnforced(): void
+    {
+        $creator = $this->createCreator();
+        $workspace = $creator->workspaces()->first();
+
+        $role = \Common\Roles\Models\Role::where('default', true)->first();
+        $creator->roles()->attach($role->id);
+
+        $plan = $creator->getSubscriptionProduct();
+        $plan->update(['storefront_benefits' => array_merge($plan->storefront_benefits ?? [], [
+            'max_upload_bytes' => 200,
+        ])]);
+
+        $file = \Illuminate\Http\UploadedFile::fake()->create('file.pdf', 1);
+
+        $response = $this->stateful()->actingAs($creator)
+            ->post('/api/v1/file-entries', [
+                'file' => $file,
+                'workspaceId' => $workspace->id,
+                'uploadType' => 'digitalProductFiles',
+            ]);
+
+        $response->assertStatus(422);
+
+        $plan->update(['storefront_benefits' => array_merge($plan->storefront_benefits ?? [], [
+            'max_upload_bytes' => 1073741824,
+        ])]);
+
+        $file2 = \Illuminate\Http\UploadedFile::fake()->create('file2.pdf', 1);
+
+        $response = $this->stateful()->actingAs($creator)
+            ->post('/api/v1/file-entries', [
+                'file' => $file2,
+                'workspaceId' => $workspace->id,
+                'uploadType' => 'digitalProductFiles',
+            ]);
+
+        $response->assertStatus(200);
+    }
+
     public function testMarkingNewDefaultPlanClearsOldDefault(): void
     {
         $admin = $this->createAdmin();
