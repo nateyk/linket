@@ -6,13 +6,6 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export type ListUnsplashImagesParams = {
-  /**
-   * @nullable
-   */
-  search?: string | null;
-  /**
-   * @minimum 1
-   */
-  page?: number;
+export type GetUsage200DataDigitalProductsDelete = {
+  allowed: boolean;
 };

@@ -73,8 +73,9 @@ export const listUserSessions = (
   );
 };
 /**
- * This will logout all the devices except the current one.
- * @summary Logout other sessions
+ * @summary Logout other sessions.
+
+This will logout all the devices except the current one
  */
 export const logoutOtherSessions = (
   logoutOtherSessionsBody: LogoutOtherSessionsBody,

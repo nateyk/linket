@@ -6,6 +6,6 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export type ListUnsplashImages200ResultsItemUserLinks = {
-  html: string;
+export type AdminProductReviewsIndexParams = {
+  per_page?: number;
 };

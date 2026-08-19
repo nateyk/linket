@@ -6,7 +6,15 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export type DigitalProductsStore422 = {
-  /** Error overview. */
-  message: string;
+export type PublicProductReviewResource = {
+  id: number;
+  stars: string;
+  /** @nullable */
+  title: string | null;
+  /** @nullable */
+  review: string | null;
+  /** @nullable */
+  buyer_name: string | null;
+  verified: boolean;
+  created_at: string;
 };

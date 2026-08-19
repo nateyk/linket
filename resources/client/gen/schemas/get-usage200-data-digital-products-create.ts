@@ -6,6 +6,6 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export type TrackUnsplashDownload200 = {
-  url: string;
+export type GetUsage200DataDigitalProductsCreate = {
+  allowed: string;
 };

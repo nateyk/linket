@@ -192,8 +192,9 @@ export const updateBiolinkLink = (
   );
 };
 /**
- * This will not delete link itself, only remove it from link in bio.
- * @summary Detach a link
+ * @summary Detach a link.
+
+This will not delete link itself, only remove it from link in bio
  */
 export const detachBiolinkLink = (
   biolinkId: number,

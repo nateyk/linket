@@ -7,7 +7,7 @@
  */
 
 export type GetUsage200DataTrackedEvents = {
+  /** @minimum 0 */
   used: number;
-  /** @nullable */
-  total: number | null;
+  total: number | boolean | null;
 };

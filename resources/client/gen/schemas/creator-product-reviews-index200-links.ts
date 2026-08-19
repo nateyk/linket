@@ -6,7 +6,13 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export type ListUnsplashImages500 = {
-  /** Error overview. */
-  message: string;
+export type CreatorProductReviewsIndex200Links = {
+  /** @nullable */
+  first: string | null;
+  /** @nullable */
+  last: string | null;
+  /** @nullable */
+  prev: string | null;
+  /** @nullable */
+  next: string | null;
 };

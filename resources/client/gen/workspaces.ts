@@ -230,8 +230,9 @@ export const deleteWorkspaceInvite = (
   );
 };
 /**
- * Join a workspace using valid invite id.
- * @summary Join a workspace
+ * @summary Join a workspace.
+
+Join a workspace using valid invite id
  */
 export const joinWorkspace = (
   inviteId: string,

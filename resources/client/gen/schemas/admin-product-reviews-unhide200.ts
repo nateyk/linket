@@ -5,8 +5,8 @@
  * In the documentation API requests will be sent from currently logged in user so you do not need to provide a bearer token manually. <br><br> When calling API from outside the documentation, you will need to provide an access token for all requests in authorization header: `Authorization: Bearer <Token>` <br> You can create a new access token in your account settings page.
  * OpenAPI spec version: 1.0.0
  */
+import type {AdminProductReviewResource} from './admin-product-review-resource';
 
-export type RegisterPurchaseCodeBody = {
-  purchase_code: string;
-  module?: string;
+export type AdminProductReviewsUnhide200 = {
+  data: AdminProductReviewResource;
 };

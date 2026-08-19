@@ -31,6 +31,7 @@ class ProductResource extends JsonResource
             'hidden' => $this->hidden,
             'trial_period_days' => $this->trial_period_days,
             'storefront_benefits' => $this->storefront_benefits,
+            'pricing_features' => $this->pricingFeatures(),
             'created_at' => $this->created_at,
             'permissions' => $this->whenLoaded(
                 'permissions',
@@ -64,5 +65,51 @@ class ProductResource extends JsonResource
                 ),
             ),
         ];
+    }
+
+    private function pricingFeatures(): array
+    {
+        $benefits = app(\App\Entitlements\Entitlements::class)
+            ->benefitsFor($this->resource);
+        $features = [];
+
+        $free = $benefits['max_free_products'] ?? null;
+        $paid = $benefits['max_paid_products'] ?? null;
+        if ($free === null && $paid === null) {
+            $features[] = 'Unlimited products';
+        } else {
+            $features[] = $free === null
+                ? 'Unlimited free products'
+                : "$free free products";
+            $features[] = $paid === null
+                ? 'Unlimited paid products'
+                : "$paid paid products";
+        }
+
+        $bytes = $benefits['max_upload_bytes'] ?? null;
+        $features[] = $bytes === null
+            ? 'Unlimited storage'
+            : \App\Entitlements\Entitlements::formatBytes($bytes) . ' storage';
+
+        $storefronts = $benefits['max_storefronts'] ?? null;
+        $features[] = $storefronts === null
+            ? 'Unlimited storefronts'
+            : "$storefronts storefronts";
+
+        $workspaces = $benefits['max_workspaces'] ?? null;
+        $features[] = $workspaces === null
+            ? 'Unlimited workspaces'
+            : "$workspaces workspaces";
+
+        $fee = (float) ($benefits['platform_fee_percent'] ?? 0);
+        $features[] = $fee > 0
+            ? rtrim(rtrim(number_format($fee, 2), '0'), '.') . '% platform fee'
+            : 'No platform fees';
+
+        if (!empty($benefits['tracking_pixels_enabled'])) {
+            $features[] = 'Tracking pixels';
+        }
+
+        return $features;
     }
 }

@@ -65,14 +65,6 @@ export const getMobileBootstrapData = (
     options,
   );
 };
-/**
- * @summary Perform app update
- */
-export const runUpdate = (
-  options?: SecondParameter<typeof orvalApiFetch<string>>,
-) => {
-  return orvalApiFetch<string>({url: `/update`, method: 'POST'}, options);
-};
 export type GenerateSitemapResult = NonNullable<
   Awaited<ReturnType<typeof generateSitemap>>
 >;
@@ -87,7 +79,4 @@ export type GetBootstrapDataResult = NonNullable<
 >;
 export type GetMobileBootstrapDataResult = NonNullable<
   Awaited<ReturnType<typeof getMobileBootstrapData>>
->;
-export type RunUpdateResult = NonNullable<
-  Awaited<ReturnType<typeof runUpdate>>
 >;

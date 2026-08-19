@@ -18,8 +18,22 @@ export type Product = {
   position: number;
   recommended: boolean;
   free: boolean;
+  is_default: boolean;
   hidden: boolean;
   trial_period_days: number;
+  /** @nullable */
+  storefront_benefits: unknown[] | null;
+  pricing_features: (
+    | string
+    | 'Unlimited products'
+    | 'Unlimited free products'
+    | 'Unlimited paid products'
+    | 'Unlimited storage'
+    | 'Unlimited storefronts'
+    | 'Unlimited workspaces'
+    | 'No platform fees'
+    | 'Tracking pixels'
+  )[];
   /** @nullable */
   created_at: string | null;
   permissions?: ProductPermissionsItem[];

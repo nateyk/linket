@@ -489,6 +489,20 @@ class EntitlementSystemTest extends TestCase
         $response->assertStatus(200);
     }
 
+    public function testPricingFeaturesDerivedFromPlanBenefits(): void
+    {
+        $plan = Product::where('is_default', true)->first();
+
+        $resource = new \Common\Billing\Products\ProductResource($plan);
+        $data = $resource->toArray(request());
+
+        $this->assertIsArray($data['pricing_features']);
+        $this->assertContains('5 free products', $data['pricing_features']);
+        $this->assertContains('5 paid products', $data['pricing_features']);
+        $this->assertContains('1 GB storage', $data['pricing_features']);
+        $this->assertContains('5% platform fee', $data['pricing_features']);
+    }
+
     public function testMarkingNewDefaultPlanClearsOldDefault(): void
     {
         $admin = $this->createAdmin();

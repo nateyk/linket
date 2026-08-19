@@ -164,8 +164,9 @@ export const deleteLinks = (
   );
 };
 /**
- * Check if given password for link is valid.
- * @summary Validate link password
+ * @summary Validate link password.
+
+Check if given password for link is valid
  */
 export const validateLinkPassword = (
   validateLinkPasswordBody: ValidateLinkPasswordBody,

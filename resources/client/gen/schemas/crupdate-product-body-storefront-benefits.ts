@@ -8,10 +8,11 @@
 
 export type CrupdateProductBodyStorefrontBenefits = {
   /**
-   * @minimum 1
+   * @minimum 0
+   * @maximum 100
    * @nullable
    */
-  max_products?: number | null;
+  platform_fee_percent?: number | null;
   /**
    * @minimum 0
    * @maximum 10000
@@ -19,8 +20,37 @@ export type CrupdateProductBodyStorefrontBenefits = {
    */
   commission_bps?: number | null;
   /**
-   * @minimum 1
+   * @minimum 0
+   * @nullable
+   */
+  max_products?: number | null;
+  /**
+   * @minimum 0
+   * @nullable
+   */
+  max_free_products?: number | null;
+  /**
+   * @minimum 0
+   * @nullable
+   */
+  max_paid_products?: number | null;
+  /**
+   * @minimum 0
    * @nullable
    */
   max_upload_bytes?: number | null;
+  /**
+   * @minimum 0
+   * @nullable
+   */
+  max_storefronts?: number | null;
+  /**
+   * @minimum 0
+   * @nullable
+   */
+  max_workspaces?: number | null;
+  /** @nullable */
+  tracking_pixels_enabled?: boolean | null;
+  /** @nullable */
+  advanced_analytics_enabled?: boolean | null;
 };

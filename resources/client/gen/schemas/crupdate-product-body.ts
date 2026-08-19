@@ -21,7 +21,9 @@ export type CrupdateProductBody = {
   position?: number;
   hidden?: boolean;
   free?: boolean;
+  active?: boolean;
   feature_list?: string[];
+  is_default?: boolean;
   /**
    * @minimum 0
    * @maximum 14

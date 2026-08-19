@@ -6,6 +6,9 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export type RegisterPurchaseCode200 = {
-  purchase_code: string;
+export type AdminProductReviewsIndex200MetaLinksItem = {
+  /** @nullable */
+  url: string | null;
+  label: string;
+  active: boolean;
 };

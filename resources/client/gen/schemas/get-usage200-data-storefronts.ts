@@ -6,7 +6,9 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export type ProductsStore422 = {
-  /** Error overview. */
-  message: string;
+export type GetUsage200DataStorefronts = {
+  /** @minimum 0 */
+  used: number;
+  /** @nullable */
+  total: string | null;
 };
