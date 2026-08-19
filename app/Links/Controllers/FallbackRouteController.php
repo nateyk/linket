@@ -6,6 +6,7 @@ use App\Http\Controllers\LandingPageController;
 use App\QrCodes\Controllers\QrCodesController;
 use App\Links\Actions\LinkeablePublicPolicy;
 use App\Analytics\Actions\LogTrackedEvent;
+use App\Entitlements\Entitlements;
 use App\Biolinks\Models\Biolink;
 use App\Folders\Models\Folder;
 use App\Links\Models\Link;
@@ -122,6 +123,7 @@ class FallbackRouteController extends Controller
             );
         } elseif ($renderType === Linkeable::RENDER_TYPE_REDIRECT_WITH_DELAY) {
             $data = $linkeable->getFrontendRenderData();
+            $data['pixelsEnabled'] = $this->pixelsEnabledForLinkeable($linkeable);
             return response()->view(
                 'redirects.direct',
                 $data,
@@ -136,6 +138,21 @@ class FallbackRouteController extends Controller
             'noPrerender' => !!$linkeable->password,
             ...$data,
         ]);
+    }
+
+    private function pixelsEnabledForLinkeable(Linkeable $linkeable): bool
+    {
+        $ownerId = $linkeable->workspace_id
+            ? \DB::table('workspaces')->where('id', $linkeable->workspace_id)->value('owner_id')
+            : $linkeable->user_id;
+        $owner = $ownerId ? \App\Models\User::find($ownerId) : null;
+
+        return $owner
+            ? app(Entitlements::class)->enabled(
+                $owner,
+                'tracking_pixels_enabled',
+            )
+            : true;
     }
 
     protected function parsePath(string $path = ''): array|null

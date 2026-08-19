@@ -512,6 +512,47 @@ class EntitlementSystemTest extends TestCase
         $this->assertFalse($defaultPlan->fresh()->is_default);
     }
 
+    public function testPixelExecutionSkippedWhenPlanDoesNotEnableTrackingPixels(): void
+    {
+        $creator = $this->createCreator();
+        $workspace = $creator->workspaces()->first();
+
+        $plan = $creator->getSubscriptionProduct();
+        $plan->update(['storefront_benefits' => array_merge($plan->storefront_benefits ?? [], [
+            'tracking_pixels_enabled' => false,
+        ])]);
+        $creator->refresh();
+
+        $link = \App\Links\Models\Link::query()->create([
+            'type' => 'direct',
+            'back_half' => Str::random(6),
+            'long_url' => 'https://example.com/redirect-target',
+            'user_id' => $creator->id,
+            'workspace_id' => $workspace->id,
+        ]);
+        $pixel = \App\TrackingPixels\Models\TrackingPixel::query()->create([
+            'name' => 'Test Pixel',
+            'type' => 'facebook',
+            'pixel_id' => '123456',
+            'user_id' => $creator->id,
+            'workspace_id' => $workspace->id,
+        ]);
+        $link->pixels()->attach($pixel->id);
+
+        $response = $this->get('/' . $link->back_half);
+
+        $response->assertStatus(301);
+        $this->assertStringNotContainsString('facebook.com', $response->getContent() ?? '');
+
+        $plan->update(['storefront_benefits' => array_merge($plan->storefront_benefits ?? [], [
+            'tracking_pixels_enabled' => true,
+        ])]);
+        $creator->refresh();
+
+        $response = $this->get('/' . $link->back_half);
+        $this->assertStringContainsString('facebook.com', $response->getContent() ?? '');
+    }
+
     private function createAdmin(): User
     {
         $user = User::query()->forceCreate([

@@ -16,9 +16,11 @@
 
         <title>{{ $data->name }}</title>
 
-        @foreach ($data->getTrackingPixels() as $pixel)
-            @include("pixels.{$pixel['type']}", ['pixel' => $pixel])
-        @endforeach
+        @if ($pixelsEnabled ?? true)
+            @foreach ($data->getTrackingPixels() as $pixel)
+                @include("pixels.{$pixel['type']}", ['pixel' => $pixel])
+            @endforeach
+        @endif
 
         @yield('head-end')
 
