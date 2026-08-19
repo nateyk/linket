@@ -604,4 +604,174 @@ class EntitlementSystemTest extends TestCase
 
         return $user;
     }
+    public function testConfigDrivenLimitChangeAppliesImmediately(): void
+    {
+        $creator = $this->createCreator();
+        $workspace = $creator->workspaces()->first();
+
+        $plan = $creator->getSubscriptionProduct();
+        $plan->update(['storefront_benefits' => array_merge($plan->storefront_benefits ?? [], [
+            'max_paid_products' => 2,
+        ])]);
+        $creator->refresh();
+
+        $file = FileEntry::query()->create([
+            'name' => 'test.pdf',
+            'file_name' => 'test.pdf',
+            'mime' => 'application/pdf',
+            'extension' => 'pdf',
+            'file_size' => 100,
+            'workspace_id' => $workspace->id,
+            'owner_id' => $creator->id,
+        ]);
+
+        foreach ([1000, 2000] as $price) {
+            DigitalProduct::query()->create([
+                'uuid' => Str::uuid(),
+                'workspace_id' => $workspace->id,
+                'user_id' => $creator->id,
+                'title' => "Product $price",
+                'price_cents' => $price,
+                'currency' => 'ETB',
+                'status' => 'draft',
+            ]);
+        }
+
+        $response = $this->stateful()->actingAs($creator)
+            ->post('/api/v1/digital-products', [
+                'title' => 'Third Product',
+                'price_cents' => 3000,
+                'currency' => 'ETB',
+                'file_ids' => [$file->id],
+            ]);
+        $response->assertStatus(422);
+
+        $plan->update(['storefront_benefits' => array_merge($plan->storefront_benefits ?? [], [
+            'max_paid_products' => 3,
+        ])]);
+        $creator->refresh();
+
+        $response = $this->stateful()->actingAs($creator)
+            ->post('/api/v1/digital-products', [
+                'title' => 'Third Product',
+                'price_cents' => 3000,
+                'currency' => 'ETB',
+                'file_ids' => [$file->id],
+            ]);
+        $response->assertStatus(201);
+
+        $response = $this->stateful()->actingAs($creator)
+            ->post('/api/v1/digital-products', [
+                'title' => 'Fourth Product',
+                'price_cents' => 4000,
+                'currency' => 'ETB',
+                'file_ids' => [$file->id],
+            ]);
+        $response->assertStatus(422);
+    }
+
+    public function testDowngradeFallsBackToDefaultPlanDataIntact(): void
+    {
+        $creator = $this->createCreator();
+        $workspace = $creator->workspaces()->first();
+        $freePlan = Product::where('is_default', true)->first();
+
+        $proPlan = Product::create([
+            'name' => 'Pro Test',
+            'uuid' => Str::uuid(),
+            'free' => false,
+            'position' => 3,
+            'storefront_benefits' => [
+                'platform_fee_percent' => 0.0,
+                'commission_bps' => 0,
+                'max_products' => null,
+                'max_free_products' => null,
+                'max_paid_products' => null,
+                'max_upload_bytes' => null,
+                'max_storefronts' => null,
+                'max_workspaces' => null,
+                'tracking_pixels_enabled' => true,
+            ],
+        ]);
+        $subscription = \Common\Billing\Subscription::query()->create([
+            'user_id' => $creator->id,
+            'product_id' => $proPlan->id,
+            'price_id' => \Common\Billing\Models\Price::query()->create([
+                'product_id' => $proPlan->id,
+                'amount' => 5000,
+                'currency' => 'ETB',
+                'interval' => 'month',
+                'interval_count' => 1,
+            ])->id,
+            'gateway_name' => 'none',
+            'gateway_status' => 'active',
+            'renews_at' => now()->addDays(30),
+            'ends_at' => null,
+        ]);
+        $creator->refresh();
+
+        // over free limits while on Pro (free plan allows 5 paid products)
+        foreach ([1000, 2000, 3000, 4000, 5000, 6000] as $price) {
+            DigitalProduct::query()->create([
+                'uuid' => Str::uuid(),
+                'workspace_id' => $workspace->id,
+                'user_id' => $creator->id,
+                'title' => "Pro Product $price",
+                'price_cents' => $price,
+                'currency' => 'ETB',
+                'status' => 'approved',
+            ]);
+        }
+        \App\Biolinks\Models\Biolink::query()->create([
+            'back_half' => Str::random(5),
+            'name' => 'Second Storefront',
+            'user_id' => $creator->id,
+            'workspace_id' => $workspace->id,
+        ]);
+
+        // expire subscription
+        $subscription->update(['ends_at' => now()->subDay(), 'renews_at' => null]);
+        $creator->refresh();
+
+        // effective plan falls back to default
+        $this->assertSame($freePlan->id, $creator->getSubscriptionProduct()->id);
+
+        // data intact
+        $this->assertSame(
+            6,
+            DigitalProduct::where('workspace_id', $workspace->id)->count(),
+        );
+
+        // no new resources allowed
+        $file = FileEntry::query()->create([
+            'name' => 'test.pdf',
+            'file_name' => 'test.pdf',
+            'mime' => 'application/pdf',
+            'extension' => 'pdf',
+            'file_size' => 100,
+            'workspace_id' => $workspace->id,
+            'owner_id' => $creator->id,
+        ]);
+        $response = $this->stateful()->actingAs($creator)
+            ->post('/api/v1/digital-products', [
+                'title' => 'Downgrade Product',
+                'price_cents' => 5000,
+                'currency' => 'ETB',
+                'file_ids' => [$file->id],
+            ]);
+        $response->assertStatus(422);
+
+        // upgrade restores immediately
+        $subscription->update(['ends_at' => null]);
+        $creator->refresh();
+        $response = $this->stateful()->actingAs($creator)
+            ->post('/api/v1/digital-products', [
+                'title' => 'Upgraded Product',
+                'price_cents' => 5000,
+                'currency' => 'ETB',
+                'file_ids' => [$file->id],
+            ]);
+        $response->assertStatus(201);
+    }
+
 }
