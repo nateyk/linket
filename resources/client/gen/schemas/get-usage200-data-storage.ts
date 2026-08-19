@@ -9,5 +9,5 @@
 export type GetUsage200DataStorage = {
   used: number;
   /** @nullable */
-  total: string | null;
+  total: number | null;
 };

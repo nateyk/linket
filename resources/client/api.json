@@ -4538,16 +4538,9 @@
                                                             "minimum": 0
                                                         },
                                                         "total": {
-                                                            "anyOf": [
-                                                                {
-                                                                    "type": "integer"
-                                                                },
-                                                                {
-                                                                    "type": "boolean"
-                                                                },
-                                                                {
-                                                                    "type": "null"
-                                                                }
+                                                            "type": [
+                                                                "integer",
+                                                                "null"
                                                             ]
                                                         }
                                                     },
@@ -4565,7 +4558,7 @@
                                                         },
                                                         "total": {
                                                             "type": [
-                                                                "string",
+                                                                "integer",
                                                                 "null"
                                                             ]
                                                         },
@@ -4620,7 +4613,7 @@
                                                         },
                                                         "total": {
                                                             "type": [
-                                                                "string",
+                                                                "integer",
                                                                 "null"
                                                             ]
                                                         }
@@ -4639,7 +4632,7 @@
                                                         },
                                                         "total": {
                                                             "type": [
-                                                                "string",
+                                                                "integer",
                                                                 "null"
                                                             ]
                                                         }
@@ -4657,7 +4650,7 @@
                                                         },
                                                         "total": {
                                                             "type": [
-                                                                "string",
+                                                                "integer",
                                                                 "null"
                                                             ]
                                                         }
@@ -4676,7 +4669,7 @@
                                                         },
                                                         "total": {
                                                             "type": [
-                                                                "string",
+                                                                "integer",
                                                                 "null"
                                                             ]
                                                         }
@@ -4695,7 +4688,7 @@
                                                         },
                                                         "total": {
                                                             "type": [
-                                                                "string",
+                                                                "integer",
                                                                 "null"
                                                             ]
                                                         }

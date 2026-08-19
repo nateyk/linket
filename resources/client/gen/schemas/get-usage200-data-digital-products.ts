@@ -13,7 +13,7 @@ export type GetUsage200DataDigitalProducts = {
   /** @minimum 0 */
   used: number;
   /** @nullable */
-  total: string | null;
+  total: number | null;
   create: GetUsage200DataDigitalProductsCreate;
   delete: GetUsage200DataDigitalProductsDelete;
   update: GetUsage200DataDigitalProductsUpdate;

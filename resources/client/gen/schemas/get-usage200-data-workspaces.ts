@@ -10,5 +10,5 @@ export type GetUsage200DataWorkspaces = {
   /** @minimum 0 */
   used: number;
   /** @nullable */
-  total: string | null;
+  total: number | null;
 };

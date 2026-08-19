@@ -86,10 +86,12 @@ class UsageController extends Controller
                 'custom_domains' => $this->getUsage(CustomDomain::class),
                 'tracked_events' => [
                     'used' => (new GetMonthlyClicks())->forUser($owner),
+                    /** @var int|null */
                     'total' => is_int($clickMaxCount) ? $clickMaxCount : null,
                 ],
                 'digital_products' => [
                     'used' => $digitalProducts->count(),
+                    /** @var int|null */
                     'total' => $benefits['max_products'] ?? null,
                     'create' => ['allowed' => $benefits['max_products'] === null || $digitalProducts->count() < $benefits['max_products']],
                     'delete' => ['allowed' => true],
@@ -97,22 +99,27 @@ class UsageController extends Controller
                 ],
                 'free_products' => [
                     'used' => $freeProductsUsed,
+                    /** @var int|null */
                     'total' => $benefits['max_free_products'] ?? null,
                 ],
                 'paid_products' => [
                     'used' => $paidProductsUsed,
+                    /** @var int|null */
                     'total' => $benefits['max_paid_products'] ?? null,
                 ],
                 'storage' => [
                     'used' => $storageUsed,
+                    /** @var int|null */
                     'total' => $benefits['max_upload_bytes'] ?? null,
                 ],
                 'storefronts' => [
                     'used' => $storefrontsUsed,
+                    /** @var int|null */
                     'total' => $benefits['max_storefronts'] ?? null,
                 ],
                 'workspaces' => [
                     'used' => $workspacesUsed,
+                    /** @var int|null */
                     'total' => $benefits['max_workspaces'] ?? null,
                 ],
             ],

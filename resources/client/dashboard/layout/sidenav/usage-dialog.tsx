@@ -14,13 +14,17 @@ import {FormattedDate} from '@ui/i18n/formatted-date';
 import {FormattedNumber} from '@ui/i18n/formatted-number';
 import {Trans} from '@ui/i18n/trans';
 import {Skeleton} from '@ui/skeleton/skeleton';
+import {prettyBytes} from '@ui/utils/files/pretty-bytes';
 import {
   CircleDollarSignIcon,
+  GiftIcon,
+  HardDriveIcon,
   MousePointerClickIcon,
+  PackageIcon,
   StoreIcon,
-  WalletCardsIcon,
+  UsersIcon,
 } from 'lucide-react';
-import {ReactNode} from 'react';
+import {ReactElement, ReactNode} from 'react';
 
 export const usageLabels: Partial<
   Record<
@@ -28,10 +32,11 @@ export const usageLabels: Partial<
     {
       label: ReactNode;
       icon: ReactNode;
+      formatUsed?: (used: number) => string | number | ReactElement;
     }
   >
 > = {
-  biolinks: {
+  storefronts: {
     label: <Trans message="Storefronts" />,
     icon: <StoreIcon className="size-4" />,
   },
@@ -42,6 +47,27 @@ export const usageLabels: Partial<
   tracking_pixels: {
     label: <Trans message="Tracking pixels" />,
     icon: sharedDashboardIcons.pixels,
+  },
+  digital_products: {
+    label: <Trans message="Products" />,
+    icon: <PackageIcon className="size-4" />,
+  },
+  free_products: {
+    label: <Trans message="Free products" />,
+    icon: <GiftIcon className="size-4" />,
+  },
+  paid_products: {
+    label: <Trans message="Paid products" />,
+    icon: <CircleDollarSignIcon className="size-4" />,
+  },
+  storage: {
+    label: <Trans message="Storage" />,
+    icon: <HardDriveIcon className="size-4" />,
+    formatUsed: used => prettyBytes(used),
+  },
+  workspaces: {
+    label: <Trans message="Workspaces" />,
+    icon: <UsersIcon className="size-4" />,
   },
 } as const;
 
@@ -104,33 +130,38 @@ type GridItemProps = {
 };
 
 function GridItem({label, usage}: GridItemProps) {
-  const isAtOrOverLimit = usage.total && usage.used >= usage.total;
+  const unlimited = usage.total === null;
+  const isAtOrOverLimit = usage.total !== null && usage.used >= usage.total;
 
-  const meterValue = usage.total ? (
-    <div>
-      <Trans
-        message=":used of :total"
-        values={{
-          used: <FormattedNumber value={usage.used} notation="compact" />,
-          total: <FormattedNumber value={usage.total} notation="compact" />,
-        }}
-      />
-    </div>
+  const formattedUsed = label.formatUsed
+    ? label.formatUsed(usage.used)
+    : <FormattedNumber value={usage.used} notation="compact" />;
+
+  const meterValue = unlimited ? (
+    <Trans message="Unlimited" />
   ) : (
-    <FormattedNumber value={usage.used} notation="compact" />
+    <Trans
+      message=":used of :total"
+      values={{
+        used: formattedUsed,
+        total: <FormattedNumber value={usage.total!} notation="compact" />,
+      }}
+    />
   );
 
   return (
-    <Meter value={usage.total ? usage.used : 0}>
+    <Meter value={unlimited ? 0 : usage.used}>
       <MeterLabel>
         {label.icon} {label.label}
       </MeterLabel>
       {meterValue}
-      <MeterTrack>
-        <MeterIndicator
-          className={isAtOrOverLimit ? 'bg-destructive' : 'bg-primary'}
-        />
-      </MeterTrack>
+      {!unlimited && (
+        <MeterTrack>
+          <MeterIndicator
+            className={isAtOrOverLimit ? 'bg-destructive' : 'bg-primary'}
+          />
+        </MeterTrack>
+      )}
     </Meter>
   );
 }
