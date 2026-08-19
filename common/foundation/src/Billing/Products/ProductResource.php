@@ -27,8 +27,26 @@ class ProductResource extends JsonResource
             'position' => $this->position,
             'recommended' => $this->recommended,
             'free' => $this->free,
+            'is_default' => $this->is_default ?? false,
+            'active' => $this->active,
             'hidden' => $this->hidden,
             'trial_period_days' => $this->trial_period_days,
+            /**
+             * @var array{
+             *     platform_fee_percent?: int|null,
+             *     commission_bps?: int|null,
+             *     max_products?: int|null,
+             *     max_free_products?: int|null,
+             *     max_paid_products?: int|null,
+             *     max_upload_bytes?: int|null,
+             *     max_storefronts?: int|null,
+             *     max_workspaces?: int|null,
+             *     tracking_pixels_enabled?: bool|null,
+             *     advanced_analytics_enabled?: bool|null,
+             * }|null
+             */
+            'storefront_benefits' => $this->storefront_benefits,
+            'pricing_features' => $this->pricingFeatures(),
             'created_at' => $this->created_at,
             'permissions' => $this->whenLoaded(
                 'permissions',
@@ -62,5 +80,51 @@ class ProductResource extends JsonResource
                 ),
             ),
         ];
+    }
+
+    private function pricingFeatures(): array
+    {
+        $benefits = app(\App\Entitlements\Entitlements::class)
+            ->benefitsFor($this->resource);
+        $features = [];
+
+        $free = $benefits['max_free_products'] ?? null;
+        $paid = $benefits['max_paid_products'] ?? null;
+        if ($free === null && $paid === null) {
+            $features[] = 'Unlimited products';
+        } else {
+            $features[] = $free === null
+                ? 'Unlimited free products'
+                : "$free free products";
+            $features[] = $paid === null
+                ? 'Unlimited paid products'
+                : "$paid paid products";
+        }
+
+        $bytes = $benefits['max_upload_bytes'] ?? null;
+        $features[] = $bytes === null
+            ? 'Unlimited storage'
+            : \App\Entitlements\Entitlements::formatBytes($bytes) . ' storage';
+
+        $storefronts = $benefits['max_storefronts'] ?? null;
+        $features[] = $storefronts === null
+            ? 'Unlimited storefronts'
+            : "$storefronts storefronts";
+
+        $workspaces = $benefits['max_workspaces'] ?? null;
+        $features[] = $workspaces === null
+            ? 'Unlimited workspaces'
+            : "$workspaces workspaces";
+
+        $fee = (float) ($benefits['platform_fee_percent'] ?? 0);
+        $features[] = $fee > 0
+            ? rtrim(rtrim(number_format($fee, 2), '0'), '.') . '% platform fee'
+            : 'No platform fees';
+
+        if (!empty($benefits['tracking_pixels_enabled'])) {
+            $features[] = 'Tracking pixels';
+        }
+
+        return $features;
     }
 }

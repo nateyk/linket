@@ -8,6 +8,10 @@ import {LinkIframeRenderer} from '@app/short-links/renderers/link-iframe-rendere
 import {LinkOverlayRenderer} from '@app/short-links/renderers/link-overlay-renderer';
 import {LinkPageRenderer} from '@app/short-links/renderers/link-page-renderer';
 import {LinkSplashRenderer} from '@app/short-links/renderers/link-splash-renderer';
+import {
+  PublicDigitalProductOrderSuccessPage,
+  PublicDigitalProductPage,
+} from '@app/digital-products/public/digital-product-public-pages';
 import {NotFoundPage} from '@common/ui/not-found-page/not-found-page';
 import {getBootstrapData} from '@ui/bootstrap-data/bootstrap-data-store';
 import {useState} from 'react';
@@ -15,7 +19,21 @@ import {useState} from 'react';
 type Linkeable = LinkType | Folder | Biolink;
 
 export function Component() {
-  const linkeablePage = getBootstrapData().loaders?.linkeablePage;
+  const loaders = getBootstrapData().loaders;
+  const linkeablePage = loaders?.linkeablePage;
+
+  if (loaders?.digitalProductPage) {
+    return <PublicDigitalProductPage data={loaders.digitalProductPage.data} />;
+  }
+
+  if (loaders?.digitalProductOrderSuccessPage) {
+    return (
+      <PublicDigitalProductOrderSuccessPage
+        data={loaders.digitalProductOrderSuccessPage.data}
+      />
+    );
+  }
+
   return linkeablePage ? (
     <LinkeableRenderer linkeable={linkeablePage.data} />
   ) : (

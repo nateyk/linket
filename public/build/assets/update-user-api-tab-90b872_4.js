@@ -1,1 +1,0 @@
-import{Xr as e}from"./icons-Cr9rzYDV.js";import{v as t}from"./chunk-6CSD65Y2-DB1nYL3F.js";import{t as n}from"./access-token-panel-CNBwB3f2.js";var r=e();function i(){return(0,r.jsx)(n,{user:t()})}export{i as Component};

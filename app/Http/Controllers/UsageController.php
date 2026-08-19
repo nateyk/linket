@@ -9,13 +9,17 @@ use App\Links\Models\Link;
 use App\LinkOverlays\Models\LinkOverlay;
 use App\LinkPages\Models\LinkPage;
 use App\QrCodes\Models\QrCode;
+use App\Storefront\Models\DigitalProduct;
+use App\Storefront\StorefrontBenefits;
 use App\TrackingPixels\Models\TrackingPixel;
 use Common\Core\Policies\PolicyFailReason;
 use Common\Domains\CustomDomain;
 use Common\Workspaces\ActiveWorkspace;
+use Common\Workspaces\Models\Workspace;
 use Common\API\ExcludeRoutesFromPublicDocs;
 use Illuminate\Auth\Access\Response;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 
@@ -42,11 +46,33 @@ class UsageController extends Controller
     public function __invoke()
     {
         $owner = ActiveWorkspace::get()->getOwnerUser();
+        $benefits = app(StorefrontBenefits::class)->forCreator($owner);
+        $workspaceId = ActiveWorkspace::get()->id;
 
         $clickMaxCount = $owner->getRestrictionValue(
             'links.create',
             'click_count',
         );
+
+        $digitalProducts = DigitalProduct::query()
+            ->where('workspace_id', $workspaceId)
+            ->whereNull('deleted_at')
+            ->get();
+
+        $freeProductsUsed = $digitalProducts->where('price_cents', '<=', 0)->count();
+        $paidProductsUsed = $digitalProducts->where('price_cents', '>', 0)->count();
+
+        $storageUsed = (int) DB::table('digital_product_files')
+            ->join('file_entries', 'file_entries.id', '=', 'digital_product_files.file_entry_id')
+            ->where('file_entries.workspace_id', $workspaceId)
+            ->sum('file_entries.file_size');
+
+        $storefrontsUsed = Biolink::query()
+            ->where('workspace_id', $workspaceId)
+            ->whereNull('deleted_at')
+            ->count();
+
+        $workspacesUsed = Workspace::where('owner_id', $owner->id)->count();
 
         return response()->json([
             'data' => [
@@ -59,10 +85,42 @@ class UsageController extends Controller
                 'tracking_pixels' => $this->getUsage(TrackingPixel::class),
                 'custom_domains' => $this->getUsage(CustomDomain::class),
                 'tracked_events' => [
-                    /** @var int */
                     'used' => (new GetMonthlyClicks())->forUser($owner),
                     /** @var int|null */
                     'total' => is_int($clickMaxCount) ? $clickMaxCount : null,
+                ],
+                'digital_products' => [
+                    'used' => $digitalProducts->count(),
+                    /** @var int|null */
+                    'total' => $benefits['max_products'] ?? null,
+                    'create' => ['allowed' => $benefits['max_products'] === null || $digitalProducts->count() < $benefits['max_products']],
+                    'delete' => ['allowed' => true],
+                    'update' => ['allowed' => true],
+                ],
+                'free_products' => [
+                    'used' => $freeProductsUsed,
+                    /** @var int|null */
+                    'total' => $benefits['max_free_products'] ?? null,
+                ],
+                'paid_products' => [
+                    'used' => $paidProductsUsed,
+                    /** @var int|null */
+                    'total' => $benefits['max_paid_products'] ?? null,
+                ],
+                'storage' => [
+                    'used' => $storageUsed,
+                    /** @var int|null */
+                    'total' => $benefits['max_upload_bytes'] ?? null,
+                ],
+                'storefronts' => [
+                    'used' => $storefrontsUsed,
+                    /** @var int|null */
+                    'total' => $benefits['max_storefronts'] ?? null,
+                ],
+                'workspaces' => [
+                    'used' => $workspacesUsed,
+                    /** @var int|null */
+                    'total' => $benefits['max_workspaces'] ?? null,
                 ],
             ],
         ]);

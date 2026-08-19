@@ -21,7 +21,7 @@ class BiolinkWidgetResource extends JsonResource
             'pinned' => $this->pinned,
             /** @var array<string, string> */
             'config' => $this->config,
-            /** @var 'image' | 'text' | 'socials' | 'youtube' | 'soundcloud' | 'vimeo' | 'spotify' | 'twitch' | 'tiktok' */
+            /** @var 'image' | 'text' | 'socials' | 'youtube' | 'soundcloud' | 'vimeo' | 'spotify' | 'twitch' | 'tiktok' | 'shop' */
             'type' => $this->type,
             /** @var 'biolinkWidget' */
             'model_type' => $this->model_type,

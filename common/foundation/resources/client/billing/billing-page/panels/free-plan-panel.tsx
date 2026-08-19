@@ -2,6 +2,7 @@ import {BillingPlanPanel} from '@common/billing/billing-page/billing-plan-panel'
 import {FormattedPrice} from '@common/billing/formatted-price';
 import {LinkButton} from '@shadcn/button/button';
 import {FormattedDateTimeRange} from '@ui/i18n/formatted-date-time-range';
+import {getSiteCurrency} from '@ui/i18n/format-money';
 import {Trans} from '@ui/i18n/trans';
 import {useCurrentDateTime} from '@ui/i18n/use-current-date-time';
 
@@ -21,7 +22,7 @@ export function FreePlanPanel() {
               className="mb-0.5 text-xl"
               price={{
                 amount: 0,
-                currency: 'USD',
+                currency: getSiteCurrency(),
                 interval: 'month',
                 interval_count: 1,
               }}

@@ -1,1 +1,0 @@
-import{Xr as e}from"./icons-Cr9rzYDV.js";import{n as t}from"./use-auth--K7Bv-DW.js";import{t as n}from"./trans-DzGLMyji.js";import{r}from"./button-BGNpXFOU.js";var i=e();function a(e){let{isSubscribed:a}=t();return(0,i.jsx)(r,{to:a?`/account-settings/billing/change-plan`:`/pricing`,variant:`outline`,color:`primary`,...e,children:(0,i.jsx)(n,{message:`Upgrade`})})}export{a as t};

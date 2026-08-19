@@ -1,1 +1,0 @@
-import{a as e}from"./trans-DzGLMyji.js";var t=e(()=>Intl.supportedValuesOf(`timeZone`)),n=e(()=>{let e=t(),n={};for(let t of e){let[e,r]=t.split(`/`);n[e]||(n[e]=[]),n[e].push(t)}return n});export{t as n,n as t};

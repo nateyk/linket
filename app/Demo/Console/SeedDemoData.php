@@ -70,8 +70,7 @@ class SeedDemoData extends Command
 
         try {
             if (Product::query()->count() === 0) {
-                $this->generateBasicPlan();
-                $this->generateStandardPlan();
+                $this->generateFreePlan();
                 $this->generateProPlan();
             }
         } catch (\Exception $e) {
@@ -180,6 +179,7 @@ class SeedDemoData extends Command
                     'radius' => 'rounded-full',
                     'textColor' => '#ffffff',
                 ],
+                'layout' => 'profile-sidebar',
             ],
         ]);
 
@@ -367,7 +367,7 @@ class SeedDemoData extends Command
         DB::commit();
     }
 
-    protected function generateBasicPlan()
+    protected function generateFreePlan()
     {
         [$featureList, $permissions] = $this->getPlanFeaturesAndPermission([
             'visitors' => 1000,
@@ -377,77 +377,24 @@ class SeedDemoData extends Command
             'folders' => 10,
             'pages' => 10,
             'overlays' => 10,
-            'pixels' => 10,
+            'pixels' => 0,
         ]);
 
         (new CrupdateProduct())->execute(
             [
-                'name' => 'Basic',
+                'name' => 'Free',
+                'free' => true,
+                'is_default' => true,
                 'position' => 1,
                 'feature_list' => $featureList,
                 'permissions' => $permissions,
+                'storefront_benefits' => config('storefront.demo_benefits.free'),
                 'prices' => [
                     [
-                        'amount' => 10,
-                        'currency' => 'USD',
+                        'amount' => 0,
+                        'currency' => 'ETB',
                         'interval' => 'month',
                         'interval_count' => 1,
-                    ],
-                    [
-                        'amount' => 54,
-                        'currency' => 'USD',
-                        'interval' => 'month',
-                        'interval_count' => 6,
-                    ],
-                    [
-                        'amount' => 96,
-                        'currency' => 'USD',
-                        'interval' => 'month',
-                        'interval_count' => 12,
-                    ],
-                ],
-            ],
-            syncProduct: true,
-        );
-    }
-
-    protected function generateStandardPlan()
-    {
-        [$featureList, $permissions] = $this->getPlanFeaturesAndPermission([
-            'visitors' => 3000,
-            'links' => 150,
-            'biolinks' => 1,
-            'qr_codes' => 150,
-            'folders' => 30,
-            'pages' => 30,
-            'overlays' => 30,
-            'pixels' => 30,
-        ]);
-        (new CrupdateProduct())->execute(
-            [
-                'name' => 'Standard',
-                'position' => 2,
-                'feature_list' => $featureList,
-                'permissions' => $permissions,
-                'recommended' => true,
-                'prices' => [
-                    [
-                        'amount' => 15,
-                        'currency' => 'USD',
-                        'interval' => 'month',
-                        'interval_count' => 1,
-                    ],
-                    [
-                        'amount' => 81,
-                        'currency' => 'USD',
-                        'interval' => 'month',
-                        'interval_count' => 6,
-                    ],
-                    [
-                        'amount' => 144,
-                        'currency' => 'USD',
-                        'interval' => 'month',
-                        'interval_count' => 12,
                     ],
                 ],
             ],
@@ -461,25 +408,27 @@ class SeedDemoData extends Command
         (new CrupdateProduct())->execute(
             [
                 'name' => 'Pro',
-                'position' => 3,
+                'position' => 2,
+                'recommended' => true,
                 'feature_list' => $featureList,
                 'permissions' => $permissions,
+                'storefront_benefits' => config('storefront.demo_benefits.pro'),
                 'prices' => [
                     [
-                        'amount' => 20,
-                        'currency' => 'USD',
+                        'amount' => 9.99,
+                        'currency' => 'ETB',
                         'interval' => 'month',
                         'interval_count' => 1,
                     ],
                     [
-                        'amount' => 135,
-                        'currency' => 'USD',
+                        'amount' => 54,
+                        'currency' => 'ETB',
                         'interval' => 'month',
                         'interval_count' => 6,
                     ],
                     [
-                        'amount' => 240,
-                        'currency' => 'USD',
+                        'amount' => 96,
+                        'currency' => 'ETB',
                         'interval' => 'month',
                         'interval_count' => 12,
                     ],

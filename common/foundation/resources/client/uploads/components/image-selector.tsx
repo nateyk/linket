@@ -184,13 +184,17 @@ function ImageSelectorInput({
 function ImageSelectorSquare({
   className,
   disabled,
+  fit = 'contain',
   onChange,
   onFileSelected,
   placeholderVariant = 'text',
   uploadMetadata,
   uploadType,
   value,
-}: ImageSelectorProps & {placeholderVariant?: 'dropzone' | 'icon' | 'text'}) {
+}: ImageSelectorProps & {
+  fit?: 'contain' | 'cover';
+  placeholderVariant?: 'dropzone' | 'icon' | 'text';
+}) {
   const upload = useImageUpload({
     disabled,
     onChange,
@@ -210,7 +214,10 @@ function ImageSelectorSquare({
     >
       {value && (
         <div
-          className="absolute inset-1.5 z-10 size-[calc(100%-12px)] bg-contain bg-center bg-no-repeat"
+          className={cn(
+            'absolute inset-1.5 z-10 size-[calc(100%-12px)] bg-center bg-no-repeat',
+            fit === 'cover' ? 'bg-cover' : 'bg-contain',
+          )}
           style={value ? {backgroundImage: `url(${value})`} : undefined}
         />
       )}

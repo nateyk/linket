@@ -20,12 +20,14 @@ import {Trans} from '@ui/i18n/trans';
 import {useSettings} from '@ui/settings/use-settings';
 import {useMediaQuery} from '@ui/utils/hooks/use-media-query';
 import {
+  BadgeCheckIcon,
   ChevronLeftIcon,
   KeyIcon,
   LockIcon,
   SettingsIcon,
   StoreIcon,
   UsersIcon,
+  WalletCardsIcon,
   WebhookIcon,
 } from 'lucide-react';
 import {use} from 'react';
@@ -135,6 +137,22 @@ function AccountSettingsSidebar() {
                   icon={<LockIcon />}
                 >
                   <Trans message="Security" />
+                </Sidebar.MenuButton>
+              </Sidebar.MenuItem>
+              <Sidebar.MenuItem>
+                <Sidebar.MenuButton
+                  render={<NavLink to="/account-settings/verification" />}
+                  icon={<BadgeCheckIcon />}
+                >
+                  <Trans message="Verification" />
+                </Sidebar.MenuButton>
+              </Sidebar.MenuItem>
+              <Sidebar.MenuItem>
+                <Sidebar.MenuButton
+                  render={<NavLink to="/account-settings/payouts" />}
+                  icon={<WalletCardsIcon />}
+                >
+                  <Trans message="Payout settings" />
                 </Sidebar.MenuButton>
               </Sidebar.MenuItem>
               <Sidebar.MenuItem>

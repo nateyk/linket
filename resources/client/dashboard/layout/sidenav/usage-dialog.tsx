@@ -14,8 +14,17 @@ import {FormattedDate} from '@ui/i18n/formatted-date';
 import {FormattedNumber} from '@ui/i18n/formatted-number';
 import {Trans} from '@ui/i18n/trans';
 import {Skeleton} from '@ui/skeleton/skeleton';
-import {MousePointerClickIcon} from 'lucide-react';
-import {ReactNode} from 'react';
+import {prettyBytes} from '@ui/utils/files/pretty-bytes';
+import {
+  CircleDollarSignIcon,
+  GiftIcon,
+  HardDriveIcon,
+  MousePointerClickIcon,
+  PackageIcon,
+  StoreIcon,
+  UsersIcon,
+} from 'lucide-react';
+import {ReactElement, ReactNode} from 'react';
 
 export const usageLabels: Partial<
   Record<
@@ -23,40 +32,42 @@ export const usageLabels: Partial<
     {
       label: ReactNode;
       icon: ReactNode;
+      formatUsed?: (used: number) => string | number | ReactElement;
     }
   >
 > = {
-  links: {
-    label: <Trans message="Links" />,
-    icon: sharedDashboardIcons.links,
-  },
-  qr_codes: {
-    label: <Trans message="QR codes" />,
-    icon: sharedDashboardIcons['qr-codes'],
-  },
-  biolinks: {
-    label: <Trans message="Link in bio" />,
-    icon: sharedDashboardIcons.biolinks,
+  storefronts: {
+    label: <Trans message="Storefronts" />,
+    icon: <StoreIcon className="size-4" />,
   },
   tracked_events: {
     label: <Trans message="Tracked events" />,
-    icon: <MousePointerClickIcon />,
-  },
-  custom_domains: {
-    label: <Trans message="Custom domains" />,
-    icon: sharedDashboardIcons['custom-domains'],
-  },
-  link_overlays: {
-    label: <Trans message="Link overlays" />,
-    icon: sharedDashboardIcons['link-overlays'],
-  },
-  folders: {
-    label: <Trans message="Folders" />,
-    icon: sharedDashboardIcons.folders,
+    icon: <MousePointerClickIcon className="size-4" />,
   },
   tracking_pixels: {
     label: <Trans message="Tracking pixels" />,
     icon: sharedDashboardIcons.pixels,
+  },
+  digital_products: {
+    label: <Trans message="Products" />,
+    icon: <PackageIcon className="size-4" />,
+  },
+  free_products: {
+    label: <Trans message="Free products" />,
+    icon: <GiftIcon className="size-4" />,
+  },
+  paid_products: {
+    label: <Trans message="Paid products" />,
+    icon: <CircleDollarSignIcon className="size-4" />,
+  },
+  storage: {
+    label: <Trans message="Storage" />,
+    icon: <HardDriveIcon className="size-4" />,
+    formatUsed: used => prettyBytes(used),
+  },
+  workspaces: {
+    label: <Trans message="Workspaces" />,
+    icon: <UsersIcon className="size-4" />,
   },
 } as const;
 
@@ -119,33 +130,38 @@ type GridItemProps = {
 };
 
 function GridItem({label, usage}: GridItemProps) {
-  const isAtOrOverLimit = usage.total && usage.used >= usage.total;
+  const unlimited = usage.total === null;
+  const isAtOrOverLimit = usage.total !== null && usage.used >= usage.total;
 
-  const meterValue = usage.total ? (
-    <div>
-      <Trans
-        message=":used of :total"
-        values={{
-          used: <FormattedNumber value={usage.used} notation="compact" />,
-          total: <FormattedNumber value={usage.total} notation="compact" />,
-        }}
-      />
-    </div>
+  const formattedUsed = label.formatUsed
+    ? label.formatUsed(usage.used)
+    : <FormattedNumber value={usage.used} notation="compact" />;
+
+  const meterValue = unlimited ? (
+    <Trans message="Unlimited" />
   ) : (
-    <FormattedNumber value={usage.used} notation="compact" />
+    <Trans
+      message=":used of :total"
+      values={{
+        used: formattedUsed,
+        total: <FormattedNumber value={usage.total!} notation="compact" />,
+      }}
+    />
   );
 
   return (
-    <Meter value={usage.total ? usage.used : 0}>
+    <Meter value={unlimited ? 0 : usage.used}>
       <MeterLabel>
         {label.icon} {label.label}
       </MeterLabel>
       {meterValue}
-      <MeterTrack>
-        <MeterIndicator
-          className={isAtOrOverLimit ? 'bg-destructive' : 'bg-primary'}
-        />
-      </MeterTrack>
+      {!unlimited && (
+        <MeterTrack>
+          <MeterIndicator
+            className={isAtOrOverLimit ? 'bg-destructive' : 'bg-primary'}
+          />
+        </MeterTrack>
+      )}
     </Meter>
   );
 }

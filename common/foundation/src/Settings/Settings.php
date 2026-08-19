@@ -69,6 +69,7 @@ class Settings
         'captcha.t_secret_key',
         'incoming_email',
         'uploading',
+        'billing.chapa.webhook_secret',
     ];
 
     public function __construct()

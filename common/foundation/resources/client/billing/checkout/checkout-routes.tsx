@@ -3,6 +3,10 @@ import {RouteObject} from 'react-router';
 
 export const checkoutRoutes: RouteObject[] = [
   {
+    path: 'checkout/:productId/:priceId/chapa/return',
+    lazy: () => import('@common/billing/checkout/chapa/checkout-chapa-done'),
+  },
+  {
     path: 'checkout/:productId/:priceId',
     loader: () => notSubscribedGuard(),
     lazy: () => import('@common/billing/checkout/checkout'),

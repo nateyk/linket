@@ -288,21 +288,27 @@ return [
                 'items' => [
                     [
                         'type' => 'route',
-                        'label' => 'Short links',
-                        'action' => '/dashboard/links',
-                        'id' => 723,
+                        'label' => 'Home',
+                        'action' => '/dashboard',
+                        'id' => 'dashboard-home',
                     ],
                     [
                         'type' => 'route',
-                        'label' => 'QR codes',
-                        'action' => '/dashboard/qr-codes',
-                        'id' => 891,
-                    ],
-                    [
-                        'type' => 'route',
-                        'label' => 'Link in bio',
+                        'label' => 'My Card',
                         'action' => '/dashboard/biolinks',
                         'id' => 239,
+                    ],
+                    [
+                        'type' => 'route',
+                        'label' => 'My Products',
+                        'action' => '/dashboard/my-products',
+                        'id' => 'digital-products-dashboard',
+                    ],
+                    [
+                        'type' => 'route',
+                        'label' => 'Sales & Payouts',
+                        'action' => '/dashboard/sales-payouts',
+                        'id' => 'sales-payouts-dashboard',
                     ],
                     [
                         'type' => 'route',
@@ -310,44 +316,19 @@ return [
                         'action' => '/dashboard/insights',
                         'id' => 318,
                     ],
-                ],
-            ],
-            [
-                'name' => 'Dashboard secondary',
-                'id' => 'a02',
-                'positions' => ['dashboard-secondary'],
-                'items' => [
-                    [
-                        'type' => 'route',
-                        'label' => 'Folders',
-                        'action' => '/dashboard/folders',
-                        'id' => 586,
-                    ],
-                    [
-                        'type' => 'route',
-                        'label' => 'Custom domains',
-                        'action' => '/dashboard/custom-domains',
-                        'id' => 444,
-                    ],
-                    [
-                        'type' => 'route',
-                        'label' => 'CTA overlays',
-                        'action' => '/dashboard/link-overlays',
-                        'id' => 184,
-                    ],
                     [
                         'type' => 'route',
                         'label' => 'Tracking pixels',
                         'action' => '/dashboard/pixels',
                         'id' => 303,
                     ],
-                    [
-                        'type' => 'route',
-                        'label' => 'Link pages',
-                        'action' => '/dashboard/link-pages',
-                        'id' => 637,
-                    ],
                 ],
+            ],
+            [
+                'name' => 'Dashboard secondary',
+                'id' => 'a02',
+                'positions' => ['dashboard-secondary'],
+                'items' => [],
             ],
             [
                 'name' => 'Dashboard mobile',
@@ -356,27 +337,27 @@ return [
                 'items' => [
                     [
                         'type' => 'route',
-                        'label' => 'Links',
-                        'action' => '/dashboard/links',
-                        'id' => 723,
+                        'label' => 'Home',
+                        'action' => '/dashboard',
+                        'id' => 'dashboard-home-mobile',
                     ],
                     [
                         'type' => 'route',
-                        'label' => 'Link in bio',
+                        'label' => 'My Card',
                         'action' => '/dashboard/biolinks',
                         'id' => 239,
                     ],
                     [
                         'type' => 'route',
-                        'label' => 'QR codes',
-                        'action' => '/dashboard/qr-codes',
-                        'id' => 721,
+                        'label' => 'My Products',
+                        'action' => '/dashboard/my-products',
+                        'id' => 'digital-products-mobile',
                     ],
                     [
                         'type' => 'route',
-                        'label' => 'Insights',
-                        'action' => '/dashboard/insights',
-                        'id' => 318,
+                        'label' => 'Sales & Payouts',
+                        'action' => '/dashboard/sales-payouts',
+                        'id' => 'sales-payouts-mobile',
                     ],
                 ],
             ],
@@ -528,48 +509,35 @@ return [
                         'id' => 'mwdkf0',
                         'permissions' => ['roles.update'],
                     ],
-
                     [
                         'type' => 'route',
-                        'label' => 'Links',
-                        'action' => '/admin/links',
-                        'id' => 7234,
+                        'label' => 'Digital Products',
+                        'action' => '/admin/digital-products',
+                        'id' => 'digital-products-admin',
                     ],
                     [
                         'type' => 'route',
-                        'label' => 'Biolinks',
-                        'action' => '/admin/biolinks',
-                        'id' => 2394,
+                        'label' => 'Withdrawals',
+                        'action' => '/admin/withdrawals',
+                        'id' => 'admin-withdrawals',
                     ],
                     [
                         'type' => 'route',
-                        'label' => 'Folders',
-                        'action' => '/admin/folders',
-                        'id' => 5864,
+                        'label' => 'Payment Activity',
+                        'action' => '/admin/payment-activity',
+                        'id' => 'admin-payment-activity',
                     ],
                     [
                         'type' => 'route',
-                        'label' => 'Branded domains',
-                        'action' => '/admin/custom-domains',
-                        'id' => 4441,
+                        'label' => 'KYC Verifications',
+                        'action' => '/admin/kyc-verifications',
+                        'id' => 'admin-kyc-verifications',
                     ],
                     [
                         'type' => 'route',
-                        'label' => 'CTA overlays',
-                        'action' => '/admin/link-overlays',
-                        'id' => 18411,
-                    ],
-                    [
-                        'type' => 'route',
-                        'label' => 'Link pages',
-                        'action' => '/admin/link-pages',
-                        'id' => 312113,
-                    ],
-                    [
-                        'type' => 'route',
-                        'label' => 'Tracking pixels',
-                        'action' => '/admin/pixels',
-                        'id' => 303113,
+                        'label' => 'Withdrawal Methods',
+                        'action' => '/admin/financial/withdrawal-methods',
+                        'id' => 'admin-withdrawal-methods',
                     ],
                     [
                         'label' => 'Custom pages',
@@ -585,7 +553,6 @@ return [
                         'id' => 'vguvti',
                         'permissions' => ['files.update'],
                     ],
-
                     [
                         'label' => 'Translations',
                         'action' => '/admin/localizations',
@@ -593,7 +560,6 @@ return [
                         'id' => 'w91yql',
                         'permissions' => ['localizations.update'],
                     ],
-
                     [
                         'label' => 'Logs',
                         'action' => '/admin/logs',
@@ -627,4 +593,11 @@ return [
 
     // custom domains
     ['name' => 'custom_domains.allow_select', 'value' => true],
+
+    // KYC verification
+    ['name' => 'kyc.enabled', 'value' => true],
+    ['name' => 'kyc.selfie_verification', 'value' => true],
+
+    // storefront
+    ['name' => 'storefront.reviews_enabled', 'value' => true],
 ];

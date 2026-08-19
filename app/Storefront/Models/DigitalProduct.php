@@ -1,0 +1,39 @@
+<?php
+
+namespace App\Storefront\Models;
+
+use App\Models\User;
+use App\Biolinks\Models\Biolink;
+use Codebyray\ReviewRateable\Traits\ReviewRateable;
+use Common\Files\FileEntry;
+use Common\Workspaces\Traits\BelongsToWorkspace;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+class DigitalProduct extends StorefrontModel
+{
+    use BelongsToWorkspace, ReviewRateable, SoftDeletes;
+
+    protected $fillable = [
+        'workspace_id',
+        'user_id',
+        'cover_file_entry_id',
+        'title',
+        'description',
+        'price_cents',
+        'currency',
+        'status',
+        'rejection_reason',
+        'approved_at',
+    ];
+    protected $casts = ['price_cents' => 'integer', 'approved_at' => 'datetime', 'workspace_id' => 'integer', 'user_id' => 'integer'];
+
+    public function creator(): BelongsTo { return $this->belongsTo(User::class, 'user_id'); }
+    public function cover(): BelongsTo { return $this->belongsTo(FileEntry::class, 'cover_file_entry_id'); }
+    public function files(): BelongsToMany { return $this->belongsToMany(FileEntry::class, 'digital_product_files')->withTimestamps(); }
+    public function biolinks(): BelongsToMany { return $this->belongsToMany(Biolink::class, 'digital_product_biolinks')->withTimestamps(); }
+    public function orders(): HasMany { return $this->hasMany(StorefrontOrder::class); }
+    public function isApproved(): bool { return $this->status === 'approved'; }
+}

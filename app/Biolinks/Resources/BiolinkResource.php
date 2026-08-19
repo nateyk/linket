@@ -32,6 +32,37 @@ class BiolinkResource extends LinkeableResource
             'back_half' => $this->back_half,
             'name' => $this->name,
             'workspace_id' => $this->workspace_id,
+            /** @var 'legacy'|'creator_profile' */
+            'builder_mode' => $this->builder_mode,
+            /**
+             * @var array{
+             *   display_name?: string,
+             *   profile_title?: string|null,
+             *   bio?: string|null,
+             *   about_html?: string|null,
+             *   avatar_url?: string|null,
+             *   cover_url?: string|null,
+             *   available_for_work?: bool,
+             *   skills?: array<string>,
+             *   follow_url?: string|null,
+             *   contact_url?: string|null,
+             *   social_links?: array<string, string>,
+             *   source_widget_ids?: array<int>
+             * }
+             */
+            'profile_config' => $this->profile_config ?? [],
+            'public_item_count' => $this->when(
+                $this->relationLoaded('links') &&
+                    $this->relationLoaded('widgets') &&
+                    $this->relationLoaded('digitalProducts'),
+                fn(): int => $this->publicItemCount(),
+            ),
+            'is_verified' => $this->when(
+                $this->relationLoaded('user'),
+                fn(): bool => settings('kyc.enabled', false)
+                    ? $this->user?->isKycVerified()
+                    : $this->user?->email_verified_at !== null,
+            ),
 
             /** @var 'biolink' */
             'model_type' => $this->model_type,

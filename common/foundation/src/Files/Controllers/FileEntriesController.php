@@ -128,6 +128,14 @@ class FileEntriesController extends Controller
             'relativePath' => 'nullable|string',
         ]);
 
+        if (
+            $payload->uploadType->name === 'digitalProductFiles' &&
+            $payload->workspaceId
+        ) {
+            app(\App\Entitlements\AssertDigitalProductUploadAllowed::class)
+                ->execute($payload->size, $payload->workspaceId);
+        }
+
         (new StoreFile())->execute($payload, ['file' => $file]);
 
         $fileEntry = (new CreateFileEntry())->execute($payload);

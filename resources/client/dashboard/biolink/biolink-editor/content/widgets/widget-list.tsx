@@ -7,6 +7,7 @@ import {TiktokWidgetDialog} from '@app/dashboard/biolink/biolink-editor/content/
 import {TwitchWidgetDialog} from '@app/dashboard/biolink/biolink-editor/content/widgets/twitch-widget/twitch-widget-dialog';
 import {VimeoWidgetDialog} from '@app/dashboard/biolink/biolink-editor/content/widgets/vimeo-widget/vimeo-widget-dialog';
 import {YoutubeWidgetDialog} from '@app/dashboard/biolink/biolink-editor/content/widgets/youtube-widget/youtube-widget-dialog';
+import {ShopWidgetDialog} from '@app/dashboard/biolink/biolink-editor/content/widgets/shop-widget/shop-widget-dialog';
 import {BiolinkWidget} from '@app/gen/schemas/biolink-widget';
 import {Trans} from '@ui/i18n/trans';
 import {JSXElementConstructor, ReactNode} from 'react';
@@ -99,5 +100,10 @@ export const WidgetList: Record<BiolinkWidget['type'], WidgetListItem> = {
       <Trans message="Paste TikTok video url to show it as an embed in your profile." />
     ),
     dialog: TiktokWidgetDialog,
+  },
+  shop: {
+    name: <Trans message="Digital Products" />,
+    description: <Trans message="Display approved digital products selected from your product manager." />,
+    dialog: ShopWidgetDialog,
   },
 };

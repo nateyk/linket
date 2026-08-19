@@ -1,1 +1,2 @@
 var e=typeof document<`u`?document.getElementById(`root`)??document.body:void 0,t=typeof document<`u`?document.documentElement:void 0;export{t as n,e as t};
+//# sourceMappingURL=root-el-38EBcTQb.js.map

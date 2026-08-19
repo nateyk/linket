@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Biolinks\Models\Biolink;
 use App\Folders\Models\Folder;
+use App\Kyc\Models\KycVerification;
 use App\LinkOverlays\Models\LinkOverlay;
 use App\LinkPages\Models\LinkPage;
 use App\Links\Models\Link;
@@ -15,6 +16,7 @@ use App\TrackingPixels\Models\TrackingPixel;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends BaseUser
@@ -64,6 +66,36 @@ class User extends BaseUser
     public function customDomains(): HasMany
     {
         return $this->hasMany(CustomDomain::class);
+    }
+
+    public function kycVerifications(): HasMany
+    {
+        return $this->hasMany(KycVerification::class);
+    }
+
+    public function latestKycVerification(): HasOne
+    {
+        return $this->hasOne(KycVerification::class)->latestOfMany();
+    }
+
+    public function isKycVerified(): bool
+    {
+        return $this->kyc_status === KycVerification::STATUS_APPROVED;
+    }
+
+    public function isKycPending(): bool
+    {
+        return $this->kyc_status === KycVerification::STATUS_PENDING;
+    }
+
+    public function isKycRejected(): bool
+    {
+        return $this->kyc_status === KycVerification::STATUS_REJECTED;
+    }
+
+    public function isKycRequired(): bool
+    {
+        return settings('kyc.enabled', false) && !$this->isKycVerified();
     }
 
     protected static function newFactory()

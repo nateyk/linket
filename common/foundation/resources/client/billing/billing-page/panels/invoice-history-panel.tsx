@@ -3,6 +3,7 @@ import {Badge} from '@shadcn/badge/badge';
 import {FormattedCurrency} from '@ui/i18n/formatted-currency';
 import {FormattedDate} from '@ui/i18n/formatted-date';
 import {Trans} from '@ui/i18n/trans';
+import {getSiteCurrency} from '@ui/i18n/format-money';
 import {useSettings} from '@ui/settings/use-settings';
 import {ExternalLinkIcon} from 'lucide-react';
 import {useOutletContext} from 'react-router';
@@ -61,7 +62,7 @@ type AmountPaidProps = {
   subscription: NonNullable<User['subscription']>;
 };
 function AmountPaid({invoice, subscription}: AmountPaidProps) {
-  const currency = invoice.currency || subscription.price?.currency || 'USD';
+  const currency = invoice.currency || subscription.price?.currency || getSiteCurrency();
   if (invoice.amount_paid != null && invoice.currency != null) {
     return (
       <FormattedCurrency

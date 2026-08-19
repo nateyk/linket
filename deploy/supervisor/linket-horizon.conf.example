@@ -1,0 +1,12 @@
+[program:linket-horizon]
+process_name=%(program_name)s
+command=/usr/bin/php /var/www/linket/artisan horizon
+directory=/var/www/linket
+autostart=true
+autorestart=true
+stopasgroup=true
+killasgroup=true
+user=www-data
+redirect_stderr=true
+stdout_logfile=/var/log/supervisor/linket-horizon.log
+stopwaitsecs=3600

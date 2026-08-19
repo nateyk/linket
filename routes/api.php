@@ -14,6 +14,8 @@
 
 use App\Analytics\Controllers\AdminAnalyticsController;
 use App\Http\Controllers\LandingPageController;
+use App\Kyc\Controllers\AdminKycVerificationsController;
+use App\Kyc\Controllers\KycVerificationsController;
 use App\Links\Controllers\LinksController;
 use App\Folders\Controllers\FolderLinksController;
 use App\QrCodes\Controllers\QrCodesController;
@@ -29,11 +31,15 @@ use App\Biolinks\Controllers\BiolinkContentOrderController;
 use App\Biolinks\Controllers\BiolinkLinkController;
 use App\Biolinks\Controllers\BiolinksController;
 use App\Biolinks\Controllers\BiolinkWidgetsController;
+use App\Biolinks\Controllers\CreatorProfileController;
 use App\TrackingPixels\Controllers\TrackingPixelsController;
 use App\Webhooks\Controllers\WebhookAttemptsController;
 use App\Webhooks\Controllers\WebhooksController;
 use App\Tags\Controllers\TagsController;
 use Common\Domains\CustomDomainsController;
+use App\Storefront\Controllers\AdminPayoutRequestsController;
+use App\Storefront\Controllers\DigitalProductWithdrawalMethodsController;
+use App\Storefront\Controllers\WorkspacePayoutConfigController;
 use Illuminate\Support\Facades\Route;
 
 Route::group(['prefix' => 'v1'], function() {
@@ -48,6 +54,17 @@ Route::group(['prefix' => 'v1'], function() {
         Route::get('tracked-events', [TrackedEventsController::class, 'index']);
 
         Route::get('usage', UsageController::class);
+
+        // KYC VERIFICATION
+        Route::get('kyc/status', [KycVerificationsController::class, 'status']);
+        Route::post('kyc', [KycVerificationsController::class, 'store']);
+        Route::get('kyc/documents/{key}', [KycVerificationsController::class, 'document']);
+        Route::get('admin/kyc-verifications', [AdminKycVerificationsController::class, 'index']);
+        Route::get('admin/kyc-verifications/{kycVerification}', [AdminKycVerificationsController::class, 'show']);
+        Route::post('admin/kyc-verifications/{kycVerification}/approve', [AdminKycVerificationsController::class, 'approve']);
+        Route::post('admin/kyc-verifications/{kycVerification}/reject', [AdminKycVerificationsController::class, 'reject']);
+        Route::get('admin/kyc-verifications/{kycVerification}/documents/{key}', [AdminKycVerificationsController::class, 'document']);
+        Route::delete('admin/kyc-verifications/{kycVerification}', [AdminKycVerificationsController::class, 'destroy']);
 
         // LINK
         Route::get('links', [LinksController::class, 'index']);
@@ -80,6 +97,8 @@ Route::group(['prefix' => 'v1'], function() {
         Route::post('biolinks', [BiolinksController::class, 'store']);
         Route::put('biolinks/{id}', [BiolinksController::class, 'update']);
         Route::delete('biolinks/{id}', [BiolinksController::class, 'destroy']);
+        Route::put('biolinks/{id}/creator-profile', [CreatorProfileController::class, 'update']);
+        Route::post('biolinks/{id}/creator-profile/convert', [CreatorProfileController::class, 'convert']);
         Route::post('biolink/{id}/change-order', [BiolinkContentOrderController::class, 'changeOrder']);
         Route::post('biolink/{id}/appearance', [BiolinkAppearanceController::class, 'update']);
 
@@ -160,5 +179,21 @@ Route::group(['prefix' => 'v1'], function() {
         ]);
         Route::post('webhooks/{id}/enable', [WebhooksController::class, 'enable']);
         Route::post('webhooks/{id}/disable', [WebhooksController::class, 'disable']);
+
+        // WORKSPACE PAYOUT CONFIG
+        Route::get('workspaces/{workspaceId}/payout-config', [WorkspacePayoutConfigController::class, 'show']);
+        Route::post('workspaces/{workspaceId}/payout-config', [WorkspacePayoutConfigController::class, 'update']);
+
+        // ADMIN WITHDRAWALS
+        Route::get('admin/withdrawals', [AdminPayoutRequestsController::class, 'index'])->name('admin.withdrawals.index');
+        Route::get('admin/withdrawals/{payoutRequest}/review', [AdminPayoutRequestsController::class, 'review'])->name('admin.withdrawals.review');
+        Route::post('admin/withdrawals/{payoutRequest}/review', [AdminPayoutRequestsController::class, 'update'])->name('admin.withdrawals.update');
+        Route::delete('admin/withdrawals/{payoutRequest}', [AdminPayoutRequestsController::class, 'destroy'])->name('admin.withdrawals.destroy');
+
+        // ADMIN WITHDRAWAL METHODS
+        Route::get('admin/financial/withdrawal-methods', [DigitalProductWithdrawalMethodsController::class, 'adminIndex'])->name('admin.withdrawal-methods.index');
+        Route::post('admin/financial/withdrawal-methods', [DigitalProductWithdrawalMethodsController::class, 'store'])->name('admin.withdrawal-methods.store');
+        Route::put('admin/financial/withdrawal-methods/{withdrawalMethod}', [DigitalProductWithdrawalMethodsController::class, 'update'])->name('admin.withdrawal-methods.update');
+        Route::delete('admin/financial/withdrawal-methods/{withdrawalMethod}', [DigitalProductWithdrawalMethodsController::class, 'destroy'])->name('admin.withdrawal-methods.destroy');
     });
 });

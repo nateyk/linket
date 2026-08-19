@@ -1,1 +1,2 @@
 function e(e,t){let n=document.createElement(`a`);n.href=e,t&&(n.download=t),document.body.appendChild(n),n.click(),document.body.removeChild(n)}export{e as t};
+//# sourceMappingURL=download-file-from-url-CrWoNyxj.js.map

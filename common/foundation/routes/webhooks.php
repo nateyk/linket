@@ -2,7 +2,11 @@
 
 use Common\Billing\Gateways\Paypal\PaypalWebhookController;
 use Common\Billing\Gateways\Stripe\StripeWebhookController;
+use App\Payments\Controllers\ChapaWebhookController;
+use App\Payments\Controllers\ChapaCallbackController;
 use Illuminate\Support\Facades\Route;
+use App\Storefront\Controllers\DownloadController;
+use App\Storefront\Controllers\StorefrontCheckoutController;
 
 // PAYPAL
 Route::post('billing/paypal/webhook', [
@@ -15,3 +19,15 @@ Route::post('billing/stripe/webhook', [
     StripeWebhookController::class,
     'handleWebhook',
 ]);
+
+Route::post('billing/chapa/webhook', [
+    ChapaWebhookController::class,
+    'handle',
+]);
+Route::match(['get', 'post'], 'billing/chapa/callback/{txRef}', [
+    ChapaCallbackController::class,
+    'handle',
+]);
+
+Route::get('storefront/downloads/{token}', [DownloadController::class, 'show'])->name('storefront.download');
+Route::get('storefront/orders/{order}/success', [StorefrontCheckoutController::class, 'success'])->name('storefront.order.success');

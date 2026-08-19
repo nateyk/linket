@@ -54,6 +54,9 @@ return [
 
     // billing
     ['name' => 'billing.enable', 'value' => false],
+    ['name' => 'billing.currency', 'value' => 'ETB'],
+    ['name' => 'billing.currency_symbol', 'value' => 'Br'],
+    ['name' => 'billing.currency_symbol_position', 'value' => 'after'],
     ['name' => 'billing.paypal_test_mode', 'value' => true],
     ['name' => 'billing.stripe_test_mode', 'value' => true],
     ['name' => 'billing.stripe.enable', 'value' => false],

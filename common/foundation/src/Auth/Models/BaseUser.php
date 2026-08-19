@@ -378,7 +378,8 @@ abstract class BaseUser extends BaseModel implements
         if ($subscription && $subscription->valid()) {
             return $subscription->load('product')->product;
         } else {
-            return Product::where('free', true)->first();
+            return Product::where('is_default', true)->first()
+                ?? Product::where('free', true)->first();
         }
     }
 

@@ -55,6 +55,11 @@ return [
         'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
     ],
 
+    'chapa' => [
+        'secret' => env('CHAPA_SECRET_KEY'),
+        'webhook_secret' => env('CHAPA_WEBHOOK_SECRET'),
+    ],
+
     /**
      * Socialite login credentials
      */

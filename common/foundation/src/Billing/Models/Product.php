@@ -18,10 +18,13 @@ class Product extends BaseModel
 
     protected $casts = [
         'free' => 'bool',
+        'is_default' => 'bool',
         'recommended' => 'bool',
         'position' => 'int',
         'trial_period_days' => 'int',
         'hidden' => 'boolean',
+        'active' => 'boolean',
+        'storefront_benefits' => 'array',
     ];
 
     public const MODEL_TYPE = 'product';

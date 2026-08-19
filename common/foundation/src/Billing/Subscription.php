@@ -4,6 +4,7 @@ namespace Common\Billing;
 
 use App\Models\User;
 use Common\Billing\Gateways\Contracts\CommonSubscriptionGatewayActions;
+use Common\Billing\Gateways\Chapa\Chapa;
 use Common\Billing\Gateways\Paypal\Paypal;
 use Common\Billing\Gateways\Stripe\Stripe;
 use Common\Billing\Invoices\Invoice;
@@ -42,6 +43,8 @@ class Subscription extends BaseModel
         'ends_at' => 'datetime',
         'renews_at' => 'datetime',
         'user_id' => 'integer',
+        'pending_product_id' => 'integer',
+        'pending_price_id' => 'integer',
         'valid' => 'boolean',
         'active' => 'boolean',
         'cancelled' => 'boolean',
@@ -157,7 +160,7 @@ class Subscription extends BaseModel
             $newPrice,
         );
 
-        if ($isSuccess) {
+        if ($isSuccess && $this->gateway_name !== 'chapa') {
             $this->fill([
                 'product_id' => $newProduct->id,
                 'price_id' => $newPrice->id,
@@ -263,6 +266,8 @@ class Subscription extends BaseModel
             return app(Stripe::class);
         } elseif ($this->gateway_name === 'paypal') {
             return app(Paypal::class);
+        } elseif ($this->gateway_name === 'chapa') {
+            return app(Chapa::class);
         }
 
         return null;

@@ -37,7 +37,6 @@ class AppBootstrapData extends BaseBootstrapData
 
     protected function getAuthRedirectUri(): string
     {
-        $uri = settings('dashboard.homepage', 'links');
-        return "/dashboard/$uri";
+        return '/dashboard';
     }
 }

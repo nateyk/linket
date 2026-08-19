@@ -1,0 +1,89 @@
+{
+    "$schema": "https://opencode.ai/config.json",
+    "plugin": [
+        "superpowers@git+https://github.com/obra/superpowers.git"
+    ],
+    "lsp": {
+        "typescript": {
+            "command": [
+                "npx",
+                "--prefix",
+                ".",
+                "typescript-language-server",
+                "--stdio"
+            ],
+            "extensions": [
+                ".ts",
+                ".tsx",
+                ".js",
+                ".jsx",
+                ".mjs",
+                ".cjs",
+                ".mts",
+                ".cts"
+            ]
+        },
+        "php": {
+            "command": [
+                "intelephense",
+                "--stdio"
+            ],
+            "extensions": [
+                ".php"
+            ],
+            "initialization": {
+                "licenseKey": "",
+                "clearCache": false,
+                "environment": {
+                    "phpVersion": "8.4"
+                }
+            }
+        }
+    },
+    "mcp": {
+        "shadcn": {
+            "type": "local",
+            "command": [
+                "npx",
+                "--prefix",
+                ".",
+                "shadcn",
+                "mcp"
+            ],
+            "enabled": true
+        },
+        "filesystem": {
+            "type": "local",
+            "command": [
+                "npx",
+                "-y",
+                "@modelcontextprotocol/server-filesystem",
+                "/home/nate/projects/linket"
+            ],
+            "enabled": true
+        },
+        "github": {
+            "type": "local",
+            "command": [
+                "npx",
+                "-y",
+                "@modelcontextprotocol/server-github"
+            ],
+            "environment": {
+                "GITHUB_TOKEN": "env:GITHUB_TOKEN"
+            },
+            "enabled": true
+        },
+        "laravel-boost": {
+            "type": "local",
+            "enabled": true,
+            "command": [
+                "ddev",
+                "exec",
+                "php",
+                "artisan",
+                "boost:mcp"
+            ]
+        }
+    }
+}

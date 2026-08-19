@@ -18,6 +18,17 @@ export function Component() {
     defaultValues: {
       free: false,
       recommended: false,
+      active: true,
+      is_default: false,
+      storefront_benefits: {
+        platform_fee_percent: 5,
+        max_free_products: 5,
+        max_paid_products: 5,
+        max_upload_bytes: 1073741824,
+        max_storefronts: 1,
+        max_workspaces: 1,
+        tracking_pixels_enabled: false,
+      },
       trial_period_days: 0,
       position: 0,
       feature_list: [],

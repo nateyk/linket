@@ -4,17 +4,33 @@ import {useAdminSettings} from '@common/admin/settings/use-admin-settings';
 import {Field} from '@shadcn/forms/field';
 import {HookForm} from '@shadcn/forms/form/hook-form';
 import {Select} from '@shadcn/forms/select/select';
+import {Switch} from '@shadcn/forms/switch/switch';
 import {Trans} from '@ui/i18n/trans';
 
 export function Component() {
   const {data} = useAdminSettings();
+  const savedHomepage = data.client.dashboard?.homepage;
+  const homepage = homepageOptions.some(
+    option => option.value === savedHomepage,
+  )
+    ? savedHomepage
+    : 'overview';
+
   return (
     <CommonGeneralSettings
-      slotOne={<DashboardHomeSection />}
+      slotOne={
+        <>
+          <DashboardHomeSection />
+          <ProductReviewsSection />
+        </>
+      }
       defaultValues={{
         client: {
           dashboard: {
-            homepage: data.client.dashboard?.homepage ?? 'links',
+            homepage,
+          },
+          storefront: {
+            reviews_enabled: data.client.storefront?.reviews_enabled ?? true,
           },
         },
       }}
@@ -23,10 +39,14 @@ export function Component() {
 }
 
 const homepageOptions = [
-  {value: 'links', label: <Trans message="Links" />},
-  {value: 'qr-codes', label: <Trans message="QR codes" />},
-  {value: 'biolinks', label: <Trans message="Link in bio" />},
-  {value: 'analytics', label: <Trans message="Analytics" />},
+  {value: 'overview', label: <Trans message="Overview" />},
+  {value: 'biolinks', label: <Trans message="Storefront" />},
+  {
+    value: 'digital-products',
+    label: <Trans message="Digital Products" />,
+  },
+  {value: 'sales-payouts', label: <Trans message="Sales & Payouts" />},
+  {value: 'insights', label: <Trans message="Insights" />},
 ] as const;
 
 function DashboardHomeSection() {
@@ -34,28 +54,46 @@ function DashboardHomeSection() {
     <SettingsPanel
       title={<Trans message="Dashboard home" />}
       description={
-        <div>
-          <Trans message="Select the page that should be the homepage for the dashboard." />
-        </div>
+        <Trans message="Choose the first page creators see after signing in." />
       }
     >
       <HookForm.Field name="client.dashboard.homepage">
         <Field.Label>
-          <Trans message="Homepage" />
+          <Trans message="Default page" />
         </Field.Label>
         <Select.Root items={homepageOptions}>
           <Select.Trigger className="w-full">
             <Select.Value />
           </Select.Trigger>
           <Select.Content>
-            {homepageOptions.map(option => (
-              <Select.Item key={option.value} value={option.value}>
-                {option.label}
-              </Select.Item>
-            ))}
+            <Select.Group>
+              {homepageOptions.map(option => (
+                <Select.Item key={option.value} value={option.value}>
+                  {option.label}
+                </Select.Item>
+              ))}
+            </Select.Group>
           </Select.Content>
         </Select.Root>
         <Field.Error />
+      </HookForm.Field>
+    </SettingsPanel>
+  );
+}
+
+function ProductReviewsSection() {
+  return (
+    <SettingsPanel
+      title={<Trans message="Product reviews" />}
+      description={
+        <Trans message="Allow buyers to leave star ratings and reviews on public product pages." />
+      }
+    >
+      <HookForm.Field name="client.storefront.reviews_enabled">
+        <Field.Label>
+          <Switch />
+          <Trans message="Enable product reviews" />
+        </Field.Label>
       </HookForm.Field>
     </SettingsPanel>
   );

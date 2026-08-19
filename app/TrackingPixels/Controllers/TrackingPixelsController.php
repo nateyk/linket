@@ -2,6 +2,7 @@
 
 namespace App\TrackingPixels\Controllers;
 
+use App\Entitlements\Entitlements;
 use App\TrackingPixels\Actions\CrupdateTrackingPixel;
 use App\TrackingPixels\Actions\DeleteTrackingPixels;
 use App\TrackingPixels\Models\TrackingPixel;
@@ -67,6 +68,13 @@ class TrackingPixelsController extends Controller
     public function store(CrupdateTrackingPixelRequest $request)
     {
         Gate::authorize('store', TrackingPixel::class);
+
+        $entitlements = app(Entitlements::class);
+        abort_if(
+            !$entitlements->enabled($request->user(), 'tracking_pixels_enabled'),
+            403,
+            __('Tracking Pixels are not included in your current plan.'),
+        );
 
         $pixel = (new CrupdateTrackingPixel())->execute($request->validated());
 

@@ -30,7 +30,6 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  LabelList,
   Pie,
   PieChart,
   PieSectorShapeProps,
@@ -46,7 +45,7 @@ interface TrackedEventsInsightsProps {
 }
 export function TrackedEventsInsights(props: TrackedEventsInsightsProps) {
   return (
-    <div className="chart-grid">
+    <div className="grid min-w-0 grid-cols-1 gap-5 xl:grid-cols-12">
       <EventsOverTimeChart {...props} />
       <TopDevicesChart {...props} />
       <ReferrerChart {...props} />
@@ -67,7 +66,7 @@ function EventsOverTimeChart(props: TrackedEventsInsightsProps) {
   const isEmpty = !isLoading && !report?.data?.length;
 
   return (
-    <Card size="sm" className="col-span-9 row-span-11">
+    <Card size="sm" className="min-w-0 xl:col-span-8 2xl:col-span-9">
       <Card.Header>
         <Card.Title>
           <Trans message="Engagements over time" />
@@ -79,10 +78,10 @@ function EventsOverTimeChart(props: TrackedEventsInsightsProps) {
           />
         </Card.Description>
       </Card.Header>
-      <Card.Content ref={contentRef} className="relative flex-1">
+      <Card.Content ref={contentRef} className="relative h-80 min-w-0">
         {!isEmpty && (
           <Chart.Container className="size-full">
-            <AreaChart data={report?.data} margin={{left: 0}}>
+            <AreaChart data={report?.data} margin={{left: 0, right: 8}}>
               <linearGradient id="fillEngagements" x1="0" y1="0" x2="0" y2="1">
                 <stop
                   offset="5%"
@@ -168,22 +167,26 @@ function TopDevicesChart(props: TrackedEventsInsightsProps) {
     [dataWithColors],
   );
   return (
-    <Card size="sm" className="col-span-3 row-span-11">
+    <Card size="sm" className="min-w-0 xl:col-span-4 2xl:col-span-3">
       <Card.Header>
         <Card.Title>
           <Trans message="Top devices" />
         </Card.Title>
       </Card.Header>
-      <Card.Content ref={contentRef} className="relative flex-1">
-        <Chart.Container className="h-full w-full">
+      <Card.Content
+        ref={contentRef}
+        className="relative flex min-h-80 min-w-0 flex-col gap-4"
+      >
+        <Chart.Container className="mx-auto h-56 w-full max-w-72">
           <PieChart>
             <Chart.Tooltip cursor={false} content={<Chart.TooltipContent />} />
             <Pie
               data={dataWithColors}
               dataKey="value"
               nameKey="label"
-              innerRadius={60}
-              strokeWidth={5}
+              innerRadius={54}
+              outerRadius={78}
+              strokeWidth={4}
               shape={({
                 index,
                 outerRadius = 0,
@@ -195,16 +198,28 @@ function TopDevicesChart(props: TrackedEventsInsightsProps) {
                   <Sector {...props} outerRadius={outerRadius} />
                 )
               }
-            >
-              <LabelList
-                dataKey="label"
-                className="fill-background"
-                stroke="none"
-                fontSize={12}
-              />
-            </Pie>
+            />
           </PieChart>
         </Chart.Container>
+        {!!dataWithColors.length && (
+          <div className="grid gap-2">
+            {dataWithColors.map(item => (
+              <div
+                key={item.label}
+                className="flex min-w-0 items-center gap-2 text-sm"
+              >
+                <span
+                  className="size-2.5 shrink-0 rounded-full"
+                  style={{backgroundColor: item.fill}}
+                />
+                <span className="min-w-0 flex-1 truncate text-muted-foreground">
+                  {item.label}
+                </span>
+                <span className="font-medium tabular-nums">{item.value}</span>
+              </div>
+            ))}
+          </div>
+        )}
         {isLoading && <Chart.LoadingIndicator />}
         {!isLoading && !report?.data?.length && <Chart.NoDataIndicator />}
       </Card.Content>
@@ -219,15 +234,20 @@ function TopBrowsersChart(props: TrackedEventsInsightsProps) {
   });
   const dataWithColors = useChartDataWithColors(report?.data);
   return (
-    <Card size="sm" className="col-span-4 row-span-10">
+    <Card size="sm" className="min-w-0 xl:col-span-6">
       <Card.Header>
         <Card.Title>
           <Trans message="Top browsers" />
         </Card.Title>
       </Card.Header>
-      <Card.Content ref={contentRef} className="relative flex-1">
+      <Card.Content ref={contentRef} className="relative h-72 min-w-0">
         <Chart.Container className="h-full w-full">
-          <BarChart accessibilityLayer layout="vertical" data={dataWithColors}>
+          <BarChart
+            accessibilityLayer
+            layout="vertical"
+            data={dataWithColors}
+            margin={{right: 12}}
+          >
             <YAxis
               dataKey="label"
               type="category"
@@ -260,19 +280,19 @@ function TopPlatformsChart(props: TrackedEventsInsightsProps) {
   });
   const dataWithColors = useChartDataWithColors(report?.data);
   return (
-    <Card size="sm" className="col-span-4 row-span-10">
+    <Card size="sm" className="min-w-0 xl:col-span-6">
       <Card.Header>
         <Card.Title>
           <Trans message="Top platforms" />
         </Card.Title>
       </Card.Header>
-      <Card.Content ref={contentRef} className="relative flex-1">
+      <Card.Content ref={contentRef} className="relative h-72 min-w-0">
         <Chart.Container className="h-full w-full">
           <BarChart
             accessibilityLayer
             layout="vertical"
             data={dataWithColors}
-            margin={{left: 14}}
+            margin={{left: 14, right: 12}}
           >
             <YAxis
               dataKey="label"
@@ -306,7 +326,7 @@ function ReferrerChart(props: TrackedEventsInsightsProps) {
   });
 
   return (
-    <Card size="sm" className="col-span-6 row-span-11">
+    <Card size="sm" className="min-w-0 xl:col-span-6">
       <Card.Header>
         <Card.Title>
           <Trans message="Referrers" />
@@ -314,7 +334,7 @@ function ReferrerChart(props: TrackedEventsInsightsProps) {
       </Card.Header>
       <Card.Content
         ref={contentRef}
-        className="compact-scrollbar relative flex-1 overflow-y-auto overscroll-contain"
+        className="compact-scrollbar relative min-h-80 min-w-0 overflow-y-auto overscroll-contain"
       >
         {report?.data?.map((dataItem, index) => (
           <div
@@ -359,7 +379,7 @@ export function TrackedEventsInsightsDateAndFilterButtons({
   filters,
 }: TrackedEventsInsightsDateAndFilterButtonsProps) {
   return (
-    <div className="flex items-center gap-2.5">
+    <div className="flex flex-wrap items-center gap-2.5">
       <ReportDateSelector
         value={dateRange}
         onChange={setDateRange}
@@ -400,7 +420,7 @@ function GeoChartWithCities(props: TrackedEventsInsightsProps) {
     <GeoChart
       onCountrySelected={handleCountrySelected}
       country={selectedCountry}
-      className="col-span-6 row-span-11"
+      className="min-w-0 xl:col-span-6"
       datasetLabel={trans({message: 'Engagements'})}
       data={report?.data as any}
       isLoading={isLoading}

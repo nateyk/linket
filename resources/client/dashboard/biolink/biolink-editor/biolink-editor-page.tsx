@@ -10,6 +10,8 @@ import {WidgetList} from '@app/dashboard/biolink/biolink-editor/content/widgets/
 import {SelectWidgetDialog} from '@app/dashboard/biolink/biolink-editor/content/widgets/widget-selector/select-widget-dialog';
 import {CreateBiolinkDialog} from '@app/dashboard/biolink/biolink-editor/create-biolink-dialog';
 import {DeleteBiolinkDialog} from '@app/dashboard/biolink/biolink-editor/delete-biolink-dialog';
+import {CreatorProfileEditor} from '@app/dashboard/biolink/biolink-editor/creator-profile-editor';
+import {isCreatorProfileBiolink} from '@app/dashboard/biolink/biolink-editor/creator-profile-types';
 import {LivePreview} from '@app/dashboard/biolink/biolink-editor/live-preview';
 import {
   listCurrentUserBiolinksOptions,
@@ -22,6 +24,11 @@ import {useDatatableRouteType} from '@app/dashboard/use-datatable-route-type';
 import {BiolinkWidget} from '@app/gen/schemas/biolink-widget';
 import {AdHost} from '@common/admin/ads/ad-host';
 import {showHttpErrorToast} from '@common/http/errors/show-http-error-toast';
+import {queryClient} from '@common/http/query-client';
+import {
+  convertBiolinkToCreatorProfile,
+  updateCreatorProfile,
+} from '@app/gen/biolinks';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {useRequiredParams} from '@common/ui/navigation/use-required-params';
 import {Breadcrumb} from '@shadcn/breadcrumb/breadcrumb';
@@ -29,6 +36,7 @@ import {Button} from '@shadcn/button/button';
 import {Dialog} from '@shadcn/dialog/dialog';
 import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {Empty} from '@shadcn/empty/empty';
+import {Alert} from '@shadcn/alert/alert';
 import {Tabs} from '@shadcn/tabs/tabs';
 import {toast} from '@shadcn/toast/toast';
 import {useMutation, useSuspenseQuery} from '@tanstack/react-query';
@@ -37,11 +45,15 @@ import {
   ChevronDownIcon,
   EllipsisVerticalIcon,
   ExternalLinkIcon,
+  ChartNoAxesCombinedIcon,
   LayoutGridIcon,
   LayoutPanelTop,
   PlusIcon,
+  SaveIcon,
   SettingsIcon,
   TrashIcon,
+  SparklesIcon,
+  UserRoundPenIcon,
 } from 'lucide-react';
 import {useState} from 'react';
 import {Outlet, useLocation, useNavigate} from 'react-router';
@@ -58,47 +70,58 @@ export function Component() {
     ? 'insights'
     : pathname.endsWith('appearance')
       ? 'appearance'
-      : 'content';
+      : pathname.endsWith('about')
+        ? 'about'
+        : 'content';
+  const isInsightsTab = selectedTab === 'insights';
 
   // re-create store provider when biolink changes
   return (
-    <BiolinkEditorStoreProvider data={biolink} key={biolink.id}>
+    <BiolinkEditorStoreProvider
+      data={biolink}
+      key={`${biolink.id}-${biolink.builder_mode}`}
+    >
       <DashboardLayout.MainSection>
         <BiolinkEditorHeader />
-        <Tabs.Root value={selectedTab}>
-          <div className="border-b px-6">
-            <Tabs.List variant="line">
-              <Tabs.LinkTab
-                className="min-w-35"
-                value="content"
-                to={baseUrl}
-                replace
+        <section className="flex min-h-0 flex-auto flex-col overflow-x-hidden overflow-y-auto lg:flex-row lg:overflow-hidden">
+          <div className="flex min-w-0 shrink-0 flex-col lg:min-h-0 lg:flex-auto lg:overflow-hidden">
+            {!isInsightsTab && (
+              <Tabs.Root value={selectedTab} className="shrink-0 border-b">
+                <div className="w-full max-w-3xl px-4 sm:px-6 lg:px-8">
+                  <Tabs.List variant="line" className="w-full justify-start">
+                    <Tabs.LinkTab value="content" to={baseUrl} replace>
+                      <Trans message="Content" />
+                    </Tabs.LinkTab>
+                    <Tabs.LinkTab
+                      value="about"
+                      to={`${baseUrl}/about`}
+                      replace
+                    >
+                      <Trans message="About" />
+                    </Tabs.LinkTab>
+                    <Tabs.LinkTab
+                      value="appearance"
+                      to={`${baseUrl}/appearance`}
+                      replace
+                    >
+                      <Trans message="Appearance" />
+                    </Tabs.LinkTab>
+                  </Tabs.List>
+                </div>
+              </Tabs.Root>
+            )}
+            <div className="compact-scrollbar min-w-0 overflow-x-hidden lg:min-h-0 lg:flex-auto lg:overflow-y-auto">
+              <div
+                className={
+                  isInsightsTab
+                    ? 'mx-auto flex w-full max-w-7xl flex-col p-4 sm:p-6 lg:p-8'
+                    : 'w-full max-w-3xl p-4 sm:p-6 lg:p-8'
+                }
               >
-                <Trans message="Content" />
-              </Tabs.LinkTab>
-              <Tabs.LinkTab
-                className="min-w-35"
-                value="appearance"
-                to={`${baseUrl}/appearance`}
-                replace
-              >
-                <Trans message="Appearance" />
-              </Tabs.LinkTab>
-              <Tabs.LinkTab
-                className="min-w-35"
-                value="insights"
-                to={`${baseUrl}/insights`}
-                replace
-              >
-                <Trans message="Insights" />
-              </Tabs.LinkTab>
-            </Tabs.List>
-          </div>
-        </Tabs.Root>
-        <section className="flex flex-auto overflow-hidden">
-          <div className="compact-scrollbar min-w-0 flex-auto overflow-y-auto p-(--section-spacing)">
-            <AdHost slot="dashboard" className="mb-6" />
-            <Outlet />
+                <AdHost slot="dashboard" className="mb-6" />
+                <Outlet />
+              </div>
+            </div>
           </div>
           <LivePreview />
         </section>
@@ -111,36 +134,65 @@ function BiolinkEditorHeader() {
   const {routeType} = useDatatableRouteType();
   const biolink = useBiolinkEditorStore(s => s.biolink);
   const getState = useBiolinkEditorStore(s => s.getState);
-  const saveAppearance = useMutation(
-    updateBiolinkAppearanceOptions(biolink.id),
-  );
   const appearanceIsDirty = useBiolinkEditorStore(s => s.appearanceIsDirty);
   const setAppearanceIsDirty = useBiolinkEditorStore(
     s => s.setAppearanceIsDirty,
   );
+  const profileIsDirty = useBiolinkEditorStore(s => s.profileIsDirty);
+  const setProfileIsDirty = useBiolinkEditorStore(s => s.setProfileIsDirty);
   const location = useLocation();
   const isAppearanceTab = location.pathname.endsWith('appearance');
+  const isProfileTab =
+    !isAppearanceTab && !location.pathname.endsWith('insights');
 
-  const handleSaveAppearance = () => {
-    saveAppearance.mutate(
-      {config: getState().appearance},
-      {
-        onSuccess: () => {
-          setAppearanceIsDirty(false);
-          toast.success(<Trans message="Changes saved" />);
+  const saveAppearance = useMutation(
+    updateBiolinkAppearanceOptions(biolink.id),
+  );
+  const saveProfile = useMutation({
+    mutationFn: (payload: Parameters<typeof updateCreatorProfile>[1]) =>
+      updateCreatorProfile(biolink.id, payload),
+    onSuccess: () => {
+      setProfileIsDirty(false);
+      queryClient.invalidateQueries({queryKey: ['biolinks']});
+      queryClient.invalidateQueries({queryKey: ['digital-products']});
+      toast.success(<Trans message="Changes saved" />);
+    },
+    onError: error => showHttpErrorToast(error),
+  });
+
+  const handleSave = () => {
+    const state = getState();
+    if (isAppearanceTab && state.appearanceIsDirty) {
+      saveAppearance.mutate(
+        {config: state.appearance},
+        {
+          onSuccess: () => {
+            setAppearanceIsDirty(false);
+            toast.success(<Trans message="Changes saved" />);
+          },
+          onError: err => {
+            showHttpErrorToast(
+              err,
+              <Trans message="Could not save appearance" />,
+            );
+          },
         },
-        onError: err => {
-          showHttpErrorToast(
-            err,
-            <Trans message="Could not save appearance" />,
-          );
-        },
-      },
-    );
+      );
+    } else if (isProfileTab && state.profileIsDirty) {
+      saveProfile.mutate({
+        ...state.profileConfig,
+        skills: state.profileConfig.skills.slice(0, 8),
+        featured_product_ids: state.featuredProductIds.slice(0, 6),
+      } as Parameters<typeof updateCreatorProfile>[1]);
+    }
   };
 
+  const showSaveButton =
+    (isAppearanceTab && appearanceIsDirty) || (isProfileTab && profileIsDirty);
+  const isSaving = saveAppearance.isPending || saveProfile.isPending;
+
   return (
-    <DashboardLayout.SectionHeader className="border-none">
+    <DashboardLayout.SectionHeader className="min-h-16 gap-2 border-none px-4 sm:px-6">
       <DashboardLayout.SidebarToggle />
       {routeType === 'admin' ? <AdminBreadcrumb /> : <BiolinkSelector />}
       <MoreActionsButton />
@@ -148,14 +200,17 @@ function BiolinkEditorHeader() {
         type="text"
         url={biolink.short_url}
         variant="outline"
-        className="max-md:hidden"
+        className="max-lg:hidden"
       />
-      {isAppearanceTab && (
-        <Button
-          onClick={() => handleSaveAppearance()}
-          disabled={!appearanceIsDirty || saveAppearance.isPending}
-        >
-          <Trans message="Save changes" />
+      {(isProfileTab || isAppearanceTab) && (
+        <Button onClick={handleSave} disabled={!showSaveButton || isSaving}>
+          <SaveIcon data-icon="inline-start" />
+          <span className="hidden sm:inline">
+            <Trans message="Save changes" />
+          </span>
+          <span className="sm:hidden">
+            <Trans message="Save" />
+          </span>
         </Button>
       )}
     </DashboardLayout.SectionHeader>
@@ -182,10 +237,13 @@ function BiolinkSelector() {
       <Dropdown.Root>
         <Dropdown.Trigger
           render={
-            <Button variant="outline" className="mr-auto justify-between" />
+            <Button
+              variant="outline"
+              className="mr-auto max-w-64 justify-between"
+            />
           }
         >
-          {selectedBiolink.name}
+          <span className="truncate">{selectedBiolink.name}</span>
           <ChevronDownIcon />
         </Dropdown.Trigger>
         <Dropdown.Content>
@@ -231,8 +289,13 @@ function AdminBreadcrumb() {
 
 function MoreActionsButton() {
   const {routeType} = useDatatableRouteType();
+  const {biolinkId} = useRequiredParams(['biolinkId']);
   const biolink = useBiolinkEditorStore(s => s.biolink);
   const listQuery = useSuspenseQuery(listCurrentUserBiolinksOptions());
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isInsightsTab = location.pathname.endsWith('/insights');
+  const baseUrl = `/${routeType}/biolinks/${biolinkId}`;
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -268,6 +331,18 @@ function MoreActionsButton() {
             <ExternalLinkIcon />
             <Trans message="Open in new tab" />
           </Dropdown.Item>
+          <Dropdown.Item
+            onClick={() =>
+              navigate(isInsightsTab ? baseUrl : `${baseUrl}/insights`)
+            }
+          >
+            {isInsightsTab ? (
+              <UserRoundPenIcon />
+            ) : (
+              <ChartNoAxesCombinedIcon />
+            )}
+            <Trans message={isInsightsTab ? 'Edit profile' : 'Insights'} />
+          </Dropdown.Item>
           <Dropdown.Separator />
           <Dropdown.Item
             variant="destructive"
@@ -286,32 +361,106 @@ function MoreActionsButton() {
 }
 
 export function BiolinkContentTab() {
+  const biolink = useBiolinkEditorStore(s => s.biolink);
   const content = useBiolinkEditorStore(s => s.content);
 
+  if (isCreatorProfileBiolink(biolink)) {
+    return <CreatorProfileEditor />;
+  }
+
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-6">
-      <div>
-        <AddNewLinkButton />
-        <AddNewWidgetButton />
+    <div className="mx-auto max-w-2xl">
+      <div className="flex flex-col gap-4">
+        <div className="min-w-0">
+          <h2 className="text-lg font-semibold">
+            <Trans message="Content" />
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            <Trans message="Add links and widgets to build your page." />
+          </p>
+        </div>
+        <CreatorProfileUpgrade />
+        <div className="flex flex-wrap gap-3">
+          <AddNewLinkButton />
+          <AddNewWidgetButton />
+        </div>
       </div>
-      {content.length ? (
-        <BiolinkItemList />
-      ) : (
-        <Empty.Root>
-          <Empty.Header>
-            <Empty.Media variant="icon">
-              <LayoutPanelTop />
-            </Empty.Media>
-            <Empty.Title>
-              <Trans message="No content yet." />
-            </Empty.Title>
-            <Empty.Description>
-              <Trans message="Get started by adding a link or widget." />
-            </Empty.Description>
-          </Empty.Header>
-        </Empty.Root>
-      )}
+      <div className="mt-6">
+        {content.length ? (
+          <BiolinkItemList />
+        ) : (
+          <Empty.Root>
+            <Empty.Header>
+              <Empty.Media variant="icon">
+                <LayoutPanelTop />
+              </Empty.Media>
+              <Empty.Title>
+                <Trans message="No content yet." />
+              </Empty.Title>
+              <Empty.Description>
+                <Trans message="Get started by adding a link or widget." />
+              </Empty.Description>
+            </Empty.Header>
+          </Empty.Root>
+        )}
+      </div>
     </div>
+  );
+}
+
+export function BiolinkAboutTab() {
+  const biolink = useBiolinkEditorStore(s => s.biolink);
+
+  if (isCreatorProfileBiolink(biolink)) {
+    return <CreatorProfileEditor tab="about" />;
+  }
+
+  return (
+    <div className="mx-auto flex max-w-2xl flex-col gap-4 py-2">
+      <div>
+        <h2 className="text-lg font-semibold">
+          <Trans message="About" />
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          <Trans message="Add a fuller introduction after converting this page into a creator profile." />
+        </p>
+      </div>
+      <CreatorProfileUpgrade />
+    </div>
+  );
+}
+
+function CreatorProfileUpgrade() {
+  const biolink = useBiolinkEditorStore(s => s.biolink);
+  const convert = useMutation({
+    mutationFn: () => convertBiolinkToCreatorProfile(biolink.id),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({queryKey: ['biolinks']});
+      toast.success(<Trans message="Creator profile is ready" />);
+    },
+    onError: error => showHttpErrorToast(error),
+  });
+
+  return (
+    <Alert.Root>
+      <SparklesIcon />
+      <Alert.Title>
+        <Trans message="Turn this page into a creator profile" />
+      </Alert.Title>
+      <Alert.Description>
+        <Trans message="Use a focused profile, work showcase, and Digital Products layout. Your existing content will be preserved." />
+      </Alert.Description>
+      <Alert.Action>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={convert.isPending}
+          onClick={() => convert.mutate()}
+        >
+          <Trans message="Upgrade" />
+        </Button>
+      </Alert.Action>
+    </Alert.Root>
   );
 }
 

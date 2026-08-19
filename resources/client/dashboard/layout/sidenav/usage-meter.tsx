@@ -18,7 +18,7 @@ import {Trans} from '@ui/i18n/trans';
 import {SvgIconProps} from '@ui/icons/svg-icon';
 import {useSettings} from '@ui/settings/use-settings';
 import {cn} from '@ui/utils/cn';
-import {ChevronRightIcon, LinkIcon, ZapIcon} from 'lucide-react';
+import {ChevronRightIcon, StoreIcon, ZapIcon} from 'lucide-react';
 import {ReactElement} from 'react';
 
 export function UsageMeter() {
@@ -57,9 +57,9 @@ export function UsageMeter() {
                 usageKey="tracked_events"
               />
               <UsageRow
-                icon={<LinkIcon />}
-                label={<Trans message="Links" />}
-                usageKey="links"
+                icon={<StoreIcon />}
+                label={<Trans message="Storefronts" />}
+                usageKey="biolinks"
               />
               {renewalDate && (
                 <p className="text-xs text-muted-foreground">

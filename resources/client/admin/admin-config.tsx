@@ -9,10 +9,15 @@ import {
   GlobeIcon,
   NotebookTextIcon,
   SettingsIcon,
+  ShieldCheckIcon,
   SquareStackIcon,
+  StoreIcon,
   TagsIcon,
   UserIcon,
   UserRoundKeyIcon,
+  CreditCardIcon,
+  LandmarkIcon,
+  CoinsIcon,
 } from 'lucide-react';
 import {ComponentProps, ReactElement} from 'react';
 
@@ -33,6 +38,12 @@ export const AdminSidebarIcons: Record<
   '/admin/files': <FilesIcon />,
   '/admin/localizations': <GlobeIcon />,
   '/admin/logs': <ClipboardClockIcon />,
+  '/admin/digital-products': <StoreIcon />,
+  '/admin/payment-activity': <CircleDollarSignIcon />,
+  '/admin/kyc-verifications': <ShieldCheckIcon />,
+  '/admin/withdrawals': <CreditCardIcon />,
+  '/admin/financial/withdrawal-methods': <CoinsIcon />,
+  '/admin/financial': <LandmarkIcon />,
 };
 
 for (const [key, value] of Object.entries(sharedDashboardIcons)) {
@@ -43,6 +54,7 @@ for (const [key, value] of Object.entries(sharedDashboardIcons)) {
 export const AppSettingsNavConfig: SettingsNavItem[] = [
   {label: message('Links'), to: 'links', position: 2},
   {label: message('Biolinks'), to: 'biolinks', position: 2},
+  {label: message('Verification'), to: 'kyc', position: 2},
   {label: message('Landing page'), to: 'landing-page', position: 2},
   {label: message('Ads'), to: 'ads', position: 20},
 ];

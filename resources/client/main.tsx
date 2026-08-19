@@ -5,6 +5,10 @@ import {Folder} from '@app/gen/schemas/folder';
 import {Link as LinkType} from '@app/gen/schemas/link';
 import {ListProducts200} from '@app/gen/schemas/list-products200';
 import {LandingPageContent} from '@app/landing/landing-page-content';
+import type {
+  DigitalProductOrderSuccessPageData,
+  DigitalProductPageData,
+} from '@app/digital-products/public/digital-product-public-pages';
 import {BaseBackendBootstrapData} from '@common/core/base-backend-bootstrap-data';
 import {CommonProvider} from '@common/core/common-provider';
 import {BaseBackendSettings} from '@common/core/settings/base-backend-settings';
@@ -34,6 +38,12 @@ declare module '@ui/bootstrap-data/bootstrap-data' {
       customPage?: {data: CustomPage};
       linkeablePage?: {
         data: LinkType | Folder | Biolink;
+      };
+      digitalProductPage?: {
+        data: DigitalProductPageData;
+      };
+      digitalProductOrderSuccessPage?: {
+        data: DigitalProductOrderSuccessPageData;
       };
     };
   }
@@ -75,6 +85,13 @@ declare module '@ui/settings/settings' {
     biolink: {
       show_branding?: boolean;
       branding_img?: string;
+    };
+    kyc?: {
+      enabled?: boolean;
+      selfie_verification?: boolean;
+    };
+    storefront?: {
+      reviews_enabled?: boolean;
     };
     ads?: {
       biolink_top?: string;

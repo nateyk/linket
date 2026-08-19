@@ -25,6 +25,12 @@ class BiolinkLinkController extends Controller
 
         Gate::authorize('update', $biolink);
 
+        abort_if(
+            $biolink->isCreatorProfile(),
+            422,
+            __('Add approved Digital Products from the creator profile Work section.'),
+        );
+
         $data = $request->validated();
 
         $link = (new CrupdateLink())->execute(

@@ -1,7 +1,14 @@
 {
-  "mcpServers": {
-    "belink-storybook": {
-      "url": "http://localhost:6006/mcp"
+    "mcpServers": {
+        "belink-storybook": {
+            "url": "http://localhost:6006/mcp"
+        },
+        "laravel-boost": {
+            "command": "php",
+            "args": [
+                "artisan",
+                "boost:mcp"
+            ]
+        }
     }
-  }
 }

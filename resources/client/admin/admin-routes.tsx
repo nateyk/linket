@@ -70,6 +70,10 @@ export const adminRoutes: RouteObject[] = [
             lazy: () => import('@app/admin/settings/biolink-settings'),
           },
           {
+            path: 'kyc',
+            lazy: () => import('@app/admin/settings/kyc-settings'),
+          },
+          {
             path: 'landing-page',
             lazy: () => import('@app/admin/settings/landing-page-settings'),
           },
@@ -99,6 +103,52 @@ export const adminRoutes: RouteObject[] = [
               fields_preset: 'datatable',
             }),
           ),
+      },
+      {
+        path: 'digital-products',
+        lazy: () => import('@app/admin/digital-products/admin-digital-products-page'),
+      },
+      {
+        path: 'digital-products/payouts',
+        lazy: () => import('@app/admin/digital-products/admin-digital-product-payouts-page'),
+      },
+      {
+        path: 'digital-products/:productId/reviews',
+        lazy: () =>
+          import('@app/admin/digital-products/admin-product-reviews-page'),
+      },
+      {
+        path: 'payment-activity',
+        lazy: () => import('@app/admin/digital-products/admin-payment-activity-page'),
+      },
+      {
+        path: 'kyc-verifications',
+        lazy: () =>
+          import('@app/admin/kyc/admin-kyc-verifications-page'),
+      },
+      {
+        path: 'withdrawals',
+        lazy: () => import('@app/admin/withdrawals/admin-withdrawals-page'),
+      },
+      {
+        path: 'withdrawals/:withdrawalId/review',
+        lazy: () => import('@app/admin/withdrawals/admin-withdrawal-review-page'),
+      },
+      {
+        path: 'financial/withdrawal-methods',
+        lazy: () => import('@app/admin/financial/admin-withdrawal-methods-page'),
+      },
+      {
+        path: 'financial/withdrawal-methods/create',
+        lazy: () => import('@app/admin/financial/admin-withdrawal-method-create-page'),
+      },
+      {
+        path: 'financial/withdrawal-methods/:methodId/edit',
+        lazy: () => import('@app/admin/financial/admin-withdrawal-method-edit-page'),
+      },
+      {
+        path: 'digital-products/delivery-history',
+        lazy: () => import('@app/admin/digital-products/admin-order-recovery-deliveries-page'),
       },
     ],
   },

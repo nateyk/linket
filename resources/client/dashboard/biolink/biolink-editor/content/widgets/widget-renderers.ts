@@ -8,6 +8,7 @@ import {TwitchWidgetRenderer} from '@app/dashboard/biolink/biolink-editor/conten
 import {VimeoWidgetRenderer} from '@app/dashboard/biolink/biolink-editor/content/widgets/vimeo-widget/vimeo-widget-renderer';
 import {WidgetRendererProps} from '@app/dashboard/biolink/biolink-editor/content/widgets/widget-renderer-props';
 import {YoutubeWidgetRenderer} from '@app/dashboard/biolink/biolink-editor/content/widgets/youtube-widget/youtube-widget-renderer';
+import {ShopWidgetRenderer} from '@app/dashboard/biolink/biolink-editor/content/widgets/shop-widget/shop-widget-renderer';
 import {BiolinkWidget} from '@app/gen/schemas/biolink-widget';
 import {JSXElementConstructor} from 'react';
 
@@ -24,4 +25,5 @@ export const WidgetRenderers: Record<
   spotify: SpotifyWidgetRenderer,
   twitch: TwitchWidgetRenderer,
   tiktok: TiktokWidgetRenderer,
+  shop: ShopWidgetRenderer,
 };

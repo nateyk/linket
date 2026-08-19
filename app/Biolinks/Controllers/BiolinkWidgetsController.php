@@ -9,6 +9,7 @@ use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule;
 
 #[Group('Biolinks', weight: 6)]
 class BiolinkWidgetsController extends Controller
@@ -25,11 +26,24 @@ class BiolinkWidgetsController extends Controller
         Gate::authorize('update', $biolink);
 
         $data = $request->validate([
-            'type' => 'required|string',
+            'type' => [
+                'required',
+                'string',
+                Rule::in([
+                    'image', 'text', 'socials', 'youtube', 'soundcloud',
+                    'vimeo', 'spotify', 'twitch', 'tiktok', 'shop',
+                ]),
+            ],
             'position' => 'int',
             /** @var array<string, string>|null */
             'config' => 'nullable|array',
         ]);
+
+        abort_if(
+            $biolink->isCreatorProfile(),
+            422,
+            __('Add approved Digital Products from the creator profile Work section.'),
+        );
 
         $widget = $biolink->widgets()->create($data);
 
@@ -61,6 +75,14 @@ class BiolinkWidgetsController extends Controller
             /** @var array<string, string> */
             'config' => 'array',
         ]);
+
+        if (
+            $biolink->isCreatorProfile() &&
+            isset($data['type']) &&
+            !in_array($data['type'], ['image', 'text'], true)
+        ) {
+            abort(422, __('Creator profiles only support image and text work items.'));
+        }
 
         $widget->update($data);
 

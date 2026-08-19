@@ -3,6 +3,7 @@
 namespace Common;
 
 use App\Models\Channel;
+use App\Payments\Commands\ProcessChapaSubscriptionRenewals;
 use App\Models\User;
 use App\Policies\ChannelPolicy;
 use Clockwork\Support\Laravel\ClockworkServiceProvider;
@@ -35,7 +36,6 @@ use Common\Core\Commands\SeedCommand;
 use Common\Core\Commands\UpdateSimplePaginateTables;
 use Common\Core\Contracts\AppUrlGenerator;
 use Common\Core\Exceptions\BaseExceptionHandler;
-use Common\Core\Install\Commands\CheckIfUpdateAvailableCommand;
 use Common\Core\Install\RedirectIfNotInstalledMiddleware;
 use Common\Core\Install\Commands\RunUpdateActionsCommand;
 use Common\Core\Install\Commands\UpdateAppCommand;
@@ -538,8 +538,8 @@ class CommonServiceProvider extends ServiceProvider
             CleanLogTables::class,
             ImportRecordsIntoScoutCommand::class,
             CountUploadingBackendFiles::class,
-            CheckIfUpdateAvailableCommand::class,
             UpdateAppCommand::class,
+            ProcessChapaSubscriptionRenewals::class,
         ];
 
         if ($this->app->environment() !== 'production') {
@@ -582,12 +582,11 @@ class CommonServiceProvider extends ServiceProvider
             $schedule
                 ->command(CountUploadingBackendFiles::class)
                 ->everyFifteenMinutes();
-
-            if (config('app.envato_purchase_code')) {
-                $schedule
-                    ->command(CheckIfUpdateAvailableCommand::class)
-                    ->dailyAt('03:20');
-            }
+            $schedule
+                ->command(ProcessChapaSubscriptionRenewals::class)
+                ->hourly()
+                ->withoutOverlapping()
+                ->onOneServer();
 
             // wait until artisan is booted to monitor schedule, otherwise commands
             // registered via console.php file will not be available yet

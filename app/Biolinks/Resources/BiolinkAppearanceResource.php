@@ -40,7 +40,8 @@ class BiolinkAppearanceResource extends JsonResource
              *   fontConfig?: array{
              *     family: string
              *   },
-             *   hideBranding?: bool
+             *   hideBranding?: bool,
+             *   layout?: 'default'|'profile-sidebar'
              * }
              */
             'config' => $this->config,
