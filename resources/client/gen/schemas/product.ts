@@ -7,6 +7,7 @@
  */
 import type {ProductPermissionsItem} from './product-permissions-item';
 import type {ProductPricesItem} from './product-prices-item';
+import type {ProductStorefrontBenefits} from './product-storefront-benefits';
 
 export type Product = {
   id: number;
@@ -19,10 +20,11 @@ export type Product = {
   recommended: boolean;
   free: boolean;
   is_default: boolean;
+  active: boolean;
   hidden: boolean;
   trial_period_days: number;
   /** @nullable */
-  storefront_benefits: unknown[] | null;
+  storefront_benefits: ProductStorefrontBenefits;
   pricing_features: (
     | string
     | 'Unlimited products'

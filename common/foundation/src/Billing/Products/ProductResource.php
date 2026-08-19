@@ -28,8 +28,23 @@ class ProductResource extends JsonResource
             'recommended' => $this->recommended,
             'free' => $this->free,
             'is_default' => $this->is_default ?? false,
+            'active' => $this->active,
             'hidden' => $this->hidden,
             'trial_period_days' => $this->trial_period_days,
+            /**
+             * @var array{
+             *     platform_fee_percent?: int|null,
+             *     commission_bps?: int|null,
+             *     max_products?: int|null,
+             *     max_free_products?: int|null,
+             *     max_paid_products?: int|null,
+             *     max_upload_bytes?: int|null,
+             *     max_storefronts?: int|null,
+             *     max_workspaces?: int|null,
+             *     tracking_pixels_enabled?: bool|null,
+             *     advanced_analytics_enabled?: bool|null,
+             * }|null
+             */
             'storefront_benefits' => $this->storefront_benefits,
             'pricing_features' => $this->pricingFeatures(),
             'created_at' => $this->created_at,

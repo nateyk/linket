@@ -26517,6 +26517,9 @@
                     "is_default": {
                         "type": "boolean"
                     },
+                    "active": {
+                        "type": "boolean"
+                    },
                     "hidden": {
                         "type": "boolean"
                     },
@@ -26525,10 +26528,71 @@
                     },
                     "storefront_benefits": {
                         "type": [
-                            "array",
+                            "object",
                             "null"
                         ],
-                        "items": {}
+                        "properties": {
+                            "platform_fee_percent": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
+                            },
+                            "commission_bps": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
+                            },
+                            "max_products": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
+                            },
+                            "max_free_products": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
+                            },
+                            "max_paid_products": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
+                            },
+                            "max_upload_bytes": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
+                            },
+                            "max_storefronts": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
+                            },
+                            "max_workspaces": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
+                            },
+                            "tracking_pixels_enabled": {
+                                "type": [
+                                    "boolean",
+                                    "null"
+                                ]
+                            },
+                            "advanced_analytics_enabled": {
+                                "type": [
+                                    "boolean",
+                                    "null"
+                                ]
+                            }
+                        }
                     },
                     "pricing_features": {
                         "type": "array",
@@ -26663,6 +26727,7 @@
                     "recommended",
                     "free",
                     "is_default",
+                    "active",
                     "hidden",
                     "trial_period_days",
                     "storefront_benefits",
