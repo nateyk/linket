@@ -483,6 +483,12 @@ return [
                     'Allow localization management from admin area.',
             ],
             [
+                'name' => 'files.create',
+                'role_types' => ['users'],
+                'display_name' => 'Upload files',
+                'description' => 'Allow users to upload files.',
+            ],
+            [
                 'name' => 'files.update',
                 'role_types' => ['users'],
                 'display_name' => 'Manage files',
