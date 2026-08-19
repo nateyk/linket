@@ -107,9 +107,10 @@ class ProductReviewTest extends TestCase
         ]);
     }
 
-    private function request(array $payload = [], string $path = '/api/v1/public/biolinks/1/digital-products/1/reviews'): Request
+    private function request(array $payload = [], string $path = '/api/v1/public/biolinks/1/digital-products/1/reviews', ?string $host = null): Request
     {
-        $request = Request::create('http://127.0.0.1' . $path, 'POST', $payload);
+        $host ??= config('app.url');
+        $request = Request::create($host . $path, 'POST', $payload);
         app()->instance('request', $request);
 
         return $request;
@@ -158,6 +159,27 @@ class ProductReviewTest extends TestCase
                 'buyer_email' => 'buyer@example.test',
                 'stars' => 4,
             ]),
+            $biolink,
+            $product,
+        );
+    }
+
+    public function testStoreRejectsRequestFromNonMatchingDomain(): void
+    {
+        [$product, $biolink] = $this->makeProductOnBiolink();
+        $order = $this->makeOrder($product, $biolink);
+
+        $this->expectException(\App\Links\Exceptions\LinkRedirectFailed::class);
+
+        (new ProductReviewsController())->store(
+            $this->request(
+                [
+                    'order_uuid' => $order->uuid,
+                    'buyer_email' => 'buyer@example.test',
+                    'stars' => 5,
+                ],
+                host: 'http://127.0.0.1',
+            ),
             $biolink,
             $product,
         );
