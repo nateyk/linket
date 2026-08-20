@@ -25,6 +25,7 @@ vendor
 dist
 dist-ssr
 public/build
+public/hot
 #
 
 # Laravel specific
