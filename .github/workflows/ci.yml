@@ -111,6 +111,9 @@ jobs:
       - name: Migrate
         run: php artisan migrate --force --no-interaction
 
+      - name: Seed required defaults (roles, themes, settings)
+        run: php artisan db:seed --force --no-interaction
+
       - name: Tests — 0 failures is the gate
         run: php artisan test --compact
         # Do NOT hardcode expected count; repo grows. Only exit 0 matters.
