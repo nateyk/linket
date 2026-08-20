@@ -25,8 +25,8 @@ return new class extends Migration {
         if (!Schema::hasTable('digital_product_order_recovery_deliveries')) {
             Schema::create('digital_product_order_recovery_deliveries', function (Blueprint $table): void {
                 $table->id();
-                $table->foreignId('digital_product_order_recovery_id')->nullable()->constrained()->nullOnDelete();
-                $table->foreignId('storefront_order_id')->nullable()->constrained()->nullOnDelete();
+                $table->foreignId('digital_product_order_recovery_id')->nullable()->constrained(table: 'digital_product_order_recoveries', indexName: 'dprod_recov_deliv_recov_id_fk')->nullOnDelete();
+                $table->foreignId('storefront_order_id')->nullable()->constrained(table: 'storefront_orders', indexName: 'dprod_recov_deliv_order_id_fk')->nullOnDelete();
                 $table->string('email_hash', 64)->index();
                 $table->string('masked_email');
                 $table->string('event')->index();
