@@ -124,8 +124,17 @@ class Uploads
                 $oldDriver,
                 $backend->type,
             ),
-            $backends[0],
+            $backends[0] ?? null,
         );
+        // Fallback to local filesystem when no backends are configured (e.g. fresh CI DB before UploadBackendsSeeder)
+        if (!$backend) {
+            return Storage::build([
+                'driver' => 'local',
+                'throw' => true,
+                'root' => $entry->public ? public_path('storage') : storage_path('app/uploads'),
+                'url' => $entry->public ? rtrim(config('app.url'), '/') . '/storage' : null,
+            ]);
+        }
 
         $root = null;
         if ($oldDriver === 'local') {

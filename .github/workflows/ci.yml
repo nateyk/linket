@@ -114,6 +114,9 @@ jobs:
       - name: Seed required defaults (roles, themes, settings)
         run: php artisan db:seed --force --no-interaction
 
+      - name: Seed upload backends (required for FileEntry legacy disk)
+        run: php artisan db:seed --class="Common\Database\Seeders\UploadBackendsSeeder" --force --no-interaction || php artisan tinker --execute="app(Common\Database\Seeders\UploadBackendsSeeder::class)->run(); echo 'backends seeded';"
+
       - name: Tests — 0 failures is the gate
         run: php artisan test --compact
         # Do NOT hardcode expected count; repo grows. Only exit 0 matters.

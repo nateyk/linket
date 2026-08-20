@@ -10,6 +10,7 @@ return [
             'permissions' => [
                 // API
                 'api.access',
+                'files.create',
 
                 // LINKS
                 [
