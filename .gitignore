@@ -45,3 +45,7 @@ session-*.md
 
 # Coverage
 /coverage
+
+# Opencode session dumps (large, never commit)
+**/linket-session.json
+C:\Users\*
