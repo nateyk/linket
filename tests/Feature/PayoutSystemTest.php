@@ -659,10 +659,24 @@ class PayoutSystemTest extends TestCase
 
     /**
      * Mock Chapa transfer to avoid external API calls in tests.
+     * Also stubs getBanks so validateBankCode does not hit live Chapa endpoint.
      */
     private function mockChapaTransfer(): void
     {
+        Cache::flush();
         $this->instance(\Chapa\Chapa\Chapa::class, new class extends \Chapa\Chapa\Chapa {
+            public function getBanks(): array
+            {
+                return [
+                    'data' => [
+                        ['id' => 946, 'slug' => 'cbe_bank', 'swift' => 'CBETETAA', 'name' => 'Commercial Bank of Ethiopia', 'active' => 1, 'currency' => 'ETB'],
+                        ['id' => 880, 'slug' => 'dashen_bank', 'swift' => 'DASHETAA', 'name' => 'Dashen Bank', 'active' => 1, 'currency' => 'ETB'],
+                        ['id' => 130, 'slug' => 'abay_bank', 'swift' => 'ABAYETAA', 'name' => 'Abay Bank', 'active' => 1, 'currency' => 'ETB'],
+                        ['id' => 0, 'slug' => 'telebirr', 'swift' => 'TELEBIRR', 'name' => 'Telebirr', 'active' => 1, 'currency' => 'ETB'],
+                    ],
+                ];
+            }
+
             public function createTransfer(array $data): array
             {
                 return ['data' => ['id' => 'chapa_transfer_' . uniqid(), 'status' => 'success']];

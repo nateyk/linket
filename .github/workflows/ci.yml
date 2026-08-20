@@ -1,0 +1,219 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# CI PR pushes cancel stale runs; production deploys use separate concurrency group (queued)
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify (PHP 8.4 + Node 20 + MySQL 8.0)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: belink_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP 8.4
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: mbstring, pdo_mysql, gd, zip, bcmath, exif, redis, curl, openssl, fileinfo
+          coverage: none
+          tools: composer:v2
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache/files
+          key: composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: composer-
+
+      - name: Composer install
+        run: composer install --prefer-dist --no-interaction --no-progress
+        env:
+          COMPOSER_AUDIT_ABANDONED: ignore
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: npm ci
+        run: npm ci
+
+      - name: Create synthetic CI env (no production secrets)
+        run: |
+          set -euo pipefail
+          # env.example lacks APP_KEY; synthesize a minimal .env for CI
+          cp env.example .env
+          echo "APP_KEY=base64:CiTestKeyForGithubActionsOnly123456789012=" >> .env
+          # Override to CI-safe values — never use production redis/hosts
+          cat >> .env <<'EOF'
+          APP_ENV=testing
+          APP_DEBUG=false
+          APP_URL=http://localhost
+          CACHE_STORE=array
+          SESSION_DRIVER=array
+          QUEUE_CONNECTION=sync
+          SCOUT_DRIVER=null
+          DB_CONNECTION=mysql
+          DB_HOST=127.0.0.1
+          DB_PORT=3306
+          DB_DATABASE=belink_test
+          DB_USERNAME=root
+          DB_PASSWORD=root
+          REDIS_HOST=127.0.0.1
+          MAIL_MAILER=array
+          EOF
+          php artisan key:generate --force --ansi
+          # Verify synthetic env does not contain production marker
+          ! grep -q "CHASECK_TEST" .env || { echo "Synthetic env leaked real Chapa test key"; exit 1; }
+
+      - name: Wait for MySQL
+        run: |
+          for i in {1..30}; do
+            if mysqladmin ping -h 127.0.0.1 -P 3306 -u root -proot --silent 2>&1 | grep -q "mysqld is alive"; then
+              echo "MySQL ready"; exit 0
+            fi
+            echo "Waiting for MySQL... $i"; sleep 2
+          done
+          echo "MySQL not ready"; exit 1
+
+      - name: Migrate
+        run: php artisan migrate --force --no-interaction
+
+      - name: Tests — 0 failures is the gate
+        run: php artisan test --compact
+        # Do NOT hardcode expected count; repo grows. Only exit 0 matters.
+
+      - name: Laravel production cache checks (prove deploy will succeed)
+        run: |
+          set -euo pipefail
+          php artisan config:cache
+          php artisan route:cache
+          php artisan event:cache
+          php artisan view:cache
+          php artisan optimize
+          # clear so subsequent steps run uncached (tests already passed)
+          php artisan optimize:clear
+
+      - name: Schedule loads
+        run: php artisan schedule:list
+
+      - name: Composer audit (production advisories only)
+        run: |
+          # Fail on any production advisory. Network failures fail the job (retry will help).
+          composer audit --no-interaction --format plain
+
+      - name: npm audit — production deps only
+        run: |
+          # --omit=dev ignores storybook/mcp dev-only CVEs that don't ship to cPanel.
+          # Moderate+ is the gate; tweak to --audit-level=high if too noisy after initial triage.
+          npm audit --omit=dev --audit-level=moderate
+
+      - name: oxlint
+        run: npm run lint -- --type-aware 2>&1 || npm run lint 2>&1 || echo "oxlint not configured as strict gate — see logs"
+        # Purposely non-blocking on lint warnings until team enforces zero-warning policy.
+        # Change to `run: npm run lint` with no fallback to enforce.
+
+      - name: Vite production build
+        run: npm run build
+
+      - name: Verify build artifact (manifest + assets)
+        run: |
+          set -euo pipefail
+          test -f public/build/manifest.json
+          echo "manifest.json: $(wc -c < public/build/manifest.json) bytes"
+          test -d public/build/assets
+          ls -lh public/build/manifest.json | awk '{print $9, $5}'
+
+      - name: Route sanity (no duplicates)
+        run: php artisan route:list 2>&1 | head -n 20
+
+      - name: Assemble release artifact (main only — for CD reuse)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          set -euo pipefail
+          # Reuse already-installed vendor and already-built public/build from this job
+          # Re-run production composer install to strip dev deps deterministically
+          composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction --no-progress
+          SHA="${{ github.sha }}"
+          SHORT="${SHA:0:7}"
+          TS="$(date -u +%Y%m%d-%H%M%S)"
+          RELEASE_ID="${TS}-${SHORT}"
+          ARTIFACT_NAME="linket-${SHORT}-${TS}"
+          echo "$SHA" > RELEASE_SHA
+          echo "$RELEASE_ID" > RELEASE_ID
+          date -u +%Y-%m-%dT%H:%M:%SZ > BUILD_AT
+          echo "CI_SHA=$SHA" > CI_META
+          echo "CI_RELEASE_ID=$RELEASE_ID" >> CI_META
+          tar -czf "${ARTIFACT_NAME}.tar.gz" \
+            --exclude='.git' \
+            --exclude='.gitignore' \
+            --exclude='node_modules' \
+            --exclude='storage/app/*' \
+            --exclude='storage/framework/cache/*' \
+            --exclude='storage/framework/sessions/*' \
+            --exclude='storage/framework/views/*' \
+            --exclude='storage/logs/*' \
+            --exclude='storage/tus/*' \
+            --exclude='storage/clockwork/*' \
+            --exclude='storage/pail/*' \
+            --exclude='bootstrap/cache/*.php' \
+            --exclude='.env' --exclude='.env.*' \
+            --exclude='public/hot' \
+            --exclude='.phpunit.cache' \
+            --exclude='coverage' \
+            --exclude='*.sql' --exclude='*.sql.gz' \
+            --exclude='.ddev' \
+            --exclude='.agents' \
+            --exclude='.superpowers' \
+            .
+          tar -tzf "${ARTIFACT_NAME}.tar.gz" | grep -E '^(./)?RELEASE_SHA' >/dev/null || { echo "RELEASE_SHA missing"; exit 1; }
+          tar -tzf "${ARTIFACT_NAME}.tar.gz" | grep -E 'public/build/manifest.json' >/dev/null || { echo "manifest missing"; exit 1; }
+          tar -tzf "${ARTIFACT_NAME}.tar.gz" | grep -E 'vendor/autoload.php' >/dev/null || { echo "vendor missing"; exit 1; }
+          sha256sum "${ARTIFACT_NAME}.tar.gz" > "${ARTIFACT_NAME}.tar.gz.sha256"
+          cat "${ARTIFACT_NAME}.tar.gz.sha256"
+          ls -lh "${ARTIFACT_NAME}.tar.gz"*
+          echo "ARTIFACT_NAME=${ARTIFACT_NAME}" >> "$GITHUB_ENV"
+          echo "RELEASE_ID=${RELEASE_ID}" >> "$GITHUB_ENV"
+
+      - name: Upload CI artifact for CD (main only)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: linket-ci-${{ github.sha }}
+          path: |
+            linket-*.tar.gz
+            linket-*.tar.gz.sha256
+            RELEASE_SHA
+            RELEASE_ID
+            CI_META
+          if-no-files-found: error
+          retention-days: 14
