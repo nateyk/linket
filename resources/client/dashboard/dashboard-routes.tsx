@@ -419,6 +419,10 @@ export const dashboardRoutes: RouteObject[] = [
         lazy: () =>
           import('@app/dashboard/digital-products/sales-payouts-page'),
       },
+      {
+        path: 'commerce',
+        loader: () => redirect('/dashboard'),
+      },
 
       // biolinks
       {

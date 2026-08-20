@@ -8,7 +8,7 @@ trait GetsEntryTypeFromMime
 {
     protected function getTypeFromMime(
         string $mime,
-        string $extension = null,
+        ?string $extension = null,
     ): string {
         $default = explode('/', $mime)[0];
 

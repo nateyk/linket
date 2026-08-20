@@ -1,8 +1,4 @@
-.ad-host:empty {
-  display: none;
-}
-
-.ad-host > *:not(img) {
+.ad-host {
   width: 100%;
   height: 100%;
   max-width: 1200px;
@@ -10,12 +6,8 @@
   max-height: 600px;
 }
 
-.ad-host img {
-  margin: auto;
-}
-
 @media only screen and (max-width: 600px) {
-  .ad-host > *:not(img) {
+  .ad-host {
     max-width: 370px;
   }
 }

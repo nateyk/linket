@@ -15,10 +15,12 @@ use Common\Permissions\Models\Permission;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Psr\Log\AbstractLogger;
 use Tests\TestCase;
 
 class PayoutSystemTest extends TestCase
@@ -525,6 +527,85 @@ class PayoutSystemTest extends TestCase
         ])->assertOk()->assertJsonPath('data.status', 'paid');
 
         $this->assertStringStartsWith('CHAPA-TX-', $response->json('data.transfer_reference'));
+    }
+
+    public function testChapaPayoutLogsNeverContainSensitiveGatewayData(): void
+    {
+        settings()->save(['kyc.enabled' => true]);
+        [$creator, $workspaceId, $payout] = $this->seedPendingPayout(withAdmin: false);
+        $destination = '+251911223344';
+        $responseSecret = 'gateway-secret-account-value';
+        $telebirrMethod = DigitalProductWithdrawalMethod::query()
+            ->where('code', 'telebirr')
+            ->firstOrFail();
+
+        $payout->update([
+            'withdrawal_method_id' => $telebirrMethod->id,
+            'withdrawal_method_name' => $telebirrMethod->name,
+            'payout_destination' => $destination,
+        ]);
+        $payout->payoutMethod()->update([
+            'withdrawal_method_id' => $telebirrMethod->id,
+            'type' => 'telebirr',
+            'destination' => $destination,
+        ]);
+        $this->instance(\Chapa\Chapa\Chapa::class, new class($responseSecret) extends \Chapa\Chapa\Chapa {
+            public function __construct(private readonly string $responseSecret) {}
+
+            public function createTransfer(array $data): array
+            {
+                return [
+                    'data' => [
+                        'id' => 'safe-transfer-id',
+                        'status' => 'success',
+                        'account_number' => $this->responseSecret,
+                    ],
+                ];
+            }
+        });
+        $logger = new class extends AbstractLogger {
+            public array $records = [];
+
+            public function log($level, string|\Stringable $message, array $context = []): void
+            {
+                $this->records[] = [
+                    'level' => $level,
+                    'message' => (string) $message,
+                    'context' => $context,
+                ];
+            }
+        };
+        $originalLogger = Log::getFacadeRoot();
+        Log::swap($logger);
+
+        try {
+            app(ChapaPayoutService::class)->createTransfer(
+                $payout->fresh(['withdrawalMethod', 'payoutMethod', 'creator']),
+            );
+        } finally {
+            Log::swap($originalLogger);
+        }
+
+        $initiated = collect($logger->records)->firstWhere(
+            'message',
+            'Initiating Chapa Telebirr transfer',
+        );
+        $this->assertNotNull($initiated);
+        $this->assertSame([
+            'payout_id',
+            'reference',
+            'amount',
+            'currency',
+            'bank_code',
+        ], array_keys($initiated['context']));
+
+        $logged = json_encode($logger->records);
+        $this->assertStringNotContainsString($destination, $logged);
+        $this->assertStringNotContainsString(
+            preg_replace('/\D/', '', $destination),
+            $logged,
+        );
+        $this->assertStringNotContainsString($responseSecret, $logged);
     }
 
     /**

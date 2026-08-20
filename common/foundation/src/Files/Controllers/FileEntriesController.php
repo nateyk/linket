@@ -105,6 +105,12 @@ class FileEntriesController extends Controller
 
         $file = $request->file('file');
         $payload = new FileEntryPayload($request->all());
+        $detectedMime = $file instanceof UploadedFile
+            ? ($file->getMimeType() ?: $payload->clientMime)
+            : $payload->clientMime;
+        $validationMime = $payload->uploadType->name === 'digitalProductFiles'
+            ? $detectedMime
+            : $payload->clientMime;
 
         $request->validate([
             'file' => [
@@ -112,12 +118,13 @@ class FileEntriesController extends Controller
                 'file',
                 function ($attribute, UploadedFile $value, $fail) use (
                     $payload,
+                    $validationMime,
                 ) {
                     $errors = FileUploadValidator::validateForUploadType(
                         $payload->uploadType,
                         $payload->size,
                         $payload->clientExtension,
-                        $payload->clientMime,
+                        $validationMime,
                     );
                     if ($errors) {
                         $fail($errors->first());
@@ -132,6 +139,7 @@ class FileEntriesController extends Controller
             $payload->uploadType->name === 'digitalProductFiles' &&
             $payload->workspaceId
         ) {
+            $payload->clientMime = $detectedMime;
             app(\App\Entitlements\AssertDigitalProductUploadAllowed::class)
                 ->execute($payload->size, $payload->workspaceId);
         }

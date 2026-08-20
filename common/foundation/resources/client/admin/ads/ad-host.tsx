@@ -1,10 +1,8 @@
-import {getScrollParent} from '@react-aria/utils';
 import {Settings} from '@ui/settings/settings';
 import {useSettings} from '@ui/settings/use-settings';
-import lazyLoader from '@ui/utils/loaders/lazy-loader';
 import clsx from 'clsx';
 import dot from 'dot-object';
-import {memo, useEffect, useId, useMemo, useRef} from 'react';
+import {memo, useMemo} from 'react';
 import {useAuth} from '../../auth/use-auth';
 
 interface AdHostProps {
@@ -20,103 +18,28 @@ export function AdHost({slot, className}: AdHostProps) {
 
   if (settings.ads?.disable || isSubscribed || !adCode) return null;
 
-  return <InvariantAd className={className} slot={slot} adCode={adCode} />;
+  return <SandboxedAd className={className} slot={slot} adCode={adCode} />;
 }
 
-interface InvariantAdProps {
+interface SandboxedAdProps {
   slot: string;
   adCode: string;
   className?: string;
 }
-const InvariantAd = memo(
-  ({slot, adCode, className}: InvariantAdProps) => {
-    const ref = useRef<HTMLDivElement>(null);
 
-    const id = useId();
-
-    useEffect(() => {
-      if (ref.current) {
-        loadAdScripts(adCode, ref.current).then(() => {
-          executeAdJavascript(adCode, id);
-        });
-      }
-      return () => {
-        delete (window as any)['google_ad_modifications'];
-      };
-    }, [adCode, id]);
-
-    // remove height modifications added by adsense
-    useEffect(() => {
-      if (ref.current) {
-        const scrollParent = getScrollParent(ref.current) as HTMLElement;
-        if (scrollParent) {
-          const observer = new MutationObserver(function () {
-            scrollParent.style.height = '';
-            scrollParent.style.minHeight = '';
-          });
-          observer.observe(scrollParent, {
-            attributes: true,
-            attributeFilter: ['style'],
-          });
-          return () => observer.disconnect();
-        }
-      }
-    }, []);
-
-    return (
-      <div
-        ref={ref}
-        id={id}
-        className={clsx(
-          'ad-host flex max-h-150 min-h-22.5 w-full max-w-full flex-shrink-0 items-center justify-center overflow-hidden',
-          `${slot.replace(/\./g, '-')}-host`,
-          className,
-        )}
-        dangerouslySetInnerHTML={{__html: getAdHtml(adCode)}}
-      ></div>
-    );
-  },
-  () => {
-    // never re-render
-    return false;
-  },
-);
-
-function getAdHtml(adCode: string) {
-  // strip out all script tags from ad code and leave only html
-  return adCode
-    ?.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .trim();
-}
-
-// Load any external scripts needed by ad.
-function loadAdScripts(adCode: string, parentEl: HTMLDivElement): Promise<any> {
-  const promises = [];
-
-  // load ad code script
-  const pattern = /<script.*?src=['"](.*?)['"]/g;
-  let match;
-
-  while ((match = pattern.exec(adCode))) {
-    if (match[1]) {
-      promises.push(lazyLoader.loadAsset(match[1], {type: 'js', parentEl}));
-    }
-  }
-
-  return Promise.all(promises);
-}
-
-// Execute ad code javascript and replace document.write if needed.
-function executeAdJavascript(adCode: string, id: string) {
-  // find any ad code javascript that needs to be executed
-  const pattern = /<script\b[^>]*>([\s\S]*?)<\/script>/g;
-  let content;
-
-  while ((content = pattern.exec(adCode))) {
-    if (content[1]) {
-      const r = `var d = document.createElement('div'); d.innerHTML = $1; document.getElementById('${id}').appendChild(d.firstChild);`;
-      const toEval = content[1].replace(/document.write\((.+?)\);/, r);
-      eval(toEval);
-    }
-  }
-}
+// Ad snippets are intentionally isolated from the Linket document. In particular,
+// omitting allow-same-origin prevents them from reading application storage or DOM.
+const SandboxedAd = memo(({slot, adCode, className}: SandboxedAdProps) => (
+  <iframe
+    className={clsx(
+      'ad-host max-h-150 min-h-22.5 w-full max-w-full shrink-0 overflow-hidden border-0',
+      `${slot.replace(/\./g, '-')}-host`,
+      className,
+    )}
+    loading="lazy"
+    referrerPolicy="no-referrer"
+    sandbox="allow-popups allow-popups-to-escape-sandbox allow-scripts"
+    srcDoc={adCode}
+    title={`Advertisement: ${slot}`}
+  />
+));

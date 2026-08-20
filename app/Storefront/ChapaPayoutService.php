@@ -33,9 +33,7 @@ class ChapaPayoutService
         return match ($method->code) {
             'bank_transfer' => $this->createBankTransfer($payout, $destination),
             'telebirr' => $this->createTelebirrTransfer($payout, $destination),
-            'paypal' => $this->createManualTransfer($payout, 'PayPal transfer to ' . $destination),
-            'other' => $this->createManualTransfer($payout, 'Manual payout to ' . $destination),
-            default => $this->createManualTransfer($payout, 'Payout via ' . $method->name),
+            default => $this->createManualTransfer($payout, $method->code),
         };
     }
 
@@ -45,10 +43,13 @@ class ChapaPayoutService
 
         $response = $this->chapa->verifyTransfer($reference);
 
-        Log::info('Chapa transfer verification response', ['reference' => $reference, 'response' => $response]);
+        Log::info('Chapa transfer verification response', [
+            'reference' => $reference,
+            'status' => data_get($response, 'data.status') ?? data_get($response, 'status'),
+        ]);
 
         if (!isset($response['data']['status'])) {
-            throw new RuntimeException("Chapa transfer verification failed: " . ($response['message'] ?? json_encode($response)));
+            throw new RuntimeException('Chapa transfer verification failed.');
         }
 
         return $response['data'];
@@ -61,7 +62,7 @@ class ChapaPayoutService
             $response = $this->chapa->getBanks();
 
             if (!isset($response['data']) || !is_array($response['data'])) {
-                throw new RuntimeException("Chapa banks fetch failed: " . ($response['message'] ?? json_encode($response)));
+                throw new RuntimeException('Chapa banks fetch failed.');
             }
 
             return $response['data'];
@@ -115,15 +116,24 @@ class ChapaPayoutService
             'narration' => "Payout #{$payout->id} for {$payout->creator?->name}",
         ];
 
-        Log::info('Initiating Chapa bank transfer', ['payout_id' => $payout->id, 'data' => $data]);
+        Log::info('Initiating Chapa bank transfer', [
+            'payout_id' => $payout->id,
+            'reference' => $transferReference,
+            'amount' => $data['amount'],
+            'currency' => $data['currency'],
+            'bank_code' => $bankCode,
+        ]);
 
         $response = $this->chapa->createTransfer($data);
 
-        Log::info('Chapa bank transfer response', ['payout_id' => $payout->id, 'response' => $response]);
+        Log::info('Chapa bank transfer response', [
+            'payout_id' => $payout->id,
+            'reference' => $transferReference,
+            'status' => data_get($response, 'data.status') ?? data_get($response, 'status'),
+        ]);
 
         if (!isset($response['data']['id']) && !isset($response['data']['transfer_id'])) {
-            $error = $response['message'] ?? json_encode($response);
-            throw new RuntimeException("Chapa transfer failed: {$error}");
+            throw new RuntimeException('Chapa transfer failed.');
         }
 
         return $transferReference;
@@ -144,27 +154,36 @@ class ChapaPayoutService
             'narration' => "Telebirr payout #{$payout->id} for {$payout->creator?->name}",
         ];
 
-        Log::info('Initiating Chapa Telebirr transfer', ['payout_id' => $payout->id, 'data' => $data]);
+        Log::info('Initiating Chapa Telebirr transfer', [
+            'payout_id' => $payout->id,
+            'reference' => $transferReference,
+            'amount' => $data['amount'],
+            'currency' => $data['currency'],
+            'bank_code' => $data['bank_code'],
+        ]);
 
         $response = $this->chapa->createTransfer($data);
 
-        Log::info('Chapa Telebirr transfer response', ['payout_id' => $payout->id, 'response' => $response]);
+        Log::info('Chapa Telebirr transfer response', [
+            'payout_id' => $payout->id,
+            'reference' => $transferReference,
+            'status' => data_get($response, 'data.status') ?? data_get($response, 'status'),
+        ]);
 
         if (!isset($response['data']['id']) && !isset($response['data']['transfer_id'])) {
-            $error = $response['message'] ?? json_encode($response);
-            throw new RuntimeException("Chapa Telebirr transfer failed: {$error}");
+            throw new RuntimeException('Chapa Telebirr transfer failed.');
         }
 
         return $transferReference;
     }
 
-    private function createManualTransfer(PayoutRequest $payout, string $description): string
+    private function createManualTransfer(PayoutRequest $payout, string $method): string
     {
         $transferReference = 'MANUAL-' . strtoupper(substr(md5($payout->id . time()), 0, 12));
         Log::info('Manual payout reference generated', [
             'payout_id' => $payout->id,
             'reference' => $transferReference,
-            'description' => $description,
+            'method' => $method,
         ]);
 
         return $transferReference;

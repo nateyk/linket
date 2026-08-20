@@ -36,6 +36,13 @@ class ChapaPaymentFulfillment
                     in_array($status, ['failed', 'cancelled'], true),
                 );
             }
+            $verifiedReference = Arr::get($data, 'tx_ref');
+            if (
+                filled($verifiedReference) &&
+                !hash_equals($transaction->tx_ref, (string) $verifiedReference)
+            ) {
+                throw new PaymentVerificationException('transaction_reference_mismatch', true);
+            }
             if ($amount !== number_format((float) $transaction->amount, 2, '.', '')) {
                 throw new PaymentVerificationException('amount_mismatch', true);
             }
@@ -68,10 +75,13 @@ class ChapaPaymentFulfillment
             return;
         }
 
-        $transaction->update([
-            'status' => 'failed',
-            'verification_data' => ['failure_reason' => $exception->reason],
-        ]);
+        PaymentTransaction::query()
+            ->whereKey($transaction->id)
+            ->where('status', '!=', 'paid')
+            ->update([
+                'status' => 'failed',
+                'verification_data' => ['failure_reason' => $exception->reason],
+            ]);
     }
 
     private function fulfillStorefrontOrder(PaymentTransaction $transaction, array $data): void

@@ -216,7 +216,8 @@ Route::group(['prefix' => 'v1'], function () {
         Route::get('billing/chapa/transactions/{txRef}', [ChapaController::class, 'status'])->middleware('throttle:60,1');
 
         // CREATOR STOREFRONT
-        Route::apiResource('storefront/products', DigitalProductsController::class);
+        Route::apiResource('storefront/products', DigitalProductsController::class)
+            ->names('storefront.products');
         Route::post('storefront/products/{digitalProduct}/submit', [DigitalProductsController::class, 'submit']);
         Route::get('storefront/payout-requests', [PayoutRequestsController::class, 'index']);
         Route::post('storefront/payout-requests', [PayoutRequestsController::class, 'store']);

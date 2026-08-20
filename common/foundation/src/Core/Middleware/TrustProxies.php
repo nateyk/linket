@@ -6,5 +6,8 @@ use Illuminate\Http\Middleware\TrustProxies as Middleware;
 
 class TrustProxies extends Middleware
 {
-    protected $proxies = '*';
+    protected function proxies(): array|string|null
+    {
+        return config('trustedproxy.proxies');
+    }
 }

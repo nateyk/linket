@@ -3,6 +3,7 @@
 namespace Common\Files\Tus;
 
 use Common\Files\Actions\CreateFileEntry;
+use Common\Files\Actions\FileUploadValidator;
 use Common\Files\Actions\StoreFile;
 use Common\Files\Events\FileUploaded;
 use Common\Files\FileEntry;
@@ -29,12 +30,11 @@ class TusFileEntryController extends Controller
         ]);
 
         $tusData = (new TusCache())->get($data['uploadKey']);
-        $uploadType = $tusData['metadata']['uploadType'] ?? null;
-
         if (!$tusData) {
             return abort(404);
         }
 
+        $uploadType = $tusData['metadata']['uploadType'] ?? null;
         $metadata = $tusData['metadata'];
         $tusFilePath = $tusData['file_path'];
         $metadata['size'] = $tusData['size'];
@@ -53,6 +53,17 @@ class TusFileEntryController extends Controller
             $payload->uploadType->name === 'digitalProductFiles' &&
             $payload->workspaceId
         ) {
+            $detectedMime = File::mimeType($tusFilePath)
+                ?: 'application/octet-stream';
+            $errors = FileUploadValidator::validateForUploadType(
+                $payload->uploadType,
+                $payload->size,
+                $payload->clientExtension,
+                $detectedMime,
+            );
+            abort_if($errors, 422, $errors?->first());
+
+            $payload->clientMime = $detectedMime;
             app(\App\Entitlements\AssertDigitalProductUploadAllowed::class)
                 ->execute($payload->size, $payload->workspaceId);
         }
