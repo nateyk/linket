@@ -23,18 +23,17 @@ export interface AdminReportOutletContext {
 export function Component() {
   const navigate = useNavigate();
   const [dateRange, setDateRange] = useState<DateRangeValue>(() => {
-    // This week
-    return DateRangePresets[2]!.getRangeValue();
+    // Last 30 days gives the business overview a useful first-load window.
+    return DateRangePresets[5]!.getRangeValue();
   });
   const {pathname} = useLocation();
-  const channel = pathname.endsWith('visitors') ? 'visitors' : 'events';
+  const channel = pathname.endsWith('visitors')
+    ? 'visitors'
+    : pathname.endsWith('events')
+      ? 'events'
+      : 'overview';
 
-  const title =
-    channel === 'visitors' ? (
-      <Trans message="Visitors" />
-    ) : (
-      <Trans message="Insights" />
-    );
+  const title = <Trans message="Insights" />;
 
   const filters = useTrackedEventsFilters();
 
@@ -49,18 +48,27 @@ export function Component() {
           buttonVariant="ghost"
           value={[channel]}
         >
-          <Toggle value="events" onClick={() => navigate('events')}>
+          <Toggle value="overview" onClick={() => navigate('/admin/insights')}>
+            <Trans message="Overview" />
+          </Toggle>
+          <Toggle
+            value="events"
+            onClick={() => navigate('/admin/insights/events')}
+          >
             <Trans message="Events" />
           </Toggle>
-          <Toggle value="visitors" onClick={() => navigate('visitors')}>
+          <Toggle
+            value="visitors"
+            onClick={() => navigate('/admin/insights/visitors')}
+          >
             <Trans message="Visitors" />
           </Toggle>
         </ToggleGroup>
         <ReportDateSelector value={dateRange} onChange={setDateRange} />
         {channel === 'events' && <AddFilterPopover filters={filters} />}
       </DashboardLayout.SectionHeader>
-      <div className="flex flex-auto flex-col gap-5 overflow-auto p-3 md:p-6">
-        <Header dateRange={dateRange} />
+      <div className="flex min-w-0 flex-auto flex-col gap-5 overflow-auto p-3 md:p-6">
+        {channel !== 'overview' && <Header dateRange={dateRange} />}
         {channel === 'events' && <FilterList filters={filters} />}
         <Outlet context={{dateRange, setDateRange}} />
       </div>

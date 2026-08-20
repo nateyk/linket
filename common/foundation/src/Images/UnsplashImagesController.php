@@ -1,6 +1,6 @@
 <?php
 
-namespace Common\images;
+namespace Common\Images;
 
 use Common\API\ExcludeRoutesFromPublicDocs;
 use Illuminate\Routing\Controller;

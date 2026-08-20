@@ -13,6 +13,7 @@
 */
 
 use App\Analytics\Controllers\AdminAnalyticsController;
+use App\Analytics\Controllers\AdminCommerceInsightsController;
 use App\Http\Controllers\LandingPageController;
 use App\Kyc\Controllers\AdminKycVerificationsController;
 use App\Kyc\Controllers\KycVerificationsController;
@@ -51,6 +52,7 @@ Route::group(['prefix' => 'v1'], function() {
         Route::get('tracked-events/report', [TrackedEventsController::class, 'report']);
         Route::get('admin/analytics/cards-data', [AdminAnalyticsController::class, 'cardsData']);
         Route::get('admin/analytics/report', [AdminAnalyticsController::class, 'report']);
+        Route::get('admin/analytics/commerce', AdminCommerceInsightsController::class);
         Route::get('tracked-events', [TrackedEventsController::class, 'index']);
 
         Route::get('usage', UsageController::class);

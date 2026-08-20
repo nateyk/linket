@@ -31,8 +31,7 @@ export const adminRoutes: RouteObject[] = [
         children: [
           {
             index: true,
-            lazy: () =>
-              import('@app/admin/reports/admin-tracked-events-insights'),
+            lazy: () => import('@app/admin/reports/admin-commerce-insights'),
           },
           {
             path: 'events',

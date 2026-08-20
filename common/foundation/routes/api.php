@@ -35,7 +35,7 @@ use Common\Files\S3\S3MultipartUploadController;
 use Common\Files\S3\S3SimpleUploadController;
 use Common\Files\Tus\TusFileEntryController;
 use Common\Files\Tus\TusServerController;
-use Common\images\UnsplashImagesController;
+use Common\Images\UnsplashImagesController;
 use Common\Localizations\LocalizationsController;
 use Common\Localizations\UserLocaleController;
 use Common\Logging\Error\ErrorLogController;
