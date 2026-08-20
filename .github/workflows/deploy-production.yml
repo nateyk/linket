@@ -127,6 +127,8 @@ jobs:
         run: |
           set -euo pipefail
           cp env.example .env
+          sed -i 's/^INSTALLED=.*/INSTALLED=true/' .env
+          grep -q "^INSTALLED=true" .env || echo "INSTALLED=true" >> .env
           echo "APP_KEY=base64:CiBuildKeyForArtifactOnly12345678901234567890=" >> .env
           cat >> .env <<'EOF'
           APP_ENV=production
