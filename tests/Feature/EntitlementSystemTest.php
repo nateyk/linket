@@ -200,7 +200,6 @@ class EntitlementSystemTest extends TestCase
         ]);
 
         $response = $this->stateful()->actingAs($creator)
-            ->withSession(['_token' => 'test'])
             ->post('/api/v1/biolinks', [
                 'name' => 'Second Storefront',
             ]);
@@ -344,6 +343,20 @@ class EntitlementSystemTest extends TestCase
     public function testUsageApiReturnsCommerceMetrics(): void
     {
         $creator = $this->createCreator();
+        $plan = $creator->getSubscriptionProduct();
+        $plan->update([
+            'storefront_benefits' => array_merge(
+                $plan->storefront_benefits ?? [],
+                [
+                    'max_free_products' => 5,
+                    'max_paid_products' => 5,
+                    'max_upload_bytes' => 1073741824,
+                    'max_storefronts' => 1,
+                    'max_workspaces' => 1,
+                ],
+            ),
+        ]);
+        $creator->refresh();
 
         $response = $this->stateful()->actingAs($creator)
             ->get('/api/v1/usage');
@@ -356,6 +369,13 @@ class EntitlementSystemTest extends TestCase
         $this->assertArrayHasKey('storage', $data);
         $this->assertArrayHasKey('storefronts', $data);
         $this->assertArrayHasKey('workspaces', $data);
+        $response
+            ->assertJsonPath('data.free_products.total', 5)
+            ->assertJsonPath('data.paid_products.total', 5)
+            ->assertJsonPath('data.storage.total', 1073741824)
+            ->assertJsonPath('data.storefronts.total', 1)
+            ->assertJsonPath('data.workspaces.used', 1)
+            ->assertJsonPath('data.workspaces.total', 1);
     }
 
     public function testIsDefaultPlanResolvesWithoutSubscription(): void
@@ -477,7 +497,10 @@ class EntitlementSystemTest extends TestCase
             'max_upload_bytes' => 1073741824,
         ])]);
 
-        $file2 = \Illuminate\Http\UploadedFile::fake()->create('file2.pdf', 1);
+        $file2 = \Illuminate\Http\UploadedFile::fake()->createWithContent(
+            'file2.pdf',
+            "%PDF-1.4\n% Linket test PDF",
+        );
 
         $response = $this->stateful()->actingAs($creator)
             ->post('/api/v1/file-entries', [
@@ -500,7 +523,7 @@ class EntitlementSystemTest extends TestCase
         $this->assertContains('5 free products', $data['pricing_features']);
         $this->assertContains('5 paid products', $data['pricing_features']);
         $this->assertContains('1 GB storage', $data['pricing_features']);
-        $this->assertContains('5% platform fee', $data['pricing_features']);
+        $this->assertContains('5% Linket transaction fee', $data['pricing_features']);
     }
 
     public function testMarkingNewDefaultPlanClearsOldDefault(): void
@@ -585,7 +608,11 @@ class EntitlementSystemTest extends TestCase
 
     private function stateful(): static
     {
-        return $this->withHeader('Referer', 'http://localhost');
+        $csrfToken = 'test-csrf-token';
+
+        return $this->withSession(['_token' => $csrfToken])
+            ->withHeader('Referer', config('app.url'))
+            ->withHeader('X-CSRF-TOKEN', $csrfToken);
     }
 
     private function createCreator(): User

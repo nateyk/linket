@@ -25,7 +25,11 @@ export function CompactUsageTrigger({className}: Props) {
         <InfoIcon />
       </Popover.Trigger>
       <Popover.Portal>
-        <Popover.Content align="start" side="right" className="w-xl">
+        <Popover.Content
+          align="start"
+          side="right"
+          className="w-[min(36rem,calc(100vw-2rem))]"
+        >
           <UsageDialogContent />
         </Popover.Content>
       </Popover.Portal>

@@ -309,12 +309,16 @@ function CommerceSection() {
         <LimitField
           name="storefront_benefits.max_free_products"
           label={<Trans message="Free products" />}
-          description={<Trans message="Maximum number of free products a creator can sell." />}
+          description={
+            <Trans message="Maximum number of free products a creator can sell." />
+          }
         />
         <LimitField
           name="storefront_benefits.max_paid_products"
           label={<Trans message="Paid products" />}
-          description={<Trans message="Maximum number of paid products a creator can sell." />}
+          description={
+            <Trans message="Maximum number of paid products a creator can sell." />
+          }
         />
         <StorageLimitField />
       </Field.Group>
@@ -332,12 +336,16 @@ function CreatorSection() {
         <LimitField
           name="storefront_benefits.max_storefronts"
           label={<Trans message="Storefronts" />}
-          description={<Trans message="Maximum number of storefronts (link in bio) per workspace." />}
+          description={
+            <Trans message="Maximum number of storefronts (link in bio) per workspace." />
+          }
         />
         <LimitField
           name="storefront_benefits.max_workspaces"
           label={<Trans message="Workspaces" />}
-          description={<Trans message="Maximum number of workspaces per user." />}
+          description={
+            <Trans message="Maximum number of workspaces per user." />
+          }
         />
       </Field.Group>
     </FieldSet.Root>
@@ -400,7 +408,7 @@ function LimitField({name, label, description}: LimitFieldProps) {
           <Switch
             checked={unlimited}
             onCheckedChange={checked =>
-              setValue(name, checked ? null : 0, {shouldDirty: true})
+              setValue(name, checked ? null : 1, {shouldDirty: true})
             }
           />
           <Trans message="Unlimited" />
@@ -421,7 +429,7 @@ function PlatformFeeField() {
   return (
     <Field.Group>
       <Field.Label>
-        <Trans message="Platform fee" />
+        <Trans message="Linket transaction fee" />
       </Field.Label>
       <div className="flex items-center gap-3">
         <Input
@@ -442,7 +450,7 @@ function PlatformFeeField() {
         <span className="text-sm text-muted-foreground">%</span>
       </div>
       <Field.Description>
-        <Trans message="Percentage of each sale deducted as platform commission." />
+        <Trans message="Percentage Linket retains from future sales. Existing order fee snapshots never change." />
       </Field.Description>
     </Field.Group>
   );

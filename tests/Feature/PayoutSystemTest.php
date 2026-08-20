@@ -785,7 +785,11 @@ class PayoutSystemTest extends TestCase
 
     private function stateful(): static
     {
-        return $this->withHeader('Referer', 'http://localhost');
+        $csrfToken = 'test-csrf-token';
+
+        return $this->withSession(['_token' => $csrfToken])
+            ->withHeader('Referer', config('app.url'))
+            ->withHeader('X-CSRF-TOKEN', $csrfToken);
     }
 
     /**

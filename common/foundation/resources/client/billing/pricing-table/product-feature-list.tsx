@@ -7,10 +7,11 @@ interface FeatureListProps {
 }
 
 export function ProductFeatureList({product}: FeatureListProps) {
-  const hasPricingFeatures =
-    product.pricing_features && product.pricing_features.length > 0;
+  const features = product.pricing_features?.length
+    ? product.pricing_features
+    : product.feature_list;
 
-  if (!hasPricingFeatures && !product.feature_list.length) {
+  if (!features.length) {
     return null;
   }
 
@@ -19,17 +20,7 @@ export function ProductFeatureList({product}: FeatureListProps) {
       <div className="mb-2.5 text-sm font-semibold">
         <Trans message="What's included" />
       </div>
-      {hasPricingFeatures &&
-        product.pricing_features.map(feature => (
-          <div
-            key={feature}
-            className="flex items-center gap-2.5 py-1.5 text-sm"
-          >
-            <CheckIcon className="size-4 text-primary" />
-            {feature}
-          </div>
-        ))}
-      {product.feature_list.map(feature => (
+      {features.map(feature => (
         <div key={feature} className="flex items-center gap-2.5 py-1.5 text-sm">
           <CheckIcon className="size-4 text-primary" />
           <Trans message={feature} />

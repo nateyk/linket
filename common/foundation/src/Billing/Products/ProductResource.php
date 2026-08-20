@@ -118,8 +118,8 @@ class ProductResource extends JsonResource
 
         $fee = (float) ($benefits['platform_fee_percent'] ?? 0);
         $features[] = $fee > 0
-            ? rtrim(rtrim(number_format($fee, 2), '0'), '.') . '% platform fee'
-            : 'No platform fees';
+            ? rtrim(rtrim(number_format($fee, 2), '0'), '.') . '% Linket transaction fee'
+            : 'No Linket transaction fee';
 
         if (!empty($benefits['tracking_pixels_enabled'])) {
             $features[] = 'Tracking pixels';

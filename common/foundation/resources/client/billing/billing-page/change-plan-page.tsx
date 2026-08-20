@@ -70,13 +70,17 @@ interface FeatureListProps {
   plan: Product;
 }
 function FeatureList({plan}: FeatureListProps) {
-  if (!plan.feature_list.length) return null;
+  const features = plan.pricing_features?.length
+    ? plan.pricing_features
+    : plan.feature_list;
+
+  if (!features.length) return null;
   return (
     <div className="mt-8">
       <div className="mb-2.5 text-sm font-semibold">
         <Trans message="What's included" />
       </div>
-      {plan.feature_list.map(feature => (
+      {features.map(feature => (
         <div key={feature} className="flex items-center gap-2.5 text-sm">
           <CheckIcon className="text-positive" />
           <Trans message={feature} />

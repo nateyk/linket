@@ -265,7 +265,7 @@ $this->stateful()->actingAs($admin);
         $user = $this->createUser();
         $verification = $this->createSubmittedVerification($user);
 
-        $this->withHeader('Referer', 'http://localhost')
+        $this->stateful()
             ->actingAs($user)
             ->deleteJson("/api/v1/admin/kyc-verifications/{$verification->id}")
             ->assertForbidden();
@@ -279,13 +279,13 @@ $this->stateful()->actingAs($admin);
 
         $this->actingAs($other);
 
-        $this->withHeader('Referer', 'http://localhost')
+        $this->stateful()
             ->getJson('/api/v1/admin/kyc-verifications')
             ->assertForbidden();
-        $this->withHeader('Referer', 'http://localhost')
+        $this->stateful()
             ->postJson("/api/v1/admin/kyc-verifications/{$verification->id}/approve")
             ->assertForbidden();
-        $this->withHeader('Referer', 'http://localhost')
+        $this->stateful()
             ->postJson("/api/v1/admin/kyc-verifications/{$verification->id}/reject", [
                 'reason' => 'No.',
             ])->assertForbidden();
@@ -363,7 +363,11 @@ $this->stateful()->actingAs($admin);
 
     private function stateful(): static
     {
-        return $this->withHeader('Referer', 'http://localhost');
+        $csrfToken = 'test-csrf-token';
+
+        return $this->withSession(['_token' => $csrfToken])
+            ->withHeader('Referer', config('app.url'))
+            ->withHeader('X-CSRF-TOKEN', $csrfToken);
     }
 
     private function createUser(): User

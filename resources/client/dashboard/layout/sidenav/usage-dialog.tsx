@@ -1,4 +1,3 @@
-import {sharedDashboardIcons} from '@app/dashboard/layout/sidenav/dashboard-sidebar-icons';
 import {UpgradeButton} from '@app/dashboard/layout/sidenav/upgrade-button';
 import {useUsage} from '@app/dashboard/use-usage';
 import {GetUsage200Data} from '@app/gen/schemas/get-usage200-data';
@@ -20,7 +19,6 @@ import {
   GiftIcon,
   HardDriveIcon,
   MousePointerClickIcon,
-  PackageIcon,
   StoreIcon,
   UsersIcon,
 } from 'lucide-react';
@@ -32,26 +30,10 @@ export const usageLabels: Partial<
     {
       label: ReactNode;
       icon: ReactNode;
-      formatUsed?: (used: number) => string | number | ReactElement;
+      formatValue?: (value: number) => string | number | ReactElement;
     }
   >
 > = {
-  storefronts: {
-    label: <Trans message="Storefronts" />,
-    icon: <StoreIcon className="size-4" />,
-  },
-  tracked_events: {
-    label: <Trans message="Tracked events" />,
-    icon: <MousePointerClickIcon className="size-4" />,
-  },
-  tracking_pixels: {
-    label: <Trans message="Tracking pixels" />,
-    icon: sharedDashboardIcons.pixels,
-  },
-  digital_products: {
-    label: <Trans message="Products" />,
-    icon: <PackageIcon className="size-4" />,
-  },
   free_products: {
     label: <Trans message="Free products" />,
     icon: <GiftIcon className="size-4" />,
@@ -63,7 +45,15 @@ export const usageLabels: Partial<
   storage: {
     label: <Trans message="Storage" />,
     icon: <HardDriveIcon className="size-4" />,
-    formatUsed: used => prettyBytes(used),
+    formatValue: value => prettyBytes(value),
+  },
+  storefronts: {
+    label: <Trans message="Storefronts" />,
+    icon: <StoreIcon className="size-4" />,
+  },
+  tracked_events: {
+    label: <Trans message="Tracked events" />,
+    icon: <MousePointerClickIcon className="size-4" />,
   },
   workspaces: {
     label: <Trans message="Workspaces" />,
@@ -132,25 +122,32 @@ type GridItemProps = {
 function GridItem({label, usage}: GridItemProps) {
   const unlimited = usage.total === null;
   const isAtOrOverLimit = usage.total !== null && usage.used >= usage.total;
+  const percentage = getUsagePercentage(usage.used, usage.total);
 
-  const formattedUsed = label.formatUsed
-    ? label.formatUsed(usage.used)
-    : <FormattedNumber value={usage.used} notation="compact" />;
+  const formattedUsed = label.formatValue ? (
+    label.formatValue(usage.used)
+  ) : (
+    <FormattedNumber value={usage.used} notation="compact" />
+  );
 
   const meterValue = unlimited ? (
-    <Trans message="Unlimited" />
+    <Trans message=":used used · Unlimited" values={{used: formattedUsed}} />
   ) : (
     <Trans
       message=":used of :total"
       values={{
         used: formattedUsed,
-        total: <FormattedNumber value={usage.total!} notation="compact" />,
+        total: label.formatValue ? (
+          label.formatValue(usage.total)
+        ) : (
+          <FormattedNumber value={usage.total} notation="compact" />
+        ),
       }}
     />
   );
 
   return (
-    <Meter value={unlimited ? 0 : usage.used}>
+    <Meter value={percentage}>
       <MeterLabel>
         {label.icon} {label.label}
       </MeterLabel>
@@ -164,6 +161,14 @@ function GridItem({label, usage}: GridItemProps) {
       )}
     </Meter>
   );
+}
+
+export function getUsagePercentage(used: number, total: number | null): number {
+  if (total === null || total <= 0) {
+    return total === 0 && used > 0 ? 100 : 0;
+  }
+
+  return Math.min(Math.max((used / total) * 100, 0), 100);
 }
 
 function SkeletonGridItem({label}: {label: GridItemProps['label']}) {

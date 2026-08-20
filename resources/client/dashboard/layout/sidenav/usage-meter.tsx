@@ -44,7 +44,11 @@ export function UsageMeter() {
         </Sidebar.GroupLabel>
 
         <Popover.Portal>
-          <Popover.Content align="start" side="right" className="w-xl">
+          <Popover.Content
+            align="start"
+            side="right"
+            className="w-[min(36rem,calc(100vw-2rem))]"
+          >
             <UsageDialogContent />
           </Popover.Content>
         </Popover.Portal>
@@ -59,7 +63,7 @@ export function UsageMeter() {
               <UsageRow
                 icon={<StoreIcon />}
                 label={<Trans message="Storefronts" />}
-                usageKey="biolinks"
+                usageKey="storefronts"
               />
               {renewalDate && (
                 <p className="text-xs text-muted-foreground">
@@ -91,7 +95,7 @@ function UsageRow({icon, label, usageKey, className}: UsageRowProps) {
   const meterValue = (
     <MeterValue>
       {() =>
-        usage.total ? (
+        usage.total !== null ? (
           <Trans
             message=":used of :total"
             values={{
@@ -106,12 +110,12 @@ function UsageRow({icon, label, usageKey, className}: UsageRowProps) {
     </MeterValue>
   );
 
-  const value = usage.total ? usage.used : 0;
+  const value = usage.total !== null ? usage.used : 0;
 
   return (
     <Meter
       min={0}
-      max={usage.total ? usage.total : value * 10}
+      max={usage.total ?? Math.max(value * 10, 1)}
       value={value}
       className={cn(className, 'text-xs')}
     >
