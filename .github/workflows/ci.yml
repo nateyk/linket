@@ -182,7 +182,7 @@ jobs:
           date -u +%Y-%m-%dT%H:%M:%SZ > BUILD_AT
           echo "CI_SHA=$SHA" > CI_META
           echo "CI_RELEASE_ID=$RELEASE_ID" >> CI_META
-          tar -czf "${ARTIFACT_NAME}.tar.gz" \
+          tar -czf "/tmp/${ARTIFACT_NAME}.tar.gz" \
             --exclude='.git' \
             --exclude='.gitignore' \
             --exclude='node_modules' \
@@ -203,7 +203,10 @@ jobs:
             --exclude='.ddev' \
             --exclude='.agents' \
             --exclude='.superpowers' \
+            --exclude='linket-*.tar.gz' \
+            --exclude='*.tar.gz' \
             .
+          mv "/tmp/${ARTIFACT_NAME}.tar.gz" "./${ARTIFACT_NAME}.tar.gz"
           tar -tzf "${ARTIFACT_NAME}.tar.gz" | grep -E '^(./)?RELEASE_SHA' >/dev/null || { echo "RELEASE_SHA missing"; exit 1; }
           tar -tzf "${ARTIFACT_NAME}.tar.gz" | grep -E 'public/build/manifest.json' >/dev/null || { echo "manifest missing"; exit 1; }
           tar -tzf "${ARTIFACT_NAME}.tar.gz" | grep -E 'vendor/autoload.php' >/dev/null || { echo "vendor missing"; exit 1; }

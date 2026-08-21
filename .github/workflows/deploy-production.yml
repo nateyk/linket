@@ -174,7 +174,7 @@ jobs:
           echo "$SHA" > RELEASE_SHA
           echo "$RELEASE_ID" > RELEASE_ID
           date -u +%Y-%m-%dT%H:%M:%SZ > BUILD_AT
-          tar -czf "${ARTIFACT_NAME}.tar.gz" \
+          tar -czf "/tmp/${ARTIFACT_NAME}.tar.gz" \
             --exclude='.git' --exclude='.gitignore' --exclude='node_modules' \
             --exclude='storage/app/*' --exclude='storage/framework/cache/*' \
             --exclude='storage/framework/sessions/*' --exclude='storage/framework/views/*' \
@@ -184,7 +184,9 @@ jobs:
             --exclude='.env' --exclude='.env.*' \
             --exclude='public/hot' --exclude='.phpunit.cache' --exclude='coverage' \
             --exclude='*.sql' --exclude='*.sql.gz' --exclude='.ddev' --exclude='.agents' --exclude='.superpowers' \
+            --exclude='linket-*.tar.gz' --exclude='*.tar.gz' \
             .
+          mv "/tmp/${ARTIFACT_NAME}.tar.gz" "./${ARTIFACT_NAME}.tar.gz"
           tar -tzf "${ARTIFACT_NAME}.tar.gz" | grep -E '^(./)?RELEASE_SHA' >/dev/null || { echo "RELEASE_SHA missing"; exit 1; }
           tar -tzf "${ARTIFACT_NAME}.tar.gz" | grep -E 'public/build/manifest.json' >/dev/null || { echo "manifest missing"; exit 1; }
           tar -tzf "${ARTIFACT_NAME}.tar.gz" | grep -E 'vendor/autoload.php' >/dev/null || { echo "vendor missing"; exit 1; }
