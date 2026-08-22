@@ -148,7 +148,7 @@ ln -sfn "$SHARED/.env" "$RELEASE_DIR/.env"
 if [[ -L "$RELEASE_DIR/storage" || -d "$RELEASE_DIR/storage" ]]; then rm -rf "$RELEASE_DIR/storage"; fi
 ln -sfn "$SHARED/storage" "$RELEASE_DIR/storage"
 # Ensure storage subdirs exist (shared side)
-mkdir -p "$SHARED/storage/app/digital-products" "$SHARED/storage/app/uploads" "$SHARED/storage/tus" "$SHARED/storage/logs" "$SHARED/storage/framework/cache" "$SHARED/storage/framework/sessions" "$SHARED/storage/framework/views" "$SHARED/storage/tntsearch"
+mkdir -p "$SHARED/storage/app/digital-products" "$SHARED/storage/app/uploads" "$SHARED/storage/app/editable-views/seo-tags" "$SHARED/storage/app/tokens" "$SHARED/storage/tus" "$SHARED/storage/logs" "$SHARED/storage/framework/cache" "$SHARED/storage/framework/sessions" "$SHARED/storage/framework/views" "$SHARED/storage/tntsearch"
 # bootstrap/cache: keep per-release but ensure writable; optionally symlink to shared
 mkdir -p "$RELEASE_DIR/bootstrap/cache" "$SHARED/bootstrap/cache"
 chmod 775 "$RELEASE_DIR/bootstrap/cache" 2>/dev/null || true
