@@ -317,7 +317,12 @@ if [[ -n "$PREV_NAME" ]]; then KEEP_SET+=("$PREV_NAME"); fi
 EXTRA_KEEP=$((KEEP - ${#KEEP_SET[@]}))
 if [[ $EXTRA_KEEP -lt 0 ]]; then EXTRA_KEEP=0; fi
 # collect all release names newest-first
-mapfile -t ALL_RELEASES < <(ls -1t "$RELEASES" 2>/dev/null | grep -E '^[0-9]{8}-' || true)
+# NOTE: no process substitution — /dev/fd is unavailable in some cPanel containers
+RELEASES_TMP="$(mktemp)"
+ls -1t "$RELEASES" 2>/dev/null | grep -E '^[0-9]{8}-' > "$RELEASES_TMP" || true
+ALL_RELEASES=()
+while IFS= read -r name; do [[ -n "$name" ]] && ALL_RELEASES+=("$name"); done < "$RELEASES_TMP"
+rm -f "$RELEASES_TMP"
 KEPT=0
 for name in "${ALL_RELEASES[@]}"; do
   # do we keep it?
