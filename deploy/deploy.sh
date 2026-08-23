@@ -207,6 +207,11 @@ log "Running migrations in $RELEASE_DIR"
 set +e
 (cd "$RELEASE_DIR" && $PHP_BIN artisan migrate --force --no-interaction 2>&1)
 MIGRATE_RC=$?
+if [[ $MIGRATE_RC -eq 0 ]]; then
+  # Migrations can mutate cached state (e.g. the settings cache); make sure
+  # the live app never serves stale cached values after a migration.
+  (cd "$RELEASE_DIR" && $PHP_BIN artisan cache:clear --no-interaction 2>&1 | tail -n 3)
+fi
 set -e
 if [[ $MIGRATE_RC -ne 0 ]]; then
   log "MIGRATE FAILED (exit $MIGRATE_RC) — aborting, current unchanged"

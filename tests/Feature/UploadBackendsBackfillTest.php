@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use Common\Settings\Models\Setting;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
@@ -45,6 +46,41 @@ class UploadBackendsBackfillTest extends TestCase
                 "upload type [{$type}] is not served by the local backend",
             );
         }
+    }
+
+    public function testSeederInvalidatesSettingsCache(): void
+    {
+        Cache::put(
+            'settings.public',
+            collect(['uploading' => ['stale' => true]]),
+            now()->addDay(),
+        );
+
+        $migration = require glob(
+            database_path('migrations/*_backfill_upload_backends.php'),
+        )[0];
+        $migration->up();
+
+        $this->assertNull(
+            Cache::get('settings.public'),
+            'settings cache was not invalidated by the backfill',
+        );
+    }
+
+    public function testSettingsCacheFlushMigrationClearsStaleCache(): void
+    {
+        Cache::put(
+            'settings.public',
+            collect(['uploading' => ['stale' => true]]),
+            now()->addDay(),
+        );
+
+        $migration = require glob(
+            database_path('migrations/*_flush_settings_cache.php'),
+        )[0];
+        $migration->up();
+
+        $this->assertNull(Cache::get('settings.public'));
     }
 
     /**
