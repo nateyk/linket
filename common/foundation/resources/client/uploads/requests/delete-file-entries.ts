@@ -12,7 +12,7 @@ interface Payload {
 }
 
 function deleteFileEntries(payload: Payload): Promise<Response> {
-  return apiClient.post('file-entries/delete', payload).then(r => r.data);
+  return apiClient.post('file-entries/bulk-delete', payload).then(r => r.data);
 }
 
 export function useDeleteFileEntries() {
