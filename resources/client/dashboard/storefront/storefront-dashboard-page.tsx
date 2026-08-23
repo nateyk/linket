@@ -9,7 +9,9 @@ import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {Table} from '@shadcn/table/table';
 import {Tooltip} from '@shadcn/tooltip/tooltip';
 import {message} from '@ui/i18n/message';
-import {formatMoney, getSiteCurrency} from '@ui/i18n/format-money';
+import {getSiteCurrency} from '@ui/i18n/format-money';
+import {FormattedCurrency} from '@ui/i18n/formatted-currency';
+import {FormattedDate} from '@ui/i18n/formatted-date';
 import {Trans} from '@ui/i18n/trans';
 import {
   ArrowUpRightIcon,
@@ -307,15 +309,18 @@ function SummaryCards({
                 {card.label}
               </div>
               {loading ? (
-                <Skeleton className="mt-2 h-7 w-28" />
+                <Skeleton className="mt-2 h-8 w-28" />
               ) : (
-                <div className="mt-1.5 text-xl font-semibold tracking-tight">
-                  {formatMoney(card.value, currency)}
+                <div className="mt-1.5 truncate text-2xl font-semibold tracking-tight tabular-nums">
+                  <FormattedCurrency
+                    valueInCents={card.value}
+                    currency={currency}
+                  />
                 </div>
               )}
             </div>
             <div
-              className={`flex size-9 shrink-0 items-center justify-center rounded-card-sm ${card.tone}`}
+              className={`flex size-9 shrink-0 items-center justify-center rounded-card-sm [&>svg]:size-4 ${card.tone}`}
             >
               {card.icon}
             </div>
@@ -385,14 +390,20 @@ function ProductsPanel({
                       </p>
                     ) : null}
                     <span className="mt-0.5 block text-xs font-normal text-muted-foreground md:hidden">
-                      {formatMoney(product.price_cents, product.currency)}
+                      <FormattedCurrency
+                        valueInCents={product.price_cents}
+                        currency={product.currency}
+                      />
                     </span>
                   </Table.Cell>
                   <Table.Cell>
                     <ProductStatusBadge status={product.status} />
                   </Table.Cell>
                   <Table.Cell className="hidden text-end md:table-cell">
-                    {formatMoney(product.price_cents, product.currency)}
+                    <FormattedCurrency
+                      valueInCents={product.price_cents}
+                      currency={product.currency}
+                    />
                   </Table.Cell>
                   <Table.Cell className="hidden text-end text-muted-foreground lg:table-cell">
                     {product.files_count ?? product.files?.length ?? 0}
@@ -480,31 +491,35 @@ function RecentSalesPanel({
                       {getOrderProductTitle(order)}
                     </span>
                     <span className="mt-0.5 block text-xs font-normal text-muted-foreground md:hidden">
-                      {formatDate(order.created_at)}
+                      <FormattedDate date={order.created_at} preset="short" />
                     </span>
                   </Table.Cell>
                   <Table.Cell className="hidden text-end sm:table-cell">
-                    {formatMoney(
-                      order.gross_amount_cents ??
+                    <FormattedCurrency
+                      valueInCents={
+                        order.gross_amount_cents ??
                         order.gross_cents ??
                         order.total_cents ??
-                        0,
-                      currency,
-                    )}
+                        0
+                      }
+                      currency={currency}
+                    />
                   </Table.Cell>
                   <Table.Cell className="text-end font-medium text-positive">
-                    {formatMoney(
-                      order.creator_earnings_cents ??
+                    <FormattedCurrency
+                      valueInCents={
+                        order.creator_earnings_cents ??
                         order.creator_earnings ??
-                        0,
-                      currency,
-                    )}
+                        0
+                      }
+                      currency={currency}
+                    />
                   </Table.Cell>
                   <Table.Cell className="hidden md:table-cell">
                     <OrderStatusBadge status={order.status} />
                   </Table.Cell>
                   <Table.Cell className="hidden pe-6 text-end text-muted-foreground lg:table-cell">
-                    {formatDate(order.created_at)}
+                    <FormattedDate date={order.created_at} preset="short" />
                   </Table.Cell>
                 </Table.Row>
               ))}
@@ -564,10 +579,13 @@ function PayoutRequestsPanel({
             <Trans message="Available now" />
           </div>
           {loading ? (
-            <Skeleton className="mt-2 h-7 w-28" />
+            <Skeleton className="mt-2 h-8 w-28" />
           ) : (
-            <div className="mt-1 text-xl font-semibold">
-              {formatMoney(availableForPayout, currency)}
+            <div className="mt-1 truncate text-2xl font-semibold tabular-nums">
+              <FormattedCurrency
+                valueInCents={availableForPayout}
+                currency={currency}
+              />
             </div>
           )}
           <div className="mt-3 flex gap-2">
@@ -605,10 +623,13 @@ function PayoutRequestsPanel({
               >
                 <div>
                   <div className="font-medium">
-                    {formatMoney(payout.amount_cents, currency)}
+                    <FormattedCurrency
+                      valueInCents={payout.amount_cents}
+                      currency={currency}
+                    />
                   </div>
                   <div className="mt-0.5 text-xs text-muted-foreground">
-                    {formatDate(payout.created_at)}
+                    <FormattedDate date={payout.created_at} preset="short" />
                   </div>
                 </div>
                 <PayoutStatusBadge status={payout.status} />
@@ -742,7 +763,7 @@ function LoadingRows({
   compact?: boolean;
 }) {
   return (
-    <div className={compact ? 'space-y-3' : 'divide-y'}>
+    <div className={compact ? 'flex flex-col gap-3' : 'divide-y'}>
       {Array.from({length: rows}, (_, index) => (
         <div
           key={index}
@@ -914,11 +935,3 @@ function getErrorMessage(reason: unknown) {
     : message('Unable to load storefront data.');
 }
 
-
-function formatDate(date: string) {
-  return new Intl.DateTimeFormat(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  }).format(new Date(date));
-}

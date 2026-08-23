@@ -389,7 +389,7 @@ export function BiolinkContentTab() {
         {content.length ? (
           <BiolinkItemList />
         ) : (
-          <Empty.Root>
+          <Empty.Root className="rounded-card border border-dashed py-16">
             <Empty.Header>
               <Empty.Media variant="icon">
                 <LayoutPanelTop />
@@ -490,7 +490,7 @@ function AddNewLinkButton() {
 
   return (
     <CreateBiolinkLinkDialog position={position}>
-      <Dialog.Trigger render={<Button className="mr-3.5 min-w-36" />}>
+      <Dialog.Trigger render={<Button className="min-w-36" />}>
         <Trans message="Add link" />
       </Dialog.Trigger>
     </CreateBiolinkLinkDialog>
@@ -522,7 +522,7 @@ function AddNewWidgetButton() {
       <SelectWidgetDialog
         onSelect={widgetType => setActiveWidgetDialog(widgetType)}
       >
-        <Dialog.Trigger render={<Button color="primary" variant="outline" />}>
+        <Dialog.Trigger render={<Button variant="outline" />}>
           <LayoutGridIcon />
           <Trans message="Add widget" />
         </Dialog.Trigger>

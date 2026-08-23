@@ -6,6 +6,7 @@ import {Card} from '@shadcn/card/card';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {Table} from '@shadcn/table/table';
 import {Trans} from '@ui/i18n/trans';
+import {FormattedDate} from '@ui/i18n/formatted-date';
 import {useTrans} from '@ui/i18n/use-trans';
 import {
   ArrowLeftIcon,
@@ -150,7 +151,7 @@ export function Component() {
                         </Table.Cell>
                         <Table.Cell className="text-sm text-muted-foreground">
                           {review.created_at
-                            ? formatDate(review.created_at)
+                            ? <FormattedDate date={review.created_at} />
                             : '—'}
                         </Table.Cell>
                       </Table.Row>
@@ -172,11 +173,5 @@ export function Component() {
         </div>
       </DashboardLayout.SectionContent>
     </DashboardLayout.MainSection>
-  );
-}
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat(undefined, {dateStyle: 'medium'}).format(
-    new Date(value),
   );
 }

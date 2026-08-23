@@ -6,23 +6,29 @@ import {Badge} from '@shadcn/badge/badge';
 import {Button} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
 import {Dialog} from '@shadcn/dialog/dialog';
+import {Empty} from '@shadcn/empty/empty';
 import {Popover} from '@shadcn/popover/popover';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {Table} from '@shadcn/table/table';
 import {Trans} from '@ui/i18n/trans';
-import {formatMoney} from '@ui/i18n/format-money';
+import {FormattedCurrency} from '@ui/i18n/formatted-currency';
+import {FormattedDate} from '@ui/i18n/formatted-date';
 import {BackendPagination} from '@shadcn/table/utils/table-pagination';
 import {Link} from 'react-router';
 import {
   BanknoteArrowUpIcon,
   CheckCircleIcon,
+  CircleAlertIcon,
   CircleQuestionMarkIcon,
   Clock3Icon,
   InboxIcon,
+  LandmarkIcon,
   RefreshCwIcon,
   TriangleAlertIcon,
+  BanIcon,
+  type LucideIcon,
 } from 'lucide-react';
-import {ReactNode, useCallback, useEffect, useState} from 'react';
+import {useCallback, useEffect, useState} from 'react';
 
 type Summary = {
   gross_sales_cents: number;
@@ -169,7 +175,9 @@ export function Component() {
           onClick={() => void load()}
         >
           <RefreshCwIcon />
-          <Trans message="Refresh" />
+          <span className="hidden sm:inline">
+            <Trans message="Refresh" />
+          </span>
         </Button>
         <Button disabled={loading} onClick={() => setWithdrawOpen(true)}>
           <BanknoteArrowUpIcon />
@@ -177,33 +185,55 @@ export function Component() {
         </Button>
       </DashboardLayout.SectionHeader>
       <DashboardLayout.SectionContent className="overflow-y-auto">
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 py-6">
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 py-4">
           {error && (
-            <div className="rounded-input border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
-              {error}
+            <div
+              role="alert"
+              aria-live="polite"
+              className="flex items-center gap-3 rounded-card border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+            >
+              <CircleAlertIcon className="size-4 shrink-0" />
+              <span className="min-w-0 flex-1">{error}</span>
+              <Button
+                size="sm"
+                variant="outline"
+                color="danger"
+                onClick={() => void load()}
+              >
+                <Trans message="Retry" />
+              </Button>
             </div>
           )}
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <CounterCard
-              icon={<BanknoteArrowUpIcon />}
+          <section className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <StatCard
+              icon={LandmarkIcon}
+              tone="text-amber-600 bg-amber-500/10 dark:text-amber-400"
               label="Available balance"
-              value={formatMoney(available, currency)}
+              scope="Ready to withdraw"
+              valueInCents={available}
+              currency={currency}
               loading={loading}
             />
-            <CounterCard
-              icon={<Clock3Icon />}
+            <StatCard
+              icon={Clock3Icon}
+              tone="text-muted-foreground bg-muted"
               label="Pending withdrawals"
-              value={formatMoney(summary?.reserved_payout_cents ?? 0, currency)}
+              scope="Processing"
+              valueInCents={summary?.reserved_payout_cents ?? 0}
+              currency={currency}
               loading={loading}
             />
-            <CounterCard
-              icon={<CheckCircleIcon />}
+            <StatCard
+              icon={CheckCircleIcon}
+              tone="text-positive bg-positive/10"
               label="Total withdrawn"
-              value={formatMoney(summary?.paid_out_cents ?? 0, currency)}
+              scope="All time"
+              valueInCents={summary?.paid_out_cents ?? 0}
+              currency={currency}
               loading={loading}
             />
-          </div>
+          </section>
 
           <SalesTable orders={orders} loading={loading} />
           <PayoutHistory
@@ -230,31 +260,53 @@ export function Component() {
   );
 }
 
-function CounterCard({
-  icon,
+function StatCard({
+  icon: Icon,
+  tone,
   label,
-  value,
+  scope,
+  valueInCents,
+  currency,
   loading,
 }: {
-  icon: ReactNode;
+  icon: LucideIcon;
+  tone: string;
   label: string;
-  value: string;
+  scope: string;
+  valueInCents: number;
+  currency: string;
   loading: boolean;
 }) {
   return (
-    <div className="rounded-card border bg-card p-4">
-      <div className="mb-3 flex items-center gap-2 text-muted-foreground">
-        {icon}
-        <p className="text-sm font-medium">
+    <Card size="sm" className="min-h-32 gap-3">
+      <Card.Header>
+        <Card.Title className="truncate text-sm font-normal text-muted-foreground">
           <Trans message={label} />
-        </p>
-      </div>
-      {loading ? (
-        <Skeleton className="h-7 w-24" />
-      ) : (
-        <p className="text-2xl font-semibold">{value}</p>
-      )}
-    </div>
+        </Card.Title>
+        <Card.Description className="text-xs">
+          <Trans message={scope} />
+        </Card.Description>
+        <Card.Action>
+          <span
+            className={`flex size-9 items-center justify-center rounded-card-sm [&>svg]:size-4 ${tone}`}
+          >
+            <Icon aria-hidden="true" />
+          </span>
+        </Card.Action>
+      </Card.Header>
+      <Card.Content>
+        {loading ? (
+          <Skeleton className="h-8 w-28" />
+        ) : (
+          <p className="truncate text-2xl font-semibold tracking-tight tabular-nums">
+            <FormattedCurrency
+              valueInCents={valueInCents}
+              currency={currency.toUpperCase()}
+            />
+          </p>
+        )}
+      </Card.Content>
+    </Card>
   );
 }
 
@@ -286,51 +338,60 @@ function SalesTable({orders, loading}: {orders: Order[]; loading: boolean}) {
         </Card.Title>
       </Card.Header>
       <Card.Content>
-        <Table.Root>
-          <Table.Header>
-            <Table.Row>
-              <Table.Head>
-                <Trans message="Product" />
-              </Table.Head>
-              <Table.Head>
-                <Trans message="Date" />
-              </Table.Head>
-              <Table.Head className="text-end">
-                <Trans message="You earned" />
-              </Table.Head>
-            </Table.Row>
-          </Table.Header>
-          <Table.Body>
-            {loading ? (
-              <LoadingRows colSpan={3} />
-            ) : orders.length ? (
-              orders.slice(0, 10).map(order => (
-                <Table.Row key={order.id}>
-                  <Table.Cell className="font-medium">
-                    {order.product?.title ?? (
-                      <Trans message="Digital product" />
-                    )}
-                  </Table.Cell>
-                  <Table.Cell className="text-muted-foreground">
-                    {formatDate(order.paid_at ?? order.created_at)}
-                  </Table.Cell>
-                  <Table.Cell className="text-end font-medium">
-                    {formatMoney(order.creator_earnings_cents, order.currency)}
+        <div className="overflow-x-auto">
+          <Table.Root>
+            <Table.Header>
+              <Table.Row>
+                <Table.Head>
+                  <Trans message="Product" />
+                </Table.Head>
+                <Table.Head>
+                  <Trans message="Date" />
+                </Table.Head>
+                <Table.Head className="text-end">
+                  <Trans message="You earned" />
+                </Table.Head>
+              </Table.Row>
+            </Table.Header>
+            <Table.Body>
+              {loading ? (
+                <LoadingRows colSpan={3} />
+              ) : orders.length ? (
+                orders.slice(0, 10).map(order => (
+                  <Table.Row key={order.id}>
+                    <Table.Cell className="font-medium">
+                      {order.product?.title ?? (
+                        <Trans message="Digital product" />
+                      )}
+                    </Table.Cell>
+                    <Table.Cell className="text-muted-foreground">
+                      <FormattedDate
+                        date={order.paid_at ?? order.created_at}
+                        preset="short"
+                      />
+                    </Table.Cell>
+                    <Table.Cell className="text-end font-medium">
+                      <FormattedCurrency
+                        valueInCents={order.creator_earnings_cents}
+                        currency={order.currency.toUpperCase()}
+                      />
+                    </Table.Cell>
+                  </Table.Row>
+                ))
+              ) : (
+                <Table.Row>
+                  <Table.Cell colSpan={3}>
+                    <TableEmptyState
+                      icon={InboxIcon}
+                      message="No sales yet"
+                      description="Your recent digital product sales will appear here."
+                    />
                   </Table.Cell>
                 </Table.Row>
-              ))
-            ) : (
-              <Table.Row>
-                <Table.Cell colSpan={3}>
-                  <EmptyState
-                    message="No sales yet"
-                    description="Your recent digital product sales will appear here."
-                  />
-                </Table.Cell>
-              </Table.Row>
-            )}
-          </Table.Body>
-        </Table.Root>
+              )}
+            </Table.Body>
+          </Table.Root>
+        </div>
       </Card.Content>
     </Card.Root>
   );
@@ -357,72 +418,80 @@ function PayoutHistory({
         </Card.Title>
       </Card.Header>
       <Card.Content>
-        <Table.Root>
-          <Table.Header>
-            <Table.Row>
-              <Table.Head>
-                <Trans message="Requested" />
-              </Table.Head>
-              <Table.Head>
-                <Trans message="Method" />
-              </Table.Head>
-              <Table.Head>
-                <Trans message="Status" />
-              </Table.Head>
-              <Table.Head className="text-end">
-                <Trans message="Amount" />
-              </Table.Head>
-              <Table.Head>
-                <span className="sr-only">
-                  <Trans message="Actions" />
-                </span>
-              </Table.Head>
-            </Table.Row>
-          </Table.Header>
-          <Table.Body>
-            {loading ? (
-              <LoadingRows colSpan={5} />
-            ) : payouts.length ? (
-              payouts.map(payout => (
-                <Table.Row key={payout.id}>
-                  <Table.Cell>{formatDate(payout.created_at)}</Table.Cell>
-                  <Table.Cell className="text-muted-foreground">
-                    {payout.withdrawal_method_name ??
-                      payout.payout_method_label ?? (
-                        <Trans message="Not specified" />
+        <div className="overflow-x-auto">
+          <Table.Root>
+            <Table.Header>
+              <Table.Row>
+                <Table.Head>
+                  <Trans message="Requested" />
+                </Table.Head>
+                <Table.Head>
+                  <Trans message="Method" />
+                </Table.Head>
+                <Table.Head>
+                  <Trans message="Status" />
+                </Table.Head>
+                <Table.Head className="text-end">
+                  <Trans message="Amount" />
+                </Table.Head>
+                <Table.Head>
+                  <span className="sr-only">
+                    <Trans message="Actions" />
+                  </span>
+                </Table.Head>
+              </Table.Row>
+            </Table.Header>
+            <Table.Body>
+              {loading ? (
+                <LoadingRows colSpan={5} />
+              ) : payouts.length ? (
+                payouts.map(payout => (
+                  <Table.Row key={payout.id}>
+                    <Table.Cell>
+                      <FormattedDate date={payout.created_at} preset="short" />
+                    </Table.Cell>
+                    <Table.Cell className="text-muted-foreground">
+                      {payout.withdrawal_method_name ??
+                        payout.payout_method_label ?? (
+                          <Trans message="Not specified" />
+                        )}
+                    </Table.Cell>
+                    <Table.Cell>
+                      <StatusBadge status={payout.status} />
+                    </Table.Cell>
+                    <Table.Cell className="text-end font-medium">
+                      <FormattedCurrency
+                        valueInCents={payout.amount_cents}
+                        currency={payout.currency.toUpperCase()}
+                      />
+                    </Table.Cell>
+                    <Table.Cell className="text-end">
+                      {payout.status === 'requested' && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => onCancel(payout)}
+                        >
+                          <Trans message="Cancel" />
+                        </Button>
                       )}
-                  </Table.Cell>
-                  <Table.Cell>
-                    <StatusBadge status={payout.status} />
-                  </Table.Cell>
-                  <Table.Cell className="text-end font-medium">
-                    {formatMoney(payout.amount_cents, payout.currency)}
-                  </Table.Cell>
-                  <Table.Cell className="text-end">
-                    {payout.status === 'requested' && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => onCancel(payout)}
-                      >
-                        <Trans message="Cancel" />
-                      </Button>
-                    )}
+                    </Table.Cell>
+                  </Table.Row>
+                ))
+              ) : (
+                <Table.Row>
+                  <Table.Cell colSpan={5}>
+                    <TableEmptyState
+                      icon={BanknoteArrowUpIcon}
+                      message="No payout requests yet"
+                      description="Your withdrawal requests will appear here once you make one."
+                    />
                   </Table.Cell>
                 </Table.Row>
-              ))
-            ) : (
-              <Table.Row>
-                <Table.Cell colSpan={5}>
-                  <EmptyState
-                    message="No payout requests yet"
-                    description="Your withdrawal requests will appear here once you make one."
-                  />
-                </Table.Cell>
-              </Table.Row>
-            )}
-          </Table.Body>
-        </Table.Root>
+              )}
+            </Table.Body>
+          </Table.Root>
+        </div>
         {pagination && (
           <BackendPagination
             response={pagination}
@@ -435,16 +504,20 @@ function PayoutHistory({
 }
 
 function StatusBadge({status}: {status: PayoutStatus}) {
-  const variants: Record<PayoutStatus, 'outline' | 'positive' | 'destructive'> =
-    {
-      requested: 'outline',
-      processing: 'outline',
-      paid: 'positive',
-      rejected: 'destructive',
-      cancelled: 'destructive',
-    };
+  const config: Record<
+    PayoutStatus,
+    {variant: 'outline' | 'positive' | 'destructive'; Icon: LucideIcon}
+  > = {
+    requested: {variant: 'outline', Icon: Clock3Icon},
+    processing: {variant: 'outline', Icon: RefreshCwIcon},
+    paid: {variant: 'positive', Icon: CheckCircleIcon},
+    rejected: {variant: 'destructive', Icon: TriangleAlertIcon},
+    cancelled: {variant: 'destructive', Icon: BanIcon},
+  };
+  const {variant, Icon} = config[status];
   return (
-    <Badge variant={variants[status]}>
+    <Badge variant={variant}>
+      <Icon aria-hidden="true" />
       <Trans message={statusLabels[status]} />
     </Badge>
   );
@@ -456,7 +529,7 @@ function LoadingRows({colSpan}: {colSpan: number}) {
       {Array.from({length: 5}, (_, index) => (
         <Table.Row key={index}>
           <Table.Cell colSpan={colSpan}>
-            <div className="h-7 animate-pulse rounded-input bg-muted" />
+            <Skeleton className="h-6 w-full" />
           </Table.Cell>
         </Table.Row>
       ))}
@@ -464,23 +537,29 @@ function LoadingRows({colSpan}: {colSpan: number}) {
   );
 }
 
-function EmptyState({
+function TableEmptyState({
+  icon: Icon,
   message,
   description,
 }: {
+  icon: LucideIcon;
   message: string;
   description: string;
 }) {
   return (
-    <div className="flex flex-col items-center py-12 text-center">
-      <InboxIcon className="mb-3 size-10 text-muted-foreground/50" />
-      <p className="font-medium">
-        <Trans message={message} />
-      </p>
-      <p className="mt-1 text-sm text-muted-foreground">
-        <Trans message={description} />
-      </p>
-    </div>
+    <Empty.Root className="border-none py-8">
+      <Empty.Header>
+        <Empty.Media variant="icon">
+          <Icon />
+        </Empty.Media>
+        <Empty.Title>
+          <Trans message={message} />
+        </Empty.Title>
+        <Empty.Description>
+          <Trans message={description} />
+        </Empty.Description>
+      </Empty.Header>
+    </Empty.Root>
   );
 }
 
@@ -517,8 +596,8 @@ function WithdrawDialog({
           <Dialog.Body>
             {!method ? (
               <div className="flex items-start gap-3 rounded-input border border-primary/30 bg-primary/5 p-4">
-                <TriangleAlertIcon className="mt-0.5 size-5 text-primary" />
-                <div className="text-sm">
+                <TriangleAlertIcon className="mt-0.5 size-5 shrink-0 text-primary" />
+                <div className="min-w-0 text-sm">
                   <p className="font-medium">
                     <Trans message="No payout method set up" />
                   </p>
@@ -538,8 +617,8 @@ function WithdrawDialog({
               </div>
             ) : available <= 0 ? (
               <div className="flex items-start gap-3 rounded-input border border-warning/30 bg-warning/5 p-4">
-                <TriangleAlertIcon className="mt-0.5 size-5 text-warning" />
-                <div className="text-sm">
+                <TriangleAlertIcon className="mt-0.5 size-5 shrink-0 text-warning" />
+                <div className="min-w-0 text-sm">
                   <p className="font-medium">
                     <Trans message="Not enough balance" />
                   </p>
@@ -549,12 +628,17 @@ function WithdrawDialog({
                 </div>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="flex flex-col gap-3">
                 <p>
                   <Trans
                     message="Withdraw :amount to :account via :method?"
                     values={{
-                      amount: formatMoney(available, currency),
+                      amount: (
+                        <FormattedCurrency
+                          valueInCents={available}
+                          currency={currency.toUpperCase()}
+                        />
+                      ),
                       account: method.account_holder,
                       method: method.display_label,
                     }}
@@ -581,12 +665,5 @@ function WithdrawDialog({
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
-  );
-}
-
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat(undefined, {dateStyle: 'medium'}).format(
-    new Date(value),
   );
 }

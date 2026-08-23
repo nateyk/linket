@@ -31,6 +31,7 @@ import {Progress} from '@shadcn/progress/progress';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {Tooltip} from '@shadcn/tooltip/tooltip';
 import {Trans} from '@ui/i18n/trans';
+import {FormattedBytes} from '@ui/i18n/formatted-bytes';
 import {
   ArchiveIcon,
   BookIcon,
@@ -363,13 +364,14 @@ function DigitalProductForm() {
       </DashboardLayout.SectionHeader>
 
       <DashboardLayout.SectionContent className="overflow-y-auto">
-        <div className="mx-auto w-full max-w-6xl">
+        <div className="mx-auto w-full max-w-6xl py-4 sm:py-6">
           {error && (
             <Alert.Root
               variant="destructive"
               fillStyle="subtleFill"
               className="mb-5"
             >
+              <TriangleAlertIcon />
               <Alert.Description>{error}</Alert.Description>
             </Alert.Root>
           )}
@@ -644,7 +646,7 @@ function DetailsPanel({
   onCoverChange: (url: string, entry?: {id: number}) => void;
 }) {
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       <Field.Root>
         <Field.Label>
           <Trans message="Product title" />
@@ -771,7 +773,7 @@ function FilesPanel({
   onRemove: (id: number) => void;
 }) {
   return (
-    <div className="space-y-3">
+    <div className="flex flex-col gap-3">
       <DownloadUploader onUploaded={onUploaded} />
       {!!files.length && (
         <div className="divide-y">
@@ -788,7 +790,7 @@ function FilesPanel({
               </span>
               {file.file_size && (
                 <span className="shrink-0 text-[12px] text-muted-foreground">
-                  {formatFileSize(file.file_size)}
+                  <FormattedBytes bytes={file.file_size} />
                 </span>
               )}
               <Button
@@ -981,14 +983,14 @@ function DownloadUploader({
 
 function BuilderSkeleton() {
   return (
-    <div className="space-y-3">
+    <div className="flex flex-col gap-3">
       <Skeleton className="h-9 w-48" />
       <div className="rounded-card border border-border">
         <div className="border-b px-4 py-3.5">
           <Skeleton className="h-5 w-36" />
           <Skeleton className="mt-1 h-3.5 w-56" />
         </div>
-        <div className="space-y-4 px-4 py-4">
+        <div className="flex flex-col gap-4 px-4 py-4">
           <Skeleton className="h-10 w-full" />
           <Skeleton className="h-10 w-full" />
           <Skeleton className="h-44 w-full" />
@@ -999,12 +1001,6 @@ function BuilderSkeleton() {
 }
 
 /* ─── Helpers ─── */
-
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 async function responseErrorMessage(response: Response, fallback: string) {
   const payload = await response.json().catch(() => undefined);

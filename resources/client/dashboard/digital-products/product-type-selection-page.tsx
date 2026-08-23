@@ -28,7 +28,7 @@ export function Component() {
         </DashboardLayout.SectionTitle>
       </DashboardLayout.SectionHeader>
       <DashboardLayout.SectionContent className="overflow-y-auto">
-        <div className="mx-auto flex w-full max-w-xl flex-col gap-6 py-6">
+        <div className="mx-auto flex w-full max-w-xl flex-col gap-5 py-4">
           <div className="flex items-center justify-between">
             <Button variant="ghost" render={<Link to="/dashboard/my-products" />}>
               <ArrowLeftIcon />

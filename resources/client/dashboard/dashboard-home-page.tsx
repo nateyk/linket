@@ -9,6 +9,7 @@ import {Badge} from '@shadcn/badge/badge';
 import {Card} from '@shadcn/card/card';
 import {Chart} from '@shadcn/chart/chart';
 import {getSiteCurrency} from '@ui/i18n/format-money';
+import {FormattedDate} from '@ui/i18n/formatted-date';
 import {
   generateTimeChartLabel,
   generateTimeChartTooltip,
@@ -662,7 +663,7 @@ function OrderStatusBadge({status}: {status: string}) {
 function OrderDate({order}: {order: StorefrontOrder}) {
   const date = order.paid_at ?? order.created_at;
 
-  return date ? formatDate(date) : <Trans message="Date unavailable" />;
+  return date ? <FormattedDate date={date} /> : <Trans message="Date unavailable" />;
 }
 
 function RankedListSkeleton() {
@@ -800,8 +801,3 @@ function formatReferrer(value: string): string {
   }
 }
 
-function formatDate(value: string): string {
-  return new Intl.DateTimeFormat(undefined, {dateStyle: 'medium'}).format(
-    new Date(value),
-  );
-}

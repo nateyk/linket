@@ -41,7 +41,7 @@ import {Placeholder} from '@tiptap/extensions';
 import StarterKit from '@tiptap/starter-kit';
 import {useCurrentTextEditor} from '@common/text-editor/tiptap-editor-context';
 import {message} from '@ui/i18n/message';
-import {formatMoney} from '@ui/i18n/format-money';
+import {FormattedCurrency} from '@ui/i18n/formatted-currency';
 import {Trans} from '@ui/i18n/trans';
 import {useTrans} from '@ui/i18n/use-trans';
 import {
@@ -868,7 +868,7 @@ function ProductPickerDialog({
                           {product.title}
                         </span>
                         <span className="block text-xs text-muted-foreground">
-                          {formatMoney(product.price_cents, product.currency)}
+                          <FormattedCurrency valueInCents={product.price_cents} currency={product.currency} />
                         </span>
                       </span>
                       <Checkbox
@@ -926,7 +926,7 @@ function SelectedProduct({
           {product.title}
         </div>
         <div className="mt-0.5 text-xs text-muted-foreground">
-          {formatMoney(product.price_cents, product.currency)}
+          <FormattedCurrency valueInCents={product.price_cents} currency={product.currency} />
         </div>
       </div>
       <Button

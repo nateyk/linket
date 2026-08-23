@@ -168,7 +168,7 @@ export function Component() {
       </DashboardLayout.SectionHeader>
 
       <DashboardLayout.SectionContent className="overflow-y-auto">
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 py-6">
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 py-4">
           {error && <ErrorNotice message={error} onRetry={() => void load()} />}
 
           {loading ? (
