@@ -260,12 +260,18 @@ if [[ "$LINK_PUBLIC_HTML" == "true" ]]; then
 fi
 
 # ---------- post-activation: queue restart ----------
-log "Restarting queue workers for new code"
-if (cd "$CURRENT" && $PHP_BIN artisan horizon:terminate 2>&1 | tail -n 10); then
-  log "horizon:terminate OK (Supervisor will restart)"
+# Only touch Horizon when actually running redis queues; otherwise plain queue:restart.
+QUEUE_CONN="$(grep -E '^QUEUE_CONNECTION=' "$SHARED/.env" 2>/dev/null | tail -1 | cut -d= -f2- | tr -d "\"'" || true)"
+log "Restarting queue workers for new code (QUEUE_CONNECTION=${QUEUE_CONN:-unknown})"
+if [[ "${QUEUE_CONN,,}" == "redis" ]]; then
+  if (cd "$CURRENT" && $PHP_BIN artisan horizon:terminate 2>&1 | tail -n 10); then
+    log "horizon:terminate OK (Supervisor will restart)"
+  else
+    log "horizon:terminate failed — trying queue:restart fallback"
+    (cd "$CURRENT" && $PHP_BIN artisan queue:restart 2>&1 | tail -n 5 || true)
+  fi
 else
-  log "horizon:terminate failed or Horizon not configured — trying queue:restart fallback"
-  (cd "$CURRENT" && $PHP_BIN artisan queue:restart 2>&1 | tail -n 10 || true)
+  (cd "$CURRENT" && $PHP_BIN artisan queue:restart 2>&1 | tail -n 3 || true)
 fi
 
 # ---------- post-activation health (gates rollback) ----------
