@@ -16,6 +16,7 @@ import {LivePreview} from '@app/dashboard/stores/store-editor/live-preview';
 import {
   listCurrentUserStoresOptions,
   retrieveStoreOptions,
+  storesBaseKey,
   updateStoreAppearanceOptions,
 } from '@app/dashboard/stores/stores-queries';
 import {useSelectedStoreId} from '@app/dashboard/stores/use-selected-store-id';
@@ -153,7 +154,7 @@ function BiolinkEditorHeader() {
       updateCreatorProfile(biolink.id, payload),
     onSuccess: () => {
       setProfileIsDirty(false);
-      queryClient.invalidateQueries({queryKey: ['biolinks']});
+      queryClient.invalidateQueries({queryKey: storesBaseKey});
       queryClient.invalidateQueries({queryKey: ['digital-products']});
       toast.success(<Trans message="Changes saved" />);
     },
@@ -435,7 +436,7 @@ function CreatorProfileUpgrade() {
   const convert = useMutation({
     mutationFn: () => convertBiolinkToCreatorProfile(biolink.id),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({queryKey: ['biolinks']});
+      await queryClient.invalidateQueries({queryKey: storesBaseKey});
       toast.success(<Trans message="Creator profile is ready" />);
     },
     onError: error => showHttpErrorToast(error),

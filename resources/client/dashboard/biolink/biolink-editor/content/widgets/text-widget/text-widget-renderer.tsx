@@ -1,3 +1,3 @@
-// Shim — canonical implementation lives in `../../stores/store-editor/content/widgets/text-widget/text-widget-renderer`.
+// Shim — canonical implementation lives in `../../../../../stores/store-editor/content/widgets/text-widget/text-widget-renderer`.
 // Kept for backward compat; stores is canonical.
-export * from '../../stores/store-editor/content/widgets/text-widget/text-widget-renderer';
+export * from '../../../../../stores/store-editor/content/widgets/text-widget/text-widget-renderer';

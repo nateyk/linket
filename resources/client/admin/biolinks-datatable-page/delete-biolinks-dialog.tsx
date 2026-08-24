@@ -1,4 +1,4 @@
-import {deleteStoresOptions} from '@app/dashboard/stores/stores-queries';
+import {deleteStoreOptions} from '@app/dashboard/stores/stores-queries';
 import {Biolink} from '@app/gen/schemas/biolink';
 import {showHttpErrorToast} from '@common/http/errors/show-http-error-toast';
 import {AlertDialog} from '@shadcn/alert-dialog/alert-dialog';
@@ -37,7 +37,7 @@ function DialogContent({
   biolink,
   onDelete,
 }: Pick<DeleteBiolinksDialogProps, 'biolink' | 'onDelete'>) {
-  const deleteBiolinks = useMutation(deleteStoresOptions());
+  const deleteBiolinks = useMutation(deleteStoreOptions());
 
   const handleDelete = () => {
     deleteBiolinks.mutate(biolink.id, {

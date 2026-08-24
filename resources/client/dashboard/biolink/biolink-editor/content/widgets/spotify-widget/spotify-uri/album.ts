@@ -1,3 +1,3 @@
-// Shim — canonical implementation lives in `../../stores/store-editor/content/widgets/spotify-widget/spotify-uri/album`.
+// Shim — canonical implementation lives in `../../../../../../stores/store-editor/content/widgets/spotify-widget/spotify-uri/album`.
 // Kept for backward compat; stores is canonical.
-export * from '../../stores/store-editor/content/widgets/spotify-widget/spotify-uri/album';
+export * from '../../../../../../stores/store-editor/content/widgets/spotify-widget/spotify-uri/album';

@@ -265,3 +265,160 @@ Brief expected FAIL `stores-queries not found` does not occur because Task 3 pre
 - Menus, landing copy, bootstrap & sidebar — storefront-first: update `resources/defaults/default-settings.php:34,76,136,298,346,364` menus `action='/dashboard/stores'`, icon `stores`, `landingPage` badges `Storefront`, `bootstrap` `stores` key, `main.tsx:26` bootstrap `stores` alias.
 - Verify `dashboard-routes.test.tsx` still passes after menu change.
 
+
+---
+
+## Fix Report — Review Blockers (2026-08-24)
+
+**Review date:** 2026-08-24
+**Review blockers:** 2 BLOCKER + 1 MINOR
+**Fix commit:** TBD — `fix(dashboard): correct Task 4 shims and query keys`
+**Branch:** main
+**Workspace root:** /home/nate/projects/linket
+
+### Blockers Fixed
+
+#### BLOCKER 1: `deleteStoresOptions` does not exist
+- **File:** `resources/client/admin/biolinks-datatable-page/delete-biolinks-dialog.tsx:1,40`
+- **Problem:** `import {deleteStoresOptions} from '@app/dashboard/stores/stores-queries'` — `deleteStoresOptions` (plural) never exported; canonical export is `deleteStoreOptions` (singular) `resources/client/dashboard/stores/stores-queries.ts:97`, compat alias is `deleteBiolinkOptions` `resources/client/dashboard/stores/stores-queries.ts:194`.
+- **tsp error before:** `error TS2724: '"@app/dashboard/stores/stores-queries"' has no exported member named 'deleteStoresOptions'. Did you mean 'deleteStoreOptions'?` at `delete-biolinks-dialog.tsx:1`
+- **Fix:** `deleteStoresOptions` → `deleteStoreOptions` (import + `useMutation(deleteStoreOptions())` at `delete-biolinks-dialog.tsx:1,40`). Alternative compat `deleteBiolinkOptions` would also work but singular is canonical.
+- **Verified:** `npx tsc --noEmit` no longer reports TS2724 for this file; `grep -rn deleteStoresOptions` now 0 hits.
+
+#### BLOCKER 2: ~60 nested shim files wrong relative path `../../stores/...` regardless of depth
+- **Path:** `resources/client/dashboard/biolink/biolink-editor/**` (55 files fixed)
+- **Problem:** All nested shims used `../../stores/store-editor/...` even when depth required more `../`. Example `biolink-editor/appearance/background-style.tsx` at depth 3 needs `../../../stores/...` but had `../../`. This produced 55 `TS2307: Cannot find module '../../stores/store-editor/...'` errors (see `/tmp/tsc_before.log` 129 errors total).
+- **Expected depth map (from review):**
+  - `appearance/file` → `../../../stores/...` (3 levels: `appearance` → `biolink-editor` → `biolink` → `dashboard`)
+  - `content/file` → `../../../stores/...`
+  - `content/link-content-item` → `../../../../stores/...` (4 levels)
+  - `content/links` → `../../../../stores/...`
+  - `content/widgets` → `../../../../stores/...`
+  - `content/widgets/image-widget` → `../../../../../stores/...` (5 levels)
+  - `content/widgets/spotify-widget/spotify-uri` → `../../../../../../stores/...` (6 levels: `spotify-uri`→`spotify-widget`→`widgets`→`content`→`biolink-editor`→`biolink`→`dashboard`)
+- **Fix:** Recomputed correct relative via `os.path.relpath(stores/store-editor/<mirror>, shim_dir)` for each shim under `biolink/biolink-editor/**`. Rewrote shim header and export:
+  ```ts
+  // Shim — canonical implementation lives in `<correct relative>`.
+  // Kept for backward compat; stores is canonical.
+  export * from '<correct relative>';
+  ```
+  - 55 files corrected, e.g.:
+    - `appearance/background-style.tsx:3` `../../stores/...` → `../../../stores/...`
+    - `content/link-content-item/link-content-item.tsx:3` `../../stores/...` → `../../../../stores/...`
+    - `content/widgets/image-widget/image-widget-dialog.tsx:3` `../../stores/...` → `../../../../../stores/...`
+    - `content/widgets/spotify-widget/spotify-uri/album.ts:3` `../../stores/...` → `../../../../../../stores/...`
+    - `content/widgets/widget-selector/select-widget-dialog.tsx:3` `../../stores/...` → `../../../../../stores/...`
+  - 9 files already correct (direct children of `biolink-editor/`: `biolink-editor-store.tsx:3`, `biolink-settings-dialog.tsx:3`, `builder-section-header.tsx:3`, `create-biolink-dialog.tsx:3`, `creator-profile-editor.tsx:3`, `creator-profile-types.ts:3`, `delete-biolink-dialog.tsx:3`, `live-preview.tsx:3`, plus `biolink-editor-page.tsx:3` kept as `../../stores/store-editor/store-editor-page` which is depth-correct and points to canonical). Top-level `biolink/*.tsx` shims (`biolinks-page.tsx:3` → `../stores/stores-page`, etc.) already correct, left unchanged.
+  - Non-code assets (`animate.min.css`, `tiktok.png`, widget images) left as copies, not shims.
+- **Verified:** `python` depth check now `ALL BIOLINK-EDITOR SHIMS OK`; `npx tsc --noEmit` `TS2307` for those 55 modules disappears (see below).
+
+#### MINOR 3: `store-editor-page.tsx` invalidates `['biolinks']` should be `['stores']` or `storesBaseKey`
+- **Files:** `resources/client/dashboard/stores/store-editor/store-editor-page.tsx:156,439`
+- **Problem:** 
+  ```ts
+  queryClient.invalidateQueries({queryKey: ['biolinks']}); // at 156 in saveProfile onSuccess
+  await queryClient.invalidateQueries({queryKey: ['biolinks']}); // at 439 in CreatorProfileUpgrade onSuccess
+  ```
+  Canonical key is `storesBaseKey = ['stores'] as const` per `stores-queries.ts:25` (compat `biolinksBaseKey = storesBaseKey` same instance). Using literal `['biolinks']` would not invalidate `['stores']` queries after rename.
+- **Fix:**
+  - Added `storesBaseKey` to import `stores-queries.ts:16-20`:
+    ```ts
+    import {
+      listCurrentUserStoresOptions,
+      retrieveStoreOptions,
+      storesBaseKey,
+      updateStoreAppearanceOptions,
+    } from '@app/dashboard/stores/stores-queries';
+    ```
+  - Replaced both invalidations with `queryClient.invalidateQueries({queryKey: storesBaseKey});` at `store-editor-page.tsx:157,439`. `delete-biolink-dialog.tsx` under `stores/store-editor` already uses `biolinksBaseKey` (alias to `storesBaseKey`) and is acceptable; could be changed to `storesBaseKey` but left as is since alias equals same instance.
+- **Verified:** No `['biolinks']` literal remains in `store-editor-page.tsx`; `grep -rn "invalidateQueries.*biolinks"` now only shows other files using `biolinksBaseKey` alias (which equals `storesBaseKey`).
+
+### Verification
+
+#### `npx tsc --noEmit`
+- **Before fix (stashed, `2a77802` base):** `129` `error TS` (164 lines) — includes 55× `TS2307: Cannot find module '../../stores/store-editor/...'` for nested shims + 1× `TS2724: has no exported member 'deleteStoresOptions'` + 72 baseline pre-existing errors (storefront, billing, qr-code-styling, etc.).
+- **After fix:** `72` `error TS` (107 lines) — 0 new errors, **-57** errors fixed. Remaining 72 are pre-existing baseline unrelated to Task 4 (e.g., `common/foundation/...edit-plan-page.tsx:37`, `storefront-dashboard-page.tsx:146`, `node_modules/qr-code-styling`, etc.). No `TS2307` for `stores/store-editor` shims, no `TS2724` for `deleteStoreOptions`.
+- **Command:** `timeout 90 npx tsc --noEmit 2>&1 > /tmp/tsc.log` (after) vs `> /tmp/tsc_before.log` (before, via `git stash --keep-index`). Full logs at `/tmp/tsc.log` and `/tmp/tsc_before.log` for diff.
+
+#### `npm run test`
+- **Command:** `npm run test` (vitest run)
+- **Before fix:** 13 passed (same — tests mock or don't import the broken shim paths directly, so they passed even with broken shims; tsc failure is the blocker).
+- **After fix:** 
+  ```
+  RUN  v4.1.11
+   Test Files  3 passed (3)
+        Tests  13 passed (13)
+   Duration  2.76s
+  ```
+  - `resources/client/dashboard/stores/stores-alias.test.tsx` (7 tests): query keys alias, use-selected alias, editor filesystem canonical, stores page loads, dashboard routes canonical, internal nav /stores checks — all PASS.
+  - `dashboard-routes.test.tsx` — PASS.
+  - `tests/js/dashboard-routes.test.ts` — PASS.
+- **No new failures.**
+
+### Files Changed (Fix Commit)
+
+- `resources/client/admin/biolinks-datatable-page/delete-biolinks-dialog.tsx:1,40` — `deleteStoresOptions` → `deleteStoreOptions`
+- `resources/client/dashboard/biolink/biolink-editor/appearance/background-style.tsx:3` — depth `../../` → `../../../`
+- `resources/client/dashboard/biolink/biolink-editor/appearance/biolink-appearance-tab.tsx:3` — `../../` → `../../../`
+- `resources/client/dashboard/biolink/biolink-editor/appearance/button-style.tsx:3` — `../../` → `../../../`
+- `resources/client/dashboard/biolink/biolink-editor/appearance/header-classnames.ts:3` — `../../` → `../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/biolink-item-layout.tsx:3` — `../../` → `../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/biolink-item-payload.ts:3` — `../../` → `../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/link-content-item/leap-link-dialog.tsx:3` — `../../` → `../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/link-content-item/link-animation-dialog.tsx:3` — `../../` → `../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/link-content-item/link-content-item.tsx:3` — `../../` → `../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/link-content-item/link-schedule-dialog.tsx:3` — `../../` → `../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/link-content-item/link-thumbnail-dialog.tsx:3` — `../../` → `../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/links/create-biolink-link-dialog.tsx:3` — `../../` → `../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/links/update-biolink-link-dialog.tsx:3` — `../../` → `../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/use-sort-biolink-content.ts:3` — `../../` → `../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/widgets/image-widget/image-widget-dialog.tsx:3` — `../../` → `../../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/widgets/image-widget/image-widget-renderer.tsx:3` — `../../` → `../../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/widgets/shop-widget/shop-widget-dialog.tsx:3` — `../../` → `../../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/widgets/shop-widget/shop-widget-renderer.tsx:3` — `../../` → `../../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/widgets/socials-widget/socials-list.tsx:3` — `../../` → `../../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/widgets/socials-widget/socials-widget-dialog.tsx:3` — `../../` → `../../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/widgets/socials-widget/socials-widget-renderer.tsx:3` — `../../` → `../../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/widgets/soundcloud-widget/soundcloud-widget-dialog.tsx:3` — `../../` → `../../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/widgets/soundcloud-widget/soundcloud-widget-renderer.tsx:3` — `../../` → `../../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/widgets/spotify-widget/spotify-uri/album.ts:3` — `../../` → `../../../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/widgets/spotify-widget/spotify-uri/artist.ts:3` — `../../` → `../../../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/widgets/spotify-widget/spotify-uri/episode.ts:3` — `../../` → `../../../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/widgets/spotify-widget/spotify-uri/index.ts:3` — `../../` → `../../../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/widgets/spotify-widget/spotify-uri/local.ts:3` — `../../` → `../../../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/widgets/spotify-widget/spotify-uri/parse.ts:3` — `../../` → `../../../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/widgets/spotify-widget/spotify-uri/playlist.ts:3` — `../../` → `../../../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/widgets/spotify-widget/spotify-uri/search.ts:3` — `../../` → `../../../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/widgets/spotify-widget/spotify-uri/show.ts:3` — `../../` → `../../../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/widgets/spotify-widget/spotify-uri/spotify-uri.ts:3` — `../../` → `../../../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/widgets/spotify-widget/spotify-uri/track.ts:3` — `../../` → `../../../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/widgets/spotify-widget/spotify-uri/user.ts:3` — `../../` → `../../../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/widgets/spotify-widget/spotify-uri/util.ts:3` — `../../` → `../../../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/widgets/spotify-widget/spotify-widget-dialog.tsx:3` — `../../` → `../../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/widgets/spotify-widget/spotify-widget-renderer.tsx:3` — `../../` → `../../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/widgets/text-widget/text-widget-dialog.tsx:3` — `../../` → `../../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/widgets/text-widget/text-widget-renderer.tsx:3` — `../../` → `../../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/widgets/tiktok-widget/tiktok-widget-dialog.tsx:3` — `../../` → `../../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/widgets/tiktok-widget/tiktok-widget-renderer.tsx:3` — `../../` → `../../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/widgets/twitch-widget/twitch-widget-dialog.tsx:3` — `../../` → `../../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/widgets/twitch-widget/twitch-widget-renderer.tsx:3` — `../../` → `../../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/widgets/use-crupdate-biolink-widget.tsx:3` — `../../` → `../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/widgets/video-embed-widget-renderer.tsx:3` — `../../` → `../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/widgets/vimeo-widget/vimeo-widget-dialog.tsx:3` — `../../` → `../../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/widgets/vimeo-widget/vimeo-widget-renderer.tsx:3` — `../../` → `../../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/widgets/widget-content-item.tsx:3` — `../../` → `../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/widgets/widget-list.tsx:3` — `../../` → `../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/widgets/widget-renderer-props.ts:3` — `../../` → `../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/widgets/widget-renderers.ts:3` — `../../` → `../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/widgets/widget-selector/select-widget-dialog.tsx:3` — `../../` → `../../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/widgets/youtube-widget/youtube-widget-dialog.tsx:3` — `../../` → `../../../../../`
+- `resources/client/dashboard/biolink/biolink-editor/content/widgets/youtube-widget/youtube-widget-renderer.tsx:3` — `../../` → `../../../../../`
+- `resources/client/dashboard/stores/store-editor/store-editor-page.tsx:16,157,439` — import `storesBaseKey`, replace `['biolinks']` → `storesBaseKey` at 157,439
+- `.superpowers/sdd/2026-08-24-store-rename-plan/task-4-report.md` — this fix report appended
+
+### Notes
+
+- No subagents used — all fixes via direct reads, python depth recomputation, and targeted edits.
+- `biolink/biolink-editor/biolink-editor-page.tsx:3` depth already correct (`../../stores/store-editor/store-editor-page`), left as is; it points directly to canonical `store-editor-page.tsx` rather than via `stores/store-editor/biolink-editor-page.tsx` alias. Both resolve, but direct canonical is preferred.
+- Top-level `biolink/*.tsx` shims already `../stores/...` correct.
+- Baseline `npx tsc` still shows 72 pre-existing errors (storefront, billing, etc.) — unrelated to Task 4, tracked separately.
