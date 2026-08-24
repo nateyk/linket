@@ -18,6 +18,7 @@ use Common\Billing\Products\CrupdateProduct;
 use Common\Billing\Subscription;
 use Common\Permissions\Models\Permission;
 use Common\Roles\Models\Role;
+use Common\Workspaces\Actions\CreateWorkspace;
 use Common\Workspaces\Models\Workspace;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -34,7 +35,23 @@ class SeedDemoData extends Command
 
     public function handle(): int
     {
-        $this->user = User::query()->where('email', 'user@user.com')->first();
+        $user = User::query()->where('email', 'user@user.com')->first();
+
+        if (!$user) {
+            $user = User::query()->forceCreate([
+                'name' => 'Demo user',
+                'username' => 'demo',
+                'email' => 'user@user.com',
+                'password' => bcrypt('demo1234'),
+                'email_verified_at' => now(),
+            ]);
+            $user->roles()->attach(
+                Role::query()->where('default', true)->firstOrFail(),
+            );
+        }
+        $this->user = $user;
+
+        (new CreateWorkspace())->createPersonalWorkspace($this->user);
 
         $this->personalWorkspace = Workspace::query()
             ->where('owner_id', $this->user->id)
