@@ -7,7 +7,7 @@
     },
     "servers": [
         {
-            "url": "http://127.0.0.1:8000/api/v1"
+            "url": "https://linket.ddev.site/api/v1"
         }
     ],
     "tags": [
@@ -16,6 +16,9 @@
         },
         {
             "name": "QR Codes"
+        },
+        {
+            "name": "Stores"
         },
         {
             "name": "Biolinks"
@@ -995,12 +998,115 @@
                 }
             }
         },
-        "/biolinks": {
-            "get": {
-                "operationId": "listBiolinks",
-                "summary": "List all biolinks",
+        "/biolinks/{id}/creator-profile": {
+            "put": {
+                "operationId": "updateCreatorProfile",
+                "summary": "Update the fixed creator profile",
                 "tags": [
                     "Biolinks"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateCreatorProfileRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`Biolink`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Biolink"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            }
+        },
+        "/biolinks/{id}/creator-profile/convert": {
+            "post": {
+                "operationId": "convertBiolinkToCreatorProfile",
+                "summary": "Convert a legacy biolink without deleting its widget records",
+                "tags": [
+                    "Biolinks"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`Biolink`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Biolink"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            }
+        },
+        "/stores/list": {
+            "get": {
+                "operationId": "listStoresList",
+                "summary": "Legacy alias for list - keep compatible with biolink/list",
+                "tags": [
+                    "Stores"
                 ],
                 "parameters": [
                     {
@@ -1075,7 +1181,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Paginated set of `Biolink`",
+                        "description": "Paginated set of `Store`",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -1084,7 +1190,199 @@
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/components/schemas/Biolink"
+                                                "$ref": "#/components/schemas/Store"
+                                            }
+                                        },
+                                        "links": {
+                                            "type": "object",
+                                            "properties": {
+                                                "first": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "last": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "prev": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "next": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "first",
+                                                "last",
+                                                "prev",
+                                                "next"
+                                            ]
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "current_page": {
+                                                    "type": "integer",
+                                                    "minimum": 1
+                                                },
+                                                "from": {
+                                                    "type": [
+                                                        "integer",
+                                                        "null"
+                                                    ],
+                                                    "minimum": 1
+                                                },
+                                                "path": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ],
+                                                    "description": "Base path for paginator generated URLs."
+                                                },
+                                                "per_page": {
+                                                    "type": "integer",
+                                                    "description": "Number of items shown per page.",
+                                                    "minimum": 0
+                                                },
+                                                "to": {
+                                                    "type": [
+                                                        "integer",
+                                                        "null"
+                                                    ],
+                                                    "description": "Number of the last item in the slice.",
+                                                    "minimum": 1
+                                                }
+                                            },
+                                            "required": [
+                                                "current_page",
+                                                "from",
+                                                "path",
+                                                "per_page",
+                                                "to"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "links",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/stores": {
+            "get": {
+                "operationId": "stores.stores.index_0",
+                "summary": "List all stores",
+                "tags": [
+                    "Stores"
+                ],
+                "parameters": [
+                    {
+                        "name": "query",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 100
+                        }
+                    },
+                    {
+                        "name": "fields_preset",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "sort",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "workspace_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "user_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "created_at",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "updated_at",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated set of `Store`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Store"
                                             }
                                         },
                                         "links": {
@@ -1184,30 +1482,30 @@
                 }
             },
             "post": {
-                "operationId": "createBiolink",
-                "summary": "Create a biolink",
+                "operationId": "stores.stores.store_1",
+                "summary": "Create a store",
                 "tags": [
-                    "Biolinks"
+                    "Stores"
                 ],
                 "requestBody": {
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/CrupdateBiolinkBody"
+                                "$ref": "#/components/schemas/CrupdateStoreBody"
                             }
                         }
                     }
                 },
                 "responses": {
                     "200": {
-                        "description": "`Biolink`",
+                        "description": "`Store`",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/components/schemas/Biolink"
+                                            "$ref": "#/components/schemas/Store"
                                         }
                                     },
                                     "required": [
@@ -1217,42 +1515,43 @@
                             }
                         }
                     },
-                    "403": {
-                        "$ref": "#/components/responses/AuthorizationException"
-                    },
                     "422": {
                         "$ref": "#/components/responses/ValidationException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
                     }
                 }
             }
         },
-        "/biolinks/{id}": {
+        "/stores/{store}": {
             "get": {
-                "operationId": "retrieveBiolink",
-                "summary": "Retrieve a biolink",
+                "operationId": "stores.stores.show_0",
+                "summary": "Retrieve a store",
                 "tags": [
-                    "Biolinks"
+                    "Stores"
                 ],
                 "parameters": [
                     {
-                        "name": "id",
+                        "name": "store",
                         "in": "path",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "string",
+                            "default": null
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "`Biolink`",
+                        "description": "`Store`",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/components/schemas/Biolink"
+                                            "$ref": "#/components/schemas/Store"
                                         }
                                     },
                                     "required": [
@@ -1271,18 +1570,19 @@
                 }
             },
             "put": {
-                "operationId": "updateBiolink",
-                "summary": "Update a biolink",
+                "operationId": "stores.stores.update_1",
+                "summary": "Update a store",
                 "tags": [
-                    "Biolinks"
+                    "Stores"
                 ],
                 "parameters": [
                     {
-                        "name": "id",
+                        "name": "store",
                         "in": "path",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "string",
+                            "default": null
                         }
                     }
                 ],
@@ -1290,21 +1590,21 @@
                     "content": {
                         "application/json": {
                             "schema": {
-                                "$ref": "#/components/schemas/CrupdateBiolinkBody"
+                                "$ref": "#/components/schemas/CrupdateStoreBody"
                             }
                         }
                     }
                 },
                 "responses": {
                     "200": {
-                        "description": "`Biolink`",
+                        "description": "`Store`",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/components/schemas/Biolink"
+                                            "$ref": "#/components/schemas/Store"
                                         }
                                     },
                                     "required": [
@@ -1326,18 +1626,19 @@
                 }
             },
             "delete": {
-                "operationId": "deleteBiolink",
-                "summary": "Delete a biolink",
+                "operationId": "stores.stores.destroy_2",
+                "summary": "Delete a store",
                 "tags": [
-                    "Biolinks"
+                    "Stores"
                 ],
                 "parameters": [
                     {
-                        "name": "id",
+                        "name": "store",
                         "in": "path",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "string",
+                            "default": null
                         }
                     }
                 ],
@@ -1373,12 +1674,11 @@
                 }
             }
         },
-        "/biolinks/{id}/creator-profile": {
+        "/stores/{id}/creator-profile": {
             "put": {
-                "operationId": "updateCreatorProfile",
-                "summary": "Update the fixed creator profile",
+                "operationId": "stores.creatorProfile.update",
                 "tags": [
-                    "Biolinks"
+                    "Stores"
                 ],
                 "parameters": [
                     {
@@ -1386,7 +1686,7 @@
                         "in": "path",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "string"
                         }
                     }
                 ],
@@ -1402,14 +1702,14 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "`Biolink`",
+                        "description": "`Store`",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/components/schemas/Biolink"
+                                            "$ref": "#/components/schemas/Store"
                                         }
                                     },
                                     "required": [
@@ -1431,12 +1731,11 @@
                 }
             }
         },
-        "/biolinks/{id}/creator-profile/convert": {
+        "/stores/{id}/creator-profile/convert": {
             "post": {
-                "operationId": "convertBiolinkToCreatorProfile",
-                "summary": "Convert a legacy biolink without deleting its widget records",
+                "operationId": "stores.creatorProfile.convert",
                 "tags": [
-                    "Biolinks"
+                    "Stores"
                 ],
                 "parameters": [
                     {
@@ -1444,24 +1743,405 @@
                         "in": "path",
                         "required": true,
                         "schema": {
-                            "type": "integer"
+                            "type": "string"
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "`Biolink`",
+                        "description": "`Store`",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/components/schemas/Biolink"
+                                            "$ref": "#/components/schemas/Store"
                                         }
                                     },
                                     "required": [
                                         "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            }
+        },
+        "/biolinks": {
+            "get": {
+                "operationId": "stores.stores.index_0",
+                "summary": "List all stores",
+                "tags": [
+                    "Stores"
+                ],
+                "parameters": [
+                    {
+                        "name": "query",
+                        "in": "query",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 100
+                        }
+                    },
+                    {
+                        "name": "fields_preset",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "sort",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "workspace_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "user_id",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "created_at",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "updated_at",
+                        "in": "query",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated set of `Store`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Store"
+                                            }
+                                        },
+                                        "links": {
+                                            "type": "object",
+                                            "properties": {
+                                                "first": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "last": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "prev": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "next": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "first",
+                                                "last",
+                                                "prev",
+                                                "next"
+                                            ]
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "current_page": {
+                                                    "type": "integer",
+                                                    "minimum": 1
+                                                },
+                                                "from": {
+                                                    "type": [
+                                                        "integer",
+                                                        "null"
+                                                    ],
+                                                    "minimum": 1
+                                                },
+                                                "path": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ],
+                                                    "description": "Base path for paginator generated URLs."
+                                                },
+                                                "per_page": {
+                                                    "type": "integer",
+                                                    "description": "Number of items shown per page.",
+                                                    "minimum": 0
+                                                },
+                                                "to": {
+                                                    "type": [
+                                                        "integer",
+                                                        "null"
+                                                    ],
+                                                    "description": "Number of the last item in the slice.",
+                                                    "minimum": 1
+                                                }
+                                            },
+                                            "required": [
+                                                "current_page",
+                                                "from",
+                                                "path",
+                                                "per_page",
+                                                "to"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "links",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "stores.stores.store_1",
+                "summary": "Create a store",
+                "tags": [
+                    "Stores"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CrupdateStoreBody"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`Store`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Store"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    }
+                }
+            }
+        },
+        "/biolinks/{store}": {
+            "get": {
+                "operationId": "stores.stores.show_0",
+                "summary": "Retrieve a store",
+                "tags": [
+                    "Stores"
+                ],
+                "parameters": [
+                    {
+                        "name": "store",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "default": null
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`Store`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Store"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            },
+            "put": {
+                "operationId": "stores.stores.update_1",
+                "summary": "Update a store",
+                "tags": [
+                    "Stores"
+                ],
+                "parameters": [
+                    {
+                        "name": "store",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "default": null
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CrupdateStoreBody"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`Store`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Store"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "stores.stores.destroy_2",
+                "summary": "Delete a store",
+                "tags": [
+                    "Stores"
+                ],
+                "parameters": [
+                    {
+                        "name": "store",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "default": null
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "422": {
+                        "description": "An error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Error overview."
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
                                     ]
                                 }
                             }
@@ -1642,6 +2322,234 @@
                                 }
                             }
                         }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            }
+        },
+        "/stores/{store}/link": {
+            "post": {
+                "operationId": "stores.storeLink.store_0",
+                "tags": [
+                    "Stores"
+                ],
+                "parameters": [
+                    {
+                        "name": "store",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CrupdateBiolinkLinkBody"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`Store`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Store"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            }
+        },
+        "/stores/{store}/link/{id}": {
+            "put": {
+                "operationId": "storeLink.update",
+                "tags": [
+                    "Stores"
+                ],
+                "parameters": [
+                    {
+                        "name": "store",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CrupdateBiolinkLinkBody"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`Store`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Store"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/stores/{storeId}/link/{id}/detach": {
+            "post": {
+                "operationId": "storeLink.detach",
+                "tags": [
+                    "Stores"
+                ],
+                "parameters": [
+                    {
+                        "name": "storeId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`Store`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Store"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            }
+        },
+        "/biolink/{biolink}/link": {
+            "post": {
+                "operationId": "stores.storeLink.store_0",
+                "tags": [
+                    "Stores"
+                ],
+                "parameters": [
+                    {
+                        "name": "biolink",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CrupdateBiolinkLinkBody"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`Store`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Store"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
                     },
                     "403": {
                         "$ref": "#/components/responses/AuthorizationException"
@@ -1887,6 +2795,68 @@
                         "required": true,
                         "schema": {
                             "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "widgetToPin": {
+                                        "type": "integer"
+                                    },
+                                    "order": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object",
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer"
+                                                },
+                                                "model_type": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "id",
+                                                "model_type"
+                                            ]
+                                        },
+                                        "minItems": 1
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                }
+            }
+        },
+        "/stores/{store}/change-order": {
+            "post": {
+                "operationId": "storeContentOrder.changeOrder",
+                "tags": [
+                    "Stores"
+                ],
+                "parameters": [
+                    {
+                        "name": "store",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
                         }
                     }
                 ],
@@ -4901,6 +5871,304 @@
                 }
             }
         },
+        "/admin/digital-products/{digitalProduct}/reviews": {
+            "get": {
+                "operationId": "adminProductReviews.index",
+                "tags": [
+                    "AdminProductReviews"
+                ],
+                "parameters": [
+                    {
+                        "name": "digitalProduct",
+                        "in": "path",
+                        "required": true,
+                        "description": "The digital product ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated set of `AdminProductReviewResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/AdminProductReviewResource"
+                                            }
+                                        },
+                                        "links": {
+                                            "type": "object",
+                                            "properties": {
+                                                "first": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "last": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "prev": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "next": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "first",
+                                                "last",
+                                                "prev",
+                                                "next"
+                                            ]
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "current_page": {
+                                                    "type": "integer",
+                                                    "minimum": 1
+                                                },
+                                                "from": {
+                                                    "type": [
+                                                        "integer",
+                                                        "null"
+                                                    ],
+                                                    "minimum": 1
+                                                },
+                                                "last_page": {
+                                                    "type": "integer",
+                                                    "minimum": 1
+                                                },
+                                                "links": {
+                                                    "type": "array",
+                                                    "description": "Generated paginator links.",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "url": {
+                                                                "type": [
+                                                                    "string",
+                                                                    "null"
+                                                                ]
+                                                            },
+                                                            "label": {
+                                                                "type": "string"
+                                                            },
+                                                            "active": {
+                                                                "type": "boolean"
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "url",
+                                                            "label",
+                                                            "active"
+                                                        ]
+                                                    }
+                                                },
+                                                "path": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ],
+                                                    "description": "Base path for paginator generated URLs."
+                                                },
+                                                "per_page": {
+                                                    "type": "integer",
+                                                    "description": "Number of items shown per page.",
+                                                    "minimum": 0
+                                                },
+                                                "to": {
+                                                    "type": [
+                                                        "integer",
+                                                        "null"
+                                                    ],
+                                                    "description": "Number of the last item in the slice.",
+                                                    "minimum": 1
+                                                },
+                                                "total": {
+                                                    "type": "integer",
+                                                    "description": "Total number of items being paginated.",
+                                                    "minimum": 0
+                                                }
+                                            },
+                                            "required": [
+                                                "current_page",
+                                                "from",
+                                                "last_page",
+                                                "links",
+                                                "path",
+                                                "per_page",
+                                                "to",
+                                                "total"
+                                            ]
+                                        },
+                                        "product": {
+                                            "type": "object",
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer"
+                                                },
+                                                "title": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "id",
+                                                "title"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "links",
+                                        "meta",
+                                        "product"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            }
+        },
+        "/admin/digital-products/reviews/{productReview}/hide": {
+            "post": {
+                "operationId": "adminProductReviews.hide",
+                "tags": [
+                    "AdminProductReviews"
+                ],
+                "parameters": [
+                    {
+                        "name": "productReview",
+                        "in": "path",
+                        "required": true,
+                        "description": "The product review ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`AdminProductReviewResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/AdminProductReviewResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            }
+        },
+        "/admin/digital-products/reviews/{productReview}/unhide": {
+            "post": {
+                "operationId": "adminProductReviews.unhide",
+                "tags": [
+                    "AdminProductReviews"
+                ],
+                "parameters": [
+                    {
+                        "name": "productReview",
+                        "in": "path",
+                        "required": true,
+                        "description": "The product review ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`AdminProductReviewResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/AdminProductReviewResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            }
+        },
+        "/admin/digital-products/reviews/{productReview}": {
+            "delete": {
+                "operationId": "adminProductReviews.destroy",
+                "tags": [
+                    "AdminProductReviews"
+                ],
+                "parameters": [
+                    {
+                        "name": "productReview",
+                        "in": "path",
+                        "required": true,
+                        "description": "The product review ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            }
+        },
         "/biolink/{id}/appearance": {
             "post": {
                 "operationId": "updateBiolinkAppearance",
@@ -4962,6 +6230,177 @@
                     },
                     "422": {
                         "$ref": "#/components/responses/ValidationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            }
+        },
+        "/digital-products/{digitalProduct}/reviews": {
+            "get": {
+                "operationId": "creatorProductReviews.index",
+                "tags": [
+                    "CreatorProductReviews"
+                ],
+                "parameters": [
+                    {
+                        "name": "digitalProduct",
+                        "in": "path",
+                        "required": true,
+                        "description": "The digital product ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated set of `CreatorProductReviewResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/CreatorProductReviewResource"
+                                            }
+                                        },
+                                        "links": {
+                                            "type": "object",
+                                            "properties": {
+                                                "first": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "last": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "prev": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                },
+                                                "next": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ]
+                                                }
+                                            },
+                                            "required": [
+                                                "first",
+                                                "last",
+                                                "prev",
+                                                "next"
+                                            ]
+                                        },
+                                        "meta": {
+                                            "type": "object",
+                                            "properties": {
+                                                "current_page": {
+                                                    "type": "integer",
+                                                    "minimum": 1
+                                                },
+                                                "from": {
+                                                    "type": [
+                                                        "integer",
+                                                        "null"
+                                                    ],
+                                                    "minimum": 1
+                                                },
+                                                "last_page": {
+                                                    "type": "integer",
+                                                    "minimum": 1
+                                                },
+                                                "links": {
+                                                    "type": "array",
+                                                    "description": "Generated paginator links.",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "url": {
+                                                                "type": [
+                                                                    "string",
+                                                                    "null"
+                                                                ]
+                                                            },
+                                                            "label": {
+                                                                "type": "string"
+                                                            },
+                                                            "active": {
+                                                                "type": "boolean"
+                                                            }
+                                                        },
+                                                        "required": [
+                                                            "url",
+                                                            "label",
+                                                            "active"
+                                                        ]
+                                                    }
+                                                },
+                                                "path": {
+                                                    "type": [
+                                                        "string",
+                                                        "null"
+                                                    ],
+                                                    "description": "Base path for paginator generated URLs."
+                                                },
+                                                "per_page": {
+                                                    "type": "integer",
+                                                    "description": "Number of items shown per page.",
+                                                    "minimum": 0
+                                                },
+                                                "to": {
+                                                    "type": [
+                                                        "integer",
+                                                        "null"
+                                                    ],
+                                                    "description": "Number of the last item in the slice.",
+                                                    "minimum": 1
+                                                },
+                                                "total": {
+                                                    "type": "integer",
+                                                    "description": "Total number of items being paginated.",
+                                                    "minimum": 0
+                                                }
+                                            },
+                                            "required": [
+                                                "current_page",
+                                                "from",
+                                                "last_page",
+                                                "links",
+                                                "path",
+                                                "per_page",
+                                                "to",
+                                                "total"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "links",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
                     },
                     "404": {
                         "$ref": "#/components/responses/ModelNotFoundException"
@@ -5713,7 +7152,7 @@
         },
         "/storefront/products": {
             "get": {
-                "operationId": "products.index",
+                "operationId": "storefront.products.index",
                 "tags": [
                     "DigitalProducts"
                 ],
@@ -5870,7 +7309,7 @@
                 }
             },
             "post": {
-                "operationId": "products.store",
+                "operationId": "storefront.products.store",
                 "tags": [
                     "DigitalProducts"
                 ],
@@ -5884,32 +7323,13 @@
                                 }
                             }
                         }
-                    },
-                    "422": {
-                        "description": "An error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "description": "Error overview."
-                                        }
-                                    },
-                                    "required": [
-                                        "message"
-                                    ]
-                                }
-                            }
-                        }
                     }
                 }
             }
         },
         "/storefront/products/{product}": {
             "get": {
-                "operationId": "products.show",
+                "operationId": "storefront.products.show",
                 "tags": [
                     "DigitalProducts"
                 ],
@@ -5945,7 +7365,7 @@
                 }
             },
             "put": {
-                "operationId": "products.update",
+                "operationId": "storefront.products.update",
                 "tags": [
                     "DigitalProducts"
                 ],
@@ -5973,7 +7393,7 @@
                 }
             },
             "delete": {
-                "operationId": "products.destroy",
+                "operationId": "storefront.products.destroy",
                 "tags": [
                     "DigitalProducts"
                 ],
@@ -6215,25 +7635,6 @@
                             "application/json": {
                                 "schema": {
                                     "type": "string"
-                                }
-                            }
-                        }
-                    },
-                    "422": {
-                        "description": "An error",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object",
-                                    "properties": {
-                                        "message": {
-                                            "type": "string",
-                                            "description": "Error overview."
-                                        }
-                                    },
-                                    "required": [
-                                        "message"
-                                    ]
                                 }
                             }
                         }
@@ -8714,9 +10115,469 @@
                 }
             }
         },
+        "/public/biolinks/{biolink}/digital-products/{digitalProduct}/reviews": {
+            "get": {
+                "operationId": "storefront.productReviews.index_0",
+                "tags": [
+                    "ProductReviews"
+                ],
+                "parameters": [
+                    {
+                        "name": "biolink",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "digitalProduct",
+                        "in": "path",
+                        "required": true,
+                        "description": "The digital product ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/PublicProductReviewResource"
+                                            }
+                                        },
+                                        "summary": {
+                                            "type": "object",
+                                            "properties": {
+                                                "average": {
+                                                    "type": "string"
+                                                },
+                                                "rating_stats": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "average",
+                                                "rating_stats"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "summary"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "storefront.productReviews.store_1",
+                "tags": [
+                    "ProductReviews"
+                ],
+                "parameters": [
+                    {
+                        "name": "biolink",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "digitalProduct",
+                        "in": "path",
+                        "required": true,
+                        "description": "The digital product ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "order_uuid": {
+                                        "type": "string",
+                                        "maxLength": 64
+                                    },
+                                    "buyer_email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "maxLength": 254
+                                    },
+                                    "stars": {
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "maximum": 5
+                                    },
+                                    "title": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "maxLength": 120
+                                    },
+                                    "review": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "maxLength": 5000
+                                    }
+                                },
+                                "required": [
+                                    "order_uuid",
+                                    "buyer_email",
+                                    "stars"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            }
+        },
+        "/public/biolinks/{biolink}/digital-products/{digitalProduct}/reviews/{order}": {
+            "get": {
+                "operationId": "storefront.productReviews.show_0",
+                "tags": [
+                    "ProductReviews"
+                ],
+                "parameters": [
+                    {
+                        "name": "biolink",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "digitalProduct",
+                        "in": "path",
+                        "required": true,
+                        "description": "The digital product ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "order",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`PublicProductReviewResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/PublicProductReviewResource"
+                                                }
+                                            },
+                                            "required": [
+                                                "data"
+                                            ]
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "type": "null"
+                                                }
+                                            },
+                                            "required": [
+                                                "data"
+                                            ]
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            }
+        },
+        "/public/stores/{biolink}/digital-products/{digitalProduct}/reviews": {
+            "get": {
+                "operationId": "storefront.productReviews.index_0",
+                "tags": [
+                    "ProductReviews"
+                ],
+                "parameters": [
+                    {
+                        "name": "biolink",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "digitalProduct",
+                        "in": "path",
+                        "required": true,
+                        "description": "The digital product ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/PublicProductReviewResource"
+                                            }
+                                        },
+                                        "summary": {
+                                            "type": "object",
+                                            "properties": {
+                                                "average": {
+                                                    "type": "string"
+                                                },
+                                                "rating_stats": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "average",
+                                                "rating_stats"
+                                            ]
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "summary"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "storefront.productReviews.store_1",
+                "tags": [
+                    "ProductReviews"
+                ],
+                "parameters": [
+                    {
+                        "name": "biolink",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "digitalProduct",
+                        "in": "path",
+                        "required": true,
+                        "description": "The digital product ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "order_uuid": {
+                                        "type": "string",
+                                        "maxLength": 64
+                                    },
+                                    "buyer_email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "maxLength": 254
+                                    },
+                                    "stars": {
+                                        "type": "integer",
+                                        "minimum": 1,
+                                        "maximum": 5
+                                    },
+                                    "title": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "maxLength": 120
+                                    },
+                                    "review": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "maxLength": 5000
+                                    }
+                                },
+                                "required": [
+                                    "order_uuid",
+                                    "buyer_email",
+                                    "stars"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            }
+        },
+        "/public/stores/{biolink}/digital-products/{digitalProduct}/reviews/{order}": {
+            "get": {
+                "operationId": "storefront.productReviews.show_0",
+                "tags": [
+                    "ProductReviews"
+                ],
+                "parameters": [
+                    {
+                        "name": "biolink",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "digitalProduct",
+                        "in": "path",
+                        "required": true,
+                        "description": "The digital product ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "order",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`PublicProductReviewResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "anyOf": [
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "$ref": "#/components/schemas/PublicProductReviewResource"
+                                                }
+                                            },
+                                            "required": [
+                                                "data"
+                                            ]
+                                        },
+                                        {
+                                            "type": "object",
+                                            "properties": {
+                                                "data": {
+                                                    "type": "null"
+                                                }
+                                            },
+                                            "required": [
+                                                "data"
+                                            ]
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            }
+        },
         "/public/biolinks/{biolink}/digital-products": {
             "get": {
-                "operationId": "publicDigitalProducts.index",
+                "operationId": "storefront.publicDigitalProducts.index_0",
                 "tags": [
                     "PublicDigitalProducts"
                 ],
@@ -8761,7 +10622,7 @@
         },
         "/public/biolinks/{biolink}/digital-products/{digitalProduct}": {
             "get": {
-                "operationId": "publicDigitalProducts.show",
+                "operationId": "storefront.publicDigitalProducts.show_0",
                 "tags": [
                     "PublicDigitalProducts"
                 ],
@@ -8812,7 +10673,7 @@
         },
         "/public/biolinks/{biolink}/digital-products/{digitalProduct}/checkout": {
             "post": {
-                "operationId": "publicDigitalProducts.checkout",
+                "operationId": "storefront.publicDigitalProducts.checkout_0",
                 "tags": [
                     "PublicDigitalProducts"
                 ],
@@ -8867,7 +10728,7 @@
         },
         "/public/biolinks/{biolink}/digital-products/{digitalProduct}/orders/{order}": {
             "get": {
-                "operationId": "publicDigitalProducts.order",
+                "operationId": "storefront.publicDigitalProducts.order_0",
                 "tags": [
                     "PublicDigitalProducts"
                 ],
@@ -8939,6 +10800,522 @@
                     },
                     "404": {
                         "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            }
+        },
+        "/public/stores/{biolink}/digital-products": {
+            "get": {
+                "operationId": "storefront.publicDigitalProducts.index_0",
+                "tags": [
+                    "PublicDigitalProducts"
+                ],
+                "parameters": [
+                    {
+                        "name": "biolink",
+                        "in": "path",
+                        "required": true,
+                        "description": "The biolink ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of `PublicDigitalProductResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/PublicDigitalProductResource"
+                                            }
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            }
+        },
+        "/public/stores/{biolink}/digital-products/{digitalProduct}": {
+            "get": {
+                "operationId": "storefront.publicDigitalProducts.show_0",
+                "tags": [
+                    "PublicDigitalProducts"
+                ],
+                "parameters": [
+                    {
+                        "name": "biolink",
+                        "in": "path",
+                        "required": true,
+                        "description": "The biolink ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "digitalProduct",
+                        "in": "path",
+                        "required": true,
+                        "description": "The digital product ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`PublicDigitalProductResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/PublicDigitalProductResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            }
+        },
+        "/public/stores/{biolink}/digital-products/{digitalProduct}/checkout": {
+            "post": {
+                "operationId": "storefront.publicDigitalProducts.checkout_0",
+                "tags": [
+                    "PublicDigitalProducts"
+                ],
+                "parameters": [
+                    {
+                        "name": "biolink",
+                        "in": "path",
+                        "required": true,
+                        "description": "The biolink ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "digitalProduct",
+                        "in": "path",
+                        "required": true,
+                        "description": "The digital product ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "order_id": {
+                                            "type": "string"
+                                        },
+                                        "checkout_url": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "order_id",
+                                        "checkout_url"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            }
+        },
+        "/public/stores/{biolink}/digital-products/{digitalProduct}/orders/{order}": {
+            "get": {
+                "operationId": "storefront.publicDigitalProducts.order_0",
+                "tags": [
+                    "PublicDigitalProducts"
+                ],
+                "parameters": [
+                    {
+                        "name": "biolink",
+                        "in": "path",
+                        "required": true,
+                        "description": "The biolink ID",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "digitalProduct",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "order",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`PublicStorefrontOrderResource`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/PublicStorefrontOrderResource"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "An error",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Error overview.",
+                                            "example": ""
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            }
+        },
+        "/stores/{store}/appearance": {
+            "post": {
+                "operationId": "storeAppearance.update",
+                "tags": [
+                    "StoreAppearance"
+                ],
+                "parameters": [
+                    {
+                        "name": "store",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "config": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        },
+                                        "minItems": 1
+                                    }
+                                },
+                                "required": [
+                                    "config"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`Store`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Store"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                }
+            }
+        },
+        "/stores/{store}/widget": {
+            "post": {
+                "operationId": "storeWidgets.store",
+                "tags": [
+                    "StoreWidgets"
+                ],
+                "parameters": [
+                    {
+                        "name": "store",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "image",
+                                            "text",
+                                            "socials",
+                                            "youtube",
+                                            "soundcloud",
+                                            "vimeo",
+                                            "spotify",
+                                            "twitch",
+                                            "tiktok",
+                                            "shop"
+                                        ]
+                                    },
+                                    "position": {
+                                        "type": "integer"
+                                    },
+                                    "config": {
+                                        "type": [
+                                            "array",
+                                            "null"
+                                        ],
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    }
+                                },
+                                "required": [
+                                    "type"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`Store`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Store"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    }
+                }
+            }
+        },
+        "/stores/{store}/widget/{widgetId}": {
+            "put": {
+                "operationId": "storeWidgets.update",
+                "tags": [
+                    "StoreWidgets"
+                ],
+                "parameters": [
+                    {
+                        "name": "store",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "widgetId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "type": {
+                                        "type": "string"
+                                    },
+                                    "active": {
+                                        "type": "boolean"
+                                    },
+                                    "pinned": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "enum": [
+                                            "top",
+                                            "bottom"
+                                        ]
+                                    },
+                                    "config": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "`Store`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Store"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "storeWidgets.destroy",
+                "tags": [
+                    "StoreWidgets"
+                ],
+                "parameters": [
+                    {
+                        "name": "store",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "widgetId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "`Store`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Store"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
                     }
                 }
             }
@@ -11591,6 +13968,84 @@
                 ],
                 "title": "AdminPayoutRequestResource"
             },
+            "AdminProductReviewResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "stars": {
+                        "type": "string"
+                    },
+                    "title": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "review": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "buyer_name": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "buyer_email": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "approved": {
+                        "type": "boolean"
+                    },
+                    "hidden_at": {
+                        "type": "string"
+                    },
+                    "hidden_reason": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "created_at": {
+                        "type": "string"
+                    },
+                    "product": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "title": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "title"
+                        ]
+                    }
+                },
+                "required": [
+                    "id",
+                    "stars",
+                    "title",
+                    "review",
+                    "buyer_name",
+                    "buyer_email",
+                    "approved",
+                    "hidden_at",
+                    "hidden_reason",
+                    "created_at"
+                ],
+                "title": "AdminProductReviewResource"
+            },
             "Biolink": {
                 "type": "object",
                 "properties": {
@@ -12803,204 +15258,57 @@
                 ],
                 "title": "CreateWorkspaceBody"
             },
-            "CrupdateBiolinkBody": {
+            "CreatorProductReviewResource": {
                 "type": "object",
                 "properties": {
-                    "name": {
-                        "type": "string",
-                        "minLength": 3,
-                        "maxLength": 100
+                    "id": {
+                        "type": "integer"
                     },
-                    "domain_id": {
-                        "type": [
-                            "integer",
-                            "null"
-                        ]
+                    "stars": {
+                        "type": "string"
                     },
-                    "back_half": {
+                    "title": {
                         "type": [
                             "string",
                             "null"
                         ]
                     },
-                    "create_qr_code": {
+                    "review": {
                         "type": [
-                            "boolean",
+                            "string",
                             "null"
                         ]
                     },
-                    "qr_code_style": {
-                        "type": [
-                            "object",
-                            "null"
-                        ],
-                        "example": "{color: '#000000', bgColor: '#ffffff', showLogo: true, logoUrl: 'https://example.com/logo.png'}",
-                        "properties": {
-                            "color": {
-                                "type": [
-                                    "string",
-                                    "null"
-                                ]
-                            },
-                            "bgColor": {
-                                "type": [
-                                    "string",
-                                    "null"
-                                ]
-                            },
-                            "showLogo": {
-                                "type": [
-                                    "boolean",
-                                    "null"
-                                ]
-                            },
-                            "logoUrl": {
-                                "type": [
-                                    "string",
-                                    "null"
-                                ]
-                            }
-                        }
-                    },
-                    "utm": {
-                        "type": "object",
-                        "properties": {
-                            "source": {
-                                "type": "string"
-                            },
-                            "medium": {
-                                "type": "string"
-                            },
-                            "campaign": {
-                                "type": "string"
-                            },
-                            "term": {
-                                "type": "string"
-                            },
-                            "content": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "utm_custom": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "key": {
-                                    "type": "string"
-                                },
-                                "value": {
-                                    "type": "string"
-                                }
-                            },
-                            "required": [
-                                "key",
-                                "value"
-                            ]
-                        }
-                    },
-                    "expires_at": {
+                    "buyer_name": {
                         "type": [
                             "string",
                             "null"
-                        ],
-                        "format": "date-time"
+                        ]
                     },
-                    "activates_at": {
+                    "created_at": {
+                        "type": "string"
+                    },
+                    "hidden_at": {
+                        "type": "string"
+                    },
+                    "hidden_reason": {
                         "type": [
                             "string",
                             "null"
-                        ],
-                        "format": "date-time"
-                    },
-                    "password": {
-                        "type": [
-                            "string",
-                            "null"
-                        ],
-                        "maxLength": 40
-                    },
-                    "pixels": {
-                        "type": "array",
-                        "items": {
-                            "anyOf": [
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "id": {
-                                            "type": "integer"
-                                        },
-                                        "name": {
-                                            "type": "string"
-                                        }
-                                    },
-                                    "required": [
-                                        "id"
-                                    ]
-                                },
-                                {
-                                    "type": "integer"
-                                }
-                            ]
-                        }
-                    },
-                    "tags": {
-                        "type": "array",
-                        "items": {
-                            "anyOf": [
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "id": {
-                                            "type": "integer"
-                                        },
-                                        "name": {
-                                            "type": "string"
-                                        }
-                                    },
-                                    "required": [
-                                        "id"
-                                    ]
-                                },
-                                {
-                                    "type": "integer"
-                                }
-                            ]
-                        }
-                    },
-                    "rules": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "key": {
-                                    "type": [
-                                        "string",
-                                        "null"
-                                    ]
-                                },
-                                "value": {
-                                    "type": [
-                                        "string",
-                                        "null"
-                                    ],
-                                    "maxLength": 250
-                                },
-                                "type": {
-                                    "type": "string",
-                                    "enum": [
-                                        "geo",
-                                        "device",
-                                        "platform",
-                                        "exp_clicks"
-                                    ]
-                                }
-                            }
-                        }
+                        ]
                     }
                 },
-                "title": "CrupdateBiolinkBody"
+                "required": [
+                    "id",
+                    "stars",
+                    "title",
+                    "review",
+                    "buyer_name",
+                    "created_at",
+                    "hidden_at",
+                    "hidden_reason"
+                ],
+                "title": "CreatorProductReviewResource"
             },
             "CrupdateBiolinkLinkBody": {
                 "type": "object",
@@ -13885,11 +16193,17 @@
                     "free": {
                         "type": "boolean"
                     },
+                    "active": {
+                        "type": "boolean"
+                    },
                     "feature_list": {
                         "type": "array",
                         "items": {
                             "type": "string"
                         }
+                    },
+                    "is_default": {
+                        "type": "boolean"
                     },
                     "trial_period_days": {
                         "type": "integer",
@@ -13899,12 +16213,13 @@
                     "storefront_benefits": {
                         "type": "object",
                         "properties": {
-                            "max_products": {
+                            "platform_fee_percent": {
                                 "type": [
-                                    "integer",
+                                    "number",
                                     "null"
                                 ],
-                                "minimum": 1
+                                "minimum": 0,
+                                "maximum": 100
                             },
                             "commission_bps": {
                                 "type": [
@@ -13914,12 +16229,59 @@
                                 "minimum": 0,
                                 "maximum": 10000
                             },
+                            "max_products": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ],
+                                "minimum": 0
+                            },
+                            "max_free_products": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ],
+                                "minimum": 0
+                            },
+                            "max_paid_products": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ],
+                                "minimum": 0
+                            },
                             "max_upload_bytes": {
                                 "type": [
                                     "integer",
                                     "null"
                                 ],
-                                "minimum": 1
+                                "minimum": 0
+                            },
+                            "max_storefronts": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ],
+                                "minimum": 0
+                            },
+                            "max_workspaces": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ],
+                                "minimum": 0
+                            },
+                            "tracking_pixels_enabled": {
+                                "type": [
+                                    "boolean",
+                                    "null"
+                                ]
+                            },
+                            "advanced_analytics_enabled": {
+                                "type": [
+                                    "boolean",
+                                    "null"
+                                ]
                             }
                         }
                     },
@@ -14186,6 +16548,206 @@
                     }
                 },
                 "title": "CrupdateQrCodeBody"
+            },
+            "CrupdateStoreBody": {
+                "type": "object",
+                "description": "Canonical store create/update request.\nAlias for CrupdateBiolinkRequest with proper store route handling.\nKeeps legacy biolink table until config('stores.table_rename_done').",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "minLength": 3,
+                        "maxLength": 100
+                    },
+                    "domain_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "back_half": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "create_qr_code": {
+                        "type": [
+                            "boolean",
+                            "null"
+                        ]
+                    },
+                    "qr_code_style": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "example": "{color: '#000000', bgColor: '#ffffff', showLogo: true, logoUrl: 'https://example.com/logo.png'}",
+                        "properties": {
+                            "color": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "bgColor": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "showLogo": {
+                                "type": [
+                                    "boolean",
+                                    "null"
+                                ]
+                            },
+                            "logoUrl": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            }
+                        }
+                    },
+                    "utm": {
+                        "type": "object",
+                        "properties": {
+                            "source": {
+                                "type": "string"
+                            },
+                            "medium": {
+                                "type": "string"
+                            },
+                            "campaign": {
+                                "type": "string"
+                            },
+                            "term": {
+                                "type": "string"
+                            },
+                            "content": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "utm_custom": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "key": {
+                                    "type": "string"
+                                },
+                                "value": {
+                                    "type": "string"
+                                }
+                            },
+                            "required": [
+                                "key",
+                                "value"
+                            ]
+                        }
+                    },
+                    "expires_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "activates_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "password": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "maxLength": 40
+                    },
+                    "pixels": {
+                        "type": "array",
+                        "items": {
+                            "anyOf": [
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "id": {
+                                            "type": "integer"
+                                        },
+                                        "name": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "id"
+                                    ]
+                                },
+                                {
+                                    "type": "integer"
+                                }
+                            ]
+                        }
+                    },
+                    "tags": {
+                        "type": "array",
+                        "items": {
+                            "anyOf": [
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "id": {
+                                            "type": "integer"
+                                        },
+                                        "name": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "id"
+                                    ]
+                                },
+                                {
+                                    "type": "integer"
+                                }
+                            ]
+                        }
+                    },
+                    "rules": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "key": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ]
+                                },
+                                "value": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
+                                    "maxLength": 250
+                                },
+                                "type": {
+                                    "type": "string",
+                                    "enum": [
+                                        "geo",
+                                        "device",
+                                        "platform",
+                                        "exp_clicks"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                },
+                "title": "CrupdateStoreBody"
             },
             "CrupdateSubscriptionBody": {
                 "type": "object",
@@ -14454,6 +17016,12 @@
                             "null"
                         ]
                     },
+                    "sell_link_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
                     "title": {
                         "type": "string"
                     },
@@ -14512,6 +17080,7 @@
                     "workspace_id",
                     "user_id",
                     "cover_file_entry_id",
+                    "sell_link_id",
                     "title",
                     "description",
                     "price_cents",
@@ -16130,11 +18699,108 @@
                     "free": {
                         "type": "boolean"
                     },
+                    "is_default": {
+                        "type": "boolean"
+                    },
+                    "active": {
+                        "type": "boolean"
+                    },
                     "hidden": {
                         "type": "boolean"
                     },
                     "trial_period_days": {
                         "type": "integer"
+                    },
+                    "storefront_benefits": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "platform_fee_percent": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
+                            },
+                            "commission_bps": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
+                            },
+                            "max_products": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
+                            },
+                            "max_free_products": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
+                            },
+                            "max_paid_products": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
+                            },
+                            "max_upload_bytes": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
+                            },
+                            "max_storefronts": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
+                            },
+                            "max_workspaces": {
+                                "type": [
+                                    "integer",
+                                    "null"
+                                ]
+                            },
+                            "tracking_pixels_enabled": {
+                                "type": [
+                                    "boolean",
+                                    "null"
+                                ]
+                            },
+                            "advanced_analytics_enabled": {
+                                "type": [
+                                    "boolean",
+                                    "null"
+                                ]
+                            }
+                        }
+                    },
+                    "pricing_features": {
+                        "type": "array",
+                        "items": {
+                            "anyOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "string",
+                                    "enum": [
+                                        "Unlimited products",
+                                        "Unlimited free products",
+                                        "Unlimited paid products",
+                                        "Unlimited storage",
+                                        "Unlimited storefronts",
+                                        "Unlimited workspaces",
+                                        "No Linket transaction fee",
+                                        "Tracking pixels"
+                                    ]
+                                }
+                            ]
+                        }
                     },
                     "created_at": {
                         "type": [
@@ -16245,8 +18911,12 @@
                     "position",
                     "recommended",
                     "free",
+                    "is_default",
+                    "active",
                     "hidden",
                     "trial_period_days",
+                    "storefront_benefits",
+                    "pricing_features",
                     "created_at"
                 ],
                 "title": "Product"
@@ -16316,6 +18986,51 @@
                     "currency"
                 ],
                 "title": "PublicDigitalProductResource"
+            },
+            "PublicProductReviewResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "stars": {
+                        "type": "string"
+                    },
+                    "title": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "review": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "buyer_name": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "verified": {
+                        "type": "boolean"
+                    },
+                    "created_at": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "stars",
+                    "title",
+                    "review",
+                    "buyer_name",
+                    "verified",
+                    "created_at"
+                ],
+                "title": "PublicProductReviewResource"
             },
             "PublicStorefrontOrderResource": {
                 "type": "object",
@@ -16908,6 +19623,317 @@
                     "access_expires_at"
                 ],
                 "title": "SocialProfile"
+            },
+            "Store": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "back_half": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "workspace_id": {
+                        "type": "integer"
+                    },
+                    "builder_mode": {
+                        "type": "string",
+                        "enum": [
+                            "legacy",
+                            "creator_profile"
+                        ]
+                    },
+                    "profile_config": {
+                        "type": "object",
+                        "properties": {
+                            "display_name": {
+                                "type": "string"
+                            },
+                            "profile_title": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "bio": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "about_html": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "avatar_url": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "cover_url": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "available_for_work": {
+                                "type": "boolean"
+                            },
+                            "skills": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string"
+                                }
+                            },
+                            "follow_url": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "contact_url": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "social_links": {
+                                "type": "object",
+                                "additionalProperties": {
+                                    "type": "string"
+                                }
+                            },
+                            "source_widget_ids": {
+                                "type": "array",
+                                "items": {
+                                    "type": "integer"
+                                }
+                            }
+                        }
+                    },
+                    "public_item_count": {
+                        "type": "integer"
+                    },
+                    "is_verified": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "boolean"
+                            }
+                        ]
+                    },
+                    "model_type": {
+                        "type": "string",
+                        "const": "store"
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "deleted_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "clicks_count": {
+                        "type": "integer"
+                    },
+                    "clicked_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "links_count": {
+                        "type": "integer"
+                    },
+                    "short_url": {
+                        "type": "string"
+                    },
+                    "expires_at": {
+                        "type": "string"
+                    },
+                    "activates_at": {
+                        "type": "string"
+                    },
+                    "pixels": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                }
+                            },
+                            "required": [
+                                "id",
+                                "name"
+                            ]
+                        }
+                    },
+                    "utm": {
+                        "type": "string"
+                    },
+                    "password": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "If password is set, this will be a placeholder string to indicate that password exists, not the actual password.",
+                        "const": "********"
+                    },
+                    "domain_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "domain": {
+                        "type": [
+                            "object",
+                            "null"
+                        ],
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "host": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "host"
+                        ]
+                    },
+                    "rules": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "type": {
+                                    "type": "string",
+                                    "enum": [
+                                        "geo",
+                                        "device",
+                                        "platform",
+                                        "exp_clicks"
+                                    ]
+                                },
+                                "key": {
+                                    "type": "string"
+                                },
+                                "value": {
+                                    "type": "string"
+                                }
+                            },
+                            "required": [
+                                "id",
+                                "type",
+                                "key",
+                                "value"
+                            ]
+                        }
+                    },
+                    "tags": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                }
+                            },
+                            "required": [
+                                "id",
+                                "name"
+                            ]
+                        }
+                    },
+                    "qr_code": {
+                        "$ref": "#/components/schemas/QrCode"
+                    },
+                    "user": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "email": {
+                                "type": "string"
+                            },
+                            "image": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "name",
+                            "email",
+                            "image"
+                        ]
+                    },
+                    "content": {
+                        "type": "array",
+                        "items": {
+                            "anyOf": [
+                                {
+                                    "$ref": "#/components/schemas/BiolinkLink"
+                                },
+                                {
+                                    "$ref": "#/components/schemas/BiolinkWidget"
+                                }
+                            ]
+                        }
+                    },
+                    "appearance": {
+                        "$ref": "#/components/schemas/BiolinkAppearance"
+                    }
+                },
+                "required": [
+                    "id",
+                    "back_half",
+                    "name",
+                    "workspace_id",
+                    "builder_mode",
+                    "profile_config",
+                    "model_type",
+                    "short_url",
+                    "domain_id"
+                ],
+                "title": "Store"
             },
             "StorefrontOrder": {
                 "type": "object",

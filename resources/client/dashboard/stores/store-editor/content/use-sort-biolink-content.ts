@@ -1,5 +1,5 @@
 import {useBiolinkEditorStore} from '@app/dashboard/stores/store-editor/biolink-editor-store';
-import {changeBiolinkContentOrder} from '@app/gen/stores';
+import {changeStoreContentOrder} from '@app/gen/stores';
 import {BiolinkWidget} from '@app/gen/schemas/biolink-widget';
 import {useRequiredParams} from '@common/ui/navigation/use-required-params';
 import {useMutation} from '@tanstack/react-query';
@@ -34,7 +34,7 @@ export function useSortBiolinkContent() {
         model_type: item.model_type,
       }));
 
-      return changeBiolinkContentOrder(Number(storeId), {
+      return changeStoreContentOrder(String(storeId), {
         order,
         widgetToPin,
       });

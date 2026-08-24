@@ -72,7 +72,7 @@ function ActionRow({link}: ActionRowProps) {
   const {storeId} = useRequiredParams(['storeId']);
   const overrideContent = useBiolinkEditorStore(s => s.overrideContent);
   const updateLink = useMutation({
-    ...updateStoreLinkOptions(Number(storeId), link.id),
+    ...updateStoreLinkOptions(String(storeId), String(link.id)),
     onSuccess: response => {
       overrideContent(response.data.content);
     },
@@ -235,7 +235,7 @@ function DetachDialog({link}: {link: BiolinkLink}) {
 
   const [open, setOpen] = useState(false);
   const detachLink = useMutation({
-    ...detachStoreLinkOptions(Number(storeId), link.id),
+    ...detachStoreLinkOptions(String(storeId), String(link.id)),
     onSuccess: response => {
       overrideContent(response.data.content);
     },

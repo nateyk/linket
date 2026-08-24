@@ -119,7 +119,7 @@ export const sharedDashboardRoutes = (routeType: DatatableRouteType) => {
       import('@app/dashboard/stores/store-editor/store-editor-page'),
     loader: ({params}) =>
       queryClient.ensureQueryData(
-        retrieveStoreOptions(Number(params.storeId!)),
+        retrieveStoreOptions(String(params.storeId!)),
       ),
     children: [
       {

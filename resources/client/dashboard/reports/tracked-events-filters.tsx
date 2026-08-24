@@ -1,6 +1,6 @@
 import {
   listStoresOptions,
-  retrieveBiolinkOptions,
+  retrieveStoreOptions,
 } from '@app/dashboard/stores/stores-queries';
 import {
   listDomainsOptions,
@@ -24,6 +24,7 @@ import {
   useDatatableRouteType,
 } from '@app/dashboard/use-datatable-route-type';
 import {Biolink} from '@app/gen/schemas/biolink';
+import {Store} from '@app/gen/schemas/store';
 import {CustomDomain} from '@app/gen/schemas/custom-domain';
 import {Folder} from '@app/gen/schemas/folder';
 import {Link} from '@app/gen/schemas/link';
@@ -167,16 +168,16 @@ const linkeableFilters: (
     item: (props: SelectModelFilterItemProps) => (
       <ModelSelectFilterItem
         {...props}
-        retrieveOptions={({id}) => retrieveBiolinkOptions(id)}
-        modelToLabel={(biolink: Biolink) => biolink.name}
+        retrieveOptions={({id}) => retrieveStoreOptions(String(id))}
+        modelToLabel={(biolink: Biolink | Store) => (biolink as any).name}
       />
     ),
     popoverContent: (props: SelectModelFilterPopoverContentProps) => (
       <ModelSelectFilterPopoverContent
         {...props}
         listOptions={({query}) => listStoresOptions(routeType, {query})}
-        retrieveOptions={({id}) => retrieveBiolinkOptions(id)}
-        modelToLabel={(biolink: Biolink) => biolink.name}
+        retrieveOptions={({id}) => retrieveStoreOptions(String(id))}
+        modelToLabel={(biolink: Biolink | Store) => (biolink as any).name}
         placeholder={<Trans message="Select link in bio" />}
       />
     ),

@@ -1,4 +1,5 @@
 import {Biolink} from '@app/gen/schemas/biolink';
+import {Store} from '@app/gen/schemas/store';
 import {
   CreatorProfileConfig,
   getCreatorProfileConfig,
@@ -7,22 +8,23 @@ import {createContext, ReactNode, use, useState} from 'react';
 import {create} from 'zustand';
 import {useStoreWithEqualityFn} from 'zustand/traditional';
 
-type Appearance = Required<Biolink>['appearance']['config'];
+type StoreBiolink = Biolink | Store;
+type Appearance = Required<StoreBiolink>['appearance']['config'];
 
 interface BiolinkEditorState {
   appearance: Appearance;
   appearanceIsDirty: boolean;
-  content: NonNullable<Biolink['content']>;
+  content: NonNullable<StoreBiolink['content']>;
   profileConfig: CreatorProfileConfig;
   profileIsDirty: boolean;
   featuredProductIds: number[];
   setAppearanceIsDirty: (isDirty: boolean) => void;
-  biolink: Omit<Biolink, 'appearance' | 'content'>;
+  biolink: Omit<StoreBiolink, 'appearance' | 'content'>;
   updateAppearance: (payload: Appearance) => void;
   updateProfileConfig: (payload: CreatorProfileConfig) => void;
   setProfileIsDirty: (isDirty: boolean) => void;
   setFeaturedProductIds: (ids: number[]) => void;
-  overrideContent: (content: Biolink['content']) => void;
+  overrideContent: (content: StoreBiolink['content']) => void;
   getState: () => BiolinkEditorState;
   hasUnsavedChanges: () => boolean;
 }
@@ -40,7 +42,7 @@ const defaultAppearance: Appearance = {
   layout: 'profile-sidebar',
 };
 
-export const createBiolinkEditorStore = (biolink: Biolink) => {
+export const createBiolinkEditorStore = (biolink: StoreBiolink) => {
   return create<BiolinkEditorState>()((set, get) => ({
     getState: () => get(),
     appearance: {
@@ -49,7 +51,7 @@ export const createBiolinkEditorStore = (biolink: Biolink) => {
       layout: 'profile-sidebar',
     },
     appearanceIsDirty: false,
-    profileConfig: getCreatorProfileConfig(biolink),
+    profileConfig: getCreatorProfileConfig(biolink as any),
     profileIsDirty: false,
     featuredProductIds: [],
     setAppearanceIsDirty: (isDirty: boolean) => {
@@ -92,37 +94,6 @@ export const createBiolinkEditorStore = (biolink: Biolink) => {
   }));
 };
 
-// export const useBiolinkEditorStore = create<BiolinkEditorState>()(
-//   immer((set, get) => ({
-//     appearance: defaultAppearance,
-//     appearanceIsDirty: false,
-//     setAppearanceIsDirty: (isDirty: boolean) => {
-//       set(state => {
-//         state.appearanceIsDirty = isDirty;
-//       });
-//     },
-//     biolink: null,
-//     setBiolink: biolink => {
-//       set(state => {
-//         state.biolink = biolink;
-//         // don't override user appearance changes in the editor when biolink reloads from backend
-//         if (!state.appearanceIsDirty) {
-//           state.appearance = biolink.appearance?.config || defaultAppearance;
-//         }
-//       });
-//     },
-//     updateAppearance(payload: BiolinkAppearance) {
-//       set(state => {
-//         state.appearanceIsDirty = true;
-//         state.appearance = {
-//           ...state.appearance,
-//           ...payload,
-//         };
-//       });
-//     },
-//   })),
-// );
-
 type BiolinkEditorStore = ReturnType<typeof createBiolinkEditorStore>;
 export const BiolinkEditorStoreContext = createContext<BiolinkEditorStore>(
   null!,
@@ -138,7 +109,7 @@ export function useBiolinkEditorStore<T>(
 
 export interface BiolinkEditorStoreProviderProps {
   children: ReactNode;
-  data: Biolink;
+  data: StoreBiolink;
 }
 export function BiolinkEditorStoreProvider({
   children,

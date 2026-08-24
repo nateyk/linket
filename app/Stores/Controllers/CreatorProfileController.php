@@ -6,7 +6,7 @@ use App\Biolinks\Actions\ConvertBiolinkToCreatorProfile;
 use App\Biolinks\Actions\SanitizeCreatorAbout;
 use App\Stores\Models\Store;
 use App\Biolinks\Requests\UpdateCreatorProfileRequest;
-use App\Biolinks\Resources\BiolinkResource;
+use App\Stores\Resources\StoreResource;
 use App\Storefront\DigitalProductVisibility;
 use App\Storefront\Models\DigitalProduct;
 use Dedoc\Scramble\Attributes\Group;
@@ -18,7 +18,12 @@ use Illuminate\Support\Facades\Gate;
 #[Group('Stores', weight: 4)]
 class CreatorProfileController extends Controller
 {
-    public function update($id, UpdateCreatorProfileRequest $request): BiolinkResource
+    /**
+     * Update store creator profile.
+     *
+     * @operationId updateStoreCreatorProfile
+     */
+    public function update($id, UpdateCreatorProfileRequest $request): StoreResource
     {
         $storeId = $request->route('store') ?? $id;
         $store = $storeId instanceof Store ? $storeId : Store::query()->findOrFail($storeId);
@@ -52,10 +57,15 @@ class CreatorProfileController extends Controller
             app(DigitalProductVisibility::class)->syncForBiolink($store, $featuredProductIds);
         });
 
-        return new BiolinkResource($store->fresh()->loadContent());
+        return new StoreResource($store->fresh()->loadContent());
     }
 
-    public function convert($id): BiolinkResource
+    /**
+     * Convert store to creator profile.
+     *
+     * @operationId convertStoreToCreatorProfile
+     */
+    public function convert($id): StoreResource
     {
         // handle both store and biolink param names
         $storeId = request()->route('store') ?? $id;
@@ -64,6 +74,6 @@ class CreatorProfileController extends Controller
 
         $store = app(ConvertBiolinkToCreatorProfile::class)->execute($store);
 
-        return new BiolinkResource($store->fresh()->loadContent());
+        return new StoreResource($store->fresh()->loadContent());
     }
 }

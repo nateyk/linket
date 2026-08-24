@@ -2,6 +2,8 @@ import {CreateBiolinkDialog} from '@app/dashboard/stores/store-editor/create-bio
 import {listStoresOptions} from '@app/dashboard/stores/stores-queries';
 import {useDatatableRouteType} from '@app/dashboard/use-datatable-route-type';
 import {Biolink} from '@app/gen/schemas/biolink';
+import {Store} from '@app/gen/schemas/store';
+type StoreBiolink = Biolink | Store;
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {Button} from '@shadcn/button/button';
 import {Dialog} from '@shadcn/dialog/dialog';
@@ -34,7 +36,7 @@ export function Component() {
   const navigate = useNavigate();
 
   const {queryState, setQueryState} = useTableQueryState({});
-  const query = useSuspenseQuery(listStoresOptions(routeType, queryState));
+  const query = useSuspenseQuery(listStoresOptions(routeType, queryState as any));
   const items = query.data?.data ?? [];
 
   return (
@@ -138,7 +140,7 @@ function EmptyState() {
 }
 
 type BiolinkCardProps = {
-  biolink: Biolink;
+  biolink: StoreBiolink;
   onClick: () => void;
   onInsights: () => void;
 };

@@ -1,10 +1,10 @@
 import {useBiolinkEditorStore} from '@app/dashboard/stores/store-editor/biolink-editor-store';
 import {
-  createBiolinkWidget,
-  updateBiolinkWidget,
-} from '@app/gen/stores';
-import type {CreateBiolinkWidgetBody} from '@app/gen/schemas/create-biolink-widget-body';
-import type {UpdateBiolinkWidgetBody} from '@app/gen/schemas/update-biolink-widget-body';
+  createStoreWidget,
+  updateStoreWidget,
+} from '@app/gen/store-widgets';
+import type {CreateStoreWidgetBody} from '@app/gen/schemas/create-store-widget-body';
+import type {UpdateStoreWidgetBody} from '@app/gen/schemas/update-store-widget-body';
 import {onFormQueryError} from '@common/http/errors/on-form-query-error';
 import {toast} from '@shadcn/toast/toast';
 import {useMutation} from '@tanstack/react-query';
@@ -17,17 +17,17 @@ export function useCrupdateBiolinkWidget(
   widgetId?: number,
 ) {
   const overrideContent = useBiolinkEditorStore(s => s.overrideContent);
-  const numericBiolinkId = Number(storeId);
+  const numericBiolinkId = String(storeId);
 
   return useMutation({
-    mutationFn: (body: CreateBiolinkWidgetBody) =>
+    mutationFn: (body: CreateStoreWidgetBody) =>
       widgetId
-        ? updateBiolinkWidget(
+        ? updateStoreWidget(
             numericBiolinkId,
-            widgetId,
-            body as UpdateBiolinkWidgetBody,
+            String(widgetId),
+            body as UpdateStoreWidgetBody,
           )
-        : createBiolinkWidget(numericBiolinkId, body),
+        : createStoreWidget(numericBiolinkId, body as any),
     onSuccess: response => {
       toast.success(
         widgetId ? (

@@ -15,6 +15,11 @@ use Illuminate\Support\Facades\Gate;
 #[Group('Stores', weight: 7)]
 class StoreContentOrderController extends Controller
 {
+    /**
+     * Change store content order.
+     *
+     * @operationId changeStoreContentOrder
+     */
     public function changeOrder(Request $request)
     {
         $storeId = $request->route('store') ?? $request->route('biolink') ?? $request->route('id');

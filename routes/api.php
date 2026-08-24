@@ -125,8 +125,7 @@ Route::group(['prefix' => 'v1'], function() {
             Route::post('biolink/{biolinkId}/widget', [BiolinkWidgetsController::class, 'store']);
             Route::put('biolink/{biolinkId}/widget/{widgetId}', [BiolinkWidgetsController::class, 'update']);
             Route::delete('biolink/{biolinkId}/widget/{widgetId}', [BiolinkWidgetsController::class, 'destroy']);
-            Route::post('biolink/{biolink}/link', [StoreLinkController::class, 'store']);
-            Route::apiResource('biolinks', StoresController::class)->parameters(['biolinks' => 'biolink']);
+            Route::apiResource('biolinks', BiolinksController::class)->parameters(['biolinks' => 'biolink']);
         });
 
 

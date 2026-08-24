@@ -71,7 +71,7 @@ function DialogContent({
   });
   const imageValue = useWatch({control: form.control, name: 'image'}) ?? '';
 
-  const createLink = useMutation(createStoreLinkOptions(biolink.id));
+  const createLink = useMutation(createStoreLinkOptions(String(biolink.id)));
 
   const handleSubmit = (values: CrupdateLinkBody) => {
     if (!urlIsValid(values.long_url)) {

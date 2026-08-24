@@ -27,7 +27,7 @@ export function LivePreview() {
         </div>
         <PhoneSkeleton>
           <BiolinkLayout
-            biolink={biolink}
+            biolink={biolink as any}
             content={content}
             appearance={appearance}
             className="h-full"

@@ -69,7 +69,7 @@ function DialogContent({
   });
 
   const updateLink = useMutation(
-    updateStoreLinkOptions(Number(storeId), link.id),
+    updateStoreLinkOptions(String(storeId), String(link.id)),
   );
 
   const expirationMinDate = useMemo(() => {

@@ -49,10 +49,10 @@ function Content({onClose}: {onClose: () => void}) {
   const biolink = useBiolinkEditorStore(s => s.biolink);
 
   const form = useForm<CrupdateBiolinkBody>({
-    defaultValues: useLinkeableDefaultFormValues(biolink),
+    defaultValues: useLinkeableDefaultFormValues(biolink as any),
   });
 
-  const updateBiolink = useMutation(updateStoreOptions(biolink.id));
+  const updateBiolink = useMutation(updateStoreOptions(String(biolink.id)));
 
   const handleSubmit = (values: CrupdateBiolinkBody) => {
     updateBiolink.mutate(values, {

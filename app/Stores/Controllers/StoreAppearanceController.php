@@ -3,13 +3,18 @@
 namespace App\Stores\Controllers;
 
 use App\Stores\Models\Store;
-use App\Biolinks\Resources\BiolinkResource;
+use App\Stores\Resources\StoreResource;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Gate;
 
 class StoreAppearanceController extends Controller
 {
+    /**
+     * Update store appearance.
+     *
+     * @operationId updateStoreAppearance
+     */
     public function update(Request $request)
     {
         $storeId = $request->route('store') ?? $request->route('biolink') ?? $request->route('id');
@@ -33,6 +38,6 @@ class StoreAppearanceController extends Controller
 
         $store->touch();
 
-        return new BiolinkResource($store->fresh()->loadContent());
+        return new StoreResource($store->fresh()->loadContent());
     }
 }

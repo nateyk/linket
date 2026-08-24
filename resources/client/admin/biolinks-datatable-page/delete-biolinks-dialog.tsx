@@ -1,5 +1,6 @@
 import {deleteStoreOptions} from '@app/dashboard/stores/stores-queries';
 import {Biolink} from '@app/gen/schemas/biolink';
+import {Store} from '@app/gen/schemas/store';
 import {showHttpErrorToast} from '@common/http/errors/show-http-error-toast';
 import {AlertDialog} from '@shadcn/alert-dialog/alert-dialog';
 import {toast} from '@shadcn/toast/toast';
@@ -8,7 +9,7 @@ import {Trans} from '@ui/i18n/trans';
 import {ComponentProps, ReactElement} from 'react';
 
 type DeleteBiolinksDialogProps = {
-  biolink: Biolink;
+  biolink: Biolink | Store;
   onDelete?: () => void;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -40,7 +41,7 @@ function DialogContent({
   const deleteBiolinks = useMutation(deleteStoreOptions());
 
   const handleDelete = () => {
-    deleteBiolinks.mutate(biolink.id, {
+    deleteBiolinks.mutate(String(biolink.id), {
       onSuccess: () => {
         onDelete?.();
         toast.success(<Trans message="Biolink deleted" />);

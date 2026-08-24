@@ -3,17 +3,19 @@ import {
   changeStoreContentOrder,
   createStore,
   createStoreLink,
-  createStoreWidget,
   deleteStore,
-  deleteStoreWidget,
   detachStoreLink,
   listStores,
   retrieveStore,
   updateStore,
-  updateStoreAppearance,
   updateStoreLink,
-  updateStoreWidget,
 } from '@app/gen/stores';
+import {
+  createStoreWidget,
+  deleteStoreWidget,
+  updateStoreWidget,
+} from '@app/gen/store-widgets';
+import {updateStoreAppearance} from '@app/gen/store-appearance';
 import {queryClient} from '@common/http/query-client';
 import {useWorkspaceStore} from '@common/workspace/workspace-store';
 import {mutationOptions, queryOptions} from '@tanstack/react-query';

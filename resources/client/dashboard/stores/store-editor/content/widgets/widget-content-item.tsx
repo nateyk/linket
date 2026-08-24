@@ -57,9 +57,9 @@ function ActionRow({widget}: ActionRowProps) {
   const overrideContent = useBiolinkEditorStore(s => s.overrideContent);
 
   const updateWidget = useMutation({
-    ...updateStoreWidgetOptions(Number(storeId), widget.id),
-    onSuccess: response => {
-      overrideContent(response.data.content);
+    ...updateStoreWidgetOptions(String(storeId), String(widget.id)),
+    onSuccess: (response: any) => {
+      overrideContent((response as any).data.content);
     },
     onError: err => showHttpErrorToast(err),
   });
@@ -118,9 +118,9 @@ function DeleteDialog({widget}: {widget: BiolinkWidget}) {
 
   const [open, setOpen] = useState(false);
   const deleteWidget = useMutation({
-    ...deleteStoreWidgetOptions(Number(storeId), widget.id),
-    onSuccess: response => {
-      overrideContent(response.data.content);
+    ...deleteStoreWidgetOptions(String(storeId), String(widget.id)),
+    onSuccess: (response: any) => {
+      overrideContent((response as any).data.content);
     },
     onError: err => showHttpErrorToast(err),
   });

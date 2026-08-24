@@ -27,8 +27,8 @@ import {AdHost} from '@common/admin/ads/ad-host';
 import {showHttpErrorToast} from '@common/http/errors/show-http-error-toast';
 import {queryClient} from '@common/http/query-client';
 import {
-  convertBiolinkToCreatorProfile,
-  updateCreatorProfile,
+  convertStoreToCreatorProfile,
+  updateStoreCreatorProfile,
 } from '@app/gen/stores';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {useRequiredParams} from '@common/ui/navigation/use-required-params';
@@ -63,7 +63,7 @@ export function Component() {
   const {routeType} = useDatatableRouteType();
   const {storeId} = useRequiredParams(['storeId']);
   const baseUrl = `/${routeType}/stores/${storeId}`;
-  const query = useSuspenseQuery(retrieveStoreOptions(Number(storeId)));
+  const query = useSuspenseQuery(retrieveStoreOptions(String(storeId)));
   const biolink = query.data.data;
 
   const {pathname} = useLocation();
@@ -147,11 +147,11 @@ function BiolinkEditorHeader() {
     !isAppearanceTab && !location.pathname.endsWith('insights');
 
   const saveAppearance = useMutation(
-    updateStoreAppearanceOptions(biolink.id),
+    updateStoreAppearanceOptions(String(biolink.id)),
   );
   const saveProfile = useMutation({
-    mutationFn: (payload: Parameters<typeof updateCreatorProfile>[1]) =>
-      updateCreatorProfile(biolink.id, payload),
+    mutationFn: (payload: Parameters<typeof updateStoreCreatorProfile>[1]) =>
+      updateStoreCreatorProfile(String(biolink.id), payload),
     onSuccess: () => {
       setProfileIsDirty(false);
       queryClient.invalidateQueries({queryKey: storesBaseKey});
@@ -165,7 +165,7 @@ function BiolinkEditorHeader() {
     const state = getState();
     if (isAppearanceTab && state.appearanceIsDirty) {
       saveAppearance.mutate(
-        {config: state.appearance},
+        {config: state.appearance as any},
         {
           onSuccess: () => {
             setAppearanceIsDirty(false);
@@ -184,7 +184,7 @@ function BiolinkEditorHeader() {
         ...state.profileConfig,
         skills: state.profileConfig.skills.slice(0, 8),
         featured_product_ids: state.featuredProductIds.slice(0, 6),
-      } as Parameters<typeof updateCreatorProfile>[1]);
+      } as Parameters<typeof updateStoreCreatorProfile>[1]);
     }
   };
 
@@ -225,7 +225,7 @@ function BiolinkSelector() {
   const query = useSuspenseQuery(listCurrentUserStoresOptions());
   const biolinks = query.data.data ?? [];
   const [, setSelectedBiolinkId] = useSelectedStoreId();
-  const selectedBiolink = biolinks.find(b => `${b.id}` === storeId)!;
+  const selectedBiolink = biolinks.find((b: any) => `${b.id}` === storeId)!;
   const [createIsOpen, setCreateIsOpen] = useState(false);
 
   if (!selectedBiolink) {
@@ -255,7 +255,7 @@ function BiolinkSelector() {
               navigate(`/${routeType}/stores/${value}`);
             }}
           >
-            {biolinks.map(b => (
+            {biolinks.map((b: any) => (
               <Dropdown.RadioItem value={`${b.id}`} key={b.id}>
                 {b.name}
               </Dropdown.RadioItem>
@@ -365,7 +365,7 @@ export function BiolinkContentTab() {
   const biolink = useBiolinkEditorStore(s => s.biolink);
   const content = useBiolinkEditorStore(s => s.content);
 
-  if (isCreatorProfileBiolink(biolink)) {
+  if (isCreatorProfileBiolink(biolink as any)) {
     return <CreatorProfileEditor />;
   }
 
@@ -412,7 +412,7 @@ export function BiolinkContentTab() {
 export function BiolinkAboutTab() {
   const biolink = useBiolinkEditorStore(s => s.biolink);
 
-  if (isCreatorProfileBiolink(biolink)) {
+  if (isCreatorProfileBiolink(biolink as any)) {
     return <CreatorProfileEditor tab="about" />;
   }
 
@@ -434,7 +434,7 @@ export function BiolinkAboutTab() {
 function CreatorProfileUpgrade() {
   const biolink = useBiolinkEditorStore(s => s.biolink);
   const convert = useMutation({
-    mutationFn: () => convertBiolinkToCreatorProfile(biolink.id),
+    mutationFn: () => convertStoreToCreatorProfile(String(biolink.id)),
     onSuccess: async () => {
       await queryClient.invalidateQueries({queryKey: storesBaseKey});
       toast.success(<Trans message="Creator profile is ready" />);

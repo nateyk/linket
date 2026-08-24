@@ -4,7 +4,7 @@ namespace App\Stores\Controllers;
 
 use App\Stores\Models\Store;
 use App\Biolinks\Requests\CrupdateBiolinkLinkRequest;
-use App\Biolinks\Resources\BiolinkResource;
+use App\Stores\Resources\StoreResource;
 use App\Links\Actions\CrupdateLink;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Arr;
@@ -14,6 +14,11 @@ use Dedoc\Scramble\Attributes\Group;
 #[Group('Stores', weight: 5)]
 class StoreLinkController extends Controller
 {
+    /**
+     * Create new link for a store.
+     *
+     * @operationId createStoreLink
+     */
     public function store(CrupdateBiolinkLinkRequest $request)
     {
         $storeId = $request->route('store') ?? $request->route('biolink') ?? $request->route('biolinkId');
@@ -44,9 +49,14 @@ class StoreLinkController extends Controller
             linkToSkip: $link->id,
         );
 
-        return new BiolinkResource($store->fresh()->loadContent());
+        return new StoreResource($store->fresh()->loadContent());
     }
 
+    /**
+     * Update a link for a store.
+     *
+     * @operationId updateStoreLink
+     */
     public function update(CrupdateBiolinkLinkRequest $request)
     {
         $storeId = $request->route('store') ?? $request->route('biolink') ?? $request->route('biolinkId');
@@ -72,9 +82,14 @@ class StoreLinkController extends Controller
             (new CrupdateLink())->execute($linkData->toArray(), $link);
         }
 
-        return new BiolinkResource($store->fresh()->loadContent());
+        return new StoreResource($store->fresh()->loadContent());
     }
 
+    /**
+     * Detach a link from a store.
+     *
+     * @operationId detachStoreLink
+     */
     public function detach($storeId, $id)
     {
         $store = Store::query()->findOrFail($storeId instanceof Store ? $storeId->id : $storeId);
@@ -82,6 +97,6 @@ class StoreLinkController extends Controller
         Gate::authorize('update', $store);
         $store->links()->detach($link->id);
         $store->adjustPositions(direction: 'decrement', anchor: $link->position);
-        return new BiolinkResource($store->fresh()->loadContent());
+        return new StoreResource($store->fresh()->loadContent());
     }
 }

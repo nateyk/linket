@@ -5,7 +5,7 @@ namespace App\Stores\Controllers;
 use App\Biolinks\BiolinksQueryBuilder;
 use App\Stores\Models\Store;
 use App\Stores\Requests\CrupdateStoreRequest;
-use App\Biolinks\Resources\BiolinkResource;
+use App\Stores\Resources\StoreResource;
 use App\Biolinks\Actions\CrupdateBiolink;
 use App\Biolinks\Actions\DeleteBiolinks;
 use App\Entitlements\Entitlements;
@@ -39,23 +39,9 @@ class StoresController extends Controller
             'updated_at' => 'string',
         ]);
 
-        // Use Store query but leverage existing query builder; override model via Store
-        // For now reuse BiolinksQueryBuilder but it queries Biolink model which shares same table
-        // We'll manually query Store for correct model_type
         $pagination = (new BiolinksQueryBuilder($data))->paginate();
 
-        // Convert each Biolink model in pagination to Store for correct model_type
-        // If items are Biolink, re-hydrate as Store
-        $collection = $pagination->getCollection()->map(function ($model) {
-            if ($model instanceof Store) {
-                return $model;
-            }
-            // fetch as Store to get correct MODEL_TYPE
-            return Store::find($model->id) ?? $model;
-        });
-        $pagination->setCollection($collection);
-
-        return BiolinkResource::collection($pagination);
+        return StoreResource::collection($pagination);
     }
 
     /**
@@ -76,7 +62,7 @@ class StoresController extends Controller
 
         $storeModel->loadContent();
 
-        return new BiolinkResource($storeModel, fieldsPreset: 'show');
+        return new StoreResource($storeModel, fieldsPreset: 'show');
     }
 
     /**
@@ -106,7 +92,7 @@ class StoresController extends Controller
         // Re-fetch as Store to ensure model_type store
         $store = Store::find($biolink->id);
 
-        return new BiolinkResource($store);
+        return new StoreResource($store);
     }
 
     /**
@@ -132,7 +118,7 @@ class StoresController extends Controller
 
         $storeFresh = Store::find($updated->id);
 
-        return new BiolinkResource($storeFresh);
+        return new StoreResource($storeFresh);
     }
 
     /**
@@ -166,9 +152,27 @@ class StoresController extends Controller
 
     /**
      * Legacy alias for list - keep compatible with biolink/list
+     *
+     * @operationId listStoresList
      */
     public function list(Request $request)
     {
-        return $this->index($request);
+        Gate::authorize('index', Store::class);
+
+        $data = $request->validate([
+            'query' => 'nullable|string',
+            'per_page' => 'integer|min:1|max:100',
+            'fields_preset' => 'string',
+            'page' => 'integer|min:1',
+            'sort' => 'string',
+            'workspace_id' => 'string',
+            'user_id' => 'integer',
+            'created_at' => 'string',
+            'updated_at' => 'string',
+        ]);
+
+        $pagination = (new BiolinksQueryBuilder($data))->paginate();
+
+        return StoreResource::collection($pagination);
     }
 }

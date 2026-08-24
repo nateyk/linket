@@ -58,7 +58,7 @@ function DialogContent({
   });
   const isDirty = form.formState.isDirty;
   const updateLink = useMutation(
-    updateStoreLinkOptions(Number(storeId), link.id),
+    updateStoreLinkOptions(String(storeId), String(link.id)),
   );
 
   const handleSubmit = (values: CrupdateBiolinkLinkBody) => {

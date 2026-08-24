@@ -15,7 +15,7 @@ import {ComponentProps, ReactElement} from 'react';
 import {useNavigate} from 'react-router';
 
 type Props = {
-  storeId: number;
+  storeId: string | number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   children?: ReactElement<ComponentProps<typeof AlertDialog.Trigger>>;
@@ -59,7 +59,7 @@ function DialogContent({
 
       const nextBiolinkId = queryClient
         .getQueryData(listCurrentUserStoresOptions().queryKey)
-        ?.data.find(b => b.id !== storeId)?.id;
+        ?.data.find((b: any) => b.id !== storeId)?.id;
 
       if (selectedBiolinkId == storeId) {
         if (nextBiolinkId) {
@@ -99,7 +99,7 @@ function DialogContent({
         <AlertDialog.Action
           color="danger"
           disabled={deleteBiolink.isPending}
-          onClick={() => deleteBiolink.mutate(storeId)}
+          onClick={() => deleteBiolink.mutate(String(storeId))}
         >
           <Trans message="Delete" />
         </AlertDialog.Action>

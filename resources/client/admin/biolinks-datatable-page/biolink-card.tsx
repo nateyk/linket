@@ -1,6 +1,7 @@
 import {DeleteBiolinksDialog} from '@app/admin/biolinks-datatable-page/delete-biolinks-dialog';
 import {ResourceCardUser} from '@app/dashboard/links/resource-card-user';
 import {Biolink} from '@app/gen/schemas/biolink';
+import {Store} from '@app/gen/schemas/store';
 import {Button} from '@shadcn/button/button';
 import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {Item} from '@shadcn/item/item';
@@ -24,7 +25,7 @@ import {useState} from 'react';
 import {Link} from 'react-router';
 
 type BiolinkCardProps = {
-  biolink: Biolink;
+  biolink: Biolink | Store;
 };
 
 export function BiolinkCard({biolink}: BiolinkCardProps) {
@@ -66,7 +67,7 @@ export function BiolinkCard({biolink}: BiolinkCardProps) {
 }
 
 type BiolinkDetailsProps = {
-  biolink: Biolink;
+  biolink: Biolink | Store;
 };
 
 function BiolinkDetails({biolink}: BiolinkDetailsProps) {
@@ -101,7 +102,7 @@ function BiolinkMedia() {
   );
 }
 
-function BiolinkActionsButton({biolink}: {biolink: Biolink}) {
+function BiolinkActionsButton({biolink}: {biolink: Biolink | Store}) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   return (
