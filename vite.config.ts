@@ -1,7 +1,8 @@
 import replace from '@rollup/plugin-replace';
 import react from '@vitejs/plugin-react';
 import laravel from 'laravel-vite-plugin';
-import {defineConfig, Plugin} from 'vite';
+import {Plugin} from 'vite';
+import {defineConfig} from 'vitest/config';
 
 // override laravel plugin base option (from absolute to relative to html base tag)
 function basePath(): Plugin {
@@ -33,6 +34,16 @@ export default defineConfig({
   resolve: {
     preserveSymlinks: true,
     tsconfigPaths: true,
+  },
+  test: {
+    include: [
+      'resources/client/**/*.test.ts',
+      'resources/client/**/*.test.tsx',
+      'tests/js/**/*.test.ts',
+      'tests/js/**/*.test.tsx',
+    ],
+    environment: 'node',
+    globals: true,
   },
   build: {
     sourcemap: true,

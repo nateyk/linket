@@ -1,14 +1,3 @@
-import {
-  getFromLocalStorage,
-  useLocalStorage,
-} from '@ui/utils/hooks/local-storage';
-
-const key = 'selectedBiolinkId';
-
-export function useSelectedBiolinkId() {
-  return useLocalStorage<number | null>(key, null);
-}
-
-export function getSelectedBiolinkId() {
-  return getFromLocalStorage<number | null>(key, null);
-}
+// Shim — canonical implementation lives in `../stores/use-selected-store-id.tsx`.
+// Kept for backward compat; Task 4 will finalize move.
+export * from '../stores/use-selected-store-id';

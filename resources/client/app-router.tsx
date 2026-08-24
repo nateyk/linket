@@ -32,6 +32,31 @@ import {FullPageLoader} from '@ui/progress/full-page-loader';
 import {createBrowserRouter, redirect} from 'react-router';
 import {Fragment} from 'react/jsx-runtime';
 
+// Legacy dashboard aliases — canonical is `/dashboard/stores`, legacy `/dashboard/biolinks` 308.
+// Primary redirects live in `dashboard-routes.tsx` (children of `dashboard`).
+// Root-level fallbacks below ensure hard-refresh to legacy URL still 308s before
+// dashboard layout loader runs.
+const legacyDashboardRedirects = [
+  {
+    path: 'dashboard/biolinks',
+    loader: () => redirect('/dashboard/stores'),
+  },
+  {
+    path: 'dashboard/biolinks/:biolinkId',
+    loader: ({params}: {params: Record<string, string>}) =>
+      redirect(`/dashboard/stores/${params.biolinkId}`),
+  },
+  {
+    path: 'admin/biolinks',
+    loader: () => redirect('/admin/stores'),
+  },
+  {
+    path: 'admin/biolinks/:biolinkId',
+    loader: ({params}: {params: Record<string, string>}) =>
+      redirect(`/admin/stores/${params.biolinkId}`),
+  },
+] as const;
+
 export const appRouter = createBrowserRouter(
   [
     {
@@ -255,6 +280,7 @@ export const appRouter = createBrowserRouter(
           },
         }),
         ...notificationRoutes,
+        ...(legacyDashboardRedirects as unknown as typeof dashboardRoutes),
         ...dashboardRoutes,
         ...adminRoutes,
         ...checkoutRoutes,

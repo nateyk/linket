@@ -1,7 +1,9 @@
 import {
   listBiolinksOptions,
+  listStoresOptions,
   retrieveBiolinkOptions,
-} from '@app/dashboard/biolink/biolinks-queries';
+  retrieveStoreOptions,
+} from '@app/dashboard/stores/stores-queries';
 import {retrieveDomainOptions} from '@app/dashboard/custom-domains/domains-queries';
 import {
   listFoldersOptions,
@@ -110,14 +112,14 @@ export const sharedDashboardRoutes = (routeType: DatatableRouteType) => {
     );
   }
 
-  // biolinks — kept for both dashboard and admin (storefront editor)
+  // stores — canonical storefront editor (replaces biolinks)
   routes.push({
-    path: 'biolinks/:biolinkId',
+    path: 'stores/:storeId',
     lazy: () =>
-      import('@app/dashboard/biolink/biolink-editor/biolink-editor-page'),
+      import('@app/dashboard/stores/store-editor/store-editor-page'),
     loader: ({params}) =>
       queryClient.ensureQueryData(
-        retrieveBiolinkOptions(Number(params.biolinkId!)),
+        retrieveStoreOptions(Number(params.storeId!)),
       ),
     children: [
       {
@@ -146,6 +148,12 @@ export const sharedDashboardRoutes = (routeType: DatatableRouteType) => {
         lazy: () => import('@app/dashboard/biolink/biolink-insights-page'),
       },
     ],
+  });
+
+  // biolinks — legacy alias, 308 redirect to stores
+  routes.push({
+    path: 'biolinks/:biolinkId',
+    loader: ({params}) => redirect(`/${routeType}/stores/${params.biolinkId}`),
   });
 
   // folders — admin only (disabled from creator dashboard)
@@ -328,6 +336,10 @@ export const sharedDashboardRoutes = (routeType: DatatableRouteType) => {
     );
   }
 
+  // keep biolink query compat for old imports that still use retrieveBiolinkOptions
+  // (stores and biolinks share same table until Phase 3 flag)
+  void retrieveBiolinkOptions;
+
   return routes;
 };
 
@@ -362,7 +374,8 @@ export const dashboardRoutes: RouteObject[] = [
         loader: () => {
           const homepage = getBootstrapData().settings.dashboard?.homepage;
           const homepageRoutes: Record<string, string> = {
-            biolinks: '/dashboard/biolinks',
+            biolinks: '/dashboard/stores',
+            stores: '/dashboard/stores',
             'digital-products': '/dashboard/my-products',
             'sales-payouts': '/dashboard/sales-payouts',
             insights: '/dashboard/insights',
@@ -424,14 +437,19 @@ export const dashboardRoutes: RouteObject[] = [
         loader: () => redirect('/dashboard'),
       },
 
-      // biolinks
+      // stores — canonical
       {
-        path: 'biolinks',
-        lazy: () => import('@app/dashboard/biolink/biolinks-page'),
+        path: 'stores',
+        lazy: () => import('@app/dashboard/stores/stores-page'),
         loader: ({request}) =>
           queryClient.ensureQueryData(
-            listBiolinksOptions('dashboard', searchParamsFromUrl(request.url)),
+            listStoresOptions('dashboard', searchParamsFromUrl(request.url)),
           ),
+      },
+      // biolinks — legacy 308 alias
+      {
+        path: 'biolinks',
+        loader: () => redirect('/dashboard/stores'),
       },
 
       ...sharedDashboardRoutes('dashboard'),
