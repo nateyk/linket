@@ -2,30 +2,22 @@
 
 namespace App\Biolinks\Models;
 
-use Illuminate\Database\Eloquent\Casts\Attribute;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use App\Stores\Models\StoreWidget;
 
-class BiolinkWidget extends Model
+/**
+ * Legacy shim — canonical is App\Stores\Models\StoreWidget
+ */
+class BiolinkWidget extends StoreWidget
 {
-    use HasFactory;
-
     const MODEL_TYPE = 'biolinkWidget';
 
-    protected $guarded = [];
-    protected $appends = ['model_type'];
-    protected $casts = ['active' => 'boolean', 'position' => 'integer'];
-
-    protected function config(): Attribute
+    public function getTable(): string
     {
-        return Attribute::make(
-            get: fn($value) => json_decode($value, true) ?: [],
-            set: fn($value) => is_string($value) ? $value : json_encode($value),
-        );
+        return config('stores.table_rename_done') ? 'store_widgets' : 'biolink_widgets';
     }
 
     public static function getModelTypeAttribute(): string
     {
-        return self::MODEL_TYPE;
+        return static::MODEL_TYPE;
     }
 }

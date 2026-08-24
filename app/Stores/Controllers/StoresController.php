@@ -4,7 +4,7 @@ namespace App\Stores\Controllers;
 
 use App\Biolinks\BiolinksQueryBuilder;
 use App\Stores\Models\Store;
-use App\Biolinks\Requests\CrupdateBiolinkRequest;
+use App\Stores\Requests\CrupdateStoreRequest;
 use App\Biolinks\Resources\BiolinkResource;
 use App\Biolinks\Actions\CrupdateBiolink;
 use App\Biolinks\Actions\DeleteBiolinks;
@@ -84,7 +84,7 @@ class StoresController extends Controller
      *
      * @operationId createStore
      */
-    public function store(CrupdateBiolinkRequest $request)
+    public function store(CrupdateStoreRequest $request)
     {
         Gate::authorize('store', Store::class);
 
@@ -114,25 +114,19 @@ class StoresController extends Controller
      *
      * @operationId updateStore
      */
-    public function update(Request $request, $store = null)
+    public function update(CrupdateStoreRequest $request, $store = null)
     {
         // Resolve id from route
         $routeId = $request->route('store') ?? $request->route('biolink') ?? $request->route('id') ?? $store;
         if ($routeId instanceof Store) {
             $storeModel = $routeId;
-            $id = $storeModel->id;
         } else {
-            $id = $routeId;
-            $storeModel = Store::query()->findOrFail($id);
+            $storeModel = Store::query()->findOrFail($routeId);
         }
 
         Gate::authorize('update', $storeModel);
 
-        // Validate using CrupdateBiolinkRequest logic? Reuse validation from that request
-        // For simplicity, use CrupdateBiolinkRequest validation via app
-        $crupdateRequest = app(CrupdateBiolinkRequest::class);
-        // Instead, validate directly via request
-        $validated = $request->validate((new CrupdateBiolinkRequest())->rules());
+        $validated = $request->validated();
 
         $updated = (new CrupdateBiolink())->execute($validated, $storeModel);
 

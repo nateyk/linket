@@ -3,6 +3,7 @@
 namespace App\Stores\Controllers;
 
 use App\Stores\Models\Store;
+use App\Stores\Models\StoreWidget;
 use App\Biolinks\Models\BiolinkWidget;
 use App\Biolinks\Resources\BiolinkResource;
 use Illuminate\Http\Request;
@@ -33,7 +34,7 @@ class StoreWidgetsController extends Controller
         $storeId = $request->route('store') ?? $request->route('biolink') ?? $request->route('biolinkId');
         $store = $storeId instanceof Store ? $storeId : Store::findOrFail($storeId);
         $widgetId = $request->route('widgetId') ?? $request->route('widget') ?? $request->route('id');
-        $widget = BiolinkWidget::findOrFail($widgetId);
+        $widget = StoreWidget::findOrFail($widgetId);
         Gate::authorize('update', $store);
         $data = $request->validate([
             'type' => 'string',
@@ -53,7 +54,7 @@ class StoreWidgetsController extends Controller
         $storeId = $request->route('store') ?? $request->route('biolink') ?? $request->route('biolinkId');
         $store = $storeId instanceof Store ? $storeId : Store::findOrFail($storeId);
         $widgetId = $request->route('widgetId') ?? $request->route('widget');
-        $widget = BiolinkWidget::findOrFail($widgetId);
+        $widget = StoreWidget::findOrFail($widgetId);
         Gate::authorize('update', $store);
         $store->widgets()->where('id', $widgetId)->delete();
         $store->adjustPositions(direction: 'decrement', anchor: $widget->position);

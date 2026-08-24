@@ -3,6 +3,7 @@
 namespace App\Stores\Controllers;
 
 use App\Stores\Models\Store;
+use App\Stores\Models\StoreWidget;
 use App\Biolinks\Models\BiolinkWidget;
 use App\Links\Models\Link;
 use Dedoc\Scramble\Attributes\Group;
@@ -47,10 +48,16 @@ class StoreContentOrderController extends Controller
 
         if ($widgetQuery) {
             $widgetIds = collect($data['order'])->where('model_type', BiolinkWidget::MODEL_TYPE)->pluck('id');
-            BiolinkWidget::where('biolink_id', $store->id)->whereIn('id', $widgetIds)->update(['position' => DB::raw("(case $widgetQuery end)")]);
+            // Support both legacy and canonical widget types
+            $storeWidgetIds = collect($data['order'])->where('model_type', StoreWidget::MODEL_TYPE)->pluck('id');
+            $allWidgetIds = $widgetIds->merge($storeWidgetIds);
+            StoreWidget::where('biolink_id', $store->id)->whereIn('id', $allWidgetIds)->update(['position' => DB::raw("(case $widgetQuery end)")]);
+            // Keep legacy table in sync until rename
+            BiolinkWidget::where('biolink_id', $store->id)->whereIn('id', $allWidgetIds)->update(['position' => DB::raw("(case $widgetQuery end)")]);
         }
 
         if (isset($data['widgetToPin'])) {
+            StoreWidget::where('id', $data['widgetToPin'])->update(['pinned' => 'top']);
             BiolinkWidget::where('id', $data['widgetToPin'])->update(['pinned' => 'top']);
         }
 

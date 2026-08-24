@@ -2,14 +2,15 @@
 
 namespace App\Biolinks\Models;
 
-use Illuminate\Database\Eloquent\Relations\Pivot;
+use App\Stores\Models\StorePivot;
 
-class BiolinkPivot extends Pivot
+/**
+ * Legacy shim — canonical is App\Stores\Models\StorePivot
+ */
+class BiolinkPivot extends StorePivot
 {
-    protected $casts = [
-        'position' => 'int',
-        'leap_until' => 'datetime',
-    ];
-
-    public $incrementing = true;
+    public function getTable(): string
+    {
+        return config('stores.table_rename_done') ? 'store_link' : 'biolink_link';
+    }
 }

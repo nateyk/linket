@@ -4,6 +4,7 @@ namespace App\Storefront\Models;
 
 use App\Models\User;
 use App\Biolinks\Models\Biolink;
+use App\Stores\Models\Store;
 use Codebyray\ReviewRateable\Traits\ReviewRateable;
 use Common\Files\FileEntry;
 use Common\Workspaces\Traits\BelongsToWorkspace;
@@ -33,7 +34,13 @@ class DigitalProduct extends StorefrontModel
     public function creator(): BelongsTo { return $this->belongsTo(User::class, 'user_id'); }
     public function cover(): BelongsTo { return $this->belongsTo(FileEntry::class, 'cover_file_entry_id'); }
     public function files(): BelongsToMany { return $this->belongsToMany(FileEntry::class, 'digital_product_files')->withTimestamps(); }
-    public function biolinks(): BelongsToMany { return $this->belongsToMany(Biolink::class, 'digital_product_biolinks')->withTimestamps(); }
+    public function stores(): BelongsToMany
+    {
+        $pivot = config('stores.table_rename_done') ? 'digital_product_store' : 'digital_product_biolinks';
+        return $this->belongsToMany(Store::class, $pivot, 'digital_product_id', 'biolink_id')->withTimestamps();
+    }
+
+    public function biolinks(): BelongsToMany { return $this->belongsToMany(Biolink::class, config('stores.table_rename_done') ? 'digital_product_store' : 'digital_product_biolinks', 'digital_product_id', 'biolink_id')->withTimestamps(); }
     public function orders(): HasMany { return $this->hasMany(StorefrontOrder::class); }
     public function isApproved(): bool { return $this->status === 'approved'; }
 }

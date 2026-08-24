@@ -114,10 +114,10 @@ class BiolinkResource extends LinkeableResource
                     $this->relationLoaded('widgets'),
                 function () {
                     $links = $this->links->map(
-                        fn(BiolinkLink $link) => new BiolinkLinkResource($link),
+                        fn($link) => new BiolinkLinkResource($link),
                     );
                     $widgets = $this->widgets->map(
-                        fn(BiolinkWidget $widget) => new BiolinkWidgetResource(
+                        fn($widget) => new BiolinkWidgetResource(
                             $widget,
                         ),
                     );
@@ -135,9 +135,7 @@ class BiolinkResource extends LinkeableResource
 
             'appearance' => $this->whenLoaded(
                 'appearance',
-                fn(
-                    BiolinkAppearance $appearance,
-                ) => new BiolinkAppearanceResource($appearance),
+                fn($appearance) => new BiolinkAppearanceResource($appearance),
             ),
         ];
     }

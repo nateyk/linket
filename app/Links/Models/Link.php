@@ -6,6 +6,7 @@ use App\Links\Models\Concerns\HasShortUrlAttribute;
 use App\Analytics\Models\TrackedEvent;
 use App\Links\Resources\LinkResource;
 use App\Biolinks\Models\Biolink;
+use App\Stores\Models\Store;
 use App\Folders\Models\Folder;
 use App\Links\Models\Linkeable;
 use App\Links\Models\LinkeableRule;
@@ -119,9 +120,16 @@ class Link extends Linkeable
         return $this->belongsTo(Folder::class);
     }
 
+    public function stores(): BelongsToMany
+    {
+        $pivot = config('stores.table_rename_done') ? 'store_link' : 'biolink_link';
+        $pivotModel = config('stores.table_rename_done') ? \App\Stores\Models\StorePivot::class : \App\Biolinks\Models\BiolinkPivot::class;
+        return $this->belongsToMany(Store::class, $pivot, 'link_id', 'biolink_id')->using($pivotModel)->withPivot(['position', 'animation', 'leap_until', 'active']);
+    }
+
     public function biolinks(): BelongsToMany
     {
-        return $this->belongsToMany(Biolink::class);
+        return $this->belongsToMany(Biolink::class, config('stores.table_rename_done') ? 'store_link' : 'biolink_link', 'link_id', 'biolink_id')->using(\App\Biolinks\Models\BiolinkPivot::class)->withPivot(['position', 'animation', 'leap_until', 'active']);
     }
 
     public function pixels(): BelongsToMany
@@ -178,7 +186,8 @@ class Link extends Linkeable
             'description' => $this->description,
             'type' => $this->type,
             'folder_id' => $this->folder_id,
-            'biolinks' => $this->biolinks->pluck('id'),
+            'biolinks' => $this->relationLoaded('biolinks') ? $this->biolinks->pluck('id') : ($this->relationLoaded('stores') ? $this->stores->pluck('id') : collect()),
+            'stores' => $this->relationLoaded('stores') ? $this->stores->pluck('id') : ($this->relationLoaded('biolinks') ? $this->biolinks->pluck('id') : collect()),
             'user_id' => $this->user_id,
             'created_at' => $this->created_at->timestamp ?? '_null',
             'updated_at' => $this->updated_at->timestamp ?? '_null',
@@ -205,7 +214,7 @@ class Link extends Linkeable
 
     protected function makeAllSearchableUsing($query)
     {
-        return $query->with(['tags', 'biolinks']);
+        return $query->with(['tags', 'biolinks', 'stores']);
     }
 
     public static function filterableFields(): array

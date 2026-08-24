@@ -65,21 +65,6 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->bind(BootstrapData::class, AppBootstrapData::class);
 
-        Relation::morphMap([
-            Link::MODEL_TYPE => Link::class,
-            Folder::MODEL_TYPE => Folder::class,
-            CustomPage::MODEL_TYPE => CustomPage::class,
-            LinkPage::MODEL_TYPE => LinkPage::class,
-            Biolink::MODEL_TYPE => Biolink::class,
-            LinkOverlay::MODEL_TYPE => LinkOverlay::class,
-            TrackingPixel::MODEL_TYPE => TrackingPixel::class,
-            Webhook::MODEL_TYPE => Webhook::class,
-            CustomDomain::MODEL_TYPE => CustomDomain::class,
-            QrCode::MODEL_TYPE => QrCode::class,
-            BaseUser::MODEL_TYPE => User::class,
-            Tag::MODEL_TYPE => Tag::class,
-        ]);
-
         Relation::enforceMorphMap([
             Link::MODEL_TYPE => Link::class,
             Folder::MODEL_TYPE => Folder::class,
@@ -97,6 +82,7 @@ class AppServiceProvider extends ServiceProvider
         ]);
 
         Gate::policy(Store::class, \App\Biolinks\Policies\BiolinkPolicy::class);
+        Gate::policy(Biolink::class, \App\Biolinks\Policies\BiolinkPolicy::class);
 
         $this->app['router']->aliasMiddleware('addDeprecationHeader', AddDeprecationHeader::class);
 
