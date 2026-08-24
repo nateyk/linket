@@ -276,6 +276,10 @@ class EntitlementSystemTest extends TestCase
 
         $order->refresh();
         $this->assertSame(5.0, (float) $order->platform_fee_percent);
+        $this->assertSame(500, $order->commission_bps);
+        $this->assertSame(10000, $order->gross_amount_cents);
+        $this->assertSame(500, $order->platform_fee_cents);
+        $this->assertSame(9500, $order->creator_earnings_cents);
     }
 
     public function testFeeMathUsesIntegerBasisPoints(): void

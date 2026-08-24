@@ -23,11 +23,12 @@ class SubscriptionFactory extends Factory
             self::$prices = Price::query()->get();
         }
 
-        $product = $this->faker->randomElement(self::$products);
-        $price = $product
-            ? $this->faker->randomElement(
-                self::$prices->where('product_id', $product->id),
-            )
+        $product = self::$products->isNotEmpty() ? self::$products->random() : null;
+        $productPrices = $product
+            ? self::$prices->where('product_id', $product->id)
+            : null;
+        $price = $productPrices && $productPrices->isNotEmpty()
+            ? $productPrices->random()
             : null;
 
         return [
@@ -42,9 +43,7 @@ class SubscriptionFactory extends Factory
         return $this->state(function (array $attributes) {
             return [
                 'gateway_status' => 'active',
-                'renews_at' => Carbon::now()->addDays(
-                    $this->faker->numberBetween(10, 30),
-                ),
+                'renews_at' => Carbon::now()->addDays(random_int(10, 30)),
             ];
         });
     }
@@ -54,9 +53,7 @@ class SubscriptionFactory extends Factory
         return $this->state(function (array $attributes) {
             return [
                 'gateway_status' => 'incomplete',
-                'ends_at' => Carbon::now()->addDays(
-                    $this->faker->numberBetween(10, 30),
-                ),
+                'ends_at' => Carbon::now()->addDays(random_int(10, 30)),
             ];
         });
     }
@@ -66,9 +63,7 @@ class SubscriptionFactory extends Factory
         return $this->state(function (array $attributes) {
             return [
                 'gateway_status' => 'trialing',
-                'trial_ends_at' => Carbon::now()->addDays(
-                    $this->faker->numberBetween(10, 30),
-                ),
+                'trial_ends_at' => Carbon::now()->addDays(random_int(10, 30)),
             ];
         });
     }
