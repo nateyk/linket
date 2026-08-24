@@ -6,15 +6,17 @@ use App\Biolinks\Models\Biolink;
 use App\Entitlements\Entitlements;
 use App\Payments\ChapaGateway;
 use App\Payments\Models\PaymentTransaction;
+use App\Stores\Models\Store;
 use App\Storefront\Models\DigitalProduct;
 use App\Storefront\Models\StorefrontOrder;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class StorefrontCheckout
 {
     public function create(
         DigitalProduct $product,
-        ?Biolink $biolink = null,
+        Biolink|Store|null $biolink = null,
         array $buyer = [],
     ): StorefrontOrder
     {
@@ -24,6 +26,11 @@ class StorefrontCheckout
         $fee = (int) round($gross * $bps / 10000);
         $feePercent = round($bps / 100, 4);
 
+        Log::info('store.checkout.initiated', [
+            'store_id' => $biolink?->id,
+            'product_id' => $product->id,
+            'workspace_id' => $product->workspace_id,
+        ]);
         $order = StorefrontOrder::create([
             'uuid' => (string) Str::uuid(),
             'digital_product_id' => $product->id,
@@ -63,6 +70,12 @@ class StorefrontCheckout
         ]);
         $order = $order->fresh();
         $order->setAttribute('chapaCheckoutUrl', $transaction->checkout_url);
+        Log::info('store.checkout.created', [
+            'store_id' => $biolink?->id,
+            'product_id' => $product->id,
+            'workspace_id' => $product->workspace_id,
+            'order_id' => $order->id,
+        ]);
         return $order;
     }
 }

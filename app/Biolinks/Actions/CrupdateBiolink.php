@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Webhooks\Models\Webhook;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class CrupdateBiolink extends CrupdateLinkeable
@@ -77,6 +78,12 @@ class CrupdateBiolink extends CrupdateLinkeable
             userId: $biolink->user_id,
             payload: (new BiolinkResource($biolink))->toWebhookArray(),
         );
+
+        Log::info($isCreating ? 'store.created' : 'store.updated', [
+            'store_id' => $biolink->id,
+            'workspace_id' => $biolink->workspace_id,
+            'user_id' => $biolink->user_id,
+        ]);
 
         return $biolink;
     }

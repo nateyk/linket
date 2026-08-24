@@ -4,9 +4,11 @@ namespace App\Storefront;
 
 use App\Biolinks\Models\Biolink;
 use App\Biolinks\Models\BiolinkWidget;
+use App\Stores\Models\Store;
 use App\Storefront\Models\DigitalProduct;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
 
 class DigitalProductVisibility
 {
@@ -28,16 +30,26 @@ class DigitalProductVisibility
             ->whereIn('id', [...$currentIds, ...$biolinkIds])
             ->get()
             ->each(fn(Biolink $biolink) => $this->syncShopWidget($biolink));
+
+        foreach ($biolinks as $store) {
+            Log::info('store.visibility.sync', ['store_id' => $store->id, 'product_id' => $product->id, 'workspace_id' => $product->workspace_id]);
+        }
+        // also log removals for currentIds that are no longer present
+        $removedIds = array_diff($currentIds, $biolinkIds);
+        foreach ($removedIds as $removedId) {
+            Log::info('store.visibility.sync', ['store_id' => $removedId, 'product_id' => $product->id, 'workspace_id' => $product->workspace_id, 'action' => 'removed']);
+        }
     }
 
     /** @param array<int> $productIds */
-    public function syncForBiolink(Biolink $biolink, array $productIds): void
+    public function syncForBiolink(Biolink|Store $biolink, array $productIds): void
     {
         $biolink->digitalProducts()->sync($productIds);
         $this->syncShopWidget($biolink);
+        Log::info('store.visibility.sync', ['store_id' => $biolink->id, 'workspace_id' => $biolink->workspace_id, 'product_ids' => $productIds]);
     }
 
-    private function syncShopWidget(Biolink $biolink): void
+    private function syncShopWidget(Biolink|Store $biolink): void
     {
         $productIds = $biolink->digitalProducts()
             ->whereNull('digital_products.deleted_at')

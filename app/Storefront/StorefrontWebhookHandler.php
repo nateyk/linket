@@ -6,6 +6,7 @@ use App\Storefront\Models\DownloadEntitlement;
 use App\Storefront\Models\StorefrontOrder;
 use App\Storefront\Jobs\SendStorefrontReceipt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class StorefrontWebhookHandler
@@ -39,7 +40,14 @@ class StorefrontWebhookHandler
             'paid_at' => now(),
             ...$gatewayAttributes,
         ]);
-        app(DigitalProductFinance::class)->creditOrder($order->fresh('product'));
+        $fresh = $order->fresh('product');
+        Log::info('store.order.fulfilled', [
+            'store_id' => $order->store_id ?? $order->biolink_id,
+            'workspace_id' => $fresh?->product?->workspace_id ?? $order->product?->workspace_id ?? null,
+            'order_id' => $order->id,
+            'product_id' => $order->digital_product_id,
+        ]);
+        app(DigitalProductFinance::class)->creditOrder($fresh ?? $order->fresh('product'));
         $order->loadMissing('product.files');
         foreach ($order->product->files as $file) {
             DownloadEntitlement::firstOrCreate([

@@ -8,6 +8,7 @@ use App\Storefront\Models\PayoutRequest;
 use App\Storefront\Models\DigitalProductWithdrawalMethod;
 use App\Storefront\ChapaPayoutService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class PayoutRequestService
@@ -60,6 +61,13 @@ class PayoutRequestService
                 'description' => __('Payout request reserved'),
             ]);
             $this->activity($payout, $creatorId, 'requested');
+            Log::info('store.payout.requested', [
+                'workspace_id' => $workspaceId,
+                'creator_id' => $creatorId,
+                'payout_id' => $payout->id,
+                'amount_cents' => $amountCents,
+                'currency' => $payout->currency,
+            ]);
 
             return $payout;
         });
@@ -109,6 +117,14 @@ class PayoutRequestService
                 ]);
             }
             $this->activity($payout, $actorId, $target, $data['reason'] ?? $data['note'] ?? null);
+            Log::info('store.payout.transition', [
+                'workspace_id' => $payout->workspace_id,
+                'creator_id' => $payout->creator_id,
+                'payout_id' => $payout->id,
+                'action' => $action,
+                'target' => $target,
+                'actor_id' => $actorId,
+            ]);
 
             return $payout->fresh(['creator', 'withdrawalMethod', 'activities.actor']);
         });
@@ -127,6 +143,11 @@ class PayoutRequestService
     {
         $payout->destinationReveals()->create(['revealed_by' => $adminId, 'reason' => $reason]);
         $this->activity($payout, $adminId, 'destination_revealed', $reason);
+        Log::info('store.payout.destination_revealed', [
+            'workspace_id' => $payout->workspace_id,
+            'payout_id' => $payout->id,
+            'actor_id' => $adminId,
+        ]);
 
         return $payout->payout_destination;
     }

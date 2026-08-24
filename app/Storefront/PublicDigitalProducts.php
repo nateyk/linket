@@ -4,6 +4,7 @@ namespace App\Storefront;
 
 use App\Biolinks\Models\Biolink;
 use App\Links\Actions\LinkeablePublicPolicy;
+use App\Stores\Models\Store;
 use App\Storefront\Models\DigitalProduct;
 
 class PublicDigitalProducts
@@ -16,7 +17,7 @@ class PublicDigitalProducts
         return $this->assertBiolink($biolink);
     }
 
-    public function assertBiolink(Biolink $biolink): Biolink
+    public function assertBiolink(Biolink|Store $biolink): Biolink|Store
     {
         $biolink->loadMissing(['user', 'domain', 'rules', 'pixels', 'appearance']);
         app(LinkeablePublicPolicy::class)->isAccessible($biolink);
@@ -24,7 +25,7 @@ class PublicDigitalProducts
         return $biolink;
     }
 
-    public function products(Biolink $biolink)
+    public function products(Biolink|Store $biolink)
     {
         $this->assertBiolink($biolink);
 
@@ -36,14 +37,14 @@ class PublicDigitalProducts
             ->latest('digital_products.approved_at');
     }
 
-    public function product(Biolink $biolink, DigitalProduct $digitalProduct): DigitalProduct
+    public function product(Biolink|Store $biolink, DigitalProduct $digitalProduct): DigitalProduct
     {
         return $this->products($biolink)
             ->whereKey($digitalProduct->id)
             ->firstOrFail();
     }
 
-    public function productForOrder(Biolink $biolink, int $digitalProductId): DigitalProduct
+    public function productForOrder(Biolink|Store $biolink, int $digitalProductId): DigitalProduct
     {
         $this->assertBiolink($biolink);
 

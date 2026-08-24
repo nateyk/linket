@@ -3,6 +3,7 @@
 namespace App\Storefront\Controllers;
 
 use App\Biolinks\Models\Biolink;
+use App\Stores\Models\Store;
 use App\Storefront\Jobs\SendStorefrontReviewNotification;
 use App\Storefront\Models\DigitalProduct;
 use App\Storefront\Models\ProductReview;
@@ -12,10 +13,11 @@ use App\Storefront\Resources\PublicProductReviewResource;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ProductReviewsController extends Controller
 {
-    public function index(Request $request, Biolink $biolink, DigitalProduct $digitalProduct): array
+    public function index(Request $request, Biolink|Store $biolink, DigitalProduct $digitalProduct): array
     {
         $this->assertEnabled();
         $product = app(PublicDigitalProducts::class)->product($biolink, $digitalProduct);
@@ -36,7 +38,7 @@ class ProductReviewsController extends Controller
         ];
     }
 
-    public function store(Request $request, Biolink $biolink, DigitalProduct $digitalProduct)
+    public function store(Request $request, Biolink|Store $biolink, DigitalProduct $digitalProduct)
     {
         $this->assertEnabled();
         $product = app(PublicDigitalProducts::class)->product($biolink, $digitalProduct);
@@ -95,13 +97,20 @@ class ProductReviewsController extends Controller
         if ($created) {
             SendStorefrontReviewNotification::dispatch($review->id)->afterCommit();
         }
+        Log::info('store.review.stored', [
+            'store_id' => $biolink->id,
+            'product_id' => $product->id,
+            'order_id' => $order->id,
+            'review_id' => $review->id,
+            'created' => $created,
+        ]);
 
         return (new PublicProductReviewResource($review))
             ->response()
             ->setStatusCode($created ? 201 : 200);
     }
 
-    public function show(Request $request, Biolink $biolink, DigitalProduct $digitalProduct, string $order)
+    public function show(Request $request, Biolink|Store $biolink, DigitalProduct $digitalProduct, string $order)
     {
         $this->assertEnabled();
         $product = app(PublicDigitalProducts::class)->product($biolink, $digitalProduct);

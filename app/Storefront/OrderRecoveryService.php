@@ -8,6 +8,7 @@ use App\Storefront\Models\DigitalProductOrderRecoveryDelivery;
 use App\Storefront\Models\StorefrontOrder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 
@@ -60,6 +61,11 @@ class OrderRecoveryService
         ]);
 
         SendDigitalProductOrderRecoveryLink::dispatch($recovery->id, $token, $delivery->id)->afterCommit();
+        Log::info('store.order.recovery.requested', [
+            'recovery_id' => $recovery->id,
+            'email_hash' => $emailHash,
+            'masked_email' => $this->maskEmail($email),
+        ]);
     }
 
     public function redeem(string $token): ?array
@@ -79,6 +85,10 @@ class OrderRecoveryService
                 'redeemed_at' => now(),
                 'session_token_hash' => hash('sha256', $sessionToken),
                 'session_expires_at' => now()->addMinutes(30),
+            ]);
+            Log::info('store.order.recovery.redeemed', [
+                'recovery_id' => $recovery->id,
+                'email_hash' => $recovery->email_hash,
             ]);
 
             return [$recovery, $sessionToken];

@@ -13,6 +13,7 @@ use App\Webhooks\Models\Webhook;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class DeleteBiolinks
 {
@@ -65,5 +66,10 @@ class DeleteBiolinks
                 payload: (new BiolinkResource($biolink))->toWebhookArray(),
             );
         });
+        Log::info('store.deleted', [
+            'store_ids' => collect($ids)->values()->all(),
+            'actor_id' => Auth::id(),
+            'count' => collect($ids)->count(),
+        ]);
     }
 }
