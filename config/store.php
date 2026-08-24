@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'table_rename_done' => env('STORES_TABLE_RENAME_DONE', false),
     'alias_compat' => true,
     'currency' => env('STOREFRONT_CURRENCY', 'etb'),
     'download_days' => 7,
