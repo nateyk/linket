@@ -67,6 +67,9 @@ export function GlobalSearchInput() {
 }
 
 function getSearchRoute(currentPage: string) {
+  // storefront-first IA: creator dashboard hides legacy link tools; only pixels+stores are creator-visible.
+  // Legacy cases below remain for admin routeType only — they are never hit on creator but kept for admin parity
+  // (dashboard-routes.tsx gates them behind if (!isDashboard)). Default is storefront, not links.
   switch (currentPage) {
     case 'qr-codes':
       return `/dashboard/qr-codes`;
@@ -80,8 +83,11 @@ function getSearchRoute(currentPage: string) {
       return `/dashboard/link-pages`;
     case 'pixels':
       return `/dashboard/pixels`;
-    // for other pages, default to searching for links
+    case 'stores':
+    case 'biolinks':
+      return `/dashboard/stores`;
+    // for other pages (including former 'links' default), storefront-first: search stores
     default:
-      return `/dashboard/links`;
+      return `/dashboard/stores`;
   }
 }

@@ -1,6 +1,63 @@
 import {dashboardRoutes, sharedDashboardRoutes} from '@app/dashboard/dashboard-routes';
 import {describe, test, expect} from 'vitest';
 
+describe('storefront-first IA hardening — creator hides legacy link tools (Task 9)', () => {
+  const legacyPaths = [
+    'links',
+    'links/:linkId',
+    'qr-codes',
+    'qr-codes/:qrCodeId',
+    'folders',
+    'folders/:folderId',
+    'folders/:folderId/links/:linkId',
+    'folders/:folderId/links/:linkId/edit',
+    'custom-domains',
+    'custom-domains/:domainId',
+    'link-overlays',
+    'link-overlays/new',
+    'link-overlays/:overlayId',
+    'link-pages',
+    'link-pages/new',
+    'link-pages/:pageId',
+  ];
+
+  test('creator dashboard does not expose admin link tools', () => {
+    const dashboardPaths = sharedDashboardRoutes('dashboard').map((r: any) => r.path);
+    for (const p of legacyPaths) {
+      expect(
+        dashboardPaths,
+        `dashboard must not expose "${p}"`,
+      ).not.toContain(p);
+    }
+  });
+
+  test('creator dashboard keeps storefront + pixels (and legacy biolink redirect)', () => {
+    const paths = sharedDashboardRoutes('dashboard').map((r: any) => r.path);
+    expect(paths).toContain('stores/:storeId');
+    expect(paths).toContain('biolinks/:biolinkId');
+    expect(paths).toContain('pixels');
+  });
+
+  test('admin retains legacy link tools', () => {
+    const adminPaths = sharedDashboardRoutes('admin').map((r: any) => r.path);
+    for (const p of legacyPaths) {
+      expect(adminPaths, `admin must retain "${p}"`).toContain(p);
+    }
+    expect(adminPaths).toContain('pixels');
+    expect(adminPaths).toContain('stores/:storeId');
+    expect(adminPaths).toContain('biolinks/:biolinkId');
+  });
+
+  test('dashboard top-level nav is storefront-first (menus already correct)', async () => {
+    // validates the dashboardRoutes children include stores + biolinks redirect, not legacy top-level links
+    const children = dashboardRoutes[0].children!.map((c: any) => c.path);
+    expect(children).toContain('stores');
+    expect(children).toContain('biolinks');
+    expect(children).not.toContain('links');
+    expect(children).not.toContain('folders');
+  });
+});
+
 describe('dashboard routes aliases', () => {
   test('canonical stores and legacy biolinks redirect', () => {
     const strs = dashboardRoutes[0].children!.map((c: any) => c.path);

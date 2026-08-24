@@ -18,13 +18,13 @@ export function Component() {
   const navigate = useNavigate();
   const isCompactLayout = useMediaQuery('(max-width: 1024px)');
 
-  // navigate to dashboard root when active workspace changes
+  // navigate to dashboard root when active workspace changes — storefront-first: never land creator on hidden /links
   useEffect(
     () =>
       useWorkspaceStore.subscribe(
         state => state.activeWorkspace,
         () => {
-          navigate(`/dashboard/links`);
+          navigate(`/dashboard`);
         },
       ),
     [navigate],
