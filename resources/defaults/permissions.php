@@ -38,7 +38,18 @@ return [
                     ],
                 ],
 
-                // BIOLINKS
+                // STORES (canonical)
+                [
+                    'name' => 'stores.create',
+                    'restrictions' => [
+                        [
+                            'name' => 'count',
+                            'value' => 3,
+                        ],
+                    ],
+                ],
+
+                // BIOLINKS (deprecated alias, keep for BC)
                 [
                     'name' => 'biolinks.create',
                     'restrictions' => [
@@ -147,6 +158,9 @@ return [
                 'custom_pages.create',
                 'custom_pages.update',
                 'custom_pages.delete',
+                'stores.create',
+                'stores.update',
+                'stores.delete',
                 'biolinks.create',
                 'biolinks.update',
                 'biolinks.delete',
@@ -179,6 +193,9 @@ return [
                 'custom_pages.create',
                 'custom_pages.update',
                 'custom_pages.delete',
+                'stores.create',
+                'stores.update',
+                'stores.delete',
                 'biolinks.create',
                 'biolinks.update',
                 'biolinks.delete',
@@ -205,6 +222,7 @@ return [
                 'links.create',
                 'link_overlays.create',
                 'custom_pages.create',
+                'stores.create',
                 'biolinks.create',
                 'custom_domains.create',
                 'folders.create',
@@ -382,6 +400,22 @@ return [
                 ],
             ],
             [
+                'name' => 'stores.create',
+                'role_types' => ['users'],
+                'display_name' => 'Stores',
+                'description' => 'Allows access to stores feature.',
+                'restrictions' => [
+                    [
+                        'name' => 'count',
+                        'display_name' => 'Stores count',
+                        'type' => 'number',
+                        'description' => __('policies.count_description', [
+                            'resources' => 'stores',
+                        ]),
+                    ],
+                ],
+            ],
+            [
                 'name' => 'biolinks.create',
                 'role_types' => ['users'],
                 'display_name' => 'Biolinks',
@@ -527,6 +561,12 @@ return [
                 'description' => 'Allows folder management from admin area.',
             ],
             [
+                'name' => 'stores.update',
+                'role_types' => ['users'],
+                'display_name' => 'Manage stores',
+                'description' => 'Allows store management from admin area.',
+            ],
+            [
                 'name' => 'biolinks.update',
                 'role_types' => ['users'],
                 'display_name' => 'Manage biolinks',
@@ -643,6 +683,24 @@ return [
                 'description' => 'Allow deleting all folders in the workspace.',
             ],
 
+            [
+                'name' => 'stores.create',
+                'display_name' => 'Create stores',
+                'role_types' => ['workspace'],
+                'description' => 'Allow creating stores in the workspace.',
+            ],
+            [
+                'name' => 'stores.update',
+                'display_name' => 'Edit stores',
+                'role_types' => ['workspace'],
+                'description' => 'Allow editing all stores in the workspace.',
+            ],
+            [
+                'name' => 'stores.delete',
+                'display_name' => 'Delete stores',
+                'role_types' => ['workspace'],
+                'description' => 'Allow deleting all stores in the workspace.',
+            ],
             [
                 'name' => 'biolinks.create',
                 'display_name' => 'Create biolinks',

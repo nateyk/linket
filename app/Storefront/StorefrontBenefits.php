@@ -13,6 +13,6 @@ class StorefrontBenefits
 
         return $plan
             ? app(Entitlements::class)->benefitsFor($plan)
-            : Entitlements::normalize(config('storefront.default_benefits', []));
+            : Entitlements::normalize(config('store.default_benefits', config('storefront.default_benefits', [])));
     }
 }

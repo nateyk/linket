@@ -16,8 +16,17 @@ trait HasPermissionsRelation
 
     public function hasPermission(string $name): bool
     {
-        return !is_null($this->getPermission($name)) ||
-            !is_null($this->getPermission('admin'));
+        if (!is_null($this->getPermission($name)) ||
+            !is_null($this->getPermission('admin'))) {
+            return true;
+        }
+
+        $alias = $this->permissionAlias($name);
+        if ($alias && !is_null($this->getPermission($alias))) {
+            return true;
+        }
+
+        return false;
     }
 
     public function hasExactPermission(string $name): bool
@@ -45,6 +54,28 @@ trait HasPermissionsRelation
         string $restriction,
     ): int|bool|null {
         $permission = $this->getPermission($permissionName);
-        return $permission?->getRestrictionValue($restriction);
+        $value = $permission?->getRestrictionValue($restriction);
+        if (!is_null($value)) {
+            return $value;
+        }
+
+        $alias = $this->permissionAlias($permissionName);
+        if ($alias) {
+            $aliasPermission = $this->getPermission($alias);
+            return $aliasPermission?->getRestrictionValue($restriction);
+        }
+
+        return null;
+    }
+
+    protected function permissionAlias(string $name): ?string
+    {
+        if (str_starts_with($name, 'stores.')) {
+            return 'biolinks.' . substr($name, 7);
+        }
+        if (str_starts_with($name, 'biolinks.')) {
+            return 'stores.' . substr($name, 9);
+        }
+        return null;
     }
 }

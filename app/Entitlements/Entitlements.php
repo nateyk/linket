@@ -35,7 +35,7 @@ final class Entitlements
             }
         }
 
-        return self::normalize(config('storefront.default_benefits', []));
+        return self::normalize(config('store.default_benefits', config('storefront.default_benefits', [])));
     }
 
     public function limit(User $creator, string $key): ?int
@@ -43,7 +43,15 @@ final class Entitlements
         $plan = $this->planFor($creator);
         $benefits = $plan
             ? $this->benefitsFor($plan)
-            : self::normalize(config('storefront.default_benefits', []));
+            : self::normalize(config('store.default_benefits', config('storefront.default_benefits', [])));
+
+        // Alias handling: max_stores <-> max_storefronts
+        if (!array_key_exists($key, $benefits) || $benefits[$key] === null) {
+            $alias = $key === 'max_stores' ? 'max_storefronts' : ($key === 'max_storefronts' ? 'max_stores' : null);
+            if ($alias && isset($benefits[$alias])) {
+                return $benefits[$alias];
+            }
+        }
 
         return $benefits[$key] ?? null;
     }
@@ -53,7 +61,7 @@ final class Entitlements
         $plan = $this->planFor($creator);
         $benefits = $plan
             ? $this->benefitsFor($plan)
-            : self::normalize(config('storefront.default_benefits', []));
+            : self::normalize(config('store.default_benefits', config('storefront.default_benefits', [])));
 
         return (bool) ($benefits[$key] ?? false);
     }
@@ -63,7 +71,7 @@ final class Entitlements
         $plan = $this->planFor($creator);
         $benefits = $plan
             ? $this->benefitsFor($plan)
-            : self::normalize(config('storefront.default_benefits', []));
+            : self::normalize(config('store.default_benefits', config('storefront.default_benefits', [])));
 
         return (int) ($benefits['commission_bps'] ?? 0);
     }
@@ -82,6 +90,9 @@ final class Entitlements
     {
         $commissionBps = $raw['commission_bps'] ?? (int) round(($raw['platform_fee_percent'] ?? 0) * 100);
 
+        $maxStores = $raw['max_stores'] ?? $raw['max_storefronts'] ?? null;
+        $maxStorefronts = $raw['max_storefronts'] ?? $raw['max_stores'] ?? null;
+
         return [
             'platform_fee_percent' => (float) ($raw['platform_fee_percent'] ?? round($commissionBps / 100, 4)),
             'commission_bps' => (int) $commissionBps,
@@ -89,7 +100,8 @@ final class Entitlements
             'max_free_products' => $raw['max_free_products'] ?? $raw['max_products'] ?? null,
             'max_paid_products' => $raw['max_paid_products'] ?? $raw['max_products'] ?? null,
             'max_upload_bytes' => $raw['max_upload_bytes'] ?? null,
-            'max_storefronts' => $raw['max_storefronts'] ?? null,
+            'max_storefronts' => $maxStorefronts,
+            'max_stores' => $maxStores,
             'max_workspaces' => $raw['max_workspaces'] ?? null,
             'tracking_pixels_enabled' => (bool) ($raw['tracking_pixels_enabled'] ?? false),
             'advanced_analytics_enabled' => (bool) ($raw['advanced_analytics_enabled'] ?? false),

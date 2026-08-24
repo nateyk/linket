@@ -11,6 +11,7 @@ use App\LinkPages\Models\LinkPage;
 use App\QrCodes\Models\QrCode;
 use App\Storefront\Models\DigitalProduct;
 use App\Storefront\StorefrontBenefits;
+use App\Stores\Models\Store;
 use App\TrackingPixels\Models\TrackingPixel;
 use Common\Core\Policies\PolicyFailReason;
 use Common\Domains\CustomDomain;
@@ -67,12 +68,17 @@ class UsageController extends Controller
             ->where('file_entries.workspace_id', $workspaceId)
             ->sum('file_entries.file_size');
 
-        $storefrontsUsed = Biolink::query()
+        $storesUsed = Store::query()
             ->where('workspace_id', $workspaceId)
             ->whereNull('deleted_at')
             ->count();
 
+        // Alias for BC: storefronts and biolinks counts are same as stores
+        $storefrontsUsed = $storesUsed;
+
         $workspacesUsed = Workspace::where('owner_id', $owner->id)->count();
+
+        $storesUsage = $this->getUsage(Store::class);
 
         return response()->json([
             'data' => [
@@ -80,7 +86,8 @@ class UsageController extends Controller
                 'qr_codes' => $this->getQrCodesUsage(),
                 'folders' => $this->getUsage(Folder::class),
                 'link_pages' => $this->getLinkPagesUsage(),
-                'biolinks' => $this->getUsage(Biolink::class),
+                'stores' => $storesUsage,
+                'biolinks' => $storesUsage,
                 'link_overlays' => $this->getUsage(LinkOverlay::class),
                 'tracking_pixels' => $this->getUsage(TrackingPixel::class),
                 'custom_domains' => $this->getUsage(CustomDomain::class),
@@ -115,7 +122,7 @@ class UsageController extends Controller
                 'storefronts' => [
                     'used' => $storefrontsUsed,
                     /** @var int|null */
-                    'total' => $benefits['max_storefronts'] ?? null,
+                    'total' => $benefits['max_stores'] ?? $benefits['max_storefronts'] ?? null,
                 ],
                 'workspaces' => [
                     'used' => $workspacesUsed,
@@ -193,14 +200,54 @@ class UsageController extends Controller
     {
         $owner = ActiveWorkspace::get()->getOwnerUser();
 
-        $name = (string) Str::of($resource::MODEL_TYPE)->snake()->plural();
+        $name = match ($resource::MODEL_TYPE) {
+            'store' => 'stores',
+            'biolink' => 'biolinks',
+            default => (string) Str::of($resource::MODEL_TYPE)->snake()->plural(),
+        };
         $relationName = Str::camel($name);
         $countName = $name . '_count';
 
-        $count = is_null($owner->$countName)
-            ? $owner->loadCount($relationName)->$countName
-            : $owner->$countName;
+        // Resolve count with fallback to alias relation if needed (stores <-> biolinks)
+        $count = $owner->$countName;
+        if (is_null($count)) {
+            // Try alias count name for BC
+            $aliasName = $name === 'stores' ? 'biolinks' : ($name === 'biolinks' ? 'stores' : null);
+            $aliasCountName = $aliasName ? $aliasName . '_count' : null;
+            $aliasRelation = $aliasName ? Str::camel($aliasName) : null;
+            if ($aliasCountName && !is_null($owner->$aliasCountName)) {
+                $count = $owner->$aliasCountName;
+            } elseif (method_exists($owner, $relationName)) {
+                $count = $owner->loadCount($relationName)->$countName;
+                // If still null and alias exists, try alias relation
+                if (is_null($count) && $aliasRelation && method_exists($owner, $aliasRelation)) {
+                    $count = $owner->loadCount($aliasRelation)->$aliasCountName;
+                }
+            } elseif ($aliasRelation && method_exists($owner, $aliasRelation)) {
+                $count = $owner->loadCount($aliasRelation)->$aliasCountName;
+                // Also try to populate original countName for consistency
+                if (is_null($count)) {
+                    $count = 0;
+                }
+            } else {
+                $count = 0;
+            }
+        }
+        if (is_null($count)) {
+            $count = 0;
+        }
+
         $maxCount = $owner->getRestrictionValue("$name.create", 'count');
+        // Fallback to alias permission for BC
+        if (!is_int($maxCount)) {
+            $aliasPermission = $name === 'stores' ? 'biolinks.create' : ($name === 'biolinks' ? 'stores.create' : null);
+            if ($aliasPermission) {
+                $aliasMax = $owner->getRestrictionValue($aliasPermission, 'count');
+                if (is_int($aliasMax)) {
+                    $maxCount = $aliasMax;
+                }
+            }
+        }
 
         $store = Gate::inspect('store', $resource);
 

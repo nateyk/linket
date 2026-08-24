@@ -9,6 +9,7 @@ use App\LinkOverlays\Models\LinkOverlay;
 use App\LinkPages\Models\LinkPage;
 use App\Links\Models\Link;
 use App\QrCodes\Models\QrCode;
+use App\Stores\Models\Store;
 use Common\Auth\Models\BaseUser;
 use Common\Domains\CustomDomain;
 use Common\Workspaces\Models\Workspace;
@@ -36,6 +37,11 @@ class User extends BaseUser
     public function biolinks(): HasMany
     {
         return $this->hasMany(Biolink::class);
+    }
+
+    public function stores(): HasMany
+    {
+        return $this->hasMany(Store::class);
     }
 
     public function linkOverlays(): HasMany
