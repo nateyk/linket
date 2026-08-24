@@ -21,6 +21,7 @@ export const sharedDashboardIcons: Record<
 > = {
   links: <LinkIcon />,
   'qr-codes': <QrCodeIcon />,
+  stores: <LayoutTemplateIcon />,
   biolinks: <LayoutTemplateIcon />,
   folders: <FolderIcon />,
   'custom-domains': <GlobeIcon />,

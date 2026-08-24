@@ -1,5 +1,6 @@
 import {appRouter} from '@app/app-router';
 import {Biolink} from '@app/gen/schemas/biolink';
+import type {Biolink as Store} from '@app/gen/schemas/biolink';
 import {CustomPage} from '@app/gen/schemas/custom-page';
 import {Folder} from '@app/gen/schemas/folder';
 import {Link as LinkType} from '@app/gen/schemas/link';
@@ -23,7 +24,8 @@ import './app.css';
 
 declare module '@ui/bootstrap-data/bootstrap-data' {
   interface BootstrapData extends BaseBackendBootstrapData {
-    biolinks: Biolink[];
+    stores: Store[];
+    biolinks?: Store[];
     loaders?: {
       landingPage?: {
         products: ListProducts200;
@@ -86,6 +88,10 @@ declare module '@ui/settings/settings' {
       show_branding?: boolean;
       branding_img?: string;
     };
+    store: {
+      show_branding?: boolean;
+      branding_img?: string;
+    };
     kyc?: {
       enabled?: boolean;
       selfie_verification?: boolean;
@@ -113,6 +119,13 @@ declare module '@ui/settings/settings' {
 }
 
 const data = getBootstrapData();
+// canonical stores, keep deprecated biolinks alias for compat
+(data as unknown as {stores?: Store[]; biolinks?: Store[]}).stores =
+  (data as unknown as {stores?: Store[]; biolinks?: Store[]}).biolinks ??
+  (data as unknown as {stores?: Store[]}).stores;
+(data as unknown as {biolinks?: Store[]}).biolinks = (
+  data as unknown as {stores: Store[]}
+).stores;
 let options: RootOptions | undefined = undefined;
 const sentryDsn = data.settings.logging.sentry_public;
 if (sentryDsn && import.meta.env.PROD) {

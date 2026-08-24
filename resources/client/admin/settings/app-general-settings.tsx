@@ -9,7 +9,9 @@ import {Trans} from '@ui/i18n/trans';
 
 export function Component() {
   const {data} = useAdminSettings();
-  const savedHomepage = data.client.dashboard?.homepage;
+  const rawSavedHomepage = data.client.dashboard?.homepage;
+  // legacy compat: biolinks → stores (Task 5, keep map entry for biolinks redirect in dashboard-routes)
+  const savedHomepage = rawSavedHomepage === 'biolinks' ? 'stores' : rawSavedHomepage;
   const homepage = homepageOptions.some(
     option => option.value === savedHomepage,
   )
@@ -40,7 +42,7 @@ export function Component() {
 
 const homepageOptions = [
   {value: 'overview', label: <Trans message="Overview" />},
-  {value: 'biolinks', label: <Trans message="Storefront" />},
+  {value: 'stores', label: <Trans message="Storefront" />},
   {
     value: 'digital-products',
     label: <Trans message="Digital Products" />,

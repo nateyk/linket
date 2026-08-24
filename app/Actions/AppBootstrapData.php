@@ -20,9 +20,10 @@ class AppBootstrapData extends BaseBootstrapData
         );
 
         if (Auth::check()) {
-            $this->data['biolinks'] = BiolinkResource::collection(
+            $this->data['stores'] = BiolinkResource::collection(
                 (new BiolinksQueryBuilder([]))->paginate(),
             );
+            $this->data['biolinks'] = $this->data['stores'];
             $this->data['workspaces'] = WorkspaceResource::collection(
                 ActiveWorkspace::getAll(),
             );

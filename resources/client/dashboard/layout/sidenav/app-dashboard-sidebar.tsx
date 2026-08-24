@@ -8,6 +8,14 @@ import {WorkspaceSelector} from '@common/workspace/workspace-selector';
 import {Trans} from '@ui/i18n/trans';
 import {StoreIcon} from 'lucide-react';
 import {use} from 'react';
+
+// stores alias – canonical storefront icon, keep deprecated biolinks
+if (!dashboardSidebarIcons['/dashboard/stores'] && dashboardSidebarIcons['/dashboard/biolinks']) {
+  dashboardSidebarIcons['/dashboard/stores'] = dashboardSidebarIcons['/dashboard/biolinks'];
+}
+if (!dashboardSidebarIcons['stores'] && dashboardSidebarIcons['biolinks']) {
+  (dashboardSidebarIcons as Record<string, unknown>)['stores'] = dashboardSidebarIcons['biolinks'];
+}
 import {NavLink} from 'react-router';
 import {UsageMeter} from './usage-meter';
 

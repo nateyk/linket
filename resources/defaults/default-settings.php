@@ -32,6 +32,7 @@ return [
     ['name' => 'links.max_len', 'value' => 1000],
     ['name' => 'links.back_half_content', 'value' => 'alpha_dash'],
     ['name' => 'biolink.show_branding', 'value' => true],
+    ['name' => 'store.show_branding', 'value' => true],
 
     // HOMEPAGE APPEARANCE
     [
@@ -44,7 +45,7 @@ return [
             'sections' => [
                 [
                     'name' => 'hero-split-with-screenshot',
-                    'badge' => 'Short links · Link in bio · QR codes',
+                    'badge' => 'Short links · Storefront · QR codes',
                     'title' => 'Every link you share, built to convert',
                     'description' =>
                         'Shorten URLs, launch beautiful link-in-bio pages, and track every click — all from one dashboard. Branded domains, deep analytics, and tools your whole team can use.',
@@ -73,7 +74,7 @@ return [
                                 'Create memorable short URLs with custom back-halves, folders, and your own domain — so every link looks like you.',
                         ],
                         [
-                            'icon' => 'biolinks',
+                            'icon' => 'stores',
                             'title' => 'Link-in-bio pages',
                             'description' =>
                                 'Build a mobile-first page that houses all your content, social profiles, and CTAs in one shareable link.',
@@ -125,7 +126,7 @@ return [
 
                 [
                     'name' => 'feature-with-screenshot',
-                    'badge' => 'Link in bio',
+                    'badge' => 'Storefront',
                     'title' => 'One link for everything you share',
                     'description' =>
                         'Replace a messy list of links with a polished page that reflects your brand. Add buttons, images, embeds, and more — then update it anytime.',
@@ -294,8 +295,8 @@ return [
                     ],
                     [
                         'type' => 'route',
-                        'label' => 'My Card',
-                        'action' => '/dashboard/biolinks',
+                        'label' => 'Stores',
+                        'action' => '/dashboard/stores',
                         'id' => 239,
                     ],
                     [
@@ -343,8 +344,8 @@ return [
                     ],
                     [
                         'type' => 'route',
-                        'label' => 'My Card',
-                        'action' => '/dashboard/biolinks',
+                        'label' => 'Stores',
+                        'action' => '/dashboard/stores',
                         'id' => 239,
                     ],
                     [
