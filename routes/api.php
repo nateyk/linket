@@ -42,6 +42,12 @@ use App\Storefront\Controllers\AdminPayoutRequestsController;
 use App\Storefront\Controllers\DigitalProductWithdrawalMethodsController;
 use App\Storefront\Controllers\WorkspacePayoutConfigController;
 use Illuminate\Support\Facades\Route;
+use App\Stores\Controllers\StoresController;
+use App\Stores\Controllers\StoreLinkController;
+use App\Stores\Controllers\StoreContentOrderController;
+use App\Stores\Controllers\CreatorProfileController as StoreCreatorProfileController;
+use App\Stores\Controllers\StoreAppearanceController;
+use App\Stores\Controllers\StoreWidgetsController;
 
 Route::group(['prefix' => 'v1'], function() {
 
@@ -92,27 +98,36 @@ Route::group(['prefix' => 'v1'], function() {
         Route::post('folders/bulk/unarchive', [FoldersController::class, 'bulkUnarchive']);
         Route::post('folders/csv/export', [FoldersController::class, 'exportCsv']);
 
-        // BIOLINKS
-        Route::get('biolink/list', [BiolinksController::class, 'list'])->middleware('auth');
-        Route::get('biolinks', [BiolinksController::class, 'index']);
-        Route::get('biolinks/{id}', [BiolinksController::class, 'show']);
-        Route::post('biolinks', [BiolinksController::class, 'store']);
-        Route::put('biolinks/{id}', [BiolinksController::class, 'update']);
-        Route::delete('biolinks/{id}', [BiolinksController::class, 'destroy']);
-        Route::put('biolinks/{id}/creator-profile', [CreatorProfileController::class, 'update']);
-        Route::post('biolinks/{id}/creator-profile/convert', [CreatorProfileController::class, 'convert']);
-        Route::post('biolink/{id}/change-order', [BiolinkContentOrderController::class, 'changeOrder']);
-        Route::post('biolink/{id}/appearance', [BiolinkAppearanceController::class, 'update']);
+        // STORES - canonical
+        Route::get('stores/list', [StoresController::class, 'list'])->middleware('auth');
+        Route::apiResource('stores', StoresController::class);
+        Route::put('stores/{store}/creator-profile', [StoreCreatorProfileController::class, 'update']);
+        Route::post('stores/{store}/creator-profile/convert', [StoreCreatorProfileController::class, 'convert']);
+        Route::post('stores/{store}/change-order', [StoreContentOrderController::class, 'changeOrder']);
+        Route::post('stores/{store}/appearance', [StoreAppearanceController::class, 'update']);
+        Route::post('stores/{store}/link', [StoreLinkController::class, 'store']);
+        Route::put('stores/{store}/link/{id}', [StoreLinkController::class, 'update']);
+        Route::post('stores/{store}/link/{id}/detach', [StoreLinkController::class, 'detach']);
+        Route::post('stores/{store}/widget', [StoreWidgetsController::class, 'store']);
+        Route::put('stores/{store}/widget/{widgetId}', [StoreWidgetsController::class, 'update']);
+        Route::delete('stores/{store}/widget/{widgetId}', [StoreWidgetsController::class, 'destroy']);
 
-        // BIOLINK LINKS
-        Route::post('biolink/{biolinkId}/link', [BiolinkLinkController::class, 'store']);
-        Route::put('biolink/{biolinkId}/link/{id}', [BiolinkLinkController::class, 'update']);
-        Route::post('biolink/{biolinkId}/link/{id}/detach', [BiolinkLinkController::class, 'detach']);
-
-        // BIOLINK WIDGETS
-        Route::post('biolink/{biolinkId}/widget', [BiolinkWidgetsController::class, 'store']);
-        Route::put('biolink/{biolinkId}/widget/{widgetId}', [BiolinkWidgetsController::class, 'update']);
-        Route::delete('biolink/{biolinkId}/widget/{widgetId}', [BiolinkWidgetsController::class, 'destroy']);
+        // BIOLINKS - legacy with deprecation header
+        Route::middleware('addDeprecationHeader')->group(function () {
+            Route::get('biolink/list', [BiolinksController::class, 'list'])->middleware('auth');
+            Route::put('biolinks/{id}/creator-profile', [CreatorProfileController::class, 'update']);
+            Route::post('biolinks/{id}/creator-profile/convert', [CreatorProfileController::class, 'convert']);
+            Route::post('biolink/{id}/change-order', [BiolinkContentOrderController::class, 'changeOrder']);
+            Route::post('biolink/{id}/appearance', [BiolinkAppearanceController::class, 'update']);
+            Route::post('biolink/{biolinkId}/link', [BiolinkLinkController::class, 'store']);
+            Route::put('biolink/{biolinkId}/link/{id}', [BiolinkLinkController::class, 'update']);
+            Route::post('biolink/{biolinkId}/link/{id}/detach', [BiolinkLinkController::class, 'detach']);
+            Route::post('biolink/{biolinkId}/widget', [BiolinkWidgetsController::class, 'store']);
+            Route::put('biolink/{biolinkId}/widget/{widgetId}', [BiolinkWidgetsController::class, 'update']);
+            Route::delete('biolink/{biolinkId}/widget/{widgetId}', [BiolinkWidgetsController::class, 'destroy']);
+            Route::post('biolink/{biolink}/link', [StoreLinkController::class, 'store']);
+            Route::apiResource('biolinks', StoresController::class)->parameters(['biolinks' => 'biolink']);
+        });
 
 
         // LINK OVERLAY

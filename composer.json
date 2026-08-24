@@ -83,6 +83,8 @@
     "laravel/boost": "^2.4",
     "laravel/pail": "^1.2",
     "nunomaduro/collision": "^8.1",
+    "pestphp/pest": "^3.0",
+    "pestphp/pest-plugin-laravel": "^3.0",
     "phpstan/phpstan": "2.1.44",
     "phpunit/phpunit": "11.5.50"
   },
@@ -91,7 +93,8 @@
     "preferred-install": "dist",
     "sort-packages": true,
     "allow-plugins": {
-      "php-http/discovery": true
+      "php-http/discovery": true,
+      "pestphp/pest-plugin": true
     }
   },
   "extra": {

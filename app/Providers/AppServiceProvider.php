@@ -43,6 +43,9 @@ use Illuminate\Auth\Events\Login;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Routing\Route;
 use Illuminate\Support\Str;
+use App\Stores\Models\Store;
+use App\Http\Middleware\AddDeprecationHeader;
+use Illuminate\Support\Facades\Gate;
 
 const WORKSPACED_RESOURCES = [
     Link::class,
@@ -76,6 +79,30 @@ class AppServiceProvider extends ServiceProvider
             BaseUser::MODEL_TYPE => User::class,
             Tag::MODEL_TYPE => Tag::class,
         ]);
+
+        Relation::enforceMorphMap([
+            Link::MODEL_TYPE => Link::class,
+            Folder::MODEL_TYPE => Folder::class,
+            CustomPage::MODEL_TYPE => CustomPage::class,
+            LinkPage::MODEL_TYPE => LinkPage::class,
+            'store' => Store::class,
+            'biolink' => Store::class,
+            LinkOverlay::MODEL_TYPE => LinkOverlay::class,
+            TrackingPixel::MODEL_TYPE => TrackingPixel::class,
+            Webhook::MODEL_TYPE => Webhook::class,
+            CustomDomain::MODEL_TYPE => CustomDomain::class,
+            QrCode::MODEL_TYPE => QrCode::class,
+            BaseUser::MODEL_TYPE => User::class,
+            Tag::MODEL_TYPE => Tag::class,
+        ]);
+
+        Gate::policy(Store::class, \App\Biolinks\Policies\BiolinkPolicy::class);
+
+        $this->app['router']->aliasMiddleware('addDeprecationHeader', AddDeprecationHeader::class);
+
+        \Illuminate\Support\Facades\Route::bind('store', fn($v) => Store::findOrFail($v));
+        \Illuminate\Support\Facades\Route::bind('biolink', fn($v) => Store::findOrFail($v));
+        \Illuminate\Support\Facades\Route::bind('biolinkId', fn($v) => Store::findOrFail($v));
 
         Model::preventLazyLoading(!app()->isProduction());
 
