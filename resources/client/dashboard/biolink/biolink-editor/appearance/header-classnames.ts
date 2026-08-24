@@ -1,3 +1,3 @@
-export const appearanceHeaderClassnames = {
-  h3: 'mb-2 text-sm font-medium',
-};
+// Shim — canonical implementation lives in `../../stores/store-editor/appearance/header-classnames`.
+// Kept for backward compat; stores is canonical.
+export * from '../../stores/store-editor/appearance/header-classnames';

@@ -126,7 +126,7 @@ export const sharedDashboardRoutes = (routeType: DatatableRouteType) => {
         index: true,
         lazy: async () => {
           const {BiolinkContentTab} =
-            await import('@app/dashboard/biolink/biolink-editor/biolink-editor-page');
+            await import('@app/dashboard/stores/store-editor/store-editor-page');
           return {Component: BiolinkContentTab};
         },
       },
@@ -134,18 +134,18 @@ export const sharedDashboardRoutes = (routeType: DatatableRouteType) => {
         path: 'about',
         lazy: async () => {
           const {BiolinkAboutTab} =
-            await import('@app/dashboard/biolink/biolink-editor/biolink-editor-page');
+            await import('@app/dashboard/stores/store-editor/store-editor-page');
           return {Component: BiolinkAboutTab};
         },
       },
       {
         path: 'appearance',
         lazy: () =>
-          import('@app/dashboard/biolink/biolink-editor/appearance/biolink-appearance-tab'),
+          import('@app/dashboard/stores/store-editor/appearance/biolink-appearance-tab'),
       },
       {
         path: 'insights',
-        lazy: () => import('@app/dashboard/biolink/biolink-insights-page'),
+        lazy: () => import('@app/dashboard/stores/store-insights-page'),
       },
     ],
   });

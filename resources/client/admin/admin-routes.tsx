@@ -1,4 +1,4 @@
-import {listBiolinksOptions} from '@app/dashboard/biolink/biolinks-queries';
+import {listStoresOptions} from '@app/dashboard/stores/stores-queries';
 import {sharedDashboardRoutes} from '@app/dashboard/dashboard-routes';
 import {adminCustomPagesRoutes} from '@common/admin/custom-pages/admin-custom-pages-routes';
 import {adminFileEntriesRoutes} from '@common/admin/file-entry/admin-file-entries-routes';
@@ -97,7 +97,7 @@ export const adminRoutes: RouteObject[] = [
           import('@app/admin/biolinks-datatable-page/biolinks-datatable-page'),
         loader: ({request}) =>
           queryClient.ensureQueryData(
-            listBiolinksOptions('admin', {
+            listStoresOptions('admin', {
               ...searchParamsFromUrl(request.url),
               fields_preset: 'datatable',
             }),

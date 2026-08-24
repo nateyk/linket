@@ -1,7 +1,7 @@
 import {
-  listBiolinksOptions,
+  listStoresOptions,
   retrieveBiolinkOptions,
-} from '@app/dashboard/biolink/biolinks-queries';
+} from '@app/dashboard/stores/stores-queries';
 import {
   listDomainsOptions,
   retrieveDomainOptions,
@@ -174,7 +174,7 @@ const linkeableFilters: (
     popoverContent: (props: SelectModelFilterPopoverContentProps) => (
       <ModelSelectFilterPopoverContent
         {...props}
-        listOptions={({query}) => listBiolinksOptions(routeType, {query})}
+        listOptions={({query}) => listStoresOptions(routeType, {query})}
         retrieveOptions={({id}) => retrieveBiolinkOptions(id)}
         modelToLabel={(biolink: Biolink) => biolink.name}
         placeholder={<Trans message="Select link in bio" />}

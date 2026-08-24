@@ -1,8 +1,3 @@
-import {BiolinkWidget} from '@app/gen/schemas/biolink-widget';
-import {Biolink} from '@app/gen/schemas/biolink';
-
-export interface WidgetRendererProps<T extends BiolinkWidget = BiolinkWidget> {
-  widget: T;
-  variant: 'editor' | 'biolinkPage';
-  biolink?: Biolink;
-}
+// Shim — canonical implementation lives in `../../stores/store-editor/content/widgets/widget-renderer-props`.
+// Kept for backward compat; stores is canonical.
+export * from '../../stores/store-editor/content/widgets/widget-renderer-props';

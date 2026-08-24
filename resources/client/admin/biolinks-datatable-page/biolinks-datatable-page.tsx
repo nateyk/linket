@@ -1,7 +1,7 @@
 import {BiolinkCard} from '@app/admin/biolinks-datatable-page/biolink-card';
 import {BiolinksDatatableFilters} from '@app/admin/biolinks-datatable-page/biolinks-datatable-filters';
-import {CreateBiolinkDialog} from '@app/dashboard/biolink/biolink-editor/create-biolink-dialog';
-import {listBiolinksOptions} from '@app/dashboard/biolink/biolinks-queries';
+import {CreateBiolinkDialog} from '@app/dashboard/stores/store-editor/create-biolink-dialog';
+import {listStoresOptions} from '@app/dashboard/stores/stores-queries';
 import {PermissionAwareButton} from '@app/dashboard/upgrade/permission-aware-button';
 import {AdHost} from '@common/admin/ads/ad-host';
 import {useShowGlobalLoadingBar} from '@common/core/use-show-global-loading-bar';
@@ -51,7 +51,7 @@ export function Component() {
     useTableQueryState({filters: BiolinksDatatableFilters});
 
   const query = useSuspenseQuery(
-    listBiolinksOptions('admin', {
+    listStoresOptions('admin', {
       ...searchParams,
       fields_preset: 'datatable',
     }),

@@ -1,4 +1,4 @@
-import {biolinksBaseKey} from '@app/dashboard/biolink/biolinks-queries';
+import {biolinksBaseKey} from '@app/dashboard/stores/stores-queries';
 import {foldersBaseKey} from '@app/dashboard/folders/folders-queries';
 import {DatatableRouteType} from '@app/dashboard/use-datatable-route-type';
 import {

@@ -1,16 +1,3 @@
-import {useBiolinkEditorStore} from '@app/dashboard/biolink/biolink-editor/biolink-editor-store';
-import {BackgroundSelector} from '@common/background-selector/background-selector';
-
-export function BackgroundStyle() {
-  const updateAppearance = useBiolinkEditorStore(s => s.updateAppearance);
-  const value = useBiolinkEditorStore(s => s.appearance?.bgConfig);
-  return (
-    <BackgroundSelector
-      uploadType="linkImages"
-      value={value}
-      onChange={newValue =>
-        updateAppearance({bgConfig: newValue ?? undefined})
-      }
-    />
-  );
-}
+// Shim — canonical implementation lives in `../../stores/store-editor/appearance/background-style`.
+// Kept for backward compat; stores is canonical.
+export * from '../../stores/store-editor/appearance/background-style';

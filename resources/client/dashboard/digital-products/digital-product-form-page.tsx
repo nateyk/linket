@@ -1,4 +1,4 @@
-import {BuilderSectionHeader} from '@app/dashboard/biolink/biolink-editor/builder-section-header';
+import {BuilderSectionHeader} from '@app/dashboard/stores/store-editor/builder-section-header';
 import {articleEditorTipTapExtensions} from '@common/article-editor/article-editor-tiptap-extensions';
 import {apiClient} from '@common/http/query-client';
 import {ClearFormatButton} from '@common/text-editor/menubar/clear-format-button';

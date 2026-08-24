@@ -1,8 +1,8 @@
-import {WidgetRenderers} from '@app/dashboard/biolink/biolink-editor/content/widgets/widget-renderers';
+import {WidgetRenderers} from '@app/dashboard/stores/store-editor/content/widgets/widget-renderers';
 import {
   CreatorProfileConfig,
   isCreatorProfileBiolink,
-} from '@app/dashboard/biolink/biolink-editor/creator-profile-types';
+} from '@app/dashboard/stores/store-editor/creator-profile-types';
 import {
   CreatorProfileLayout,
   CreatorProfilePreview,
@@ -76,7 +76,7 @@ export function BiolinkLayout({
       item => item.model_type === 'link' && item.animation,
     );
     if (enableLinkAnimations && hasAnimations) {
-      import('@app/dashboard/biolink/biolink-editor/content/link-content-item/animate.min.css');
+      import('@app/dashboard/stores/store-editor/content/link-content-item/animate.min.css');
     }
   }, [enableLinkAnimations, content]);
 

@@ -1,13 +1,13 @@
 import {
   CreatorProfileConfig,
   getCreatorProfileConfig,
-} from '@app/dashboard/biolink/biolink-editor/creator-profile-types';
+} from '@app/dashboard/stores/store-editor/creator-profile-types';
 import {Biolink} from '@app/gen/schemas/biolink';
 import {
   SocialsList,
   SocialsType,
-} from '@app/dashboard/biolink/biolink-editor/content/widgets/socials-widget/socials-list';
-import {ShopWidgetRenderer} from '@app/dashboard/biolink/biolink-editor/content/widgets/shop-widget/shop-widget-renderer';
+} from '@app/dashboard/stores/store-editor/content/widgets/socials-widget/socials-list';
+import {ShopWidgetRenderer} from '@app/dashboard/stores/store-editor/content/widgets/shop-widget/shop-widget-renderer';
 import {
   resolveBiolinkButtonAppearance,
   shouldUseLightBiolinkLogo,
