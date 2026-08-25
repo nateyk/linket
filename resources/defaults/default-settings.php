@@ -295,7 +295,7 @@ return [
                     ],
                     [
                         'type' => 'route',
-                        'label' => 'Stores',
+                        'label' => 'My Store',
                         'action' => '/dashboard/stores',
                         'id' => 239,
                     ],
@@ -344,7 +344,7 @@ return [
                     ],
                     [
                         'type' => 'route',
-                        'label' => 'Stores',
+                        'label' => 'My Store',
                         'action' => '/dashboard/stores',
                         'id' => 239,
                     ],

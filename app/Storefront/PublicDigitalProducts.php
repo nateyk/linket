@@ -9,9 +9,13 @@ use App\Storefront\Models\DigitalProduct;
 
 class PublicDigitalProducts
 {
-    public function findBiolink(string $backHalf): Biolink
+    public function findBiolink(string $backHalf): Biolink|Store
     {
-        $biolink = Biolink::findForRendering($backHalf);
+        // Try Store first (new canonical), fallback to Biolink for BC
+        $biolink = Store::findForRendering($backHalf);
+        if (!$biolink) {
+            $biolink = Biolink::findForRendering($backHalf);
+        }
         abort_unless($biolink, 404);
 
         return $this->assertBiolink($biolink);

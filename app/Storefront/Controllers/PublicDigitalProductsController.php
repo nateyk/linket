@@ -3,6 +3,7 @@
 namespace App\Storefront\Controllers;
 
 use App\Biolinks\Models\Biolink;
+use App\Stores\Models\Store;
 use App\Storefront\Models\DigitalProduct;
 use App\Storefront\Models\StorefrontOrder;
 use App\Storefront\PublicDigitalProducts;
@@ -14,21 +15,21 @@ use Illuminate\Routing\Controller;
 
 class PublicDigitalProductsController extends Controller
 {
-    public function index(Biolink $biolink)
+    public function index(Biolink|Store $biolink)
     {
         return PublicDigitalProductResource::collection(
             app(PublicDigitalProducts::class)->products($biolink)->get(),
         );
     }
 
-    public function show(Biolink $biolink, DigitalProduct $digitalProduct): PublicDigitalProductResource
+    public function show(Biolink|Store $biolink, DigitalProduct $digitalProduct): PublicDigitalProductResource
     {
         return new PublicDigitalProductResource(
             app(PublicDigitalProducts::class)->product($biolink, $digitalProduct),
         );
     }
 
-    public function checkout(Biolink $biolink, DigitalProduct $digitalProduct)
+    public function checkout(Biolink|Store $biolink, DigitalProduct $digitalProduct)
     {
         $buyer = request()->validate([
             'buyer_name' => ['required', 'string', 'min:2', 'max:120'],
@@ -48,7 +49,7 @@ class PublicDigitalProductsController extends Controller
         ]);
     }
 
-    public function order(Request $request, Biolink $biolink, int $digitalProduct, string $order): PublicStorefrontOrderResource
+    public function order(Request $request, Biolink|Store $biolink, int $digitalProduct, string $order): PublicStorefrontOrderResource
     {
         $product = app(PublicDigitalProducts::class)->productForOrder($biolink, $digitalProduct);
         $storefrontOrder = StorefrontOrder::query()
