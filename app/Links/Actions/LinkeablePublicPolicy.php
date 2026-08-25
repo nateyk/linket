@@ -28,6 +28,7 @@ class LinkeablePublicPolicy
         $this->modelName = match ($model::MODEL_TYPE) {
             Link::MODEL_TYPE => 'Short link',
             Biolink::MODEL_TYPE => 'Link in bio',
+            \App\Stores\Models\Store::MODEL_TYPE => 'Store',
             Folder::MODEL_TYPE => 'Folder',
             QrCode::MODEL_TYPE => 'QR code',
         };

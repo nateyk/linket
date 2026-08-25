@@ -28,10 +28,10 @@ Route::get('find-my-purchase/access/{token}', [OrderLookupController::class, 're
 
 Route::get('{linkHash}/img', [LinkImageController::class, 'show']);
 
-Route::get('{biolink}/products/{digitalProduct}', [PublicDigitalProductPageController::class, 'show'])
+Route::get('{storeSlug}/products/{digitalProduct}', [PublicDigitalProductPageController::class, 'show'])
     ->whereNumber('digitalProduct')
     ->name('digital-products.public.show');
-Route::get('{biolink}/products/{digitalProduct}/orders/{order}/success', [PublicDigitalProductPageController::class, 'success'])
+Route::get('{storeSlug}/products/{digitalProduct}/orders/{order}/success', [PublicDigitalProductPageController::class, 'success'])
     ->whereNumber('digitalProduct')
     ->name('digital-products.public.order.success');
 

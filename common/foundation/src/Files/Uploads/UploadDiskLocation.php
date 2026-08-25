@@ -50,7 +50,7 @@ readonly class UploadDiskLocation
             $this->backend->root &&
             !$this->isAbsolutePath($this->backend->root)
         ) {
-            return 'storage/' . trim($this->backend->root, '/');
+            return '/storage/' . trim($this->backend->root, '/');
         }
 
         return null;

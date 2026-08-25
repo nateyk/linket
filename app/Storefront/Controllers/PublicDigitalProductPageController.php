@@ -16,9 +16,9 @@ class PublicDigitalProductPageController extends Controller
 {
     use RendersClientSideApp;
 
-    public function show(string $biolink, DigitalProduct $digitalProduct)
+    public function show(string $storeSlug, DigitalProduct $digitalProduct)
     {
-        $biolink = app(PublicDigitalProducts::class)->findBiolink($biolink);
+        $biolink = app(PublicDigitalProducts::class)->findBiolink($storeSlug);
         $product = app(PublicDigitalProducts::class)->product($biolink, $digitalProduct);
 
         return $this->clientSideOrPrerenderedResponse([
@@ -38,9 +38,9 @@ class PublicDigitalProductPageController extends Controller
         ]);
     }
 
-    public function success(Request $request, string $biolink, int $digitalProduct, string $order)
+    public function success(Request $request, string $storeSlug, int $digitalProduct, string $order)
     {
-        $biolink = app(PublicDigitalProducts::class)->findBiolink($biolink);
+        $biolink = app(PublicDigitalProducts::class)->findBiolink($storeSlug);
         $product = app(PublicDigitalProducts::class)->productForOrder($biolink, $digitalProduct);
         $storefrontOrder = StorefrontOrder::query()
             ->where('uuid', $order)

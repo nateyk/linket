@@ -31,9 +31,7 @@ readonly class UploadType
         $backend = Uploads::backend($entry->backend_id);
 
         if ($this->public && $backend) {
-            // laravel's url method adds leading slash. Need to remove
-            // it for relative urls to work when installed on subfolder
-            return trim(
+            return rtrim(
                 Uploads::disk(
                     $this,
                     $backend,

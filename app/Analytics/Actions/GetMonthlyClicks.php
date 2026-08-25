@@ -7,6 +7,7 @@ use App\Links\Models\Link;
 use App\Analytics\Models\TrackedEvent;
 use App\Folders\Models\Folder;
 use App\Models\User;
+use App\Stores\Models\Store;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Common\Workspaces\Models\Workspace;
@@ -26,7 +27,7 @@ class GetMonthlyClicks
             ->count();
     }
 
-    public function forLinkeable(Link|Folder|Biolink $linkeable): int
+    public function forLinkeable(Link|Folder|Biolink|Store $linkeable): int
     {
         return $this->baseQuery()
             ->where('linkeable_id', $linkeable->id)
