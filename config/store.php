@@ -1,6 +1,7 @@
 <?php
 
 return [
+    // Deprecated alias – canonical is config('stores.table_rename_done'). Keep synchronized via same env.
     'table_rename_done' => env('STORES_TABLE_RENAME_DONE', false),
     'alias_compat' => true,
     'currency' => env('STOREFRONT_CURRENCY', 'etb'),

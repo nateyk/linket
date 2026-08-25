@@ -48,7 +48,7 @@ class StoreContentOrderController extends Controller
 
         if ($linkQuery) {
             $linkIds = collect($data['order'])->where('model_type', Link::MODEL_TYPE)->pluck('id');
-            DB::table('biolink_link')->where('biolink_id', $store->id)->whereIn('link_id', $linkIds)->update(['position' => DB::raw("(case $linkQuery end)")]);
+            DB::table(Store::pivotTable())->where('biolink_id', $store->id)->whereIn('link_id', $linkIds)->update(['position' => DB::raw("(case $linkQuery end)")]);
         }
 
         if ($widgetQuery) {

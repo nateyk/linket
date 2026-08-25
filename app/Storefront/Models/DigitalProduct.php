@@ -36,11 +36,11 @@ class DigitalProduct extends StorefrontModel
     public function files(): BelongsToMany { return $this->belongsToMany(FileEntry::class, 'digital_product_files')->withTimestamps(); }
     public function stores(): BelongsToMany
     {
-        $pivot = config('stores.table_rename_done') ? 'digital_product_store' : 'digital_product_biolinks';
+        $pivot = Store::isTableRenameDone() ? 'digital_product_store' : 'digital_product_biolinks';
         return $this->belongsToMany(Store::class, $pivot, 'digital_product_id', 'biolink_id')->withTimestamps();
     }
 
-    public function biolinks(): BelongsToMany { return $this->belongsToMany(Biolink::class, config('stores.table_rename_done') ? 'digital_product_store' : 'digital_product_biolinks', 'digital_product_id', 'biolink_id')->withTimestamps(); }
+    public function biolinks(): BelongsToMany { return $this->belongsToMany(Biolink::class, Store::isTableRenameDone() ? 'digital_product_store' : 'digital_product_biolinks', 'digital_product_id', 'biolink_id')->withTimestamps(); }
     public function orders(): HasMany { return $this->hasMany(StorefrontOrder::class); }
     public function isApproved(): bool { return $this->status === 'approved'; }
 }

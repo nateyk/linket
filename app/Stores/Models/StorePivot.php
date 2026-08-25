@@ -15,6 +15,6 @@ class StorePivot extends Pivot
 
     public function getTable(): string
     {
-        return config('stores.table_rename_done') ? 'store_link' : 'biolink_link';
+        return Store::pivotTable();
     }
 }

@@ -6,6 +6,7 @@ use App\Analytics\Models\TrackedEvent;
 use App\Biolinks\Models\Biolink;
 use App\Biolinks\Models\BiolinkAppearance;
 use App\Biolinks\Resources\BiolinkResource;
+use App\Stores\Models\Store;
 use App\Webhooks\Jobs\DispatchWebhooksForEvent;
 use App\Links\Models\LinkeableRule;
 use App\QrCodes\Models\QrCode;
@@ -29,14 +30,14 @@ class DeleteBiolinks
         // events
         TrackedEvent::query()
             ->whereIn('linkeable_id', $ids)
-            ->where('linkeable_type', Biolink::MODEL_TYPE)
+            ->where('linkeable_type', Store::linkeableType())
             ->delete();
 
         // detach links from biolinks
-        DB::table('biolink_link')->whereIn('biolink_id', $ids)->delete();
+        DB::table(Store::pivotTable())->whereIn('biolink_id', $ids)->delete();
 
         // delete widgets
-        DB::table('biolink_widgets')->whereIn('biolink_id', $ids)->delete();
+        DB::table(Store::widgetTable())->whereIn('biolink_id', $ids)->delete();
 
         // delete appearances
         BiolinkAppearance::query()->whereIn('biolink_id', $ids)->delete();
@@ -44,19 +45,19 @@ class DeleteBiolinks
         // rules
         LinkeableRule::query()
             ->whereIn('linkeable_id', $ids)
-            ->where('linkeable_type', Biolink::MODEL_TYPE)
+            ->where('linkeable_type', Store::linkeableType())
             ->delete();
 
         // pixels
         DB::table('link_tracking_pixel')
             ->whereIn('linkeable_id', $ids)
-            ->where('linkeable_type', Biolink::MODEL_TYPE)
+            ->where('linkeable_type', Store::linkeableType())
             ->delete();
 
         // qr codes
         QrCode::query()
             ->whereIn('linkeable_id', $ids)
-            ->where('linkeable_type', Biolink::MODEL_TYPE)
+            ->where('linkeable_type', Store::linkeableType())
             ->delete();
 
         $biolinks->each(function (Biolink $biolink) {

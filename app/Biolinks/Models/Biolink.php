@@ -19,7 +19,7 @@ class Biolink extends Store
 
     public function getTable(): string
     {
-        return config('stores.table_rename_done') ? 'stores' : 'biolinks';
+        return Store::isTableRenameDone() ? 'stores' : 'biolinks';
     }
 
     public function getForeignKey(): string
@@ -59,7 +59,7 @@ class Biolink extends Store
     {
         return $this->belongsToMany(
             BiolinkLink::class,
-            config('stores.table_rename_done') ? 'store_link' : 'biolink_link',
+            Store::pivotTable(),
             'biolink_id',
             'link_id',
         )

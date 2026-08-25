@@ -122,14 +122,14 @@ class Link extends Linkeable
 
     public function stores(): BelongsToMany
     {
-        $pivot = config('stores.table_rename_done') ? 'store_link' : 'biolink_link';
-        $pivotModel = config('stores.table_rename_done') ? \App\Stores\Models\StorePivot::class : \App\Biolinks\Models\BiolinkPivot::class;
+        $pivot = Store::pivotTable();
+        $pivotModel = Store::isTableRenameDone() ? \App\Stores\Models\StorePivot::class : \App\Biolinks\Models\BiolinkPivot::class;
         return $this->belongsToMany(Store::class, $pivot, 'link_id', 'biolink_id')->using($pivotModel)->withPivot(['position', 'animation', 'leap_until', 'active']);
     }
 
     public function biolinks(): BelongsToMany
     {
-        return $this->belongsToMany(Biolink::class, config('stores.table_rename_done') ? 'store_link' : 'biolink_link', 'link_id', 'biolink_id')->using(\App\Biolinks\Models\BiolinkPivot::class)->withPivot(['position', 'animation', 'leap_until', 'active']);
+        return $this->belongsToMany(Biolink::class, Store::pivotTable(), 'link_id', 'biolink_id')->using(\App\Biolinks\Models\BiolinkPivot::class)->withPivot(['position', 'animation', 'leap_until', 'active']);
     }
 
     public function pixels(): BelongsToMany

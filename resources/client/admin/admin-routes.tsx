@@ -92,7 +92,7 @@ export const adminRoutes: RouteObject[] = [
       ),
       ...sharedDashboardRoutes('admin'),
       {
-        path: 'biolinks',
+        path: 'stores',
         lazy: () =>
           import('@app/admin/biolinks-datatable-page/biolinks-datatable-page'),
         loader: ({request}) =>
@@ -102,6 +102,10 @@ export const adminRoutes: RouteObject[] = [
               fields_preset: 'datatable',
             }),
           ),
+      },
+      {
+        path: 'biolinks',
+        loader: () => redirect('/admin/stores', 308),
       },
       {
         path: 'digital-products',

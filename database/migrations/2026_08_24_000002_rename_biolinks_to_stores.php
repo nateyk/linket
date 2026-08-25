@@ -9,7 +9,8 @@ return new class extends Migration {
     public function up(): void
     {
         // Gated Phase 3 — only rename when flag is true (next release)
-        if (! config('stores.table_rename_done')) {
+        // Unify config source: check both stores and store (canonical is stores)
+        if (! (config('stores.table_rename_done') || config('store.table_rename_done'))) {
             return;
         }
 

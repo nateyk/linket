@@ -39,21 +39,21 @@ import {Fragment} from 'react/jsx-runtime';
 const legacyDashboardRedirects = [
   {
     path: 'dashboard/biolinks',
-    loader: () => redirect('/dashboard/stores'),
+    loader: () => redirect('/dashboard/stores', 308),
   },
   {
     path: 'dashboard/biolinks/:biolinkId',
     loader: ({params}: {params: Record<string, string>}) =>
-      redirect(`/dashboard/stores/${params.biolinkId}`),
+      redirect(`/dashboard/stores/${params.biolinkId}`, 308),
   },
   {
     path: 'admin/biolinks',
-    loader: () => redirect('/admin/stores'),
+    loader: () => redirect('/admin/stores', 308),
   },
   {
     path: 'admin/biolinks/:biolinkId',
     loader: ({params}: {params: Record<string, string>}) =>
-      redirect(`/admin/stores/${params.biolinkId}`),
+      redirect(`/admin/stores/${params.biolinkId}`, 308),
   },
 ] as const;
 

@@ -11,6 +11,6 @@ class BiolinkAppearance extends StoreAppearance
 {
     public function getTable(): string
     {
-        return config('stores.table_rename_done') ? 'store_appearances' : 'biolink_appearances';
+        return \App\Stores\Models\Store::appearanceTable();
     }
 }

@@ -13,7 +13,7 @@ class BiolinkWidget extends StoreWidget
 
     public function getTable(): string
     {
-        return config('stores.table_rename_done') ? 'store_widgets' : 'biolink_widgets';
+        return \App\Stores\Models\Store::widgetTable();
     }
 
     public static function getModelTypeAttribute(): string

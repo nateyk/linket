@@ -56,9 +56,34 @@ class Store extends Linkeable
         'activates_at' => 'datetime',
     ];
 
+    public static function isTableRenameDone(): bool
+    {
+        return (bool) (config('stores.table_rename_done') || config('store.table_rename_done'));
+    }
+
+    public static function pivotTable(): string
+    {
+        return static::isTableRenameDone() ? 'store_link' : 'biolink_link';
+    }
+
+    public static function linkeableType(): string
+    {
+        return static::isTableRenameDone() ? self::MODEL_TYPE : \App\Biolinks\Models\Biolink::MODEL_TYPE;
+    }
+
+    public static function widgetTable(): string
+    {
+        return static::isTableRenameDone() ? 'store_widgets' : 'biolink_widgets';
+    }
+
+    public static function appearanceTable(): string
+    {
+        return static::isTableRenameDone() ? 'store_appearances' : 'biolink_appearances';
+    }
+
     public function getTable(): string
     {
-        return config('stores.table_rename_done') ? 'stores' : 'biolinks';
+        return static::isTableRenameDone() ? 'stores' : 'biolinks';
     }
 
     public function getForeignKey(): string
@@ -115,8 +140,8 @@ class Store extends Linkeable
 
     public function links(): BelongsToMany
     {
-        $pivotTable = config('stores.table_rename_done') ? 'store_link' : 'biolink_link';
-        if (config('stores.table_rename_done')) {
+        $pivotTable = static::pivotTable();
+        if (static::isTableRenameDone()) {
             return $this->belongsToMany(
                 StoreLink::class,
                 $pivotTable,
@@ -152,7 +177,7 @@ class Store extends Linkeable
 
     public function widgets(): HasMany
     {
-        if (config('stores.table_rename_done')) {
+        if (static::isTableRenameDone()) {
             return $this->hasMany(StoreWidget::class, 'biolink_id');
         }
         return $this->hasMany(\App\Biolinks\Models\BiolinkWidget::class, 'biolink_id');
@@ -168,7 +193,7 @@ class Store extends Linkeable
 
     public function digitalProducts(): BelongsToMany
     {
-        $pivot = config('stores.table_rename_done') ? 'digital_product_store' : 'digital_product_biolinks';
+        $pivot = static::isTableRenameDone() ? 'digital_product_store' : 'digital_product_biolinks';
         return $this->belongsToMany(
             DigitalProduct::class,
             $pivot,
@@ -187,7 +212,7 @@ class Store extends Linkeable
 
     public function appearance(): HasOne
     {
-        if (config('stores.table_rename_done')) {
+        if (static::isTableRenameDone()) {
             return $this->hasOne(StoreAppearance::class, 'biolink_id');
         }
         return $this->hasOne(\App\Biolinks\Models\BiolinkAppearance::class, 'biolink_id');
@@ -330,7 +355,7 @@ class Store extends Linkeable
         int|null $widgetToSkip = null,
     ) {
         $sign = $direction === 'decrement' ? '-' : '+';
-        $pivotTable = config('stores.table_rename_done') ? 'store_link' : 'biolink_link';
+        $pivotTable = static::pivotTable();
         $this->links()
             ->newPivotStatement()
             ->where('biolink_id', $this->id)

@@ -2,7 +2,7 @@
 
 namespace App\Biolinks\Actions;
 
-use App\Biolinks\Models\BiolinkWidget;
+use App\Stores\Models\StoreWidget;
 use Common\Auth\Models\BaseUser;
 
 class AddInitialContentToBiolink
@@ -44,6 +44,6 @@ class AddInitialContentToBiolink
             ],
         ];
 
-        BiolinkWidget::insert($widgets);
+        StoreWidget::insert($widgets);
     }
 }

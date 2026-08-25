@@ -12,7 +12,7 @@ export function Component() {
       <DashboardLayout.SectionHeader>
         <DashboardLayout.SidebarToggle />
         <h1 className="text-xl font-semibold">
-          <Trans message="Link in bio" />
+          <Trans message="Stores" />
         </h1>
       </DashboardLayout.SectionHeader>
 
@@ -22,10 +22,10 @@ export function Component() {
             <LayoutPanelTop />
           </Empty.Media>
           <Empty.Title>
-            <Trans message="No link in bio yet" />
+            <Trans message="No stores yet" />
           </Empty.Title>
           <Empty.Description>
-            <Trans message="This workspace has no link in bio yet. Create one to get started." />
+            <Trans message="This workspace has no stores yet. Create one to get started." />
           </Empty.Description>
         </Empty.Header>
         <Empty.Content>
@@ -34,7 +34,7 @@ export function Component() {
               render={<Button variant="default" color="primary" />}
             >
               <PlusIcon />
-              <Trans message="Create link in bio" />
+              <Trans message="Create store" />
             </Dialog.Trigger>
           </CreateBiolinkDialog>
         </Empty.Content>

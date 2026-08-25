@@ -31,7 +31,7 @@ class CrupdateStoreRequest extends CrupdateBiolinkRequest
             $ignoreId = $ignoreId->id;
         }
 
-        $table = config('stores.table_rename_done') ? 'stores' : 'biolinks';
+        $table = Store::isTableRenameDone() ? 'stores' : 'biolinks';
 
         return [
             'name' => [

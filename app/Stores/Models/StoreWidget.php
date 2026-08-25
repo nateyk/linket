@@ -18,7 +18,7 @@ class StoreWidget extends Model
 
     public function getTable(): string
     {
-        return config('stores.table_rename_done') ? 'store_widgets' : 'biolink_widgets';
+        return Store::isTableRenameDone() ? 'store_widgets' : 'biolink_widgets';
     }
 
     public function getForeignKey(): string

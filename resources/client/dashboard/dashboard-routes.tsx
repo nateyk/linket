@@ -153,7 +153,7 @@ export const sharedDashboardRoutes = (routeType: DatatableRouteType) => {
   // biolinks — legacy alias, 308 redirect to stores
   routes.push({
     path: 'biolinks/:biolinkId',
-    loader: ({params}) => redirect(`/${routeType}/stores/${params.biolinkId}`),
+    loader: ({params}) => redirect(`/${routeType}/stores/${params.biolinkId}`, 308),
   });
 
   // folders — admin only (disabled from creator dashboard)
@@ -449,7 +449,7 @@ export const dashboardRoutes: RouteObject[] = [
       // biolinks — legacy 308 alias
       {
         path: 'biolinks',
-        loader: () => redirect('/dashboard/stores'),
+        loader: () => redirect('/dashboard/stores', 308),
       },
 
       ...sharedDashboardRoutes('dashboard'),

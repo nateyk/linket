@@ -13,7 +13,7 @@ class StoreAppearance extends Model
 
     public function getTable(): string
     {
-        return config('stores.table_rename_done') ? 'store_appearances' : 'biolink_appearances';
+        return Store::appearanceTable();
     }
 
     public function getConfigAttribute($value)

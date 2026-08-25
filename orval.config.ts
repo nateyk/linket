@@ -9,7 +9,7 @@ export default defineConfig({
       schemas: './resources/client/gen/schemas',
       namingConvention: 'kebab-case',
       formatter: 'prettier',
-      clean: true,
+      clean: false,
       indexFiles: false,
       headers: false,
       override: {

@@ -3,7 +3,7 @@
 namespace App\Actions;
 
 use App\Biolinks\BiolinksQueryBuilder;
-use App\Biolinks\Resources\BiolinkResource;
+use App\Stores\Resources\StoreResource;
 use Common\Core\Bootstrap\BaseBootstrapData;
 use Common\Workspaces\ActiveWorkspace;
 use Common\Workspaces\Resources\WorkspaceResource;
@@ -20,7 +20,7 @@ class AppBootstrapData extends BaseBootstrapData
         );
 
         if (Auth::check()) {
-            $this->data['stores'] = BiolinkResource::collection(
+            $this->data['stores'] = StoreResource::collection(
                 (new BiolinksQueryBuilder([]))->paginate(),
             );
             $this->data['biolinks'] = $this->data['stores'];
