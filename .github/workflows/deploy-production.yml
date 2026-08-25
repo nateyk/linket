@@ -269,7 +269,7 @@ jobs:
           fi
           test -f artifact/*.tar.gz || { echo "tarball missing"; exit 1; }
 
-      - name: Provision SSH (known_hosts pinned)
+      - name: Provision SSH (known_hosts pinned, single multiplexed connection)
         run: |
           set -euo pipefail
           mkdir -p ~/.ssh && chmod 700 ~/.ssh
@@ -289,6 +289,34 @@ jobs:
             exit 1
           fi
           ssh-keygen -l -f ~/.ssh/known_hosts 2>&1 | head -5 || true
+          # ControlMaster: all subsequent ssh/scp reuse ONE TCP connection.
+          # Shared hosts (fail2ban/CSF) rate-limit many rapid SSH logins from CI runners.
+          mkdir -p ~/.ssh/cm
+          cat > ~/.ssh/config <<SSHCFG
+          Host cpanel
+            HostName ${{ vars.CPANEL_SSH_HOST }}
+            Port ${{ vars.CPANEL_SSH_PORT }}
+            User ${{ vars.CPANEL_SSH_USER }}
+            IdentityFile ~/.ssh/id_ed25519
+            StrictHostKeyChecking yes
+            UserKnownHostsFile ~/.ssh/known_hosts
+            ControlMaster auto
+            ControlPath ~/.ssh/cm/%r@%h:%p
+            ControlPersist 15m
+            ServerAliveInterval 30
+            ConnectTimeout 20
+          SSHCFG
+          chmod 600 ~/.ssh/config
+          MASTER_UP=false
+          for i in 1 2 3; do
+            if ssh -MNf cpanel; then echo "SSH master established (attempt $i)"; MASTER_UP=true; break; fi
+            echo "SSH attempt $i failed (host firewall may rate-limit CI IPs); retrying in 30s"; sleep 30
+          done
+          if [[ "$MASTER_UP" != "true" ]]; then
+            echo "SSH unreachable after 3 attempts. If this persists, ask the host to allowlist GitHub Actions IPs or check fail2ban." >&2
+            exit 1
+          fi
+          ssh -O check cpanel
 
       - name: Copy artifact to server
         run: |
@@ -297,9 +325,9 @@ jobs:
           RELEASE_ID="${{ steps.eff.outputs.release_id }}"
           SHA="${{ steps.eff.outputs.sha }}"
           echo "Uploading $(basename "$ARTIFACT_FILE") as releases/${RELEASE_ID}.tar.gz for SHA $SHA"
-          ssh -p "${{ vars.CPANEL_SSH_PORT }}" "${{ vars.CPANEL_SSH_USER }}@${{ vars.CPANEL_SSH_HOST }}" "mkdir -p ~/linket/releases ~/linket/shared ~/linket/deploy"
-          scp -P "${{ vars.CPANEL_SSH_PORT }}" "$ARTIFACT_FILE" "${{ vars.CPANEL_SSH_USER }}@${{ vars.CPANEL_SSH_HOST }}:~/linket/releases/${RELEASE_ID}.tar.gz"
-          scp -P "${{ vars.CPANEL_SSH_PORT }}" artifact/RELEASE_SHA "${{ vars.CPANEL_SSH_USER }}@${{ vars.CPANEL_SSH_HOST }}:~/linket/releases/${RELEASE_ID}.RELEASE_SHA.tmp" || true
+          ssh cpanel "mkdir -p ~/linket/releases ~/linket/shared ~/linket/deploy"
+          scp "$ARTIFACT_FILE" "cpanel:~/linket/releases/${RELEASE_ID}.tar.gz"
+          scp artifact/RELEASE_SHA "cpanel:~/linket/releases/${RELEASE_ID}.RELEASE_SHA.tmp" || true
 
       - name: Checkout pinned SHA for helper sync
         uses: actions/checkout@v4
@@ -310,15 +338,15 @@ jobs:
       - name: Sync deploy helpers
         run: |
           set -euo pipefail
-          scp -P "${{ vars.CPANEL_SSH_PORT }}" source/deploy/deploy.sh "${{ vars.CPANEL_SSH_USER }}@${{ vars.CPANEL_SSH_HOST }}:~/linket/deploy/deploy.sh"
-          scp -P "${{ vars.CPANEL_SSH_PORT }}" source/deploy/cpanel-discovery.sh "${{ vars.CPANEL_SSH_USER }}@${{ vars.CPANEL_SSH_HOST }}:~/linket/deploy/cpanel-discovery.sh" || true
-          ssh -p "${{ vars.CPANEL_SSH_PORT }}" "${{ vars.CPANEL_SSH_USER }}@${{ vars.CPANEL_SSH_HOST }}" "chmod +x ~/linket/deploy/deploy.sh ~/linket/deploy/cpanel-discovery.sh 2>&1 | head"
+          scp source/deploy/deploy.sh "cpanel:~/linket/deploy/deploy.sh"
+          scp source/deploy/cpanel-discovery.sh "cpanel:~/linket/deploy/cpanel-discovery.sh" || true
+          ssh cpanel "chmod +x ~/linket/deploy/deploy.sh ~/linket/deploy/cpanel-discovery.sh 2>&1 | head"
 
       - name: Run atomic deploy on server
         run: |
           set -euo pipefail
           RELEASE_ID="${{ steps.eff.outputs.release_id }}"
-          ssh -p "${{ vars.CPANEL_SSH_PORT }}" "${{ vars.CPANEL_SSH_USER }}@${{ vars.CPANEL_SSH_HOST }}" \
+          ssh cpanel \
             "DEPLOY_PATH=\"\$HOME/linket\" PHP_BINARY=\"${{ vars.PHP_BINARY }}\" APP_URL=\"${{ vars.APP_URL }}\" bash ~/linket/deploy/deploy.sh --release-id=\"$RELEASE_ID\" --artifact=\"releases/${RELEASE_ID}.tar.gz\" --php-binary=\"${{ vars.PHP_BINARY }}\" --health-url=\"${{ vars.APP_URL }}/up\" --keep-releases=5 2>&1"
           echo "Remote deploy exit $?"
 
