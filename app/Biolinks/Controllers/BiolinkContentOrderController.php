@@ -19,9 +19,9 @@ class BiolinkContentOrderController extends Controller
      *
      * @operationId changeBiolinkContentOrder
      */
-    public function changeOrder(int $id, Request $request)
+    public function changeOrder(mixed $id, Request $request)
     {
-        $biolink = Biolink::findOrFail($id);
+        $biolink = $id instanceof Biolink || $id instanceof \App\Stores\Models\Store ? $id : Biolink::findOrFail($id);
 
         Gate::authorize('update', $biolink);
 

@@ -18,9 +18,9 @@ class BiolinkAppearanceController extends Controller
      *
      * @operationId updateBiolinkAppearance
      */
-    public function update(int $id, Request $request)
+    public function update(mixed $id, Request $request)
     {
-        $biolink = Biolink::query()->findOrFail($id);
+        $biolink = $id instanceof Biolink || $id instanceof \App\Stores\Models\Store ? $id : Biolink::query()->findOrFail($id instanceof \App\Stores\Models\Store || $id instanceof Biolink ? $id->id : $id);
         Gate::authorize('update', $biolink);
 
         $data = $request->validate([

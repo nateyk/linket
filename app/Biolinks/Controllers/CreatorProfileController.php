@@ -24,10 +24,10 @@ class CreatorProfileController extends Controller
      * @operationId updateCreatorProfile
      */
     public function update(
-        int $id,
+        mixed $id,
         UpdateCreatorProfileRequest $request,
     ): BiolinkResource {
-        $biolink = Biolink::query()->findOrFail($id);
+        $biolink = $id instanceof Biolink || $id instanceof \App\Stores\Models\Store ? $id : Biolink::query()->findOrFail($id);
         Gate::authorize('update', $biolink);
 
         abort_unless(
@@ -79,9 +79,9 @@ class CreatorProfileController extends Controller
      *
      * @operationId convertBiolinkToCreatorProfile
      */
-    public function convert(int $id): BiolinkResource
+    public function convert(mixed $id): BiolinkResource
     {
-        $biolink = Biolink::query()->findOrFail($id);
+        $biolink = $id instanceof Biolink || $id instanceof \App\Stores\Models\Store ? $id : Biolink::query()->findOrFail($id);
         Gate::authorize('update', $biolink);
 
         $biolink = app(ConvertBiolinkToCreatorProfile::class)->execute(

@@ -19,9 +19,9 @@ class BiolinkWidgetsController extends Controller
      *
      * @operationId createBiolinkWidget
      */
-    public function store(int $biolinkId, Request $request)
+    public function store(mixed $biolinkId, Request $request)
     {
-        $biolink = Biolink::findOrFail($biolinkId);
+        $biolink = $biolinkId instanceof Biolink || $biolinkId instanceof \App\Stores\Models\Store ? $biolinkId : Biolink::findOrFail($biolinkId);
 
         Gate::authorize('update', $biolink);
 
@@ -61,9 +61,9 @@ class BiolinkWidgetsController extends Controller
      *
      * @operationId updateBiolinkWidget
      */
-    public function update(int $biolinkId, int $widgetId, Request $request)
+    public function update(mixed $biolinkId, int $widgetId, Request $request)
     {
-        $biolink = Biolink::findOrFail($biolinkId);
+        $biolink = $biolinkId instanceof Biolink || $biolinkId instanceof \App\Stores\Models\Store ? $biolinkId : Biolink::findOrFail($biolinkId);
         $widget = BiolinkWidget::findOrFail($widgetId);
 
         Gate::authorize('update', $biolink);
@@ -94,9 +94,9 @@ class BiolinkWidgetsController extends Controller
      *
      * @operationId deleteBiolinkWidget
      */
-    public function destroy(int $biolinkId, int $widgetId)
+    public function destroy(mixed $biolinkId, int $widgetId)
     {
-        $biolink = Biolink::findOrFail($biolinkId);
+        $biolink = $biolinkId instanceof Biolink || $biolinkId instanceof \App\Stores\Models\Store ? $biolinkId : Biolink::findOrFail($biolinkId);
         $widget = BiolinkWidget::findOrFail($widgetId);
 
         Gate::authorize('update', $biolink);

@@ -49,9 +49,9 @@ class BiolinksController extends Controller
      *
      * @operationId retrieveBiolink
      */
-    public function show(int $id)
+    public function show(mixed $id)
     {
-        $biolink = Biolink::query()->findOrFail($id);
+        $biolink = $id instanceof Biolink || $id instanceof \App\Stores\Models\Store ? $id : Biolink::query()->findOrFail($id);
 
         Gate::authorize('show', $biolink);
 
@@ -93,9 +93,9 @@ class BiolinksController extends Controller
      *
      * @operationId updateBiolink
      */
-    public function update(int $id, CrupdateBiolinkRequest $request)
+    public function update(mixed $id, CrupdateBiolinkRequest $request)
     {
-        $biolink = Biolink::query()->findOrFail($id);
+        $biolink = $id instanceof Biolink || $id instanceof \App\Stores\Models\Store ? $id : Biolink::query()->findOrFail($id);
 
         Gate::authorize('update', $biolink);
 
@@ -112,9 +112,10 @@ class BiolinksController extends Controller
      *
      * @operationId deleteBiolink
      */
-    public function destroy(int $id)
+    public function destroy(mixed $id)
     {
-        $biolink = Biolink::query()->findOrFail($id);
+        $biolink = $id instanceof Biolink || $id instanceof \App\Stores\Models\Store ? $id : Biolink::query()->findOrFail($id);
+        $id = $biolink->id;
 
         Gate::authorize('destroy', $biolink);
 

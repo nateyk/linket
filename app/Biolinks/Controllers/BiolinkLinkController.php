@@ -19,9 +19,9 @@ class BiolinkLinkController extends Controller
      *
      * @operationId createBiolinkLink
      */
-    public function store(int $biolinkId, CrupdateBiolinkLinkRequest $request)
+    public function store(mixed $biolinkId, CrupdateBiolinkLinkRequest $request)
     {
-        $biolink = Biolink::query()->findOrFail($biolinkId);
+        $biolink = $biolinkId instanceof Biolink || $biolinkId instanceof \App\Stores\Models\Store ? $biolinkId : Biolink::query()->findOrFail($biolinkId);
 
         Gate::authorize('update', $biolink);
 
@@ -57,11 +57,11 @@ class BiolinkLinkController extends Controller
      * @operationId updateBiolinkLink
      */
     public function update(
-        int $biolinkId,
+        mixed $biolinkId,
         int $id,
         CrupdateBiolinkLinkRequest $request,
     ) {
-        $biolink = Biolink::query()->findOrFail($biolinkId);
+        $biolink = $biolinkId instanceof Biolink || $biolinkId instanceof \App\Stores\Models\Store ? $biolinkId : Biolink::query()->findOrFail($biolinkId);
         $link = $biolink->links()->findOrFail($id);
 
         Gate::authorize('update', $biolink);
@@ -108,9 +108,9 @@ class BiolinkLinkController extends Controller
      *
      * @operationId detachBiolinkLink
      */
-    public function detach(int $biolinkId, int $id)
+    public function detach(mixed $biolinkId, int $id)
     {
-        $biolink = Biolink::query()->findOrFail($biolinkId);
+        $biolink = $biolinkId instanceof Biolink || $biolinkId instanceof \App\Stores\Models\Store ? $biolinkId : Biolink::query()->findOrFail($biolinkId);
         $link = $biolink->links()->findOrFail($id);
 
         Gate::authorize('update', $biolink);
