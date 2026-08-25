@@ -721,18 +721,23 @@ function BackToBio({
 }
 
 function ProductCover({product}: {product: PublicDigitalProduct}) {
+  const [imageError, setImageError] = useState(false);
+
   return (
     <div
       className={cn(
         'relative overflow-hidden bg-[var(--biolink-surface)]',
-        product.cover?.url ? 'aspect-video' : 'min-h-64 sm:min-h-80',
+        product.cover?.url && !imageError
+          ? 'aspect-video'
+          : 'min-h-64 sm:min-h-80',
       )}
     >
-      {product.cover?.url ? (
+      {product.cover?.url && !imageError ? (
         <img
           className="size-full object-cover"
           src={product.cover.url}
           alt={product.title}
+          onError={() => setImageError(true)}
         />
       ) : (
         <div className="flex size-full min-h-64 flex-col items-center justify-center gap-3 bg-[radial-gradient(circle_at_center,var(--biolink-surface-strong),transparent_68%)] px-6 text-center text-[var(--biolink-muted-text)] sm:min-h-80">

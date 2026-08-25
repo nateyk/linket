@@ -125,18 +125,21 @@ export function ShopWidgetRenderer({
 }
 
 function ProductCard({product, href}: {product: Product; href: string}) {
+  const [imageError, setImageError] = useState(false);
+
   return (
     <a
       className="group flex h-full min-w-0 flex-col overflow-hidden rounded-card bg-[var(--biolink-surface)] text-[var(--biolink-text)] no-underline shadow-sm ring-1 ring-[var(--biolink-border)] backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--biolink-text)]"
       href={href}
     >
       <div className="aspect-video w-full overflow-hidden bg-[var(--biolink-surface-muted)]">
-        {product.cover?.url ? (
+        {product.cover?.url && !imageError ? (
           <img
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
             src={product.cover.url}
             alt={product.title}
             loading="lazy"
+            onError={() => setImageError(true)}
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
@@ -167,4 +170,3 @@ function ProductCard({product, href}: {product: Product; href: string}) {
     </a>
   );
 }
-
