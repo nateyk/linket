@@ -1,0 +1,697 @@
+import {articleEditorTipTapExtensions} from '@common/article-editor/article-editor-tiptap-extensions';
+import {apiClient} from '@common/http/query-client';
+import {ClearFormatButton} from '@common/text-editor/menubar/clear-format-button';
+import {Divider} from '@common/text-editor/menubar/divider';
+import {FontStyleButtons} from '@common/text-editor/menubar/font-style-buttons';
+import {FormatDropdown} from '@common/text-editor/menubar/format-dropdown';
+import {LinkButton} from '@common/text-editor/menubar/link-button';
+import {ListButtons} from '@common/text-editor/menubar/list-buttons';
+import {TiptapEditorContent} from '@common/text-editor/tiptap-editor-content';
+import {TipTapEditorProvider} from '@common/text-editor/tiptap-editor-provider';
+import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
+import {FileUploadProvider} from '@common/uploads/uploader/file-upload-provider';
+import {useActiveUpload} from '@common/uploads/uploader/use-active-upload';
+import {Accordion} from '@shadcn/accordion/accordion';
+import {Alert} from '@shadcn/alert/alert';
+import {AlertDialog} from '@shadcn/alert-dialog/alert-dialog';
+import {Badge} from '@shadcn/badge/badge';
+import {Button} from '@shadcn/button/button';
+import {Card} from '@shadcn/card/card';
+import {Dialog} from '@shadcn/dialog/dialog';
+import {Dropdown} from '@shadcn/dropdown/dropdown';
+import {Field} from '@shadcn/forms/field';
+import {Input} from '@shadcn/forms/input/input';
+import {Switch} from '@shadcn/forms/switch/switch';
+import {Tooltip} from '@shadcn/tooltip/tooltip';
+import {Trans} from '@ui/i18n/trans';
+import {toast} from '@ui/toast/toast';
+import {
+  ChevronDownIcon,
+  CopyIcon,
+  EyeIcon,
+  GraduationCapIcon,
+  GripVerticalIcon,
+  MoreHorizontalIcon,
+  PencilIcon,
+  PlusIcon,
+  SettingsIcon,
+  Trash2Icon,
+  UploadIcon,
+  VideoIcon,
+} from 'lucide-react';
+import {useCallback, useEffect, useState} from 'react';
+import {useParams} from 'react-router';
+
+// Types
+type Course = {
+  id: number;
+  digital_product_id: number;
+  require_sequential_completion: boolean;
+  published_at: string | null;
+  product: {
+    id: number;
+    title: string;
+    description?: string | null;
+    price_cents: number;
+    currency: string;
+    status: string;
+    cover?: {url: string} | null;
+  };
+  chapters: Chapter[];
+};
+
+type Chapter = {
+  id: number;
+  course_id: number;
+  title: string;
+  sort_order: number;
+  lessons: Lesson[];
+};
+
+type Lesson = {
+  id: number;
+  chapter_id: number;
+  course_id: number;
+  title: string;
+  content?: string | null;
+  video_type?: 'upload' | 'external' | null;
+  video_url?: string | null;
+  video_file_entry_id?: number | null;
+  video?: {id: number; name: string; url: string} | null;
+  status: 'draft' | 'published';
+  sort_order: number;
+  resources?: LessonResource[];
+};
+
+type LessonResource = {
+  id: number;
+  display_name: string;
+  file: {id: number; name: string} | null;
+};
+
+export function Component() {
+  return (
+    <FileUploadProvider>
+      <CourseBuilder />
+    </FileUploadProvider>
+  );
+}
+
+function CourseBuilder() {
+  const {productId} = useParams();
+  const [course, setCourse] = useState<Course | null>(null);
+  const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
+  const [selectedChapterId, setSelectedChapterId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>();
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+
+  const load = useCallback(async () => {
+    if (!productId) return;
+    setLoading(true);
+    try {
+      const productRes = await fetch(`/api/v1/digital-products/${productId}`, {
+        credentials: 'same-origin',
+        headers: {Accept: 'application/json'},
+      });
+      if (!productRes.ok) throw new Error('Unable to load product');
+      const productData = (await productRes.json()).data;
+      const courseId = productData.course?.id;
+      if (!courseId) throw new Error('Course not found — this product is not a course');
+      const res = await fetch(`/api/v1/courses/${courseId}`, {
+        credentials: 'same-origin',
+        headers: {Accept: 'application/json'},
+      });
+      if (!res.ok) throw new Error('Unable to load course');
+      const payload = (await res.json()).data;
+      setCourse(payload);
+      // Auto-select first lesson if exists
+      const firstLesson = payload.chapters?.[0]?.lessons?.[0];
+      if (firstLesson) {
+        setSelectedLesson(firstLesson);
+        setSelectedChapterId(payload.chapters[0].id);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load course');
+    } finally {
+      setLoading(false);
+    }
+  }, [productId]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const addChapter = async () => {
+    if (!course) return;
+    const title = `Chapter ${course.chapters.length + 1}`;
+    const res = await apiClient.post(`/api/v1/courses/${course.id}/chapters`, {title});
+    await load();
+    toast.message('Chapter added');
+  };
+
+  const addLesson = async (chapterId: number) => {
+    const res = await apiClient.post(`/api/v1/course-chapters/${chapterId}/lessons`, {
+      title: `Lesson ${Date.now().toString().slice(-3)}`,
+    });
+    await load();
+    const lesson = (res.data as any).data as Lesson;
+    setSelectedLesson(lesson);
+    setSelectedChapterId(chapterId);
+  };
+
+  const updateChapterTitle = async (chapterId: number, title: string) => {
+    await apiClient.put(`/api/v1/course-chapters/${chapterId}`, {title});
+    setCourse(c => {
+      if (!c) return c;
+      return {...c, chapters: c.chapters.map(ch => (ch.id === chapterId ? {...ch, title} : ch))};
+    });
+  };
+
+  const deleteChapter = async (chapterId: number) => {
+    if (!confirm('Delete this chapter and all its lessons?')) return;
+    await apiClient.delete(`/api/v1/course-chapters/${chapterId}`);
+    await load();
+  };
+
+  const deleteLesson = async (lessonId: number) => {
+    if (!confirm('Delete this lesson?')) return;
+    await apiClient.delete(`/api/v1/course-lessons/${lessonId}`);
+    await load();
+    if (selectedLesson?.id === lessonId) setSelectedLesson(null);
+  };
+
+  const toggleLessonStatus = async (lesson: Lesson) => {
+    const newStatus = lesson.status === 'published' ? 'draft' : 'published';
+    await apiClient.put(`/api/v1/course-lessons/${lesson.id}`, {status: newStatus});
+    await load();
+  };
+
+  const publish = async () => {
+    if (!course) return;
+    setPublishing(true);
+    try {
+      await apiClient.post(`/api/v1/courses/${course.id}/publish`);
+      toast.message('Course published');
+      await load();
+    } catch (e: any) {
+      toast.danger(e.message ?? 'Unable to publish');
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <DashboardLayout.MainSection>
+        <DashboardLayout.SectionContent className="p-6">Loading course builder...</DashboardLayout.SectionContent>
+      </DashboardLayout.MainSection>
+    );
+  }
+
+  if (error || !course) {
+    return (
+      <DashboardLayout.MainSection>
+        <DashboardLayout.SectionContent className="p-6">
+          <Alert.Root variant="destructive" fillStyle="subtleFill">
+            <Alert.Description>{error ?? 'Course not found'}</Alert.Description>
+          </Alert.Root>
+        </DashboardLayout.SectionContent>
+      </DashboardLayout.MainSection>
+    );
+  }
+
+  const isPublished = !!course.published_at;
+
+  return (
+    <DashboardLayout.MainSection>
+      <DashboardLayout.SectionHeader>
+        <DashboardLayout.SidebarToggle />
+        <DashboardLayout.SectionTitle>
+          <GraduationCapIcon className="size-5" />
+          <Trans message="Course Builder" />
+          {isPublished && (
+            <Badge variant="positive" className="ml-2">
+              <Trans message="Published" />
+            </Badge>
+          )}
+        </DashboardLayout.SectionTitle>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => window.open(`/ @${course.product.title}`, '_blank')}>
+            <EyeIcon />
+            <Trans message="Preview" />
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setSettingsOpen(true)}>
+            <SettingsIcon />
+            <Trans message="Configure" />
+          </Button>
+          <Button size="sm" onClick={() => void publish()} disabled={publishing}>
+            <Trans message={isPublished ? 'Update' : 'Publish'} />
+          </Button>
+        </div>
+      </DashboardLayout.SectionHeader>
+
+      <DashboardLayout.SectionContent className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
+        <div className="flex min-h-0 flex-1 flex-col gap-0 lg:flex-row">
+          {/* Curriculum */}
+          <div className="flex w-full min-w-0 flex-col border-b bg-card lg:w-[36%] lg:border-r lg:border-b-0">
+            <div className="flex items-center justify-between gap-2 border-b p-3">
+              <h2 className="text-sm font-semibold">
+                <Trans message="Curriculum" />
+              </h2>
+              <Button size="xs" variant="outline" onClick={() => void addChapter()}>
+                <PlusIcon />
+                <Trans message="New chapter" />
+              </Button>
+            </div>
+            <div className="flex-1 space-y-3 overflow-y-auto p-3">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => setSettingsOpen(true)}
+              >
+                <SettingsIcon />
+                <Trans message="Course settings" />
+              </Button>
+
+              {course.chapters.length === 0 ? (
+                <Card.Root className="border-dashed p-6 text-center">
+                  <Card.Content className="flex flex-col items-center gap-2">
+                    <GraduationCapIcon className="size-6 text-muted-foreground" />
+                    <p className="text-sm font-medium">
+                      <Trans message="Build your course" />
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      <Trans message="Start by adding your first chapter." />
+                    </p>
+                    <Button size="sm" onClick={() => void addChapter()}>
+                      <PlusIcon />
+                      <Trans message="Add chapter" />
+                    </Button>
+                  </Card.Content>
+                </Card.Root>
+              ) : (
+                course.chapters.map(chapter => (
+                  <div key={chapter.id} className="rounded-card border bg-background">
+                    <div className="flex items-center gap-2 border-b bg-muted/20 p-2">
+                      <GripVerticalIcon className="size-4 text-muted-foreground" />
+                      <Input
+                        className="h-8 flex-1 border-0 bg-transparent text-sm font-medium focus-visible:ring-1"
+                        defaultValue={chapter.title}
+                        onBlur={e => void updateChapterTitle(chapter.id, e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                        }}
+                      />
+                      <Button size="icon-xs" variant="ghost" onClick={() => void deleteChapter(chapter.id)}>
+                        <Trash2Icon className="size-4" />
+                      </Button>
+                    </div>
+                    <div className="space-y-1 p-2">
+                      {chapter.lessons.length === 0 ? (
+                        <p className="py-3 text-center text-xs text-muted-foreground">
+                          <Trans message="This chapter has no lessons yet." />
+                        </p>
+                      ) : (
+                        chapter.lessons.map(lesson => (
+                          <div
+                            key={lesson.id}
+                            className={`flex items-center gap-2 rounded-card border p-2 text-sm ${selectedLesson?.id === lesson.id ? 'bg-primary/5 ring-1 ring-primary/20' : 'bg-card hover:bg-muted/30'}`}
+                          >
+                            <GripVerticalIcon className="size-3.5 text-muted-foreground" />
+                            <VideoIcon className="size-3.5 text-muted-foreground" />
+                            <button
+                              className="flex-1 truncate text-left font-medium"
+                              onClick={() => {
+                                setSelectedLesson(lesson);
+                                setSelectedChapterId(chapter.id);
+                              }}
+                            >
+                              {lesson.title}
+                            </button>
+                            <Badge variant={lesson.status === 'published' ? 'positive' : 'outline'} className="h-5 px-1.5 text-[10px]">
+                              <Trans message={lesson.status === 'published' ? 'Published' : 'Draft'} />
+                            </Badge>
+                            <Dropdown.Root>
+                              <Dropdown.Trigger
+                                render={
+                                  <Button size="icon-xs" variant="ghost">
+                                    <MoreHorizontalIcon className="size-4" />
+                                  </Button>
+                                }
+                              />
+                              <Dropdown.Content align="end">
+                                <Dropdown.Item onClick={() => void toggleLessonStatus(lesson)}>
+                                  <Trans message={lesson.status === 'published' ? 'Unpublish' : 'Publish'} />
+                                </Dropdown.Item>
+                                <Dropdown.Item
+                                  onClick={async () => {
+                                    await apiClient.post(`/api/v1/course-lessons/${lesson.id}/duplicate`);
+                                    await load();
+                                  }}
+                                >
+                                  <CopyIcon />
+                                  <Trans message="Duplicate" />
+                                </Dropdown.Item>
+                                <Dropdown.Item variant="destructive" onClick={() => void deleteLesson(lesson.id)}>
+                                  <Trash2Icon />
+                                  <Trans message="Delete" />
+                                </Dropdown.Item>
+                              </Dropdown.Content>
+                            </Dropdown.Root>
+                          </div>
+                        ))
+                      )}
+                      <Button size="xs" variant="ghost" className="w-full" onClick={() => void addLesson(chapter.id)}>
+                        <PlusIcon />
+                        <Trans message="New lesson" />
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Editor */}
+          <div className="flex min-w-0 flex-1 flex-col overflow-y-auto bg-muted/10 p-4">
+            {selectedLesson ? (
+              <LessonEditor
+                lesson={selectedLesson}
+                chapterId={selectedChapterId}
+                onSaved={load}
+                onSelectLesson={setSelectedLesson}
+              />
+            ) : (
+              <div className="flex flex-1 flex-col items-center justify-center gap-3 py-16 text-center text-muted-foreground">
+                <PencilIcon className="size-8" />
+                <p className="text-sm">
+                  <Trans message="Select a lesson to edit" />
+                </p>
+                <p className="text-xs">
+                  <Trans message="Choose a lesson from the curriculum to edit its video, content and resources." />
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </DashboardLayout.SectionContent>
+
+      <CourseSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} course={course} onSaved={load} />
+    </DashboardLayout.MainSection>
+  );
+}
+
+function LessonEditor({
+  lesson,
+  chapterId,
+  onSaved,
+  onSelectLesson,
+}: {
+  lesson: Lesson;
+  chapterId: number | null;
+  onSaved: () => void;
+  onSelectLesson: (l: Lesson) => void;
+}) {
+  const [title, setTitle] = useState(lesson.title);
+  const [status, setStatus] = useState(lesson.status);
+  const [videoUrl, setVideoUrl] = useState(lesson.video_url ?? '');
+  const [content, setContent] = useState(lesson.content ?? '');
+  const [saving, setSaving] = useState(false);
+  const [resources, setResources] = useState<LessonResource[]>(lesson.resources ?? []);
+  const {uploadFile, uploadStatus} = useActiveUpload();
+
+  useEffect(() => {
+    setTitle(lesson.title);
+    setStatus(lesson.status);
+    setVideoUrl(lesson.video_url ?? '');
+    setContent(lesson.content ?? '');
+    setResources(lesson.resources ?? []);
+  }, [lesson]);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const res = await apiClient.put(`/api/v1/course-lessons/${lesson.id}`, {
+        title,
+        content,
+        status,
+        video_type: videoUrl ? 'external' : lesson.video_type,
+        video_url: videoUrl || null,
+      });
+      const updated = (res.data as any).data as Lesson;
+      onSelectLesson(updated);
+      toast.message('Lesson saved');
+      onSaved();
+    } catch (e: any) {
+      toast.danger(e.message ?? 'Unable to save');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const uploadVideo = (file: File) => {
+    uploadFile(file, {
+      uploadType: 'courseVideos',
+      onSuccess: async entry => {
+        await apiClient.put(`/api/v1/course-lessons/${lesson.id}`, {
+          video_type: 'upload',
+          video_file_entry_id: entry.id,
+        });
+        toast.message('Video uploaded');
+        onSaved();
+      },
+    });
+  };
+
+  const uploadResource = (file: File) => {
+    uploadFile(file, {
+      uploadType: 'courseResources',
+      onSuccess: async entry => {
+        await apiClient.post(`/api/v1/course-lessons/${lesson.id}/resources`, {
+          file_entry_id: entry.id,
+        });
+        onSaved();
+      },
+    });
+  };
+
+  return (
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs text-muted-foreground">Chapter {chapterId} • Lesson editor</p>
+        <Badge variant={status === 'published' ? 'positive' : 'outline'}>{status}</Badge>
+      </div>
+
+      <Field.Root>
+        <Field.Label>
+          <Trans message="Lesson title" />
+        </Field.Label>
+        <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Lesson title" />
+      </Field.Root>
+
+      <Card.Root className="gap-0 py-0">
+        <Card.Header className="p-4">
+          <Card.Title className="text-sm">
+            <Trans message="Video" />
+          </Card.Title>
+          <Card.Description>
+            <Trans message="Upload a video or paste a YouTube/Vimeo URL." />
+          </Card.Description>
+        </Card.Header>
+        <Card.Content className="flex flex-col gap-3 p-4 pt-0">
+          <label className="flex cursor-pointer flex-col items-center gap-2 rounded-card border border-dashed p-6 text-center hover:bg-muted/30">
+            <UploadIcon className="size-5 text-muted-foreground" />
+            <span className="text-sm font-medium">
+              <Trans message="Upload a video..." />
+            </span>
+            <span className="text-xs text-muted-foreground">.mp4, .mov, .mpeg, or .webm</span>
+            <input
+              type="file"
+              accept="video/*"
+              className="hidden"
+              onChange={e => {
+                const f = e.target.files?.[0];
+                if (f) uploadVideo(f);
+              }}
+            />
+            <span className="text-xs text-muted-foreground">
+              {uploadStatus === 'inProgress' ? 'Uploading...' : 'Click to browse'}
+            </span>
+          </label>
+          <div className="flex items-center gap-3">
+            <div className="h-px flex-1 bg-border" />
+            <span className="text-xs text-muted-foreground">or</span>
+            <div className="h-px flex-1 bg-border" />
+          </div>
+          <Field.Root>
+            <Field.Label>
+              <Trans message="Video URL" />
+            </Field.Label>
+            <Input value={videoUrl} onChange={e => setVideoUrl(e.target.value)} placeholder="https://www.youtube.com/watch?v=..." />
+            <Field.Description>
+              <Trans message="Paste a YouTube or Vimeo URL" />
+            </Field.Description>
+          </Field.Root>
+          {lesson.video && (
+            <div className="rounded-card border bg-muted/20 p-3 text-xs">
+              Current: {lesson.video.name} — <a href={lesson.video.url} target="_blank" className="underline">View</a>
+            </div>
+          )}
+        </Card.Content>
+      </Card.Root>
+
+      <Field.Root>
+        <Field.Label>
+          <Trans message="Content" />
+        </Field.Label>
+        <TipTapEditorProvider extensions={articleEditorTipTapExtensions} initialContent={content} onChange={setContent}>
+          <div className="overflow-hidden rounded-card border">
+            <div className="flex flex-wrap items-center gap-0.5 border-b bg-muted/30 p-2">
+              <FormatDropdown />
+              <Divider />
+              <FontStyleButtons />
+              <Divider />
+              <ListButtons />
+              <Divider />
+              <LinkButton />
+              <Divider />
+              <ClearFormatButton />
+            </div>
+            <TiptapEditorContent className="prose prose-sm min-h-[180px] max-w-none p-3" />
+          </div>
+        </TipTapEditorProvider>
+      </Field.Root>
+
+      <Field.Root>
+        <Field.Label>
+          <Trans message="File attachments" />
+        </Field.Label>
+        <label className="flex cursor-pointer items-center gap-2 rounded-card border border-dashed p-3 hover:bg-muted/30">
+          <UploadIcon className="size-4" />
+          <span className="text-sm">
+            <Trans message="Upload attachment" />
+          </span>
+          <input
+            type="file"
+            className="hidden"
+            onChange={e => {
+              const f = e.target.files?.[0];
+              if (f) uploadResource(f);
+            }}
+          />
+        </label>
+        {!!resources.length && (
+          <div className="divide-y rounded-card border">
+            {resources.map(r => (
+              <div key={r.id} className="flex items-center gap-2 p-2 text-sm">
+                <span className="flex-1 truncate">{r.display_name}</span>
+                <Button
+                  size="icon-xs"
+                  variant="ghost"
+                  onClick={async () => {
+                    await apiClient.delete(`/api/v1/course-lesson-resources/${r.id}`);
+                    onSaved();
+                  }}
+                >
+                  <Trash2Icon className="size-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </Field.Root>
+
+      <div className="flex items-center justify-between gap-3">
+        <label className="flex items-center gap-2 text-sm">
+          <Switch checked={status === 'published'} onCheckedChange={v => setStatus(v ? 'published' : 'draft')} />
+          <Trans message="Published" />
+        </label>
+        <Button onClick={() => void save()} disabled={saving}>
+          <Trans message={saving ? 'Saving...' : 'Save changes'} />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function CourseSettingsDialog({
+  open,
+  onOpenChange,
+  course,
+  onSaved,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  course: Course;
+  onSaved: () => void;
+}) {
+  const [requireSeq, setRequireSeq] = useState(course.require_sequential_completion);
+  const [price, setPrice] = useState((course.product.price_cents / 100).toFixed(2));
+
+  useEffect(() => setRequireSeq(course.require_sequential_completion), [course]);
+
+  const save = async () => {
+    await apiClient.put(`/api/v1/courses/${course.id}`, {
+      require_sequential_completion: requireSeq,
+    });
+    if (price) {
+      const cents = Math.round(Number(price) * 100);
+      await apiClient.put(`/api/v1/digital-products/${course.product.id}`, {
+        title: course.product.title,
+        price_cents: cents,
+        type: 'course',
+      });
+    }
+    toast.message('Settings saved');
+    onOpenChange(false);
+    onSaved();
+  };
+
+  return (
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+      <Dialog.Portal>
+        <Dialog.Backdrop />
+        <Dialog.Content className="sm:max-w-lg">
+          <Dialog.Header>
+            <Dialog.Title>
+              <Trans message="Course Settings" />
+            </Dialog.Title>
+            <Dialog.Description>
+              <Trans message="Manage your course cover image and other settings" />
+            </Dialog.Description>
+          </Dialog.Header>
+          <Dialog.Body className="space-y-4">
+            <Field.Root>
+              <Field.Label>
+                <Trans message="Price (ETB)" />
+              </Field.Label>
+              <Input value={price} onChange={e => setPrice(e.target.value)} type="number" min="0" step="0.01" />
+            </Field.Root>
+            <div className="flex items-center justify-between gap-4 rounded-card border p-3">
+              <div>
+                <p className="text-sm font-medium">
+                  <Trans message="Require students to complete lessons in order" />
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  <Trans message="Students must complete lessons before moving to the next one" />
+                </p>
+              </div>
+              <Switch checked={requireSeq} onCheckedChange={setRequireSeq} />
+            </div>
+          </Dialog.Body>
+          <Dialog.Footer>
+            <Dialog.CloseButton>
+              <Trans message="Cancel" />
+            </Dialog.CloseButton>
+            <Button onClick={() => void save()}>
+              <Trans message="Save" />
+            </Button>
+          </Dialog.Footer>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+}

@@ -35,8 +35,11 @@ class PublicDigitalProducts
 
         return $biolink->digitalProducts()
             ->where('digital_products.status', 'approved')
-            ->whereHas('files')
-            ->with(['cover', 'creator'])
+            ->where(function ($q) {
+                $q->where(function ($qq) { $qq->where('digital_products.type', '!=', 'course')->whereHas('files'); })
+                  ->orWhere(function ($qq) { $qq->where('digital_products.type', 'course')->whereHas('course', fn($c) => $c->whereNotNull('published_at')); });
+            })
+            ->with(['cover', 'creator', 'course'])
             ->withCount('files')
             ->latest('digital_products.approved_at');
     }

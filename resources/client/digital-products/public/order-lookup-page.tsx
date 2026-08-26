@@ -15,12 +15,15 @@ import {
   ArrowLeftIcon,
   DownloadIcon,
   FileDownIcon,
+  GraduationCapIcon,
   MailCheckIcon,
   MailIcon,
   PackageOpenIcon,
   ShieldCheckIcon,
+  SparklesIcon,
   StarIcon,
 } from 'lucide-react';
+import {auth} from '@common/auth/use-auth';
 import {ReactNode, useCallback, useEffect, useState} from 'react';
 import {Link, useLocation, useNavigate} from 'react-router';
 
@@ -45,8 +48,89 @@ type Order = {
 
 export function Component() {
   const location = useLocation();
+  const isAuth = auth.isLoggedIn;
+  if (location.pathname.endsWith('/purchases')) return <PurchaseOrders />;
+  if (isAuth) return <AuthenticatedMyOrder />;
+  return <RecoveryRequest />;
+}
 
-  return location.pathname.endsWith('/purchases') ? <PurchaseOrders /> : <RecoveryRequest />;
+function AuthenticatedMyOrder() {
+  const [courses, setCourses] = useState<{course_id: number; title: string; cover?: {url: string} | null; total_lessons: number; percent: number}[]>([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch('/api/v1/my-courses', {credentials: 'same-origin', headers: {Accept: 'application/json'}});
+        if (res.ok) {
+          const payload = await res.json();
+          setCourses(payload.data ?? []);
+        }
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+  return (
+    <PublicShell>
+      <PromotionBanner />
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight"><Trans message="My orders & courses" /></h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            <Trans message="Your purchases and enrolled courses in one place." />
+          </p>
+        </div>
+        <Button variant="outline" size="sm" render={<Link to="/dashboard/my-courses" />}><GraduationCapIcon /><Trans message="Go to learning" /></Button>
+      </div>
+      {loading ? (
+        <div className="flex min-h-40 items-center justify-center"><Spinner /></div>
+      ) : courses.length ? (
+        <div className="space-y-3">
+          <h2 className="text-sm font-semibold"><Trans message="My courses" /></h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {courses.map(c => (
+              <Card.Root key={c.course_id} className="gap-0 overflow-hidden py-0">
+                <div className="aspect-video bg-muted">
+                  {c.cover?.url ? <img src={c.cover.url} alt={c.title} className="size-full object-cover" /> : <div className="flex size-full items-center justify-center text-muted-foreground"><GraduationCapIcon className="size-8" /></div>}
+                </div>
+                <Card.Content className="p-3">
+                  <p className="text-sm font-medium">{c.title}</p>
+                  <p className="text-xs text-muted-foreground">{c.percent}% • {c.total_lessons} lessons</p>
+                  <Button size="sm" className="mt-2 w-full" render={<Link to={`/dashboard/learn/${c.course_id}`}/>}><Trans message="Continue" /></Button>
+                </Card.Content>
+              </Card.Root>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <Alert fillStyle="subtleFill"><GraduationCapIcon /><Alert.Title><Trans message="No courses yet" /></Alert.Title><Alert.Description><Trans message="Courses you purchase will appear here. Explore promoted courses below." /></Alert.Description></Alert>
+      )}
+      <Card.Root className="gap-0 overflow-hidden">
+        <Card.Header><Card.Title><Trans message="Need your downloads?" /></Card.Title><Card.Description><Trans message="Verify your purchase email to unlock protected downloads when you bought as guest." /></Card.Description></Card.Header>
+        <Card.Content className="flex flex-col gap-3 sm:flex-row">
+          <Button variant="outline" render={<Link to="/my-order/purchases" />}><MailIcon /><Trans message="Go to purchases" /></Button>
+          <Button variant="outline" render={<Link to="/dashboard/my-courses" />}><GraduationCapIcon /><Trans message="My courses" /></Button>
+        </Card.Content>
+      </Card.Root>
+    </PublicShell>
+  );
+}
+
+function PromotionBanner() {
+  return (
+    <Card.Root className="overflow-hidden border-primary/20 bg-primary/5 py-0">
+      <Card.Content className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex gap-3">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"><SparklesIcon className="size-5" /></span>
+          <div>
+            <p className="text-sm font-semibold"><Trans message="Level up with featured courses" /></p>
+            <p className="text-xs text-muted-foreground"><Trans message="New creator courses are live on Linket — keep learning and unlock your next certificate." /></p>
+          </div>
+        </div>
+        <Button size="sm" variant="outline" render={<Link to="/dashboard/my-courses" />}><GraduationCapIcon /><Trans message="Explore courses" /></Button>
+      </Card.Content>
+    </Card.Root>
+  );
 }
 
 function RecoveryRequest() {

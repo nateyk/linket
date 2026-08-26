@@ -13,13 +13,28 @@ class PublicDigitalProductResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        // Compute course-specific aggregates when loaded
+        $isCourse = ($this->type ?? 'digital') === 'course';
+        $course = $this->whenLoaded('course', fn() => $this->course);
+        $chaptersCount = null;
+        $lessonsCount = null;
+        if ($isCourse && $this->relationLoaded('course') && $this->course) {
+            $chaptersCount = $this->course->chapters()->count();
+            $lessonsCount = \App\Courses\Models\Lesson::where('course_id', $this->course->id)->where('status', 'published')->count();
+        }
+        $courseId = $isCourse && $this->relationLoaded('course') && $this->course ? $this->course->id : null;
         return [
             'id' => $this->id,
             'title' => $this->title,
             'description' => $this->description,
             'price_cents' => $this->price_cents,
             'currency' => $this->currency,
+            'type' => $this->type ?? 'digital',
+            'is_course' => $isCourse,
+            'course_id' => $courseId,
             'files_count' => $this->whenCounted('files'),
+            'chapters_count' => $chaptersCount,
+            'lessons_count' => $lessonsCount,
             'cover' => $this->whenLoaded('cover', fn() => $this->cover ? [
                 'url' => $this->cover->url,
             ] : null),

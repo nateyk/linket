@@ -423,6 +423,22 @@ export const dashboardRoutes: RouteObject[] = [
           import('@app/dashboard/digital-products/digital-product-form-page'),
       },
       {
+        path: 'my-products/:productId/course',
+        lazy: () => import('@app/dashboard/courses/course-builder-page'),
+      },
+      {
+        path: 'my-courses',
+        lazy: () => import('@app/dashboard/my-learning/my-courses-page'),
+      },
+      {
+        path: 'learn/:courseId',
+        lazy: () => import('@app/dashboard/my-learning/course-learn-page'),
+      },
+      {
+        path: 'learn/:courseId/lessons/:lessonId',
+        lazy: () => import('@app/dashboard/my-learning/lesson-player-page'),
+      },
+      {
         path: 'my-products/:productId/reviews',
         lazy: () =>
           import('@app/dashboard/digital-products/product-reviews-page'),

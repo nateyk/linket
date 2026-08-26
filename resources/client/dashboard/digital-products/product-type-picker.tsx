@@ -5,11 +5,12 @@ import {
   BookIcon,
   CheckIcon,
   DownloadIcon,
+  GraduationCapIcon,
   HeadphonesIcon,
   type LucideIcon,
 } from 'lucide-react';
 
-export type ProductType = 'digital' | 'ebook' | 'audio';
+export type ProductType = 'digital' | 'ebook' | 'audio' | 'course';
 
 type ProductTypeOption = {
   id: ProductType;
@@ -36,6 +37,12 @@ const PRODUCT_TYPES: ProductTypeOption[] = [
     icon: HeadphonesIcon,
     title: 'Audio',
     description: 'Sell music, podcasts, or any audio content.',
+  },
+  {
+    id: 'course',
+    icon: GraduationCapIcon,
+    title: 'Course',
+    description: 'Sell a structured curriculum with chapters, lessons, video and resources.',
   },
 ];
 

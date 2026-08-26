@@ -59,6 +59,15 @@ class StorefrontWebhookHandler
                 'expires_at' => now()->addDays(config('storefront.download_days')),
             ]);
         }
+        // Course enrollment (idempotent)
+        try {
+            $productForCourse = $order->product ?? $fresh?->product;
+            if ($productForCourse && ($productForCourse->type ?? 'digital') === 'course' && $productForCourse->course) {
+                app(\App\Courses\Services\EnrollmentService::class)->grantFromOrder($order->fresh('product.course'));
+            }
+        } catch (\Throwable $e) {
+            Log::warning('store.course.enrollment_failed', ['order_id' => $order->id, 'error' => $e->getMessage()]);
+        }
         SendStorefrontReceipt::dispatch($order->id)->afterCommit();
     }
 }

@@ -6,7 +6,7 @@ import {Sidebar} from '@common/ui/dashboard/sidebar';
 import {Logo} from '@common/ui/navigation/navbar/logo';
 import {WorkspaceSelector} from '@common/workspace/workspace-selector';
 import {Trans} from '@ui/i18n/trans';
-import {StoreIcon} from 'lucide-react';
+import {GraduationCapIcon, StoreIcon} from 'lucide-react';
 import {use} from 'react';
 
 // stores alias – canonical storefront icon, keep deprecated biolinks
@@ -26,6 +26,7 @@ export function AppDashboardSidebar() {
   const hasDigitalProducts = primaryMenu?.items.some(
     item => item.action === '/dashboard/my-products',
   );
+  const hasMyCourses = primaryMenu?.items.some(item => item.action === '/dashboard/my-courses');
   const hasSecondaryItems = !!secondaryMenu?.items.length;
 
   return (
@@ -57,6 +58,15 @@ export function AppDashboardSidebar() {
                     icon={<StoreIcon />}
                   >
                     <Trans message="Digital Products" />
+                  </Sidebar.MenuButton>
+                </Sidebar.MenuItem>
+              </Sidebar.Menu>
+            )}
+            {!hasMyCourses && (
+              <Sidebar.Menu>
+                <Sidebar.MenuItem>
+                  <Sidebar.MenuButton render={<NavLink to="/dashboard/my-courses" />} icon={<GraduationCapIcon />}>
+                    <Trans message="My Courses" />
                   </Sidebar.MenuButton>
                 </Sidebar.MenuItem>
               </Sidebar.Menu>

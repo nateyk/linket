@@ -32,6 +32,7 @@ import {
   DownloadIcon,
   FileDownIcon,
   FileIcon,
+  GraduationCapIcon,
   LockKeyholeIcon,
   PackageOpenIcon,
   RefreshCwIcon,
@@ -46,6 +47,10 @@ export type PublicDigitalProduct = {
   description?: string | null;
   price_cents: number;
   currency: string;
+  type?: string;
+  is_course?: boolean;
+  lessons_count?: number | null;
+  chapters_count?: number | null;
   cover?: {url: string} | null;
   files_count?: number;
 };
@@ -179,17 +184,29 @@ export function PublicDigitalProductPage({
             <Card.Content className="flex min-w-0 flex-col gap-6 p-5 sm:p-7">
               <div className="flex min-w-0 flex-col gap-4">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge className="bg-[var(--biolink-surface)] text-[var(--biolink-text)] ring-1 ring-[var(--biolink-border)]">
-                    <FileDownIcon />
-                    <Trans message="Digital download" />
-                  </Badge>
-                  <span className="flex items-center gap-1.5 text-xs font-medium text-[var(--biolink-muted-text)]">
-                    <FileIcon className="size-4 shrink-0" />
-                    <Trans
-                      message=":count files"
-                      values={{count: data.product.files_count ?? 1}}
-                    />
-                  </span>
+                  {data.product.is_course ? (
+                    <>
+                      <Badge className="bg-[var(--biolink-surface)] text-[var(--biolink-text)] ring-1 ring-[var(--biolink-border)]">
+                        <GraduationCapIcon />
+                        <Trans message="Course" />
+                      </Badge>
+                      <span className="flex items-center gap-1.5 text-xs font-medium text-[var(--biolink-muted-text)]">
+                        <GraduationCapIcon className="size-4 shrink-0" />
+                        <Trans message=":count lessons" values={{count: data.product.lessons_count ?? 0}} />
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <Badge className="bg-[var(--biolink-surface)] text-[var(--biolink-text)] ring-1 ring-[var(--biolink-border)]">
+                        <FileDownIcon />
+                        <Trans message="Digital download" />
+                      </Badge>
+                      <span className="flex items-center gap-1.5 text-xs font-medium text-[var(--biolink-muted-text)]">
+                        <FileIcon className="size-4 shrink-0" />
+                        <Trans message=":count files" values={{count: data.product.files_count ?? 1}} />
+                      </span>
+                    </>
+                  )}
                 </div>
                 <h1 className="max-w-3xl text-3xl leading-tight font-semibold tracking-tight text-balance sm:text-4xl">
                   {data.product.title}
@@ -210,6 +227,7 @@ export function PublicDigitalProductPage({
                   </p>
                 </section>
               )}
+              {data.product.is_course && (data.product as any).course_id && <CourseCurriculum courseId={(data.product as any).course_id} />}
             </Card.Content>
           </Card.Root>
 
@@ -906,6 +924,44 @@ function DownloadList({
               <DownloadIcon />
               <Trans message="Download" />
             </Button>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function CourseCurriculum({courseId}: {courseId: number}) {
+  const [curriculum, setCurriculum] = useState<null | {chapters: {id: number; title: string; lessons: {id: number; title: string}[]}[]}>(null);
+  useEffect(() => {
+    void (async () => {
+      try {
+        const res = await fetch(`/api/v1/public/courses/${courseId}/curriculum`, {headers: {Accept: 'application/json'}});
+        if (!res.ok) return;
+        const payload = await res.json();
+        setCurriculum(payload.data ?? payload);
+      } catch {}
+    })();
+  }, [courseId]);
+  if (!curriculum?.chapters?.length) return null;
+  return (
+    <section className="flex flex-col gap-3 border-t border-[var(--biolink-border)] pt-5">
+      <h2 className="text-sm font-semibold">
+        <Trans message="Course curriculum" />
+      </h2>
+      <div className="space-y-3">
+        {curriculum.chapters.map(ch => (
+          <div key={ch.id} className="rounded-card border border-[var(--biolink-border)] bg-[var(--biolink-surface)] p-3">
+            <h3 className="text-sm font-medium">{ch.title}</h3>
+            <p className="text-xs text-[var(--biolink-muted-text)]">{ch.lessons.length} lessons</p>
+            <div className="mt-2 space-y-1">
+              {ch.lessons.map(lesson => (
+                <div key={lesson.id} className="flex items-center gap-2 rounded-card border border-[var(--biolink-border)] bg-[var(--biolink-surface-strong)] px-3 py-2 text-sm">
+                  <GraduationCapIcon className="size-4 text-[var(--biolink-muted-text)]" />
+                  <span className="flex-1 truncate">{lesson.title}</span>
+                </div>
+              ))}
+            </div>
           </div>
         ))}
       </div>

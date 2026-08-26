@@ -150,6 +150,54 @@ class AppServiceProvider extends ServiceProvider
                     ],
                 );
             });
+
+        $this->registerCourseRoutes();
+    }
+
+    private function registerCourseRoutes(): void
+    {
+        \Illuminate\Support\Facades\Route::prefix('api/v1')->middleware(['api', 'optionalAuth:sanctum', 'verified', 'verifyApiAccess'])->group(function () {
+            // Creator course management
+            \Illuminate\Support\Facades\Route::get('courses/{course}', [\App\Courses\Controllers\CoursesController::class, 'show']);
+            \Illuminate\Support\Facades\Route::put('courses/{course}', [\App\Courses\Controllers\CoursesController::class, 'update']);
+            \Illuminate\Support\Facades\Route::post('courses/{course}/publish', [\App\Courses\Controllers\CoursesController::class, 'publish']);
+            \Illuminate\Support\Facades\Route::post('courses/{course}/unpublish', [\App\Courses\Controllers\CoursesController::class, 'unpublish']);
+            \Illuminate\Support\Facades\Route::post('courses/{course}/chapters/reorder', [\App\Courses\Controllers\CoursesController::class, 'reorderChapters']);
+            \Illuminate\Support\Facades\Route::get('courses/{course}/preview', [\App\Courses\Controllers\CoursesController::class, 'preview']);
+            \Illuminate\Support\Facades\Route::get('courses/{course}/curriculum', [\App\Courses\Controllers\StudentCoursesController::class, 'curriculum']);
+
+            \Illuminate\Support\Facades\Route::post('courses/{course}/chapters', [\App\Courses\Controllers\ChaptersController::class, 'store']);
+            \Illuminate\Support\Facades\Route::put('course-chapters/{chapter}', [\App\Courses\Controllers\ChaptersController::class, 'update']);
+            \Illuminate\Support\Facades\Route::delete('course-chapters/{chapter}', [\App\Courses\Controllers\ChaptersController::class, 'destroy']);
+            \Illuminate\Support\Facades\Route::post('course-chapters/{chapter}/lessons/reorder', [\App\Courses\Controllers\ChaptersController::class, 'reorderLessons']);
+
+            \Illuminate\Support\Facades\Route::post('course-chapters/{chapter}/lessons', [\App\Courses\Controllers\LessonsController::class, 'store']);
+            \Illuminate\Support\Facades\Route::get('course-lessons/{lesson}', [\App\Courses\Controllers\LessonsController::class, 'show']);
+            \Illuminate\Support\Facades\Route::put('course-lessons/{lesson}', [\App\Courses\Controllers\LessonsController::class, 'update']);
+            \Illuminate\Support\Facades\Route::delete('course-lessons/{lesson}', [\App\Courses\Controllers\LessonsController::class, 'destroy']);
+            \Illuminate\Support\Facades\Route::post('course-lessons/{lesson}/duplicate', [\App\Courses\Controllers\LessonsController::class, 'duplicate']);
+            \Illuminate\Support\Facades\Route::post('course-lessons/{lesson}/move', [\App\Courses\Controllers\LessonsController::class, 'move']);
+
+            \Illuminate\Support\Facades\Route::post('course-lessons/{lesson}/resources', [\App\Courses\Controllers\LessonResourcesController::class, 'store']);
+            \Illuminate\Support\Facades\Route::delete('course-lesson-resources/{resource}', [\App\Courses\Controllers\LessonResourcesController::class, 'destroy']);
+            \Illuminate\Support\Facades\Route::get('course-lesson-resources/{resource}/download', [\App\Courses\Controllers\LessonResourcesController::class, 'download']);
+
+        });
+
+        \Illuminate\Support\Facades\Route::prefix('api/v1')->middleware(['api', 'optionalAuth:sanctum'])->group(function () {
+            // Student (optionalAuth for test compat, controller handles 401)
+            \Illuminate\Support\Facades\Route::get('my-courses', [\App\Courses\Controllers\StudentCoursesController::class, 'myCourses']);
+            \Illuminate\Support\Facades\Route::get('courses/{course}/learn', [\App\Courses\Controllers\StudentCoursesController::class, 'show']);
+            \Illuminate\Support\Facades\Route::get('courses/{course}/learn/lessons/{lesson}', [\App\Courses\Controllers\StudentCoursesController::class, 'lesson']);
+            \Illuminate\Support\Facades\Route::post('course-lessons/{lesson}/complete', [\App\Courses\Controllers\LessonProgressController::class, 'complete']);
+            \Illuminate\Support\Facades\Route::post('course-lessons/{lesson}/uncomplete', [\App\Courses\Controllers\LessonProgressController::class, 'uncomplete']);
+            \Illuminate\Support\Facades\Route::get('courses/{course}/progress', [\App\Courses\Controllers\LessonProgressController::class, 'progress']);
+        });
+
+        // Public curriculum (no auth)
+        \Illuminate\Support\Facades\Route::prefix('api/v1/public')->group(function () {
+            \Illuminate\Support\Facades\Route::get('courses/{course}/curriculum', [\App\Courses\Controllers\StudentCoursesController::class, 'curriculum']);
+        });
     }
 
     public function register()

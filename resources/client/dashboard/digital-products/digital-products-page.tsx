@@ -23,6 +23,7 @@ import {
   Clock3Icon,
   CopyIcon,
   ExternalLinkIcon,
+  GraduationCapIcon,
   MoreHorizontalIcon,
   PackageIcon,
   PackagePlusIcon,
@@ -56,6 +57,8 @@ type Product = {
   description?: string | null;
   price_cents: number;
   currency: string;
+  type?: string;
+  is_course?: boolean;
   status: ProductStatus;
   rejection_reason?: string | null;
   sales_count: number;
@@ -63,6 +66,7 @@ type Product = {
   cover?: {url: string} | null;
   files?: unknown[];
   biolinks?: ProductBiolink[];
+  course?: {id: number} | null;
 };
 
 type ProductsResponse = {
@@ -247,12 +251,14 @@ function ProductCard({
     copyToClipboard();
     toast.positive(message('Product link copied'));
   };
+  const isCourse = product.type === 'course' || product.is_course;
+  const editPath = isCourse ? `/dashboard/my-products/${product.id}/course` : `/dashboard/my-products/${product.id}/edit`;
 
   return (
     <Card.Root className="group gap-0 overflow-hidden py-0 shadow-xs transition-shadow hover:shadow-md">
       <Card.Header className="relative block p-0">
         <Link
-          to={`/dashboard/my-products/${product.id}/edit`}
+          to={editPath}
           className="block aspect-video overflow-hidden bg-muted outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
         >
           {product.cover?.url ? (
@@ -277,9 +283,16 @@ function ProductCard({
 
       <Card.Content className="flex flex-col gap-3 p-4 pb-0">
         <div className="flex min-w-0 flex-col gap-1">
+          <div className="flex items-center gap-2">
+            {isCourse && (
+              <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
+                <Trans message="Course" />
+              </Badge>
+            )}
+          </div>
           <Card.Title className="truncate text-sm font-semibold leading-5">
             <Link
-              to={`/dashboard/my-products/${product.id}/edit`}
+              to={editPath}
               className="hover:underline hover:underline-offset-3"
             >
               {product.title}
@@ -428,11 +441,17 @@ function ProductActions({
         </Dropdown.Trigger>
         <Dropdown.Content align="end">
           <Dropdown.LinkItem
-            render={<Link to={`/dashboard/my-products/${product.id}/edit`} />}
+            render={<Link to={product.type === 'course' || product.is_course ? `/dashboard/my-products/${product.id}/course` : `/dashboard/my-products/${product.id}/edit`} />}
           >
             <PencilIcon />
-            <Trans message="Edit product" />
+            <Trans message={product.type === 'course' || product.is_course ? 'Edit course' : 'Edit product'} />
           </Dropdown.LinkItem>
+          {(product.type === 'course' || product.is_course) && (
+            <Dropdown.LinkItem render={<Link to={`/dashboard/my-products/${product.id}/course`} />}>
+              <GraduationCapIcon />
+              <Trans message="Open course builder" />
+            </Dropdown.LinkItem>
+          )}
 
           {canSubmit && (
             <Dropdown.Item

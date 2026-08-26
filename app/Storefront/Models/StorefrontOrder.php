@@ -32,6 +32,7 @@ class StorefrontOrder extends StorefrontModel
         return $value ?? $this->attributes['store_id'] ?? null;
     }
     public function creator(): BelongsTo { return $this->belongsTo(User::class, 'creator_id'); }
+    public function buyer(): BelongsTo { return $this->belongsTo(User::class, 'buyer_user_id'); }
     public function items(): HasMany { return $this->hasMany(StorefrontOrderItem::class); }
     public function entitlements(): HasMany { return $this->hasMany(DownloadEntitlement::class); }
     public function earningsLedger(): HasMany { return $this->hasMany(DigitalProductEarningsLedger::class); }
