@@ -7,6 +7,7 @@ use App\Stores\Models\Store;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class StorefrontOrder extends StorefrontModel
 {
@@ -35,4 +36,5 @@ class StorefrontOrder extends StorefrontModel
     public function entitlements(): HasMany { return $this->hasMany(DownloadEntitlement::class); }
     public function earningsLedger(): HasMany { return $this->hasMany(DigitalProductEarningsLedger::class); }
     public function refunds(): HasMany { return $this->hasMany(DigitalProductPaymentRefund::class); }
+    public function review(): HasOne { return $this->hasOne(ProductReview::class); }
 }

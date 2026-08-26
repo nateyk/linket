@@ -2,7 +2,7 @@
 
 namespace Tests\Unit;
 
-use App\Storefront\Controllers\OrderLookupController;
+use App\Storefront\Controllers\CustomerOrderPortalController;
 use App\Storefront\Jobs\SendDigitalProductOrderRecoveryLink;
 use App\Storefront\Models\DigitalProductOrderRecovery;
 use App\Storefront\Models\DigitalProductOrderRecoveryDelivery;
@@ -14,10 +14,10 @@ class OrderRecoveryTest extends TestCase
 {
     public function testItReturnsTheSameGenericResponseForAnInvalidRecoveryRequest(): void
     {
-        $response = (new OrderLookupController())->requestRecovery(Request::create('/api/v1/public/order-lookup/request', 'POST', ['email' => 'not-an-email']));
+        $response = (new CustomerOrderPortalController())->requestCode(Request::create('/api/v1/public/my-order/request-code', 'POST', ['email' => 'not-an-email']));
 
         $this->assertSame(
-            'If paid purchases match that email address, we will send a secure recovery link shortly.',
+            'If paid purchases match that email address, we will send a sign-in code shortly.',
             $response['message'],
         );
     }

@@ -68,7 +68,7 @@ use App\Storefront\Controllers\AdminDigitalProductRefundsController;
 use App\Storefront\Controllers\PublicDigitalProductsController;
 use App\Payments\Controllers\AdminPaymentTransactionsController;
 use App\Payments\Controllers\AdminPaymentHealthController;
-use App\Storefront\Controllers\OrderLookupController;
+use App\Storefront\Controllers\CustomerOrderPortalController;
 use App\Storefront\Controllers\AdminDigitalProductOrderRecoveryDeliveriesController;
 use App\Storefront\Controllers\ProductReviewsController;
 use App\Storefront\Controllers\CreatorProductReviewsController;
@@ -328,13 +328,6 @@ Route::group(['prefix' => 'v1'], function () {
         ]);
     Route::get('public/biolinks/{biolink}/digital-products/{digitalProduct}/orders/{order}', [PublicDigitalProductsController::class, 'order'])->middleware('throttle:60,1');
     Route::get('public/biolinks/{biolink}/digital-products/{digitalProduct}/reviews', [ProductReviewsController::class, 'index']);
-    Route::post('public/biolinks/{biolink}/digital-products/{digitalProduct}/reviews', [ProductReviewsController::class, 'store'])
-        ->middleware('throttle:20,1')
-        ->withoutMiddleware([
-            EnsureFrontendRequestsAreStateful::class,
-            VerifyCsrfToken::class,
-            VerifyApiAccessMiddleware::class,
-        ]);
     Route::get('public/biolinks/{biolink}/digital-products/{digitalProduct}/reviews/{order}', [ProductReviewsController::class, 'show']);
     Route::get('public/stores/{biolink}/digital-products', [PublicDigitalProductsController::class, 'index']);
     Route::get('public/stores/{biolink}/digital-products/{digitalProduct}', [PublicDigitalProductsController::class, 'show']);
@@ -347,24 +340,20 @@ Route::group(['prefix' => 'v1'], function () {
         ]);
     Route::get('public/stores/{biolink}/digital-products/{digitalProduct}/orders/{order}', [PublicDigitalProductsController::class, 'order'])->middleware('throttle:60,1');
     Route::get('public/stores/{biolink}/digital-products/{digitalProduct}/reviews', [ProductReviewsController::class, 'index']);
-    Route::post('public/stores/{biolink}/digital-products/{digitalProduct}/reviews', [ProductReviewsController::class, 'store'])
-        ->middleware('throttle:20,1')
-        ->withoutMiddleware([
-            EnsureFrontendRequestsAreStateful::class,
-            VerifyCsrfToken::class,
-            VerifyApiAccessMiddleware::class,
-        ]);
     Route::get('public/stores/{biolink}/digital-products/{digitalProduct}/reviews/{order}', [ProductReviewsController::class, 'show']);
-    Route::post('public/order-lookup/request', [OrderLookupController::class, 'requestRecovery'])->middleware('throttle:20,1')->withoutMiddleware([
+    Route::post('public/my-order/request-code', [CustomerOrderPortalController::class, 'requestCode'])->middleware('throttle:20,1')->withoutMiddleware([
+        VerifyCsrfToken::class,
+        VerifyApiAccessMiddleware::class,
+    ]);
+    Route::post('public/my-order/verify-code', [CustomerOrderPortalController::class, 'verifyCode'])->middleware('throttle:20,1')->withoutMiddleware([
         EnsureFrontendRequestsAreStateful::class,
         VerifyCsrfToken::class,
         VerifyApiAccessMiddleware::class,
     ]);
-    Route::get('public/order-lookup/orders', [OrderLookupController::class, 'orders'])->middleware('throttle:60,1')->withoutMiddleware([
-        VerifyApiAccessMiddleware::class,
-    ]);
-    Route::post('public/order-lookup/orders/{order}/downloads/{entitlement}', [OrderLookupController::class, 'download'])->middleware('throttle:30,1')->withoutMiddleware(VerifyApiAccessMiddleware::class);
-    Route::post('public/order-lookup/orders/{order}/resend-receipt', [OrderLookupController::class, 'resendReceipt'])->middleware('throttle:10,1')->withoutMiddleware(VerifyApiAccessMiddleware::class);
+    Route::get('public/my-order/purchases', [CustomerOrderPortalController::class, 'purchases'])->middleware('throttle:60,1')->withoutMiddleware(VerifyApiAccessMiddleware::class);
+    Route::post('public/my-order/purchases/{order}/downloads/{entitlement}', [CustomerOrderPortalController::class, 'download'])->middleware('throttle:30,1')->withoutMiddleware(VerifyApiAccessMiddleware::class);
+    Route::post('public/my-order/purchases/{order}/resend-receipt', [CustomerOrderPortalController::class, 'resendReceipt'])->middleware('throttle:10,1')->withoutMiddleware(VerifyApiAccessMiddleware::class);
+    Route::post('public/my-order/purchases/{order}/review', [CustomerOrderPortalController::class, 'review'])->middleware('throttle:10,1')->withoutMiddleware(VerifyApiAccessMiddleware::class);
     Route::get('storefront/products/{digitalProduct}/public', [StorefrontCheckoutController::class, 'show']);
     Route::post('storefront/products/{digitalProduct}/checkout', [StorefrontCheckoutController::class, 'store'])->middleware('throttle:20,1');
     Route::get('digital-products/{digitalProduct}/public', [StorefrontCheckoutController::class, 'show']);

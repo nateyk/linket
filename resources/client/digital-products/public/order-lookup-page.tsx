@@ -1,7 +1,10 @@
 import {Alert} from '@shadcn/alert/alert';
 import {Button} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
+import {Dialog} from '@shadcn/dialog/dialog';
+import {Field} from '@shadcn/forms/field';
 import {Input} from '@shadcn/forms/input/input';
+import {Textarea} from '@shadcn/forms/textarea/textarea';
 import {Spinner} from '@shadcn/spinner/spinner';
 import {Trans} from '@ui/i18n/trans';
 import {formatMoney as formatPrice} from '@ui/i18n/format-money';
@@ -16,9 +19,10 @@ import {
   MailIcon,
   PackageOpenIcon,
   ShieldCheckIcon,
+  StarIcon,
 } from 'lucide-react';
 import {ReactNode, useCallback, useEffect, useState} from 'react';
-import {Link, useLocation} from 'react-router';
+import {Link, useLocation, useNavigate} from 'react-router';
 
 type OrderDownload = {
   id: number;
@@ -35,23 +39,24 @@ type Order = {
   gross_amount_cents: number;
   paid_at: string | null;
   receipt_sent_at: string | null;
+  review: {stars: number | null; title: string | null; review: string | null} | null;
   downloads: OrderDownload[];
 };
 
 export function Component() {
   const location = useLocation();
 
-  return location.pathname.endsWith('/orders') ? <PurchaseOrders /> : <RecoveryRequest />;
+  return location.pathname.endsWith('/purchases') ? <PurchaseOrders /> : <RecoveryRequest />;
 }
 
 function RecoveryRequest() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
+  const [code, setCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string>();
-  const expired = new URLSearchParams(useLocation().search).has('expired');
-
-  const submit = async () => {
+  const requestCode = async () => {
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
       setError('Enter a valid email address.');
       return;
@@ -60,15 +65,41 @@ function RecoveryRequest() {
     setSubmitting(true);
     setError(undefined);
     try {
-      await fetch('/api/v1/public/order-lookup/request', {
+      const response = await fetch('/api/v1/public/my-order/request-code', {
         method: 'POST',
         credentials: 'same-origin',
         headers: {Accept: 'application/json', 'Content-Type': 'application/json'},
         body: JSON.stringify({email: email.trim()}),
       });
+      if (!response.ok) throw new Error();
       setSent(true);
     } catch {
       setError('We could not submit your request. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const verifyCode = async () => {
+    if (!/^\d{6}$/.test(code)) {
+      setError('Enter the 6-digit code from your email.');
+      return;
+    }
+
+    setSubmitting(true);
+    setError(undefined);
+    try {
+      const response = await fetch('/api/v1/public/my-order/verify-code', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {Accept: 'application/json', 'Content-Type': 'application/json'},
+        body: JSON.stringify({email: email.trim(), code}),
+      });
+      const payload = await response.json().catch(() => undefined);
+      if (!response.ok) throw new Error(payload?.message || 'That sign-in code is invalid or has expired.');
+      navigate('/my-order/purchases');
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'We could not verify your code.');
     } finally {
       setSubmitting(false);
     }
@@ -78,19 +109,23 @@ function RecoveryRequest() {
     <Card.Root className="gap-0 overflow-hidden shadow-sm ring-1 ring-foreground/10">
       <Card.Header className="space-y-2">
         <div className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary"><PackageOpenIcon className="size-5" /></div>
-        <Card.Title><Trans message="Find my purchase" /></Card.Title>
-        <Card.Description><Trans message="Enter the email used at checkout. If we find paid purchases, we’ll send a secure sign-in link." /></Card.Description>
+        <Card.Title><Trans message="Your purchases" /></Card.Title>
+        <Card.Description><Trans message="Enter the email used at checkout to receive a 6-digit sign-in code." /></Card.Description>
       </Card.Header>
       <Card.Content className="space-y-4">
-        {expired && <Alert variant="warning" fillStyle="subtleFill"><ShieldCheckIcon /><Alert.Title><Trans message="That recovery link has expired" /></Alert.Title><Alert.Description><Trans message="Request a new secure link to continue." /></Alert.Description></Alert>}
-        {sent ? <Alert fillStyle="subtleFill"><MailCheckIcon /><Alert.Title><Trans message="Check your inbox" /></Alert.Title><Alert.Description><Trans message="If paid purchases match that email address, you’ll receive a secure recovery link shortly." /></Alert.Description></Alert> : <>
+        {sent ? <>
+          <Alert fillStyle="subtleFill"><MailCheckIcon /><Alert.Title><Trans message="Check your inbox" /></Alert.Title><Alert.Description><Trans message="Enter the 6-digit code we sent if paid purchases match this email address." /></Alert.Description></Alert>
+          <div className="flex flex-col gap-2"><label htmlFor="purchase-code" className="text-sm font-medium"><Trans message="Sign-in code" /></label><Input id="purchase-code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={event => setCode(event.target.value.replace(/\D/g, ''))} disabled={submitting} bindToHookForm={false} className="text-center font-mono text-xl tracking-[0.45em]" /></div>
+          <Button className="w-full" size="lg" disabled={submitting} onClick={() => void verifyCode()}>{submitting ? <Spinner /> : <ShieldCheckIcon />}<Trans message="Verify code" /></Button>
+          <Button className="w-full" variant="outline" disabled={submitting} onClick={() => void requestCode()}><Trans message="Resend code" /></Button>
+        </> : <>
           <div className="space-y-2"><label htmlFor="purchase-recovery-email" className="text-sm font-medium"><Trans message="Email address" /></label><Input id="purchase-recovery-email" type="email" autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} disabled={submitting} bindToHookForm={false} /></div>
           {error && <Alert variant="destructive" fillStyle="subtleFill"><MailIcon /><Alert.Title><Trans message="Unable to continue" /></Alert.Title><Alert.Description>{error}</Alert.Description></Alert>}
-          <Button className="w-full" size="lg" disabled={submitting} onClick={() => void submit()}>{submitting ? <Spinner /> : <MailIcon />}<Trans message="Email me a secure link" /></Button>
+          <Button className="w-full" size="lg" disabled={submitting} onClick={() => void requestCode()}>{submitting ? <Spinner /> : <MailIcon />}<Trans message="Email me a sign-in code" /></Button>
         </>}
       </Card.Content>
     </Card.Root>
-    <p className="text-center text-sm text-muted-foreground"><Trans message="For your privacy, we never show purchase details until you open the secure link sent to your email." /></p>
+    <p className="text-center text-sm text-muted-foreground"><Trans message="For your privacy, we show purchase details only after you verify your email code." /></p>
   </PublicShell>;
 }
 
@@ -103,12 +138,12 @@ function PurchaseOrders() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/v1/public/order-lookup/orders', {credentials: 'same-origin', headers: {Accept: 'application/json'}});
+      const response = await fetch('/api/v1/public/my-order/purchases', {credentials: 'same-origin', headers: {Accept: 'application/json'}});
       const payload = await response.json().catch(() => undefined);
-      if (!response.ok) throw new Error(payload?.message || 'Your recovery session has expired.');
+      if (!response.ok) throw new Error(payload?.message || 'Your portal session has expired.');
       setOrders(payload?.orders ?? payload?.data?.orders ?? []);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Your recovery session has expired.');
+      setError(reason instanceof Error ? reason.message : 'Your portal session has expired.');
     } finally {
       setLoading(false);
     }
@@ -127,7 +162,7 @@ function PurchaseOrders() {
   const download = async (order: Order, entitlement: OrderDownload) => {
     setBusy(`download-${entitlement.id}`);
     try {
-      const response = await fetch(`/api/v1/public/order-lookup/orders/${order.id}/downloads/${entitlement.id}`, {method: 'POST', credentials: 'same-origin', headers: await withCsrf()});
+      const response = await fetch(`/api/v1/public/my-order/purchases/${order.id}/downloads/${entitlement.id}`, {method: 'POST', credentials: 'same-origin', headers: await withCsrf()});
       const payload = await response.json().catch(() => undefined);
       if (!response.ok || !payload?.url) throw new Error(payload?.message || 'This protected download is no longer available.');
       window.location.assign(payload.url);
@@ -141,7 +176,7 @@ function PurchaseOrders() {
   const resend = async (order: Order) => {
     setBusy(`receipt-${order.id}`);
     try {
-      const response = await fetch(`/api/v1/public/order-lookup/orders/${order.id}/resend-receipt`, {method: 'POST', credentials: 'same-origin', headers: await withCsrf()});
+      const response = await fetch(`/api/v1/public/my-order/purchases/${order.id}/resend-receipt`, {method: 'POST', credentials: 'same-origin', headers: await withCsrf()});
       const payload = await response.json().catch(() => undefined);
       if (!response.ok) throw new Error(payload?.message || 'Unable to resend the receipt.');
       toast(message('Your receipt is being sent.'));
@@ -154,9 +189,56 @@ function PurchaseOrders() {
   };
 
   return <PublicShell>
-    <div className="flex items-center justify-between gap-3"><div><h1 className="text-2xl font-semibold tracking-tight"><Trans message="Your purchases" /></h1><p className="mt-1 text-sm text-muted-foreground"><Trans message="Your private purchase recovery session is active for 30 minutes." /></p></div><Button variant="outline" size="sm" render={<Link to="/find-my-purchase" />}><ArrowLeftIcon /><Trans message="Done" /></Button></div>
-    {loading ? <div className="flex min-h-40 items-center justify-center"><Spinner /></div> : error ? <Alert variant="warning" fillStyle="subtleFill"><ShieldCheckIcon /><Alert.Title><Trans message="Session unavailable" /></Alert.Title><Alert.Description><p>{error}</p><Button className="mt-3" size="sm" variant="outline" render={<Link to="/find-my-purchase" />}><Trans message="Request a new link" /></Button></Alert.Description></Alert> : orders?.length ? <div className="space-y-4">{orders.map(order => <OrderCard key={order.id} order={order} busy={busy} onDownload={download} onResend={resend} />)}</div> : <Alert fillStyle="subtleFill"><PackageOpenIcon /><Alert.Title><Trans message="No paid purchases found" /></Alert.Title><Alert.Description><Trans message="This secure link does not have any paid Digital Product purchases to show." /></Alert.Description></Alert>}
+    <div className="flex items-center justify-between gap-3"><div><h1 className="text-2xl font-semibold tracking-tight"><Trans message="Your purchases" /></h1><p className="mt-1 text-sm text-muted-foreground"><Trans message="Your private portal session is active for 30 days." /></p></div><Button variant="outline" size="sm" render={<Link to="/my-order" />}><ArrowLeftIcon /><Trans message="Done" /></Button></div>
+    {loading ? <div className="flex min-h-40 items-center justify-center"><Spinner /></div> : error ? <Alert variant="warning" fillStyle="subtleFill"><ShieldCheckIcon /><Alert.Title><Trans message="Session unavailable" /></Alert.Title><Alert.Description><p>{error}</p><Button className="mt-3" size="sm" variant="outline" render={<Link to="/my-order" />}><Trans message="Request a new code" /></Button></Alert.Description></Alert> : orders?.length ? <div className="space-y-4">{orders.map(order => <ReviewableOrderCard key={order.id} order={order} busy={busy} onDownload={download} onResend={resend} onSaved={load} />)}</div> : <Alert fillStyle="subtleFill"><PackageOpenIcon /><Alert.Title><Trans message="No paid purchases found" /></Alert.Title><Alert.Description><Trans message="This verified email does not have any paid digital product purchases to show." /></Alert.Description></Alert>}
   </PublicShell>;
+}
+
+function ReviewableOrderCard({onSaved, ...props}: Parameters<typeof OrderCard>[0] & {onSaved: () => Promise<void>}) {
+  const [open, setOpen] = useState(false);
+
+  return <>
+    <OrderCard {...props} />
+    <div className="-mt-2 flex justify-end"><Button variant="outline" size="sm" onClick={() => setOpen(true)}><StarIcon />{props.order.review ? <Trans message="Edit review" /> : <Trans message="Write a review" />}</Button></div>
+    {open && <PortalReviewDialog order={props.order} onClose={() => setOpen(false)} onSaved={onSaved} />}
+  </>;
+}
+
+function PortalReviewDialog({order, onClose, onSaved}: {order: Order; onClose: () => void; onSaved: () => Promise<void>}) {
+  const [stars, setStars] = useState(order.review?.stars ?? 0);
+  const [title, setTitle] = useState(order.review?.title ?? '');
+  const [review, setReview] = useState(order.review?.review ?? '');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string>();
+
+  const submit = async () => {
+    if (!stars) {
+      setError('Choose a star rating to continue.');
+      return;
+    }
+
+    setSubmitting(true);
+    setError(undefined);
+    try {
+      await fetch('/sanctum/csrf-cookie', {credentials: 'same-origin'});
+      const token = document.cookie.split('; ').find(value => value.startsWith('XSRF-TOKEN='))?.split('=')[1];
+      const response = await fetch(`/api/v1/public/my-order/purchases/${order.id}/review`, {
+        method: 'POST', credentials: 'same-origin', headers: {Accept: 'application/json', 'Content-Type': 'application/json', ...(token ? {'X-XSRF-TOKEN': decodeURIComponent(token)} : {})},
+        body: JSON.stringify({stars, title: title.trim() || undefined, review: review.trim() || undefined}),
+      });
+      const payload = await response.json().catch(() => undefined);
+      if (!response.ok) throw new Error(payload?.message || 'We could not save your review.');
+      await onSaved();
+      onClose();
+      toast(message('Your review has been saved.'));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'We could not save your review.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return <Dialog.Root open onOpenChange={isOpen => !isOpen && !submitting && onClose()}><Dialog.Portal><Dialog.Backdrop /><Dialog.Content className="sm:max-w-md"><Dialog.Header><Dialog.Title><StarIcon className="text-amber-500" />{order.review ? <Trans message="Edit your review" /> : <Trans message="Write a review" />}</Dialog.Title></Dialog.Header><Dialog.Body><div className="space-y-4"><div className="flex gap-1" aria-label="Star rating">{[1, 2, 3, 4, 5].map(value => <Button key={value} type="button" size="icon" variant="ghost" className="size-9" onClick={() => setStars(value)} aria-label={`${value} stars`}><StarIcon className={value <= stars ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground'} /></Button>)}</div><Field.Root><Field.Label><Trans message="Headline (optional)" /></Field.Label><Input value={title} onChange={event => setTitle(event.target.value)} bindToHookForm={false} maxLength={120} /></Field.Root><Field.Root><Field.Label><Trans message="Review (optional)" /></Field.Label><Textarea rows={4} value={review} onChange={event => setReview(event.target.value)} bindToHookForm={false} maxLength={5000} /></Field.Root>{error && <Alert variant="destructive" fillStyle="subtleFill"><Alert.Description>{error}</Alert.Description></Alert>}</div></Dialog.Body><Dialog.Footer><Button variant="outline" disabled={submitting} onClick={onClose}><Trans message="Cancel" /></Button><Button disabled={submitting} onClick={() => void submit()}>{submitting && <Spinner />}<Trans message="Save review" /></Button></Dialog.Footer></Dialog.Content></Dialog.Portal></Dialog.Root>;
 }
 
 function OrderCard({order, busy, onDownload, onResend}: {order: Order; busy?: string; onDownload: (order: Order, download: OrderDownload) => Promise<void>; onResend: (order: Order) => Promise<void>}) {
@@ -167,4 +249,3 @@ function OrderCard({order, busy, onDownload, onResend}: {order: Order; busy?: st
 function PublicShell({children}: {children: ReactNode}) {
   return <div className="min-h-screen bg-muted/30 px-4 py-10 sm:px-6"><main className="mx-auto flex w-full max-w-2xl flex-col gap-6">{children}</main></div>;
 }
-
