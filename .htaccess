@@ -22,5 +22,7 @@
     RewriteRule ^(.*)$ public/$1 [L]
 </IfModule>
 
-# php -- BEGIN cPanel-generated handler, do not edit
-# php -- END cPanel-generated handler, do not edit
+# PHP 8.4 is required by Laravel and must be selected for the web runtime.
+<IfModule mime_module>
+    AddHandler application/x-httpd-ea-php84 .php .php8 .phtml
+</IfModule>

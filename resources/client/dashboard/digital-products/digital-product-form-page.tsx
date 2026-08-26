@@ -252,7 +252,7 @@ function DigitalProductForm() {
         const response = product
           ? await apiClient.put(`/api/v1/digital-products/${product.id}`, body)
           : await apiClient.post('/api/v1/digital-products', body);
-        const saved = response.data as Product;
+        const saved = response.data.data as Product;
         setProduct(saved);
 
         if (submitAfterSave) {
