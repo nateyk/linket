@@ -301,8 +301,8 @@ export const appRouter = createBrowserRouter(
           loader: () => queryClient.ensureQueryData(listProductsOptions()),
         },
 
-          {path: 'find-my-purchase', lazy: () => import('@app/digital-products/public/order-lookup-page')},
-          {path: 'find-my-purchase/orders', lazy: () => import('@app/digital-products/public/order-lookup-page')},
+          {path: 'my-order', lazy: () => import('@app/digital-products/public/order-lookup-page')},
+          {path: 'my-order/purchases', lazy: () => import('@app/digital-products/public/order-lookup-page')},
         ...commonRoutes,
         {
           path: '/link-pages/:pageId/preview',

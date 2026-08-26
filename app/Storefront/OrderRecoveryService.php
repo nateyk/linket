@@ -14,7 +14,7 @@ use Illuminate\Support\Str;
 
 class OrderRecoveryService
 {
-    public const COOKIE = 'digital_product_order_recovery';
+    public const COOKIE = 'customer_order_portal';
 
     public function request(string $email, string $ip): void
     {
@@ -36,43 +36,51 @@ class OrderRecoveryService
             return;
         }
 
-        $token = Str::random(80);
+        $code = (string) random_int(100000, 999999);
         $recovery = DigitalProductOrderRecovery::create([
             'uuid' => (string) Str::uuid(),
             'email' => $email,
             'email_hash' => $emailHash,
-            'token_hash' => hash('sha256', $token),
-            'expires_at' => now()->addMinutes(30),
+            'token_hash' => hash('sha256', "{$emailHash}.{$code}"),
+            'expires_at' => now()->addMinutes(10),
         ]);
 
         DigitalProductOrderRecoveryDelivery::create([
             'digital_product_order_recovery_id' => $recovery->id,
             'email_hash' => $emailHash,
             'masked_email' => $this->maskEmail($email),
-            'event' => 'recovery_requested',
+            'event' => 'otp_requested',
             'status' => 'accepted',
         ]);
         $delivery = DigitalProductOrderRecoveryDelivery::create([
             'digital_product_order_recovery_id' => $recovery->id,
             'email_hash' => $emailHash,
             'masked_email' => $this->maskEmail($email),
-            'event' => 'recovery_email',
+            'event' => 'otp_email',
             'status' => 'queued',
         ]);
 
-        SendDigitalProductOrderRecoveryLink::dispatch($recovery->id, $token, $delivery->id)->afterCommit();
-        Log::info('store.order.recovery.requested', [
+        SendDigitalProductOrderRecoveryLink::dispatch($recovery->id, $code, $delivery->id)->afterCommit();
+        Log::info('store.order.otp.requested', [
             'recovery_id' => $recovery->id,
             'email_hash' => $emailHash,
             'masked_email' => $this->maskEmail($email),
         ]);
     }
 
-    public function redeem(string $token): ?array
+    public function verifyCode(string $email, string $code): ?array
     {
-        return DB::transaction(function () use ($token): ?array {
+        $email = $this->normalizeEmail($email);
+        $emailHash = $this->emailHash($email);
+
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL) || !preg_match('/^\d{6}$/', $code)) {
+            return null;
+        }
+
+        return DB::transaction(function () use ($emailHash, $code): ?array {
             $recovery = DigitalProductOrderRecovery::query()
-                ->where('token_hash', hash('sha256', $token))
+                ->where('email_hash', $emailHash)
+                ->latest('id')
                 ->lockForUpdate()
                 ->first();
 
@@ -80,15 +88,23 @@ class OrderRecoveryService
                 return null;
             }
 
+            $key = "customer-order-otp:attempts:{$recovery->uuid}";
+            if (RateLimiter::tooManyAttempts($key, 5)) {
+                return null;
+            }
+
+            if (!hash_equals($recovery->token_hash, hash('sha256', "{$emailHash}.{$code}"))) {
+                RateLimiter::hit($key, 600);
+
+                return null;
+            }
+
+            RateLimiter::clear($key);
             $sessionToken = Str::random(80);
             $recovery->update([
                 'redeemed_at' => now(),
                 'session_token_hash' => hash('sha256', $sessionToken),
-                'session_expires_at' => now()->addMinutes(30),
-            ]);
-            Log::info('store.order.recovery.redeemed', [
-                'recovery_id' => $recovery->id,
-                'email_hash' => $recovery->email_hash,
+                'session_expires_at' => now()->addDays(30),
             ]);
 
             return [$recovery, $sessionToken];
@@ -115,7 +131,7 @@ class OrderRecoveryService
         return StorefrontOrder::query()
             ->where('buyer_email', $recovery->email)
             ->where('status', 'paid')
-            ->with(['product', 'entitlements.file'])
+            ->with(['product.cover', 'entitlements.file', 'review.ratings'])
             ->latest('paid_at');
     }
 

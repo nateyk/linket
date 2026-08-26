@@ -22,7 +22,7 @@ class SendDigitalProductOrderRecoveryLink implements ShouldQueue
 
     public function __construct(
         private readonly int $recoveryId,
-        private readonly string $token,
+        private readonly string $code,
         private readonly int $deliveryId,
     ) {
         $this->onQueue('mail');
@@ -38,10 +38,9 @@ class SendDigitalProductOrderRecoveryLink implements ShouldQueue
                 return;
             }
 
-            $url = url("find-my-purchase/access/{$this->token}");
             Mail::raw(
-                "Use this secure link to view your paid digital product purchases:\n{$url}\n\nThis link expires in 30 minutes and can be used once.",
-                fn($message) => $message->to($recovery->email)->subject(__('Your Linket purchase recovery link')),
+                "Your Linket sign-in code is: {$this->code}\n\nThis code expires in 10 minutes.",
+                fn($message) => $message->to($recovery->email)->subject(__('Your Linket sign-in code')),
             );
 
             $delivery->update(['status' => 'sent', 'failure_code' => null]);

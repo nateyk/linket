@@ -46,6 +46,8 @@ use Illuminate\Support\Str;
 use App\Stores\Models\Store;
 use App\Http\Middleware\AddDeprecationHeader;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Cookie\Middleware\EncryptCookies;
+use App\Storefront\OrderRecoveryService;
 
 const WORKSPACED_RESOURCES = [
     Link::class,
@@ -63,6 +65,8 @@ class AppServiceProvider extends ServiceProvider
 {
     public function boot()
     {
+        EncryptCookies::except(OrderRecoveryService::COOKIE);
+
         $this->app->bind(BootstrapData::class, AppBootstrapData::class);
 
         Relation::enforceMorphMap([
