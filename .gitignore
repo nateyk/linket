@@ -33,6 +33,7 @@ public/hot
 
 # Superpowers SDD workspace
 .superpowers/sdd/
+.worktrees/
 
 # IDE helper (generated)
 _ide_helper*.php
