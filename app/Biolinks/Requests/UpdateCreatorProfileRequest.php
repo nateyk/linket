@@ -3,6 +3,7 @@
 namespace App\Biolinks\Requests;
 
 use App\Biolinks\Models\Biolink;
+use App\Stores\Models\Store;
 use Common\Files\FileEntry;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
@@ -113,15 +114,40 @@ class UpdateCreatorProfileRequest extends FormRequest
             return;
         }
 
-        $biolink = Biolink::query()
-            ->select(['id', 'workspace_id'])
-            ->find((int) $this->route('id'));
+        // Resolve owning entity for both legacy biolink and canonical store routes.
+        // Store route uses {store}, legacy uses {id} or {biolink}. Route model binding may give a model instance.
+        $routeValue = $this->route('store') ?? $this->route('biolink') ?? $this->route('id');
+        $entity = null;
+        if ($routeValue instanceof Store || $routeValue instanceof Biolink) {
+            $entity = $routeValue;
+        } elseif (is_numeric($routeValue) && (int) $routeValue > 0) {
+            $id = (int) $routeValue;
+            $entity = Store::query()->select(['id', 'workspace_id'])->find($id)
+                ?? Biolink::query()->select(['id', 'workspace_id'])->find($id);
+        } else {
+            // Fallback: probe all possible keys (handles _method spoofed POST where route param may be hidden)
+            foreach (['store', 'biolink', 'id'] as $key) {
+                $val = $this->route($key);
+                if ($val instanceof Store || $val instanceof Biolink) {
+                    $entity = $val;
+                    break;
+                }
+                if (is_numeric($val) && (int) $val > 0) {
+                    $found = Store::query()->select(['id', 'workspace_id'])->find((int) $val)
+                        ?? Biolink::query()->select(['id', 'workspace_id'])->find((int) $val);
+                    if ($found) {
+                        $entity = $found;
+                        break;
+                    }
+                }
+            }
+        }
         $user = $this->user();
 
-        $isOwnedImage = $biolink && $user && FileEntry::query()
+        $isOwnedImage = $entity && $user && FileEntry::query()
             ->where('file_name', basename($path))
             ->where('owner_id', $user->id)
-            ->where('workspace_id', $biolink->workspace_id)
+            ->where('workspace_id', $entity->workspace_id)
             ->where('upload_type', 'linkImages')
             ->where('public', true)
             ->where('type', 'image')
