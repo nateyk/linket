@@ -436,6 +436,13 @@ export const dashboardRoutes: RouteObject[] = [
         lazy: () => import('@app/dashboard/courses/course-builder-page'),
       },
       {
+        path: 'my-products/:productId/course/analytics',
+        lazy: async () => {
+          const m = await import('@app/dashboard/courses/course-analytics-page');
+          return {Component: m.CourseAnalyticsPage};
+        },
+      },
+      {
         path: 'my-products/:productId/reviews',
         lazy: () =>
           import('@app/dashboard/digital-products/product-reviews-page'),

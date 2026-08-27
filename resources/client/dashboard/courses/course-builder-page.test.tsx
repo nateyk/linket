@@ -17,3 +17,18 @@ describe('course builder uploads', () => {
     expect(source.match(/showToastOnBackendError: true/g)).toHaveLength(2);
   });
 });
+
+describe('course builder analytics navigation', () => {
+  test('uses the Base UI render API for the analytics link', () => {
+    const source = fs.readFileSync(
+      path.resolve(
+        'resources/client/dashboard/courses/course-builder-page.tsx',
+      ),
+      'utf8',
+    );
+
+    expect(source).toMatch(
+      /render=\{\s*<Link\s+to=\{`\/dashboard\/my-products\/\$\{productId\}\/course\/analytics`\}\s*\/>\s*\}/,
+    );
+  });
+});

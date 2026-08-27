@@ -97,6 +97,12 @@ describe('course product creation', () => {
 
     expect(paths).toContain('my-products/new/course');
   });
+
+  test('uses a dedicated course analytics route', () => {
+    const paths = dashboardRoutes[0].children!.map(route => route.path);
+
+    expect(paths).toContain('my-products/:productId/course/analytics');
+  });
 });
 
 describe('buyer course routes', () => {

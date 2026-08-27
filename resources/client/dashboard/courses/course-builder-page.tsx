@@ -27,6 +27,7 @@ import {StatCard} from '@common/ui/stat-card';
 import {Trans} from '@ui/i18n/trans';
 import {toast} from '@ui/toast/toast';
 import {
+  BarChart3Icon,
   BookIcon,
   CheckCircleIcon,
   CopyIcon,
@@ -41,7 +42,7 @@ import {
   VideoIcon,
 } from 'lucide-react';
 import {useCallback, useEffect, useState} from 'react';
-import {useParams} from 'react-router';
+import {Link, useParams} from 'react-router';
 
 // Types
 type Course = {
@@ -266,6 +267,18 @@ function CourseBuilder() {
           <Button variant="outline" size="sm" onClick={() => setSettingsOpen(true)}>
             <SettingsIcon />
             <Trans message="Configure" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            render={
+              <Link
+                to={`/dashboard/my-products/${productId}/course/analytics`}
+              />
+            }
+          >
+            <BarChart3Icon data-icon="inline-start" />
+            Analytics
           </Button>
           <Button size="sm" onClick={() => void publish()} disabled={publishing}>
             <Trans message={isPublished ? 'Update' : 'Publish'} />
