@@ -27,6 +27,8 @@ Route::get('my-order/courses/{courseId}/lessons/{lessonId}', [HomeController::cl
     ->whereNumber('courseId')
     ->whereNumber('lessonId');
 
+Route::get('dashboard/my-products/{product}/course/analytics', [HomeController::class, 'render'])->middleware(['auth', 'verified']);
+
 Route::get('{linkHash}/img', [LinkImageController::class, 'show']);
 
 Route::get('{storeSlug}/products/{digitalProduct}', [PublicDigitalProductPageController::class, 'show'])

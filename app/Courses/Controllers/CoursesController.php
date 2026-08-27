@@ -4,15 +4,18 @@ namespace App\Courses\Controllers;
 
 use App\Courses\Models\Course;
 use App\Courses\Resources\CourseResource;
+use App\Courses\Services\CourseAnalyticsService;
 use App\Courses\Services\CourseService;
 use App\Storefront\Models\DigitalProduct;
 use Common\Workspaces\ActiveWorkspace;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
 
 class CoursesController extends Controller
 {
+    use AuthorizesRequests;
     public function show(Request $request, Course $course)
     {
         $this->assertOwner($course, $request);
@@ -23,6 +26,13 @@ class CoursesController extends Controller
         $course->setAttribute('lessons_count', $lessonsCount);
 
         return new CourseResource($course);
+    }
+
+    public function analytics(Course $course, CourseAnalyticsService $service)
+    {
+        $this->assertActiveWorkspace($course);
+        $this->authorize('view', $course);
+        return response()->json(['data' => $service->forCourse($course)]);
     }
 
     public function update(Request $request, Course $course)
@@ -117,8 +127,15 @@ class CoursesController extends Controller
 
     private function assertOwner(Course $course, Request $request): void
     {
+        $this->assertActiveWorkspace($course);
         $product = $course->product;
-        abort_unless($product && $product->workspace_id === ActiveWorkspace::get()->id && $product->user_id === $request->user()->id, 403);
+        abort_unless($product && $product->user_id === $request->user()->id, 403);
+    }
+
+    private function assertActiveWorkspace(Course $course): void
+    {
+        $product = $course->product;
+        abort_unless($product && $product->workspace_id === ActiveWorkspace::get()->id, 403);
     }
 
     private function assertCanPreview(Course $course, Request $request): void

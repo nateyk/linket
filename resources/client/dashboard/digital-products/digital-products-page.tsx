@@ -16,6 +16,7 @@ import {toast} from '@ui/toast/toast';
 import useClipboard from '@ui/utils/hooks/use-clipboard';
 import {
   ArchiveIcon,
+  BarChart3Icon,
   CheckCircle2Icon,
   CheckIcon,
   CircleAlertIcon,
@@ -288,6 +289,20 @@ function ProductCard({
               <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
                 <Trans message="Course" />
               </Badge>
+            )}
+            {product.type === 'course' && (
+              <Button
+                size="xs"
+                variant="outline"
+                render={
+                  <Link
+                    to={`/dashboard/my-products/${product.id}/course/analytics`}
+                  />
+                }
+              >
+                <BarChart3Icon data-icon="inline-start" />
+                Analytics
+              </Button>
             )}
           </div>
           <Card.Title className="truncate text-sm font-semibold leading-5">
