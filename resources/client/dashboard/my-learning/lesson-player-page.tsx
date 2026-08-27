@@ -1,10 +1,18 @@
-import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
+import {MyOrderShell} from '@app/digital-products/public/my-order-shell';
+import {Alert} from '@shadcn/alert/alert';
 import {Button} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
+import {Spinner} from '@shadcn/spinner/spinner';
 import {Trans} from '@ui/i18n/trans';
 import {apiClient} from '@common/http/query-client';
-import {CheckIcon, ChevronLeftIcon, ChevronRightIcon, DownloadIcon, LockIcon} from 'lucide-react';
-import {useEffect, useState} from 'react';
+import {
+  CheckIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  DownloadIcon,
+  LockIcon,
+} from 'lucide-react';
+import {useCallback, useEffect, useState} from 'react';
 import {Link, useParams, useNavigate} from 'react-router';
 
 type LessonData = {
@@ -17,7 +25,11 @@ type LessonData = {
   video_url?: string | null;
   video?: {url: string} | null;
   status: string;
-  resources: {id: number; display_name: string; file: {id: number; name: string}}[];
+  resources: {
+    id: number;
+    display_name: string;
+    file: {id: number; name: string};
+  }[];
 };
 
 export function Component() {
@@ -26,15 +38,20 @@ export function Component() {
   const [lesson, setLesson] = useState<LessonData | null>(null);
   const [course, setCourse] = useState<any>(null);
   const [trial, setTrial] = useState(false);
+  const [error, setError] = useState<string>();
+  const [completing, setCompleting] = useState(false);
 
-  const load = async () => {
-    const res = await fetch(`/api/v1/courses/${courseId}/learn/lessons/${lessonId}`, {
-      credentials: 'same-origin',
-      headers: {Accept: 'application/json'},
-    });
+  const load = useCallback(async (signal?: AbortSignal) => {
+    const res = await fetch(
+      `/api/v1/courses/${courseId}/learn/lessons/${lessonId}`,
+      {
+        credentials: 'same-origin',
+        headers: {Accept: 'application/json'},
+        signal,
+      },
+    );
     if (!res.ok) {
       if (res.status === 403) {
-        // locked
         setTrial(true);
         return;
       }
@@ -42,136 +59,204 @@ export function Component() {
     }
     const payload = await res.json();
     setLesson(payload.data);
-    // Also load course for navigation
     const cRes = await fetch(`/api/v1/courses/${courseId}/learn`, {
       credentials: 'same-origin',
       headers: {Accept: 'application/json'},
+      signal,
     });
-    if (cRes.ok) {
-      const cPayload = await cRes.json();
-      setCourse(cPayload.data);
-    }
-  };
-
-  useEffect(() => {
-    void load();
+    if (!cRes.ok) throw new Error('Unable to load course navigation');
+    const cPayload = await cRes.json();
+    setCourse(cPayload.data);
   }, [courseId, lessonId]);
 
+  useEffect(() => {
+    const controller = new AbortController();
+    setLesson(null);
+    setCourse(null);
+    setTrial(false);
+    setError(undefined);
+    void load(controller.signal).catch(reason => {
+      if (!(reason instanceof DOMException && reason.name === 'AbortError')) {
+        setError('Unable to load this lesson.');
+      }
+    });
+    return () => controller.abort();
+  }, [load]);
+
   const complete = async () => {
-    await apiClient.post(`/api/v1/course-lessons/${lessonId}/complete`);
-    // Find next lesson
-    if (course) {
-      const flat = course.chapters.flatMap((ch: any) => ch.lessons);
-      const idx = flat.findIndex((l: any) => l.id === Number(lessonId));
-      const next = flat[idx + 1];
-      if (next) navigate(`/dashboard/learn/${courseId}/lessons/${next.id}`);
-      else await load();
+    setCompleting(true);
+    try {
+      await apiClient.post(`/api/v1/course-lessons/${lessonId}/complete`);
+      if (course) {
+        const flat = course.chapters.flatMap((ch: any) => ch.lessons);
+        const idx = flat.findIndex((l: any) => l.id === Number(lessonId));
+        const next = flat[idx + 1];
+        if (next)
+          navigate(`/my-order/courses/${courseId}/lessons/${next.id}`);
+        else navigate(`/my-order/courses/${courseId}`);
+      }
+    } catch {
+      setError('Unable to update lesson progress.');
+    } finally {
+      setCompleting(false);
     }
   };
 
   if (trial) {
     return (
-      <DashboardLayout.MainSection>
-        <DashboardLayout.SectionContent className="flex flex-col items-center justify-center gap-4 p-12 text-center">
+      <MyOrderShell wide>
+        <Alert.Root variant="warning" fillStyle="subtleFill">
           <LockIcon className="size-8 text-muted-foreground" />
-          <p className="text-sm">
+          <Alert.Title>
+            <Trans message="Lesson locked" />
+          </Alert.Title>
+          <Alert.Description>
             <Trans message="This lesson is locked. Complete previous lessons to unlock." />
-          </p>
-          <Button render={<Link to={`/dashboard/learn/${courseId}`} />}>
-            <Trans message="Back to course" />
-          </Button>
-        </DashboardLayout.SectionContent>
-      </DashboardLayout.MainSection>
+          </Alert.Description>
+        </Alert.Root>
+        <Button
+          className="w-fit"
+          render={<Link to={`/my-order/courses/${courseId}`} />}
+        >
+          <Trans message="Back to course" />
+        </Button>
+      </MyOrderShell>
     );
   }
 
-  if (!lesson) return <DashboardLayout.MainSection><DashboardLayout.SectionContent className="p-6">Loading lesson...</DashboardLayout.SectionContent></DashboardLayout.MainSection>;
+  if (error) {
+    return (
+      <MyOrderShell wide>
+        <Alert.Root variant="warning" fillStyle="subtleFill">
+          <Alert.Title>
+            <Trans message="Lesson unavailable" />
+          </Alert.Title>
+          <Alert.Description>{error}</Alert.Description>
+        </Alert.Root>
+        <Button className="w-fit" render={<Link to="/my-order" />}>
+          <Trans message="Back to my orders" />
+        </Button>
+      </MyOrderShell>
+    );
+  }
+
+  if (!lesson) {
+    return (
+      <MyOrderShell wide>
+        <div className="flex min-h-64 items-center justify-center">
+          <Spinner />
+        </div>
+      </MyOrderShell>
+    );
+  }
 
   return (
-    <DashboardLayout.MainSection>
-      <DashboardLayout.SectionHeader>
-        <DashboardLayout.SidebarToggle />
-        <DashboardLayout.SectionTitle>
-          <Trans message={lesson.title} />
-        </DashboardLayout.SectionTitle>
-        <Button variant="outline" size="sm" render={<Link to={`/dashboard/learn/${courseId}`} />}>
+    <MyOrderShell wide>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm text-muted-foreground">
+            <Trans message="Course lesson" />
+          </p>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {lesson.title}
+          </h1>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          render={<Link to={`/my-order/courses/${courseId}`} />}
+        >
           <Trans message="Course" />
         </Button>
-      </DashboardLayout.SectionHeader>
-      <DashboardLayout.SectionContent className="overflow-y-auto">
-        <div className="mx-auto max-w-3xl space-y-6 py-6">
-          {lesson.video_url && (
-            <div className="aspect-video overflow-hidden rounded-card border bg-muted">
-              <iframe src={lesson.video_url} className="size-full" allowFullScreen title={lesson.title} />
-            </div>
-          )}
-          {lesson.video?.url && !lesson.video_url && (
-            <div className="aspect-video overflow-hidden rounded-card border bg-muted">
-              <video src={lesson.video.url} controls className="size-full" />
-            </div>
-          )}
-          {lesson.content && (
-            <Card.Root>
-              <Card.Content className="prose prose-sm max-w-none p-6" dangerouslySetInnerHTML={{__html: lesson.content}} />
-            </Card.Root>
-          )}
-          {!!lesson.resources.length && (
-            <Card.Root>
-              <Card.Header className="p-4">
-                <Card.Title className="text-sm">
-                  <Trans message="Resources" />
-                </Card.Title>
-              </Card.Header>
-              <Card.Content className="space-y-2 p-4 pt-0">
-                {lesson.resources.map(r => (
-                  <a
-                    key={r.id}
-                    href={`/api/v1/course-lesson-resources/${r.id}/download`}
-                    className="flex items-center gap-2 rounded-card border p-3 text-sm hover:bg-muted/30"
-                  >
-                    <DownloadIcon className="size-4" />
-                    <span className="flex-1">{r.display_name}</span>
-                  </a>
-                ))}
-              </Card.Content>
-            </Card.Root>
-          )}
-          <div className="flex items-center justify-between gap-3">
-            <Button
-              variant="outline"
-              onClick={() => {
-                if (course) {
-                  const flat = course.chapters.flatMap((ch: any) => ch.lessons);
-                  const idx = flat.findIndex((l: any) => l.id === Number(lessonId));
-                  const prev = flat[idx - 1];
-                  if (prev) navigate(`/dashboard/learn/${courseId}/lessons/${prev.id}`);
-                }
-              }}
-            >
-              <ChevronLeftIcon />
-              <Trans message="Previous" />
-            </Button>
-            <Button onClick={() => void complete()}>
-              <CheckIcon />
-              <Trans message="Complete & Next" />
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => {
-                if (course) {
-                  const flat = course.chapters.flatMap((ch: any) => ch.lessons);
-                  const idx = flat.findIndex((l: any) => l.id === Number(lessonId));
-                  const next = flat[idx + 1];
-                  if (next) navigate(`/dashboard/learn/${courseId}/lessons/${next.id}`);
-                }
-              }}
-            >
-              <Trans message="Next" />
-              <ChevronRightIcon />
-            </Button>
+      </div>
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
+        {lesson.video_url && (
+          <div className="aspect-video overflow-hidden rounded-card border bg-muted">
+            <iframe
+              src={lesson.video_url}
+              className="size-full"
+              allowFullScreen
+              title={lesson.title}
+            />
           </div>
+        )}
+        {lesson.video?.url && !lesson.video_url && (
+          <div className="aspect-video overflow-hidden rounded-card border bg-muted">
+            <video src={lesson.video.url} controls className="size-full" />
+          </div>
+        )}
+        {lesson.content && (
+          <Card.Root>
+            <Card.Content
+              className="prose prose-sm max-w-none p-6"
+              dangerouslySetInnerHTML={{__html: lesson.content}}
+            />
+          </Card.Root>
+        )}
+        {!!lesson.resources.length && (
+          <Card.Root>
+            <Card.Header className="p-4">
+              <Card.Title className="text-sm">
+                <Trans message="Resources" />
+              </Card.Title>
+            </Card.Header>
+            <Card.Content className="flex flex-col gap-2 p-4 pt-0">
+              {lesson.resources.map(r => (
+                <a
+                  key={r.id}
+                  href={`/api/v1/course-lesson-resources/${r.id}/download`}
+                  className="flex items-center gap-2 rounded-card border p-3 text-sm hover:bg-muted/30"
+                >
+                  <DownloadIcon className="size-4" />
+                  <span className="flex-1">{r.display_name}</span>
+                </a>
+              ))}
+            </Card.Content>
+          </Card.Root>
+        )}
+        <div className="flex items-center justify-between gap-3">
+          <Button
+            variant="outline"
+            disabled={completing}
+            onClick={() => {
+              if (course) {
+                const flat = course.chapters.flatMap((ch: any) => ch.lessons);
+                const idx = flat.findIndex(
+                  (l: any) => l.id === Number(lessonId),
+                );
+                const prev = flat[idx - 1];
+                if (prev)
+                  navigate(`/my-order/courses/${courseId}/lessons/${prev.id}`);
+              }
+            }}
+          >
+            <ChevronLeftIcon />
+            <Trans message="Previous" />
+          </Button>
+          <Button disabled={completing} onClick={() => void complete()}>
+            {completing ? <Spinner /> : <CheckIcon />}
+            <Trans message="Complete & Next" />
+          </Button>
+          <Button
+            variant="outline"
+            disabled={completing}
+            onClick={() => {
+              if (course) {
+                const flat = course.chapters.flatMap((ch: any) => ch.lessons);
+                const idx = flat.findIndex(
+                  (l: any) => l.id === Number(lessonId),
+                );
+                const next = flat[idx + 1];
+                if (next)
+                  navigate(`/my-order/courses/${courseId}/lessons/${next.id}`);
+              }
+            }}
+          >
+            <Trans message="Next" />
+            <ChevronRightIcon />
+          </Button>
         </div>
-      </DashboardLayout.SectionContent>
-    </DashboardLayout.MainSection>
+      </div>
+    </MyOrderShell>
   );
 }

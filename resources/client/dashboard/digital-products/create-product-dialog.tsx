@@ -4,10 +4,7 @@ import {Trans} from '@ui/i18n/trans';
 import {useNavigate} from 'react-router';
 import {useState} from 'react';
 import {ArrowRightIcon, PackagePlusIcon} from 'lucide-react';
-import {
-  ProductTypePicker,
-  type ProductType,
-} from './product-type-picker';
+import {ProductTypePicker, type ProductType} from './product-type-picker';
 
 interface CreateProductDialogProps {
   open: boolean;
@@ -24,7 +21,11 @@ export function CreateProductDialog({
   const handleContinue = () => {
     if (selectedType) {
       onOpenChange(false);
-      navigate(`/dashboard/my-products/new/details?type=${selectedType}`);
+      navigate(
+        selectedType === 'course'
+          ? '/dashboard/my-products/new/course'
+          : `/dashboard/my-products/new/details?type=${selectedType}`,
+      );
     }
   };
 
@@ -68,10 +69,7 @@ export function CreateProductDialog({
             <Dialog.CloseButton render={<Button variant="outline" />}>
               <Trans message="Cancel" />
             </Dialog.CloseButton>
-            <Button
-              disabled={!selectedType}
-              onClick={handleContinue}
-            >
+            <Button disabled={!selectedType} onClick={handleContinue}>
               <Trans message="Continue" />
               <ArrowRightIcon data-icon="inline-end" />
             </Button>

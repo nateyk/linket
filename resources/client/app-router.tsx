@@ -149,8 +149,7 @@ export const appRouter = createBrowserRouter(
               },
               {
                 path: 'verification',
-                lazy: () =>
-                  import('@app/account-settings/kyc/kyc-page'),
+                lazy: () => import('@app/account-settings/kyc/kyc-page'),
               },
               {
                 path: 'payouts',
@@ -205,26 +204,26 @@ export const appRouter = createBrowserRouter(
                   ]);
                 },
                 children: [
-{
-                index: true,
-                lazy: () =>
-                  import('@common/workspace/workspace-page/workspace-members-table'),
-              },
-              {
-                path: 'invites',
-                lazy: () =>
-                  import('@common/workspace/workspace-page/workspace-invites-table'),
-              },
-              {
-                path: 'payouts',
-                lazy: () =>
-                  import('@common/workspace/workspace-page/workspace-payouts-page'),
-                loader: async ({params}) => {
-                  await queryClient.ensureQueryData(
-                    retrieveWorkspaceOptions(Number(params.workspaceId!)),
-                  );
-                },
-              },
+                  {
+                    index: true,
+                    lazy: () =>
+                      import('@common/workspace/workspace-page/workspace-members-table'),
+                  },
+                  {
+                    path: 'invites',
+                    lazy: () =>
+                      import('@common/workspace/workspace-page/workspace-invites-table'),
+                  },
+                  {
+                    path: 'payouts',
+                    lazy: () =>
+                      import('@common/workspace/workspace-page/workspace-payouts-page'),
+                    loader: async ({params}) => {
+                      await queryClient.ensureQueryData(
+                        retrieveWorkspaceOptions(Number(params.workspaceId!)),
+                      );
+                    },
+                  },
                 ],
               },
 
@@ -301,8 +300,22 @@ export const appRouter = createBrowserRouter(
           loader: () => queryClient.ensureQueryData(listProductsOptions()),
         },
 
-          {path: 'my-order', lazy: () => import('@app/digital-products/public/order-lookup-page')},
-          {path: 'my-order/purchases', lazy: () => import('@app/digital-products/public/order-lookup-page')},
+        {
+          path: 'my-order',
+          lazy: () => import('@app/digital-products/public/order-lookup-page'),
+        },
+        {
+          path: 'my-order/purchases',
+          lazy: () => import('@app/digital-products/public/order-lookup-page'),
+        },
+        {
+          path: 'my-order/courses/:courseId',
+          lazy: () => import('@app/dashboard/my-learning/course-learn-page'),
+        },
+        {
+          path: 'my-order/courses/:courseId/lessons/:lessonId',
+          lazy: () => import('@app/dashboard/my-learning/lesson-player-page'),
+        },
         ...commonRoutes,
         {
           path: '/link-pages/:pageId/preview',

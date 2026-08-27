@@ -11,22 +11,24 @@ import {TipTapEditorProvider} from '@common/text-editor/tiptap-editor-provider';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {FileUploadProvider} from '@common/uploads/uploader/file-upload-provider';
 import {useActiveUpload} from '@common/uploads/uploader/use-active-upload';
-import {Accordion} from '@shadcn/accordion/accordion';
 import {Alert} from '@shadcn/alert/alert';
-import {AlertDialog} from '@shadcn/alert-dialog/alert-dialog';
 import {Badge} from '@shadcn/badge/badge';
 import {Button} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
 import {Dialog} from '@shadcn/dialog/dialog';
 import {Dropdown} from '@shadcn/dropdown/dropdown';
+import {Empty} from '@shadcn/empty/empty';
 import {Field} from '@shadcn/forms/field';
 import {Input} from '@shadcn/forms/input/input';
+import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {Switch} from '@shadcn/forms/switch/switch';
-import {Tooltip} from '@shadcn/tooltip/tooltip';
+import {FileDropzone} from '@common/ui/file-dropzone';
+import {StatCard} from '@common/ui/stat-card';
 import {Trans} from '@ui/i18n/trans';
 import {toast} from '@ui/toast/toast';
 import {
-  ChevronDownIcon,
+  BookIcon,
+  CheckCircleIcon,
   CopyIcon,
   EyeIcon,
   GraduationCapIcon,
@@ -36,7 +38,6 @@ import {
   PlusIcon,
   SettingsIcon,
   Trash2Icon,
-  UploadIcon,
   VideoIcon,
 } from 'lucide-react';
 import {useCallback, useEffect, useState} from 'react';
@@ -146,9 +147,9 @@ function CourseBuilder() {
   const addChapter = async () => {
     if (!course) return;
     const title = `Chapter ${course.chapters.length + 1}`;
-    const res = await apiClient.post(`/api/v1/courses/${course.id}/chapters`, {title});
+    await apiClient.post(`/api/v1/courses/${course.id}/chapters`, {title});
     await load();
-    toast.message('Chapter added');
+    toast.positive('Chapter added');
   };
 
   const addLesson = async (chapterId: number) => {
@@ -193,7 +194,7 @@ function CourseBuilder() {
     setPublishing(true);
     try {
       await apiClient.post(`/api/v1/courses/${course.id}/publish`);
-      toast.message('Course published');
+      toast.positive('Course published');
       await load();
     } catch (e: any) {
       toast.danger(e.message ?? 'Unable to publish');
@@ -205,7 +206,18 @@ function CourseBuilder() {
   if (loading) {
     return (
       <DashboardLayout.MainSection>
-        <DashboardLayout.SectionContent className="p-6">Loading course builder...</DashboardLayout.SectionContent>
+        <DashboardLayout.SectionContent className="flex flex-1 gap-4 p-6">
+          <div className="w-72 shrink-0 space-y-3">
+            <Skeleton className="h-9 w-full" />
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-24 w-full" />
+          </div>
+          <div className="flex-1 space-y-3">
+            <Skeleton className="h-9 w-1/3" />
+            <Skeleton className="h-40 w-full" />
+            <Skeleton className="h-40 w-full" />
+          </div>
+        </DashboardLayout.SectionContent>
       </DashboardLayout.MainSection>
     );
   }
@@ -223,6 +235,15 @@ function CourseBuilder() {
   }
 
   const isPublished = !!course.published_at;
+
+  const totalLessons = course.chapters.reduce(
+    (n, c) => n + c.lessons.length,
+    0,
+  );
+  const publishedLessons = course.chapters.reduce(
+    (n, c) => n + c.lessons.filter(l => l.status === 'published').length,
+    0,
+  );
 
   return (
     <DashboardLayout.MainSection>
@@ -252,6 +273,29 @@ function CourseBuilder() {
         </div>
       </DashboardLayout.SectionHeader>
 
+      <div className="grid grid-cols-2 gap-3 px-4 pt-4 sm:grid-cols-3">
+        <StatCard
+          label={<Trans message="Chapters" />}
+          value={course.chapters.length}
+          icon={<BookIcon className="size-4" />}
+        />
+        <StatCard
+          label={<Trans message="Lessons" />}
+          value={totalLessons}
+          icon={<VideoIcon className="size-4" />}
+        />
+        <StatCard
+          label={<Trans message="Published" />}
+          value={publishedLessons}
+          hint={
+            totalLessons
+              ? `${Math.round((publishedLessons / totalLessons) * 100)}% published`
+              : undefined
+          }
+          icon={<CheckCircleIcon className="size-4" />}
+        />
+      </div>
+
       <DashboardLayout.SectionContent className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
         <div className="flex min-h-0 flex-1 flex-col gap-0 lg:flex-row">
           {/* Curriculum */}
@@ -277,21 +321,23 @@ function CourseBuilder() {
               </Button>
 
               {course.chapters.length === 0 ? (
-                <Card.Root className="border-dashed p-6 text-center">
-                  <Card.Content className="flex flex-col items-center gap-2">
-                    <GraduationCapIcon className="size-6 text-muted-foreground" />
-                    <p className="text-sm font-medium">
+                <Empty.Root>
+                  <Empty.Header>
+                    <Empty.Media variant="icon">
+                      <GraduationCapIcon />
+                    </Empty.Media>
+                    <Empty.Title>
                       <Trans message="Build your course" />
-                    </p>
-                    <p className="text-xs text-muted-foreground">
+                    </Empty.Title>
+                    <Empty.Description>
                       <Trans message="Start by adding your first chapter." />
-                    </p>
-                    <Button size="sm" onClick={() => void addChapter()}>
-                      <PlusIcon />
-                      <Trans message="Add chapter" />
-                    </Button>
-                  </Card.Content>
-                </Card.Root>
+                    </Empty.Description>
+                  </Empty.Header>
+                  <Button size="sm" onClick={() => void addChapter()}>
+                    <PlusIcon />
+                    <Trans message="Add chapter" />
+                  </Button>
+                </Empty.Root>
               ) : (
                 course.chapters.map(chapter => (
                   <div key={chapter.id} className="rounded-card border bg-background">
@@ -385,15 +431,19 @@ function CourseBuilder() {
                 onSelectLesson={setSelectedLesson}
               />
             ) : (
-              <div className="flex flex-1 flex-col items-center justify-center gap-3 py-16 text-center text-muted-foreground">
-                <PencilIcon className="size-8" />
-                <p className="text-sm">
-                  <Trans message="Select a lesson to edit" />
-                </p>
-                <p className="text-xs">
-                  <Trans message="Choose a lesson from the curriculum to edit its video, content and resources." />
-                </p>
-              </div>
+              <Empty.Root className="m-auto">
+                <Empty.Header>
+                  <Empty.Media variant="icon">
+                    <PencilIcon />
+                  </Empty.Media>
+                  <Empty.Title>
+                    <Trans message="Select a lesson to edit" />
+                  </Empty.Title>
+                  <Empty.Description>
+                    <Trans message="Choose a lesson from the curriculum to edit its video, content and resources." />
+                  </Empty.Description>
+                </Empty.Header>
+              </Empty.Root>
             )}
           </div>
         </div>
@@ -421,7 +471,7 @@ function LessonEditor({
   const [content, setContent] = useState(lesson.content ?? '');
   const [saving, setSaving] = useState(false);
   const [resources, setResources] = useState<LessonResource[]>(lesson.resources ?? []);
-  const {uploadFile, uploadStatus} = useActiveUpload();
+  const {uploadFile, uploadStatus, percentage} = useActiveUpload();
 
   useEffect(() => {
     setTitle(lesson.title);
@@ -443,7 +493,7 @@ function LessonEditor({
       });
       const updated = (res.data as any).data as Lesson;
       onSelectLesson(updated);
-      toast.message('Lesson saved');
+      toast.positive('Lesson saved');
       onSaved();
     } catch (e: any) {
       toast.danger(e.message ?? 'Unable to save');
@@ -455,13 +505,19 @@ function LessonEditor({
   const uploadVideo = (file: File) => {
     uploadFile(file, {
       uploadType: 'courseVideos',
+      showToastOnRestrictionFail: true,
+      showToastOnBackendError: true,
       onSuccess: async entry => {
-        await apiClient.put(`/api/v1/course-lessons/${lesson.id}`, {
-          video_type: 'upload',
-          video_file_entry_id: entry.id,
-        });
-        toast.message('Video uploaded');
-        onSaved();
+        try {
+          await apiClient.put(`/api/v1/course-lessons/${lesson.id}`, {
+            video_type: 'upload',
+            video_file_entry_id: entry.id,
+          });
+          toast.positive('Video uploaded');
+          onSaved();
+        } catch {
+          toast.danger('Unable to attach the uploaded video');
+        }
       },
     });
   };
@@ -469,11 +525,18 @@ function LessonEditor({
   const uploadResource = (file: File) => {
     uploadFile(file, {
       uploadType: 'courseResources',
+      showToastOnRestrictionFail: true,
+      showToastOnBackendError: true,
       onSuccess: async entry => {
-        await apiClient.post(`/api/v1/course-lessons/${lesson.id}/resources`, {
-          file_entry_id: entry.id,
-        });
-        onSaved();
+        try {
+          await apiClient.post(
+            `/api/v1/course-lessons/${lesson.id}/resources`,
+            {file_entry_id: entry.id},
+          );
+          onSaved();
+        } catch {
+          toast.danger('Unable to attach the resource');
+        }
       },
     });
   };
@@ -502,25 +565,15 @@ function LessonEditor({
           </Card.Description>
         </Card.Header>
         <Card.Content className="flex flex-col gap-3 p-4 pt-0">
-          <label className="flex cursor-pointer flex-col items-center gap-2 rounded-card border border-dashed p-6 text-center hover:bg-muted/30">
-            <UploadIcon className="size-5 text-muted-foreground" />
-            <span className="text-sm font-medium">
-              <Trans message="Upload a video..." />
-            </span>
-            <span className="text-xs text-muted-foreground">.mp4, .mov, .mpeg, or .webm</span>
-            <input
-              type="file"
-              accept="video/*"
-              className="hidden"
-              onChange={e => {
-                const f = e.target.files?.[0];
-                if (f) uploadVideo(f);
-              }}
-            />
-            <span className="text-xs text-muted-foreground">
-              {uploadStatus === 'inProgress' ? 'Uploading...' : 'Click to browse'}
-            </span>
-          </label>
+          <FileDropzone
+            accept="video/*"
+            title={<Trans message="Upload a video" />}
+            description={<Trans message="Drag and drop or click to browse" />}
+            hint=".mp4, .mov, .mpeg, or .webm"
+            status={uploadStatus === 'inProgress' ? 'uploading' : 'idle'}
+            progress={percentage}
+            onFile={uploadVideo}
+          />
           <div className="flex items-center gap-3">
             <div className="h-px flex-1 bg-border" />
             <span className="text-xs text-muted-foreground">or</span>
@@ -569,20 +622,11 @@ function LessonEditor({
         <Field.Label>
           <Trans message="File attachments" />
         </Field.Label>
-        <label className="flex cursor-pointer items-center gap-2 rounded-card border border-dashed p-3 hover:bg-muted/30">
-          <UploadIcon className="size-4" />
-          <span className="text-sm">
-            <Trans message="Upload attachment" />
-          </span>
-          <input
-            type="file"
-            className="hidden"
-            onChange={e => {
-              const f = e.target.files?.[0];
-              if (f) uploadResource(f);
-            }}
-          />
-        </label>
+        <FileDropzone
+          title={<Trans message="Upload attachment" />}
+          description={<Trans message="Drag and drop or click to browse" />}
+          onFile={uploadResource}
+        />
         {!!resources.length && (
           <div className="divide-y rounded-card border">
             {resources.map(r => (
@@ -645,7 +689,7 @@ function CourseSettingsDialog({
         type: 'course',
       });
     }
-    toast.message('Settings saved');
+    toast.positive('Settings saved');
     onOpenChange(false);
     onSaved();
   };

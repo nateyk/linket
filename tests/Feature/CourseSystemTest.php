@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Courses\Models\Course;
 use App\Courses\Models\Lesson;
+use App\Models\User;
 use App\Storefront\Models\DigitalProduct;
 use App\Storefront\Models\StorefrontOrder;
 use Common\Workspaces\Actions\CreateWorkspace;
@@ -11,7 +12,6 @@ use Common\Workspaces\ActiveWorkspace;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Str;
 use Tests\TestCase;
-use App\Models\User;
 
 class CourseSystemTest extends TestCase
 {
@@ -195,6 +195,10 @@ class CourseSystemTest extends TestCase
 
     private function stateful(): static
     {
-        return $this->withHeader('Referer', 'http://localhost');
+        $csrfToken = 'test-csrf-token';
+
+        return $this->withSession(['_token' => $csrfToken])
+            ->withHeader('Referer', config('app.url'))
+            ->withHeader('X-CSRF-TOKEN', $csrfToken);
     }
 }

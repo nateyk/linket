@@ -22,6 +22,10 @@ Route::get('pages/{slugOrId}', [CustomPageController::class, 'show']);
 Route::get('forgot-password', [HomeController::class, 'render']);
 Route::get('my-order', [HomeController::class, 'render']);
 Route::get('my-order/purchases', [HomeController::class, 'render']);
+Route::get('my-order/courses/{courseId}', [HomeController::class, 'render'])->whereNumber('courseId');
+Route::get('my-order/courses/{courseId}/lessons/{lessonId}', [HomeController::class, 'render'])
+    ->whereNumber('courseId')
+    ->whereNumber('lessonId');
 
 Route::get('{linkHash}/img', [LinkImageController::class, 'show']);
 

@@ -1,5 +1,4 @@
 import {
-  listBiolinksOptions,
   listStoresOptions,
   retrieveBiolinkOptions,
   retrieveStoreOptions,
@@ -115,8 +114,7 @@ export const sharedDashboardRoutes = (routeType: DatatableRouteType) => {
   // stores — canonical storefront editor (replaces biolinks)
   routes.push({
     path: 'stores/:storeId',
-    lazy: () =>
-      import('@app/dashboard/stores/store-editor/store-editor-page'),
+    lazy: () => import('@app/dashboard/stores/store-editor/store-editor-page'),
     loader: ({params}) =>
       queryClient.ensureQueryData(
         retrieveStoreOptions(String(params.storeId!)),
@@ -153,7 +151,8 @@ export const sharedDashboardRoutes = (routeType: DatatableRouteType) => {
   // biolinks — legacy alias, 308 redirect to stores
   routes.push({
     path: 'biolinks/:biolinkId',
-    loader: ({params}) => redirect(`/${routeType}/stores/${params.biolinkId}`, 308),
+    loader: ({params}) =>
+      redirect(`/${routeType}/stores/${params.biolinkId}`, 308),
   });
 
   // folders — admin only (disabled from creator dashboard)
@@ -414,8 +413,18 @@ export const dashboardRoutes: RouteObject[] = [
       },
       {
         path: 'my-products/new/details',
+        loader: ({request}) => {
+          const url = new URL(request.url);
+          return url.searchParams.get('type') === 'course'
+            ? redirect('/dashboard/my-products/new/course')
+            : null;
+        },
         lazy: () =>
           import('@app/dashboard/digital-products/digital-product-form-page'),
+      },
+      {
+        path: 'my-products/new/course',
+        lazy: () => import('@app/dashboard/courses/create-course-page'),
       },
       {
         path: 'my-products/:productId/edit',
@@ -425,18 +434,6 @@ export const dashboardRoutes: RouteObject[] = [
       {
         path: 'my-products/:productId/course',
         lazy: () => import('@app/dashboard/courses/course-builder-page'),
-      },
-      {
-        path: 'my-courses',
-        lazy: () => import('@app/dashboard/my-learning/my-courses-page'),
-      },
-      {
-        path: 'learn/:courseId',
-        lazy: () => import('@app/dashboard/my-learning/course-learn-page'),
-      },
-      {
-        path: 'learn/:courseId/lessons/:lessonId',
-        lazy: () => import('@app/dashboard/my-learning/lesson-player-page'),
       },
       {
         path: 'my-products/:productId/reviews',

@@ -279,25 +279,29 @@ function SidebarMenu({className, ...props}: ComponentProps<'ul'>) {
 function SidebarMenuFromConfig({
   position,
   end,
+  filter,
   defaultIcons,
 }: {
   position: string;
   end?: (item: MenuItemConfig) => boolean;
+  filter?: (item: MenuItemConfig) => boolean;
   defaultIcons?: Record<string, ReactElement<any>>;
 }) {
   const menuConfig = useCustomMenu(position);
   return (
     <Sidebar.Menu>
-      {menuConfig?.items.map(item => (
-        <Sidebar.MenuItem key={item.id}>
-          <Sidebar.MenuButton
-            render={<NavLink to={item.action} end={end?.(item)} />}
-            icon={<MenuItemIcon item={item} defaultIcons={defaultIcons} />}
-          >
-            <Trans message={item.label} />
-          </Sidebar.MenuButton>
-        </Sidebar.MenuItem>
-      ))}
+      {menuConfig?.items
+        .filter(item => filter?.(item) ?? true)
+        .map(item => (
+          <Sidebar.MenuItem key={item.id}>
+            <Sidebar.MenuButton
+              render={<NavLink to={item.action} end={end?.(item)} />}
+              icon={<MenuItemIcon item={item} defaultIcons={defaultIcons} />}
+            >
+              <Trans message={item.label} />
+            </Sidebar.MenuButton>
+          </Sidebar.MenuItem>
+        ))}
     </Sidebar.Menu>
   );
 }

@@ -6,15 +6,20 @@ import {Sidebar} from '@common/ui/dashboard/sidebar';
 import {Logo} from '@common/ui/navigation/navbar/logo';
 import {WorkspaceSelector} from '@common/workspace/workspace-selector';
 import {Trans} from '@ui/i18n/trans';
-import {GraduationCapIcon, StoreIcon} from 'lucide-react';
+import {StoreIcon} from 'lucide-react';
 import {use} from 'react';
 
 // stores alias – canonical storefront icon, keep deprecated biolinks
-if (!dashboardSidebarIcons['/dashboard/stores'] && dashboardSidebarIcons['/dashboard/biolinks']) {
-  dashboardSidebarIcons['/dashboard/stores'] = dashboardSidebarIcons['/dashboard/biolinks'];
+if (
+  !dashboardSidebarIcons['/dashboard/stores'] &&
+  dashboardSidebarIcons['/dashboard/biolinks']
+) {
+  dashboardSidebarIcons['/dashboard/stores'] =
+    dashboardSidebarIcons['/dashboard/biolinks'];
 }
 if (!dashboardSidebarIcons['stores'] && dashboardSidebarIcons['biolinks']) {
-  (dashboardSidebarIcons as Record<string, unknown>)['stores'] = dashboardSidebarIcons['biolinks'];
+  (dashboardSidebarIcons as Record<string, unknown>)['stores'] =
+    dashboardSidebarIcons['biolinks'];
 }
 import {NavLink} from 'react-router';
 import {UsageMeter} from './usage-meter';
@@ -26,7 +31,6 @@ export function AppDashboardSidebar() {
   const hasDigitalProducts = primaryMenu?.items.some(
     item => item.action === '/dashboard/my-products',
   );
-  const hasMyCourses = primaryMenu?.items.some(item => item.action === '/dashboard/my-courses');
   const hasSecondaryItems = !!secondaryMenu?.items.length;
 
   return (
@@ -48,6 +52,7 @@ export function AppDashboardSidebar() {
             <Sidebar.MenuFromConfig
               position="dashboard-primary"
               defaultIcons={dashboardSidebarIcons}
+              filter={item => item.action !== '/dashboard/my-courses'}
               end={item => item.action === '/dashboard'}
             />
             {!hasDigitalProducts && (
@@ -58,15 +63,6 @@ export function AppDashboardSidebar() {
                     icon={<StoreIcon />}
                   >
                     <Trans message="Digital Products" />
-                  </Sidebar.MenuButton>
-                </Sidebar.MenuItem>
-              </Sidebar.Menu>
-            )}
-            {!hasMyCourses && (
-              <Sidebar.Menu>
-                <Sidebar.MenuItem>
-                  <Sidebar.MenuButton render={<NavLink to="/dashboard/my-courses" />} icon={<GraduationCapIcon />}>
-                    <Trans message="My Courses" />
                   </Sidebar.MenuButton>
                 </Sidebar.MenuItem>
               </Sidebar.Menu>
