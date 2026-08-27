@@ -1,9 +1,9 @@
 import {apiClient} from '@common/http/query-client';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
+import {StatCard} from '@common/ui/stat-card';
 import {Accordion} from '@shadcn/accordion/accordion';
 import {Alert} from '@shadcn/alert/alert';
 import {Button} from '@shadcn/button/button';
-import {Card} from '@shadcn/card/card';
 import {Empty} from '@shadcn/empty/empty';
 import {Progress} from '@shadcn/progress/progress';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
@@ -158,6 +158,10 @@ export function CourseAnalyticsPage() {
     );
   }
 
+  const overviewCardClassName = cn(
+    'rounded-xl border bg-card text-card-foreground shadow-xs',
+  );
+
   return (
     <DashboardLayout.MainSection>
       <DashboardLayout.SectionHeader>
@@ -174,61 +178,34 @@ export function CourseAnalyticsPage() {
 
       <DashboardLayout.SectionContent className="gap-6 p-6">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <Card.Root className={cn('rounded-xl border bg-card text-card-foreground shadow-xs')}>
-            <Card.Header className="pb-2">
-              <Card.Description className="flex items-center gap-1.5 text-xs font-medium">
-                <UsersIcon className="size-4" data-icon="inline-start" />
-                <Trans message="Active learners" />
-              </Card.Description>
-            </Card.Header>
-            <Card.Content className="pt-0">
-              <p className="text-2xl font-semibold tabular-nums">{analytics.activeLearners}</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                <Trans message="Enrolled learners" />
-              </p>
-            </Card.Content>
-          </Card.Root>
-
-          <Card.Root className="rounded-xl border bg-card text-card-foreground shadow-xs">
-            <Card.Header className="pb-2">
-              <Card.Description className="flex items-center gap-1.5 text-xs font-medium">
-                <BookOpenIcon className="size-4" data-icon="inline-start" />
-                <Trans message="Avg. lesson completion" />
-              </Card.Description>
-            </Card.Header>
-            <Card.Content className="pt-0">
-              <p className="text-2xl font-semibold tabular-nums">{analytics.avgLessonCompletion.toFixed(1)}%</p>
-              <p className="mt-1 text-xs text-muted-foreground">{analytics.totalLessons} lessons</p>
-            </Card.Content>
-          </Card.Root>
-
-          <Card.Root className="rounded-xl border bg-card text-card-foreground shadow-xs">
-            <Card.Header className="pb-2">
-              <Card.Description className="flex items-center gap-1.5 text-xs font-medium">
-                <CheckCircleIcon className="size-4" data-icon="inline-start" />
-                <Trans message="Lesson completions" />
-              </Card.Description>
-            </Card.Header>
-            <Card.Content className="pt-0">
-              <p className="text-2xl font-semibold tabular-nums">{analytics.lessonCompletions}</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                <Trans message="Total completions" />
-              </p>
-            </Card.Content>
-          </Card.Root>
-
-          <Card.Root className="rounded-xl border bg-card text-card-foreground shadow-xs">
-            <Card.Header className="pb-2">
-              <Card.Description className="flex items-center gap-1.5 text-xs font-medium">
-                <LayersIcon className="size-4" data-icon="inline-start" />
-                <Trans message="Avg. chapter completion" />
-              </Card.Description>
-            </Card.Header>
-            <Card.Content className="pt-0">
-              <p className="text-2xl font-semibold tabular-nums">{analytics.avgChapterCompletion.toFixed(1)}%</p>
-              <p className="mt-1 text-xs text-muted-foreground">{analytics.totalChapters} chapters</p>
-            </Card.Content>
-          </Card.Root>
+          <StatCard
+            className={overviewCardClassName}
+            icon={<UsersIcon className="size-4" data-icon="inline-start" />}
+            label={<Trans message="Active learners" />}
+            value={analytics.activeLearners}
+            hint={<Trans message="Enrolled learners" />}
+          />
+          <StatCard
+            className={overviewCardClassName}
+            icon={<BookOpenIcon className="size-4" data-icon="inline-start" />}
+            label={<Trans message="Avg. lesson completion" />}
+            value={`${analytics.avgLessonCompletion.toFixed(1)}%`}
+            hint={`${analytics.totalLessons} lessons`}
+          />
+          <StatCard
+            className={overviewCardClassName}
+            icon={<CheckCircleIcon className="size-4" data-icon="inline-start" />}
+            label={<Trans message="Lesson completions" />}
+            value={analytics.lessonCompletions}
+            hint={<Trans message="Total completions" />}
+          />
+          <StatCard
+            className={overviewCardClassName}
+            icon={<LayersIcon className="size-4" data-icon="inline-start" />}
+            label={<Trans message="Avg. chapter completion" />}
+            value={`${analytics.avgChapterCompletion.toFixed(1)}%`}
+            hint={`${analytics.totalChapters} chapters`}
+          />
         </div>
 
         <div className="flex flex-col gap-4">
