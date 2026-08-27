@@ -17,4 +17,19 @@ class CoursePolicy
     {
         return $this->manage($user, $course) || $user->hasPermission('admin.access');
     }
+
+    public function view(User $user, Course $course): bool
+    {
+        // Allow if instructor or product owner matches authenticated user
+        if ($course->instructor_user_id !== null && (int) $course->instructor_user_id === (int) $user->id) {
+            return true;
+        }
+
+        return $this->manage($user, $course);
+    }
+
+    public function update(User $user, Course $course): bool
+    {
+        return $this->view($user, $course);
+    }
 }

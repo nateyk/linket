@@ -87,6 +87,7 @@ class AppServiceProvider extends ServiceProvider
 
         Gate::policy(Store::class, \App\Biolinks\Policies\BiolinkPolicy::class);
         Gate::policy(Biolink::class, \App\Biolinks\Policies\BiolinkPolicy::class);
+        Gate::policy(\App\Courses\Models\Course::class, \App\Courses\Policies\CoursePolicy::class);
 
         $this->app['router']->aliasMiddleware('addDeprecationHeader', AddDeprecationHeader::class);
 
@@ -159,6 +160,7 @@ class AppServiceProvider extends ServiceProvider
         \Illuminate\Support\Facades\Route::prefix('api/v1')->middleware(['api', 'optionalAuth:sanctum', 'verified', 'verifyApiAccess'])->group(function () {
             // Creator course management
             \Illuminate\Support\Facades\Route::get('courses/{course}', [\App\Courses\Controllers\CoursesController::class, 'show']);
+            \Illuminate\Support\Facades\Route::get('courses/{course}/analytics', [\App\Courses\Controllers\CoursesController::class, 'analytics']);
             \Illuminate\Support\Facades\Route::put('courses/{course}', [\App\Courses\Controllers\CoursesController::class, 'update']);
             \Illuminate\Support\Facades\Route::post('courses/{course}/publish', [\App\Courses\Controllers\CoursesController::class, 'publish']);
             \Illuminate\Support\Facades\Route::post('courses/{course}/unpublish', [\App\Courses\Controllers\CoursesController::class, 'unpublish']);
