@@ -4,10 +4,7 @@ import {Trans} from '@ui/i18n/trans';
 import {ArrowLeftIcon} from 'lucide-react';
 import {Link, useNavigate} from 'react-router';
 import {useState} from 'react';
-import {
-  ProductTypePicker,
-  type ProductType,
-} from './product-type-picker';
+import {ProductTypePicker, type ProductType} from './product-type-picker';
 
 export function Component() {
   const navigate = useNavigate();
@@ -15,7 +12,11 @@ export function Component() {
 
   const handleContinue = () => {
     if (selectedType) {
-      navigate(`/dashboard/my-products/new/details?type=${selectedType}`);
+      navigate(
+        selectedType === 'course'
+          ? '/dashboard/my-products/new/course'
+          : `/dashboard/my-products/new/details?type=${selectedType}`,
+      );
     }
   };
 
@@ -30,14 +31,14 @@ export function Component() {
       <DashboardLayout.SectionContent className="overflow-y-auto">
         <div className="mx-auto flex w-full max-w-xl flex-col gap-5 py-4">
           <div className="flex items-center justify-between">
-            <Button variant="ghost" render={<Link to="/dashboard/my-products" />}>
+            <Button
+              variant="ghost"
+              render={<Link to="/dashboard/my-products" />}
+            >
               <ArrowLeftIcon />
               <Trans message="All products" />
             </Button>
-            <Button
-              disabled={!selectedType}
-              onClick={handleContinue}
-            >
+            <Button disabled={!selectedType} onClick={handleContinue}>
               <Trans message="Continue" />
             </Button>
           </div>

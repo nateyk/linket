@@ -1,4 +1,7 @@
-import {dashboardRoutes, sharedDashboardRoutes} from '@app/dashboard/dashboard-routes';
+import {
+  dashboardRoutes,
+  sharedDashboardRoutes,
+} from '@app/dashboard/dashboard-routes';
 import {describe, test, expect} from 'vitest';
 
 describe('storefront-first IA hardening — creator hides legacy link tools (Task 9)', () => {
@@ -22,12 +25,13 @@ describe('storefront-first IA hardening — creator hides legacy link tools (Tas
   ];
 
   test('creator dashboard does not expose admin link tools', () => {
-    const dashboardPaths = sharedDashboardRoutes('dashboard').map((r: any) => r.path);
+    const dashboardPaths = sharedDashboardRoutes('dashboard').map(
+      (r: any) => r.path,
+    );
     for (const p of legacyPaths) {
-      expect(
-        dashboardPaths,
-        `dashboard must not expose "${p}"`,
-      ).not.toContain(p);
+      expect(dashboardPaths, `dashboard must not expose "${p}"`).not.toContain(
+        p,
+      );
     }
   });
 
@@ -79,11 +83,28 @@ describe('dashboard routes aliases', () => {
   });
 
   test('dashboard stores loader uses storesBaseKey', async () => {
-    const {storesBaseKey, biolinksBaseKey} = await import(
-      '@app/dashboard/stores/stores-queries'
-    );
+    const {storesBaseKey, biolinksBaseKey} =
+      await import('@app/dashboard/stores/stores-queries');
     expect(storesBaseKey).toEqual(['stores']);
     expect(biolinksBaseKey).toEqual(['stores']);
     expect(biolinksBaseKey).toEqual(storesBaseKey);
+  });
+});
+
+describe('course product creation', () => {
+  test('uses a dedicated course creation route', () => {
+    const paths = dashboardRoutes[0].children!.map(route => route.path);
+
+    expect(paths).toContain('my-products/new/course');
+  });
+});
+
+describe('buyer course routes', () => {
+  test('does not expose learner pages in the seller dashboard', () => {
+    const paths = dashboardRoutes[0].children!.map(route => route.path);
+
+    expect(paths).not.toContain('my-courses');
+    expect(paths).not.toContain('learn/:courseId');
+    expect(paths).not.toContain('learn/:courseId/lessons/:lessonId');
   });
 });

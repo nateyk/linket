@@ -74,4 +74,6 @@ export const UploadType = {
   ...CommonUploadType,
   linkImages: 'linkImages',
   digitalProductFiles: 'digitalProductFiles',
+  courseVideos: 'courseVideos',
+  courseResources: 'courseResources',
 } as const;

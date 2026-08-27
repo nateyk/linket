@@ -157,6 +157,41 @@ function DigitalProductForm() {
   useEffect(() => {
     void (async () => {
       try {
+        if (productId) {
+          const response = await fetch(
+            `/api/v1/digital-products/${productId}`,
+            {
+              credentials: 'same-origin',
+              headers: {Accept: 'application/json'},
+            },
+          );
+
+          if (!response.ok) {
+            throw new Error(
+              await responseErrorMessage(
+                response,
+                'Unable to load this digital product.',
+              ),
+            );
+          }
+
+          const item = (await response.json()).data as Product;
+          if (item.type === 'course') {
+            navigate(`/dashboard/my-products/${item.id}/course`, {
+              replace: true,
+            });
+            return;
+          }
+          setProduct(item);
+          setTitle(item.title);
+          setDescription(item.description ?? '');
+          setPrice((item.price_cents / 100).toFixed(2));
+          setCoverUrl(item.cover?.url ?? '');
+          setCoverFileId(item.cover_file_entry_id ?? item.cover?.id ?? null);
+          setFiles(item.files ?? []);
+          setBiolinkIds(item.biolink_ids ?? []);
+        }
+
         const pageResponse = await fetch(
           '/api/v1/biolinks?fields_preset=minimal',
           {
@@ -170,31 +205,6 @@ function DigitalProductForm() {
           setBiolinks(payload.data ?? []);
         }
 
-        if (!productId) return;
-
-        const response = await fetch(`/api/v1/digital-products/${productId}`, {
-          credentials: 'same-origin',
-          headers: {Accept: 'application/json'},
-        });
-
-        if (!response.ok) {
-          throw new Error(
-            await responseErrorMessage(
-              response,
-              'Unable to load this digital product.',
-            ),
-          );
-        }
-
-        const item = (await response.json()).data as Product;
-        setProduct(item);
-        setTitle(item.title);
-        setDescription(item.description ?? '');
-        setPrice((item.price_cents / 100).toFixed(2));
-        setCoverUrl(item.cover?.url ?? '');
-        setCoverFileId(item.cover_file_entry_id ?? item.cover?.id ?? null);
-        setFiles(item.files ?? []);
-        setBiolinkIds(item.biolink_ids ?? []);
       } catch (reason) {
         setError(
           reason instanceof Error
@@ -205,12 +215,13 @@ function DigitalProductForm() {
         setLoading(false);
       }
     })();
-  }, [productId]);
+  }, [navigate, productId]);
 
   const save = useCallback(
     async (submitAfterSave = false) => {
       const priceCents = Math.round(Number(price) * 100);
-      const isCourse = productType === 'course';
+      const effectiveType = product?.type ?? productType ?? 'digital';
+      const isCourse = effectiveType === 'course';
 
       if (
         !title.trim() ||
@@ -219,7 +230,9 @@ function DigitalProductForm() {
         (!isCourse && !files.length)
       ) {
         setOpenSection(
-          !title.trim() || !Number.isFinite(priceCents) || (isCourse ? priceCents < 0 : priceCents < 50)
+          !title.trim() ||
+            !Number.isFinite(priceCents) ||
+            (isCourse ? priceCents < 0 : priceCents < 50)
             ? 'details'
             : 'files',
         );
@@ -246,7 +259,6 @@ function DigitalProductForm() {
       setError(undefined);
 
       try {
-        const isCourseBody = productType === 'course';
         const body: Record<string, unknown> = {
           title: title.trim(),
           description: description.trim() || null,
@@ -255,22 +267,24 @@ function DigitalProductForm() {
           cover_file_entry_id: coverFileId,
           file_ids: files.map(file => file.id),
           biolink_ids: biolinkIds,
-          type: productType ?? 'digital',
+          type: effectiveType,
         };
         // For courses, file_ids is optional — send empty array as-is, backend allows it
         const response = product
           ? await apiClient.put(`/api/v1/digital-products/${product.id}`, body)
           : await apiClient.post('/api/v1/digital-products', body);
-        const saved = response.data.data as Product & {type?: string};
-        setProduct(saved as Product);
+        const saved = response.data.data as Product;
+        setProduct(saved);
 
         if (submitAfterSave) {
           setSubmitting(true);
           await apiClient.post(`/api/v1/digital-products/${saved.id}/submit`);
         }
 
-        if (isCourseBody || (saved as unknown as {type?: string}).type === 'course') {
-          navigate(`/dashboard/my-products/${saved.id}/course`, {replace: true});
+        if (isCourse || saved.type === 'course') {
+          navigate(`/dashboard/my-products/${saved.id}/course`, {
+            replace: true,
+          });
         } else {
           navigate(`/dashboard/my-products/${saved.id}/edit`, {replace: true});
         }
@@ -293,6 +307,7 @@ function DigitalProductForm() {
       navigate,
       price,
       product,
+      productType,
       title,
     ],
   );
@@ -395,12 +410,17 @@ function DigitalProductForm() {
               <GraduationCapIcon />
               <Alert.Title>Course product</Alert.Title>
               <Alert.Description className="flex flex-wrap items-center gap-2">
-                <span>After saving, you’ll build your curriculum in the course builder.</span>
+                <span>
+                  After saving, you’ll build your curriculum in the course
+                  builder.
+                </span>
                 {product && (
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => navigate(`/dashboard/my-products/${product.id}/course`)}
+                    onClick={() =>
+                      navigate(`/dashboard/my-products/${product.id}/course`)
+                    }
                   >
                     <GraduationCapIcon />
                     Open course builder
