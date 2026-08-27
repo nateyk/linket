@@ -40,6 +40,7 @@ import {
   DownloadIcon,
   FileIcon,
   FileTextIcon,
+  GraduationCapIcon,
   HeadphonesIcon,
   Link2Icon,
   PencilIcon,
@@ -75,6 +76,7 @@ type Product = {
   files?: FileEntry[];
   biolink_ids?: number[];
   status: string;
+  type?: string;
 };
 
 type SetupSection = 'details' | 'files' | 'bio-pages';
@@ -86,6 +88,7 @@ const PRODUCT_TYPE_CONFIG: Record<
   digital: {label: 'Digital product', icon: DownloadIcon},
   ebook: {label: 'E-book', icon: BookIcon},
   audio: {label: 'Audio', icon: HeadphonesIcon},
+  course: {label: 'Course', icon: GraduationCapIcon},
 };
 
 const SECTION_ORDER: SetupSection[] = ['details', 'files', 'bio-pages'];
@@ -207,20 +210,23 @@ function DigitalProductForm() {
   const save = useCallback(
     async (submitAfterSave = false) => {
       const priceCents = Math.round(Number(price) * 100);
+      const isCourse = productType === 'course';
 
       if (
         !title.trim() ||
         !Number.isFinite(priceCents) ||
-        priceCents < 50 ||
-        !files.length
+        (isCourse ? priceCents < 0 : priceCents < 50) ||
+        (!isCourse && !files.length)
       ) {
         setOpenSection(
-          !title.trim() || !Number.isFinite(priceCents) || priceCents < 50
+          !title.trim() || !Number.isFinite(priceCents) || (isCourse ? priceCents < 0 : priceCents < 50)
             ? 'details'
             : 'files',
         );
         setError(
-          'Add a title, a price of at least ETB 0.50, and one downloadable file.',
+          isCourse
+            ? 'Add a title and a valid price.'
+            : 'Add a title, a price of at least ETB 0.50, and one downloadable file.',
         );
         return;
       }
@@ -240,7 +246,8 @@ function DigitalProductForm() {
       setError(undefined);
 
       try {
-        const body = {
+        const isCourseBody = productType === 'course';
+        const body: Record<string, unknown> = {
           title: title.trim(),
           description: description.trim() || null,
           price_cents: priceCents,
@@ -248,19 +255,25 @@ function DigitalProductForm() {
           cover_file_entry_id: coverFileId,
           file_ids: files.map(file => file.id),
           biolink_ids: biolinkIds,
+          type: productType ?? 'digital',
         };
+        // For courses, file_ids is optional — send empty array as-is, backend allows it
         const response = product
           ? await apiClient.put(`/api/v1/digital-products/${product.id}`, body)
           : await apiClient.post('/api/v1/digital-products', body);
-        const saved = response.data.data as Product;
-        setProduct(saved);
+        const saved = response.data.data as Product & {type?: string};
+        setProduct(saved as Product);
 
         if (submitAfterSave) {
           setSubmitting(true);
           await apiClient.post(`/api/v1/digital-products/${saved.id}/submit`);
         }
 
-        navigate(`/dashboard/my-products/${saved.id}/edit`, {replace: true});
+        if (isCourseBody || (saved as unknown as {type?: string}).type === 'course') {
+          navigate(`/dashboard/my-products/${saved.id}/course`, {replace: true});
+        } else {
+          navigate(`/dashboard/my-products/${saved.id}/edit`, {replace: true});
+        }
         if (submitAfterSave) navigate('/dashboard/my-products');
       } catch (reason) {
         setError(
@@ -301,9 +314,10 @@ function DigitalProductForm() {
   };
 
   const isSectionComplete = (section: SetupSection) => {
+    const isCourse = productType === 'course';
     if (section === 'details')
       return title.trim().length > 0 && price.trim().length > 0;
-    if (section === 'files') return files.length > 0;
+    if (section === 'files') return isCourse ? true : files.length > 0;
     return biolinkIds.length > 0;
   };
 
@@ -373,6 +387,26 @@ function DigitalProductForm() {
             >
               <TriangleAlertIcon />
               <Alert.Description>{error}</Alert.Description>
+            </Alert.Root>
+          )}
+
+          {(productType === 'course' || product?.type === 'course') && (
+            <Alert.Root className="mb-5 border-primary/20 bg-primary/5">
+              <GraduationCapIcon />
+              <Alert.Title>Course product</Alert.Title>
+              <Alert.Description className="flex flex-wrap items-center gap-2">
+                <span>After saving, you’ll build your curriculum in the course builder.</span>
+                {product && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => navigate(`/dashboard/my-products/${product.id}/course`)}
+                  >
+                    <GraduationCapIcon />
+                    Open course builder
+                  </Button>
+                )}
+              </Alert.Description>
             </Alert.Root>
           )}
 
