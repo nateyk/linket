@@ -42,8 +42,9 @@ Out of scope:
 - **Controller**: add `analytics()` to `App\Courses\Controllers\CoursesController`
   (creator-management controller, consistent with `show`/`update`/`publish`).
   - Resolves `{course}` via route model binding.
-  - Enforces ownership via `CoursePolicy` (same policy used by other creator
-    endpoints — returns 403 for non-owners).
+  - Enforces that the course product belongs to the active workspace, then
+    applies `CoursePolicy::view` (owner or assigned instructor; returns 403
+    outside the workspace or for an unauthorized user).
 - **Service**: new `App\Courses\Services\CourseAnalyticsService` (thin, mirrors
   `EnrollmentService` / `ProgressService` style) containing the queries so the
   controller stays lean.
@@ -89,12 +90,12 @@ Revoked `course_enrollments` are excluded from every count.
   `lesson_id` (completed).
 - `completionRate` — `completedLearners / max(activeLearners, 1) * 100`.
 - `dropOffRate` — for the first lesson in course order:
-  `(activeLearners - completedLearners) / max(activeLearners, 1) * 100`;
+  `max(0, (activeLearners - completedLearners) / max(activeLearners, 1) * 100)`;
   for later lessons:
-  `(completedPrevLesson - completedCurrentLesson) / max(completedPrevLesson, 1) * 100`
+  `max(0, (completedPrevLesson - completedCurrentLesson) / max(completedPrevLesson, 1) * 100)`
   (0 when the denominator is 0). This mirrors a funnel-style drop between
-  consecutive lessons. If a simpler definition is preferred, the fallback is
-  `100 - completionRate`; adjust the service's one-liner.
+  consecutive lessons. Non-sequential completion can make a later lesson's
+  count higher than the prior lesson's; that is reported as 0.0% drop-off.
 
 **Example zero-state** (as in the reference): active 0 ⇒ every rate 0.0% and
 every count 0, matching the pasted HTML.
@@ -115,8 +116,10 @@ every count 0, matching the pasted HTML.
     "Completion rate: \u00d7%" on the right. Its content is a `Table` per
     chapter with columns Lesson | Completed learners | Completion rate
     (with a small `Progress` bar) | Drop-off rate (with `Progress`) | Edit.
-    The Edit button navigates to the builder's lesson editor. Uses `Empty`
-    when no chapters/enrollments and `Skeleton` while loading.
+    The Edit button navigates to the builder's exact lesson via `lessonId`.
+    Courses with chapters retain the four zero cards and chapter accordion
+    when there are no active learners; `Empty` applies only when no chapters.
+    `Skeleton` is shown while loading.
 - **Entry point**: on the seller's digital-product card
   (`resources/client/dashboard/digital-products/...`), when `type === 'course'`,
   add an **Analytics** `Button`/`Link` navigating to the analytics page.
@@ -127,19 +130,22 @@ every count 0, matching the pasted HTML.
 
 ### Error handling
 
-- Backend: 403 (non-owner via policy), 404 (missing course), standard auth
+- Backend: 403 (wrong active workspace or unauthorized user), 404 (missing course), standard auth
   errors from the group middleware.
 - Frontend: `Alert` on load error (same pattern as the builder), `Skeleton`
-  while loading, `Empty` for zero enrollments.
+  while loading, `Empty` only when the course has no chapters.
 
 ## Testing
 
 - **Backend** `tests/Feature/CourseAnalyticsTest.php`:
-  - Owner can fetch metrics; other creator gets 403; missing course 404.
+  - Owner and assigned instructor can fetch metrics in the active course
+    workspace; other creators and a direct cross-workspace request get 403;
+    missing course returns 404.
   - Revoked enrollments excluded from every count.
   - Zero-state (no enrollments) returns 0 for every metric, matching reference.
-  - Lesson/chapter aggregates and per-lesson drop-off computed correctly
-    (seeded progress fixtures).
+  - Lesson/chapter aggregates and per-lesson drop-off computed correctly,
+    including a later non-sequential lesson with more completions clamped to
+    0.0 (seeded progress fixtures).
 - **Frontend** `course-analytics-page.test.tsx`:
   - Source-contract style (like `course-builder-page.test.tsx`): asserts the
   analytics endpoint path is requested and key labels ("Active learners",

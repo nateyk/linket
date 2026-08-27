@@ -28,8 +28,9 @@ class CoursesController extends Controller
         return new CourseResource($course);
     }
 
-    public function analytics(\App\Courses\Models\Course $course, CourseAnalyticsService $service)
+    public function analytics(Course $course, CourseAnalyticsService $service)
     {
+        $this->assertActiveWorkspace($course);
         $this->authorize('view', $course);
         return response()->json(['data' => $service->forCourse($course)]);
     }
@@ -126,8 +127,15 @@ class CoursesController extends Controller
 
     private function assertOwner(Course $course, Request $request): void
     {
+        $this->assertActiveWorkspace($course);
         $product = $course->product;
-        abort_unless($product && $product->workspace_id === ActiveWorkspace::get()->id && $product->user_id === $request->user()->id, 403);
+        abort_unless($product && $product->user_id === $request->user()->id, 403);
+    }
+
+    private function assertActiveWorkspace(Course $course): void
+    {
+        $product = $course->product;
+        abort_unless($product && $product->workspace_id === ActiveWorkspace::get()->id, 403);
     }
 
     private function assertCanPreview(Course $course, Request $request): void

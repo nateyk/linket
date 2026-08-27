@@ -126,6 +126,46 @@ it('other creator gets 403', function () {
     $response->assertStatus(403);
 });
 
+it('rejects analytics for a course outside the active workspace', function () {
+    $creator = analyticsCreateCreator();
+    $courseWorkspace = (new CreateWorkspace())->createPersonalWorkspace($creator);
+    $product = analyticsCreateCourseProduct($creator, $courseWorkspace);
+    $course = $product->course;
+    analyticsCreateStructure($course);
+
+    $otherWorkspace = (new CreateWorkspace())->execute([
+        'name' => 'Other workspace',
+        'owner_id' => $creator->id,
+    ]);
+    ActiveWorkspace::clearCache();
+
+    analyticsStateful($this)
+        ->actingAs($creator)
+        ->getJson("/api/v1/courses/{$course->id}/analytics?workspace_id={$otherWorkspace->id}")
+        ->assertStatus(403);
+});
+
+it('allows an assigned instructor to fetch analytics from the course workspace', function () {
+    $creator = analyticsCreateCreator();
+    $workspace = (new CreateWorkspace())->createPersonalWorkspace($creator);
+    $product = analyticsCreateCourseProduct($creator, $workspace);
+    $course = $product->course;
+    analyticsCreateStructure($course);
+
+    $instructor = analyticsCreateCreator();
+    $workspace->members()->create([
+        'user_id' => $instructor->id,
+        'is_owner' => false,
+    ]);
+    $course->update(['instructor_user_id' => $instructor->id]);
+    ActiveWorkspace::clearCache();
+
+    analyticsStateful($this)
+        ->actingAs($instructor)
+        ->getJson("/api/v1/courses/{$course->id}/analytics?workspace_id={$workspace->id}")
+        ->assertOk();
+});
+
 it('missing course returns 404 JSON', function () {
     $creator = analyticsCreateCreator();
     $workspace = (new CreateWorkspace())->createPersonalWorkspace($creator);
@@ -169,7 +209,6 @@ it('revoked enrollments are excluded', function () {
     // lessonCompletions should be 1 if revoked filtered (strict), otherwise 3. Service filters revoked, so expect 1.
     $this->assertEquals(1, $data['lessonCompletions']);
     // L1 completedLearners should be 1 (only active)
-    $ch1Lessons = $data['chapters'][0]['lessons'];
     // Find L1 in chapters[0] lessons
     $l1Data = collect($data['chapters'])->flatMap(fn($c) => $c['lessons'])->firstWhere('id', $l1->id);
     $this->assertEquals(1, $l1Data['completedLearners']);
@@ -283,4 +322,30 @@ it('per-lesson and per-chapter rates/drops are correct', function () {
     $this->assertEquals(0, $l4Data['completedLearners']);
     $this->assertEqualsWithDelta(0.0, $l4Data['completionRate'], 0.01);
     $this->assertEqualsWithDelta(100.0, $l4Data['dropOffRate'], 0.01); // (1-0)/1=100
+});
+
+it('clamps drop-off when a later non-sequential lesson has more completions', function () {
+    $creator = analyticsCreateCreator();
+    $workspace = (new CreateWorkspace())->createPersonalWorkspace($creator);
+    $product = analyticsCreateCourseProduct($creator, $workspace);
+    $course = $product->course;
+    [$firstLesson, $secondLesson] = analyticsCreateStructure($course)['lessons'];
+
+    $student1 = analyticsCreateCreator();
+    $student2 = analyticsCreateCreator();
+    Enrollment::create(['course_id' => $course->id, 'user_id' => $student1->id, 'status' => 'active', 'enrolled_at' => now()]);
+    Enrollment::create(['course_id' => $course->id, 'user_id' => $student2->id, 'status' => 'active', 'enrolled_at' => now()]);
+    LessonProgress::create(['user_id' => $student1->id, 'course_id' => $course->id, 'lesson_id' => $firstLesson->id, 'completed_at' => now()]);
+    LessonProgress::create(['user_id' => $student1->id, 'course_id' => $course->id, 'lesson_id' => $secondLesson->id, 'completed_at' => now()]);
+    LessonProgress::create(['user_id' => $student2->id, 'course_id' => $course->id, 'lesson_id' => $secondLesson->id, 'completed_at' => now()]);
+    ActiveWorkspace::clearCache();
+
+    $data = analyticsStateful($this)
+        ->actingAs($creator)
+        ->getJson("/api/v1/courses/{$course->id}/analytics?workspace_id={$workspace->id}")
+        ->assertOk()
+        ->json('data');
+
+    $secondLessonData = collect($data['chapters'])->flatMap(fn ($chapter) => $chapter['lessons'])->firstWhere('id', $secondLesson->id);
+    $this->assertEqualsWithDelta(0.0, $secondLessonData['dropOffRate'], 0.01);
 });

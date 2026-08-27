@@ -42,7 +42,7 @@ import {
   VideoIcon,
 } from 'lucide-react';
 import {useCallback, useEffect, useState} from 'react';
-import {Link, useParams} from 'react-router';
+import {Link, useParams, useSearchParams} from 'react-router';
 
 // Types
 type Course = {
@@ -101,6 +101,7 @@ export function Component() {
 
 function CourseBuilder() {
   const {productId} = useParams();
+  const [searchParams] = useSearchParams();
   const [course, setCourse] = useState<Course | null>(null);
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [selectedChapterId, setSelectedChapterId] = useState<number | null>(null);
@@ -126,20 +127,29 @@ function CourseBuilder() {
         headers: {Accept: 'application/json'},
       });
       if (!res.ok) throw new Error('Unable to load course');
-      const payload = (await res.json()).data;
+      const payload = (await res.json()).data as Course;
       setCourse(payload);
-      // Auto-select first lesson if exists
-      const firstLesson = payload.chapters?.[0]?.lessons?.[0];
-      if (firstLesson) {
-        setSelectedLesson(firstLesson);
-        setSelectedChapterId(payload.chapters[0].id);
+      const lessonId = Number(searchParams.get('lessonId'));
+      const requestedChapter = Number.isInteger(lessonId)
+        ? payload.chapters.find(chapter =>
+            chapter.lessons.some(lesson => lesson.id === lessonId),
+          )
+        : undefined;
+      const requestedLesson = requestedChapter?.lessons.find(
+        lesson => lesson.id === lessonId,
+      );
+      const firstChapter = payload.chapters[0];
+      const selectedLesson = requestedLesson ?? firstChapter?.lessons[0];
+      if (selectedLesson) {
+        setSelectedLesson(selectedLesson);
+        setSelectedChapterId(requestedChapter?.id ?? firstChapter.id);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load course');
     } finally {
       setLoading(false);
     }
-  }, [productId]);
+  }, [productId, searchParams]);
 
   useEffect(() => {
     void load();

@@ -28,6 +28,7 @@ class CourseAnalyticsService
 
         // Flatten lessons in global course order (chapter order -> lesson order)
         $orderedLessons = $chapters->flatMap(fn ($ch) => $ch->lessons)->values();
+        $lessonIndexById = $orderedLessons->pluck('id')->flip()->all();
 
         // Lesson progress filtered to active learners (revoked excluded)
         $progressRows = collect();
@@ -57,14 +58,9 @@ class CourseAnalyticsService
 
         $lessonCompletions = $progressRows->count();
 
-        $avgLessonCompletion = 0.0;
-        if ($activeLearners > 0 && $totalLessons > 0) {
-            $avgLessonCompletion = (float) ($lessonCompletions / ($activeLearners * $totalLessons) * 100);
-        } elseif ($totalLessons === 0 || $activeLearners === 0) {
-            $avgLessonCompletion = 0.0;
-        } else {
-            $avgLessonCompletion = (float) ($lessonCompletions / max($activeLearners * $totalLessons, 1) * 100);
-        }
+        $avgLessonCompletion = $activeLearners > 0 && $totalLessons > 0
+            ? (float) ($lessonCompletions / ($activeLearners * $totalLessons) * 100)
+            : 0.0;
 
         // Per chapter computations
         $chaptersResult = [];
@@ -104,28 +100,17 @@ class CourseAnalyticsService
                 $completed = $lessonCompletedMap[$lesson->id] ?? 0;
                 $completionRateLesson = $activeLearners > 0 ? (float) ($completed / $activeLearners * 100) : 0.0;
 
-                // Drop-off: funnel style. First lesson in global order: (active - completed)/active*100
-                // Later: (prevCompleted - currCompleted)/max(prevCompleted,1)*100 . Fallback 100 - completionRate acceptable.
                 $dropOffRate = 0.0;
-                if ($activeLearners === 0) {
-                    $dropOffRate = 0.0;
-                } else {
-                    $idx = $orderedLessons->search(fn ($l) => $l->id === $lesson->id);
+                if ($activeLearners > 0) {
+                    $idx = $lessonIndexById[$lesson->id];
                     if ($idx === 0) {
-                        $dropOffRate = (float) (($activeLearners - $completed) / max($activeLearners, 1) * 100);
+                        $dropOffRate = (float) max(0, ($activeLearners - $completed) / $activeLearners * 100);
                     } else {
                         $prevLesson = $orderedLessons->get($idx - 1);
-                        $prevCompleted = $prevLesson ? ($lessonCompletedMap[$prevLesson->id] ?? 0) : $activeLearners;
-                        if ($prevCompleted === 0) {
-                            $dropOffRate = 0.0;
-                        } else {
-                            $dropOffRate = (float) (($prevCompleted - $completed) / max($prevCompleted, 1) * 100);
-                            // Clamp negative drop (when current > previous) to 0? Spec says funnel drop, could be negative if more completions than previous — but we keep raw; if negative, set 0 to avoid negative drop.
-                            if ($dropOffRate < 0) {
-                                $dropOffRate = 0.0;
-                            }
-                        }
-                        // Fallback alternative: 100 - completionRate is acceptable with one-liner note — we use funnel above.
+                        $prevCompleted = $lessonCompletedMap[$prevLesson->id] ?? 0;
+                        $dropOffRate = $prevCompleted > 0
+                            ? (float) max(0, ($prevCompleted - $completed) / $prevCompleted * 100)
+                            : 0.0;
                     }
                 }
 
@@ -148,14 +133,9 @@ class CourseAnalyticsService
             ];
         }
 
-        $avgChapterCompletion = 0.0;
-        if ($activeLearners > 0 && $totalChapters > 0) {
-            $avgChapterCompletion = (float) ($totalChapterCompletions / ($activeLearners * $totalChapters) * 100);
-        } elseif ($totalChapters === 0 || $activeLearners === 0) {
-            $avgChapterCompletion = 0.0;
-        } else {
-            $avgChapterCompletion = (float) ($totalChapterCompletions / max($activeLearners * $totalChapters, 1) * 100);
-        }
+        $avgChapterCompletion = $activeLearners > 0 && $totalChapters > 0
+            ? (float) ($totalChapterCompletions / ($activeLearners * $totalChapters) * 100)
+            : 0.0;
 
         // Zero-state (active 0) -> every rate 0.0 and every count 0 already handled via above branches.
         // Ensure all rates are floats

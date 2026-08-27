@@ -31,4 +31,17 @@ describe('course builder analytics navigation', () => {
       /render=\{\s*<Link\s+to=\{`\/dashboard\/my-products\/\$\{productId\}\/course\/analytics`\}\s*\/>\s*\}/,
     );
   });
+
+  test('selects the requested lesson after loading its course', () => {
+    const source = fs.readFileSync(
+      path.resolve(
+        'resources/client/dashboard/courses/course-builder-page.tsx',
+      ),
+      'utf8',
+    );
+
+    expect(source).toContain('useSearchParams');
+    expect(source).toContain("searchParams.get('lessonId')");
+    expect(source).toContain('requestedLesson');
+  });
 });

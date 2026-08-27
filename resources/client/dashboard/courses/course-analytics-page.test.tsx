@@ -10,4 +10,10 @@ describe('course analytics page', () => {
     expect(src).toContain("Detailed performance");
     expect(src).toContain("Completion rate");
   });
+
+  test('links each lesson edit action to that lesson in the builder', () => {
+    const src = fs.readFileSync('resources/client/dashboard/courses/course-analytics-page.tsx', 'utf8');
+
+    expect(src).toContain('course?lessonId=${l.id}');
+  });
 });

@@ -289,7 +289,7 @@ export function CourseAnalyticsPage() {
                                   variant="outline"
                                   size="sm"
                                   data-icon
-                                  onClick={() => navigate(`/dashboard/my-products/${productId}/course`)}
+                                  onClick={() => navigate(`/dashboard/my-products/${productId}/course?lessonId=${l.id}`)}
                                 >
                                   <PencilIcon className="size-4" />
                                   <Trans message="Edit" />
