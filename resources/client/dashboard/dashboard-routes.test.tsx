@@ -2,6 +2,7 @@ import {
   dashboardRoutes,
   sharedDashboardRoutes,
 } from '@app/dashboard/dashboard-routes';
+import fs from 'node:fs';
 import {describe, test, expect} from 'vitest';
 
 describe('storefront-first IA hardening — creator hides legacy link tools (Task 9)', () => {
@@ -102,6 +103,18 @@ describe('course product creation', () => {
     const paths = dashboardRoutes[0].children!.map(route => route.path);
 
     expect(paths).toContain('my-products/:productId/course/analytics');
+  });
+
+  test('loads course analytics only through the dashboard route tree', () => {
+    const appRouterSource = fs.readFileSync(
+      'resources/client/app-router.tsx',
+      'utf8',
+    );
+
+    expect(appRouterSource).not.toContain('CourseAnalyticsPage');
+    expect(appRouterSource).not.toContain(
+      "path: 'dashboard/my-products/:productId/course/analytics'",
+    );
   });
 });
 

@@ -28,7 +28,6 @@ import {
   retrieveWorkspaceOptions,
 } from '@common/workspace/workspace-queries';
 import {getBootstrapData} from '@ui/bootstrap-data/bootstrap-data-store';
-import {CourseAnalyticsPage} from '@app/dashboard/courses/course-analytics-page';
 import {FullPageLoader} from '@ui/progress/full-page-loader';
 import {createBrowserRouter, redirect} from 'react-router';
 import {Fragment} from 'react/jsx-runtime';
@@ -282,7 +281,6 @@ export const appRouter = createBrowserRouter(
         ...notificationRoutes,
         ...(legacyDashboardRedirects as unknown as typeof dashboardRoutes),
         ...dashboardRoutes,
-        {path: 'dashboard/my-products/:productId/course/analytics', element: <CourseAnalyticsPage />},
         ...adminRoutes,
         ...checkoutRoutes,
 
