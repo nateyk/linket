@@ -23,7 +23,6 @@ import {Input} from '@shadcn/forms/input/input';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {Switch} from '@shadcn/forms/switch/switch';
 import {FileDropzone} from '@common/ui/file-dropzone';
-import {ImageSelector} from '@common/uploads/components/image-selector';
 import {Trans} from '@ui/i18n/trans';
 import {useSortable} from '@ui/interactions/dnd/sortable/use-sortable';
 import {toast} from '@ui/toast/toast';
@@ -1001,7 +1000,7 @@ function CourseSettingsDialog({
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Backdrop />
-        <Dialog.Content className="flex max-h-[85vh] max-w-2xl flex-col gap-0 p-0 sm:max-w-lg">
+        <Dialog.Content className="flex max-h-[85vh] flex-col gap-0 p-0 sm:max-w-2xl">
           <Dialog.Header className="border-b px-6 pt-6 pb-4">
             <Dialog.Title>
               <Trans message="Course Settings" />
@@ -1010,7 +1009,7 @@ function CourseSettingsDialog({
               <Trans message="Manage your course cover image and other settings" />
             </Dialog.Description>
           </Dialog.Header>
-          <Dialog.Body className="flex-1 space-y-6 overflow-y-auto px-6 py-5">
+          <Dialog.Body className="mx-0 flex-1 space-y-6 overflow-y-auto px-6 py-5">
             <Field.Root>
               <Field.Label htmlFor="course-name">
                 <Trans message="Course Name" />
@@ -1031,21 +1030,7 @@ function CourseSettingsDialog({
               <Field.Label>
                 <Trans message="Cover Image" />
               </Field.Label>
-              <div className="w-full space-y-4">
-                <div className="group relative overflow-hidden rounded-xl border border-dashed bg-muted/30 transition-all hover:border-primary hover:bg-primary/5">
-                  <ImageSelector.Square
-                    value={coverUrl}
-                    onChange={(url, entry) => {
-                      setCoverUrl(url);
-                      setCoverFileId(entry?.id ?? null);
-                    }}
-                    uploadType="linkImages"
-                    placeholderVariant="dropzone"
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  <Trans message="Recommended size: 1200x514px • Max size: 5MB" />
-                </p>
+              <div className="w-full space-y-3">
                 {coverUrl && (
                   <div className="overflow-hidden rounded-xl border">
                     <img
@@ -1054,6 +1039,28 @@ function CourseSettingsDialog({
                       className="aspect-[1200/514] w-full object-cover"
                     />
                   </div>
+                )}
+                <CoverImageDropzone
+                  coverUrl={coverUrl}
+                  onCoverChange={(url, id) => {
+                    setCoverUrl(url);
+                    setCoverFileId(id);
+                  }}
+                />
+                <p className="text-xs text-muted-foreground">
+                  <Trans message="Recommended size: 1200x514px • Max size: 5MB" />
+                </p>
+                {coverUrl && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setCoverUrl('');
+                      setCoverFileId(null);
+                    }}
+                  >
+                    <Trans message="Remove cover" />
+                  </Button>
                 )}
               </div>
             </Field.Root>
@@ -1102,7 +1109,7 @@ function CourseSettingsDialog({
                     ID {course.instructor_user_id}
                   </span>
                 </div>
-                <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground transition-transform duration-200 group-data-[open]:rotate-180" />
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <div className="px-4 pb-3 text-sm text-muted-foreground">
@@ -1111,7 +1118,7 @@ function CourseSettingsDialog({
               </CollapsibleContent>
             </Collapsible>
           </Dialog.Body>
-          <Dialog.Footer className="border-t px-6 py-4">
+          <Dialog.Footer className="mx-0 mb-0 border-t px-6 py-4">
             <Dialog.CloseButton>
               <Trans message="Cancel" />
             </Dialog.CloseButton>
@@ -1122,5 +1129,40 @@ function CourseSettingsDialog({
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
+  );
+}
+
+function CoverImageDropzone({
+  coverUrl,
+  onCoverChange,
+}: {
+  coverUrl: string;
+  onCoverChange: (url: string, id: number | null) => void;
+}) {
+  const {uploadFile, uploadStatus, percentage} = useActiveUpload();
+  const uploading = uploadStatus === 'inProgress';
+
+  const handleFile = (file: File) => {
+    uploadFile(file, {
+      uploadType: 'linkImages',
+      showToastOnRestrictionFail: true,
+      showToastOnBackendError: true,
+      onSuccess: entry => {
+        onCoverChange(entry.url, entry.id);
+      },
+    });
+  };
+
+  return (
+    <FileDropzone
+      accept="image/*"
+      title={<Trans message="Upload Cover Image" />}
+      description={<Trans message="Drag and drop or click to browse" />}
+      hint="1200x514 • 5MB"
+      status={uploading ? 'uploading' : 'idle'}
+      progress={percentage}
+      onFile={handleFile}
+      className={coverUrl ? 'border-muted' : undefined}
+    />
   );
 }
