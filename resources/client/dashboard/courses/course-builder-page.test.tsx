@@ -11,7 +11,9 @@ describe('course builder uploads', () => {
       'utf8',
     );
 
-    expect(source).toContain("toast.danger('Unable to attach the uploaded video')");
+    expect(source).toContain(
+      "toast.danger('Unable to attach the uploaded video')",
+    );
     expect(source).toContain("toast.danger('Unable to attach the resource')");
     expect(source.match(/showToastOnRestrictionFail: true/g)).toHaveLength(2);
     expect(source.match(/showToastOnBackendError: true/g)).toHaveLength(2);
@@ -43,5 +45,21 @@ describe('course builder analytics navigation', () => {
     expect(source).toContain('useSearchParams');
     expect(source).toContain("searchParams.get('lessonId')");
     expect(source).toContain('requestedLesson');
+  });
+});
+
+describe('course builder curriculum sorting', () => {
+  test('removes the overview cards and persists chapter and lesson ordering', () => {
+    const source = fs.readFileSync(
+      path.resolve(
+        'resources/client/dashboard/courses/course-builder-page.tsx',
+      ),
+      'utf8',
+    );
+
+    expect(source).not.toContain('<StatCard');
+    expect(source).toContain('@ui/interactions/dnd/sortable/use-sortable');
+    expect(source).toContain('/chapters/reorder');
+    expect(source).toContain('/lessons/reorder');
   });
 });
