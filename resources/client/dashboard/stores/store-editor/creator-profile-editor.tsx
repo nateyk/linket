@@ -14,7 +14,10 @@ import {LinkButton as EditorLinkButton} from '@common/text-editor/menubar/link-b
 import {ListButtons} from '@common/text-editor/menubar/list-buttons';
 import {TiptapEditorContent} from '@common/text-editor/tiptap-editor-content';
 import {TipTapEditorProvider} from '@common/text-editor/tiptap-editor-provider';
-import {ImageSelector} from '@common/uploads/components/image-selector';
+import {
+  CroppedAvatar,
+  CroppedCover,
+} from '@common/uploads/components/cropped-image-selector';
 import {FileUploadProvider} from '@common/uploads/uploader/file-upload-provider';
 import {Badge} from '@shadcn/badge/badge';
 import {Accordion} from '@shadcn/accordion/accordion';
@@ -353,9 +356,8 @@ export function CreatorProfileEditor({
                       <Field.Label>
                         <Trans message="Cover image" />
                       </Field.Label>
-                      <ImageSelector.Square
-                        className="h-28 w-full rounded-card-sm sm:h-32"
-                        fit="cover"
+                      <CroppedCover
+                        className="h-28 w-full sm:h-32"
                         value={values.cover_url || ''}
                         onChange={value =>
                           form.setValue('cover_url', value || '', {
@@ -363,7 +365,7 @@ export function CreatorProfileEditor({
                           })
                         }
                         uploadType="linkImages"
-                        placeholderVariant="dropzone"
+                        aspect={16 / 9}
                       />
                     </HookForm.Field>
 
@@ -372,7 +374,7 @@ export function CreatorProfileEditor({
                         <Field.Label>
                           <Trans message="Profile photo" />
                         </Field.Label>
-                        <ImageSelector.Avatar
+                        <CroppedAvatar
                           className="size-22 rounded-card-sm bg-background p-1"
                           previewClassName="rounded-card-xs"
                           value={values.avatar_url || ''}
@@ -382,6 +384,7 @@ export function CreatorProfileEditor({
                             })
                           }
                           uploadType="linkImages"
+                          aspect={1}
                         />
                       </HookForm.Field>
 
@@ -545,9 +548,7 @@ export function CreatorProfileEditor({
                   <BuilderSectionHeader
                     icon={LinkIcon}
                     title={<Trans message="Actions" />}
-                    description={
-                      <Trans message="Message button settings." />
-                    }
+                    description={<Trans message="Message button settings." />}
                   />
                 </Accordion.Trigger>
                 <Accordion.Content className="border-t pt-4">
@@ -868,7 +869,10 @@ function ProductPickerDialog({
                           {product.title}
                         </span>
                         <span className="block text-xs text-muted-foreground">
-                          <FormattedCurrency valueInCents={product.price_cents} currency={product.currency} />
+                          <FormattedCurrency
+                            valueInCents={product.price_cents}
+                            currency={product.currency}
+                          />
                         </span>
                       </span>
                       <Checkbox
@@ -926,7 +930,10 @@ function SelectedProduct({
           {product.title}
         </div>
         <div className="mt-0.5 text-xs text-muted-foreground">
-          <FormattedCurrency valueInCents={product.price_cents} currency={product.currency} />
+          <FormattedCurrency
+            valueInCents={product.price_cents}
+            currency={product.currency}
+          />
         </div>
       </div>
       <Button
@@ -989,4 +996,3 @@ function sameProductSelection(first: number[], second: number[]): boolean {
   const sortedSecond = [...second].sort((a, b) => a - b);
   return sortedFirst.every((id, index) => id === sortedSecond[index]);
 }
-

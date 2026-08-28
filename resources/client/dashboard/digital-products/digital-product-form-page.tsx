@@ -10,7 +10,7 @@ import {ListButtons} from '@common/text-editor/menubar/list-buttons';
 import {TiptapEditorContent} from '@common/text-editor/tiptap-editor-content';
 import {TipTapEditorProvider} from '@common/text-editor/tiptap-editor-provider';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
-import {ImageSelector} from '@common/uploads/components/image-selector';
+import {CroppedCover} from '@common/uploads/components/cropped-image-selector';
 import {FileUploadProvider} from '@common/uploads/uploader/file-upload-provider';
 import {useActiveUpload} from '@common/uploads/uploader/use-active-upload';
 import {Badge} from '@shadcn/badge/badge';
@@ -204,7 +204,6 @@ function DigitalProductForm() {
           const payload = await pageResponse.json();
           setBiolinks(payload.data ?? []);
         }
-
       } catch (reason) {
         setError(
           reason instanceof Error
@@ -768,11 +767,11 @@ function DetailsPanel({
         <Field.Label>
           <Trans message="Cover image" />
         </Field.Label>
-        <ImageSelector.Square
+        <CroppedCover
           value={coverUrl}
           onChange={onCoverChange}
           uploadType="linkImages"
-          placeholderVariant="dropzone"
+          aspect={16 / 9}
         />
         <Field.Description>
           <Trans message="Shown on your product listing and bio pages." />

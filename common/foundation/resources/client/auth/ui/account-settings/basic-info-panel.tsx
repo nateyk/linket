@@ -4,7 +4,7 @@ import {UploadType} from '@app/site-config';
 import {updateDetailsOptions} from '@common/auth/ui/account-settings/account-settings-queries';
 import {AccountSettingsId} from '@common/auth/ui/account-settings/account-settings-sidenav';
 import {onFormQueryError} from '@common/http/errors/on-form-query-error';
-import {ImageSelector} from '@common/uploads/components/image-selector';
+import {CroppedAvatar} from '@common/uploads/components/cropped-image-selector';
 import {FileUploadProvider} from '@common/uploads/uploader/file-upload-provider';
 import {Button} from '@shadcn/button/button';
 import {Field} from '@shadcn/forms/field';
@@ -105,9 +105,10 @@ function AvatarSelector({user}: AvatarManagerProps) {
   const updateAvatar = useMutation(updateDetailsOptions(user.id));
   return (
     <FileUploadProvider>
-      <ImageSelector.Avatar
+      <CroppedAvatar
         value={value ?? null}
         uploadType={UploadType.avatars}
+        aspect={1}
         className="size-22.5"
         placeholderIcon={
           <Avatar label={user.name} size="size-full text-2xl" circle />
