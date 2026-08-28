@@ -63,3 +63,20 @@ describe('course builder curriculum sorting', () => {
     expect(source).toContain('/lessons/reorder');
   });
 });
+
+describe('course settings and builder polish', () => {
+  test('exposes cover image, course name, instructor and collapsible curriculum with simplified header', () => {
+    const source = fs.readFileSync(
+      path.resolve(
+        'resources/client/dashboard/courses/course-builder-page.tsx',
+      ),
+      'utf8',
+    );
+
+    expect(source).toContain('Cover Image');
+    expect(source).toContain('Course Name');
+    expect(source).toContain('Collapsible');
+    expect(source).toContain('max-w-2xl');
+    expect(source).toContain('Instructor');
+  });
+});
