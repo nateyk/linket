@@ -15,8 +15,8 @@ describe('course builder uploads', () => {
       "toast.danger('Unable to attach the uploaded video')",
     );
     expect(source).toContain("toast.danger('Unable to attach the resource')");
-    expect(source.match(/showToastOnRestrictionFail: true/g)).toHaveLength(2);
-    expect(source.match(/showToastOnBackendError: true/g)).toHaveLength(2);
+    expect(source.match(/showToastOnRestrictionFail: true/g)).toHaveLength(3);
+    expect(source.match(/showToastOnBackendError: true/g)).toHaveLength(3);
   });
 });
 
