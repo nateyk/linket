@@ -23,13 +23,12 @@ import {Input} from '@shadcn/forms/input/input';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {Switch} from '@shadcn/forms/switch/switch';
 import {FileDropzone} from '@common/ui/file-dropzone';
-import {StatCard} from '@common/ui/stat-card';
 import {Trans} from '@ui/i18n/trans';
+import {useSortable} from '@ui/interactions/dnd/sortable/use-sortable';
 import {toast} from '@ui/toast/toast';
+import {cn} from '@ui/utils/cn';
 import {
   BarChart3Icon,
-  BookIcon,
-  CheckCircleIcon,
   CopyIcon,
   EyeIcon,
   GraduationCapIcon,
@@ -41,7 +40,14 @@ import {
   Trash2Icon,
   VideoIcon,
 } from 'lucide-react';
-import {useCallback, useEffect, useState} from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from 'react';
 import {Link, useParams, useSearchParams} from 'react-router';
 
 // Types
@@ -104,11 +110,14 @@ function CourseBuilder() {
   const [searchParams] = useSearchParams();
   const [course, setCourse] = useState<Course | null>(null);
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
-  const [selectedChapterId, setSelectedChapterId] = useState<number | null>(null);
+  const [selectedChapterId, setSelectedChapterId] = useState<number | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [reordering, setReordering] = useState<string>();
 
   const load = useCallback(async () => {
     if (!productId) return;
@@ -121,7 +130,8 @@ function CourseBuilder() {
       if (!productRes.ok) throw new Error('Unable to load product');
       const productData = (await productRes.json()).data;
       const courseId = productData.course?.id;
-      if (!courseId) throw new Error('Course not found — this product is not a course');
+      if (!courseId)
+        throw new Error('Course not found — this product is not a course');
       const res = await fetch(`/api/v1/courses/${courseId}`, {
         credentials: 'same-origin',
         headers: {Accept: 'application/json'},
@@ -164,9 +174,12 @@ function CourseBuilder() {
   };
 
   const addLesson = async (chapterId: number) => {
-    const res = await apiClient.post(`/api/v1/course-chapters/${chapterId}/lessons`, {
-      title: `Lesson ${Date.now().toString().slice(-3)}`,
-    });
+    const res = await apiClient.post(
+      `/api/v1/course-chapters/${chapterId}/lessons`,
+      {
+        title: `Lesson ${Date.now().toString().slice(-3)}`,
+      },
+    );
     await load();
     const lesson = (res.data as any).data as Lesson;
     setSelectedLesson(lesson);
@@ -177,7 +190,12 @@ function CourseBuilder() {
     await apiClient.put(`/api/v1/course-chapters/${chapterId}`, {title});
     setCourse(c => {
       if (!c) return c;
-      return {...c, chapters: c.chapters.map(ch => (ch.id === chapterId ? {...ch, title} : ch))};
+      return {
+        ...c,
+        chapters: c.chapters.map(ch =>
+          ch.id === chapterId ? {...ch, title} : ch,
+        ),
+      };
     });
   };
 
@@ -196,8 +214,86 @@ function CourseBuilder() {
 
   const toggleLessonStatus = async (lesson: Lesson) => {
     const newStatus = lesson.status === 'published' ? 'draft' : 'published';
-    await apiClient.put(`/api/v1/course-lessons/${lesson.id}`, {status: newStatus});
+    await apiClient.put(`/api/v1/course-lessons/${lesson.id}`, {
+      status: newStatus,
+    });
     await load();
+  };
+
+  const reorderChapters = async (oldIndex: number, newIndex: number) => {
+    if (!course || reordering) return;
+
+    const previousChapters = course.chapters;
+    const chapters = moveItem(previousChapters, oldIndex, newIndex).map(
+      (chapter, sortOrder) => ({...chapter, sort_order: sortOrder}),
+    );
+    setCourse(current => (current ? {...current, chapters} : current));
+    setReordering('chapters');
+
+    try {
+      await apiClient.post(`/api/v1/courses/${course.id}/chapters/reorder`, {
+        ordered_ids: chapters.map(chapter => chapter.id),
+      });
+    } catch {
+      setCourse(current =>
+        current ? {...current, chapters: previousChapters} : current,
+      );
+      toast.danger('Unable to save chapter order');
+    } finally {
+      setReordering(undefined);
+    }
+  };
+
+  const reorderLessons = async (
+    chapterId: number,
+    oldIndex: number,
+    newIndex: number,
+  ) => {
+    if (!course || reordering) return;
+
+    const chapter = course.chapters.find(item => item.id === chapterId);
+    if (!chapter) return;
+
+    const previousLessons = chapter.lessons;
+    const lessons = moveItem(previousLessons, oldIndex, newIndex).map(
+      (lesson, sortOrder) => ({...lesson, sort_order: sortOrder}),
+    );
+    setCourse(current =>
+      current
+        ? {
+            ...current,
+            chapters: current.chapters.map(item =>
+              item.id === chapterId ? {...item, lessons} : item,
+            ),
+          }
+        : current,
+    );
+    setReordering(`lessons-${chapterId}`);
+
+    try {
+      await apiClient.post(
+        `/api/v1/course-chapters/${chapterId}/lessons/reorder`,
+        {
+          ordered_ids: lessons.map(lesson => lesson.id),
+        },
+      );
+    } catch {
+      setCourse(current =>
+        current
+          ? {
+              ...current,
+              chapters: current.chapters.map(item =>
+                item.id === chapterId
+                  ? {...item, lessons: previousLessons}
+                  : item,
+              ),
+            }
+          : current,
+      );
+      toast.danger('Unable to save lesson order');
+    } finally {
+      setReordering(undefined);
+    }
   };
 
   const publish = async () => {
@@ -247,15 +343,6 @@ function CourseBuilder() {
 
   const isPublished = !!course.published_at;
 
-  const totalLessons = course.chapters.reduce(
-    (n, c) => n + c.lessons.length,
-    0,
-  );
-  const publishedLessons = course.chapters.reduce(
-    (n, c) => n + c.lessons.filter(l => l.status === 'published').length,
-    0,
-  );
-
   return (
     <DashboardLayout.MainSection>
       <DashboardLayout.SectionHeader>
@@ -270,11 +357,19 @@ function CourseBuilder() {
           )}
         </DashboardLayout.SectionTitle>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => window.open(`/ @${course.product.title}`, '_blank')}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.open(`/ @${course.product.title}`, '_blank')}
+          >
             <EyeIcon />
             <Trans message="Preview" />
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setSettingsOpen(true)}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSettingsOpen(true)}
+          >
             <SettingsIcon />
             <Trans message="Configure" />
           </Button>
@@ -290,34 +385,15 @@ function CourseBuilder() {
             <BarChart3Icon data-icon="inline-start" />
             Analytics
           </Button>
-          <Button size="sm" onClick={() => void publish()} disabled={publishing}>
+          <Button
+            size="sm"
+            onClick={() => void publish()}
+            disabled={publishing}
+          >
             <Trans message={isPublished ? 'Update' : 'Publish'} />
           </Button>
         </div>
       </DashboardLayout.SectionHeader>
-
-      <div className="grid grid-cols-2 gap-3 px-4 pt-4 sm:grid-cols-3">
-        <StatCard
-          label={<Trans message="Chapters" />}
-          value={course.chapters.length}
-          icon={<BookIcon className="size-4" />}
-        />
-        <StatCard
-          label={<Trans message="Lessons" />}
-          value={totalLessons}
-          icon={<VideoIcon className="size-4" />}
-        />
-        <StatCard
-          label={<Trans message="Published" />}
-          value={publishedLessons}
-          hint={
-            totalLessons
-              ? `${Math.round((publishedLessons / totalLessons) * 100)}% published`
-              : undefined
-          }
-          icon={<CheckCircleIcon className="size-4" />}
-        />
-      </div>
 
       <DashboardLayout.SectionContent className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
         <div className="flex min-h-0 flex-1 flex-col gap-0 lg:flex-row">
@@ -327,7 +403,11 @@ function CourseBuilder() {
               <h2 className="text-sm font-semibold">
                 <Trans message="Curriculum" />
               </h2>
-              <Button size="xs" variant="outline" onClick={() => void addChapter()}>
+              <Button
+                size="xs"
+                variant="outline"
+                onClick={() => void addChapter()}
+              >
                 <PlusIcon />
                 <Trans message="New chapter" />
               </Button>
@@ -363,82 +443,182 @@ function CourseBuilder() {
                 </Empty.Root>
               ) : (
                 course.chapters.map(chapter => (
-                  <div key={chapter.id} className="rounded-card border bg-background">
-                    <div className="flex items-center gap-2 border-b bg-muted/20 p-2">
-                      <GripVerticalIcon className="size-4 text-muted-foreground" />
-                      <Input
-                        className="h-8 flex-1 border-0 bg-transparent text-sm font-medium focus-visible:ring-1"
-                        defaultValue={chapter.title}
-                        onBlur={e => void updateChapterTitle(chapter.id, e.target.value)}
-                        onKeyDown={e => {
-                          if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
-                        }}
-                      />
-                      <Button size="icon-xs" variant="ghost" onClick={() => void deleteChapter(chapter.id)}>
-                        <Trash2Icon className="size-4" />
-                      </Button>
-                    </div>
-                    <div className="space-y-1 p-2">
-                      {chapter.lessons.length === 0 ? (
-                        <p className="py-3 text-center text-xs text-muted-foreground">
-                          <Trans message="This chapter has no lessons yet." />
-                        </p>
-                      ) : (
-                        chapter.lessons.map(lesson => (
-                          <div
-                            key={lesson.id}
-                            className={`flex items-center gap-2 rounded-card border p-2 text-sm ${selectedLesson?.id === lesson.id ? 'bg-primary/5 ring-1 ring-primary/20' : 'bg-card hover:bg-muted/30'}`}
+                  <SortableCurriculumItem
+                    key={chapter.id}
+                    id={`course-builder-chapter-${chapter.id}`}
+                    items={course.chapters.map(
+                      item => `course-builder-chapter-${item.id}`,
+                    )}
+                    type={`course-builder-chapters-${course.id}`}
+                    disabled={!!reordering}
+                    onSortEnd={reorderChapters}
+                  >
+                    {dragHandleRef => (
+                      <div className="rounded-card border bg-background">
+                        <div className="flex items-center gap-2 border-b bg-muted/20 p-2">
+                          <button
+                            ref={dragHandleRef}
+                            type="button"
+                            aria-label="Reorder chapter"
+                            disabled={!!reordering}
+                            className="shrink-0 cursor-grab touch-none text-muted-foreground hover:text-foreground active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
                           >
-                            <GripVerticalIcon className="size-3.5 text-muted-foreground" />
-                            <VideoIcon className="size-3.5 text-muted-foreground" />
-                            <button
-                              className="flex-1 truncate text-left font-medium"
-                              onClick={() => {
-                                setSelectedLesson(lesson);
-                                setSelectedChapterId(chapter.id);
-                              }}
-                            >
-                              {lesson.title}
-                            </button>
-                            <Badge variant={lesson.status === 'published' ? 'positive' : 'outline'} className="h-5 px-1.5 text-[10px]">
-                              <Trans message={lesson.status === 'published' ? 'Published' : 'Draft'} />
-                            </Badge>
-                            <Dropdown.Root>
-                              <Dropdown.Trigger
-                                render={
-                                  <Button size="icon-xs" variant="ghost">
-                                    <MoreHorizontalIcon className="size-4" />
-                                  </Button>
+                            <GripVerticalIcon className="size-4" />
+                          </button>
+                          <Input
+                            className="h-8 flex-1 border-0 bg-transparent text-sm font-medium focus-visible:ring-1"
+                            defaultValue={chapter.title}
+                            onBlur={e =>
+                              void updateChapterTitle(
+                                chapter.id,
+                                e.target.value,
+                              )
+                            }
+                            onKeyDown={e => {
+                              if (e.key === 'Enter')
+                                (e.target as HTMLInputElement).blur();
+                            }}
+                          />
+                          <Button
+                            size="icon-xs"
+                            variant="ghost"
+                            onClick={() => void deleteChapter(chapter.id)}
+                          >
+                            <Trash2Icon className="size-4" />
+                          </Button>
+                        </div>
+                        <div className="space-y-1 p-2">
+                          {chapter.lessons.length === 0 ? (
+                            <p className="py-3 text-center text-xs text-muted-foreground">
+                              <Trans message="This chapter has no lessons yet." />
+                            </p>
+                          ) : (
+                            chapter.lessons.map(lesson => (
+                              <SortableCurriculumItem
+                                key={lesson.id}
+                                id={`course-builder-lesson-${lesson.id}`}
+                                items={chapter.lessons.map(
+                                  item => `course-builder-lesson-${item.id}`,
+                                )}
+                                type={`course-builder-lessons-${chapter.id}`}
+                                disabled={!!reordering}
+                                onSortEnd={(oldIndex, newIndex) =>
+                                  void reorderLessons(
+                                    chapter.id,
+                                    oldIndex,
+                                    newIndex,
+                                  )
                                 }
-                              />
-                              <Dropdown.Content align="end">
-                                <Dropdown.Item onClick={() => void toggleLessonStatus(lesson)}>
-                                  <Trans message={lesson.status === 'published' ? 'Unpublish' : 'Publish'} />
-                                </Dropdown.Item>
-                                <Dropdown.Item
-                                  onClick={async () => {
-                                    await apiClient.post(`/api/v1/course-lessons/${lesson.id}/duplicate`);
-                                    await load();
-                                  }}
-                                >
-                                  <CopyIcon />
-                                  <Trans message="Duplicate" />
-                                </Dropdown.Item>
-                                <Dropdown.Item variant="destructive" onClick={() => void deleteLesson(lesson.id)}>
-                                  <Trash2Icon />
-                                  <Trans message="Delete" />
-                                </Dropdown.Item>
-                              </Dropdown.Content>
-                            </Dropdown.Root>
-                          </div>
-                        ))
-                      )}
-                      <Button size="xs" variant="ghost" className="w-full" onClick={() => void addLesson(chapter.id)}>
-                        <PlusIcon />
-                        <Trans message="New lesson" />
-                      </Button>
-                    </div>
-                  </div>
+                              >
+                                {dragHandleRef => (
+                                  <div
+                                    className={cn(
+                                      'flex items-center gap-2 rounded-card border p-2 text-sm',
+                                      selectedLesson?.id === lesson.id
+                                        ? 'bg-primary/5 ring-1 ring-primary/20'
+                                        : 'bg-card hover:bg-muted/30',
+                                    )}
+                                  >
+                                    <button
+                                      ref={dragHandleRef}
+                                      type="button"
+                                      aria-label="Reorder lesson"
+                                      disabled={!!reordering}
+                                      className="shrink-0 cursor-grab touch-none text-muted-foreground hover:text-foreground active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                      <GripVerticalIcon className="size-3.5" />
+                                    </button>
+                                    <VideoIcon className="size-3.5 text-muted-foreground" />
+                                    <button
+                                      className="flex-1 truncate text-left font-medium"
+                                      onClick={() => {
+                                        setSelectedLesson(lesson);
+                                        setSelectedChapterId(chapter.id);
+                                      }}
+                                    >
+                                      {lesson.title}
+                                    </button>
+                                    <Badge
+                                      variant={
+                                        lesson.status === 'published'
+                                          ? 'positive'
+                                          : 'outline'
+                                      }
+                                      className="h-5 px-1.5 text-[10px]"
+                                    >
+                                      <Trans
+                                        message={
+                                          lesson.status === 'published'
+                                            ? 'Published'
+                                            : 'Draft'
+                                        }
+                                      />
+                                    </Badge>
+                                    <Dropdown.Root>
+                                      <Dropdown.Trigger
+                                        render={
+                                          <Button
+                                            size="icon-xs"
+                                            variant="ghost"
+                                          >
+                                            <MoreHorizontalIcon className="size-4" />
+                                          </Button>
+                                        }
+                                      />
+                                      <Dropdown.Content align="end">
+                                        <Dropdown.Item
+                                          onClick={() =>
+                                            void toggleLessonStatus(lesson)
+                                          }
+                                        >
+                                          <Trans
+                                            message={
+                                              lesson.status === 'published'
+                                                ? 'Unpublish'
+                                                : 'Publish'
+                                            }
+                                          />
+                                        </Dropdown.Item>
+                                        <Dropdown.Item
+                                          onClick={async () => {
+                                            await apiClient.post(
+                                              `/api/v1/course-lessons/${lesson.id}/duplicate`,
+                                            );
+                                            await load();
+                                          }}
+                                        >
+                                          <CopyIcon />
+                                          <Trans message="Duplicate" />
+                                        </Dropdown.Item>
+                                        <Dropdown.Item
+                                          variant="destructive"
+                                          onClick={() =>
+                                            void deleteLesson(lesson.id)
+                                          }
+                                        >
+                                          <Trash2Icon />
+                                          <Trans message="Delete" />
+                                        </Dropdown.Item>
+                                      </Dropdown.Content>
+                                    </Dropdown.Root>
+                                  </div>
+                                )}
+                              </SortableCurriculumItem>
+                            ))
+                          )}
+                          <Button
+                            size="xs"
+                            variant="ghost"
+                            className="w-full"
+                            onClick={() => void addLesson(chapter.id)}
+                          >
+                            <PlusIcon />
+                            <Trans message="New lesson" />
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </SortableCurriculumItem>
                 ))
               )}
             </div>
@@ -472,8 +652,63 @@ function CourseBuilder() {
         </div>
       </DashboardLayout.SectionContent>
 
-      <CourseSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} course={course} onSaved={load} />
+      <CourseSettingsDialog
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        course={course}
+        onSaved={load}
+      />
     </DashboardLayout.MainSection>
+  );
+}
+
+function moveItem<T>(items: T[], oldIndex: number, newIndex: number): T[] {
+  if (
+    oldIndex === newIndex ||
+    oldIndex < 0 ||
+    newIndex < 0 ||
+    oldIndex >= items.length ||
+    newIndex >= items.length
+  ) {
+    return items;
+  }
+
+  const reordered = [...items];
+  const [item] = reordered.splice(oldIndex, 1);
+  reordered.splice(newIndex, 0, item);
+
+  return reordered;
+}
+
+function SortableCurriculumItem({
+  id,
+  items,
+  type,
+  disabled,
+  onSortEnd,
+  children,
+}: {
+  id: string;
+  items: string[];
+  type: string;
+  disabled: boolean;
+  onSortEnd: (oldIndex: number, newIndex: number) => void;
+  children: (dragHandleRef: RefObject<HTMLButtonElement | null>) => ReactNode;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const {sortableProps, dragHandleRef} = useSortable({
+    item: id,
+    items,
+    type,
+    ref,
+    disabled,
+    onSortEnd,
+  });
+
+  return (
+    <div ref={ref} {...sortableProps}>
+      {children(dragHandleRef)}
+    </div>
   );
 }
 
@@ -493,7 +728,9 @@ function LessonEditor({
   const [videoUrl, setVideoUrl] = useState(lesson.video_url ?? '');
   const [content, setContent] = useState(lesson.content ?? '');
   const [saving, setSaving] = useState(false);
-  const [resources, setResources] = useState<LessonResource[]>(lesson.resources ?? []);
+  const [resources, setResources] = useState<LessonResource[]>(
+    lesson.resources ?? [],
+  );
   const {uploadFile, uploadStatus, percentage} = useActiveUpload();
 
   useEffect(() => {
@@ -567,15 +804,23 @@ function LessonEditor({
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-xs text-muted-foreground">Chapter {chapterId} • Lesson editor</p>
-        <Badge variant={status === 'published' ? 'positive' : 'outline'}>{status}</Badge>
+        <p className="text-xs text-muted-foreground">
+          Chapter {chapterId} • Lesson editor
+        </p>
+        <Badge variant={status === 'published' ? 'positive' : 'outline'}>
+          {status}
+        </Badge>
       </div>
 
       <Field.Root>
         <Field.Label>
           <Trans message="Lesson title" />
         </Field.Label>
-        <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Lesson title" />
+        <Input
+          value={title}
+          onChange={e => setTitle(e.target.value)}
+          placeholder="Lesson title"
+        />
       </Field.Root>
 
       <Card.Root className="gap-0 py-0">
@@ -606,14 +851,21 @@ function LessonEditor({
             <Field.Label>
               <Trans message="Video URL" />
             </Field.Label>
-            <Input value={videoUrl} onChange={e => setVideoUrl(e.target.value)} placeholder="https://www.youtube.com/watch?v=..." />
+            <Input
+              value={videoUrl}
+              onChange={e => setVideoUrl(e.target.value)}
+              placeholder="https://www.youtube.com/watch?v=..."
+            />
             <Field.Description>
               <Trans message="Paste a YouTube or Vimeo URL" />
             </Field.Description>
           </Field.Root>
           {lesson.video && (
             <div className="rounded-card border bg-muted/20 p-3 text-xs">
-              Current: {lesson.video.name} — <a href={lesson.video.url} target="_blank" className="underline">View</a>
+              Current: {lesson.video.name} —{' '}
+              <a href={lesson.video.url} target="_blank" className="underline">
+                View
+              </a>
             </div>
           )}
         </Card.Content>
@@ -623,7 +875,11 @@ function LessonEditor({
         <Field.Label>
           <Trans message="Content" />
         </Field.Label>
-        <TipTapEditorProvider extensions={articleEditorTipTapExtensions} initialContent={content} onChange={setContent}>
+        <TipTapEditorProvider
+          extensions={articleEditorTipTapExtensions}
+          initialContent={content}
+          onChange={setContent}
+        >
           <div className="overflow-hidden rounded-card border">
             <div className="flex flex-wrap items-center gap-0.5 border-b bg-muted/30 p-2">
               <FormatDropdown />
@@ -659,7 +915,9 @@ function LessonEditor({
                   size="icon-xs"
                   variant="ghost"
                   onClick={async () => {
-                    await apiClient.delete(`/api/v1/course-lesson-resources/${r.id}`);
+                    await apiClient.delete(
+                      `/api/v1/course-lesson-resources/${r.id}`,
+                    );
                     onSaved();
                   }}
                 >
@@ -673,7 +931,10 @@ function LessonEditor({
 
       <div className="flex items-center justify-between gap-3">
         <label className="flex items-center gap-2 text-sm">
-          <Switch checked={status === 'published'} onCheckedChange={v => setStatus(v ? 'published' : 'draft')} />
+          <Switch
+            checked={status === 'published'}
+            onCheckedChange={v => setStatus(v ? 'published' : 'draft')}
+          />
           <Trans message="Published" />
         </label>
         <Button onClick={() => void save()} disabled={saving}>
@@ -695,10 +956,17 @@ function CourseSettingsDialog({
   course: Course;
   onSaved: () => void;
 }) {
-  const [requireSeq, setRequireSeq] = useState(course.require_sequential_completion);
-  const [price, setPrice] = useState((course.product.price_cents / 100).toFixed(2));
+  const [requireSeq, setRequireSeq] = useState(
+    course.require_sequential_completion,
+  );
+  const [price, setPrice] = useState(
+    (course.product.price_cents / 100).toFixed(2),
+  );
 
-  useEffect(() => setRequireSeq(course.require_sequential_completion), [course]);
+  useEffect(
+    () => setRequireSeq(course.require_sequential_completion),
+    [course],
+  );
 
   const save = async () => {
     await apiClient.put(`/api/v1/courses/${course.id}`, {
@@ -735,7 +1003,13 @@ function CourseSettingsDialog({
               <Field.Label>
                 <Trans message="Price (ETB)" />
               </Field.Label>
-              <Input value={price} onChange={e => setPrice(e.target.value)} type="number" min="0" step="0.01" />
+              <Input
+                value={price}
+                onChange={e => setPrice(e.target.value)}
+                type="number"
+                min="0"
+                step="0.01"
+              />
             </Field.Root>
             <div className="flex items-center justify-between gap-4 rounded-card border p-3">
               <div>
