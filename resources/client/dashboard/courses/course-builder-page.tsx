@@ -23,12 +23,19 @@ import {Input} from '@shadcn/forms/input/input';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {Switch} from '@shadcn/forms/switch/switch';
 import {FileDropzone} from '@common/ui/file-dropzone';
+import {ImageSelector} from '@common/uploads/components/image-selector';
 import {Trans} from '@ui/i18n/trans';
 import {useSortable} from '@ui/interactions/dnd/sortable/use-sortable';
 import {toast} from '@ui/toast/toast';
 import {cn} from '@ui/utils/cn';
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@shadcn/collapsible/collapsible';
+import {
   BarChart3Icon,
+  ChevronDownIcon,
   CopyIcon,
   EyeIcon,
   GraduationCapIcon,
@@ -63,7 +70,7 @@ type Course = {
     price_cents: number;
     currency: string;
     status: string;
-    cover?: {url: string} | null;
+    cover?: {id: number; url: string} | null;
   };
   chapters: Chapter[];
 };
@@ -398,7 +405,7 @@ function CourseBuilder() {
       <DashboardLayout.SectionContent className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
         <div className="flex min-h-0 flex-1 flex-col gap-0 lg:flex-row">
           {/* Curriculum */}
-          <div className="flex w-full min-w-0 flex-col border-b bg-card lg:w-[36%] lg:border-r lg:border-b-0">
+          <div className="flex max-h-[50vh] w-full min-w-0 flex-col overflow-hidden border-b bg-card lg:max-h-none lg:w-[36%] lg:border-r lg:border-b-0">
             <div className="flex items-center justify-between gap-2 border-b p-3">
               <h2 className="text-sm font-semibold">
                 <Trans message="Curriculum" />
@@ -413,16 +420,6 @@ function CourseBuilder() {
               </Button>
             </div>
             <div className="flex-1 space-y-3 overflow-y-auto p-3">
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full"
-                onClick={() => setSettingsOpen(true)}
-              >
-                <SettingsIcon />
-                <Trans message="Course settings" />
-              </Button>
-
               {course.chapters.length === 0 ? (
                 <Empty.Root>
                   <Empty.Header>
@@ -454,7 +451,10 @@ function CourseBuilder() {
                     onSortEnd={reorderChapters}
                   >
                     {dragHandleRef => (
-                      <div className="rounded-card border bg-background">
+                      <Collapsible
+                        defaultOpen
+                        className="rounded-xl border bg-background"
+                      >
                         <div className="flex items-center gap-2 border-b bg-muted/20 p-2">
                           <button
                             ref={dragHandleRef}
@@ -487,136 +487,141 @@ function CourseBuilder() {
                             <Trash2Icon className="size-4" />
                           </Button>
                         </div>
-                        <div className="space-y-1 p-2">
-                          {chapter.lessons.length === 0 ? (
-                            <p className="py-3 text-center text-xs text-muted-foreground">
-                              <Trans message="This chapter has no lessons yet." />
-                            </p>
-                          ) : (
-                            chapter.lessons.map(lesson => (
-                              <SortableCurriculumItem
-                                key={lesson.id}
-                                id={`course-builder-lesson-${lesson.id}`}
-                                items={chapter.lessons.map(
-                                  item => `course-builder-lesson-${item.id}`,
-                                )}
-                                type={`course-builder-lessons-${chapter.id}`}
-                                disabled={!!reordering}
-                                onSortEnd={(oldIndex, newIndex) =>
-                                  void reorderLessons(
-                                    chapter.id,
-                                    oldIndex,
-                                    newIndex,
-                                  )
-                                }
-                              >
-                                {dragHandleRef => (
-                                  <div
-                                    className={cn(
-                                      'flex items-center gap-2 rounded-card border p-2 text-sm',
-                                      selectedLesson?.id === lesson.id
-                                        ? 'bg-primary/5 ring-1 ring-primary/20'
-                                        : 'bg-card hover:bg-muted/30',
-                                    )}
-                                  >
-                                    <button
-                                      ref={dragHandleRef}
-                                      type="button"
-                                      aria-label="Reorder lesson"
-                                      disabled={!!reordering}
-                                      className="shrink-0 cursor-grab touch-none text-muted-foreground hover:text-foreground active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
+                        <CollapsibleTrigger className="flex w-full items-center justify-center border-t p-1 text-muted-foreground hover:bg-muted/20">
+                          <ChevronDownIcon className="size-4 transition-transform data-[state=open]:rotate-180" />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <div className="space-y-1 p-2">
+                            {chapter.lessons.length === 0 ? (
+                              <p className="py-3 text-center text-xs text-muted-foreground">
+                                <Trans message="This chapter has no lessons yet." />
+                              </p>
+                            ) : (
+                              chapter.lessons.map(lesson => (
+                                <SortableCurriculumItem
+                                  key={lesson.id}
+                                  id={`course-builder-lesson-${lesson.id}`}
+                                  items={chapter.lessons.map(
+                                    item => `course-builder-lesson-${item.id}`,
+                                  )}
+                                  type={`course-builder-lessons-${chapter.id}`}
+                                  disabled={!!reordering}
+                                  onSortEnd={(oldIndex, newIndex) =>
+                                    void reorderLessons(
+                                      chapter.id,
+                                      oldIndex,
+                                      newIndex,
+                                    )
+                                  }
+                                >
+                                  {dragHandleRef => (
+                                    <div
+                                      className={cn(
+                                        'flex items-center gap-2 rounded-card border p-2 text-sm',
+                                        selectedLesson?.id === lesson.id
+                                          ? 'bg-primary/5 ring-1 ring-primary/20'
+                                          : 'bg-card hover:bg-muted/30',
+                                      )}
                                     >
-                                      <GripVerticalIcon className="size-3.5" />
-                                    </button>
-                                    <VideoIcon className="size-3.5 text-muted-foreground" />
-                                    <button
-                                      className="flex-1 truncate text-left font-medium"
-                                      onClick={() => {
-                                        setSelectedLesson(lesson);
-                                        setSelectedChapterId(chapter.id);
-                                      }}
-                                    >
-                                      {lesson.title}
-                                    </button>
-                                    <Badge
-                                      variant={
-                                        lesson.status === 'published'
-                                          ? 'positive'
-                                          : 'outline'
-                                      }
-                                      className="h-5 px-1.5 text-[10px]"
-                                    >
-                                      <Trans
-                                        message={
+                                      <button
+                                        ref={dragHandleRef}
+                                        type="button"
+                                        aria-label="Reorder lesson"
+                                        disabled={!!reordering}
+                                        className="shrink-0 cursor-grab touch-none text-muted-foreground hover:text-foreground active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
+                                      >
+                                        <GripVerticalIcon className="size-3.5" />
+                                      </button>
+                                      <VideoIcon className="size-3.5 text-muted-foreground" />
+                                      <button
+                                        className="flex-1 truncate text-left font-medium"
+                                        onClick={() => {
+                                          setSelectedLesson(lesson);
+                                          setSelectedChapterId(chapter.id);
+                                        }}
+                                      >
+                                        {lesson.title}
+                                      </button>
+                                      <Badge
+                                        variant={
                                           lesson.status === 'published'
-                                            ? 'Published'
-                                            : 'Draft'
+                                            ? 'positive'
+                                            : 'outline'
                                         }
-                                      />
-                                    </Badge>
-                                    <Dropdown.Root>
-                                      <Dropdown.Trigger
-                                        render={
-                                          <Button
-                                            size="icon-xs"
-                                            variant="ghost"
-                                          >
-                                            <MoreHorizontalIcon className="size-4" />
-                                          </Button>
-                                        }
-                                      />
-                                      <Dropdown.Content align="end">
-                                        <Dropdown.Item
-                                          onClick={() =>
-                                            void toggleLessonStatus(lesson)
+                                        className="h-5 px-1.5 text-[10px]"
+                                      >
+                                        <Trans
+                                          message={
+                                            lesson.status === 'published'
+                                              ? 'Published'
+                                              : 'Draft'
                                           }
-                                        >
-                                          <Trans
-                                            message={
-                                              lesson.status === 'published'
-                                                ? 'Unpublish'
-                                                : 'Publish'
+                                        />
+                                      </Badge>
+                                      <Dropdown.Root>
+                                        <Dropdown.Trigger
+                                          render={
+                                            <Button
+                                              size="icon-xs"
+                                              variant="ghost"
+                                            >
+                                              <MoreHorizontalIcon className="size-4" />
+                                            </Button>
+                                          }
+                                        />
+                                        <Dropdown.Content align="end">
+                                          <Dropdown.Item
+                                            onClick={() =>
+                                              void toggleLessonStatus(lesson)
                                             }
-                                          />
-                                        </Dropdown.Item>
-                                        <Dropdown.Item
-                                          onClick={async () => {
-                                            await apiClient.post(
-                                              `/api/v1/course-lessons/${lesson.id}/duplicate`,
-                                            );
-                                            await load();
-                                          }}
-                                        >
-                                          <CopyIcon />
-                                          <Trans message="Duplicate" />
-                                        </Dropdown.Item>
-                                        <Dropdown.Item
-                                          variant="destructive"
-                                          onClick={() =>
-                                            void deleteLesson(lesson.id)
-                                          }
-                                        >
-                                          <Trash2Icon />
-                                          <Trans message="Delete" />
-                                        </Dropdown.Item>
-                                      </Dropdown.Content>
-                                    </Dropdown.Root>
-                                  </div>
-                                )}
-                              </SortableCurriculumItem>
-                            ))
-                          )}
-                          <Button
-                            size="xs"
-                            variant="ghost"
-                            className="w-full"
-                            onClick={() => void addLesson(chapter.id)}
-                          >
-                            <PlusIcon />
-                            <Trans message="New lesson" />
-                          </Button>
-                        </div>
-                      </div>
+                                          >
+                                            <Trans
+                                              message={
+                                                lesson.status === 'published'
+                                                  ? 'Unpublish'
+                                                  : 'Publish'
+                                              }
+                                            />
+                                          </Dropdown.Item>
+                                          <Dropdown.Item
+                                            onClick={async () => {
+                                              await apiClient.post(
+                                                `/api/v1/course-lessons/${lesson.id}/duplicate`,
+                                              );
+                                              await load();
+                                            }}
+                                          >
+                                            <CopyIcon />
+                                            <Trans message="Duplicate" />
+                                          </Dropdown.Item>
+                                          <Dropdown.Item
+                                            variant="destructive"
+                                            onClick={() =>
+                                              void deleteLesson(lesson.id)
+                                            }
+                                          >
+                                            <Trash2Icon />
+                                            <Trans message="Delete" />
+                                          </Dropdown.Item>
+                                        </Dropdown.Content>
+                                      </Dropdown.Root>
+                                    </div>
+                                  )}
+                                </SortableCurriculumItem>
+                              ))
+                            )}
+                            <Button
+                              size="xs"
+                              variant="ghost"
+                              className="w-full"
+                              onClick={() => void addLesson(chapter.id)}
+                            >
+                              <PlusIcon />
+                              <Trans message="New lesson" />
+                            </Button>
+                          </div>
+                        </CollapsibleContent>
+                      </Collapsible>
                     )}
                   </SortableCurriculumItem>
                 ))
@@ -956,6 +961,11 @@ function CourseSettingsDialog({
   course: Course;
   onSaved: () => void;
 }) {
+  const [title, setTitle] = useState(course.product.title);
+  const [coverUrl, setCoverUrl] = useState(course.product.cover?.url ?? '');
+  const [coverFileId, setCoverFileId] = useState<number | null>(
+    course.product.cover?.id ?? null,
+  );
   const [requireSeq, setRequireSeq] = useState(
     course.require_sequential_completion,
   );
@@ -963,23 +973,25 @@ function CourseSettingsDialog({
     (course.product.price_cents / 100).toFixed(2),
   );
 
-  useEffect(
-    () => setRequireSeq(course.require_sequential_completion),
-    [course],
-  );
+  useEffect(() => {
+    setTitle(course.product.title);
+    setCoverUrl(course.product.cover?.url ?? '');
+    setCoverFileId(course.product.cover?.id ?? null);
+    setRequireSeq(course.require_sequential_completion);
+    setPrice((course.product.price_cents / 100).toFixed(2));
+  }, [course]);
 
   const save = async () => {
     await apiClient.put(`/api/v1/courses/${course.id}`, {
       require_sequential_completion: requireSeq,
     });
-    if (price) {
-      const cents = Math.round(Number(price) * 100);
-      await apiClient.put(`/api/v1/digital-products/${course.product.id}`, {
-        title: course.product.title,
-        price_cents: cents,
-        type: 'course',
-      });
-    }
+    const cents = Math.round(Number(price || '0') * 100);
+    await apiClient.put(`/api/v1/digital-products/${course.product.id}`, {
+      title: title.trim() || course.product.title,
+      price_cents: Number.isFinite(cents) ? cents : course.product.price_cents,
+      cover_file_entry_id: coverFileId,
+      type: 'course',
+    });
     toast.positive('Settings saved');
     onOpenChange(false);
     onSaved();
@@ -989,8 +1001,8 @@ function CourseSettingsDialog({
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Backdrop />
-        <Dialog.Content className="sm:max-w-lg">
-          <Dialog.Header>
+        <Dialog.Content className="flex max-h-[85vh] max-w-2xl flex-col gap-0 p-0 sm:max-w-lg">
+          <Dialog.Header className="border-b px-6 pt-6 pb-4">
             <Dialog.Title>
               <Trans message="Course Settings" />
             </Dialog.Title>
@@ -998,7 +1010,54 @@ function CourseSettingsDialog({
               <Trans message="Manage your course cover image and other settings" />
             </Dialog.Description>
           </Dialog.Header>
-          <Dialog.Body className="space-y-4">
+          <Dialog.Body className="flex-1 space-y-6 overflow-y-auto px-6 py-5">
+            <Field.Root>
+              <Field.Label htmlFor="course-name">
+                <Trans message="Course Name" />
+              </Field.Label>
+              <div className="relative">
+                <Input
+                  id="course-name"
+                  value={title}
+                  onChange={e => setTitle(e.target.value)}
+                  placeholder="Enter a course name"
+                  maxLength={160}
+                  className="pr-18"
+                />
+              </div>
+            </Field.Root>
+
+            <Field.Root>
+              <Field.Label>
+                <Trans message="Cover Image" />
+              </Field.Label>
+              <div className="w-full space-y-4">
+                <div className="group relative overflow-hidden rounded-xl border border-dashed bg-muted/30 transition-all hover:border-primary hover:bg-primary/5">
+                  <ImageSelector.Square
+                    value={coverUrl}
+                    onChange={(url, entry) => {
+                      setCoverUrl(url);
+                      setCoverFileId(entry?.id ?? null);
+                    }}
+                    uploadType="linkImages"
+                    placeholderVariant="dropzone"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  <Trans message="Recommended size: 1200x514px • Max size: 5MB" />
+                </p>
+                {coverUrl && (
+                  <div className="overflow-hidden rounded-xl border">
+                    <img
+                      src={coverUrl}
+                      alt="Cover preview"
+                      className="aspect-[1200/514] w-full object-cover"
+                    />
+                  </div>
+                )}
+              </div>
+            </Field.Root>
+
             <Field.Root>
               <Field.Label>
                 <Trans message="Price (ETB)" />
@@ -1011,19 +1070,48 @@ function CourseSettingsDialog({
                 step="0.01"
               />
             </Field.Root>
-            <div className="flex items-center justify-between gap-4 rounded-card border p-3">
-              <div>
-                <p className="text-sm font-medium">
-                  <Trans message="Require students to complete lessons in order" />
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  <Trans message="Students must complete lessons before moving to the next one" />
-                </p>
+
+            <Field.Root>
+              <Field.Label htmlFor="require-lesson-completion">
+                <Trans message="Learning Settings" />
+              </Field.Label>
+              <div className="flex items-center justify-between gap-6 rounded-lg border p-4">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">
+                    <Trans message="Require students to complete lessons in order" />
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    <Trans message="Students must complete lessons before moving to the next one" />
+                  </p>
+                </div>
+                <Switch
+                  id="require-lesson-completion"
+                  checked={requireSeq}
+                  onCheckedChange={setRequireSeq}
+                />
               </div>
-              <Switch checked={requireSeq} onCheckedChange={setRequireSeq} />
-            </div>
+            </Field.Root>
+
+            <Collapsible className="overflow-hidden rounded-lg border">
+              <CollapsibleTrigger className="group flex w-full cursor-pointer items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/40">
+                <div className="flex min-w-0 flex-col">
+                  <span className="text-sm font-medium">
+                    <Trans message="Instructor" />
+                  </span>
+                  <span className="truncate text-xs text-muted-foreground">
+                    ID {course.instructor_user_id}
+                  </span>
+                </div>
+                <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="px-4 pb-3 text-sm text-muted-foreground">
+                  <Trans message="Course instructor details are managed via your workspace profile." />
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
           </Dialog.Body>
-          <Dialog.Footer>
+          <Dialog.Footer className="border-t px-6 py-4">
             <Dialog.CloseButton>
               <Trans message="Cancel" />
             </Dialog.CloseButton>
