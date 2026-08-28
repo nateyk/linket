@@ -141,8 +141,8 @@ export function CroppedImageSelector({
             className={cn(
               'absolute transition-opacity',
               shape === 'circle'
-                ? 'right-1 bottom-1 opacity-100 group-hover:opacity-100'
-                : 'top-2 right-2 opacity-0 group-hover:opacity-100',
+                ? 'right-1 bottom-1 opacity-0 group-focus-within:opacity-100 group-hover:opacity-100'
+                : 'top-2 right-2 opacity-0 group-focus-within:opacity-100 group-hover:opacity-100',
             )}
           >
             <Dropdown.Root>
@@ -229,7 +229,7 @@ export function CroppedImageSelector({
           <ImageCrop aspect={aspect} file={pendingFile} onCrop={handleCrop}>
             <Dialog.Portal>
               <Dialog.Backdrop />
-              <Dialog.Content className="sm:max-w-lg">
+              <Dialog.Content className="sm:max-w-xl">
                 <Dialog.Header>
                   <Dialog.Title>
                     <Trans message="Crop image" />
@@ -239,7 +239,7 @@ export function CroppedImageSelector({
                   </Dialog.Description>
                 </Dialog.Header>
                 <Dialog.Body className="space-y-4">
-                  <ImageCropContent className="max-h-[50vh] sm:max-h-72" />
+                  <ImageCropContent className="max-h-[60vh] min-h-[320px] sm:max-h-[520px] sm:min-h-[460px]" />
                 </Dialog.Body>
                 <Dialog.Footer className="flex-row items-center justify-between gap-2">
                   <ImageCropReset asChild>
