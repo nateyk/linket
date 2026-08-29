@@ -33,6 +33,12 @@ import {
   CollapsibleTrigger,
 } from '@shadcn/collapsible/collapsible';
 import {
+  ImageCrop,
+  ImageCropApply,
+  ImageCropContent,
+  ImageCropReset,
+} from '@shadcn/image-crop/image-crop';
+import {
   BarChart3Icon,
   ChevronDownIcon,
   CopyIcon,
@@ -1141,28 +1147,79 @@ function CoverImageDropzone({
 }) {
   const {uploadFile, uploadStatus, percentage} = useActiveUpload();
   const uploading = uploadStatus === 'inProgress';
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [cropOpen, setCropOpen] = useState(false);
 
   const handleFile = (file: File) => {
-    uploadFile(file, {
+    setPendingFile(file);
+    setCropOpen(true);
+  };
+
+  const handleCrop = (preview: string, croppedFile?: File) => {
+    if (!croppedFile) return;
+    uploadFile(croppedFile, {
       uploadType: 'linkImages',
       showToastOnRestrictionFail: true,
       showToastOnBackendError: true,
       onSuccess: entry => {
         onCoverChange(entry.url, entry.id);
+        setCropOpen(false);
+        setPendingFile(null);
       },
     });
   };
 
   return (
-    <FileDropzone
-      accept="image/*"
-      title={<Trans message="Upload Cover Image" />}
-      description={<Trans message="Drag and drop or click to browse" />}
-      hint="1200x514 • 5MB"
-      status={uploading ? 'uploading' : 'idle'}
-      progress={percentage}
-      onFile={handleFile}
-      className={coverUrl ? 'border-muted' : undefined}
-    />
+    <>
+      <FileDropzone
+        accept="image/*"
+        title={<Trans message="Upload Cover Image" />}
+        description={<Trans message="Drag and drop or click to browse" />}
+        hint="1200x514 • 5MB"
+        status={uploading ? 'uploading' : 'idle'}
+        progress={percentage}
+        onFile={handleFile}
+        className={coverUrl ? 'border-muted' : undefined}
+      />
+      {pendingFile && (
+        <Dialog.Root open={cropOpen} onOpenChange={setCropOpen}>
+          <ImageCrop aspect={1200 / 514} file={pendingFile} onCrop={handleCrop}>
+            <Dialog.Portal>
+              <Dialog.Backdrop />
+              <Dialog.Content className="sm:max-w-xl">
+                <Dialog.Header>
+                  <Dialog.Title>
+                    <Trans message="Crop cover image" />
+                  </Dialog.Title>
+                  <Dialog.Description>
+                    <Trans message="Adjust the preferred region, then apply." />
+                  </Dialog.Description>
+                </Dialog.Header>
+                <Dialog.Body className="space-y-4">
+                  <ImageCropContent className="max-h-[60vh] min-h-[320px] sm:max-h-[520px] sm:min-h-[460px]" />
+                </Dialog.Body>
+                <Dialog.Footer className="flex-row items-center justify-between gap-2">
+                  <ImageCropReset asChild>
+                    <Button type="button" variant="ghost" size="sm">
+                      <Trans message="Reset" />
+                    </Button>
+                  </ImageCropReset>
+                  <div className="flex gap-2">
+                    <Dialog.CloseButton variant="outline" size="sm">
+                      <Trans message="Cancel" />
+                    </Dialog.CloseButton>
+                    <ImageCropApply asChild>
+                      <Button type="button" size="sm">
+                        <Trans message="Apply crop" />
+                      </Button>
+                    </ImageCropApply>
+                  </div>
+                </Dialog.Footer>
+              </Dialog.Content>
+            </Dialog.Portal>
+          </ImageCrop>
+        </Dialog.Root>
+      )}
+    </>
   );
 }
