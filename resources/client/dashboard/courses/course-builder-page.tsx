@@ -25,6 +25,7 @@ import {Switch} from '@shadcn/forms/switch/switch';
 import {FileDropzone} from '@common/ui/file-dropzone';
 import {Trans} from '@ui/i18n/trans';
 import {useSortable} from '@ui/interactions/dnd/sortable/use-sortable';
+import {ProductCover} from '@ui/product-cover';
 import {toast} from '@ui/toast/toast';
 import {cn} from '@ui/utils/cn';
 import {
@@ -372,7 +373,12 @@ function CourseBuilder() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => window.open(`/ @${course.product.title}`, '_blank')}
+            onClick={() =>
+              window.open(
+                `/api/v1/courses/${course.id}/preview?preview=1`,
+                '_blank',
+              )
+            }
           >
             <EyeIcon />
             <Trans message="Preview" />
@@ -590,15 +596,51 @@ function CourseBuilder() {
                                           </Dropdown.Item>
                                           <Dropdown.Item
                                             onClick={async () => {
-                                              await apiClient.post(
-                                                `/api/v1/course-lessons/${lesson.id}/duplicate`,
-                                              );
-                                              await load();
+                                              if (reordering) return;
+                                              try {
+                                                setReordering(`duplicate-${lesson.id}`);
+                                                await apiClient.post(
+                                                  `/api/v1/course-lessons/${lesson.id}/duplicate`,
+                                                );
+                                                await load();
+                                              } catch (e: any) {
+                                                toast.danger(e?.message ?? 'Unable to duplicate lesson');
+                                              } finally {
+                                                setReordering(undefined);
+                                              }
                                             }}
                                           >
                                             <CopyIcon />
                                             <Trans message="Duplicate" />
                                           </Dropdown.Item>
+                                          {course.chapters.length > 1 && (
+                                            <Dropdown.Item
+                                              onClick={async () => {
+                                                if (reordering) return;
+                                                const target = course.chapters.find(
+                                                  c => c.id !== chapter.id,
+                                                );
+                                                if (!target) return;
+                                                try {
+                                                  setReordering(`move-${lesson.id}`);
+                                                  await apiClient.post(
+                                                    `/api/v1/course-lessons/${lesson.id}/move`,
+                                                    {
+                                                      target_chapter_id: target.id,
+                                                      position: 0,
+                                                    },
+                                                  );
+                                                  await load();
+                                                } catch (e: any) {
+                                                  toast.danger(e?.message ?? 'Unable to move lesson');
+                                                } finally {
+                                                  setReordering(undefined);
+                                                }
+                                              }}
+                                            >
+                                              <Trans message="Move to chapter" />
+                                            </Dropdown.Item>
+                                          )}
                                           <Dropdown.Item
                                             variant="destructive"
                                             onClick={() =>
@@ -1039,10 +1081,9 @@ function CourseSettingsDialog({
               <div className="w-full space-y-3">
                 {coverUrl && (
                   <div className="overflow-hidden rounded-xl border">
-                    <img
-                      src={coverUrl}
-                      alt="Cover preview"
-                      className="aspect-[1200/514] w-full object-cover"
+                    <ProductCover
+                      cover={{url: coverUrl}}
+                      className="aspect-video"
                     />
                   </div>
                 )}
@@ -1183,7 +1224,7 @@ function CoverImageDropzone({
       />
       {pendingFile && (
         <Dialog.Root open={cropOpen} onOpenChange={setCropOpen}>
-          <ImageCrop aspect={1200 / 514} file={pendingFile} onCrop={handleCrop}>
+          <ImageCrop aspect={16 / 9} file={pendingFile} onCrop={handleCrop}>
             <Dialog.Portal>
               <Dialog.Backdrop />
               <Dialog.Content className="sm:max-w-xl">

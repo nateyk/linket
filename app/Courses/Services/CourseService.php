@@ -96,6 +96,7 @@ class CourseService
         abort_unless($target->course_id === $lesson->course_id, 422, 'Target chapter must belong to same course.');
 
         return DB::transaction(function () use ($lesson, $target, $position): Lesson {
+            $sourceId = $lesson->chapter_id;
             $lesson->update(['chapter_id' => $target->id]);
 
             // Re-normalize sort_order for target chapter.
@@ -107,6 +108,15 @@ class CourseService
             array_splice($ids, max(0, min($position, count($ids))), 0, [$lesson->id]);
             foreach ($ids as $idx => $id) {
                 Lesson::whereKey($id)->update(['sort_order' => $idx]);
+            }
+
+            // Reindex source chapter to close gap (contiguous 0..n-1)
+            if ($sourceId !== $target->id) {
+                Lesson::where('chapter_id', $sourceId)->orderBy('sort_order')->orderBy('id')->get()->each(function (Lesson $l, int $i): void {
+                    if ($l->sort_order !== $i) {
+                        $l->update(['sort_order' => $i]);
+                    }
+                });
             }
 
             return $lesson->fresh();
