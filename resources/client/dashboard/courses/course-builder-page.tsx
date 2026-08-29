@@ -596,33 +596,51 @@ function CourseBuilder() {
                                           </Dropdown.Item>
                                           <Dropdown.Item
                                             onClick={async () => {
-                                              await apiClient.post(
-                                                `/api/v1/course-lessons/${lesson.id}/duplicate`,
-                                              );
-                                              await load();
+                                              if (reordering) return;
+                                              try {
+                                                setReordering(`duplicate-${lesson.id}`);
+                                                await apiClient.post(
+                                                  `/api/v1/course-lessons/${lesson.id}/duplicate`,
+                                                );
+                                                await load();
+                                              } catch (e: any) {
+                                                toast.danger(e?.message ?? 'Unable to duplicate lesson');
+                                              } finally {
+                                                setReordering(undefined);
+                                              }
                                             }}
                                           >
                                             <CopyIcon />
                                             <Trans message="Duplicate" />
                                           </Dropdown.Item>
-                                          <Dropdown.Item
-                                            onClick={async () => {
-                                              const target = course.chapters.find(
-                                                c => c.id !== chapter.id,
-                                              );
-                                              if (!target) return;
-                                              await apiClient.post(
-                                                `/api/v1/course-lessons/${lesson.id}/move`,
-                                                {
-                                                  target_chapter_id: target.id,
-                                                  position: 0,
-                                                },
-                                              );
-                                              await load();
-                                            }}
-                                          >
-                                            <Trans message="Move to chapter" />
-                                          </Dropdown.Item>
+                                          {course.chapters.length > 1 && (
+                                            <Dropdown.Item
+                                              onClick={async () => {
+                                                if (reordering) return;
+                                                const target = course.chapters.find(
+                                                  c => c.id !== chapter.id,
+                                                );
+                                                if (!target) return;
+                                                try {
+                                                  setReordering(`move-${lesson.id}`);
+                                                  await apiClient.post(
+                                                    `/api/v1/course-lessons/${lesson.id}/move`,
+                                                    {
+                                                      target_chapter_id: target.id,
+                                                      position: 0,
+                                                    },
+                                                  );
+                                                  await load();
+                                                } catch (e: any) {
+                                                  toast.danger(e?.message ?? 'Unable to move lesson');
+                                                } finally {
+                                                  setReordering(undefined);
+                                                }
+                                              }}
+                                            >
+                                              <Trans message="Move to chapter" />
+                                            </Dropdown.Item>
+                                          )}
                                           <Dropdown.Item
                                             variant="destructive"
                                             onClick={() =>
