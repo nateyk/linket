@@ -64,9 +64,10 @@ readonly class UploadDiskLocation
         }
 
         $defaultRoot = $this->type->public
-            ? base_path('public/storage')
-            : base_path('storage/app/uploads');
-        return "$defaultRoot/$backendRoot";
+            ? storage_path('app/public')
+            : storage_path('app/uploads');
+
+        return $backendRoot ? "$defaultRoot/$backendRoot" : $defaultRoot;
     }
 
     protected function isAbsolutePath(string $path): bool

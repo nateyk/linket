@@ -227,7 +227,7 @@ class CreatorProfileTest extends TestCase
             ->assertOk()
             ->assertJsonPath(
                 'data.profile_config.avatar_url',
-                "storage/link-images/{$avatar->file_name}",
+                "/storage/link-images/{$avatar->file_name}",
             )
             ->assertJsonPath(
                 'data.profile_config.cover_url',

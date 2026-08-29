@@ -12,9 +12,8 @@ return [
 
         'public' => [
             'driver' => 'local',
-            'root' => public_path('storage'),
-            'url' =>
-                rtrim(env('APP_URL', 'http://localhost'), '/') . '/storage',
+            'root' => storage_path('app/public'),
+            'url' => '/storage',
             'visibility' => 'public',
             'throw' => false,
             'report' => false,
@@ -25,6 +24,7 @@ return [
     'upload_types' => [
         'avatars' => [
             'visibility' => 'public',
+            'dont_clean' => true,
             'label' => 'User avatars',
             'description' => 'Avatars uploaded by users on the site.',
             'defaults' => [
@@ -35,6 +35,7 @@ return [
         ],
         'brandingImages' => [
             'visibility' => 'public',
+            'dont_clean' => true,
             'label' => 'Branding images',
             'description' =>
                 'Logos, landing page images, previews etc. uploaded from admin area.',
@@ -46,6 +47,7 @@ return [
         ],
         'articleImages' => [
             'visibility' => 'public',
+            'dont_clean' => true,
             'label' => 'Article images',
             'description' =>
                 'Inline article and custom page images uploaded from editor.',

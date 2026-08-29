@@ -147,8 +147,44 @@ ln -sfn "$SHARED/.env" "$RELEASE_DIR/.env"
 # storage (entire storage dir is shared — private product files + tus survive)
 if [[ -L "$RELEASE_DIR/storage" || -d "$RELEASE_DIR/storage" ]]; then rm -rf "$RELEASE_DIR/storage"; fi
 ln -sfn "$SHARED/storage" "$RELEASE_DIR/storage"
-# Ensure storage subdirs exist (shared side)
-mkdir -p "$SHARED/storage/app/digital-products" "$SHARED/storage/app/uploads" "$SHARED/storage/app/editable-views/seo-tags" "$SHARED/storage/app/tokens" "$SHARED/storage/tus" "$SHARED/storage/logs" "$SHARED/storage/framework/cache" "$SHARED/storage/framework/sessions" "$SHARED/storage/framework/views" "$SHARED/storage/tntsearch"
+# Ensure storage subdirs exist (shared side) — including canonical public media root
+mkdir -p "$SHARED/storage/app/digital-products" "$SHARED/storage/app/uploads" "$SHARED/storage/app/public/avatars" "$SHARED/storage/app/public/link-images" "$SHARED/storage/app/public/branding-images" "$SHARED/storage/app/public/article-images" "$SHARED/storage/app/editable-views/seo-tags" "$SHARED/storage/app/tokens" "$SHARED/storage/tus" "$SHARED/storage/logs" "$SHARED/storage/framework/cache" "$SHARED/storage/framework/sessions" "$SHARED/storage/framework/views" "$SHARED/storage/tntsearch"
+# Migrate legacy public/storage files to shared public root (one-time, idempotent)
+if [[ -d "$RELEASE_DIR/public/storage" && ! -L "$RELEASE_DIR/public/storage" ]]; then
+  log "Migrating legacy public/storage files to shared/storage/app/public (idempotent, preserve)"
+  for sub in avatars link-images branding-images article-images; do
+    if [[ -d "$RELEASE_DIR/public/storage/$sub" ]]; then
+      mkdir -p "$SHARED/storage/app/public/$sub"
+      # copy without overwriting existing shared files
+      if command -v rsync >/dev/null 2>&1; then
+        rsync -a --ignore-existing "$RELEASE_DIR/public/storage/$sub/" "$SHARED/storage/app/public/$sub/" 2>&1 | tail -n 5 || true
+      else
+        # cp -rn = no-clobber, recursive
+        cp -rn "$RELEASE_DIR/public/storage/$sub"/* "$SHARED/storage/app/public/$sub/" 2>&1 | tail -n 5 || true
+      fi
+      count_src=$(find "$RELEASE_DIR/public/storage/$sub" -type f 2>/dev/null | wc -l | tr -d ' ')
+      count_dst=$(find "$SHARED/storage/app/public/$sub" -type f 2>/dev/null | wc -l | tr -d ' ')
+      log " migrated $sub: src $count_src -> shared $count_dst"
+    fi
+  done
+  # also handle any top-level files in public/storage (e.g., custom-code)
+  if ls "$RELEASE_DIR/public/storage"/* >/dev/null 2>&1; then
+    for f in "$RELEASE_DIR/public/storage"/*; do
+      [[ -f "$f" ]] || continue
+      base=$(basename "$f")
+      # skip .gitignore/.htaccess
+      if [[ "$base" == ".gitignore" || "$base" == ".htaccess" ]]; then continue; fi
+      if [[ ! -f "$SHARED/storage/app/public/$base" ]]; then
+        cp -n "$f" "$SHARED/storage/app/public/$base" 2>&1 | tail -n 5 || true
+        log " migrated top-level $base to shared"
+      fi
+    done
+  fi
+fi
+# Ensure public/storage is a symlink to shared public root (idempotent, survives releases)
+if [[ -L "$RELEASE_DIR/public/storage" || -d "$RELEASE_DIR/public/storage" ]]; then rm -rf "$RELEASE_DIR/public/storage"; fi
+ln -sfn "$SHARED/storage/app/public" "$RELEASE_DIR/public/storage"
+log "public/storage -> $SHARED/storage/app/public (canonical persistent)"
 # bootstrap/cache: keep per-release but ensure writable; optionally symlink to shared
 mkdir -p "$RELEASE_DIR/bootstrap/cache" "$SHARED/bootstrap/cache"
 chmod 775 "$RELEASE_DIR/bootstrap/cache" 2>/dev/null || true
@@ -228,12 +264,34 @@ log "Building optimized caches in new release"
 # view cache is included in optimize, but also explicit:
 (cd "$RELEASE_DIR" && $PHP_BIN artisan view:cache 2>&1 | tail -n 5 || true)
 (cd "$RELEASE_DIR" && $PHP_BIN artisan route:list 2>&1 | head -n 5) # smoke route load
-# storage:link idempotent — creates public/storage -> storage/app/public inside release
-if (cd "$RELEASE_DIR" && $PHP_BIN artisan storage:link 2>&1 | tail -n 10); then
-  log "storage:link OK"
+# Verify canonical public storage symlink (persistent, created above)
+if [[ -L "$RELEASE_DIR/public/storage" ]]; then
+  target=$(readlink "$RELEASE_DIR/public/storage" 2>&1)
+  log "public/storage symlink verified -> $target"
+  if [[ "$target" != "$SHARED/storage/app/public" && "$target" != "../storage/app/public" ]]; then
+    log "WARN: public/storage points to unexpected $target (expected $SHARED/storage/app/public)"
+  fi
+  # ensure target exists and is not broken
+  if [[ ! -e "$RELEASE_DIR/public/storage" ]]; then
+    log "WARN: public/storage symlink is broken -> $target (shared target may be missing)"
+  fi
 else
-  log "storage:link reported issue (may already exist) — checking"
-  [[ -L "$RELEASE_DIR/public/storage" ]] || log "WARN: public/storage symlink missing after storage:link"
+  log "WARN: public/storage symlink missing, attempting artisan storage:link"
+  if (cd "$RELEASE_DIR" && $PHP_BIN artisan storage:link 2>&1 | tail -n 10); then
+    log "storage:link created"
+  else
+    log "storage:link reported issue — checking"
+    [[ -L "$RELEASE_DIR/public/storage" ]] || log "WARN: public/storage still missing after storage:link"
+  fi
+  # Force correct target if artisan created wrong relative link
+  if [[ -L "$RELEASE_DIR/public/storage" ]]; then
+    cur=$(readlink "$RELEASE_DIR/public/storage")
+    if [[ "$cur" != "$SHARED/storage/app/public" && "$cur" != "../storage/app/public" ]]; then
+      log "Correcting public/storage -> $SHARED/storage/app/public (was $cur)"
+      rm -rf "$RELEASE_DIR/public/storage"
+      ln -sfn "$SHARED/storage/app/public" "$RELEASE_DIR/public/storage"
+    fi
+  fi
 fi
 # assert private product prefix is NOT inside public
 if [[ -d "$RELEASE_DIR/storage/app/digital-products" ]]; then

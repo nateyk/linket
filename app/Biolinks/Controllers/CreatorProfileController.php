@@ -9,6 +9,7 @@ use App\Biolinks\Requests\UpdateCreatorProfileRequest;
 use App\Biolinks\Resources\BiolinkResource;
 use App\Storefront\DigitalProductVisibility;
 use App\Storefront\Models\DigitalProduct;
+use Common\Files\PublicMediaUrl;
 use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Arr;
@@ -37,6 +38,8 @@ class CreatorProfileController extends Controller
         );
 
         $validated = $request->validated();
+        $validated['avatar_url'] = PublicMediaUrl::normalize($validated['avatar_url'] ?? null) ?? '';
+        $validated['cover_url'] = PublicMediaUrl::normalize($validated['cover_url'] ?? null) ?? '';
         $validated['about_html'] = $request->exists('about_html')
             ? app(SanitizeCreatorAbout::class)->execute(
                 $validated['about_html'] ?? null,

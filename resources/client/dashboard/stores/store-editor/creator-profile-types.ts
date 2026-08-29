@@ -1,5 +1,6 @@
 import {Biolink} from '@app/gen/schemas/biolink';
 import {BiolinkBuilderMode} from '@app/gen/schemas/biolink-builder-mode';
+import {normalizeMediaUrl} from '@common/uploads/normalize-media-url';
 
 export interface CreatorProfileConfig {
   display_name: string;
@@ -33,8 +34,10 @@ export function getCreatorProfileConfig(
     headline: '',
     bio: biolink.profile_config?.bio || '',
     about_html: biolink.profile_config?.about_html || '',
-    avatar_url: biolink.profile_config?.avatar_url || biolink.user?.image || '',
-    cover_url: biolink.profile_config?.cover_url || '',
+    avatar_url: normalizeMediaUrl(
+      biolink.profile_config?.avatar_url || biolink.user?.image || '',
+    ),
+    cover_url: normalizeMediaUrl(biolink.profile_config?.cover_url || ''),
     available_for_work: biolink.profile_config?.available_for_work ?? false,
     skills: (biolink.profile_config?.skills || []).slice(0, 8),
     follow_url: biolink.profile_config?.follow_url || '',

@@ -185,6 +185,7 @@ jobs:
             --exclude='public/hot' --exclude='.phpunit.cache' --exclude='coverage' \
             --exclude='*.sql' --exclude='*.sql.gz' --exclude='.ddev' --exclude='.agents' --exclude='.superpowers' \
             --exclude='linket-*.tar.gz' --exclude='*.tar.gz' \
+            --exclude='public/storage/*' \
             .
           mv "/tmp/${ARTIFACT_NAME}.tar.gz" "./${ARTIFACT_NAME}.tar.gz"
           tar -tzf "${ARTIFACT_NAME}.tar.gz" | grep -E '^(./)?RELEASE_SHA' >/dev/null || { echo "RELEASE_SHA missing"; exit 1; }

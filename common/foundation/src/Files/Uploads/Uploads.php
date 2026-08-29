@@ -131,15 +131,15 @@ class Uploads
             return Storage::build([
                 'driver' => 'local',
                 'throw' => true,
-                'root' => $entry->public ? public_path('storage') : storage_path('app/uploads'),
-                'url' => $entry->public ? rtrim(config('app.url'), '/') . '/storage' : null,
+                'root' => $entry->public ? storage_path('app/public') : storage_path('app/uploads'),
+                'url' => $entry->public ? '/storage' : null,
             ]);
         }
 
         $root = null;
         if ($oldDriver === 'local') {
             $root = $entry->public
-                ? public_path('storage')
+                ? storage_path('app/public')
                 : storage_path('app/uploads');
         }
 

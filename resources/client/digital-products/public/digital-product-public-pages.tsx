@@ -22,6 +22,7 @@ import {
   getBgTintStyle,
 } from '@common/background-selector/utils/css-props-from-bg-config';
 import {loadFonts} from '@ui/fonts/font-picker/load-fonts';
+import {normalizeMediaUrl} from '@common/uploads/normalize-media-url';
 import {formatMoney as formatPrice} from '@ui/i18n/format-money';
 import {Trans} from '@ui/i18n/trans';
 import {cn} from '@ui/utils/cn';
@@ -787,7 +788,9 @@ function CreatorIdentity({
 }) {
   const name =
     biolink.profile_config?.display_name || creator?.name || biolink.name;
-  const avatar = biolink.profile_config?.avatar_url || creator?.avatar;
+  const avatar = normalizeMediaUrl(
+    biolink.profile_config?.avatar_url || creator?.avatar || '',
+  );
   const verified = biolink.is_verified ?? creator?.verified;
 
   return (

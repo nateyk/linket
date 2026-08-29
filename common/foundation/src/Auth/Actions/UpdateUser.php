@@ -3,8 +3,9 @@
 namespace Common\Auth\Actions;
 
 use App\Models\User;
-use Common\Permissions\Traits\SyncsPermissions;
 use Common\Files\FileEntry;
+use Common\Files\PublicMediaUrl;
+use Common\Permissions\Traits\SyncsPermissions;
 use Illuminate\Support\Arr;
 
 class UpdateUser
@@ -20,7 +21,7 @@ class UpdateUser
             unset($params['image_entry_id']);
 
             // remove image if "image_entry_id" is null
-            $user->image = $entry?->url;
+            $user->image = $entry ? PublicMediaUrl::normalize($entry->url) : null;
             if ($entry) {
                 $user->avatars()->sync([$entry->id]);
             } else {
