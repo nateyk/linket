@@ -606,6 +606,24 @@ function CourseBuilder() {
                                             <Trans message="Duplicate" />
                                           </Dropdown.Item>
                                           <Dropdown.Item
+                                            onClick={async () => {
+                                              const target = course.chapters.find(
+                                                c => c.id !== chapter.id,
+                                              );
+                                              if (!target) return;
+                                              await apiClient.post(
+                                                `/api/v1/course-lessons/${lesson.id}/move`,
+                                                {
+                                                  target_chapter_id: target.id,
+                                                  position: 0,
+                                                },
+                                              );
+                                              await load();
+                                            }}
+                                          >
+                                            <Trans message="Move to chapter" />
+                                          </Dropdown.Item>
+                                          <Dropdown.Item
                                             variant="destructive"
                                             onClick={() =>
                                               void deleteLesson(lesson.id)
