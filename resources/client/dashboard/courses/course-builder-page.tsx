@@ -372,7 +372,12 @@ function CourseBuilder() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => window.open(`/ @${course.product.title}`, '_blank')}
+            onClick={() =>
+              window.open(
+                `/api/v1/courses/${course.id}/preview?preview=1`,
+                '_blank',
+              )
+            }
           >
             <EyeIcon />
             <Trans message="Preview" />
