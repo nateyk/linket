@@ -32,6 +32,7 @@ import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {Tooltip} from '@shadcn/tooltip/tooltip';
 import {Trans} from '@ui/i18n/trans';
 import {FormattedBytes} from '@ui/i18n/formatted-bytes';
+import {ProductCover} from '@ui/product-cover';
 import {
   ArchiveIcon,
   BookIcon,
@@ -639,7 +640,7 @@ function ProductBuilderPreview({
       </div>
       <div className="aspect-video bg-muted">
         {coverUrl ? (
-          <img className="size-full object-cover" src={coverUrl} alt="" />
+          <ProductCover cover={{url: coverUrl}} className="size-full" />
         ) : (
           <div className="flex size-full flex-col items-center justify-center gap-2 text-muted-foreground">
             <PackageOpenIcon className="size-8" />

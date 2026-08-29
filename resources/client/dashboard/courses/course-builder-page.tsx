@@ -25,6 +25,7 @@ import {Switch} from '@shadcn/forms/switch/switch';
 import {FileDropzone} from '@common/ui/file-dropzone';
 import {Trans} from '@ui/i18n/trans';
 import {useSortable} from '@ui/interactions/dnd/sortable/use-sortable';
+import {ProductCover} from '@ui/product-cover';
 import {toast} from '@ui/toast/toast';
 import {cn} from '@ui/utils/cn';
 import {
@@ -1044,10 +1045,9 @@ function CourseSettingsDialog({
               <div className="w-full space-y-3">
                 {coverUrl && (
                   <div className="overflow-hidden rounded-xl border">
-                    <img
-                      src={coverUrl}
-                      alt="Cover preview"
-                      className="aspect-[1200/514] w-full object-cover"
+                    <ProductCover
+                      cover={{url: coverUrl}}
+                      className="aspect-video"
                     />
                   </div>
                 )}
@@ -1188,7 +1188,7 @@ function CoverImageDropzone({
       />
       {pendingFile && (
         <Dialog.Root open={cropOpen} onOpenChange={setCropOpen}>
-          <ImageCrop aspect={1200 / 514} file={pendingFile} onCrop={handleCrop}>
+          <ImageCrop aspect={16 / 9} file={pendingFile} onCrop={handleCrop}>
             <Dialog.Portal>
               <Dialog.Backdrop />
               <Dialog.Content className="sm:max-w-xl">
