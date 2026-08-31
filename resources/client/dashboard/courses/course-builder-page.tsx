@@ -23,7 +23,8 @@ import {Empty} from '@shadcn/empty/empty';
 import {Field} from '@shadcn/forms/field';
 import {Input} from '@shadcn/forms/input/input';
 import {Select} from '@shadcn/forms/select/select';
-import {Skeleton} from '@shadcn/skeleton/skeleton';
+import {ScrollArea, ScrollAreaScrollBar, ScrollAreaViewport} from '@shadcn/scroll-area/scroll-area';
+import {Spinner} from '@shadcn/spinner/spinner';
 import {Switch} from '@shadcn/forms/switch/switch';
 import {FileDropzone} from '@common/ui/file-dropzone';
 import {Trans} from '@ui/i18n/trans';
@@ -44,6 +45,7 @@ import {
   ImageCropReset,
 } from '@shadcn/image-crop/image-crop';
 import {
+  ArrowLeftIcon,
   BarChart3Icon,
   ChevronDownIcon,
   CopyIcon,
@@ -444,16 +446,10 @@ function CourseBuilder() {
   if (loading) {
     return (
       <DashboardLayout.MainSection>
-        <DashboardLayout.SectionContent className="flex flex-1 gap-4 p-6">
-          <div className="w-72 shrink-0 space-y-3">
-            <Skeleton className="h-9 w-full" />
-            <Skeleton className="h-24 w-full" />
-            <Skeleton className="h-24 w-full" />
-          </div>
-          <div className="flex-1 space-y-3">
-            <Skeleton className="h-9 w-1/3" />
-            <Skeleton className="h-40 w-full" />
-            <Skeleton className="h-40 w-full" />
+        <DashboardLayout.SectionContent className="flex flex-1 items-center justify-center p-6">
+          <div role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Spinner className="size-5" />
+            <span>Loading course builder</span>
           </div>
         </DashboardLayout.SectionContent>
       </DashboardLayout.MainSection>
@@ -596,7 +592,9 @@ function CourseBuilder() {
                 <Trans message="New chapter" />
               </Button>
             </div>
-            <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-3">
+            <ScrollArea className="min-h-0 flex-1">
+              <ScrollAreaViewport className="p-3">
+                <div className="flex flex-col gap-3">
               {course.chapters.length === 0 ? (
                 <Empty.Root>
                   <Empty.Header>
@@ -628,11 +626,8 @@ function CourseBuilder() {
                     onSortEnd={reorderChapters}
                   >
                     {dragHandleRef => (
-                      <Collapsible
-                        defaultOpen
-                        className="rounded-xl border bg-background"
-                      >
-                        <div className="flex items-center gap-2 border-b bg-muted/20 p-2">
+                      <Collapsible defaultOpen className="overflow-hidden rounded-xl border bg-background">
+                        <div className="flex items-center gap-2 bg-muted/30 p-2">
                           <div className="hidden lg:block">
                             <button
                               ref={dragHandleRef}
@@ -644,6 +639,12 @@ function CourseBuilder() {
                               <GripVerticalIcon className="size-4" />
                             </button>
                           </div>
+                          <CollapsibleTrigger
+                            aria-label="Toggle chapter lessons"
+                            className="group flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                          >
+                            <ChevronDownIcon className="size-4 transition-transform group-data-panel-open:rotate-180" />
+                          </CollapsibleTrigger>
                           <Input
                             className="h-8 flex-1 border-0 bg-transparent text-sm font-medium focus-visible:ring-1"
                             defaultValue={chapter.title}
@@ -700,9 +701,6 @@ function CourseBuilder() {
                             <Trash2Icon className="size-4" />
                           </Button>
                         </div>
-                        <CollapsibleTrigger className="flex w-full items-center justify-center border-t p-1 text-muted-foreground hover:bg-muted/20">
-                          <ChevronDownIcon className="size-4 transition-transform data-[state=open]:rotate-180" />
-                        </CollapsibleTrigger>
                         <CollapsibleContent>
                           <div className="flex flex-col gap-1 p-2">
                             {chapter.lessons.length === 0 ? (
@@ -764,7 +762,7 @@ function CourseBuilder() {
                                             ? 'positive'
                                             : 'outline'
                                         }
-                                        className="h-5 px-1.5 text-[10px]"
+                                        className="h-5 shrink-0 px-1.5 text-[10px]"
                                       >
                                         <Trans
                                           message={
@@ -897,7 +895,10 @@ function CourseBuilder() {
                   </SortableCurriculumItem>
                 ))
               )}
-            </div>
+                </div>
+              </ScrollAreaViewport>
+              <ScrollAreaScrollBar onlyShowOnHover />
+            </ScrollArea>
           </div>
 
           {/* Editor */}
@@ -1256,6 +1257,7 @@ function LessonEditor({
         className="self-start lg:hidden"
         onClick={onBackToCurriculum}
       >
+        <ArrowLeftIcon data-icon="inline-start" />
         <Trans message="Back to curriculum" />
       </Button>
       <div className="flex items-center justify-between gap-3">
@@ -1401,7 +1403,6 @@ function LessonEditor({
 }
 
 type CourseSettingsContentProps = {
-  course: Course;
   inputId: string;
   title: string;
   setTitle: (value: string) => void;
@@ -1415,7 +1416,6 @@ type CourseSettingsContentProps = {
 };
 
 function CourseSettingsContent({
-  course,
   inputId,
   title,
   setTitle,
@@ -1511,24 +1511,6 @@ function CourseSettingsContent({
         </div>
       </Field.Root>
 
-      <Collapsible className="overflow-hidden rounded-lg border">
-        <CollapsibleTrigger className="group flex w-full cursor-pointer items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/40">
-          <div className="flex min-w-0 flex-col">
-            <span className="text-sm font-medium">
-              <Trans message="Instructor" />
-            </span>
-            <span className="truncate text-xs text-muted-foreground">
-              ID {course.instructor_user_id}
-            </span>
-          </div>
-          <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground transition-transform duration-200 group-data-[open]:rotate-180" />
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <div className="px-4 pb-3 text-sm text-muted-foreground">
-            <Trans message="Course instructor details are managed via your workspace profile." />
-          </div>
-        </CollapsibleContent>
-      </Collapsible>
     </div>
   );
 }
@@ -1625,7 +1607,6 @@ function CourseSettingsDialog({
   };
 
   const contentProps = {
-    course,
     title,
     setTitle,
     coverUrl,

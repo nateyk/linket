@@ -190,7 +190,7 @@ describe('course builder curriculum sorting', () => {
 });
 
 describe('course settings and builder polish', () => {
-  test('exposes cover image, course name, instructor and collapsible curriculum with simplified header', () => {
+  test('exposes cover image, course name and collapsible curriculum with simplified header', () => {
     const source = fs.readFileSync(
       path.resolve(
         'resources/client/dashboard/courses/course-builder-page.tsx',
@@ -202,7 +202,6 @@ describe('course settings and builder polish', () => {
     expect(source).toContain('Course Name');
     expect(source).toContain('Collapsible');
     expect(source).toContain('max-w-2xl');
-    expect(source).toContain('Instructor');
   });
 
   test('uses a bottom Drawer for phone settings and a Dialog on desktop', () => {
@@ -287,5 +286,50 @@ describe('course settings and builder polish', () => {
       /pendingDelete\.type === 'chapter'[\s\S]*?selectedLesson\?\.chapter_id === pendingDelete\.item\.id/,
     );
     expect(source).toContain("setMobileSurface('curriculum')");
+  });
+});
+
+describe('course builder UI polish', () => {
+  test('uses shared loading and scrolling primitives for the curriculum', () => {
+    const source = fs.readFileSync(
+      path.resolve(
+        'resources/client/dashboard/courses/course-builder-page.tsx',
+      ),
+      'utf8',
+    );
+
+    expect(source).toContain("import {Spinner} from '@shadcn/spinner/spinner'");
+    expect(source).toContain('@shadcn/scroll-area/scroll-area');
+    expect(source).toContain('role="status"');
+    expect(source).toContain('<ScrollArea className="min-h-0 flex-1">');
+    expect(source).toContain('<ScrollAreaViewport className="p-3">');
+    expect(source).toContain('<ScrollAreaScrollBar onlyShowOnHover />');
+    expect(source).toContain('group-data-panel-open:rotate-180');
+  });
+
+  test('uses an icon back action and does not expose the internal instructor ID', () => {
+    const source = fs.readFileSync(
+      path.resolve(
+        'resources/client/dashboard/courses/course-builder-page.tsx',
+      ),
+      'utf8',
+    );
+
+    expect(source).toContain('ArrowLeftIcon');
+    expect(source).toMatch(
+      /<ArrowLeftIcon data-icon="inline-start"\s*\/>\s*<Trans message="Back to curriculum" \/>/,
+    );
+    expect(source).not.toContain('ID {course.instructor_user_id}');
+  });
+
+  test('keeps lesson status badges visible without shrinking their label', () => {
+    const source = fs.readFileSync(
+      path.resolve(
+        'resources/client/dashboard/courses/course-builder-page.tsx',
+      ),
+      'utf8',
+    );
+
+    expect(source).toContain('className="h-5 shrink-0 px-1.5 text-[10px]"');
   });
 });
