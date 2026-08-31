@@ -2,6 +2,7 @@ import {ShopWidgetConfig} from '@app/dashboard/stores/store-editor/content/widge
 import {WidgetRendererProps} from '@app/dashboard/stores/store-editor/content/widgets/widget-renderer-props';
 import {Trans} from '@ui/i18n/trans';
 import {formatMoney} from '@ui/i18n/format-money';
+import {ProductCover} from '@ui/product-cover';
 import {useEffect, useState} from 'react';
 import {ArrowUpRightIcon, ShoppingBagIcon} from 'lucide-react';
 import type {ReactNode} from 'react';
@@ -125,7 +126,13 @@ export function ShopWidgetRenderer({
 }
 
 function ProductCard({product, href}: {product: Product; href: string}) {
-  const [imageError, setImageError] = useState(false);
+  const fallback = (
+    <div className="flex h-full w-full items-center justify-center">
+      <span className="grid size-11 place-items-center rounded-card-sm bg-[var(--biolink-surface-strong)] ring-1 ring-[var(--biolink-border)]">
+        <ShoppingBagIcon className="size-5 text-[var(--biolink-muted-text)] opacity-65" />
+      </span>
+    </div>
+  );
 
   return (
     <a
@@ -133,20 +140,15 @@ function ProductCard({product, href}: {product: Product; href: string}) {
       href={href}
     >
       <div className="aspect-video w-full overflow-hidden bg-[var(--biolink-surface-muted)]">
-        {product.cover?.url && !imageError ? (
-          <img
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-            src={product.cover.url}
+        {product.cover?.url ? (
+          <ProductCover
+            cover={product.cover}
             alt={product.title}
-            loading="lazy"
-            onError={() => setImageError(true)}
+            className="size-full transition-transform duration-300 group-hover:scale-[1.03]"
+            fallback={fallback}
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center">
-            <span className="grid size-11 place-items-center rounded-card-sm bg-[var(--biolink-surface-strong)] ring-1 ring-[var(--biolink-border)]">
-              <ShoppingBagIcon className="size-5 text-[var(--biolink-muted-text)] opacity-65" />
-            </span>
-          </div>
+          fallback
         )}
       </div>
       <div className="flex flex-1 flex-col gap-3 p-3">

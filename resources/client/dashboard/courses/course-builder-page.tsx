@@ -12,14 +12,17 @@ import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {FileUploadProvider} from '@common/uploads/uploader/file-upload-provider';
 import {useActiveUpload} from '@common/uploads/uploader/use-active-upload';
 import {Alert} from '@shadcn/alert/alert';
+import {AlertDialog} from '@shadcn/alert-dialog/alert-dialog';
 import {Badge} from '@shadcn/badge/badge';
 import {Button} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
 import {Dialog} from '@shadcn/dialog/dialog';
+import {Drawer} from '@shadcn/drawer/drawer';
 import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {Empty} from '@shadcn/empty/empty';
 import {Field} from '@shadcn/forms/field';
 import {Input} from '@shadcn/forms/input/input';
+import {Select} from '@shadcn/forms/select/select';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {Switch} from '@shadcn/forms/switch/switch';
 import {FileDropzone} from '@common/ui/file-dropzone';
@@ -28,6 +31,7 @@ import {useSortable} from '@ui/interactions/dnd/sortable/use-sortable';
 import {ProductCover} from '@ui/product-cover';
 import {toast} from '@ui/toast/toast';
 import {cn} from '@ui/utils/cn';
+import {useMediaQuery} from '@ui/utils/hooks/use-media-query';
 import {
   Collapsible,
   CollapsibleContent,
@@ -67,6 +71,7 @@ import {Link, useParams, useSearchParams} from 'react-router';
 type Course = {
   id: number;
   digital_product_id: number;
+  instructor_user_id: number;
   require_sequential_completion: boolean;
   published_at: string | null;
   product: {
@@ -110,6 +115,10 @@ type LessonResource = {
   file: {id: number; name: string} | null;
 };
 
+type PendingDelete =
+  | {type: 'chapter'; item: Chapter}
+  | {type: 'lesson'; item: Lesson};
+
 export function Component() {
   return (
     <FileUploadProvider>
@@ -123,6 +132,9 @@ function CourseBuilder() {
   const [searchParams] = useSearchParams();
   const [course, setCourse] = useState<Course | null>(null);
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
+  const [mobileSurface, setMobileSurface] = useState<'curriculum' | 'editor'>(
+    'curriculum',
+  );
   const [selectedChapterId, setSelectedChapterId] = useState<number | null>(
     null,
   );
@@ -131,6 +143,14 @@ function CourseBuilder() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [reordering, setReordering] = useState<string>();
+  const [moveRequest, setMoveRequest] = useState<{
+    lesson: Lesson;
+    sourceChapter: Chapter;
+  } | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(
+    null,
+  );
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     if (!productId) return;
@@ -197,6 +217,7 @@ function CourseBuilder() {
     const lesson = (res.data as any).data as Lesson;
     setSelectedLesson(lesson);
     setSelectedChapterId(chapterId);
+    setMobileSurface('editor');
   };
 
   const updateChapterTitle = async (chapterId: number, title: string) => {
@@ -212,17 +233,41 @@ function CourseBuilder() {
     });
   };
 
-  const deleteChapter = async (chapterId: number) => {
-    if (!confirm('Delete this chapter and all its lessons?')) return;
-    await apiClient.delete(`/api/v1/course-chapters/${chapterId}`);
-    await load();
+  const deleteChapter = (chapter: Chapter) => {
+    setPendingDelete({type: 'chapter', item: chapter});
   };
 
-  const deleteLesson = async (lessonId: number) => {
-    if (!confirm('Delete this lesson?')) return;
-    await apiClient.delete(`/api/v1/course-lessons/${lessonId}`);
-    await load();
-    if (selectedLesson?.id === lessonId) setSelectedLesson(null);
+  const deleteLesson = (lesson: Lesson) => {
+    setPendingDelete({type: 'lesson', item: lesson});
+  };
+
+  const confirmDelete = async () => {
+    if (!pendingDelete || deleting) return;
+
+    setDeleting(true);
+    try {
+      const endpoint =
+        pendingDelete.type === 'chapter'
+          ? `/api/v1/course-chapters/${pendingDelete.item.id}`
+          : `/api/v1/course-lessons/${pendingDelete.item.id}`;
+      await apiClient.delete(endpoint);
+      await load();
+      if (
+        (pendingDelete.type === 'lesson' &&
+          selectedLesson?.id === pendingDelete.item.id) ||
+        (pendingDelete.type === 'chapter' &&
+          selectedLesson?.chapter_id === pendingDelete.item.id)
+      ) {
+        setSelectedLesson(null);
+        setSelectedChapterId(null);
+        setMobileSurface('curriculum');
+      }
+      setPendingDelete(null);
+    } catch {
+      toast.danger('Unable to delete');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const toggleLessonStatus = async (lesson: Lesson) => {
@@ -309,6 +354,79 @@ function CourseBuilder() {
     }
   };
 
+  const moveChapterByOffset = (chapterId: number, offset: number) => {
+    if (!course) return;
+
+    const oldIndex = course.chapters.findIndex(
+      chapter => chapter.id === chapterId,
+    );
+    const newIndex = oldIndex + offset;
+
+    if (oldIndex < 0 || newIndex < 0 || newIndex >= course.chapters.length) {
+      return;
+    }
+
+    void reorderChapters(oldIndex, newIndex);
+  };
+
+  const moveLessonByOffset = (
+    chapterId: number,
+    lessonId: number,
+    offset: number,
+  ) => {
+    if (!course) return;
+
+    const chapter = course.chapters.find(item => item.id === chapterId);
+    if (!chapter) return;
+
+    const oldIndex = chapter.lessons.findIndex(
+      lesson => lesson.id === lessonId,
+    );
+    const newIndex = oldIndex + offset;
+
+    if (oldIndex < 0 || newIndex < 0 || newIndex >= chapter.lessons.length) {
+      return;
+    }
+
+    void reorderLessons(chapterId, oldIndex, newIndex);
+  };
+
+  const moveLesson = async (
+    lesson: Lesson,
+    sourceChapterId: number,
+    targetChapterId: number,
+  ) => {
+    if (!course || reordering) return false;
+
+    const previousCourse = course;
+    setCourse(current =>
+      current
+        ? moveLessonInCourse(
+            current,
+            lesson.id,
+            sourceChapterId,
+            targetChapterId,
+          )
+        : current,
+    );
+    setReordering(`move-${lesson.id}`);
+
+    try {
+      await apiClient.post(`/api/v1/course-lessons/${lesson.id}/move`, {
+        target_chapter_id: targetChapterId,
+        position: 0,
+      });
+      await load();
+      return true;
+    } catch (e: any) {
+      setCourse(previousCourse);
+      toast.danger(e?.message ?? 'Unable to move lesson');
+      return false;
+    } finally {
+      setReordering(undefined);
+    }
+  };
+
   const publish = async () => {
     if (!course) return;
     setPublishing(true);
@@ -369,40 +487,83 @@ function CourseBuilder() {
             </Badge>
           )}
         </DashboardLayout.SectionTitle>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              window.open(
-                `/api/v1/courses/${course.id}/preview?preview=1`,
-                '_blank',
-              )
-            }
-          >
-            <EyeIcon />
-            <Trans message="Preview" />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setSettingsOpen(true)}
-          >
-            <SettingsIcon />
-            <Trans message="Configure" />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            render={
-              <Link
-                to={`/dashboard/my-products/${productId}/course/analytics`}
-              />
-            }
-          >
-            <BarChart3Icon data-icon="inline-start" />
-            Analytics
-          </Button>
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="hidden items-center gap-2 lg:flex">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                window.open(
+                  `/dashboard/my-products/${productId}/course/preview`,
+                  '_blank',
+                )
+              }
+            >
+              <EyeIcon />
+              <Trans message="Preview" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSettingsOpen(true)}
+            >
+              <SettingsIcon />
+              <Trans message="Configure" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              render={
+                <Link
+                  to={`/dashboard/my-products/${productId}/course/analytics`}
+                />
+              }
+            >
+              <BarChart3Icon data-icon="inline-start" />
+              Analytics
+            </Button>
+          </div>
+          <Dropdown.Root>
+            <Dropdown.Trigger
+              render={
+                <Button
+                  aria-label="Course actions"
+                  size="icon-sm"
+                  variant="outline"
+                  className="lg:hidden"
+                >
+                  <MoreHorizontalIcon />
+                </Button>
+              }
+            />
+            <Dropdown.Content align="end">
+              <Dropdown.Item
+                onClick={() =>
+                  window.open(
+                    `/dashboard/my-products/${productId}/course/preview`,
+                    '_blank',
+                  )
+                }
+              >
+                <EyeIcon />
+                <Trans message="Preview" />
+              </Dropdown.Item>
+              <Dropdown.Item onClick={() => setSettingsOpen(true)}>
+                <SettingsIcon />
+                <Trans message="Configure" />
+              </Dropdown.Item>
+              <Dropdown.Item
+                render={
+                  <Link
+                    to={`/dashboard/my-products/${productId}/course/analytics`}
+                  />
+                }
+              >
+                <BarChart3Icon />
+                Analytics
+              </Dropdown.Item>
+            </Dropdown.Content>
+          </Dropdown.Root>
           <Button
             size="sm"
             onClick={() => void publish()}
@@ -414,15 +575,20 @@ function CourseBuilder() {
       </DashboardLayout.SectionHeader>
 
       <DashboardLayout.SectionContent className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
-        <div className="flex min-h-0 flex-1 flex-col gap-0 lg:flex-row">
+        <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
           {/* Curriculum */}
-          <div className="flex max-h-[50vh] w-full min-w-0 flex-col overflow-hidden border-b bg-card lg:max-h-none lg:w-[36%] lg:border-r lg:border-b-0">
+          <div
+            className={cn(
+              'flex min-h-0 w-full min-w-0 flex-col overflow-hidden border-b bg-card lg:w-[36%] lg:border-r lg:border-b-0',
+              mobileSurface === 'editor' && 'hidden lg:flex',
+            )}
+          >
             <div className="flex items-center justify-between gap-2 border-b p-3">
               <h2 className="text-sm font-semibold">
                 <Trans message="Curriculum" />
               </h2>
               <Button
-                size="xs"
+                size="sm"
                 variant="outline"
                 onClick={() => void addChapter()}
               >
@@ -430,7 +596,7 @@ function CourseBuilder() {
                 <Trans message="New chapter" />
               </Button>
             </div>
-            <div className="flex-1 space-y-3 overflow-y-auto p-3">
+            <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-3">
               {course.chapters.length === 0 ? (
                 <Empty.Root>
                   <Empty.Header>
@@ -450,7 +616,7 @@ function CourseBuilder() {
                   </Button>
                 </Empty.Root>
               ) : (
-                course.chapters.map(chapter => (
+                course.chapters.map((chapter, chapterIndex) => (
                   <SortableCurriculumItem
                     key={chapter.id}
                     id={`course-builder-chapter-${chapter.id}`}
@@ -467,15 +633,17 @@ function CourseBuilder() {
                         className="rounded-xl border bg-background"
                       >
                         <div className="flex items-center gap-2 border-b bg-muted/20 p-2">
-                          <button
-                            ref={dragHandleRef}
-                            type="button"
-                            aria-label="Reorder chapter"
-                            disabled={!!reordering}
-                            className="shrink-0 cursor-grab touch-none text-muted-foreground hover:text-foreground active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            <GripVerticalIcon className="size-4" />
-                          </button>
+                          <div className="hidden lg:block">
+                            <button
+                              ref={dragHandleRef}
+                              type="button"
+                              aria-label="Reorder chapter"
+                              disabled={!!reordering}
+                              className="shrink-0 cursor-grab touch-none text-muted-foreground hover:text-foreground active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              <GripVerticalIcon className="size-4" />
+                            </button>
+                          </div>
                           <Input
                             className="h-8 flex-1 border-0 bg-transparent text-sm font-medium focus-visible:ring-1"
                             defaultValue={chapter.title}
@@ -490,10 +658,44 @@ function CourseBuilder() {
                                 (e.target as HTMLInputElement).blur();
                             }}
                           />
+                          <Dropdown.Root>
+                            <Dropdown.Trigger
+                              render={
+                                <Button
+                                  aria-label="Chapter actions"
+                                  size="icon-sm"
+                                  variant="ghost"
+                                >
+                                  <MoreHorizontalIcon className="size-4" />
+                                </Button>
+                              }
+                            />
+                            <Dropdown.Content align="end">
+                              <Dropdown.Item
+                                disabled={chapterIndex === 0 || !!reordering}
+                                onClick={() =>
+                                  moveChapterByOffset(chapter.id, -1)
+                                }
+                              >
+                                <Trans message="Move up" />
+                              </Dropdown.Item>
+                              <Dropdown.Item
+                                disabled={
+                                  chapterIndex === course.chapters.length - 1 ||
+                                  !!reordering
+                                }
+                                onClick={() =>
+                                  moveChapterByOffset(chapter.id, 1)
+                                }
+                              >
+                                <Trans message="Move down" />
+                              </Dropdown.Item>
+                            </Dropdown.Content>
+                          </Dropdown.Root>
                           <Button
-                            size="icon-xs"
+                            size="icon-sm"
                             variant="ghost"
-                            onClick={() => void deleteChapter(chapter.id)}
+                            onClick={() => deleteChapter(chapter)}
                           >
                             <Trash2Icon className="size-4" />
                           </Button>
@@ -502,13 +704,13 @@ function CourseBuilder() {
                           <ChevronDownIcon className="size-4 transition-transform data-[state=open]:rotate-180" />
                         </CollapsibleTrigger>
                         <CollapsibleContent>
-                          <div className="space-y-1 p-2">
+                          <div className="flex flex-col gap-1 p-2">
                             {chapter.lessons.length === 0 ? (
                               <p className="py-3 text-center text-xs text-muted-foreground">
                                 <Trans message="This chapter has no lessons yet." />
                               </p>
                             ) : (
-                              chapter.lessons.map(lesson => (
+                              chapter.lessons.map((lesson, lessonIndex) => (
                                 <SortableCurriculumItem
                                   key={lesson.id}
                                   id={`course-builder-lesson-${lesson.id}`}
@@ -534,21 +736,24 @@ function CourseBuilder() {
                                           : 'bg-card hover:bg-muted/30',
                                       )}
                                     >
-                                      <button
-                                        ref={dragHandleRef}
-                                        type="button"
-                                        aria-label="Reorder lesson"
-                                        disabled={!!reordering}
-                                        className="shrink-0 cursor-grab touch-none text-muted-foreground hover:text-foreground active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
-                                      >
-                                        <GripVerticalIcon className="size-3.5" />
-                                      </button>
+                                      <div className="hidden lg:block">
+                                        <button
+                                          ref={dragHandleRef}
+                                          type="button"
+                                          aria-label="Reorder lesson"
+                                          disabled={!!reordering}
+                                          className="shrink-0 cursor-grab touch-none text-muted-foreground hover:text-foreground active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                          <GripVerticalIcon className="size-3.5" />
+                                        </button>
+                                      </div>
                                       <VideoIcon className="size-3.5 text-muted-foreground" />
                                       <button
                                         className="flex-1 truncate text-left font-medium"
                                         onClick={() => {
                                           setSelectedLesson(lesson);
                                           setSelectedChapterId(chapter.id);
+                                          setMobileSurface('editor');
                                         }}
                                       >
                                         {lesson.title}
@@ -573,7 +778,8 @@ function CourseBuilder() {
                                         <Dropdown.Trigger
                                           render={
                                             <Button
-                                              size="icon-xs"
+                                              aria-label="Lesson actions"
+                                              size="icon-sm"
                                               variant="ghost"
                                             >
                                               <MoreHorizontalIcon className="size-4" />
@@ -581,6 +787,36 @@ function CourseBuilder() {
                                           }
                                         />
                                         <Dropdown.Content align="end">
+                                          <Dropdown.Item
+                                            disabled={
+                                              lessonIndex === 0 || !!reordering
+                                            }
+                                            onClick={() =>
+                                              moveLessonByOffset(
+                                                chapter.id,
+                                                lesson.id,
+                                                -1,
+                                              )
+                                            }
+                                          >
+                                            <Trans message="Move up" />
+                                          </Dropdown.Item>
+                                          <Dropdown.Item
+                                            disabled={
+                                              lessonIndex ===
+                                                chapter.lessons.length - 1 ||
+                                              !!reordering
+                                            }
+                                            onClick={() =>
+                                              moveLessonByOffset(
+                                                chapter.id,
+                                                lesson.id,
+                                                1,
+                                              )
+                                            }
+                                          >
+                                            <Trans message="Move down" />
+                                          </Dropdown.Item>
                                           <Dropdown.Item
                                             onClick={() =>
                                               void toggleLessonStatus(lesson)
@@ -598,13 +834,18 @@ function CourseBuilder() {
                                             onClick={async () => {
                                               if (reordering) return;
                                               try {
-                                                setReordering(`duplicate-${lesson.id}`);
+                                                setReordering(
+                                                  `duplicate-${lesson.id}`,
+                                                );
                                                 await apiClient.post(
                                                   `/api/v1/course-lessons/${lesson.id}/duplicate`,
                                                 );
                                                 await load();
                                               } catch (e: any) {
-                                                toast.danger(e?.message ?? 'Unable to duplicate lesson');
+                                                toast.danger(
+                                                  e?.message ??
+                                                    'Unable to duplicate lesson',
+                                                );
                                               } finally {
                                                 setReordering(undefined);
                                               }
@@ -615,37 +856,20 @@ function CourseBuilder() {
                                           </Dropdown.Item>
                                           {course.chapters.length > 1 && (
                                             <Dropdown.Item
-                                              onClick={async () => {
-                                                if (reordering) return;
-                                                const target = course.chapters.find(
-                                                  c => c.id !== chapter.id,
-                                                );
-                                                if (!target) return;
-                                                try {
-                                                  setReordering(`move-${lesson.id}`);
-                                                  await apiClient.post(
-                                                    `/api/v1/course-lessons/${lesson.id}/move`,
-                                                    {
-                                                      target_chapter_id: target.id,
-                                                      position: 0,
-                                                    },
-                                                  );
-                                                  await load();
-                                                } catch (e: any) {
-                                                  toast.danger(e?.message ?? 'Unable to move lesson');
-                                                } finally {
-                                                  setReordering(undefined);
-                                                }
-                                              }}
+                                              disabled={!!reordering}
+                                              onClick={() =>
+                                                setMoveRequest({
+                                                  lesson,
+                                                  sourceChapter: chapter,
+                                                })
+                                              }
                                             >
                                               <Trans message="Move to chapter" />
                                             </Dropdown.Item>
                                           )}
                                           <Dropdown.Item
                                             variant="destructive"
-                                            onClick={() =>
-                                              void deleteLesson(lesson.id)
-                                            }
+                                            onClick={() => deleteLesson(lesson)}
                                           >
                                             <Trash2Icon />
                                             <Trans message="Delete" />
@@ -658,7 +882,7 @@ function CourseBuilder() {
                               ))
                             )}
                             <Button
-                              size="xs"
+                              size="sm"
                               variant="ghost"
                               className="w-full"
                               onClick={() => void addLesson(chapter.id)}
@@ -677,13 +901,19 @@ function CourseBuilder() {
           </div>
 
           {/* Editor */}
-          <div className="flex min-w-0 flex-1 flex-col overflow-y-auto bg-muted/10 p-4">
+          <div
+            className={cn(
+              'flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto bg-muted/10 p-4',
+              mobileSurface === 'curriculum' && 'hidden lg:flex',
+            )}
+          >
             {selectedLesson ? (
               <LessonEditor
                 lesson={selectedLesson}
                 chapterId={selectedChapterId}
                 onSaved={load}
                 onSelectLesson={setSelectedLesson}
+                onBackToCurriculum={() => setMobileSurface('curriculum')}
               />
             ) : (
               <Empty.Root className="m-auto">
@@ -710,7 +940,170 @@ function CourseBuilder() {
         course={course}
         onSaved={load}
       />
+      <DeleteCourseItemDialog
+        item={pendingDelete}
+        deleting={deleting}
+        onOpenChange={open => {
+          if (!open && !deleting) setPendingDelete(null);
+        }}
+        onDelete={() => void confirmDelete()}
+      />
+      {moveRequest && (
+        <MoveLessonDialog
+          course={course}
+          lesson={moveRequest.lesson}
+          sourceChapter={moveRequest.sourceChapter}
+          open
+          onOpenChange={open => {
+            if (!open) setMoveRequest(null);
+          }}
+          onMoved={targetChapterId =>
+            moveLesson(
+              moveRequest.lesson,
+              moveRequest.sourceChapter.id,
+              targetChapterId,
+            )
+          }
+        />
+      )}
     </DashboardLayout.MainSection>
+  );
+}
+
+function moveLessonInCourse(
+  course: Course,
+  lessonId: number,
+  sourceChapterId: number,
+  targetChapterId: number,
+): Course {
+  const lesson = course.chapters
+    .find(chapter => chapter.id === sourceChapterId)
+    ?.lessons.find(item => item.id === lessonId);
+
+  if (!lesson) return course;
+
+  return {
+    ...course,
+    chapters: course.chapters.map(chapter => {
+      if (chapter.id === sourceChapterId) {
+        return {
+          ...chapter,
+          lessons: chapter.lessons
+            .filter(item => item.id !== lessonId)
+            .map((item, sortOrder) => ({...item, sort_order: sortOrder})),
+        };
+      }
+
+      if (chapter.id === targetChapterId) {
+        return {
+          ...chapter,
+          lessons: [
+            {...lesson, chapter_id: targetChapterId},
+            ...chapter.lessons,
+          ].map((item, sortOrder) => ({...item, sort_order: sortOrder})),
+        };
+      }
+
+      return chapter;
+    }),
+  };
+}
+
+function MoveLessonDialog({
+  course,
+  lesson,
+  sourceChapter,
+  open,
+  onOpenChange,
+  onMoved,
+}: {
+  course: Course;
+  lesson: Lesson;
+  sourceChapter: Chapter;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onMoved: (targetChapterId: number) => Promise<boolean>;
+}) {
+  const [targetChapterId, setTargetChapterId] = useState<number | null>(null);
+  const [moving, setMoving] = useState(false);
+  const targets = course.chapters.filter(
+    chapter => chapter.id !== sourceChapter.id,
+  );
+
+  const close = () => {
+    setTargetChapterId(null);
+    onOpenChange(false);
+  };
+
+  const move = async () => {
+    if (targetChapterId === null || moving) return;
+
+    setMoving(true);
+    try {
+      if (await onMoved(targetChapterId)) close();
+    } finally {
+      setMoving(false);
+    }
+  };
+
+  return (
+    <Dialog.Root
+      open={open}
+      onOpenChange={open => (open ? undefined : close())}
+    >
+      <Dialog.Portal>
+        <Dialog.Backdrop />
+        <Dialog.Content className="w-[calc(100%-2rem)] sm:max-w-md">
+          <Dialog.Header>
+            <Dialog.Title>
+              <Trans message="Move lesson" />
+            </Dialog.Title>
+            <Dialog.Description>
+              <Trans message={`Choose a chapter for "${lesson.title}".`} />
+            </Dialog.Description>
+          </Dialog.Header>
+          <Dialog.Body>
+            <Field.Root>
+              <Field.Label>
+                <Trans message="Destination chapter" />
+              </Field.Label>
+              <Select.Root
+                value={
+                  targetChapterId === null ? null : String(targetChapterId)
+                }
+                onValueChange={value => setTargetChapterId(Number(value))}
+              >
+                <Select.Trigger className="w-full">
+                  <Select.Value
+                    placeholder={<Trans message="Select a chapter" />}
+                  />
+                </Select.Trigger>
+                <Select.Content>
+                  <Select.Group>
+                    {targets.map(chapter => (
+                      <Select.Item key={chapter.id} value={String(chapter.id)}>
+                        {chapter.title}
+                      </Select.Item>
+                    ))}
+                  </Select.Group>
+                </Select.Content>
+              </Select.Root>
+            </Field.Root>
+          </Dialog.Body>
+          <Dialog.Footer>
+            <Button variant="outline" onClick={close} disabled={moving}>
+              <Trans message="Cancel" />
+            </Button>
+            <Button
+              onClick={() => void move()}
+              disabled={targetChapterId === null || moving}
+            >
+              <Trans message={moving ? 'Moving...' : 'Move lesson'} />
+            </Button>
+          </Dialog.Footer>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }
 
@@ -769,11 +1162,13 @@ function LessonEditor({
   chapterId,
   onSaved,
   onSelectLesson,
+  onBackToCurriculum,
 }: {
   lesson: Lesson;
   chapterId: number | null;
   onSaved: () => void;
   onSelectLesson: (l: Lesson) => void;
+  onBackToCurriculum: () => void;
 }) {
   const [title, setTitle] = useState(lesson.title);
   const [status, setStatus] = useState(lesson.status);
@@ -855,6 +1250,14 @@ function LessonEditor({
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
+      <Button
+        variant="ghost"
+        size="sm"
+        className="self-start lg:hidden"
+        onClick={onBackToCurriculum}
+      >
+        <Trans message="Back to curriculum" />
+      </Button>
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs text-muted-foreground">
           Chapter {chapterId} • Lesson editor
@@ -997,6 +1400,139 @@ function LessonEditor({
   );
 }
 
+type CourseSettingsContentProps = {
+  course: Course;
+  inputId: string;
+  title: string;
+  setTitle: (value: string) => void;
+  coverUrl: string;
+  setCoverUrl: (value: string) => void;
+  setCoverFileId: (value: number | null) => void;
+  price: string;
+  setPrice: (value: string) => void;
+  requireSeq: boolean;
+  setRequireSeq: (value: boolean) => void;
+};
+
+function CourseSettingsContent({
+  course,
+  inputId,
+  title,
+  setTitle,
+  coverUrl,
+  setCoverUrl,
+  setCoverFileId,
+  price,
+  setPrice,
+  requireSeq,
+  setRequireSeq,
+}: CourseSettingsContentProps) {
+  return (
+    <div className="flex flex-col gap-6">
+      <Field.Root>
+        <Field.Label htmlFor={inputId}>
+          <Trans message="Course Name" />
+        </Field.Label>
+        <Input
+          id={inputId}
+          value={title}
+          onChange={e => setTitle(e.target.value)}
+          placeholder="Enter a course name"
+          maxLength={160}
+        />
+      </Field.Root>
+
+      <Field.Root>
+        <Field.Label>
+          <Trans message="Cover Image" />
+        </Field.Label>
+        <div className="flex w-full flex-col gap-3">
+          {coverUrl && (
+            <div className="overflow-hidden rounded-xl border">
+              <ProductCover cover={{url: coverUrl}} className="aspect-video" />
+            </div>
+          )}
+          <CoverImageDropzone
+            coverUrl={coverUrl}
+            onCoverChange={(url, id) => {
+              setCoverUrl(url);
+              setCoverFileId(id);
+            }}
+          />
+          <p className="text-xs text-muted-foreground">
+            <Trans message="Recommended size: 1200x514px • Max size: 5MB" />
+          </p>
+          {coverUrl && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setCoverUrl('');
+                setCoverFileId(null);
+              }}
+            >
+              <Trans message="Remove cover" />
+            </Button>
+          )}
+        </div>
+      </Field.Root>
+
+      <Field.Root>
+        <Field.Label>
+          <Trans message="Price (ETB)" />
+        </Field.Label>
+        <Input
+          value={price}
+          onChange={e => setPrice(e.target.value)}
+          type="number"
+          min="0"
+          step="0.01"
+        />
+      </Field.Root>
+
+      <Field.Root>
+        <Field.Label htmlFor={`${inputId}-require-lesson-completion`}>
+          <Trans message="Learning Settings" />
+        </Field.Label>
+        <div className="flex items-center justify-between gap-6 rounded-lg border p-4">
+          <div className="flex flex-col gap-1">
+            <p className="text-sm font-medium">
+              <Trans message="Require students to complete lessons in order" />
+            </p>
+            <p className="text-sm text-muted-foreground">
+              <Trans message="Students must complete lessons before moving to the next one" />
+            </p>
+          </div>
+          <Switch
+            id={`${inputId}-require-lesson-completion`}
+            checked={requireSeq}
+            onCheckedChange={setRequireSeq}
+          />
+        </div>
+      </Field.Root>
+
+      <Collapsible className="overflow-hidden rounded-lg border">
+        <CollapsibleTrigger className="group flex w-full cursor-pointer items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/40">
+          <div className="flex min-w-0 flex-col">
+            <span className="text-sm font-medium">
+              <Trans message="Instructor" />
+            </span>
+            <span className="truncate text-xs text-muted-foreground">
+              ID {course.instructor_user_id}
+            </span>
+          </div>
+          <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground transition-transform duration-200 group-data-[open]:rotate-180" />
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="px-4 pb-3 text-sm text-muted-foreground">
+            <Trans message="Course instructor details are managed via your workspace profile." />
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    </div>
+  );
+}
+
 function CourseSettingsDialog({
   open,
   onOpenChange,
@@ -1008,6 +1544,7 @@ function CourseSettingsDialog({
   course: Course;
   onSaved: () => void;
 }) {
+  const isDesktop = useMediaQuery('(min-width: 1024px)') ?? false;
   const [title, setTitle] = useState(course.product.title);
   const [coverUrl, setCoverUrl] = useState(course.product.cover?.url ?? '');
   const [coverFileId, setCoverFileId] = useState<number | null>(
@@ -1019,6 +1556,8 @@ function CourseSettingsDialog({
   const [price, setPrice] = useState(
     (course.product.price_cents / 100).toFixed(2),
   );
+  const [discardOpen, setDiscardOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     setTitle(course.product.title);
@@ -1028,154 +1567,227 @@ function CourseSettingsDialog({
     setPrice((course.product.price_cents / 100).toFixed(2));
   }, [course]);
 
-  const save = async () => {
-    await apiClient.put(`/api/v1/courses/${course.id}`, {
-      require_sequential_completion: requireSeq,
-    });
-    const cents = Math.round(Number(price || '0') * 100);
-    await apiClient.put(`/api/v1/digital-products/${course.product.id}`, {
-      title: title.trim() || course.product.title,
-      price_cents: Number.isFinite(cents) ? cents : course.product.price_cents,
-      cover_file_entry_id: coverFileId,
-      type: 'course',
-    });
-    toast.positive('Settings saved');
+  const reset = () => {
+    setTitle(course.product.title);
+    setCoverUrl(course.product.cover?.url ?? '');
+    setCoverFileId(course.product.cover?.id ?? null);
+    setRequireSeq(course.require_sequential_completion);
+    setPrice((course.product.price_cents / 100).toFixed(2));
+  };
+
+  const isDirty =
+    title !== course.product.title ||
+    coverFileId !== (course.product.cover?.id ?? null) ||
+    price !== (course.product.price_cents / 100).toFixed(2) ||
+    requireSeq !== course.require_sequential_completion;
+
+  const requestClose = (nextOpen: boolean) => {
+    if (!nextOpen && saving) return;
+    if (!nextOpen && isDirty) {
+      setDiscardOpen(true);
+      return;
+    }
+    onOpenChange(nextOpen);
+  };
+
+  const discard = () => {
+    if (saving) return;
+    reset();
+    setDiscardOpen(false);
     onOpenChange(false);
-    onSaved();
+  };
+
+  const save = async () => {
+    if (saving) return;
+
+    setSaving(true);
+    try {
+      await apiClient.put(`/api/v1/courses/${course.id}`, {
+        require_sequential_completion: requireSeq,
+      });
+      const cents = Math.round(Number(price || '0') * 100);
+      await apiClient.put(`/api/v1/digital-products/${course.product.id}`, {
+        title: title.trim() || course.product.title,
+        price_cents: Number.isFinite(cents)
+          ? cents
+          : course.product.price_cents,
+        cover_file_entry_id: coverFileId,
+        type: 'course',
+      });
+      toast.positive('Settings saved');
+      onOpenChange(false);
+      onSaved();
+    } catch (e: any) {
+      toast.danger(e.message ?? 'Unable to save settings');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const contentProps = {
+    course,
+    title,
+    setTitle,
+    coverUrl,
+    setCoverUrl,
+    setCoverFileId,
+    price,
+    setPrice,
+    requireSeq,
+    setRequireSeq,
   };
 
   return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Portal>
-        <Dialog.Backdrop />
-        <Dialog.Content className="flex max-h-[85vh] flex-col gap-0 p-0 sm:max-w-2xl">
-          <Dialog.Header className="border-b px-6 pt-6 pb-4">
-            <Dialog.Title>
-              <Trans message="Course Settings" />
-            </Dialog.Title>
-            <Dialog.Description>
-              <Trans message="Manage your course cover image and other settings" />
-            </Dialog.Description>
-          </Dialog.Header>
-          <Dialog.Body className="mx-0 flex-1 space-y-6 overflow-y-auto px-6 py-5">
-            <Field.Root>
-              <Field.Label htmlFor="course-name">
-                <Trans message="Course Name" />
-              </Field.Label>
-              <div className="relative">
-                <Input
-                  id="course-name"
-                  value={title}
-                  onChange={e => setTitle(e.target.value)}
-                  placeholder="Enter a course name"
-                  maxLength={160}
-                  className="pr-18"
-                />
-              </div>
-            </Field.Root>
+    <>
+      <Drawer.Root
+        open={open && !isDesktop}
+        onOpenChange={requestClose}
+        position="bottom"
+      >
+        <Drawer.Portal>
+          <Drawer.Backdrop />
+          <Drawer.Content className="lg:hidden">
+            <Drawer.Header>
+              <Drawer.Title>
+                <Trans message="Course Settings" />
+              </Drawer.Title>
+              <Drawer.Description>
+                <Trans message="Manage your course cover image and other settings" />
+              </Drawer.Description>
+            </Drawer.Header>
+            <Drawer.Body>
+              <CourseSettingsContent {...contentProps} inputId="course-name-mobile" />
+            </Drawer.Body>
+            <Drawer.Footer className="border-t pt-4">
+              <Button
+                variant="outline"
+                onClick={() => requestClose(false)}
+                disabled={saving}
+              >
+                <Trans message="Cancel" />
+              </Button>
+              <Button onClick={() => void save()} disabled={saving}>
+                <Trans message={saving ? 'Saving...' : 'Save'} />
+              </Button>
+            </Drawer.Footer>
+          </Drawer.Content>
+        </Drawer.Portal>
+      </Drawer.Root>
+      <Dialog.Root open={open && isDesktop} onOpenChange={requestClose}>
+        <Dialog.Portal>
+          <Dialog.Backdrop />
+          <Dialog.Content className="hidden max-h-[85vh] flex-col gap-0 p-0 sm:max-w-2xl lg:flex">
+            <Dialog.Header className="border-b px-4 pt-4 pb-4 sm:px-6 sm:pt-6">
+              <Dialog.Title>
+                <Trans message="Course Settings" />
+              </Dialog.Title>
+              <Dialog.Description>
+                <Trans message="Manage your course cover image and other settings" />
+              </Dialog.Description>
+            </Dialog.Header>
+            <Dialog.Body className="mx-0 flex-1 px-4 py-5 sm:px-6">
+              <CourseSettingsContent {...contentProps} inputId="course-name-desktop" />
+            </Dialog.Body>
+            <Dialog.Footer className="mx-0 mb-0 border-t px-4 py-4 sm:px-6">
+              <Button
+                variant="outline"
+                onClick={() => requestClose(false)}
+                disabled={saving}
+              >
+                <Trans message="Cancel" />
+              </Button>
+              <Button onClick={() => void save()} disabled={saving}>
+                <Trans message={saving ? 'Saving...' : 'Save'} />
+              </Button>
+            </Dialog.Footer>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+      <AlertDialog.Root
+        open={discardOpen}
+        onOpenChange={open => !open && setDiscardOpen(false)}
+      >
+        <AlertDialog.Portal>
+          <AlertDialog.Backdrop />
+          <AlertDialog.Content size="sm">
+            <AlertDialog.Header>
+              <AlertDialog.Title>
+                <Trans message="Discard changes?" />
+              </AlertDialog.Title>
+              <AlertDialog.Description>
+                <Trans message="Your unsaved course settings will be lost." />
+              </AlertDialog.Description>
+            </AlertDialog.Header>
+            <AlertDialog.Footer>
+              <AlertDialog.Cancel disabled={saving}>
+                <Trans message="Keep editing" />
+              </AlertDialog.Cancel>
+              <AlertDialog.Action
+                color="danger"
+                onClick={discard}
+                disabled={saving}
+              >
+                <Trans message="Discard changes" />
+              </AlertDialog.Action>
+            </AlertDialog.Footer>
+          </AlertDialog.Content>
+        </AlertDialog.Portal>
+      </AlertDialog.Root>
+    </>
+  );
+}
 
-            <Field.Root>
-              <Field.Label>
-                <Trans message="Cover Image" />
-              </Field.Label>
-              <div className="w-full space-y-3">
-                {coverUrl && (
-                  <div className="overflow-hidden rounded-xl border">
-                    <ProductCover
-                      cover={{url: coverUrl}}
-                      className="aspect-video"
-                    />
-                  </div>
-                )}
-                <CoverImageDropzone
-                  coverUrl={coverUrl}
-                  onCoverChange={(url, id) => {
-                    setCoverUrl(url);
-                    setCoverFileId(id);
-                  }}
-                />
-                <p className="text-xs text-muted-foreground">
-                  <Trans message="Recommended size: 1200x514px • Max size: 5MB" />
-                </p>
-                {coverUrl && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setCoverUrl('');
-                      setCoverFileId(null);
-                    }}
-                  >
-                    <Trans message="Remove cover" />
-                  </Button>
-                )}
-              </div>
-            </Field.Root>
+function DeleteCourseItemDialog({
+  item,
+  deleting,
+  onOpenChange,
+  onDelete,
+}: {
+  item: PendingDelete | null;
+  deleting: boolean;
+  onOpenChange: (open: boolean) => void;
+  onDelete: () => void;
+}) {
+  const isChapter = item?.type === 'chapter';
+  const itemName = item?.item.title ?? '';
 
-            <Field.Root>
-              <Field.Label>
-                <Trans message="Price (ETB)" />
-              </Field.Label>
-              <Input
-                value={price}
-                onChange={e => setPrice(e.target.value)}
-                type="number"
-                min="0"
-                step="0.01"
+  return (
+    <AlertDialog.Root open={item !== null} onOpenChange={onOpenChange}>
+      <AlertDialog.Portal>
+        <AlertDialog.Backdrop />
+        <AlertDialog.Content size="sm">
+          <AlertDialog.Header>
+            <AlertDialog.Media className="bg-destructive/10 text-destructive">
+              <Trash2Icon />
+            </AlertDialog.Media>
+            <AlertDialog.Title>
+              <Trans message={`Delete "${itemName}"?`} />
+            </AlertDialog.Title>
+            <AlertDialog.Description>
+              <Trans
+                message={
+                  isChapter
+                    ? 'This chapter and all of its lessons will be permanently deleted.'
+                    : 'This lesson will be permanently deleted.'
+                }
               />
-            </Field.Root>
-
-            <Field.Root>
-              <Field.Label htmlFor="require-lesson-completion">
-                <Trans message="Learning Settings" />
-              </Field.Label>
-              <div className="flex items-center justify-between gap-6 rounded-lg border p-4">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium">
-                    <Trans message="Require students to complete lessons in order" />
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    <Trans message="Students must complete lessons before moving to the next one" />
-                  </p>
-                </div>
-                <Switch
-                  id="require-lesson-completion"
-                  checked={requireSeq}
-                  onCheckedChange={setRequireSeq}
-                />
-              </div>
-            </Field.Root>
-
-            <Collapsible className="overflow-hidden rounded-lg border">
-              <CollapsibleTrigger className="group flex w-full cursor-pointer items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/40">
-                <div className="flex min-w-0 flex-col">
-                  <span className="text-sm font-medium">
-                    <Trans message="Instructor" />
-                  </span>
-                  <span className="truncate text-xs text-muted-foreground">
-                    ID {course.instructor_user_id}
-                  </span>
-                </div>
-                <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground transition-transform duration-200 group-data-[open]:rotate-180" />
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <div className="px-4 pb-3 text-sm text-muted-foreground">
-                  <Trans message="Course instructor details are managed via your workspace profile." />
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-          </Dialog.Body>
-          <Dialog.Footer className="mx-0 mb-0 border-t px-6 py-4">
-            <Dialog.CloseButton>
+            </AlertDialog.Description>
+          </AlertDialog.Header>
+          <AlertDialog.Footer>
+            <AlertDialog.Cancel disabled={deleting}>
               <Trans message="Cancel" />
-            </Dialog.CloseButton>
-            <Button onClick={() => void save()}>
-              <Trans message="Save" />
-            </Button>
-          </Dialog.Footer>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+            </AlertDialog.Cancel>
+            <AlertDialog.Action
+              color="danger"
+              disabled={deleting}
+              onClick={onDelete}
+            >
+              <Trans message={deleting ? 'Deleting...' : 'Delete'} />
+            </AlertDialog.Action>
+          </AlertDialog.Footer>
+        </AlertDialog.Content>
+      </AlertDialog.Portal>
+    </AlertDialog.Root>
   );
 }
 
@@ -1227,7 +1839,7 @@ function CoverImageDropzone({
           <ImageCrop aspect={16 / 9} file={pendingFile} onCrop={handleCrop}>
             <Dialog.Portal>
               <Dialog.Backdrop />
-              <Dialog.Content className="sm:max-w-xl">
+              <Dialog.Content className="max-w-[calc(100vw-2rem)] sm:max-w-xl">
                 <Dialog.Header>
                   <Dialog.Title>
                     <Trans message="Crop cover image" />
@@ -1236,25 +1848,23 @@ function CoverImageDropzone({
                     <Trans message="Adjust the preferred region, then apply." />
                   </Dialog.Description>
                 </Dialog.Header>
-                <Dialog.Body className="space-y-4">
-                  <ImageCropContent className="max-h-[60vh] min-h-[320px] sm:max-h-[520px] sm:min-h-[460px]" />
+                <Dialog.Body>
+                  <ImageCropContent />
                 </Dialog.Body>
-                <Dialog.Footer className="flex-row items-center justify-between gap-2">
+                <Dialog.Footer className="flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <ImageCropReset asChild>
-                    <Button type="button" variant="ghost" size="sm">
+                    <Button type="button" variant="ghost">
                       <Trans message="Reset" />
                     </Button>
                   </ImageCropReset>
-                  <div className="flex gap-2">
-                    <Dialog.CloseButton variant="outline" size="sm">
-                      <Trans message="Cancel" />
-                    </Dialog.CloseButton>
-                    <ImageCropApply asChild>
-                      <Button type="button" size="sm">
-                        <Trans message="Apply crop" />
-                      </Button>
-                    </ImageCropApply>
-                  </div>
+                  <Dialog.CloseButton variant="outline">
+                    <Trans message="Cancel" />
+                  </Dialog.CloseButton>
+                  <ImageCropApply asChild>
+                    <Button type="button">
+                      <Trans message="Apply crop" />
+                    </Button>
+                  </ImageCropApply>
                 </Dialog.Footer>
               </Dialog.Content>
             </Dialog.Portal>

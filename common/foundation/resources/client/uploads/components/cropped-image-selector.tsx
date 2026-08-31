@@ -224,12 +224,12 @@ export function CroppedImageSelector({
         </button>
       )}
 
-      {pendingFile && (
-        <Dialog.Root open={cropOpen} onOpenChange={setCropOpen}>
-          <ImageCrop aspect={aspect} file={pendingFile} onCrop={handleCrop}>
-            <Dialog.Portal>
-              <Dialog.Backdrop />
-              <Dialog.Content className="sm:max-w-xl">
+      <Dialog.Root open={cropOpen} onOpenChange={setCropOpen}>
+        <Dialog.Portal>
+          <Dialog.Backdrop />
+          <Dialog.Content className="max-w-[calc(100vw-2rem)] sm:max-w-xl">
+            {pendingFile ? (
+              <ImageCrop aspect={aspect} file={pendingFile} onCrop={handleCrop}>
                 <Dialog.Header>
                   <Dialog.Title>
                     <Trans message="Crop image" />
@@ -238,58 +238,33 @@ export function CroppedImageSelector({
                     <Trans message="Adjust the preferred region, then apply." />
                   </Dialog.Description>
                 </Dialog.Header>
-                <Dialog.Body className="space-y-4">
-                  <ImageCropContent className="max-h-[60vh] min-h-[320px] sm:max-h-[520px] sm:min-h-[460px]" />
+                <Dialog.Body>
+                  <ImageCropContent />
                 </Dialog.Body>
-                <Dialog.Footer className="flex-row items-center justify-between gap-2">
+                <Dialog.Footer className="flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <ImageCropReset asChild>
-                    <Button type="button" variant="ghost" size="sm">
+                    <Button type="button" variant="ghost">
                       <Trans message="Reset" />
                     </Button>
                   </ImageCropReset>
-                  <div className="flex gap-2">
-                    <Dialog.CloseButton variant="outline" size="sm">
-                      <Trans message="Cancel" />
-                    </Dialog.CloseButton>
-                    <ImageCropApply asChild>
-                      <Button type="button" size="sm">
-                        <Trans message="Apply crop" />
-                      </Button>
-                    </ImageCropApply>
-                  </div>
+                  <Dialog.CloseButton variant="outline">
+                    <Trans message="Cancel" />
+                  </Dialog.CloseButton>
+                  <ImageCropApply asChild>
+                    <Button type="button">
+                      <Trans message="Apply crop" />
+                    </Button>
+                  </ImageCropApply>
                 </Dialog.Footer>
-              </Dialog.Content>
-            </Dialog.Portal>
-          </ImageCrop>
-        </Dialog.Root>
-      )}
-      {!pendingFile && (
-        <Dialog.Root open={cropOpen} onOpenChange={setCropOpen}>
-          <Dialog.Portal>
-            <Dialog.Backdrop />
-            <Dialog.Content className="sm:max-w-lg">
-              <Dialog.Header>
-                <Dialog.Title>
-                  <Trans message="Crop image" />
-                </Dialog.Title>
-                <Dialog.Description>
-                  <Trans message="Adjust the preferred region, then apply." />
-                </Dialog.Description>
-              </Dialog.Header>
-              <Dialog.Body>
-                <p className="text-sm text-muted-foreground">
-                  <Trans message="No image selected." />
-                </p>
-              </Dialog.Body>
-              <Dialog.Footer>
-                <Dialog.CloseButton>
-                  <Trans message="Cancel" />
-                </Dialog.CloseButton>
-              </Dialog.Footer>
-            </Dialog.Content>
-          </Dialog.Portal>
-        </Dialog.Root>
-      )}
+              </ImageCrop>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                <Trans message="No image selected." />
+              </p>
+            )}
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </>
   );
 }

@@ -34,4 +34,27 @@ describe('reusable image crop composer', () => {
     // ensure component can be used with 1, 2.33, 16/9
     expect(source).toContain('Cropper');
   });
+
+  test('uses viewport-safe sizing with a single selector dialog tree', () => {
+    const cropSource = fs.readFileSync(
+      path.resolve(
+        'common/foundation/resources/client/shadcn/image-crop/image-crop.tsx',
+      ),
+      'utf8',
+    );
+    const selectorSource = fs.readFileSync(
+      path.resolve(
+        'common/foundation/resources/client/uploads/components/cropped-image-selector.tsx',
+      ),
+      'utf8',
+    );
+
+    expect(cropSource).toContain('h-[min(50dvh,520px)]');
+    expect(cropSource).not.toContain('min-h-[320px]');
+    expect(cropSource).toContain('sm:h-[460px] sm:min-h-0');
+    expect(selectorSource.match(/<Dialog\.Root/g)).toHaveLength(1);
+    expect(selectorSource).toContain(
+      'flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between',
+    );
+  });
 });

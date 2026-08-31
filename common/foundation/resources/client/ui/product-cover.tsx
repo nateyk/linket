@@ -2,13 +2,18 @@
 import {cn} from '@ui/utils/cn';
 import {normalizeMediaUrl} from '@common/uploads/normalize-media-url';
 import {useState} from 'react';
+import type {ReactNode} from 'react';
 
 export function ProductCover({
   cover,
+  alt = '',
+  fallback,
   className,
   aspect = 'aspect-video',
 }: {
   cover?: {url: string} | null;
+  alt?: string;
+  fallback?: ReactNode;
   className?: string;
   aspect?: string;
 }) {
@@ -18,6 +23,8 @@ export function ProductCover({
     : null;
 
   if (!normalizedUrl || imageError) {
+    if (fallback) return fallback;
+
     return (
       <div
         className={cn(
@@ -33,7 +40,7 @@ export function ProductCover({
   return (
     <img
       src={normalizedUrl}
-      alt=""
+      alt={alt}
       onError={() => setImageError(true)}
       className={cn('w-full object-cover', aspect, className)}
     />

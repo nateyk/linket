@@ -25,6 +25,7 @@ import {loadFonts} from '@ui/fonts/font-picker/load-fonts';
 import {normalizeMediaUrl} from '@common/uploads/normalize-media-url';
 import {formatMoney as formatPrice} from '@ui/i18n/format-money';
 import {Trans} from '@ui/i18n/trans';
+import {ProductCover} from '@ui/product-cover';
 import {cn} from '@ui/utils/cn';
 import {
   ArrowLeftIcon,
@@ -181,7 +182,7 @@ export function PublicDigitalProductPage({
       <div className="flex w-full max-w-6xl flex-col gap-4 sm:gap-5">
         <div className="grid min-w-0 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-6">
           <Card.Root className="gap-0 overflow-hidden bg-[var(--biolink-surface-strong)] py-0 text-[var(--biolink-text)] shadow-xl ring-1 ring-[var(--biolink-border)] backdrop-blur-xl">
-            <ProductCover product={data.product} />
+            <DigitalProductCover product={data.product} />
             <Card.Content className="flex min-w-0 flex-col gap-6 p-5 sm:p-7">
               <div className="flex min-w-0 flex-col gap-4">
                 <div className="flex flex-wrap items-center gap-2">
@@ -739,39 +740,39 @@ function BackToBio({
   );
 }
 
-function ProductCover({product}: {product: PublicDigitalProduct}) {
-  const [imageError, setImageError] = useState(false);
+function DigitalProductCover({product}: {product: PublicDigitalProduct}) {
+  const fallback = (
+    <div className="flex size-full min-h-64 flex-col items-center justify-center gap-3 bg-[radial-gradient(circle_at_center,var(--biolink-surface-strong),transparent_68%)] px-6 text-center text-[var(--biolink-muted-text)] sm:min-h-80">
+      <span className="grid size-14 place-items-center rounded-card bg-[var(--biolink-surface-strong)] shadow-sm ring-1 ring-[var(--biolink-border)]">
+        <PackageOpenIcon className="size-5" />
+      </span>
+      <div className="flex flex-col gap-1">
+        <span className="text-sm font-semibold text-[var(--biolink-text)]">
+          <Trans message="Digital download" />
+        </span>
+        <span className="text-xs">
+          <Trans message="Secure access after purchase" />
+        </span>
+      </div>
+    </div>
+  );
 
   return (
     <div
       className={cn(
         'relative overflow-hidden bg-[var(--biolink-surface)]',
-        product.cover?.url && !imageError
-          ? 'aspect-video'
-          : 'min-h-64 sm:min-h-80',
+        product.cover?.url ? 'aspect-video' : 'min-h-64 sm:min-h-80',
       )}
     >
-      {product.cover?.url && !imageError ? (
-        <img
-          className="size-full object-cover"
-          src={product.cover.url}
+      {product.cover?.url ? (
+        <ProductCover
+          cover={product.cover}
           alt={product.title}
-          onError={() => setImageError(true)}
+          className="size-full"
+          fallback={fallback}
         />
       ) : (
-        <div className="flex size-full min-h-64 flex-col items-center justify-center gap-3 bg-[radial-gradient(circle_at_center,var(--biolink-surface-strong),transparent_68%)] px-6 text-center text-[var(--biolink-muted-text)] sm:min-h-80">
-          <span className="grid size-14 place-items-center rounded-card bg-[var(--biolink-surface-strong)] shadow-sm ring-1 ring-[var(--biolink-border)]">
-            <PackageOpenIcon className="size-5" />
-          </span>
-          <div className="flex flex-col gap-1">
-            <span className="text-sm font-semibold text-[var(--biolink-text)]">
-              <Trans message="Digital download" />
-            </span>
-            <span className="text-xs">
-              <Trans message="Secure access after purchase" />
-            </span>
-          </div>
-        </div>
+        fallback
       )}
     </div>
   );
