@@ -130,6 +130,7 @@ class DigitalProductsController extends Controller
             $hasPublished = \App\Courses\Models\Lesson::where('course_id', $course->id)->where('status', 'published')->exists();
             abort_unless($course->chapters()->exists() && $hasPublished, 422, __('Add at least one chapter and one published lesson before submitting.'));
             if (config('store.courses_require_approval')) {
+                $course->update(['published_at' => now()]);
                 $digitalProduct->update(['status' => 'pending_approval', 'rejection_reason' => null]);
             } else {
                 $course->update(['published_at' => now()]);

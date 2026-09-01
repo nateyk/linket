@@ -333,3 +333,18 @@ describe('course builder UI polish', () => {
     expect(source).toContain('className="h-5 shrink-0 px-1.5 text-[10px]"');
   });
 });
+
+describe('course approval submission', () => {
+  test('uses the standard product submission flow', () => {
+    const source = fs.readFileSync(
+      path.resolve('resources/client/dashboard/courses/course-builder-page.tsx'),
+      'utf8',
+    );
+
+    expect(source).toContain(
+      '`/api/v1/digital-products/${course.digital_product_id}/submit`',
+    );
+    expect(source).toContain("toast.positive('Course submitted for review')");
+    expect(source).toContain("publishing ? 'Submitting...' : 'Submit for review'");
+  });
+});

@@ -429,15 +429,17 @@ function CourseBuilder() {
     }
   };
 
-  const publish = async () => {
+  const submit = async () => {
     if (!course) return;
     setPublishing(true);
     try {
-      await apiClient.post(`/api/v1/courses/${course.id}/publish`);
-      toast.positive('Course published');
+      await apiClient.post(
+        `/api/v1/digital-products/${course.digital_product_id}/submit`,
+      );
+      toast.positive('Course submitted for review');
       await load();
     } catch (e: any) {
-      toast.danger(e.message ?? 'Unable to publish');
+      toast.danger(e.message ?? 'Unable to submit course');
     } finally {
       setPublishing(false);
     }
@@ -468,7 +470,8 @@ function CourseBuilder() {
     );
   }
 
-  const isPublished = !!course.published_at;
+  const canSubmit =
+    course.product.status === 'draft' || course.product.status === 'rejected';
 
   return (
     <DashboardLayout.MainSection>
@@ -477,9 +480,14 @@ function CourseBuilder() {
         <DashboardLayout.SectionTitle>
           <GraduationCapIcon className="size-5" />
           <Trans message="Course Builder" />
-          {isPublished && (
+          {course.product.status === 'approved' && (
             <Badge variant="positive" className="ml-2">
               <Trans message="Published" />
+            </Badge>
+          )}
+          {course.product.status === 'pending_approval' && (
+            <Badge variant="secondary" className="ml-2">
+              <Trans message="In review" />
             </Badge>
           )}
         </DashboardLayout.SectionTitle>
@@ -562,10 +570,10 @@ function CourseBuilder() {
           </Dropdown.Root>
           <Button
             size="sm"
-            onClick={() => void publish()}
-            disabled={publishing}
+            onClick={() => void submit()}
+            disabled={publishing || !canSubmit}
           >
-            <Trans message={isPublished ? 'Update' : 'Publish'} />
+            <Trans message={publishing ? 'Submitting...' : 'Submit for review'} />
           </Button>
         </div>
       </DashboardLayout.SectionHeader>

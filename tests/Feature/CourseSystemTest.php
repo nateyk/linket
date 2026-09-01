@@ -98,6 +98,35 @@ class CourseSystemTest extends TestCase
         $this->assertDatabaseHas('course_lessons', ['id' => $lessonId, 'status' => 'published']);
     }
 
+    public function testSubmittingCourseForApprovalPublishesItsCurriculum(): void
+    {
+        config()->set('store.courses_require_approval', true);
+        $creator = $this->createCreator();
+        $workspace = (new CreateWorkspace())->createPersonalWorkspace($creator);
+        ActiveWorkspace::clearCache();
+        $product = $this->createCourseProduct($creator, $workspace);
+        $course = $product->course;
+        $chapter = \App\Courses\Models\Chapter::create([
+            'course_id' => $course->id,
+            'title' => 'Chapter 1',
+            'sort_order' => 0,
+        ]);
+        Lesson::create([
+            'chapter_id' => $chapter->id,
+            'course_id' => $course->id,
+            'title' => 'Lesson 1',
+            'status' => 'published',
+            'sort_order' => 0,
+        ]);
+
+        $this->stateful()->actingAs($creator)
+            ->postJson("/api/v1/digital-products/{$product->id}/submit")
+            ->assertOk();
+
+        $this->assertSame('pending_approval', $product->fresh()->status);
+        $this->assertNotNull($course->fresh()->published_at);
+    }
+
     public function testOtherCreatorCannotEditCourse(): void
     {
         $creatorA = $this->createCreator();
