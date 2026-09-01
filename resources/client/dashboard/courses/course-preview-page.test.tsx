@@ -23,5 +23,7 @@ describe('course preview page', () => {
     expect(preview).toContain('/api/v1/courses/${courseId}/preview');
     expect(preview).toContain('ProductCover');
     expect(preview).toContain('Preview mode');
+    expect(preview).toContain('Course curriculum');
+    expect(preview).toContain('max-w-3xl');
   });
 });

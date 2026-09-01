@@ -455,16 +455,23 @@ function ProductActions({
           <MoreHorizontalIcon />
         </Dropdown.Trigger>
         <Dropdown.Content align="end">
-          <Dropdown.LinkItem
-            render={<Link to={product.type === 'course' || product.is_course ? `/dashboard/my-products/${product.id}/course` : `/dashboard/my-products/${product.id}/edit`} />}
-          >
-            <PencilIcon />
-            <Trans message={product.type === 'course' || product.is_course ? 'Edit course' : 'Edit product'} />
-          </Dropdown.LinkItem>
+          {!(product.type === 'course' || product.is_course) && (
+            <Dropdown.LinkItem render={<Link to={`/dashboard/my-products/${product.id}/edit`} />}>
+              <PencilIcon />
+              <Trans message="Edit product" />
+            </Dropdown.LinkItem>
+          )}
           {(product.type === 'course' || product.is_course) && (
             <Dropdown.LinkItem render={<Link to={`/dashboard/my-products/${product.id}/course`} />}>
               <GraduationCapIcon />
               <Trans message="Open course builder" />
+            </Dropdown.LinkItem>
+          )}
+
+          {(product.type === 'course' || product.is_course) && (
+            <Dropdown.LinkItem render={<Link to={`/dashboard/my-products/${product.id}/course/analytics`} />}>
+              <BarChart3Icon />
+              <Trans message="Analytics" />
             </Dropdown.LinkItem>
           )}
 

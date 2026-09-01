@@ -100,7 +100,7 @@ export function Component() {
               alt={course.product.title}
               className="overflow-hidden rounded-card"
             />
-            <section className="flex flex-col gap-3">
+            <section className="flex flex-col gap-3 rounded-card border bg-card p-4 sm:p-6">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <h1 className="text-2xl font-semibold tracking-tight">
                   {course.product.title}
