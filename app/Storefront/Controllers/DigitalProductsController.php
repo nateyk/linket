@@ -4,19 +4,19 @@ namespace App\Storefront\Controllers;
 
 use App\Storefront\Models\DigitalProduct;
 use App\Entitlements\Entitlements;
+use App\Storefront\DigitalProductMutationService;
 use App\Storefront\Resources\DigitalProductResource;
 use App\Storefront\DigitalProductVisibility;
-use Common\Files\FileEntry;
 use Common\Workspaces\ActiveWorkspace;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Arr;
 
 class DigitalProductsController extends Controller
 {
+    public function __construct(private readonly DigitalProductMutationService $mutations) {}
+
     public function index(Request $request): AnonymousResourceCollection
     {
         $perPage = min(max($request->integer('per_page', 15), 1), 100);
@@ -52,33 +52,13 @@ class DigitalProductsController extends Controller
             null,
         );
 
-        return DB::transaction(function () use ($data, $creator, $entitlements): DigitalProductResource {
-            $type = $data['type'] ?? 'digital';
-            $product = DigitalProduct::create([
-                ...Arr::except($data, ['file_ids', 'biolink_ids', 'type']),
-                'type' => $type,
-                'user_id' => $creator->id,
-                'workspace_id' => ActiveWorkspace::get()->id,
-                'currency' => $data['currency'] ?? config('storefront.currency'),
-            ]);
-            if ($type === 'course') {
-                app(\App\Courses\Services\CourseService::class)->ensureForProduct($product);
-                // Courses do not require digital_product_files; file_ids optional
-                if (!empty($data['file_ids'])) {
-                    $this->syncFiles($product, $data['file_ids'], $entitlements->limit($creator, 'max_upload_bytes'));
-                }
-            } else {
-                $this->syncFiles(
-                    $product,
-                    $data['file_ids'],
-                    $entitlements->limit($creator, 'max_upload_bytes'),
-                );
-            }
-            app(DigitalProductVisibility::class)->sync($product, $data['biolink_ids'] ?? []);
+        $product = $this->mutations->create(
+            $data,
+            $creator,
+            $entitlements->limit($creator, 'max_upload_bytes'),
+        );
 
-            $product->load(['files', 'cover', 'biolinks', 'course']);
-            return new DigitalProductResource($product);
-        });
+        return (new DigitalProductResource($product))->response()->setStatusCode(201);
     }
 
     public function update(Request $request, DigitalProduct $digitalProduct)
@@ -91,35 +71,13 @@ class DigitalProductsController extends Controller
         abort_unless($entitlements->enabled($creator, 'course_creation_enabled') || $effectiveType !== 'course', 403, __('Course creation is not enabled for your plan.'));
         $this->enforceProductLimitForType($entitlements, $data['price_cents'], $effectiveType, $creator, $digitalProduct->id);
 
-        return DB::transaction(function () use ($digitalProduct, $data, $creator, $entitlements): DigitalProductResource {
-            $type = $data['type'] ?? $digitalProduct->type ?? 'digital';
-            $digitalProduct->update([
-                ...Arr::except($data, ['file_ids', 'biolink_ids', 'type']),
-                'type' => $type,
-                'currency' => $data['currency'] ?? $digitalProduct->currency,
-                'status' => $digitalProduct->status === 'approved' ? 'draft' : $digitalProduct->status,
-            ]);
-            if ($type === 'course') {
-                app(\App\Courses\Services\CourseService::class)->ensureForProduct($digitalProduct->fresh());
-                if (array_key_exists('file_ids', $data) && !empty($data['file_ids'])) {
-                    $this->syncFiles($digitalProduct, $data['file_ids'], $entitlements->limit($creator, 'max_upload_bytes'));
-                } elseif (array_key_exists('file_ids', $data) && empty($data['file_ids'])) {
-                    $digitalProduct->files()->sync([]);
-                }
-            } else {
-                $this->syncFiles(
-                    $digitalProduct,
-                    $data['file_ids'],
-                    $entitlements->limit($creator, 'max_upload_bytes'),
-                );
-            }
-            app(DigitalProductVisibility::class)->sync(
-                $digitalProduct,
-                $data['biolink_ids'] ?? $digitalProduct->biolinks()->pluck('biolinks.id')->all(),
-            );
+        $product = $this->mutations->update(
+            $digitalProduct,
+            $data,
+            $entitlements->limit($creator, 'max_upload_bytes'),
+        );
 
-            return new DigitalProductResource($digitalProduct->fresh()->load(['files', 'cover', 'biolinks', 'course']));
-        });
+        return new DigitalProductResource($product);
     }
 
     public function submit(Request $request, DigitalProduct $digitalProduct)
@@ -199,42 +157,6 @@ class DigitalProductsController extends Controller
         abort_if($count >= $limit, 422, $isFree
             ? __("You've reached your :plan limit of :count free products.", ['plan' => $planName ?? 'plan', 'count' => $limit])
             : __("You've reached your :plan limit of :count paid products.", ['plan' => $planName ?? 'plan', 'count' => $limit]));
-    }
-    private function syncFiles(DigitalProduct $product, array $ids, ?int $maxBytes): void
-    {
-        $this->assertCoverBelongsToWorkspace($product);
-        $files = FileEntry::query()->whereIn('id', $ids)->where('workspace_id', $product->workspace_id)->get();
-        abort_if($files->count() !== count($ids), 422, __('Every file must belong to the active workspace.'));
-        abort_if($files->contains(function (FileEntry $file) use ($maxBytes): bool {
-            return ($maxBytes !== null && $file->file_size > $maxBytes) || !in_array(strtolower((string) $file->extension), config('storefront.allowed_extensions'), true);
-        }), 422, $maxBytes !== null && $files->max('file_size') > $maxBytes
-            ? __("One or more files exceed your plan's storage allowance per file.")
-            : __('One or more files are not allowed for sale.'));
-
-        if ($maxBytes !== null) {
-            $existingBytes = (int) DB::table('digital_product_files')
-                ->where('digital_product_id', '!=', $product->id)
-                ->join('file_entries', 'file_entries.id', '=', 'digital_product_files.file_entry_id')
-                ->where('file_entries.workspace_id', $product->workspace_id)
-                ->sum('file_entries.file_size');
-            $newBytes = $files->sum('file_size');
-            abort_if($existingBytes + $newBytes > $maxBytes, 422, __("Uploading these files would exceed your plan's storage allowance of :limit.", ['limit' => Entitlements::formatBytes($maxBytes)]));
-        }
-
-        $product->files()->sync($ids);
-    }
-    private function assertCoverBelongsToWorkspace(DigitalProduct $product): void
-    {
-        if (!$product->cover_file_entry_id) return;
-
-        $cover = FileEntry::query()->find($product->cover_file_entry_id);
-        abort_unless(
-            $cover &&
-                $cover->workspace_id === $product->workspace_id &&
-                str_starts_with((string) $cover->mime, 'image/'),
-            422,
-            __('The product cover must be an image from the active workspace.'),
-        );
     }
     private function assertOwner(DigitalProduct $product, Request $request): void
     {
