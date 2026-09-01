@@ -101,12 +101,13 @@ export function Component() {
             <form onSubmit={createCourse}>
               <Card.Content>
                 <Field.Group>
-                  <Field.Root>
+                  <Field.Root data-invalid={!!error}>
                     <Field.Label htmlFor="course-title">
                       <Trans message="Course title" />
                     </Field.Label>
-                    <Input
-                      id="course-title"
+                      <Input
+                        id="course-title"
+                        aria-invalid={!!error}
                       value={title}
                       onChange={event => setTitle(event.target.value)}
                       placeholder="Complete course title"
@@ -114,7 +115,7 @@ export function Component() {
                       autoFocus
                     />
                   </Field.Root>
-                  <Field.Root>
+                  <Field.Root data-invalid={!!error}>
                     <Field.Label htmlFor="course-price">
                       <Trans message="Price" />
                     </Field.Label>
@@ -122,8 +123,9 @@ export function Component() {
                       <InputGroupAddon align="inline-start">
                         <InputGroupText>ETB</InputGroupText>
                       </InputGroupAddon>
-                      <InputGroupInput
-                        id="course-price"
+                        <InputGroupInput
+                          id="course-price"
+                          aria-invalid={!!error}
                         type="number"
                         min="0"
                         step="0.01"
@@ -160,7 +162,7 @@ export function Component() {
                   )}
                   <Trans
                     message={
-                      creating ? 'Creating course...' : 'Open course builder'
+                      creating ? 'Creating course...' : 'Create course'
                     }
                   />
                 </Button>
