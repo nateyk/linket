@@ -1,5 +1,6 @@
 import {ShopWidgetConfig} from '@app/dashboard/stores/store-editor/content/widgets/shop-widget/shop-widget-dialog';
 import {WidgetRendererProps} from '@app/dashboard/stores/store-editor/content/widgets/widget-renderer-props';
+import {apiClient} from '@common/http/query-client';
 import {Trans} from '@ui/i18n/trans';
 import {formatMoney} from '@ui/i18n/format-money';
 import {ProductCover} from '@ui/product-cover';
@@ -40,10 +41,9 @@ export function ShopWidgetRenderer({
     }
 
     let cancelled = false;
-    fetch(`/api/v1/public/stores/${storeId}/digital-products`, {
-      headers: {Accept: 'application/json'},
-    })
-      .then(response => (response.ok ? response.json() : {data: []}))
+    apiClient
+      .get(`/api/v1/public/stores/${storeId}/digital-products`)
+      .then(response => response.data)
       .then(payload => {
         if (!cancelled) {
           const payloadProducts = payload.data ?? [];

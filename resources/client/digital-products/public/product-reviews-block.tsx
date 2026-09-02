@@ -1,6 +1,7 @@
 import {Avatar} from '@shadcn/avatar/avatar';
 import {Badge} from '@shadcn/badge/badge';
 import {Separator} from '@shadcn/separator';
+import {apiClient} from '@common/http/query-client';
 import {Trans} from '@ui/i18n/trans';
 import {BadgeCheckIcon, StarIcon, StarOffIcon} from 'lucide-react';
 import {useCallback, useEffect, useState} from 'react';
@@ -53,12 +54,7 @@ export function ProductReviewsBlock({
     setLoading(true);
     setError(undefined);
     try {
-      const response = await fetch(baseUrl, {
-        credentials: 'same-origin',
-        headers: {Accept: 'application/json'},
-      });
-      if (!response.ok) throw new Error('Unable to load reviews.');
-      const payload: ReviewsResponse = await response.json();
+      const {data: payload} = await apiClient.get<ReviewsResponse>(baseUrl);
       setReviews(payload.data ?? []);
       setSummary(payload.summary);
 
@@ -67,7 +63,7 @@ export function ProductReviewsBlock({
     } finally {
       setLoading(false);
     }
-  }, [baseUrl, product.id]);
+  }, [baseUrl]);
 
   useEffect(() => {
     void load();

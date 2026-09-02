@@ -81,6 +81,7 @@ type Product = {
 };
 
 type SetupSection = 'details' | 'files' | 'bio-pages';
+type FieldErrors = Record<string, string>;
 
 const PRODUCT_TYPE_CONFIG: Record<
   ProductType,
@@ -110,9 +111,9 @@ const SECTION_META: Record<
     description: 'Upload the files customers will receive after purchase.',
   },
   'bio-pages': {
-    label: 'Bio pages',
+    label: 'Storefront placement',
     icon: Link2Icon,
-    description: 'Select the bio pages where this product will be displayed.',
+    description: 'Optional. Show this product on one or more Storefronts.',
   },
 };
 
@@ -142,6 +143,7 @@ function DigitalProductForm() {
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string>();
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [convertToEtb, setConvertToEtb] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [openSection, setOpenSection] = useState<SetupSection | null>(
@@ -159,24 +161,10 @@ function DigitalProductForm() {
     void (async () => {
       try {
         if (productId) {
-          const response = await fetch(
+          const response = await apiClient.get(
             `/api/v1/digital-products/${productId}`,
-            {
-              credentials: 'same-origin',
-              headers: {Accept: 'application/json'},
-            },
           );
-
-          if (!response.ok) {
-            throw new Error(
-              await responseErrorMessage(
-                response,
-                'Unable to load this digital product.',
-              ),
-            );
-          }
-
-          const item = (await response.json()).data as Product;
+          const item = response.data.data as Product;
           if (item.type === 'course') {
             navigate(`/dashboard/my-products/${item.id}/course`, {
               replace: true,
@@ -193,17 +181,14 @@ function DigitalProductForm() {
           setBiolinkIds(item.biolink_ids ?? []);
         }
 
-        const pageResponse = await fetch(
-          '/api/v1/biolinks?fields_preset=minimal',
-          {
-            credentials: 'same-origin',
-            headers: {Accept: 'application/json'},
-          },
-        );
-
-        if (pageResponse.ok) {
-          const payload = await pageResponse.json();
+        try {
+          const pageResponse = await apiClient.get(
+            '/api/v1/biolinks?fields_preset=minimal',
+          );
+          const payload = pageResponse.data;
           setBiolinks(payload.data ?? []);
+        } catch {
+          // Storefront placement is optional, so a failed list request is non-fatal.
         }
       } catch (reason) {
         setError(
@@ -226,20 +211,18 @@ function DigitalProductForm() {
       if (
         !title.trim() ||
         !Number.isFinite(priceCents) ||
-        (isCourse ? priceCents < 0 : priceCents < 50) ||
+        priceCents < 0 ||
         (!isCourse && !files.length)
       ) {
         setOpenSection(
-          !title.trim() ||
-            !Number.isFinite(priceCents) ||
-            (isCourse ? priceCents < 0 : priceCents < 50)
+          !title.trim() || !Number.isFinite(priceCents) || priceCents < 0
             ? 'details'
             : 'files',
         );
         setError(
           isCourse
             ? 'Add a title and a valid price.'
-            : 'Add a title, a price of at least ETB 0.50, and one downloadable file.',
+            : 'Add a title, a price of ETB 0 or more, and one downloadable file.',
         );
         return;
       }
@@ -257,6 +240,8 @@ function DigitalProductForm() {
 
       setSaving(true);
       setError(undefined);
+      setFieldErrors({});
+      let saved: Product | undefined;
 
       try {
         const body: Record<string, unknown> = {
@@ -273,7 +258,7 @@ function DigitalProductForm() {
         const response = product
           ? await apiClient.put(`/api/v1/digital-products/${product.id}`, body)
           : await apiClient.post('/api/v1/digital-products', body);
-        const saved = response.data.data as Product;
+        saved = response.data.data as Product;
         setProduct(saved);
 
         if (submitAfterSave) {
@@ -290,9 +275,19 @@ function DigitalProductForm() {
         }
         if (submitAfterSave) navigate('/dashboard/my-products');
       } catch (reason) {
-        setError(
-          reason instanceof Error ? reason.message : 'Unable to save product.',
-        );
+        const validationErrors = getValidationErrors(reason);
+        if (Object.keys(validationErrors).length) {
+          setFieldErrors(validationErrors);
+          setOpenSection(validationErrors.file_ids ? 'files' : 'details');
+        } else {
+          setError(
+            saved && submitAfterSave
+              ? 'Draft saved, but submission failed. Fix the issue and try again.'
+              : reason instanceof Error
+                ? reason.message
+                : 'Unable to save product.',
+          );
+        }
       } finally {
         setSaving(false);
         setSubmitting(false);
@@ -333,10 +328,12 @@ function DigitalProductForm() {
     if (section === 'details')
       return title.trim().length > 0 && price.trim().length > 0;
     if (section === 'files') return isCourse ? true : files.length > 0;
-    return biolinkIds.length > 0;
+    return true;
   };
 
   const completedSections = SECTION_ORDER.filter(isSectionComplete).length;
+  const canSubmit =
+    !product || product.status === 'draft' || product.status === 'rejected';
 
   return (
     <DashboardLayout.MainSection>
@@ -377,7 +374,7 @@ function DigitalProductForm() {
           </Button>
           <Button
             size="sm"
-            disabled={saving || submitting}
+            disabled={saving || submitting || !canSubmit}
             onClick={() => void save(true)}
           >
             <SendIcon className="size-4" />
@@ -402,6 +399,15 @@ function DigitalProductForm() {
             >
               <TriangleAlertIcon />
               <Alert.Description>{error}</Alert.Description>
+            </Alert.Root>
+          )}
+
+          {product?.status === 'approved' && (
+            <Alert.Root className="mb-5 border-amber-500/20 bg-amber-500/5 text-amber-800 dark:text-amber-200">
+              <TriangleAlertIcon />
+              <Alert.Description>
+                <Trans message="Saving changes will return this approved product to draft." />
+              </Alert.Description>
             </Alert.Root>
           )}
 
@@ -442,7 +448,7 @@ function DigitalProductForm() {
                     </p>
                     <p className="mt-1 text-sm text-muted-foreground">
                       <Trans
-                        message=":completed of 3 sections complete"
+                        message=":completed of 2 required sections complete"
                         values={{completed: completedSections}}
                       />
                     </p>
@@ -516,6 +522,7 @@ function DigitalProductForm() {
                                   setCoverUrl(url);
                                   setCoverFileId(entry?.id ?? null);
                                 }}
+                                errors={fieldErrors}
                               />
                             )}
                             {section === 'files' && (
@@ -533,6 +540,7 @@ function DigitalProductForm() {
                                     current.filter(file => file.id !== id),
                                   )
                                 }
+                                error={fieldErrors.file_ids}
                               />
                             )}
                             {section === 'bio-pages' && (
@@ -686,6 +694,7 @@ function DetailsPanel({
   convertToEtb,
   onConvertToEtbChange,
   onCoverChange,
+  errors,
 }: {
   title: string;
   description: string;
@@ -698,6 +707,7 @@ function DetailsPanel({
   convertToEtb: boolean;
   onConvertToEtbChange: (value: boolean) => void;
   onCoverChange: (url: string, entry?: {id: number}) => void;
+  errors: FieldErrors;
 }) {
   return (
     <div className="flex flex-col gap-4">
@@ -714,6 +724,9 @@ function DetailsPanel({
         <Field.Description>
           <Trans message="Choose a clear title customers can easily understand." />
         </Field.Description>
+        {errors.title && (
+          <p className="text-sm text-destructive">{errors.title}</p>
+        )}
       </Field.Root>
 
       <Field.Root>
@@ -726,16 +739,19 @@ function DetailsPanel({
           </InputGroupAddon>
           <InputGroupInput
             type="number"
-            min="0.50"
+            min="0"
             step="0.01"
             value={price}
             onChange={event => onPriceChange(event.target.value)}
-            placeholder="9.00"
+            placeholder="0.00"
           />
         </InputGroup>
         <Field.Description>
-          <Trans message="Set the amount customers will pay." />
+          <Trans message="Set ETB 0 to offer this product for free." />
         </Field.Description>
+        {errors.price_cents && (
+          <p className="text-sm text-destructive">{errors.price_cents}</p>
+        )}
         {legacyCurrency && legacyCurrency.toLowerCase() !== 'etb' && (
           <label className="mt-2 flex items-start gap-3 rounded-card-sm border border-border bg-muted/30 p-3 text-sm">
             <Checkbox
@@ -762,6 +778,9 @@ function DetailsPanel({
         <Field.Description>
           <Trans message="Describe what customers will receive." />
         </Field.Description>
+        {errors.description && (
+          <p className="text-sm text-destructive">{errors.description}</p>
+        )}
       </Field.Root>
 
       <Field.Root>
@@ -775,8 +794,13 @@ function DetailsPanel({
           aspect={16 / 9}
         />
         <Field.Description>
-          <Trans message="Shown on your product listing and bio pages." />
+          <Trans message="Shown on your product listing and Storefronts." />
         </Field.Description>
+        {errors.cover_file_entry_id && (
+          <p className="text-sm text-destructive">
+            {errors.cover_file_entry_id}
+          </p>
+        )}
       </Field.Root>
     </div>
   );
@@ -821,14 +845,17 @@ function FilesPanel({
   files,
   onUploaded,
   onRemove,
+  error,
 }: {
   files: FileEntry[];
   onUploaded: (file: FileEntry) => void;
   onRemove: (id: number) => void;
+  error?: string;
 }) {
   return (
     <div className="flex flex-col gap-3">
       <DownloadUploader onUploaded={onUploaded} />
+      {error && <p className="text-sm text-destructive">{error}</p>}
       {!!files.length && (
         <div className="divide-y">
           {files.map(file => (
@@ -876,7 +903,7 @@ function BioPagesPanel({
   if (!biolinks.length) {
     return (
       <p className="py-4 text-[13px] text-muted-foreground">
-        <Trans message="Create a bio page first, then return here to display this product." />
+        <Trans message="You can sell this product directly. Create a Storefront later if you want to display it there." />
       </p>
     );
   }
@@ -986,6 +1013,7 @@ function DownloadUploader({
     uploadFile(file, {
       uploadType: 'digitalProductFiles',
       showToastOnRestrictionFail: true,
+      showToastOnBackendError: true,
       onSuccess: entry =>
         onUploaded({
           id: entry.id,
@@ -1002,7 +1030,7 @@ function DownloadUploader({
       <input
         className="absolute inset-0 cursor-pointer opacity-0"
         type="file"
-        accept=".pdf,.zip,.txt,.epub"
+        accept=".pdf,.zip,.txt,.epub,.mp3,.wav,.m4a,.aac"
         disabled={uploading}
         onChange={onChange}
       />
@@ -1017,7 +1045,7 @@ function DownloadUploader({
         )}
       </span>
       <span className="text-[12px] text-muted-foreground">
-        <Trans message="PDF, ZIP, EPUB, or TXT" />
+        <Trans message="PDF, ZIP, EPUB, TXT, MP3, WAV, M4A, or AAC" />
       </span>
       {uploading && (
         <Progress.Root
@@ -1056,7 +1084,17 @@ function BuilderSkeleton() {
 
 /* ─── Helpers ─── */
 
-async function responseErrorMessage(response: Response, fallback: string) {
-  const payload = await response.json().catch(() => undefined);
-  return typeof payload?.message === 'string' ? payload.message : fallback;
+function getValidationErrors(reason: unknown): FieldErrors {
+  const errors = (reason as {response?: {data?: {errors?: unknown}}})?.response
+    ?.data?.errors;
+
+  if (!errors || typeof errors !== 'object') return {};
+
+  return Object.fromEntries(
+    Object.entries(errors).flatMap(([field, messages]) =>
+      Array.isArray(messages) && typeof messages[0] === 'string'
+        ? [[field, messages[0]]]
+        : [],
+    ),
+  );
 }

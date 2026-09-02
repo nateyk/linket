@@ -52,7 +52,21 @@ describe('my order course access', () => {
     expect(coursePage).toContain('setLoading(true);');
     expect(coursePage).toContain('setError(undefined);');
     expect(coursePage).toContain('return () => controller.abort();');
-    expect(orderPage).toContain("setCourseError('Unable to load your courses.')");
+    expect(coursePage).toMatch(
+      /await apiClient\.get\(\s*`\/api\/v1\/courses\/\$\{courseId\}\/learn`\s*,\s*\{signal: controller\.signal\}\s*,?\s*\)/,
+    );
+    expect(lessonPage).toMatch(
+      /await apiClient\.get\(\s*`\/api\/v1\/courses\/\$\{courseId\}\/learn\/lessons\/\$\{lessonId\}`\s*,\s*\{signal\}\s*,?\s*\)/,
+    );
+    expect(lessonPage).toContain(
+      'isAxiosError(reason) && reason.response?.status === 403',
+    );
+    expect(orderPage).toMatch(
+      /await apiClient\.get\(\s*'\/api\/v1\/my-courses'\s*,?\s*\)/,
+    );
+    expect(orderPage).toContain(
+      "setCourseError('Unable to load your courses.')",
+    );
     expect(sidebar).toContain(
       "filter={item => item.action !== '/dashboard/my-courses'}",
     );

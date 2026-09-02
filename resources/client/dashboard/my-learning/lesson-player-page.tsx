@@ -5,6 +5,7 @@ import {Card} from '@shadcn/card/card';
 import {Spinner} from '@shadcn/spinner/spinner';
 import {Trans} from '@ui/i18n/trans';
 import {apiClient} from '@common/http/query-client';
+import {isAxiosError} from 'axios';
 import {
   CheckIcon,
   ChevronLeftIcon,
@@ -41,33 +42,30 @@ export function Component() {
   const [error, setError] = useState<string>();
   const [completing, setCompleting] = useState(false);
 
-  const load = useCallback(async (signal?: AbortSignal) => {
-    const res = await fetch(
-      `/api/v1/courses/${courseId}/learn/lessons/${lessonId}`,
-      {
-        credentials: 'same-origin',
-        headers: {Accept: 'application/json'},
-        signal,
-      },
-    );
-    if (!res.ok) {
-      if (res.status === 403) {
-        setTrial(true);
-        return;
+  const load = useCallback(
+    async (signal?: AbortSignal) => {
+      try {
+        const response = await apiClient.get(
+          `/api/v1/courses/${courseId}/learn/lessons/${lessonId}`,
+          {signal},
+        );
+        setLesson(response.data.data);
+      } catch (reason) {
+        if (isAxiosError(reason) && reason.response?.status === 403) {
+          setTrial(true);
+          return;
+        }
+        throw reason;
       }
-      throw new Error('Unable to load lesson');
-    }
-    const payload = await res.json();
-    setLesson(payload.data);
-    const cRes = await fetch(`/api/v1/courses/${courseId}/learn`, {
-      credentials: 'same-origin',
-      headers: {Accept: 'application/json'},
-      signal,
-    });
-    if (!cRes.ok) throw new Error('Unable to load course navigation');
-    const cPayload = await cRes.json();
-    setCourse(cPayload.data);
-  }, [courseId, lessonId]);
+
+      const response = await apiClient.get(
+        `/api/v1/courses/${courseId}/learn`,
+        {signal},
+      );
+      setCourse(response.data.data);
+    },
+    [courseId, lessonId],
+  );
 
   useEffect(() => {
     const controller = new AbortController();

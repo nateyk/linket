@@ -22,8 +22,13 @@ import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {Empty} from '@shadcn/empty/empty';
 import {Field} from '@shadcn/forms/field';
 import {Input} from '@shadcn/forms/input/input';
+import {Checkbox} from '@shadcn/forms/checkbox/checkbox';
 import {Select} from '@shadcn/forms/select/select';
-import {ScrollArea, ScrollAreaScrollBar, ScrollAreaViewport} from '@shadcn/scroll-area/scroll-area';
+import {
+  ScrollArea,
+  ScrollAreaScrollBar,
+  ScrollAreaViewport,
+} from '@shadcn/scroll-area/scroll-area';
 import {Spinner} from '@shadcn/spinner/spinner';
 import {Switch} from '@shadcn/forms/switch/switch';
 import {FileDropzone} from '@common/ui/file-dropzone';
@@ -84,6 +89,7 @@ type Course = {
     currency: string;
     status: string;
     cover?: {id: number; url: string} | null;
+    biolink_ids?: number[];
   };
   chapters: Chapter[];
 };
@@ -116,6 +122,8 @@ type LessonResource = {
   display_name: string;
   file: {id: number; name: string} | null;
 };
+
+type Biolink = {id: number; name: string; short_url?: string};
 
 type PendingDelete =
   | {type: 'chapter'; item: Chapter}
@@ -158,21 +166,15 @@ function CourseBuilder() {
     if (!productId) return;
     setLoading(true);
     try {
-      const productRes = await fetch(`/api/v1/digital-products/${productId}`, {
-        credentials: 'same-origin',
-        headers: {Accept: 'application/json'},
-      });
-      if (!productRes.ok) throw new Error('Unable to load product');
-      const productData = (await productRes.json()).data;
+      const productRes = await apiClient.get(
+        `/api/v1/digital-products/${productId}`,
+      );
+      const productData = productRes.data.data;
       const courseId = productData.course?.id;
       if (!courseId)
         throw new Error('Course not found — this product is not a course');
-      const res = await fetch(`/api/v1/courses/${courseId}`, {
-        credentials: 'same-origin',
-        headers: {Accept: 'application/json'},
-      });
-      if (!res.ok) throw new Error('Unable to load course');
-      const payload = (await res.json()).data as Course;
+      const res = await apiClient.get(`/api/v1/courses/${courseId}`);
+      const payload = res.data.data as Course;
       setCourse(payload);
       const lessonId = Number(searchParams.get('lessonId'));
       const requestedChapter = Number.isInteger(lessonId)
@@ -449,7 +451,10 @@ function CourseBuilder() {
     return (
       <DashboardLayout.MainSection>
         <DashboardLayout.SectionContent className="flex flex-1 items-center justify-center p-6">
-          <div role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
+          <div
+            role="status"
+            className="flex items-center gap-2 text-sm text-muted-foreground"
+          >
             <Spinner className="size-5" />
             <span>Loading course builder</span>
           </div>
@@ -472,6 +477,9 @@ function CourseBuilder() {
 
   const canSubmit =
     course.product.status === 'draft' || course.product.status === 'rejected';
+  const hasPublishedLesson = course.chapters.some(chapter =>
+    chapter.lessons.some(lesson => lesson.status === 'published'),
+  );
 
   return (
     <DashboardLayout.MainSection>
@@ -571,9 +579,17 @@ function CourseBuilder() {
           <Button
             size="sm"
             onClick={() => void submit()}
-            disabled={publishing || !canSubmit}
+            disabled={publishing || !canSubmit || !hasPublishedLesson}
           >
-            <Trans message={publishing ? 'Submitting...' : 'Submit for review'} />
+            <Trans
+              message={
+                publishing
+                  ? 'Submitting...'
+                  : hasPublishedLesson
+                    ? 'Submit for review'
+                    : 'Add a published lesson'
+              }
+            />
           </Button>
         </div>
       </DashboardLayout.SectionHeader>
@@ -603,306 +619,319 @@ function CourseBuilder() {
             <ScrollArea className="min-h-0 flex-1">
               <ScrollAreaViewport className="p-3">
                 <div className="flex flex-col gap-3">
-              {course.chapters.length === 0 ? (
-                <Empty.Root>
-                  <Empty.Header>
-                    <Empty.Media variant="icon">
-                      <GraduationCapIcon />
-                    </Empty.Media>
-                    <Empty.Title>
-                      <Trans message="Build your course" />
-                    </Empty.Title>
-                    <Empty.Description>
-                      <Trans message="Start by adding your first chapter." />
-                    </Empty.Description>
-                  </Empty.Header>
-                  <Button size="sm" onClick={() => void addChapter()}>
-                    <PlusIcon />
-                    <Trans message="Add chapter" />
-                  </Button>
-                </Empty.Root>
-              ) : (
-                course.chapters.map((chapter, chapterIndex) => (
-                  <SortableCurriculumItem
-                    key={chapter.id}
-                    id={`course-builder-chapter-${chapter.id}`}
-                    items={course.chapters.map(
-                      item => `course-builder-chapter-${item.id}`,
-                    )}
-                    type={`course-builder-chapters-${course.id}`}
-                    disabled={!!reordering}
-                    onSortEnd={reorderChapters}
-                  >
-                    {dragHandleRef => (
-                      <Collapsible defaultOpen className="overflow-hidden rounded-xl border bg-background">
-                        <div className="flex items-center gap-2 bg-muted/30 p-2">
-                          <div className="hidden lg:block">
-                            <button
-                              ref={dragHandleRef}
-                              type="button"
-                              aria-label="Reorder chapter"
-                              disabled={!!reordering}
-                              className="shrink-0 cursor-grab touch-none text-muted-foreground hover:text-foreground active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                              <GripVerticalIcon className="size-4" />
-                            </button>
-                          </div>
-                          <CollapsibleTrigger
-                            aria-label="Toggle chapter lessons"
-                            className="group flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  {course.chapters.length === 0 ? (
+                    <Empty.Root>
+                      <Empty.Header>
+                        <Empty.Media variant="icon">
+                          <GraduationCapIcon />
+                        </Empty.Media>
+                        <Empty.Title>
+                          <Trans message="Build your course" />
+                        </Empty.Title>
+                        <Empty.Description>
+                          <Trans message="Start by adding your first chapter." />
+                        </Empty.Description>
+                      </Empty.Header>
+                      <Button size="sm" onClick={() => void addChapter()}>
+                        <PlusIcon />
+                        <Trans message="Add chapter" />
+                      </Button>
+                    </Empty.Root>
+                  ) : (
+                    course.chapters.map((chapter, chapterIndex) => (
+                      <SortableCurriculumItem
+                        key={chapter.id}
+                        id={`course-builder-chapter-${chapter.id}`}
+                        items={course.chapters.map(
+                          item => `course-builder-chapter-${item.id}`,
+                        )}
+                        type={`course-builder-chapters-${course.id}`}
+                        disabled={!!reordering}
+                        onSortEnd={reorderChapters}
+                      >
+                        {dragHandleRef => (
+                          <Collapsible
+                            defaultOpen
+                            className="overflow-hidden rounded-xl border bg-background"
                           >
-                            <ChevronDownIcon className="size-4 transition-transform group-data-panel-open:rotate-180" />
-                          </CollapsibleTrigger>
-                          <Input
-                            className="h-8 flex-1 border-0 bg-transparent text-sm font-medium focus-visible:ring-1"
-                            defaultValue={chapter.title}
-                            onBlur={e =>
-                              void updateChapterTitle(
-                                chapter.id,
-                                e.target.value,
-                              )
-                            }
-                            onKeyDown={e => {
-                              if (e.key === 'Enter')
-                                (e.target as HTMLInputElement).blur();
-                            }}
-                          />
-                          <Dropdown.Root>
-                            <Dropdown.Trigger
-                              render={
-                                <Button
-                                  aria-label="Chapter actions"
-                                  size="icon-sm"
-                                  variant="ghost"
-                                >
-                                  <MoreHorizontalIcon className="size-4" />
-                                </Button>
-                              }
-                            />
-                            <Dropdown.Content align="end">
-                              <Dropdown.Item
-                                disabled={chapterIndex === 0 || !!reordering}
-                                onClick={() =>
-                                  moveChapterByOffset(chapter.id, -1)
-                                }
-                              >
-                                <Trans message="Move up" />
-                              </Dropdown.Item>
-                              <Dropdown.Item
-                                disabled={
-                                  chapterIndex === course.chapters.length - 1 ||
-                                  !!reordering
-                                }
-                                onClick={() =>
-                                  moveChapterByOffset(chapter.id, 1)
-                                }
-                              >
-                                <Trans message="Move down" />
-                              </Dropdown.Item>
-                            </Dropdown.Content>
-                          </Dropdown.Root>
-                          <Button
-                            size="icon-sm"
-                            variant="ghost"
-                            onClick={() => deleteChapter(chapter)}
-                          >
-                            <Trash2Icon className="size-4" />
-                          </Button>
-                        </div>
-                        <CollapsibleContent>
-                          <div className="flex flex-col gap-1 p-2">
-                            {chapter.lessons.length === 0 ? (
-                              <p className="py-3 text-center text-xs text-muted-foreground">
-                                <Trans message="This chapter has no lessons yet." />
-                              </p>
-                            ) : (
-                              chapter.lessons.map((lesson, lessonIndex) => (
-                                <SortableCurriculumItem
-                                  key={lesson.id}
-                                  id={`course-builder-lesson-${lesson.id}`}
-                                  items={chapter.lessons.map(
-                                    item => `course-builder-lesson-${item.id}`,
-                                  )}
-                                  type={`course-builder-lessons-${chapter.id}`}
+                            <div className="flex items-center gap-2 bg-muted/30 p-2">
+                              <div className="hidden lg:block">
+                                <button
+                                  ref={dragHandleRef}
+                                  type="button"
+                                  aria-label="Reorder chapter"
                                   disabled={!!reordering}
-                                  onSortEnd={(oldIndex, newIndex) =>
-                                    void reorderLessons(
-                                      chapter.id,
-                                      oldIndex,
-                                      newIndex,
-                                    )
-                                  }
+                                  className="shrink-0 cursor-grab touch-none text-muted-foreground hover:text-foreground active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
                                 >
-                                  {dragHandleRef => (
-                                    <div
-                                      className={cn(
-                                        'flex items-center gap-2 rounded-card border p-2 text-sm',
-                                        selectedLesson?.id === lesson.id
-                                          ? 'bg-primary/5 ring-1 ring-primary/20'
-                                          : 'bg-card hover:bg-muted/30',
-                                      )}
+                                  <GripVerticalIcon className="size-4" />
+                                </button>
+                              </div>
+                              <CollapsibleTrigger
+                                aria-label="Toggle chapter lessons"
+                                className="group flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                              >
+                                <ChevronDownIcon className="size-4 transition-transform group-data-panel-open:rotate-180" />
+                              </CollapsibleTrigger>
+                              <Input
+                                className="h-8 flex-1 border-0 bg-transparent text-sm font-medium focus-visible:ring-1"
+                                defaultValue={chapter.title}
+                                onBlur={e =>
+                                  void updateChapterTitle(
+                                    chapter.id,
+                                    e.target.value,
+                                  )
+                                }
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter')
+                                    (e.target as HTMLInputElement).blur();
+                                }}
+                              />
+                              <Dropdown.Root>
+                                <Dropdown.Trigger
+                                  render={
+                                    <Button
+                                      aria-label="Chapter actions"
+                                      size="icon-sm"
+                                      variant="ghost"
                                     >
-                                      <div className="hidden lg:block">
-                                        <button
-                                          ref={dragHandleRef}
-                                          type="button"
-                                          aria-label="Reorder lesson"
-                                          disabled={!!reordering}
-                                          className="shrink-0 cursor-grab touch-none text-muted-foreground hover:text-foreground active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
+                                      <MoreHorizontalIcon className="size-4" />
+                                    </Button>
+                                  }
+                                />
+                                <Dropdown.Content align="end">
+                                  <Dropdown.Item
+                                    disabled={
+                                      chapterIndex === 0 || !!reordering
+                                    }
+                                    onClick={() =>
+                                      moveChapterByOffset(chapter.id, -1)
+                                    }
+                                  >
+                                    <Trans message="Move up" />
+                                  </Dropdown.Item>
+                                  <Dropdown.Item
+                                    disabled={
+                                      chapterIndex ===
+                                        course.chapters.length - 1 ||
+                                      !!reordering
+                                    }
+                                    onClick={() =>
+                                      moveChapterByOffset(chapter.id, 1)
+                                    }
+                                  >
+                                    <Trans message="Move down" />
+                                  </Dropdown.Item>
+                                </Dropdown.Content>
+                              </Dropdown.Root>
+                              <Button
+                                size="icon-sm"
+                                variant="ghost"
+                                onClick={() => deleteChapter(chapter)}
+                              >
+                                <Trash2Icon className="size-4" />
+                              </Button>
+                            </div>
+                            <CollapsibleContent>
+                              <div className="flex flex-col gap-1 p-2">
+                                {chapter.lessons.length === 0 ? (
+                                  <p className="py-3 text-center text-xs text-muted-foreground">
+                                    <Trans message="This chapter has no lessons yet." />
+                                  </p>
+                                ) : (
+                                  chapter.lessons.map((lesson, lessonIndex) => (
+                                    <SortableCurriculumItem
+                                      key={lesson.id}
+                                      id={`course-builder-lesson-${lesson.id}`}
+                                      items={chapter.lessons.map(
+                                        item =>
+                                          `course-builder-lesson-${item.id}`,
+                                      )}
+                                      type={`course-builder-lessons-${chapter.id}`}
+                                      disabled={!!reordering}
+                                      onSortEnd={(oldIndex, newIndex) =>
+                                        void reorderLessons(
+                                          chapter.id,
+                                          oldIndex,
+                                          newIndex,
+                                        )
+                                      }
+                                    >
+                                      {dragHandleRef => (
+                                        <div
+                                          className={cn(
+                                            'flex items-center gap-2 rounded-card border p-2 text-sm',
+                                            selectedLesson?.id === lesson.id
+                                              ? 'bg-primary/5 ring-1 ring-primary/20'
+                                              : 'bg-card hover:bg-muted/30',
+                                          )}
                                         >
-                                          <GripVerticalIcon className="size-3.5" />
-                                        </button>
-                                      </div>
-                                      <VideoIcon className="size-3.5 text-muted-foreground" />
-                                      <button
-                                        className="flex-1 truncate text-left font-medium"
-                                        onClick={() => {
-                                          setSelectedLesson(lesson);
-                                          setSelectedChapterId(chapter.id);
-                                          setMobileSurface('editor');
-                                        }}
-                                      >
-                                        {lesson.title}
-                                      </button>
-                                      <Badge
-                                        variant={
-                                          lesson.status === 'published'
-                                            ? 'positive'
-                                            : 'outline'
-                                        }
-                                        className="h-5 shrink-0 px-1.5 text-[10px]"
-                                      >
-                                        <Trans
-                                          message={
-                                            lesson.status === 'published'
-                                              ? 'Published'
-                                              : 'Draft'
-                                          }
-                                        />
-                                      </Badge>
-                                      <Dropdown.Root>
-                                        <Dropdown.Trigger
-                                          render={
-                                            <Button
-                                              aria-label="Lesson actions"
-                                              size="icon-sm"
-                                              variant="ghost"
+                                          <div className="hidden lg:block">
+                                            <button
+                                              ref={dragHandleRef}
+                                              type="button"
+                                              aria-label="Reorder lesson"
+                                              disabled={!!reordering}
+                                              className="shrink-0 cursor-grab touch-none text-muted-foreground hover:text-foreground active:cursor-grabbing disabled:cursor-not-allowed disabled:opacity-50"
                                             >
-                                              <MoreHorizontalIcon className="size-4" />
-                                            </Button>
-                                          }
-                                        />
-                                        <Dropdown.Content align="end">
-                                          <Dropdown.Item
-                                            disabled={
-                                              lessonIndex === 0 || !!reordering
-                                            }
-                                            onClick={() =>
-                                              moveLessonByOffset(
-                                                chapter.id,
-                                                lesson.id,
-                                                -1,
-                                              )
-                                            }
+                                              <GripVerticalIcon className="size-3.5" />
+                                            </button>
+                                          </div>
+                                          <VideoIcon className="size-3.5 text-muted-foreground" />
+                                          <button
+                                            className="flex-1 truncate text-left font-medium"
+                                            onClick={() => {
+                                              setSelectedLesson(lesson);
+                                              setSelectedChapterId(chapter.id);
+                                              setMobileSurface('editor');
+                                            }}
                                           >
-                                            <Trans message="Move up" />
-                                          </Dropdown.Item>
-                                          <Dropdown.Item
-                                            disabled={
-                                              lessonIndex ===
-                                                chapter.lessons.length - 1 ||
-                                              !!reordering
+                                            {lesson.title}
+                                          </button>
+                                          <Badge
+                                            variant={
+                                              lesson.status === 'published'
+                                                ? 'positive'
+                                                : 'outline'
                                             }
-                                            onClick={() =>
-                                              moveLessonByOffset(
-                                                chapter.id,
-                                                lesson.id,
-                                                1,
-                                              )
-                                            }
-                                          >
-                                            <Trans message="Move down" />
-                                          </Dropdown.Item>
-                                          <Dropdown.Item
-                                            onClick={() =>
-                                              void toggleLessonStatus(lesson)
-                                            }
+                                            className="h-5 shrink-0 px-1.5 text-[10px]"
                                           >
                                             <Trans
                                               message={
                                                 lesson.status === 'published'
-                                                  ? 'Unpublish'
-                                                  : 'Publish'
+                                                  ? 'Published'
+                                                  : 'Draft'
                                               }
                                             />
-                                          </Dropdown.Item>
-                                          <Dropdown.Item
-                                            onClick={async () => {
-                                              if (reordering) return;
-                                              try {
-                                                setReordering(
-                                                  `duplicate-${lesson.id}`,
-                                                );
-                                                await apiClient.post(
-                                                  `/api/v1/course-lessons/${lesson.id}/duplicate`,
-                                                );
-                                                await load();
-                                              } catch (e: any) {
-                                                toast.danger(
-                                                  e?.message ??
-                                                    'Unable to duplicate lesson',
-                                                );
-                                              } finally {
-                                                setReordering(undefined);
+                                          </Badge>
+                                          <Dropdown.Root>
+                                            <Dropdown.Trigger
+                                              render={
+                                                <Button
+                                                  aria-label="Lesson actions"
+                                                  size="icon-sm"
+                                                  variant="ghost"
+                                                >
+                                                  <MoreHorizontalIcon className="size-4" />
+                                                </Button>
                                               }
-                                            }}
-                                          >
-                                            <CopyIcon />
-                                            <Trans message="Duplicate" />
-                                          </Dropdown.Item>
-                                          {course.chapters.length > 1 && (
-                                            <Dropdown.Item
-                                              disabled={!!reordering}
-                                              onClick={() =>
-                                                setMoveRequest({
-                                                  lesson,
-                                                  sourceChapter: chapter,
-                                                })
-                                              }
-                                            >
-                                              <Trans message="Move to chapter" />
-                                            </Dropdown.Item>
-                                          )}
-                                          <Dropdown.Item
-                                            variant="destructive"
-                                            onClick={() => deleteLesson(lesson)}
-                                          >
-                                            <Trash2Icon />
-                                            <Trans message="Delete" />
-                                          </Dropdown.Item>
-                                        </Dropdown.Content>
-                                      </Dropdown.Root>
-                                    </div>
-                                  )}
-                                </SortableCurriculumItem>
-                              ))
-                            )}
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="w-full"
-                              onClick={() => void addLesson(chapter.id)}
-                            >
-                              <PlusIcon />
-                              <Trans message="New lesson" />
-                            </Button>
-                          </div>
-                        </CollapsibleContent>
-                      </Collapsible>
-                    )}
-                  </SortableCurriculumItem>
-                ))
-              )}
+                                            />
+                                            <Dropdown.Content align="end">
+                                              <Dropdown.Item
+                                                disabled={
+                                                  lessonIndex === 0 ||
+                                                  !!reordering
+                                                }
+                                                onClick={() =>
+                                                  moveLessonByOffset(
+                                                    chapter.id,
+                                                    lesson.id,
+                                                    -1,
+                                                  )
+                                                }
+                                              >
+                                                <Trans message="Move up" />
+                                              </Dropdown.Item>
+                                              <Dropdown.Item
+                                                disabled={
+                                                  lessonIndex ===
+                                                    chapter.lessons.length -
+                                                      1 || !!reordering
+                                                }
+                                                onClick={() =>
+                                                  moveLessonByOffset(
+                                                    chapter.id,
+                                                    lesson.id,
+                                                    1,
+                                                  )
+                                                }
+                                              >
+                                                <Trans message="Move down" />
+                                              </Dropdown.Item>
+                                              <Dropdown.Item
+                                                onClick={() =>
+                                                  void toggleLessonStatus(
+                                                    lesson,
+                                                  )
+                                                }
+                                              >
+                                                <Trans
+                                                  message={
+                                                    lesson.status ===
+                                                    'published'
+                                                      ? 'Unpublish'
+                                                      : 'Publish'
+                                                  }
+                                                />
+                                              </Dropdown.Item>
+                                              <Dropdown.Item
+                                                onClick={async () => {
+                                                  if (reordering) return;
+                                                  try {
+                                                    setReordering(
+                                                      `duplicate-${lesson.id}`,
+                                                    );
+                                                    await apiClient.post(
+                                                      `/api/v1/course-lessons/${lesson.id}/duplicate`,
+                                                    );
+                                                    await load();
+                                                  } catch (e: any) {
+                                                    toast.danger(
+                                                      e?.message ??
+                                                        'Unable to duplicate lesson',
+                                                    );
+                                                  } finally {
+                                                    setReordering(undefined);
+                                                  }
+                                                }}
+                                              >
+                                                <CopyIcon />
+                                                <Trans message="Duplicate" />
+                                              </Dropdown.Item>
+                                              {course.chapters.length > 1 && (
+                                                <Dropdown.Item
+                                                  disabled={!!reordering}
+                                                  onClick={() =>
+                                                    setMoveRequest({
+                                                      lesson,
+                                                      sourceChapter: chapter,
+                                                    })
+                                                  }
+                                                >
+                                                  <Trans message="Move to chapter" />
+                                                </Dropdown.Item>
+                                              )}
+                                              <Dropdown.Item
+                                                variant="destructive"
+                                                onClick={() =>
+                                                  deleteLesson(lesson)
+                                                }
+                                              >
+                                                <Trash2Icon />
+                                                <Trans message="Delete" />
+                                              </Dropdown.Item>
+                                            </Dropdown.Content>
+                                          </Dropdown.Root>
+                                        </div>
+                                      )}
+                                    </SortableCurriculumItem>
+                                  ))
+                                )}
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="w-full"
+                                  onClick={() => void addLesson(chapter.id)}
+                                >
+                                  <PlusIcon />
+                                  <Trans message="New lesson" />
+                                </Button>
+                              </div>
+                            </CollapsibleContent>
+                          </Collapsible>
+                        )}
+                      </SortableCurriculumItem>
+                    ))
+                  )}
                 </div>
               </ScrollAreaViewport>
               <ScrollAreaScrollBar onlyShowOnHover />
@@ -1414,6 +1443,8 @@ type CourseSettingsContentProps = {
   inputId: string;
   title: string;
   setTitle: (value: string) => void;
+  description: string;
+  setDescription: (value: string) => void;
   coverUrl: string;
   setCoverUrl: (value: string) => void;
   setCoverFileId: (value: number | null) => void;
@@ -1421,12 +1452,17 @@ type CourseSettingsContentProps = {
   setPrice: (value: string) => void;
   requireSeq: boolean;
   setRequireSeq: (value: boolean) => void;
+  biolinks: Biolink[];
+  biolinkIds: number[];
+  setBiolinkIds: (value: number[]) => void;
 };
 
 function CourseSettingsContent({
   inputId,
   title,
   setTitle,
+  description,
+  setDescription,
   coverUrl,
   setCoverUrl,
   setCoverFileId,
@@ -1434,6 +1470,9 @@ function CourseSettingsContent({
   setPrice,
   requireSeq,
   setRequireSeq,
+  biolinks,
+  biolinkIds,
+  setBiolinkIds,
 }: CourseSettingsContentProps) {
   return (
     <div className="flex flex-col gap-6">
@@ -1447,6 +1486,19 @@ function CourseSettingsContent({
           onChange={e => setTitle(e.target.value)}
           placeholder="Enter a course name"
           maxLength={160}
+        />
+      </Field.Root>
+
+      <Field.Root>
+        <Field.Label htmlFor={`${inputId}-description`}>
+          <Trans message="Description" />
+        </Field.Label>
+        <Input
+          id={`${inputId}-description`}
+          value={description}
+          onChange={e => setDescription(e.target.value)}
+          placeholder="What will students learn?"
+          maxLength={20000}
         />
       </Field.Root>
 
@@ -1499,6 +1551,48 @@ function CourseSettingsContent({
       </Field.Root>
 
       <Field.Root>
+        <Field.Label>
+          <Trans message="Storefront placement" />
+        </Field.Label>
+        {!biolinks.length ? (
+          <Field.Description>
+            <Trans message="You can sell this course directly. Create a Storefront later if you want to display it there." />
+          </Field.Description>
+        ) : (
+          <div className="divide-y rounded-lg border px-3">
+            {biolinks.map(biolink => (
+              <label
+                key={biolink.id}
+                className="flex cursor-pointer items-center gap-3 py-3 text-sm transition-colors hover:bg-muted/40"
+              >
+                <Checkbox
+                  bindToHookForm={false}
+                  checked={biolinkIds.includes(biolink.id)}
+                  onCheckedChange={checked =>
+                    setBiolinkIds(
+                      checked
+                        ? [...biolinkIds, biolink.id]
+                        : biolinkIds.filter(id => id !== biolink.id),
+                    )
+                  }
+                />
+                <span className="min-w-0">
+                  <span className="block truncate font-medium">
+                    {biolink.name}
+                  </span>
+                  {biolink.short_url && (
+                    <span className="block truncate text-xs text-muted-foreground">
+                      {biolink.short_url}
+                    </span>
+                  )}
+                </span>
+              </label>
+            ))}
+          </div>
+        )}
+      </Field.Root>
+
+      <Field.Root>
         <Field.Label htmlFor={`${inputId}-require-lesson-completion`}>
           <Trans message="Learning Settings" />
         </Field.Label>
@@ -1518,7 +1612,6 @@ function CourseSettingsContent({
           />
         </div>
       </Field.Root>
-
     </div>
   );
 }
@@ -1536,12 +1629,19 @@ function CourseSettingsDialog({
 }) {
   const isDesktop = useMediaQuery('(min-width: 1024px)') ?? false;
   const [title, setTitle] = useState(course.product.title);
+  const [description, setDescription] = useState(
+    course.product.description ?? '',
+  );
   const [coverUrl, setCoverUrl] = useState(course.product.cover?.url ?? '');
   const [coverFileId, setCoverFileId] = useState<number | null>(
     course.product.cover?.id ?? null,
   );
   const [requireSeq, setRequireSeq] = useState(
     course.require_sequential_completion,
+  );
+  const [biolinks, setBiolinks] = useState<Biolink[]>([]);
+  const [biolinkIds, setBiolinkIds] = useState(
+    course.product.biolink_ids ?? [],
   );
   const [price, setPrice] = useState(
     (course.product.price_cents / 100).toFixed(2),
@@ -1551,25 +1651,43 @@ function CourseSettingsDialog({
 
   useEffect(() => {
     setTitle(course.product.title);
+    setDescription(course.product.description ?? '');
     setCoverUrl(course.product.cover?.url ?? '');
     setCoverFileId(course.product.cover?.id ?? null);
     setRequireSeq(course.require_sequential_completion);
+    setBiolinkIds(course.product.biolink_ids ?? []);
     setPrice((course.product.price_cents / 100).toFixed(2));
   }, [course]);
 
+  useEffect(() => {
+    if (!open) return;
+
+    void apiClient
+      .get('/api/v1/biolinks?fields_preset=minimal')
+      .then(response => setBiolinks(response.data.data ?? []))
+      .catch(() => setBiolinks([]));
+  }, [open]);
+
   const reset = () => {
     setTitle(course.product.title);
+    setDescription(course.product.description ?? '');
     setCoverUrl(course.product.cover?.url ?? '');
     setCoverFileId(course.product.cover?.id ?? null);
     setRequireSeq(course.require_sequential_completion);
+    setBiolinkIds(course.product.biolink_ids ?? []);
     setPrice((course.product.price_cents / 100).toFixed(2));
   };
 
+  const hasPlacementChanges =
+    biolinkIds.length !== (course.product.biolink_ids ?? []).length ||
+    biolinkIds.some(id => !(course.product.biolink_ids ?? []).includes(id));
   const isDirty =
     title !== course.product.title ||
+    description !== (course.product.description ?? '') ||
     coverFileId !== (course.product.cover?.id ?? null) ||
     price !== (course.product.price_cents / 100).toFixed(2) ||
-    requireSeq !== course.require_sequential_completion;
+    requireSeq !== course.require_sequential_completion ||
+    hasPlacementChanges;
 
   const requestClose = (nextOpen: boolean) => {
     if (!nextOpen && saving) return;
@@ -1590,19 +1708,18 @@ function CourseSettingsDialog({
   const save = async () => {
     if (saving) return;
 
+    const cents = Math.round(Number(price || '0') * 100);
     setSaving(true);
     try {
       await apiClient.put(`/api/v1/courses/${course.id}`, {
-        require_sequential_completion: requireSeq,
-      });
-      const cents = Math.round(Number(price || '0') * 100);
-      await apiClient.put(`/api/v1/digital-products/${course.product.id}`, {
         title: title.trim() || course.product.title,
+        description: description.trim() || null,
         price_cents: Number.isFinite(cents)
           ? cents
           : course.product.price_cents,
         cover_file_entry_id: coverFileId,
-        type: 'course',
+        require_sequential_completion: requireSeq,
+        biolink_ids: biolinkIds,
       });
       toast.positive('Settings saved');
       onOpenChange(false);
@@ -1617,6 +1734,8 @@ function CourseSettingsDialog({
   const contentProps = {
     title,
     setTitle,
+    description,
+    setDescription,
     coverUrl,
     setCoverUrl,
     setCoverFileId,
@@ -1624,6 +1743,9 @@ function CourseSettingsDialog({
     setPrice,
     requireSeq,
     setRequireSeq,
+    biolinks,
+    biolinkIds,
+    setBiolinkIds,
   };
 
   return (
@@ -1645,7 +1767,10 @@ function CourseSettingsDialog({
               </Drawer.Description>
             </Drawer.Header>
             <Drawer.Body>
-              <CourseSettingsContent {...contentProps} inputId="course-name-mobile" />
+              <CourseSettingsContent
+                {...contentProps}
+                inputId="course-name-mobile"
+              />
             </Drawer.Body>
             <Drawer.Footer className="border-t pt-4">
               <Button
@@ -1675,7 +1800,10 @@ function CourseSettingsDialog({
               </Dialog.Description>
             </Dialog.Header>
             <Dialog.Body className="mx-0 flex-1 px-4 py-5 sm:px-6">
-              <CourseSettingsContent {...contentProps} inputId="course-name-desktop" />
+              <CourseSettingsContent
+                {...contentProps}
+                inputId="course-name-desktop"
+              />
             </Dialog.Body>
             <Dialog.Footer className="mx-0 mb-0 border-t px-4 py-4 sm:px-6">
               <Button

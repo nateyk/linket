@@ -21,6 +21,7 @@ import {
   cssPropsFromBgConfig,
   getBgTintStyle,
 } from '@common/background-selector/utils/css-props-from-bg-config';
+import {apiClient} from '@common/http/query-client';
 import {loadFonts} from '@ui/fonts/font-picker/load-fonts';
 import {normalizeMediaUrl} from '@common/uploads/normalize-media-url';
 import {formatMoney as formatPrice} from '@ui/i18n/format-money';
@@ -141,27 +142,19 @@ export function PublicDigitalProductPage({
     setBuyerError(undefined);
 
     try {
-      const response = await fetch(
+      const response = await apiClient.post(
         data.checkout_endpoint ??
           `/api/v1/digital-products/${data.product.id}/checkout`,
         {
-          method: 'POST',
-          credentials: 'same-origin',
-          headers: {
-            Accept: 'application/json',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            buyer_name: buyerName.trim(),
-            buyer_email: buyerEmail.trim(),
-            buyer_phone: buyerPhone.trim() || undefined,
-          }),
+          buyer_name: buyerName.trim(),
+          buyer_email: buyerEmail.trim(),
+          buyer_phone: buyerPhone.trim() || undefined,
         },
       );
-      const payload = await response.json().catch(() => undefined);
+      const payload = response.data;
       const checkoutUrl = payload?.checkout_url ?? payload?.data?.checkout_url;
 
-      if (!response.ok || typeof checkoutUrl !== 'string') {
+      if (typeof checkoutUrl !== 'string') {
         throw new Error('Checkout could not be started.');
       }
 
@@ -346,13 +339,7 @@ export function PublicDigitalProductOrderSuccessPage({
     }
 
     try {
-      const response = await fetch(data.status_endpoint, {
-        credentials: 'same-origin',
-        headers: {Accept: 'application/json'},
-      });
-      if (!response.ok) throw new Error('Unable to refresh order status.');
-
-      const payload = await response.json();
+      const {data: payload} = await apiClient.get(data.status_endpoint);
       const nextOrder = payload?.data?.order ?? payload?.order ?? payload?.data;
       if (nextOrder && typeof nextOrder === 'object') {
         setOrder(current => ({...current, ...nextOrder}));
@@ -940,11 +927,13 @@ function CourseCurriculum({courseId}: {courseId: number}) {
   useEffect(() => {
     void (async () => {
       try {
-        const res = await fetch(`/api/v1/public/courses/${courseId}/curriculum`, {headers: {Accept: 'application/json'}});
-        if (!res.ok) return;
-        const payload = await res.json();
+        const {data: payload} = await apiClient.get(
+          `/api/v1/public/courses/${courseId}/curriculum`,
+        );
         setCurriculum(payload.data ?? payload);
-      } catch {}
+      } catch {
+        // Leave the optional curriculum section hidden when it cannot load.
+      }
     })();
   }, [courseId]);
   if (!curriculum?.chapters?.length) return null;
@@ -1014,8 +1003,6 @@ function plainTextDescription(value: string) {
     .replace(/\s+/g, ' ')
     .trim();
 }
-
-
 function formatDate(value: string) {
   return new Intl.DateTimeFormat(undefined, {
     dateStyle: 'medium',

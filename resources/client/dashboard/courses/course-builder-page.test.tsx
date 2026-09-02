@@ -48,6 +48,27 @@ describe('course builder analytics navigation', () => {
   });
 });
 
+describe('course builder data loading', () => {
+  test('loads product, course, and Storefront data through the shared API client', () => {
+    const source = fs.readFileSync(
+      path.resolve(
+        'resources/client/dashboard/courses/course-builder-page.tsx',
+      ),
+      'utf8',
+    );
+
+    expect(source).toMatch(
+      /await apiClient\.get\(\s*`\/api\/v1\/digital-products\/\$\{productId\}`\s*,?\s*\)/,
+    );
+    expect(source).toMatch(
+      /await apiClient\.get\(\s*`\/api\/v1\/courses\/\$\{courseId\}`\s*,?\s*\)/,
+    );
+    expect(source).toMatch(
+      /apiClient\s*\.get\(\s*'\/api\/v1\/biolinks\?fields_preset=minimal'\s*,?\s*\)/,
+    );
+  });
+});
+
 describe('course builder mobile navigation', () => {
   test('uses opposite phone visibility conditions for curriculum and editor', () => {
     const source = fs.readFileSync(
@@ -167,23 +188,29 @@ describe('course builder curriculum sorting', () => {
       'utf8',
     );
     const chapterMenuStart = source.indexOf('aria-label="Chapter actions"');
-    const chapterMenuEnd = source.indexOf('</Dropdown.Content>', chapterMenuStart);
+    const chapterMenuEnd = source.indexOf(
+      '</Dropdown.Content>',
+      chapterMenuStart,
+    );
     const chapterMenu = source.slice(chapterMenuStart, chapterMenuEnd);
     const lessonMenuStart = source.indexOf('aria-label="Lesson actions"');
-    const lessonMenuEnd = source.indexOf('</Dropdown.Content>', lessonMenuStart);
+    const lessonMenuEnd = source.indexOf(
+      '</Dropdown.Content>',
+      lessonMenuStart,
+    );
     const lessonMenu = source.slice(lessonMenuStart, lessonMenuEnd);
 
     expect(chapterMenu).toMatch(
-      /disabled=\{chapterIndex === 0 \|\| !!reordering\}[\s\S]*?moveChapterByOffset\(chapter\.id, -1\)[\s\S]*?<Trans message="Move up" \/>/,
+      /disabled=\{\s*chapterIndex === 0 \|\| !!reordering\s*\}[\s\S]*?moveChapterByOffset\(chapter\.id, -1\)[\s\S]*?<Trans message="Move up" \/>/,
     );
     expect(chapterMenu).toMatch(
-      /disabled=\{[\s\S]*?chapterIndex === course\.chapters\.length - 1 \|\|[\s\S]*?!!reordering[\s\S]*?\}[\s\S]*?moveChapterByOffset\(chapter\.id, 1\)[\s\S]*?<Trans message="Move down" \/>/,
+      /disabled=\{[\s\S]*?chapterIndex ===\s*course\.chapters\.length - 1 \|\|[\s\S]*?!!reordering[\s\S]*?\}[\s\S]*?moveChapterByOffset\(chapter\.id, 1\)[\s\S]*?<Trans message="Move down" \/>/,
     );
     expect(lessonMenu).toMatch(
-      /disabled=\{[\s\S]*?lessonIndex === 0 \|\| !!reordering[\s\S]*?\}[\s\S]*?moveLessonByOffset\([\s\S]*?chapter\.id,[\s\S]*?lesson\.id,[\s\S]*?-1,[\s\S]*?\)[\s\S]*?<Trans message="Move up" \/>/,
+      /disabled=\{[\s\S]*?lessonIndex === 0 \|\|\s*!!reordering[\s\S]*?\}[\s\S]*?moveLessonByOffset\([\s\S]*?chapter\.id,[\s\S]*?lesson\.id,[\s\S]*?-1,[\s\S]*?\)[\s\S]*?<Trans message="Move up" \/>/,
     );
     expect(lessonMenu).toMatch(
-      /disabled=\{[\s\S]*?lessonIndex ===[\s\S]*?chapter\.lessons\.length - 1 \|\|[\s\S]*?!!reordering[\s\S]*?\}[\s\S]*?moveLessonByOffset\([\s\S]*?chapter\.id,[\s\S]*?lesson\.id,[\s\S]*?1,[\s\S]*?\)[\s\S]*?<Trans message="Move down" \/>/,
+      /disabled=\{[\s\S]*?lessonIndex ===[\s\S]*?chapter\.lessons\.length -\s*1 \|\|[\s\S]*?!!reordering[\s\S]*?\}[\s\S]*?moveLessonByOffset\([\s\S]*?chapter\.id,[\s\S]*?lesson\.id,[\s\S]*?1,[\s\S]*?\)[\s\S]*?<Trans message="Move down" \/>/,
     );
     expect(source).toContain('hidden lg:block');
   });
@@ -217,7 +244,9 @@ describe('course settings and builder polish', () => {
     expect(source).toContain('position="bottom"');
     expect(source).toContain('className="lg:hidden"');
     expect(source).toContain('<Dialog.Root');
-    expect(source).toContain('className="hidden max-h-[85vh] flex-col gap-0 p-0 sm:max-w-2xl lg:flex"');
+    expect(source).toContain(
+      'className="hidden max-h-[85vh] flex-col gap-0 p-0 sm:max-w-2xl lg:flex"',
+    );
     expect(source).toContain('<Drawer.Body>');
     expect(source).toContain('<Drawer.Footer');
   });
@@ -230,7 +259,9 @@ describe('course settings and builder polish', () => {
       'utf8',
     );
 
-    expect(source).toContain('const [discardOpen, setDiscardOpen] = useState(false)');
+    expect(source).toContain(
+      'const [discardOpen, setDiscardOpen] = useState(false)',
+    );
     expect(source).toContain('const isDirty =');
     expect(source).toContain('if (!nextOpen && isDirty)');
     expect(source).toContain('<Trans message="Discard changes?" />');
@@ -248,10 +279,12 @@ describe('course settings and builder polish', () => {
       source.indexOf('function DeleteCourseItemDialog'),
     );
 
-    expect(settingsDialog).toContain('const [saving, setSaving] = useState(false)');
+    expect(settingsDialog).toContain(
+      'const [saving, setSaving] = useState(false)',
+    );
     expect(settingsDialog).toContain('if (!nextOpen && saving) return;');
     expect(settingsDialog).toMatch(
-      /const save = async \(\) => \{[\s\S]*?if \(saving\) return;[\s\S]*?setSaving\(true\);[\s\S]*?try \{[\s\S]*?await apiClient\.put\([\s\S]*?await apiClient\.put\([\s\S]*?toast\.positive\('Settings saved'\);[\s\S]*?onOpenChange\(false\);[\s\S]*?onSaved\(\);[\s\S]*?\} catch \(e: any\) \{[\s\S]*?toast\.danger\(e\.message \?\? 'Unable to save settings'\);[\s\S]*?\} finally \{[\s\S]*?setSaving\(false\);/,
+      /const save = async \(\) => \{[\s\S]*?if \(saving\) return;[\s\S]*?setSaving\(true\);[\s\S]*?try \{[\s\S]*?await apiClient\.put\([\s\S]*?biolink_ids: biolinkIds,[\s\S]*?toast\.positive\('Settings saved'\);[\s\S]*?onOpenChange\(false\);[\s\S]*?onSaved\(\);[\s\S]*?\} catch \(e: any\) \{[\s\S]*?toast\.danger\(e\.message \?\? 'Unable to save settings'\);[\s\S]*?\} finally \{[\s\S]*?setSaving\(false\);/,
     );
     expect(settingsDialog.match(/disabled=\{saving\}/g)).toHaveLength(6);
   });
@@ -337,7 +370,9 @@ describe('course builder UI polish', () => {
 describe('course approval submission', () => {
   test('uses the standard product submission flow', () => {
     const source = fs.readFileSync(
-      path.resolve('resources/client/dashboard/courses/course-builder-page.tsx'),
+      path.resolve(
+        'resources/client/dashboard/courses/course-builder-page.tsx',
+      ),
       'utf8',
     );
 
@@ -345,6 +380,8 @@ describe('course approval submission', () => {
       '`/api/v1/digital-products/${course.digital_product_id}/submit`',
     );
     expect(source).toContain("toast.positive('Course submitted for review')");
-    expect(source).toContain("publishing ? 'Submitting...' : 'Submit for review'");
+    expect(source).toContain('const hasPublishedLesson =');
+    expect(source).toContain("'Submit for review'");
+    expect(source).toContain("'Add a published lesson'");
   });
 });

@@ -83,6 +83,11 @@ class DigitalProductsController extends Controller
     public function submit(Request $request, DigitalProduct $digitalProduct)
     {
         $this->assertOwner($digitalProduct, $request);
+        abort_unless(
+            in_array($digitalProduct->status, ['draft', 'rejected'], true),
+            422,
+            __('Only draft or rejected products can be submitted for review.'),
+        );
         if ($digitalProduct->isCourse()) {
             $course = $digitalProduct->course ?? app(\App\Courses\Services\CourseService::class)->ensureForProduct($digitalProduct);
             $hasPublished = \App\Courses\Models\Lesson::where('course_id', $course->id)->where('status', 'published')->exists();

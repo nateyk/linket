@@ -24,6 +24,8 @@ import {
   StarIcon,
 } from 'lucide-react';
 import {auth} from '@common/auth/use-auth';
+import {apiClient} from '@common/http/query-client';
+import {getApiErrorMessage} from '@common/http/errors/parsed-api-error';
 import {useCallback, useEffect, useState} from 'react';
 import {Link, useLocation, useNavigate} from 'react-router';
 import {MyOrderShell} from './my-order-shell';
@@ -74,13 +76,8 @@ function AuthenticatedMyOrder() {
   useEffect(() => {
     void (async () => {
       try {
-        const res = await fetch('/api/v1/my-courses', {
-          credentials: 'same-origin',
-          headers: {Accept: 'application/json'},
-        });
-        if (!res.ok) throw new Error();
-        const payload = await res.json();
-        setCourses(payload.data ?? []);
+        const response = await apiClient.get('/api/v1/my-courses');
+        setCourses(response.data.data ?? []);
       } catch {
         setCourseError('Unable to load your courses.');
       } finally {
@@ -227,16 +224,9 @@ function RecoveryRequest() {
     setSubmitting(true);
     setError(undefined);
     try {
-      const response = await fetch('/api/v1/public/my-order/request-code', {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({email: email.trim()}),
+      await apiClient.post('/api/v1/public/my-order/request-code', {
+        email: email.trim(),
       });
-      if (!response.ok) throw new Error();
       setSent(true);
     } catch {
       setError('We could not submit your request. Please try again.');
@@ -254,26 +244,17 @@ function RecoveryRequest() {
     setSubmitting(true);
     setError(undefined);
     try {
-      const response = await fetch('/api/v1/public/my-order/verify-code', {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({email: email.trim(), code}),
+      await apiClient.post('/api/v1/public/my-order/verify-code', {
+        email: email.trim(),
+        code,
       });
-      const payload = await response.json().catch(() => undefined);
-      if (!response.ok)
-        throw new Error(
-          payload?.message || 'That sign-in code is invalid or has expired.',
-        );
       navigate('/my-order/purchases');
     } catch (reason) {
+      const apiMessage = getApiErrorMessage(reason);
       setError(
-        reason instanceof Error
-          ? reason.message
-          : 'We could not verify your code.',
+        apiMessage !== 'An error occurred.'
+          ? apiMessage
+          : 'That sign-in code is invalid or has expired.',
       );
     } finally {
       setSubmitting(false);
@@ -399,18 +380,14 @@ function PurchaseOrders() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/v1/public/my-order/purchases', {
-        credentials: 'same-origin',
-        headers: {Accept: 'application/json'},
-      });
-      const payload = await response.json().catch(() => undefined);
-      if (!response.ok)
-        throw new Error(payload?.message || 'Your portal session has expired.');
+      const response = await apiClient.get('/api/v1/public/my-order/purchases');
+      const payload = response.data;
       setOrders(payload?.orders ?? payload?.data?.orders ?? []);
     } catch (reason) {
+      const apiMessage = getApiErrorMessage(reason);
       setError(
-        reason instanceof Error
-          ? reason.message
+        apiMessage !== 'An error occurred.'
+          ? apiMessage
           : 'Your portal session has expired.',
       );
     } finally {
@@ -436,21 +413,26 @@ function PurchaseOrders() {
   const download = async (order: Order, entitlement: OrderDownload) => {
     setBusy(`download-${entitlement.id}`);
     try {
-      const response = await fetch(
+      const headers = await withCsrf();
+      const response = await apiClient.post(
         `/api/v1/public/my-order/purchases/${order.id}/downloads/${entitlement.id}`,
-        {method: 'POST', credentials: 'same-origin', headers: await withCsrf()},
+        {},
+        {headers},
       );
-      const payload = await response.json().catch(() => undefined);
-      if (!response.ok || !payload?.url)
+      const payload = response.data;
+      if (!payload?.url)
         throw new Error(
           payload?.message || 'This protected download is no longer available.',
         );
       window.location.assign(payload.url);
     } catch (reason) {
+      const apiMessage = getApiErrorMessage(reason);
       toast.danger(
-        reason instanceof Error
-          ? reason.message
-          : 'Unable to prepare your download.',
+        apiMessage !== 'An error occurred.'
+          ? apiMessage
+          : reason instanceof Error
+            ? reason.message
+            : 'Unable to prepare your download.',
       );
     } finally {
       setBusy(undefined);
@@ -460,20 +442,25 @@ function PurchaseOrders() {
   const resend = async (order: Order) => {
     setBusy(`receipt-${order.id}`);
     try {
-      const response = await fetch(
+      const headers = await withCsrf();
+      const response = await apiClient.post(
         `/api/v1/public/my-order/purchases/${order.id}/resend-receipt`,
-        {method: 'POST', credentials: 'same-origin', headers: await withCsrf()},
+        {},
+        {headers},
       );
-      const payload = await response.json().catch(() => undefined);
-      if (!response.ok)
-        throw new Error(payload?.message || 'Unable to resend the receipt.');
+      const payload = response.data;
+      if (!payload && response.status >= 400)
+        throw new Error('Unable to resend the receipt.');
       toast(message('Your receipt is being sent.'));
       void load();
     } catch (reason) {
+      const apiMessage = getApiErrorMessage(reason);
       toast.danger(
-        reason instanceof Error
-          ? reason.message
-          : 'Unable to resend the receipt.',
+        apiMessage !== 'An error occurred.'
+          ? apiMessage
+          : reason instanceof Error
+            ? reason.message
+            : 'Unable to resend the receipt.',
       );
     } finally {
       setBusy(undefined);
@@ -605,34 +592,30 @@ function PortalReviewDialog({
         .split('; ')
         .find(value => value.startsWith('XSRF-TOKEN='))
         ?.split('=')[1];
-      const response = await fetch(
+      await apiClient.post(
         `/api/v1/public/my-order/purchases/${order.id}/review`,
         {
-          method: 'POST',
-          credentials: 'same-origin',
+          stars,
+          title: title.trim() || undefined,
+          review: review.trim() || undefined,
+        },
+        {
           headers: {
-            Accept: 'application/json',
-            'Content-Type': 'application/json',
             ...(token ? {'X-XSRF-TOKEN': decodeURIComponent(token)} : {}),
           },
-          body: JSON.stringify({
-            stars,
-            title: title.trim() || undefined,
-            review: review.trim() || undefined,
-          }),
         },
       );
-      const payload = await response.json().catch(() => undefined);
-      if (!response.ok)
-        throw new Error(payload?.message || 'We could not save your review.');
       await onSaved();
       onClose();
       toast(message('Your review has been saved.'));
     } catch (reason) {
+      const apiMessage = getApiErrorMessage(reason);
       setError(
-        reason instanceof Error
-          ? reason.message
-          : 'We could not save your review.',
+        apiMessage !== 'An error occurred.'
+          ? apiMessage
+          : reason instanceof Error
+            ? reason.message
+            : 'We could not save your review.',
       );
     } finally {
       setSubmitting(false);

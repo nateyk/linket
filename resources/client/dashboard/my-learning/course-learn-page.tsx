@@ -1,4 +1,5 @@
 import {MyOrderShell} from '@app/digital-products/public/my-order-shell';
+import {apiClient} from '@common/http/query-client';
 import {Alert} from '@shadcn/alert/alert';
 import {Accordion} from '@shadcn/accordion/accordion';
 import {Badge} from '@shadcn/badge/badge';
@@ -41,14 +42,11 @@ export function Component() {
 
     void (async () => {
       try {
-        const res = await fetch(`/api/v1/courses/${courseId}/learn`, {
-          credentials: 'same-origin',
-          headers: {Accept: 'application/json'},
-          signal: controller.signal,
-        });
-        if (!res.ok) throw new Error();
-        const payload = await res.json();
-        setCourse(payload.data);
+        const response = await apiClient.get(
+          `/api/v1/courses/${courseId}/learn`,
+          {signal: controller.signal},
+        );
+        setCourse(response.data.data);
       } catch {
         if (!controller.signal.aborted) {
           setError('Unable to load this course.');

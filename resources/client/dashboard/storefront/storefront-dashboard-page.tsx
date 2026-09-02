@@ -1,5 +1,6 @@
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {apiClient} from '@common/http/query-client';
+import {getApiErrorMessage} from '@common/http/errors/parsed-api-error';
 import {Badge} from '@shadcn/badge/badge';
 import {Button} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
@@ -113,22 +114,11 @@ export function Component() {
     setError(undefined);
 
     try {
-      const [productsResponse, salesResponse, payoutsResponse] =
-        await Promise.all([
-          storefrontFetch(
-            `/api/v1/storefront/products?page=${productsPage}`,
-          ),
-          storefrontFetch('/api/v1/storefront/sales'),
-          storefrontFetch(
-            `/api/v1/storefront/payout-requests?page=${payoutsPage}`,
-          ),
-        ]);
-
-      const [products, sales, payouts] = await Promise.all(
-        [productsResponse, salesResponse, payoutsResponse].map(response =>
-          response.json(),
-        ),
-      );
+      const [products, sales, payouts] = await Promise.all([
+        apiClient.get(`/api/v1/storefront/products?page=${productsPage}`).then(response => response.data),
+        apiClient.get('/api/v1/storefront/sales').then(response => response.data),
+        apiClient.get(`/api/v1/storefront/payout-requests?page=${payoutsPage}`).then(response => response.data),
+      ]);
 
       const productCollection = getCollectionResponse<Product>(products);
       const payoutCollection = getCollectionResponse<PayoutRequest>(payouts);
@@ -852,28 +842,6 @@ function PayoutStatusBadge({status}: {status: string}) {
   );
 }
 
-async function storefrontFetch(url: string, init?: RequestInit) {
-  const response = await fetch(url, {
-    credentials: 'same-origin',
-    headers: {
-      Accept: 'application/json',
-      ...(init?.body ? {'Content-Type': 'application/json'} : {}),
-      ...init?.headers,
-    },
-    ...init,
-  });
-  if (response.ok) return response;
-
-  let errorMessage = message('Unable to load storefront data.');
-  try {
-    const body = await response.json();
-    errorMessage = body.message ?? errorMessage;
-  } catch {
-    // Use the fallback when the response is not JSON.
-  }
-  throw new Error(errorMessage);
-}
-
 function getCollection<T>(value: unknown): T[] {
   if (Array.isArray(value)) return value as T[];
   if (
@@ -930,6 +898,8 @@ function getOrderStatusLabel(status: string): ReactNode {
 }
 
 function getErrorMessage(reason: unknown) {
+  const apiMessage = getApiErrorMessage(reason);
+  if (apiMessage !== 'An error occurred.') return apiMessage;
   return reason instanceof Error
     ? reason.message
     : message('Unable to load storefront data.');

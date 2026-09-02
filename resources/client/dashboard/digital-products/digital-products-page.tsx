@@ -88,21 +88,10 @@ export function Component() {
     setError(undefined);
 
     try {
-      const response = await fetch('/api/v1/digital-products?per_page=100', {
-        credentials: 'same-origin',
-        headers: {Accept: 'application/json'},
-      });
-
-      if (!response.ok) {
-        throw new Error(
-          await responseErrorMessage(
-            response,
-            trans({message: 'Unable to load digital products.'}),
-          ),
-        );
-      }
-
-      const payload: ProductsResponse = await response.json();
+      const response = await apiClient.get(
+        '/api/v1/digital-products?per_page=100',
+      );
+      const payload: ProductsResponse = response.data;
       setProducts(payload.data ?? []);
     } catch (reason) {
       setError(
@@ -444,6 +433,7 @@ function ProductActions({
 }) {
   const {trans} = useTrans();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const isCourse = product.type === 'course' || product.is_course;
 
   return (
     <>
@@ -477,7 +467,7 @@ function ProductActions({
 
           {canSubmit && (
             <Dropdown.Item
-              disabled={submitting || !product.files?.length}
+              disabled={submitting || (!isCourse && !product.files?.length)}
               onClick={onSubmit}
             >
               <SendIcon />
@@ -676,11 +666,6 @@ function ProductSkeleton() {
 
 function productPublicUrl(product: Product, biolink: ProductBiolink): string {
   return `${biolink.short_url.replace(/\/$/, '')}/products/${product.id}`;
-}
-
-async function responseErrorMessage(response: Response, fallback: string) {
-  const payload = await response.json().catch(() => undefined);
-  return typeof payload?.message === 'string' ? payload.message : fallback;
 }
 
 function plainTextDescription(description: string): string {
