@@ -66,6 +66,7 @@ class DigitalProductRefundService
                 ProductReview::query()
                     ->where('storefront_order_id', $order->id)
                     ->delete();
+                app(\App\Courses\Services\EnrollmentService::class)->revokeForOrder($order);
             }
 
             return $refund;

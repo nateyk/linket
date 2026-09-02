@@ -86,6 +86,7 @@ class LessonsController extends Controller
                     $data['video_url'] = $normalized;
                     $data['video_file_entry_id'] = null;
                 } elseif ($data['video_type'] === 'upload') {
+                    abort_unless(app(Entitlements::class)->enabled($request->user(), 'course_video_upload_enabled'), 403, __('Video uploads are not enabled for your plan.'));
                     $fileId = $data['video_file_entry_id'] ?? $lesson->video_file_entry_id;
                     if ($fileId) {
                         $file = FileEntry::find($fileId);

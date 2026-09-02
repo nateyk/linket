@@ -32,14 +32,17 @@ class StorefrontWebhookHandler
 
     public function fulfill(StorefrontOrder $order, ?string $buyerEmail = null, array $gatewayAttributes = []): void
     {
-        if ($order->status === 'paid') return;
+        DB::transaction(function () use ($order, $buyerEmail, $gatewayAttributes): void {
+            $locked = StorefrontOrder::query()->whereKey($order->getKey())->lockForUpdate()->firstOrFail();
+            if ($locked->status === 'paid') return;
 
-        $order->update([
-            'status' => 'paid',
-            'buyer_email' => $buyerEmail ?? $order->buyer_email,
-            'paid_at' => now(),
-            ...$gatewayAttributes,
-        ]);
+            $locked->update([
+                'status' => 'paid',
+                'buyer_email' => $buyerEmail ?? $locked->buyer_email,
+                'paid_at' => now(),
+                ...$gatewayAttributes,
+            ]);
+            $order = $locked;
         $fresh = $order->fresh('product');
         Log::info('store.order.fulfilled', [
             'store_id' => $order->store_id ?? $order->biolink_id,
@@ -69,5 +72,6 @@ class StorefrontWebhookHandler
             Log::warning('store.course.enrollment_failed', ['order_id' => $order->id, 'error' => $e->getMessage()]);
         }
         SendStorefrontReceipt::dispatch($order->id)->afterCommit();
+        });
     }
 }

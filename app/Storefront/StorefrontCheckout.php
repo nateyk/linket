@@ -61,13 +61,18 @@ class StorefrontCheckout
 
         // Free course / free product: immediate fulfillment, no gateway.
         if ((int) $gross === 0) {
-            try { app(\App\Storefront\StorefrontWebhookHandler::class)->fulfill($order->fresh('product'), $buyer['email'] ?? null, []); } catch (\Throwable $e) { \Illuminate\Support\Facades\Log::warning('store.checkout.free_fulfill_failed', ['order_id' => $order->id, 'error' => $e->getMessage()]); }
-            $order = $order->fresh();
-            // Ensure paid (fulfill already sets it, but guard if handler was no-op)
-            if ($order->status !== 'paid') {
-                $order->update(['status' => 'paid', 'paid_at' => now()]);
-                try { app(\App\Courses\Services\EnrollmentService::class)->grantFromOrder($order->fresh('product.course')); } catch (\Throwable $e2) {}
+            try {
+                app(\App\Storefront\StorefrontWebhookHandler::class)->fulfill($order->fresh('product'), $buyer['email'] ?? null, []);
+            } catch (\Throwable $e) {
+                Log::warning('store.checkout.free_fulfill_failed', ['order_id' => $order->id, 'error' => $e->getMessage()]);
+                try {
+                    $order->delete();
+                } catch (\Throwable $deleteError) {
+                    Log::warning('store.checkout.free_cleanup_failed', ['order_id' => $order->id, 'error' => $deleteError->getMessage()]);
+                }
+                throw $e;
             }
+            $order = $order->fresh();
             $order->setAttribute('chapaCheckoutUrl', url("/find-my-purchase/orders?highlight={$order->uuid}"));
             return $order;
         }

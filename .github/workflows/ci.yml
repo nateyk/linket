@@ -135,6 +135,12 @@ jobs:
       - name: Schedule loads
         run: php artisan schedule:list
 
+      - name: TypeScript typecheck
+        run: npx tsc --noEmit --skipLibCheck || echo "TypeScript check completed with warnings (non-blocking until strict)"
+
+      - name: Frontend tests (vitest)
+        run: npm test
+
       - name: Composer audit (production advisories only)
         run: |
           # Fail on any production advisory. Network failures fail the job (retry will help).
@@ -147,9 +153,7 @@ jobs:
           npm audit --omit=dev --audit-level=moderate
 
       - name: oxlint
-        run: npm run lint -- --type-aware 2>&1 || npm run lint 2>&1 || echo "oxlint not configured as strict gate — see logs"
-        # Purposely non-blocking on lint warnings until team enforces zero-warning policy.
-        # Change to `run: npm run lint` with no fallback to enforce.
+        run: npm run lint
 
       - name: Vite production build
         run: npm run build

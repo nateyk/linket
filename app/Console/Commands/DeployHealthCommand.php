@@ -90,27 +90,17 @@ class DeployHealthCommand extends Command
         // 8. No pending migrations (post only — pre is expected to have pending before migrate)
         if ($isPost) {
             try {
-                $pending = 0;
-                // Use migrator to count pending without running them
                 $migrator = app('migrator');
                 $files = $migrator->getMigrationFiles(base_path('database/migrations'));
-                // Also common migrations
                 if (is_dir(base_path('common/foundation/database/migrations'))) {
                     $files = array_merge($files, $migrator->getMigrationFiles(base_path('common/foundation/database/migrations')));
                 }
                 $ran = DB::table(config('database.migrations.table', 'migrations'))->pluck('migration')->all();
-                // crude pending count; if migrator not available, fallback to 0
-                foreach ($files as $file => $_path) {
-                    $name = pathinfo($file, PATHINFO_FILENAME);
-                    // migrator keys are full paths; extract basename without timestamp? simpler: count diff
-                }
-                // Fallback: ask artisan migrate:status but avoid heavy output
-                $add('no_pending_migrations', true, 'checked via deploy:health (migrator)');
+                $pending = count(array_diff(array_keys($files), $ran));
+                $add('no_pending_migrations', $pending === 0, $pending === 0 ? 'none' : "{$pending} pending");
             } catch (\Throwable $e) {
                 $add('no_pending_migrations', false, $this->sanitize($e->getMessage()));
             }
-            // Lighter reliable check: try to run migrate --pretend quickly? Instead just assert DB table exists
-            // We keep this non-fatal if migrator unavailable.
         }
 
         // 9. TUS dir writable (if TUS enabled)
