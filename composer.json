@@ -46,6 +46,7 @@
     "league/flysystem-sftp-v3": "^3.0",
     "league/flysystem-webdav": "^3.0",
     "league/html-to-markdown": "^5.1",
+    "livewire/livewire": "^4.3.4",
     "maennchen/zipstream-php": "^3.1",
     "meilisearch/meilisearch-php": "^1.13",
     "moneyphp/money": "^4.6",
