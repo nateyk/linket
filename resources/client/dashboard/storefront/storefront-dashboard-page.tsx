@@ -9,7 +9,6 @@ import {Input} from '@shadcn/forms/input/input';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {Table} from '@shadcn/table/table';
 import {Tooltip} from '@shadcn/tooltip/tooltip';
-import {message} from '@ui/i18n/message';
 import {getSiteCurrency} from '@ui/i18n/format-money';
 import {FormattedCurrency} from '@ui/i18n/formatted-currency';
 import {FormattedDate} from '@ui/i18n/formatted-date';
@@ -580,7 +579,7 @@ function PayoutRequestsPanel({
           )}
           <div className="mt-3 flex gap-2">
             <Input
-              aria-label={message('Payout amount')}
+              aria-label="Payout amount"
               bindToHookForm={false}
               inputMode="decimal"
               min="0.01"
@@ -721,7 +720,7 @@ function CollectionPaginationControls({
       </div>
       <div className="flex items-center gap-1">
         <Button
-          aria-label={message('Previous page')}
+          aria-label="Previous page"
           color="default"
           disabled={pagination.currentPage <= 1}
           size="icon-xs"
@@ -731,7 +730,7 @@ function CollectionPaginationControls({
           <ChevronLeftIcon />
         </Button>
         <Button
-          aria-label={message('Next page')}
+          aria-label="Next page"
           color="default"
           disabled={pagination.currentPage >= pagination.lastPage}
           size="icon-xs"
@@ -897,11 +896,10 @@ function getOrderStatusLabel(status: string): ReactNode {
   }
 }
 
-function getErrorMessage(reason: unknown) {
+function getErrorMessage(reason: unknown): string {
   const apiMessage = getApiErrorMessage(reason);
   if (apiMessage !== 'An error occurred.') return apiMessage;
-  return reason instanceof Error
-    ? reason.message
-    : message('Unable to load storefront data.');
+  if (reason instanceof Error) return reason.message;
+  return 'Unable to load storefront data.';
 }
 

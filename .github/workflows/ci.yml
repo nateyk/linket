@@ -136,7 +136,7 @@ jobs:
         run: php artisan schedule:list
 
       - name: TypeScript typecheck
-        run: npx tsc --noEmit --skipLibCheck || echo "TypeScript check completed with warnings (non-blocking until strict)"
+        run: npx tsc --noEmit
 
       - name: Frontend tests (vitest)
         run: npm test

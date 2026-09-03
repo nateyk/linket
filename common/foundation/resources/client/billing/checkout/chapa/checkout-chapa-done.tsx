@@ -54,6 +54,7 @@ export function Component() {
           </Button>
         )}
       </div>
+      <div />
     </CheckoutLayout>
   );
 }

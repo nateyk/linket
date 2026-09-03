@@ -210,7 +210,7 @@ function TopDevicesChart(props: TrackedEventsInsightsProps) {
               >
                 <span
                   className="size-2.5 shrink-0 rounded-full"
-                  style={{backgroundColor: item.fill}}
+                  style={{backgroundColor: (item as any).fill}}
                 />
                 <span className="min-w-0 flex-1 truncate text-muted-foreground">
                   {item.label}

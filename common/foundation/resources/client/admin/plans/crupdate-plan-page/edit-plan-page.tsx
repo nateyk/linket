@@ -34,7 +34,7 @@ export function Component() {
       is_default: product.is_default,
       storefront_benefits: product.storefront_benefits ?? {},
       feature_list: product.feature_list?.map(f => ({value: f})) ?? [],
-      prices: product.prices ?? [],
+      prices: (product.prices as unknown as CrupdatePlanFormValues['prices']) ?? [],
       trial_period_days: product.trial_period_days,
       permissions: product.permissions ?? [],
     },
@@ -57,7 +57,7 @@ export function Component() {
 
   return (
     <DashboardLayout.MainSection
-      render={<HookForm.Root form={form} onSubmit={handleSubmit} />}
+      render={<HookForm.Root form={form as any} onSubmit={handleSubmit} />}
     >
       <StaticPageTitle>{product.name}</StaticPageTitle>
 

@@ -99,7 +99,9 @@ export function usePolicyCheckResult(
   const usageKey = `${snakeCase}s` as keyof GetUsage200Data;
 
   const policyCheckResult =
-    usageKey === 'tracked_events' ? null : data?.data[usageKey][action];
+    usageKey === 'tracked_events'
+      ? null
+      : (data?.data[usageKey] as unknown as Record<Action, {allowed: boolean; reason?: PolicyFailReason}> | undefined)?.[action];
 
   if (!policyCheckResult) {
     return {allowed: false, reason: 'noPermission'};

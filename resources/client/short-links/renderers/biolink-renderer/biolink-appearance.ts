@@ -171,14 +171,12 @@ function resolveMutedTextColor(foreground: Color, surface: Color): string {
   const surfaceCoordinates = surface.to('srgb').coords as number[];
 
   for (const foregroundWeight of [0.88, 0.92, 0.96, 1]) {
-    const mixed = new Color(
-      'srgb',
-      foregroundCoordinates.map(
-        (channel, index) =>
-          channel * foregroundWeight +
-          surfaceCoordinates[index] * (1 - foregroundWeight),
-      ),
-    );
+    const mixedCoords = foregroundCoordinates.map(
+      (channel, index) =>
+        channel * foregroundWeight +
+        (surfaceCoordinates[index] as number) * (1 - foregroundWeight),
+    ) as [number, number, number];
+    const mixed = new Color('srgb', mixedCoords);
 
     if (contrastRatio(mixed, surface) >= 4.5) {
       return mixed.toString({format: 'hex'});

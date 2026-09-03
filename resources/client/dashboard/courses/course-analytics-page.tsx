@@ -228,7 +228,7 @@ export function CourseAnalyticsPage() {
               </Empty.Header>
             </Empty.Root>
           ) : (
-            <Accordion.Root type="multiple" className="w-full rounded-xl border bg-card">
+            <Accordion.Root className="w-full rounded-xl border bg-card">
               {analytics.chapters.map(ch => (
                 <Accordion.Item key={ch.id} value={String(ch.id)}>
                   <Accordion.Trigger className="gap-4 px-4">

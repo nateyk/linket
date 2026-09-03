@@ -137,11 +137,11 @@ function GridItem({label, usage}: GridItemProps) {
       message=":used of :total"
       values={{
         used: formattedUsed,
-        total: label.formatValue ? (
-          label.formatValue(usage.total)
-        ) : (
-          <FormattedNumber value={usage.total} notation="compact" />
-        ),
+        total: label.formatValue
+          ? label.formatValue(usage.total as number)
+          : usage.total !== null ? (
+              <FormattedNumber value={usage.total} notation="compact" />
+            ) : null,
       }}
     />
   );
