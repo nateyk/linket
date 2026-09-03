@@ -140,6 +140,8 @@ jobs:
 
       - name: Frontend tests (vitest)
         run: npm test
+        env:
+          LARAVEL_BYPASS_ENV_CHECK: 1
 
       - name: Composer audit (production advisories only)
         run: |
