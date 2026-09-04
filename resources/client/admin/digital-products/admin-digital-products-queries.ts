@@ -11,6 +11,7 @@ export const adminDigitalProductsOptions = (
     perPage: params.per_page ?? '15',
     status: params.status ?? '',
     page: params.page ?? '1',
+    sort: params.sort ?? '',
   };
   return queryOptions({
     queryKey: [...adminDigitalProductsBaseKey, params],

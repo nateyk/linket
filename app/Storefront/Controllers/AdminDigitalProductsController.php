@@ -15,6 +15,7 @@ class AdminDigitalProductsController extends Controller
 
         $search = $request->string('search');
         $status = $request->string('status');
+        $sort = $request->string('sort');
 
         $query = DigitalProduct::query()
             ->with(['creator', 'cover', 'files', 'biolinks'])
@@ -36,14 +37,27 @@ class AdminDigitalProductsController extends Controller
 
         $query->when($status->isNotEmpty(), fn($q) => $q->where('status', $status));
 
+        // Handle sorting: sort=id:desc or price_cents:asc, etc.
+        $allowedSorts = ['id', 'title', 'price_cents', 'created_at', 'status'];
+        if ($sort->isNotEmpty()) {
+            [$field, $direction] = array_pad(explode(':', (string) $sort, 2), 2, 'desc');
+            $field = in_array($field, $allowedSorts, true) ? $field : 'created_at';
+            $direction = strtolower($direction) === 'asc' ? 'asc' : 'desc';
+            $query->orderBy($field, $direction);
+        } else {
+            $query->latest();
+        }
+
         $counters = [
+            'total' => ['total' => DigitalProduct::count()],
             'pending_approval' => ['total' => DigitalProduct::where('status', 'pending_approval')->count()],
             'approved' => ['total' => DigitalProduct::where('status', 'approved')->count()],
             'rejected' => ['total' => DigitalProduct::where('status', 'rejected')->count()],
+            'draft' => ['total' => DigitalProduct::where('status', 'draft')->count()],
         ];
 
-        $products = $query->latest()->paginate((int) $request->input('perPage', 15));
-        $products->appends($request->only(['search', 'status', 'perPage']));
+        $products = $query->paginate((int) $request->input('perPage', 15));
+        $products->appends($request->only(['search', 'status', 'perPage', 'sort']));
 
         $paginated = $products->toArray();
         $paginated['meta'] = array_merge($paginated['meta'] ?? [], ['counters' => $counters]);
