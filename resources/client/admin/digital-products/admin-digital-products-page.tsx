@@ -32,7 +32,7 @@ export function Component() {
   const table = useTable({
     data: items,
     columns: adminDigitalProductColumns,
-    enableMultiRowSelection: false,
+    enableMultiRowSelection: true,
     sort: queryState.sort,
     onSortChange: sort => setQueryState({sort}),
     pagination: {
@@ -86,27 +86,42 @@ export function Component() {
         </div>
       </DashboardLayout.SectionHeader>
 
-      <DashboardLayout.SectionContent>
-        <DashboardLayout.SectionContentHeader>
-          <TableSearchInput placeholder={message('Search by title or creator…')} />
-          <AddFilterPopover
-            filters={AdminDigitalProductsDatatableFilters}
-            className="ml-auto"
-          />
-        </DashboardLayout.SectionContentHeader>
+      <DashboardLayout.SectionContent className="gap-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-1 items-center gap-2">
+            <TableSearchInput placeholder={message('Search by title or creator…')} className="max-w-sm" />
+            <AddFilterPopover
+              filters={AdminDigitalProductsDatatableFilters}
+            />
+          </div>
+          {table.getSelectedRowModel().rows.length > 0 && (
+            <span className="text-sm text-muted-foreground">
+              <Trans
+                message=":count selected"
+                values={{count: table.getSelectedRowModel().rows.length}}
+              />
+            </span>
+          )}
+        </div>
 
         <FilterList filters={AdminDigitalProductsDatatableFilters} />
 
-        <DashboardLayout.SectionScrollContainer>
-          <GenericTable table={table} />
+        <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+          <div className="overflow-x-auto">
+            <div className="[&_thead]:bg-muted/50 [&_thead_tr]:border-b [&_th]:p-4 [&_th]:text-left [&_td]:p-4 [&_tbody_tr]:border-b [&_tbody_tr:last-child]:border-0 [&_tbody_tr:hover]:bg-muted/30">
+              <GenericTable table={table} />
+            </div>
+          </div>
           {!items.length && (
             <DigitalProductsEmptyState
               isFiltering={isFiltering}
               onClearFilters={() => setQueryState({status: null, query: null})}
             />
           )}
-          <TablePagination table={table} />
-        </DashboardLayout.SectionScrollContainer>
+          <div className="border-t bg-card px-4 py-3">
+            <TablePagination table={table} />
+          </div>
+        </div>
       </DashboardLayout.SectionContent>
     </DashboardLayout.MainSection>
   );
@@ -120,7 +135,7 @@ function DigitalProductsEmptyState({
   onClearFilters: () => void;
 }) {
   return (
-    <Empty.Root>
+    <Empty.Root className="border-0">
       <Empty.Header>
         <Empty.Media variant="icon">
           <PackageSearchIcon aria-hidden="true" />

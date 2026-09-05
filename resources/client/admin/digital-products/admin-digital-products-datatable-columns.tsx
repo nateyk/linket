@@ -2,6 +2,7 @@ import {apiClient} from '@common/http/query-client';
 import {showHttpErrorToast} from '@common/http/errors/show-http-error-toast';
 import {Badge} from '@shadcn/badge/badge';
 import {Button} from '@shadcn/button/button';
+import {Checkbox} from '@shadcn/forms/checkbox/checkbox';
 import {Dialog} from '@shadcn/dialog/dialog';
 import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {Field} from '@shadcn/forms/field';
@@ -48,45 +49,70 @@ export type AdminDigitalProduct = {
 
 export const adminDigitalProductColumns: ColumnDef<AdminDigitalProduct>[] = [
   {
-    id: 'id',
-    accessorKey: 'id',
-    enableSorting: true,
-    size: 80,
-    header: ({column}) => (
-      <SortableHeader column={column}>
-        <Trans message="ID" />
-      </SortableHeader>
+    id: 'select',
+    size: 48,
+    header: ({table}) => (
+      <div className="flex justify-center">
+        <Checkbox
+          checked={
+            (table.getIsAllPageRowsSelected() ||
+              (table.getIsSomePageRowsSelected() && 'indeterminate')) as any
+          }
+          onCheckedChange={value => table.toggleAllPageRowsSelected(!!value)}
+          aria-label="Select all"
+        />
+      </div>
     ),
     cell: ({row}) => (
-      <span className="font-mono text-xs tabular-nums">#{row.original.id}</span>
+      <div className="flex justify-center">
+        <Checkbox
+          checked={row.getIsSelected()}
+          onCheckedChange={value => row.toggleSelected(!!value)}
+          aria-label={`Select ${row.original.title}`}
+        />
+      </div>
     ),
+    enableSorting: false,
+    enableHiding: false,
   },
   {
     id: 'title',
     accessorKey: 'title',
     enableSorting: true,
-    size: 300,
-    header: () => <Trans message="Product" />,
+    size: 320,
+    header: ({column}) => (
+      <SortableHeader column={column} className="p-0">
+        <Button
+          variant="ghost"
+          className="flex h-8 items-center gap-1 px-2 font-medium"
+        >
+          <Trans message="Product" />
+        </Button>
+      </SortableHeader>
+    ),
     cell: ({row}) => {
       const product = row.original;
       return (
-        <div className="flex items-center gap-3">
-          {product.cover?.url ? (
-            <img
-              className="size-10 rounded-md object-cover"
-              src={product.cover.url}
-              alt=""
-            />
-          ) : (
-            <div className="flex size-10 items-center justify-center rounded-md bg-muted">
-              <FileIcon className="size-4 text-muted-foreground" aria-hidden="true" />
-            </div>
-          )}
+        <div className="flex items-center gap-3 py-1">
+          <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border bg-muted">
+            {product.cover?.url ? (
+              <img
+                src={product.cover.url}
+                alt=""
+                className="h-12 w-12 object-cover"
+              />
+            ) : (
+              <div className="flex h-12 w-12 items-center justify-center">
+                <FileIcon className="size-5 text-muted-foreground" aria-hidden="true" />
+              </div>
+            )}
+          </div>
           <div className="min-w-0">
-            <p className="truncate text-sm font-medium" title={product.title}>
+            <p className="truncate text-sm font-medium leading-none" title={product.title}>
               {product.title}
             </p>
-            <p className="text-xs text-muted-foreground">
+            <p className="mt-1 text-xs text-muted-foreground">
+              SKU: {String(product.id).padStart(4, '0')} •{' '}
               <Trans
                 message=":count files"
                 values={{count: product.files?.length ?? 0}}
@@ -100,14 +126,14 @@ export const adminDigitalProductColumns: ColumnDef<AdminDigitalProduct>[] = [
   {
     id: 'creator',
     size: 200,
-    header: () => <Trans message="Creator" />,
+    header: () => <span className="text-sm font-medium"><Trans message="Creator" /></span>,
     cell: ({row}) => {
       const creator = row.original.creator;
       return (
         <div className="min-w-0">
-          <p className="truncate text-sm font-medium">{creator?.name ?? '—'}</p>
-          <p className="truncate text-xs text-muted-foreground" title={creator?.email}>
-            {creator?.email}
+          <p className="truncate text-sm font-medium leading-none">{creator?.name ?? '—'}</p>
+          <p className="mt-1 truncate text-xs text-muted-foreground" title={creator?.email}>
+            {creator?.email ?? '—'}
           </p>
         </div>
       );
@@ -117,47 +143,70 @@ export const adminDigitalProductColumns: ColumnDef<AdminDigitalProduct>[] = [
     id: 'price_cents',
     accessorKey: 'price_cents',
     enableSorting: true,
-    size: 110,
+    size: 130,
     header: ({column}) => (
-      <SortableHeader column={column}>
-        <Trans message="Price" />
+      <SortableHeader column={column} className="justify-center p-0">
+        <Button variant="ghost" className="flex h-8 items-center gap-1 px-2 font-medium">
+          <Trans message="Price" />
+        </Button>
       </SortableHeader>
     ),
-    cell: ({row}) =>
-      row.original.price_cents === 0 ? (
-        <Badge variant="secondary">
-          <Trans message="Free" />
-        </Badge>
-      ) : (
-        <span className="text-sm tabular-nums">
-          {formatMoney(row.original.price_cents, row.original.currency)}
-        </span>
-      ),
+    cell: ({row}) => (
+      <div className="text-center">
+        {row.original.price_cents === 0 ? (
+          <Badge variant="secondary" className="font-medium">
+            <Trans message="Free" />
+          </Badge>
+        ) : (
+          <div>
+            <div className="text-sm font-medium tabular-nums">
+              {formatMoney(row.original.price_cents, row.original.currency)}
+            </div>
+            <div className="text-xs text-muted-foreground">one-time</div>
+          </div>
+        )}
+      </div>
+    ),
   },
   {
     id: 'status',
     enableSorting: true,
-    size: 130,
+    size: 140,
     header: ({column}) => (
-      <SortableHeader column={column}>
-        <Trans message="Status" />
+      <SortableHeader column={column} className="justify-center p-0">
+        <Button variant="ghost" className="flex h-8 items-center gap-1 px-2 font-medium">
+          <Trans message="Status" />
+        </Button>
       </SortableHeader>
     ),
-    cell: ({row}) => <ProductStatusBadge status={row.original.status} />,
+    cell: ({row}) => (
+      <div className="flex justify-center">
+        <ProductStatusBadge status={row.original.status} />
+      </div>
+    ),
   },
   {
     id: 'reviews',
-    size: 110,
-    header: () => <Trans message="Reviews" />,
+    size: 120,
+    header: ({column}) => (
+      <SortableHeader column={column} className="justify-center p-0">
+        <Button variant="ghost" className="flex h-8 items-center gap-1 px-2 font-medium">
+          <Trans message="Rating" />
+        </Button>
+      </SortableHeader>
+    ),
     cell: ({row}) => {
       const product = row.original;
       const total = product.reviews_count ?? 0;
       const hidden = product.hidden_reviews_count ?? 0;
       return (
-        <div className="flex flex-col gap-0.5">
+        <div className="flex flex-col items-center">
           <span className="inline-flex items-center gap-1 text-sm">
-            <StarIcon className="size-3.5 text-amber-500" aria-hidden="true" />
-            {total}
+            <StarIcon className="size-4 fill-primary text-primary" aria-hidden="true" />
+            <span className="font-medium">{total === 0 ? '—' : total}</span>
+            {total > 0 && (
+              <span className="text-muted-foreground">({total})</span>
+            )}
           </span>
           {hidden > 0 && (
             <span className="text-xs text-muted-foreground">
@@ -172,29 +221,33 @@ export const adminDigitalProductColumns: ColumnDef<AdminDigitalProduct>[] = [
     id: 'created_at',
     accessorKey: 'created_at',
     enableSorting: true,
-    size: 160,
+    size: 150,
     header: ({column}) => (
-      <SortableHeader column={column}>
-        <Trans message="Submitted" />
+      <SortableHeader column={column} className="justify-center p-0">
+        <Button variant="ghost" className="flex h-8 items-center gap-1 px-2 font-medium">
+          <Trans message="Submitted" />
+        </Button>
       </SortableHeader>
     ),
-    cell: ({row}) =>
-      row.original.created_at ? (
-        <span className="text-sm text-muted-foreground">
-          <FormattedDate date={row.original.created_at} />
-        </span>
-      ) : (
-        <span className="text-muted-foreground">—</span>
-      ),
+    cell: ({row}) => {
+      const date = row.original.created_at;
+      if (!date) return <span className="text-center text-sm text-muted-foreground">—</span>;
+      return (
+        <div className="text-center">
+          <div className="text-sm font-medium">
+            <FormattedDate date={date} />
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {new Date(date).toLocaleDateString()}
+          </div>
+        </div>
+      );
+    },
   },
   {
     id: 'actions',
-    size: 56,
-    header: () => (
-      <span className="sr-only">
-        <Trans message="Actions" />
-      </span>
-    ),
+    size: 80,
+    header: () => <span className="sr-only"><Trans message="Actions" /></span>,
     cell: ({row}) => <ProductActionsButton product={row.original} />,
   },
 ];
@@ -235,13 +288,14 @@ export function ProductActionsButton({
 
   return (
     <>
-      <div className="flex justify-end">
+      <div className="flex justify-center">
         <Dropdown.Root>
           <Dropdown.Trigger
             render={
               <Button
                 variant="ghost"
                 size="icon-sm"
+                className="h-8 w-8"
                 aria-label={`Actions for ${product.title}`}
               />
             }
@@ -383,7 +437,7 @@ export function ProductStatusBadge({
 }) {
   if (status === 'approved') {
     return (
-      <Badge variant="positive">
+      <Badge variant="positive" className="font-medium">
         <BadgeCheckIcon className="size-3.5" aria-hidden="true" />
         <Trans message="Approved" />
       </Badge>
@@ -391,7 +445,7 @@ export function ProductStatusBadge({
   }
   if (status === 'rejected') {
     return (
-      <Badge variant="destructive">
+      <Badge variant="destructive" className="font-medium">
         <XCircleIcon className="size-3.5" aria-hidden="true" />
         <Trans message="Rejected" />
       </Badge>
@@ -399,14 +453,14 @@ export function ProductStatusBadge({
   }
   if (status === 'draft') {
     return (
-      <Badge variant="secondary">
+      <Badge variant="secondary" className="font-medium">
         <FileIcon className="size-3.5" aria-hidden="true" />
         <Trans message="Draft" />
       </Badge>
     );
   }
   return (
-    <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-300">
+    <Badge variant="outline" className="border-amber-200 bg-amber-50 font-medium text-amber-700 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-300">
       <ClockIcon className="size-3.5" aria-hidden="true" />
       <Trans message="Pending" />
     </Badge>
