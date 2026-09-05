@@ -247,6 +247,12 @@ if [[ $MIGRATE_RC -eq 0 ]]; then
   # Migrations can mutate cached state (e.g. the settings cache); make sure
   # the live app never serves stale cached values after a migration.
   (cd "$RELEASE_DIR" && $PHP_BIN artisan cache:clear --no-interaction 2>&1 | tail -n 3)
+
+  # Run UploadBackendsSeeder to ensure all upload types have backends configured
+  log "Running UploadBackendsSeeder to configure upload type backends"
+  (cd "$RELEASE_DIR" && $PHP_BIN artisan db:seed --class=UploadBackendsSeeder --force --no-interaction 2>&1 | tail -n 10)
+  # Clear settings cache again after seeder updates settings
+  (cd "$RELEASE_DIR" && $PHP_BIN artisan cache:forget settings.public 2>&1 | tail -n 3 || true)
 fi
 set -e
 if [[ $MIGRATE_RC -ne 0 ]]; then
