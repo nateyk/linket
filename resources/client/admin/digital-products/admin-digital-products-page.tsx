@@ -107,8 +107,8 @@ export function Component() {
         <FilterList filters={AdminDigitalProductsDatatableFilters} />
 
         <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
-          <div className="overflow-x-auto">
-            <div className="[&_thead]:bg-muted/50 [&_thead_tr]:border-b [&_th]:p-4 [&_th]:text-left [&_td]:p-4 [&_tbody_tr]:border-b [&_tbody_tr:last-child]:border-0 [&_tbody_tr:hover]:bg-muted/30">
+          <div className="overflow-x-auto [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-transparent">
+            <div className="[&_thead]:bg-muted/30 [&_thead_tr]:border-b [&_th]:px-4 [&_th]:py-3 [&_th]:text-left [&_th]:font-medium [&_td]:px-4 [&_td]:py-3 [&_tbody_tr]:border-b [&_tbody_tr:last-child]:border-0 [&_tbody_tr:hover]:bg-muted/30 [&_tbody_tr]:transition-colors">
               <GenericTable table={table} />
             </div>
           </div>

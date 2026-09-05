@@ -50,7 +50,7 @@ export type AdminDigitalProduct = {
 export const adminDigitalProductColumns: ColumnDef<AdminDigitalProduct>[] = [
   {
     id: 'select',
-    size: 48,
+    size: 40,
     header: ({table}) => (
       <div className="flex justify-center">
         <Checkbox
@@ -79,7 +79,7 @@ export const adminDigitalProductColumns: ColumnDef<AdminDigitalProduct>[] = [
     id: 'title',
     accessorKey: 'title',
     enableSorting: true,
-    size: 320,
+    size: 260,
     header: ({column}) => (
       <SortableHeader column={column} className="p-0">
         <Button
@@ -107,16 +107,12 @@ export const adminDigitalProductColumns: ColumnDef<AdminDigitalProduct>[] = [
               </div>
             )}
           </div>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium leading-none" title={product.title}>
+          <div className="min-w-0 max-w-[180px] sm:max-w-[220px]">
+            <p className="line-clamp-2 text-sm font-medium leading-tight break-words" title={product.title}>
               {product.title}
             </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              SKU: {String(product.id).padStart(4, '0')} •{' '}
-              <Trans
-                message=":count files"
-                values={{count: product.files?.length ?? 0}}
-              />
+            <p className="mt-1 truncate text-xs text-muted-foreground">
+              SKU: {String(product.id).padStart(4, '0')} • {product.files?.length ?? 0} files
             </p>
           </div>
         </div>
@@ -125,7 +121,7 @@ export const adminDigitalProductColumns: ColumnDef<AdminDigitalProduct>[] = [
   },
   {
     id: 'creator',
-    size: 200,
+    size: 160,
     header: () => <span className="text-sm font-medium"><Trans message="Creator" /></span>,
     cell: ({row}) => {
       const creator = row.original.creator;
@@ -143,7 +139,7 @@ export const adminDigitalProductColumns: ColumnDef<AdminDigitalProduct>[] = [
     id: 'price_cents',
     accessorKey: 'price_cents',
     enableSorting: true,
-    size: 130,
+    size: 110,
     header: ({column}) => (
       <SortableHeader column={column} className="justify-center p-0">
         <Button variant="ghost" className="flex h-8 items-center gap-1 px-2 font-medium">
@@ -158,12 +154,9 @@ export const adminDigitalProductColumns: ColumnDef<AdminDigitalProduct>[] = [
             <Trans message="Free" />
           </Badge>
         ) : (
-          <div>
-            <div className="text-sm font-medium tabular-nums">
-              {formatMoney(row.original.price_cents, row.original.currency)}
-            </div>
-            <div className="text-xs text-muted-foreground">one-time</div>
-          </div>
+          <span className="text-sm font-medium tabular-nums">
+            {formatMoney(row.original.price_cents, row.original.currency)}
+          </span>
         )}
       </div>
     ),
@@ -171,7 +164,7 @@ export const adminDigitalProductColumns: ColumnDef<AdminDigitalProduct>[] = [
   {
     id: 'status',
     enableSorting: true,
-    size: 140,
+    size: 120,
     header: ({column}) => (
       <SortableHeader column={column} className="justify-center p-0">
         <Button variant="ghost" className="flex h-8 items-center gap-1 px-2 font-medium">
@@ -187,7 +180,7 @@ export const adminDigitalProductColumns: ColumnDef<AdminDigitalProduct>[] = [
   },
   {
     id: 'reviews',
-    size: 120,
+    size: 100,
     header: ({column}) => (
       <SortableHeader column={column} className="justify-center p-0">
         <Button variant="ghost" className="flex h-8 items-center gap-1 px-2 font-medium">
@@ -221,7 +214,7 @@ export const adminDigitalProductColumns: ColumnDef<AdminDigitalProduct>[] = [
     id: 'created_at',
     accessorKey: 'created_at',
     enableSorting: true,
-    size: 150,
+    size: 130,
     header: ({column}) => (
       <SortableHeader column={column} className="justify-center p-0">
         <Button variant="ghost" className="flex h-8 items-center gap-1 px-2 font-medium">
@@ -246,7 +239,7 @@ export const adminDigitalProductColumns: ColumnDef<AdminDigitalProduct>[] = [
   },
   {
     id: 'actions',
-    size: 80,
+    size: 60,
     header: () => <span className="sr-only"><Trans message="Actions" /></span>,
     cell: ({row}) => <ProductActionsButton product={row.original} />,
   },
