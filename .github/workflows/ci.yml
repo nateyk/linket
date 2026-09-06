@@ -227,6 +227,7 @@ jobs:
 
       - name: Upload CI artifact for CD (main only)
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: linket-ci-${{ github.sha }}
@@ -237,4 +238,4 @@ jobs:
             RELEASE_ID
             CI_META
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 3
