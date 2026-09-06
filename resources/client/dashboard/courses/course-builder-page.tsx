@@ -213,9 +213,14 @@ function CourseBuilder() {
     const maxNum = existingNums.length ? Math.max(...existingNums) : 0;
     const nextNum = Math.max(maxNum + 1, course.chapters.length + 1);
     const title = `Chapter ${nextNum}`;
-    await apiClient.post(`/api/v1/courses/${course.id}/chapters`, {title});
-    await load();
-    toast.positive('Chapter added');
+    try {
+      const res = await apiClient.post(`/api/v1/courses/${course.id}/chapters`, {title});
+      const newChapter = (res.data as any).data as Chapter;
+      setCourse(c => c ? {...c, chapters: [...c.chapters, {...newChapter, lessons: newChapter.lessons ?? []}]} : c);
+      toast.positive('Chapter added');
+    } catch (e: any) {
+      toast.danger(e.message ?? 'Unable to add chapter');
+    }
   };
 
   const addLesson = async (chapterId: number) => {
@@ -228,17 +233,29 @@ function CourseBuilder() {
       .filter(n => n > 0);
     const maxNum = existingNums.length ? Math.max(...existingNums) : 0;
     const nextNum = Math.max(maxNum + 1, (chapter?.lessons.length ?? 0) + 1);
-    const res = await apiClient.post(
-      `/api/v1/course-chapters/${chapterId}/lessons`,
-      {
-        title: `Lesson ${nextNum}`,
-      },
-    );
-    await load();
-    const lesson = (res.data as any).data as Lesson;
-    setSelectedLesson(lesson);
-    setSelectedChapterId(chapterId);
-    setMobileSurface('editor');
+    try {
+      const res = await apiClient.post(
+        `/api/v1/course-chapters/${chapterId}/lessons`,
+        {
+          title: `Lesson ${nextNum}`,
+        },
+      );
+      const lesson = (res.data as any).data as Lesson;
+      setCourse(c => {
+        if (!c) return c;
+        return {
+          ...c,
+          chapters: c.chapters.map(ch =>
+            ch.id === chapterId ? {...ch, lessons: [...ch.lessons, lesson]} : ch,
+          ),
+        };
+      });
+      setSelectedLesson(lesson);
+      setSelectedChapterId(chapterId);
+      setMobileSurface('editor');
+    } catch (e: any) {
+      toast.danger(e.message ?? 'Unable to add lesson');
+    }
   };
 
   const updateChapterTitle = async (chapterId: number, title: string) => {
@@ -266,18 +283,30 @@ function CourseBuilder() {
     if (!pendingDelete || deleting) return;
 
     setDeleting(true);
+    const toDelete = pendingDelete;
+    const prevCourse = course;
     try {
       const endpoint =
-        pendingDelete.type === 'chapter'
-          ? `/api/v1/course-chapters/${pendingDelete.item.id}`
-          : `/api/v1/course-lessons/${pendingDelete.item.id}`;
+        toDelete.type === 'chapter'
+          ? `/api/v1/course-chapters/${toDelete.item.id}`
+          : `/api/v1/course-lessons/${toDelete.item.id}`;
       await apiClient.delete(endpoint);
-      await load();
+      setCourse(c => {
+        if (!c) return c;
+        if (toDelete.type === 'chapter') {
+          return {...c, chapters: c.chapters.filter(ch => ch.id !== toDelete.item.id)};
+        }
+        return {
+          ...c,
+          chapters: c.chapters.map(ch => ({
+            ...ch,
+            lessons: ch.lessons.filter(l => l.id !== toDelete.item.id),
+          })),
+        };
+      });
       if (
-        (pendingDelete.type === 'lesson' &&
-          selectedLesson?.id === pendingDelete.item.id) ||
-        (pendingDelete.type === 'chapter' &&
-          selectedLesson?.chapter_id === pendingDelete.item.id)
+        (toDelete.type === 'lesson' && selectedLesson?.id === toDelete.item.id) ||
+        (toDelete.type === 'chapter' && selectedLesson?.chapter_id === toDelete.item.id)
       ) {
         setSelectedLesson(null);
         setSelectedChapterId(null);
@@ -285,6 +314,7 @@ function CourseBuilder() {
       }
       setPendingDelete(null);
     } catch {
+      setCourse(prevCourse ?? null);
       toast.danger('Unable to delete');
     } finally {
       setDeleting(false);
@@ -293,10 +323,27 @@ function CourseBuilder() {
 
   const toggleLessonStatus = async (lesson: Lesson) => {
     const newStatus = lesson.status === 'published' ? 'draft' : 'published';
-    await apiClient.put(`/api/v1/course-lessons/${lesson.id}`, {
-      status: newStatus,
+    const prevCourse = course;
+    setCourse(c => {
+      if (!c) return c;
+      return {
+        ...c,
+        chapters: c.chapters.map(ch => ({
+          ...ch,
+          lessons: ch.lessons.map(l => (l.id === lesson.id ? {...l, status: newStatus} : l)),
+        })),
+      };
     });
-    await load();
+    setSelectedLesson(l => (l?.id === lesson.id ? {...l, status: newStatus} : l));
+    try {
+      await apiClient.put(`/api/v1/course-lessons/${lesson.id}`, {
+        status: newStatus,
+      });
+    } catch (e: any) {
+      setCourse(prevCourse ?? null);
+      setSelectedLesson(lesson);
+      toast.danger(e.message ?? 'Unable to update status');
+    }
   };
 
   const reorderChapters = async (oldIndex: number, newIndex: number) => {
@@ -437,7 +484,6 @@ function CourseBuilder() {
         target_chapter_id: targetChapterId,
         position: 0,
       });
-      await load();
       return true;
     } catch (e: any) {
       setCourse(previousCourse);
@@ -456,7 +502,7 @@ function CourseBuilder() {
         `/api/v1/digital-products/${course.digital_product_id}/submit`,
       );
       toast.positive('Course submitted for review');
-      await load();
+      setCourse(c => (c ? {...c, product: {...c.product, status: 'pending_approval'}} : c));
     } catch (e: any) {
       toast.danger(e.message ?? 'Unable to submit course');
     } finally {
@@ -884,18 +930,24 @@ function CourseBuilder() {
                                                 onClick={async () => {
                                                   if (reordering) return;
                                                   try {
-                                                    setReordering(
-                                                      `duplicate-${lesson.id}`,
-                                                    );
-                                                    await apiClient.post(
+                                                    setReordering(`duplicate-${lesson.id}`);
+                                                    const res = await apiClient.post(
                                                       `/api/v1/course-lessons/${lesson.id}/duplicate`,
                                                     );
-                                                    await load();
+                                                    const dup = (res.data as any).data as Lesson;
+                                                    setCourse(c => {
+                                                      if (!c) return c;
+                                                      return {
+                                                        ...c,
+                                                        chapters: c.chapters.map(ch =>
+                                                          ch.id === lesson.chapter_id
+                                                            ? {...ch, lessons: [...ch.lessons, dup].sort((a,b)=>a.sort_order-b.sort_order)}
+                                                            : ch,
+                                                        ),
+                                                      };
+                                                    });
                                                   } catch (e: any) {
-                                                    toast.danger(
-                                                      e?.message ??
-                                                        'Unable to duplicate lesson',
-                                                    );
+                                                    toast.danger(e?.message ?? 'Unable to duplicate lesson');
                                                   } finally {
                                                     setReordering(undefined);
                                                   }

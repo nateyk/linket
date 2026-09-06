@@ -316,7 +316,7 @@ describe('course settings and builder polish', () => {
     );
 
     expect(source).toMatch(
-      /pendingDelete\.type === 'chapter'[\s\S]*?selectedLesson\?\.chapter_id === pendingDelete\.item\.id/,
+      /(pendingDelete|toDelete)\.type === 'chapter'[\s\S]*?selectedLesson\?\.chapter_id === (pendingDelete|toDelete)\.item\.id/,
     );
     expect(source).toContain("setMobileSurface('curriculum')");
   });
