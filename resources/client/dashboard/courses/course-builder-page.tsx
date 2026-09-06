@@ -29,7 +29,7 @@ import {
   ScrollAreaScrollBar,
   ScrollAreaViewport,
 } from '@shadcn/scroll-area/scroll-area';
-import {Spinner} from '@shadcn/spinner/spinner';
+import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {Switch} from '@shadcn/forms/switch/switch';
 import {FileDropzone} from '@common/ui/file-dropzone';
 import {Trans} from '@ui/i18n/trans';
@@ -513,13 +513,32 @@ function CourseBuilder() {
   if (loading) {
     return (
       <DashboardLayout.MainSection>
-        <DashboardLayout.SectionContent className="flex flex-1 items-center justify-center p-6">
-          <div
-            role="status"
-            className="flex items-center gap-2 text-sm text-muted-foreground"
-          >
-            <Spinner className="size-5" />
-            <span>Loading course builder</span>
+        <DashboardLayout.SectionHeader>
+          <DashboardLayout.SidebarToggle />
+          <DashboardLayout.SectionTitle>
+            <GraduationCapIcon className="size-5" />
+            <Trans message="Course Builder" />
+          </DashboardLayout.SectionTitle>
+        </DashboardLayout.SectionHeader>
+        <DashboardLayout.SectionContent className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
+          <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+            <div className="flex min-h-0 w-full min-w-0 flex-col overflow-hidden border-b bg-card p-3 lg:w-[36%] lg:border-r lg:border-b-0">
+              <div className="flex items-center justify-between gap-2 border-b pb-3">
+                <Skeleton className="h-5 w-24" />
+                <Skeleton className="h-8 w-28" />
+              </div>
+              <div className="space-y-3 p-3">
+                <Skeleton className="h-16 w-full rounded-card" />
+                <Skeleton className="h-12 w-full rounded-card" />
+                <Skeleton className="h-12 w-full rounded-card" />
+                <Skeleton className="h-9 w-28" />
+              </div>
+            </div>
+            <div className="flex min-h-0 flex-1 flex-col bg-muted/10 p-4">
+              <Skeleton className="h-6 w-40" />
+              <Skeleton className="mt-4 h-32 w-full rounded-card" />
+              <Skeleton className="mt-4 h-20 w-full rounded-card" />
+            </div>
           </div>
         </DashboardLayout.SectionContent>
       </DashboardLayout.MainSection>

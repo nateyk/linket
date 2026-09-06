@@ -331,13 +331,13 @@ describe('course builder UI polish', () => {
       'utf8',
     );
 
-    expect(source).toContain("import {Spinner} from '@shadcn/spinner/spinner'");
+    expect(source).toContain("import {Skeleton} from '@shadcn/skeleton/skeleton'");
     expect(source).toContain('@shadcn/scroll-area/scroll-area');
-    expect(source).toContain('role="status"');
     expect(source).toContain('<ScrollArea className="min-h-0 flex-1">');
     expect(source).toContain('<ScrollAreaViewport className="p-3">');
     expect(source).toContain('<ScrollAreaScrollBar onlyShowOnHover />');
     expect(source).toContain('group-data-panel-open:rotate-180');
+    expect(source).toContain('Skeleton className="h-5 w-24"');
   });
 
   test('uses an icon back action and does not expose the internal instructor ID', () => {
