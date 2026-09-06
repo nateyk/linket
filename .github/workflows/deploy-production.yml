@@ -237,7 +237,9 @@ jobs:
           cat "$GITHUB_OUTPUT"
 
       - name: Download CI artifact (gated path)
+        id: dl
         if: needs.resolve.outputs.source == 'ci_artifact'
+        continue-on-error: true
         uses: dawidd6/action-download-artifact@v6
         with:
           workflow: ci.yml
@@ -246,7 +248,66 @@ jobs:
           path: ./artifact
           check_artifacts: true
           search_artifacts: false
-          if_no_artifact_found: error
+          if_no_artifact_found: warn
+
+      - name: Checkout for fallback build (quota)
+        if: needs.resolve.outputs.source == 'ci_artifact' && steps.dl.outcome == 'failure'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.eff.outputs.sha }}
+          path: /tmp/build-fallback
+
+      - name: Setup PHP 8.4 (fallback)
+        if: needs.resolve.outputs.source == 'ci_artifact' && steps.dl.outcome == 'failure'
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: mbstring, pdo_mysql, gd, zip, bcmath, exif, redis, curl, openssl, fileinfo
+          coverage: none
+          tools: composer:v2
+
+      - name: Setup Node 20 (fallback)
+        if: needs.resolve.outputs.source == 'ci_artifact' && steps.dl.outcome == 'failure'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: /tmp/build-fallback/package-lock.json
+
+      - name: Fallback build when CI artifact missing (quota)
+        if: needs.resolve.outputs.source == 'ci_artifact' && steps.dl.outcome == 'failure'
+        run: |
+          set -euo pipefail
+          echo "CI artifact missing (quota hit) — building release artifact locally for ${{ steps.eff.outputs.sha }}"
+          SHA="${{ steps.eff.outputs.sha }}"
+          RELEASE_ID="${{ steps.eff.outputs.release_id }}"
+          ARTIFACT_NAME="${{ steps.eff.outputs.artifact_name }}"
+          cd /tmp/build-fallback
+          composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction --no-progress
+          npm ci
+          npm run build
+          echo "$SHA" > RELEASE_SHA
+          echo "$RELEASE_ID" > RELEASE_ID
+          date -u +%Y-%m-%dT%H:%M:%SZ > BUILD_AT
+          mkdir -p "$GITHUB_WORKSPACE/artifact"
+          tar -czf "$GITHUB_WORKSPACE/artifact/${ARTIFACT_NAME}.tar.gz" \
+            --exclude='.git' --exclude='.gitignore' --exclude='node_modules' \
+            --exclude='storage/app/*' --exclude='storage/framework/cache/*' \
+            --exclude='storage/framework/sessions/*' --exclude='storage/framework/views/*' \
+            --exclude='storage/logs/*' --exclude='storage/tus/*' \
+            --exclude='storage/clockwork/*' --exclude='storage/pail/*' \
+            --exclude='bootstrap/cache/*.php' \
+            --exclude='.env' --exclude='.env.*' \
+            --exclude='public/hot' --exclude='.phpunit.cache' --exclude='coverage' \
+            --exclude='*.sql' --exclude='*.sql.gz' --exclude='.ddev' --exclude='.agents' --exclude='.superpowers' \
+            --exclude='linket-*.tar.gz' --exclude='*.tar.gz' \
+            --exclude='public/storage/*' \
+            .
+          echo "$SHA" > "$GITHUB_WORKSPACE/artifact/RELEASE_SHA"
+          echo "$RELEASE_ID" > "$GITHUB_WORKSPACE/artifact/RELEASE_ID"
+          date -u +%Y-%m-%dT%H:%M:%SZ > "$GITHUB_WORKSPACE/artifact/BUILD_AT"
+          sha256sum "$GITHUB_WORKSPACE/artifact/${ARTIFACT_NAME}.tar.gz" > "$GITHUB_WORKSPACE/artifact/${ARTIFACT_NAME}.tar.gz.sha256"
+          ls -lh "$GITHUB_WORKSPACE/artifact/"*
 
       - name: Download dispatch artifact
         if: needs.resolve.outputs.source == 'dispatch_build'
