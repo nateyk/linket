@@ -204,17 +204,34 @@ function CourseBuilder() {
 
   const addChapter = async () => {
     if (!course) return;
-    const title = `Chapter ${course.chapters.length + 1}`;
+    const existingNums = course.chapters
+      .map(c => {
+        const m = c.title.match(/^Chapter\s+(\d+)$/);
+        return m ? parseInt(m[1], 10) : 0;
+      })
+      .filter(n => n > 0);
+    const maxNum = existingNums.length ? Math.max(...existingNums) : 0;
+    const nextNum = Math.max(maxNum + 1, course.chapters.length + 1);
+    const title = `Chapter ${nextNum}`;
     await apiClient.post(`/api/v1/courses/${course.id}/chapters`, {title});
     await load();
     toast.positive('Chapter added');
   };
 
   const addLesson = async (chapterId: number) => {
+    const chapter = course?.chapters.find(c => c.id === chapterId);
+    const existingNums = (chapter?.lessons ?? [])
+      .map(l => {
+        const m = l.title.match(/^Lesson\s+(\d+)$/);
+        return m ? parseInt(m[1], 10) : 0;
+      })
+      .filter(n => n > 0);
+    const maxNum = existingNums.length ? Math.max(...existingNums) : 0;
+    const nextNum = Math.max(maxNum + 1, (chapter?.lessons.length ?? 0) + 1);
     const res = await apiClient.post(
       `/api/v1/course-chapters/${chapterId}/lessons`,
       {
-        title: `Lesson ${Date.now().toString().slice(-3)}`,
+        title: `Lesson ${nextNum}`,
       },
     );
     await load();
