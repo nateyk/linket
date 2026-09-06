@@ -245,7 +245,7 @@ function ProductCard({
   const editPath = isCourse ? `/dashboard/my-products/${product.id}/course` : `/dashboard/my-products/${product.id}/edit`;
 
   return (
-    <Card.Root className="group gap-0 overflow-hidden py-0 shadow-xs transition-shadow hover:shadow-md">
+    <Card.Root className="group flex h-full flex-col gap-0 overflow-hidden py-0 shadow-xs transition-shadow hover:shadow-md">
       <Card.Header className="relative block p-0">
         <Link
           to={editPath}
@@ -271,9 +271,9 @@ function ProductCard({
         </div>
       </Card.Header>
 
-      <Card.Content className="flex flex-col gap-3 p-4 pb-0">
+      <Card.Content className="flex flex-1 flex-col gap-3 p-4 pb-0">
         <div className="flex min-w-0 flex-col gap-1">
-          <div className="flex items-center gap-2">
+          <div className="flex min-h-5 items-center gap-2">
             {isCourse && (
               <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
                 <Trans message="Course" />
@@ -310,7 +310,7 @@ function ProductCard({
           </p>
         </div>
 
-        <Card.Description className="line-clamp-2 min-h-10 leading-5">
+        <Card.Description className="line-clamp-2 min-h-10 flex-1 leading-5">
           {product.description ? (
             plainTextDescription(product.description)
           ) : (
