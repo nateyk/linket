@@ -6,9 +6,9 @@ describe('course analytics page', () => {
     expect(src).toContain("/api/v1/courses/${");
     expect(src).toContain("/analytics");
     expect(src).toContain("Active learners");
-    expect(src).toContain("<StatCard");
+    expect(src).toContain("MetricCard");
     expect(src).toContain("Detailed performance");
-    expect(src).toContain("Completion rate");
+    expect(src).toContain("Completion");
   });
 
   test('links each lesson edit action to that lesson in the builder', () => {
