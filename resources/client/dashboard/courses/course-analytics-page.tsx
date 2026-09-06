@@ -92,7 +92,6 @@ export function CourseAnalyticsPage() {
         <DashboardLayout.SectionHeader>
           <DashboardLayout.SidebarToggle />
           <DashboardLayout.SectionTitle>
-            <BarChart3Icon className="size-5" />
             <Trans message="Course Analytics" />
           </DashboardLayout.SectionTitle>
         </DashboardLayout.SectionHeader>
@@ -117,7 +116,6 @@ export function CourseAnalyticsPage() {
         <DashboardLayout.SectionHeader>
           <DashboardLayout.SidebarToggle />
           <DashboardLayout.SectionTitle>
-            <BarChart3Icon className="size-5" />
             <Trans message="Course Analytics" />
           </DashboardLayout.SectionTitle>
         </DashboardLayout.SectionHeader>
@@ -138,7 +136,6 @@ export function CourseAnalyticsPage() {
         <DashboardLayout.SectionHeader>
           <DashboardLayout.SidebarToggle />
           <DashboardLayout.SectionTitle>
-            <BarChart3Icon className="size-5" />
             <Trans message="Course Analytics" />
           </DashboardLayout.SectionTitle>
         </DashboardLayout.SectionHeader>
@@ -168,7 +165,6 @@ export function CourseAnalyticsPage() {
       <DashboardLayout.SectionHeader>
         <DashboardLayout.SidebarToggle />
         <DashboardLayout.SectionTitle>
-          <BarChart3Icon className="size-5" />
           <Trans message="Course Analytics" />
         </DashboardLayout.SectionTitle>
         <Button variant="outline" size="sm" data-icon onClick={() => navigate(`/dashboard/my-products/${productId}/course`)}>
@@ -188,8 +184,7 @@ export function CourseAnalyticsPage() {
 
         <div className="overflow-hidden rounded-xl border bg-card shadow-xs">
           <div className="flex items-center justify-between border-b bg-muted/20 px-5 py-3">
-            <h2 className="flex items-center gap-2 text-sm font-semibold">
-              <BarChart3Icon className="size-4 text-muted-foreground" />
+            <h2 className="text-sm font-semibold">
               <Trans message="Detailed performance" />
             </h2>
             <span className="rounded-full bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground ring-1 ring-border">

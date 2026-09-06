@@ -516,7 +516,6 @@ function CourseBuilder() {
         <DashboardLayout.SectionHeader>
           <DashboardLayout.SidebarToggle />
           <DashboardLayout.SectionTitle>
-            <GraduationCapIcon className="size-5" />
             <Trans message="Course Builder" />
           </DashboardLayout.SectionTitle>
         </DashboardLayout.SectionHeader>
@@ -568,7 +567,6 @@ function CourseBuilder() {
       <DashboardLayout.SectionHeader>
         <DashboardLayout.SidebarToggle />
         <DashboardLayout.SectionTitle>
-          <GraduationCapIcon className="size-5" />
           <Trans message="Course Builder" />
           {course.product.status === 'approved' && (
             <Badge variant="positive" className="ml-2">
