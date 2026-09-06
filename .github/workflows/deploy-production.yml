@@ -255,7 +255,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ steps.eff.outputs.sha }}
-          path: /tmp/build-fallback
+          path: build-fallback
 
       - name: Setup PHP 8.4 (fallback)
         if: always() && needs.resolve.outputs.source == 'ci_artifact'
@@ -272,7 +272,7 @@ jobs:
         with:
           node-version: "20"
           cache: npm
-          cache-dependency-path: /tmp/build-fallback/package-lock.json
+          cache-dependency-path: build-fallback/package-lock.json
 
       - name: Fallback build when CI artifact missing (quota)
         if: always() && needs.resolve.outputs.source == 'ci_artifact'
@@ -287,7 +287,7 @@ jobs:
           SHA="${{ steps.eff.outputs.sha }}"
           RELEASE_ID="${{ steps.eff.outputs.release_id }}"
           ARTIFACT_NAME="${{ steps.eff.outputs.artifact_name }}"
-          cd /tmp/build-fallback
+          cd "$GITHUB_WORKSPACE/build-fallback"
           composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction --no-progress
           npm ci
           npm run build
