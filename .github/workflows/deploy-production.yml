@@ -251,14 +251,14 @@ jobs:
           if_no_artifact_found: warn
 
       - name: Checkout for fallback build (quota)
-        if: needs.resolve.outputs.source == 'ci_artifact' && steps.dl.outcome == 'failure'
+        if: always() && needs.resolve.outputs.source == 'ci_artifact'
         uses: actions/checkout@v4
         with:
           ref: ${{ steps.eff.outputs.sha }}
           path: /tmp/build-fallback
 
       - name: Setup PHP 8.4 (fallback)
-        if: needs.resolve.outputs.source == 'ci_artifact' && steps.dl.outcome == 'failure'
+        if: always() && needs.resolve.outputs.source == 'ci_artifact'
         uses: shivammathur/setup-php@v2
         with:
           php-version: "8.4"
@@ -267,7 +267,7 @@ jobs:
           tools: composer:v2
 
       - name: Setup Node 20 (fallback)
-        if: needs.resolve.outputs.source == 'ci_artifact' && steps.dl.outcome == 'failure'
+        if: always() && needs.resolve.outputs.source == 'ci_artifact'
         uses: actions/setup-node@v4
         with:
           node-version: "20"
@@ -275,9 +275,14 @@ jobs:
           cache-dependency-path: /tmp/build-fallback/package-lock.json
 
       - name: Fallback build when CI artifact missing (quota)
-        if: needs.resolve.outputs.source == 'ci_artifact' && steps.dl.outcome == 'failure'
+        if: always() && needs.resolve.outputs.source == 'ci_artifact'
         run: |
           set -euo pipefail
+          if ls "$GITHUB_WORKSPACE/artifact"/*.tar.gz >/dev/null 2>&1; then
+            echo "Artifact already present from CI, skipping fallback build"
+            ls -lh "$GITHUB_WORKSPACE/artifact/"*
+            exit 0
+          fi
           echo "CI artifact missing (quota hit) — building release artifact locally for ${{ steps.eff.outputs.sha }}"
           SHA="${{ steps.eff.outputs.sha }}"
           RELEASE_ID="${{ steps.eff.outputs.release_id }}"
