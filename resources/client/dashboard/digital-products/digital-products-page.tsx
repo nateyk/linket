@@ -168,7 +168,7 @@ export function Component() {
           {loading ? (
             <ProductSkeleton />
           ) : products.length ? (
-            <div className="grid grid-cols-1 gap-5 sm:[grid-template-columns:repeat(auto-fill,minmax(280px,340px))]">
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {products.map(product => (
                 <ProductCard
                   key={product.id}
@@ -642,7 +642,7 @@ function EmptyProducts({onNewProduct}: {onNewProduct: () => void}) {
 
 function ProductSkeleton() {
   return (
-    <div className="grid grid-cols-1 gap-5 sm:[grid-template-columns:repeat(auto-fill,minmax(280px,340px))]">
+    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
       {[1, 2, 3].map(item => (
         <Card.Root key={item} className="gap-0 overflow-hidden py-0">
           <Card.Header className="p-0">
