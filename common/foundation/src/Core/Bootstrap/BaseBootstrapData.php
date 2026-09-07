@@ -200,6 +200,17 @@ class BaseBootstrapData implements BootstrapData
         $configForFrontend = [];
 
         foreach (Uploads::getAllTypes() as $uploadType) {
+            $backendIds = $uploadType->backendIds;
+            // Fallback to local backend when no backends configured (handles missing courseResources/courseVideos backend)
+            if (empty($backendIds)) {
+                $fallback = Arr::first(
+                    Uploads::getAllBackends(),
+                    fn($backend) => $backend->type === 'local',
+                ) ?? Arr::first(Uploads::getAllBackends());
+                if ($fallback) {
+                    $backendIds = [$fallback->id];
+                }
+            }
             $configForFrontend[$uploadType->name] = [
                 'visibility' => $uploadType->visibility,
                 'max_file_size' => $uploadType->maxFileSize(),
@@ -215,17 +226,22 @@ class BaseBootstrapData implements BootstrapData
                         );
                     }
 
+                    // final fallback if no backends at all
+                    if (!$backend) {
+                        $backend = Arr::first(Uploads::getAllBackends());
+                    }
+
                     $data = [
                         'id' => $backendId,
-                        'driver' => $backend->baseDriver,
+                        'driver' => $backend ? $backend->baseDriver : 'local',
                     ];
 
-                    if ($backend->isS3()) {
+                    if ($backend && $backend->isS3()) {
                         $data['direct_upload'] = $backend->usesDirectUpload();
                     }
 
                     return $data;
-                }, $uploadType->backendIds),
+                }, $backendIds),
             ];
         }
 

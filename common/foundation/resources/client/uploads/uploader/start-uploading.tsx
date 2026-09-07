@@ -141,10 +141,18 @@ function chooseBackend(uploadType: keyof typeof UploadType) {
   const uploadingTypes = getBootstrapData().uploading_types;
   if (uploadingTypes && uploadType) {
     const uploadTypeConfig = uploadingTypes[uploadType];
-    // pick random backend
-    return uploadTypeConfig.backends[
-      Math.floor(Math.random() * uploadTypeConfig.backends.length)
-    ];
+    if (uploadTypeConfig?.backends?.length) {
+      // pick random backend
+      return uploadTypeConfig.backends[
+        Math.floor(Math.random() * uploadTypeConfig.backends.length)
+      ];
+    }
+    // Fallback: empty backends (should not happen after backend fix) - try any available backend
+    for (const type of Object.values(uploadingTypes) as any[]) {
+      if (type.backends?.length) {
+        return type.backends[0];
+      }
+    }
   }
   return null;
 }
