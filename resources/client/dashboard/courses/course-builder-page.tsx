@@ -55,6 +55,7 @@ import {
   ChevronDownIcon,
   CopyIcon,
   EyeIcon,
+  FileTextIcon,
   GraduationCapIcon,
   GripVerticalIcon,
   MoreHorizontalIcon,
@@ -62,7 +63,9 @@ import {
   PlusIcon,
   SettingsIcon,
   Trash2Icon,
+  UploadIcon,
   VideoIcon,
+  XIcon,
 } from 'lucide-react';
 import {
   useCallback,
@@ -1360,10 +1363,12 @@ function LessonEditor({
       showToastOnBackendError: true,
       onSuccess: async entry => {
         try {
-          await apiClient.post(
+          const res = await apiClient.post(
             `/api/v1/course-lessons/${lesson.id}/resources`,
             {file_entry_id: entry.id},
           );
+          const newRes = (res.data as any).data as LessonResource;
+          setResources(prev => [...prev, newRes]);
           onSaved();
         } catch {
           toast.danger('Unable to attach the resource');
@@ -1482,32 +1487,81 @@ function LessonEditor({
         <Field.Label>
           <Trans message="File attachments" />
         </Field.Label>
-        <FileDropzone
-          title={<Trans message="Upload attachment" />}
-          description={<Trans message="Drag and drop or click to browse" />}
-          onFile={uploadResource}
-        />
-        {!!resources.length && (
-          <div className="divide-y rounded-card border">
-            {resources.map(r => (
-              <div key={r.id} className="flex items-center gap-2 p-2 text-sm">
-                <span className="flex-1 truncate">{r.display_name}</span>
-                <Button
-                  size="icon-xs"
-                  variant="ghost"
-                  onClick={async () => {
-                    await apiClient.delete(
-                      `/api/v1/course-lesson-resources/${r.id}`,
-                    );
-                    onSaved();
-                  }}
-                >
-                  <Trash2Icon className="size-4" />
-                </Button>
+        <Card className="overflow-hidden">
+          <Card.Header className="pb-3">
+            <Card.Title className="flex items-center gap-2 text-sm">
+              <FileTextIcon className="size-4" />
+              <Trans message="Lesson files" />
+            </Card.Title>
+            <Card.Description>
+              <Trans message="PDF, DOC, TXT, images up to 100MB" />
+            </Card.Description>
+          </Card.Header>
+          <Card.Content className="space-y-3 p-4 pt-0">
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.pdf,.doc,.docx,.txt,.csv,.png,.jpg,.jpeg,.webp,.zip';
+                input.onchange = e => {
+                  const file = (e.target as HTMLInputElement).files?.[0];
+                  if (file) uploadResource(file);
+                };
+                input.click();
+              }}
+              onDragOver={e => e.preventDefault()}
+              onDrop={e => {
+                e.preventDefault();
+                const file = e.dataTransfer.files?.[0];
+                if (file) uploadResource(file);
+              }}
+              className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 text-center transition-colors hover:bg-accent/30 focus-visible:border-ring/50 focus-visible:ring-2 focus-visible:ring-ring/20"
+            >
+              <div className="rounded-full bg-primary/10 p-3">
+                <UploadIcon className="size-6 text-primary" />
               </div>
-            ))}
-          </div>
-        )}
+              <div>
+                <p className="text-sm font-medium"><Trans message="Drop your files here" /></p>
+                <p className="text-xs text-muted-foreground"><Trans message="PDF, DOC, images up to 100MB" /></p>
+              </div>
+              <Button size="sm" variant="outline" className="mt-2" onClick={e => { e.stopPropagation(); const input = document.createElement('input'); input.type='file'; input.accept='.pdf,.doc,.docx,.txt,.csv,.png,.jpg,.jpeg,.webp,.zip'; input.onchange=ev=>{const f=(ev.target as HTMLInputElement).files?.[0]; if(f) uploadResource(f)}; input.click(); }}>
+                <Trans message="Select Files" />
+              </Button>
+            </div>
+            {resources.length > 0 ? (
+              <div className="space-y-2">
+                {resources.map(r => (
+                  <div key={r.id} className="flex items-center gap-2.5 rounded-md border p-3">
+                    <div className="flex size-10 shrink-0 items-center justify-center rounded border bg-accent/50">
+                      <FileTextIcon className="size-5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{r.display_name}</p>
+                      <p className="truncate text-xs text-muted-foreground">{r.file?.name ?? 'file'}</p>
+                    </div>
+                    <Button
+                      size="icon-sm"
+                      variant="ghost"
+                      className="size-7 shrink-0"
+                      onClick={async () => {
+                        await apiClient.delete(`/api/v1/course-lesson-resources/${r.id}`);
+                        setResources(prev => prev.filter(x => x.id !== r.id));
+                        onSaved();
+                      }}
+                      aria-label="Remove file"
+                    >
+                      <XIcon className="size-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="py-2 text-center text-sm text-muted-foreground"><Trans message="No files attached yet" /></p>
+            )}
+          </Card.Content>
+        </Card>
       </Field.Root>
 
       <div className="flex items-center justify-between gap-3">
