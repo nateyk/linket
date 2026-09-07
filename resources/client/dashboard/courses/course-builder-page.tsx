@@ -1036,6 +1036,7 @@ function CourseBuilder() {
           >
             {selectedLesson ? (
               <LessonEditor
+                key={selectedLesson.id}
                 lesson={selectedLesson}
                 chapterId={selectedChapterId}
                 onSaved={load}
