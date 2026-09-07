@@ -1456,6 +1456,7 @@ function LessonEditor({
           <Trans message="Content" />
         </Field.Label>
         <TipTapEditorProvider
+          key={lesson.id}
           extensions={articleEditorTipTapExtensions}
           initialContent={content}
           onChange={setContent}
