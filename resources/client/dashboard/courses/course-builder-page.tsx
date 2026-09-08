@@ -1344,12 +1344,13 @@ function LessonEditor({
       showToastOnBackendError: true,
       onSuccess: async entry => {
         try {
-          await apiClient.put(`/api/v1/course-lessons/${lesson.id}`, {
+          const res = await apiClient.put(`/api/v1/course-lessons/${lesson.id}`, {
             video_type: 'upload',
             video_file_entry_id: entry.id,
           });
+          const updated = (res.data as any).data as Lesson;
+          onSelectLesson(updated);
           toast.positive('Video uploaded');
-          onSaved();
         } catch {
           toast.danger('Unable to attach the uploaded video');
         }
@@ -1370,7 +1371,6 @@ function LessonEditor({
           );
           const newRes = (res.data as any).data as LessonResource;
           setResources(prev => [...prev, newRes]);
-          onSaved();
         } catch {
           toast.danger('Unable to attach the resource');
         }
@@ -1549,7 +1549,6 @@ function LessonEditor({
                       onClick={async () => {
                         await apiClient.delete(`/api/v1/course-lesson-resources/${r.id}`);
                         setResources(prev => prev.filter(x => x.id !== r.id));
-                        onSaved();
                       }}
                       aria-label="Remove file"
                     >
