@@ -19,7 +19,12 @@ class StorefrontCheckoutController extends Controller
 
     public function store(Request $request, DigitalProduct $digitalProduct)
     {
-        abort_unless($digitalProduct->isApproved() && $digitalProduct->files()->exists(), 404);
+        if ($digitalProduct->isCourse()) {
+            $digitalProduct->loadMissing('course');
+            abort_unless($digitalProduct->isApproved() && $digitalProduct->course && $digitalProduct->course->published_at !== null, 404);
+        } else {
+            abort_unless($digitalProduct->isApproved() && $digitalProduct->files()->exists(), 404);
+        }
         $buyer = $request->validate([
             'buyer_name' => ['required', 'string', 'min:2', 'max:120'],
             'buyer_email' => ['required', 'email:rfc', 'max:254'],
