@@ -16,7 +16,7 @@ import {
 } from '../../core/settings/site-config-context';
 import {StaticPageTitle} from '../../seo/static-page-title';
 import {useLogin} from '../requests/use-login';
-import {AuthLayout} from './auth-layout/auth-layout';
+import {AuthLayoutV2} from './auth-layout/auth-layout-v2';
 import {SocialAuthSection} from './social-auth-section';
 
 interface Props {
@@ -35,7 +35,7 @@ export function LoginPage({
   const isWorkspaceLogin = pathname.includes('workspace');
   const searchParamsEmail = searchParams.get('email') || undefined;
 
-  const {branding, registration, site, social} = useSettings();
+  const {branding, registration, site} = useSettings();
   const registrationEnabled = !registration?.disable;
   const siteConfig = useContext(SiteConfigContext);
 
@@ -78,92 +78,120 @@ export function LoginPage({
   const isInvalid = !!Object.keys(form.formState.errors).length;
 
   return (
-    <AuthLayout heading={heading} message={messages}>
+    <AuthLayoutV2>
       <StaticPageTitle>
         <Trans message="Login" />
       </StaticPageTitle>
 
       {children}
 
-      <HookForm.Root
-        form={form}
-        onSubmit={payload => {
-          login.mutate(payload, {
-            onSuccess: response => {
-              if (response.two_factor) {
-                onTwoFactorChallenge();
-              }
-            },
-          });
-        }}
-      >
-        <Field.Group>
-          <HookForm.Field
-            name="email"
-            invalid={isInvalid ? true : undefined}
-            disabled={!!searchParamsEmail}
-          >
-            <Field.Label>
-              <Trans message="Email" />
-            </Field.Label>
-            <Input type="email" required />
-            {form.formState.errors.email?.message ? (
-              <Field.Error>
-                <InvalidCredentialsMessage />
-              </Field.Error>
-            ) : (
-              <Field.Error />
-            )}
-          </HookForm.Field>
+      <div className="space-y-2 text-center">
+        <h1 className="font-medium text-3xl">
+          {isWorkspaceLogin ? heading : <Trans message="Login to your account" />}
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          {isWorkspaceLogin ? null : (
+            <Trans message="Please enter your details to login." />
+          )}
+        </p>
+      </div>
 
-          <HookForm.Field
-            name="password"
-            invalid={isInvalid ? true : undefined}
-          >
-            <div className="flex items-center justify-between gap-4">
-              <Field.Label>
-                <Trans message="Password" />
+      <div className="space-y-4">
+        <SocialAuthSection
+          dividerMessage={<Trans message="Or continue with" />}
+        />
+
+        <HookForm.Root
+          form={form}
+          onSubmit={payload => {
+            login.mutate(payload, {
+              onSuccess: response => {
+                if (response.two_factor) {
+                  onTwoFactorChallenge();
+                }
+              },
+            });
+          }}
+        >
+          <Field.Group className="gap-4">
+            <HookForm.Field
+              name="email"
+              invalid={isInvalid ? true : undefined}
+              disabled={!!searchParamsEmail}
+            >
+              <Field.Label htmlFor="login-email">
+                <Trans message="Email Address" />
               </Field.Label>
-              <Link
-                className="text-sm hover:underline"
-                to="/forgot-password"
-                tabIndex={-1}
-              >
-                <Trans message="Forgot your password?" />
-              </Link>
-            </div>
-            <Input type="password" required />
-            <Field.Error />
-          </HookForm.Field>
+              <Input
+                id="login-email"
+                type="email"
+                placeholder="you@example.com"
+                autoComplete="email"
+                required
+              />
+              {form.formState.errors.email?.message ? (
+                <Field.Error>
+                  <InvalidCredentialsMessage />
+                </Field.Error>
+              ) : (
+                <Field.Error />
+              )}
+            </HookForm.Field>
 
-          <HookForm.Field name="remember">
-            <Field.Label>
-              <Checkbox />
-              <Trans message="Stay signed in for a month" />
-            </Field.Label>
-          </HookForm.Field>
+            <HookForm.Field
+              name="password"
+              invalid={isInvalid ? true : undefined}
+            >
+              <div className="flex items-center justify-between gap-4">
+                <Field.Label htmlFor="login-password">
+                  <Trans message="Password" />
+                </Field.Label>
+                <Link
+                  className="text-sm hover:underline"
+                  to="/forgot-password"
+                  tabIndex={-1}
+                >
+                  <Trans message="Forgot your password?" />
+                </Link>
+              </div>
+              <Input
+                id="login-password"
+                type="password"
+                placeholder="••••••••"
+                autoComplete="current-password"
+                required
+              />
+              <Field.Error />
+            </HookForm.Field>
 
-          <Button
-            className="mt-2 w-full"
-            type="submit"
-            variant="default"
-            color="primary"
-            disabled={login.isPending}
-          >
-            <Trans message="Continue" />
-          </Button>
-        </Field.Group>
-      </HookForm.Root>
-      <SocialAuthSection
-        dividerMessage={
-          social?.compact_buttons ? (
-            <Trans message="Or sign in with" />
-          ) : (
-            <Trans message="OR" />
-          )
-        }
-      />
-    </AuthLayout>
+            <HookForm.Field name="remember">
+              <Field.Root orientation="horizontal">
+                <Checkbox id="login-remember" />
+                <Field.Label htmlFor="login-remember" className="font-normal">
+                  <Trans message="Remember me for 30 days" />
+                </Field.Label>
+              </Field.Root>
+            </HookForm.Field>
+
+            <Button
+              className="w-full"
+              type="submit"
+              variant="default"
+              color="primary"
+              disabled={login.isPending}
+            >
+              <Trans message="Login" />
+            </Button>
+          </Field.Group>
+        </HookForm.Root>
+      </div>
+
+      {messages && (
+        <div className="text-center text-sm text-muted-foreground">
+          {messages}
+        </div>
+      )}
+    </AuthLayoutV2>
   );
 }
 
