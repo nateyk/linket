@@ -11,20 +11,23 @@ declare module 'mime-match' {
   export = match;
 }
 
-declare global {
-  // oxlint-disable-next-line no-redeclare
-  interface Window {
-    captchaOnloadCallback?: () => void;
-    turnstile?: Turnstile.Turnstile;
-    bootstrapData: string;
-    onYouTubeIframeAPIReady: () => void;
-  }
+// oxlint-disable-next-line no-redeclare
+interface Window {
+  captchaOnloadCallback?: () => void;
+  turnstile?: Turnstile.Turnstile;
+  grecaptcha?: any;
+  bootstrapData: string;
+  onYouTubeIframeAPIReady: () => void;
 }
 
+// oxlint-disable-next-line no-redeclare
+declare var turnstile: Turnstile.Turnstile;
+// oxlint-disable-next-line no-redeclare
+declare var grecaptcha: any;
+
 type WebKitPresentationMode = 'picture-in-picture' | 'inline' | 'fullscreen';
-declare global {
-  // oxlint-disable-next-line no-redeclare
-  interface HTMLVideoElement {
+// oxlint-disable-next-line no-redeclare
+interface HTMLVideoElement {
   disablePictureInPicture: boolean;
 
   /**
@@ -91,7 +94,6 @@ declare global {
    * @see {@link https://developer.apple.com/documentation/webkitjs/htmlvideoelement/1631224-webkitsetpresentationmode}
    */
   webkitSetPresentationMode?(mode: WebKitPresentationMode): Promise<void>;
-  }
 }
 
 declare namespace React {
