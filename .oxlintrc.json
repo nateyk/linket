@@ -13,6 +13,7 @@
     "builtin": true
   },
   "ignorePatterns": [
-    "dist"
+    "dist",
+    "docs/reference"
   ]
 }

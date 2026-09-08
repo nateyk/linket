@@ -1,4 +1,7 @@
 @import './common-tailwind.css';
+@import './presets/brutalist.css';
+@import './presets/tangerine.css';
+@import './presets/soft-pop.css';
 @import '../ui/library/progress/animation.css';
 @import '../ui/library/skeleton/skeleton.css';
 @import '../text-editor/highlight/editor-styles.css';
