@@ -5,7 +5,6 @@ import {Button} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
 import {Dialog} from '@shadcn/dialog/dialog';
 import {Dropdown} from '@shadcn/dropdown/dropdown';
-import {Input} from '@shadcn/forms/input/input';
 import {Popover} from '@shadcn/popover/popover';
 import {Table} from '@shadcn/table/table';
 import {Trans} from '@ui/i18n/trans';

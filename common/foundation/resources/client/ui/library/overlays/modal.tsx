@@ -14,7 +14,6 @@ export const Modal = forwardRef<HTMLDivElement, OverlayProps>(
       autoFocus = false,
       restoreFocus = true,
       isDismissable = true,
-      isOpen = false,
       placement = 'center',
       underlayTransparent,
       underlayBlurred,

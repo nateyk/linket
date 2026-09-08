@@ -2,7 +2,9 @@
   "plugins": [],
   "overrides": [
     {
-      "files": ["**/*.{ts,tsx}"],
+      "files": [
+        "**/*.{ts,tsx}"
+      ],
       "rules": {
         "constructor-super": "error",
         "for-direction": "error",
@@ -77,7 +79,9 @@
         "@typescript-eslint/no-misused-new": "error",
         "@typescript-eslint/no-namespace": [
           "error",
-          {"allowDeclarations": true}
+          {
+            "allowDeclarations": true
+          }
         ],
         "@typescript-eslint/no-non-null-asserted-optional-chain": "error",
         "@typescript-eslint/no-require-imports": "error",
@@ -93,7 +97,10 @@
         "react-hooks/rules-of-hooks": "error",
         "react-hooks/exhaustive-deps": "warn"
       },
-      "plugins": ["typescript", "react"],
+      "plugins": [
+        "typescript",
+        "react"
+      ],
       "env": {
         "es2020": true
       },
@@ -859,11 +866,15 @@
         "XRWebGLBinding": "readonly",
         "XRWebGLDepthInformation": "readonly",
         "XRWebGLLayer": "readonly",
-        "XSLTProcessor": "readonly"
+        "XSLTProcessor": "readonly",
+        "google": "readonly",
+        "turnstile": "readonly"
       }
     },
     {
-      "files": ["**/.storybook/stories/**/*.tsx"]
+      "files": [
+        "**/.storybook/stories/**/*.tsx"
+      ]
     }
   ]
 }

@@ -33,20 +33,8 @@ export function encodeBackendFilters(
 
 function transformValue(
   filterValue: FilterListValue,
-  filters: BackendFilter[],
+  _filters: BackendFilter[],
 ) {
-  //const filterConfig = filters.find(f => f.key === filterValue.key);
-  // select components will use a key always, because we can't use objects as
-  // value. Map over select options and replace key with actual value
-  // if (filterConfig?.control.type === 'select') {
-  //   const option = (filterConfig.control.options || []).find(
-  //     o => o.key === filterValue.value,
-  //   );
-  //   // if it's language or country select, there might not be an option
-  //   if (option) {
-  //     return {...filterValue, value: option.value, valueKey: option.key};
-  //   }
-  // }
-
+  void _filters;
   return filterValue;
 }

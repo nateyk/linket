@@ -13,7 +13,7 @@ import {Avatar} from '@shadcn/avatar/avatar';
 import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {Popover} from '@shadcn/popover/popover';
 import {Trans} from '@ui/i18n/trans';
-import {BellIcon, ChevronUpIcon, ShieldCheckIcon, StoreIcon, WalletCardsIcon, CreditCardIcon, CoinsIcon, LandmarkIcon} from 'lucide-react';
+import {BellIcon, ChevronUpIcon, ShieldCheckIcon, StoreIcon, WalletCardsIcon, CreditCardIcon, CoinsIcon} from 'lucide-react';
 import {use} from 'react';
 import {NavLink} from 'react-router';
 

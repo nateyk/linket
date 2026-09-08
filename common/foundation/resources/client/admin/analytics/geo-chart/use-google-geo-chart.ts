@@ -104,7 +104,7 @@ export function useGoogleGeoChart({
       }
     };
     // this will correctly run when geochart instance is set on ref
-  }, [onCountrySelected, geoChartRef.current]);
+  }, [onCountrySelected]);
 
   // on component load: load chart library then draw, otherwise just draw
   useEffect(() => {

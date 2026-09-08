@@ -45,7 +45,6 @@ export function Chip(props: ChipProps) {
     selectable = false,
     radius = 'rounded-full',
     elementType = 'div',
-    fontWeight: fontSize,
     to,
     onClick,
   } = props;

@@ -13,7 +13,6 @@ export const Tray = forwardRef<HTMLDivElement, OverlayProps>(
       autoFocus = false,
       restoreFocus = true,
       isDismissable,
-      isOpen,
       onClose,
     },
     ref,

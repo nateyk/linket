@@ -70,7 +70,8 @@ export const createPlayerStore = (
           streamTypeChange: payload => {
             set({streamType: payload.streamType});
           },
-          buffered: payload => {
+          buffered: _payload => {
+            void _payload;
             //
           },
           playbackRateChange: payload => {
@@ -332,7 +333,8 @@ export const createPlayerStore = (
                   unsubscribe();
                   resolve();
                 },
-                error: e => {
+                error: _e => {
+                  void _e;
                   clearTimeout(timeoutId);
                   unsubscribe();
                   reject('Could not cue media');

@@ -19,8 +19,6 @@ export const Popover = forwardRef<HTMLDivElement, OverlayProps>(
       isOpen,
       onClose,
       triggerRef,
-      arrowRef,
-      arrowStyle,
       onPointerLeave,
       onPointerEnter,
     },
@@ -73,7 +71,6 @@ interface useCloseOnInteractOutsideProps {
 function useCloseOnInteractOutside(
   {
     onClose,
-    isDismissable = true,
     triggerRef,
     isContextMenu = false,
   }: useCloseOnInteractOutsideProps,

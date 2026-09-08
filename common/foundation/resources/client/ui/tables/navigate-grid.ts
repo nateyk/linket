@@ -157,7 +157,7 @@ function focusFirstElementAfterGrid(e: React.KeyboardEvent) {
       }
     } while (last);
 
-    // @ts-ignore
+    // @ts-expect-error: TS - suppress type error for non-standard property
     if (next && !next.contains(document.activeElement)) {
       focusWithoutScrolling(next);
     }

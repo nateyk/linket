@@ -8,7 +8,8 @@ type Props = {
   config: LandingPageFooterConfig;
 };
 
-export function LandingPageFooter({config}: Props) {
+export function LandingPageFooter({config: _config}: Props) {
+  void _config;
   return (
     <Footer
       className="mx-auto max-w-7xl"

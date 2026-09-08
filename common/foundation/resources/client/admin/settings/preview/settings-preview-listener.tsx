@@ -19,7 +19,7 @@ export function SettingsPreviewListener() {
     (command: AllCommands) => {
       switch (command.type) {
         case 'setValues':
-          const newData: Partial<BootstrapData> = {};
+          { const newData: Partial<BootstrapData> = {};
           if (command.values.client) {
             if (command.options.merge) {
               newData.settings = deepMerge(
@@ -31,7 +31,7 @@ export function SettingsPreviewListener() {
               newData.settings = command.values.client;
             }
           }
-          return mergeBootstrapData(newData);
+          return mergeBootstrapData(newData); }
         case 'setThemeFont':
           if (command.value) {
             setThemeValue('--be-font-family', command.value.family);

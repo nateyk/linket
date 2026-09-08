@@ -173,7 +173,12 @@ export function DialogTrigger(props: DialogTriggerProps) {
     if (triggerRef?.current && refs.reference.current !== triggerRef.current) {
       reference(triggerRef.current);
     }
-  }, [reference, triggerRef?.current, refs]);
+  }, [
+	reference,
+	triggerRef?.current,
+	refs,
+	triggerRef
+]);
 
   const dialogProps = useMemo(() => {
     return {
@@ -221,10 +226,10 @@ export function DialogTrigger(props: DialogTriggerProps) {
   triggerOnHover = triggerOnHover && type === 'popover';
 
   const handleTriggerHover: HTMLProps<HTMLElement> = {
-    onPointerEnter: ignoreEventsFromPortal((e: React.PointerEvent) => {
+    onPointerEnter: ignoreEventsFromPortal(() => {
       open();
     }),
-    onPointerLeave: ignoreEventsFromPortal((e: React.PointerEvent) => {
+    onPointerLeave: ignoreEventsFromPortal(() => {
       hoverTimeoutRef.current = setTimeout(() => {
         close();
       }, 150);
@@ -232,12 +237,12 @@ export function DialogTrigger(props: DialogTriggerProps) {
   };
 
   const handleFloatingHover: HTMLProps<HTMLElement> = {
-    onPointerEnter: ignoreEventsFromPortal((e: React.PointerEvent) => {
+    onPointerEnter: ignoreEventsFromPortal(() => {
       if (hoverTimeoutRef.current) {
         clearTimeout(hoverTimeoutRef.current);
       }
     }),
-    onPointerLeave: ignoreEventsFromPortal((e: React.PointerEvent) => {
+    onPointerLeave: ignoreEventsFromPortal(() => {
       close();
     }),
   };

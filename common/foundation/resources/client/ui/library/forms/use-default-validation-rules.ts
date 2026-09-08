@@ -150,5 +150,18 @@ export function useDefaultValidationRules({
     };
 
     return rules;
-  }, [name, required, minLength, maxLength, min, max, pattern]);
+  }, [
+	name,
+	required,
+	minLength,
+	maxLength,
+	min,
+	max,
+	pattern,
+	errorMessageName,
+	label,
+	multiSelect,
+	type,
+	trans
+]);
 }

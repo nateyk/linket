@@ -8,12 +8,13 @@ import {DataTablePaginationFooter} from '@common/datatable/data-table-pagination
 import {useDatatableSearchParams} from '@common/datatable/filters/utils/use-datatable-search-params';
 import {validateDatatableSearch} from '@common/datatable/filters/utils/validate-datatable-search';
 import {Empty} from '@shadcn/empty/empty';
-import {
-  DashboardPage.HeaderBar,
-  DashboardPage.ScrollContainer,
-  DashboardPage.Body,
-  DashboardPage.Root,
-} from '@common/datatable/page/datatable-page-with-header-layout';
+import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
+const DashboardPage = {
+  Root: DashboardLayout.MainSection,
+  HeaderBar: DashboardLayout.SectionHeader,
+  Body: DashboardLayout.SectionContent,
+  ScrollContainer: DashboardLayout.SectionScrollContainer,
+};
 import {useDatatableQuery} from '@common/datatable/requests/use-datatable-query';
 import {apiClient, queryClient} from '@common/http/query-client';
 import {showHttpErrorToast} from '@common/http/show-http-error-toast';

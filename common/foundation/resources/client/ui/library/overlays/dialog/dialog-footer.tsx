@@ -11,7 +11,7 @@ export type DialogFooterProps = {
   padding?: string;
 };
 export function DialogFooter(props: DialogFooterProps) {
-  const {children, startAction, className, dividerTop, padding, size} = props;
+  const {children, startAction, className, dividerTop} = props;
 
   return (
     <div

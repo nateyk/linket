@@ -68,7 +68,12 @@ export function useCaptcha(action: CaptchaAction, disabled = false) {
         window.turnstile?.remove('#captcha-container');
       }
     };
-  }, [captchaEnabled, siteKey]);
+  }, [
+	captchaEnabled,
+	siteKey,
+	provider,
+	action
+]);
 
   const resetCaptcha = useCallback(() => {
     if (!siteKey || !captchaEnabled) return;

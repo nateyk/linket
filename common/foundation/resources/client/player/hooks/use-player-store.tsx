@@ -22,7 +22,7 @@ type UsePlayerStore = {
   ): U;
 };
 
-// @ts-ignore
+// @ts-expect-error: TS - suppress type error for non-standard property
 export const usePlayerStore: UsePlayerStore = (selector, equalityFn) => {
   const store = useContext(PlayerStoreContext);
   return useStoreWithEqualityFn(store, selector, equalityFn);

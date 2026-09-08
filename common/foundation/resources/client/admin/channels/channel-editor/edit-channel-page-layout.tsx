@@ -17,7 +17,7 @@ export function EditChannelPageLayout({children}: Props) {
   const query = useChannel(undefined, 'editChannelPage');
   const channel = query.data.channel;
   const form = useForm<UpdateChannelPayload>({
-    // @ts-ignore
+    // @ts-expect-error: TS - suppress type error for non-standard property
     defaultValues: {
       ...channel,
     },

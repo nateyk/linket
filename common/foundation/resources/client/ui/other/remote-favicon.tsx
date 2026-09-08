@@ -46,7 +46,7 @@ const getFaviconSrc = memoize((url: string): string | null => {
   try {
     const domain = new URL(url).origin;
     return 'https://www.google.com/s2/favicons?domain=' + domain;
-  } catch (e) {}
+  } catch (e) { /* ignore error */ }
 
   return null;
 });

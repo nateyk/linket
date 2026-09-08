@@ -4,7 +4,6 @@ import {Popover} from '@ui/overlays/popover';
 import {Tray} from '@ui/overlays/tray';
 import {ProgressCircle} from '@ui/progress/progress-circle';
 import {rootEl} from '@ui/root-el';
-import {useIsMobileDevice} from '@ui/utils/hooks/is-mobile-device';
 import clsx from 'clsx';
 import {AnimatePresence} from 'framer-motion';
 import {
@@ -46,7 +45,7 @@ export function Listbox({
   contentClassName,
   ...domProps
 }: Props) {
-  const isMobile = useIsMobileDevice();
+  
   const {
     floatingWidth,
     floatingMinWidth = 'min-w-45',

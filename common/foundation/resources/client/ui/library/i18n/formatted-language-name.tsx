@@ -11,7 +11,7 @@ export const FormattedLanguageName = memo(({code: languageCode}: Props) => {
 
   try {
     formattedName = regionNames.of(languageCode);
-  } catch (e) {}
+  } catch (e) { /* ignore error */ }
 
   return <Fragment>{formattedName}</Fragment>;
 });

@@ -1,9 +1,7 @@
 import {FocusScope, useFocusManager} from '@react-aria/focus';
 import {ListItemBase, ListItemBaseProps} from '@ui/list/list-item-base';
 import clsx from 'clsx';
-import React, {forwardRef, ReactElement, ReactNode, useState} from 'react';
-
-type Child = ReactElement<ListItemProps> | ReactElement<ListItemProps>[];
+import React, {forwardRef, ReactNode, useState} from 'react';
 
 interface Props {
   className?: string;

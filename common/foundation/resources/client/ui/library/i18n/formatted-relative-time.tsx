@@ -23,7 +23,7 @@ interface FormattedDateProps {
 }
 export const FormattedRelativeTime = memo(
   ({date, style, variant = 'default'}: FormattedDateProps) => {
-    const {localeCode} = useSelectedLocale();
+    
     const timezone = useUserTimezone();
 
     if (!date) return null;

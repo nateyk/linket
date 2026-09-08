@@ -25,7 +25,7 @@ export function initPlayerMediaSession(
           key as MediaSessionAction,
           actionHandlers[key as MediaSessionAction]!
         );
-      } catch (error) {}
+      } catch (error) { /* ignore error */ }
     }
     const cuedMedia = state().cuedMedia;
     if (cuedMedia) {

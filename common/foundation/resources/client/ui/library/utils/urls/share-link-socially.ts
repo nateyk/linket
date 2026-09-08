@@ -59,9 +59,9 @@ function generateShareUrl(
         image
       );
     case 'tumblr':
-      const base =
+      { const base =
         'https://www.tumblr.com/widgets/share/tool?shareSource=legacy&canonicalUrl=&posttype=photo&title=&caption=';
-      return base + name + '&content=' + image + '&url=' + link;
+      return base + name + '&content=' + image + '&url=' + link; }
     case 'blogger':
       return (
         'https://www.blogger.com/blog_this.pyra?t&u=' + link + '&n=' + name

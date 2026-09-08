@@ -4,7 +4,8 @@ import {Link} from 'react-router';
 type Props = {
   index: number;
 };
-export function FooterSectionSettings({index}: Props) {
+export function FooterSectionSettings({index: _index}: Props) {
+  void _index;
   return (
     <div className="text-sm">
       <Trans

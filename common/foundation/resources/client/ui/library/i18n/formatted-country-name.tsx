@@ -11,7 +11,7 @@ export const FormattedCountryName = memo(({code: countryCode}: Props) => {
 
   try {
     formattedName = regionNames.of(countryCode.toUpperCase());
-  } catch (e) {}
+  } catch (e) { /* ignore error */ }
 
   return <Fragment>{formattedName}</Fragment>;
 });

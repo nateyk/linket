@@ -49,7 +49,7 @@ export function ButtonGroup(props: ButtonGroupProps) {
     return newValue;
   };
 
-  const buttons = React.Children.map(children, (button, i) => {
+  const buttons = React.Children.map(children, button => {
     if (React.isValidElement(button)) {
       const buttonProps = button.props as ButtonProps;
       const active = isActive(buttonProps.value);

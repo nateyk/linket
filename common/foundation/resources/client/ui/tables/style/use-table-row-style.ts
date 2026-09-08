@@ -1,5 +1,4 @@
 import {TableContext} from '@common/ui/tables/table-context';
-import {useIsDarkMode} from '@ui/themes/use-is-dark-mode';
 import {useIsMobileMediaQuery} from '@ui/utils/hooks/is-mobile-media-query';
 import clsx from 'clsx';
 import {useContext} from 'react';
@@ -10,7 +9,7 @@ interface Props {
   isHeader?: boolean;
 }
 export function useTableRowStyle({index, isSelected, isHeader}: Props) {
-  const isDarkMode = useIsDarkMode();
+  
   const isMobile = useIsMobileMediaQuery();
   const {
     hideBorder,

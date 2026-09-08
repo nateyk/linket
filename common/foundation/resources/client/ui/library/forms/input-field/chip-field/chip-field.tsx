@@ -502,7 +502,11 @@ function useChipFieldValueState({
       }
       onChange?.(newValue as any);
     },
-    [onChange, valueKey],
+    [
+	onChange,
+	valueKey,
+	maxItems
+],
   );
 
   return useControlledState<ChipValue[]>(

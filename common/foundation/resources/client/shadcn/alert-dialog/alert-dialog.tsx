@@ -170,10 +170,13 @@ const AlertDialog = Object.assign(Root, {
   createHandle: AlertDialogPrimitive.createHandle,
 });
 
-namespace AlertDialog {
-  export type TriggerElement = ReactElement<
-    ComponentProps<typeof AlertDialogPrimitive.Trigger>
-  >;
-}
+export type AlertDialogTriggerElement = ReactElement<
+  ComponentProps<typeof AlertDialogPrimitive.Trigger>
+>;
 
 export {AlertDialog};
+
+// eslint-disable-next-line @typescript-eslint/no-namespace
+export namespace AlertDialog {
+  export type TriggerElement = AlertDialogTriggerElement;
+}

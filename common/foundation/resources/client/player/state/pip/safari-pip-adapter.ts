@@ -46,9 +46,9 @@ const canUsePiPInSafari = (): boolean => {
   const video = document.createElement('video');
   if (_canUsePiPInSafari == null) {
     _canUsePiPInSafari =
-      // @ts-ignore
+      // @ts-expect-error: TS - suppress type error for non-standard property
       !!video.webkitSupportsPresentationMode &&
-      // @ts-ignore
+      // @ts-expect-error: TS - suppress type error for non-standard property
       !!video.webkitSetPresentationMode &&
       !IS_IPHONE;
   }

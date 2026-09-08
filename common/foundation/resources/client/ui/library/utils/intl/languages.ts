@@ -21,7 +21,7 @@ export const getLanguageList = memoize((lang: string = 'en') => {
         usedLangCodes.push(langCode);
         languages.push({code: langCode, name: langName});
       }
-    } catch (e) {}
+    } catch (e) { /* ignore error */ }
   }
 
   return languages;

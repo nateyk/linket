@@ -15,13 +15,7 @@ const fruits = [
   {value: 'pineapple', label: <Trans message="Pineapple" />},
 ] as const;
 
-const frameworks = [
-  {value: 'next', label: 'Next.js'},
-  {value: 'sveltekit', label: 'SvelteKit'},
-  {value: 'nuxt', label: 'Nuxt'},
-  {value: 'remix', label: 'Remix'},
-  {value: 'astro', label: 'Astro'},
-] as const;
+
 
 const languages = [
   {value: 'english', label: 'English'},

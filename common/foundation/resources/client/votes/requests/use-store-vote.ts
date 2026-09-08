@@ -15,8 +15,8 @@ interface Payload {
 export function useStoreVote(model: VotableModel) {
   return useMutation({
     mutationFn: (payload: Payload) => changeVote(model, payload),
-    onSuccess: response => {
-      //
+    onSuccess: _response => {
+      void _response;
     },
     onError: err => showHttpErrorToast(err),
   });

@@ -106,14 +106,7 @@ export const ListItemBase = React.forwardRef<
 });
 
 function itemClassName(props: ListItemBaseProps): string {
-  const {
-    className,
-    showCheckmark,
-    endIcon,
-    endSection,
-    radius,
-    padding: userPadding,
-  } = props;
+  const {className, radius, padding: userPadding} = props;
 
   const padding = userPadding ?? 'px-3 py-2';
 

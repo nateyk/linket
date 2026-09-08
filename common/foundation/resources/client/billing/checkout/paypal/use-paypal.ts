@@ -74,7 +74,8 @@ export function usePaypal({productId, priceId}: UsePaypalProps) {
           );
           return Promise.resolve();
         },
-        onError: e => {
+        onError: _e => {
+          void _e;
           location.href = `${base_url}/checkout/${productId}/${priceId}/paypal/done?status=error`;
         },
       })

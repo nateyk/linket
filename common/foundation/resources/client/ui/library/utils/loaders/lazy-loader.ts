@@ -92,7 +92,7 @@ class LazyLoader {
       if (parentEl.querySelector(`#${prefixedId}`)) {
         parentEl.querySelector(`#${prefixedId}`)?.remove();
       }
-    } catch (e) {}
+    } catch (e) { /* ignore error */ }
 
     style.onload = () => {
       this.loadedAssets[options.url].state = 'loaded';
@@ -118,7 +118,7 @@ class LazyLoader {
       if (parentEl.querySelector(`#${prefixedId}`)) {
         parentEl.querySelector(`#${prefixedId}`)?.remove();
       }
-    } catch (e) {}
+    } catch (e) { /* ignore error */ }
 
     script.onload = () => {
       this.loadedAssets[options.url].state = 'loaded';

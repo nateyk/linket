@@ -75,7 +75,7 @@ export function useTipTapEditor({
       extensions.push(ctrlEnterExtension);
     }
     return extensions;
-  }, [initialExtensions]);
+  }, [initialExtensions, preventNewLine]);
 
   const editorProps = useMemo(
     () => ({
@@ -92,7 +92,7 @@ export function useTipTapEditor({
       body = '';
     }
     onChangeRef.current?.(body);
-  }, []);
+  }, [changesAsText]);
 
   return useEditor({
     extensions,

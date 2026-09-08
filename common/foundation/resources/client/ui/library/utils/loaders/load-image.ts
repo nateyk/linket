@@ -10,9 +10,9 @@ export const loadImage = (
   new Promise((resolve, reject) => {
     const image = new Image();
     const handler = () => {
-      // @ts-expect-error
+      // @ts-expect-error: TS - suppress type error for non-standard property
       delete image.onload;
-      // @ts-expect-error
+      // @ts-expect-error: TS - suppress type error for non-standard property
       delete image.onerror;
       if (image.naturalWidth >= minWidth) {
         resolve(image);

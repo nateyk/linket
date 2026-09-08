@@ -6,7 +6,7 @@ export class ScreenOrientation {
     try {
       await (screen.orientation as any).lock(lockType);
       this.currentLock = lockType;
-    } catch (e) {}
+    } catch (e) { /* ignore error */ }
   }
 
   async unlock() {

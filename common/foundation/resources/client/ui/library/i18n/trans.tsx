@@ -11,7 +11,7 @@ function hasOwn(obj: any, key: string): boolean {
   if (Object.hasOwn !== undefined) {
     return Object.hasOwn(obj, key);
   }
-  return Object.hasOwnProperty(key);
+  return Object.prototype.hasOwnProperty.call(obj, key);
 }
 
 export const Trans = memo((props: MessageDescriptor) => {
@@ -65,7 +65,7 @@ export const Trans = memo((props: MessageDescriptor) => {
     }
     if (nodePlaceholders.length) {
       const nodePlaceholderMatchers = nodePlaceholders.join('|');
-      regexArray.push(`(\:(?:${nodePlaceholderMatchers}))`);
+      regexArray.push(`(:(?:${nodePlaceholderMatchers}))`);
     }
 
     const regex = new RegExp(regexArray.join('|'), 'gm');

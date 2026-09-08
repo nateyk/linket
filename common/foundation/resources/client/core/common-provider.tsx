@@ -83,7 +83,7 @@ export function RootErrorElement() {
     bar.hide();
   }, [bar]);
 
-  console.log(error);
+  console.error(error);
 
   if (apiErrorStatusIs(error, 404)) {
     return <NotFoundPage />;

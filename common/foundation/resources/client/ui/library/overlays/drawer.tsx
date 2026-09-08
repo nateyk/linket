@@ -15,7 +15,6 @@ export const Drawer = forwardRef<HTMLDivElement, OverlayProps>(
       isDismissable,
       underlayBlurred,
       underlayTransparent,
-      isOpen,
       onClose,
     },
     ref,

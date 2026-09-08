@@ -10,7 +10,7 @@ interface Props {
   icon?: ReactElement<SvgIconProps>;
   size?: string;
 }
-export function ComboboxEndAdornment({isLoading, icon, size}: Props) {
+export function ComboboxEndAdornment({isLoading, icon}: Props) {
   const timeout = useRef<any>(null);
   const {trans} = useTrans();
   const [showLoading, setShowLoading] = useState(false);

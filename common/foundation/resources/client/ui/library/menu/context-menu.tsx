@@ -38,16 +38,11 @@ export function ContextMenu({position, children, ...props}: Props) {
   } = listbox;
 
   useEffect(() => {
-    if (refs.floating.current) {
-      refs.floating.current.addEventListener(
-        'contextmenu',
-        preventContextOnMenu,
-      );
+    const floating = refs.floating.current;
+    if (floating) {
+      floating.addEventListener('contextmenu', preventContextOnMenu);
       return () => {
-        refs.floating.current?.removeEventListener(
-          'contextmenu',
-          preventContextOnMenu,
-        );
+        floating.removeEventListener('contextmenu', preventContextOnMenu);
       };
     }
   }, [refs.floating]);

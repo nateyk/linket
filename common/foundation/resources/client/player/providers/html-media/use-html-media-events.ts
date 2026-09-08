@@ -74,7 +74,8 @@ export function useHtmlMediaEvents({
         emit('play');
         emit('buffering', {isBuffering: false});
       },
-      onPause: e => {
+      onPause: _e => {
+        void _e;
         emit('pause');
         emit('buffering', {isBuffering: false});
         internalState.current.timeRafLoop.stop();

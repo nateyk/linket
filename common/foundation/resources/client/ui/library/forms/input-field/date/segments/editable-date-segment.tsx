@@ -72,7 +72,7 @@ export function EditableDateSegment({
       if (newValue.length === 0 || parsed === 0) {
         const now = today(timezone);
         if (segment.type in now) {
-          // @ts-ignore
+          // @ts-expect-error: TS - suppress type error for non-standard property
           setSegmentValue(now[segment.type]);
         }
       } else {

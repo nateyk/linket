@@ -186,7 +186,7 @@ function EditCommentForm({comment, onClose}: EditCommentFormProps) {
         size="xs"
         variant="outline"
         className="mr-1.5"
-        onClick={e => onClose(false)}
+        onClick={() => onClose(false)}
         disabled={updateComment.isPending}
       >
         <Trans message="Cancel" />

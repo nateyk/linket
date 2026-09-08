@@ -80,7 +80,12 @@ export function useSortable({
       sortSession.sortables = [...items];
       sortSession.activeIndex = items.indexOf(item);
     }
-  }, [items, item]);
+  }, [
+	items,
+	item,
+	disabled,
+	type
+]);
 
   const {draggableProps, dragHandleRef} = useDraggable({
     id: item,
@@ -110,7 +115,7 @@ export function useSortable({
         sortSession.scrollListener,
       );
     },
-    onDragEnd: e => {
+    onDragEnd: () => {
       if (!sortSession) return;
 
       sortSession.dropPosition = null;

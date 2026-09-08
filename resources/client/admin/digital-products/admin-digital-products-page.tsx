@@ -3,7 +3,6 @@ import {useShowGlobalLoadingBar} from '@common/core/use-show-global-loading-bar'
 import {AddFilterPopover} from '@common/datatable/filters/add-filter-popover';
 import {FilterList} from '@common/datatable/filters/filter-list/filter-list';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
-import {Badge} from '@shadcn/badge/badge';
 import {Button} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
 import {Empty} from '@shadcn/empty/empty';
