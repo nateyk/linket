@@ -5,7 +5,7 @@ import {motion} from "framer-motion";
 import {Home, LineChart, CreditCard, MessageCircle, Trophy, User} from "lucide-react";
 import {cn} from "@ui/utils/cn";
 
-const defaultNavItems = [
+const navItems = [
   {label: "Home", icon: Home},
   {label: "Portfolio", icon: LineChart},
   {label: "Transactions", icon: CreditCard},
@@ -16,33 +16,18 @@ const defaultNavItems = [
 
 const MOBILE_LABEL_WIDTH = 72;
 
-type NavItem = {label: string; icon: React.ComponentType<{size?: number; strokeWidth?: number; className?: string}>};
-
 type BottomNavBarProps = {
   className?: string;
-  style?: React.CSSProperties;
   defaultIndex?: number;
   stickyBottom?: boolean;
-  items?: NavItem[];
-  activeIndex?: number;
-  onIndexChange?: (index: number) => void;
 };
 
 export function BottomNavBar({
   className,
-  style,
   defaultIndex = 0,
   stickyBottom = false,
-  items = defaultNavItems,
-  activeIndex: controlledIndex,
-  onIndexChange,
 }: BottomNavBarProps) {
-  const [internalIndex, setInternalIndex] = useState(defaultIndex);
-  const activeIndex = controlledIndex ?? internalIndex;
-  const setActiveIndex = (idx: number) => {
-    if (onIndexChange) onIndexChange(idx);
-    else setInternalIndex(idx);
-  };
+  const [activeIndex, setActiveIndex] = useState(defaultIndex);
 
   return (
     <motion.nav
@@ -51,14 +36,13 @@ export function BottomNavBar({
       transition={{type: "spring", stiffness: 300, damping: 26}}
       role="navigation"
       aria-label="Bottom Navigation"
-      style={style}
       className={cn(
         "bg-card dark:bg-card border border-border dark:border-sidebar-border rounded-full flex items-center p-2 shadow-xl space-x-1 min-w-[320px] max-w-[95vw] h-[52px]",
         stickyBottom && "fixed inset-x-0 bottom-4 mx-auto z-20 w-fit",
         className,
       )}
     >
-      {items.map((item, idx) => {
+      {navItems.map((item, idx) => {
         const Icon = item.icon;
         const isActive = activeIndex === idx;
 
