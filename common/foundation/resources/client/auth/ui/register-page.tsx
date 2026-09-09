@@ -73,20 +73,7 @@ export function RegisterPage({inviteType, fields, children}: Props) {
 
   return (
     <GuestRoute>
-      <AuthLayoutV2
-        topAction={
-          <Trans
-            message="Already have an account? <a>Sign in</a>"
-            values={{
-              a: (text: ReactNode) => (
-                <Link className="text-foreground hover:underline" to="/login">
-                  {text}
-                </Link>
-              ),
-            }}
-          />
-        }
-      >
+      <AuthLayoutV2>
         {children}
         <StaticPageTitle>
           <Trans message="Register" />

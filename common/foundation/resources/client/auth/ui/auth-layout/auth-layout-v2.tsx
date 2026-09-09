@@ -2,7 +2,6 @@ import {Separator} from '@shadcn/separator';
 import {Trans} from '@ui/i18n/trans';
 import {useSettings} from '@ui/settings/use-settings';
 import {ReactNode} from 'react';
-import {Link} from 'react-router';
 import {Command, Globe} from 'lucide-react';
 
 interface AuthLayoutV2Props {
@@ -49,23 +48,12 @@ export function AuthLayoutV2({children, topAction}: AuthLayoutV2Props) {
 
         {/* Left form area */}
         <div className="relative order-1 flex h-full flex-col">
-          {/* Top action link */}
-          <div className="absolute top-5 flex w-full justify-end px-4 lg:px-10">
-            <div className="text-sm text-muted-foreground">
-              {topAction ?? (
-                <Trans
-                  message="Don't have an account? <a>Register</a>"
-                  values={{
-                    a: (text: ReactNode) => (
-                      <Link className="text-foreground hover:underline" to="/register">
-                        {text}
-                      </Link>
-                    ),
-                  }}
-                />
-              )}
+          {/* Top action link - hidden to avoid duplication, bottom keeps it */}
+          {topAction ? (
+            <div className="absolute top-5 flex w-full justify-end px-4 lg:px-10">
+              <div className="text-sm text-muted-foreground">{topAction}</div>
             </div>
-          </div>
+          ) : null}
 
           {/* Centered form */}
           <div className="flex flex-1 items-center justify-center p-4 lg:p-8">
