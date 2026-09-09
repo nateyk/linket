@@ -5,10 +5,23 @@ import {Button} from "@shadcn/button/button";
 import {DesktopNav} from "./desktop-nav";
 import {MobileNav} from "./mobile-nav";
 import {Link} from "react-router";
+import {useScroll} from "@common/hooks/use-scroll";
+import {motion} from "framer-motion";
 
 export function Header() {
+  const scrolled = useScroll(10);
+
   return (
-    <header className="sticky top-0 z-50 w-full bg-background">
+    <motion.header
+      initial={false}
+      animate={{
+        backgroundColor: scrolled ? "hsl(var(--background) / 0.8)" : "hsl(var(--background) / 0)",
+        backdropFilter: scrolled ? "blur(8px)" : "blur(0px)",
+        boxShadow: scrolled ? "0 1px 3px 0 hsl(var(--border) / 0.1), 0 1px 2px -1px hsl(var(--border) / 0.1)" : "0 0 0 0 transparent",
+      }}
+      transition={{duration: 0.2, ease: [0.4, 0, 0.2, 1]}}
+      className="sticky top-0 z-50 w-full border-transparent bg-background/0"
+    >
     
       <nav className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
         <div className="flex items-center gap-8">
@@ -28,6 +41,6 @@ export function Header() {
         </div>
         <MobileNav />
       </nav>
-    </header>
+    </motion.header>
   );
 }
