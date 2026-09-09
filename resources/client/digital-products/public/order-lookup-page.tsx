@@ -28,6 +28,7 @@ import {apiClient} from '@common/http/query-client';
 import {getApiErrorMessage} from '@common/http/errors/parsed-api-error';
 import {useCallback, useEffect, useState} from 'react';
 import {Link, useLocation, useNavigate} from 'react-router';
+import {AuthLayoutV2} from '@common/auth/ui/auth-layout/auth-layout-v2';
 import {MyOrderShell} from './my-order-shell';
 
 type OrderDownload = {
@@ -86,7 +87,7 @@ function AuthenticatedMyOrder() {
     })();
   }, []);
   return (
-    <MyOrderShell>
+    <MyOrderShell wide>
       <PromotionBanner />
       <div className="flex items-center justify-between gap-3">
         <div>
@@ -262,112 +263,107 @@ function RecoveryRequest() {
   };
 
   return (
-    <MyOrderShell>
-      <Card.Root className="gap-0 overflow-hidden shadow-sm ring-1 ring-foreground/10">
-        <Card.Header className="space-y-2">
-          <div className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <PackageOpenIcon className="size-5" />
-          </div>
-          <Card.Title>
-            <Trans message="Your purchases" />
-          </Card.Title>
-          <Card.Description>
-            <Trans message="Enter the email used at checkout to receive a 6-digit sign-in code." />
-          </Card.Description>
-        </Card.Header>
-        <Card.Content className="space-y-4">
-          {sent ? (
-            <>
-              <Alert fillStyle="subtleFill">
-                <MailCheckIcon />
+    <AuthLayoutV2>
+      <div className="space-y-2 text-center">
+        <div className="mx-auto flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <PackageOpenIcon className="size-5" />
+        </div>
+        <h1 className="font-medium text-3xl">
+          <Trans message="Your purchases" />
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          <Trans message="Enter the email used at checkout to receive a 6-digit sign-in code." />
+        </p>
+      </div>
+
+      <div className="space-y-4">
+        {sent ? (
+          <>
+            <Alert fillStyle="subtleFill">
+              <MailCheckIcon />
+              <Alert.Title>
+                <Trans message="Check your inbox" />
+              </Alert.Title>
+              <Alert.Description>
+                <Trans message="Enter the 6-digit code we sent if paid purchases match this email address." />
+              </Alert.Description>
+            </Alert>
+            <div className="flex flex-col gap-2">
+              <label htmlFor="purchase-code" className="text-sm font-medium">
+                <Trans message="Sign-in code" />
+              </label>
+              <Input
+                id="purchase-code"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                value={code}
+                onChange={event => setCode(event.target.value.replace(/\D/g, ''))}
+                disabled={submitting}
+                bindToHookForm={false}
+                className="text-center font-mono text-xl tracking-[0.45em]"
+              />
+            </div>
+            <Button
+              className="w-full"
+              size="lg"
+              disabled={submitting}
+              onClick={() => void verifyCode()}
+            >
+              {submitting ? <Spinner /> : <ShieldCheckIcon />}
+              <Trans message="Verify code" />
+            </Button>
+            <Button
+              className="w-full"
+              variant="outline"
+              disabled={submitting}
+              onClick={() => void requestCode()}
+            >
+              <Trans message="Resend code" />
+            </Button>
+          </>
+        ) : (
+          <>
+            <div className="space-y-2">
+              <label htmlFor="purchase-recovery-email" className="text-sm font-medium">
+                <Trans message="Email address" />
+              </label>
+              <Input
+                id="purchase-recovery-email"
+                type="email"
+                autoComplete="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={event => setEmail(event.target.value)}
+                disabled={submitting}
+                bindToHookForm={false}
+              />
+            </div>
+            {error && (
+              <Alert variant="destructive" fillStyle="subtleFill">
+                <MailIcon />
                 <Alert.Title>
-                  <Trans message="Check your inbox" />
+                  <Trans message="Unable to continue" />
                 </Alert.Title>
-                <Alert.Description>
-                  <Trans message="Enter the 6-digit code we sent if paid purchases match this email address." />
-                </Alert.Description>
+                <Alert.Description>{error}</Alert.Description>
               </Alert>
-              <div className="flex flex-col gap-2">
-                <label htmlFor="purchase-code" className="text-sm font-medium">
-                  <Trans message="Sign-in code" />
-                </label>
-                <Input
-                  id="purchase-code"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  maxLength={6}
-                  value={code}
-                  onChange={event =>
-                    setCode(event.target.value.replace(/\D/g, ''))
-                  }
-                  disabled={submitting}
-                  bindToHookForm={false}
-                  className="text-center font-mono text-xl tracking-[0.45em]"
-                />
-              </div>
-              <Button
-                className="w-full"
-                size="lg"
-                disabled={submitting}
-                onClick={() => void verifyCode()}
-              >
-                {submitting ? <Spinner /> : <ShieldCheckIcon />}
-                <Trans message="Verify code" />
-              </Button>
-              <Button
-                className="w-full"
-                variant="outline"
-                disabled={submitting}
-                onClick={() => void requestCode()}
-              >
-                <Trans message="Resend code" />
-              </Button>
-            </>
-          ) : (
-            <>
-              <div className="space-y-2">
-                <label
-                  htmlFor="purchase-recovery-email"
-                  className="text-sm font-medium"
-                >
-                  <Trans message="Email address" />
-                </label>
-                <Input
-                  id="purchase-recovery-email"
-                  type="email"
-                  autoComplete="email"
-                  value={email}
-                  onChange={event => setEmail(event.target.value)}
-                  disabled={submitting}
-                  bindToHookForm={false}
-                />
-              </div>
-              {error && (
-                <Alert variant="destructive" fillStyle="subtleFill">
-                  <MailIcon />
-                  <Alert.Title>
-                    <Trans message="Unable to continue" />
-                  </Alert.Title>
-                  <Alert.Description>{error}</Alert.Description>
-                </Alert>
-              )}
-              <Button
-                className="w-full"
-                size="lg"
-                disabled={submitting}
-                onClick={() => void requestCode()}
-              >
-                {submitting ? <Spinner /> : <MailIcon />}
-                <Trans message="Email me a sign-in code" />
-              </Button>
-            </>
-          )}
-        </Card.Content>
-      </Card.Root>
-      <p className="text-center text-sm text-muted-foreground">
-        <Trans message="For your privacy, we show purchase details only after you verify your email code." />
-      </p>
-    </MyOrderShell>
+            )}
+            <Button
+              className="w-full"
+              size="lg"
+              disabled={submitting}
+              onClick={() => void requestCode()}
+            >
+              {submitting ? <Spinner /> : <MailIcon />}
+              <Trans message="Email me a sign-in code" />
+            </Button>
+            <p className="text-center text-sm text-muted-foreground">
+              <Trans message="For your privacy, we show purchase details only after you verify your email code." />
+            </p>
+          </>
+        )}
+      </div>
+    </AuthLayoutV2>
   );
 }
 
