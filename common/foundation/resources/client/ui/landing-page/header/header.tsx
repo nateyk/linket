@@ -114,12 +114,8 @@ export function Header({className}: {className?: string}) {
             </div>
           </div>
           <div className="flex gap-2">
-            <Button asChild variant="outline" size="sm">
-              <Link to={auth.login.url}>{auth.login.title}</Link>
-            </Button>
-            <Button asChild size="sm">
-              <Link to={auth.signup.url}>{auth.signup.title}</Link>
-            </Button>
+            <Button variant="outline" size="sm" render={<Link to={auth.login.url} />}>{auth.login.title}</Button>
+            <Button size="sm" render={<Link to={auth.signup.url} />}>{auth.signup.title}</Button>
           </div>
         </nav>
 
@@ -152,12 +148,8 @@ export function Header({className}: {className?: string}) {
                     </Accordion>
                   </div>
                   <div className="p-6 pt-4 border-t bg-muted/10 flex flex-col gap-3">
-                    <Button asChild variant="outline" size="lg" className="w-full">
-                      <Link to={auth.login.url}>{auth.login.title}</Link>
-                    </Button>
-                    <Button asChild size="lg" className="w-full shadow-sm">
-                      <Link to={auth.signup.url}>{auth.signup.title}</Link>
-                    </Button>
+                    <Button variant="outline" size="lg" className="w-full" render={<Link to={auth.login.url} />}>{auth.login.title}</Button>
+                    <Button size="lg" className="w-full shadow-sm" render={<Link to={auth.signup.url} />}>{auth.signup.title}</Button>
                   </div>
                 </Drawer.Content>
               </Drawer.Portal>
