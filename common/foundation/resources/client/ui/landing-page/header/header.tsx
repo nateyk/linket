@@ -1,33 +1,15 @@
 "use client";
 
-import {cn} from "@ui/utils/cn";
 import {Logo} from "@common/ui/navigation/navbar/logo";
-import {useScroll} from "@common/hooks/use-scroll";
 import {Button} from "@shadcn/button/button";
 import {DesktopNav} from "./desktop-nav";
 import {MobileNav} from "./mobile-nav";
 import {Link} from "react-router";
-import {motion} from "framer-motion";
 
 export function Header() {
-  const scrolled = useScroll(10);
-
   return (
-    <motion.header
-      initial={false}
-      animate={{
-        backgroundColor: scrolled ? "hsl(var(--background) / 0.95)" : "hsl(var(--background) / 0)",
-        borderColor: scrolled ? "hsl(var(--border))" : "transparent",
-        backdropFilter: scrolled ? "blur(8px)" : "blur(0px)",
-      }}
-      transition={{duration: 0.22, ease: [0.4, 0, 0.2, 1]}}
-      className={cn(
-        "sticky top-0 z-50 w-full border-b",
-        scrolled
-          ? "border-border bg-background/95 backdrop-blur-sm supports-[backdrop-filter]:bg-background/80 shadow-sm"
-          : "border-transparent bg-background/0"
-      )}
-    >
+    <header className="sticky top-0 z-50 w-full bg-background">
+    
       <nav className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
         <div className="flex items-center gap-8">
           <Link
@@ -46,6 +28,6 @@ export function Header() {
         </div>
         <MobileNav />
       </nav>
-    </motion.header>
+    </header>
   );
 }
