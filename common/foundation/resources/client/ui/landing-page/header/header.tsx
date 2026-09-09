@@ -143,9 +143,9 @@ export function Header({className}: {className?: string}) {
                   className="flex flex-col bg-background w-full h-full"
                   popupClassName="p-0 w-screen h-[100dvh] max-w-none m-0 rounded-none inset-0 bg-background sm:max-w-none"
                 >
-                  <Drawer.Header className="flex items-center justify-between p-4 border-b bg-background shrink-0">
+                  <Drawer.Header className="sticky top-0 z-10 flex items-center justify-between p-4 border-b bg-background shrink-0">
                     <Link to="/" className="flex items-center gap-2">
-                      <Logo className="h-6 w-auto" />
+                      <Logo className="h-7 w-auto" />
                     </Link>
                     <Drawer.Close
                       render={
