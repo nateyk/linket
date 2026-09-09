@@ -143,7 +143,7 @@ export function Header({className}: {className?: string}) {
                   className="flex flex-col bg-background w-full h-full"
                   popupClassName="p-0 w-screen h-[100dvh] max-w-none m-0 rounded-none inset-0 bg-background sm:max-w-none"
                 >
-                  <Drawer.Header className="sticky top-0 z-10 flex items-center justify-between p-4 border-b bg-background shrink-0">
+                  <div className="sticky top-0 z-10 flex items-center justify-between p-4 border-b bg-background shrink-0">
                     <Link to="/" className="flex items-center gap-2">
                       <Logo className="h-7 w-auto" />
                     </Link>
@@ -169,13 +169,13 @@ export function Header({className}: {className?: string}) {
                       }
                     />
                     <Drawer.Title className="sr-only">Navigation</Drawer.Title>
-                  </Drawer.Header>
+                  </div>
                   <div className="flex-1 overflow-y-auto overscroll-contain bg-background">
                     <Accordion className="flex w-full flex-col">
                       {menu.map((item) => renderMobileMenuItem(item))}
                     </Accordion>
                   </div>
-                  <div className="p-6 pt-4 border-t bg-background flex flex-col gap-3 shrink-0">
+                  <div className="p-4 border-t bg-background flex flex-col gap-3 shrink-0">
                     <Button variant="outline" size="lg" className="w-full" render={<Link to={auth.login.url} />}>
                       {auth.login.title}
                     </Button>
@@ -215,7 +215,7 @@ const renderMenuItem = (item: MenuItem) => {
     <NavigationMenuItem key={item.title}>
       <NavigationMenuLink
         href={item.url}
-        className="group inline-flex h-10 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
+        className="group inline-flex h-10 w-max items-center justify-center rounded-md bg-transparent px-4 py-2 text-sm font-medium transition-colors hover:bg-accent/50 hover:text-accent-foreground"
       >
         {item.title}
       </NavigationMenuLink>
