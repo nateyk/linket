@@ -1,6 +1,6 @@
 "use client";
 
-import {cn} from "@shadcn/lib/utils";
+import {cn} from "@ui/utils/cn";
 import {Logo} from "@common/ui/navigation/navbar/logo";
 import {useScroll} from "@common/hooks/use-scroll";
 import {Button} from "@shadcn/button/button";

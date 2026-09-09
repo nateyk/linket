@@ -1,4 +1,4 @@
-import {cn} from "@shadcn/lib/utils";
+import {cn} from "@ui/utils/cn";
 import type React from "react";
 
 export type LinkItemType = {

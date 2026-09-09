@@ -1,4 +1,4 @@
-import {cn} from "@shadcn/lib/utils";
+import {cn} from "@ui/utils/cn";
 import React from "react";
 import {Button} from "@shadcn/button/button";
 import {Portal, PortalBackdrop} from "../../portal/portal";
