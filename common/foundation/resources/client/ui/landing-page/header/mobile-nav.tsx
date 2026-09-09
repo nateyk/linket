@@ -27,7 +27,7 @@ export function MobileNav() {
             onClick={() => setOpen(false)}
           />
           <div className="relative flex h-full flex-col overflow-y-auto bg-background p-4">
-            <Accordion className="w-full">
+            <Accordion defaultValue={[]} className="w-full">
               <Accordion.Item value="product">
                 <Accordion.Trigger className="px-4 py-3 text-base font-medium capitalize text-muted-foreground hover:no-underline">
                   Product
