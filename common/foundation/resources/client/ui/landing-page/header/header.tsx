@@ -138,20 +138,44 @@ export function Header({className}: {className?: string}) {
                 }
               />
               <Drawer.Portal>
-                <Drawer.Backdrop className="bg-black/20 backdrop-blur-sm" />
-                <Drawer.Content className="flex flex-col p-0 sm:max-w-sm w-[85vw] max-w-[85vw] max-h-[90vh]">
-                  <Drawer.Header className="p-6 pb-4 border-b shrink-0">
+                <Drawer.Backdrop className="bg-background" />
+                <Drawer.Content
+                  className="flex flex-col bg-background w-full h-full"
+                  popupClassName="p-0 w-screen h-[100dvh] max-w-none m-0 rounded-none inset-0 bg-background sm:max-w-none"
+                >
+                  <Drawer.Header className="flex items-center justify-between p-4 border-b bg-background shrink-0">
                     <Link to="/" className="flex items-center gap-2">
                       <Logo className="h-6 w-auto" />
                     </Link>
+                    <Drawer.Close
+                      render={
+                        <Button variant="ghost" size="icon" className="size-9">
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="size-4"
+                          >
+                            <path d="M18 6 6 18" />
+                            <path d="m6 6 12 12" />
+                          </svg>
+                        </Button>
+                      }
+                    />
                     <Drawer.Title className="sr-only">Navigation</Drawer.Title>
                   </Drawer.Header>
-                  <div className="flex-1 overflow-y-auto overscroll-contain">
+                  <div className="flex-1 overflow-y-auto overscroll-contain bg-background">
                     <Accordion className="flex w-full flex-col">
                       {menu.map((item) => renderMobileMenuItem(item))}
                     </Accordion>
                   </div>
-                  <div className="p-6 pt-4 border-t bg-muted/20 flex flex-col gap-3 shrink-0">
+                  <div className="p-6 pt-4 border-t bg-background flex flex-col gap-3 shrink-0">
                     <Button variant="outline" size="lg" className="w-full" render={<Link to={auth.login.url} />}>
                       {auth.login.title}
                     </Button>
