@@ -17,7 +17,7 @@ import {useCaptcha} from '../../captcha/use-captcha';
 import {UnstyledCustomMenuItem} from '../../menus/custom-menu';
 import {StaticPageTitle} from '../../seo/static-page-title';
 import {RegisterPayload, useRegister} from '../requests/use-register';
-import {AuthLayout} from './auth-layout/auth-layout';
+import {AuthLayoutV2} from './auth-layout/auth-layout-v2';
 import {SocialAuthSection} from './social-auth-section';
 
 interface Props {
@@ -26,7 +26,7 @@ interface Props {
   children?: ReactNode;
 }
 export function RegisterPage({inviteType, fields, children}: Props) {
-  const {branding, registration, social} = useSettings();
+  const {branding, registration} = useSettings();
   const {captchaToken, captchaEnabled, resetCaptcha} = useCaptcha('register');
 
   const {pathname} = useLocation();
@@ -73,80 +73,121 @@ export function RegisterPage({inviteType, fields, children}: Props) {
 
   return (
     <GuestRoute>
-      <AuthLayout heading={heading} message={footerMessage}>
+      <AuthLayoutV2
+        topAction={
+          <Trans
+            message="Already have an account? <a>Sign in</a>"
+            values={{
+              a: (text: ReactNode) => (
+                <Link className="text-foreground hover:underline" to="/login">
+                  {text}
+                </Link>
+              ),
+            }}
+          />
+        }
+      >
         {children}
         <StaticPageTitle>
           <Trans message="Register" />
         </StaticPageTitle>
-        <HookForm.Root
-          form={form}
-          onSubmit={async payload => {
-            if (captchaEnabled && !captchaToken) {
-              toast.danger(message('Please solve the captcha challenge.'));
-              return;
-            }
-            register.mutate(
-              {
-                ...payload,
-                captcha_token: captchaToken,
-                invite_type: inviteType,
-                registration_data: searchParams.get('data') ?? null,
-              },
-              {onError: () => resetCaptcha()},
-            );
-          }}
-        >
-          <Field.Group>
-            <HookForm.Field name="email" disabled={!!searchParamsEmail}>
-              <Field.Label>
-                <Trans message="Email" />
-              </Field.Label>
-              <Input type="email" required />
-              <Field.Error />
-            </HookForm.Field>
 
-            <HookForm.Field name="password">
-              <Field.Label>
-                <Trans message="Password" />
-              </Field.Label>
-              <Input type="password" required />
-              <Field.Error />
-            </HookForm.Field>
+        <div className="space-y-2 text-center">
+          <h1 className="font-medium text-3xl">{heading}</h1>
+          <p className="text-sm text-muted-foreground">
+            {isRegisteringUsingInvite || isBillingRegister ? null : (
+              <Trans message="Please enter your details to create an account." />
+            )}
+          </p>
+        </div>
 
-            <HookForm.Field name="password_confirmation">
-              <Field.Label>
-                <Trans message="Confirm password" />
-              </Field.Label>
-              <Input type="password" required />
-              <Field.Error />
-            </HookForm.Field>
-
-            {fields}
-            {captchaEnabled && <CaptchaContainer className="mb-8" />}
-            <PolicyCheckboxes />
-            <Button
-              className="mt-2 w-full"
-              type="submit"
-              variant="default"
-              color="primary"
-              disabled={register.isPending}
-            >
-              <Trans message="Create account" />
-            </Button>
-          </Field.Group>
-
+        <div className="space-y-4">
           <SocialAuthSection
             isUsingInvite={isRegisteringUsingInvite}
-            dividerMessage={
-              social?.compact_buttons ? (
-                <Trans message="Or sign up with" />
-              ) : (
-                <Trans message="OR" />
-              )
-            }
+            dividerMessage={<Trans message="Or continue with" />}
           />
-        </HookForm.Root>
-      </AuthLayout>
+
+          <HookForm.Root
+            form={form}
+            onSubmit={async payload => {
+              if (captchaEnabled && !captchaToken) {
+                toast.danger(message('Please solve the captcha challenge.'));
+                return;
+              }
+              register.mutate(
+                {
+                  ...payload,
+                  captcha_token: captchaToken,
+                  invite_type: inviteType,
+                  registration_data: searchParams.get('data') ?? null,
+                },
+                {onError: () => resetCaptcha()},
+              );
+            }}
+          >
+            <Field.Group className="gap-4">
+              <HookForm.Field name="email" disabled={!!searchParamsEmail}>
+                <Field.Label htmlFor="register-email">
+                  <Trans message="Email Address" />
+                </Field.Label>
+                <Input
+                  id="register-email"
+                  type="email"
+                  placeholder="you@example.com"
+                  autoComplete="email"
+                  required
+                />
+                <Field.Error />
+              </HookForm.Field>
+
+              <HookForm.Field name="password">
+                <Field.Label htmlFor="register-password">
+                  <Trans message="Password" />
+                </Field.Label>
+                <Input
+                  id="register-password"
+                  type="password"
+                  placeholder="••••••••"
+                  autoComplete="new-password"
+                  required
+                />
+                <Field.Error />
+              </HookForm.Field>
+
+              <HookForm.Field name="password_confirmation">
+                <Field.Label htmlFor="register-password-confirmation">
+                  <Trans message="Confirm password" />
+                </Field.Label>
+                <Input
+                  id="register-password-confirmation"
+                  type="password"
+                  placeholder="••••••••"
+                  autoComplete="new-password"
+                  required
+                />
+                <Field.Error />
+              </HookForm.Field>
+
+              {fields}
+              {captchaEnabled && <CaptchaContainer className="mb-8" />}
+              <PolicyCheckboxes />
+              <Button
+                className="w-full"
+                type="submit"
+                variant="default"
+                color="primary"
+                disabled={register.isPending}
+              >
+                <Trans message="Create account" />
+              </Button>
+            </Field.Group>
+          </HookForm.Root>
+        </div>
+
+        <div className="text-center text-sm text-muted-foreground">
+          {footerMessage}
+        </div>
+      </AuthLayoutV2>
     </GuestRoute>
   );
 }

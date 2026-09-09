@@ -7,9 +7,10 @@ import {Command, Globe} from 'lucide-react';
 
 interface AuthLayoutV2Props {
   children: ReactNode;
+  topAction?: ReactNode;
 }
 
-export function AuthLayoutV2({children}: AuthLayoutV2Props) {
+export function AuthLayoutV2({children, topAction}: AuthLayoutV2Props) {
   const {branding} = useSettings();
 
   return (
@@ -48,19 +49,21 @@ export function AuthLayoutV2({children}: AuthLayoutV2Props) {
 
         {/* Left form area */}
         <div className="relative order-1 flex h-full flex-col">
-          {/* Top Register link */}
+          {/* Top action link */}
           <div className="absolute top-5 flex w-full justify-end px-4 lg:px-10">
             <div className="text-sm text-muted-foreground">
-              <Trans
-                message="Don't have an account? <a>Register</a>"
-                values={{
-                  a: (text: ReactNode) => (
-                    <Link className="text-foreground hover:underline" to="/register">
-                      {text}
-                    </Link>
-                  ),
-                }}
-              />
+              {topAction ?? (
+                <Trans
+                  message="Don't have an account? <a>Register</a>"
+                  values={{
+                    a: (text: ReactNode) => (
+                      <Link className="text-foreground hover:underline" to="/register">
+                        {text}
+                      </Link>
+                    ),
+                  }}
+                />
+              )}
             </div>
           </div>
 
