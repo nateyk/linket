@@ -12,6 +12,7 @@ import {HeroWithBackgroundImage} from '@common/ui/landing-page/hero/hero-with-ba
 import {SectionConfig} from '@common/ui/landing-page/landing-page-config';
 import {LandingPageContext} from '@common/ui/landing-page/landing-page-context';
 import {LandingPagePricing} from '@common/ui/landing-page/pricing/landing-page-pricing';
+import {Header} from '@common/ui/landing-page/header/header';
 import {useSettings} from '@ui/settings/use-settings';
 import {use} from 'react';
 import {Fragment} from 'react/jsx-runtime';
@@ -32,6 +33,7 @@ export function LandingPage() {
 
   return (
     <div>
+      <Header />
       <DefaultMetaTags />
       {sections.map((section, index) => (
         <Fragment key={index}>
