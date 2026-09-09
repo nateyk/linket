@@ -28,13 +28,13 @@ export function Header() {
           : "border-transparent bg-background/0"
       )}
     >
-      <nav className="mx-auto flex h-14 w-full max-w-5xl items-center justify-between px-4">
-        <div className="flex items-center gap-5">
+      <nav className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
+        <div className="flex items-center gap-8">
           <Link
-            className="rounded-lg px-3 py-2.5 hover:bg-muted dark:hover:bg-muted/50"
+            className="flex items-center rounded-xl px-2 py-2 hover:bg-muted dark:hover:bg-muted/50 transition-colors"
             to="/"
           >
-            <Logo className="h-4" />
+            <Logo className="h-6 w-auto" />
           </Link>
           <DesktopNav />
         </div>
