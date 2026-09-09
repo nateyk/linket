@@ -97,11 +97,11 @@ const auth = {
 
 export function Header({className}: {className?: string}) {
   return (
-    <section className={cn("sticky top-0 z-50 w-full bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border/40 py-4", className)}>
+    <section className={cn("sticky top-0 z-50 w-full bg-background py-4 border-b border-border/40 backdrop-blur-sm", className)}>
       <div className="container mx-auto max-w-6xl px-4 sm:px-6">
         {/* Desktop Menu */}
         <nav className="hidden items-center justify-between lg:flex">
-          <div className="flex items-center gap-8">
+          <div className="flex items-center gap-6">
             <Link to="/" className="flex items-center gap-2">
               <Logo className="h-7 w-auto" />
             </Link>
@@ -114,8 +114,12 @@ export function Header({className}: {className?: string}) {
             </div>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" render={<Link to={auth.login.url} />}>{auth.login.title}</Button>
-            <Button size="sm" render={<Link to={auth.signup.url} />}>{auth.signup.title}</Button>
+            <Button variant="outline" size="sm" render={<Link to={auth.login.url} />}>
+              {auth.login.title}
+            </Button>
+            <Button size="sm" render={<Link to={auth.signup.url} />}>
+              {auth.signup.title}
+            </Button>
           </div>
         </nav>
 
@@ -128,28 +132,30 @@ export function Header({className}: {className?: string}) {
             <Drawer.Root position="right">
               <Drawer.Trigger
                 render={
-                  <Button variant="outline" size="icon" className="size-9">
+                  <Button variant="outline" size="icon">
                     <Menu className="size-4" />
                   </Button>
                 }
               />
               <Drawer.Portal>
-                <Drawer.Backdrop className="bg-black/20 backdrop-blur-sm" />
-                <Drawer.Content className="flex flex-col p-0 sm:max-w-sm w-[85vw] max-w-[85vw]">
-                  <Drawer.Header className="p-6 pb-4 border-b">
-                    <Link to="/" className="flex items-center gap-2">
-                      <Logo className="h-6 w-auto" />
-                    </Link>
+                <Drawer.Backdrop />
+                <Drawer.Content>
+                  <Drawer.Header>
                     <Drawer.Title className="sr-only">Navigation</Drawer.Title>
                   </Drawer.Header>
-                  <div className="flex-1 overflow-y-auto">
-                    <Accordion className="flex w-full flex-col">
+                  <div className="flex flex-col gap-6 p-4 overflow-y-auto">
+                    <Accordion className="flex w-full flex-col gap-4">
                       {menu.map((item) => renderMobileMenuItem(item))}
                     </Accordion>
-                  </div>
-                  <div className="p-6 pt-4 border-t bg-muted/10 flex flex-col gap-3">
-                    <Button variant="outline" size="lg" className="w-full" render={<Link to={auth.login.url} />}>{auth.login.title}</Button>
-                    <Button size="lg" className="w-full shadow-sm" render={<Link to={auth.signup.url} />}>{auth.signup.title}</Button>
+
+                    <div className="flex flex-col gap-3">
+                      <Button variant="outline" render={<Link to={auth.login.url} />}>
+                        {auth.login.title}
+                      </Button>
+                      <Button render={<Link to={auth.signup.url} />}>
+                        {auth.signup.title}
+                      </Button>
+                    </div>
                   </div>
                 </Drawer.Content>
               </Drawer.Portal>
@@ -165,9 +171,7 @@ const renderMenuItem = (item: MenuItem) => {
   if (item.items) {
     return (
       <NavigationMenuItem key={item.title}>
-        <NavigationMenuTrigger className="bg-transparent hover:bg-accent/50 data-[state=open]:bg-accent/50">
-          {item.title}
-        </NavigationMenuTrigger>
+        <NavigationMenuTrigger>{item.title}</NavigationMenuTrigger>
         <NavigationMenuContent className="bg-popover text-popover-foreground">
           {item.items.map((subItem) => (
             <NavigationMenuLink asChild key={subItem.title} className="w-80">
@@ -183,7 +187,7 @@ const renderMenuItem = (item: MenuItem) => {
     <NavigationMenuItem key={item.title}>
       <NavigationMenuLink
         href={item.url}
-        className="group inline-flex h-10 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
+        className="group inline-flex h-10 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-muted hover:text-accent-foreground"
       >
         {item.title}
       </NavigationMenuLink>
@@ -194,27 +198,21 @@ const renderMenuItem = (item: MenuItem) => {
 const renderMobileMenuItem = (item: MenuItem) => {
   if (item.items) {
     return (
-      <Accordion.Item key={item.title} value={item.title} className="border-b">
-        <Accordion.Trigger className="px-6 py-4 text-[15px] font-medium hover:no-underline hover:bg-accent/50 data-[panel-open]:bg-accent/30">
+      <Accordion.Item key={item.title} value={item.title} className="border-b-0">
+        <Accordion.Trigger className="text-md py-0 font-semibold hover:no-underline">
           {item.title}
         </Accordion.Trigger>
-        <Accordion.Content className="px-3 pb-4 bg-muted/30">
-          <div className="flex flex-col gap-2 pt-2">
-            {item.items.map((subItem) => (
-              <SubMenuLink key={subItem.title} item={subItem} />
-            ))}
-          </div>
+        <Accordion.Content className="mt-2">
+          {item.items.map((subItem) => (
+            <SubMenuLink key={subItem.title} item={subItem} />
+          ))}
         </Accordion.Content>
       </Accordion.Item>
     );
   }
 
   return (
-    <a
-      key={item.title}
-      href={item.url}
-      className="flex items-center px-6 py-4 text-[15px] font-medium border-b hover:bg-accent/50 transition-colors"
-    >
+    <a key={item.title} href={item.url} className="text-md font-semibold px-4 py-2">
       {item.title}
     </a>
   );
@@ -223,16 +221,14 @@ const renderMobileMenuItem = (item: MenuItem) => {
 const SubMenuLink = ({item}: {item: MenuItem}) => {
   return (
     <a
-      className="flex flex-row gap-4 rounded-xl p-3 leading-none no-underline transition-colors outline-none select-none hover:bg-accent hover:text-accent-foreground border border-transparent hover:border-border/50 hover:shadow-sm"
+      className="flex min-w-80 flex-row gap-4 rounded-md p-3 leading-none no-underline transition-colors outline-none select-none hover:bg-muted hover:text-accent-foreground"
       href={item.url}
     >
-      <div className="flex size-10 items-center justify-center rounded-lg bg-muted border text-foreground shrink-0">
-        <span className="[&_svg]:size-5">{item.icon}</span>
-      </div>
-      <div className="flex flex-col gap-1">
+      <div className="text-foreground">{item.icon}</div>
+      <div>
         <div className="text-sm font-semibold">{item.title}</div>
         {item.description && (
-          <p className="text-xs leading-snug text-muted-foreground">
+          <p className="text-sm leading-snug text-muted-foreground">
             {item.description}
           </p>
         )}
