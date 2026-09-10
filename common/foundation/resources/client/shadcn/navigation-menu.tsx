@@ -66,7 +66,7 @@ function NavigationMenuContent({className, children, ...props}: React.ComponentP
     <div
       data-slot="navigation-menu-content"
       className={cn(
-        "absolute left-0 top-full mt-2 hidden group-hover:block group-focus-within:block animate-in fade-in slide-in-from-top-2 duration-200 w-auto z-50",
+        "absolute left-0 top-full pt-2 hidden group-hover:block group-focus-within:block animate-in fade-in slide-in-from-top-2 duration-200 w-auto z-50 before:absolute before:inset-x-0 before:-top-2 before:h-2 before:content-['']",
         className
       )}
       {...props}
