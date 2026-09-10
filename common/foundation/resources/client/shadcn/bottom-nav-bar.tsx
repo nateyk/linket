@@ -5,7 +5,7 @@ import {motion} from "framer-motion";
 import {Home, LineChart, CreditCard, MessageCircle, Trophy, User} from "lucide-react";
 import {cn} from "@ui/utils/cn";
 
-const navItems = [
+const defaultNavItems = [
   {label: "Home", icon: Home},
   {label: "Portfolio", icon: LineChart},
   {label: "Transactions", icon: CreditCard},
@@ -16,18 +16,31 @@ const navItems = [
 
 const MOBILE_LABEL_WIDTH = 72;
 
+type NavItem = {label: string; icon: React.ComponentType<{size?: number; strokeWidth?: number; className?: string}>};
+
 type BottomNavBarProps = {
   className?: string;
   defaultIndex?: number;
   stickyBottom?: boolean;
+  items?: NavItem[];
+  activeIndex?: number;
+  onIndexChange?: (index: number) => void;
 };
 
 export function BottomNavBar({
   className,
   defaultIndex = 0,
   stickyBottom = false,
+  items = defaultNavItems,
+  activeIndex: controlledIndex,
+  onIndexChange,
 }: BottomNavBarProps) {
-  const [activeIndex, setActiveIndex] = useState(defaultIndex);
+  const [internalIndex, setInternalIndex] = useState(defaultIndex);
+  const activeIndex = controlledIndex ?? internalIndex;
+  const setActiveIndex = (idx: number) => {
+    if (onIndexChange) onIndexChange(idx);
+    else setInternalIndex(idx);
+  };
 
   return (
     <motion.nav
@@ -42,7 +55,7 @@ export function BottomNavBar({
         className,
       )}
     >
-      {navItems.map((item, idx) => {
+      {items.map((item, idx) => {
         const Icon = item.icon;
         const isActive = activeIndex === idx;
 

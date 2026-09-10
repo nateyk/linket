@@ -31,8 +31,12 @@ import {
   BadgeCheckIcon,
   BriefcaseBusinessIcon,
   MailIcon,
+  UserIcon,
+  PackageIcon,
+  InfoIcon,
 } from 'lucide-react';
 import {Link} from 'react-router';
+import {useState} from 'react';
 
 interface CreatorProfileLayoutProps {
   biolink: Biolink;
@@ -149,10 +153,17 @@ function MobileCreatorProfile({
       : configuredProductIds.length > 0);
   const hasAbout = hasVisibleAbout(profile.about_html);
   const showNavigation = hasProducts || hasAbout;
+  const [activeTab, setActiveTab] = useState("profile");
+  const biolinkNavItems = [
+    {label: "Profile", icon: UserIcon, value: "profile"},
+    ...(hasProducts ? [{label: "Products", icon: PackageIcon, value: "products"}] : []),
+    ...(hasAbout ? [{label: "About", icon: InfoIcon, value: "about"}] : []),
+  ];
 
   return (
     <Tabs.Root
-      defaultValue="profile"
+      value={activeTab}
+      onValueChange={setActiveTab}
       className={cn(
         'relative min-w-0 gap-0',
         compact && 'flex min-h-full flex-col justify-start',
@@ -199,7 +210,15 @@ function MobileCreatorProfile({
 
       {showNavigation && (
         <div className="flex justify-center py-6 @4xl:hidden">
-          <BottomNavBar stickyBottom />
+          <BottomNavBar
+            items={biolinkNavItems.map(item => ({label: item.label, icon: item.icon}))}
+            activeIndex={biolinkNavItems.findIndex(item => item.value === activeTab)}
+            onIndexChange={(idx: number) => {
+              const item = biolinkNavItems[idx];
+              if (item) setActiveTab(item.value);
+            }}
+            stickyBottom
+          />
         </div>
       )}
     </Tabs.Root>
