@@ -5,7 +5,7 @@ import {motion} from "framer-motion";
 import {Home, LineChart, CreditCard, MessageCircle, Trophy, User} from "lucide-react";
 import {cn} from "@ui/utils/cn";
 
-const defaultNavItems = [
+const navItems = [
   {label: "Home", icon: Home},
   {label: "Portfolio", icon: LineChart},
   {label: "Transactions", icon: CreditCard},
@@ -31,7 +31,7 @@ export function BottomNavBar({
   className,
   defaultIndex = 0,
   stickyBottom = false,
-  items = defaultNavItems,
+  items = navItems,
   activeIndex: controlledIndex,
   onIndexChange,
 }: BottomNavBarProps) {
@@ -50,7 +50,7 @@ export function BottomNavBar({
       role="navigation"
       aria-label="Bottom Navigation"
       className={cn(
-        "bg-card dark:bg-card border border-border dark:border-sidebar-border rounded-full flex items-center p-1.5 shadow-xl gap-1 max-w-[95vw] h-[52px] w-fit min-w-0",
+        "bg-card/95 backdrop-blur-xl supports-[backdrop-filter]:bg-card/80 border border-border/40 dark:border-border/50 rounded-full flex items-center p-1.5 shadow-lg shadow-black/5 ring-1 ring-foreground/5 gap-1 max-w-[95vw] h-[52px] w-fit min-w-0",
         stickyBottom && "fixed inset-x-0 bottom-4 mx-auto z-20",
         className,
       )}
@@ -64,21 +64,22 @@ export function BottomNavBar({
             key={item.label}
             whileTap={{scale: 0.97}}
             className={cn(
-              "flex items-center gap-0 px-3 py-2 rounded-full transition-colors duration-200 relative h-10 min-w-[44px] min-h-[40px] max-h-[44px]",
+              "flex items-center gap-0 px-3 py-2 rounded-full transition-all duration-200 relative h-10 min-w-[44px] min-h-[40px] max-h-[44px] font-medium",
               isActive
-                ? "bg-primary/10 dark:bg-primary/15 text-primary dark:text-primary gap-2"
-                : "bg-transparent text-muted-foreground dark:text-muted-foreground hover:bg-muted dark:hover:bg-muted",
-              "focus:outline-none focus-visible:ring-0",
+                ? "bg-primary text-primary-foreground shadow-sm gap-2"
+                : "bg-transparent text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+              "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
             )}
             onClick={() => setActiveIndex(idx)}
             aria-label={item.label}
+            aria-pressed={isActive}
             type="button"
           >
             <Icon
-              size={22}
+              size={20}
               strokeWidth={2}
               aria-hidden
-              className="transition-colors duration-200"
+              className="transition-colors duration-200 shrink-0"
             />
 
             <motion.div
@@ -93,12 +94,12 @@ export function BottomNavBar({
                 opacity: {duration: 0.19},
                 marginLeft: {duration: 0.19},
               }}
-              className={cn("overflow-hidden flex items-center max-w-[72px]")}
+              className="overflow-hidden flex items-center max-w-[72px]"
             >
               <span
                 className={cn(
-                  "font-medium text-xs whitespace-nowrap select-none transition-opacity duration-200 overflow-hidden text-ellipsis text-[clamp(0.625rem,0.5263rem+0.5263vw,1rem)] leading-[1.9]",
-                  isActive ? "text-primary dark:text-primary" : "opacity-0",
+                  "font-semibold text-xs whitespace-nowrap select-none transition-opacity duration-200 overflow-hidden text-ellipsis leading-[1.9]",
+                  isActive ? "text-primary-foreground" : "opacity-0",
                 )}
                 title={item.label}
               >
