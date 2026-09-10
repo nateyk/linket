@@ -137,23 +137,48 @@ export function Header() {
           <MenuToggleIcon open={open} className="size-5" duration={300} />
         </Button>
       </nav>
-      <MobileMenu open={open} className="flex flex-col justify-between gap-2 overflow-y-auto">
-        <NavigationMenu className="max-w-full">
-          <div className="flex w-full flex-col gap-y-2">
-            <span className="text-sm">Product</span>
-            {productLinks.map((link) => (
-              <ListItem key={link.title} {...link} />
-            ))}
-            <span className="text-sm">Company</span>
-            {companyLinks.map((link) => (
-              <ListItem key={link.title} {...link} />
-            ))}
-            {companyLinks2.map((link) => (
-              <ListItem key={link.title} {...link} />
-            ))}
+      <MobileMenu open={open} className="flex flex-col justify-between gap-0 overflow-y-auto">
+        <div className="flex w-full flex-col">
+          <div className="border-b">
+            <button
+              onClick={() => {
+                const el = document.getElementById('mobile-product-panel');
+                if (el) el.classList.toggle('hidden');
+              }}
+              className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium hover:bg-accent/50"
+            >
+              Product
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-4"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+            <div id="mobile-product-panel" className="hidden px-2 pb-3 space-y-1">
+              {productLinks.map((link) => (
+                <ListItem key={link.title} {...link} />
+              ))}
+            </div>
           </div>
-        </NavigationMenu>
-        <div className="flex flex-col gap-2">
+          <div className="border-b">
+            <button
+              onClick={() => {
+                const el = document.getElementById('mobile-company-panel');
+                if (el) el.classList.toggle('hidden');
+              }}
+              className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium hover:bg-accent/50"
+            >
+              Company
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-4"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+            <div id="mobile-company-panel" className="hidden px-2 pb-3 space-y-1">
+              {companyLinks.map((link) => (
+                <ListItem key={link.title} {...link} />
+              ))}
+              {companyLinks2.map((link) => (
+                <ListItem key={link.title} {...link} />
+              ))}
+            </div>
+          </div>
+          <a href="#" className="px-4 py-3 text-sm font-medium border-b hover:bg-accent/50">Pricing</a>
+        </div>
+        <div className="flex flex-col gap-2 p-4 border-t">
           <Button variant="outline" className="w-full bg-transparent">
             Sign In
           </Button>
