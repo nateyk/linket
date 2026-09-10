@@ -18,6 +18,7 @@ import {AdHost} from '@common/admin/ads/ad-host';
 import {Avatar} from '@shadcn/avatar/avatar';
 import {Badge} from '@shadcn/badge/badge';
 import {LinkButton} from '@shadcn/button/button';
+import BottomNavBar from '@shadcn/bottom-nav-bar';
 import {Tabs} from '@shadcn/tabs/tabs';
 import {Trans} from '@ui/i18n/trans';
 import {message} from '@ui/i18n/message';
@@ -29,10 +30,7 @@ import {isAbsoluteUrl} from '@ui/utils/urls/is-absolute-url';
 import {
   BadgeCheckIcon,
   BriefcaseBusinessIcon,
-  InfoIcon,
   MailIcon,
-  PackageIcon,
-  UserIcon,
 } from 'lucide-react';
 import {Link} from 'react-router';
 
@@ -141,7 +139,6 @@ function MobileCreatorProfile({
   compact?: boolean;
   showAds?: boolean;
 }) {
-  const {trans} = useTrans();
   const configuredProductIds = Array.isArray(shopWidget?.config?.product_ids)
     ? shopWidget.config.product_ids
     : [];
@@ -152,11 +149,6 @@ function MobileCreatorProfile({
       : configuredProductIds.length > 0);
   const hasAbout = hasVisibleAbout(profile.about_html);
   const showNavigation = hasProducts || hasAbout;
-  const buttonAppearance = resolveBiolinkButtonAppearance(appearance);
-  const navigationAppearanceStyle = {
-    ...buttonAppearance.style,
-    boxShadow: undefined,
-  };
 
   return (
     <Tabs.Root
@@ -206,93 +198,11 @@ function MobileCreatorProfile({
       )}
 
       {showNavigation && (
-        <div
-          className={cn(
-            'pointer-events-none z-10 flex justify-center',
-            compact
-              ? 'relative mt-3 px-3 pb-1'
-              : 'fixed inset-x-0 bottom-[calc(1rem+env(safe-area-inset-bottom))] px-4 @4xl:hidden',
-          )}
-        >
-          <div
-            className={cn(
-              'mx-auto w-fit max-w-[calc(100vw-2rem)]',
-              compact && 'max-w-[calc(100%-1.5rem)]',
-            )}
-          >
-            <Tabs.List
-              aria-label={trans(message('Creator profile sections'))}
-              className={cn(
-                'pointer-events-auto flex h-auto w-fit min-w-0 items-center gap-1 border border-[var(--biolink-border)] bg-[var(--biolink-surface-strong)] p-1 text-[var(--biolink-muted-text)] shadow-md shadow-black/10 backdrop-blur-xl [&>span:last-child]:hidden',
-                compact && 'shadow-sm',
-                buttonAppearance.radius,
-              )}
-              style={navigationAppearanceStyle}
-            >
-              <MobileSectionTab
-                value="profile"
-                icon={<UserIcon />}
-                compact={compact}
-              >
-                <Trans message="Profile" />
-              </MobileSectionTab>
-              {hasProducts && (
-                <MobileSectionTab
-                  value="products"
-                  icon={<PackageIcon />}
-                  compact={compact}
-                >
-                  <Trans message="Products" />
-                </MobileSectionTab>
-              )}
-              {hasAbout && (
-                <MobileSectionTab
-                  value="about"
-                  icon={<InfoIcon />}
-                  compact={compact}
-                >
-                  <Trans message="About" />
-                </MobileSectionTab>
-              )}
-            </Tabs.List>
-          </div>
+        <div className="flex justify-center py-6 @4xl:hidden">
+          <BottomNavBar stickyBottom />
         </div>
       )}
     </Tabs.Root>
-  );
-}
-
-function MobileSectionTab({
-  value,
-  icon,
-  compact,
-  children,
-}: {
-  value: string;
-  icon: React.ReactNode;
-  compact: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <Tabs.Tab
-      value={value}
-      className={cn(
-        'group/mobile-section-tab min-w-0 flex-none gap-0 rounded-[inherit] border border-transparent px-0 text-[var(--biolink-muted-text)] transition-colors duration-150 hover:[background:var(--biolink-surface-muted)] hover:text-[var(--biolink-text)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--biolink-button-focus)] data-active:gap-1.5 data-active:border-[var(--biolink-button-border)]! data-active:[background:var(--biolink-button-background)] data-active:text-[var(--biolink-button-text)]! data-active:hover:[background:var(--biolink-button-hover)]',
-        compact
-          ? 'size-9 data-active:w-auto data-active:px-2.5'
-          : 'size-10 data-active:w-auto data-active:px-3',
-      )}
-    >
-      {icon}
-      <span
-        className={cn(
-          'max-w-0 overflow-hidden leading-none font-medium whitespace-nowrap opacity-0 transition-opacity duration-150 group-data-[active]/mobile-section-tab:max-w-20 group-data-[active]/mobile-section-tab:opacity-100',
-          compact ? 'text-[0.6875rem]' : 'text-xs',
-        )}
-      >
-        {children}
-      </span>
-    </Tabs.Tab>
   );
 }
 
