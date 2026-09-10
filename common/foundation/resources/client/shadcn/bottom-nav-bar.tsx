@@ -50,8 +50,8 @@ export function BottomNavBar({
       role="navigation"
       aria-label="Bottom Navigation"
       className={cn(
-        "bg-card dark:bg-card border border-border dark:border-sidebar-border rounded-full flex items-center p-2 shadow-xl space-x-1 min-w-[320px] max-w-[95vw] h-[52px]",
-        stickyBottom && "fixed inset-x-0 bottom-4 mx-auto z-20 w-fit",
+        "bg-card dark:bg-card border border-border dark:border-sidebar-border rounded-full flex items-center p-1.5 shadow-xl gap-1 max-w-[95vw] h-[52px] w-fit min-w-0",
+        stickyBottom && "fixed inset-x-0 bottom-4 mx-auto z-20",
         className,
       )}
     >
