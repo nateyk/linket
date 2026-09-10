@@ -31,8 +31,8 @@ const menu: MenuItem[] = [
     url: "#",
     items: [
       {
-        title: "Website Builder",
-        description: "Create responsive websites with ease",
+        title: "Blog",
+        description: "The latest industry news, updates, and info",
         icon: <Book className="size-5 shrink-0" />,
         url: "#",
       },
@@ -101,7 +101,7 @@ export function Header({className}: {className?: string}) {
       <div className="container mx-auto max-w-6xl px-4 sm:px-6">
         {/* Desktop Menu */}
         <nav className="hidden items-center justify-between lg:flex">
-          <div className="flex items-center gap-8">
+          <div className="flex items-center gap-6">
             <Link to="/" className="flex items-center gap-2">
               <Logo className="h-7 w-auto" />
             </Link>
@@ -168,7 +168,6 @@ export function Header({className}: {className?: string}) {
                         </Button>
                       }
                     />
-                    <Drawer.Title className="sr-only">Navigation</Drawer.Title>
                   </div>
                   <div className="flex-1 overflow-y-auto overscroll-contain bg-background">
                     <Accordion className="flex w-full flex-col">
@@ -197,9 +196,7 @@ const renderMenuItem = (item: MenuItem) => {
   if (item.items) {
     return (
       <NavigationMenuItem key={item.title}>
-        <NavigationMenuTrigger className="bg-transparent hover:bg-accent/50 data-[state=open]:bg-accent/50 transition-colors">
-          {item.title}
-        </NavigationMenuTrigger>
+        <NavigationMenuTrigger>{item.title}</NavigationMenuTrigger>
         <NavigationMenuContent className="bg-popover text-popover-foreground">
           {item.items.map((subItem) => (
             <NavigationMenuLink asChild key={subItem.title} className="w-80">
@@ -215,7 +212,7 @@ const renderMenuItem = (item: MenuItem) => {
     <NavigationMenuItem key={item.title}>
       <NavigationMenuLink
         href={item.url}
-        className="group inline-flex h-10 w-max items-center justify-center rounded-md bg-transparent px-4 py-2 text-sm font-medium transition-colors hover:bg-accent/50 hover:text-accent-foreground"
+        className="group inline-flex h-10 w-max items-center justify-center rounded-md bg-transparent px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
       >
         {item.title}
       </NavigationMenuLink>
