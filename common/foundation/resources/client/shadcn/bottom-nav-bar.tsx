@@ -50,7 +50,7 @@ export function BottomNavBar({
       role="navigation"
       aria-label="Bottom Navigation"
       className={cn(
-        "bg-card/95 backdrop-blur-xl supports-[backdrop-filter]:bg-card/80 border border-border/40 dark:border-border/50 rounded-full flex items-center p-1.5 shadow-lg shadow-black/5 ring-1 ring-foreground/5 gap-1 max-w-[95vw] h-[52px] w-fit min-w-0",
+        "bg-card dark:bg-card border border-border dark:border-sidebar-border rounded-full flex items-center p-1.5 shadow-xl gap-1 max-w-[95vw] h-[48px] w-fit min-w-0",
         stickyBottom && "fixed inset-x-0 bottom-4 mx-auto z-20",
         className,
       )}
@@ -64,11 +64,11 @@ export function BottomNavBar({
             key={item.label}
             whileTap={{scale: 0.97}}
             className={cn(
-              "flex items-center gap-0 px-3 py-2 rounded-full transition-all duration-200 relative h-10 min-w-[44px] min-h-[40px] max-h-[44px] font-medium",
+              "flex items-center gap-0 px-2.5 py-2 rounded-full transition-all duration-200 relative h-9 min-w-[40px] min-h-[36px] max-h-[40px] font-medium",
               isActive
-                ? "bg-primary text-primary-foreground shadow-sm gap-2"
-                : "bg-transparent text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-              "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                ? "bg-primary/10 dark:bg-primary/15 text-primary dark:text-primary gap-2"
+                : "bg-transparent text-muted-foreground dark:text-muted-foreground hover:bg-muted dark:hover:bg-muted",
+              "focus:outline-none focus-visible:ring-0",
             )}
             onClick={() => setActiveIndex(idx)}
             aria-label={item.label}
