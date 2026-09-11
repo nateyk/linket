@@ -17,16 +17,17 @@ function SheetTrigger({...props}: DialogPrimitive.Trigger.Props) {
 }
 
 const sheetContentVariants = cva(
-  'fixed z-50 flex flex-col gap-0 bg-card text-card-foreground shadow-xl outline-none transition-transform duration-200 ease-out',
+  'fixed z-50 flex flex-col gap-0 bg-card text-card-foreground shadow-xl outline-none will-change-transform data-closed:animate-out data-closed:duration-200 data-closed:fade-out-0 data-open:animate-in data-open:fade-in-0 duration-300',
   {
     variants: {
       side: {
         right:
-          'inset-y-0 right-0 h-full w-full border-l data-ending-style:translate-x-full data-starting-style:translate-x-full sm:max-w-sm',
-        left: 'inset-y-0 left-0 h-full w-full border-r data-ending-style:-translate-x-full data-starting-style:-translate-x-full sm:max-w-sm',
-        top: 'inset-x-0 top-0 h-auto border-b data-ending-style:-translate-y-full data-starting-style:-translate-y-full',
+          'inset-y-0 right-0 h-full w-full border-l data-closed:slide-out-to-right data-open:slide-in-from-right',
+        left:
+          'inset-y-0 left-0 h-full w-full border-r data-closed:slide-out-to-left data-open:slide-in-from-left',
+        top: 'inset-x-0 top-0 h-auto border-b data-closed:slide-out-to-top data-open:slide-in-from-top',
         bottom:
-          'inset-x-0 bottom-0 h-auto border-t data-ending-style:translate-y-full data-starting-style:translate-y-full',
+          'inset-x-0 bottom-0 h-auto border-t data-closed:slide-out-to-bottom data-open:slide-in-from-bottom',
       },
     },
     defaultVariants: {
@@ -45,7 +46,10 @@ function SheetContent({
     <DialogPrimitive.Portal>
       <DialogPrimitive.Backdrop
         data-slot="sheet-backdrop"
-        className={dialogBaseStyles.backdrop}
+        className={cn(
+          dialogBaseStyles.backdrop,
+          'duration-300 data-closed:duration-200',
+        )}
       />
       <DialogPrimitive.Popup
         data-slot="sheet-content"

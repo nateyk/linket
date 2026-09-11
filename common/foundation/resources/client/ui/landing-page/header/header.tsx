@@ -92,10 +92,10 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex h-16 items-center justify-between">
         {/* Logo */}
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-2">
           <a
             href="https://shadcnstore.com"
-            className="flex items-center space-x-2 cursor-pointer"
+            className="flex cursor-pointer items-center gap-2"
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -114,7 +114,7 @@ export function Header() {
                     <NavigationMenuTrigger className="bg-transparent hover:bg-transparent focus:bg-transparent data-[active]:bg-transparent data-[state=open]:bg-transparent px-4 py-2 text-sm font-medium transition-colors hover:text-primary focus:text-primary cursor-pointer">
                       {item.name}
                     </NavigationMenuTrigger>
-                    <NavigationMenuContent>
+                    <NavigationMenuContent className="left-1/2 w-[700px] max-w-[95vw] -translate-x-1/2 overflow-hidden rounded-xl border border-border/40 bg-card/95 shadow-xl backdrop-blur">
                       <MegaMenu />
                     </NavigationMenuContent>
                   </>
@@ -139,7 +139,7 @@ export function Header() {
         </NavigationMenu>
 
         {/* Desktop CTA */}
-        <div className="hidden xl:flex items-center space-x-2">
+        <div className="hidden items-center gap-2 xl:flex">
           <Button
             variant="ghost"
             size="icon"
@@ -257,7 +257,7 @@ export function Header() {
 
               {/* Navigation Links */}
               <div className="flex-1 overflow-y-auto">
-                <nav className="p-6 space-y-1">
+                <nav className="flex flex-col gap-1 p-6">
                   {navigationItems.map(item => (
                     <div key={item.name}>
                       {item.hasMegaMenu ? (
@@ -271,7 +271,7 @@ export function Header() {
                               className={`h-4 w-4 transition-transform ${solutionsOpen ? 'rotate-180' : ''}`}
                             />
                           </CollapsibleTrigger>
-                          <CollapsibleContent className="pl-4 space-y-1">
+                          <CollapsibleContent className="flex flex-col gap-1 pl-4">
                             {solutionsItems.map((solution, index) =>
                               solution.title ? (
                                 <div
@@ -323,9 +323,9 @@ export function Header() {
               </div>
 
               {/* Footer Actions */}
-              <div className="border-t p-6 space-y-4">
+              <div className="flex flex-col gap-4 border-t p-6">
                 {/* Primary Actions */}
-                <div className="space-y-3">
+                <div className="flex flex-col gap-3">
                   <LinkButton
                     variant="outline"
                     size="lg"
