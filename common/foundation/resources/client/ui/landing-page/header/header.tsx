@@ -2,6 +2,7 @@
 
 import {useAuth} from '@common/auth/use-auth';
 import {ColorSchemeContext} from '@common/core/color-scheme-provider';
+import {Logo} from '@common/ui/navigation/navbar/logo';
 import {Button, LinkButton} from '@shadcn/button/button';
 import {
   Collapsible,
@@ -32,9 +33,9 @@ import {
   SunIcon,
   XIcon,
 } from 'lucide-react';
+import {useSettings} from '@ui/settings/use-settings';
 import {use, useState} from 'react';
 import {MegaMenu} from './mega-menu';
-import {StoreLogo} from './store-logo';
 
 const navigationItems = [
   {name: 'Home', href: '#hero'},
@@ -83,6 +84,7 @@ export function Header() {
   const [solutionsOpen, setSolutionsOpen] = useState(false);
   const {colorScheme, setColorScheme} = use(ColorSchemeContext);
   const {getRedirectUri} = useAuth();
+  const {branding} = useSettings();
 
   const toggleColorScheme = () => {
     setColorScheme(colorScheme === 'light' ? 'dark' : 'light');
@@ -92,17 +94,7 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex h-16 items-center justify-between">
         {/* Logo */}
-        <div className="flex items-center gap-2">
-          <a
-            href="https://shadcnstore.com"
-            className="flex cursor-pointer items-center gap-2"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <StoreLogo size={32} />
-            <span className="font-bold">ShadcnStore</span>
-          </a>
-        </div>
+        <Logo className="h-8" url="/" />
 
         {/* Desktop Navigation */}
         <NavigationMenu className="hidden xl:flex">
@@ -207,10 +199,10 @@ export function Header() {
               <SheetHeader className="p-4 pb-2 border-b">
                 <div className="flex items-center gap-2">
                   <div className="p-2 bg-primary/10 rounded-lg">
-                    <StoreLogo size={16} />
+                    <Logo logoType="compact" className="h-4" url="/" />
                   </div>
                   <SheetTitle className="text-lg font-semibold">
-                    ShadcnStore
+                    {branding.site_name}
                   </SheetTitle>
                   <div className="ml-auto flex items-center gap-2">
                     <Button
