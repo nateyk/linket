@@ -43,9 +43,17 @@ describe('digital product form submission', () => {
       ),
       'utf8',
     );
+    const flow = fs.readFileSync(
+      path.resolve(
+        'resources/client/dashboard/digital-products/product-create-flow.ts',
+      ),
+      'utf8',
+    );
 
-    expect(selectionPage).toMatch(
-      /selectedType === 'course'\s*\? '\/dashboard\/my-products\/new\/course'/,
+    expect(selectionPage).toContain('useProductCreateWizard');
+    expect(selectionPage).toContain('finishUrl');
+    expect(flow).toMatch(
+      /state\.type === 'course'[\s\S]*?\/dashboard\/my-products\/new\/course/,
     );
     expect(dialog).toContain('useProductCreateWizard');
     expect(dialog).toContain('finishUrl');

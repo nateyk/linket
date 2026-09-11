@@ -21,3 +21,13 @@ describe('create product dialog wizard', () => {
     expect(source).toMatch(/wizard\.reset\(\)|reset\(\)/);
   });
 });
+
+describe('product type selection page wizard', () => {
+  test('reuses the shared wizard and finishes via buildCreateUrl', () => {
+    const source = read('product-type-selection-page.tsx');
+    expect(source).toContain('useProductCreateWizard');
+    expect(source).toContain('WizardStepBody');
+    expect(source).toContain('finishUrl');
+    expect(source).not.toContain('selectedType');
+  });
+});
