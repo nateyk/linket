@@ -47,9 +47,8 @@ describe('digital product form submission', () => {
     expect(selectionPage).toMatch(
       /selectedType === 'course'\s*\? '\/dashboard\/my-products\/new\/course'/,
     );
-    expect(dialog).toMatch(
-      /selectedType === 'course'\s*\? '\/dashboard\/my-products\/new\/course'/,
-    );
+    expect(dialog).toContain('useProductCreateWizard');
+    expect(dialog).toContain('finishUrl');
   });
 
   test('existing course edit links redirect to the course builder', () => {
