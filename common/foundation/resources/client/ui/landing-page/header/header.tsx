@@ -3,6 +3,11 @@ import React from 'react';
 import {Button} from '@shadcn/button/button';
 import {cn} from '@ui/utils/cn';
 import {MenuToggleIcon} from '@shadcn/menu-toggle-icon/menu-toggle-icon';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@shadcn/collapsible/collapsible';
 import {createPortal} from 'react-dom';
 import {
   NavigationMenu,
@@ -15,6 +20,7 @@ import {
 import {LucideIcon} from 'lucide-react';
 import {Logo} from '@common/ui/navigation/navbar/logo';
 import {
+  ChevronDownIcon,
   CodeIcon,
   GlobeIcon,
   LayersIcon,
@@ -29,6 +35,7 @@ import {
   HelpCircle,
   BarChart,
   PlugIcon,
+  XIcon,
 } from 'lucide-react';
 
 type LinkItem = {
@@ -40,6 +47,8 @@ type LinkItem = {
 
 export function Header() {
   const [open, setOpen] = React.useState(false);
+  const [productOpen, setProductOpen] = React.useState(false);
+  const [companyOpen, setCompanyOpen] = React.useState(false);
   const scrolled = useScroll(10);
 
   React.useEffect(() => {
@@ -137,44 +146,66 @@ export function Header() {
         </Button>
       </nav>
       <MobileMenu open={open} className="flex flex-col justify-between gap-0 overflow-y-auto">
+        <div className="flex items-center gap-2 border-b px-4 py-3">
+          <Logo className="h-4" url="/" />
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={() => setOpen(false)}
+            aria-label="Close menu"
+            className="ml-auto size-8"
+          >
+            <XIcon className="size-4" />
+          </Button>
+        </div>
         <div className="flex w-full flex-col">
-          <div className="border-b">
-            <button
-              onClick={() => {
-                const el = document.getElementById('mobile-product-panel');
-                if (el) el.classList.toggle('hidden');
-              }}
-              className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium hover:bg-accent/50"
-            >
+          <Collapsible
+            open={productOpen}
+            onOpenChange={setProductOpen}
+            className="border-b"
+          >
+            <CollapsibleTrigger className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium hover:bg-accent/50">
               Product
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-4"><path d="m6 9 6 6 6-6"/></svg>
-            </button>
-            <div id="mobile-product-panel" className="hidden px-2 pb-2 space-y-1 bg-card/95 backdrop-blur rounded border border-border/40">
-              {productLinks.map((link) => (
-                <ListItem key={link.title} {...link} />
-              ))}
-            </div>
-          </div>
-          <div className="border-b">
-            <button
-              onClick={() => {
-                const el = document.getElementById('mobile-company-panel');
-                if (el) el.classList.toggle('hidden');
-              }}
-              className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium hover:bg-accent/50"
-            >
+              <ChevronDownIcon
+                className={cn(
+                  'size-4 transition-transform',
+                  productOpen && 'rotate-180',
+                )}
+              />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="px-2 pb-2">
+              <div className="flex flex-col gap-1 rounded border border-border/40 bg-card/95 p-2 backdrop-blur">
+                {productLinks.map(link => (
+                  <ListItem key={link.title} {...link} />
+                ))}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+          <Collapsible
+            open={companyOpen}
+            onOpenChange={setCompanyOpen}
+            className="border-b"
+          >
+            <CollapsibleTrigger className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium hover:bg-accent/50">
               Company
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="size-4"><path d="m6 9 6 6 6-6"/></svg>
-            </button>
-            <div id="mobile-company-panel" className="hidden px-2 pb-2 space-y-1 bg-card/95 backdrop-blur rounded border border-border/40">
-              {companyLinks.map((link) => (
-                <ListItem key={link.title} {...link} />
-              ))}
-              {companyLinks2.map((link) => (
-                <ListItem key={link.title} {...link} />
-              ))}
-            </div>
-          </div>
+              <ChevronDownIcon
+                className={cn(
+                  'size-4 transition-transform',
+                  companyOpen && 'rotate-180',
+                )}
+              />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="px-2 pb-2">
+              <div className="flex flex-col gap-1 rounded border border-border/40 bg-card/95 p-2 backdrop-blur">
+                {companyLinks.map(link => (
+                  <ListItem key={link.title} {...link} />
+                ))}
+                {companyLinks2.map(link => (
+                  <ListItem key={link.title} {...link} />
+                ))}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
           <a href="#" className="px-4 py-3 text-sm font-medium border-b hover:bg-accent/50">Pricing</a>
         </div>
         <div className="flex flex-col gap-2 p-4 border-t">
