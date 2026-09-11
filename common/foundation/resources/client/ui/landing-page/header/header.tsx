@@ -1,14 +1,13 @@
 'use client';
-import React from 'react';
-import {Button} from '@shadcn/button/button';
-import {cn} from '@ui/utils/cn';
-import {MenuToggleIcon} from '@shadcn/menu-toggle-icon/menu-toggle-icon';
+
+import {useAuth} from '@common/auth/use-auth';
+import {ColorSchemeContext} from '@common/core/color-scheme-provider';
+import {Button, LinkButton} from '@shadcn/button/button';
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@shadcn/collapsible/collapsible';
-import {createPortal} from 'react-dom';
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -17,375 +16,349 @@ import {
   NavigationMenuList,
   NavigationMenuTrigger,
 } from '@shadcn/navigation-menu';
-import {LucideIcon} from 'lucide-react';
-import {Logo} from '@common/ui/navigation/navbar/logo';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@shadcn/sheet/sheet';
 import {
   ChevronDownIcon,
-  CodeIcon,
-  GlobeIcon,
-  LayersIcon,
-  UserPlusIcon,
-  Users,
-  Star,
-  FileText,
-  Shield,
-  RotateCcw,
-  Handshake,
-  Leaf,
-  HelpCircle,
-  BarChart,
-  PlugIcon,
+  GithubIcon,
+  LayoutDashboardIcon,
+  MenuIcon,
+  MoonIcon,
+  SunIcon,
   XIcon,
 } from 'lucide-react';
+import {use, useState} from 'react';
+import {MegaMenu} from './mega-menu';
+import {StoreLogo} from './store-logo';
 
-type LinkItem = {
-  title: string;
-  href: string;
-  icon: LucideIcon;
-  description?: string;
+const navigationItems = [
+  {name: 'Home', href: '#hero'},
+  {name: 'Features', href: '#features'},
+  {name: 'Solutions', href: '#features', hasMegaMenu: true},
+  {name: 'Team', href: '#team'},
+  {name: 'Pricing', href: '#pricing'},
+  {name: 'FAQ', href: '#faq'},
+  {name: 'Contact', href: '#contact'},
+];
+
+// Solutions menu items for mobile
+const solutionsItems = [
+  {title: 'Browse Products'},
+  {name: 'Free Blocks', href: '#free-blocks'},
+  {name: 'Premium Templates', href: '#premium-templates'},
+  {name: 'Admin Dashboards', href: '#admin-dashboards'},
+  {name: 'Landing Pages', href: '#landing-pages'},
+  {title: 'Categories'},
+  {name: 'E-commerce', href: '#ecommerce'},
+  {name: 'SaaS Dashboards', href: '#saas-dashboards'},
+  {name: 'Analytics', href: '#analytics'},
+  {name: 'Authentication', href: '#authentication'},
+  {title: 'Resources'},
+  {name: 'Documentation', href: '#docs'},
+  {name: 'Component Showcase', href: '#showcase'},
+  {name: 'GitHub Repository', href: '#github'},
+  {name: 'Design System', href: '#design-system'},
+];
+
+// Smooth scroll function
+const smoothScrollTo = (targetId: string) => {
+  if (targetId.startsWith('#')) {
+    const element = document.querySelector(targetId);
+    if (element) {
+      element.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    }
+  }
 };
 
 export function Header() {
-  const [open, setOpen] = React.useState(false);
-  const [productOpen, setProductOpen] = React.useState(false);
-  const [companyOpen, setCompanyOpen] = React.useState(false);
-  const scrolled = useScroll(10);
+  const [isOpen, setIsOpen] = useState(false);
+  const [solutionsOpen, setSolutionsOpen] = useState(false);
+  const {colorScheme, setColorScheme} = use(ColorSchemeContext);
+  const {getRedirectUri} = useAuth();
 
-  React.useEffect(() => {
-    if (open) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [open]);
+  const toggleColorScheme = () => {
+    setColorScheme(colorScheme === 'light' ? 'dark' : 'light');
+  };
 
   return (
-    <header
-      className={cn('sticky top-0 z-50 w-full border-b border-transparent', {
-        'bg-background/95 supports-[backdrop-filter]:bg-background/50 border-border backdrop-blur-lg':
-          scrolled,
-      })}
-    >
-      <nav className="mx-auto flex h-14 w-full max-w-5xl items-center justify-between px-4">
-        <div className="flex items-center gap-5">
-          <Logo className="h-4" url="/" />
-          <NavigationMenu className="hidden md:flex">
-            <NavigationMenuList>
-              <NavigationMenuItem>
-                <NavigationMenuTrigger className="bg-transparent">Product</NavigationMenuTrigger>
-                <NavigationMenuContent className="bg-card/95 backdrop-blur rounded-xl border border-border/40 p-1 pr-1.5">
-                  <ul className="grid w-lg grid-cols-2 gap-2 rounded p-2 border-border/40 bg-card/95 backdrop-blur">
-                    {productLinks.map((item, i) => (
-                      <li key={i}>
-                        <ListItem {...item} />
-                      </li>
-                    ))}
-                  </ul>
-                  <div className="p-2">
-                    <p className="text-muted-foreground text-sm">
-                      Interested?{' '}
-                      <a href="#" className="text-foreground font-medium hover:underline">
-                        Schedule a demo
-                      </a>
-                    </p>
-                  </div>
-                </NavigationMenuContent>
-              </NavigationMenuItem>
-              <NavigationMenuItem>
-                <NavigationMenuTrigger className="bg-transparent">Company</NavigationMenuTrigger>
-                <NavigationMenuContent className="bg-card/95 backdrop-blur rounded-xl border border-border/40 p-1 pr-1.5 pb-1.5">
-                  <div className="grid w-lg grid-cols-2 gap-2">
-                    <ul className="grid w-lg grid-cols-2 gap-2 rounded p-2 border-border/40 bg-card/95 backdrop-blur">
-                      {companyLinks.map((item, i) => (
-                        <li key={i}>
-                          <ListItem {...item} />
-                        </li>
-                      ))}
-                    </ul>
-                    <ul className="space-y-2 p-3">
-                      {companyLinks2.map((item, i) => (
-                        <li key={i}>
-                          <NavigationMenuLink
-                            href={item.href}
-                            className="flex p-2 hover:bg-accent flex-row rounded-md items-center gap-x-2"
-                          >
-                            <item.icon className="text-foreground size-4" />
-                            <span className="font-medium">{item.title}</span>
-                          </NavigationMenuLink>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </NavigationMenuContent>
-              </NavigationMenuItem>
-              <NavigationMenuLink className="px-4" asChild>
-                <a href="#" className="hover:bg-accent rounded-md p-2">
-                  Pricing
-                </a>
-              </NavigationMenuLink>
-            </NavigationMenuList>
-          </NavigationMenu>
+    <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex h-16 items-center justify-between">
+        {/* Logo */}
+        <div className="flex items-center space-x-2">
+          <a
+            href="https://shadcnstore.com"
+            className="flex items-center space-x-2 cursor-pointer"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <StoreLogo size={32} />
+            <span className="font-bold">ShadcnStore</span>
+          </a>
         </div>
-        <div className="hidden items-center gap-2 md:flex">
-          <Button variant="outline">Sign In</Button>
-          <Button>Get Started</Button>
-        </div>
-        <Button
-          size="icon"
-          variant="outline"
-          onClick={() => setOpen(!open)}
-          className="md:hidden"
-          aria-expanded={open}
-          aria-controls="mobile-menu"
-          aria-label="Toggle menu"
-        >
-          <MenuToggleIcon open={open} className="size-5" duration={300} />
-        </Button>
-      </nav>
-      <MobileMenu open={open} className="flex flex-col justify-between gap-0 overflow-y-auto">
-        <div className="flex items-center gap-2 border-b px-4 py-3">
-          <Logo className="h-4" url="/" />
+
+        {/* Desktop Navigation */}
+        <NavigationMenu className="hidden xl:flex">
+          <NavigationMenuList>
+            {navigationItems.map(item => (
+              <NavigationMenuItem key={item.name}>
+                {item.hasMegaMenu ? (
+                  <>
+                    <NavigationMenuTrigger className="bg-transparent hover:bg-transparent focus:bg-transparent data-[active]:bg-transparent data-[state=open]:bg-transparent px-4 py-2 text-sm font-medium transition-colors hover:text-primary focus:text-primary cursor-pointer">
+                      {item.name}
+                    </NavigationMenuTrigger>
+                    <NavigationMenuContent>
+                      <MegaMenu />
+                    </NavigationMenuContent>
+                  </>
+                ) : (
+                  <NavigationMenuLink
+                    className="group inline-flex h-10 w-max items-center justify-center px-4 py-2 text-sm font-medium transition-colors hover:text-primary focus:text-primary focus:outline-none cursor-pointer"
+                    onClick={e => {
+                      e.preventDefault();
+                      if (item.href.startsWith('#')) {
+                        smoothScrollTo(item.href);
+                      } else {
+                        window.location.href = item.href;
+                      }
+                    }}
+                  >
+                    {item.name}
+                  </NavigationMenuLink>
+                )}
+              </NavigationMenuItem>
+            ))}
+          </NavigationMenuList>
+        </NavigationMenu>
+
+        {/* Desktop CTA */}
+        <div className="hidden xl:flex items-center space-x-2">
           <Button
-            size="icon"
             variant="ghost"
-            onClick={() => setOpen(false)}
-            aria-label="Close menu"
-            className="ml-auto size-8"
+            size="icon"
+            onClick={toggleColorScheme}
+            className="cursor-pointer"
+            aria-label={
+              colorScheme === 'light'
+                ? 'Switch to dark mode'
+                : 'Switch to light mode'
+            }
           >
-            <XIcon className="size-4" />
+            {colorScheme === 'light' ? <MoonIcon /> : <SunIcon />}
           </Button>
-        </div>
-        <div className="flex w-full flex-col">
-          <Collapsible
-            open={productOpen}
-            onOpenChange={setProductOpen}
-            className="border-b"
-          >
-            <CollapsibleTrigger className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium hover:bg-accent/50">
-              Product
-              <ChevronDownIcon
-                className={cn(
-                  'size-4 transition-transform',
-                  productOpen && 'rotate-180',
-                )}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="cursor-pointer"
+            render={
+              <a
+                href="https://github.com/silicondeck/shadcn-dashboard-landing-template"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="GitHub Repository"
               />
-            </CollapsibleTrigger>
-            <CollapsibleContent className="px-2 pb-2">
-              <div className="flex flex-col gap-1 rounded border border-border/40 bg-card/95 p-2 backdrop-blur">
-                {productLinks.map(link => (
-                  <ListItem key={link.title} {...link} />
-                ))}
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-          <Collapsible
-            open={companyOpen}
-            onOpenChange={setCompanyOpen}
-            className="border-b"
+            }
           >
-            <CollapsibleTrigger className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium hover:bg-accent/50">
-              Company
-              <ChevronDownIcon
-                className={cn(
-                  'size-4 transition-transform',
-                  companyOpen && 'rotate-180',
-                )}
-              />
-            </CollapsibleTrigger>
-            <CollapsibleContent className="px-2 pb-2">
-              <div className="flex flex-col gap-1 rounded border border-border/40 bg-card/95 p-2 backdrop-blur">
-                {companyLinks.map(link => (
-                  <ListItem key={link.title} {...link} />
-                ))}
-                {companyLinks2.map(link => (
-                  <ListItem key={link.title} {...link} />
-                ))}
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-          <a href="#" className="px-4 py-3 text-sm font-medium border-b hover:bg-accent/50">Pricing</a>
-        </div>
-        <div className="flex flex-col gap-2 p-4 border-t">
-          <Button variant="outline" className="w-full bg-transparent">
+            <GithubIcon />
+          </Button>
+          <LinkButton
+            variant="outline"
+            to={getRedirectUri()}
+            className="cursor-pointer"
+          >
+            <LayoutDashboardIcon data-icon="inline-start" />
+            Dashboard
+          </LinkButton>
+          <LinkButton variant="ghost" to="/login" className="cursor-pointer">
             Sign In
-          </Button>
-          <Button className="w-full">Get Started</Button>
+          </LinkButton>
+          <LinkButton to="/register" className="cursor-pointer">
+            Get Started
+          </LinkButton>
         </div>
-      </MobileMenu>
+
+        {/* Mobile Menu */}
+        <Sheet open={isOpen} onOpenChange={setIsOpen}>
+          <SheetTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon"
+                className="xl:hidden cursor-pointer"
+              />
+            }
+          >
+            <MenuIcon />
+            <span className="sr-only">Toggle menu</span>
+          </SheetTrigger>
+          <SheetContent
+            side="right"
+            className="w-full sm:w-[400px] p-0 gap-0 [&>button]:hidden overflow-hidden flex flex-col"
+          >
+            <div className="flex flex-col h-full">
+              {/* Header */}
+              <SheetHeader className="p-4 pb-2 border-b">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <StoreLogo size={16} />
+                  </div>
+                  <SheetTitle className="text-lg font-semibold">
+                    ShadcnStore
+                  </SheetTitle>
+                  <div className="ml-auto flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={toggleColorScheme}
+                      className="cursor-pointer"
+                      aria-label={
+                        colorScheme === 'light'
+                          ? 'Switch to dark mode'
+                          : 'Switch to light mode'
+                      }
+                    >
+                      <MoonIcon className="rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                      <SunIcon className="absolute rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      className="cursor-pointer"
+                      render={
+                        <a
+                          href="https://github.com/silicondeck/shadcn-dashboard-landing-template"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label="GitHub Repository"
+                        />
+                      }
+                    >
+                      <GithubIcon />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => setIsOpen(false)}
+                      className="cursor-pointer"
+                      aria-label="Close menu"
+                    >
+                      <XIcon />
+                    </Button>
+                  </div>
+                </div>
+              </SheetHeader>
+
+              {/* Navigation Links */}
+              <div className="flex-1 overflow-y-auto">
+                <nav className="p-6 space-y-1">
+                  {navigationItems.map(item => (
+                    <div key={item.name}>
+                      {item.hasMegaMenu ? (
+                        <Collapsible
+                          open={solutionsOpen}
+                          onOpenChange={setSolutionsOpen}
+                        >
+                          <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-3 text-base font-medium rounded-lg transition-colors hover:bg-accent hover:text-accent-foreground cursor-pointer">
+                            {item.name}
+                            <ChevronDownIcon
+                              className={`h-4 w-4 transition-transform ${solutionsOpen ? 'rotate-180' : ''}`}
+                            />
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="pl-4 space-y-1">
+                            {solutionsItems.map((solution, index) =>
+                              solution.title ? (
+                                <div
+                                  key={`title-${index}`}
+                                  className="px-4 mt-5 py-2 text-xs font-semibold text-muted-foreground/50 uppercase tracking-wider"
+                                >
+                                  {solution.title}
+                                </div>
+                              ) : (
+                                <a
+                                  key={solution.name}
+                                  href={solution.href}
+                                  className="flex items-center px-4 py-2 text-sm rounded-lg transition-colors hover:bg-accent hover:text-accent-foreground cursor-pointer"
+                                  onClick={e => {
+                                    setIsOpen(false);
+                                    if (solution.href?.startsWith('#')) {
+                                      e.preventDefault();
+                                      setTimeout(
+                                        () => smoothScrollTo(solution.href),
+                                        100,
+                                      );
+                                    }
+                                  }}
+                                >
+                                  {solution.name}
+                                </a>
+                              ),
+                            )}
+                          </CollapsibleContent>
+                        </Collapsible>
+                      ) : (
+                        <a
+                          href={item.href}
+                          className="flex items-center px-4 py-3 text-base font-medium rounded-lg transition-colors hover:bg-accent hover:text-accent-foreground cursor-pointer"
+                          onClick={e => {
+                            setIsOpen(false);
+                            if (item.href.startsWith('#')) {
+                              e.preventDefault();
+                              setTimeout(() => smoothScrollTo(item.href), 100);
+                            }
+                          }}
+                        >
+                          {item.name}
+                        </a>
+                      )}
+                    </div>
+                  ))}
+                </nav>
+              </div>
+
+              {/* Footer Actions */}
+              <div className="border-t p-6 space-y-4">
+                {/* Primary Actions */}
+                <div className="space-y-3">
+                  <LinkButton
+                    variant="outline"
+                    size="lg"
+                    to={getRedirectUri()}
+                    className="w-full cursor-pointer"
+                  >
+                    <LayoutDashboardIcon data-icon="inline-start" />
+                    Dashboard
+                  </LinkButton>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <LinkButton
+                      variant="outline"
+                      size="lg"
+                      to="/login"
+                      className="cursor-pointer"
+                    >
+                      Sign In
+                    </LinkButton>
+                    <LinkButton
+                      size="lg"
+                      to="/register"
+                      className="cursor-pointer"
+                    >
+                      Get Started
+                    </LinkButton>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </SheetContent>
+        </Sheet>
+      </div>
     </header>
   );
 }
-
-type MobileMenuProps = React.ComponentProps<'div'> & {
-  open: boolean;
-};
-
-function MobileMenu({open, children, className, ...props}: MobileMenuProps) {
-  if (!open || typeof window === 'undefined') return null;
-
-  return createPortal(
-    <div
-      id="mobile-menu"
-      className={cn(
-        'bg-background/95 supports-[backdrop-filter]:bg-background/50 backdrop-blur-lg',
-        'fixed top-14 right-0 bottom-0 left-0 z-40 flex flex-col overflow-hidden border-y md:hidden',
-      )}
-    >
-      <div
-        data-slot={open ? 'open' : 'closed'}
-        className={cn(
-          'data-[slot=open]:animate-in data-[slot=open]:zoom-in-97 ease-out',
-          'size-full p-4',
-          className,
-        )}
-        {...props}
-      >
-        {children}
-      </div>
-    </div>,
-    document.body,
-  );
-}
-
-function ListItem({
-  title,
-  description,
-  icon: Icon,
-  className,
-  href,
-  ...props
-}: React.ComponentProps<typeof NavigationMenuLink> & LinkItem) {
-  return (
-    <NavigationMenuLink
-      className={cn(
-        'w-full flex flex-row gap-x-2 data-[active=true]:focus:bg-accent data-[active=true]:hover:bg-accent data-[active=true]:bg-accent/50 data-[active=true]:text-accent-foreground hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground rounded-sm p-2',
-        className,
-      )}
-      {...props}
-      asChild
-    >
-      <a href={href}>
-        <div className="bg-background/40 flex aspect-square size-12 items-center justify-center rounded-md border shadow-sm">
-          <Icon className="text-foreground size-5" />
-        </div>
-        <div className="flex flex-col items-start justify-center">
-          <span className="font-medium">{title}</span>
-          <span className="text-muted-foreground text-xs">{description}</span>
-        </div>
-      </a>
-    </NavigationMenuLink>
-  );
-}
-
-const productLinks: LinkItem[] = [
-  {
-    title: 'Website Builder',
-    href: '#',
-    description: 'Create responsive websites with ease',
-    icon: GlobeIcon,
-  },
-  {
-    title: 'Cloud Platform',
-    href: '#',
-    description: 'Deploy and scale apps in the cloud',
-    icon: LayersIcon,
-  },
-  {
-    title: 'Team Collaboration',
-    href: '#',
-    description: 'Tools to help your teams work better together',
-    icon: UserPlusIcon,
-  },
-  {
-    title: 'Analytics',
-    href: '#',
-    description: 'Track and analyze your website traffic',
-    icon: BarChart,
-  },
-  {
-    title: 'Integrations',
-    href: '#',
-    description: 'Connect your apps and services',
-    icon: PlugIcon,
-  },
-  {
-    title: 'API',
-    href: '#',
-    description: 'Build custom integrations with our API',
-    icon: CodeIcon,
-  },
-];
-
-const companyLinks: LinkItem[] = [
-  {
-    title: 'About Us',
-    href: '#',
-    description: 'Learn more about our story and team',
-    icon: Users,
-  },
-  {
-    title: 'Customer Stories',
-    href: '#',
-    description: 'See how we’ve helped our clients succeed',
-    icon: Star,
-  },
-  {
-    title: 'Partnerships',
-    href: '#',
-    icon: Handshake,
-    description: 'Collaborate with us for mutual growth',
-  },
-];
-
-const companyLinks2: LinkItem[] = [
-  {
-    title: 'Terms of Service',
-    href: '#',
-    icon: FileText,
-  },
-  {
-    title: 'Privacy Policy',
-    href: '#',
-    icon: Shield,
-  },
-  {
-    title: 'Refund Policy',
-    href: '#',
-    icon: RotateCcw,
-  },
-  {
-    title: 'Blog',
-    href: '#',
-    icon: Leaf,
-  },
-  {
-    title: 'Help Center',
-    href: '#',
-    icon: HelpCircle,
-  },
-];
-
-function useScroll(threshold: number) {
-  const [scrolled, setScrolled] = React.useState(false);
-
-  const onScroll = React.useCallback(() => {
-    setScrolled(window.scrollY > threshold);
-  }, [threshold]);
-
-  React.useEffect(() => {
-    window.addEventListener('scroll', onScroll);
-    return () => window.removeEventListener('scroll', onScroll);
-  }, [onScroll]);
-
-  // also check on first load
-  React.useEffect(() => {
-    onScroll();
-  }, [onScroll]);
-
-  return scrolled;
-}
-
-
