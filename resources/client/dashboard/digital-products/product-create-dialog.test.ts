@@ -31,3 +31,21 @@ describe('product type selection page wizard', () => {
     expect(source).not.toContain('selectedType');
   });
 });
+
+describe('wizard price prefill', () => {
+  test('details form seeds price from price_cents param on create', () => {
+    const source = read('digital-product-form-page.tsx');
+    expect(source).toContain("searchParams.get('price_cents')");
+    expect(source).toContain('initialPriceFromParam');
+  });
+  test('course form seeds price from price_cents param', () => {
+    const course = fs.readFileSync(
+      path.resolve(
+        'resources/client/dashboard/courses/create-course-page.tsx',
+      ),
+      'utf8',
+    );
+    expect(course).toContain("searchParams.get('price_cents')");
+    expect(course).toContain('initialPriceFromParam');
+  });
+});

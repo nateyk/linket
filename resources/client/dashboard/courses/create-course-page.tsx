@@ -20,14 +20,18 @@ import {
   TriangleAlertIcon,
 } from 'lucide-react';
 import {FormEvent, useState} from 'react';
-import {Link, useNavigate} from 'react-router';
+import {Link, useNavigate, useSearchParams} from 'react-router';
+import {initialPriceFromParam} from '../digital-products/product-create-flow';
 
 type CreatedProduct = {id: number};
 
 export function Component() {
   const navigate = useNavigate();
   const [title, setTitle] = useState('');
-  const [price, setPrice] = useState('0');
+  const [searchParams] = useSearchParams();
+  const [price, setPrice] = useState<string>(
+    () => initialPriceFromParam(searchParams.get('price_cents')) ?? '0',
+  );
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string>();
   const [creationUncertain, setCreationUncertain] = useState(false);

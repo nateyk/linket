@@ -55,6 +55,7 @@ import {
 } from 'lucide-react';
 import {type ChangeEvent, useCallback, useEffect, useState} from 'react';
 import {useNavigate, useParams, useSearchParams} from 'react-router';
+import {initialPriceFromParam} from './product-create-flow';
 import type {ProductType} from './product-type-picker';
 
 type FileEntry = {
@@ -134,7 +135,11 @@ function DigitalProductForm() {
   const [biolinks, setBiolinks] = useState<Biolink[]>([]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [price, setPrice] = useState('');
+  const [price, setPrice] = useState<string>(() =>
+    productId
+      ? ''
+      : (initialPriceFromParam(searchParams.get('price_cents')) ?? ''),
+  );
   const [coverUrl, setCoverUrl] = useState('');
   const [coverFileId, setCoverFileId] = useState<number | null>(null);
   const [files, setFiles] = useState<FileEntry[]>([]);
