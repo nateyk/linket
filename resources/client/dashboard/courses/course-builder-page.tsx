@@ -246,6 +246,10 @@ function CourseBuilder() {
         `/api/v1/course-chapters/${chapterId}/lessons`,
         {
           title: `Lesson ${nextNum}`,
+          // Default for a fresh empty lesson; the creator can toggle to
+          // readable in the editor immediately after. Required by the API
+          // (LessonsController::store validates content_type as required).
+          content_type: 'video',
         },
       );
       const lesson = (res.data as any).data as Lesson;
