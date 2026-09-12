@@ -8,6 +8,7 @@ import {LinkButton} from '@common/text-editor/menubar/link-button';
 import {ListButtons} from '@common/text-editor/menubar/list-buttons';
 import {TiptapEditorContent} from '@common/text-editor/tiptap-editor-content';
 import {TipTapEditorProvider} from '@common/text-editor/tiptap-editor-provider';
+import {useCurrentTextEditor} from '@common/text-editor/tiptap-editor-context';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {FileUploadProvider} from '@common/uploads/uploader/file-upload-provider';
 import {useActiveUpload} from '@common/uploads/uploader/use-active-upload';
@@ -1320,6 +1321,7 @@ function LessonEditor({
     lesson.resources ?? [],
   );
   const {uploadFile, uploadStatus, percentage} = useActiveUpload();
+  const editor = useCurrentTextEditor();
 
   useEffect(() => {
     setTitle(lesson.title);
@@ -1331,6 +1333,17 @@ function LessonEditor({
     setContentType(lesson.content_type ?? 'video');
     setResources(lesson.resources ?? []);
   }, [lesson]);
+
+  // Sync editor content when content state changes (e.g., when switching lessons)
+  // This ensures the Tiptap editor updates when content state changes from the lesson sync effect
+  useEffect(() => {
+    if (editor) {
+      const currentContent = editor.getHTML();
+      if (currentContent !== content) {
+        editor.commands.setContent(content);
+      }
+    }
+  }, [content, editor]);
 
   const save = async () => {
     setSaving(true);
