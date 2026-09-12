@@ -227,6 +227,7 @@ class CourseSystemTest extends TestCase
             ->actingAs($creator)
             ->postJson("/api/v1/course-chapters/{$chapterId}/lessons", [
                 'title' => 'Lesson 1',
+                'content_type' => 'video',
             ]);
         $less->assertCreated();
         $lessonId = $less->json('data.id');
