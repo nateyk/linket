@@ -52,8 +52,23 @@ class CourseService
         });
     }
 
-    public function updateSettings(Course $course, array $data): Course
+    /**
+     * Re-review gate: any content change on an approved course reverts the
+     * product to draft and unpublishes the course, forcing re-approval.
+     * Mirrors the inline logic in CoursesController::update() and
+     * DigitalProductMutationService::update(). Cosmetic-only changes
+     * (chapter/lesson reordering) must NOT call this.
+     */
+    public function revertApprovalForContentChange(Course $course): void
     {
+        $product = $course->product;
+        if ($product && $product->status === 'approved') {
+            $product->update(['status' => 'draft']);
+            $course->update(['published_at' => null]);
+        }
+    }
+
+    public function updateSettings(Course $course, array $data): Course {
         $course->update([
             'require_sequential_completion' => $data['require_sequential_completion'] ?? $course->require_sequential_completion,
         ]);

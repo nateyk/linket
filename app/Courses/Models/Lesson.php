@@ -21,6 +21,7 @@ class Lesson extends Model
         'video_url',
         'duration_seconds',
         'status',
+        'content_type',
         'sort_order',
     ];
 
@@ -30,6 +31,7 @@ class Lesson extends Model
         'video_file_entry_id' => 'integer',
         'duration_seconds' => 'integer',
         'sort_order' => 'integer',
+        'content_type' => 'string',
     ];
 
     public function chapter(): BelongsTo

@@ -7,7 +7,7 @@ import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {formatMoney} from '@ui/i18n/format-money';
 import {Trans} from '@ui/i18n/trans';
 import {ProductCover} from '@ui/product-cover';
-import {ArrowLeftIcon, EyeIcon, VideoIcon} from 'lucide-react';
+import {ArrowLeftIcon, CheckIcon, EyeIcon, VideoIcon} from 'lucide-react';
 import {useCallback, useEffect, useState} from 'react';
 import {useNavigate, useParams} from 'react-router';
 
@@ -17,6 +17,7 @@ type CoursePreview = {
     id: number;
     title: string;
     description?: string | null;
+    learning_outcomes?: string[] | null;
     price_cents: number;
     currency: string;
     cover?: {id: number; url: string} | null;
@@ -113,6 +114,21 @@ export function Component() {
                 <p className="whitespace-pre-wrap text-muted-foreground">
                   {course.product.description}
                 </p>
+              )}
+              {course.product.learning_outcomes && course.product.learning_outcomes.length > 0 && (
+                <section className="flex flex-col gap-2 mt-4">
+                  <h3 className="text-sm font-semibold">
+                    <Trans message="What you'll learn" />
+                  </h3>
+                  <ul className="flex flex-col gap-2">
+                    {course.product.learning_outcomes.map((outcome, index) => (
+                      <li key={index} className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <CheckIcon className="size-4 shrink-0 text-positive" />
+                        <span>{outcome}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
               )}
             </section>
             <section className="flex flex-col gap-3">

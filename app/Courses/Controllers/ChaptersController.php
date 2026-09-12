@@ -42,6 +42,10 @@ class ChaptersController extends Controller
             $chapter->delete();
         });
 
+        // Re-review gate: removing a chapter changes approved content.
+        // (Title-only edits and reordering are cosmetic and stay excluded.)
+        app(\App\Courses\Services\CourseService::class)->revertApprovalForContentChange($course);
+
         return response()->noContent();
     }
 

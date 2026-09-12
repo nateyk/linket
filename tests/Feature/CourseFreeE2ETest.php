@@ -57,12 +57,18 @@ class CourseFreeE2ETest extends TestCase
         $chapterId = $ch->json('data.id');
 
         // 3. Add lessons
-        $l1 = $this->stateful()->actingAs($creator)->postJson("/api/v1/course-chapters/{$chapterId}/lessons", ['title' => 'Lesson 1']);
+        $l1 = $this->stateful()->actingAs($creator)->postJson("/api/v1/course-chapters/{$chapterId}/lessons", [
+            'title' => 'Lesson 1',
+            'content_type' => 'video',
+        ]);
         $l1->assertCreated();
         $l1Id = $l1->json('data.id');
         $this->stateful()->actingAs($creator)->putJson("/api/v1/course-lessons/{$l1Id}", ['status' => 'published', 'content' => '<p>Welcome</p>'])->assertOk();
 
-        $l2 = $this->stateful()->actingAs($creator)->postJson("/api/v1/course-chapters/{$chapterId}/lessons", ['title' => 'Lesson 2']);
+        $l2 = $this->stateful()->actingAs($creator)->postJson("/api/v1/course-chapters/{$chapterId}/lessons", [
+            'title' => 'Lesson 2',
+            'content_type' => 'readable',
+        ]);
         $l2Id = $l2->json('data.id');
         $this->stateful()->actingAs($creator)->putJson("/api/v1/course-lessons/{$l2Id}", ['status' => 'published'])->assertOk();
 

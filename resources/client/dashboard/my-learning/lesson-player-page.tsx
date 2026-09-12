@@ -3,6 +3,7 @@ import {Alert} from '@shadcn/alert/alert';
 import {Button} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
 import {Spinner} from '@shadcn/spinner/spinner';
+import {Tabs} from '@shadcn/tabs/tabs';
 import {Trans} from '@ui/i18n/trans';
 import {apiClient} from '@common/http/query-client';
 import {isAxiosError} from 'axios';
@@ -26,6 +27,7 @@ type LessonData = {
   video_url?: string | null;
   video?: {url: string} | null;
   status: string;
+  content_type?: 'video' | 'readable';
   resources: {
     id: number;
     display_name: string;
@@ -168,49 +170,107 @@ export function Component() {
         </Button>
       </div>
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
-        {lesson.video_url && (
-          <div className="aspect-video overflow-hidden rounded-card border bg-muted">
-            <iframe
-              src={lesson.video_url}
-              className="size-full"
-              allowFullScreen
-              title={lesson.title}
-            />
-          </div>
-        )}
-        {lesson.video?.url && !lesson.video_url && (
-          <div className="aspect-video overflow-hidden rounded-card border bg-muted">
-            <video src={lesson.video.url} controls className="size-full" />
-          </div>
-        )}
-        {lesson.content && (
-          <Card.Root>
-            <Card.Content
-              className="prose prose-sm max-w-none p-6"
-              dangerouslySetInnerHTML={{__html: lesson.content}}
-            />
-          </Card.Root>
-        )}
-        {!!lesson.resources.length && (
-          <Card.Root>
-            <Card.Header className="p-4">
-              <Card.Title className="text-sm">
-                <Trans message="Resources" />
-              </Card.Title>
-            </Card.Header>
-            <Card.Content className="flex flex-col gap-2 p-4 pt-0">
-              {lesson.resources.map(r => (
-                <a
-                  key={r.id}
-                  href={`/api/v1/course-lesson-resources/${r.id}/download`}
-                  className="flex items-center gap-2 rounded-card border p-3 text-sm hover:bg-muted/30"
-                >
-                  <DownloadIcon className="size-4" />
-                  <span className="flex-1">{r.display_name}</span>
-                </a>
-              ))}
-            </Card.Content>
-          </Card.Root>
+        {lesson.content_type === 'video' ? (
+          <>
+            {lesson.video_url && (
+              <div className="aspect-video overflow-hidden rounded-card border bg-muted">
+                <iframe
+                  src={lesson.video_url}
+                  className="size-full"
+                  allowFullScreen
+                  title={lesson.title}
+                />
+              </div>
+            )}
+            {lesson.video?.url && !lesson.video_url && (
+              <div className="aspect-video overflow-hidden rounded-card border bg-muted">
+                <video src={lesson.video.url} controls className="size-full" />
+              </div>
+            )}
+            <Tabs.Root defaultValue="summary" className="w-full">
+              <Tabs.List variant="line" className="w-full">
+                <Tabs.Tab value="summary">
+                  <Trans message="Summary" />
+                </Tabs.Tab>
+                <Tabs.Tab value="attachments">
+                  <Trans message="Attachments" />
+                </Tabs.Tab>
+              </Tabs.List>
+              <Tabs.Panel value="summary">
+                {lesson.content ? (
+                  <Card.Root>
+                    <Card.Content
+                      className="prose prose-sm max-w-none p-6"
+                      dangerouslySetInnerHTML={{__html: lesson.content}}
+                    />
+                  </Card.Root>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    <Trans message="No summary added yet." />
+                  </p>
+                )}
+              </Tabs.Panel>
+              <Tabs.Panel value="attachments">
+                {lesson.resources.length > 0 ? (
+                  <Card.Root>
+                    <Card.Header className="p-4">
+                      <Card.Title className="text-sm">
+                        <Trans message="Resources" />
+                      </Card.Title>
+                    </Card.Header>
+                    <Card.Content className="flex flex-col gap-2 p-4 pt-0">
+                      {lesson.resources.map(r => (
+                        <a
+                          key={r.id}
+                          href={`/api/v1/course-lesson-resources/${r.id}/download`}
+                          className="flex items-center gap-2 rounded-card border p-3 text-sm hover:bg-muted/30"
+                        >
+                          <DownloadIcon className="size-4" />
+                          <span className="flex-1">{r.display_name}</span>
+                        </a>
+                      ))}
+                    </Card.Content>
+                  </Card.Root>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    <Trans message="No attachments added yet." />
+                  </p>
+                )}
+              </Tabs.Panel>
+            </Tabs.Root>
+          </>
+        ) : (
+          <>
+            {lesson.content && (
+              <Card.Root>
+                <Card.Content
+                  className="prose prose-sm max-w-none p-6"
+                  dangerouslySetInnerHTML={{__html: lesson.content}}
+                />
+              </Card.Root>
+            )}
+            {!!lesson.resources.length && (
+              <Card.Root>
+                <Card.Header className="p-4">
+                  <Card.Title className="text-sm">
+                    <Trans message="Resources" />
+                  </Card.Title>
+                </Card.Header>
+                <Card.Content className="flex flex-col gap-2 p-4 pt-0">
+                  {lesson.resources.map(r => (
+                    <a
+                      key={r.id}
+                      href={`/api/v1/course-lesson-resources/${r.id}/download`}
+                      className="flex items-center gap-2 rounded-card border p-3 text-sm hover:bg-muted/30"
+                    >
+                      <DownloadIcon className="size-4" />
+                      <span className="flex-1">{r.display_name}</span>
+                    </a>
+                  ))}
+                </Card.Content>
+              </Card.Root>
+            )}
+          </>
         )}
         <div className="flex items-center justify-between gap-3">
           <Button

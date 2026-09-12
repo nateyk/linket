@@ -66,6 +66,9 @@ class LessonResourcesController extends Controller
             'sort_order' => $maxOrder,
         ]);
 
+        // Re-review gate: attachment changes are content changes.
+        app(\App\Courses\Services\CourseService::class)->revertApprovalForContentChange($lesson->course);
+
         return new LessonResourceFileResource($resource->load('file'));
     }
 
@@ -77,6 +80,10 @@ class LessonResourcesController extends Controller
         abort_unless($product && $product->workspace_id === ActiveWorkspace::get()->id && $product->user_id === $request->user()->id, 403);
 
         $resource->delete();
+
+        // Re-review gate: attachment changes are content changes.
+        app(\App\Courses\Services\CourseService::class)->revertApprovalForContentChange($course);
+
         return response()->noContent();
     }
 
