@@ -24,6 +24,9 @@ import {Field} from '@shadcn/forms/field';
 import {Input} from '@shadcn/forms/input/input';
 import {Checkbox} from '@shadcn/forms/checkbox/checkbox';
 import {Select} from '@shadcn/forms/select/select';
+import {Tabs} from '@shadcn/tabs/tabs';
+import {ChipField} from '@ui/forms/input-field/chip-field/chip-field';
+import {Chip} from '@ui/forms/input-field/chip-field/chip';
 import {
   ScrollArea,
   ScrollAreaScrollBar,
@@ -88,6 +91,7 @@ type Course = {
     id: number;
     title: string;
     description?: string | null;
+    learning_outcomes?: string[] | null;
     price_cents: number;
     currency: string;
     status: string;
@@ -118,6 +122,7 @@ type Lesson = {
   status: 'draft' | 'published';
   sort_order: number;
   resources?: LessonResource[];
+  content_type?: 'video' | 'readable';
 };
 
 type LessonResource = {
@@ -1301,7 +1306,11 @@ function LessonEditor({
   const [title, setTitle] = useState(lesson.title);
   const [status, setStatus] = useState(lesson.status);
   const [videoUrl, setVideoUrl] = useState(lesson.video_url ?? '');
+  const [videoType, setVideoType] = useState<Lesson['video_type']>(lesson.video_type ?? null);
+  const [videoFileEntryId, setVideoFileEntryId] = useState<number | null>(lesson.video_file_entry_id ?? null);
   const [content, setContent] = useState(lesson.content ?? '');
+  const [contentType, setContentType] = useState<Lesson['content_type']>(lesson.content_type ?? 'video');
+  const [activeTab, setActiveTab] = useState<'summary' | 'attachments'>('summary');
   const [saving, setSaving] = useState(false);
   const [resources, setResources] = useState<LessonResource[]>(
     lesson.resources ?? [],
@@ -1312,20 +1321,42 @@ function LessonEditor({
     setTitle(lesson.title);
     setStatus(lesson.status);
     setVideoUrl(lesson.video_url ?? '');
+    setVideoType(lesson.video_type ?? null);
+    setVideoFileEntryId(lesson.video_file_entry_id ?? null);
     setContent(lesson.content ?? '');
+    setContentType(lesson.content_type ?? 'video');
     setResources(lesson.resources ?? []);
   }, [lesson]);
 
   const save = async () => {
     setSaving(true);
     try {
-      const res = await apiClient.put(`/api/v1/course-lessons/${lesson.id}`, {
+      const payload: Record<string, any> = {
         title,
         content,
         status,
-        video_type: videoUrl ? 'external' : lesson.video_type,
-        video_url: videoUrl || null,
-      });
+        content_type: contentType,
+      };
+      if (contentType === 'video') {
+        if (videoUrl) {
+          payload.video_type = 'external';
+          payload.video_url = videoUrl;
+          payload.video_file_entry_id = null;
+        } else if (videoFileEntryId) {
+          payload.video_type = 'upload';
+          payload.video_url = null;
+          payload.video_file_entry_id = videoFileEntryId;
+        } else {
+          payload.video_type = null;
+          payload.video_url = null;
+          payload.video_file_entry_id = null;
+        }
+      } else {
+        payload.video_type = null;
+        payload.video_url = null;
+        payload.video_file_entry_id = null;
+      }
+      const res = await apiClient.put(`/api/v1/course-lessons/${lesson.id}`, payload);
       const updated = (res.data as any).data as Lesson;
       onSelectLesson(updated);
       toast.positive('Lesson saved');
@@ -1349,6 +1380,9 @@ function LessonEditor({
             video_file_entry_id: entry.id,
           });
           const updated = (res.data as any).data as Lesson;
+          setVideoType('upload');
+          setVideoFileEntryId(entry.id);
+          setVideoUrl('');
           onSelectLesson(updated);
           toast.positive('Video uploaded');
         } catch {
@@ -1409,160 +1443,337 @@ function LessonEditor({
         />
       </Field.Root>
 
-      <Card.Root className="gap-0 py-0">
-        <Card.Header className="p-4">
-          <Card.Title className="text-sm">
-            <Trans message="Video" />
-          </Card.Title>
-          <Card.Description>
-            <Trans message="Upload a video or paste a YouTube/Vimeo URL." />
-          </Card.Description>
-        </Card.Header>
-        <Card.Content className="flex flex-col gap-3 p-4 pt-0">
-          <FileDropzone
-            accept="video/*"
-            title={<Trans message="Upload a video" />}
-            description={<Trans message="Drag and drop or click to browse" />}
-            hint=".mp4, .mov, .mpeg, or .webm"
-            status={uploadStatus === 'inProgress' ? 'uploading' : 'idle'}
-            progress={percentage}
-            onFile={uploadVideo}
-          />
-          <div className="flex items-center gap-3">
-            <div className="h-px flex-1 bg-border" />
-            <span className="text-xs text-muted-foreground">or</span>
-            <div className="h-px flex-1 bg-border" />
-          </div>
-          <Field.Root>
-            <Field.Label>
-              <Trans message="Video URL" />
-            </Field.Label>
-            <Input
-              value={videoUrl}
-              onChange={e => setVideoUrl(e.target.value)}
-              placeholder="https://www.youtube.com/watch?v=..."
-            />
-            <Field.Description>
-              <Trans message="Paste a YouTube or Vimeo URL" />
-            </Field.Description>
-          </Field.Root>
-          {lesson.video && (
-            <div className="rounded-card border bg-muted/20 p-3 text-xs">
-              Current: {lesson.video.name} —{' '}
-              <a href={lesson.video.url} target="_blank" className="underline">
-                View
-              </a>
-            </div>
-          )}
-        </Card.Content>
-      </Card.Root>
-
       <Field.Root>
         <Field.Label>
-          <Trans message="Content" />
+          <Trans message="Lesson type" />
         </Field.Label>
-        <TipTapEditorProvider
-          key={lesson.id}
-          extensions={articleEditorTipTapExtensions}
-          initialContent={content}
-          onChange={setContent}
-        >
-          <div className="overflow-hidden rounded-card border">
-            <div className="flex flex-wrap items-center gap-0.5 border-b bg-muted/30 p-2">
-              <FormatDropdown />
-              <Divider />
-              <FontStyleButtons />
-              <Divider />
-              <ListButtons />
-              <Divider />
-              <LinkButton />
-              <Divider />
-              <ClearFormatButton />
-            </div>
-            <TiptapEditorContent className="prose prose-sm min-h-[180px] max-w-none p-3" />
-          </div>
-        </TipTapEditorProvider>
+        <div className="flex gap-4">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="contentType"
+              value="video"
+              checked={contentType === 'video'}
+              onChange={() => {
+                setContentType('video');
+              }}
+              className="sr-only"
+            />
+            <span className={cn(
+              'px-4 py-2 rounded-lg border text-sm font-medium transition-colors',
+              contentType === 'video'
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'bg-background hover:bg-muted/50 border-border'
+            )}>
+              <Trans message="Video lesson" />
+            </span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="contentType"
+              value="readable"
+              checked={contentType === 'readable'}
+              onChange={() => {
+                setContentType('readable');
+                setVideoUrl('');
+                setVideoType(null);
+                setVideoFileEntryId(null);
+              }}
+              className="sr-only"
+            />
+            <span className={cn(
+              'px-4 py-2 rounded-lg border text-sm font-medium transition-colors',
+              contentType === 'readable'
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'bg-background hover:bg-muted/50 border-border'
+            )}>
+              <Trans message="Readable lesson" />
+            </span>
+          </label>
+        </div>
       </Field.Root>
 
-      <Field.Root>
-        <Field.Label>
-          <Trans message="File attachments" />
-        </Field.Label>
-        <Card className="overflow-hidden">
-          <Card.Header className="pb-3">
-            <Card.Title className="flex items-center gap-2 text-sm">
-              <FileTextIcon className="size-4" />
-              <Trans message="Lesson files" />
+      {contentType === 'video' && (
+        <Card.Root className="gap-0 py-0">
+          <Card.Header className="p-4">
+            <Card.Title className="text-sm">
+              <Trans message="Video" />
             </Card.Title>
             <Card.Description>
-              <Trans message="PDF, DOC, TXT, images up to 100MB" />
+              <Trans message="Upload a video or paste a YouTube/Vimeo URL." />
             </Card.Description>
           </Card.Header>
-          <Card.Content className="space-y-3 p-4 pt-0">
-            <div
-              role="button"
-              tabIndex={0}
-              onClick={() => {
-                const input = document.createElement('input');
-                input.type = 'file';
-                input.accept = '.pdf,.doc,.docx,.txt,.csv,.png,.jpg,.jpeg,.webp,.zip';
-                input.onchange = e => {
-                  const file = (e.target as HTMLInputElement).files?.[0];
-                  if (file) uploadResource(file);
-                };
-                input.click();
-              }}
-              onDragOver={e => e.preventDefault()}
-              onDrop={e => {
-                e.preventDefault();
-                const file = e.dataTransfer.files?.[0];
-                if (file) uploadResource(file);
-              }}
-              className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 text-center transition-colors hover:bg-accent/30 focus-visible:border-ring/50 focus-visible:ring-2 focus-visible:ring-ring/20"
-            >
-              <div className="rounded-full bg-primary/10 p-3">
-                <UploadIcon className="size-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm font-medium"><Trans message="Drop your files here" /></p>
-                <p className="text-xs text-muted-foreground"><Trans message="PDF, DOC, images up to 100MB" /></p>
-              </div>
-              <Button size="sm" variant="outline" className="mt-2" onClick={e => { e.stopPropagation(); const input = document.createElement('input'); input.type='file'; input.accept='.pdf,.doc,.docx,.txt,.csv,.png,.jpg,.jpeg,.webp,.zip'; input.onchange=ev=>{const f=(ev.target as HTMLInputElement).files?.[0]; if(f) uploadResource(f)}; input.click(); }}>
-                <Trans message="Select Files" />
-              </Button>
+          <Card.Content className="flex flex-col gap-3 p-4 pt-0">
+            <FileDropzone
+              accept="video/*"
+              title={<Trans message="Upload a video" />}
+              description={<Trans message="Drag and drop or click to browse" />}
+              hint=".mp4, .mov, .mpeg, or .webm"
+              status={uploadStatus === 'inProgress' ? 'uploading' : 'idle'}
+              progress={percentage}
+              onFile={uploadVideo}
+            />
+            <div className="flex items-center gap-3">
+              <div className="h-px flex-1 bg-border" />
+              <span className="text-xs text-muted-foreground">or</span>
+              <div className="h-px flex-1 bg-border" />
             </div>
-            {resources.length > 0 ? (
-              <div className="space-y-2">
-                {resources.map(r => (
-                  <div key={r.id} className="flex items-center gap-2.5 rounded-md border p-3">
-                    <div className="flex size-10 shrink-0 items-center justify-center rounded border bg-accent/50">
-                      <FileTextIcon className="size-5" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{r.display_name}</p>
-                      <p className="truncate text-xs text-muted-foreground">{r.file?.name ?? 'file'}</p>
-                    </div>
-                    <Button
-                      size="icon-sm"
-                      variant="ghost"
-                      className="size-7 shrink-0"
-                      onClick={async () => {
-                        await apiClient.delete(`/api/v1/course-lesson-resources/${r.id}`);
-                        setResources(prev => prev.filter(x => x.id !== r.id));
-                      }}
-                      aria-label="Remove file"
-                    >
-                      <XIcon className="size-4" />
-                    </Button>
-                  </div>
-                ))}
+            <Field.Root>
+              <Field.Label>
+                <Trans message="Video URL" />
+              </Field.Label>
+              <Input
+                value={videoUrl}
+                onChange={e => setVideoUrl(e.target.value)}
+                placeholder="https://www.youtube.com/watch?v=..."
+              />
+              <Field.Description>
+                <Trans message="Paste a YouTube or Vimeo URL" />
+              </Field.Description>
+            </Field.Root>
+            {lesson.video && (
+              <div className="rounded-card border bg-muted/20 p-3 text-xs">
+                Current: {lesson.video.name} —{' '}
+                <a href={lesson.video.url} target="_blank" className="underline">
+                  View
+                </a>
               </div>
-            ) : (
-              <p className="py-2 text-center text-sm text-muted-foreground"><Trans message="No files attached yet" /></p>
             )}
           </Card.Content>
-        </Card>
-      </Field.Root>
+        </Card.Root>
+      )}
+
+      {contentType === 'video' ? (
+        <Tabs.Root value={activeTab} onValueChange={setActiveTab} defaultValue="summary" className="w-full">
+          <Tabs.List variant="line" className="w-full">
+            <Tabs.Tab value="summary">
+              <Trans message="Summary" />
+            </Tabs.Tab>
+            <Tabs.Tab value="attachments">
+              <Trans message="Attachments" />
+            </Tabs.Tab>
+          </Tabs.List>
+          <Tabs.Panel value="summary">
+            <Field.Root>
+              <Field.Label>
+                <Trans message="Summary" />
+              </Field.Label>
+              <TipTapEditorProvider
+                key={lesson.id}
+                extensions={articleEditorTipTapExtensions}
+                initialContent={content}
+                onChange={setContent}
+              >
+                <div className="overflow-hidden rounded-card border">
+                  <div className="flex flex-wrap items-center gap-0.5 border-b bg-muted/30 p-2">
+                    <FormatDropdown />
+                    <Divider />
+                    <FontStyleButtons />
+                    <Divider />
+                    <ListButtons />
+                    <Divider />
+                    <LinkButton />
+                    <Divider />
+                    <ClearFormatButton />
+                  </div>
+                  <TiptapEditorContent className="prose prose-sm min-h-[180px] max-w-none p-3" />
+                </div>
+              </TipTapEditorProvider>
+            </Field.Root>
+          </Tabs.Panel>
+          <Tabs.Panel value="attachments">
+            <Field.Root>
+              <Field.Label>
+                <Trans message="File attachments" />
+              </Field.Label>
+              <Card className="overflow-hidden">
+                <Card.Header className="pb-3">
+                  <Card.Title className="flex items-center gap-2 text-sm">
+                    <FileTextIcon className="size-4" />
+                    <Trans message="Lesson files" />
+                  </Card.Title>
+                  <Card.Description>
+                    <Trans message="PDF, DOC, TXT, images up to 100MB" />
+                  </Card.Description>
+                </Card.Header>
+                <Card.Content className="space-y-3 p-4 pt-0">
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => {
+                      const input = document.createElement('input');
+                      input.type = 'file';
+                      input.accept = '.pdf,.doc,.docx,.txt,.csv,.png,.jpg,.jpeg,.webp,.zip';
+                      input.onchange = e => {
+                        const file = (e.target as HTMLInputElement).files?.[0];
+                        if (file) uploadResource(file);
+                      };
+                      input.click();
+                    }}
+                    onDragOver={e => e.preventDefault()}
+                    onDrop={e => {
+                      e.preventDefault();
+                      const file = e.dataTransfer.files?.[0];
+                      if (file) uploadResource(file);
+                    }}
+                    className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 text-center transition-colors hover:bg-accent/30 focus-visible:border-ring/50 focus-visible:ring-2 focus-visible:ring-ring/20"
+                  >
+                    <div className="rounded-full bg-primary/10 p-3">
+                      <UploadIcon className="size-6 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium"><Trans message="Drop your files here" /></p>
+                      <p className="text-xs text-muted-foreground"><Trans message="PDF, DOC, images up to 100MB" /></p>
+                    </div>
+                    <Button size="sm" variant="outline" className="mt-2" onClick={e => { e.stopPropagation(); const input = document.createElement('input'); input.type='file'; input.accept='.pdf,.doc,.docx,.txt,.csv,.png,.jpg,.jpeg,.webp,.zip'; input.onchange=ev=>{const f=(ev.target as HTMLInputElement).files?.[0]; if(f) uploadResource(f)}; input.click(); }}>
+                      <Trans message="Select Files" />
+                    </Button>
+                  </div>
+                  {resources.length > 0 ? (
+                    <div className="space-y-2">
+                      {resources.map(r => (
+                        <div key={r.id} className="flex items-center gap-2.5 rounded-md border p-3">
+                          <div className="flex size-10 shrink-0 items-center justify-center rounded border bg-accent/50">
+                            <FileTextIcon className="size-5" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium">{r.display_name}</p>
+                            <p className="truncate text-xs text-muted-foreground">{r.file?.name ?? 'file'}</p>
+                          </div>
+                          <Button
+                            size="icon-sm"
+                            variant="ghost"
+                            className="size-7 shrink-0"
+                            onClick={async () => {
+                              await apiClient.delete(`/api/v1/course-lesson-resources/${r.id}`);
+                              setResources(prev => prev.filter(x => x.id !== r.id));
+                            }}
+                            aria-label="Remove file"
+                          >
+                            <XIcon className="size-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="py-2 text-center text-sm text-muted-foreground"><Trans message="No files attached yet" /></p>
+                  )}
+                </Card.Content>
+              </Card>
+            </Field.Root>
+          </Tabs.Panel>
+        </Tabs.Root>
+      ) : (
+        <>
+          <Field.Root>
+            <Field.Label>
+              <Trans message="Content" />
+            </Field.Label>
+            <TipTapEditorProvider
+              key={lesson.id}
+              extensions={articleEditorTipTapExtensions}
+              initialContent={content}
+              onChange={setContent}
+            >
+              <div className="overflow-hidden rounded-card border">
+                <div className="flex flex-wrap items-center gap-0.5 border-b bg-muted/30 p-2">
+                  <FormatDropdown />
+                  <Divider />
+                  <FontStyleButtons />
+                  <Divider />
+                  <ListButtons />
+                  <Divider />
+                  <LinkButton />
+                  <Divider />
+                  <ClearFormatButton />
+                </div>
+                <TiptapEditorContent className="prose prose-sm min-h-[180px] max-w-none p-3" />
+              </div>
+            </TipTapEditorProvider>
+          </Field.Root>
+
+          <Field.Root>
+            <Field.Label>
+              <Trans message="File attachments" />
+            </Field.Label>
+            <Card className="overflow-hidden">
+              <Card.Header className="pb-3">
+                <Card.Title className="flex items-center gap-2 text-sm">
+                  <FileTextIcon className="size-4" />
+                  <Trans message="Lesson files" />
+                </Card.Title>
+                <Card.Description>
+                  <Trans message="PDF, DOC, TXT, images up to 100MB" />
+                </Card.Description>
+              </Card.Header>
+              <Card.Content className="space-y-3 p-4 pt-0">
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = '.pdf,.doc,.docx,.txt,.csv,.png,.jpg,.jpeg,.webp,.zip';
+                    input.onchange = e => {
+                      const file = (e.target as HTMLInputElement).files?.[0];
+                      if (file) uploadResource(file);
+                    };
+                    input.click();
+                  }}
+                  onDragOver={e => e.preventDefault()}
+                  onDrop={e => {
+                    e.preventDefault();
+                    const file = e.dataTransfer.files?.[0];
+                    if (file) uploadResource(file);
+                  }}
+                  className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 text-center transition-colors hover:bg-accent/30 focus-visible:border-ring/50 focus-visible:ring-2 focus-visible:ring-ring/20"
+                >
+                  <div className="rounded-full bg-primary/10 p-3">
+                    <UploadIcon className="size-6 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium"><Trans message="Drop your files here" /></p>
+                    <p className="text-xs text-muted-foreground"><Trans message="PDF, DOC, images up to 100MB" /></p>
+                  </div>
+                  <Button size="sm" variant="outline" className="mt-2" onClick={e => { e.stopPropagation(); const input = document.createElement('input'); input.type='file'; input.accept='.pdf,.doc,.docx,.txt,.csv,.png,.jpg,.jpeg,.webp,.zip'; input.onchange=ev=>{const f=(ev.target as HTMLInputElement).files?.[0]; if(f) uploadResource(f)}; input.click(); }}>
+                    <Trans message="Select Files" />
+                  </Button>
+                </div>
+                {resources.length > 0 ? (
+                  <div className="space-y-2">
+                    {resources.map(r => (
+                      <div key={r.id} className="flex items-center gap-2.5 rounded-md border p-3">
+                        <div className="flex size-10 shrink-0 items-center justify-center rounded border bg-accent/50">
+                          <FileTextIcon className="size-5" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium">{r.display_name}</p>
+                          <p className="truncate text-xs text-muted-foreground">{r.file?.name ?? 'file'}</p>
+                        </div>
+                        <Button
+                          size="icon-sm"
+                          variant="ghost"
+                          className="size-7 shrink-0"
+                          onClick={async () => {
+                            await apiClient.delete(`/api/v1/course-lesson-resources/${r.id}`);
+                            setResources(prev => prev.filter(x => x.id !== r.id));
+                          }}
+                          aria-label="Remove file"
+                        >
+                          <XIcon className="size-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="py-2 text-center text-sm text-muted-foreground"><Trans message="No files attached yet" /></p>
+                )}
+              </Card.Content>
+            </Card>
+          </Field.Root>
+        </>
+      )}
 
       <div className="flex items-center justify-between gap-3">
         <label className="flex items-center gap-2 text-sm">
@@ -1580,12 +1791,134 @@ function LessonEditor({
   );
 }
 
+function SortableOutcomeItem({
+  id,
+  items,
+  disabled,
+  onSortEnd,
+  children,
+}: {
+  id: string;
+  items: string[];
+  disabled: boolean;
+  onSortEnd: (oldIndex: number, newIndex: number) => void;
+  children: (dragHandleRef: React.RefObject<HTMLButtonElement | null>) => React.ReactNode;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const {sortableProps, dragHandleRef} = useSortable({
+    item: id,
+    items,
+    type: 'course-builder-outcomes',
+    ref,
+    disabled,
+    onSortEnd,
+  });
+
+  return (
+    <div ref={ref} {...sortableProps}>
+      {children(dragHandleRef)}
+    </div>
+  );
+}
+
+function OutcomesChipList({
+  outcomes,
+  onChange,
+}: {
+  outcomes: {id: string; text: string}[];
+  onChange: (outcomes: {id: string; text: string}[]) => void;
+}) {
+  const [newOutcome, setNewOutcome] = useState('');
+  const MAX_OUTCOMES = 8;
+
+  const addOutcome = () => {
+    if (!newOutcome.trim() || outcomes.length >= MAX_OUTCOMES) return;
+    const newItem = { id: crypto.randomUUID(), text: newOutcome.trim() };
+    onChange([...outcomes, newItem]);
+    setNewOutcome('');
+  };
+
+  const removeOutcome = (id: string) => {
+    onChange(outcomes.filter(item => item.id !== id));
+  };
+
+  const handleReorder = (oldIndex: number, newIndex: number) => {
+    const newOutcomes = [...outcomes];
+    const [removed] = newOutcomes.splice(oldIndex, 1);
+    newOutcomes.splice(newIndex, 0, removed);
+    onChange(newOutcomes);
+  };
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex gap-2">
+        <Input
+          value={newOutcome}
+          onChange={e => setNewOutcome(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && addOutcome()}
+          placeholder="e.g. Build and launch your first course"
+          disabled={outcomes.length >= MAX_OUTCOMES}
+        />
+        <Button
+          type="button"
+          onClick={addOutcome}
+          disabled={!newOutcome.trim() || outcomes.length >= MAX_OUTCOMES}
+        >
+          <Trans message="Add" />
+        </Button>
+        {outcomes.length >= MAX_OUTCOMES && (
+          <span className="text-xs text-muted-foreground self-center">
+            <Trans message="Maximum of 8 outcomes reached" />
+          </span>
+        )}
+      </div>
+      {outcomes.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {outcomes.map((item, index) => (
+            <SortableOutcomeItem
+              key={item.id}
+              id={item.id}
+              items={outcomes.map(o => o.id)}
+              disabled={false}
+              onSortEnd={handleReorder}
+            >
+              {dragHandleRef => (
+                <div className="flex items-center gap-1.5 rounded-md border bg-background px-2.5 py-1 text-sm">
+                  <button
+                    ref={dragHandleRef}
+                    type="button"
+                    aria-label="Reorder outcome"
+                    className="shrink-0 cursor-grab text-muted-foreground hover:text-foreground"
+                  >
+                    <GripVerticalIcon className="size-3.5" />
+                  </button>
+                  <span>{item.text}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeOutcome(item.id)}
+                    aria-label="Remove outcome"
+                    className="shrink-0 text-muted-foreground hover:text-destructive"
+                  >
+                    <XIcon className="size-3.5" />
+                  </button>
+                </div>
+              )}
+            </SortableOutcomeItem>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 type CourseSettingsContentProps = {
   inputId: string;
   title: string;
   setTitle: (value: string) => void;
   description: string;
   setDescription: (value: string) => void;
+  learningOutcomes: {id: string; text: string}[];
+  setLearningOutcomes: (value: {id: string; text: string}[]) => void;
   coverUrl: string;
   setCoverUrl: (value: string) => void;
   setCoverFileId: (value: number | null) => void;
@@ -1604,6 +1937,8 @@ function CourseSettingsContent({
   setTitle,
   description,
   setDescription,
+  learningOutcomes,
+  setLearningOutcomes,
   coverUrl,
   setCoverUrl,
   setCoverFileId,
@@ -1640,6 +1975,19 @@ function CourseSettingsContent({
           onChange={e => setDescription(e.target.value)}
           placeholder="What will students learn?"
           maxLength={20000}
+        />
+      </Field.Root>
+
+      <Field.Root>
+        <Field.Label>
+          <Trans message="What you'll learn" />
+        </Field.Label>
+        <Field.Description>
+          <Trans message="Add up to 8 outcome bullets that students will achieve." />
+        </Field.Description>
+        <OutcomesChipList
+          outcomes={learningOutcomes}
+          onChange={setLearningOutcomes}
         />
       </Field.Root>
 
@@ -1787,6 +2135,12 @@ function CourseSettingsDialog({
   const [price, setPrice] = useState(
     (course.product.price_cents / 100).toFixed(2),
   );
+  const [learningOutcomes, setLearningOutcomes] = useState<{id: string; text: string}[]>(
+    (course.product.learning_outcomes ?? []).map(text => ({
+      id: crypto.randomUUID(),
+      text,
+    })),
+  );
   const [discardOpen, setDiscardOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -1798,6 +2152,10 @@ function CourseSettingsDialog({
     setRequireSeq(course.require_sequential_completion);
     setBiolinkIds(course.product.biolink_ids ?? []);
     setPrice((course.product.price_cents / 100).toFixed(2));
+    setLearningOutcomes((course.product.learning_outcomes ?? []).map(text => ({
+      id: crypto.randomUUID(),
+      text,
+    })));
   }, [course]);
 
   useEffect(() => {
@@ -1817,6 +2175,10 @@ function CourseSettingsDialog({
     setRequireSeq(course.require_sequential_completion);
     setBiolinkIds(course.product.biolink_ids ?? []);
     setPrice((course.product.price_cents / 100).toFixed(2));
+    setLearningOutcomes((course.product.learning_outcomes ?? []).map(text => ({
+      id: crypto.randomUUID(),
+      text,
+    })));
   };
 
   const hasPlacementChanges =
@@ -1855,6 +2217,7 @@ function CourseSettingsDialog({
       await apiClient.put(`/api/v1/courses/${course.id}`, {
         title: title.trim() || course.product.title,
         description: description.trim() || null,
+        learning_outcomes: learningOutcomes.map(item => item.text),
         price_cents: Number.isFinite(cents)
           ? cents
           : course.product.price_cents,
@@ -1877,6 +2240,8 @@ function CourseSettingsDialog({
     setTitle,
     description,
     setDescription,
+    learningOutcomes,
+    setLearningOutcomes,
     coverUrl,
     setCoverUrl,
     setCoverFileId,
