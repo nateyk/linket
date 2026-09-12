@@ -248,6 +248,41 @@ class CourseSystemTest extends TestCase
         ]);
     }
 
+    public function testNewLessonButtonPayloadCreatesLesson(): void
+    {
+        // Regression test (prod 422): the curriculum sidebar's "New lesson"
+        // button sends exactly {title, content_type: 'video'}. If the API
+        // ever requires more than this again, lesson creation breaks for
+        // every creator, so lock the contract in here.
+        $creator = $this->createCreator();
+        $workspace = (new CreateWorkspace())->createPersonalWorkspace($creator);
+        ActiveWorkspace::clearCache();
+        $product = $this->createCourseProduct($creator, $workspace);
+        $course = $product->course;
+
+        $resp = $this->stateful()
+            ->actingAs($creator)
+            ->postJson("/api/v1/courses/{$course->id}/chapters", [
+                'title' => 'Chapter 1',
+            ]);
+        $resp->assertCreated();
+        $chapterId = $resp->json('data.id');
+
+        $less = $this->stateful()
+            ->actingAs($creator)
+            ->postJson("/api/v1/course-chapters/{$chapterId}/lessons", [
+                'title' => 'Lesson 1',
+                'content_type' => 'video',
+            ]);
+        $less->assertCreated();
+
+        $this->assertDatabaseHas('course_lessons', [
+            'id' => $less->json('data.id'),
+            'title' => 'Lesson 1',
+            'content_type' => 'video',
+        ]);
+    }
+
     public function testSubmittingCourseForApprovalPublishesItsCurriculum(): void
     {
         config()->set('store.courses_require_approval', true);
