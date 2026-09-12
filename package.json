@@ -6,7 +6,8 @@
     "storybook": "storybook dev -p 6006 -c common/foundation/resources/client/.storybook",
     "extract": "node ./resources/scripts/extract-translations.js",
     "lint": "oxlint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
@@ -108,6 +109,7 @@
     "zustand": "^5.0.4"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@prettier/plugin-php": "^0.25.0",
     "@rolldown/plugin-babel": "^0.2.3",
     "@rollup/plugin-replace": "^6.0.2",
