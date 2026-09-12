@@ -50,6 +50,8 @@ class CoursesController extends Controller
         $data = $request->validate([
             'title' => 'sometimes|string|max:160',
             'description' => 'sometimes|nullable|string|max:20000',
+            'learning_outcomes' => 'sometimes|array',
+            'learning_outcomes.*' => 'string|max:280',
             'price_cents' => 'sometimes|integer|min:0',
             'cover_file_entry_id' =>
                 'sometimes|nullable|integer|exists:file_entries,id',
@@ -70,6 +72,7 @@ class CoursesController extends Controller
                 ->only([
                     'title',
                     'description',
+                    'learning_outcomes',
                     'price_cents',
                     'cover_file_entry_id',
                 ])

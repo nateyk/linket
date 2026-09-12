@@ -24,6 +24,7 @@ class LessonsController extends Controller
             'title' => 'required|string|max:160',
             'status' => 'sometimes|in:draft,published',
             'sort_order' => 'sometimes|integer|min:0',
+            'content_type' => 'required|in:video,readable',
         ]);
 
         $maxOrder = (int) ($chapter->lessons()->max('sort_order') ?? -1) + 1;
@@ -33,6 +34,7 @@ class LessonsController extends Controller
             'course_id' => $course->id,
             'title' => $data['title'],
             'status' => $data['status'] ?? 'draft',
+            'content_type' => $data['content_type'],
             'sort_order' => $data['sort_order'] ?? $maxOrder,
         ]);
 
@@ -68,6 +70,7 @@ class LessonsController extends Controller
             'video_url' => 'sometimes|nullable|string|max:1024',
             'duration_seconds' => 'sometimes|nullable|integer|min:0|max:86400',
             'sort_order' => 'sometimes|integer|min:0',
+            'content_type' => 'sometimes|in:video,readable',
         ]);
 
         return DB::transaction(function () use ($lesson, $data, $request): LessonResource {
@@ -122,6 +125,15 @@ class LessonsController extends Controller
             }
 
             $lesson->update($data);
+
+            // Re-review gate (A4b): substantive lesson edits on an approved
+            // course revert the product to draft and unpublish the course.
+            // Pure sort_order-only updates are excluded: intra-list
+            // drag-reorder uses POST course-chapters/{chapter}/lessons/reorder.
+            if (array_diff(array_keys($data), ['sort_order']) !== []) {
+                app(\App\Courses\Services\CourseService::class)->revertApprovalForContentChange($lesson->course);
+            }
+
             $lesson->load(['resources.file', 'videoFile', 'course.product']);
             return new LessonResource($lesson);
         });
@@ -129,8 +141,13 @@ class LessonsController extends Controller
 
     public function destroy(Request $request, Lesson $lesson)
     {
-        $this->assertOwner($lesson->course, $request);
+        $course = $lesson->course;
+        $this->assertOwner($course, $request);
         $lesson->delete();
+
+        // Re-review gate: removing a lesson changes approved content.
+        app(\App\Courses\Services\CourseService::class)->revertApprovalForContentChange($course);
+
         return response()->noContent();
     }
 
@@ -138,6 +155,11 @@ class LessonsController extends Controller
     {
         $this->assertOwner($lesson->course, $request);
         $copy = app(\App\Courses\Services\CourseService::class)->duplicateLesson($lesson);
+
+        // Re-review gate: adding a lesson changes approved content
+        // (the copy itself is created as draft).
+        app(\App\Courses\Services\CourseService::class)->revertApprovalForContentChange($lesson->course);
+
         return new LessonResource($copy->load(['resources.file', 'videoFile']));
     }
 

@@ -61,6 +61,12 @@ class DigitalProductRefundService
                 'metadata' => ['refund_id' => $refund->id],
             ]);
 
+            // NOTE (2026-09-12, audit decision): only full refunds revoke access.
+            // Partial refunds and subscription lapses intentionally do NOT revoke
+            // enrollment/download access — handled manually via support for now.
+            // SaaS subscriptions (Common\Billing\Subscription) are unrelated to
+            // one-time course enrollments; no subscription hook applies here.
+            // Revisit if refund volume grows. Do not "fix" without product sign-off.
             if ($isFull) {
                 $order->entitlements()->update(['revoked_at' => now()]);
                 ProductReview::query()
