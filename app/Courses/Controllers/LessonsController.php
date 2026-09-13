@@ -64,6 +64,7 @@ class LessonsController extends Controller
         $data = $request->validate([
             'title' => 'sometimes|string|max:160',
             'content' => 'sometimes|nullable|string|max:100000',
+            'summary' => 'sometimes|nullable|string|max:100000',
             'status' => 'sometimes|in:draft,published',
             'video_type' => 'sometimes|nullable|in:upload,external',
             'video_file_entry_id' => 'sometimes|nullable|integer|exists:file_entries,id',
@@ -74,9 +75,12 @@ class LessonsController extends Controller
         ]);
 
         return DB::transaction(function () use ($lesson, $data, $request): LessonResource {
-            // Sanitize content: strip script/iframe except allowed; use html-sanitizer if available
+            // Sanitize content/summary: strip script/iframe except allowed; use html-sanitizer if available
             if (array_key_exists('content', $data) && $data['content'] !== null) {
                 $data['content'] = $this->sanitizeContent($data['content']);
+            }
+            if (array_key_exists('summary', $data) && $data['summary'] !== null) {
+                $data['summary'] = $this->sanitizeContent($data['summary']);
             }
 
             // Video handling

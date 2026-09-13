@@ -116,6 +116,7 @@ type Lesson = {
   course_id: number;
   title: string;
   content?: string | null;
+  summary?: string | null;
   video_type?: 'upload' | 'external' | null;
   video_url?: string | null;
   video_file_entry_id?: number | null;
@@ -1332,6 +1333,7 @@ function LessonEditor({
   const [videoType, setVideoType] = useState<Lesson['video_type']>(lesson.video_type ?? null);
   const [videoFileEntryId, setVideoFileEntryId] = useState<number | null>(lesson.video_file_entry_id ?? null);
   const [content, setContent] = useState(lesson.content ?? '');
+  const [summary, setSummary] = useState(lesson.summary ?? '');
   const [contentType, setContentType] = useState<Lesson['content_type']>(lesson.content_type ?? 'video');
   const [activeTab, setActiveTab] = useState<'summary' | 'attachments'>('summary');
   const [saving, setSaving] = useState(false);
@@ -1347,6 +1349,7 @@ function LessonEditor({
     setVideoType(lesson.video_type ?? null);
     setVideoFileEntryId(lesson.video_file_entry_id ?? null);
     setContent(lesson.content ?? '');
+    setSummary(lesson.summary ?? '');
     setContentType(lesson.content_type ?? 'video');
     setResources(lesson.resources ?? []);
   }, [lesson]);
@@ -1356,10 +1359,14 @@ function LessonEditor({
     try {
       const payload: Record<string, any> = {
         title,
-        content,
         status,
         content_type: contentType,
       };
+      if (contentType === 'video') {
+        payload.summary = summary;
+      } else {
+        payload.content = content;
+      }
       if (contentType === 'video') {
         if (videoUrl) {
           payload.video_type = 'external';
@@ -1566,10 +1573,10 @@ function LessonEditor({
               <TipTapEditorProvider
                 key={lesson.id}
                 extensions={articleEditorTipTapExtensions}
-                initialContent={lesson.content ?? ''}
-                onChange={setContent}
+                initialContent={lesson.summary ?? ''}
+                onChange={setSummary}
               >
-                <EditorContentSync content={lesson.content ?? ''} />
+                <EditorContentSync content={lesson.summary ?? ''} />
                 <div className="overflow-hidden rounded-card border">
                   <div className="flex flex-wrap items-center gap-0.5 border-b bg-muted/30 p-2">
                     <FormatDropdown />

@@ -16,6 +16,7 @@ class Lesson extends Model
         'course_id',
         'title',
         'content',
+        'summary',
         'video_type',
         'video_file_entry_id',
         'video_url',

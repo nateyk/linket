@@ -23,6 +23,7 @@ type LessonData = {
   course_id: number;
   title: string;
   content?: string | null;
+  summary?: string | null;
   video_type?: string | null;
   video_url?: string | null;
   video?: {url: string} | null;
@@ -197,11 +198,11 @@ export function Component() {
                 </Tabs.Tab>
               </Tabs.List>
               <Tabs.Panel value="summary">
-                {lesson.content ? (
+                {lesson.summary ? (
                   <Card.Root>
                     <Card.Content
                       className="prose prose-sm max-w-none p-6"
-                      dangerouslySetInnerHTML={{__html: lesson.content}}
+                      dangerouslySetInnerHTML={{__html: lesson.summary}}
                     />
                   </Card.Root>
                 ) : (
