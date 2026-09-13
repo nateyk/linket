@@ -131,10 +131,14 @@ class BaseBootstrapData implements BootstrapData
                 ? $cookieScheme
                 : $adminSelectedDefaultScheme;
 
+        // Ensure we always have fallback themes even if DB is empty
         $defaultLight =
-            $themes->where('default_light', true)->first() ?? $themes->first();
+            $themes->where('default_light', true)->first()
+            ?? $themes->first()
+            ?? $this->getDefaultCssTheme('light');
         $defaultDark =
-            $themes->where('default_dark', true)->first() ?? $defaultLight;
+            $themes->where('default_dark', true)->first()
+            ?? $defaultLight;
 
         $this->cssThemes = [
             'light' => $defaultLight,
@@ -151,10 +155,22 @@ class BaseBootstrapData implements BootstrapData
         $this->initialTheme =
             $this->cssThemes[$resolvedScheme] ?? Arr::first($this->cssThemes);
 
-        // Ensure initialTheme is never null
+        // Ensure initialTheme is never null (final fallback)
         if ($this->initialTheme === null) {
             $this->initialTheme = $defaultLight;
         }
+    }
+
+    protected function getDefaultCssTheme(string $type): CssTheme
+    {
+        return new CssTheme([
+            'type' => 'site',
+            'name' => $type === 'light' ? 'Default Light' : 'Default Dark',
+            'default_light' => $type === 'light',
+            'default_dark' => $type === 'dark',
+            'colors' => json_encode([]),
+            'css' => '',
+        ]);
     }
 
     public function getThemes(): Collection
