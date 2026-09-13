@@ -1571,7 +1571,7 @@ function LessonEditor({
                 <Trans message="Summary" />
               </Field.Label>
               <TipTapEditorProvider
-                key={lesson.id}
+                key={`${lesson.id}-summary`}
                 extensions={articleEditorTipTapExtensions}
                 initialContent={lesson.summary ?? ''}
                 onChange={setSummary}
@@ -1683,7 +1683,7 @@ function LessonEditor({
               <Trans message="Content" />
             </Field.Label>
             <TipTapEditorProvider
-              key={lesson.id}
+              key={`${lesson.id}-content`}
               extensions={articleEditorTipTapExtensions}
               initialContent={lesson.content ?? ''}
               onChange={setContent}
