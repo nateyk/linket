@@ -141,8 +141,20 @@ class BaseBootstrapData implements BootstrapData
             'dark' => $defaultDark,
         ];
 
+        // Resolve 'system' scheme to actual theme based on user preference or default
+        $resolvedScheme = $selectedScheme;
+        if ($selectedScheme === 'system') {
+            // Default to light for 'system' if no preference detected
+            $resolvedScheme = 'light';
+        }
+
         $this->initialTheme =
-            $this->cssThemes[$selectedScheme] ?? Arr::first($this->cssThemes);
+            $this->cssThemes[$resolvedScheme] ?? Arr::first($this->cssThemes);
+
+        // Ensure initialTheme is never null
+        if ($this->initialTheme === null) {
+            $this->initialTheme = $defaultLight;
+        }
     }
 
     public function getThemes(): Collection
