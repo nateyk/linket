@@ -1322,6 +1322,7 @@ function LessonEditor({
   );
   const {uploadFile, uploadStatus, percentage} = useActiveUpload();
   const editor = useCurrentTextEditor();
+  const lastSyncedLessonRef = useRef<{id: number; content: string} | null>(null);
 
   useEffect(() => {
     setTitle(lesson.title);
@@ -1337,13 +1338,30 @@ function LessonEditor({
   // Sync editor content when content state changes (e.g., when switching lessons)
   // This ensures the Tiptap editor updates when content state changes from the lesson sync effect
   useEffect(() => {
-    if (editor) {
+    if (editor && editor.isEditable) {
       const currentContent = editor.getHTML();
-      if (currentContent !== content) {
+      // Normalize comparison: empty content vs empty paragraph
+      const normalizedCurrent = currentContent === '<p></p>' ? '' : currentContent;
+      const normalizedTarget = content === '<p></p>' ? '' : content;
+      if (normalizedCurrent !== normalizedTarget) {
         editor.commands.setContent(content);
+        lastSyncedLessonRef.current = { id: lesson.id, content };
       }
     }
-  }, [content, editor]);
+  }, [content, editor, lesson.id]);
+
+  // Also sync when lesson changes (in case editor wasn't ready during content sync)
+  useEffect(() => {
+    if (editor && editor.isEditable) {
+      const currentContent = editor.getHTML();
+      const normalizedCurrent = currentContent === '<p></p>' ? '' : currentContent;
+      const normalizedTarget = content === '<p></p>' ? '' : content;
+      if (normalizedCurrent !== normalizedTarget) {
+        editor.commands.setContent(content);
+        lastSyncedLessonRef.current = { id: lesson.id, content };
+      }
+    }
+  }, [lesson.id]);
 
   const save = async () => {
     setSaving(true);
