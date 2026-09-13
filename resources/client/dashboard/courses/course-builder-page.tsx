@@ -1470,51 +1470,32 @@ function LessonEditor({
         <Field.Label>
           <Trans message="Lesson type" />
         </Field.Label>
-        <div className="flex gap-4">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="contentType"
-              value="video"
-              checked={contentType === 'video'}
-              onChange={() => {
-                setContentType('video');
-              }}
-              className="sr-only"
-            />
-            <span className={cn(
-              'px-4 py-2 rounded-lg border text-sm font-medium transition-colors',
-              contentType === 'video'
-                ? 'bg-primary text-primary-foreground border-primary'
-                : 'bg-background hover:bg-muted/50 border-border'
-            )}>
-              <Trans message="Video lesson" />
-            </span>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="radio"
-              name="contentType"
-              value="readable"
-              checked={contentType === 'readable'}
-              onChange={() => {
-                setContentType('readable');
-                setVideoUrl('');
-                setVideoType(null);
-                setVideoFileEntryId(null);
-              }}
-              className="sr-only"
-            />
-            <span className={cn(
-              'px-4 py-2 rounded-lg border text-sm font-medium transition-colors',
-              contentType === 'readable'
-                ? 'bg-primary text-primary-foreground border-primary'
-                : 'bg-background hover:bg-muted/50 border-border'
-            )}>
-              <Trans message="Readable lesson" />
-            </span>
-          </label>
-        </div>
+        <Select.Root
+          value={contentType}
+          onValueChange={value => {
+            const next = value as 'video' | 'readable';
+            setContentType(next);
+            if (next === 'readable') {
+              setVideoUrl('');
+              setVideoType(null);
+              setVideoFileEntryId(null);
+            }
+          }}
+        >
+          <Select.Trigger className="w-full">
+            <Select.Value />
+          </Select.Trigger>
+          <Select.Content>
+            <Select.Group>
+              <Select.Item value="video">
+                <Trans message="Video lesson" />
+              </Select.Item>
+              <Select.Item value="readable">
+                <Trans message="Readable lesson" />
+              </Select.Item>
+            </Select.Group>
+          </Select.Content>
+        </Select.Root>
       </Field.Root>
 
       {contentType === 'video' && (
