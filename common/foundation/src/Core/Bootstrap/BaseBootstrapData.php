@@ -153,12 +153,9 @@ class BaseBootstrapData implements BootstrapData
         }
 
         $this->initialTheme =
-            $this->cssThemes[$resolvedScheme] ?? Arr::first($this->cssThemes);
-
-        // Ensure initialTheme is never null (final fallback)
-        if ($this->initialTheme === null) {
-            $this->initialTheme = $defaultLight;
-        }
+            $this->cssThemes[$resolvedScheme] ??
+            Arr::first($this->cssThemes) ??
+            $defaultLight;
     }
 
     protected function getDefaultCssTheme(string $type): CssTheme
