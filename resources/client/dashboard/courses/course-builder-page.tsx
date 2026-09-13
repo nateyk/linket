@@ -124,6 +124,7 @@ type Lesson = {
   sort_order: number;
   resources?: LessonResource[];
   content_type?: 'video' | 'readable';
+  updated_at?: string | null;
 };
 
 type LessonResource = {
@@ -1584,10 +1585,10 @@ function LessonEditor({
               <TipTapEditorProvider
                 key={lesson.id}
                 extensions={articleEditorTipTapExtensions}
-                initialContent={content}
+                initialContent={lesson.content ?? ''}
                 onChange={setContent}
               >
-                <EditorContentSync content={content} />
+                <EditorContentSync content={lesson.content ?? ''} />
                 <div className="overflow-hidden rounded-card border">
                   <div className="flex flex-wrap items-center gap-0.5 border-b bg-muted/30 p-2">
                     <FormatDropdown />
@@ -1696,10 +1697,10 @@ function LessonEditor({
             <TipTapEditorProvider
               key={lesson.id}
               extensions={articleEditorTipTapExtensions}
-              initialContent={content}
+              initialContent={lesson.content ?? ''}
               onChange={setContent}
             >
-              <EditorContentSync content={content} />
+              <EditorContentSync content={lesson.content ?? ''} />
               <div className="overflow-hidden rounded-card border">
                 <div className="flex flex-wrap items-center gap-0.5 border-b bg-muted/30 p-2">
                   <FormatDropdown />
