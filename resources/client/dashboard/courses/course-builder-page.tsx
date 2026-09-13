@@ -1295,6 +1295,23 @@ function SortableCurriculumItem({
   );
 }
 
+function EditorContentSync({content}: {content: string}) {
+  const editor = useCurrentTextEditor();
+  const prevContentRef = useRef(content);
+  useEffect(() => {
+    if (editor && editor.isEditable && content !== prevContentRef.current) {
+      const cur = editor.getHTML();
+      const normCur = cur === '<p></p>' ? '' : cur;
+      const normTarget = content === '<p></p>' ? '' : content;
+      if (normCur !== normTarget) {
+        editor.commands.setContent(content);
+      }
+      prevContentRef.current = content;
+    }
+  }, [content, editor]);
+  return null;
+}
+
 function LessonEditor({
   lesson,
   chapterId,
@@ -1321,8 +1338,6 @@ function LessonEditor({
     lesson.resources ?? [],
   );
   const {uploadFile, uploadStatus, percentage} = useActiveUpload();
-  const editor = useCurrentTextEditor();
-  const lastSyncedLessonRef = useRef<{id: number; content: string} | null>(null);
 
   useEffect(() => {
     setTitle(lesson.title);
@@ -1334,34 +1349,6 @@ function LessonEditor({
     setContentType(lesson.content_type ?? 'video');
     setResources(lesson.resources ?? []);
   }, [lesson]);
-
-  // Sync editor content when content state changes (e.g., when switching lessons)
-  // This ensures the Tiptap editor updates when content state changes from the lesson sync effect
-  useEffect(() => {
-    if (editor && editor.isEditable) {
-      const currentContent = editor.getHTML();
-      // Normalize comparison: empty content vs empty paragraph
-      const normalizedCurrent = currentContent === '<p></p>' ? '' : currentContent;
-      const normalizedTarget = content === '<p></p>' ? '' : content;
-      if (normalizedCurrent !== normalizedTarget) {
-        editor.commands.setContent(content);
-        lastSyncedLessonRef.current = { id: lesson.id, content };
-      }
-    }
-  }, [content, editor, lesson.id]);
-
-  // Also sync when lesson changes (in case editor wasn't ready during content sync)
-  useEffect(() => {
-    if (editor && editor.isEditable) {
-      const currentContent = editor.getHTML();
-      const normalizedCurrent = currentContent === '<p></p>' ? '' : currentContent;
-      const normalizedTarget = content === '<p></p>' ? '' : content;
-      if (normalizedCurrent !== normalizedTarget) {
-        editor.commands.setContent(content);
-        lastSyncedLessonRef.current = { id: lesson.id, content };
-      }
-    }
-  }, [lesson.id]);
 
   const save = async () => {
     setSaving(true);
@@ -1600,6 +1587,7 @@ function LessonEditor({
                 initialContent={content}
                 onChange={setContent}
               >
+                <EditorContentSync content={content} />
                 <div className="overflow-hidden rounded-card border">
                   <div className="flex flex-wrap items-center gap-0.5 border-b bg-muted/30 p-2">
                     <FormatDropdown />
@@ -1711,6 +1699,7 @@ function LessonEditor({
               initialContent={content}
               onChange={setContent}
             >
+              <EditorContentSync content={content} />
               <div className="overflow-hidden rounded-card border">
                 <div className="flex flex-wrap items-center gap-0.5 border-b bg-muted/30 p-2">
                   <FormatDropdown />
