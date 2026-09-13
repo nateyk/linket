@@ -1503,6 +1503,15 @@ function LessonEditor({
             </Select.Group>
           </Select.Content>
         </Select.Root>
+        <p className="text-xs text-muted-foreground">
+          <Trans
+            message={
+              contentType === 'video'
+                ? 'Readable content is preserved when switching types.'
+                : 'Video summary is preserved when switching types.'
+            }
+          />
+        </p>
       </Field.Root>
 
       {contentType === 'video' && (
