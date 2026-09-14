@@ -15,6 +15,7 @@ class LessonProgressController extends Controller
         abort_unless($user, 401);
         $access = app(\App\Courses\CourseAccess::class);
         abort_unless($access->canAccessLesson($user, $lesson, false), 403, 'Locked.');
+        abort_unless(app(ProgressService::class)->hasPassedRequiredQuiz($user->id, $lesson), 422, 'Pass the quiz before completing this lesson.');
 
         $progress = app(ProgressService::class)->complete($user->id, $lesson);
 

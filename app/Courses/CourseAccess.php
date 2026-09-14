@@ -78,6 +78,9 @@ class CourseAccess
             if (!in_array($lesson->id, $completedIds, true)) {
                 return false;
             }
+            if (!app(\App\Courses\Services\ProgressService::class)->hasPassedRequiredQuiz($userId, $lesson)) {
+                return false;
+            }
         }
 
         return true;

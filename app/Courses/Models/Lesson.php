@@ -55,6 +55,11 @@ class Lesson extends Model
         return $this->hasMany(LessonResource::class, 'lesson_id')->orderBy('sort_order')->orderBy('id');
     }
 
+    public function quiz(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Quiz::class);
+    }
+
     public function isPublished(): bool
     {
         return $this->status === 'published';

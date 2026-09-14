@@ -13,6 +13,7 @@ import {
   ChevronRightIcon,
   DownloadIcon,
   LockIcon,
+  ClockIcon,
 } from 'lucide-react';
 import {useCallback, useEffect, useState} from 'react';
 import {Link, useParams, useNavigate} from 'react-router';
@@ -34,6 +35,19 @@ type LessonData = {
     display_name: string;
     file: {id: number; name: string};
   }[];
+  quiz?: {
+    id: number;
+    require_pass_to_progress: boolean;
+    passing_score: number;
+    questions: {
+      id: number;
+      type: string;
+      question_text: string;
+      options: string[] | null;
+      correct_answer: string;
+      sort_order: number;
+    }[];
+  } | null;
 };
 
 export function Component() {
@@ -44,6 +58,8 @@ export function Component() {
   const [trial, setTrial] = useState(false);
   const [error, setError] = useState<string>();
   const [completing, setCompleting] = useState(false);
+  const [quizAttempts, setQuizAttempts] = useState<any[]>([]);
+  const [quizAttemptsLoading, setQuizAttemptsLoading] = useState(false);
 
   const load = useCallback(
     async (signal?: AbortSignal) => {
@@ -70,6 +86,20 @@ export function Component() {
     [courseId, lessonId],
   );
 
+  // Fetch quiz attempts for the current lesson
+  const loadQuizAttempts = useCallback(async () => {
+    if (!lesson?.quiz?.id) return;
+    setQuizAttemptsLoading(true);
+    try {
+      const response = await apiClient.get(`/api/v1/quizzes/${lesson.quiz.id}/attempts`);
+      setQuizAttempts(response.data.data);
+    } catch {
+      // Ignore errors for quiz attempts loading
+    } finally {
+      setQuizAttemptsLoading(false);
+    }
+  }, [lesson?.quiz?.id]);
+
   useEffect(() => {
     const controller = new AbortController();
     setLesson(null);
@@ -83,6 +113,13 @@ export function Component() {
     });
     return () => controller.abort();
   }, [load]);
+
+  // Load quiz attempts when lesson loads
+  useEffect(() => {
+    if (lesson?.quiz?.id) {
+      loadQuizAttempts();
+    }
+  }, [lesson?.quiz?.id, loadQuizAttempts]);
 
   const complete = async () => {
     setCompleting(true);

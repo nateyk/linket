@@ -184,10 +184,17 @@ class AppServiceProvider extends ServiceProvider
             \Illuminate\Support\Facades\Route::delete('course-lesson-resources/{resource}', [\App\Courses\Controllers\LessonResourcesController::class, 'destroy']);
             \Illuminate\Support\Facades\Route::get('course-lesson-resources/{resource}/download', [\App\Courses\Controllers\LessonResourcesController::class, 'download']);
 
+            \Illuminate\Support\Facades\Route::post('course-lessons/{lesson}/quiz', [\App\Courses\Controllers\QuizzesController::class, 'store']);
+            \Illuminate\Support\Facades\Route::put('quizzes/{quiz}', [\App\Courses\Controllers\QuizzesController::class, 'update']);
+            \Illuminate\Support\Facades\Route::delete('quizzes/{quiz}', [\App\Courses\Controllers\QuizzesController::class, 'destroy']);
+
         });
 
         \Illuminate\Support\Facades\Route::prefix('api/v1')->middleware(['api', 'optionalAuth:sanctum'])->group(function () {
             // Student (optionalAuth for test compat, controller handles 401)
+            \Illuminate\Support\Facades\Route::get('course-lessons/{lesson}/quiz', [\App\Courses\Controllers\QuizzesController::class, 'show']);
+            \Illuminate\Support\Facades\Route::post('quizzes/{quiz}/attempts', [\App\Courses\Controllers\QuizAttemptsController::class, 'store']);
+            \Illuminate\Support\Facades\Route::get('quizzes/{quiz}/attempts', [\App\Courses\Controllers\QuizAttemptsController::class, 'index']);
             \Illuminate\Support\Facades\Route::get('my-courses', [\App\Courses\Controllers\StudentCoursesController::class, 'myCourses']);
             \Illuminate\Support\Facades\Route::get('courses/{course}/learn', [\App\Courses\Controllers\StudentCoursesController::class, 'show']);
             \Illuminate\Support\Facades\Route::get('courses/{course}/learn/lessons/{lesson}', [\App\Courses\Controllers\StudentCoursesController::class, 'lesson']);

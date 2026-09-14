@@ -105,4 +105,33 @@ class ProgressService
             \App\Courses\Models\Enrollment::where('user_id', $userId)->where('course_id', $courseId)->whereNull('completed_at')->update(['completed_at' => now()]);
         }
     }
+
+    /**
+     * Quiz gate: true if lesson has no quiz, quiz does not require pass,
+     * user has a passing attempt, or prior completion is grandfathered
+     * (completed before quiz was created).
+     */
+    public function hasPassedRequiredQuiz(int $userId, Lesson $lesson): bool
+    {
+        $quiz = $lesson->relationLoaded('quiz') ? $lesson->quiz : \App\Courses\Models\Quiz::where('lesson_id', $lesson->id)->first();
+        if (!$quiz || !$quiz->require_pass_to_progress) {
+            return true;
+        }
+
+        $hasPassingAttempt = \App\Courses\Models\QuizAttempt::where('quiz_id', $quiz->id)
+            ->where('user_id', $userId)
+            ->where('passed', true)
+            ->exists();
+        if ($hasPassingAttempt) {
+            return true;
+        }
+
+        // Grandfathered: completed before quiz existed
+        $progress = LessonProgress::where('user_id', $userId)->where('lesson_id', $lesson->id)->first();
+        if ($progress && $progress->completed_at && $quiz->created_at && $progress->completed_at->lt($quiz->created_at)) {
+            return true;
+        }
+
+        return false;
+    }
 }
