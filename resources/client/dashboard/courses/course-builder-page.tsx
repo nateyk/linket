@@ -1332,7 +1332,7 @@ function LessonEditor({
   const [videoFileEntryId, setVideoFileEntryId] = useState<number | null>(lesson.video_file_entry_id ?? null);
   const [content, setContent] = useState(lesson.content ?? '');
   const [contentType, setContentType] = useState<Lesson['content_type']>(lesson.content_type ?? 'video');
-  const [activeTab, setActiveTab] = useState<'summary' | 'attachments'>('summary');
+  const [activeTab, setActiveTab] = useState<'summary' | 'attachments' | 'quiz'>('summary');
   const [saving, setSaving] = useState(false);
   const [resources, setResources] = useState<LessonResource[]>(
     lesson.resources ?? [],
@@ -1575,6 +1575,9 @@ function LessonEditor({
             <Tabs.Tab value="attachments">
               <Trans message="Attachments" />
             </Tabs.Tab>
+            <Tabs.Tab value="quiz">
+              <Trans message="Quiz" />
+            </Tabs.Tab>
           </Tabs.List>
           <Tabs.Panel value="summary">
             <Field.Root>
@@ -1684,6 +1687,16 @@ function LessonEditor({
                   )}
                 </Card.Content>
               </Card>
+            </Field.Root>
+          </Tabs.Panel>
+          <Tabs.Panel value="quiz">
+            <Field.Root>
+              <Field.Label>
+                <Trans message="Quiz" />
+              </Field.Label>
+              <p className="text-sm text-muted-foreground">
+                <Trans message="Quiz management is handled separately in the course settings." />
+              </p>
             </Field.Root>
           </Tabs.Panel>
         </Tabs.Root>
