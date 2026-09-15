@@ -116,7 +116,6 @@ type Lesson = {
   course_id: number;
   title: string;
   content?: string | null;
-  summary?: string | null;
   video_type?: 'upload' | 'external' | null;
   video_url?: string | null;
   video_file_entry_id?: number | null;
@@ -125,7 +124,6 @@ type Lesson = {
   sort_order: number;
   resources?: LessonResource[];
   content_type?: 'video' | 'readable';
-  updated_at?: string | null;
 };
 
 type LessonResource = {
@@ -1333,11 +1331,8 @@ function LessonEditor({
   const [videoType, setVideoType] = useState<Lesson['video_type']>(lesson.video_type ?? null);
   const [videoFileEntryId, setVideoFileEntryId] = useState<number | null>(lesson.video_file_entry_id ?? null);
   const [content, setContent] = useState(lesson.content ?? '');
-  const [summary, setSummary] = useState(lesson.summary ?? '');
   const [contentType, setContentType] = useState<Lesson['content_type']>(lesson.content_type ?? 'video');
-  const [activeTab, setActiveTab] = useState<'summary' | 'attachments' | 'quiz'>('summary');
-  const [quiz, setQuiz] = useState<any>(null);
-  const [quizLoading, setQuizLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'summary' | 'attachments'>('summary');
   const [saving, setSaving] = useState(false);
   const [resources, setResources] = useState<LessonResource[]>(
     lesson.resources ?? [],
@@ -1351,15 +1346,8 @@ function LessonEditor({
     setVideoType(lesson.video_type ?? null);
     setVideoFileEntryId(lesson.video_file_entry_id ?? null);
     setContent(lesson.content ?? '');
-    setSummary(lesson.summary ?? '');
     setContentType(lesson.content_type ?? 'video');
     setResources(lesson.resources ?? []);
-    // Load quiz for this lesson
-    setQuiz(null);
-    setQuizLoading(true);
-    apiClient.get(`/api/v1/course-lessons/${lesson.id}/quiz`).then(res => {
-      setQuiz(res.data.data);
-    }).catch(() => setQuiz(null)).finally(() => setQuizLoading(false));
   }, [lesson]);
 
   const save = async () => {
@@ -1367,14 +1355,10 @@ function LessonEditor({
     try {
       const payload: Record<string, any> = {
         title,
+        content,
         status,
         content_type: contentType,
       };
-      if (contentType === 'video') {
-        payload.summary = summary;
-      } else {
-        payload.content = content;
-      }
       if (contentType === 'video') {
         if (videoUrl) {
           payload.video_type = 'external';
@@ -1485,41 +1469,51 @@ function LessonEditor({
         <Field.Label>
           <Trans message="Lesson type" />
         </Field.Label>
-        <Select.Root
-          value={contentType}
-          onValueChange={value => {
-            const next = value as 'video' | 'readable';
-            setContentType(next);
-            if (next === 'readable') {
-              setVideoUrl('');
-              setVideoType(null);
-              setVideoFileEntryId(null);
-            }
-          }}
-        >
-          <Select.Trigger className="w-full">
-            <Select.Value />
-          </Select.Trigger>
-          <Select.Content>
-            <Select.Group>
-              <Select.Item value="video">
-                <Trans message="Video lesson" />
-              </Select.Item>
-              <Select.Item value="readable">
-                <Trans message="Readable lesson" />
-              </Select.Item>
-            </Select.Group>
-          </Select.Content>
-        </Select.Root>
-        <p className="text-xs text-muted-foreground">
-          <Trans
-            message={
+        <div className="flex gap-4">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="contentType"
+              value="video"
+              checked={contentType === 'video'}
+              onChange={() => {
+                setContentType('video');
+              }}
+              className="sr-only"
+            />
+            <span className={cn(
+              'px-4 py-2 rounded-lg border text-sm font-medium transition-colors',
               contentType === 'video'
-                ? 'Readable content is preserved when switching types.'
-                : 'Video summary is preserved when switching types.'
-            }
-          />
-        </p>
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'bg-background hover:bg-muted/50 border-border'
+            )}>
+              <Trans message="Video lesson" />
+            </span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="contentType"
+              value="readable"
+              checked={contentType === 'readable'}
+              onChange={() => {
+                setContentType('readable');
+                setVideoUrl('');
+                setVideoType(null);
+                setVideoFileEntryId(null);
+              }}
+              className="sr-only"
+            />
+            <span className={cn(
+              'px-4 py-2 rounded-lg border text-sm font-medium transition-colors',
+              contentType === 'readable'
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'bg-background hover:bg-muted/50 border-border'
+            )}>
+              <Trans message="Readable lesson" />
+            </span>
+          </label>
+        </div>
       </Field.Root>
 
       {contentType === 'video' && (
@@ -1573,16 +1567,13 @@ function LessonEditor({
       )}
 
       {contentType === 'video' ? (
-        <Tabs.Root value={activeTab} onValueChange={(v: any) => setActiveTab(v)} defaultValue="summary" className="w-full">
+        <Tabs.Root value={activeTab} onValueChange={setActiveTab} defaultValue="summary" className="w-full">
           <Tabs.List variant="line" className="w-full">
             <Tabs.Tab value="summary">
               <Trans message="Summary" />
             </Tabs.Tab>
             <Tabs.Tab value="attachments">
               <Trans message="Attachments" />
-            </Tabs.Tab>
-            <Tabs.Tab value="quiz">
-              <Trans message="Quiz" />
             </Tabs.Tab>
           </Tabs.List>
           <Tabs.Panel value="summary">
@@ -1591,12 +1582,12 @@ function LessonEditor({
                 <Trans message="Summary" />
               </Field.Label>
               <TipTapEditorProvider
-                key={`${lesson.id}-summary`}
+                key={lesson.id}
                 extensions={articleEditorTipTapExtensions}
-                initialContent={lesson.summary ?? ''}
-                onChange={setSummary}
+                initialContent={content}
+                onChange={setContent}
               >
-                <EditorContentSync content={lesson.summary ?? ''} />
+                <EditorContentSync content={content} />
                 <div className="overflow-hidden rounded-card border">
                   <div className="flex flex-wrap items-center gap-0.5 border-b bg-muted/30 p-2">
                     <FormatDropdown />
@@ -1695,85 +1686,41 @@ function LessonEditor({
               </Card>
             </Field.Root>
           </Tabs.Panel>
-          <Tabs.Panel value="quiz">
-            <Card className="overflow-hidden">
-              <Card.Header className="pb-3">
-                <Card.Title className="text-sm"><Trans message="Quiz" /></Card.Title>
-                <Card.Description><Trans message="Add a quiz to this lesson" /></Card.Description>
-              </Card.Header>
-              <Card.Content className="space-y-3">
-                {quizLoading ? <p className="text-sm text-muted-foreground"><Trans message="Loading quiz..." /></p> : quiz ? (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <label className="flex items-center gap-2 text-sm">
-                        <Switch checked={quiz.require_pass_to_progress} onCheckedChange={v => setQuiz({...quiz, require_pass_to_progress: v})} />
-                        <Trans message="Require passing to progress" />
-                      </label>
-                      <Field.Root className="w-24">
-                        <Field.Label><Trans message="Passing %" /></Field.Label>
-                        <Input type="number" min={0} max={100} value={String(quiz.passing_score)} onChange={e => setQuiz({...quiz, passing_score: parseInt(e.target.value)||0})} />
-                      </Field.Root>
-                    </div>
-                    {quiz.questions?.map((q: any, idx: number) => (
-                      <Card key={q.id ?? idx} className="p-3">
-                        <p className="text-sm font-medium">{idx+1}. {q.question_text} ({q.type})</p>
-                        {q.type==='multiple_choice' && <p className="text-xs text-muted-foreground">{q.options?.join(', ')} → {q.correct_answer}</p>}
-                        {q.type==='true_false' && <p className="text-xs text-muted-foreground">Correct: {q.correct_answer}</p>}
-                      </Card>
-                    ))}
-                    <Button size="sm" onClick={async () => { await apiClient.post(`/api/v1/course-lessons/${lesson.id}/quiz`, quiz); toast.positive('Quiz saved'); }}><Trans message="Save quiz" /></Button>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <p className="text-sm text-muted-foreground"><Trans message="No quiz added yet — Add quiz" /></p>
-                    <Button size="sm" onClick={async () => { const newQuiz={require_pass_to_progress:false, passing_score:70, questions:[{type:'multiple_choice', question_text:'Sample question', options:['A','B'], correct_answer:'A'}]}; setQuiz(newQuiz); }}><Trans message="Add quiz" /></Button>
-                  </div>
-                )}
-              </Card.Content>
-            </Card>
-          </Tabs.Panel>
         </Tabs.Root>
-      ) : quiz ? (
-        <Tabs.Root value={activeTab} onValueChange={(v: any) => setActiveTab(v)} defaultValue="content" className="w-full">
-          <Tabs.List variant="line" className="w-full">
-            <Tabs.Tab value="content"><Trans message="Content" /></Tabs.Tab>
-            <Tabs.Tab value="attachments"><Trans message="Attachments" /></Tabs.Tab>
-            <Tabs.Tab value="quiz"><Trans message="Quiz" /></Tabs.Tab>
-          </Tabs.List>
-          <Tabs.Panel value="content">
-            <Field.Root>
-              <Field.Label>
-                <Trans message="Content" />
-              </Field.Label>
-              <TipTapEditorProvider
-                key={`${lesson.id}-content`}
-                extensions={articleEditorTipTapExtensions}
-                initialContent={lesson.content ?? ''}
-                onChange={setContent}
-              >
-                <EditorContentSync content={lesson.content ?? ''} />
-                <div className="overflow-hidden rounded-card border">
-                  <div className="flex flex-wrap items-center gap-0.5 border-b bg-muted/30 p-2">
-                    <FormatDropdown />
-                    <Divider />
-                    <FontStyleButtons />
-                    <Divider />
-                    <ListButtons />
-                    <Divider />
-                    <LinkButton />
-                    <Divider />
-                    <ClearFormatButton />
-                  </div>
-                  <TiptapEditorContent className="prose prose-sm min-h-[180px] max-w-none p-3" />
+      ) : (
+        <>
+          <Field.Root>
+            <Field.Label>
+              <Trans message="Content" />
+            </Field.Label>
+            <TipTapEditorProvider
+              key={lesson.id}
+              extensions={articleEditorTipTapExtensions}
+              initialContent={content}
+              onChange={setContent}
+            >
+              <EditorContentSync content={content} />
+              <div className="overflow-hidden rounded-card border">
+                <div className="flex flex-wrap items-center gap-0.5 border-b bg-muted/30 p-2">
+                  <FormatDropdown />
+                  <Divider />
+                  <FontStyleButtons />
+                  <Divider />
+                  <ListButtons />
+                  <Divider />
+                  <LinkButton />
+                  <Divider />
+                  <ClearFormatButton />
                 </div>
-              </TipTapEditorProvider>
-            </Field.Root>
-          </Tabs.Panel>
-          <Tabs.Panel value="attachments">
-            <Field.Root>
-              <Field.Label>
-                <Trans message="File attachments" />
-              </Field.Label>
+                <TiptapEditorContent className="prose prose-sm min-h-[180px] max-w-none p-3" />
+              </div>
+            </TipTapEditorProvider>
+          </Field.Root>
+
+          <Field.Root>
+            <Field.Label>
+              <Trans message="File attachments" />
+            </Field.Label>
             <Card className="overflow-hidden">
               <Card.Header className="pb-3">
                 <Card.Title className="flex items-center gap-2 text-sm">
