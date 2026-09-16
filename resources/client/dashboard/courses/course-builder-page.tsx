@@ -2054,9 +2054,9 @@ function LessonEditor({
                             {q.type === 'multiple_choice' && (
                               <div className="space-y-3">
                                 <div className="flex items-center justify-between">
-                                  <Field.Label className="mb-0">
+                                  <span className="text-sm font-medium">
                                     <Trans message="Options" />
-                                  </Field.Label>
+                                  </span>
                                   <Button
                                     type="button"
                                     variant="outline"
