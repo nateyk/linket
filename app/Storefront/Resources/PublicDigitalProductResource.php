@@ -13,14 +13,18 @@ class PublicDigitalProductResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
-        // Compute course-specific aggregates when loaded
+        // Compute course-specific aggregates when loaded. Prefer the eager
+        // withCount values (no per-product queries); fall back to direct
+        // queries for callers that load the course relation without counts.
         $isCourse = ($this->type ?? 'digital') === 'course';
         $course = $this->whenLoaded('course', fn() => $this->course);
         $chaptersCount = null;
         $lessonsCount = null;
         if ($isCourse && $this->relationLoaded('course') && $this->course) {
-            $chaptersCount = $this->course->chapters()->count();
-            $lessonsCount = \App\Courses\Models\Lesson::where('course_id', $this->course->id)->where('status', 'published')->count();
+            $chaptersCount = $this->course->chapters_count
+                ?? $this->course->chapters()->count();
+            $lessonsCount = $this->course->lessons_count
+                ?? \App\Courses\Models\Lesson::where('course_id', $this->course->id)->where('status', 'published')->count();
         }
         $courseId = $isCourse && $this->relationLoaded('course') && $this->course ? $this->course->id : null;
         return [

@@ -39,7 +39,16 @@ class PublicDigitalProducts
                 $q->where(function ($qq) { $qq->where('digital_products.type', '!=', 'course')->whereHas('files'); })
                   ->orWhere(function ($qq) { $qq->where('digital_products.type', 'course')->whereHas('course', fn($c) => $c->whereNotNull('published_at')); });
             })
-            ->with(['cover', 'creator', 'course'])
+            ->with([
+                'cover',
+                'creator',
+                // Aggregates ride along here so the resource never issues
+                // per-product count queries (see PublicDigitalProductResource).
+                'course' => fn($query) => $query->withCount([
+                    'chapters',
+                    'lessons' => fn($lessonQuery) => $lessonQuery->where('course_lessons.status', 'published'),
+                ]),
+            ])
             ->withCount('files')
             ->latest('digital_products.approved_at');
     }
