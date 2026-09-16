@@ -1347,9 +1347,9 @@ function LessonEditor({
     questions: Array<{
       id?: number;
       type: 'multiple_choice' | 'true_false';
-      question: string;
-      options?: Array<{ id?: number; text: string; is_correct: boolean }>;
-      correct_answer?: boolean;
+      question_text: string;
+      options?: string[];
+      correct_answer: string;
     }>;
   } | null>(null);
   const [quizLoading, setQuizLoading] = useState(false);
@@ -1434,9 +1434,9 @@ function LessonEditor({
         passing_score: quiz.passing_score,
         questions: quiz.questions.map((q) => ({
           type: q.type,
-          question: q.question,
+          question_text: q.question_text,
           options: q.type === 'multiple_choice' ? q.options : undefined,
-          correct_answer: q.type === 'true_false' ? q.correct_answer : undefined,
+          correct_answer: q.correct_answer,
         })),
       };
       if (quiz.id) {
@@ -1464,11 +1464,9 @@ function LessonEditor({
               ...prev.questions,
               {
                 type: 'multiple_choice',
-                question: '',
-                options: [
-                  { text: '', is_correct: false },
-                  { text: '', is_correct: false },
-                ],
+                question_text: '',
+                options: ['', ''],
+                correct_answer: '',
               },
             ],
           }
@@ -1505,7 +1503,7 @@ function LessonEditor({
             ...prev,
             questions: prev.questions.map((q, i) =>
               i === questionIndex && q.options
-                ? { ...q, options: [...q.options, { text: '', is_correct: false }] }
+                ? { ...q, options: [...q.options, ''] }
                 : q,
             ),
           }
@@ -1535,13 +1533,7 @@ function LessonEditor({
             ...prev,
             questions: prev.questions.map((q, i) =>
               i === questionIndex && q.options
-                ? {
-                    ...q,
-                    options: q.options.map((opt, oi) => ({
-                      ...opt,
-                      is_correct: oi === optionIndex,
-                    })),
-                  }
+                ? { ...q, correct_answer: q.options[optionIndex] }
                 : q,
             ),
           }
@@ -1549,13 +1541,13 @@ function LessonEditor({
     );
   };
 
-  const toggleCorrectAnswer = (questionIndex: number) => {
+  const setCorrectAnswer = (questionIndex: number, value: string) => {
     setQuiz((prev) =>
       prev
         ? {
             ...prev,
             questions: prev.questions.map((q, i) =>
-              i === questionIndex ? { ...q, correct_answer: !q.correct_answer } : q,
+              i === questionIndex ? { ...q, correct_answer: value } : q,
             ),
           }
         : null,
@@ -2034,7 +2026,14 @@ function LessonEditor({
                               </Field.Label>
                               <Select.Root
                                 value={q.type}
-                                onValueChange={(v) => updateQuestion(qi, { type: v as 'multiple_choice' | 'true_false' })}
+                                onValueChange={(v) => {
+                                  const type = v as 'multiple_choice' | 'true_false';
+                                  updateQuestion(qi, {
+                                    type,
+                                    options: type === 'multiple_choice' ? (q.options ?? ['', '']) : undefined,
+                                    correct_answer: type === 'true_false' ? 'true' : '',
+                                  });
+                                }}
                               >
                                 <Select.Trigger className="w-full max-w-xs">
                                   <Select.Value />
@@ -2055,8 +2054,8 @@ function LessonEditor({
                                 <Trans message="Question text" />
                               </Field.Label>
                               <Input
-                                value={q.question}
-                                onChange={(e) => updateQuestion(qi, { question: e.target.value })}
+                                value={q.question_text}
+                                onChange={(e) => updateQuestion(qi, { question_text: e.target.value })}
                                 placeholder="Enter your question"
                               />
                             </Field.Root>
@@ -2077,41 +2076,44 @@ function LessonEditor({
                                     <Trans message="Add option" />
                                   </Button>
                                 </div>
-                                {q.options?.map((opt, oi) => (
-                                  <div key={oi} className="flex items-center gap-2">
-                                    <Button
-                                      type="button"
-                                      variant={opt.is_correct ? 'default' : 'outline'}
-                                      size="icon"
-                                      onClick={() => toggleCorrectOption(qi, oi)}
-                                      aria-label={opt.is_correct ? 'Correct answer' : 'Mark as correct'}
-                                      className="h-8 w-8"
-                                    >
-                                      {opt.is_correct ? <CheckIcon className="size-4" /> : <CircleIcon className="size-4" />}
-                                    </Button>
-                                    <Input
-                                      value={opt.text}
-                                      onChange={(e) => {
-                                        const newOptions = [...(q.options ?? [])];
-                                        newOptions[oi] = { ...newOptions[oi], text: e.target.value };
-                                        updateQuestion(qi, { options: newOptions });
-                                      }}
-                                      placeholder="Option text"
-                                      className="flex-1"
-                                    />
-                                    {q.options && q.options.length > 2 && (
+                                {q.options?.map((opt, oi) => {
+                                  const isCorrect = opt === q.correct_answer;
+                                  return (
+                                    <div key={oi} className="flex items-center gap-2">
                                       <Button
                                         type="button"
-                                        variant="ghost"
+                                        variant={isCorrect ? 'default' : 'outline'}
                                         size="icon"
-                                        onClick={() => removeOption(qi, oi)}
-                                        aria-label="Remove option"
+                                        onClick={() => toggleCorrectOption(qi, oi)}
+                                        aria-label={isCorrect ? 'Correct answer' : 'Mark as correct'}
+                                        className="h-8 w-8"
                                       >
-                                        <Trash2Icon className="size-4" />
+                                        {isCorrect ? <CheckIcon className="size-4" /> : <CircleIcon className="size-4" />}
                                       </Button>
-                                    )}
-                                  </div>
-                                ))}
+                                      <Input
+                                        value={opt}
+                                        onChange={(e) => {
+                                          const newOptions = [...(q.options ?? [])];
+                                          newOptions[oi] = e.target.value;
+                                          updateQuestion(qi, { options: newOptions });
+                                        }}
+                                        placeholder="Option text"
+                                        className="flex-1"
+                                      />
+                                      {q.options && q.options.length > 2 && (
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="icon"
+                                          onClick={() => removeOption(qi, oi)}
+                                          aria-label="Remove option"
+                                        >
+                                          <Trash2Icon className="size-4" />
+                                        </Button>
+                                      )}
+                                    </div>
+                                  );
+                                })}
                               </div>
                             )}
 
@@ -2123,16 +2125,16 @@ function LessonEditor({
                                 <div className="flex items-center gap-4">
                                   <Button
                                     type="button"
-                                    variant={q.correct_answer === true ? 'default' : 'outline'}
-                                    onClick={() => toggleCorrectAnswer(qi)}
+                                    variant={q.correct_answer === 'true' ? 'default' : 'outline'}
+                                    onClick={() => setCorrectAnswer(qi, 'true')}
                                     className="w-24"
                                   >
                                     <Trans message="True" />
                                   </Button>
                                   <Button
                                     type="button"
-                                    variant={q.correct_answer === false ? 'default' : 'outline'}
-                                    onClick={() => toggleCorrectAnswer(qi)}
+                                    variant={q.correct_answer === 'false' ? 'default' : 'outline'}
+                                    onClick={() => setCorrectAnswer(qi, 'false')}
                                     className="w-24"
                                   >
                                     <Trans message="False" />
