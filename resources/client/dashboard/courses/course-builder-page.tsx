@@ -1932,15 +1932,25 @@ function LessonEditor({
               </Alert>
             )}
             {!quizLoading && !quiz && !quizError && (
-              <div className="text-center py-12">
-                <p className="text-muted-foreground mb-4">
-                  <Trans message="No quiz exists for this lesson yet." />
-                </p>
-                <Button onClick={createQuiz}>
-                  <PlusIcon className="mr-2 h-4 w-4" />
-                  <Trans message="Create quiz" />
-                </Button>
-              </div>
+              <Empty.Root>
+                <Empty.Header>
+                  <Empty.Media variant="icon">
+                    <GraduationCapIcon />
+                  </Empty.Media>
+                  <Empty.Title>
+                    <Trans message="No quiz for this lesson" />
+                  </Empty.Title>
+                  <Empty.Description>
+                    <Trans message="Add multiple choice or true/false questions to check understanding before students progress." />
+                  </Empty.Description>
+                </Empty.Header>
+                <Empty.Content>
+                  <Button onClick={createQuiz}>
+                    <PlusIcon data-icon="inline-start" />
+                    <Trans message="Create quiz" />
+                  </Button>
+                </Empty.Content>
+              </Empty.Root>
             )}
             {quiz && !quizLoading && (
               <form onSubmit={(e) => { e.preventDefault(); saveQuiz(); }} className="space-y-6">
@@ -1990,7 +2000,7 @@ function LessonEditor({
                       <Trans message="Questions" />
                     </Card.Title>
                     <Button type="button" variant="outline" size="sm" onClick={addQuestion}>
-                      <PlusIcon className="mr-2 h-4 w-4" />
+                      <PlusIcon data-icon="inline-start" />
                       <Trans message="Add question" />
                     </Button>
                   </Card.Header>
@@ -2014,7 +2024,7 @@ function LessonEditor({
                                 onClick={() => removeQuestion(qi)}
                                 aria-label="Remove question"
                               >
-                                <Trash2Icon className="h-4 w-4" />
+                                <Trash2Icon className="size-4" />
                               </Button>
                             </div>
 
@@ -2063,7 +2073,7 @@ function LessonEditor({
                                     size="sm"
                                     onClick={() => addOption(qi)}
                                   >
-                                    <PlusIcon className="mr-2 h-4 w-4" />
+                                    <PlusIcon data-icon="inline-start" />
                                     <Trans message="Add option" />
                                   </Button>
                                 </div>
@@ -2077,7 +2087,7 @@ function LessonEditor({
                                       aria-label={opt.is_correct ? 'Correct answer' : 'Mark as correct'}
                                       className="h-8 w-8"
                                     >
-                                      {opt.is_correct ? <CheckIcon className="h-4 w-4" /> : <CircleIcon className="h-4 w-4" />}
+                                      {opt.is_correct ? <CheckIcon className="size-4" /> : <CircleIcon className="size-4" />}
                                     </Button>
                                     <Input
                                       value={opt.text}
@@ -2097,7 +2107,7 @@ function LessonEditor({
                                         onClick={() => removeOption(qi, oi)}
                                         aria-label="Remove option"
                                       >
-                                        <Trash2Icon className="h-4 w-4" />
+                                        <Trash2Icon className="size-4" />
                                       </Button>
                                     )}
                                   </div>
@@ -2142,14 +2152,7 @@ function LessonEditor({
                     <Trans message="Delete quiz" />
                   </Button>
                   <Button type="submit" disabled={quizSaving}>
-                    {quizSaving ? (
-                      <>
-                        <span className="animate-spin mr-2">⏳</span>
-                        <Trans message="Saving..." />
-                      </>
-                    ) : (
-                      <Trans message="Save quiz" />
-                    )}
+                    <Trans message={quizSaving ? 'Saving...' : 'Save quiz'} />
                   </Button>
                 </div>
               </form>

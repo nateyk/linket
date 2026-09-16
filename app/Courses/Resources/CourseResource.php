@@ -25,6 +25,7 @@ class CourseResource extends JsonResource
                     'id' => $this->product->id,
                     'title' => $this->product->title,
                     'description' => $this->product->description,
+                    'learning_outcomes' => $this->product->learning_outcomes,
                     'price_cents' => $this->product->price_cents,
                     'currency' => $this->product->currency,
                     'status' => $this->product->status,
