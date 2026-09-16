@@ -1346,6 +1346,7 @@ function LessonEditor({
     passing_score: number;
     questions: Array<{
       id?: number;
+      key: string;
       type: 'multiple_choice' | 'true_false';
       question_text: string;
       options?: string[];
@@ -1355,6 +1356,7 @@ function LessonEditor({
   const [quizLoading, setQuizLoading] = useState(false);
   const [quizSaving, setQuizSaving] = useState(false);
   const [quizError, setQuizError] = useState<string | null>(null);
+  const [expandedQuestionKeys, setExpandedQuestionKeys] = useState<Set<string>>(new Set());
   const {uploadFile, uploadStatus, percentage} = useActiveUpload();
 
   useEffect(() => {
@@ -1368,12 +1370,24 @@ function LessonEditor({
     setResources(lesson.resources ?? []);
     // Load quiz for this lesson
     setQuiz(null);
+    setExpandedQuestionKeys(new Set());
     setQuizLoading(true);
     setQuizError(null);
     apiClient
       .get(`/api/v1/course-lessons/${lesson.id}/quiz`)
       .then((res) => {
-        setQuiz(res.data.data);
+        const data = res.data.data;
+        setQuiz(
+          data
+            ? {
+                ...data,
+                questions: (data.questions ?? []).map((q: any) => ({
+                  ...q,
+                  key: crypto.randomUUID(),
+                })),
+              }
+            : null,
+        );
       })
       .catch((err) => {
         if (err.response?.status !== 404) {
@@ -1456,6 +1470,12 @@ function LessonEditor({
   };
 
   const addQuestion = () => {
+    const key = crypto.randomUUID();
+    setExpandedQuestionKeys(prev => {
+      const next = new Set(prev);
+      next.add(key);
+      return next;
+    });
     setQuiz((prev) =>
       prev
         ? {
@@ -1463,6 +1483,7 @@ function LessonEditor({
             questions: [
               ...prev.questions,
               {
+                key,
                 type: 'multiple_choice',
                 question_text: '',
                 options: ['', ''],
@@ -1475,6 +1496,14 @@ function LessonEditor({
   };
 
   const removeQuestion = (index: number) => {
+    const targetKey = quiz?.questions[index]?.key;
+    if (targetKey) {
+      setExpandedQuestionKeys(prev => {
+        const next = new Set(prev);
+        next.delete(targetKey);
+        return next;
+      });
+    }
     setQuiz((prev) =>
       prev
         ? {
@@ -1483,6 +1512,15 @@ function LessonEditor({
           }
         : null,
     );
+  };
+
+  const setQuestionOpen = (key: string, isOpen: boolean) => {
+    setExpandedQuestionKeys(prev => {
+      const next = new Set(prev);
+      if (isOpen) next.add(key);
+      else next.delete(key);
+      return next;
+    });
   };
 
   const updateQuestion = (index: number, updates: Partial<NonNullable<typeof quiz>['questions'][0]>) => {
@@ -1671,7 +1709,14 @@ function LessonEditor({
           }}
         >
           <Select.Trigger className="w-full">
-            <Select.Value />
+            <Select.Value>
+              {(value: string | null) =>
+                value === 'video' ? (
+                  <Trans message="Video lesson" />
+                ) : value === 'readable' ? (
+                  <Trans message="Readable lesson" />
+                ) : null}
+            </Select.Value>
           </Select.Trigger>
           <Select.Content>
             <Select.Group>
@@ -2003,22 +2048,57 @@ function LessonEditor({
                       </p>
                     ) : (
                       <div className="space-y-4">
-                        {quiz.questions.map((q, qi) => (
-                          <div key={qi} className="border rounded-lg p-4 space-y-4">
-                            <div className="flex items-center justify-between">
-                              <span className="font-medium text-sm">
-                                <Trans message="Question" /> {qi + 1}
-                              </span>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => removeQuestion(qi)}
-                                aria-label="Remove question"
-                              >
-                                <Trash2Icon className="size-4" />
-                              </Button>
-                            </div>
+                        {quiz.questions.map((q, qi) => {
+                          const questionKey = q.key ?? `question-${qi}`;
+                          const questionPreview = q.question_text.trim();
+                          const questionAnswered = q.correct_answer !== '';
+                          return (
+                            <Collapsible
+                              key={questionKey}
+                              open={expandedQuestionKeys.has(questionKey)}
+                              onOpenChange={isOpen => setQuestionOpen(questionKey, isOpen)}
+                              className="overflow-hidden rounded-xl border bg-background"
+                            >
+                              <div className="flex items-center gap-2 bg-muted/30 p-2">
+                                <CollapsibleTrigger
+                                  aria-label={`Toggle question ${qi + 1}`}
+                                  className="group flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1 rounded-md p-1 text-start hover:bg-muted/50"
+                                >
+                                  <span className="shrink-0 text-sm font-medium">
+                                    <Trans message="Question" /> {qi + 1}
+                                  </span>
+                                  <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
+                                    {questionPreview ? (
+                                      questionPreview
+                                    ) : (
+                                      <Trans message="Untitled question" />
+                                    )}
+                                  </span>
+                                  <Badge variant="outline">
+                                    {q.type === 'multiple_choice' ? (
+                                      <Trans message="Multiple choice" />
+                                    ) : (
+                                      <Trans message="True / False" />
+                                    )}
+                                  </Badge>
+                                  {questionAnswered ? (
+                                    <CheckIcon className="size-4 shrink-0 text-positive" />
+                                  ) : null}
+                                  <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground transition-transform group-data-panel-open:rotate-180" />
+                                </CollapsibleTrigger>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  className="shrink-0"
+                                  onClick={() => removeQuestion(qi)}
+                                  aria-label="Remove question"
+                                >
+                                  <Trash2Icon className="size-4" />
+                                </Button>
+                              </div>
+                              <CollapsibleContent>
+                                <div className="flex flex-col gap-4 p-4">
 
                             <Field.Root>
                               <Field.Label>
@@ -2036,7 +2116,14 @@ function LessonEditor({
                                 }}
                               >
                                 <Select.Trigger className="w-full max-w-xs">
-                                  <Select.Value />
+                                  <Select.Value>
+                                    {(value: string | null) =>
+                                      value === 'multiple_choice' ? (
+                                        <Trans message="Multiple choice" />
+                                      ) : value === 'true_false' ? (
+                                        <Trans message="True / False" />
+                                      ) : null}
+                                  </Select.Value>
                                 </Select.Trigger>
                                 <Select.Content>
                                   <Select.Item value="multiple_choice">
@@ -2142,8 +2229,11 @@ function LessonEditor({
                                 </div>
                               </Field.Root>
                             )}
-                          </div>
-                        ))}
+                                </div>
+                              </CollapsibleContent>
+                            </Collapsible>
+                          );
+                        })}
                       </div>
                     )}
                   </Card.Content>

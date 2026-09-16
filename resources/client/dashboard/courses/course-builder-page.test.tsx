@@ -410,3 +410,45 @@ describe('course builder quiz save payload', () => {
     expect(source).toContain('correct_answer: q.correct_answer');
   });
 });
+
+describe('course builder quiz select labels', () => {
+  // Regression: Select.Value fell back to the raw enum (true_false,
+  // readable) in the trigger because Base UI derives the display text
+  // from measured item DOM text. Both dropdowns now map the value to a
+  // human label via the documented Select.Value render prop.
+  const source = fs.readFileSync(
+    path.resolve('resources/client/dashboard/courses/course-builder-page.tsx'),
+    'utf8',
+  );
+
+  test('question type trigger maps enums to labels', () => {
+    expect(source).toContain("(value: string | null) =>");
+    expect(source).toContain("value === 'multiple_choice' ? (");
+    expect(source).toContain("value === 'true_false' ? (");
+  });
+
+  test('lesson type trigger maps enums to labels', () => {
+    expect(source).toContain("value === 'video' ? (");
+    expect(source).toContain("value === 'readable' ? (");
+  });
+
+  test('no bare Select.Value left to fall back to raw values', () => {
+    expect(source).not.toContain('<Select.Value />');
+  });
+});
+
+describe('course builder quiz question cards', () => {
+  // Questions render collapsed by default inside the app's own
+  // Collapsible, reusing the chapter chevron pattern.
+  const source = fs.readFileSync(
+    path.resolve('resources/client/dashboard/courses/course-builder-page.tsx'),
+    'utf8',
+  );
+
+  test('each question is a collapsible with the chapter chevron pattern', () => {
+    expect(source).toContain('expandedQuestionKeys');
+    expect(source).toContain('<CollapsibleContent>');
+    expect(source).toContain('group-data-panel-open:rotate-180');
+    expect(source).toContain('Untitled question');
+  });
+});
