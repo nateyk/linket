@@ -3,10 +3,12 @@ import {Alert} from '@shadcn/alert/alert';
 import {Badge} from '@shadcn/badge/badge';
 import {Button} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
+import {Field} from '@shadcn/forms/field';
 import {
   RadioGroup,
   RadioGroupItem,
 } from '@shadcn/forms/radio-group/radio-group';
+import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {Spinner} from '@shadcn/spinner/spinner';
 import {Tabs} from '@shadcn/tabs/tabs';
 import {Trans} from '@ui/i18n/trans';
@@ -16,6 +18,8 @@ import {
   CheckIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  CircleCheckBigIcon,
+  CircleXIcon,
   DownloadIcon,
   LockIcon,
 } from 'lucide-react';
@@ -536,7 +540,7 @@ function LessonQuiz({
   });
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center gap-2">
         <Badge variant="outline">
           <Trans
@@ -585,14 +589,21 @@ function LessonQuiz({
               return (
                 <div
                   key={detail.question_id}
-                  className="flex flex-col gap-1 rounded-card border p-3 text-sm"
+                  className="flex flex-col gap-2 rounded-card border p-3 text-sm"
                 >
                   <p className="font-medium">{question?.question_text}</p>
                   <p
                     className={
-                      detail.is_correct ? 'text-positive' : 'text-destructive'
+                      detail.is_correct
+                        ? 'flex items-center gap-2 text-positive'
+                        : 'flex items-center gap-2 text-destructive'
                     }
                   >
+                    {detail.is_correct ? (
+                      <CircleCheckBigIcon className="size-4" />
+                    ) : (
+                      <CircleXIcon className="size-4" />
+                    )}
                     <Trans
                       message="Your answer: :answer"
                       values={{answer: answerLabel(detail.given)}}
@@ -633,47 +644,47 @@ function LessonQuiz({
                 <Card.Description>{question.question_text}</Card.Description>
               </Card.Header>
               <Card.Content className="flex flex-col gap-2 p-4 pt-0">
-                {question.type === 'multiple_choice' && question.options ? (
-                  <RadioGroup
-                    value={answers[String(question.id)] ?? ''}
-                    onValueChange={value =>
-                      onAnswer(question.id, String(value))
-                    }
-                  >
-                    {question.options.map(option => (
-                      <label
-                        key={option}
-                        className="flex items-center gap-2 text-sm"
-                      >
-                        <RadioGroupItem value={option} />
-                        <span>{option}</span>
-                      </label>
-                    ))}
-                  </RadioGroup>
-                ) : (
-                  <RadioGroup
-                    value={answers[String(question.id)] ?? ''}
-                    onValueChange={value =>
-                      onAnswer(question.id, String(value))
-                    }
-                  >
-                    {['true', 'false'].map(value => (
-                      <label
-                        key={value}
-                        className="flex items-center gap-2 text-sm"
-                      >
-                        <RadioGroupItem value={value} />
-                        <span>
-                          {value === 'true' ? (
-                            <Trans message="True" />
-                          ) : (
-                            <Trans message="False" />
-                          )}
-                        </span>
-                      </label>
-                    ))}
-                  </RadioGroup>
-                )}
+                <Field.Root>
+                  {question.type === 'multiple_choice' && question.options ? (
+                    <RadioGroup
+                      value={answers[String(question.id)] ?? ''}
+                      onValueChange={value =>
+                        onAnswer(question.id, String(value))
+                      }
+                    >
+                      {question.options.map(option => (
+                        <Field.Item key={option}>
+                          <Field.Label>
+                            <RadioGroupItem value={option} />
+                            <Field.Title>{option}</Field.Title>
+                          </Field.Label>
+                        </Field.Item>
+                      ))}
+                    </RadioGroup>
+                  ) : (
+                    <RadioGroup
+                      value={answers[String(question.id)] ?? ''}
+                      onValueChange={value =>
+                        onAnswer(question.id, String(value))
+                      }
+                    >
+                      {['true', 'false'].map(value => (
+                        <Field.Item key={value}>
+                          <Field.Label>
+                            <RadioGroupItem value={value} />
+                            <Field.Title>
+                              {value === 'true' ? (
+                                <Trans message="True" />
+                              ) : (
+                                <Trans message="False" />
+                              )}
+                            </Field.Title>
+                          </Field.Label>
+                        </Field.Item>
+                      ))}
+                    </RadioGroup>
+                  )}
+                </Field.Root>
                 <p className="text-xs text-muted-foreground">
                   {questionTypeLabel(question.type)}
                 </p>
@@ -699,7 +710,7 @@ function LessonQuiz({
         </Card.Header>
         <Card.Content className="flex flex-col gap-2 p-4 pt-0">
           {attemptsLoading ? (
-            <Spinner />
+            <Skeleton className="h-12 w-full rounded-card" />
           ) : attempts.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               <Trans message="No attempts yet." />
