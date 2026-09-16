@@ -40,7 +40,14 @@ class DigitalProductResource extends JsonResource
                 'file_size' => $file->file_size,
                 'extension' => $file->extension,
             ])),
-            'biolink_ids' => $this->whenLoaded('biolinks', fn() => $this->biolinks->pluck('id')->values()),
+            // Always present (never whenLoaded): the product form treats a
+            // missing key as "no placement" and would wipe it on the next
+            // save. Falls back to an explicit query when the relation was
+            // not eager-loaded, so correctness never depends on a
+            // particular controller load() call.
+            'biolink_ids' => $this->resource->relationLoaded('biolinks')
+                ? $this->biolinks->pluck('id')->values()->all()
+                : $this->resource->biolinks()->pluck('biolinks.id')->all(),
             'biolinks' => $this->whenLoaded('biolinks', fn() => $this->biolinks->map(fn($biolink) => [
                 'id' => $biolink->id,
                 'name' => $biolink->name,
