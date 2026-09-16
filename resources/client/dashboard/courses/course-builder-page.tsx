@@ -1570,6 +1570,23 @@ function LessonEditor({
     });
   };
 
+  const [deleteQuizOpen, setDeleteQuizOpen] = useState(false);
+
+  const deleteQuiz = async () => {
+    if (!quiz) return;
+    if (quiz.id) {
+      try {
+        await apiClient.delete(`/api/v1/quizzes/${quiz.id}`);
+        toast.positive('Quiz deleted');
+      } catch (e: any) {
+        toast.danger(e.message ?? 'Unable to delete quiz');
+        return;
+      }
+    }
+    setQuiz(null);
+    setDeleteQuizOpen(false);
+  };
+
   const uploadVideo = (file: File) => {
     uploadFile(file, {
       uploadType: 'courseVideos',
@@ -2121,7 +2138,7 @@ function LessonEditor({
                 </Card>
 
                 <div className="flex justify-end gap-3 pt-4 border-t">
-                  <Button type="button" variant="outline" onClick={() => setQuiz(null)}>
+                  <Button type="button" variant="outline" onClick={() => setDeleteQuizOpen(true)}>
                     <Trans message="Delete quiz" />
                   </Button>
                   <Button type="submit" disabled={quizSaving}>
@@ -2137,6 +2154,39 @@ function LessonEditor({
                 </div>
               </form>
             )}
+            <AlertDialog.Root
+              open={deleteQuizOpen}
+              onOpenChange={setDeleteQuizOpen}
+            >
+              <AlertDialog.Portal>
+                <AlertDialog.Backdrop />
+                <AlertDialog.Content size="sm">
+                  <AlertDialog.Header>
+                    <AlertDialog.Media className="bg-destructive/10 text-destructive">
+                      <Trash2Icon />
+                    </AlertDialog.Media>
+                    <AlertDialog.Title>
+                      <Trans message="Delete quiz?" />
+                    </AlertDialog.Title>
+                    <AlertDialog.Description>
+                      <Trans message="This quiz and all its questions will be permanently deleted." />
+                    </AlertDialog.Description>
+                  </AlertDialog.Header>
+                  <AlertDialog.Footer>
+                    <AlertDialog.Cancel disabled={quizSaving}>
+                      <Trans message="Cancel" />
+                    </AlertDialog.Cancel>
+                    <AlertDialog.Action
+                      color="danger"
+                      onClick={deleteQuiz}
+                      disabled={quizSaving}
+                    >
+                      <Trans message={quizSaving ? 'Deleting...' : 'Delete'} />
+                    </AlertDialog.Action>
+                  </AlertDialog.Footer>
+                </AlertDialog.Content>
+              </AlertDialog.Portal>
+            </AlertDialog.Root>
           </div>
         </Tabs.Panel>
       </Tabs.Root>
