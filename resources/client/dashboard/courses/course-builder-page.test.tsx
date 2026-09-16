@@ -385,3 +385,28 @@ describe('course approval submission', () => {
     expect(source).toContain("'Add a published lesson'");
   });
 });
+
+describe('course builder quiz save payload', () => {
+  // Regression (prod 422): saveQuiz previously sent `question`, option
+  // objects ({text,is_correct}) and a missing/boolean `correct_answer`,
+  // while QuizzesController validates `question_text`, `options.*` as
+  // strings and a required string `correct_answer`. Lock the mapping.
+  const source = fs.readFileSync(
+    path.resolve('resources/client/dashboard/courses/course-builder-page.tsx'),
+    'utf8',
+  );
+
+  test('sends question_text, not question', () => {
+    expect(source).toContain('question_text: q.question_text');
+    expect(source).not.toContain('question: q.question,');
+  });
+
+  test('sends options as plain strings', () => {
+    expect(source).toContain('options?: string[];');
+    expect(source).not.toContain('is_correct');
+  });
+
+  test('sends correct_answer as a string', () => {
+    expect(source).toContain('correct_answer: q.correct_answer');
+  });
+});
