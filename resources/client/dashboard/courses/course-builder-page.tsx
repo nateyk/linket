@@ -70,6 +70,8 @@ import {
   UploadIcon,
   VideoIcon,
   XIcon,
+  CheckIcon,
+  CircleIcon,
 } from 'lucide-react';
 import {
   useCallback,
@@ -1337,6 +1339,22 @@ function LessonEditor({
   const [resources, setResources] = useState<LessonResource[]>(
     lesson.resources ?? [],
   );
+  // Quiz state
+  const [quiz, setQuiz] = useState<{
+    id?: number;
+    require_pass_to_progress: boolean;
+    passing_score: number;
+    questions: Array<{
+      id?: number;
+      type: 'multiple_choice' | 'true_false';
+      question: string;
+      options?: Array<{ id?: number; text: string; is_correct: boolean }>;
+      correct_answer?: boolean;
+    }>;
+  } | null>(null);
+  const [quizLoading, setQuizLoading] = useState(false);
+  const [quizSaving, setQuizSaving] = useState(false);
+  const [quizError, setQuizError] = useState<string | null>(null);
   const {uploadFile, uploadStatus, percentage} = useActiveUpload();
 
   useEffect(() => {
@@ -1348,6 +1366,22 @@ function LessonEditor({
     setContent(lesson.content ?? '');
     setContentType(lesson.content_type ?? 'video');
     setResources(lesson.resources ?? []);
+    // Load quiz for this lesson
+    setQuiz(null);
+    setQuizLoading(true);
+    setQuizError(null);
+    apiClient
+      .get(`/api/v1/course-lessons/${lesson.id}/quiz`)
+      .then((res) => {
+        setQuiz(res.data.data);
+      })
+      .catch((err) => {
+        if (err.response?.status !== 404) {
+          setQuizError(err.response?.data?.message ?? 'Failed to load quiz');
+        }
+        setQuiz(null);
+      })
+      .finally(() => setQuizLoading(false));
   }, [lesson]);
 
   const save = async () => {
@@ -1388,6 +1422,169 @@ function LessonEditor({
     } finally {
       setSaving(false);
     }
+  };
+
+  const saveQuiz = async () => {
+    if (!quiz) return;
+    setQuizSaving(true);
+    setQuizError(null);
+    try {
+      const payload = {
+        require_pass_to_progress: quiz.require_pass_to_progress,
+        passing_score: quiz.passing_score,
+        questions: quiz.questions.map((q) => ({
+          type: q.type,
+          question: q.question,
+          options: q.type === 'multiple_choice' ? q.options : undefined,
+          correct_answer: q.type === 'true_false' ? q.correct_answer : undefined,
+        })),
+      };
+      if (quiz.id) {
+        await apiClient.put(`/api/v1/quizzes/${quiz.id}`, payload);
+      } else {
+        const res = await apiClient.post(`/api/v1/course-lessons/${lesson.id}/quiz`, payload);
+        setQuiz((prev) => (prev ? { ...prev, id: res.data.data.id } : null));
+      }
+      toast.positive('Quiz saved');
+    } catch (e: any) {
+      const msg = e.response?.data?.message ?? e.message ?? 'Unable to save quiz';
+      setQuizError(msg);
+      toast.danger(msg);
+    } finally {
+      setQuizSaving(false);
+    }
+  };
+
+  const addQuestion = () => {
+    setQuiz((prev) =>
+      prev
+        ? {
+            ...prev,
+            questions: [
+              ...prev.questions,
+              {
+                type: 'multiple_choice',
+                question: '',
+                options: [
+                  { text: '', is_correct: false },
+                  { text: '', is_correct: false },
+                ],
+              },
+            ],
+          }
+        : null,
+    );
+  };
+
+  const removeQuestion = (index: number) => {
+    setQuiz((prev) =>
+      prev
+        ? {
+            ...prev,
+            questions: prev.questions.filter((_, i) => i !== index),
+          }
+        : null,
+    );
+  };
+
+  const updateQuestion = (index: number, updates: Partial<NonNullable<typeof quiz>['questions'][0]>) => {
+    setQuiz((prev) =>
+      prev
+        ? {
+            ...prev,
+            questions: prev.questions.map((q, i) => (i === index ? { ...q, ...updates } : q)),
+          }
+        : null,
+    );
+  };
+
+  const addOption = (questionIndex: number) => {
+    setQuiz((prev) =>
+      prev
+        ? {
+            ...prev,
+            questions: prev.questions.map((q, i) =>
+              i === questionIndex && q.options
+                ? { ...q, options: [...q.options, { text: '', is_correct: false }] }
+                : q,
+            ),
+          }
+        : null,
+    );
+  };
+
+  const removeOption = (questionIndex: number, optionIndex: number) => {
+    setQuiz((prev) =>
+      prev
+        ? {
+            ...prev,
+            questions: prev.questions.map((q, i) =>
+              i === questionIndex && q.options
+                ? { ...q, options: q.options.filter((_, oi) => oi !== optionIndex) }
+                : q,
+            ),
+          }
+        : null,
+    );
+  };
+
+  const toggleCorrectOption = (questionIndex: number, optionIndex: number) => {
+    setQuiz((prev) =>
+      prev
+        ? {
+            ...prev,
+            questions: prev.questions.map((q, i) =>
+              i === questionIndex && q.options
+                ? {
+                    ...q,
+                    options: q.options.map((opt, oi) => ({
+                      ...opt,
+                      is_correct: oi === optionIndex,
+                    })),
+                  }
+                : q,
+            ),
+          }
+        : null,
+    );
+  };
+
+  const toggleCorrectAnswer = (questionIndex: number) => {
+    setQuiz((prev) =>
+      prev
+        ? {
+            ...prev,
+            questions: prev.questions.map((q, i) =>
+              i === questionIndex ? { ...q, correct_answer: !q.correct_answer } : q,
+            ),
+          }
+        : null,
+    );
+  };
+
+  const createQuiz = () => {
+    setQuiz({
+      require_pass_to_progress: false,
+      passing_score: 70,
+      questions: [],
+    });
+  };
+
+  const [deleteQuizOpen, setDeleteQuizOpen] = useState(false);
+
+  const deleteQuiz = async () => {
+    if (!quiz) return;
+    if (quiz.id) {
+      try {
+        await apiClient.delete(`/api/v1/quizzes/${quiz.id}`);
+        toast.positive('Quiz deleted');
+      } catch (e: any) {
+        toast.danger(e.message ?? 'Unable to delete quiz');
+        return;
+      }
+    }
+    setQuiz(null);
+    setDeleteQuizOpen(false);
   };
 
   const uploadVideo = (file: File) => {
@@ -1722,14 +1919,275 @@ function LessonEditor({
         </Tabs.Panel>
 
         <Tabs.Panel value="quiz">
-          <Field.Root>
-            <Field.Label>
-              <Trans message="Quiz" />
-            </Field.Label>
-            <p className="text-sm text-muted-foreground">
-              <Trans message="Quiz management is handled separately in the course settings." />
-            </p>
-          </Field.Root>
+          <div className="space-y-6 p-4">
+            {quizLoading && (
+              <div className="flex items-center justify-center py-8">
+                <Skeleton className="h-4 w-48" />
+              </div>
+            )}
+            {quizError && !quizLoading && (
+              <Alert variant="destructive" className="mb-4">
+                <Alert.Title>Error loading quiz</Alert.Title>
+                <Alert.Description>{quizError}</Alert.Description>
+              </Alert>
+            )}
+            {!quizLoading && !quiz && !quizError && (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground mb-4">
+                  <Trans message="No quiz exists for this lesson yet." />
+                </p>
+                <Button onClick={createQuiz}>
+                  <PlusIcon className="mr-2 h-4 w-4" />
+                  <Trans message="Create quiz" />
+                </Button>
+              </div>
+            )}
+            {quiz && !quizLoading && (
+              <form onSubmit={(e) => { e.preventDefault(); saveQuiz(); }} className="space-y-6">
+                <Card>
+                  <Card.Header>
+                    <Card.Title className="text-base">
+                      <Trans message="Quiz Settings" />
+                    </Card.Title>
+                  </Card.Header>
+                  <Card.Content className="space-y-4 pt-0">
+                    <Field.Root>
+                      <Field.Label>
+                        <Trans message="Require passing to progress" />
+                      </Field.Label>
+                      <Switch
+                        checked={quiz.require_pass_to_progress}
+                        onCheckedChange={(v) => setQuiz({ ...quiz, require_pass_to_progress: v })}
+                      />
+                      <Field.Description>
+                        <Trans message="Students must pass this quiz to continue to the next lesson." />
+                      </Field.Description>
+                    </Field.Root>
+                    <Field.Root>
+                      <Field.Label>
+                        <Trans message="Passing score (%)" />
+                      </Field.Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={quiz.passing_score}
+                        onChange={(e) =>
+                          setQuiz({ ...quiz, passing_score: Math.min(100, Math.max(0, parseInt(e.target.value) || 0)) })
+                        }
+                        className="w-24"
+                      />
+                      <Field.Description>
+                        <Trans message="Minimum percentage required to pass." />
+                      </Field.Description>
+                    </Field.Root>
+                  </Card.Content>
+                </Card>
+
+                <Card>
+                  <Card.Header className="flex items-center justify-between">
+                    <Card.Title className="text-base">
+                      <Trans message="Questions" />
+                    </Card.Title>
+                    <Button type="button" variant="outline" size="sm" onClick={addQuestion}>
+                      <PlusIcon className="mr-2 h-4 w-4" />
+                      <Trans message="Add question" />
+                    </Button>
+                  </Card.Header>
+                  <Card.Content className="space-y-4 pt-0">
+                    {quiz.questions.length === 0 ? (
+                      <p className="text-center text-muted-foreground py-8">
+                        <Trans message="No questions yet. Click 'Add question' to start." />
+                      </p>
+                    ) : (
+                      <div className="space-y-4">
+                        {quiz.questions.map((q, qi) => (
+                          <div key={qi} className="border rounded-lg p-4 space-y-4">
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium text-sm">
+                                <Trans message="Question" /> {qi + 1}
+                              </span>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => removeQuestion(qi)}
+                                aria-label="Remove question"
+                              >
+                                <Trash2Icon className="h-4 w-4" />
+                              </Button>
+                            </div>
+
+                            <Field.Root>
+                              <Field.Label>
+                                <Trans message="Question type" />
+                              </Field.Label>
+                              <Select.Root
+                                value={q.type}
+                                onValueChange={(v) => updateQuestion(qi, { type: v as 'multiple_choice' | 'true_false' })}
+                              >
+                                <Select.Trigger className="w-full max-w-xs">
+                                  <Select.Value />
+                                </Select.Trigger>
+                                <Select.Content>
+                                  <Select.Item value="multiple_choice">
+                                    <Trans message="Multiple choice" />
+                                  </Select.Item>
+                                  <Select.Item value="true_false">
+                                    <Trans message="True / False" />
+                                  </Select.Item>
+                                </Select.Content>
+                              </Select.Root>
+                            </Field.Root>
+
+                            <Field.Root>
+                              <Field.Label>
+                                <Trans message="Question text" />
+                              </Field.Label>
+                              <Input
+                                value={q.question}
+                                onChange={(e) => updateQuestion(qi, { question: e.target.value })}
+                                placeholder="Enter your question"
+                              />
+                            </Field.Root>
+
+                            {q.type === 'multiple_choice' && (
+                              <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <Field.Label className="mb-0">
+                                    <Trans message="Options" />
+                                  </Field.Label>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => addOption(qi)}
+                                  >
+                                    <PlusIcon className="mr-2 h-4 w-4" />
+                                    <Trans message="Add option" />
+                                  </Button>
+                                </div>
+                                {q.options?.map((opt, oi) => (
+                                  <div key={oi} className="flex items-center gap-2">
+                                    <Button
+                                      type="button"
+                                      variant={opt.is_correct ? 'default' : 'outline'}
+                                      size="icon"
+                                      onClick={() => toggleCorrectOption(qi, oi)}
+                                      aria-label={opt.is_correct ? 'Correct answer' : 'Mark as correct'}
+                                      className="h-8 w-8"
+                                    >
+                                      {opt.is_correct ? <CheckIcon className="h-4 w-4" /> : <CircleIcon className="h-4 w-4" />}
+                                    </Button>
+                                    <Input
+                                      value={opt.text}
+                                      onChange={(e) => {
+                                        const newOptions = [...(q.options ?? [])];
+                                        newOptions[oi] = { ...newOptions[oi], text: e.target.value };
+                                        updateQuestion(qi, { options: newOptions });
+                                      }}
+                                      placeholder="Option text"
+                                      className="flex-1"
+                                    />
+                                    {q.options && q.options.length > 2 && (
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => removeOption(qi, oi)}
+                                        aria-label="Remove option"
+                                      >
+                                        <Trash2Icon className="h-4 w-4" />
+                                      </Button>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {q.type === 'true_false' && (
+                              <Field.Root>
+                                <Field.Label>
+                                  <Trans message="Correct answer" />
+                                </Field.Label>
+                                <div className="flex items-center gap-4">
+                                  <Button
+                                    type="button"
+                                    variant={q.correct_answer === true ? 'default' : 'outline'}
+                                    onClick={() => toggleCorrectAnswer(qi)}
+                                    className="w-24"
+                                  >
+                                    <Trans message="True" />
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant={q.correct_answer === false ? 'default' : 'outline'}
+                                    onClick={() => toggleCorrectAnswer(qi)}
+                                    className="w-24"
+                                  >
+                                    <Trans message="False" />
+                                  </Button>
+                                </div>
+                              </Field.Root>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </Card.Content>
+                </Card>
+
+                <div className="flex justify-end gap-3 pt-4 border-t">
+                  <Button type="button" variant="outline" onClick={() => setDeleteQuizOpen(true)}>
+                    <Trans message="Delete quiz" />
+                  </Button>
+                  <Button type="submit" disabled={quizSaving}>
+                    {quizSaving ? (
+                      <>
+                        <span className="animate-spin mr-2">⏳</span>
+                        <Trans message="Saving..." />
+                      </>
+                    ) : (
+                      <Trans message="Save quiz" />
+                    )}
+                  </Button>
+                </div>
+              </form>
+            )}
+            <AlertDialog.Root
+              open={deleteQuizOpen}
+              onOpenChange={setDeleteQuizOpen}
+            >
+              <AlertDialog.Portal>
+                <AlertDialog.Backdrop />
+                <AlertDialog.Content size="sm">
+                  <AlertDialog.Header>
+                    <AlertDialog.Media className="bg-destructive/10 text-destructive">
+                      <Trash2Icon />
+                    </AlertDialog.Media>
+                    <AlertDialog.Title>
+                      <Trans message="Delete quiz?" />
+                    </AlertDialog.Title>
+                    <AlertDialog.Description>
+                      <Trans message="This quiz and all its questions will be permanently deleted." />
+                    </AlertDialog.Description>
+                  </AlertDialog.Header>
+                  <AlertDialog.Footer>
+                    <AlertDialog.Cancel disabled={quizSaving}>
+                      <Trans message="Cancel" />
+                    </AlertDialog.Cancel>
+                    <AlertDialog.Action
+                      color="danger"
+                      onClick={deleteQuiz}
+                      disabled={quizSaving}
+                    >
+                      <Trans message={quizSaving ? 'Deleting...' : 'Delete'} />
+                    </AlertDialog.Action>
+                  </AlertDialog.Footer>
+                </AlertDialog.Content>
+              </AlertDialog.Portal>
+            </AlertDialog.Root>
+          </div>
         </Tabs.Panel>
       </Tabs.Root>
 
