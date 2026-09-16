@@ -1,7 +1,12 @@
 import {MyOrderShell} from '@app/digital-products/public/my-order-shell';
 import {Alert} from '@shadcn/alert/alert';
+import {Badge} from '@shadcn/badge/badge';
 import {Button} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
+import {
+  RadioGroup,
+  RadioGroupItem,
+} from '@shadcn/forms/radio-group/radio-group';
 import {Spinner} from '@shadcn/spinner/spinner';
 import {Tabs} from '@shadcn/tabs/tabs';
 import {Trans} from '@ui/i18n/trans';
@@ -13,7 +18,6 @@ import {
   ChevronRightIcon,
   DownloadIcon,
   LockIcon,
-  ClockIcon,
 } from 'lucide-react';
 import {useCallback, useEffect, useState} from 'react';
 import {Link, useParams, useNavigate} from 'react-router';
@@ -35,20 +39,63 @@ type LessonData = {
     display_name: string;
     file: {id: number; name: string};
   }[];
-  quiz?: {
-    id: number;
-    require_pass_to_progress: boolean;
-    passing_score: number;
-    questions: {
-      id: number;
-      type: string;
-      question_text: string;
-      options: string[] | null;
-      correct_answer: string;
-      sort_order: number;
-    }[];
-  } | null;
 };
+
+type QuizQuestion = {
+  id: number;
+  type: string;
+  question_text: string;
+  options: string[] | null;
+  sort_order: number;
+};
+
+type QuizData = {
+  id: number;
+  require_pass_to_progress: boolean;
+  passing_score: number;
+  questions: QuizQuestion[];
+};
+
+type QuizAttempt = {
+  id: number;
+  score: number;
+  passed: boolean;
+  answers: Record<string, string> | null;
+  created_at: string;
+};
+
+type QuizAttemptResult = {
+  id: number;
+  score: number;
+  passed: boolean;
+  correct: number;
+  total: number;
+  details: Array<{
+    question_id: number;
+    given: string | null;
+    correct_answer: string;
+    is_correct: boolean;
+  }>;
+};
+
+const QUESTION_TYPE_LABELS: Record<string, string> = {
+  multiple_choice: 'Multiple Choice',
+  true_false: 'True or False',
+};
+
+function questionTypeLabel(type: string): string {
+  return QUESTION_TYPE_LABELS[type] ?? type;
+}
+
+function answerLabel(value: string | null | undefined): string {
+  if (value === null || value === undefined || value === '') {
+    return 'No answer';
+  }
+  if (value === 'true' || value === 'false') {
+    return value === 'true' ? 'True' : 'False';
+  }
+  return value;
+}
 
 export function Component() {
   const {courseId, lessonId} = useParams();
@@ -58,8 +105,15 @@ export function Component() {
   const [trial, setTrial] = useState(false);
   const [error, setError] = useState<string>();
   const [completing, setCompleting] = useState(false);
-  const [quizAttempts, setQuizAttempts] = useState<any[]>([]);
-  const [quizAttemptsLoading, setQuizAttemptsLoading] = useState(false);
+  const [progressError, setProgressError] = useState<string>();
+
+  const [quiz, setQuiz] = useState<QuizData | null>(null);
+  const [quizLoading, setQuizLoading] = useState(false);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [result, setResult] = useState<QuizAttemptResult | null>(null);
+  const [attempts, setAttempts] = useState<QuizAttempt[]>([]);
+  const [attemptsLoading, setAttemptsLoading] = useState(false);
 
   const load = useCallback(
     async (signal?: AbortSignal) => {
@@ -86,19 +140,19 @@ export function Component() {
     [courseId, lessonId],
   );
 
-  // Fetch quiz attempts for the current lesson
-  const loadQuizAttempts = useCallback(async () => {
-    if (!lesson?.quiz?.id) return;
-    setQuizAttemptsLoading(true);
+  const loadAttempts = useCallback(async (quizId: number) => {
+    setAttemptsLoading(true);
     try {
-      const response = await apiClient.get(`/api/v1/quizzes/${lesson.quiz.id}/attempts`);
-      setQuizAttempts(response.data.data);
+      const response = await apiClient.get(
+        `/api/v1/quizzes/${quizId}/attempts`,
+      );
+      setAttempts(response.data.data ?? []);
     } catch {
-      // Ignore errors for quiz attempts loading
+      setAttempts([]);
     } finally {
-      setQuizAttemptsLoading(false);
+      setAttemptsLoading(false);
     }
-  }, [lesson?.quiz?.id]);
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -114,15 +168,41 @@ export function Component() {
     return () => controller.abort();
   }, [load]);
 
-  // Load quiz attempts when lesson loads
+  // Fetch the quiz (if any) for the current lesson.
   useEffect(() => {
-    if (lesson?.quiz?.id) {
-      loadQuizAttempts();
+    if (!lesson?.id) return;
+    const controller = new AbortController();
+    setQuiz(null);
+    setAnswers({});
+    setResult(null);
+    setProgressError(undefined);
+    setQuizLoading(true);
+    apiClient
+      .get(`/api/v1/course-lessons/${lesson.id}/quiz`, {
+        signal: controller.signal,
+      })
+      .then(response => setQuiz(response.data.data ?? null))
+      .catch(reason => {
+        if (!(reason instanceof DOMException && reason.name === 'AbortError')) {
+          setQuiz(null);
+        }
+      })
+      .finally(() => setQuizLoading(false));
+    return () => controller.abort();
+  }, [lesson?.id]);
+
+  // Load attempt history once we know the quiz id.
+  useEffect(() => {
+    if (!quiz?.id) {
+      setAttempts([]);
+      return;
     }
-  }, [lesson?.quiz?.id, loadQuizAttempts]);
+    void loadAttempts(quiz.id);
+  }, [quiz?.id, loadAttempts]);
 
   const complete = async () => {
     setCompleting(true);
+    setProgressError(undefined);
     try {
       await apiClient.post(`/api/v1/course-lessons/${lessonId}/complete`);
       if (course) {
@@ -133,11 +213,46 @@ export function Component() {
           navigate(`/my-order/courses/${courseId}/lessons/${next.id}`);
         else navigate(`/my-order/courses/${courseId}`);
       }
-    } catch {
-      setError('Unable to update lesson progress.');
+    } catch (reason) {
+      if (isAxiosError(reason) && reason.response?.status === 422) {
+        setProgressError(
+          reason.response?.data?.message ??
+            'Pass the quiz before completing this lesson.',
+        );
+      } else {
+        setError('Unable to update lesson progress.');
+      }
     } finally {
       setCompleting(false);
     }
+  };
+
+  const setAnswer = (questionId: number, value: string) => {
+    setAnswers(prev => ({...prev, [String(questionId)]: value}));
+  };
+
+  const submitQuiz = async () => {
+    if (!quiz) return;
+    setSubmitting(true);
+    setProgressError(undefined);
+    try {
+      const response = await apiClient.post(
+        `/api/v1/quizzes/${quiz.id}/attempts`,
+        {answers},
+      );
+      setResult(response.data.data);
+      await loadAttempts(quiz.id);
+    } catch {
+      setProgressError('Unable to submit your quiz. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const retakeQuiz = () => {
+    setAnswers({});
+    setResult(null);
+    setProgressError(undefined);
   };
 
   if (trial) {
@@ -188,6 +303,20 @@ export function Component() {
     );
   }
 
+  const quizSection = quiz ? (
+    <LessonQuiz
+      quiz={quiz}
+      answers={answers}
+      onAnswer={setAnswer}
+      onSubmit={() => void submitQuiz()}
+      submitting={submitting}
+      result={result}
+      onRetake={retakeQuiz}
+      attempts={attempts}
+      attemptsLoading={attemptsLoading}
+    />
+  ) : null;
+
   return (
     <MyOrderShell wide>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -233,6 +362,11 @@ export function Component() {
                 <Tabs.Tab value="attachments">
                   <Trans message="Attachments" />
                 </Tabs.Tab>
+                {quiz && (
+                  <Tabs.Tab value="quiz">
+                    <Trans message="Quiz" />
+                  </Tabs.Tab>
+                )}
               </Tabs.List>
               <Tabs.Panel value="summary">
                 {lesson.summary ? (
@@ -275,6 +409,9 @@ export function Component() {
                   </p>
                 )}
               </Tabs.Panel>
+              {quiz && (
+                <Tabs.Panel value="quiz">{quizSection}</Tabs.Panel>
+              )}
             </Tabs.Root>
           </>
         ) : (
@@ -308,8 +445,23 @@ export function Component() {
                 </Card.Content>
               </Card.Root>
             )}
+            {quizSection && (
+              <section className="flex flex-col gap-3">
+                <h2 className="text-lg font-semibold">
+                  <Trans message="Quiz" />
+                </h2>
+                {quizSection}
+              </section>
+            )}
           </>
         )}
+
+        {progressError && (
+          <Alert.Root variant="warning" fillStyle="subtleFill">
+            <Alert.Description>{progressError}</Alert.Description>
+          </Alert.Root>
+        )}
+
         <div className="flex items-center justify-between gap-3">
           <Button
             variant="outline"
@@ -354,5 +506,235 @@ export function Component() {
         </div>
       </div>
     </MyOrderShell>
+  );
+}
+
+function LessonQuiz({
+  quiz,
+  answers,
+  onAnswer,
+  onSubmit,
+  submitting,
+  result,
+  onRetake,
+  attempts,
+  attemptsLoading,
+}: {
+  quiz: QuizData;
+  answers: Record<string, string>;
+  onAnswer: (questionId: number, value: string) => void;
+  onSubmit: () => void;
+  submitting: boolean;
+  result: QuizAttemptResult | null;
+  onRetake: () => void;
+  attempts: QuizAttempt[];
+  attemptsLoading: boolean;
+}) {
+  const allAnswered = quiz.questions.every(question => {
+    const value = answers[String(question.id)];
+    return value !== undefined && value !== '';
+  });
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge variant="outline">
+          <Trans
+            message="Passing score: :score%"
+            values={{score: quiz.passing_score}}
+          />
+        </Badge>
+        <Badge variant={quiz.require_pass_to_progress ? 'default' : 'outline'}>
+          {quiz.require_pass_to_progress ? (
+            <Trans message="Required to progress" />
+          ) : (
+            <Trans message="Optional" />
+          )}
+        </Badge>
+      </div>
+
+      {result ? (
+        <Card.Root>
+          <Card.Header className="p-4">
+            <Card.Title className="flex items-center gap-2 text-sm">
+              <Trans message="Quiz result" />
+              <Badge variant={result.passed ? 'positive' : 'destructive'}>
+                {result.passed ? (
+                  <Trans message="Passed" />
+                ) : (
+                  <Trans message="Not passed" />
+                )}
+              </Badge>
+            </Card.Title>
+            <Card.Description>
+              <Trans
+                message="You scored :score% (:correct of :total correct)."
+                values={{
+                  score: result.score,
+                  correct: result.correct,
+                  total: result.total,
+                }}
+              />
+            </Card.Description>
+          </Card.Header>
+          <Card.Content className="flex flex-col gap-2 p-4 pt-0">
+            {result.details.map(detail => {
+              const question = quiz.questions.find(
+                q => q.id === detail.question_id,
+              );
+              return (
+                <div
+                  key={detail.question_id}
+                  className="flex flex-col gap-1 rounded-card border p-3 text-sm"
+                >
+                  <p className="font-medium">{question?.question_text}</p>
+                  <p
+                    className={
+                      detail.is_correct ? 'text-positive' : 'text-destructive'
+                    }
+                  >
+                    <Trans
+                      message="Your answer: :answer"
+                      values={{answer: answerLabel(detail.given)}}
+                    />
+                  </p>
+                  {!detail.is_correct && (
+                    <p className="text-muted-foreground">
+                      <Trans
+                        message="Correct answer: :answer"
+                        values={{answer: answerLabel(detail.correct_answer)}}
+                      />
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-fit"
+              onClick={onRetake}
+            >
+              <Trans message="Retake quiz" />
+            </Button>
+          </Card.Content>
+        </Card.Root>
+      ) : (
+        <>
+          {quiz.questions.map((question, index) => (
+            <Card.Root key={question.id}>
+              <Card.Header className="p-4">
+                <Card.Title className="text-sm">
+                  <Trans
+                    message="Question :number"
+                    values={{number: index + 1}}
+                  />
+                </Card.Title>
+                <Card.Description>{question.question_text}</Card.Description>
+              </Card.Header>
+              <Card.Content className="flex flex-col gap-2 p-4 pt-0">
+                {question.type === 'multiple_choice' && question.options ? (
+                  <RadioGroup
+                    value={answers[String(question.id)] ?? ''}
+                    onValueChange={value =>
+                      onAnswer(question.id, String(value))
+                    }
+                  >
+                    {question.options.map(option => (
+                      <label
+                        key={option}
+                        className="flex items-center gap-2 text-sm"
+                      >
+                        <RadioGroupItem value={option} />
+                        <span>{option}</span>
+                      </label>
+                    ))}
+                  </RadioGroup>
+                ) : (
+                  <RadioGroup
+                    value={answers[String(question.id)] ?? ''}
+                    onValueChange={value =>
+                      onAnswer(question.id, String(value))
+                    }
+                  >
+                    {['true', 'false'].map(value => (
+                      <label
+                        key={value}
+                        className="flex items-center gap-2 text-sm"
+                      >
+                        <RadioGroupItem value={value} />
+                        <span>
+                          {value === 'true' ? (
+                            <Trans message="True" />
+                          ) : (
+                            <Trans message="False" />
+                          )}
+                        </span>
+                      </label>
+                    ))}
+                  </RadioGroup>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  {questionTypeLabel(question.type)}
+                </p>
+              </Card.Content>
+            </Card.Root>
+          ))}
+          <Button
+            className="w-fit"
+            disabled={!allAnswered || submitting}
+            onClick={onSubmit}
+          >
+            {submitting && <Spinner />}
+            <Trans message={submitting ? 'Submitting...' : 'Submit quiz'} />
+          </Button>
+        </>
+      )}
+
+      <Card.Root>
+        <Card.Header className="p-4">
+          <Card.Title className="text-sm">
+            <Trans message="Attempt history" />
+          </Card.Title>
+        </Card.Header>
+        <Card.Content className="flex flex-col gap-2 p-4 pt-0">
+          {attemptsLoading ? (
+            <Spinner />
+          ) : attempts.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              <Trans message="No attempts yet." />
+            </p>
+          ) : (
+            attempts.map(attempt => (
+              <div
+                key={attempt.id}
+                className="flex items-center justify-between gap-3 rounded-card border p-3 text-sm"
+              >
+                <span className="text-muted-foreground">
+                  {new Date(attempt.created_at).toLocaleString()}
+                </span>
+                <span className="flex items-center gap-2">
+                  <span>
+                    <Trans
+                      message=":score%"
+                      values={{score: attempt.score}}
+                    />
+                  </span>
+                  <Badge
+                    variant={attempt.passed ? 'positive' : 'destructive'}
+                  >
+                    {attempt.passed ? (
+                      <Trans message="Passed" />
+                    ) : (
+                      <Trans message="Not passed" />
+                    )}
+                  </Badge>
+                </span>
+              </div>
+            ))
+          )}
+        </Card.Content>
+      </Card.Root>
+    </div>
   );
 }

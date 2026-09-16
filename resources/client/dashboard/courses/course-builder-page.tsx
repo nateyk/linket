@@ -2142,14 +2142,7 @@ function LessonEditor({
                     <Trans message="Delete quiz" />
                   </Button>
                   <Button type="submit" disabled={quizSaving}>
-                    {quizSaving ? (
-                      <>
-                        <span className="animate-spin mr-2">⏳</span>
-                        <Trans message="Saving..." />
-                      </>
-                    ) : (
-                      <Trans message="Save quiz" />
-                    )}
+                    <Trans message={quizSaving ? 'Saving...' : 'Save quiz'} />
                   </Button>
                 </div>
               </form>
