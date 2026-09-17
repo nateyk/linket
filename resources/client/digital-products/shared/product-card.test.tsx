@@ -55,8 +55,10 @@ describe('shared product card consistency', () => {
     expect(source).not.toContain('const [imageError, setImageError]');
   });
 
-  test('keeps motion calm: single fade, no stagger cascade, no title underline', () => {
-    expect(source).toContain('whileInView');
+  test('keeps motion calm: carousel only, no entrance choreography', () => {
+    expect(source).toContain('AnimatePresence');
+    expect(source).not.toContain('whileInView');
+    expect(source).not.toContain('whileHover');
     expect(source).not.toContain('staggerChildren');
     expect(source).not.toContain('itemVariants');
     expect(source).not.toContain('hover:underline');

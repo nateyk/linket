@@ -51,11 +51,6 @@ const carouselVariants: Variants = {
   }),
 };
 
-const contentVariants: Variants = {
-  hidden: {opacity: 0},
-  visible: {opacity: 1},
-};
-
 export function ProductCard({
   images,
   title,
@@ -94,13 +89,7 @@ export function ProductCard({
   );
 
   return (
-    <motion.div
-      initial="hidden"
-      whileInView="visible"
-      viewport={{once: true, amount: 0.3}}
-      transition={{duration: 0.5}}
-      variants={contentVariants}
-      whileHover={{y: -2}}
+    <div
       className={cn(
         'flex h-full w-full flex-col overflow-hidden rounded-card bg-card text-card-foreground shadow-sm ring-1 ring-foreground/10 transition-shadow duration-200 hover:shadow-md',
         classNames?.root,
@@ -238,6 +227,6 @@ export function ProductCard({
           {action}
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }

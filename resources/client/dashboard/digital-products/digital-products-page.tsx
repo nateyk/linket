@@ -288,21 +288,7 @@ function ProductCard({
               {product.title}
             </Link>
           </Card.Title>
-          <p className="text-lg font-semibold leading-7">
-            <FormattedCurrency
-              valueInCents={product.price_cents}
-              currency={product.currency.toUpperCase()}
-            />
-          </p>
         </div>
-
-        <Card.Description className="line-clamp-2 min-h-10 flex-1 leading-5">
-          {product.description ? (
-            plainTextDescription(product.description)
-          ) : (
-            <Trans message="Add a clear description to help customers understand what they will receive." />
-          )}
-        </Card.Description>
 
         {product.status === 'rejected' && product.rejection_reason && (
           <div className="flex gap-2 rounded-card-sm bg-destructive/8 p-2.5 text-xs leading-4 text-destructive">
@@ -315,6 +301,13 @@ function ProductCard({
       <Card.Footer className="justify-between gap-3 px-4 py-4">
         <div className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
           <SalesLabel count={product.sales_count} />
+          <span className="size-1 rounded-full bg-muted-foreground/40" />
+          <span className="truncate font-semibold text-foreground">
+            <FormattedCurrency
+              valueInCents={product.price_cents}
+              currency={product.currency.toUpperCase()}
+            />
+          </span>
         </div>
 
         <Tooltip.Provider>
@@ -644,13 +637,4 @@ function ProductSkeleton() {
 
 function productPublicUrl(product: Product, biolink: ProductBiolink): string {
   return `${biolink.short_url.replace(/\/$/, '')}/products/${product.id}`;
-}
-
-function plainTextDescription(description: string): string {
-  if (typeof DOMParser !== 'undefined') {
-    const document = new DOMParser().parseFromString(description, 'text/html');
-    return document.body.textContent?.replace(/\s+/g, ' ').trim() ?? '';
-  }
-
-  return description.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 }
