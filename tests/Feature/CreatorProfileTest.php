@@ -364,7 +364,34 @@ class CreatorProfileTest extends TestCase
         $this->assertTrue($product->biolinks()->whereKey($otherBiolink->id)->exists());
     }
 
-    public function testProfileRejectsProductsThatAreNotApprovedOrOwnedByTheCreator(): void
+    public function testProfileAcceptsDraftProductsOwnedByTheCreator(): void
+    {
+        // Placement policy matches the product form: same workspace +
+        // owned by you. Drafts may be staged; the public storefront only
+        // renders approved products, so they stay invisible until approved.
+        $owner = $this->createUser();
+        $workspace = $this->createWorkspace($owner);
+        $biolink = $this->createBiolink([
+            'user_id' => $owner->id,
+            'workspace_id' => $workspace->id,
+            'builder_mode' => Biolink::BUILDER_MODE_CREATOR_PROFILE,
+            'profile_config' => [],
+        ]);
+        $draft = $this->createDigitalProduct($owner, $workspace, 'draft');
+
+        $this->withoutMiddleware();
+        $this->actingAs($owner);
+
+        $this->putJson("/api/v1/biolinks/{$biolink->id}/creator-profile", [
+                ...$this->validProfilePayload(),
+                'featured_product_ids' => [$draft->id],
+            ])
+            ->assertOk();
+
+        $this->assertTrue($draft->biolinks()->whereKey($biolink->id)->exists());
+    }
+
+    public function testProfileRejectsProductsOwnedByAnotherCreator(): void
     {
         $owner = $this->createUser();
         $otherUser = $this->createUser();
@@ -375,21 +402,67 @@ class CreatorProfileTest extends TestCase
             'builder_mode' => Biolink::BUILDER_MODE_CREATOR_PROFILE,
             'profile_config' => [],
         ]);
-        $draft = $this->createDigitalProduct($owner, $workspace, 'draft');
         $otherProduct = $this->createDigitalProduct($otherUser, $workspace, 'approved');
 
         $this->withoutMiddleware();
         $this->actingAs($owner);
 
-        foreach ([$draft, $otherProduct] as $product) {
-            $this->putJson("/api/v1/biolinks/{$biolink->id}/creator-profile", [
-                    ...$this->validProfilePayload(),
-                    'featured_product_ids' => [$product->id],
-                ])
-                ->assertUnprocessable();
-        }
+        $this->putJson("/api/v1/biolinks/{$biolink->id}/creator-profile", [
+                ...$this->validProfilePayload(),
+                'featured_product_ids' => [$otherProduct->id],
+            ])
+            ->assertUnprocessable();
 
         $this->assertSame(0, $biolink->digitalProducts()->count());
+    }
+
+    public function testCreatorProfileSaveSucceedsWithAttachedDraftProduct(): void
+    {
+        // Regression: attaching a draft via the product form, then saving
+        // creator-profile settings, used to 422 the whole save because the
+        // draft rode along invisibly in featured_product_ids.
+        $owner = $this->createUser();
+        $workspace = $this->createWorkspace($owner);
+        $biolink = $this->createBiolink([
+            'user_id' => $owner->id,
+            'workspace_id' => $workspace->id,
+            'builder_mode' => Biolink::BUILDER_MODE_CREATOR_PROFILE,
+            'profile_config' => [],
+        ]);
+        $draft = $this->createDigitalProduct($owner, $workspace, 'draft');
+        $draft->biolinks()->attach($biolink->id);
+
+        $this->withoutMiddleware();
+        $this->actingAs($owner);
+
+        $this->putJson("/api/v1/biolinks/{$biolink->id}/creator-profile", [
+                ...$this->validProfilePayload(),
+                'featured_product_ids' => [$draft->id],
+            ])
+            ->assertOk();
+
+        $this->assertTrue($draft->biolinks()->whereKey($biolink->id)->exists());
+    }
+
+    public function testStagedDraftProductStaysInvisiblePublicly(): void
+    {
+        $owner = $this->createUser();
+        $workspace = $this->createWorkspace($owner);
+        $biolink = $this->createBiolink([
+            'user_id' => $owner->id,
+            'workspace_id' => $workspace->id,
+            'builder_mode' => Biolink::BUILDER_MODE_CREATOR_PROFILE,
+            'profile_config' => [],
+        ]);
+        $draft = $this->createDigitalProduct($owner, $workspace, 'draft');
+        $draft->biolinks()->attach($biolink->id);
+
+        $visible = app(\App\Storefront\PublicDigitalProducts::class)
+            ->products($biolink)
+            ->pluck('digital_products.id')
+            ->all();
+
+        $this->assertNotContains($draft->id, $visible);
     }
 
     private function widget(int $id, string $type, array $config): BiolinkWidget

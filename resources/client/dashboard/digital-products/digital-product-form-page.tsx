@@ -434,6 +434,14 @@ function DigitalProductForm() {
             </Alert.Root>
           )}
 
+          {product && biolinkIds.length > 0 && product.status !== 'approved' && (
+            <Alert.Root className="mb-5 border-primary/20 bg-primary/5">
+              <Link2Icon />
+              <Alert.Description>
+                <Trans message="This product is placed on storefronts, but it will not appear publicly until it is approved." />
+              </Alert.Description>
+            </Alert.Root>
+          )}
 
           {(productType === 'course' || product?.type === 'course') && (
             <Alert.Root className="mb-5 border-primary/20 bg-primary/5">

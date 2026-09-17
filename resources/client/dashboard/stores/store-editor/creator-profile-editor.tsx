@@ -226,10 +226,10 @@ export function CreatorProfileEditor({
   );
   const selectedProducts = useMemo(
     () =>
-      approvedProducts.filter(product =>
+      (productsQuery.data || []).filter(product =>
         selectedProductIds.includes(product.id),
       ),
-    [approvedProducts, selectedProductIds],
+    [productsQuery.data, selectedProductIds],
   );
   const professionItems = useMemo(() => {
     const currentTitle = values.profile_title?.trim();
@@ -935,6 +935,13 @@ function SelectedProduct({
             currency={product.currency}
           />
         </div>
+        {product.status !== 'approved' && (
+          <div className="mt-1">
+            <Badge variant="outline">
+              <Trans message="Not visible yet" />
+            </Badge>
+          </div>
+        )}
       </div>
       <Button
         type="button"
