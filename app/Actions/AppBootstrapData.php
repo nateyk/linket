@@ -4,6 +4,7 @@ namespace App\Actions;
 
 use App\Biolinks\BiolinksQueryBuilder;
 use App\Stores\Resources\StoreResource;
+use App\Storefront\ProductFileFormats;
 use Common\Core\Bootstrap\BaseBootstrapData;
 use Common\Workspaces\ActiveWorkspace;
 use Common\Workspaces\Resources\WorkspaceResource;
@@ -32,6 +33,9 @@ class AppBootstrapData extends BaseBootstrapData
         $this->data['settings']['unsplash_is_setup'] = config(
             'services.unsplash.access_key',
         );
+
+        // Canonical creator-sellable file formats for the product form.
+        $this->data['product_file_formats'] = ProductFileFormats::forFrontend();
 
         return $this;
     }

@@ -151,3 +151,37 @@ describe('digital product list submission', () => {
     );
   });
 });
+
+describe('digital product file capability', () => {
+  // Regression: the uploader advertised formats (AAC) that attach later
+  // rejected, and the picker advertised Mobi which nothing accepted.
+  // The accept list and help text must come from the server capability.
+  const formSource = fs.readFileSync(
+    path.resolve(
+      'resources/client/dashboard/digital-products/digital-product-form-page.tsx',
+    ),
+    'utf8',
+  );
+  const pickerSource = fs.readFileSync(
+    path.resolve(
+      'resources/client/dashboard/digital-products/product-type-picker.tsx',
+    ),
+    'utf8',
+  );
+
+  test('accept list comes from bootstrap, not a hardcoded string', () => {
+    expect(formSource).toContain('product_file_formats');
+    expect(formSource).not.toContain('accept=".pdf');
+    expect(formSource).not.toContain('.aac');
+  });
+
+  test('help text comes from the server hint, not a hardcoded list', () => {
+    expect(formSource).not.toContain('M4A, or AAC');
+    expect(formSource).toContain('fileHint');
+  });
+
+  test('ebook picker copy no longer advertises Mobi', () => {
+    expect(pickerSource).not.toContain('Mobi');
+    expect(pickerSource).toContain('PDF and EPUB');
+  });
+});

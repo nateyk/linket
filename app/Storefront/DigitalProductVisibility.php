@@ -25,12 +25,18 @@ class DigitalProductVisibility
         abort_if($biolinks->count() !== count($biolinkIds), 422, __('Every bio page must belong to the active workspace.'));
         $biolinks->each(fn(Biolink $biolink) => Gate::authorize('update', $biolink));
 
-        $product->biolinks()->sync($biolinkIds);
+        // Pivot sync and widget sync must commit together: a pivot row
+        // without its matching widget config (or vice versa) would desync
+        // what the storefront renders from what is placed. Safe to nest
+        // inside callers' transactions (savepoints).
+        DB::transaction(function () use ($product, $biolinkIds, $currentIds): void {
+            $product->biolinks()->sync($biolinkIds);
 
-        Biolink::query()
-            ->whereIn('id', [...$currentIds, ...$biolinkIds])
-            ->get()
-            ->each(fn(Biolink $biolink) => $this->syncShopWidget($biolink));
+            Biolink::query()
+                ->whereIn('id', [...$currentIds, ...$biolinkIds])
+                ->get()
+                ->each(fn(Biolink $biolink) => $this->syncShopWidget($biolink));
+        });
 
         foreach ($biolinks as $store) {
             Log::info('store.visibility.sync', ['store_id' => $store->id, 'product_id' => $product->id, 'workspace_id' => $product->workspace_id]);

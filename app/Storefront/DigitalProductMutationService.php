@@ -84,11 +84,24 @@ final class DigitalProductMutationService
         $this->assertCoverBelongsToWorkspace($product);
         $files = FileEntry::query()->whereIn('id', $ids)->where('workspace_id', $product->workspace_id)->get();
         abort_if($files->count() !== count($ids), 422, __('Every file must belong to the active workspace.'));
-        abort_if($files->contains(function (FileEntry $file) use ($maxBytes): bool {
-            return ($maxBytes !== null && $file->file_size > $maxBytes) || !in_array(strtolower((string) $file->extension), config('storefront.allowed_extensions'), true);
+        // Files already attached to this product keep working even when they
+        // predate the current sellable set (legacy formats can stay, they
+        // just cannot be newly attached). Only newly attached files must be
+        // in the canonical capability.
+        $existingIds = $product->exists
+            ? $product->files()->pluck('file_entries.id')->all()
+            : [];
+        abort_if($files->contains(function (FileEntry $file) use ($maxBytes, $existingIds): bool {
+            if ($maxBytes !== null && $file->file_size > $maxBytes) {
+                return true;
+            }
+            if (ProductFileFormats::isSellableExtension($file->extension)) {
+                return false;
+            }
+            return !in_array($file->id, $existingIds, true);
         }), 422, $maxBytes !== null && $files->max('file_size') > $maxBytes
             ? __("One or more files exceed your plan's storage allowance per file.")
-            : __('One or more files are not allowed for sale.'));
+            : __('One or more files are not allowed for sale. Allowed formats: :formats.', ['formats' => ProductFileFormats::helpText()]));
 
         if ($maxBytes !== null) {
             $existingBytes = (int) DB::table('digital_product_files')

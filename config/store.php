@@ -9,10 +9,10 @@ return [
     'download_days' => 7,
     'download_limit' => 10,
     'payout_hold_days' => env('DIGITAL_PRODUCTS_PAYOUT_HOLD_DAYS', 7),
-    'allowed_extensions' => [
-        'pdf', 'zip', 'epub', 'mp3', 'wav', 'm4a', 'mp4', 'mov', 'png', 'jpg',
-        'jpeg', 'webp', 'gif', 'svg', 'ttf', 'otf', 'woff', 'woff2', 'txt', 'csv',
-    ],
+    // Deprecated alias: derived from the single source of truth so it can
+    // never drift from the capability definition again. New code must use
+    // App\Storefront\ProductFileFormats directly.
+    'allowed_extensions' => \App\Storefront\ProductFileFormats::extensions(),
     'default_benefits' => [
         'platform_fee_percent' => 5.0,
         'commission_bps' => 500,

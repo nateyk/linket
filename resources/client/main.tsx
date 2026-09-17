@@ -26,6 +26,15 @@ declare module '@ui/bootstrap-data/bootstrap-data' {
   interface BootstrapData extends BaseBackendBootstrapData {
     stores: Store[];
     biolinks?: Store[];
+    /**
+     * Canonical creator-sellable product file formats, served from
+     * App\Storefront\ProductFileFormats. Optional so older cached pages
+     * keep working; consumers must fall back to uploading_types.
+     */
+    product_file_formats?: Record<
+      'digital' | 'ebook' | 'audio' | 'course',
+      {extensions: string[]; accept: string; hint: string}
+    >;
     loaders?: {
       landingPage?: {
         products: ListProducts200;

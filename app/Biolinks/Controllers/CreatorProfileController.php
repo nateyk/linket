@@ -46,18 +46,20 @@ class CreatorProfileController extends Controller
             )
             : ($biolink->profile_config['about_html'] ?? '');
         $featuredProductIds = $validated['featured_product_ids'];
+        // Placement policy matches the product form (DigitalProductVisibility::sync):
+        // same workspace + owned by you. Draft/rejected products may be staged
+        // here; the public storefront only renders approved, downloadable
+        // products, so they stay invisible until approved.
         $featuredProducts = DigitalProduct::query()
             ->where('workspace_id', $biolink->workspace_id)
             ->where('user_id', $request->user()->id)
-            ->where('status', 'approved')
             ->whereIn('id', $featuredProductIds)
-            ->whereHas('files')
             ->get();
 
         abort_if(
             $featuredProducts->count() !== count($featuredProductIds),
             422,
-            __('Every featured product must be approved, downloadable, and owned by you.'),
+            __('Every featured product must belong to this workspace and be owned by you.'),
         );
 
         DB::transaction(function () use ($biolink, $validated, $featuredProductIds): void {

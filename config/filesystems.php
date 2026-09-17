@@ -20,7 +20,9 @@ return [
             'description' => 'Downloadable files uploaded by digital product creators.',
             'defaults' => [
                 'prefix' => 'digital-products',
-                'accept' => ['application/pdf', 'application/zip', 'text/plain', 'application/epub+zip', 'audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/mp4', 'audio/aac'],
+                // Derived from the single source of truth — do not hardcode a separate list here.
+                // See App\Storefront\ProductFileFormats::uploadMimes().
+                'accept' => \App\Storefront\ProductFileFormats::uploadMimes(),
                 'max_file_size' => '104857600', // 100mb; the product plan limit is enforced when it is attached.
             ],
         ],

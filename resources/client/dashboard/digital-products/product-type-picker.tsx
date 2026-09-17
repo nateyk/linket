@@ -29,7 +29,7 @@ const PRODUCT_TYPES: ProductTypeOption[] = [
     id: 'ebook',
     icon: BookIcon,
     title: 'E-book',
-    description: 'Offer a book or comic in PDF, ePub, and Mobi formats.',
+    description: 'Offer a book or comic in PDF and EPUB formats.',
   },
   {
     id: 'audio',
