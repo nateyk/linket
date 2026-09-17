@@ -52,19 +52,8 @@ const carouselVariants: Variants = {
 };
 
 const contentVariants: Variants = {
-  hidden: {opacity: 0, y: 20},
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      staggerChildren: 0.1,
-    },
-  },
-};
-
-const itemVariants: Variants = {
-  hidden: {opacity: 0, y: 15},
-  visible: {opacity: 1, y: 0},
+  hidden: {opacity: 0},
+  visible: {opacity: 1},
 };
 
 export function ProductCard({
@@ -212,14 +201,8 @@ export function ProductCard({
         )}
       </div>
 
-      <motion.div
-        variants={contentVariants}
-        className={cn('flex flex-1 flex-col gap-3 p-4', classNames?.body)}
-      >
-        <motion.div
-          variants={itemVariants}
-          className="flex items-start justify-between gap-2"
-        >
+      <div className={cn('flex flex-1 flex-col gap-3 p-4', classNames?.body)}>
+        <div className="flex items-start justify-between gap-2">
           <h3
             className={cn(
               'line-clamp-2 min-w-0 flex-1 text-sm leading-snug font-semibold',
@@ -227,12 +210,7 @@ export function ProductCard({
             )}
           >
             {titleHref ? (
-              <a
-                href={titleHref}
-                className="hover:underline hover:underline-offset-3"
-              >
-                {title}
-              </a>
+              <a href={titleHref}>{title}</a>
             ) : (
               title
             )}
@@ -242,19 +220,15 @@ export function ProductCard({
               <Trans message="Top rated" />
             </Badge>
           )}
-        </motion.div>
+        </div>
 
         {description ? (
-          <motion.p
-            variants={itemVariants}
-            className="line-clamp-2 text-sm leading-relaxed text-muted-foreground"
-          >
+          <p className="line-clamp-2 text-sm leading-relaxed text-muted-foreground">
             {description}
-          </motion.p>
+          </p>
         ) : null}
 
-        <motion.div
-          variants={itemVariants}
+        <div
           className={cn(
             'mt-auto flex items-center justify-between gap-2 pt-1',
             classNames?.footer,
@@ -262,8 +236,8 @@ export function ProductCard({
         >
           <div className="text-sm leading-none font-semibold">{price}</div>
           {action}
-        </motion.div>
-      </motion.div>
+        </div>
+      </div>
     </motion.div>
   );
 }
