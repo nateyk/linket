@@ -51,6 +51,19 @@ class DigitalProductVisibility
     /** @param array<int> $productIds */
     public function syncForBiolink(Biolink|Store $biolink, array $productIds): void
     {
+        // Same placement policy as sync(): every product must live in the
+        // biolink's workspace and the caller must be allowed to update it.
+        // (Per-product ownership beyond the workspace stays at the endpoint
+        // layer, matching sync(). Trashed products fail the count check via
+        // the SoftDeletes global scope.)
+        $products = DigitalProduct::query()
+            ->where('workspace_id', $biolink->workspace_id)
+            ->whereIn('id', $productIds)
+            ->get();
+
+        abort_if($products->count() !== count($productIds), 422, __('Every featured product must belong to this workspace.'));
+        Gate::authorize('update', $biolink);
+
         // Same atomicity guarantee as sync(): pivot and widget commit together.
         DB::transaction(function () use ($biolink, $productIds): void {
             $biolink->digitalProducts()->sync($productIds);
