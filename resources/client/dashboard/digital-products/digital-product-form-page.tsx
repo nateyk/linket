@@ -31,6 +31,7 @@ import {Progress} from '@shadcn/progress/progress';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {Tooltip} from '@shadcn/tooltip/tooltip';
 import {Trans} from '@ui/i18n/trans';
+import {getBootstrapData} from '@ui/bootstrap-data/bootstrap-data-store';
 import {FormattedBytes} from '@ui/i18n/formatted-bytes';
 import {ProductCover} from '@ui/product-cover';
 import {
@@ -156,6 +157,23 @@ function DigitalProductForm() {
   );
 
   const typeConfig = productType ? PRODUCT_TYPE_CONFIG[productType] : null;
+  // Creator-facing file formats come from the server capability
+  // (App\Storefront\ProductFileFormats via bootstrap data) — never hardcoded.
+  const effectiveFileType = (product?.type ?? productType ?? 'digital') as
+    | 'digital'
+    | 'ebook'
+    | 'audio'
+    | 'course';
+  const fileCapability =
+    getBootstrapData()?.product_file_formats?.[effectiveFileType];
+  // Fallback for stale bootstrap payloads: the server-provided upload MIME
+  // list for the same upload type. Also server data, never hardcoded.
+  const fileAccept =
+    fileCapability?.accept ??
+    getBootstrapData()?.uploading_types?.digitalProductFiles?.accept?.join(
+      ',',
+    );
+  const fileHint = fileCapability?.hint;
   const pageTitle = product
     ? 'Edit digital product'
     : typeConfig
@@ -542,6 +560,8 @@ function DigitalProductForm() {
                             {section === 'files' && (
                               <FilesPanel
                                 files={files}
+                                accept={fileAccept}
+                                hint={fileHint}
                                 onUploaded={file =>
                                   setFiles(current =>
                                     current.some(item => item.id === file.id)
@@ -860,15 +880,23 @@ function FilesPanel({
   onUploaded,
   onRemove,
   error,
+  accept,
+  hint,
 }: {
   files: FileEntry[];
   onUploaded: (file: FileEntry) => void;
   onRemove: (id: number) => void;
   error?: string;
+  accept?: string;
+  hint?: string;
 }) {
   return (
     <div className="flex flex-col gap-3">
-      <DownloadUploader onUploaded={onUploaded} />
+      <DownloadUploader
+        onUploaded={onUploaded}
+        accept={accept}
+        hint={hint}
+      />
       {error && <p className="text-sm text-destructive">{error}</p>}
       {!!files.length && (
         <div className="divide-y">
@@ -1014,8 +1042,12 @@ function ProductStatus({status}: {status: string}) {
 
 function DownloadUploader({
   onUploaded,
+  accept,
+  hint,
 }: {
   onUploaded: (file: FileEntry) => void;
+  accept?: string;
+  hint?: string;
 }) {
   const {uploadFile, uploadStatus, percentage} = useActiveUpload();
   const uploading = uploadStatus === 'inProgress';
@@ -1044,7 +1076,7 @@ function DownloadUploader({
       <input
         className="absolute inset-0 cursor-pointer opacity-0"
         type="file"
-        accept=".pdf,.zip,.txt,.epub,.mp3,.wav,.m4a,.aac"
+        accept={accept}
         disabled={uploading}
         onChange={onChange}
       />
@@ -1059,7 +1091,7 @@ function DownloadUploader({
         )}
       </span>
       <span className="text-[12px] text-muted-foreground">
-        <Trans message="PDF, ZIP, EPUB, TXT, MP3, WAV, M4A, or AAC" />
+        {hint ? <Trans message={hint} /> : null}
       </span>
       {uploading && (
         <Progress.Root
