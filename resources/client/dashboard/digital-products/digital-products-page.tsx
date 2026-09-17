@@ -272,26 +272,12 @@ function ProductCard({
       </Card.Header>
 
       <Card.Content className="flex flex-1 flex-col gap-3 p-4 pb-0">
-        <div className="flex min-w-0 flex-col gap-1">
+          <div className="flex min-w-0 flex-col gap-1">
           <div className="flex min-h-5 items-center gap-2">
             {isCourse && (
               <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
                 <Trans message="Course" />
               </Badge>
-            )}
-            {product.type === 'course' && (
-              <Button
-                size="xs"
-                variant="outline"
-                render={
-                  <Link
-                    to={`/dashboard/my-products/${product.id}/course/analytics`}
-                  />
-                }
-              >
-                <BarChart3Icon data-icon="inline-start" />
-                Analytics
-              </Button>
             )}
           </div>
           <Card.Title className="truncate text-sm font-semibold leading-5">
@@ -329,14 +315,6 @@ function ProductCard({
       <Card.Footer className="justify-between gap-3 px-4 py-4">
         <div className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
           <SalesLabel count={product.sales_count} />
-          <span className="size-1 rounded-full bg-muted-foreground/40" />
-          <span className="truncate">
-            <FormattedCurrency
-              valueInCents={product.gross_revenue_cents}
-              currency={product.currency.toUpperCase()}
-            />{' '}
-            <Trans message="revenue" />
-          </span>
         </div>
 
         <Tooltip.Provider>

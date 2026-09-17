@@ -126,7 +126,6 @@ export function ShopWidgetRenderer({
               action={
                 <Button
                   size="sm"
-                  variant="outline"
                   render={<a href={href} />}
                 >
                   <Trans message="View product" />

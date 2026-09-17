@@ -54,4 +54,11 @@ describe('shared product card consistency', () => {
     );
     expect(source).not.toContain('const [imageError, setImageError]');
   });
+
+  test('keeps motion calm: single fade, no stagger cascade, no title underline', () => {
+    expect(source).toContain('whileInView');
+    expect(source).not.toContain('staggerChildren');
+    expect(source).not.toContain('itemVariants');
+    expect(source).not.toContain('hover:underline');
+  });
 });
