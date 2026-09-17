@@ -1,11 +1,12 @@
 import {ShopWidgetConfig} from '@app/dashboard/stores/store-editor/content/widgets/shop-widget/shop-widget-dialog';
 import {WidgetRendererProps} from '@app/dashboard/stores/store-editor/content/widgets/widget-renderer-props';
+import {ProductCard} from '@app/digital-products/shared/product-card';
 import {apiClient} from '@common/http/query-client';
+import {Button} from '@shadcn/button/button';
 import {Trans} from '@ui/i18n/trans';
 import {formatMoney} from '@ui/i18n/format-money';
-import {ProductCover} from '@ui/product-cover';
 import {useEffect, useState} from 'react';
-import {ArrowUpRightIcon, ShoppingBagIcon} from 'lucide-react';
+import {ArrowRightIcon} from 'lucide-react';
 import type {ReactNode} from 'react';
 
 type Product = {
@@ -113,62 +114,35 @@ export function ShopWidgetRenderer({
         </div>
       )}
       <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 @4xl:grid-cols-3">
-        {products.map(product => (
-          <ProductCard
-            key={product.id}
-            product={product}
-            href={`${biolink.short_url}/products/${product.id}`}
-          />
-        ))}
+        {products.map(product => {
+          const href = `${biolink.short_url}/products/${product.id}`;
+          return (
+            <ProductCard
+              key={product.id}
+              images={product.cover?.url ? [product.cover.url] : []}
+              title={product.title}
+              titleHref={href}
+              price={formatMoney(product.price_cents, product.currency)}
+              action={
+                <Button
+                  size="sm"
+                  variant="outline"
+                  render={<a href={href} />}
+                >
+                  <Trans message="View product" />
+                  <ArrowRightIcon data-icon="inline-end" />
+                </Button>
+              }
+              classNames={{
+                root: 'bg-[var(--biolink-surface)] text-[var(--biolink-text)] ring-[var(--biolink-border)] backdrop-blur-md',
+                media: 'bg-[var(--biolink-surface-muted)]',
+                footer:
+                  'border-t border-[var(--biolink-border)] pt-2',
+              }}
+            />
+          );
+        })}
       </div>
     </section>
-  );
-}
-
-function ProductCard({product, href}: {product: Product; href: string}) {
-  const fallback = (
-    <div className="flex h-full w-full items-center justify-center">
-      <span className="grid size-11 place-items-center rounded-card-sm bg-[var(--biolink-surface-strong)] ring-1 ring-[var(--biolink-border)]">
-        <ShoppingBagIcon className="size-5 text-[var(--biolink-muted-text)] opacity-65" />
-      </span>
-    </div>
-  );
-
-  return (
-    <a
-      className="group flex h-full min-w-0 flex-col overflow-hidden rounded-card bg-[var(--biolink-surface)] text-[var(--biolink-text)] no-underline shadow-sm ring-1 ring-[var(--biolink-border)] backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--biolink-text)]"
-      href={href}
-    >
-      <div className="aspect-video w-full overflow-hidden bg-[var(--biolink-surface-muted)]">
-        {product.cover?.url ? (
-          <ProductCover
-            cover={product.cover}
-            alt={product.title}
-            className="size-full transition-transform duration-300 group-hover:scale-[1.03]"
-            fallback={fallback}
-          />
-        ) : (
-          fallback
-        )}
-      </div>
-      <div className="flex flex-1 flex-col gap-3 p-3">
-        <div className="flex min-w-0 flex-col gap-1">
-          <div className="line-clamp-2 text-sm leading-snug font-semibold">
-            {product.title}
-          </div>
-          <div className="text-sm leading-none font-semibold">
-            {formatMoney(product.price_cents, product.currency)}
-          </div>
-        </div>
-        <div className="mt-auto flex items-center justify-between border-t border-[var(--biolink-border)] pt-2 text-xs font-medium text-[var(--biolink-muted-text)]">
-          <span>
-            <Trans message="View product" />
-          </span>
-          <span className="inline-flex size-7 items-center justify-center rounded-card-xs bg-[var(--biolink-surface-muted)] text-[var(--biolink-muted-text)] transition-colors group-hover:bg-[var(--biolink-surface-strong)] group-hover:text-[var(--biolink-text)]">
-            <ArrowUpRightIcon className="size-3.5" />
-          </span>
-        </div>
-      </div>
-    </a>
   );
 }
