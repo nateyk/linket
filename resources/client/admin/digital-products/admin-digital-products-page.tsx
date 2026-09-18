@@ -47,7 +47,8 @@ export function Component() {
   const approved = counters?.approved?.total ?? 0;
   const rejected = counters?.rejected?.total ?? 0;
   const updated = counters?.updated?.total ?? 0;
-  const scope = (queryState.scope as string) ?? '';
+  const scope = queryState.scope;
+  const isScopeFiltering = scope === 'updated';
 
   const table = useTable({
     data: items,
@@ -140,6 +141,7 @@ export function Component() {
               value={String(updated)}
               icon={<RefreshCwIcon />}
               tone={updated > 0 ? 'warning' : 'default'}
+              active={isScopeFiltering}
               onClick={() =>
                 setQueryState(
                   {scope: scope === 'updated' ? null : 'updated'},
@@ -159,8 +161,14 @@ export function Component() {
                   <Trans message="Moderate creator submissions and manage their lifecycle." />
                 </Card.Description>
               </div>
-              {isFiltering && (
-                <Button size="sm" variant="ghost" onClick={() => setQueryState({status: null, query: null})}>
+              {(isFiltering || isScopeFiltering) && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() =>
+                    setQueryState({status: null, query: null, scope: null})
+                  }
+                >
                   <Trans message="Clear filters" />
                 </Button>
               )}
@@ -187,8 +195,10 @@ export function Component() {
                 </div>
                 {!items.length && (
                   <DigitalProductsEmptyState
-                    isFiltering={isFiltering}
-                    onClearFilters={() => setQueryState({status: null, query: null})}
+                    isFiltering={isFiltering || isScopeFiltering}
+                    onClearFilters={() =>
+                      setQueryState({status: null, query: null, scope: null})
+                    }
                   />
                 )}
               </div>
@@ -206,12 +216,14 @@ function MetricCard({
   value,
   icon,
   tone = 'default',
+  active = false,
   onClick,
 }: {
   label: string;
   value: string;
   icon: ReactNode;
   tone?: 'default' | 'positive' | 'warning';
+  active?: boolean;
   onClick?: () => void;
 }) {
   const iconClass =
@@ -251,7 +263,10 @@ function MetricCard({
     <button
       type="button"
       onClick={onClick}
-      className="rounded-card text-left transition-opacity hover:opacity-90"
+      aria-pressed={active}
+      className={`rounded-card text-left transition-opacity hover:opacity-90 ${
+        active ? 'ring-2 ring-amber-500/60 ring-offset-2 ring-offset-background' : ''
+      }`}
     >
       {card}
     </button>
