@@ -222,6 +222,46 @@ class ProductApprovalPipelineTest extends TestCase
             'event' => 'created',
             'actor_role' => 'creator',
         ]);
+
+        $this->assertDatabaseHas('digital_product_review_events', [
+            'digital_product_id' => $response->json('data.id'),
+            'event' => 'created',
+            'to_status' => 'draft',
+        ]);
+    }
+
+    public function testFileOnlyEditRecordsUpdatedEvent(): void
+    {
+        settings()->save(['product.updating_requires_review' => 1]);
+        [$creator, $workspace, $product, $file] = $this->approvedProductWithStore();
+        $second = FileEntry::query()->create([
+            'name' => 'second.pdf',
+            'file_name' => 'second-' . Str::random(8) . '.pdf',
+            'mime' => 'application/pdf',
+            'extension' => 'pdf',
+            'file_size' => 100,
+            'workspace_id' => $workspace->id,
+            'owner_id' => $creator->id,
+        ]);
+
+        $this->stateful()->actingAs($creator)->putJson(
+            "/api/v1/digital-products/{$product->id}",
+            [
+                'title' => $product->title,
+                'price_cents' => $product->price_cents,
+                'currency' => $product->currency,
+                'file_ids' => [$file->id, $second->id],
+            ],
+        )->assertOk();
+
+        $this->assertDatabaseHas('digital_product_review_events', [
+            'digital_product_id' => $product->id,
+            'event' => 'updated',
+            'actor_role' => 'creator',
+        ]);
+
+        $event = $product->reviewEvents()->where('event', 'updated')->latest('id')->first();
+        $this->assertContains('file_ids', $event->meta['changed']);
     }
 
     private function creatorContext(): array

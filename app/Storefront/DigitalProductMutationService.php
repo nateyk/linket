@@ -42,7 +42,7 @@ final class DigitalProductMutationService
                 $product,
                 'created',
                 null,
-                $product->status,
+                $product->fresh()->status,
                 $creator,
                 'creator',
             );
@@ -65,6 +65,8 @@ final class DigitalProductMutationService
             $this->queueUpdateReviewIfNeeded($product, $actor);
 
             $this->assertCoverBelongsToWorkspace($product);
+            $fileIdsBefore = $product->files()->pluck('file_entries.id')->sort()->values()->all();
+            $biolinkIdsBefore = $product->biolinks()->pluck('biolinks.id')->sort()->values()->all();
             $this->syncProductFiles($product, $data, $type, $maxUploadBytes);
             if ($type === 'course') {
                 $this->courses->ensureForProduct($product->fresh());
@@ -73,6 +75,13 @@ final class DigitalProductMutationService
                 $product,
                 $data['biolink_ids'] ?? $product->biolinks()->pluck('biolinks.id')->all(),
             );
+
+            if ($product->files()->pluck('file_entries.id')->sort()->values()->all() !== $fileIdsBefore) {
+                $changed[] = 'file_ids';
+            }
+            if ($product->biolinks()->pluck('biolinks.id')->sort()->values()->all() !== $biolinkIdsBefore) {
+                $changed[] = 'biolink_ids';
+            }
 
             if ($changed !== []) {
                 app(ProductReviewHistory::class)->record(
