@@ -6,6 +6,7 @@ use App\Courses\Services\CourseService;
 use App\Models\User;
 use App\Storefront\Models\DigitalProduct;
 use App\Entitlements\Entitlements;
+use Common\Files\Actions\FileUploadValidator;
 use Common\Files\FileEntry;
 use Common\Workspaces\ActiveWorkspace;
 use Illuminate\Support\Arr;
@@ -49,7 +50,7 @@ final class DigitalProductMutationService
                 ...Arr::except($data, ['file_ids', 'biolink_ids', 'type']),
                 'type' => $type,
                 'currency' => $data['currency'] ?? $product->currency,
-                'status' => $product->status === 'approved' ? 'draft' : $product->status,
+                'status' => $product->status === 'approved' && app(ProductSettings::class)->updatingRequiresReview() ? 'draft' : $product->status,
             ]);
 
             $this->assertCoverBelongsToWorkspace($product);
@@ -84,6 +85,15 @@ final class DigitalProductMutationService
         $this->assertCoverBelongsToWorkspace($product);
         $files = FileEntry::query()->whereIn('id', $ids)->where('workspace_id', $product->workspace_id)->get();
         abort_if($files->count() !== count($ids), 422, __('Every file must belong to the active workspace.'));
+        // Platform per-file cap composes with (never loosens) the plan
+        // allowance. Total workspace storage stays plan-only below.
+        $platformMax = app(ProductSettings::class)->maxFileBytes();
+        $perFileMax = $maxBytes;
+        $platformBinding = false;
+        if ($platformMax !== null && ($perFileMax === null || $platformMax < $perFileMax)) {
+            $perFileMax = $platformMax;
+            $platformBinding = true;
+        }
         // Files already attached to this product keep working even when they
         // predate the current sellable set (legacy formats can stay, they
         // just cannot be newly attached). Only newly attached files must be
@@ -91,16 +101,18 @@ final class DigitalProductMutationService
         $existingIds = $product->exists
             ? $product->files()->pluck('file_entries.id')->all()
             : [];
-        abort_if($files->contains(function (FileEntry $file) use ($maxBytes, $existingIds): bool {
-            if ($maxBytes !== null && $file->file_size > $maxBytes) {
+        abort_if($files->contains(function (FileEntry $file) use ($perFileMax, $existingIds): bool {
+            if ($perFileMax !== null && $file->file_size > $perFileMax) {
                 return true;
             }
             if (ProductFileFormats::isSellableExtension($file->extension)) {
                 return false;
             }
             return !in_array($file->id, $existingIds, true);
-        }), 422, $maxBytes !== null && $files->max('file_size') > $maxBytes
-            ? __("One or more files exceed your plan's storage allowance per file.")
+        }), 422, $perFileMax !== null && $files->max('file_size') > $perFileMax
+            ? ($platformBinding
+                ? __('The file size may not be greater than :size', ['size' => FileUploadValidator::formatBytes($platformMax)])
+                : __("One or more files exceed your plan's storage allowance per file."))
             : __('One or more files are not allowed for sale. Allowed formats: :formats.', ['formats' => ProductFileFormats::helpText()]));
 
         if ($maxBytes !== null) {

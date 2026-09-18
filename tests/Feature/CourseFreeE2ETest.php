@@ -16,6 +16,13 @@ class CourseFreeE2ETest extends TestCase
 
     protected function tearDown(): void
     {
+        \Common\Settings\Models\Setting::query()
+            ->whereIn('name', [
+                'product.adding_requires_review',
+                'product.updating_requires_review',
+            ])
+            ->delete();
+        settings()->loadSettings();
         ActiveWorkspace::clearCache();
         parent::tearDown();
     }
@@ -72,7 +79,8 @@ class CourseFreeE2ETest extends TestCase
         $l2Id = $l2->json('data.id');
         $this->stateful()->actingAs($creator)->putJson("/api/v1/course-lessons/{$l2Id}", ['status' => 'published'])->assertOk();
 
-        // 4. Publish course
+        // 4. Publish course (frictionless review policy for this flow)
+        settings()->save(['product.adding_requires_review' => 0]);
         $this->stateful()->actingAs($creator)->postJson("/api/v1/courses/{$courseId}/publish")->assertOk();
 
         // Verify product is approved and course published

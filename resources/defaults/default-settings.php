@@ -601,4 +601,11 @@ return [
 
     // storefront
     ['name' => 'storefront.reviews_enabled', 'value' => true],
+
+    // product policy (min/max default to unlimited, free products allowed)
+    ['name' => 'product.allow_free_products', 'value' => true],
+
+    // product review policy (fail closed: new and updated products need review)
+    ['name' => 'product.adding_requires_review', 'value' => true],
+    ['name' => 'product.updating_requires_review', 'value' => true],
 ];

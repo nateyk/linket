@@ -24,9 +24,10 @@ class CourseService
         return DB::transaction(function () use ($course): Course {
             $course->update(['published_at' => now()]);
 
-            // Immediate-live policy: approved instantly unless flag requires pre-approval.
+            // Immediate-live policy: approved instantly unless the platform
+            // product policy or the server flag requires pre-approval.
             // Post-moderation path: admin can still reject afterwards.
-            if (!config('store.courses_require_approval')) {
+            if (!app(\App\Storefront\ProductSettings::class)->addingRequiresReviewForCourse()) {
                 $product = $course->product;
                 if ($product && $product->status !== 'approved') {
                     $product->update(['status' => 'approved', 'approved_at' => now()]);
@@ -54,13 +55,17 @@ class CourseService
 
     /**
      * Re-review gate: any content change on an approved course reverts the
-     * product to draft and unpublishes the course, forcing re-approval.
+     * product to draft and unpublishes the course, forcing re-approval,
+     * unless the platform product policy disables update reviews.
      * Mirrors the inline logic in CoursesController::update() and
      * DigitalProductMutationService::update(). Cosmetic-only changes
      * (chapter/lesson reordering) must NOT call this.
      */
     public function revertApprovalForContentChange(Course $course): void
     {
+        if (!app(\App\Storefront\ProductSettings::class)->updatingRequiresReview()) {
+            return;
+        }
         $product = $course->product;
         if ($product && $product->status === 'approved') {
             $product->update(['status' => 'draft']);

@@ -98,9 +98,13 @@ class CoursesController extends Controller
                         );
                     }
                 }
+                $policy = app(\App\Storefront\ProductSettings::class);
+                if (array_key_exists('price_cents', $productData)) {
+                    $policy->enforcePricePolicy($productData['price_cents']);
+                }
                 $course->product->update($productData);
                 // if course product was approved, editing should draft it (consistent with DigitalProductsController)
-                if ($course->product->status === 'approved') {
+                if ($course->product->status === 'approved' && $policy->updatingRequiresReview()) {
                     $course->product->update(['status' => 'draft']);
                     $course->update(['published_at' => null]);
                 }

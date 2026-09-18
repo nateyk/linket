@@ -142,6 +142,8 @@ class FileEntriesController extends Controller
             $payload->clientMime = $detectedMime;
             app(\App\Entitlements\AssertDigitalProductUploadAllowed::class)
                 ->execute($payload->size, $payload->workspaceId);
+            app(\App\Storefront\ProductSettings::class)
+                ->enforceFileSizePolicy($payload->size);
         }
 
         (new StoreFile())->execute($payload, ['file' => $file]);

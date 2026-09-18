@@ -88,11 +88,12 @@ class DigitalProductsController extends Controller
             422,
             __('Only draft or rejected products can be submitted for review.'),
         );
+        $policy = app(\App\Storefront\ProductSettings::class);
         if ($digitalProduct->isCourse()) {
             $course = $digitalProduct->course ?? app(\App\Courses\Services\CourseService::class)->ensureForProduct($digitalProduct);
             $hasPublished = \App\Courses\Models\Lesson::where('course_id', $course->id)->where('status', 'published')->exists();
             abort_unless($course->chapters()->exists() && $hasPublished, 422, __('Add at least one chapter and one published lesson before submitting.'));
-            if (config('store.courses_require_approval')) {
+            if ($policy->addingRequiresReviewForCourse()) {
                 $course->update(['published_at' => now()]);
                 $digitalProduct->update(['status' => 'pending_approval', 'rejection_reason' => null]);
             } else {
@@ -102,7 +103,11 @@ class DigitalProductsController extends Controller
             return new DigitalProductResource($digitalProduct->fresh()->load(['course', 'cover']));
         }
         abort_if($digitalProduct->files()->doesntExist(), 422, __('Add at least one downloadable file before submitting.'));
-        $digitalProduct->update(['status' => 'pending_approval', 'rejection_reason' => null]);
+        if ($policy->addingRequiresReview()) {
+            $digitalProduct->update(['status' => 'pending_approval', 'rejection_reason' => null]);
+        } else {
+            $digitalProduct->update(['status' => 'approved', 'approved_at' => now(), 'rejection_reason' => null]);
+        }
         return new DigitalProductResource($digitalProduct->fresh());
     }
 
@@ -125,7 +130,10 @@ class DigitalProductsController extends Controller
             $rules['file_ids'] = 'required|array|min:1';
             $rules['file_ids.*'] = 'integer|distinct|exists:file_entries,id';
         }
-        return $request->validate($rules);
+        $data = $request->validate($rules);
+        app(\App\Storefront\ProductSettings::class)->enforcePricePolicy($data['price_cents']);
+
+        return $data;
     }
     private function enforceProductLimitForType(Entitlements $entitlements, int $priceCents, string $type, \App\Models\User $creator, ?int $existingId): void
     {
