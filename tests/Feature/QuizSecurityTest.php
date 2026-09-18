@@ -111,7 +111,7 @@ class QuizSecurityTest extends TestCase
         $this->stateful()->actingAs($creator)->postJson("/api/v1/course-lessons/{$lesson->id}/quiz?workspace_id={$ws->id}", $this->quizPayload())->assertCreated();
         $student = User::factory()->create();
         $this->enroll($student, $c);
-        // re-publish after quiz creation triggers revert
+        // re-assert approved/published state before the security check
         $p->refresh(); $c->refresh();
         $p->update(['status' => 'approved', 'approved_at' => now()]); $c->update(['published_at' => now()]);
         $c->refresh(); $lesson->refresh();
@@ -142,7 +142,7 @@ class QuizSecurityTest extends TestCase
         [$p,$c,$ch,$lesson] = $this->createCourseWithLesson($creator, $ws);
         $this->stateful()->actingAs($creator)->postJson("/api/v1/course-lessons/{$lesson->id}/quiz?workspace_id={$ws->id}", $this->quizPayload())->assertCreated();
         $quiz = $lesson->fresh()->quiz()->first();
-        // re-publish after quiz triggers revert - use fresh models to avoid stale isDirty check
+        // re-assert approved/published state - use fresh models to avoid stale isDirty check
         $p->refresh(); $c->refresh();
         $p->update(['status' => 'approved', 'approved_at' => now()]); $c->update(['published_at' => now()]);
         $c->refresh(); $p->refresh();
@@ -178,28 +178,43 @@ class QuizSecurityTest extends TestCase
     }
 
     /** @test */
-    public function quiz_create_triggers_revert_on_approved_course()
+    public function quiz_create_queues_review_on_approved_course()
     {
         $creator = User::factory()->create();
         $ws = (new CreateWorkspace())->createPersonalWorkspace($creator);
         [$p,$c,$ch,$lesson] = $this->createCourseWithLesson($creator, $ws, 'approved');
         $this->assertEquals('approved', $p->fresh()->status);
         $this->stateful()->actingAs($creator)->postJson("/api/v1/course-lessons/{$lesson->id}/quiz?workspace_id={$ws->id}", $this->quizPayload())->assertCreated();
-        $this->assertEquals('draft', $p->fresh()->status);
-        $this->assertNull($c->fresh()->published_at);
+
+        $fresh = $p->fresh();
+        $this->assertEquals('approved', $fresh->status);
+        $this->assertNotNull($fresh->review_requested_at);
+        $this->assertNotNull($c->fresh()->published_at);
+        $this->assertDatabaseHas('digital_product_review_events', [
+            'digital_product_id' => $p->id,
+            'event' => 'updated',
+        ]);
     }
 
     /** @test */
-    public function quiz_update_triggers_revert()
+    public function quiz_update_queues_review()
     {
         $creator = User::factory()->create();
         $ws = (new CreateWorkspace())->createPersonalWorkspace($creator);
         [$p,$c,$ch,$lesson] = $this->createCourseWithLesson($creator, $ws, 'approved');
         $this->stateful()->actingAs($creator)->postJson("/api/v1/course-lessons/{$lesson->id}/quiz?workspace_id={$ws->id}", $this->quizPayload())->assertCreated();
-        // reset to approved again
-        $p->update(['status' => 'approved', 'approved_at' => now()]); $c->update(['published_at' => now()]);
+        // reset to approved with a clean review flag so the update is what queues the review
+        $p->update(['status' => 'approved', 'approved_at' => now(), 'review_requested_at' => null, 'review_requested_by' => null]); $c->update(['published_at' => now()]);
         $quiz = $lesson->fresh()->quiz()->first();
         $this->stateful()->actingAs($creator)->putJson("/api/v1/quizzes/{$quiz->id}?workspace_id={$ws->id}", ['passing_score' => 80])->assertOk();
-        $this->assertEquals('draft', $p->fresh()->status);
+
+        $fresh = $p->fresh();
+        $this->assertEquals('approved', $fresh->status);
+        $this->assertNotNull($fresh->review_requested_at);
+        $this->assertNotNull($c->fresh()->published_at);
+        $this->assertDatabaseHas('digital_product_review_events', [
+            'digital_product_id' => $p->id,
+            'event' => 'updated',
+        ]);
     }
 }
