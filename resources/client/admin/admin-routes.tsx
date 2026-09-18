@@ -73,6 +73,10 @@ export const adminRoutes: RouteObject[] = [
             lazy: () => import('@app/admin/settings/kyc-settings'),
           },
           {
+            path: 'product',
+            lazy: () => import('@app/admin/settings/product-settings'),
+          },
+          {
             path: 'landing-page',
             lazy: () => import('@app/admin/settings/landing-page-settings'),
           },
