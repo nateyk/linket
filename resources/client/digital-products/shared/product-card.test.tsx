@@ -55,11 +55,19 @@ describe('shared product card consistency', () => {
     expect(source).not.toContain('const [imageError, setImageError]');
   });
 
-  test('keeps motion calm: single fade, no stagger cascade, no title underline', () => {
-    expect(source).toContain('whileInView');
+  test('keeps motion minimal: carousel only, no entrance or hover motion', () => {
+    expect(source).toContain('AnimatePresence');
+    expect(source).not.toContain('whileInView');
+    expect(source).not.toContain('whileHover');
     expect(source).not.toContain('staggerChildren');
     expect(source).not.toContain('itemVariants');
     expect(source).not.toContain('hover:underline');
+  });
+
+  test('shares the dashboard hover language: group zoom on cover', () => {
+    expect(source).toContain("'group flex h-full");
+    expect(source).toContain('group-hover:scale-[1.025]');
+    expect(source).not.toContain('group-hover/card');
   });
 });
 
