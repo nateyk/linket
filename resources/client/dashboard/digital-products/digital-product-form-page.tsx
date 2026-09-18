@@ -1,4 +1,5 @@
 import {BuilderSectionHeader} from '@app/dashboard/stores/store-editor/builder-section-header';
+import {ProductCard} from '@app/digital-products/shared/product-card';
 import {articleEditorTipTapExtensions} from '@common/article-editor/article-editor-tiptap-extensions';
 import {apiClient} from '@common/http/query-client';
 import {ClearFormatButton} from '@common/text-editor/menubar/clear-format-button';
@@ -31,9 +32,9 @@ import {Progress} from '@shadcn/progress/progress';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {Tooltip} from '@shadcn/tooltip/tooltip';
 import {Trans} from '@ui/i18n/trans';
+import {useTrans} from '@ui/i18n/use-trans';
 import {getBootstrapData} from '@ui/bootstrap-data/bootstrap-data-store';
 import {FormattedBytes} from '@ui/i18n/formatted-bytes';
-import {ProductCover} from '@ui/product-cover';
 import {
   ArchiveIcon,
   BookIcon,
@@ -667,49 +668,48 @@ function ProductBuilderPreview({
   productTypeLabel: string;
   status: string;
 }) {
+  const {trans} = useTrans();
   const numericPrice = Number(price);
   const formattedPrice = Number.isFinite(numericPrice)
     ? `ETB ${numericPrice.toFixed(2)}`
     : 'ETB 0.00';
 
   return (
-    <div className="overflow-hidden rounded-card-sm border bg-background">
-      <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-3">
         <p className="text-sm font-medium">
           <Trans message="Customer preview" />
         </p>
         <ProductStatus status={status} />
       </div>
-      <div className="aspect-video bg-muted">
-        {coverUrl ? (
-          <ProductCover cover={{url: coverUrl}} className="size-full" />
-        ) : (
+      <ProductCard
+        images={coverUrl ? [coverUrl] : []}
+        title={title.trim() || trans({message: 'Your digital product'})}
+        tags={[trans({message: productTypeLabel})]}
+        price={formattedPrice}
+        meta={
+          <span className="flex items-center gap-2 text-xs text-muted-foreground">
+            <FileIcon className="size-4" />
+            <Trans
+              message=":count download files"
+              values={{count: fileCount}}
+            />
+          </span>
+        }
+        action={
+          <Button disabled>
+            <Trans message="Buy now" />
+          </Button>
+        }
+        imageFallback={
           <div className="flex size-full flex-col items-center justify-center gap-2 text-muted-foreground">
             <PackageOpenIcon className="size-8" />
             <span className="text-xs">
               <Trans message="Add a cover image" />
             </span>
           </div>
-        )}
-      </div>
-      <div className="flex flex-col gap-3 p-4">
-        <div className="flex flex-col gap-2">
-          <Badge variant="outline" className="w-fit">
-            <Trans message={productTypeLabel} />
-          </Badge>
-          <h2 className="text-lg leading-tight font-semibold text-pretty">
-            {title.trim() || <Trans message="Your digital product" />}
-          </h2>
-          <p className="text-lg leading-7 font-semibold">{formattedPrice}</p>
-        </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <FileIcon className="size-4" />
-          <Trans message=":count download files" values={{count: fileCount}} />
-        </div>
-        <Button disabled className="w-full">
-          <Trans message="Buy now" />
-        </Button>
-      </div>
+        }
+      />
     </div>
   );
 }
