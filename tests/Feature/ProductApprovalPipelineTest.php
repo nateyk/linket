@@ -64,6 +64,34 @@ class ProductApprovalPipelineTest extends TestCase
         $this->assertSame($creator->id, $event->actor_id);
     }
 
+    public function testRecordWritesActorRoleAndMeta(): void
+    {
+        [$creator, $workspace] = $this->creatorContext();
+        $product = $this->product($workspace, $creator);
+
+        $history = app(\App\Storefront\ProductReviewHistory::class);
+        $history->record($product, 'created', null, 'draft', $creator, 'creator');
+        $history->record($product, 'approved', 'pending_approval', 'approved', $creator, 'admin');
+        $history->record($product, 'updated', 'approved', 'approved', null, 'system', null, ['changed' => ['title']]);
+
+        $events = $product->reviewEvents()->orderBy('id')->get();
+        $this->assertSame(['creator', 'admin', 'system'], $events->pluck('actor_role')->all());
+        $this->assertSame(['changed' => ['title']], $events->last()->meta);
+        $this->assertNull($events->last()->actor_id);
+        $this->assertSame('approved', $events->last()->to_status);
+    }
+
+    public function testRecordForcesSystemRoleWhenNoActor(): void
+    {
+        [$creator, $workspace] = $this->creatorContext();
+        $product = $this->product($workspace, $creator);
+
+        app(\App\Storefront\ProductReviewHistory::class)
+            ->record($product, 'updated', 'approved', 'approved', null, 'creator');
+
+        $this->assertSame('system', $product->reviewEvents()->first()->actor_role);
+    }
+
     private function creatorContext(): array
     {
         $creator = $this->createCreator();
