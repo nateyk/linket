@@ -114,6 +114,7 @@ class ProductSettingsReviewPolicyTest extends TestCase
             "/api/v1/digital-products/{$product->id}/submit",
         );
         $submitted->assertOk();
+        $submitted->assertJsonStructure(['data' => ['course', 'cover']]);
 
         $this->assertSame('pending_approval', $product->fresh()->status);
     }

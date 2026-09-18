@@ -33,7 +33,7 @@ class DigitalProduct extends StorefrontModel
         'review_requested_by',
         'type',
     ];
-    protected $casts = ['price_cents' => 'integer', 'approved_at' => 'datetime', 'review_requested_at' => 'datetime', 'workspace_id' => 'integer', 'user_id' => 'integer', 'learning_outcomes' => 'array'];
+    protected $casts = ['price_cents' => 'integer', 'approved_at' => 'datetime', 'review_requested_at' => 'datetime', 'review_requested_by' => 'integer', 'workspace_id' => 'integer', 'user_id' => 'integer', 'learning_outcomes' => 'array'];
 
     public function course(): \Illuminate\Database\Eloquent\Relations\HasOne { return $this->hasOne(\App\Courses\Models\Course::class); }
     public function isCourse(): bool { return ($this->type ?? 'digital') === 'course'; }

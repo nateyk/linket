@@ -161,6 +161,9 @@ class ProductApprovalPipelineTest extends TestCase
             'actor_role' => 'creator',
         ]);
 
+        $event = $product->reviewEvents()->where('event', 'updated')->latest('id')->first();
+        $this->assertTrue($event->meta['review_requested'] ?? false);
+
         $listed = $this->stateful()->getJson("/api/v1/public/stores/{$biolink->id}/digital-products");
         $listed->assertOk();
         $this->assertNotNull(collect($listed->json('data'))->firstWhere('id', $product->id));
@@ -201,6 +204,30 @@ class ProductApprovalPipelineTest extends TestCase
         )->assertOk();
 
         $this->assertTrue($queuedAt->equalTo($product->fresh()->review_requested_at));
+    }
+
+    public function testNoOpEditDoesNotQueueReviewOrRecordUpdatedEvent(): void
+    {
+        settings()->save(['product.updating_requires_review' => 1]);
+        [$creator, $workspace, $product, $file] = $this->approvedProductWithStore();
+
+        $this->stateful()->actingAs($creator)->putJson(
+            "/api/v1/digital-products/{$product->id}",
+            [
+                'title' => $product->title,
+                'price_cents' => $product->price_cents,
+                'currency' => $product->currency,
+                'file_ids' => [$file->id],
+            ],
+        )->assertOk();
+
+        $fresh = $product->fresh();
+        $this->assertSame('approved', $fresh->status);
+        $this->assertNull($fresh->review_requested_at);
+        $this->assertDatabaseMissing('digital_product_review_events', [
+            'digital_product_id' => $product->id,
+            'event' => 'updated',
+        ]);
     }
 
     public function testCreatingProductRecordsCreatedEvent(): void
@@ -293,6 +320,56 @@ class ProductApprovalPipelineTest extends TestCase
     public function testCourseContentChangeWithoutUpdateReviewStaysClean(): void
     {
         settings()->save(['product.updating_requires_review' => 0]);
+        [$creator, $workspace] = $this->creatorContext();
+        $product = $this->product($workspace, $creator, [
+            'status' => 'approved',
+            'approved_at' => now(),
+            'type' => 'course',
+        ]);
+        $course = \App\Courses\Models\Course::query()->create([
+            'digital_product_id' => $product->id,
+            'instructor_user_id' => $creator->id,
+            'published_at' => now(),
+        ]);
+
+        app(\App\Courses\Services\CourseService::class)->revertApprovalForContentChange($course);
+
+        $this->assertSame('approved', $product->fresh()->status);
+        $this->assertNull($product->fresh()->review_requested_at);
+        $this->assertNotNull($course->fresh()->published_at);
+    }
+
+    public function testCourseContentChangeQueuesReviewWhenPlatformRequiresCourseApproval(): void
+    {
+        settings()->save(['product.updating_requires_review' => 0]);
+        config()->set('store.courses_require_approval', true);
+        [$creator, $workspace] = $this->creatorContext();
+        $product = $this->product($workspace, $creator, [
+            'status' => 'approved',
+            'approved_at' => now(),
+            'type' => 'course',
+        ]);
+        $course = \App\Courses\Models\Course::query()->create([
+            'digital_product_id' => $product->id,
+            'instructor_user_id' => $creator->id,
+            'published_at' => now(),
+        ]);
+
+        app(\App\Courses\Services\CourseService::class)->revertApprovalForContentChange($course);
+
+        $this->assertSame('approved', $product->fresh()->status);
+        $this->assertNotNull($product->fresh()->review_requested_at);
+        $this->assertNotNull($course->fresh()->published_at);
+        $this->assertDatabaseHas('digital_product_review_events', [
+            'digital_product_id' => $product->id,
+            'event' => 'updated',
+        ]);
+    }
+
+    public function testCourseContentChangeLeavesNoFlagWhenBothReviewPoliciesOff(): void
+    {
+        settings()->save(['product.updating_requires_review' => 0]);
+        config()->set('store.courses_require_approval', false);
         [$creator, $workspace] = $this->creatorContext();
         $product = $this->product($workspace, $creator, [
             'status' => 'approved',

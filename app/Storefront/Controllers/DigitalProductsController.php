@@ -102,13 +102,14 @@ class DigitalProductsController extends Controller
             abort_unless($course->chapters()->exists() && $hasPublished, 422, __('Add at least one chapter and one published lesson before submitting.'));
 
             $requiresReview = $wasApproved
-                ? ($policy->updatingRequiresReview() || (bool) config('store.courses_require_approval'))
+                ? $policy->updatingRequiresReviewForCourse()
                 : $policy->addingRequiresReviewForCourse();
 
             $course->update(['published_at' => now()]);
 
             return new DigitalProductResource(
-                $this->applySubmission($digitalProduct, $requiresReview, $wasApproved, $request),
+                $this->applySubmission($digitalProduct, $requiresReview, $wasApproved, $request)
+                    ->load(['course', 'cover']),
             );
         }
 

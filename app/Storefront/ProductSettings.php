@@ -40,6 +40,11 @@ final class ProductSettings
         return $this->addingRequiresReview() || (bool) config('store.courses_require_approval');
     }
 
+    public function updatingRequiresReviewForCourse(): bool
+    {
+        return $this->updatingRequiresReview() || (bool) config('store.courses_require_approval');
+    }
+
     public function maxFileBytes(): ?int
     {
         $value = settings('product.max_file_bytes');

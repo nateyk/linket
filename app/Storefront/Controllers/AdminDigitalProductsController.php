@@ -65,7 +65,7 @@ class AdminDigitalProductsController extends Controller
         ];
 
         $products = $query->paginate((int) $request->input('perPage', 15));
-        $products->appends($request->only(['search', 'status', 'perPage', 'sort']));
+        $products->appends($request->only(['search', 'status', 'scope', 'perPage', 'sort']));
 
         $paginated = $products->toArray();
         $paginated['meta'] = array_merge($paginated['meta'] ?? [], ['counters' => $counters]);
@@ -77,12 +77,17 @@ class AdminDigitalProductsController extends Controller
     {
         Gate::authorize('admin.access');
 
-        $isUpdate = $digitalProduct->status === 'approved' && $digitalProduct->review_requested_at !== null;
-        abort_unless($digitalProduct->status === 'pending_approval' || $isUpdate, 422);
-        $from = $digitalProduct->status;
+        $locked = DB::transaction(function () use ($digitalProduct, $request): DigitalProduct {
+            $product = DigitalProduct::query()
+                ->whereKey($digitalProduct->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        DB::transaction(function () use ($digitalProduct, $isUpdate, $from, $request): void {
-            $digitalProduct->update([
+            $isUpdate = $product->status === 'approved' && $product->review_requested_at !== null;
+            abort_unless($product->status === 'pending_approval' || $isUpdate, 422);
+            $from = $product->status;
+
+            $product->update([
                 'status' => 'approved',
                 'approved_at' => now(),
                 'rejection_reason' => null,
@@ -91,29 +96,37 @@ class AdminDigitalProductsController extends Controller
             ]);
 
             app(ProductReviewHistory::class)->record(
-                $digitalProduct,
+                $product,
                 $isUpdate ? 'update_approved' : 'approved',
                 $from,
                 'approved',
                 $request->user(),
                 'admin',
             );
+
+            return $product;
         });
 
-        return $digitalProduct->fresh()->load(['creator', 'cover', 'files', 'biolinks']);
+        return $locked->fresh()->load(['creator', 'cover', 'files', 'biolinks']);
     }
 
     public function reject(Request $request, DigitalProduct $digitalProduct)
     {
         Gate::authorize('admin.access');
 
-        $isUpdate = $digitalProduct->status === 'approved' && $digitalProduct->review_requested_at !== null;
-        abort_unless($digitalProduct->status === 'pending_approval' || $isUpdate, 422);
         $data = $request->validate(['reason' => 'nullable|string|max:2000']);
-        $from = $digitalProduct->status;
 
-        DB::transaction(function () use ($digitalProduct, $data, $isUpdate, $from, $request): void {
-            $digitalProduct->update([
+        $locked = DB::transaction(function () use ($digitalProduct, $data, $request): DigitalProduct {
+            $product = DigitalProduct::query()
+                ->whereKey($digitalProduct->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $isUpdate = $product->status === 'approved' && $product->review_requested_at !== null;
+            abort_unless($product->status === 'pending_approval' || $isUpdate, 422);
+            $from = $product->status;
+
+            $product->update([
                 'status' => 'rejected',
                 'rejection_reason' => $data['reason'] ?? null,
                 'review_requested_at' => null,
@@ -121,7 +134,7 @@ class AdminDigitalProductsController extends Controller
             ]);
 
             app(ProductReviewHistory::class)->record(
-                $digitalProduct,
+                $product,
                 $isUpdate ? 'update_rejected' : 'rejected',
                 $from,
                 'rejected',
@@ -129,8 +142,10 @@ class AdminDigitalProductsController extends Controller
                 'admin',
                 $data['reason'] ?? null,
             );
+
+            return $product;
         });
 
-        return $digitalProduct->fresh()->load(['creator', 'cover', 'files', 'biolinks']);
+        return $locked->fresh()->load(['creator', 'cover', 'files', 'biolinks']);
     }
 }

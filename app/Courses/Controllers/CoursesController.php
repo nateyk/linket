@@ -104,7 +104,7 @@ class CoursesController extends Controller
                 }
                 $course->product->update($productData);
                 // Keep a live course sellable while its edit awaits review.
-                if ($course->product->status === 'approved' && $policy->updatingRequiresReview()) {
+                if ($course->product->status === 'approved' && $policy->updatingRequiresReviewForCourse()) {
                     if ($course->product->review_requested_at === null) {
                         $course->product->update([
                             'review_requested_at' => now(),

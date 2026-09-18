@@ -64,7 +64,7 @@ class CourseService
      */
     public function revertApprovalForContentChange(Course $course): void
     {
-        if (!app(\App\Storefront\ProductSettings::class)->updatingRequiresReview()) {
+        if (!app(\App\Storefront\ProductSettings::class)->updatingRequiresReviewForCourse()) {
             return;
         }
 

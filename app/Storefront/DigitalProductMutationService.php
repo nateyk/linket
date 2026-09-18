@@ -62,7 +62,6 @@ final class DigitalProductMutationService
             ]);
 
             $changed = array_values(array_diff(array_keys($product->getChanges()), ['updated_at']));
-            $this->queueUpdateReviewIfNeeded($product, $actor);
 
             $this->assertCoverBelongsToWorkspace($product);
             $fileIdsBefore = $product->files()->pluck('file_entries.id')->sort()->values()->all();
@@ -84,6 +83,12 @@ final class DigitalProductMutationService
             }
 
             if ($changed !== []) {
+                $queuedReview = $this->queueUpdateReviewIfNeeded($product, $actor);
+                $meta = ['changed' => $changed];
+                if ($queuedReview) {
+                    $meta['review_requested'] = true;
+                }
+
                 app(ProductReviewHistory::class)->record(
                     $product->fresh(),
                     'updated',
@@ -92,7 +97,7 @@ final class DigitalProductMutationService
                     $actor,
                     'creator',
                     null,
-                    ['changed' => $changed],
+                    $meta,
                 );
             }
 
@@ -100,20 +105,26 @@ final class DigitalProductMutationService
         });
     }
 
-    private function queueUpdateReviewIfNeeded(DigitalProduct $product, ?User $actor): void
+    private function queueUpdateReviewIfNeeded(DigitalProduct $product, ?User $actor): bool
     {
-        if ($product->status !== 'approved' || !app(ProductSettings::class)->updatingRequiresReview()) {
-            return;
+        $requiresReview = $product->isCourse()
+            ? app(ProductSettings::class)->updatingRequiresReviewForCourse()
+            : app(ProductSettings::class)->updatingRequiresReview();
+
+        if ($product->status !== 'approved' || !$requiresReview) {
+            return false;
         }
 
         if ($product->review_requested_at !== null) {
-            return;
+            return false;
         }
 
         $product->update([
             'review_requested_at' => now(),
             'review_requested_by' => $actor?->id ?? $product->user_id,
         ]);
+
+        return true;
     }
 
     private function syncProductFiles(DigitalProduct $product, array $data, string $type, ?int $maxBytes): void
