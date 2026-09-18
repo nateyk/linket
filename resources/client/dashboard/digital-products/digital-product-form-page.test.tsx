@@ -185,3 +185,22 @@ describe('digital product file capability', () => {
     expect(pickerSource).toContain('PDF and EPUB');
   });
 });
+
+describe('product builder preview', () => {
+  // The Customer preview must render through the shared ProductCard so
+  // creators see exactly what storefront customers see.
+  const formSource = fs.readFileSync(
+    path.resolve(
+      'resources/client/dashboard/digital-products/digital-product-form-page.tsx',
+    ),
+    'utf8',
+  );
+
+  test('preview reuses the shared ProductCard', () => {
+    expect(formSource).toContain(
+      "import {ProductCard} from '@app/digital-products/shared/product-card'",
+    );
+    expect(formSource).toContain('<ProductCard');
+    expect(formSource).toContain('meta={');
+  });
+});

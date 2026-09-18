@@ -62,3 +62,15 @@ describe('shared product card consistency', () => {
     expect(source).not.toContain('hover:underline');
   });
 });
+
+describe('shared product card meta slot', () => {
+  const source = fs.readFileSync(
+    path.resolve('resources/client/digital-products/shared/product-card.tsx'),
+    'utf8',
+  );
+
+  test('exposes a meta slot rendered between description and footer', () => {
+    expect(source).toContain('meta?: ReactNode');
+    expect(source).toContain('{meta}');
+  });
+});

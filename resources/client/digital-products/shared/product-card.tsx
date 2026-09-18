@@ -29,6 +29,7 @@ export interface ProductCardProps {
   topRated?: boolean;
   price: ReactNode;
   action?: ReactNode;
+  meta?: ReactNode;
   imageFallback?: ReactNode;
   classNames?: ProductCardClassNames;
   className?: string;
@@ -66,6 +67,7 @@ export function ProductCard({
   topRated = false,
   price,
   action,
+  meta,
   imageFallback,
   classNames,
   className,
@@ -227,6 +229,8 @@ export function ProductCard({
             {description}
           </p>
         ) : null}
+
+        {meta}
 
         <div
           className={cn(
