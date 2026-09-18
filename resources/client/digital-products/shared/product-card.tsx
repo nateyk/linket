@@ -52,11 +52,6 @@ const carouselVariants: Variants = {
   }),
 };
 
-const contentVariants: Variants = {
-  hidden: {opacity: 0},
-  visible: {opacity: 1},
-};
-
 export function ProductCard({
   images,
   title,
@@ -96,20 +91,19 @@ export function ProductCard({
   );
 
   return (
-    <motion.div
-      initial="hidden"
-      whileInView="visible"
-      viewport={{once: true, amount: 0.3}}
-      transition={{duration: 0.5}}
-      variants={contentVariants}
-      whileHover={{y: -2}}
+    <div
       className={cn(
-        'flex h-full w-full flex-col overflow-hidden rounded-card bg-card text-card-foreground shadow-sm ring-1 ring-foreground/10 transition-shadow duration-200 hover:shadow-md',
+        'group flex h-full w-full flex-col overflow-hidden rounded-card bg-card text-card-foreground shadow-sm ring-1 ring-foreground/10 transition-shadow duration-200 hover:shadow-md',
         classNames?.root,
         className,
       )}
     >
-      <div className={cn('relative aspect-video w-full', classNames?.media)}>
+      <div
+        className={cn(
+          'relative aspect-video w-full overflow-hidden',
+          classNames?.media,
+        )}
+      >
         {images.length === 0 ? (
           fallbackBlock
         ) : (
@@ -132,14 +126,14 @@ export function ProductCard({
                     cover={{url: images[safeIndex]}}
                     alt={title}
                     aspect=""
-                    className="h-full w-full"
+                    className="h-full w-full transition-transform duration-300 group-hover:scale-[1.025]"
                     fallback={fallbackBlock}
                   />
                 </motion.div>
               </AnimatePresence>
 
               {showCarouselUI && (
-                <div className="absolute inset-0 flex items-center justify-between p-2 opacity-0 transition-opacity group-hover/card:opacity-100 focus-within:opacity-100">
+                <div className="absolute inset-0 flex items-center justify-between p-2 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
                   <button
                     type="button"
                     onClick={() => changeImage(-1)}
@@ -242,6 +236,6 @@ export function ProductCard({
           {action}
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
