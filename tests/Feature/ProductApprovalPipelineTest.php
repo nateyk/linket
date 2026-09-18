@@ -92,6 +92,55 @@ class ProductApprovalPipelineTest extends TestCase
         $this->assertSame('system', $product->reviewEvents()->first()->actor_role);
     }
 
+    public function testPreviouslyApprovedResubmissionUsesUpdatePolicy(): void
+    {
+        settings()->save([
+            'product.adding_requires_review' => 0,
+            'product.updating_requires_review' => 1,
+        ]);
+        [$creator, $workspace] = $this->creatorContext();
+        $file = $this->createFile($creator, $workspace);
+        $product = $this->product($workspace, $creator, [
+            'status' => 'rejected',
+            'approved_at' => now(),
+        ]);
+        $product->files()->attach($file->id);
+
+        $this->stateful()->actingAs($creator)
+            ->postJson("/api/v1/digital-products/{$product->id}/submit")
+            ->assertOk();
+
+        $this->assertSame('pending_approval', $product->fresh()->status);
+        $this->assertDatabaseHas('digital_product_review_events', [
+            'digital_product_id' => $product->id,
+            'event' => 'update_submitted',
+            'actor_role' => 'creator',
+        ]);
+    }
+
+    public function testFirstSubmissionStillUsesAddingPolicy(): void
+    {
+        settings()->save([
+            'product.adding_requires_review' => 0,
+            'product.updating_requires_review' => 1,
+        ]);
+        [$creator, $workspace] = $this->creatorContext();
+        $file = $this->createFile($creator, $workspace);
+        $product = $this->product($workspace, $creator, ['status' => 'draft']);
+        $product->files()->attach($file->id);
+
+        $this->stateful()->actingAs($creator)
+            ->postJson("/api/v1/digital-products/{$product->id}/submit")
+            ->assertOk();
+
+        $this->assertSame('approved', $product->fresh()->status);
+        $this->assertDatabaseHas('digital_product_review_events', [
+            'digital_product_id' => $product->id,
+            'event' => 'submitted',
+            'actor_role' => 'creator',
+        ]);
+    }
+
     private function creatorContext(): array
     {
         $creator = $this->createCreator();

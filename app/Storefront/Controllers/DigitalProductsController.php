@@ -5,13 +5,16 @@ namespace App\Storefront\Controllers;
 use App\Storefront\Models\DigitalProduct;
 use App\Entitlements\Entitlements;
 use App\Storefront\DigitalProductMutationService;
+use App\Storefront\ProductReviewHistory;
 use App\Storefront\Resources\DigitalProductResource;
 use App\Storefront\DigitalProductVisibility;
+use App\Storefront\ProductSettings;
 use Common\Workspaces\ActiveWorkspace;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\DB;
 
 class DigitalProductsController extends Controller
 {
@@ -88,27 +91,70 @@ class DigitalProductsController extends Controller
             422,
             __('Only draft or rejected products can be submitted for review.'),
         );
-        $policy = app(\App\Storefront\ProductSettings::class);
+
+        $policy = app(ProductSettings::class);
+        $wasApproved = $digitalProduct->approved_at !== null;
+
         if ($digitalProduct->isCourse()) {
             $course = $digitalProduct->course ?? app(\App\Courses\Services\CourseService::class)->ensureForProduct($digitalProduct);
             $hasPublished = \App\Courses\Models\Lesson::where('course_id', $course->id)->where('status', 'published')->exists();
             abort_unless($course->chapters()->exists() && $hasPublished, 422, __('Add at least one chapter and one published lesson before submitting.'));
-            if ($policy->addingRequiresReviewForCourse()) {
-                $course->update(['published_at' => now()]);
-                $digitalProduct->update(['status' => 'pending_approval', 'rejection_reason' => null]);
-            } else {
-                $course->update(['published_at' => now()]);
-                $digitalProduct->update(['status' => 'approved', 'approved_at' => now(), 'rejection_reason' => null]);
-            }
-            return new DigitalProductResource($digitalProduct->fresh()->load(['course', 'cover']));
+
+            $requiresReview = $wasApproved
+                ? ($policy->updatingRequiresReview() || (bool) config('store.courses_require_approval'))
+                : $policy->addingRequiresReviewForCourse();
+
+            $course->update(['published_at' => now()]);
+
+            return new DigitalProductResource(
+                $this->applySubmission($digitalProduct, $requiresReview, $wasApproved, $request),
+            );
         }
+
         abort_if($digitalProduct->files()->doesntExist(), 422, __('Add at least one downloadable file before submitting.'));
-        if ($policy->addingRequiresReview()) {
-            $digitalProduct->update(['status' => 'pending_approval', 'rejection_reason' => null]);
-        } else {
-            $digitalProduct->update(['status' => 'approved', 'approved_at' => now(), 'rejection_reason' => null]);
-        }
-        return new DigitalProductResource($digitalProduct->fresh());
+
+        $requiresReview = $wasApproved
+            ? $policy->updatingRequiresReview()
+            : $policy->addingRequiresReview();
+
+        return new DigitalProductResource(
+            $this->applySubmission($digitalProduct, $requiresReview, $wasApproved, $request),
+        );
+    }
+
+    private function applySubmission(
+        DigitalProduct $product,
+        bool $requiresReview,
+        bool $wasApproved,
+        Request $request,
+    ): DigitalProduct {
+        $from = $product->status;
+
+        DB::transaction(function () use ($product, $requiresReview, $wasApproved, $from, $request): void {
+            if ($requiresReview) {
+                $product->update([
+                    'status' => 'pending_approval',
+                    'rejection_reason' => null,
+                ]);
+            } else {
+                $product->update([
+                    'status' => 'approved',
+                    'approved_at' => now(),
+                    'rejection_reason' => null,
+                ]);
+            }
+
+            app(ProductReviewHistory::class)->record(
+                $product,
+                $wasApproved ? 'update_submitted' : 'submitted',
+                $from,
+                $product->status,
+                $request->user(),
+                'creator',
+            );
+        });
+
+        return $product->fresh();
     }
 
     public function destroy(Request $request, DigitalProduct $digitalProduct) { $this->assertOwner($digitalProduct, $request); app(DigitalProductVisibility::class)->sync($digitalProduct, []); $digitalProduct->delete(); return response()->noContent(); }
