@@ -3,8 +3,10 @@
 namespace App\Storefront\Controllers;
 
 use App\Storefront\Models\DigitalProduct;
+use App\Storefront\ProductReviewHistory;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
 class AdminDigitalProductsController extends Controller
@@ -16,6 +18,7 @@ class AdminDigitalProductsController extends Controller
         $search = $request->string('search');
         $status = $request->string('status');
         $sort = $request->string('sort');
+        $scope = $request->string('scope')->toString();
 
         $query = DigitalProduct::query()
             ->with(['creator', 'cover', 'files', 'biolinks'])
@@ -37,6 +40,10 @@ class AdminDigitalProductsController extends Controller
 
         $query->when($status->isNotEmpty(), fn($q) => $q->where('status', $status));
 
+        $query->when($scope === 'updated', fn ($q) => $q
+            ->where('status', 'approved')
+            ->whereNotNull('review_requested_at'));
+
         // Handle sorting: sort=id:desc or price_cents:asc, etc.
         $allowedSorts = ['id', 'title', 'price_cents', 'created_at', 'status'];
         if ($sort->isNotEmpty()) {
@@ -54,6 +61,7 @@ class AdminDigitalProductsController extends Controller
             'approved' => ['total' => DigitalProduct::where('status', 'approved')->count()],
             'rejected' => ['total' => DigitalProduct::where('status', 'rejected')->count()],
             'draft' => ['total' => DigitalProduct::where('status', 'draft')->count()],
+            'updated' => ['total' => DigitalProduct::where('status', 'approved')->whereNotNull('review_requested_at')->count()],
         ];
 
         $products = $query->paginate((int) $request->input('perPage', 15));
@@ -65,6 +73,64 @@ class AdminDigitalProductsController extends Controller
         return response()->json($paginated);
     }
 
-    public function approve(DigitalProduct $digitalProduct) { Gate::authorize('admin.access'); abort_unless($digitalProduct->status === 'pending_approval', 422); $digitalProduct->update(['status' => 'approved', 'approved_at' => now(), 'rejection_reason' => null]); return $digitalProduct->fresh(); }
-    public function reject(Request $request, DigitalProduct $digitalProduct) { Gate::authorize('admin.access'); abort_unless($digitalProduct->status === 'pending_approval', 422); $data = $request->validate(['reason' => 'nullable|string|max:2000']); $digitalProduct->update(['status' => 'rejected', 'rejection_reason' => $data['reason'] ?? null]); return $digitalProduct->fresh(); }
+    public function approve(Request $request, DigitalProduct $digitalProduct)
+    {
+        Gate::authorize('admin.access');
+
+        $isUpdate = $digitalProduct->status === 'approved' && $digitalProduct->review_requested_at !== null;
+        abort_unless($digitalProduct->status === 'pending_approval' || $isUpdate, 422);
+        $from = $digitalProduct->status;
+
+        DB::transaction(function () use ($digitalProduct, $isUpdate, $from, $request): void {
+            $digitalProduct->update([
+                'status' => 'approved',
+                'approved_at' => now(),
+                'rejection_reason' => null,
+                'review_requested_at' => null,
+                'review_requested_by' => null,
+            ]);
+
+            app(ProductReviewHistory::class)->record(
+                $digitalProduct,
+                $isUpdate ? 'update_approved' : 'approved',
+                $from,
+                'approved',
+                $request->user(),
+                'admin',
+            );
+        });
+
+        return $digitalProduct->fresh()->load(['creator', 'cover', 'files', 'biolinks']);
+    }
+
+    public function reject(Request $request, DigitalProduct $digitalProduct)
+    {
+        Gate::authorize('admin.access');
+
+        $isUpdate = $digitalProduct->status === 'approved' && $digitalProduct->review_requested_at !== null;
+        abort_unless($digitalProduct->status === 'pending_approval' || $isUpdate, 422);
+        $data = $request->validate(['reason' => 'nullable|string|max:2000']);
+        $from = $digitalProduct->status;
+
+        DB::transaction(function () use ($digitalProduct, $data, $isUpdate, $from, $request): void {
+            $digitalProduct->update([
+                'status' => 'rejected',
+                'rejection_reason' => $data['reason'] ?? null,
+                'review_requested_at' => null,
+                'review_requested_by' => null,
+            ]);
+
+            app(ProductReviewHistory::class)->record(
+                $digitalProduct,
+                $isUpdate ? 'update_rejected' : 'rejected',
+                $from,
+                'rejected',
+                $request->user(),
+                'admin',
+                $data['reason'] ?? null,
+            );
+        });
+
+        return $digitalProduct->fresh()->load(['creator', 'cover', 'files', 'biolinks']);
+    }
 }
