@@ -78,6 +78,7 @@ class DigitalProductsController extends Controller
             $digitalProduct,
             $data,
             $entitlements->limit($creator, 'max_upload_bytes'),
+            $creator,
         );
 
         return new DigitalProductResource($product);

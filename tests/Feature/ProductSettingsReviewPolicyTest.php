@@ -156,7 +156,7 @@ class ProductSettingsReviewPolicyTest extends TestCase
         $this->assertSame('approved', DigitalProduct::find($productId)->status);
     }
 
-    public function testUpdateRevertsToDraftWhenUpdatingReviewEnabled(): void
+    public function testUpdateQueuesReviewWhenUpdatingReviewEnabled(): void
     {
         $creator = $this->createCreator();
         $workspace = $creator->workspaces()->first();
@@ -191,7 +191,9 @@ class ProductSettingsReviewPolicyTest extends TestCase
         );
         $response->assertOk();
 
-        $this->assertSame('draft', DigitalProduct::find($productId)->status);
+        $updated = DigitalProduct::find($productId);
+        $this->assertSame('approved', $updated->status);
+        $this->assertNotNull($updated->review_requested_at);
     }
 
     public function testLessonEditKeepsCourseApprovalWhenUpdatingReviewDisabled(): void
@@ -275,7 +277,9 @@ class ProductSettingsReviewPolicyTest extends TestCase
                 'file_ids' => [$file->id],
             ],
         )->assertOk();
-        $this->assertSame('draft', DigitalProduct::find($productId)->status);
+        $updated = DigitalProduct::find($productId);
+        $this->assertSame('approved', $updated->status);
+        $this->assertNotNull($updated->review_requested_at);
     }
 
     /**

@@ -38,20 +38,31 @@ final class DigitalProductMutationService
             $this->syncProductFiles($product, $data, $type, $maxUploadBytes);
             $this->visibility->sync($product, $data['biolink_ids'] ?? []);
 
+            app(ProductReviewHistory::class)->record(
+                $product,
+                'created',
+                null,
+                $product->status,
+                $creator,
+                'creator',
+            );
+
             return $product->fresh()->load(['files', 'cover', 'biolinks', 'course']);
         });
     }
 
-    public function update(DigitalProduct $product, array $data, ?int $maxUploadBytes): DigitalProduct
+    public function update(DigitalProduct $product, array $data, ?int $maxUploadBytes, ?User $actor = null): DigitalProduct
     {
-        return DB::transaction(function () use ($product, $data, $maxUploadBytes): DigitalProduct {
+        return DB::transaction(function () use ($product, $data, $maxUploadBytes, $actor): DigitalProduct {
             $type = $data['type'] ?? $product->type ?? 'digital';
             $product->update([
                 ...Arr::except($data, ['file_ids', 'biolink_ids', 'type']),
                 'type' => $type,
                 'currency' => $data['currency'] ?? $product->currency,
-                'status' => $product->status === 'approved' && app(ProductSettings::class)->updatingRequiresReview() ? 'draft' : $product->status,
             ]);
+
+            $changed = array_values(array_diff(array_keys($product->getChanges()), ['updated_at']));
+            $this->queueUpdateReviewIfNeeded($product, $actor);
 
             $this->assertCoverBelongsToWorkspace($product);
             $this->syncProductFiles($product, $data, $type, $maxUploadBytes);
@@ -63,8 +74,37 @@ final class DigitalProductMutationService
                 $data['biolink_ids'] ?? $product->biolinks()->pluck('biolinks.id')->all(),
             );
 
+            if ($changed !== []) {
+                app(ProductReviewHistory::class)->record(
+                    $product->fresh(),
+                    'updated',
+                    $product->status,
+                    $product->status,
+                    $actor,
+                    'creator',
+                    null,
+                    ['changed' => $changed],
+                );
+            }
+
             return $product->fresh()->load(['files', 'cover', 'biolinks', 'course']);
         });
+    }
+
+    private function queueUpdateReviewIfNeeded(DigitalProduct $product, ?User $actor): void
+    {
+        if ($product->status !== 'approved' || !app(ProductSettings::class)->updatingRequiresReview()) {
+            return;
+        }
+
+        if ($product->review_requested_at !== null) {
+            return;
+        }
+
+        $product->update([
+            'review_requested_at' => now(),
+            'review_requested_by' => $actor?->id ?? $product->user_id,
+        ]);
     }
 
     private function syncProductFiles(DigitalProduct $product, array $data, string $type, ?int $maxBytes): void

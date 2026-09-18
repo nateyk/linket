@@ -141,6 +141,89 @@ class ProductApprovalPipelineTest extends TestCase
         ]);
     }
 
+    public function testEditingApprovedProductQueuesReviewAndStaysLive(): void
+    {
+        settings()->save(['product.updating_requires_review' => 1]);
+        [$creator, $workspace, $product, $file, $biolink] = $this->approvedProductWithStore();
+
+        $this->stateful()->actingAs($creator)->putJson(
+            "/api/v1/digital-products/{$product->id}",
+            ['title' => 'Edited live', 'price_cents' => 1000, 'currency' => 'ETB', 'file_ids' => [$file->id]],
+        )->assertOk();
+
+        $fresh = $product->fresh();
+        $this->assertSame('approved', $fresh->status);
+        $this->assertNotNull($fresh->review_requested_at);
+        $this->assertSame($creator->id, $fresh->review_requested_by);
+        $this->assertDatabaseHas('digital_product_review_events', [
+            'digital_product_id' => $product->id,
+            'event' => 'updated',
+            'actor_role' => 'creator',
+        ]);
+
+        $listed = $this->stateful()->getJson("/api/v1/public/stores/{$biolink->id}/digital-products");
+        $listed->assertOk();
+        $this->assertNotNull(collect($listed->json('data'))->firstWhere('id', $product->id));
+    }
+
+    public function testEditingApprovedProductWithoutUpdateReviewStaysClean(): void
+    {
+        settings()->save(['product.updating_requires_review' => 0]);
+        [$creator, $workspace, $product, $file] = $this->approvedProductWithStore();
+
+        $this->stateful()->actingAs($creator)->putJson(
+            "/api/v1/digital-products/{$product->id}",
+            ['title' => 'Edited live', 'price_cents' => 1000, 'currency' => 'ETB', 'file_ids' => [$file->id]],
+        )->assertOk();
+
+        $fresh = $product->fresh();
+        $this->assertSame('approved', $fresh->status);
+        $this->assertNull($fresh->review_requested_at);
+    }
+
+    public function testSecondEditDoesNotResetReviewRequestedAt(): void
+    {
+        settings()->save(['product.updating_requires_review' => 1]);
+        [$creator, $workspace] = $this->creatorContext();
+        $file = $this->createFile($creator, $workspace);
+        $queuedAt = now()->subHour()->startOfSecond();
+        $product = $this->product($workspace, $creator, [
+            'status' => 'approved',
+            'approved_at' => now(),
+            'review_requested_at' => $queuedAt,
+            'review_requested_by' => $creator->id,
+        ]);
+        $product->files()->attach($file->id);
+
+        $this->stateful()->actingAs($creator)->putJson(
+            "/api/v1/digital-products/{$product->id}",
+            ['title' => 'Second edit', 'price_cents' => 1000, 'currency' => 'ETB', 'file_ids' => [$file->id]],
+        )->assertOk();
+
+        $this->assertTrue($queuedAt->equalTo($product->fresh()->review_requested_at));
+    }
+
+    public function testCreatingProductRecordsCreatedEvent(): void
+    {
+        settings()->save(['product.adding_requires_review' => 1]);
+        [$creator, $workspace] = $this->creatorContext();
+        $file = $this->createFile($creator, $workspace);
+
+        $response = $this->stateful()->actingAs($creator)->postJson('/api/v1/digital-products', [
+            'title' => 'New product',
+            'price_cents' => 1000,
+            'currency' => 'ETB',
+            'file_ids' => [$file->id],
+        ]);
+        $response->assertCreated();
+
+        $this->assertDatabaseHas('digital_product_review_events', [
+            'digital_product_id' => $response->json('data.id'),
+            'event' => 'created',
+            'actor_role' => 'creator',
+        ]);
+    }
+
     private function creatorContext(): array
     {
         $creator = $this->createCreator();
@@ -190,6 +273,26 @@ class ProductApprovalPipelineTest extends TestCase
             'currency' => 'ETB',
             'type' => 'digital',
         ], $attributes));
+    }
+
+    private function approvedProductWithStore(): array
+    {
+        [$creator, $workspace] = $this->creatorContext();
+        $file = $this->createFile($creator, $workspace);
+        $biolink = Biolink::query()->create([
+            'back_half' => Str::random(8),
+            'name' => 'Test Storefront',
+            'user_id' => $creator->id,
+            'workspace_id' => $workspace->id,
+        ]);
+        $product = $this->product($workspace, $creator, [
+            'status' => 'approved',
+            'approved_at' => now(),
+        ]);
+        $product->files()->attach($file->id);
+        $product->biolinks()->attach($biolink->id);
+
+        return [$creator, $workspace, $product, $file, $biolink];
     }
 
     private function stateful(): static
