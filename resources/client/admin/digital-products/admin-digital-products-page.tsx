@@ -20,9 +20,11 @@ import {
   LandmarkIcon,
   PackageIcon,
   PackageSearchIcon,
+  RefreshCwIcon,
   SearchIcon,
   XCircleIcon,
 } from 'lucide-react';
+import {parseAsString} from 'nuqs';
 import {useSuspenseQuery} from '@tanstack/react-query';
 import {Link} from 'react-router';
 import {adminDigitalProductColumns} from './admin-digital-products-datatable-columns';
@@ -34,6 +36,7 @@ export function Component() {
   const {queryState, setQueryState, deferredSearchParams, isFiltering, isLoading} =
     useTableQueryState({
       filters: AdminDigitalProductsDatatableFilters,
+      parsers: {scope: parseAsString.withDefault('')},
     });
 
   const query = useSuspenseQuery(adminDigitalProductsOptions(deferredSearchParams));
@@ -43,6 +46,9 @@ export function Component() {
   const pending = counters?.pending_approval?.total ?? 0;
   const approved = counters?.approved?.total ?? 0;
   const rejected = counters?.rejected?.total ?? 0;
+  const updated = counters?.updated?.total ?? 0;
+  const scope = queryState.scope;
+  const isScopeFiltering = scope === 'updated';
 
   const table = useTable({
     data: items,
@@ -106,7 +112,7 @@ export function Component() {
 
       <DashboardLayout.SectionContent className="overflow-y-auto">
         <div className="mx-auto w-full max-w-6xl space-y-5 py-6">
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
             <MetricCard
               label="All products"
               value={String(total)}
@@ -130,6 +136,19 @@ export function Component() {
               icon={<XCircleIcon />}
               tone={rejected > 0 ? 'warning' : 'default'}
             />
+            <MetricCard
+              label="Updates pending"
+              value={String(updated)}
+              icon={<RefreshCwIcon />}
+              tone={updated > 0 ? 'warning' : 'default'}
+              active={isScopeFiltering}
+              onClick={() =>
+                setQueryState(
+                  {scope: scope === 'updated' ? null : 'updated'},
+                  {resetPage: true},
+                )
+              }
+            />
           </div>
 
           <Card.Root>
@@ -142,8 +161,14 @@ export function Component() {
                   <Trans message="Moderate creator submissions and manage their lifecycle." />
                 </Card.Description>
               </div>
-              {isFiltering && (
-                <Button size="sm" variant="ghost" onClick={() => setQueryState({status: null, query: null})}>
+              {(isFiltering || isScopeFiltering) && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() =>
+                    setQueryState({status: null, query: null, scope: null})
+                  }
+                >
                   <Trans message="Clear filters" />
                 </Button>
               )}
@@ -170,8 +195,10 @@ export function Component() {
                 </div>
                 {!items.length && (
                   <DigitalProductsEmptyState
-                    isFiltering={isFiltering}
-                    onClearFilters={() => setQueryState({status: null, query: null})}
+                    isFiltering={isFiltering || isScopeFiltering}
+                    onClearFilters={() =>
+                      setQueryState({status: null, query: null, scope: null})
+                    }
                   />
                 )}
               </div>
@@ -189,11 +216,15 @@ function MetricCard({
   value,
   icon,
   tone = 'default',
+  active = false,
+  onClick,
 }: {
   label: string;
   value: string;
   icon: ReactNode;
   tone?: 'default' | 'positive' | 'warning';
+  active?: boolean;
+  onClick?: () => void;
 }) {
   const iconClass =
     tone === 'positive'
@@ -201,7 +232,8 @@ function MetricCard({
       : tone === 'warning'
         ? 'text-amber-600 bg-amber-500/10 dark:text-amber-400'
         : 'text-muted-foreground bg-muted';
-  return (
+
+  const card = (
     <Card size="sm" className="gap-3">
       <Card.Header>
         <Card.Title className="truncate text-sm font-normal text-muted-foreground">
@@ -216,9 +248,28 @@ function MetricCard({
         </Card.Action>
       </Card.Header>
       <Card.Content>
-        <p className="truncate text-2xl font-semibold tracking-tight tabular-nums">{value}</p>
+        <p className="truncate text-2xl font-semibold tracking-tight tabular-nums">
+          {value}
+        </p>
       </Card.Content>
     </Card>
+  );
+
+  if (!onClick) {
+    return card;
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`rounded-card text-left transition-opacity hover:opacity-90 ${
+        active ? 'ring-2 ring-amber-500/60 ring-offset-2 ring-offset-background' : ''
+      }`}
+    >
+      {card}
+    </button>
   );
 }
 

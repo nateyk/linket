@@ -12,6 +12,7 @@ export const adminDigitalProductsOptions = (
     status: params.status ?? '',
     page: params.page ?? '1',
     sort: params.sort ?? '',
+    scope: params.scope ?? '',
   };
   return queryOptions({
     queryKey: [...adminDigitalProductsBaseKey, params],

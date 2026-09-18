@@ -54,23 +54,44 @@ class CourseService
     }
 
     /**
-     * Re-review gate: any content change on an approved course reverts the
-     * product to draft and unpublishes the course, forcing re-approval,
-     * unless the platform product policy disables update reviews.
+     * Re-review gate: any content change on an approved course queues the
+     * product for review (sets review_requested_at) while leaving it approved
+     * and the course published/sellable, unless the platform product policy
+     * disables update reviews.
      * Mirrors the inline logic in CoursesController::update() and
      * DigitalProductMutationService::update(). Cosmetic-only changes
      * (chapter/lesson reordering) must NOT call this.
      */
     public function revertApprovalForContentChange(Course $course): void
     {
-        if (!app(\App\Storefront\ProductSettings::class)->updatingRequiresReview()) {
+        if (!app(\App\Storefront\ProductSettings::class)->updatingRequiresReviewForCourse()) {
             return;
         }
+
         $product = $course->product;
-        if ($product && $product->status === 'approved') {
-            $product->update(['status' => 'draft']);
-            $course->update(['published_at' => null]);
+        if (!$product || $product->status !== 'approved') {
+            return;
         }
+
+        DB::transaction(function () use ($product): void {
+            if ($product->review_requested_at === null) {
+                $product->update([
+                    'review_requested_at' => now(),
+                    'review_requested_by' => $product->user_id,
+                ]);
+            }
+
+            app(\App\Storefront\ProductReviewHistory::class)->record(
+                $product->fresh(),
+                'updated',
+                'approved',
+                'approved',
+                \App\Models\User::query()->find($product->user_id),
+                'creator',
+                null,
+                ['changed' => ['course_content']],
+            );
+        });
     }
 
     public function updateSettings(Course $course, array $data): Course {

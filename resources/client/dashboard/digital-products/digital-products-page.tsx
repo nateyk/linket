@@ -62,6 +62,8 @@ type Product = {
   is_course?: boolean;
   status: ProductStatus;
   rejection_reason?: string | null;
+  review_requested_at?: string | null;
+  has_pending_update?: boolean;
   sales_count: number;
   gross_revenue_cents: number;
   cover?: {url: string} | null;
@@ -267,7 +269,10 @@ function ProductCard({
           )}
         </Link>
         <div className="absolute top-3 left-3">
-          <StatusBadge status={product.status} />
+          <StatusBadge
+            status={product.status}
+            hasPendingUpdate={product.has_pending_update}
+          />
         </div>
       </Card.Header>
 
@@ -545,8 +550,23 @@ function ProductCoverFallback() {
   );
 }
 
-function StatusBadge({status}: {status: ProductStatus}) {
+function StatusBadge({
+  status,
+  hasPendingUpdate = false,
+}: {
+  status: ProductStatus;
+  hasPendingUpdate?: boolean;
+}) {
   const className = 'border border-border/70 bg-background/95 shadow-sm';
+
+  if (status === 'approved' && hasPendingUpdate) {
+    return (
+      <Badge variant="outline" className={className}>
+        <Clock3Icon />
+        <Trans message="Update under review" />
+      </Badge>
+    );
+  }
 
   switch (status) {
     case 'pending_approval':

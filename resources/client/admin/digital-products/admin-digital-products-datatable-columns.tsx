@@ -38,6 +38,8 @@ export type AdminDigitalProduct = {
   currency: string;
   status: 'pending_approval' | 'approved' | 'rejected' | 'draft';
   rejection_reason?: string | null;
+  review_requested_at?: string | null;
+  has_pending_update?: boolean;
   created_at?: string;
   creator?: {name: string; email: string};
   cover?: {url: string} | null;
@@ -174,7 +176,10 @@ export const adminDigitalProductColumns: ColumnDef<AdminDigitalProduct>[] = [
     ),
     cell: ({row}) => (
       <div className="flex justify-center">
-        <ProductStatusBadge status={row.original.status} />
+        <ProductStatusBadge
+          status={row.original.status}
+          hasPendingUpdate={row.original.has_pending_update}
+        />
       </div>
     ),
   },
@@ -253,6 +258,8 @@ export function ProductActionsButton({
   const queryClient = useQueryClient();
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [reason, setReason] = useState('');
+  const isUpdate = product.status === 'approved' && !!product.has_pending_update;
+  const isActionable = product.status === 'pending_approval' || isUpdate;
 
   const approve = useMutation({
     mutationFn: () =>
@@ -364,6 +371,11 @@ export function ProductActionsButton({
                   />
                 </p>
               </div>
+              {isUpdate && (
+                <p className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-300">
+                  <Trans message="This update is live on the storefront until it is reviewed." />
+                </p>
+              )}
               {product.status === 'rejected' && product.rejection_reason && (
                 <p className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
                   <Trans
@@ -372,7 +384,7 @@ export function ProductActionsButton({
                   />
                 </p>
               )}
-              {product.status === 'pending_approval' && (
+              {isActionable && (
                 <Field.Root>
                   <Field.Label htmlFor="rejection-reason">
                     <Trans message="Rejection reason (optional)" />
@@ -395,7 +407,7 @@ export function ProductActionsButton({
               >
                 <Trans message="Close" />
               </Button>
-              {product.status === 'pending_approval' && (
+              {isActionable && (
                 <>
                   <Button
                     variant="outline"
@@ -425,9 +437,28 @@ export function ProductActionsButton({
 
 export function ProductStatusBadge({
   status,
+  hasPendingUpdate = false,
 }: {
   status: AdminDigitalProduct['status'];
+  hasPendingUpdate?: boolean;
 }) {
+  if (status === 'approved' && hasPendingUpdate) {
+    return (
+      <div className="flex items-center gap-1.5">
+        <Badge variant="positive" className="font-medium">
+          <BadgeCheckIcon className="size-3.5" aria-hidden="true" />
+          <Trans message="Approved" />
+        </Badge>
+        <Badge
+          variant="outline"
+          className="border-amber-200 bg-amber-50 font-medium text-amber-700 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-300"
+        >
+          <ClockIcon className="size-3.5" aria-hidden="true" />
+          <Trans message="Update" />
+        </Badge>
+      </div>
+    );
+  }
   if (status === 'approved') {
     return (
       <Badge variant="positive" className="font-medium">

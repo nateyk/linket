@@ -38,22 +38,34 @@ final class DigitalProductMutationService
             $this->syncProductFiles($product, $data, $type, $maxUploadBytes);
             $this->visibility->sync($product, $data['biolink_ids'] ?? []);
 
+            app(ProductReviewHistory::class)->record(
+                $product,
+                'created',
+                null,
+                $product->fresh()->status,
+                $creator,
+                'creator',
+            );
+
             return $product->fresh()->load(['files', 'cover', 'biolinks', 'course']);
         });
     }
 
-    public function update(DigitalProduct $product, array $data, ?int $maxUploadBytes): DigitalProduct
+    public function update(DigitalProduct $product, array $data, ?int $maxUploadBytes, ?User $actor = null): DigitalProduct
     {
-        return DB::transaction(function () use ($product, $data, $maxUploadBytes): DigitalProduct {
+        return DB::transaction(function () use ($product, $data, $maxUploadBytes, $actor): DigitalProduct {
             $type = $data['type'] ?? $product->type ?? 'digital';
             $product->update([
                 ...Arr::except($data, ['file_ids', 'biolink_ids', 'type']),
                 'type' => $type,
                 'currency' => $data['currency'] ?? $product->currency,
-                'status' => $product->status === 'approved' && app(ProductSettings::class)->updatingRequiresReview() ? 'draft' : $product->status,
             ]);
 
+            $changed = array_values(array_diff(array_keys($product->getChanges()), ['updated_at']));
+
             $this->assertCoverBelongsToWorkspace($product);
+            $fileIdsBefore = $product->files()->pluck('file_entries.id')->sort()->values()->all();
+            $biolinkIdsBefore = $product->biolinks()->pluck('biolinks.id')->sort()->values()->all();
             $this->syncProductFiles($product, $data, $type, $maxUploadBytes);
             if ($type === 'course') {
                 $this->courses->ensureForProduct($product->fresh());
@@ -63,8 +75,56 @@ final class DigitalProductMutationService
                 $data['biolink_ids'] ?? $product->biolinks()->pluck('biolinks.id')->all(),
             );
 
+            if ($product->files()->pluck('file_entries.id')->sort()->values()->all() !== $fileIdsBefore) {
+                $changed[] = 'file_ids';
+            }
+            if ($product->biolinks()->pluck('biolinks.id')->sort()->values()->all() !== $biolinkIdsBefore) {
+                $changed[] = 'biolink_ids';
+            }
+
+            if ($changed !== []) {
+                $queuedReview = $this->queueUpdateReviewIfNeeded($product, $actor);
+                $meta = ['changed' => $changed];
+                if ($queuedReview) {
+                    $meta['review_requested'] = true;
+                }
+
+                app(ProductReviewHistory::class)->record(
+                    $product->fresh(),
+                    'updated',
+                    $product->status,
+                    $product->status,
+                    $actor,
+                    'creator',
+                    null,
+                    $meta,
+                );
+            }
+
             return $product->fresh()->load(['files', 'cover', 'biolinks', 'course']);
         });
+    }
+
+    private function queueUpdateReviewIfNeeded(DigitalProduct $product, ?User $actor): bool
+    {
+        $requiresReview = $product->isCourse()
+            ? app(ProductSettings::class)->updatingRequiresReviewForCourse()
+            : app(ProductSettings::class)->updatingRequiresReview();
+
+        if ($product->status !== 'approved' || !$requiresReview) {
+            return false;
+        }
+
+        if ($product->review_requested_at !== null) {
+            return false;
+        }
+
+        $product->update([
+            'review_requested_at' => now(),
+            'review_requested_by' => $actor?->id ?? $product->user_id,
+        ]);
+
+        return true;
     }
 
     private function syncProductFiles(DigitalProduct $product, array $data, string $type, ?int $maxBytes): void

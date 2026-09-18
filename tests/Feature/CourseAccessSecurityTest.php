@@ -248,8 +248,10 @@ class CourseAccessSecurityTest extends TestCase
     }
 
     /** @test */
-    public function lesson_content_edit_on_approved_course_reverts_product_to_draft()
+    public function lesson_content_edit_on_approved_course_queues_review_and_stays_live()
     {
+        $productId = $this->course->product->id;
+
         // Verify course is approved
         $this->assertEquals('approved', $this->course->product->status);
 
@@ -263,17 +265,25 @@ class CourseAccessSecurityTest extends TestCase
 
         $response->assertOk();
 
-        // Refresh and check product status - should now be 'draft' (re-review required)
+        // Post-moderation: the product stays approved and the course stays
+        // published while the edit awaits review.
         $this->course->product->refresh();
-        $this->assertEquals('draft', $this->course->product->status,
-            'Editing lesson content on an approved course should revert it to draft');
+        $this->assertEquals('approved', $this->course->product->status,
+            'Editing lesson content on an approved course should keep it approved');
+        $this->assertNotNull($this->course->product->review_requested_at,
+            'Editing lesson content on an approved course should queue a review');
         $this->course->refresh();
-        $this->assertNull($this->course->published_at,
-            'Editing lesson content on an approved course should unpublish it');
+        $this->assertNotNull($this->course->published_at,
+            'Editing lesson content on an approved course should keep it published');
+        $this->assertDatabaseHas('digital_product_review_events', [
+            'digital_product_id' => $productId,
+            'event' => 'updated',
+            'actor_role' => 'creator',
+        ]);
     }
 
     /** @test */
-    public function lesson_sort_order_only_edit_does_not_revert_approved_course()
+    public function lesson_sort_order_only_edit_does_not_queue_review()
     {
         // Verify course is approved
         $this->assertEquals('approved', $this->course->product->status);
@@ -289,15 +299,19 @@ class CourseAccessSecurityTest extends TestCase
 
         $response->assertOk();
 
-        // Refresh and check product status - should still be 'approved'
+        // Cosmetic-only edits must not queue a review.
         $this->course->product->refresh();
         $this->assertEquals('approved', $this->course->product->status,
             'Pure sort_order edits should NOT revert an approved course to draft');
+        $this->assertNull($this->course->product->review_requested_at,
+            'Pure sort_order edits should NOT queue a review');
     }
 
     /** @test */
-    public function course_edit_on_approved_course_reverts_to_draft()
+    public function course_edit_on_approved_course_queues_review_and_stays_published()
     {
+        $productId = $this->course->product->id;
+
         // Verify course is approved
         $this->assertEquals('approved', $this->course->product->status);
 
@@ -310,15 +324,26 @@ class CourseAccessSecurityTest extends TestCase
 
         $response->assertOk();
 
-        // Refresh and check product status - should be 'draft'
+        // Post-moderation: keep the product approved and the course published.
         $this->course->product->refresh();
-        $this->assertEquals('draft', $this->course->product->status,
-            'Editing an approved course should revert to draft');
+        $this->assertEquals('approved', $this->course->product->status,
+            'Editing an approved course should keep it approved');
+        $this->assertNotNull($this->course->product->review_requested_at,
+            'Editing an approved course should queue a review');
+        $this->course->refresh();
+        $this->assertNotNull($this->course->published_at,
+            'Editing an approved course should keep it published');
+        $this->assertDatabaseHas('digital_product_review_events', [
+            'digital_product_id' => $productId,
+            'event' => 'updated',
+            'actor_role' => 'creator',
+        ]);
     }
 
     /** @test */
-    public function lesson_resource_add_reverts_approved_course_to_draft()
+    public function lesson_resource_add_queues_review_and_stays_published()
     {
+        $productId = $this->course->product->id;
         $this->assertEquals('approved', $this->course->product->status);
 
         $file = FileEntry::create([
@@ -343,16 +368,24 @@ class CourseAccessSecurityTest extends TestCase
         $response->assertCreated();
 
         $this->course->product->refresh();
-        $this->assertEquals('draft', $this->course->product->status,
-            'Adding a lesson attachment on an approved course should revert it to draft');
+        $this->assertEquals('approved', $this->course->product->status,
+            'Adding a lesson attachment on an approved course should keep it approved');
+        $this->assertNotNull($this->course->product->review_requested_at,
+            'Adding a lesson attachment on an approved course should queue a review');
         $this->course->refresh();
-        $this->assertNull($this->course->published_at,
-            'Adding a lesson attachment on an approved course should unpublish it');
+        $this->assertNotNull($this->course->published_at,
+            'Adding a lesson attachment on an approved course should keep it published');
+        $this->assertDatabaseHas('digital_product_review_events', [
+            'digital_product_id' => $productId,
+            'event' => 'updated',
+            'actor_role' => 'creator',
+        ]);
     }
 
     /** @test */
-    public function lesson_resource_remove_reverts_approved_course_to_draft()
+    public function lesson_resource_remove_queues_review_and_stays_published()
     {
+        $productId = $this->course->product->id;
         $this->assertEquals('approved', $this->course->product->status);
 
         $response = $this->stateful()
@@ -362,16 +395,24 @@ class CourseAccessSecurityTest extends TestCase
         $response->assertNoContent();
 
         $this->course->product->refresh();
-        $this->assertEquals('draft', $this->course->product->status,
-            'Removing a lesson attachment on an approved course should revert it to draft');
+        $this->assertEquals('approved', $this->course->product->status,
+            'Removing a lesson attachment on an approved course should keep it approved');
+        $this->assertNotNull($this->course->product->review_requested_at,
+            'Removing a lesson attachment on an approved course should queue a review');
         $this->course->refresh();
-        $this->assertNull($this->course->published_at,
-            'Removing a lesson attachment on an approved course should unpublish it');
+        $this->assertNotNull($this->course->published_at,
+            'Removing a lesson attachment on an approved course should keep it published');
+        $this->assertDatabaseHas('digital_product_review_events', [
+            'digital_product_id' => $productId,
+            'event' => 'updated',
+            'actor_role' => 'creator',
+        ]);
     }
 
     /** @test */
-    public function lesson_delete_reverts_approved_course_to_draft()
+    public function lesson_delete_queues_review_and_stays_published()
     {
+        $productId = $this->course->product->id;
         $this->assertEquals('approved', $this->course->product->status);
 
         $response = $this->stateful()
@@ -381,16 +422,24 @@ class CourseAccessSecurityTest extends TestCase
         $response->assertNoContent();
 
         $this->course->product->refresh();
-        $this->assertEquals('draft', $this->course->product->status,
-            'Deleting a lesson on an approved course should revert it to draft');
+        $this->assertEquals('approved', $this->course->product->status,
+            'Deleting a lesson on an approved course should keep it approved');
+        $this->assertNotNull($this->course->product->review_requested_at,
+            'Deleting a lesson on an approved course should queue a review');
         $this->course->refresh();
-        $this->assertNull($this->course->published_at,
-            'Deleting a lesson on an approved course should unpublish it');
+        $this->assertNotNull($this->course->published_at,
+            'Deleting a lesson on an approved course should keep it published');
+        $this->assertDatabaseHas('digital_product_review_events', [
+            'digital_product_id' => $productId,
+            'event' => 'updated',
+            'actor_role' => 'creator',
+        ]);
     }
 
     /** @test */
-    public function lesson_duplicate_reverts_approved_course_to_draft()
+    public function lesson_duplicate_queues_review_and_stays_published()
     {
+        $productId = $this->course->product->id;
         $this->assertEquals('approved', $this->course->product->status);
 
         $response = $this->stateful()
@@ -400,16 +449,24 @@ class CourseAccessSecurityTest extends TestCase
         $response->assertCreated();
 
         $this->course->product->refresh();
-        $this->assertEquals('draft', $this->course->product->status,
-            'Duplicating a lesson on an approved course should revert it to draft');
+        $this->assertEquals('approved', $this->course->product->status,
+            'Duplicating a lesson on an approved course should keep it approved');
+        $this->assertNotNull($this->course->product->review_requested_at,
+            'Duplicating a lesson on an approved course should queue a review');
         $this->course->refresh();
-        $this->assertNull($this->course->published_at,
-            'Duplicating a lesson on an approved course should unpublish it');
+        $this->assertNotNull($this->course->published_at,
+            'Duplicating a lesson on an approved course should keep it published');
+        $this->assertDatabaseHas('digital_product_review_events', [
+            'digital_product_id' => $productId,
+            'event' => 'updated',
+            'actor_role' => 'creator',
+        ]);
     }
 
     /** @test */
-    public function chapter_delete_reverts_approved_course_to_draft()
+    public function chapter_delete_queues_review_and_stays_published()
     {
+        $productId = $this->course->product->id;
         $this->assertEquals('approved', $this->course->product->status);
 
         $response = $this->stateful()
@@ -419,11 +476,18 @@ class CourseAccessSecurityTest extends TestCase
         $response->assertNoContent();
 
         $this->course->product->refresh();
-        $this->assertEquals('draft', $this->course->product->status,
-            'Deleting a chapter on an approved course should revert it to draft');
+        $this->assertEquals('approved', $this->course->product->status,
+            'Deleting a chapter on an approved course should keep it approved');
+        $this->assertNotNull($this->course->product->review_requested_at,
+            'Deleting a chapter on an approved course should queue a review');
         $this->course->refresh();
-        $this->assertNull($this->course->published_at,
-            'Deleting a chapter on an approved course should unpublish it');
+        $this->assertNotNull($this->course->published_at,
+            'Deleting a chapter on an approved course should keep it published');
+        $this->assertDatabaseHas('digital_product_review_events', [
+            'digital_product_id' => $productId,
+            'event' => 'updated',
+            'actor_role' => 'creator',
+        ]);
     }
 
     private function stateful(): static
