@@ -103,10 +103,24 @@ class CoursesController extends Controller
                     $policy->enforcePricePolicy($productData['price_cents']);
                 }
                 $course->product->update($productData);
-                // if course product was approved, editing should draft it (consistent with DigitalProductsController)
+                // Keep a live course sellable while its edit awaits review.
                 if ($course->product->status === 'approved' && $policy->updatingRequiresReview()) {
-                    $course->product->update(['status' => 'draft']);
-                    $course->update(['published_at' => null]);
+                    if ($course->product->review_requested_at === null) {
+                        $course->product->update([
+                            'review_requested_at' => now(),
+                            'review_requested_by' => $request->user()->id,
+                        ]);
+                    }
+                    app(\App\Storefront\ProductReviewHistory::class)->record(
+                        $course->product->fresh(),
+                        'updated',
+                        'approved',
+                        'approved',
+                        $request->user(),
+                        'creator',
+                        null,
+                        ['changed' => array_keys($productData)],
+                    );
                 }
             }
 

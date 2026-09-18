@@ -264,6 +264,54 @@ class ProductApprovalPipelineTest extends TestCase
         $this->assertContains('file_ids', $event->meta['changed']);
     }
 
+    public function testCourseContentChangeQueuesReviewAndStaysPublished(): void
+    {
+        settings()->save(['product.updating_requires_review' => 1]);
+        [$creator, $workspace] = $this->creatorContext();
+        $product = $this->product($workspace, $creator, [
+            'status' => 'approved',
+            'approved_at' => now(),
+            'type' => 'course',
+        ]);
+        $course = \App\Courses\Models\Course::query()->create([
+            'digital_product_id' => $product->id,
+            'instructor_user_id' => $creator->id,
+            'published_at' => now(),
+        ]);
+
+        app(\App\Courses\Services\CourseService::class)->revertApprovalForContentChange($course);
+
+        $this->assertSame('approved', $product->fresh()->status);
+        $this->assertNotNull($product->fresh()->review_requested_at);
+        $this->assertNotNull($course->fresh()->published_at);
+        $this->assertDatabaseHas('digital_product_review_events', [
+            'digital_product_id' => $product->id,
+            'event' => 'updated',
+        ]);
+    }
+
+    public function testCourseContentChangeWithoutUpdateReviewStaysClean(): void
+    {
+        settings()->save(['product.updating_requires_review' => 0]);
+        [$creator, $workspace] = $this->creatorContext();
+        $product = $this->product($workspace, $creator, [
+            'status' => 'approved',
+            'approved_at' => now(),
+            'type' => 'course',
+        ]);
+        $course = \App\Courses\Models\Course::query()->create([
+            'digital_product_id' => $product->id,
+            'instructor_user_id' => $creator->id,
+            'published_at' => now(),
+        ]);
+
+        app(\App\Courses\Services\CourseService::class)->revertApprovalForContentChange($course);
+
+        $this->assertSame('approved', $product->fresh()->status);
+        $this->assertNull($product->fresh()->review_requested_at);
+        $this->assertNotNull($course->fresh()->published_at);
+    }
+
     private function creatorContext(): array
     {
         $creator = $this->createCreator();
