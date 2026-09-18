@@ -60,6 +60,8 @@ class DigitalProductResource extends JsonResource
                 'instructor_user_id' => $this->course->instructor_user_id,
             ] : null),
             'approved_at' => $this->approved_at,
+            'review_requested_at' => $this->review_requested_at,
+            'has_pending_update' => $this->resource->hasPendingUpdate(),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

@@ -312,6 +312,25 @@ class ProductApprovalPipelineTest extends TestCase
         $this->assertNotNull($course->fresh()->published_at);
     }
 
+    public function testCreatorIndexExposesPendingUpdateFlag(): void
+    {
+        settings()->save(['product.updating_requires_review' => 1]);
+        [$creator, $workspace] = $this->creatorContext();
+        $product = $this->product($workspace, $creator, [
+            'status' => 'approved',
+            'approved_at' => now(),
+            'review_requested_at' => now(),
+        ]);
+
+        $response = $this->stateful()->actingAs($creator)->getJson('/api/v1/digital-products');
+
+        $response->assertOk();
+        $row = collect($response->json('data'))->firstWhere('id', $product->id);
+        $this->assertNotNull($row);
+        $this->assertTrue($row['has_pending_update']);
+        $this->assertNotNull($row['review_requested_at']);
+    }
+
     private function creatorContext(): array
     {
         $creator = $this->createCreator();
