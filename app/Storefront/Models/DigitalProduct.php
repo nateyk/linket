@@ -29,9 +29,11 @@ class DigitalProduct extends StorefrontModel
         'status',
         'rejection_reason',
         'approved_at',
+        'review_requested_at',
+        'review_requested_by',
         'type',
     ];
-    protected $casts = ['price_cents' => 'integer', 'approved_at' => 'datetime', 'workspace_id' => 'integer', 'user_id' => 'integer', 'learning_outcomes' => 'array'];
+    protected $casts = ['price_cents' => 'integer', 'approved_at' => 'datetime', 'review_requested_at' => 'datetime', 'workspace_id' => 'integer', 'user_id' => 'integer', 'learning_outcomes' => 'array'];
 
     public function course(): \Illuminate\Database\Eloquent\Relations\HasOne { return $this->hasOne(\App\Courses\Models\Course::class); }
     public function isCourse(): bool { return ($this->type ?? 'digital') === 'course'; }
@@ -49,4 +51,19 @@ class DigitalProduct extends StorefrontModel
     public function biolinks(): BelongsToMany { return $this->belongsToMany(Biolink::class, Store::isTableRenameDone() ? 'digital_product_store' : 'digital_product_biolinks', 'digital_product_id', 'biolink_id')->withTimestamps(); }
     public function orders(): HasMany { return $this->hasMany(StorefrontOrder::class); }
     public function isApproved(): bool { return $this->status === 'approved'; }
+
+    public function reviewRequestedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'review_requested_by');
+    }
+
+    public function reviewEvents(): HasMany
+    {
+        return $this->hasMany(DigitalProductReviewEvent::class);
+    }
+
+    public function hasPendingUpdate(): bool
+    {
+        return $this->status === 'approved' && $this->review_requested_at !== null;
+    }
 }
