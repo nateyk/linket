@@ -12,7 +12,6 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Log;
 use Intervention\Image\ImageManager;
 
 class ConvertProductCoverToWebp implements ShouldQueue
@@ -52,25 +51,17 @@ class ConvertProductCoverToWebp implements ShouldQueue
             return;
         }
 
-        try {
-            $webp = $this->convert($entry);
-            if ($webp === null) {
-                return;
-            }
-
-            $newEntry = $this->store($entry, $webp);
-
-            DigitalProduct::query()
-                ->whereKey($this->productId)
-                ->where('cover_file_entry_id', $this->coverFileEntryId)
-                ->update(['cover_file_entry_id' => $newEntry->id]);
-        } catch (\Throwable $e) {
-            Log::error('Failed to convert product cover to WebP', [
-                'product_id' => $this->productId,
-                'file_entry_id' => $this->coverFileEntryId,
-                'message' => $e->getMessage(),
-            ]);
+        $webp = $this->convert($entry);
+        if ($webp === null) {
+            return;
         }
+
+        $newEntry = $this->store($entry, $webp);
+
+        DigitalProduct::query()
+            ->whereKey($this->productId)
+            ->where('cover_file_entry_id', $this->coverFileEntryId)
+            ->update(['cover_file_entry_id' => $newEntry->id]);
     }
 
     private function convert(FileEntry $entry): ?string
