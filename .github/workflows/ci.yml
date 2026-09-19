@@ -61,7 +61,7 @@ jobs:
           # Ensure app is considered installed so CommonServiceProvider registers api middleware (optionalAuth etc.)
           sed -i 's/^INSTALLED=.*/INSTALLED=true/' .env
           grep -q "^INSTALLED=true" .env || echo "INSTALLED=true" >> .env
-          echo "APP_KEY=base64:CiTestKeyForGithubActionsOnly123456789012=" >> .env
+          echo "APP_KEY=base64:$(php -r 'echo base64_encode(random_bytes(32));')" >> .env
           # Override to CI-safe values — never use production redis/hosts
           cat >> .env <<'EOF'
           APP_ENV=testing
@@ -87,6 +87,9 @@ jobs:
         run: composer install --prefer-dist --no-interaction --no-progress
         env:
           COMPOSER_AUDIT_ABANDONED: ignore
+
+      - name: Ensure a valid APP_KEY
+        run: php artisan key:generate --force
 
       - name: Setup Node 20
         uses: actions/setup-node@v4
