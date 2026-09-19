@@ -71,7 +71,7 @@ class ProductModerationNotification extends Notification implements ShouldQueue
 
     public function shouldSend(object $notifiable, string $channel): bool
     {
-        return DigitalProduct::withTrashed()->whereKey($this->productId)->exists();
+        return DigitalProduct::whereKey($this->productId)->exists();
     }
 
     public function toMail(object $notifiable): MailMessage { /* see copy below */ }
@@ -81,10 +81,11 @@ class ProductModerationNotification extends Notification implements ShouldQueue
 ```
 
 The product is loaded inside `toMail`/`toDatabase` with
-`DigitalProduct::withTrashed()->with('cover')->find($this->productId)`, matching
-the existing `SendStorefrontReviewNotification` job which loads by id rather than
-serializing the model. `shouldSend` cancels the notification if the product has
-since been deleted, so a queued job for a removed product does not error.
+`DigitalProduct::find($this->productId)`, matching the existing
+`SendStorefrontReviewNotification` job which loads by id rather than serializing
+the model. `shouldSend` cancels the notification if the product has since been
+deleted (including soft-deleted), so a queued job for a removed product does not
+error and does not link to a dead product.
 
 ### Message copy
 

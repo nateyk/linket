@@ -47,6 +47,14 @@ class ProductModerationNotification extends Notification implements ShouldQueue
     {
         $product = $this->product();
 
+        if (!$product) {
+            return (new MailMessage())
+                ->subject(__('Product update'))
+                ->greeting(__('Hello, :name', ['name' => $notifiable->name]))
+                ->line(__('Your product catalog changed. Open your dashboard for the latest.'))
+                ->action(__('Open dashboard'), url('/dashboard/my-products'));
+        }
+
         $mail = (new MailMessage())
             ->subject($this->subject())
             ->greeting(__('Hello, :name', ['name' => $notifiable->name]))
@@ -62,6 +70,16 @@ class ProductModerationNotification extends Notification implements ShouldQueue
     public function toDatabase(object $notifiable): array
     {
         $product = $this->product();
+
+        if (!$product) {
+            return [
+                'mainAction' => ['label' => __('Open dashboard'), 'action' => url('/dashboard/my-products')],
+                'lines' => [[
+                    'content' => e(__('Your product catalog changed. Open your dashboard for the latest.')),
+                    'type' => 'primary',
+                ]],
+            ];
+        }
 
         $lines = [
             ['content' => e($this->summary($product)), 'type' => 'primary'],
@@ -83,9 +101,9 @@ class ProductModerationNotification extends Notification implements ShouldQueue
         ];
     }
 
-    private function product(): DigitalProduct
+    private function product(): ?DigitalProduct
     {
-        return DigitalProduct::query()->with('cover')->findOrFail($this->productId);
+        return DigitalProduct::query()->find($this->productId);
     }
 
     private function isRejection(): bool

@@ -262,9 +262,17 @@ class AdminDigitalProductsController extends Controller
             return null;
         }
 
-        $result['product']->creator?->notify(
-            new ProductModerationNotification($result['product']->id, $result['event'], $reason),
-        );
+        try {
+            $result['product']->creator?->notify(
+                new ProductModerationNotification($result['product']->id, $result['event'], $reason),
+            );
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to queue product moderation notification', [
+                'product_id' => $result['product']->id,
+                'event' => $result['event'],
+                'message' => $e->getMessage(),
+            ]);
+        }
 
         return $result['product'];
     }
