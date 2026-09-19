@@ -80,9 +80,10 @@ public function __construct(
    cast to string. Return if decoding/encoding throws.
 8. Store the bytes and create a new FileEntry via the existing upload actions,
    mirroring `FileEntriesController::store` (`FileEntryPayload` → `StoreFile` with
-   `['contents' => $webp]` → `CreateFileEntry`): same `workspace_id`, `owner_id`,
-   `upload_type = 'linkImages'`, public visibility, name `<original name>.webp`,
-   extension `webp`, mime `image/webp`, size `strlen($webp)`.
+   `['file' => new \Illuminate\Http\File($tmp)]` → `CreateFileEntry`): same
+   `workspace_id`, `owner_id`, `upload_type = 'linkImages'`, public visibility,
+   name `<original name>.webp`, extension `webp`, mime `image/webp`, size
+   `strlen($webp)`.
 9. Repoint the cover with a conditional update so a concurrent cover change is
    never clobbered:
 
@@ -95,14 +96,19 @@ DigitalProduct::query()
 
 10. Do not delete the original entry.
 
-Failures are caught and logged (`Log::error`) rather than thrown, so a bad image
-never leaves a failed job spamming the queue; unexpected exceptions may still
-retry via the queue.
+Failures storing the converted bytes (a `false` result from `StoreFile`, or a
+failure to create the temporary file) throw a `\RuntimeException`, so the job
+fails and the queue's `tries`/`backoff` apply. Undecodable images are handled
+separately: `convert()` catches decoding/encoding errors and returns `null`, and
+the job simply no-ops. There is no outer catch that swallows storage/DB errors.
 
 ## Dispatch
 
 One helper, e.g. `App\Storefront\ProductCoverWebp::dispatchFor(DigitalProduct $product): void`,
 which dispatches the job with the product's current cover id when a cover is set.
+`dispatchFor()` returns early (pushing nothing) unless
+`app(ProductSettings::class)->convertsCoversToWebp()` is enabled, so no no-op
+jobs are queued while the feature is off.
 
 Called after the mutation commits in:
 
@@ -126,8 +132,10 @@ only runs once the cover reference persists.
 3. **Skipped types:** a WebP, SVG, or GIF cover is left unchanged.
 4. **Race guard:** if the product's cover changes after dispatch, the job does not
    repoint (cover id stays the newer value).
-5. **Dispatch:** creating a product with a JPG cover pushes the job
-   (`Queue::fake` + `assertPushed`); updating without changing the cover does not.
+5. **Dispatch:** creating a product with a JPG cover pushes the job with the
+   product/cover ids (`Queue::fake` + `assertPushed` with an argument callback);
+   updating without changing the cover does not; updating the cover while
+   `product.convert_covers_to_webp = 0` does not dispatch.
 6. **Default:** `convertsCoversToWebp()` is true when the setting row is absent.
 
 A minimal in-test JPG fixture is generated with GD (`imagecreatetruecolor` +

@@ -9,7 +9,7 @@ final class ProductCoverWebp
 {
     public function dispatchFor(DigitalProduct $product): void
     {
-        if (!$product->cover_file_entry_id) {
+        if (!app(ProductSettings::class)->convertsCoversToWebp() || !$product->cover_file_entry_id) {
             return;
         }
 

@@ -94,12 +94,20 @@ class ConvertProductCoverToWebp implements ShouldQueue
         ]);
 
         $tmp = tempnam(sys_get_temp_dir(), 'webp');
+        if ($tmp === false) {
+            throw new \RuntimeException('Unable to create a temporary file for WebP conversion.');
+        }
+
         file_put_contents($tmp, $webp);
 
         try {
-            (new StoreFile())->execute($payload, ['file' => new \Illuminate\Http\File($tmp)]);
+            $stored = (new StoreFile())->execute($payload, ['file' => new \Illuminate\Http\File($tmp)]);
         } finally {
             @unlink($tmp);
+        }
+
+        if ($stored === false) {
+            throw new \RuntimeException('Failed to store the converted WebP cover.');
         }
 
         return (new CreateFileEntry())->execute($payload);

@@ -117,7 +117,12 @@ class ProductSettingsWebpTest extends TestCase
             'cover_file_entry_id' => $cover->id,
         ])->assertCreated();
 
-        Queue::assertPushed(ConvertProductCoverToWebp::class);
+        $product = DigitalProduct::query()->where('title', 'With Cover')->firstOrFail();
+
+        Queue::assertPushed(
+            ConvertProductCoverToWebp::class,
+            fn ($job) => $job->productId === $product->id && $job->coverFileEntryId === $cover->id,
+        );
     }
 
     public function testUpdateWithoutCoverChangeDoesNotDispatch(): void
@@ -155,7 +160,31 @@ class ProductSettingsWebpTest extends TestCase
             'cover_file_entry_id' => $cover->id,
         ])->assertOk();
 
-        Queue::assertPushed(ConvertProductCoverToWebp::class);
+        Queue::assertPushed(
+            ConvertProductCoverToWebp::class,
+            fn ($job) => $job->productId === $product->id && $job->coverFileEntryId === $cover->id,
+        );
+    }
+
+    public function testUpdateChangingCoverWithSettingDisabledDoesNotDispatch(): void
+    {
+        Queue::fake();
+        settings()->save(['product.convert_covers_to_webp' => 0]);
+        [$creator, $workspace] = $this->creatorContext();
+        $file = $this->createPdfEntry($creator, $workspace);
+        $cover = $this->createImageEntry($creator, $workspace, 'jpg');
+        $product = $this->product($workspace, $creator);
+        $product->files()->attach($file->id);
+
+        $this->stateful()->actingAs($creator)->putJson("/api/v1/digital-products/{$product->id}", [
+            'title' => $product->title,
+            'price_cents' => 1000,
+            'currency' => 'ETB',
+            'file_ids' => [$file->id],
+            'cover_file_entry_id' => $cover->id,
+        ])->assertOk();
+
+        Queue::assertNotPushed(ConvertProductCoverToWebp::class);
     }
 
     private function createPdfEntry(User $creator, Workspace $workspace): FileEntry
