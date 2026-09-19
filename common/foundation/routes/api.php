@@ -240,6 +240,7 @@ Route::group(['prefix' => 'v1'], function () {
         Route::get('digital-products/{digitalProduct}/reviews', [CreatorProductReviewsController::class, 'index']);
         Route::post('digital-products/{digitalProduct}/submit', [DigitalProductsController::class, 'submit']);
         Route::get('admin/digital-products', [AdminDigitalProductsController::class, 'index']);
+        Route::get('admin/digital-products/{digitalProduct}', [AdminDigitalProductsController::class, 'show'])->whereNumber('digitalProduct');
         Route::post('admin/digital-products/{digitalProduct}/approve', [AdminDigitalProductsController::class, 'approve']);
         Route::post('admin/digital-products/{digitalProduct}/reject', [AdminDigitalProductsController::class, 'reject']);
         Route::post('admin/digital-products/bulk-approve', [AdminDigitalProductsController::class, 'bulkApprove']);
