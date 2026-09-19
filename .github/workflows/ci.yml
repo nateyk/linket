@@ -53,20 +53,6 @@ jobs:
           key: composer-${{ hashFiles('**/composer.lock') }}
           restore-keys: composer-
 
-      - name: Composer install
-        run: composer install --prefer-dist --no-interaction --no-progress
-        env:
-          COMPOSER_AUDIT_ABANDONED: ignore
-
-      - name: Setup Node 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: npm
-
-      - name: npm ci
-        run: npm ci
-
       - name: Create synthetic CI env (no production secrets)
         run: |
           set -euo pipefail
@@ -94,9 +80,30 @@ jobs:
           REDIS_HOST=127.0.0.1
           MAIL_MAILER=array
           EOF
-          php artisan key:generate --force --ansi
           # Verify synthetic env does not contain production marker
           ! grep -q "CHASECK_TEST" .env || { echo "Synthetic env leaked real Chapa test key"; exit 1; }
+
+      - name: Composer install
+        run: composer install --prefer-dist --no-interaction --no-progress
+        env:
+          COMPOSER_AUDIT_ABANDONED: ignore
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.19.0"
+          cache: npm
+
+      - name: Setup npm 11
+        run: npm install --global npm@11
+
+      - name: Verify Node tooling
+        run: |
+          node --version
+          npm --version
+
+      - name: npm ci
+        run: npm ci
 
       - name: Wait for MySQL
         run: |
