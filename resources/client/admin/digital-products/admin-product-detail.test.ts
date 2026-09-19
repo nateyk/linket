@@ -27,3 +27,35 @@ describe('admin product shared display', () => {
     expect(columns).toContain('/admin/digital-products/${product.id}');
   });
 });
+
+const routes = read('resources/client/admin/admin-routes.tsx');
+const queries = read(
+  'resources/client/admin/digital-products/admin-digital-product-detail-queries.ts',
+);
+const page = read(
+  'resources/client/admin/digital-products/admin-digital-product-detail-page.tsx',
+);
+
+describe('admin product detail page', () => {
+  test('registers the detail route', () => {
+    expect(routes).toContain("'digital-products/:productId'");
+    expect(routes).toContain('admin-digital-product-detail-page');
+  });
+
+  test('queries the admin show endpoint', () => {
+    expect(queries).toContain('/api/v1/admin/digital-products/${productId}');
+  });
+
+  test('renders Details and History panels', () => {
+    expect(page).toContain('function DetailsPanel');
+    expect(page).toContain('function HistoryPanel');
+    expect(page).toContain('<Trans message="Details" />');
+    expect(page).toContain('<Trans message="History" />');
+  });
+
+  test('consumes the history event fields', () => {
+    expect(page).toContain('actor_role');
+    expect(page).toContain('from_status');
+    expect(page).toContain('to_status');
+  });
+});
