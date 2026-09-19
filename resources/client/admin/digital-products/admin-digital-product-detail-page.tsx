@@ -14,6 +14,7 @@ import {useMutation, useQueryClient, useSuspenseQuery} from '@tanstack/react-que
 import {FormattedDate} from '@ui/i18n/formatted-date';
 import {formatMoney} from '@ui/i18n/format-money';
 import {Trans} from '@ui/i18n/trans';
+import {useTrans} from '@ui/i18n/use-trans';
 import {prettyBytes} from '@ui/utils/files/pretty-bytes';
 import {
   ArrowLeftIcon,
@@ -29,7 +30,10 @@ import {
   looksLikeHtml,
   ProductStatusBadge,
 } from './admin-digital-product-display';
-import {adminDigitalProductDetailOptions} from './admin-digital-product-detail-queries';
+import {
+  adminDigitalProductDetailBaseKey,
+  adminDigitalProductDetailOptions,
+} from './admin-digital-product-detail-queries';
 import {adminDigitalProductsBaseKey} from './admin-digital-products-queries';
 
 type HistoryEvent = {
@@ -84,6 +88,7 @@ type AdminProductDetail = {
 
 export function Component() {
   const {productId} = useParams();
+  const {trans} = useTrans();
   const query = useSuspenseQuery(adminDigitalProductDetailOptions(productId ?? ''));
   const queryClient = useQueryClient();
   const [rejectOpen, setRejectOpen] = useState(false);
@@ -95,7 +100,7 @@ export function Component() {
 
   const invalidate = () => {
     queryClient.invalidateQueries({queryKey: adminDigitalProductsBaseKey});
-    queryClient.invalidateQueries({queryKey: ['adminDigitalProductDetail']});
+    queryClient.invalidateQueries({queryKey: adminDigitalProductDetailBaseKey});
   };
 
   const approve = useMutation({
@@ -228,7 +233,9 @@ export function Component() {
                   rows={4}
                   value={reason}
                   onChange={e => setReason(e.target.value)}
-                  placeholder="Explain what the creator should change."
+                  placeholder={trans({
+                    message: 'Explain what the creator should change.',
+                  })}
                 />
               </Field.Root>
             </Dialog.Body>
@@ -383,9 +390,11 @@ function DetailsPanel({product}: {product: AdminProductDetail}) {
           </DetailRow>
           <DetailRow label="Type">{product.type ?? 'digital'}</DetailRow>
           <DetailRow label="Price">
-            {product.price_cents === 0
-              ? 'Free'
-              : formatMoney(product.price_cents, product.currency)}
+            {product.price_cents === 0 ? (
+              <Trans message="Free" />
+            ) : (
+              formatMoney(product.price_cents, product.currency)
+            )}
           </DetailRow>
           <DetailRow label="Creator">
             {product.creator ? (
@@ -504,21 +513,21 @@ function HistoryPanel({history}: {history: HistoryEvent[]}) {
 function eventLabel(event: string) {
   switch (event) {
     case 'created':
-      return 'Created';
+      return <Trans message="Created" />;
     case 'updated':
-      return 'Updated';
+      return <Trans message="Updated" />;
     case 'submitted':
-      return 'Submitted for review';
+      return <Trans message="Submitted for review" />;
     case 'update_submitted':
-      return 'Update submitted for review';
+      return <Trans message="Update submitted for review" />;
     case 'approved':
-      return 'Approved';
+      return <Trans message="Approved" />;
     case 'update_approved':
-      return 'Update approved';
+      return <Trans message="Update approved" />;
     case 'rejected':
-      return 'Rejected';
+      return <Trans message="Rejected" />;
     case 'update_rejected':
-      return 'Update rejected';
+      return <Trans message="Update rejected" />;
     default:
       return event;
   }
@@ -533,7 +542,9 @@ function DetailRow({
 }) {
   return (
     <div className="flex items-start justify-between gap-3">
-      <span className="text-muted-foreground">{label}</span>
+      <span className="text-muted-foreground">
+        <Trans message={label} />
+      </span>
       <span className="text-end">{children}</span>
     </div>
   );
