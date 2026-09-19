@@ -49,6 +49,27 @@ class AdminProductReviewQueueTest extends TestCase
         $response->assertJsonPath('meta.counters.updated.total', 1);
     }
 
+    public function testIndexExposesHasPendingUpdateForRows(): void
+    {
+        $admin = $this->createAdmin();
+        [$creator, $workspace] = $this->creatorContext();
+
+        $flagged = $this->product($workspace, $creator, [
+            'status' => 'approved',
+            'approved_at' => now(),
+            'review_requested_at' => now(),
+            'review_requested_by' => $creator->id,
+        ]);
+        $clean = $this->product($workspace, $creator, ['status' => 'approved', 'approved_at' => now()]);
+
+        $response = $this->stateful()->actingAs($admin)->getJson('/api/v1/admin/digital-products');
+
+        $response->assertOk();
+        $rows = collect($response->json('data'))->keyBy('id');
+        $this->assertTrue($rows->get($flagged->id)['has_pending_update']);
+        $this->assertFalse($rows->get($clean->id)['has_pending_update']);
+    }
+
     public function testAdminCanApproveAPendingUpdate(): void
     {
         $admin = $this->createAdmin();

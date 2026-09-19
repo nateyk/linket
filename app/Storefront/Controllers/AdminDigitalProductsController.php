@@ -81,6 +81,11 @@ class AdminDigitalProductsController extends Controller
             if (array_key_exists('description', $row) && $row['description'] !== null) {
                 $row['description'] = $sanitizer->execute($row['description']);
             }
+            // Same semantics as DigitalProduct::hasPendingUpdate(): the list
+            // badges and actions depend on this computed flag, and raw rows
+            // do not carry model accessors.
+            $row['has_pending_update'] = ($row['status'] ?? null) === 'approved'
+                && !empty($row['review_requested_at']);
 
             return $row;
         }, $paginated['data']);
