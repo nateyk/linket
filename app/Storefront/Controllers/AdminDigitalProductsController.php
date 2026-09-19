@@ -4,6 +4,7 @@ namespace App\Storefront\Controllers;
 
 use App\Storefront\Models\DigitalProduct;
 use App\Storefront\ProductReviewHistory;
+use App\Storefront\Resources\AdminDigitalProductResource;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
@@ -71,6 +72,33 @@ class AdminDigitalProductsController extends Controller
         $paginated['meta'] = array_merge($paginated['meta'] ?? [], ['counters' => $counters]);
 
         return response()->json($paginated);
+    }
+
+    public function show(Request $request, DigitalProduct $digitalProduct)
+    {
+        Gate::authorize('admin.access');
+
+        $digitalProduct->load([
+            'creator',
+            'cover',
+            'files',
+            'biolinks',
+            'course' => fn ($q) => $q->withCount([
+                'chapters',
+                'lessons',
+                'lessons as published_lessons_count' => fn ($q) => $q->where('status', 'published'),
+            ]),
+            'reviewEvents' => fn ($q) => $q
+                ->with('actor')
+                ->orderByDesc('created_at')
+                ->orderByDesc('id')
+                ->limit(50),
+        ])->loadCount([
+            'orders as sales_count' => fn ($q) => $q->where('status', 'paid'),
+            'reviews',
+        ]);
+
+        return new AdminDigitalProductResource($digitalProduct);
     }
 
     public function approve(Request $request, DigitalProduct $digitalProduct)

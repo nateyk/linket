@@ -29,4 +29,9 @@ class DigitalProductReviewEvent extends Model
     {
         return $this->belongsTo(DigitalProduct::class, 'digital_product_id');
     }
+
+    public function actor(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\User::class, 'actor_id');
+    }
 }
