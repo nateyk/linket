@@ -361,6 +361,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Intervention\Image\ImageManager;
 
 class ConvertProductCoverToWebp implements ShouldQueue
 {
@@ -380,7 +381,7 @@ class ConvertProductCoverToWebp implements ShouldQueue
 
     public function handle(): void
     {
-        if (!app(ProductSettings::class)->convertsCoversToWebp() || !function_exists('imagewebp')) {
+        if (!app(ProductSettings::class)->convertsCoversToWebp() || !extension_loaded('gd')) {
             return;
         }
 
@@ -427,20 +428,13 @@ class ConvertProductCoverToWebp implements ShouldQueue
             return null;
         }
 
-        $image = @imagecreatefromstring($contents);
-        if ($image === false) {
+        try {
+            return (string) ImageManager::gd()
+                ->read($contents)
+                ->toWebp(quality: 82);
+        } catch (\Throwable) {
             return null;
         }
-
-        imagealphablending($image, true);
-        imagesavealpha($image, true);
-
-        ob_start();
-        $ok = imagewebp($image, null, 82);
-        $webp = ob_get_clean();
-        imagedestroy($image);
-
-        return $ok && is_string($webp) && $webp !== '' ? $webp : null;
     }
 
     private function store(FileEntry $entry, string $webp): FileEntry

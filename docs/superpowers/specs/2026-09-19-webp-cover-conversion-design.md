@@ -14,6 +14,8 @@ destroying the original file.
   so conversion cannot be targeted at upload time for covers alone.
 - The host supports WebP (`gd_info()['WebP Support'] === true` and the Imagick
   extension is present).
+- The repository already ships **`intervention/image` v3** (used as the encoder;
+  no new dependency).
 - The product-update-revert change snapshots `cover_file_entry_id`, so the
   original cover file must survive conversion or a revert would point at a
   missing file.
@@ -28,8 +30,8 @@ destroying the original file.
 - **Admin-controlled, default ON.** `product.convert_covers_to_webp` gates the
   job; default `true`, seeded like the other product settings.
 - **Raster only.** Convert `jpg`, `jpeg`, `png`, `bmp`. Skip `webp` (already),
-  `svg` (vector), and `gif` (animation cannot be preserved by GD). If
-  `imagewebp` is unavailable the job no-ops.
+  `svg` (vector), and `gif` (animation cannot be preserved by GD). If the GD
+  extension (or WebP encoding) is unavailable the job no-ops.
 
 ## Setting
 
@@ -71,12 +73,11 @@ public function __construct(
    (the cover changed after this job was dispatched).
 4. Load the `FileEntry`; return unless it exists, is an image (`str_starts_with($mime, 'image/')`),
    and its lowercase extension is in `['jpg', 'jpeg', 'png', 'bmp']`.
-5. Return unless `function_exists('imagewebp')`.
+5. Return unless `extension_loaded('gd')`.
 6. Read the bytes from the entry's disk (`$entry->getDisk()->get($entry->getStoragePath())`).
    Return if the read fails.
-7. Convert with GD: `imagecreatefromstring`, keep alpha for PNG
-   (`imagesavealpha` / `imagealphablending`), `imagewebp($image, null, 82)`;
-   free the image. Return if conversion fails.
+7. Encode with `intervention/image` v3: `ImageManager::gd()->read($bytes)->toWebp(quality: 82)`
+   cast to string. Return if decoding/encoding throws.
 8. Store the bytes and create a new FileEntry via the existing upload actions,
    mirroring `FileEntriesController::store` (`FileEntryPayload` → `StoreFile` with
    `['contents' => $webp]` → `CreateFileEntry`): same `workspace_id`, `owner_id`,
