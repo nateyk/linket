@@ -2,8 +2,10 @@
 
 namespace App\Storefront\Controllers;
 
+use App\Storefront\Actions\SanitizeProductDescription;
 use App\Storefront\Models\DigitalProduct;
 use App\Storefront\ProductReviewHistory;
+use App\Storefront\Resources\AdminDigitalProductResource;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
@@ -68,9 +70,46 @@ class AdminDigitalProductsController extends Controller
         $products->appends($request->only(['search', 'status', 'scope', 'perPage', 'sort']));
 
         $paginated = $products->toArray();
+        // Render-only sanitization: creator HTML is stored as authored, but the
+        // admin list dialog injects descriptions, so emit safe HTML here.
+        $sanitizer = app(SanitizeProductDescription::class);
+        $paginated['data'] = array_map(static function (array $row) use ($sanitizer): array {
+            if (array_key_exists('description', $row) && $row['description'] !== null) {
+                $row['description'] = $sanitizer->execute($row['description']);
+            }
+
+            return $row;
+        }, $paginated['data']);
         $paginated['meta'] = array_merge($paginated['meta'] ?? [], ['counters' => $counters]);
 
         return response()->json($paginated);
+    }
+
+    public function show(DigitalProduct $digitalProduct)
+    {
+        Gate::authorize('admin.access');
+
+        $digitalProduct->load([
+            'creator',
+            'cover',
+            'files',
+            'biolinks',
+            'course' => fn ($q) => $q->withCount([
+                'chapters',
+                'lessons',
+                'lessons as published_lessons_count' => fn ($q) => $q->where('status', 'published'),
+            ]),
+            'reviewEvents' => fn ($q) => $q
+                ->with('actor')
+                ->orderByDesc('created_at')
+                ->orderByDesc('id')
+                ->limit(50),
+        ])->loadCount([
+            'orders as sales_count' => fn ($q) => $q->where('status', 'paid'),
+            'reviews',
+        ]);
+
+        return new AdminDigitalProductResource($digitalProduct);
     }
 
     public function approve(Request $request, DigitalProduct $digitalProduct)
