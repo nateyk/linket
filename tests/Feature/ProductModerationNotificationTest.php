@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use App\Storefront\Models\DigitalProduct;
 use App\Storefront\Notifications\ProductModerationNotification;
+use App\Storefront\Notifications\ProductModerationSummaryNotification;
 use Common\Permissions\Models\Permission;
 use Common\Workspaces\ActiveWorkspace;
 use Common\Workspaces\Actions\CreateWorkspace;
@@ -94,7 +95,7 @@ class ProductModerationNotificationTest extends TestCase
         );
     }
 
-    public function testBulkApproveNotifiesEachActionableCreatorOnly(): void
+    public function testBulkApproveSendsOneSummaryPerCreatorAndSkipsIneligible(): void
     {
         Notification::fake();
         $admin = $this->createAdmin();
@@ -110,8 +111,72 @@ class ProductModerationNotificationTest extends TestCase
             ['ids' => [$first->id, $second->id, $draft->id]],
         )->assertOk();
 
-        Notification::assertSentToTimes($creatorA, ProductModerationNotification::class, 2);
+        Notification::assertSentToTimes($creatorA, ProductModerationSummaryNotification::class, 1);
+        Notification::assertNotSentTo($creatorA, ProductModerationNotification::class);
+        Notification::assertNotSentTo($creatorB, ProductModerationSummaryNotification::class);
         Notification::assertNotSentTo($creatorB, ProductModerationNotification::class);
+
+        Notification::assertSentTo(
+            $creatorA,
+            ProductModerationSummaryNotification::class,
+            fn (ProductModerationSummaryNotification $n): bool => $n->event === 'approved'
+                && count($n->titles) === 2,
+        );
+    }
+
+    public function testBulkWithSingleActionableProductUsesTheIndividualNotification(): void
+    {
+        Notification::fake();
+        $admin = $this->createAdmin();
+        [$creator, $workspace] = $this->creatorContext();
+        $product = $this->product($workspace, $creator, ['status' => 'pending_approval']);
+
+        $this->stateful()->actingAs($admin)->postJson(
+            '/api/v1/admin/digital-products/bulk-approve',
+            ['ids' => [$product->id]],
+        )->assertOk();
+
+        Notification::assertSentToTimes($creator, ProductModerationNotification::class, 1);
+        Notification::assertNotSentTo($creator, ProductModerationSummaryNotification::class);
+    }
+
+    public function testBulkRejectSummaryCarriesTheReason(): void
+    {
+        Notification::fake();
+        $admin = $this->createAdmin();
+        [$creator, $workspace] = $this->creatorContext();
+        $first = $this->product($workspace, $creator, ['status' => 'pending_approval']);
+        $second = $this->product($workspace, $creator, ['status' => 'pending_approval']);
+
+        $this->stateful()->actingAs($admin)->postJson(
+            '/api/v1/admin/digital-products/bulk-reject',
+            ['ids' => [$first->id, $second->id], 'reason' => 'Not allowed'],
+        )->assertOk();
+
+        Notification::assertSentTo(
+            $creator,
+            ProductModerationSummaryNotification::class,
+            fn (ProductModerationSummaryNotification $n): bool => $n->event === 'rejected'
+                && $n->reason === 'Not allowed'
+                && count($n->titles) === 2,
+        );
+    }
+
+    public function testSummaryNotificationRendersMailAndEscapedDatabasePayload(): void
+    {
+        [$creator] = $this->creatorContext();
+        $notification = new ProductModerationSummaryNotification(
+            'rejected',
+            ['<b>A</b>', 'B'],
+            'Nope',
+        );
+
+        $this->assertInstanceOf(MailMessage::class, $notification->toMail($creator));
+        $this->assertTrue($notification->shouldSend($creator, 'database'));
+
+        $payload = $notification->toDatabase($creator);
+        $this->assertStringContainsString('&lt;b&gt;A&lt;/b&gt;', $payload['lines'][0]['content']);
+        $this->assertStringContainsString('Nope', $payload['lines'][1]['content']);
     }
 
     public function testApprovingPersistsADatabaseNotification(): void
