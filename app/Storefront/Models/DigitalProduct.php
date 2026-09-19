@@ -31,9 +31,10 @@ class DigitalProduct extends StorefrontModel
         'approved_at',
         'review_requested_at',
         'review_requested_by',
+        'pending_review_snapshot',
         'type',
     ];
-    protected $casts = ['price_cents' => 'integer', 'cover_file_entry_id' => 'integer', 'approved_at' => 'datetime', 'review_requested_at' => 'datetime', 'review_requested_by' => 'integer', 'workspace_id' => 'integer', 'user_id' => 'integer', 'learning_outcomes' => 'array'];
+    protected $casts = ['price_cents' => 'integer', 'cover_file_entry_id' => 'integer', 'approved_at' => 'datetime', 'review_requested_at' => 'datetime', 'review_requested_by' => 'integer', 'workspace_id' => 'integer', 'user_id' => 'integer', 'learning_outcomes' => 'array', 'pending_review_snapshot' => 'array'];
 
     public function course(): \Illuminate\Database\Eloquent\Relations\HasOne { return $this->hasOne(\App\Courses\Models\Course::class); }
     public function isCourse(): bool { return ($this->type ?? 'digital') === 'course'; }

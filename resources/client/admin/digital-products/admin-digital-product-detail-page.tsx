@@ -59,6 +59,12 @@ type AdminProductDetail = {
   rejection_reason?: string | null;
   review_requested_at?: string | null;
   has_pending_update?: boolean;
+  pending_changes?: Array<{
+    field: string;
+    label: string;
+    before: string;
+    after: string;
+  }> | null;
   approved_at?: string | null;
   price_cents: number;
   currency: string;
@@ -264,6 +270,30 @@ function DetailsPanel({product}: {product: AdminProductDetail}) {
   return (
     <div className="grid gap-4 lg:grid-cols-3">
       <div className="space-y-4 lg:col-span-2">
+        {product.pending_changes && product.pending_changes.length > 0 && (
+          <Card.Root>
+            <Card.Header>
+              <Card.Title>
+                <Trans message="Pending changes" />
+              </Card.Title>
+            </Card.Header>
+            <Card.Content className="space-y-2 text-sm">
+              {product.pending_changes.map(change => (
+                <div
+                  key={change.field}
+                  className="flex flex-wrap items-baseline gap-2"
+                >
+                  <span className="font-medium">{change.label}</span>
+                  <span className="text-muted-foreground line-through">
+                    {change.before}
+                  </span>
+                  <span aria-hidden="true">→</span>
+                  <span>{change.after}</span>
+                </div>
+              ))}
+            </Card.Content>
+          </Card.Root>
+        )}
         <Card.Root>
           <Card.Content className="space-y-4 p-4">
             {product.cover?.url ? (

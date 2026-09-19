@@ -76,6 +76,87 @@ class AdminDigitalProductResource extends JsonResource
                 'meta' => $event->meta,
                 'created_at' => $event->created_at,
             ])),
+            'pending_changes' => $this->pendingChanges(),
         ];
+    }
+
+    private function pendingChanges(): ?array
+    {
+        $snapshot = $this->pending_review_snapshot;
+
+        if (!is_array($snapshot)) {
+            return null;
+        }
+
+        $changes = [];
+
+        $scalar = [
+            'title' => __('Title'),
+            'description' => __('Description'),
+            'price_cents' => __('Price'),
+            'type' => __('Type'),
+        ];
+
+        foreach ($scalar as $field => $label) {
+            $before = $snapshot[$field] ?? null;
+            $after = $this->{$field};
+
+            if ((string) $before === (string) $after) {
+                continue;
+            }
+
+            $changes[] = [
+                'field' => $field,
+                'label' => $label,
+                'before' => $this->displayValue($before, $field),
+                'after' => $this->displayValue($after, $field),
+            ];
+        }
+
+        $beforeOutcomes = count($snapshot['learning_outcomes'] ?? []);
+        $afterOutcomes = count($this->learning_outcomes ?? []);
+        if ($beforeOutcomes !== $afterOutcomes) {
+            $changes[] = [
+                'field' => 'learning_outcomes',
+                'label' => __('Learning outcomes'),
+                'before' => (string) $beforeOutcomes,
+                'after' => (string) $afterOutcomes,
+            ];
+        }
+
+        if (($snapshot['cover_file_entry_id'] ?? null) !== $this->cover_file_entry_id) {
+            $changes[] = [
+                'field' => 'cover',
+                'label' => __('Cover image'),
+                'before' => __('Changed'),
+                'after' => __('Changed'),
+            ];
+        }
+
+        $beforeFiles = count($snapshot['file_ids'] ?? []);
+        $afterFiles = $this->relationLoaded('files') ? $this->files->count() : $beforeFiles;
+        if ($beforeFiles !== $afterFiles) {
+            $changes[] = [
+                'field' => 'files',
+                'label' => __('Files'),
+                'before' => (string) $beforeFiles,
+                'after' => (string) $afterFiles,
+            ];
+        }
+
+        return $changes === [] ? null : $changes;
+    }
+
+    private function displayValue(mixed $value, string $field): string
+    {
+        if ($value === null || $value === '') {
+            return '—';
+        }
+
+        if ($field === 'price_cents') {
+            return number_format(((int) $value) / 100, 2);
+        }
+
+        return \Illuminate\Support\Str::limit(trim(strip_tags((string) $value)), 120);
     }
 }

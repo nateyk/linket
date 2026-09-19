@@ -59,3 +59,12 @@ describe('admin product detail page', () => {
     expect(page).toContain('to_status');
   });
 });
+
+describe('admin product pending changes', () => {
+  test('renders a Pending changes card from the resource', () => {
+    expect(page).toContain('<Trans message="Pending changes" />');
+    expect(page).toContain('pending_changes');
+    expect(page).toContain('change.before');
+    expect(page).toContain('change.after');
+  });
+});
