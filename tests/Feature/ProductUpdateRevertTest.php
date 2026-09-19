@@ -62,6 +62,92 @@ class ProductUpdateRevertTest extends TestCase
         $this->assertNull($product->fresh()->pending_review_snapshot);
     }
 
+    public function testRejectingAnUpdateRevertsToSnapshotAndStaysLive(): void
+    {
+        settings()->save(['product.updating_requires_review' => 1]);
+        $admin = $this->createAdmin();
+        [$creator, $workspace] = $this->creatorContext();
+        $file = $this->createFile($creator, $workspace);
+        $store = $this->store($creator, $workspace);
+        $product = $this->product($workspace, $creator, [
+            'status' => 'approved',
+            'approved_at' => now(),
+            'title' => 'Original',
+            'price_cents' => 1000,
+        ]);
+        $product->files()->attach($file->id);
+        $product->biolinks()->attach($store->id);
+
+        $this->updateProduct($creator, $product, ['title' => 'Edited', 'price_cents' => 2000]);
+        $this->assertSame('Edited', $product->fresh()->title);
+
+        $this->stateful()->actingAs($admin)->postJson(
+            "/api/v1/admin/digital-products/{$product->id}/reject",
+            ['reason' => 'Not acceptable'],
+        )->assertOk();
+
+        $fresh = $product->fresh();
+        $this->assertSame('approved', $fresh->status);
+        $this->assertSame('Original', $fresh->title);
+        $this->assertSame(1000, $fresh->price_cents);
+        $this->assertNull($fresh->review_requested_at);
+        $this->assertNull($fresh->pending_review_snapshot);
+        $this->assertSame([$file->id], $fresh->files()->pluck('file_entries.id')->all());
+
+        $this->assertDatabaseHas('digital_product_review_events', [
+            'digital_product_id' => $product->id,
+            'event' => 'update_reverted',
+            'reason' => 'Not acceptable',
+            'actor_role' => 'admin',
+        ]);
+
+        $listed = $this->stateful()->getJson("/api/v1/public/stores/{$store->id}/digital-products");
+        $listed->assertOk();
+        $this->assertNotNull(collect($listed->json('data'))->firstWhere('id', $product->id));
+    }
+
+    public function testRejectingAnUpdateWithoutSnapshotFallsBackToRejected(): void
+    {
+        $admin = $this->createAdmin();
+        [$creator, $workspace] = $this->creatorContext();
+        $product = $this->product($workspace, $creator, [
+            'status' => 'approved',
+            'approved_at' => now(),
+            'review_requested_at' => now(),
+            'review_requested_by' => $creator->id,
+        ]);
+        $this->assertNull($product->pending_review_snapshot);
+
+        $this->stateful()->actingAs($admin)->postJson(
+            "/api/v1/admin/digital-products/{$product->id}/reject",
+            ['reason' => 'No'],
+        )->assertOk();
+
+        $this->assertSame('rejected', $product->fresh()->status);
+        $this->assertDatabaseHas('digital_product_review_events', [
+            'digital_product_id' => $product->id,
+            'event' => 'update_rejected',
+        ]);
+    }
+
+    public function testFirstTimeRejectIsUnchanged(): void
+    {
+        $admin = $this->createAdmin();
+        [$creator, $workspace] = $this->creatorContext();
+        $product = $this->product($workspace, $creator, ['status' => 'pending_approval']);
+
+        $this->stateful()->actingAs($admin)->postJson(
+            "/api/v1/admin/digital-products/{$product->id}/reject",
+            ['reason' => 'Nope'],
+        )->assertOk();
+
+        $this->assertSame('rejected', $product->fresh()->status);
+        $this->assertDatabaseHas('digital_product_review_events', [
+            'digital_product_id' => $product->id,
+            'event' => 'rejected',
+        ]);
+    }
+
     private function updateProduct(User $creator, DigitalProduct $product, array $overrides = []): void
     {
         $this->stateful()->actingAs($creator)->putJson(
@@ -127,9 +213,27 @@ class ProductUpdateRevertTest extends TestCase
         return [$creator, $creator->workspaces()->first()];
     }
 
+    private function createAdmin(): User
+    {
+        $user = User::query()->forceCreate([
+            'name' => 'Admin ' . Str::random(6),
+            'username' => Str::lower(Str::random(10)),
+            'email' => Str::random(8) . '@example.test',
+            'password' => bcrypt('password'),
+            'email_verified_at' => now(),
+        ]);
+        $user->permissions()->attach(
+            \Common\Permissions\Models\Permission::query()->firstOrCreate(['name' => 'admin']),
+        );
+
+        return $user;
+    }
+
     private function stateful(): static
     {
         $csrfToken = 'test-csrf-token';
+
+        $this->flushSession();
 
         return $this->withSession(['_token' => $csrfToken])
             ->withHeader('Referer', config('app.url'))

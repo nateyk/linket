@@ -9,6 +9,7 @@ use App\Storefront\Notifications\ProductModerationNotification;
 use App\Storefront\Notifications\ProductModerationSummaryNotification;
 use App\Storefront\ProductReviewHistory;
 use App\Storefront\Resources\AdminDigitalProductResource;
+use Common\Files\FileEntry;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
@@ -300,6 +301,7 @@ class AdminDigitalProductsController extends Controller
                     'rejection_reason' => null,
                     'review_requested_at' => null,
                     'review_requested_by' => null,
+                    'pending_review_snapshot' => null,
                 ]);
 
                 app(ProductReviewHistory::class)->record(
@@ -311,24 +313,64 @@ class AdminDigitalProductsController extends Controller
                     'admin',
                 );
             } else {
-                $event = $isUpdate ? 'update_rejected' : 'rejected';
+                $snapshot = $product->pending_review_snapshot;
 
-                $product->update([
-                    'status' => 'rejected',
-                    'rejection_reason' => $reason,
-                    'review_requested_at' => null,
-                    'review_requested_by' => null,
-                ]);
+                if ($isUpdate && is_array($snapshot)) {
+                    $event = 'update_reverted';
 
-                app(ProductReviewHistory::class)->record(
-                    $product,
-                    $event,
-                    $from,
-                    'rejected',
-                    $actor,
-                    'admin',
-                    $reason,
-                );
+                    $product->update([
+                        'title' => $snapshot['title'] ?? $product->title,
+                        'description' => $snapshot['description'] ?? null,
+                        'learning_outcomes' => $snapshot['learning_outcomes'] ?? null,
+                        'price_cents' => $snapshot['price_cents'] ?? $product->price_cents,
+                        'currency' => $snapshot['currency'] ?? $product->currency,
+                        'type' => $snapshot['type'] ?? $product->type,
+                        'cover_file_entry_id' => $snapshot['cover_file_entry_id'] ?? null,
+                        'status' => 'approved',
+                        'rejection_reason' => null,
+                        'review_requested_at' => null,
+                        'review_requested_by' => null,
+                        'pending_review_snapshot' => null,
+                    ]);
+
+                    $fileIds = FileEntry::query()
+                        ->whereIn('id', $snapshot['file_ids'] ?? [])
+                        ->where('workspace_id', $product->workspace_id)
+                        ->pluck('id')
+                        ->all();
+                    $product->files()->sync($fileIds);
+
+                    app(ProductReviewHistory::class)->record(
+                        $product,
+                        $event,
+                        $from,
+                        'approved',
+                        $actor,
+                        'admin',
+                        $reason,
+                        ['restored' => array_keys($snapshot)],
+                    );
+                } else {
+                    $event = $isUpdate ? 'update_rejected' : 'rejected';
+
+                    $product->update([
+                        'status' => 'rejected',
+                        'rejection_reason' => $reason,
+                        'review_requested_at' => null,
+                        'review_requested_by' => null,
+                        'pending_review_snapshot' => null,
+                    ]);
+
+                    app(ProductReviewHistory::class)->record(
+                        $product,
+                        $event,
+                        $from,
+                        'rejected',
+                        $actor,
+                        'admin',
+                        $reason,
+                    );
+                }
             }
 
             return ['product' => $product, 'event' => $event];
