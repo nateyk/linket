@@ -5,6 +5,7 @@ namespace App\Storefront\Controllers;
 use App\Models\User;
 use App\Storefront\Actions\SanitizeProductDescription;
 use App\Storefront\Models\DigitalProduct;
+use App\Storefront\Notifications\ProductModerationNotification;
 use App\Storefront\ProductReviewHistory;
 use App\Storefront\Resources\AdminDigitalProductResource;
 use Illuminate\Http\Request;
@@ -196,8 +197,9 @@ class AdminDigitalProductsController extends Controller
      */
     private function applyDecision(int $id, bool $approve, ?string $reason, User $actor): ?DigitalProduct
     {
-        return DB::transaction(function () use ($id, $approve, $reason, $actor): ?DigitalProduct {
+        $result = DB::transaction(function () use ($id, $approve, $reason, $actor): ?array {
             $product = DigitalProduct::query()
+                ->with('creator')
                 ->whereKey($id)
                 ->lockForUpdate()
                 ->first();
@@ -214,6 +216,8 @@ class AdminDigitalProductsController extends Controller
             $from = $product->status;
 
             if ($approve) {
+                $event = $isUpdate ? 'update_approved' : 'approved';
+
                 $product->update([
                     'status' => 'approved',
                     'approved_at' => now(),
@@ -224,13 +228,15 @@ class AdminDigitalProductsController extends Controller
 
                 app(ProductReviewHistory::class)->record(
                     $product,
-                    $isUpdate ? 'update_approved' : 'approved',
+                    $event,
                     $from,
                     'approved',
                     $actor,
                     'admin',
                 );
             } else {
+                $event = $isUpdate ? 'update_rejected' : 'rejected';
+
                 $product->update([
                     'status' => 'rejected',
                     'rejection_reason' => $reason,
@@ -240,7 +246,7 @@ class AdminDigitalProductsController extends Controller
 
                 app(ProductReviewHistory::class)->record(
                     $product,
-                    $isUpdate ? 'update_rejected' : 'rejected',
+                    $event,
                     $from,
                     'rejected',
                     $actor,
@@ -249,7 +255,17 @@ class AdminDigitalProductsController extends Controller
                 );
             }
 
-            return $product;
+            return ['product' => $product, 'event' => $event];
         });
+
+        if ($result === null) {
+            return null;
+        }
+
+        $result['product']->creator?->notify(
+            new ProductModerationNotification($result['product']->id, $result['event'], $reason),
+        );
+
+        return $result['product'];
     }
 }
