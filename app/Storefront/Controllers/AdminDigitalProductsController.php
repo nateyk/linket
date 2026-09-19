@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Storefront\Actions\SanitizeProductDescription;
 use App\Storefront\Models\DigitalProduct;
 use App\Storefront\Notifications\ProductModerationNotification;
+use App\Storefront\Notifications\ProductModerationSummaryNotification;
 use App\Storefront\ProductReviewHistory;
 use App\Storefront\Resources\AdminDigitalProductResource;
 use Illuminate\Http\Request;
@@ -176,13 +177,33 @@ class AdminDigitalProductsController extends Controller
     {
         $processed = 0;
         $skipped = 0;
+        /** @var array<int, array{creator: User, items: array<int, array{id: int, title: string, event: string}>}> $byCreator */
+        $byCreator = [];
 
         foreach (array_unique($ids) as $id) {
-            if ($this->applyDecision((int) $id, $approve, $reason, $actor) === null) {
+            $result = $this->decide((int) $id, $approve, $reason, $actor);
+
+            if ($result === null) {
                 $skipped++;
-            } else {
-                $processed++;
+                continue;
             }
+
+            $processed++;
+
+            $creator = $result['product']->creator;
+            if ($creator) {
+                $byCreator[$creator->id] ??= ['creator' => $creator, 'items' => []];
+                $byCreator[$creator->id]['items'][] = [
+                    'id' => $result['product']->id,
+                    'title' => $result['product']->title,
+                    'event' => $result['event'],
+                ];
+            }
+        }
+
+        // One notification per creator instead of one per product.
+        foreach ($byCreator as $entry) {
+            $this->notifyBulkCreator($entry['creator'], $approve, $entry['items'], $reason);
         }
 
         return [
@@ -191,13 +212,68 @@ class AdminDigitalProductsController extends Controller
         ];
     }
 
+    private function notifyBulkCreator(User $creator, bool $approve, array $items, ?string $reason): void
+    {
+        try {
+            if (count($items) === 1) {
+                $creator->notify(new ProductModerationNotification(
+                    $items[0]['id'],
+                    $items[0]['event'],
+                    $reason,
+                ));
+
+                return;
+            }
+
+            $creator->notify(new ProductModerationSummaryNotification(
+                $approve ? 'approved' : 'rejected',
+                array_map(fn (array $item): string => $item['title'], $items),
+                $reason,
+            ));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to queue bulk product moderation notification', [
+                'creator_id' => $creator->id,
+                'count' => count($items),
+                'message' => $e->getMessage(),
+            ]);
+        }
+    }
+
     /**
      * Apply one moderation decision under a row lock. Returns null when the
      * product is missing or not actionable, so bulk calls can skip it.
      */
-    private function applyDecision(int $id, bool $approve, ?string $reason, User $actor): ?DigitalProduct
+    private function applyDecision(int $id, bool $approve, ?string $reason, User $actor, bool $notify = true): ?DigitalProduct
     {
-        $result = DB::transaction(function () use ($id, $approve, $reason, $actor): ?array {
+        $result = $this->decide($id, $approve, $reason, $actor);
+
+        if ($result === null) {
+            return null;
+        }
+
+        if ($notify) {
+            try {
+                $result['product']->creator?->notify(
+                    new ProductModerationNotification($result['product']->id, $result['event'], $reason),
+                );
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error('Failed to queue product moderation notification', [
+                    'product_id' => $result['product']->id,
+                    'event' => $result['event'],
+                    'message' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return $result['product'];
+    }
+
+    /**
+     * @return array{product: DigitalProduct, event: string}|null
+     */
+    private function decide(int $id, bool $approve, ?string $reason, User $actor): ?array
+    {
+        return DB::transaction(function () use ($id, $approve, $reason, $actor): ?array {
             $product = DigitalProduct::query()
                 ->with('creator')
                 ->whereKey($id)
@@ -257,23 +333,5 @@ class AdminDigitalProductsController extends Controller
 
             return ['product' => $product, 'event' => $event];
         });
-
-        if ($result === null) {
-            return null;
-        }
-
-        try {
-            $result['product']->creator?->notify(
-                new ProductModerationNotification($result['product']->id, $result['event'], $reason),
-            );
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error('Failed to queue product moderation notification', [
-                'product_id' => $result['product']->id,
-                'event' => $result['event'],
-                'message' => $e->getMessage(),
-            ]);
-        }
-
-        return $result['product'];
     }
 }
