@@ -27,6 +27,7 @@ declare module '@ui/settings/settings' {
       min_price_cents?: string | number;
       max_price_cents?: string | number;
       max_file_bytes?: string | number;
+      convert_covers_to_webp?: string | number | boolean;
       allow_free_products?: string | number | boolean;
       adding_requires_review?: string | number | boolean;
       updating_requires_review?: string | number | boolean;
@@ -43,6 +44,8 @@ export function Component() {
           min_price_cents: data.client.product?.min_price_cents ?? '',
           max_price_cents: data.client.product?.max_price_cents ?? '',
           max_file_bytes: data.client.product?.max_file_bytes ?? '',
+          convert_covers_to_webp:
+            data.client.product?.convert_covers_to_webp ?? 1,
           allow_free_products: data.client.product?.allow_free_products ?? 1,
           adding_requires_review:
             data.client.product?.adding_requires_review ?? 1,
@@ -150,6 +153,16 @@ export function Component() {
               <Trans message="Maximum size in bytes for a single product file. Leave empty for no platform limit." />
             </Field.Description>
             <Field.Error />
+          </HookForm.Field>
+
+          <HookForm.Field name="client.product.convert_covers_to_webp">
+            <Field.Label>
+              <NumericSwitch />
+              <Trans message="Convert cover images to WebP" />
+            </Field.Label>
+            <Field.Description>
+              <Trans message="When a product cover is attached, convert it to WebP for smaller images. The original file is kept." />
+            </Field.Description>
           </HookForm.Field>
         </Field.Group>
       </SettingsPanel>

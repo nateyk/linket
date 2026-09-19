@@ -4,7 +4,7 @@ namespace App\Admin;
 
 class ProductSettingsValidator
 {
-    const KEYS = ['product.min_price_cents', 'product.max_price_cents', 'product.allow_free_products', 'product.max_file_bytes'];
+    const KEYS = ['product.min_price_cents', 'product.max_price_cents', 'product.allow_free_products', 'product.max_file_bytes', 'product.convert_covers_to_webp'];
 
     public function fails($settings)
     {
