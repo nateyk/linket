@@ -2,19 +2,27 @@ import {StaticPageTitle} from '@common/seo/static-page-title';
 import {useShowGlobalLoadingBar} from '@common/core/use-show-global-loading-bar';
 import {AddFilterPopover} from '@common/datatable/filters/add-filter-popover';
 import {FilterList} from '@common/datatable/filters/filter-list/filter-list';
+import {showHttpErrorToast} from '@common/http/errors/show-http-error-toast';
+import {apiClient} from '@common/http/query-client';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {Button} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
+import {Dialog} from '@shadcn/dialog/dialog';
 import {Empty} from '@shadcn/empty/empty';
+import {Field} from '@shadcn/forms/field';
+import {Textarea} from '@shadcn/forms/textarea/textarea';
 import {GenericTable} from '@shadcn/table/generic-table';
 import {TablePagination} from '@shadcn/table/utils/table-pagination';
 import {Input} from '@shadcn/forms/input/input';
+import {toast} from '@shadcn/toast/toast';
 import {useTable} from '@shadcn/table/utils/use-table';
 import {useTableQueryState} from '@shadcn/table/utils/use-table-query-state';
 import {Tooltip} from '@shadcn/tooltip/tooltip';
 import {Trans} from '@ui/i18n/trans';
+import {useTrans} from '@ui/i18n/use-trans';
 import {
   BadgeCheckIcon,
+  CheckIcon,
   ClockIcon,
   InfoIcon,
   LandmarkIcon,
@@ -23,16 +31,21 @@ import {
   RefreshCwIcon,
   SearchIcon,
   XCircleIcon,
+  XIcon,
 } from 'lucide-react';
 import {parseAsString} from 'nuqs';
-import {useSuspenseQuery} from '@tanstack/react-query';
+import {useMutation, useQueryClient, useSuspenseQuery} from '@tanstack/react-query';
 import {Link} from 'react-router';
 import {adminDigitalProductColumns} from './admin-digital-products-datatable-columns';
 import {AdminDigitalProductsDatatableFilters} from './admin-digital-products-datatable-filters';
-import {adminDigitalProductsOptions} from './admin-digital-products-queries';
-import {ReactNode} from 'react';
+import {
+  adminDigitalProductsBaseKey,
+  adminDigitalProductsOptions,
+} from './admin-digital-products-queries';
+import {ReactNode, useEffect, useState} from 'react';
 
 export function Component() {
+  const {trans} = useTrans();
   const {queryState, setQueryState, deferredSearchParams, isFiltering, isLoading} =
     useTableQueryState({
       filters: AdminDigitalProductsDatatableFilters,
@@ -50,10 +63,67 @@ export function Component() {
   const scope = queryState.scope;
   const isScopeFiltering = scope === 'updated';
 
+  const queryClient = useQueryClient();
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [bulkReason, setBulkReason] = useState('');
+
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [deferredSearchParams]);
+
+  const invalidate = () =>
+    queryClient.invalidateQueries({queryKey: adminDigitalProductsBaseKey});
+
+  const bulkApprove = useMutation({
+    mutationFn: () =>
+      apiClient.post('/api/v1/admin/digital-products/bulk-approve', {
+        ids: selectedIds,
+      }),
+    onSuccess: response => {
+      const approvedCount = response.data?.approved ?? 0;
+      const skipped = response.data?.skipped ?? 0;
+      setSelectedIds([]);
+      invalidate();
+      toast.success(
+        <Trans
+          message=":approved approved, :skipped skipped"
+          values={{approved: approvedCount, skipped}}
+        />,
+      );
+    },
+    onError: error => showHttpErrorToast(error),
+  });
+
+  const bulkReject = useMutation({
+    mutationFn: () =>
+      apiClient.post('/api/v1/admin/digital-products/bulk-reject', {
+        ids: selectedIds,
+        reason: bulkReason.trim() || null,
+      }),
+    onSuccess: response => {
+      const rejectedCount = response.data?.rejected ?? 0;
+      const skipped = response.data?.skipped ?? 0;
+      setRejectOpen(false);
+      setBulkReason('');
+      setSelectedIds([]);
+      invalidate();
+      toast.success(
+        <Trans
+          message=":rejected rejected, :skipped skipped"
+          values={{rejected: rejectedCount, skipped}}
+        />,
+      );
+    },
+    onError: error => showHttpErrorToast(error),
+  });
+
   const table = useTable({
     data: items,
     columns: adminDigitalProductColumns,
     enableMultiRowSelection: true,
+    selectedRows: selectedIds,
+    onSelectedRowsChange: setSelectedIds,
     sort: queryState.sort,
     onSortChange: sort => setQueryState({sort}),
     pagination: {
@@ -189,6 +259,44 @@ export function Component() {
 
               <FilterList filters={AdminDigitalProductsDatatableFilters} />
 
+              {selectedIds.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2 rounded-card border bg-muted/40 px-3 py-2">
+                  <span className="text-sm font-medium">
+                    <Trans
+                      message=":count selected"
+                      values={{count: selectedIds.length}}
+                    />
+                  </span>
+                  <div className="ms-auto flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setSelectedIds([])}
+                    >
+                      <Trans message="Clear" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      color="danger"
+                      disabled={bulkReject.isPending}
+                      onClick={() => setRejectOpen(true)}
+                    >
+                      <XIcon />
+                      <Trans message="Reject" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      disabled={bulkApprove.isPending}
+                      onClick={() => bulkApprove.mutate()}
+                    >
+                      <CheckIcon />
+                      <Trans message="Approve" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               <div className="overflow-x-auto rounded-card border">
                 <div className="[&_thead]:bg-muted/30 [&_thead_tr]:border-b [&_th]:px-4 [&_th]:py-3 [&_th]:font-medium [&_td]:px-4 [&_td]:py-3 [&_tbody_tr]:border-b [&_tbody_tr:last-child]:border-0 [&_tbody_tr:hover]:bg-muted/30 [&_tbody_tr]:transition-colors [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border">
                   <GenericTable table={table} />
@@ -207,6 +315,52 @@ export function Component() {
           </Card.Root>
         </div>
       </DashboardLayout.SectionContent>
+
+      <Dialog.Root open={rejectOpen} onOpenChange={setRejectOpen}>
+        <Dialog.Portal>
+          <Dialog.Backdrop />
+          <Dialog.Content className="sm:max-w-lg">
+            <Dialog.Header>
+              <Dialog.Title>
+                <Trans message="Reject products" />
+              </Dialog.Title>
+              <Dialog.Description>
+                <Trans message="Explain what the creators should change. This is sent with each rejection." />
+              </Dialog.Description>
+            </Dialog.Header>
+            <Dialog.Body>
+              <Field.Root>
+                <Field.Label htmlFor="bulk-rejection-reason">
+                  <Trans message="Rejection reason" />
+                </Field.Label>
+                <Textarea
+                  id="bulk-rejection-reason"
+                  rows={4}
+                  value={bulkReason}
+                  onChange={e => setBulkReason(e.target.value)}
+                  placeholder={trans({
+                    message: 'Explain what the creator should change.',
+                  })}
+                />
+              </Field.Root>
+            </Dialog.Body>
+            <Dialog.Footer>
+              <Dialog.CloseButton>
+                <Trans message="Cancel" />
+              </Dialog.CloseButton>
+              <Button
+                variant="outline"
+                color="danger"
+                disabled={bulkReject.isPending}
+                onClick={() => bulkReject.mutate()}
+              >
+                <XIcon />
+                <Trans message="Reject" />
+              </Button>
+            </Dialog.Footer>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </DashboardLayout.MainSection>
   );
 }

@@ -2,6 +2,7 @@
 
 namespace App\Storefront\Controllers;
 
+use App\Models\User;
 use App\Storefront\Actions\SanitizeProductDescription;
 use App\Storefront\Models\DigitalProduct;
 use App\Storefront\ProductReviewHistory;
@@ -116,37 +117,12 @@ class AdminDigitalProductsController extends Controller
     {
         Gate::authorize('admin.access');
 
-        $locked = DB::transaction(function () use ($digitalProduct, $request): DigitalProduct {
-            $product = DigitalProduct::query()
-                ->whereKey($digitalProduct->getKey())
-                ->lockForUpdate()
-                ->firstOrFail();
+        abort_if(
+            $this->applyDecision($digitalProduct->getKey(), true, null, $request->user()) === null,
+            422,
+        );
 
-            $isUpdate = $product->status === 'approved' && $product->review_requested_at !== null;
-            abort_unless($product->status === 'pending_approval' || $isUpdate, 422);
-            $from = $product->status;
-
-            $product->update([
-                'status' => 'approved',
-                'approved_at' => now(),
-                'rejection_reason' => null,
-                'review_requested_at' => null,
-                'review_requested_by' => null,
-            ]);
-
-            app(ProductReviewHistory::class)->record(
-                $product,
-                $isUpdate ? 'update_approved' : 'approved',
-                $from,
-                'approved',
-                $request->user(),
-                'admin',
-            );
-
-            return $product;
-        });
-
-        return $locked->fresh()->load(['creator', 'cover', 'files', 'biolinks']);
+        return $digitalProduct->fresh()->load(['creator', 'cover', 'files', 'biolinks']);
     }
 
     public function reject(Request $request, DigitalProduct $digitalProduct)
@@ -155,36 +131,125 @@ class AdminDigitalProductsController extends Controller
 
         $data = $request->validate(['reason' => 'nullable|string|max:2000']);
 
-        $locked = DB::transaction(function () use ($digitalProduct, $data, $request): DigitalProduct {
+        abort_if(
+            $this->applyDecision($digitalProduct->getKey(), false, $data['reason'] ?? null, $request->user()) === null,
+            422,
+        );
+
+        return $digitalProduct->fresh()->load(['creator', 'cover', 'files', 'biolinks']);
+    }
+
+    public function bulkApprove(Request $request)
+    {
+        Gate::authorize('admin.access');
+
+        $data = $request->validate([
+            'ids' => 'required|array|min:1|max:100',
+            'ids.*' => 'integer',
+        ]);
+
+        return response()->json(
+            $this->applyBulk($data['ids'], true, null, $request->user()),
+        );
+    }
+
+    public function bulkReject(Request $request)
+    {
+        Gate::authorize('admin.access');
+
+        $data = $request->validate([
+            'ids' => 'required|array|min:1|max:100',
+            'ids.*' => 'integer',
+            'reason' => 'nullable|string|max:2000',
+        ]);
+
+        return response()->json(
+            $this->applyBulk($data['ids'], false, $data['reason'] ?? null, $request->user()),
+        );
+    }
+
+    /**
+     * @return array{approved?: int, rejected?: int, skipped: int}
+     */
+    private function applyBulk(array $ids, bool $approve, ?string $reason, User $actor): array
+    {
+        $processed = 0;
+        $skipped = 0;
+
+        foreach (array_unique($ids) as $id) {
+            if ($this->applyDecision((int) $id, $approve, $reason, $actor) === null) {
+                $skipped++;
+            } else {
+                $processed++;
+            }
+        }
+
+        return [
+            $approve ? 'approved' : 'rejected' => $processed,
+            'skipped' => $skipped,
+        ];
+    }
+
+    /**
+     * Apply one moderation decision under a row lock. Returns null when the
+     * product is missing or not actionable, so bulk calls can skip it.
+     */
+    private function applyDecision(int $id, bool $approve, ?string $reason, User $actor): ?DigitalProduct
+    {
+        return DB::transaction(function () use ($id, $approve, $reason, $actor): ?DigitalProduct {
             $product = DigitalProduct::query()
-                ->whereKey($digitalProduct->getKey())
+                ->whereKey($id)
                 ->lockForUpdate()
-                ->firstOrFail();
+                ->first();
+
+            if (!$product) {
+                return null;
+            }
 
             $isUpdate = $product->status === 'approved' && $product->review_requested_at !== null;
-            abort_unless($product->status === 'pending_approval' || $isUpdate, 422);
+            if ($product->status !== 'pending_approval' && !$isUpdate) {
+                return null;
+            }
+
             $from = $product->status;
 
-            $product->update([
-                'status' => 'rejected',
-                'rejection_reason' => $data['reason'] ?? null,
-                'review_requested_at' => null,
-                'review_requested_by' => null,
-            ]);
+            if ($approve) {
+                $product->update([
+                    'status' => 'approved',
+                    'approved_at' => now(),
+                    'rejection_reason' => null,
+                    'review_requested_at' => null,
+                    'review_requested_by' => null,
+                ]);
 
-            app(ProductReviewHistory::class)->record(
-                $product,
-                $isUpdate ? 'update_rejected' : 'rejected',
-                $from,
-                'rejected',
-                $request->user(),
-                'admin',
-                $data['reason'] ?? null,
-            );
+                app(ProductReviewHistory::class)->record(
+                    $product,
+                    $isUpdate ? 'update_approved' : 'approved',
+                    $from,
+                    'approved',
+                    $actor,
+                    'admin',
+                );
+            } else {
+                $product->update([
+                    'status' => 'rejected',
+                    'rejection_reason' => $reason,
+                    'review_requested_at' => null,
+                    'review_requested_by' => null,
+                ]);
+
+                app(ProductReviewHistory::class)->record(
+                    $product,
+                    $isUpdate ? 'update_rejected' : 'rejected',
+                    $from,
+                    'rejected',
+                    $actor,
+                    'admin',
+                    $reason,
+                );
+            }
 
             return $product;
         });
-
-        return $locked->fresh()->load(['creator', 'cover', 'files', 'biolinks']);
     }
 }

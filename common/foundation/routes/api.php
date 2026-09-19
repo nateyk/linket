@@ -243,6 +243,8 @@ Route::group(['prefix' => 'v1'], function () {
         Route::get('admin/digital-products/{digitalProduct}', [AdminDigitalProductsController::class, 'show'])->whereNumber('digitalProduct');
         Route::post('admin/digital-products/{digitalProduct}/approve', [AdminDigitalProductsController::class, 'approve']);
         Route::post('admin/digital-products/{digitalProduct}/reject', [AdminDigitalProductsController::class, 'reject']);
+        Route::post('admin/digital-products/bulk-approve', [AdminDigitalProductsController::class, 'bulkApprove']);
+        Route::post('admin/digital-products/bulk-reject', [AdminDigitalProductsController::class, 'bulkReject']);
         Route::get('admin/digital-products/payout-requests', [PayoutRequestsController::class, 'adminIndex']);
         Route::post('admin/digital-products/payout-requests/{payoutRequest}/processing', [PayoutRequestsController::class, 'startProcessing']);
         Route::post('admin/digital-products/payout-requests/{payoutRequest}/reject', [PayoutRequestsController::class, 'reject']);
