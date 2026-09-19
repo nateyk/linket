@@ -26,6 +26,11 @@ describe('admin product shared display', () => {
   test('list title links to the detail page', () => {
     expect(columns).toContain('/admin/digital-products/${product.id}');
   });
+
+  test('details menu navigates while quick review opens the dialog', () => {
+    expect(columns).toContain('<Trans message="Quick review" />');
+    expect(columns).toContain('setDetailsOpen(true)');
+  });
 });
 
 const routes = read('resources/client/admin/admin-routes.tsx');

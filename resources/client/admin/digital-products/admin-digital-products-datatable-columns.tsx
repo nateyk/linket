@@ -290,9 +290,17 @@ export function ProductActionsButton({
             <EllipsisIcon className="size-4" />
           </Dropdown.Trigger>
           <Dropdown.Content align="end">
-            <Dropdown.Item onClick={() => setDetailsOpen(true)}>
+            <Dropdown.Item
+              render={
+                <Link to={`/admin/digital-products/${product.id}`} />
+              }
+            >
               <EyeIcon className="size-4" />
               <Trans message="Details" />
+            </Dropdown.Item>
+            <Dropdown.Item onClick={() => setDetailsOpen(true)}>
+              <ShieldCheckIcon className="size-4" />
+              <Trans message="Quick review" />
             </Dropdown.Item>
             <Dropdown.Item
               render={
