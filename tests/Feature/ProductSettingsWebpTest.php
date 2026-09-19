@@ -14,6 +14,7 @@ use Common\Workspaces\Actions\CreateWorkspace;
 use Common\Workspaces\Models\Workspace;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -100,6 +101,75 @@ class ProductSettingsWebpTest extends TestCase
         settings()->loadSettings();
 
         $this->assertTrue(app(ProductSettings::class)->convertsCoversToWebp());
+    }
+
+    public function testCreateWithCoverDispatchesConversion(): void
+    {
+        Queue::fake();
+        [$creator, $workspace] = $this->creatorContext();
+        $cover = $this->createImageEntry($creator, $workspace, 'jpg');
+
+        $this->stateful()->actingAs($creator)->postJson('/api/v1/digital-products', [
+            'title' => 'With Cover',
+            'price_cents' => 1000,
+            'currency' => 'ETB',
+            'file_ids' => [$this->createPdfEntry($creator, $workspace)->id],
+            'cover_file_entry_id' => $cover->id,
+        ])->assertCreated();
+
+        Queue::assertPushed(ConvertProductCoverToWebp::class);
+    }
+
+    public function testUpdateWithoutCoverChangeDoesNotDispatch(): void
+    {
+        Queue::fake();
+        [$creator, $workspace] = $this->creatorContext();
+        $file = $this->createPdfEntry($creator, $workspace);
+        $product = $this->product($workspace, $creator);
+        $product->files()->attach($file->id);
+
+        $this->stateful()->actingAs($creator)->putJson("/api/v1/digital-products/{$product->id}", [
+            'title' => 'Renamed',
+            'price_cents' => 1000,
+            'currency' => 'ETB',
+            'file_ids' => [$file->id],
+        ])->assertOk();
+
+        Queue::assertNotPushed(ConvertProductCoverToWebp::class);
+    }
+
+    public function testUpdateChangingCoverDispatchesConversion(): void
+    {
+        Queue::fake();
+        [$creator, $workspace] = $this->creatorContext();
+        $file = $this->createPdfEntry($creator, $workspace);
+        $cover = $this->createImageEntry($creator, $workspace, 'jpg');
+        $product = $this->product($workspace, $creator);
+        $product->files()->attach($file->id);
+
+        $this->stateful()->actingAs($creator)->putJson("/api/v1/digital-products/{$product->id}", [
+            'title' => $product->title,
+            'price_cents' => 1000,
+            'currency' => 'ETB',
+            'file_ids' => [$file->id],
+            'cover_file_entry_id' => $cover->id,
+        ])->assertOk();
+
+        Queue::assertPushed(ConvertProductCoverToWebp::class);
+    }
+
+    private function createPdfEntry(User $creator, Workspace $workspace): FileEntry
+    {
+        return FileEntry::query()->create([
+            'name' => 'guide.pdf',
+            'file_name' => 'guide.pdf',
+            'mime' => 'application/pdf',
+            'extension' => 'pdf',
+            'file_size' => 1024,
+            'workspace_id' => $workspace->id,
+            'owner_id' => $creator->id,
+            'upload_type' => 'digitalProductFiles',
+        ]);
     }
 
     private function product(Workspace $workspace, User $creator, array $attributes = []): DigitalProduct
