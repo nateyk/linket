@@ -102,6 +102,9 @@ class CoursesController extends Controller
                 if (array_key_exists('price_cents', $productData)) {
                     $policy->enforcePricePolicy($productData['price_cents']);
                 }
+                $snapshot = $course->product->status === 'approved'
+                    ? app(\App\Storefront\ApprovedContentSnapshot::class)->capture($course->product)
+                    : null;
                 $course->product->update($productData);
                 // Keep a live course sellable while its edit awaits review.
                 if ($course->product->status === 'approved' && $policy->updatingRequiresReviewForCourse()) {
@@ -110,6 +113,9 @@ class CoursesController extends Controller
                             'review_requested_at' => now(),
                             'review_requested_by' => $request->user()->id,
                         ]);
+                    }
+                    if ($course->product->pending_review_snapshot === null && $snapshot !== null) {
+                        $course->product->update(['pending_review_snapshot' => $snapshot]);
                     }
                     app(\App\Storefront\ProductReviewHistory::class)->record(
                         $course->product->fresh(),

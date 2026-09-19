@@ -55,16 +55,9 @@ final class DigitalProductMutationService
     {
         return DB::transaction(function () use ($product, $data, $maxUploadBytes, $actor): DigitalProduct {
             $type = $data['type'] ?? $product->type ?? 'digital';
-            $snapshot = [
-                'title' => $product->title,
-                'description' => $product->description,
-                'learning_outcomes' => $product->learning_outcomes,
-                'price_cents' => $product->price_cents,
-                'currency' => $product->currency,
-                'type' => $product->type ?? 'digital',
-                'cover_file_entry_id' => $product->cover_file_entry_id,
-                'file_ids' => $product->files()->pluck('file_entries.id')->sort()->values()->all(),
-            ];
+            $snapshot = $product->status === 'approved'
+                ? app(\App\Storefront\ApprovedContentSnapshot::class)->capture($product)
+                : null;
             $product->update([
                 ...Arr::except($data, ['file_ids', 'biolink_ids', 'type']),
                 'type' => $type,
@@ -115,7 +108,7 @@ final class DigitalProductMutationService
         });
     }
 
-    private function queueUpdateReviewIfNeeded(DigitalProduct $product, ?User $actor, array $snapshot): bool
+    private function queueUpdateReviewIfNeeded(DigitalProduct $product, ?User $actor, ?array $snapshot): bool
     {
         $requiresReview = $product->isCourse()
             ? app(ProductSettings::class)->updatingRequiresReviewForCourse()
@@ -125,14 +118,14 @@ final class DigitalProductMutationService
             return false;
         }
 
-        if ($product->review_requested_at !== null) {
+        if ($product->review_requested_at !== null && $product->pending_review_snapshot !== null) {
             return false;
         }
 
         $product->update([
-            'review_requested_at' => now(),
-            'review_requested_by' => $actor?->id ?? $product->user_id,
-            'pending_review_snapshot' => $snapshot,
+            'review_requested_at' => $product->review_requested_at ?? now(),
+            'review_requested_by' => $product->review_requested_by ?? ($actor?->id ?? $product->user_id),
+            'pending_review_snapshot' => $product->pending_review_snapshot ?? $snapshot,
         ]);
 
         return true;

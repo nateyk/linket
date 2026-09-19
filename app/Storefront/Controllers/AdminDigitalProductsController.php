@@ -320,12 +320,12 @@ class AdminDigitalProductsController extends Controller
 
                     $product->update([
                         'title' => $snapshot['title'] ?? $product->title,
-                        'description' => $snapshot['description'] ?? null,
+                        'description' => $snapshot['description'] ?? $product->description,
                         'learning_outcomes' => $snapshot['learning_outcomes'] ?? null,
                         'price_cents' => $snapshot['price_cents'] ?? $product->price_cents,
                         'currency' => $snapshot['currency'] ?? $product->currency,
                         'type' => $snapshot['type'] ?? $product->type,
-                        'cover_file_entry_id' => $snapshot['cover_file_entry_id'] ?? null,
+                        'cover_file_entry_id' => $snapshot['cover_file_entry_id'] ?? $product->cover_file_entry_id,
                         'status' => 'approved',
                         'rejection_reason' => null,
                         'review_requested_at' => null,

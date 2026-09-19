@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Biolinks\Models\Biolink;
+use App\Courses\Models\Course;
+use App\Courses\Services\CourseService;
 use App\Models\User;
 use App\Storefront\Models\DigitalProduct;
 use Common\Files\FileEntry;
@@ -194,6 +196,99 @@ class ProductUpdateRevertTest extends TestCase
         $payload = $notification->toDatabase($creator);
         $this->assertStringContainsString('previous version is still live', $payload['lines'][0]['content']);
         $this->assertStringContainsString('Nope', $payload['lines'][1]['content']);
+    }
+
+    public function testCourseProductEditCanBeReverted(): void
+    {
+        settings()->save(['product.updating_requires_review' => 1]);
+        $admin = $this->createAdmin();
+        [$creator, $workspace] = $this->creatorContext();
+        $course = $this->approvedCourse($creator, $workspace, [
+            'title' => 'Original Course',
+            'price_cents' => 1000,
+        ]);
+
+        $this->stateful()->actingAs($creator)->putJson(
+            "/api/v1/courses/{$course->id}",
+            ['title' => 'Edited Course', 'price_cents' => 2000],
+        )->assertOk();
+
+        $product = $course->product->fresh();
+        $this->assertSame('approved', $product->status);
+        $this->assertNotNull($product->review_requested_at);
+        $this->assertIsArray($product->pending_review_snapshot);
+        $this->assertSame('Original Course', $product->pending_review_snapshot['title']);
+
+        $this->stateful()->actingAs($admin)->postJson(
+            "/api/v1/admin/digital-products/{$product->id}/reject",
+            ['reason' => 'No'],
+        )->assertOk();
+
+        $reverted = $product->fresh();
+        $this->assertSame('approved', $reverted->status);
+        $this->assertSame('Original Course', $reverted->title);
+        $this->assertSame(1000, $reverted->price_cents);
+        $this->assertNull($reverted->review_requested_at);
+        $this->assertNull($reverted->pending_review_snapshot);
+        $this->assertDatabaseHas('digital_product_review_events', [
+            'digital_product_id' => $product->id,
+            'event' => 'update_reverted',
+            'reason' => 'No',
+            'actor_role' => 'admin',
+        ]);
+    }
+
+    public function testCurriculumFirstThenProductEditIsStillRevertable(): void
+    {
+        settings()->save(['product.updating_requires_review' => 1]);
+        $admin = $this->createAdmin();
+        [$creator, $workspace] = $this->creatorContext();
+        $course = $this->approvedCourse($creator, $workspace, [
+            'title' => 'Original Course',
+            'price_cents' => 1000,
+        ]);
+
+        app(CourseService::class)->revertApprovalForContentChange($course);
+        $this->assertNotNull($course->product->fresh()->review_requested_at);
+        $this->assertNull($course->product->fresh()->pending_review_snapshot);
+
+        $this->stateful()->actingAs($creator)->putJson(
+            "/api/v1/courses/{$course->id}",
+            ['title' => 'Edited Course', 'price_cents' => 2000],
+        )->assertOk();
+
+        $product = $course->product->fresh();
+        $this->assertIsArray($product->pending_review_snapshot);
+        $this->assertSame('Original Course', $product->pending_review_snapshot['title']);
+
+        $this->stateful()->actingAs($admin)->postJson(
+            "/api/v1/admin/digital-products/{$product->id}/reject",
+            ['reason' => 'No'],
+        )->assertOk();
+
+        $reverted = $product->fresh();
+        $this->assertSame('approved', $reverted->status);
+        $this->assertSame('Original Course', $reverted->title);
+        $this->assertSame(1000, $reverted->price_cents);
+        $this->assertDatabaseHas('digital_product_review_events', [
+            'digital_product_id' => $product->id,
+            'event' => 'update_reverted',
+        ]);
+    }
+
+    private function approvedCourse(User $creator, Workspace $workspace, array $attributes = []): Course
+    {
+        $product = $this->product($workspace, $creator, array_merge([
+            'type' => 'course',
+            'status' => 'approved',
+            'approved_at' => now(),
+        ], $attributes));
+
+        return Course::query()->create([
+            'digital_product_id' => $product->id,
+            'instructor_user_id' => $creator->id,
+            'published_at' => now(),
+        ])->load('product');
     }
 
     private function updateProduct(User $creator, DigitalProduct $product, array $overrides = []): void
