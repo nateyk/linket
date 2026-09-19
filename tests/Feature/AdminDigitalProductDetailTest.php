@@ -17,7 +17,6 @@ use Common\Workspaces\ActiveWorkspace;
 use Common\Workspaces\Actions\CreateWorkspace;
 use Common\Workspaces\Models\Workspace;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -173,29 +172,28 @@ class AdminDigitalProductDetailTest extends TestCase
         $response->assertJsonPath('data.course.published_lessons_count', 1);
     }
 
-    public function testDescriptionIsSanitizedOnWriteAndInAdminResponse(): void
+    public function testDescriptionIsSanitizedOnRenderButNotOnWrite(): void
     {
         $admin = $this->createAdmin();
         [$creator, $workspace] = $this->creatorContext();
+        $payload = '<p>Keep</p><strong>Bold</strong><img src="https://example.test/x.png"><script>alert(1)</script><a href="javascript:alert(1)">bad</a>';
         $product = $this->product($workspace, $creator, [
-            'description' => '<p>Keep</p><script>alert(1)</script><a href="javascript:alert(1)">bad</a>',
+            'description' => $payload,
         ]);
 
         $stored = $product->fresh()->description;
-        $this->assertStringContainsString('<p>Keep</p>', $stored);
-        $this->assertStringNotContainsString('<script', $stored);
-        $this->assertStringNotContainsString('javascript:', $stored);
-
-        DB::table('digital_products')->where('id', $product->id)->update([
-            'description' => '<p>Legacy</p><script>alert(1)</script>',
-        ]);
+        $this->assertSame($payload, $stored);
+        $this->assertStringContainsString('<script', $stored);
+        $this->assertStringContainsString('javascript:', $stored);
 
         $response = $this->stateful()->actingAs($admin)
             ->getJson("/api/v1/admin/digital-products/{$product->id}");
 
         $response->assertOk();
         $description = (string) $response->json('data.description');
-        $this->assertStringContainsString('<p>Legacy</p>', $description);
+        $this->assertStringContainsString('<p>Keep</p>', $description);
+        $this->assertStringContainsString('<strong>Bold</strong>', $description);
+        $this->assertStringContainsString('<img', $description);
         $this->assertStringNotContainsString('<script', $description);
         $this->assertStringNotContainsString('javascript:', $description);
     }
