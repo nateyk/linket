@@ -55,6 +55,9 @@ final class DigitalProductMutationService
     {
         return DB::transaction(function () use ($product, $data, $maxUploadBytes, $actor): DigitalProduct {
             $type = $data['type'] ?? $product->type ?? 'digital';
+            $snapshot = $product->status === 'approved'
+                ? app(\App\Storefront\ApprovedContentSnapshot::class)->capture($product)
+                : null;
             $product->update([
                 ...Arr::except($data, ['file_ids', 'biolink_ids', 'type']),
                 'type' => $type,
@@ -83,7 +86,7 @@ final class DigitalProductMutationService
             }
 
             if ($changed !== []) {
-                $queuedReview = $this->queueUpdateReviewIfNeeded($product, $actor);
+                $queuedReview = $this->queueUpdateReviewIfNeeded($product, $actor, $snapshot);
                 $meta = ['changed' => $changed];
                 if ($queuedReview) {
                     $meta['review_requested'] = true;
@@ -105,7 +108,7 @@ final class DigitalProductMutationService
         });
     }
 
-    private function queueUpdateReviewIfNeeded(DigitalProduct $product, ?User $actor): bool
+    private function queueUpdateReviewIfNeeded(DigitalProduct $product, ?User $actor, ?array $snapshot): bool
     {
         $requiresReview = $product->isCourse()
             ? app(ProductSettings::class)->updatingRequiresReviewForCourse()
@@ -115,16 +118,19 @@ final class DigitalProductMutationService
             return false;
         }
 
-        if ($product->review_requested_at !== null) {
+        if ($product->review_requested_at !== null && $product->pending_review_snapshot !== null) {
             return false;
         }
 
+        $newlyRequested = $product->review_requested_at === null;
+
         $product->update([
-            'review_requested_at' => now(),
-            'review_requested_by' => $actor?->id ?? $product->user_id,
+            'review_requested_at' => $product->review_requested_at ?? now(),
+            'review_requested_by' => $product->review_requested_by ?? ($actor?->id ?? $product->user_id),
+            'pending_review_snapshot' => $product->pending_review_snapshot ?? $snapshot,
         ]);
 
-        return true;
+        return $newlyRequested;
     }
 
     private function syncProductFiles(DigitalProduct $product, array $data, string $type, ?int $maxBytes): void
