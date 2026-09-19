@@ -74,7 +74,7 @@ class AdminDigitalProductsController extends Controller
         return response()->json($paginated);
     }
 
-    public function show(Request $request, DigitalProduct $digitalProduct)
+    public function show(DigitalProduct $digitalProduct)
     {
         Gate::authorize('admin.access');
 

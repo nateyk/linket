@@ -9,12 +9,15 @@ use App\Courses\Models\Lesson;
 use App\Models\User;
 use App\Storefront\Models\DigitalProduct;
 use App\Storefront\Models\DigitalProductReviewEvent;
+use App\Storefront\Models\ProductReview;
+use App\Storefront\Models\StorefrontOrder;
 use Common\Files\FileEntry;
 use Common\Permissions\Models\Permission;
 use Common\Workspaces\ActiveWorkspace;
 use Common\Workspaces\Actions\CreateWorkspace;
 use Common\Workspaces\Models\Workspace;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -168,6 +171,77 @@ class AdminDigitalProductDetailTest extends TestCase
         $response->assertJsonPath('data.course.chapters_count', 1);
         $response->assertJsonPath('data.course.lessons_count', 2);
         $response->assertJsonPath('data.course.published_lessons_count', 1);
+    }
+
+    public function testDescriptionIsSanitizedOnWriteAndInAdminResponse(): void
+    {
+        $admin = $this->createAdmin();
+        [$creator, $workspace] = $this->creatorContext();
+        $product = $this->product($workspace, $creator, [
+            'description' => '<p>Keep</p><script>alert(1)</script><a href="javascript:alert(1)">bad</a>',
+        ]);
+
+        $stored = $product->fresh()->description;
+        $this->assertStringContainsString('<p>Keep</p>', $stored);
+        $this->assertStringNotContainsString('<script', $stored);
+        $this->assertStringNotContainsString('javascript:', $stored);
+
+        DB::table('digital_products')->where('id', $product->id)->update([
+            'description' => '<p>Legacy</p><script>alert(1)</script>',
+        ]);
+
+        $response = $this->stateful()->actingAs($admin)
+            ->getJson("/api/v1/admin/digital-products/{$product->id}");
+
+        $response->assertOk();
+        $description = (string) $response->json('data.description');
+        $this->assertStringContainsString('<p>Legacy</p>', $description);
+        $this->assertStringNotContainsString('<script', $description);
+        $this->assertStringNotContainsString('javascript:', $description);
+    }
+
+    public function testShowReturnsSalesAndReviewsCounts(): void
+    {
+        $admin = $this->createAdmin();
+        [$creator, $workspace] = $this->creatorContext();
+        $product = $this->product($workspace, $creator, [
+            'status' => 'approved',
+            'approved_at' => now(),
+        ]);
+
+        $this->createOrder($product, $creator, 'paid');
+        $this->createOrder($product, $creator, 'pending');
+
+        ProductReview::query()->create([
+            'reviewable_id' => $product->id,
+            'reviewable_type' => DigitalProduct::class,
+            'user_id' => $creator->id,
+            'review' => 'Great product',
+            'approved' => true,
+        ]);
+
+        $response = $this->stateful()->actingAs($admin)
+            ->getJson("/api/v1/admin/digital-products/{$product->id}");
+
+        $response->assertOk();
+        $response->assertJsonPath('data.sales_count', 1);
+        $response->assertJsonPath('data.reviews_count', 1);
+    }
+
+    private function createOrder(DigitalProduct $product, User $creator, string $status): StorefrontOrder
+    {
+        return StorefrontOrder::query()->create([
+            'uuid' => (string) Str::uuid(),
+            'digital_product_id' => $product->id,
+            'creator_id' => $creator->id,
+            'currency' => $product->currency,
+            'gross_amount_cents' => 1000,
+            'commission_bps' => 1000,
+            'platform_fee_cents' => 100,
+            'creator_earnings_cents' => 900,
+            'status' => $status,
+            'paid_at' => $status === 'paid' ? now() : null,
+        ]);
     }
 
     private function product(Workspace $workspace, User $creator, array $attributes = []): DigitalProduct

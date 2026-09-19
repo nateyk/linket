@@ -18,14 +18,16 @@ class AdminDigitalProductResource extends JsonResource
         return [
             'id' => $this->id,
             'title' => $this->title,
-            'description' => $this->description,
+            'description' => $this->description === null
+                ? null
+                : app(\App\Storefront\Actions\SanitizeProductDescription::class)->execute($this->description),
             'learning_outcomes' => $this->learning_outcomes,
             'type' => $this->type ?? 'digital',
             'is_course' => ($this->type ?? 'digital') === 'course',
             'status' => $this->status,
             'rejection_reason' => $this->rejection_reason,
             'review_requested_at' => $this->review_requested_at,
-            'has_pending_update' => $this->resource->hasPendingUpdate(),
+            'has_pending_update' => $this->hasPendingUpdate(),
             'approved_at' => $this->approved_at,
             'price_cents' => $this->price_cents,
             'currency' => $this->currency,
