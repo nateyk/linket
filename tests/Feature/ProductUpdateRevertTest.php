@@ -148,6 +148,54 @@ class ProductUpdateRevertTest extends TestCase
         ]);
     }
 
+    public function testAdminDetailExposesPendingChanges(): void
+    {
+        settings()->save(['product.updating_requires_review' => 1]);
+        $admin = $this->createAdmin();
+        [$creator, $workspace] = $this->creatorContext();
+        $file = $this->createFile($creator, $workspace);
+        $product = $this->product($workspace, $creator, [
+            'status' => 'approved',
+            'approved_at' => now(),
+            'title' => 'Original',
+            'price_cents' => 1000,
+        ]);
+        $product->files()->attach($file->id);
+
+        $this->updateProduct($creator, $product, ['title' => 'Edited', 'price_cents' => 2000]);
+
+        $response = $this->stateful()->actingAs($admin)
+            ->getJson("/api/v1/admin/digital-products/{$product->id}");
+
+        $response->assertOk();
+        $changes = collect($response->json('data.pending_changes'));
+        $this->assertNotNull($changes->firstWhere('field', 'title'));
+        $this->assertSame('Original', $changes->firstWhere('field', 'title')['before']);
+        $this->assertSame('Edited', $changes->firstWhere('field', 'title')['after']);
+        $this->assertNotNull($changes->firstWhere('field', 'price_cents'));
+    }
+
+    public function testUpdateRevertedNotificationCopy(): void
+    {
+        [$creator, $workspace] = $this->creatorContext();
+        $product = $this->product($workspace, $creator, ['status' => 'approved', 'approved_at' => now()]);
+
+        $notification = new \App\Storefront\Notifications\ProductModerationNotification(
+            $product->id,
+            'update_reverted',
+            'Nope',
+        );
+
+        $this->assertStringContainsString(
+            'previous version is still live',
+            $notification->toMail($creator)->render(),
+        );
+
+        $payload = $notification->toDatabase($creator);
+        $this->assertStringContainsString('previous version is still live', $payload['lines'][0]['content']);
+        $this->assertStringContainsString('Nope', $payload['lines'][1]['content']);
+    }
+
     private function updateProduct(User $creator, DigitalProduct $product, array $overrides = []): void
     {
         $this->stateful()->actingAs($creator)->putJson(

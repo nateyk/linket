@@ -108,7 +108,7 @@ class ProductModerationNotification extends Notification implements ShouldQueue
 
     private function isRejection(): bool
     {
-        return in_array($this->event, ['rejected', 'update_rejected'], true);
+        return in_array($this->event, ['rejected', 'update_rejected', 'update_reverted'], true);
     }
 
     private function subject(): string
@@ -118,6 +118,7 @@ class ProductModerationNotification extends Notification implements ShouldQueue
             'update_approved' => __('Your product update is live'),
             'rejected' => __('Your product needs changes'),
             'update_rejected' => __('Your product update needs changes'),
+            'update_reverted' => __('Your product update was rejected'),
             default => __('Product update'),
         };
     }
@@ -129,6 +130,7 @@ class ProductModerationNotification extends Notification implements ShouldQueue
             'update_approved' => __('Your update to ":title" is now live.', ['title' => $product->title]),
             'rejected' => __('Your product ":title" needs changes.', ['title' => $product->title]),
             'update_rejected' => __('Your update to ":title" needs changes.', ['title' => $product->title]),
+            'update_reverted' => __('Your update to ":title" was rejected. Your previous version is still live.', ['title' => $product->title]),
             default => __('Your product ":title" was updated.', ['title' => $product->title]),
         };
     }
