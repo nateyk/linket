@@ -45,6 +45,11 @@ final class ProductSettings
         return $this->updatingRequiresReview() || (bool) config('store.courses_require_approval');
     }
 
+    public function convertsCoversToWebp(): bool
+    {
+        return $this->settingEnabled('product.convert_covers_to_webp', true);
+    }
+
     public function maxFileBytes(): ?int
     {
         $value = settings('product.max_file_bytes');

@@ -608,4 +608,5 @@ return [
     // product review policy (fail closed: new and updated products need review)
     ['name' => 'product.adding_requires_review', 'value' => true],
     ['name' => 'product.updating_requires_review', 'value' => true],
+    ['name' => 'product.convert_covers_to_webp', 'value' => true],
 ];

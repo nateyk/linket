@@ -21,7 +21,7 @@ final class DigitalProductMutationService
 
     public function create(array $data, User $creator, ?int $maxUploadBytes): DigitalProduct
     {
-        return DB::transaction(function () use ($data, $creator, $maxUploadBytes): DigitalProduct {
+        $product = DB::transaction(function () use ($data, $creator, $maxUploadBytes): DigitalProduct {
             $type = $data['type'] ?? 'digital';
             $product = DigitalProduct::create([
                 ...Arr::except($data, ['file_ids', 'biolink_ids', 'type']),
@@ -49,11 +49,17 @@ final class DigitalProductMutationService
 
             return $product->fresh()->load(['files', 'cover', 'biolinks', 'course']);
         });
+
+        app(ProductCoverWebp::class)->dispatchFor($product);
+
+        return $product;
     }
 
     public function update(DigitalProduct $product, array $data, ?int $maxUploadBytes, ?User $actor = null): DigitalProduct
     {
-        return DB::transaction(function () use ($product, $data, $maxUploadBytes, $actor): DigitalProduct {
+        $coverBefore = $product->cover_file_entry_id;
+
+        $updated = DB::transaction(function () use ($product, $data, $maxUploadBytes, $actor): DigitalProduct {
             $type = $data['type'] ?? $product->type ?? 'digital';
             $snapshot = $product->status === 'approved'
                 ? app(\App\Storefront\ApprovedContentSnapshot::class)->capture($product)
@@ -106,6 +112,12 @@ final class DigitalProductMutationService
 
             return $product->fresh()->load(['files', 'cover', 'biolinks', 'course']);
         });
+
+        if ($updated->cover_file_entry_id && $updated->cover_file_entry_id !== $coverBefore) {
+            app(ProductCoverWebp::class)->dispatchFor($updated);
+        }
+
+        return $updated;
     }
 
     private function queueUpdateReviewIfNeeded(DigitalProduct $product, ?User $actor, ?array $snapshot): bool

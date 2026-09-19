@@ -62,7 +62,9 @@ class CoursesController extends Controller
                 'sometimes|nullable|integer|exists:users,id',
         ]);
 
-        return DB::transaction(function () use (
+        $coverBefore = $course->product->cover_file_entry_id;
+
+        $result = DB::transaction(function () use (
             $course,
             $data,
             $request,
@@ -156,6 +158,13 @@ class CoursesController extends Controller
             ]);
             return new CourseResource($course);
         });
+
+        $product = $course->product()->first();
+        if ($product && $product->cover_file_entry_id && $product->cover_file_entry_id !== $coverBefore) {
+            app(\App\Storefront\ProductCoverWebp::class)->dispatchFor($product);
+        }
+
+        return $result;
     }
 
     public function publish(Request $request, Course $course)
