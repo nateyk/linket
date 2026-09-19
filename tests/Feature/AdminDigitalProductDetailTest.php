@@ -198,6 +198,28 @@ class AdminDigitalProductDetailTest extends TestCase
         $this->assertStringNotContainsString('javascript:', $description);
     }
 
+    public function testAdminIndexSanitizesDescription(): void
+    {
+        $admin = $this->createAdmin();
+        [$creator, $workspace] = $this->creatorContext();
+        $payload = '<p>Keep</p><script>alert(1)</script><a href="javascript:alert(1)">bad</a>';
+        $product = $this->product($workspace, $creator, [
+            'description' => $payload,
+        ]);
+
+        $this->assertSame($payload, $product->fresh()->description);
+
+        $response = $this->stateful()->actingAs($admin)
+            ->getJson('/api/v1/admin/digital-products');
+
+        $response->assertOk();
+        $row = collect($response->json('data'))->firstWhere('id', $product->id);
+        $this->assertNotNull($row);
+        $this->assertStringContainsString('<p>Keep</p>', $row['description']);
+        $this->assertStringNotContainsString('<script', $row['description']);
+        $this->assertStringNotContainsString('javascript:', $row['description']);
+    }
+
     public function testShowReturnsSalesAndReviewsCounts(): void
     {
         $admin = $this->createAdmin();

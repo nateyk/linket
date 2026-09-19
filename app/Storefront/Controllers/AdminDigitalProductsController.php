@@ -2,6 +2,7 @@
 
 namespace App\Storefront\Controllers;
 
+use App\Storefront\Actions\SanitizeProductDescription;
 use App\Storefront\Models\DigitalProduct;
 use App\Storefront\ProductReviewHistory;
 use App\Storefront\Resources\AdminDigitalProductResource;
@@ -69,6 +70,16 @@ class AdminDigitalProductsController extends Controller
         $products->appends($request->only(['search', 'status', 'scope', 'perPage', 'sort']));
 
         $paginated = $products->toArray();
+        // Render-only sanitization: creator HTML is stored as authored, but the
+        // admin list dialog injects descriptions, so emit safe HTML here.
+        $sanitizer = app(SanitizeProductDescription::class);
+        $paginated['data'] = array_map(static function (array $row) use ($sanitizer): array {
+            if (array_key_exists('description', $row) && $row['description'] !== null) {
+                $row['description'] = $sanitizer->execute($row['description']);
+            }
+
+            return $row;
+        }, $paginated['data']);
         $paginated['meta'] = array_merge($paginated['meta'] ?? [], ['counters' => $counters]);
 
         return response()->json($paginated);
