@@ -276,6 +276,58 @@ class ProductUpdateRevertTest extends TestCase
         ]);
     }
 
+    public function testRevertRestoresNullDescriptionAndCover(): void
+    {
+        settings()->save(['product.updating_requires_review' => 1]);
+        $admin = $this->createAdmin();
+        [$creator, $workspace] = $this->creatorContext();
+        $file = $this->createFile($creator, $workspace);
+        $image = $this->createFile($creator, $workspace, [
+            'name' => 'cover.png',
+            'file_name' => 'cover.png',
+            'mime' => 'image/png',
+            'extension' => 'png',
+        ]);
+        $product = $this->product($workspace, $creator, [
+            'status' => 'approved',
+            'approved_at' => now(),
+            'title' => 'Original',
+            'description' => null,
+            'cover_file_entry_id' => null,
+            'price_cents' => 1000,
+        ]);
+        $product->files()->attach($file->id);
+
+        $this->stateful()->actingAs($creator)->putJson(
+            "/api/v1/digital-products/{$product->id}",
+            [
+                'title' => 'Original',
+                'description' => 'Added description',
+                'price_cents' => 1000,
+                'currency' => 'ETB',
+                'cover_file_entry_id' => $image->id,
+                'file_ids' => [$file->id],
+            ],
+        )->assertOk();
+
+        $this->assertSame('Added description', $product->fresh()->description);
+        $this->assertSame($image->id, $product->fresh()->cover_file_entry_id);
+
+        $this->stateful()->actingAs($admin)->postJson(
+            "/api/v1/admin/digital-products/{$product->id}/reject",
+            ['reason' => 'No'],
+        )->assertOk();
+
+        $reverted = $product->fresh();
+        $this->assertSame('approved', $reverted->status);
+        $this->assertNull($reverted->description);
+        $this->assertNull($reverted->cover_file_entry_id);
+        $this->assertDatabaseHas('digital_product_review_events', [
+            'digital_product_id' => $product->id,
+            'event' => 'update_reverted',
+        ]);
+    }
+
     private function approvedCourse(User $creator, Workspace $workspace, array $attributes = []): Course
     {
         $product = $this->product($workspace, $creator, array_merge([
@@ -316,9 +368,9 @@ class ProductUpdateRevertTest extends TestCase
         ], $attributes));
     }
 
-    private function createFile(User $creator, Workspace $workspace): FileEntry
+    private function createFile(User $creator, Workspace $workspace, array $attributes = []): FileEntry
     {
-        return FileEntry::query()->create([
+        return FileEntry::query()->create(array_merge([
             'name' => 'download.pdf',
             'file_name' => 'download.pdf',
             'mime' => 'application/pdf',
@@ -326,7 +378,7 @@ class ProductUpdateRevertTest extends TestCase
             'file_size' => 1024,
             'workspace_id' => $workspace->id,
             'owner_id' => $creator->id,
-        ]);
+        ], $attributes));
     }
 
     private function store(User $creator, Workspace $workspace): Biolink

@@ -320,12 +320,18 @@ class AdminDigitalProductsController extends Controller
 
                     $product->update([
                         'title' => $snapshot['title'] ?? $product->title,
-                        'description' => $snapshot['description'] ?? $product->description,
-                        'learning_outcomes' => $snapshot['learning_outcomes'] ?? null,
+                        'description' => array_key_exists('description', $snapshot)
+                            ? $snapshot['description']
+                            : $product->description,
+                        'learning_outcomes' => array_key_exists('learning_outcomes', $snapshot)
+                            ? $snapshot['learning_outcomes']
+                            : $product->learning_outcomes,
                         'price_cents' => $snapshot['price_cents'] ?? $product->price_cents,
                         'currency' => $snapshot['currency'] ?? $product->currency,
                         'type' => $snapshot['type'] ?? $product->type,
-                        'cover_file_entry_id' => $snapshot['cover_file_entry_id'] ?? $product->cover_file_entry_id,
+                        'cover_file_entry_id' => array_key_exists('cover_file_entry_id', $snapshot)
+                            ? $snapshot['cover_file_entry_id']
+                            : $product->cover_file_entry_id,
                         'status' => 'approved',
                         'rejection_reason' => null,
                         'review_requested_at' => null,

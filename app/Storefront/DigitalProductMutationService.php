@@ -122,13 +122,15 @@ final class DigitalProductMutationService
             return false;
         }
 
+        $newlyRequested = $product->review_requested_at === null;
+
         $product->update([
             'review_requested_at' => $product->review_requested_at ?? now(),
             'review_requested_by' => $product->review_requested_by ?? ($actor?->id ?? $product->user_id),
             'pending_review_snapshot' => $product->pending_review_snapshot ?? $snapshot,
         ]);
 
-        return true;
+        return $newlyRequested;
     }
 
     private function syncProductFiles(DigitalProduct $product, array $data, string $type, ?int $maxBytes): void
