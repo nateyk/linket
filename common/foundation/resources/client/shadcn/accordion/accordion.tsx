@@ -28,9 +28,9 @@ function AccordionRoot({
 
 function AccordionItem({
   className,
-  ...props
+  variant = 'default',
+  ...rest
 }: AccordionPrimitive.Item.Props & {variant?: 'separated' | 'bordered' | 'default'}) {
-  const variant = props.variant ?? 'default';
   const isBordered = variant === 'bordered';
 
   return (
@@ -42,7 +42,7 @@ function AccordionItem({
         isBordered && 'relative',
         className,
       )}
-      {...props}
+      {...rest}
     >
       {isBordered && (
         <div
