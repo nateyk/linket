@@ -445,7 +445,7 @@ function DigitalProductForm() {
           )}
 
           {product?.status === 'approved' && (
-            <Alert.Root className="mb-5 border-amber-500/20 bg-amber-500/5 text-amber-800 dark:text-amber-200">
+            <Alert.Root variant="warning" fillStyle="subtleFill" className="mb-5">
               <TriangleAlertIcon />
               <Alert.Description>
                 <Trans message="Saving changes will return this approved product to draft." />
