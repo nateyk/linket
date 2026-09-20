@@ -2,8 +2,12 @@ import {describe, expect, test, vi} from 'vitest';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {SharedFileUploader} from '@common/ui/file-uploader';
 import {
+  applyUploadError,
+  applyUploadProgress,
+  clearUploadItem,
   formatUploadSize,
   validateUploadFile,
+  type UploadItem,
 } from '@common/ui/file-uploader';
 import {Attachment} from '@shadcn/attachment/attachment';
 
@@ -104,6 +108,61 @@ describe('SharedFileUploader', () => {
     expect(html).toContain('bad.exe');
     expect(html).toContain('Unsupported file type');
     expect(html).toContain('Remove uploading.pdf');
+  });
+});
+
+describe('SharedFileUploader bare mode', () => {
+  test('renders without a Card wrapper for embedding in existing Cards', () => {
+    const html = renderToStaticMarkup(
+      <SharedFileUploader
+        uploadType="courseResources"
+        onUploaded={() => {}}
+        bare
+      />,
+    );
+    expect(html).not.toContain('data-slot="card"');
+    expect(html).toContain('Drag');
+    expect(html).toContain('Browse');
+  });
+
+  test('uses core dropzone tokens, not the heavy block style', () => {
+    const html = renderToStaticMarkup(
+      <SharedFileUploader
+        uploadType="courseResources"
+        onUploaded={() => {}}
+        bare
+      />,
+    );
+    expect(html).toContain('rounded-card');
+    expect(html).not.toContain('border-2');
+    expect(html).not.toContain('py-12');
+  });
+});
+
+describe('upload item state transitions', () => {
+  const seed: UploadItem[] = [
+    {id: 'u1', name: 'a.pdf', size: 1000, progress: 10, status: 'uploading'},
+    {id: 'u2', name: 'b.pdf', size: 2000, progress: 20, status: 'uploading'},
+  ];
+
+  test('clearUploadItem removes the finished item so files show once', () => {
+    const next = clearUploadItem(seed, 'u1');
+    expect(next.map(i => i.id)).toEqual(['u2']);
+  });
+
+  test('applyUploadProgress updates only the matching item', () => {
+    const next = applyUploadProgress(seed, 'u2', 55.6);
+    expect(next.find(i => i.id === 'u2')?.progress).toBe(56);
+    expect(next.find(i => i.id === 'u1')?.progress).toBe(10);
+  });
+
+  test('applyUploadError marks the item without touching others', () => {
+    const next = applyUploadError(seed, 'u1', 'Upload failed');
+    expect(next.find(i => i.id === 'u1')).toMatchObject({
+      status: 'error',
+      error: 'Upload failed',
+    });
+    expect(next.find(i => i.id === 'u2')?.status).toBe('uploading');
   });
 });
 

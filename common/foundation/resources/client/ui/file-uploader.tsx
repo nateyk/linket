@@ -103,6 +103,35 @@ export function validateUploadFile(
   return undefined;
 }
 
+export function clearUploadItem(
+  items: UploadItem[],
+  id: string,
+): UploadItem[] {
+  return items.filter(item => item.id !== id);
+}
+
+export function applyUploadProgress(
+  items: UploadItem[],
+  id: string,
+  progress: number,
+): UploadItem[] {
+  return items.map(item =>
+    item.id === id
+      ? {...item, progress: Math.min(100, Math.round(progress))}
+      : item,
+  );
+}
+
+export function applyUploadError(
+  items: UploadItem[],
+  id: string,
+  message: string,
+): UploadItem[] {
+  return items.map(item =>
+    item.id === id ? {...item, status: 'error' as const, error: message} : item,
+  );
+}
+
 function restrictionsFor(
   uploadType: keyof typeof UploadType,
   overrides?: UploadRestrictions,
@@ -140,6 +169,7 @@ interface SharedFileUploaderProps {
   hint?: ReactNode;
   initialItems?: UploadItem[];
   className?: string;
+  bare?: boolean;
 }
 
 export function SharedFileUploader({
@@ -154,6 +184,7 @@ export function SharedFileUploader({
   hint,
   initialItems = [],
   className,
+  bare = false,
 }: SharedFileUploaderProps) {
   const [items, setItems] = useState<UploadItem[]>(initialItems);
   const [isDragging, setIsDragging] = useState(false);
@@ -164,34 +195,37 @@ export function SharedFileUploader({
   const onUploadedRef = useRef(onUploaded);
   onUploadedRef.current = onUploaded;
 
-  const markDone = useCallback((id: string, entry: FileEntry) => {
-    setItems(prev =>
-      prev.map(item =>
-        item.id === id ? {...item, progress: 100, status: 'done'} : item,
-      ),
-    );
-    toast.positive(`${entry.name} uploaded`);
-    onUploadedRef.current(entry);
-  }, []);
+  const markDone = useCallback(
+    (id: string, entry: FileEntry) => {
+      toast.positive(`${entry.name} uploaded`);
+      void (async () => {
+        try {
+          await onUploadedRef.current(entry);
+        } finally {
+          // The parent attached-files list owns finished files, so drop the
+          // internal row — each file shows exactly once.
+          const uploadId = idToUploadId.current.get(id);
+          if (uploadId && uploadStore) {
+            try {
+              uploadStore.getState().removeUpload(uploadId);
+            } catch {
+              // ignore store errors on remove
+            }
+          }
+          idToUploadId.current.delete(id);
+          setItems(prev => clearUploadItem(prev, id));
+        }
+      })();
+    },
+    [uploadStore],
+  );
 
   const markError = useCallback((id: string, message: string) => {
-    setItems(prev =>
-      prev.map(item =>
-        item.id === id
-          ? {...item, status: 'error' as const, error: message}
-          : item,
-      ),
-    );
+    setItems(prev => applyUploadError(prev, id, message));
   }, []);
 
   const markProgress = useCallback((id: string, progress: number) => {
-    setItems(prev =>
-      prev.map(item =>
-        item.id === id
-          ? {...item, progress: Math.min(100, Math.round(progress))}
-          : item,
-      ),
-    );
+    setItems(prev => applyUploadProgress(prev, id, progress));
   }, []);
 
   const addFiles = useCallback(
@@ -300,9 +334,8 @@ export function SharedFileUploader({
     [uploadStore],
   );
 
-  return (
-    <Card.Root className={cn('w-full', className)}>
-      <Card.Content className="flex flex-col gap-5">
+  const content = (
+    <>
         <div
           role="button"
           tabIndex={0}
@@ -336,8 +369,7 @@ export function SharedFileUploader({
             addFiles(event.dataTransfer.files);
           }}
           className={cn(
-            'flex cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border border-dashed px-6 py-12 text-center transition-colors outline-none',
-            'focus-visible:ring-[3px] focus-visible:ring-ring/50',
+            'flex cursor-pointer flex-col items-center justify-center gap-2 rounded-card border border-dashed p-6 text-center transition-colors outline-none hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring/20',
             isDragging
               ? 'border-primary bg-primary/5'
               : 'border-border bg-muted/40 hover:bg-muted/60',
@@ -354,21 +386,17 @@ export function SharedFileUploader({
               event.target.value = '';
             }}
           />
-          <div
-            className={cn(
-              'flex size-12 items-center justify-center rounded-lg border transition-colors',
-              isDragging
-                ? 'border-primary bg-background text-primary'
-                : 'border-border bg-background text-muted-foreground',
-            )}
-          >
-            <UploadIcon className="size-6" aria-hidden="true" />
+          <div className="flex size-9 items-center justify-center rounded-card-sm bg-primary/10 text-primary">
+            <UploadIcon className="size-4" aria-hidden="true" />
           </div>
           <div className="flex flex-col gap-1">
             <p className="text-sm font-medium text-foreground">
-              {title ?? (
-                <Trans message="Drag & drop files or click to browse" />
-              )}
+              {title ??
+                (isDragging ? (
+                  <Trans message="Release to upload" />
+                ) : (
+                  <Trans message="Drag & drop files or click to browse" />
+                ))}
             </p>
             <p className="text-xs text-muted-foreground">
               {description ?? hint ?? (
@@ -459,7 +487,16 @@ export function SharedFileUploader({
             </ul>
           </div>
         )}
-      </Card.Content>
+    </>
+  );
+
+  if (bare) {
+    return <div className={cn('flex w-full flex-col gap-3', className)}>{content}</div>;
+  }
+
+  return (
+    <Card.Root className={cn('w-full', className)}>
+      <Card.Content className="flex flex-col gap-5">{content}</Card.Content>
     </Card.Root>
   );
 }

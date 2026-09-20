@@ -15,12 +15,13 @@ describe('course builder uploads', () => {
       "toast.danger('Unable to attach the uploaded video')",
     );
     expect(source).toContain("toast.danger('Unable to attach the resource')");
-    // Lesson resources upload through the shared uploader; video + cover
-    // keep their inline upload configs.
+    // Lesson resources and video upload through the shared uploader; only
+    // cover keeps an inline upload config.
     expect(source).toContain('<SharedFileUploader');
     expect(source).toContain('uploadType="courseResources"');
-    expect(source.match(/showToastOnRestrictionFail: true/g)).toHaveLength(2);
-    expect(source.match(/showToastOnBackendError: true/g)).toHaveLength(2);
+    expect(source).toContain('uploadType="courseVideos"');
+    expect(source.match(/showToastOnRestrictionFail: true/g)).toHaveLength(1);
+    expect(source.match(/showToastOnBackendError: true/g)).toHaveLength(1);
     const uploaderSource = fs.readFileSync(
       path.resolve('common/foundation/resources/client/ui/file-uploader.tsx'),
       'utf8',
