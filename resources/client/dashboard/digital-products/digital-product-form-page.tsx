@@ -1,5 +1,3 @@
-import {BuilderSectionHeader} from '@app/dashboard/stores/store-editor/builder-section-header';
-import {ProductCard} from '@app/digital-products/shared/product-card';
 import {articleEditorTipTapExtensions} from '@common/article-editor/article-editor-tiptap-extensions';
 import {apiClient} from '@common/http/query-client';
 import {ClearFormatButton} from '@common/text-editor/menubar/clear-format-button';
@@ -14,13 +12,12 @@ import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {CroppedCover} from '@common/uploads/components/cropped-image-selector';
 import {FileUploadProvider} from '@common/uploads/uploader/file-upload-provider';
 import {SharedFileUploader} from '@common/ui/file-uploader';
-import {Badge} from '@shadcn/badge/badge';
 import {Accordion} from '@shadcn/accordion/accordion';
 import {Alert} from '@shadcn/alert/alert';
 import {AlertDialog} from '@shadcn/alert-dialog/alert-dialog';
+import {Breadcrumb} from '@shadcn/breadcrumb/breadcrumb';
 import {Button} from '@shadcn/button/button';
 import {Checkbox} from '@shadcn/forms/checkbox/checkbox';
-import {Field} from '@shadcn/forms/field';
 import {
   InputGroup,
   InputGroupAddon,
@@ -28,43 +25,39 @@ import {
   InputGroupText,
 } from '@shadcn/forms/input-group/input-group';
 import {Input} from '@shadcn/forms/input/input';
-import {Progress} from '@shadcn/progress/progress';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
-import {Tooltip} from '@shadcn/tooltip/tooltip';
 import {Trans} from '@ui/i18n/trans';
-import {useTrans} from '@ui/i18n/use-trans';
 import {getBootstrapData} from '@ui/bootstrap-data/bootstrap-data-store';
 import {FormattedBytes} from '@ui/i18n/formatted-bytes';
 import {
-  ArchiveIcon,
   BookIcon,
-  CheckIcon,
-  Clock3Icon,
   DownloadIcon,
   FileIcon,
   FileTextIcon,
   GraduationCapIcon,
   HeadphonesIcon,
   Link2Icon,
-  PencilIcon,
   SaveIcon,
   SendIcon,
   Trash2Icon,
-  PackageOpenIcon,
   TriangleAlertIcon,
-  type LucideIcon,
 } from 'lucide-react';
 import {useCallback, useEffect, useState} from 'react';
 import {useNavigate, useParams, useSearchParams} from 'react-router';
-import {initialPriceFromParam} from './product-create-flow';
+import {parseWizardPrefill} from './product-create-flow';
+import {
+  ProductCreationProvider,
+  useProductCreation,
+} from './product-creation-context';
+import type {FileEntry} from './product-creation-context';
+import {ProductFormField} from './product-form-field';
+import {ProductFormProgress} from './product-form-progress';
+import {
+  ProductFormSection,
+  type ProductSetupSection,
+} from './product-form-section';
+import {ProductPreview, ProductStatus} from './product-preview';
 import type {ProductType} from './product-type-picker';
-
-type FileEntry = {
-  id: number;
-  name: string;
-  file_size?: number;
-  extension?: string;
-};
 
 type Biolink = {id: number; name: string; short_url?: string};
 
@@ -82,7 +75,6 @@ type Product = {
   type?: string;
 };
 
-type SetupSection = 'details' | 'files' | 'bio-pages';
 type FieldErrors = Record<string, string>;
 
 const PRODUCT_TYPE_CONFIG: Record<
@@ -95,10 +87,10 @@ const PRODUCT_TYPE_CONFIG: Record<
   course: {label: 'Course', icon: GraduationCapIcon},
 };
 
-const SECTION_ORDER: SetupSection[] = ['details', 'files', 'bio-pages'];
+const SECTION_ORDER: ProductSetupSection[] = ['details', 'files', 'bio-pages'];
 
 const SECTION_META: Record<
-  SetupSection,
+  ProductSetupSection,
   {label: string; icon: typeof FileTextIcon; description: string}
 > = {
   details: {
@@ -120,31 +112,30 @@ const SECTION_META: Record<
 };
 
 export function Component() {
+  const [searchParams] = useSearchParams();
   return (
     <FileUploadProvider>
-      <DigitalProductForm />
+      <ProductCreationProvider prefill={parseWizardPrefill(searchParams)}>
+        <DigitalProductForm />
+      </ProductCreationProvider>
     </FileUploadProvider>
   );
 }
 
 function DigitalProductForm() {
   const {productId} = useParams();
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const productType = searchParams.get('type') as ProductType | null;
+  const {state, actions} = useProductCreation();
+  const title = state.title;
+  const description = state.description;
+  const price = state.price;
+  const coverUrl = state.coverUrl;
+  const coverFileId = state.coverFileId;
+  const files = state.files;
+  const biolinkIds = state.biolinkIds;
+  const productType = state.productType as ProductType | null;
   const [product, setProduct] = useState<Product | null>(null);
   const [biolinks, setBiolinks] = useState<Biolink[]>([]);
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [price, setPrice] = useState<string>(() =>
-    productId
-      ? ''
-      : (initialPriceFromParam(searchParams.get('price_cents')) ?? ''),
-  );
-  const [coverUrl, setCoverUrl] = useState('');
-  const [coverFileId, setCoverFileId] = useState<number | null>(null);
-  const [files, setFiles] = useState<FileEntry[]>([]);
-  const [biolinkIds, setBiolinkIds] = useState<number[]>([]);
   const [loading, setLoading] = useState(!!productId);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -152,7 +143,7 @@ function DigitalProductForm() {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [convertToEtb, setConvertToEtb] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [openSection, setOpenSection] = useState<SetupSection | null>(
+  const [openSection, setOpenSection] = useState<ProductSetupSection | null>(
     'details',
   );
 
@@ -195,13 +186,22 @@ function DigitalProductForm() {
             return;
           }
           setProduct(item);
-          setTitle(item.title);
-          setDescription(item.description ?? '');
-          setPrice((item.price_cents / 100).toFixed(2));
-          setCoverUrl(item.cover?.url ?? '');
-          setCoverFileId(item.cover_file_entry_id ?? item.cover?.id ?? null);
-          setFiles(item.files ?? []);
-          setBiolinkIds(item.biolink_ids ?? []);
+          actions.setTitle(item.title);
+          actions.setDescription(item.description ?? '');
+          actions.setPrice((item.price_cents / 100).toFixed(2));
+          {
+            const coverId =
+              item.cover_file_entry_id ?? item.cover?.id ?? null;
+            actions.setCover(
+              item.cover?.url ?? '',
+              coverId != null ? {id: coverId} : undefined,
+            );
+          }
+          actions.setFiles(item.files ?? []);
+          actions.setBiolinkIds(item.biolink_ids ?? []);
+          if (item.type) {
+            actions.setProductType(item.type as ProductType);
+          }
         }
 
         try {
@@ -346,7 +346,7 @@ function DigitalProductForm() {
     }
   };
 
-  const isSectionComplete = (section: SetupSection) => {
+  const isSectionComplete = (section: ProductSetupSection) => {
     const isCourse = productType === 'course';
     if (section === 'details')
       return title.trim().length > 0 && price.trim().length > 0;
@@ -362,6 +362,19 @@ function DigitalProductForm() {
     <DashboardLayout.MainSection>
       <DashboardLayout.SectionHeader>
         <DashboardLayout.SidebarToggle />
+        <Breadcrumb>
+          <Breadcrumb.Item>
+            <Breadcrumb.Link to="/dashboard/my-products">
+              <Trans message="All products" />
+            </Breadcrumb.Link>
+          </Breadcrumb.Item>
+          <Breadcrumb.Separator />
+          <Breadcrumb.Item>
+            <Breadcrumb.Page>
+              <Trans message={pageTitle} />
+            </Breadcrumb.Page>
+          </Breadcrumb.Item>
+        </Breadcrumb>
         <DashboardLayout.SectionTitle>
           <Trans message={pageTitle} />
           {product && <ProductStatus status={product.status} />}
@@ -413,7 +426,7 @@ function DigitalProductForm() {
       </DashboardLayout.SectionHeader>
 
       <DashboardLayout.SectionContent className="overflow-y-auto">
-        <div className="mx-auto w-full max-w-6xl py-4 sm:py-6">
+        <div className="mx-auto w-full max-w-6xl py-4 sm:py-5">
           {error && (
             <Alert.Root
               variant="destructive"
@@ -471,136 +484,101 @@ function DigitalProductForm() {
           {loading ? (
             <BuilderSkeleton />
           ) : (
-            <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_24rem] xl:gap-6">
+            <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_26rem] xl:gap-6">
               <div className="flex min-w-0 flex-col gap-4">
-                <div className="flex flex-col gap-3 border-b pb-4 lg:flex-row lg:items-end lg:justify-between">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium">
-                      <Trans message="Product setup" />
-                    </p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      <Trans
-                        message=":completed of 2 required sections complete"
-                        values={{completed: completedSections}}
-                      />
-                    </p>
-                  </div>
-                  <Progress.Root
-                    value={(completedSections / SECTION_ORDER.length) * 100}
-                    className="w-full lg:w-48"
-                    aria-label="Product setup progress"
-                  >
-                    <Progress.Track className="h-1.5">
-                      <Progress.Indicator />
-                    </Progress.Track>
-                  </Progress.Root>
-                </div>
+                <ProductFormProgress
+                  completed={completedSections}
+                  total={2}
+                />
 
                 <Accordion.Root
                   variant="bordered"
                   value={openSection ? [openSection] : []}
                   onValueChange={value =>
                     setOpenSection(
-                      (value[0] as SetupSection | undefined) ?? null,
+                      (value[0] as ProductSetupSection | undefined) ?? null,
                     )
                   }
                 >
                   {SECTION_ORDER.map(section => {
                     const meta = SECTION_META[section];
-                    const Icon = meta.icon;
-                    const isComplete = isSectionComplete(section);
-                    const count =
-                      section === 'files'
-                        ? files.length
-                        : section === 'bio-pages'
-                          ? biolinkIds.length
-                          : null;
 
                     return (
-                      <Accordion.Item key={section} value={section}>
-                        <Accordion.Trigger>
-                          <BuilderSectionHeader
-                            icon={Icon}
-                            isComplete={isComplete}
-                            title={<Trans message={meta.label} />}
-                            description={<Trans message={meta.description} />}
-                            trailing={
-                              count !== null && count > 0 ? (
-                                <Badge
-                                  variant="secondary"
-                                  className="h-4 min-w-[16px] px-1 text-[10px]"
-                                >
-                                  {count}
-                                </Badge>
-                              ) : undefined
-                            }
+                      <ProductFormSection
+                        key={section}
+                        id={section}
+                        title={meta.label}
+                        description={meta.description}
+                        icon={meta.icon}
+                        isComplete={isSectionComplete(section)}
+                        count={
+                          section === 'files'
+                            ? files.length
+                            : section === 'bio-pages'
+                              ? biolinkIds.length
+                              : null
+                        }
+                        hasError={
+                          section === 'details'
+                            ? !!(
+                                fieldErrors.title || fieldErrors.price_cents
+                              )
+                            : section === 'files'
+                              ? !!fieldErrors.file_ids
+                              : false
+                        }
+                      >
+                        {section === 'details' && (
+                          <DetailsPanel
+                            title={title}
+                            description={description}
+                            price={price}
+                            coverUrl={coverUrl}
+                            onTitleChange={actions.setTitle}
+                            onDescriptionChange={actions.setDescription}
+                            onPriceChange={actions.setPrice}
+                            legacyCurrency={product?.currency}
+                            convertToEtb={convertToEtb}
+                            onConvertToEtbChange={setConvertToEtb}
+                            onCoverChange={actions.setCover}
+                            errors={fieldErrors}
                           />
-                        </Accordion.Trigger>
-                        <Accordion.Content className="border-t pt-4">
-                          <div className="max-w-2xl">
-                            {section === 'details' && (
-                              <DetailsPanel
-                                title={title}
-                                description={description}
-                                price={price}
-                                coverUrl={coverUrl}
-                                onTitleChange={setTitle}
-                                onDescriptionChange={setDescription}
-                                onPriceChange={setPrice}
-                                legacyCurrency={product?.currency}
-                                convertToEtb={convertToEtb}
-                                onConvertToEtbChange={setConvertToEtb}
-                                onCoverChange={(url, entry) => {
-                                  setCoverUrl(url);
-                                  setCoverFileId(entry?.id ?? null);
-                                }}
-                                errors={fieldErrors}
-                              />
-                            )}
-                            {section === 'files' && (
-                              <FilesPanel
-                                files={files}
-                                accept={fileAccept}
-                                hint={fileHint}
-                                onUploaded={file =>
-                                  setFiles(current =>
-                                    current.some(item => item.id === file.id)
-                                      ? current
-                                      : [...current, file],
-                                  )
-                                }
-                                onRemove={id =>
-                                  setFiles(current =>
-                                    current.filter(file => file.id !== id),
-                                  )
-                                }
-                                error={fieldErrors.file_ids}
-                              />
-                            )}
-                            {section === 'bio-pages' && (
-                              <BioPagesPanel
-                                biolinks={biolinks}
-                                selectedIds={biolinkIds}
-                                onChange={setBiolinkIds}
-                              />
-                            )}
-                          </div>
-                        </Accordion.Content>
-                      </Accordion.Item>
+                        )}
+                        {section === 'files' && (
+                          <FilesPanel
+                            files={files}
+                            accept={fileAccept}
+                            hint={fileHint}
+                            onUploaded={file => {
+                              if (
+                                !files.some(item => item.id === file.id)
+                              ) {
+                                actions.setFiles([...files, file]);
+                              }
+                            }}
+                            onRemove={id =>
+                              actions.setFiles(
+                                files.filter(file => file.id !== id),
+                              )
+                            }
+                            error={fieldErrors.file_ids}
+                          />
+                        )}
+                        {section === 'bio-pages' && (
+                          <BioPagesPanel
+                            biolinks={biolinks}
+                            selectedIds={biolinkIds}
+                            onChange={actions.setBiolinkIds}
+                          />
+                        )}
+                      </ProductFormSection>
                     );
                   })}
                 </Accordion.Root>
               </div>
 
               <aside className="min-w-0 lg:sticky lg:top-6">
-                <ProductBuilderPreview
-                  title={title}
-                  price={price}
-                  coverUrl={coverUrl}
-                  fileCount={files.length}
-                  productTypeLabel={typeConfig?.label ?? 'Digital product'}
-                  status={product?.status ?? 'draft'}
-                />
+                <ProductPreview />
               </aside>
             </div>
           )}
@@ -744,33 +722,37 @@ function DetailsPanel({
 }) {
   return (
     <div className="flex flex-col gap-4">
-      <Field.Root>
-        <Field.Label>
-          <Trans message="Product title" />
-        </Field.Label>
+      <ProductFormField
+        label="Product title"
+        description="Choose a clear title customers can easily understand."
+        error={errors.title}
+        htmlFor="product-title"
+        required
+      >
         <Input
+          id="product-title"
+          aria-invalid={!!errors.title}
           value={title}
           maxLength={160}
           onChange={event => onTitleChange(event.target.value)}
           placeholder="My digital guide"
         />
-        <Field.Description>
-          <Trans message="Choose a clear title customers can easily understand." />
-        </Field.Description>
-        {errors.title && (
-          <p className="text-sm text-destructive">{errors.title}</p>
-        )}
-      </Field.Root>
+      </ProductFormField>
 
-      <Field.Root>
-        <Field.Label>
-          <Trans message="Price" />
-        </Field.Label>
+      <ProductFormField
+        label="Price"
+        description="Set ETB 0 to offer this product for free."
+        error={errors.price_cents}
+        htmlFor="product-price"
+        required
+      >
         <InputGroup>
           <InputGroupAddon align="inline-start">
             <InputGroupText>ETB</InputGroupText>
           </InputGroupAddon>
           <InputGroupInput
+            id="product-price"
+            aria-invalid={!!errors.price_cents}
             type="number"
             min="0"
             step="0.01"
@@ -779,12 +761,6 @@ function DetailsPanel({
             placeholder="0.00"
           />
         </InputGroup>
-        <Field.Description>
-          <Trans message="Set ETB 0 to offer this product for free." />
-        </Field.Description>
-        {errors.price_cents && (
-          <p className="text-sm text-destructive">{errors.price_cents}</p>
-        )}
         {legacyCurrency && legacyCurrency.toLowerCase() !== 'etb' && (
           <label className="mt-2 flex items-start gap-3 rounded-card-sm border border-border bg-muted/30 p-3 text-sm">
             <Checkbox
@@ -801,40 +777,30 @@ function DetailsPanel({
             </span>
           </label>
         )}
-      </Field.Root>
+      </ProductFormField>
 
-      <Field.Root>
-        <Field.Label>
-          <Trans message="Description" />
-        </Field.Label>
+      <ProductFormField
+        label="Description"
+        description="Describe what customers will receive."
+        error={errors.description}
+        htmlFor="product-description"
+      >
         <DescriptionEditor value={description} onChange={onDescriptionChange} />
-        <Field.Description>
-          <Trans message="Describe what customers will receive." />
-        </Field.Description>
-        {errors.description && (
-          <p className="text-sm text-destructive">{errors.description}</p>
-        )}
-      </Field.Root>
+      </ProductFormField>
 
-      <Field.Root>
-        <Field.Label>
-          <Trans message="Cover image" />
-        </Field.Label>
+      <ProductFormField
+        label="Cover image"
+        description="Shown on your product listing and Storefronts."
+        error={errors.cover_file_entry_id}
+        htmlFor="product-cover"
+      >
         <CroppedCover
           value={coverUrl}
           onChange={onCoverChange}
           uploadType="linkImages"
           aspect={16 / 9}
         />
-        <Field.Description>
-          <Trans message="Shown on your product listing and Storefronts." />
-        </Field.Description>
-        {errors.cover_file_entry_id && (
-          <p className="text-sm text-destructive">
-            {errors.cover_file_entry_id}
-          </p>
-        )}
-      </Field.Root>
+      </ProductFormField>
     </div>
   );
 }

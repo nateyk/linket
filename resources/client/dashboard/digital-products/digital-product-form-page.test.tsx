@@ -204,10 +204,45 @@ describe('product builder preview', () => {
   );
 
   test('preview reuses the shared ProductCard', () => {
-    expect(formSource).toContain(
+    const previewSource = fs.readFileSync(
+      path.resolve(
+        'resources/client/dashboard/digital-products/product-preview.tsx',
+      ),
+      'utf8',
+    );
+    expect(previewSource).toContain(
       "import {ProductCard} from '@app/digital-products/shared/product-card'",
     );
-    expect(formSource).toContain('<ProductCard');
-    expect(formSource).toContain('meta={');
+    expect(previewSource).toContain('<ProductCard');
+    expect(previewSource).toContain('meta={');
+  });
+});
+
+describe('product form reassembly', () => {
+  const source = fs.readFileSync(
+    path.resolve(
+      'resources/client/dashboard/digital-products/digital-product-form-page.tsx',
+    ),
+    'utf8',
+  );
+
+  test('initializes the creation provider from wizard query params', () => {
+    expect(source).toContain('parseWizardPrefill');
+    expect(source).toContain('<ProductCreationProvider');
+    expect(source).toContain('useProductCreation');
+  });
+
+  test('renders sections, progress, preview, and breadcrumb through primitives', () => {
+    expect(source).toContain('<ProductFormSection');
+    expect(source).toContain('<ProductFormProgress');
+    expect(source).toContain('<ProductPreview');
+    expect(source).toContain("from '@shadcn/breadcrumb/breadcrumb'");
+    expect(source).toContain('<Breadcrumb');
+    expect(source).toContain('All products');
+  });
+
+  test('invalid fields carry accessible error state', () => {
+    expect(source).toContain('<ProductFormField');
+    expect(source).toContain('aria-invalid');
   });
 });
