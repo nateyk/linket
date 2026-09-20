@@ -52,7 +52,7 @@ class ProductModerationSummaryNotification extends Notification implements Shoul
             ->greeting(__('Hello, :name', ['name' => $notifiable->name]))
             ->line($this->summary());
 
-        if ($this->isRejection() && $this->reason) {
+        if ($this->showsReason() && $this->reason) {
             $mail->line(__('Reason: :reason', ['reason' => $this->reason]));
         }
 
@@ -65,7 +65,7 @@ class ProductModerationSummaryNotification extends Notification implements Shoul
             ['content' => e($this->summary()), 'type' => 'primary'],
         ];
 
-        if ($this->isRejection() && $this->reason) {
+        if ($this->showsReason() && $this->reason) {
             $lines[] = [
                 'content' => e(__('Reason: :reason', ['reason' => $this->reason])),
                 'type' => 'secondary',
@@ -86,8 +86,17 @@ class ProductModerationSummaryNotification extends Notification implements Shoul
         return $this->event === 'rejected';
     }
 
+    private function showsReason(): bool
+    {
+        return $this->isRejection() || $this->event === 'update_reverted';
+    }
+
     private function subject(): string
     {
+        if ($this->event === 'update_reverted') {
+            return __('Some of your updates were rejected');
+        }
+
         return $this->isRejection()
             ? __('Some of your products need changes')
             : __('Your products were approved');
@@ -113,6 +122,12 @@ class ProductModerationSummaryNotification extends Notification implements Shoul
             return $count === 1
                 ? __('Your product ":name" needs changes.', ['name' => $names])
                 : __('Your :count products need changes: :names', ['count' => $count, 'names' => $names]);
+        }
+
+        if ($this->event === 'update_reverted') {
+            return $count === 1
+                ? __('Your update to ":name" was rejected. Your previous version is still live.', ['name' => $names])
+                : __('Your :count updates were rejected. Your previous versions are still live: :names', ['count' => $count, 'names' => $names]);
         }
 
         return $count === 1
