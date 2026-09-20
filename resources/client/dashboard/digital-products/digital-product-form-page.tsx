@@ -223,7 +223,7 @@ function DigitalProductForm() {
         setLoading(false);
       }
     })();
-  }, [navigate, productId]);
+  }, [navigate, productId, actions]);
 
   const save = useCallback(
     async (submitAfterSave = false) => {
