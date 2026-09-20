@@ -33,10 +33,11 @@ describe('product type selection page wizard', () => {
 });
 
 describe('wizard price prefill', () => {
-  test('details form seeds price from price_cents param on create', () => {
+  test('details form initializes price from wizard prefill via context', () => {
     const source = read('digital-product-form-page.tsx');
-    expect(source).toContain("searchParams.get('price_cents')");
-    expect(source).toContain('initialPriceFromParam');
+    expect(source).toContain('parseWizardPrefill');
+    expect(source).toContain('<ProductCreationProvider');
+    expect(source).toContain('useProductCreation');
   });
   test('course form seeds price from price_cents param', () => {
     const course = fs.readFileSync(

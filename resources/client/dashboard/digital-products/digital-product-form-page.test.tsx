@@ -196,18 +196,76 @@ describe('digital product file capability', () => {
 describe('product builder preview', () => {
   // The Customer preview must render through the shared ProductCard so
   // creators see exactly what storefront customers see.
-  const formSource = fs.readFileSync(
+  const previewSource = fs.readFileSync(
+    path.resolve(
+      'resources/client/dashboard/digital-products/product-preview.tsx',
+    ),
+    'utf8',
+  );
+
+  test('preview reuses the shared ProductCard', () => {
+    expect(previewSource).toContain(
+      "import {ProductCard} from '@app/digital-products/shared/product-card'",
+    );
+    expect(previewSource).toContain('<ProductCard');
+    expect(previewSource).toContain('meta={');
+  });
+});
+
+describe('product form reassembly', () => {
+  const source = fs.readFileSync(
     path.resolve(
       'resources/client/dashboard/digital-products/digital-product-form-page.tsx',
     ),
     'utf8',
   );
 
-  test('preview reuses the shared ProductCard', () => {
-    expect(formSource).toContain(
-      "import {ProductCard} from '@app/digital-products/shared/product-card'",
+  test('initializes the creation provider from wizard query params', () => {
+    expect(source).toContain('parseWizardPrefill');
+    expect(source).toContain('<ProductCreationProvider');
+    expect(source).toContain('useProductCreation');
+  });
+
+  test('renders sections, progress, preview, and breadcrumb through primitives', () => {
+    expect(source).toContain('<ProductFormSection');
+    expect(source).toContain('<ProductFormProgress');
+    expect(source).toContain('<ProductPreview');
+    expect(source).toContain("from '@shadcn/breadcrumb/breadcrumb'");
+    expect(source).toContain('<Breadcrumb');
+    expect(source).toContain('All products');
+  });
+
+  test('invalid fields carry accessible error state', () => {
+    expect(source).toContain('<ProductFormField');
+    expect(source).toContain('aria-invalid');
+  });
+});
+
+describe('product form error focus and skeletons', () => {
+  const source = fs.readFileSync(
+    path.resolve(
+      'resources/client/dashboard/digital-products/digital-product-form-page.tsx',
+    ),
+    'utf8',
+  );
+
+  test('routes the first invalid field to a focusable id', async () => {
+    const {firstInvalidFieldId} = await import('./product-create-flow');
+    expect(firstInvalidFieldId({title: 'Required'})).toBe('product-title');
+    expect(firstInvalidFieldId({price_cents: 'Invalid'})).toBe(
+      'product-price',
     );
-    expect(formSource).toContain('<ProductCard');
-    expect(formSource).toContain('meta={');
+    expect(firstInvalidFieldId({file_ids: 'Required'})).toBe('product-files');
+    expect(firstInvalidFieldId({})).toBeNull();
+  });
+
+  test('focuses the offending field and renders granular skeletons', () => {
+    expect(source).toContain('firstInvalidFieldId');
+    expect(source).toContain('getElementById');
+    expect(source).toContain('.focus(');
+    expect(source).toContain('DetailsSkeleton');
+    expect(source).toContain('FilesSkeleton');
+    expect(source).toContain('PreviewSkeleton');
+    expect(source).toContain('id="product-files"');
   });
 });
