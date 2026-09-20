@@ -36,6 +36,7 @@ import {
 import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {Switch} from '@shadcn/forms/switch/switch';
 import {FileDropzone} from '@common/ui/file-dropzone';
+import {SharedFileUploader} from '@common/ui/file-uploader';
 import {Trans} from '@ui/i18n/trans';
 import {useSortable} from '@ui/interactions/dnd/sortable/use-sortable';
 import {ProductCover} from '@ui/product-cover';
@@ -67,7 +68,6 @@ import {
   PlusIcon,
   SettingsIcon,
   Trash2Icon,
-  UploadIcon,
   VideoIcon,
   XIcon,
   CheckIcon,
@@ -1641,24 +1641,17 @@ function LessonEditor({
     });
   };
 
-  const uploadResource = (file: File) => {
-    uploadFile(file, {
-      uploadType: 'courseResources',
-      showToastOnRestrictionFail: true,
-      showToastOnBackendError: true,
-      onSuccess: async entry => {
-        try {
-          const res = await apiClient.post(
-            `/api/v1/course-lessons/${lesson.id}/resources`,
-            {file_entry_id: entry.id},
-          );
-          const newRes = (res.data as any).data as LessonResource;
-          setResources(prev => [...prev, newRes]);
-        } catch {
-          toast.danger('Unable to attach the resource');
-        }
-      },
-    });
+  const attachResourceEntry = async (entry: {id: number}) => {
+    try {
+      const res = await apiClient.post(
+        `/api/v1/course-lessons/${lesson.id}/resources`,
+        {file_entry_id: entry.id},
+      );
+      const newRes = (res.data as any).data as LessonResource;
+      setResources(prev => [...prev, newRes]);
+    } catch {
+      toast.danger('Unable to attach the resource');
+    }
   };
 
   return (
@@ -1889,38 +1882,15 @@ function LessonEditor({
                 </Card.Description>
               </Card.Header>
               <Card.Content className="space-y-3 p-4 pt-0">
-                <div
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => {
-                    const input = document.createElement('input');
-                    input.type = 'file';
-                    input.accept = '.pdf,.doc,.docx,.txt,.csv,.png,.jpg,.jpeg,.webp,.zip';
-                    input.onchange = e => {
-                      const file = (e.target as HTMLInputElement).files?.[0];
-                      if (file) uploadResource(file);
-                    };
-                    input.click();
-                  }}
-                  onDragOver={e => e.preventDefault()}
-                  onDrop={e => {
-                    e.preventDefault();
-                    const file = e.dataTransfer.files?.[0];
-                    if (file) uploadResource(file);
-                  }}
-                  className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 text-center transition-colors hover:bg-accent/30 focus-visible:border-ring/50 focus-visible:ring-2 focus-visible:ring-ring/20"
-                >
-                  <div className="rounded-full bg-primary/10 p-3">
-                    <UploadIcon className="size-6 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium"><Trans message="Drop your files here" /></p>
-                    <p className="text-xs text-muted-foreground"><Trans message="PDF, DOC, images up to 100MB" /></p>
-                  </div>
-                </div>
-                <Button size="sm" variant="outline" className="mt-2" onClick={e => { e.stopPropagation(); const input = document.createElement('input'); input.type='file'; input.accept='.pdf,.doc,.docx,.txt,.csv,.png,.jpg,.jpeg,.webp,.zip'; input.onchange=ev=>{const f=(ev.target as HTMLInputElement).files?.[0]; if(f) uploadResource(f)}; input.click(); }}>
-                  <Trans message="Select Files" />
-                </Button>
+                <SharedFileUploader
+                  uploadType="courseResources"
+                  onUploaded={attachResourceEntry}
+                  accept=".pdf,.doc,.docx,.txt,.csv,.png,.jpg,.jpeg,.webp,.zip"
+                  title={<Trans message="Drop your files here" />}
+                  description={
+                    <Trans message="PDF, DOC, images up to 100MB" />
+                  }
+                />
                 {resources.length > 0 ? (
                   <div className="space-y-2">
                     {resources.map(r => (

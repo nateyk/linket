@@ -15,8 +15,18 @@ describe('course builder uploads', () => {
       "toast.danger('Unable to attach the uploaded video')",
     );
     expect(source).toContain("toast.danger('Unable to attach the resource')");
-    expect(source.match(/showToastOnRestrictionFail: true/g)).toHaveLength(3);
-    expect(source.match(/showToastOnBackendError: true/g)).toHaveLength(3);
+    // Lesson resources upload through the shared uploader; video + cover
+    // keep their inline upload configs.
+    expect(source).toContain('<SharedFileUploader');
+    expect(source).toContain('uploadType="courseResources"');
+    expect(source.match(/showToastOnRestrictionFail: true/g)).toHaveLength(2);
+    expect(source.match(/showToastOnBackendError: true/g)).toHaveLength(2);
+    const uploaderSource = fs.readFileSync(
+      path.resolve('common/foundation/resources/client/ui/file-uploader.tsx'),
+      'utf8',
+    );
+    expect(uploaderSource).toContain('showToastOnRestrictionFail: true');
+    expect(uploaderSource).toContain('showToastOnBackendError: true');
   });
 });
 
