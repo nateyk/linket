@@ -101,3 +101,14 @@ export function buildCreateUrl(state: WizardState): string | null {
     state.billing === 'paid' ? `&price_cents=${cents}` : ''
   }`;
 }
+
+export function firstInvalidFieldId(
+  fieldErrors: Record<string, string>,
+): 'product-title' | 'product-price' | 'product-files' | null {
+  if (fieldErrors.title) return 'product-title';
+  if (fieldErrors.price_cents) return 'product-price';
+  if (fieldErrors.file_ids) return 'product-files';
+  if (fieldErrors.cover_file_entry_id || fieldErrors.description)
+    return 'product-title';
+  return null;
+}

@@ -246,3 +246,32 @@ describe('product form reassembly', () => {
     expect(source).toContain('aria-invalid');
   });
 });
+
+describe('product form error focus and skeletons', () => {
+  const source = fs.readFileSync(
+    path.resolve(
+      'resources/client/dashboard/digital-products/digital-product-form-page.tsx',
+    ),
+    'utf8',
+  );
+
+  test('routes the first invalid field to a focusable id', async () => {
+    const {firstInvalidFieldId} = await import('./product-create-flow');
+    expect(firstInvalidFieldId({title: 'Required'})).toBe('product-title');
+    expect(firstInvalidFieldId({price_cents: 'Invalid'})).toBe(
+      'product-price',
+    );
+    expect(firstInvalidFieldId({file_ids: 'Required'})).toBe('product-files');
+    expect(firstInvalidFieldId({})).toBeNull();
+  });
+
+  test('focuses the offending field and renders granular skeletons', () => {
+    expect(source).toContain('firstInvalidFieldId');
+    expect(source).toContain('getElementById');
+    expect(source).toContain('.focus(');
+    expect(source).toContain('DetailsSkeleton');
+    expect(source).toContain('FilesSkeleton');
+    expect(source).toContain('PreviewSkeleton');
+    expect(source).toContain('id="product-files"');
+  });
+});

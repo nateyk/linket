@@ -44,7 +44,7 @@ import {
 } from 'lucide-react';
 import {useCallback, useEffect, useState} from 'react';
 import {useNavigate, useParams, useSearchParams} from 'react-router';
-import {parseWizardPrefill} from './product-create-flow';
+import {parseWizardPrefill, firstInvalidFieldId} from './product-create-flow';
 import {
   ProductCreationProvider,
   useProductCreation,
@@ -302,6 +302,12 @@ function DigitalProductForm() {
         if (Object.keys(validationErrors).length) {
           setFieldErrors(validationErrors);
           setOpenSection(validationErrors.file_ids ? 'files' : 'details');
+          const focusId = firstInvalidFieldId(validationErrors);
+          if (focusId) {
+            requestAnimationFrame(() => {
+              document.getElementById(focusId)?.focus({preventScroll: false});
+            });
+          }
         } else {
           setError(
             saved && submitAfterSave
@@ -482,7 +488,16 @@ function DigitalProductForm() {
           )}
 
           {loading ? (
-            <BuilderSkeleton />
+            <>
+              <div className="flex flex-col gap-4">
+                <DetailsSkeleton />
+                <FilesSkeleton />
+                <BioPagesSkeleton />
+              </div>
+              <aside className="min-w-0 lg:sticky lg:top-6">
+                <PreviewSkeleton />
+              </aside>
+            </>
           ) : (
             <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_26rem] xl:gap-6">
               <div className="flex min-w-0 flex-col gap-4">
@@ -627,67 +642,6 @@ function DigitalProductForm() {
         </AlertDialog.Portal>
       </AlertDialog.Root>
     </DashboardLayout.MainSection>
-  );
-}
-
-function ProductBuilderPreview({
-  title,
-  price,
-  coverUrl,
-  fileCount,
-  productTypeLabel,
-  status,
-}: {
-  title: string;
-  price: string;
-  coverUrl: string;
-  fileCount: number;
-  productTypeLabel: string;
-  status: string;
-}) {
-  const {trans} = useTrans();
-  const numericPrice = Number(price);
-  const formattedPrice = Number.isFinite(numericPrice)
-    ? `ETB ${numericPrice.toFixed(2)}`
-    : 'ETB 0.00';
-
-  return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-sm font-medium">
-          <Trans message="Customer preview" />
-        </p>
-        <ProductStatus status={status} />
-      </div>
-      <ProductCard
-        images={coverUrl ? [coverUrl] : []}
-        title={title.trim() || trans({message: 'Your digital product'})}
-        tags={[trans({message: productTypeLabel})]}
-        price={formattedPrice}
-        meta={
-          <span className="flex items-center gap-2 text-xs text-muted-foreground">
-            <FileIcon className="size-4" />
-            <Trans
-              message=":count download files"
-              values={{count: fileCount}}
-            />
-          </span>
-        }
-        action={
-          <Button disabled>
-            <Trans message="Buy now" />
-          </Button>
-        }
-        imageFallback={
-          <div className="flex size-full flex-col items-center justify-center gap-2 text-muted-foreground">
-            <PackageOpenIcon className="size-8" />
-            <span className="text-xs">
-              <Trans message="Add a cover image" />
-            </span>
-          </div>
-        }
-      />
-    </div>
   );
 }
 
@@ -856,7 +810,7 @@ function FilesPanel({
   hint?: string;
 }) {
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3" id="product-files" tabIndex={-1}>
       <SharedFileUploader
         uploadType="digitalProductFiles"
         onUploaded={entry =>
@@ -955,79 +909,43 @@ function BioPagesPanel({
   );
 }
 
-/* ─── Product Status ─── */
+/* ── Skeleton ─── */
 
-function ProductStatus({status}: {status: string}) {
-  const configs: Record<
-    string,
-    {icon: LucideIcon; tone: string; label: string}
-  > = {
-    draft: {
-      icon: PencilIcon,
-      tone: 'text-muted-foreground bg-muted',
-      label: 'Draft',
-    },
-    pending_approval: {
-      icon: Clock3Icon,
-      tone: 'text-amber-600 bg-amber-500/10 dark:text-amber-400',
-      label: 'In review',
-    },
-    approved: {
-      icon: CheckIcon,
-      tone: 'text-primary bg-primary/10',
-      label: 'Approved',
-    },
-    rejected: {
-      icon: TriangleAlertIcon,
-      tone: 'text-destructive bg-destructive/10',
-      label: 'Needs changes',
-    },
-    archived: {
-      icon: ArchiveIcon,
-      tone: 'text-muted-foreground bg-muted',
-      label: 'Archived',
-    },
-  };
-
-  const config = configs[status] ?? configs.draft;
-  const Icon = config.icon;
-
+function DetailsSkeleton() {
   return (
-    <Tooltip.Root>
-      <Tooltip.Trigger
-        aria-label={config.label}
-        render={
-          <span
-            className={`flex size-9 shrink-0 items-center justify-center rounded-card-sm ${config.tone}`}
-          />
-        }
-      >
-        <Icon className="size-4" aria-hidden="true" />
-      </Tooltip.Trigger>
-      <Tooltip.Content>
-        <Trans message={config.label} />
-      </Tooltip.Content>
-    </Tooltip.Root>
+    <div className="flex flex-col gap-4 px-4 py-4">
+      <Skeleton className="h-10 w-full" />
+      <Skeleton className="h-10 w-full" />
+      <Skeleton className="h-44 w-full" />
+    </div>
   );
 }
 
-/* ── Skeleton ─── */
+function FilesSkeleton() {
+  return (
+    <div className="flex flex-col gap-3 px-4 py-4">
+      <Skeleton className="h-24 w-full" />
+      <Skeleton className="h-10 w-full" />
+    </div>
+  );
+}
 
-function BuilderSkeleton() {
+function BioPagesSkeleton() {
+  return (
+    <div className="flex flex-col gap-3 px-4 py-4">
+      <Skeleton className="h-10 w-full" />
+      <Skeleton className="h-10 w-full" />
+    </div>
+  );
+}
+
+function PreviewSkeleton() {
   return (
     <div className="flex flex-col gap-3">
-      <Skeleton className="h-9 w-48" />
-      <div className="rounded-card border border-border">
-        <div className="border-b px-4 py-3.5">
-          <Skeleton className="h-5 w-36" />
-          <Skeleton className="mt-1 h-3.5 w-56" />
-        </div>
-        <div className="flex flex-col gap-4 px-4 py-4">
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-44 w-full" />
-        </div>
-      </div>
+      <Skeleton className="h-4 w-32" />
+      <Skeleton className="aspect-video w-full" />
+      <Skeleton className="h-4 w-3/4" />
+      <Skeleton className="h-9 w-full" />
     </div>
   );
 }
