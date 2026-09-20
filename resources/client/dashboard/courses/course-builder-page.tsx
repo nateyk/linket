@@ -1357,7 +1357,6 @@ function LessonEditor({
   const [quizSaving, setQuizSaving] = useState(false);
   const [quizError, setQuizError] = useState<string | null>(null);
   const [expandedQuestionKeys, setExpandedQuestionKeys] = useState<Set<string>>(new Set());
-  const {uploadFile, uploadStatus, percentage} = useActiveUpload();
 
   useEffect(() => {
     setTitle(lesson.title);
@@ -1617,28 +1616,21 @@ function LessonEditor({
     setDeleteQuizOpen(false);
   };
 
-  const uploadVideo = (file: File) => {
-    uploadFile(file, {
-      uploadType: 'courseVideos',
-      showToastOnRestrictionFail: true,
-      showToastOnBackendError: true,
-      onSuccess: async entry => {
-        try {
-          const res = await apiClient.put(`/api/v1/course-lessons/${lesson.id}`, {
-            video_type: 'upload',
-            video_file_entry_id: entry.id,
-          });
-          const updated = (res.data as any).data as Lesson;
-          setVideoType('upload');
-          setVideoFileEntryId(entry.id);
-          setVideoUrl('');
-          onSelectLesson(updated);
-          toast.positive('Video uploaded');
-        } catch {
-          toast.danger('Unable to attach the uploaded video');
-        }
-      },
-    });
+  const attachVideoEntry = async (entry: {id: number}) => {
+    try {
+      const res = await apiClient.put(`/api/v1/course-lessons/${lesson.id}`, {
+        video_type: 'upload',
+        video_file_entry_id: entry.id,
+      });
+      const updated = (res.data as any).data as Lesson;
+      setVideoType('upload');
+      setVideoFileEntryId(entry.id);
+      setVideoUrl('');
+      onSelectLesson(updated);
+      toast.positive('Video uploaded');
+    } catch {
+      toast.danger('Unable to attach the uploaded video');
+    }
   };
 
   const attachResourceEntry = async (entry: {id: number}) => {
@@ -1744,14 +1736,15 @@ function LessonEditor({
             </Card.Description>
           </Card.Header>
           <Card.Content className="flex flex-col gap-3 p-4 pt-0">
-            <FileDropzone
+            <SharedFileUploader
+              uploadType="courseVideos"
+              onUploaded={attachVideoEntry}
               accept="video/*"
+              maxFiles={1}
+              multiple={false}
+              bare
               title={<Trans message="Upload a video" />}
-              description={<Trans message="Drag and drop or click to browse" />}
-              hint=".mp4, .mov, .mpeg, or .webm"
-              status={uploadStatus === 'inProgress' ? 'uploading' : 'idle'}
-              progress={percentage}
-              onFile={uploadVideo}
+              description=".mp4, .mov, .mpeg, or .webm"
             />
             <div className="flex items-center gap-3">
               <div className="h-px flex-1 bg-border" />
@@ -1886,6 +1879,7 @@ function LessonEditor({
                   uploadType="courseResources"
                   onUploaded={attachResourceEntry}
                   accept=".pdf,.doc,.docx,.txt,.csv,.png,.jpg,.jpeg,.webp,.zip"
+                  bare
                   title={<Trans message="Drop your files here" />}
                   description={
                     <Trans message="PDF, DOC, images up to 100MB" />
