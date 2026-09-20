@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Storefront\Models\DigitalProduct;
 use App\Storefront\Notifications\ProductModerationNotification;
 use App\Storefront\Notifications\ProductModerationSummaryNotification;
+use Common\Files\FileEntry;
 use Common\Permissions\Models\Permission;
 use Common\Workspaces\ActiveWorkspace;
 use Common\Workspaces\Actions\CreateWorkspace;
@@ -211,6 +212,70 @@ class ProductModerationNotificationTest extends TestCase
         $this->assertFalse($notification->shouldSend($creator, 'mail'));
     }
 
+    public function testBulkRejectOfRevertedUpdatesSummarizesAsStillLive(): void
+    {
+        Notification::fake();
+        $admin = $this->createAdmin();
+        [$creator, $workspace] = $this->creatorContext();
+        $first = $this->editedProduct($workspace, $creator, 'Original A');
+        $second = $this->editedProduct($workspace, $creator, 'Original B');
+
+        $this->stateful()->actingAs($admin)->postJson(
+            '/api/v1/admin/digital-products/bulk-reject',
+            ['ids' => [$first->id, $second->id], 'reason' => 'Nope'],
+        )->assertOk();
+
+        Notification::assertSentToTimes($creator, ProductModerationSummaryNotification::class, 1);
+        Notification::assertNotSentTo($creator, ProductModerationNotification::class);
+        Notification::assertSentTo(
+            $creator,
+            ProductModerationSummaryNotification::class,
+            fn (ProductModerationSummaryNotification $n): bool => $n->event === 'update_reverted',
+        );
+    }
+
+    public function testRevertedSummaryCopySaysProductsRemainLive(): void
+    {
+        [$creator] = $this->creatorContext();
+        $notification = new ProductModerationSummaryNotification('update_reverted', ['A', 'B'], 'Nope');
+
+        $payload = $notification->toDatabase($creator);
+
+        $this->assertStringContainsString('still live', $payload['lines'][0]['content']);
+        $this->assertStringNotContainsString('need changes', $payload['lines'][0]['content']);
+        $this->assertStringContainsString('Nope', $payload['lines'][1]['content']);
+        $this->assertInstanceOf(MailMessage::class, $notification->toMail($creator));
+    }
+
+    private function editedProduct(Workspace $workspace, User $creator, string $title): DigitalProduct
+    {
+        $name = 'test-' . Str::random(6) . '.pdf';
+        $file = FileEntry::query()->create([
+            'name' => $name,
+            'file_name' => $name,
+            'mime' => 'application/pdf',
+            'extension' => 'pdf',
+            'file_size' => 100,
+            'workspace_id' => $workspace->id,
+            'owner_id' => $creator->id,
+        ]);
+        $product = $this->product($workspace, $creator, [
+            'status' => 'approved',
+            'approved_at' => now(),
+            'title' => $title,
+        ]);
+        $product->files()->attach($file->id);
+
+        $this->stateful()->actingAs($creator)->putJson("/api/v1/digital-products/{$product->id}", [
+            'title' => $title . ' Edited',
+            'price_cents' => 1000,
+            'currency' => 'ETB',
+            'file_ids' => [$file->id],
+        ])->assertOk();
+
+        return $product->fresh();
+    }
+
     private function updatedProduct(Workspace $workspace, User $creator): DigitalProduct
     {
         return $this->product($workspace, $creator, [
@@ -269,6 +334,8 @@ class ProductModerationNotificationTest extends TestCase
     private function stateful(): static
     {
         $csrfToken = 'test-csrf-token';
+
+        $this->flushSession();
 
         return $this->withSession(['_token' => $csrfToken])
             ->withHeader('Referer', config('app.url'))

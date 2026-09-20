@@ -106,7 +106,14 @@ describe('digital product form submission', () => {
     expect(source).toContain('errors.price_cents');
     expect(source).toContain('errors.cover_file_entry_id');
     expect(source).toContain('fieldErrors.file_ids');
-    expect(source).toContain('showToastOnBackendError: true');
+    expect(source).toContain('<SharedFileUploader');
+    expect(source).toContain('uploadType="digitalProductFiles"');
+    const uploaderSource = fs.readFileSync(
+      path.resolve('common/foundation/resources/client/ui/file-uploader.tsx'),
+      'utf8',
+    );
+    expect(uploaderSource).toContain('showToastOnBackendError: true');
+    expect(uploaderSource).toContain('showToastOnRestrictionFail: true');
   });
 
   test('warns before an approved product is returned to draft', () => {

@@ -231,8 +231,12 @@ class AdminDigitalProductsController extends Controller
                 return;
             }
 
+            $events = array_unique(array_map(fn (array $item): string => $item['event'], $items));
+
             $creator->notify(new ProductModerationSummaryNotification(
-                $approve ? 'approved' : 'rejected',
+                $approve
+                    ? 'approved'
+                    : ($events === ['update_reverted'] ? 'update_reverted' : 'rejected'),
                 array_map(fn (array $item): string => $item['title'], $items),
                 $reason,
             ));

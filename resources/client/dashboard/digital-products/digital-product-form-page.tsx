@@ -13,7 +13,7 @@ import {TipTapEditorProvider} from '@common/text-editor/tiptap-editor-provider';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {CroppedCover} from '@common/uploads/components/cropped-image-selector';
 import {FileUploadProvider} from '@common/uploads/uploader/file-upload-provider';
-import {useActiveUpload} from '@common/uploads/uploader/use-active-upload';
+import {SharedFileUploader} from '@common/ui/file-uploader';
 import {Badge} from '@shadcn/badge/badge';
 import {Accordion} from '@shadcn/accordion/accordion';
 import {Alert} from '@shadcn/alert/alert';
@@ -50,12 +50,11 @@ import {
   SaveIcon,
   SendIcon,
   Trash2Icon,
-  UploadIcon,
   PackageOpenIcon,
   TriangleAlertIcon,
   type LucideIcon,
 } from 'lucide-react';
-import {type ChangeEvent, useCallback, useEffect, useState} from 'react';
+import {useCallback, useEffect, useState} from 'react';
 import {useNavigate, useParams, useSearchParams} from 'react-router';
 import {initialPriceFromParam} from './product-create-flow';
 import type {ProductType} from './product-type-picker';
@@ -892,8 +891,16 @@ function FilesPanel({
 }) {
   return (
     <div className="flex flex-col gap-3">
-      <DownloadUploader
-        onUploaded={onUploaded}
+      <SharedFileUploader
+        uploadType="digitalProductFiles"
+        onUploaded={entry =>
+          onUploaded({
+            id: entry.id,
+            name: entry.name,
+            file_size: entry.file_size,
+            extension: entry.extension ?? undefined,
+          })
+        }
         accept={accept}
         hint={hint}
       />
@@ -1035,75 +1042,6 @@ function ProductStatus({status}: {status: string}) {
         <Trans message={config.label} />
       </Tooltip.Content>
     </Tooltip.Root>
-  );
-}
-
-/* ─── Download Uploader ─── */
-
-function DownloadUploader({
-  onUploaded,
-  accept,
-  hint,
-}: {
-  onUploaded: (file: FileEntry) => void;
-  accept?: string;
-  hint?: string;
-}) {
-  const {uploadFile, uploadStatus, percentage} = useActiveUpload();
-  const uploading = uploadStatus === 'inProgress';
-
-  const onChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    uploadFile(file, {
-      uploadType: 'digitalProductFiles',
-      showToastOnRestrictionFail: true,
-      showToastOnBackendError: true,
-      onSuccess: entry =>
-        onUploaded({
-          id: entry.id,
-          name: entry.name,
-          file_size: entry.file_size,
-          extension: entry.extension ?? undefined,
-        }),
-    });
-    event.target.value = '';
-  };
-
-  return (
-    <label className="relative flex cursor-pointer flex-col items-center gap-2 rounded-card-sm border border-dashed border-border px-5 py-6 text-center transition-colors hover:bg-muted/40">
-      <input
-        className="absolute inset-0 cursor-pointer opacity-0"
-        type="file"
-        accept={accept}
-        disabled={uploading}
-        onChange={onChange}
-      />
-      <div className="flex size-9 items-center justify-center rounded-card-sm bg-primary/10 text-primary">
-        <UploadIcon className="size-4" />
-      </div>
-      <span className="text-[13px] font-medium">
-        {uploading ? (
-          <Trans message="Uploading file..." />
-        ) : (
-          <Trans message="Add product file" />
-        )}
-      </span>
-      <span className="text-[12px] text-muted-foreground">
-        {hint ? <Trans message={hint} /> : null}
-      </span>
-      {uploading && (
-        <Progress.Root
-          className="absolute right-3 bottom-2 left-3"
-          value={percentage}
-        >
-          <Progress.Track>
-            <Progress.Indicator />
-          </Progress.Track>
-        </Progress.Root>
-      )}
-    </label>
   );
 }
 
