@@ -62,6 +62,30 @@ export function canContinue(step: WizardStep, state: WizardState): boolean {
   return cents !== null && cents > 0;
 }
 
+export interface WizardPrefill {
+  type: ProductType | null;
+  billing: BillingMode | null;
+  price: string | null;
+}
+
+const PRODUCT_TYPES: ProductType[] = ['digital', 'ebook', 'audio', 'course'];
+
+export function parseWizardPrefill(params: URLSearchParams): WizardPrefill {
+  const rawType = params.get('type');
+  const rawBilling = params.get('billing');
+  const type: ProductType | null =
+    rawType && (PRODUCT_TYPES as string[]).includes(rawType)
+      ? (rawType as ProductType)
+      : null;
+  const billing: BillingMode | null =
+    rawBilling === 'free' || rawBilling === 'paid' ? rawBilling : null;
+  return {
+    type,
+    billing,
+    price: initialPriceFromParam(params.get('price_cents')),
+  };
+}
+
 export function buildCreateUrl(state: WizardState): string | null {
   if (state.type === null || state.billing === null) return null;
   const cents =
@@ -73,7 +97,7 @@ export function buildCreateUrl(state: WizardState): string | null {
       state.billing === 'paid' ? `?price_cents=${cents}` : ''
     }`;
   }
-  return `/dashboard/my-products/new/details?type=${state.type}${
+  return `/dashboard/my-products/new/details?type=${state.type}&billing=${state.billing}${
     state.billing === 'paid' ? `&price_cents=${cents}` : ''
   }`;
 }

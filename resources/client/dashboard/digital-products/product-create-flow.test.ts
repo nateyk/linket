@@ -6,6 +6,7 @@ import {
   initialPriceFromParam,
   nextStep,
   parseEtbToCents,
+  parseWizardPrefill,
   prevStep,
   visibleSteps,
 } from './product-create-flow';
@@ -100,15 +101,53 @@ describe('buildCreateUrl', () => {
   test('routes other types to details with type and paid price', () => {
     expect(
       buildCreateUrl({type: 'ebook', billing: 'paid', price: '10'}),
-    ).toBe('/dashboard/my-products/new/details?type=ebook&price_cents=1000');
+    ).toBe('/dashboard/my-products/new/details?type=ebook&billing=paid&price_cents=1000');
     expect(
       buildCreateUrl({type: 'audio', billing: 'free', price: ''}),
-    ).toBe('/dashboard/my-products/new/details?type=audio');
+    ).toBe('/dashboard/my-products/new/details?type=audio&billing=free');
   });
   test('returns null while incomplete', () => {
     expect(buildCreateUrl({type: null, billing: null, price: ''})).toBeNull();
     expect(
       buildCreateUrl({type: 'digital', billing: 'paid', price: ''}),
+    ).toBeNull();
+  });
+});
+
+describe('wizard prefill transport', () => {
+  test('details urls carry the billing mode', () => {
+    expect(
+      buildCreateUrl({type: 'ebook', billing: 'paid', price: '10'}),
+    ).toBe(
+      '/dashboard/my-products/new/details?type=ebook&billing=paid&price_cents=1000',
+    );
+    expect(
+      buildCreateUrl({type: 'audio', billing: 'free', price: ''}),
+    ).toBe('/dashboard/my-products/new/details?type=audio&billing=free');
+  });
+  test('course urls are unchanged', () => {
+    expect(
+      buildCreateUrl({type: 'course', billing: 'paid', price: '19.99'}),
+    ).toBe('/dashboard/my-products/new/course?price_cents=1999');
+  });
+  test('parseWizardPrefill validates type, billing, and price', () => {
+    expect(
+      parseWizardPrefill(
+        new URLSearchParams('type=ebook&billing=paid&price_cents=1000'),
+      ),
+    ).toEqual({type: 'ebook', billing: 'paid', price: '10'});
+    expect(
+      parseWizardPrefill(
+        new URLSearchParams('type=bogus&billing=paid&price_cents=1000'),
+      ).type,
+    ).toBeNull();
+    expect(
+      parseWizardPrefill(
+        new URLSearchParams('type=ebook&billing=bogus&price_cents=1000'),
+      ).billing,
+    ).toBeNull();
+    expect(
+      parseWizardPrefill(new URLSearchParams('type=audio&billing=free')).price,
     ).toBeNull();
   });
 });
