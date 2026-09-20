@@ -21,8 +21,9 @@ export function BuilderSectionHeader({
     <span className="flex min-w-0 flex-1 items-start gap-3 py-1">
       <span
         className={cn(
-          'flex size-9 shrink-0 items-center justify-center rounded-card-sm bg-muted text-muted-foreground',
+          'flex size-9 shrink-0 items-center justify-center rounded-card-sm bg-card',
           isComplete && 'bg-primary/10 text-primary',
+          !isComplete && 'bg-muted text-muted-foreground',
         )}
       >
         {isComplete ? (
