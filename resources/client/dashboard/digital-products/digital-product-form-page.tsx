@@ -113,9 +113,13 @@ const SECTION_META: Record<
 
 export function Component() {
   const [searchParams] = useSearchParams();
+  const {productId} = useParams();
   return (
     <FileUploadProvider>
-      <ProductCreationProvider prefill={parseWizardPrefill(searchParams)}>
+      <ProductCreationProvider
+        prefill={parseWizardPrefill(searchParams)}
+        productId={productId ? Number(productId) : null}
+      >
         <DigitalProductForm />
       </ProductCreationProvider>
     </FileUploadProvider>
@@ -125,7 +129,7 @@ export function Component() {
 function DigitalProductForm() {
   const {productId} = useParams();
   const navigate = useNavigate();
-  const {state, actions} = useProductCreation();
+  const {state, actions, dirty} = useProductCreation();
   const title = state.title;
   const description = state.description;
   const price = state.price;
@@ -146,6 +150,10 @@ function DigitalProductForm() {
   const [openSection, setOpenSection] = useState<ProductSetupSection | null>(
     'details',
   );
+
+  useEffect(() => {
+    if (dirty) actions.autoSave();
+  }, [dirty, actions]);
 
   const typeConfig = productType ? PRODUCT_TYPE_CONFIG[productType] : null;
   // Creator-facing file formats come from the server capability

@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import debounce from 'just-debounce-it';
 import type {BillingMode, WizardPrefill} from './product-create-flow';
 import type {ProductType} from './product-type-picker';
 
@@ -37,6 +38,8 @@ export interface ProductCreationActions {
   setBiolinkIds: (ids: number[]) => void;
   setProductType: (type: ProductType) => void;
   clear: () => void;
+  setDirty: (dirty: boolean) => void;
+  autoSave: () => void;
 }
 
 const EMPTY_STATE: ProductFormState = {
@@ -63,58 +66,110 @@ export function resolveInitialFormState(
 
 const ProductCreationContext = createContext<{
   state: ProductFormState;
+  dirty: boolean;
   actions: ProductCreationActions;
   billing: BillingMode | null;
 } | null>(null);
 
 export function ProductCreationProvider({
   prefill,
+  productId,
   children,
 }: {
   prefill: WizardPrefill | null;
+  productId: number | null;
   children: ReactNode;
 }) {
   const [state, setState] = useState<ProductFormState>(() =>
     resolveInitialFormState(prefill),
   );
+  const [dirty, setDirty] = useState(false);
+
   const setTitle = useCallback(
-    (title: string) => setState(current => ({...current, title})),
+    (title: string) => {
+      setState(current => ({...current, title}));
+      setDirty(true);
+    },
     [],
   );
   const setDescription = useCallback(
-    (description: string) => setState(current => ({...current, description})),
+    (description: string) => {
+      setState(current => ({...current, description}));
+      setDirty(true);
+    },
     [],
   );
   const setPrice = useCallback(
-    (price: string) => setState(current => ({...current, price})),
+    (price: string) => {
+      setState(current => ({...current, price}));
+      setDirty(true);
+    },
     [],
   );
   const setCover = useCallback(
-    (coverUrl: string, entry?: {id: number}) =>
+    (coverUrl: string, entry?: {id: number}) => {
       setState(current => ({
         ...current,
         coverUrl,
         coverFileId: entry?.id ?? null,
-      })),
+      }));
+      setDirty(true);
+    },
     [],
   );
   const setFiles = useCallback(
-    (files: FileEntry[]) => setState(current => ({...current, files})),
+    (files: FileEntry[]) => {
+      setState(current => ({...current, files}));
+      setDirty(true);
+    },
     [],
   );
   const setBiolinkIds = useCallback(
-    (biolinkIds: number[]) => setState(current => ({...current, biolinkIds})),
+    (biolinkIds: number[]) => {
+      setState(current => ({...current, biolinkIds}));
+      setDirty(true);
+    },
     [],
   );
   const setProductType = useCallback(
-    (productType: ProductType) =>
-      setState(current => ({...current, productType})),
+    (productType: ProductType) => {
+      setState(current => ({...current, productType}));
+      setDirty(true);
+    },
     [],
   );
-  const clear = useCallback(() => setState({...EMPTY_STATE}), []);
+  const clear = useCallback(() => {
+    setState({...EMPTY_STATE});
+    setDirty(false);
+  }, []);
+
+  const autoSave = useCallback(
+    debounce(async () => {
+      if (!productId || !dirty) return;
+      try {
+        const {apiClient} = await import('@common/http/query-client');
+        await apiClient.put(`/api/v1/digital-products/${productId}/draft`, {
+          title: state.title,
+          description: state.description,
+          price_cents: Math.round(Number(state.price) * 100),
+          currency: 'etb',
+          cover_file_entry_id: state.coverFileId,
+          file_ids: state.files.map(f => f.id),
+          biolink_ids: state.biolinkIds,
+          type: state.productType,
+        });
+        setDirty(false);
+      } catch {
+        // Silent fail - auto-save is best effort
+      }
+    }, 1500),
+    [productId, state, dirty],
+  );
+
   const value = useMemo(
     () => ({
       state,
+      dirty,
       actions: {
         setTitle,
         setDescription,
@@ -124,11 +179,14 @@ export function ProductCreationProvider({
         setBiolinkIds,
         setProductType,
         clear,
+        setDirty,
+        autoSave,
       },
       billing: prefill?.billing ?? null,
     }),
     [
       state,
+      dirty,
       setTitle,
       setDescription,
       setPrice,
@@ -137,6 +195,8 @@ export function ProductCreationProvider({
       setBiolinkIds,
       setProductType,
       clear,
+      setDirty,
+      autoSave,
       prefill,
     ],
   );
