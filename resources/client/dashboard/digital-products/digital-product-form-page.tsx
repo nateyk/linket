@@ -13,6 +13,15 @@ import {CroppedCover} from '@common/uploads/components/cropped-image-selector';
 import {FileUploadProvider} from '@common/uploads/uploader/file-upload-provider';
 import {SharedFileUploader} from '@common/ui/file-uploader';
 import {Accordion} from '@shadcn/accordion/accordion';
+import {
+  Attachment,
+  AttachmentAction,
+  AttachmentActions,
+  AttachmentContent,
+  AttachmentDescription,
+  AttachmentMedia,
+  AttachmentTitle,
+} from '@shadcn/attachment/attachment';
 import {Alert} from '@shadcn/alert/alert';
 import {AlertDialog} from '@shadcn/alert-dialog/alert-dialog';
 import {Breadcrumb} from '@shadcn/breadcrumb/breadcrumb';
@@ -32,6 +41,7 @@ import {FormattedBytes} from '@ui/i18n/formatted-bytes';
 import {
   BookIcon,
   DownloadIcon,
+  FileArchiveIcon,
   FileIcon,
   FileTextIcon,
   GraduationCapIcon,
@@ -828,6 +838,7 @@ function DetailsPanel({
           onChange={onCoverChange}
           uploadType="linkImages"
           aspect={16 / 9}
+          className="aspect-video h-auto w-full"
         />
       </ProductFormField>
     </div>
@@ -869,6 +880,14 @@ function DescriptionEditor({
 
 /* ── Files Panel ─── */
 
+function fileTypeIcon(extension?: string) {
+  const ext = extension?.toLowerCase() ?? '';
+  if (ext === 'zip') return FileArchiveIcon;
+  if (['pdf', 'epub', 'txt'].includes(ext)) return FileTextIcon;
+  if (['mp3', 'm4a', 'wav', 'ogg'].includes(ext)) return HeadphonesIcon;
+  return FileIcon;
+}
+
 function FilesPanel({
   files,
   onUploaded,
@@ -902,33 +921,36 @@ function FilesPanel({
       />
       {error && <p className="text-sm text-destructive">{error}</p>}
       {!!files.length && (
-        <div className="divide-y">
-          {files.map(file => (
-            <div
-              key={file.id}
-              className="flex items-center gap-3 px-1 py-2.5 text-sm transition-colors hover:bg-muted/40"
-            >
-              <div className="flex size-8 items-center justify-center rounded-card-sm bg-muted text-muted-foreground">
-                <FileIcon className="size-4" />
-              </div>
-              <span className="min-w-0 flex-1 truncate font-medium">
-                {file.name}
-              </span>
-              {file.file_size && (
-                <span className="shrink-0 text-[12px] text-muted-foreground">
-                  <FormattedBytes bytes={file.file_size} />
-                </span>
-              )}
-              <Button
-                size="icon-xs"
-                variant="ghost"
-                onClick={() => onRemove(file.id)}
-              >
-                <Trash2Icon className="size-4" />
-              </Button>
-            </div>
-          ))}
-        </div>
+        <ul className="flex flex-col gap-2">
+          {files.map(file => {
+            const Icon = fileTypeIcon(file.extension);
+            return (
+              <li key={file.id}>
+                <Attachment state="done" size="sm" className="w-full">
+                  <AttachmentMedia>
+                    <Icon aria-hidden="true" />
+                  </AttachmentMedia>
+                  <AttachmentContent>
+                    <AttachmentTitle>{file.name}</AttachmentTitle>
+                    {file.file_size && (
+                      <AttachmentDescription className="tabular-nums">
+                        <FormattedBytes bytes={file.file_size} />
+                      </AttachmentDescription>
+                    )}
+                  </AttachmentContent>
+                  <AttachmentActions>
+                    <AttachmentAction
+                      aria-label={`Remove ${file.name}`}
+                      onClick={() => onRemove(file.id)}
+                    >
+                      <Trash2Icon aria-hidden="true" />
+                    </AttachmentAction>
+                  </AttachmentActions>
+                </Attachment>
+              </li>
+            );
+          })}
+        </ul>
       )}
     </div>
   );

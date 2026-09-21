@@ -306,3 +306,28 @@ describe('product files dropzone', () => {
     expect(source).toContain('bare');
   });
 });
+
+describe('product cover and attached files', () => {
+  test('cover preview keeps a true 16:9 ratio like the storefront card', () => {
+    const source = fs.readFileSync(
+      path.resolve(
+        'resources/client/dashboard/digital-products/digital-product-form-page.tsx',
+      ),
+      'utf8',
+    );
+    expect(source).toContain('aspect={16 / 9}');
+    expect(source).toContain('aspect-video h-auto w-full');
+  });
+  test('attached files reuse the Attachment primitive with type icons', () => {
+    const source = fs.readFileSync(
+      path.resolve(
+        'resources/client/dashboard/digital-products/digital-product-form-page.tsx',
+      ),
+      'utf8',
+    );
+    expect(source).toContain("from '@shadcn/attachment/attachment'");
+    expect(source).toContain('<Attachment state="done"');
+    expect(source).toContain('fileTypeIcon');
+    expect(source).toContain('FileArchiveIcon');
+  });
+});
