@@ -17,8 +17,8 @@ describe('reusable image crop composer', () => {
     expect(source).toContain('ImageCropReset');
     expect(source).toContain('aspect');
     expect(source).toContain('onCrop');
-    expect(source).toContain('react-easy-crop');
-    expect(source).toContain('getCroppedAreaPixels');
+    expect(source).toContain('react-image-crop');
+    expect(source).toContain('centerAspectCrop');
   });
 
   test('supports avatar, course cover and product card ratios', () => {
@@ -31,8 +31,10 @@ describe('reusable image crop composer', () => {
     // default aspect 1 and ability to pass any number (checked via aspect prop)
     expect(source).toMatch(/aspect\s*\??\s*:\s*number/);
     expect(source).toMatch(/aspect\s*=\s*1/);
-    // ensure component can be used with 1, 2.33, 16/9
-    expect(source).toContain('Cropper');
+    // selection-box cropper renders the image with a centered aspect crop
+    expect(source).toContain('ReactCrop');
+    expect(source).toContain('ruleOfThirds');
+    expect(source).toContain('centerAspectCrop');
   });
 
   test('uses viewport-safe sizing with a single selector dialog tree', () => {
@@ -49,20 +51,18 @@ describe('reusable image crop composer', () => {
       'utf8',
     );
 
-    expect(cropSource).toContain('aspectRatio');
-    expect(cropSource).toContain("maxHeight: 'min(50dvh,420px)'");
+    expect(cropSource).toContain('max-h-[min(50dvh,420px)]');
     expect(cropSource).not.toContain('sm:h-[460px]');
     expect(cropSource).not.toContain('min-h-[320px]');
-    // zoom stays wired to the cropper (wheel/pinch) with button controls, no slider UI
+    // selection-box cropper: no zoom state, no slider UI
     expect(cropSource).not.toContain('<Slider');
-    expect(cropSource).toContain('onZoomChange');
-    expect(cropSource).toContain('setZoom');
-    expect(cropSource).toContain('zoomIn');
-    expect(cropSource).toContain('zoomOut');
-    expect(cropSource).toContain('ImageCropZoomControls');
-    expect(cropSource).toContain('ZoomInIcon');
-    expect(cropSource).toContain('ZoomOutIcon');
-    expect(cropSource).toContain('Tooltip.Content');
+    expect(cropSource).not.toContain('zoomIn');
+    expect(cropSource).not.toContain('zoomOut');
+    expect(cropSource).not.toContain('ImageCropZoomControls');
+    expect(cropSource).not.toContain('react-easy-crop');
+    // resolution-independent percent crop resolved against natural size
+    expect(cropSource).toContain('PercentCrop');
+    expect(cropSource).toContain('naturalWidth');
     expect(selectorSource.match(/<Dialog\.Root/g)).toHaveLength(1);
     expect(selectorSource).toContain(
       'flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between',
