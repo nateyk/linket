@@ -1,5 +1,6 @@
 // resources/client/dashboard/digital-products/product-creation-context.tsx
 import {
+  useRef,
   createContext,
   useCallback,
   useContext,
@@ -143,7 +144,7 @@ export function ProductCreationProvider({
     setDirty(false);
   }, []);
 
-  const autoSave = useCallback(
+  const autoSaveRef = useRef(
     debounce(async () => {
       if (!productId || !dirty) return;
       try {
@@ -163,8 +164,11 @@ export function ProductCreationProvider({
         // Silent fail - auto-save is best effort
       }
     }, 1500),
-    [productId, state, dirty],
   );
+
+  const autoSave = useCallback(() => {
+    autoSaveRef.current();
+  }, []);
 
   const value = useMemo(
     () => ({
