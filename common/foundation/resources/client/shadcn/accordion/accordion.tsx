@@ -67,7 +67,7 @@ function AccordionTrigger({
       <AccordionPrimitive.Trigger
         data-slot="accordion-trigger"
         className={cn(
-          'group/accordion-trigger relative flex flex-1 items-center justify-between gap-4 p-3 text-start text-sm font-medium transition-all outline-none group-data-[variant=bordered]/accordion:hover:bg-accent/80 group-data-[variant=default]/accordion:hover:underline group-data-[variant=separated]/accordion:hover:bg-accent/80 focus-visible:underline aria-disabled:pointer-events-none aria-disabled:opacity-50 **:data-[slot=accordion-trigger-icon]:ms-auto **:data-[slot=accordion-trigger-icon]:text-muted-foreground [&_svg:not([class*="size-"])]:size-4',
+          'group/accordion-trigger relative flex flex-1 items-center justify-between gap-4 p-3 text-start text-sm font-medium transition-all outline-none group-data-[variant=bordered]/accordion:hover:text-primary group-data-[variant=default]/accordion:hover:underline group-data-[variant=separated]/accordion:hover:bg-accent/80 focus-visible:underline aria-disabled:pointer-events-none aria-disabled:opacity-50 **:data-[slot=accordion-trigger-icon]:ms-auto **:data-[slot=accordion-trigger-icon]:text-muted-foreground [&_svg:not([class*="size-"])]:size-4',
           className,
         )}
         {...props}
@@ -94,7 +94,7 @@ function AccordionContent({
   return (
     <AccordionPrimitive.Panel
       data-slot="accordion-content"
-      className="overflow-hidden text-sm group-data-[variant=bordered]/accordion:pt-1.5 group-data-[variant=separated]/accordion:pt-1.5 data-open:animate-accordion-down data-closed:animate-accordion-up"
+      className="overflow-hidden text-sm group-data-[variant=bordered]/accordion:pt-0.5 group-data-[variant=separated]/accordion:pt-1.5 data-open:animate-accordion-down data-closed:animate-accordion-up"
       {...props}
     >
       <div
