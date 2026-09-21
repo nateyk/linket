@@ -10,6 +10,8 @@ interface ProductFormFieldProps {
   htmlFor?: string;
   required?: boolean;
   children: ReactNode;
+  onBlur?: () => void;
+  onChange?: () => void;
 }
 
 export function ProductFormField({
@@ -19,9 +21,11 @@ export function ProductFormField({
   htmlFor,
   required = false,
   children,
+  onBlur,
+  onChange,
 }: ProductFormFieldProps) {
   return (
-    <Field.Root invalid={!!error}>
+    <Field.Root invalid={!!error} onBlur={onBlur} onChange={onChange}>
       <Field.Label htmlFor={htmlFor}>
         <Trans message={label} />
         {required && <span aria-hidden="true"> *</span>}

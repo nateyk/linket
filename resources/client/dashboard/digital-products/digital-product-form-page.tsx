@@ -155,6 +155,42 @@ function DigitalProductForm() {
     if (dirty) actions.autoSave();
   }, [dirty, actions]);
 
+  const validateField = useCallback(
+    (field: string, value: string) => {
+      if (field === 'title' && !value.trim()) {
+        setFieldErrors(current => ({...current, title: 'Title is required'}));
+      } else if (field === 'title') {
+        setFieldErrors(current => {
+          const next = {...current};
+          delete next.title;
+          return next;
+        });
+      }
+      if (field === 'price') {
+        const cents = Math.round(Number(value) * 100);
+        if (!Number.isFinite(cents) || cents < 0) {
+          setFieldErrors(current => ({...current, price_cents: 'Invalid price'}));
+        } else {
+          setFieldErrors(current => {
+            const next = {...current};
+            delete next.price_cents;
+            return next;
+          });
+        }
+      }
+      if (field === 'description' && value.length > 5000) {
+        setFieldErrors(current => ({...current, description: 'Description too long'}));
+      } else if (field === 'description') {
+        setFieldErrors(current => {
+          const next = {...current};
+          delete next.description;
+          return next;
+        });
+      }
+    },
+    [],
+  );
+
   const typeConfig = productType ? PRODUCT_TYPE_CONFIG[productType] : null;
   // Creator-facing file formats come from the server capability
   // (App\Storefront\ProductFileFormats via bootstrap data) — never hardcoded.
@@ -565,6 +601,7 @@ function DigitalProductForm() {
                             onConvertToEtbChange={setConvertToEtb}
                             onCoverChange={actions.setCover}
                             errors={fieldErrors}
+                            validateField={validateField}
                           />
                         )}
                         {section === 'files' && (
@@ -681,7 +718,9 @@ function DetailsPanel({
   onConvertToEtbChange: (value: boolean) => void;
   onCoverChange: (url: string, entry?: {id: number}) => void;
   errors: FieldErrors;
+  validateField: (field: string, value: string) => void;
 }) {
+  const {validateField} = arguments[0] as {validateField: (field: string, value: string) => void};
   return (
     <div className="flex flex-col gap-4">
       <ProductFormField
@@ -690,6 +729,7 @@ function DetailsPanel({
         error={errors.title}
         htmlFor="product-title"
         required
+        onBlur={() => validateField('title', title)}
       >
         <Input
           id="product-title"
@@ -707,6 +747,7 @@ function DetailsPanel({
         error={errors.price_cents}
         htmlFor="product-price"
         required
+        onBlur={() => validateField('price', price)}
       >
         <InputGroup>
           <InputGroupAddon align="inline-start">
@@ -746,6 +787,7 @@ function DetailsPanel({
         description="Describe what customers will receive."
         error={errors.description}
         htmlFor="product-description"
+        onBlur={() => validateField('description', description)}
       >
         <DescriptionEditor value={description} onChange={onDescriptionChange} />
       </ProductFormField>
