@@ -1,7 +1,10 @@
 'use client';
 
 import {cn} from '@ui/utils/cn';
+import {Button} from '@shadcn/button/button';
+import {Tooltip} from '@shadcn/tooltip/tooltip';
 import {Trans} from '@ui/i18n/trans';
+import {ZoomInIcon, ZoomOutIcon} from 'lucide-react';
 import * as React from 'react';
 import Cropper, {type Area} from 'react-easy-crop';
 import 'react-easy-crop/react-easy-crop.css';
@@ -15,6 +18,8 @@ type ImageCropContextValue = {
   croppedAreaPixels: Area | null;
   setCrop: (crop: {x: number; y: number}) => void;
   setZoom: (zoom: number) => void;
+  zoomIn: () => void;
+  zoomOut: () => void;
   setCroppedAreaPixels: (area: Area | null) => void;
   handleApply: () => Promise<void>;
   handleReset: () => void;
@@ -96,6 +101,14 @@ export function ImageCrop({
     setZoom(1);
   }, []);
 
+  const zoomIn = React.useCallback(() => {
+    setZoom(current => Math.min(3, Math.round((current + 0.2) * 10) / 10));
+  }, []);
+
+  const zoomOut = React.useCallback(() => {
+    setZoom(current => Math.max(1, Math.round((current - 0.2) * 10) / 10));
+  }, []);
+
   const value = React.useMemo<ImageCropContextValue>(
     () => ({
       aspect,
@@ -106,6 +119,8 @@ export function ImageCrop({
       croppedAreaPixels,
       setCrop,
       setZoom,
+      zoomIn,
+      zoomOut,
       setCroppedAreaPixels,
       handleApply,
       handleReset,
@@ -121,6 +136,8 @@ export function ImageCrop({
       handleApply,
       handleReset,
       isApplying,
+      zoomIn,
+      zoomOut,
     ],
   );
 
@@ -183,6 +200,57 @@ export function ImageCropContent({className, ...props}: ImageCropContentProps) {
           onCropComplete={onCropComplete}
         />
       </div>
+    </div>
+  );
+}
+
+export function ImageCropZoomControls({className}: {className?: string}) {
+  const {zoom, zoomIn, zoomOut} = useImageCropContext();
+
+  return (
+    <div
+      role="group"
+      aria-label="Zoom"
+      className={cn('flex items-center gap-1', className)}
+    >
+      <Tooltip.Root>
+        <Tooltip.Trigger
+          aria-label="Zoom out"
+          render={
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              onClick={zoomOut}
+              disabled={zoom <= 1}
+            />
+          }
+        >
+          <ZoomOutIcon aria-hidden="true" />
+        </Tooltip.Trigger>
+        <Tooltip.Content>
+          <Trans message="Zoom out" />
+        </Tooltip.Content>
+      </Tooltip.Root>
+      <Tooltip.Root>
+        <Tooltip.Trigger
+          aria-label="Zoom in"
+          render={
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-xs"
+              onClick={zoomIn}
+              disabled={zoom >= 3}
+            />
+          }
+        >
+          <ZoomInIcon aria-hidden="true" />
+        </Tooltip.Trigger>
+        <Tooltip.Content>
+          <Trans message="Zoom in" />
+        </Tooltip.Content>
+      </Tooltip.Root>
     </div>
   );
 }

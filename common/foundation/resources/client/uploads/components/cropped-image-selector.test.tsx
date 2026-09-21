@@ -14,6 +14,15 @@ describe('cropped image selector', () => {
     expect(source).toContain('isDragging');
     expect(source).toContain('border-primary bg-primary/5');
   });
+  test('crop dialog footer offers tooltip zoom controls', () => {
+    const source = fs.readFileSync(
+      path.resolve(
+        'common/foundation/resources/client/uploads/components/cropped-image-selector.tsx',
+      ),
+      'utf8',
+    );
+    expect(source).toContain('ImageCropZoomControls');
+  });
   test('uses semantic tokens, no hardcoded white surfaces', () => {
     const source = fs.readFileSync(
       path.resolve(

@@ -53,10 +53,16 @@ describe('reusable image crop composer', () => {
     expect(cropSource).toContain("maxHeight: 'min(50dvh,420px)'");
     expect(cropSource).not.toContain('sm:h-[460px]');
     expect(cropSource).not.toContain('min-h-[320px]');
-    // zoom stays wired to the cropper (wheel/pinch) with no slider UI
+    // zoom stays wired to the cropper (wheel/pinch) with button controls, no slider UI
     expect(cropSource).not.toContain('<Slider');
     expect(cropSource).toContain('onZoomChange');
     expect(cropSource).toContain('setZoom');
+    expect(cropSource).toContain('zoomIn');
+    expect(cropSource).toContain('zoomOut');
+    expect(cropSource).toContain('ImageCropZoomControls');
+    expect(cropSource).toContain('ZoomInIcon');
+    expect(cropSource).toContain('ZoomOutIcon');
+    expect(cropSource).toContain('Tooltip.Content');
     expect(selectorSource.match(/<Dialog\.Root/g)).toHaveLength(1);
     expect(selectorSource).toContain(
       'flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between',
