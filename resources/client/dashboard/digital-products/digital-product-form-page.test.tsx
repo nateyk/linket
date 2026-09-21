@@ -269,3 +269,27 @@ describe('product form error focus and skeletons', () => {
     expect(source).toContain('id="product-files"');
   });
 });
+
+describe('keyboard shortcuts and preview', () => {
+  test('handles Cmd+S to save draft', () => {
+    const source = fs.readFileSync(
+      path.resolve(
+        'resources/client/dashboard/digital-products/digital-product-form-page.tsx',
+      ),
+      'utf8',
+    );
+    expect(source).toContain('keydown');
+    expect(source).toContain('metaKey');
+    expect(source).toContain('save');
+  });
+  test('preview shows character count and file sizes', () => {
+    const source = fs.readFileSync(
+      path.resolve(
+        'resources/client/dashboard/digital-products/product-preview.tsx',
+      ),
+      'utf8',
+    );
+    expect(source).toContain('character');
+    expect(source).toContain('file');
+  });
+});

@@ -155,6 +155,31 @@ function DigitalProductForm() {
     if (dirty) actions.autoSave();
   }, [dirty, actions]);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault();
+        save(false);
+      }
+      if (e.key === 'ArrowDown' && e.altKey) {
+        e.preventDefault();
+        setOpenSection(current => {
+          const idx = SECTION_ORDER.indexOf(current ?? 'details');
+          return SECTION_ORDER[Math.min(idx + 1, SECTION_ORDER.length - 1)];
+        });
+      }
+      if (e.key === 'ArrowUp' && e.altKey) {
+        e.preventDefault();
+        setOpenSection(current => {
+          const idx = SECTION_ORDER.indexOf(current ?? 'details');
+          return SECTION_ORDER[Math.max(idx - 1, 0)];
+        });
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [save, actions]);
+
   const validateField = useCallback(
     (field: string, value: string) => {
       if (field === 'title' && !value.trim()) {
