@@ -54,18 +54,24 @@ describe('reusable image crop composer', () => {
     expect(cropSource).toContain('max-h-[min(50dvh,420px)]');
     expect(cropSource).not.toContain('sm:h-[460px]');
     expect(cropSource).not.toContain('min-h-[320px]');
-    // selection-box cropper: no zoom state, no slider UI
-    expect(cropSource).not.toContain('<Slider');
+    // selection-box cropper with slider-driven zoom (themed thumb)
+    expect(cropSource).toContain('<Slider');
+    expect(cropSource).toContain('bg-primary ring-primary/30');
+    expect(cropSource).toContain('Math.min(3');
+    expect(cropSource).toContain('Math.max(1');
     expect(cropSource).not.toContain('zoomIn');
     expect(cropSource).not.toContain('zoomOut');
     expect(cropSource).not.toContain('ImageCropZoomControls');
     expect(cropSource).not.toContain('react-easy-crop');
+    // rendered image size always matches measured size
+    expect(cropSource).toContain('max-h-[min(50dvh,420px)]');
+    expect(cropSource).not.toContain('max-h-[inherit]');
     // resolution-independent percent crop resolved against natural size
     expect(cropSource).toContain('PercentCrop');
     expect(cropSource).toContain('naturalWidth');
     expect(selectorSource.match(/<Dialog\.Root/g)).toHaveLength(1);
     expect(selectorSource).toContain(
-      'flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between',
+      'flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-end',
     );
   });
 });
