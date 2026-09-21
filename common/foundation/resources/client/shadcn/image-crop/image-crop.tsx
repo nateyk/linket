@@ -4,41 +4,23 @@ import {cn} from '@ui/utils/cn';
 import {Slider} from '@shadcn/forms/slider/slider';
 import {Trans} from '@ui/i18n/trans';
 import * as React from 'react';
-import ReactCrop, {
-  centerCrop,
-  makeAspectCrop,
-  type Crop,
-  type PercentCrop,
-} from 'react-image-crop';
-import 'react-image-crop/dist/ReactCrop.css';
+import Cropper, {type Area} from 'react-easy-crop';
+import 'react-easy-crop/react-easy-crop.css';
 
 type ImageCropContextValue = {
   aspect: number;
   file: File | null;
   imageUrl: string | null;
-  crop: Crop | undefined;
-  completedCrop: PercentCrop | null;
+  crop: {x: number; y: number};
   zoom: number;
-  setCrop: (crop: Crop) => void;
-  setCompletedCrop: (crop: PercentCrop | null) => void;
+  croppedAreaPixels: Area | null;
+  setCrop: (crop: {x: number; y: number}) => void;
   setZoom: (zoom: number) => void;
-  setMediaSize: (size: {width: number; height: number} | null) => void;
+  setCroppedAreaPixels: (area: Area | null) => void;
   handleApply: () => Promise<void>;
   handleReset: () => void;
   isApplying: boolean;
 };
-
-export function centerAspectCrop(
-  mediaWidth: number,
-  mediaHeight: number,
-  aspect: number,
-): Crop {
-  return centerCrop(
-    makeAspectCrop({unit: '%', width: 90}, aspect, mediaWidth, mediaHeight),
-    mediaWidth,
-    mediaHeight,
-  );
-}
 
 const ImageCropContext = React.createContext<ImageCropContextValue | null>(
   null,
@@ -69,14 +51,11 @@ export function ImageCrop({
   className,
 }: ImageCropProps) {
   const [imageUrl, setImageUrl] = React.useState<string | null>(null);
-  const [crop, setCrop] = React.useState<Crop | undefined>(undefined);
-  const [completedCrop, setCompletedCrop] =
-    React.useState<PercentCrop | null>(null);
+  const [crop, setCrop] = React.useState({x: 0, y: 0});
   const [zoom, setZoom] = React.useState(1);
-  const [mediaSize, setMediaSize] = React.useState<{
-    width: number;
-    height: number;
-  } | null>(null);
+  const [croppedAreaPixels, setCroppedAreaPixels] = React.useState<Area | null>(
+    null,
+  );
   const [isApplying, setIsApplying] = React.useState(false);
 
   React.useEffect(() => {
@@ -86,10 +65,9 @@ export function ImageCrop({
     }
     const url = URL.createObjectURL(file);
     setImageUrl(url);
-    setCrop(undefined);
-    setCompletedCrop(null);
-    setMediaSize(null);
+    setCrop({x: 0, y: 0});
     setZoom(1);
+    setCroppedAreaPixels(null);
     return () => URL.revokeObjectURL(url);
   }, [file]);
 
@@ -98,7 +76,7 @@ export function ImageCrop({
   }, []);
 
   const handleApply = React.useCallback(async () => {
-    if (!file || !imageUrl || !completedCrop) {
+    if (!file || !imageUrl || !croppedAreaPixels) {
       onError?.('No image or crop area');
       return;
     }
@@ -106,7 +84,7 @@ export function ImageCrop({
     try {
       const {previewUrl, croppedFile} = await getCroppedImage({
         imageUrl,
-        percent: completedCrop,
+        crop: croppedAreaPixels,
         file,
       });
       onCrop(previewUrl, croppedFile);
@@ -115,17 +93,13 @@ export function ImageCrop({
     } finally {
       setIsApplying(false);
     }
-  }, [file, imageUrl, completedCrop, onCrop, onError]);
+  }, [file, imageUrl, croppedAreaPixels, onCrop, onError]);
 
   const handleReset = React.useCallback(() => {
-    if (mediaSize) {
-      setCrop(centerAspectCrop(mediaSize.width, mediaSize.height, aspect));
-    } else {
-      setCrop(undefined);
-    }
-    setCompletedCrop(null);
+    setCrop({x: 0, y: 0});
     setZoom(1);
-  }, [mediaSize, aspect]);
+    setCroppedAreaPixels(null);
+  }, []);
 
   const value = React.useMemo<ImageCropContextValue>(
     () => ({
@@ -133,12 +107,11 @@ export function ImageCrop({
       file,
       imageUrl,
       crop,
-      completedCrop,
       zoom,
+      croppedAreaPixels,
       setCrop,
-      setCompletedCrop,
       setZoom: setZoomClamped,
-      setMediaSize,
+      setCroppedAreaPixels,
       handleApply,
       handleReset,
       isApplying,
@@ -148,8 +121,8 @@ export function ImageCrop({
       file,
       imageUrl,
       crop,
-      completedCrop,
       zoom,
+      croppedAreaPixels,
       setZoomClamped,
       handleApply,
       handleReset,
@@ -177,18 +150,15 @@ export function ImageCropContent({className, ...props}: ImageCropContentProps) {
     aspect,
     zoom,
     setCrop,
-    setCompletedCrop,
     setZoom,
-    setMediaSize,
+    setCroppedAreaPixels,
   } = useImageCropContext();
 
-  const onImageLoad = React.useCallback(
-    (e: React.SyntheticEvent<HTMLImageElement>) => {
-      const {width, height} = e.currentTarget;
-      setMediaSize({width, height});
-      setCrop(centerAspectCrop(width, height, aspect));
+  const onCropComplete = React.useCallback(
+    (_area: Area, pixels: Area) => {
+      setCroppedAreaPixels(pixels);
     },
-    [aspect, setCrop, setMediaSize],
+    [setCroppedAreaPixels],
   );
 
   if (!imageUrl) {
@@ -205,32 +175,22 @@ export function ImageCropContent({className, ...props}: ImageCropContentProps) {
     );
   }
 
-  const zoomed = zoom > 1;
-  // Guard the ratio: a non-finite aspect would unlock free-form selection
-  // (the "sometimes square" defect), so fall back to square explicitly.
-  const lockedAspect =
-    Number.isFinite(aspect) && aspect > 0 ? aspect : 1;
+  // Guard the ratio: a non-finite aspect would unlock free-form selection,
+  // so fall back to square explicitly.
+  const lockedAspect = Number.isFinite(aspect) && aspect > 0 ? aspect : 1;
 
   return (
     <div className={cn('flex flex-col gap-3', className)} {...props}>
-      <div className="flex max-h-[min(50dvh,420px)] w-full items-center justify-center overflow-auto rounded-card bg-muted">
-        <ReactCrop
+      <div className="relative h-[min(50dvh,420px)] w-full overflow-hidden rounded-card bg-muted">
+        <Cropper
+          image={imageUrl}
           crop={crop}
-          onChange={(_, percentCrop) => setCrop(percentCrop)}
-          onComplete={(_pixelCrop, percentCrop) =>
-            setCompletedCrop(percentCrop)
-          }
+          zoom={zoom}
           aspect={lockedAspect}
-          ruleOfThirds
-        >
-          <img
-            src={imageUrl}
-            alt=""
-            onLoad={onImageLoad}
-            className="h-auto w-full"
-            style={zoomed ? {width: `${zoom * 100}%`, maxWidth: 'none'} : undefined}
-          />
-        </ReactCrop>
+          onCropChange={setCrop}
+          onZoomChange={setZoom}
+          onCropComplete={onCropComplete}
+        />
       </div>
       <Slider
         min={1}
@@ -264,9 +224,9 @@ export function ImageCropApply({
   children,
   className,
 }: ImageCropApplyProps) {
-  const {handleApply, isApplying, completedCrop, file} =
+  const {handleApply, isApplying, croppedAreaPixels, file} =
     useImageCropContext();
-  const disabled = !file || !completedCrop || isApplying;
+  const disabled = !file || !croppedAreaPixels || isApplying;
 
   if (asChild && React.isValidElement(children)) {
     return React.cloneElement(
@@ -347,24 +307,14 @@ export function ImageCropReset({
 // helpers
 async function getCroppedImage({
   imageUrl,
-  percent,
+  crop,
   file,
 }: {
   imageUrl: string;
-  percent: PercentCrop;
+  crop: Area;
   file: File;
 }): Promise<{previewUrl: string; croppedFile: File}> {
   const image = await createImage(imageUrl);
-  // PercentCrop is resolution-independent: resolve against the natural size
-  // so large uploads crop at full quality.
-  const scaleX = image.naturalWidth / 100;
-  const scaleY = image.naturalHeight / 100;
-  const crop = {
-    x: percent.x * scaleX,
-    y: percent.y * scaleY,
-    width: percent.width * scaleX,
-    height: percent.height * scaleY,
-  };
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Could not create canvas context');

@@ -17,8 +17,8 @@ describe('reusable image crop composer', () => {
     expect(source).toContain('ImageCropReset');
     expect(source).toContain('aspect');
     expect(source).toContain('onCrop');
-    expect(source).toContain('react-image-crop');
-    expect(source).toContain('centerAspectCrop');
+    expect(source).toContain('react-easy-crop');
+    expect(source).toContain('getCroppedImage');
   });
 
   test('supports avatar, course cover and product card ratios', () => {
@@ -31,10 +31,11 @@ describe('reusable image crop composer', () => {
     // default aspect 1 and ability to pass any number (checked via aspect prop)
     expect(source).toMatch(/aspect\s*\??\s*:\s*number/);
     expect(source).toMatch(/aspect\s*=\s*1/);
-    // selection-box cropper renders the image with a centered aspect crop
-    expect(source).toContain('ReactCrop');
-    expect(source).toContain('ruleOfThirds');
-    expect(source).toContain('centerAspectCrop');
+    // pan-the-image engine with a locked aspect window
+    expect(source).toContain('<Cropper');
+    expect(source).toContain('onCropComplete');
+    expect(source).toContain('lockedAspect');
+    expect(source).toContain('Number.isFinite(aspect)');
   });
 
   test('uses viewport-safe sizing with a single selector dialog tree', () => {
@@ -51,10 +52,13 @@ describe('reusable image crop composer', () => {
       'utf8',
     );
 
-    expect(cropSource).toContain('max-h-[min(50dvh,420px)]');
+    expect(cropSource).toContain('h-[min(50dvh,420px)]');
     expect(cropSource).not.toContain('sm:h-[460px]');
     expect(cropSource).not.toContain('min-h-[320px]');
-    // selection-box cropper with slider-driven zoom (themed thumb)
+    // fixed window, no scroll: the image pans under it to reach any region
+    expect(cropSource).toContain('overflow-hidden');
+    expect(cropSource).not.toContain('overflow-auto');
+    // slider-driven zoom with themed thumb, clamped 1-3
     expect(cropSource).toContain('<Slider');
     expect(cropSource).toContain('bg-primary ring-primary/30');
     expect(cropSource).toContain('Math.min(3');
@@ -62,18 +66,9 @@ describe('reusable image crop composer', () => {
     expect(cropSource).not.toContain('zoomIn');
     expect(cropSource).not.toContain('zoomOut');
     expect(cropSource).not.toContain('ImageCropZoomControls');
-    expect(cropSource).not.toContain('react-easy-crop');
-    // stage scrolls so tall uploads stay reachable; image fills stage width
-    expect(cropSource).toContain('overflow-auto');
-    expect(cropSource).not.toContain('overflow-hidden');
-    expect(cropSource).toContain('h-auto w-full');
-    expect(cropSource).not.toContain('max-h-[inherit]');
     // ratio can never unlock into free-form/square selection
     expect(cropSource).toContain('lockedAspect');
     expect(cropSource).toContain('Number.isFinite(aspect)');
-    // resolution-independent percent crop resolved against natural size
-    expect(cropSource).toContain('PercentCrop');
-    expect(cropSource).toContain('naturalWidth');
     expect(selectorSource.match(/<Dialog\.Root/g)).toHaveLength(1);
     expect(selectorSource).toContain(
       'flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-end',
