@@ -1,5 +1,5 @@
 import {cn} from '@ui/utils/cn';
-import {CheckIcon, type LucideIcon} from 'lucide-react';
+import type {LucideIcon} from 'lucide-react';
 import type {ReactNode} from 'react';
 
 interface BuilderSectionHeaderProps {
@@ -26,11 +26,7 @@ export function BuilderSectionHeader({
           !isComplete && 'bg-muted text-muted-foreground',
         )}
       >
-        {isComplete ? (
-          <CheckIcon className="size-4" />
-        ) : (
-          <Icon className="size-4" />
-        )}
+        <Icon className="size-4" />
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-0.5 text-start">
         <span className="truncate text-sm leading-snug font-medium">
