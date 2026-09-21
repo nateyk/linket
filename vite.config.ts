@@ -41,6 +41,8 @@ export default defineConfig({
       'resources/client/**/*.test.tsx',
       'tests/js/**/*.test.ts',
       'tests/js/**/*.test.tsx',
+      'common/foundation/resources/client/**/*.test.ts',
+      'common/foundation/resources/client/**/*.test.tsx',
     ],
     environment: 'node',
     globals: true,
