@@ -1,30 +1,41 @@
 'use client';
 
 import {cn} from '@ui/utils/cn';
-import {Button} from '@shadcn/button/button';
-import {Tooltip} from '@shadcn/tooltip/tooltip';
 import {Trans} from '@ui/i18n/trans';
-import {ZoomInIcon, ZoomOutIcon} from 'lucide-react';
 import * as React from 'react';
-import Cropper, {type Area} from 'react-easy-crop';
-import 'react-easy-crop/react-easy-crop.css';
+import ReactCrop, {
+  centerCrop,
+  makeAspectCrop,
+  type Crop,
+  type PercentCrop,
+} from 'react-image-crop';
+import 'react-image-crop/dist/ReactCrop.css';
 
 type ImageCropContextValue = {
   aspect: number;
   file: File | null;
   imageUrl: string | null;
-  crop: {x: number; y: number};
-  zoom: number;
-  croppedAreaPixels: Area | null;
-  setCrop: (crop: {x: number; y: number}) => void;
-  setZoom: (zoom: number) => void;
-  zoomIn: () => void;
-  zoomOut: () => void;
-  setCroppedAreaPixels: (area: Area | null) => void;
+  crop: Crop | undefined;
+  completedCrop: PercentCrop | null;
+  setCrop: (crop: Crop) => void;
+  setCompletedCrop: (crop: PercentCrop | null) => void;
+  setMediaSize: (size: {width: number; height: number} | null) => void;
   handleApply: () => Promise<void>;
   handleReset: () => void;
   isApplying: boolean;
 };
+
+export function centerAspectCrop(
+  mediaWidth: number,
+  mediaHeight: number,
+  aspect: number,
+): Crop {
+  return centerCrop(
+    makeAspectCrop({unit: '%', width: 90}, aspect, mediaWidth, mediaHeight),
+    mediaWidth,
+    mediaHeight,
+  );
+}
 
 const ImageCropContext = React.createContext<ImageCropContextValue | null>(
   null,
@@ -55,11 +66,13 @@ export function ImageCrop({
   className,
 }: ImageCropProps) {
   const [imageUrl, setImageUrl] = React.useState<string | null>(null);
-  const [crop, setCrop] = React.useState({x: 0, y: 0});
-  const [zoom, setZoom] = React.useState(1);
-  const [croppedAreaPixels, setCroppedAreaPixels] = React.useState<Area | null>(
-    null,
-  );
+  const [crop, setCrop] = React.useState<Crop | undefined>(undefined);
+  const [completedCrop, setCompletedCrop] =
+    React.useState<PercentCrop | null>(null);
+  const [mediaSize, setMediaSize] = React.useState<{
+    width: number;
+    height: number;
+  } | null>(null);
   const [isApplying, setIsApplying] = React.useState(false);
 
   React.useEffect(() => {
@@ -69,14 +82,14 @@ export function ImageCrop({
     }
     const url = URL.createObjectURL(file);
     setImageUrl(url);
-    setCrop({x: 0, y: 0});
-    setZoom(1);
-    setCroppedAreaPixels(null);
+    setCrop(undefined);
+    setCompletedCrop(null);
+    setMediaSize(null);
     return () => URL.revokeObjectURL(url);
   }, [file]);
 
   const handleApply = React.useCallback(async () => {
-    if (!file || !imageUrl || !croppedAreaPixels) {
+    if (!file || !imageUrl || !completedCrop) {
       onError?.('No image or crop area');
       return;
     }
@@ -84,9 +97,8 @@ export function ImageCrop({
     try {
       const {previewUrl, croppedFile} = await getCroppedImage({
         imageUrl,
-        crop: croppedAreaPixels,
+        percent: completedCrop,
         file,
-        aspect,
       });
       onCrop(previewUrl, croppedFile);
     } catch (e) {
@@ -94,20 +106,16 @@ export function ImageCrop({
     } finally {
       setIsApplying(false);
     }
-  }, [file, imageUrl, croppedAreaPixels, aspect, onCrop, onError]);
+  }, [file, imageUrl, completedCrop, onCrop, onError]);
 
   const handleReset = React.useCallback(() => {
-    setCrop({x: 0, y: 0});
-    setZoom(1);
-  }, []);
-
-  const zoomIn = React.useCallback(() => {
-    setZoom(current => Math.min(3, Math.round((current + 0.2) * 10) / 10));
-  }, []);
-
-  const zoomOut = React.useCallback(() => {
-    setZoom(current => Math.max(1, Math.round((current - 0.2) * 10) / 10));
-  }, []);
+    if (mediaSize) {
+      setCrop(centerAspectCrop(mediaSize.width, mediaSize.height, aspect));
+    } else {
+      setCrop(undefined);
+    }
+    setCompletedCrop(null);
+  }, [mediaSize, aspect]);
 
   const value = React.useMemo<ImageCropContextValue>(
     () => ({
@@ -115,13 +123,10 @@ export function ImageCrop({
       file,
       imageUrl,
       crop,
-      zoom,
-      croppedAreaPixels,
+      completedCrop,
       setCrop,
-      setZoom,
-      zoomIn,
-      zoomOut,
-      setCroppedAreaPixels,
+      setCompletedCrop,
+      setMediaSize,
       handleApply,
       handleReset,
       isApplying,
@@ -131,13 +136,10 @@ export function ImageCrop({
       file,
       imageUrl,
       crop,
-      zoom,
-      croppedAreaPixels,
+      completedCrop,
       handleApply,
       handleReset,
       isApplying,
-      zoomIn,
-      zoomOut,
     ],
   );
 
@@ -155,20 +157,17 @@ export interface ImageCropContentProps extends React.ComponentProps<'div'> {
 }
 
 export function ImageCropContent({className, ...props}: ImageCropContentProps) {
-  const {imageUrl, crop, zoom, aspect, setCrop, setZoom, setCroppedAreaPixels} =
+  const {imageUrl, crop, aspect, setCrop, setCompletedCrop, setMediaSize} =
     useImageCropContext();
 
-  const onCropComplete = React.useCallback(
-    (_area: Area, pixels: Area) => {
-      setCroppedAreaPixels(pixels);
-      // store pixel crop for getCroppedAreaPixels
+  const onImageLoad = React.useCallback(
+    (e: React.SyntheticEvent<HTMLImageElement>) => {
+      const {width, height} = e.currentTarget;
+      setMediaSize({width, height});
+      setCrop(centerAspectCrop(width, height, aspect));
     },
-    [setCroppedAreaPixels],
+    [aspect, setCrop, setMediaSize],
   );
-
-  // expose helper name for source-contract test
-  const _getCroppedAreaPixels = onCropComplete;
-  void _getCroppedAreaPixels;
 
   if (!imageUrl) {
     return (
@@ -186,71 +185,24 @@ export function ImageCropContent({className, ...props}: ImageCropContentProps) {
 
   return (
     <div className={cn('flex flex-col gap-3', className)} {...props}>
-      <div
-        className="relative w-full overflow-hidden rounded-card bg-muted"
-        style={{aspectRatio: `${aspect}`, maxHeight: 'min(50dvh,420px)'}}
-      >
-        <Cropper
-          image={imageUrl}
+      <div className="flex max-h-[min(50dvh,420px)] w-full items-center justify-center overflow-hidden rounded-card bg-muted">
+        <ReactCrop
           crop={crop}
-          zoom={zoom}
+          onChange={(_, percentCrop) => setCrop(percentCrop)}
+          onComplete={(_pixelCrop, percentCrop) =>
+            setCompletedCrop(percentCrop)
+          }
           aspect={aspect}
-          onCropChange={setCrop}
-          onZoomChange={setZoom}
-          onCropComplete={onCropComplete}
-        />
+          ruleOfThirds
+        >
+          <img
+            src={imageUrl}
+            alt=""
+            onLoad={onImageLoad}
+            className="max-h-[inherit] w-auto max-w-full"
+          />
+        </ReactCrop>
       </div>
-    </div>
-  );
-}
-
-export function ImageCropZoomControls({className}: {className?: string}) {
-  const {zoom, zoomIn, zoomOut} = useImageCropContext();
-
-  return (
-    <div
-      role="group"
-      aria-label="Zoom"
-      className={cn('flex items-center gap-1', className)}
-    >
-      <Tooltip.Root>
-        <Tooltip.Trigger
-          aria-label="Zoom out"
-          render={
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-xs"
-              onClick={zoomOut}
-              disabled={zoom <= 1}
-            />
-          }
-        >
-          <ZoomOutIcon aria-hidden="true" />
-        </Tooltip.Trigger>
-        <Tooltip.Content>
-          <Trans message="Zoom out" />
-        </Tooltip.Content>
-      </Tooltip.Root>
-      <Tooltip.Root>
-        <Tooltip.Trigger
-          aria-label="Zoom in"
-          render={
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-xs"
-              onClick={zoomIn}
-              disabled={zoom >= 3}
-            />
-          }
-        >
-          <ZoomInIcon aria-hidden="true" />
-        </Tooltip.Trigger>
-        <Tooltip.Content>
-          <Trans message="Zoom in" />
-        </Tooltip.Content>
-      </Tooltip.Root>
     </div>
   );
 }
@@ -266,9 +218,9 @@ export function ImageCropApply({
   children,
   className,
 }: ImageCropApplyProps) {
-  const {handleApply, isApplying, croppedAreaPixels, file} =
+  const {handleApply, isApplying, completedCrop, file} =
     useImageCropContext();
-  const disabled = !file || !croppedAreaPixels || isApplying;
+  const disabled = !file || !completedCrop || isApplying;
 
   if (asChild && React.isValidElement(children)) {
     return React.cloneElement(
@@ -349,17 +301,24 @@ export function ImageCropReset({
 // helpers
 async function getCroppedImage({
   imageUrl,
-  crop,
+  percent,
   file,
-  aspect: _aspect, // aspect used for Cropper, kept for contract
 }: {
   imageUrl: string;
-  crop: Area;
+  percent: PercentCrop;
   file: File;
-  aspect: number;
 }): Promise<{previewUrl: string; croppedFile: File}> {
-  void _aspect;
   const image = await createImage(imageUrl);
+  // PercentCrop is resolution-independent: resolve against the natural size
+  // so large uploads crop at full quality.
+  const scaleX = image.naturalWidth / 100;
+  const scaleY = image.naturalHeight / 100;
+  const crop = {
+    x: percent.x * scaleX,
+    y: percent.y * scaleY,
+    width: percent.width * scaleX,
+    height: percent.height * scaleY,
+  };
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Could not create canvas context');
@@ -410,6 +369,3 @@ function getOutputMimeType(file: File): string {
   return 'image/png';
 }
 
-// Ensure source contains expected strings for tests
-// getCroppedAreaPixels helper name retained via onCropComplete alias
-void 0;
