@@ -11,6 +11,7 @@ import {
   ImageCropApply,
   ImageCropContent,
   ImageCropReset,
+  ImageCropZoomControls,
 } from '@shadcn/image-crop/image-crop';
 import {Trans} from '@ui/i18n/trans';
 import {toast} from '@ui/toast/toast';
@@ -264,11 +265,14 @@ export function CroppedImageSelector({
                   <ImageCropContent />
                 </Dialog.Body>
                 <Dialog.Footer className="flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <ImageCropReset asChild>
-                    <Button type="button" variant="ghost">
-                      <Trans message="Reset" />
-                    </Button>
-                  </ImageCropReset>
+                  <div className="flex items-center gap-2">
+                    <ImageCropZoomControls />
+                    <ImageCropReset asChild>
+                      <Button type="button" variant="ghost">
+                        <Trans message="Reset" />
+                      </Button>
+                    </ImageCropReset>
+                  </div>
                   <Dialog.CloseButton variant="outline">
                     <Trans message="Cancel" />
                   </Dialog.CloseButton>
