@@ -52,7 +52,8 @@ describe('reusable image crop composer', () => {
       'utf8',
     );
 
-    expect(cropSource).toContain('h-[min(50dvh,420px)]');
+    expect(cropSource).toContain('h-[min(62dvh,540px)]');
+    expect(selectorSource).toContain('sm:max-w-3xl');
     expect(cropSource).not.toContain('sm:h-[460px]');
     expect(cropSource).not.toContain('min-h-[320px]');
     // fixed window, no scroll: the image pans under it to reach any region
