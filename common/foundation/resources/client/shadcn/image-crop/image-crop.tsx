@@ -170,7 +170,10 @@ export function ImageCropContent({className, ...props}: ImageCropContentProps) {
 
   return (
     <div className={cn('flex flex-col gap-3', className)} {...props}>
-      <div className="relative h-[min(50dvh,520px)] min-h-52 overflow-hidden rounded-card bg-muted sm:h-[460px] sm:min-h-0">
+      <div
+        className="relative w-full overflow-hidden rounded-card bg-muted"
+        style={{aspectRatio: `${aspect}`, maxHeight: 'min(50dvh,420px)'}}
+      >
         <Cropper
           image={imageUrl}
           crop={crop}
@@ -195,7 +198,7 @@ export function ImageCropContent({className, ...props}: ImageCropContentProps) {
           <Slider.Track>
             <Slider.Indicator />
           </Slider.Track>
-          <Slider.Thumb />
+          <Slider.Thumb className="bg-primary ring-primary/30" />
         </Slider.Control>
       </Slider>
     </div>
