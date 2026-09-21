@@ -1,7 +1,6 @@
 'use client';
 
 import {cn} from '@ui/utils/cn';
-import {Slider} from '@shadcn/forms/slider/slider';
 import {Trans} from '@ui/i18n/trans';
 import * as React from 'react';
 import Cropper, {type Area} from 'react-easy-crop';
@@ -184,23 +183,6 @@ export function ImageCropContent({className, ...props}: ImageCropContentProps) {
           onCropComplete={onCropComplete}
         />
       </div>
-      <Slider
-        min={1}
-        max={3}
-        step={0.1}
-        value={zoom}
-        onValueChange={v => setZoom((v as number) ?? 1)}
-      >
-        <Slider.Label>
-          <Trans message="Zoom" />
-        </Slider.Label>
-        <Slider.Control>
-          <Slider.Track>
-            <Slider.Indicator />
-          </Slider.Track>
-          <Slider.Thumb className="bg-primary ring-primary/30" />
-        </Slider.Control>
-      </Slider>
     </div>
   );
 }

@@ -173,4 +173,12 @@ describe('Attachment primitive', () => {
     );
     expect(html).toContain('data-state="error"');
   });
+  test('radii follow the theme tokens, not hardcoded values', () => {
+    const html = renderToStaticMarkup(
+      <Attachment state="done">oops</Attachment>,
+    );
+    expect(html).toContain('rounded-card');
+    expect(html).not.toContain('rounded-3xl');
+    expect(html).not.toContain('rounded-2xl');
+  });
 });
