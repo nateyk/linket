@@ -29,6 +29,7 @@ function AccordionRoot({
 function AccordionItem({
   className,
   variant = 'default',
+  children,
   ...rest
 }: AccordionPrimitive.Item.Props & {variant?: 'separated' | 'bordered' | 'default'}) {
   const isBordered = variant === 'bordered';
@@ -47,9 +48,11 @@ function AccordionItem({
       {isBordered && (
         <div
           data-slot="accordion-connector"
+          aria-hidden="true"
           className="absolute left-[calc(var(--radius-card-sm)/2)] top-0 bottom-0 w-px bg-border"
         />
       )}
+      {children}
     </AccordionPrimitive.Item>
   );
 }
