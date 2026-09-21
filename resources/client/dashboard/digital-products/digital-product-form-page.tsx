@@ -888,6 +888,7 @@ function FilesPanel({
     <div className="flex flex-col gap-3" id="product-files" tabIndex={-1}>
       <SharedFileUploader
         uploadType="digitalProductFiles"
+        bare
         onUploaded={entry =>
           onUploaded({
             id: entry.id,

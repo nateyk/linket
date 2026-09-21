@@ -71,6 +71,7 @@ export function CroppedImageSelector({
 }: CroppedImageSelectorProps) {
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [cropOpen, setCropOpen] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const {uploadCroppedFile, isUploading, percentage} = useCroppedUpload({
     onChange,
@@ -103,6 +104,16 @@ export function CroppedImageSelector({
   );
 
   const openPicker = useCallback(() => inputRef.current?.click(), []);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDragging(false);
+      const file = e.dataTransfer.files?.[0];
+      if (file && file.type.startsWith('image/')) handleFileSelect(file);
+    },
+    [handleFileSelect],
+  );
 
   const previewCls =
     shape === 'circle'
@@ -151,7 +162,7 @@ export function CroppedImageSelector({
                   <Button
                     size="icon-xs"
                     variant="outline"
-                    className="size-7 rounded-full bg-white shadow-sm hover:bg-white"
+                    className="size-7 rounded-full bg-card shadow-sm hover:bg-card"
                   />
                 }
               >
@@ -199,11 +210,22 @@ export function CroppedImageSelector({
           type="button"
           onClick={openPicker}
           disabled={isUploading}
+          onDragOver={e => e.preventDefault()}
+          onDragEnter={e => {
+            e.preventDefault();
+            setIsDragging(true);
+          }}
+          onDragLeave={e => {
+            e.preventDefault();
+            setIsDragging(false);
+          }}
+          onDrop={handleDrop}
           className={cn(
             'relative flex flex-col items-center justify-center gap-2 rounded-card border border-dashed p-6 text-center transition-colors hover:bg-muted/30 disabled:opacity-50',
             shape === 'circle'
               ? 'aspect-square size-32 rounded-full'
               : 'w-full',
+            isDragging && 'border-primary bg-primary/5',
             className,
           )}
         >
