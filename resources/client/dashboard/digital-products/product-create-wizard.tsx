@@ -13,7 +13,7 @@ import {
   WalletIcon,
   type LucideIcon,
 } from 'lucide-react';
-import {useState} from 'react';
+import {useEffect, useState} from 'react';
 import {BillingModePicker} from './billing-mode-picker';
 import {
   buildCreateUrl,
@@ -51,10 +51,38 @@ export const STEP_META: Record<
   },
 };
 
+const STORAGE_KEY = 'productCreateWizard';
+
 export function useProductCreateWizard() {
-  const [step, setStep] = useState<WizardStep>('type');
-  const [state, setState] = useState<WizardState>(INITIAL_WIZARD_STATE);
+  const [step, setStep] = useState<WizardStep>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return parsed.step ?? 'type';
+      } catch {
+        return 'type';
+      }
+    }
+    return 'type';
+  });
+  const [state, setState] = useState<WizardState>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return parsed.state ?? INITIAL_WIZARD_STATE;
+      } catch {
+        return INITIAL_WIZARD_STATE;
+      }
+    }
+    return INITIAL_WIZARD_STATE;
+  });
   const steps = visibleSteps(state.billing);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({step, state}));
+  }, [step, state]);
 
   const setType = (type: ProductType | null) =>
     setState(current => ({...current, type}));
@@ -76,6 +104,7 @@ export function useProductCreateWizard() {
   const reset = () => {
     setStep('type');
     setState(INITIAL_WIZARD_STATE);
+    localStorage.removeItem(STORAGE_KEY);
   };
 
   return {
