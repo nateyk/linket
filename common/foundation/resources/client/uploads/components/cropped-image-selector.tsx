@@ -263,7 +263,7 @@ export function CroppedImageSelector({
                 <Dialog.Body>
                   <ImageCropContent />
                 </Dialog.Body>
-                <Dialog.Footer className="flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-end">
+                <Dialog.Footer className="flex-row flex-wrap items-center sm:justify-end gap-2">
                   <ImageCropReset asChild>
                     <Button type="button" variant="ghost">
                       <Trans message="Reset" />

@@ -1,6 +1,36 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {describe, expect, test} from 'vitest';
+import {
+  aspectFitCropSize,
+  coverZoomForCrop,
+} from '@shadcn/image-crop/image-crop';
+
+describe('crop window math', () => {
+  test('aspectFitCropSize fills stage width for landscape ratios', () => {
+    expect(aspectFitCropSize(740, 460, 16 / 9)).toEqual({
+      width: 740,
+      height: 740 / (16 / 9),
+    });
+  });
+  test('aspectFitCropSize fits height when the ratio is taller than the stage', () => {
+    expect(aspectFitCropSize(740, 200, 16 / 9)).toEqual({
+      width: 200 * (16 / 9),
+      height: 200,
+    });
+  });
+  test('coverZoomForCrop pre-zooms portrait media to fill the window', () => {
+    const zoom = coverZoomForCrop(900, 1600, 740, 460, 740);
+    expect(zoom).toBeGreaterThan(1);
+    expect(zoom).toBeLessThanOrEqual(3);
+  });
+  test('coverZoomForCrop stays at 1 for landscape media', () => {
+    expect(coverZoomForCrop(1600, 900, 740, 460, 740)).toBe(1);
+  });
+  test('coverZoomForCrop guards empty inputs', () => {
+    expect(coverZoomForCrop(0, 0, 0, 0, 0)).toBe(1);
+  });
+});
 
 describe('reusable image crop composer', () => {
   test('exposes aspect-aware crop primitives matching kibo sample', () => {
@@ -52,18 +82,25 @@ describe('reusable image crop composer', () => {
       'utf8',
     );
 
-    expect(cropSource).toContain('h-[min(62dvh,540px)]');
+    expect(cropSource).toContain('h-[min(34dvh,540px)]');
+    expect(cropSource).toContain('sm:h-[min(62dvh,540px)]');
     expect(selectorSource).toContain('sm:max-w-3xl');
     expect(cropSource).not.toContain('sm:h-[460px]');
     expect(cropSource).not.toContain('min-h-[320px]');
     // fixed window, no scroll: the image pans under it to reach any region
     expect(cropSource).toContain('overflow-hidden');
     expect(cropSource).not.toContain('overflow-auto');
-    // slider-driven zoom with themed thumb, clamped 1-3
+    // window measured from the stage, portrait media opens pre-zoomed to cover
+    expect(cropSource).toContain('ResizeObserver');
+    expect(cropSource).toContain('cropSize={cropSize}');
+    expect(cropSource).toContain('onMediaLoaded');
+    expect(cropSource).toContain('coverZoomForCrop');
+    expect(cropSource).toContain('aspectFitCropSize');
+    expect(cropSource).toContain('minZoom={minZoom}');
+    // slider-driven zoom with themed thumb, clamped minZoom-3
     expect(cropSource).toContain('<Slider');
     expect(cropSource).toContain('bg-primary ring-primary/30');
     expect(cropSource).toContain('Math.min(3');
-    expect(cropSource).toContain('Math.max(1');
     expect(cropSource).not.toContain('zoomIn');
     expect(cropSource).not.toContain('zoomOut');
     expect(cropSource).not.toContain('ImageCropZoomControls');
@@ -71,8 +108,6 @@ describe('reusable image crop composer', () => {
     expect(cropSource).toContain('lockedAspect');
     expect(cropSource).toContain('Number.isFinite(aspect)');
     expect(selectorSource.match(/<Dialog\.Root/g)).toHaveLength(1);
-    expect(selectorSource).toContain(
-      'flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-end',
-    );
+    expect(selectorSource).toContain('flex-row flex-wrap items-center sm:justify-end');
   });
 });
