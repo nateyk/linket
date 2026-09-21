@@ -206,32 +206,28 @@ export function ImageCropContent({className, ...props}: ImageCropContentProps) {
   }
 
   const zoomed = zoom > 1;
+  // Guard the ratio: a non-finite aspect would unlock free-form selection
+  // (the "sometimes square" defect), so fall back to square explicitly.
+  const lockedAspect =
+    Number.isFinite(aspect) && aspect > 0 ? aspect : 1;
 
   return (
     <div className={cn('flex flex-col gap-3', className)} {...props}>
-      <div
-        className={cn(
-          'flex max-h-[min(50dvh,420px)] w-full items-center justify-center overflow-hidden rounded-card bg-muted',
-          zoomed && 'overflow-auto',
-        )}
-      >
+      <div className="flex max-h-[min(50dvh,420px)] w-full items-center justify-center overflow-auto rounded-card bg-muted">
         <ReactCrop
           crop={crop}
           onChange={(_, percentCrop) => setCrop(percentCrop)}
           onComplete={(_pixelCrop, percentCrop) =>
             setCompletedCrop(percentCrop)
           }
-          aspect={aspect}
+          aspect={lockedAspect}
           ruleOfThirds
         >
           <img
             src={imageUrl}
             alt=""
             onLoad={onImageLoad}
-            className={cn(
-              'mx-auto w-auto max-w-full',
-              !zoomed && 'max-h-[min(50dvh,420px)]',
-            )}
+            className="h-auto w-full"
             style={zoomed ? {width: `${zoom * 100}%`, maxWidth: 'none'} : undefined}
           />
         </ReactCrop>
