@@ -63,9 +63,14 @@ describe('reusable image crop composer', () => {
     expect(cropSource).not.toContain('zoomOut');
     expect(cropSource).not.toContain('ImageCropZoomControls');
     expect(cropSource).not.toContain('react-easy-crop');
-    // rendered image size always matches measured size
-    expect(cropSource).toContain('max-h-[min(50dvh,420px)]');
+    // stage scrolls so tall uploads stay reachable; image fills stage width
+    expect(cropSource).toContain('overflow-auto');
+    expect(cropSource).not.toContain('overflow-hidden');
+    expect(cropSource).toContain('h-auto w-full');
     expect(cropSource).not.toContain('max-h-[inherit]');
+    // ratio can never unlock into free-form/square selection
+    expect(cropSource).toContain('lockedAspect');
+    expect(cropSource).toContain('Number.isFinite(aspect)');
     // resolution-independent percent crop resolved against natural size
     expect(cropSource).toContain('PercentCrop');
     expect(cropSource).toContain('naturalWidth');
