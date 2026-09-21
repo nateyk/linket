@@ -45,3 +45,27 @@ describe('product creation provider wiring', () => {
     expect(source).toContain('must be used within ProductCreationProvider');
   });
 });
+
+describe('auto-save drafts', () => {
+  test('context exports dirty state and autoSave action', () => {
+    const source = fs.readFileSync(
+      path.resolve(
+        'resources/client/dashboard/digital-products/product-creation-context.tsx',
+      ),
+      'utf8',
+    );
+    expect(source).toContain('dirty');
+    expect(source).toContain('setDirty');
+    expect(source).toContain('autoSave');
+  });
+  test('autoSave debounces at 1500ms', () => {
+    const source = fs.readFileSync(
+      path.resolve(
+        'resources/client/dashboard/digital-products/product-creation-context.tsx',
+      ),
+      'utf8',
+    );
+    expect(source).toContain('1500');
+    expect(source).toContain('debounce');
+  });
+});

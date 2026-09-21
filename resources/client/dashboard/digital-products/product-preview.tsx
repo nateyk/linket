@@ -12,6 +12,7 @@ import {
   PackageOpenIcon,
   PencilIcon,
   TriangleAlertIcon,
+  TypeIcon,
   type LucideIcon,
 } from 'lucide-react';
 import {useProductCreation} from './product-creation-context';
@@ -33,7 +34,7 @@ export function formatPreviewPrice(price: string): string {
 
 export function ProductPreview() {
   const {
-    state: {title, price, coverUrl, files, productType},
+    state: {title, description, price, coverUrl, files, productType},
   } = useProductCreation();
   const {trans} = useTrans();
   return (
@@ -49,13 +50,22 @@ export function ProductPreview() {
         tags={[trans({message: PRODUCT_TYPE_LABELS[productType]})]}
         price={formatPreviewPrice(price)}
         meta={
-          <span className="flex items-center gap-2 text-xs text-muted-foreground">
-            <FileIcon className="size-4" aria-hidden="true" />
-            <Trans
-              message=":count download files"
-              values={{count: files.length}}
-            />
-          </span>
+          <>
+            <span className="flex items-center gap-2 text-xs text-muted-foreground">
+              <FileIcon className="size-4" aria-hidden="true" />
+              <Trans
+                message=":count download files"
+                values={{count: files.length}}
+              />
+            </span>
+            <span className="flex items-center gap-2 text-xs text-muted-foreground">
+              <TypeIcon className="size-4" aria-hidden="true" />
+              <Trans
+                message=":count characters"
+                values={{count: title.length + (description?.length ?? 0)}}
+              />
+            </span>
+          </>
         }
         action={
           <Tooltip.Root>

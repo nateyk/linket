@@ -113,9 +113,13 @@ const SECTION_META: Record<
 
 export function Component() {
   const [searchParams] = useSearchParams();
+  const {productId} = useParams();
   return (
     <FileUploadProvider>
-      <ProductCreationProvider prefill={parseWizardPrefill(searchParams)}>
+      <ProductCreationProvider
+        prefill={parseWizardPrefill(searchParams)}
+        productId={productId ? Number(productId) : null}
+      >
         <DigitalProductForm />
       </ProductCreationProvider>
     </FileUploadProvider>
@@ -125,7 +129,7 @@ export function Component() {
 function DigitalProductForm() {
   const {productId} = useParams();
   const navigate = useNavigate();
-  const {state, actions} = useProductCreation();
+  const {state, actions, dirty} = useProductCreation();
   const title = state.title;
   const description = state.description;
   const price = state.price;
@@ -145,6 +149,71 @@ function DigitalProductForm() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [openSection, setOpenSection] = useState<ProductSetupSection | null>(
     'details',
+  );
+
+  useEffect(() => {
+    if (dirty) actions.autoSave();
+  }, [dirty, actions]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault();
+        save(false);
+      }
+      if (e.key === 'ArrowDown' && e.altKey) {
+        e.preventDefault();
+        setOpenSection(current => {
+          const idx = SECTION_ORDER.indexOf(current ?? 'details');
+          return SECTION_ORDER[Math.min(idx + 1, SECTION_ORDER.length - 1)];
+        });
+      }
+      if (e.key === 'ArrowUp' && e.altKey) {
+        e.preventDefault();
+        setOpenSection(current => {
+          const idx = SECTION_ORDER.indexOf(current ?? 'details');
+          return SECTION_ORDER[Math.max(idx - 1, 0)];
+        });
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [save, actions]);
+
+  const validateField = useCallback(
+    (field: string, value: string) => {
+      if (field === 'title' && !value.trim()) {
+        setFieldErrors(current => ({...current, title: 'Title is required'}));
+      } else if (field === 'title') {
+        setFieldErrors(current => {
+          const next = {...current};
+          delete next.title;
+          return next;
+        });
+      }
+      if (field === 'price') {
+        const cents = Math.round(Number(value) * 100);
+        if (!Number.isFinite(cents) || cents < 0) {
+          setFieldErrors(current => ({...current, price_cents: 'Invalid price'}));
+        } else {
+          setFieldErrors(current => {
+            const next = {...current};
+            delete next.price_cents;
+            return next;
+          });
+        }
+      }
+      if (field === 'description' && value.length > 5000) {
+        setFieldErrors(current => ({...current, description: 'Description too long'}));
+      } else if (field === 'description') {
+        setFieldErrors(current => {
+          const next = {...current};
+          delete next.description;
+          return next;
+        });
+      }
+    },
+    [],
   );
 
   const typeConfig = productType ? PRODUCT_TYPE_CONFIG[productType] : null;
@@ -557,6 +626,7 @@ function DigitalProductForm() {
                             onConvertToEtbChange={setConvertToEtb}
                             onCoverChange={actions.setCover}
                             errors={fieldErrors}
+                            validateField={validateField}
                           />
                         )}
                         {section === 'files' && (
@@ -673,7 +743,9 @@ function DetailsPanel({
   onConvertToEtbChange: (value: boolean) => void;
   onCoverChange: (url: string, entry?: {id: number}) => void;
   errors: FieldErrors;
+  validateField: (field: string, value: string) => void;
 }) {
+  const {validateField} = arguments[0] as {validateField: (field: string, value: string) => void};
   return (
     <div className="flex flex-col gap-4">
       <ProductFormField
@@ -682,6 +754,7 @@ function DetailsPanel({
         error={errors.title}
         htmlFor="product-title"
         required
+        onBlur={() => validateField('title', title)}
       >
         <Input
           id="product-title"
@@ -699,6 +772,7 @@ function DetailsPanel({
         error={errors.price_cents}
         htmlFor="product-price"
         required
+        onBlur={() => validateField('price', price)}
       >
         <InputGroup>
           <InputGroupAddon align="inline-start">
@@ -738,6 +812,7 @@ function DetailsPanel({
         description="Describe what customers will receive."
         error={errors.description}
         htmlFor="product-description"
+        onBlur={() => validateField('description', description)}
       >
         <DescriptionEditor value={description} onChange={onDescriptionChange} />
       </ProductFormField>

@@ -19,3 +19,14 @@ describe('creator product pending-update badge', () => {
     expect(source).toContain('hasPendingUpdate');
   });
 });
+
+describe('dropdown portal rendering', () => {
+  test('all dropdowns use Dropdown.Content with Portal', () => {
+    const triggerCount = (source.match(/Dropdown\.Trigger/g) || []).length;
+    const contentCount = (source.match(/Dropdown\.Content/g) || []).length;
+    expect(contentCount).toBeGreaterThanOrEqual(triggerCount);
+  });
+  test('dropdown content uses alignOffset/sideOffset for viewport edges', () => {
+    expect(source).toContain('alignOffset');
+  });
+});

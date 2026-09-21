@@ -420,7 +420,7 @@ function ProductActions({
         >
           <MoreHorizontalIcon />
         </Dropdown.Trigger>
-        <Dropdown.Content align="end">
+        <Dropdown.Content align="end" alignOffset={-4} sideOffset={8}>
           {!(product.type === 'course' || product.is_course) && (
             <Dropdown.LinkItem render={<Link to={`/dashboard/my-products/${product.id}/edit`} />}>
               <PencilIcon />

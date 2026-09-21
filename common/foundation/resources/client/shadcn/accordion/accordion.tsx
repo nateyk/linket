@@ -26,16 +26,31 @@ function AccordionRoot({
   );
 }
 
-function AccordionItem({className, ...props}: AccordionPrimitive.Item.Props) {
+function AccordionItem({
+  className,
+  variant = 'default',
+  ...rest
+}: AccordionPrimitive.Item.Props & {variant?: 'separated' | 'bordered' | 'default'}) {
+  const isBordered = variant === 'bordered';
+
   return (
     <AccordionPrimitive.Item
       data-slot="accordion-item"
+      data-variant={variant}
       className={cn(
         'overflow-hidden not-last:border-b group-data-[variant=separated]/accordion:rounded-card-sm group-data-[variant=separated]/accordion:border group-data-[variant=separated]/accordion:data-open:border-foreground/15 group-data-[variant=separated]/accordion:data-open:shadow',
+        isBordered && 'relative',
         className,
       )}
-      {...props}
-    />
+      {...rest}
+    >
+      {isBordered && (
+        <div
+          data-slot="accordion-connector"
+          className="absolute left-[calc(var(--radius-card-sm)/2)] top-0 bottom-0 w-px bg-border"
+        />
+      )}
+    </AccordionPrimitive.Item>
   );
 }
 
