@@ -293,3 +293,16 @@ describe('keyboard shortcuts and preview', () => {
     expect(source).toContain('file');
   });
 });
+
+describe('product files dropzone', () => {
+  test('renders the uploader bare, without an extra card wrapper', () => {
+    const source = fs.readFileSync(
+      path.resolve(
+        'resources/client/dashboard/digital-products/digital-product-form-page.tsx',
+      ),
+      'utf8',
+    );
+    expect(source).toContain('uploadType="digitalProductFiles"');
+    expect(source).toContain('bare');
+  });
+});
