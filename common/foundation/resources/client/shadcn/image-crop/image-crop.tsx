@@ -1,6 +1,7 @@
 'use client';
 
 import {cn} from '@ui/utils/cn';
+import {Slider} from '@shadcn/forms/slider/slider';
 import {Trans} from '@ui/i18n/trans';
 import * as React from 'react';
 import ReactCrop, {
@@ -17,8 +18,10 @@ type ImageCropContextValue = {
   imageUrl: string | null;
   crop: Crop | undefined;
   completedCrop: PercentCrop | null;
+  zoom: number;
   setCrop: (crop: Crop) => void;
   setCompletedCrop: (crop: PercentCrop | null) => void;
+  setZoom: (zoom: number) => void;
   setMediaSize: (size: {width: number; height: number} | null) => void;
   handleApply: () => Promise<void>;
   handleReset: () => void;
@@ -69,6 +72,7 @@ export function ImageCrop({
   const [crop, setCrop] = React.useState<Crop | undefined>(undefined);
   const [completedCrop, setCompletedCrop] =
     React.useState<PercentCrop | null>(null);
+  const [zoom, setZoom] = React.useState(1);
   const [mediaSize, setMediaSize] = React.useState<{
     width: number;
     height: number;
@@ -85,8 +89,13 @@ export function ImageCrop({
     setCrop(undefined);
     setCompletedCrop(null);
     setMediaSize(null);
+    setZoom(1);
     return () => URL.revokeObjectURL(url);
   }, [file]);
+
+  const setZoomClamped = React.useCallback((value: number) => {
+    setZoom(Math.min(3, Math.max(1, Math.round(value * 10) / 10)));
+  }, []);
 
   const handleApply = React.useCallback(async () => {
     if (!file || !imageUrl || !completedCrop) {
@@ -115,6 +124,7 @@ export function ImageCrop({
       setCrop(undefined);
     }
     setCompletedCrop(null);
+    setZoom(1);
   }, [mediaSize, aspect]);
 
   const value = React.useMemo<ImageCropContextValue>(
@@ -124,8 +134,10 @@ export function ImageCrop({
       imageUrl,
       crop,
       completedCrop,
+      zoom,
       setCrop,
       setCompletedCrop,
+      setZoom: setZoomClamped,
       setMediaSize,
       handleApply,
       handleReset,
@@ -137,6 +149,8 @@ export function ImageCrop({
       imageUrl,
       crop,
       completedCrop,
+      zoom,
+      setZoomClamped,
       handleApply,
       handleReset,
       isApplying,
@@ -157,8 +171,16 @@ export interface ImageCropContentProps extends React.ComponentProps<'div'> {
 }
 
 export function ImageCropContent({className, ...props}: ImageCropContentProps) {
-  const {imageUrl, crop, aspect, setCrop, setCompletedCrop, setMediaSize} =
-    useImageCropContext();
+  const {
+    imageUrl,
+    crop,
+    aspect,
+    zoom,
+    setCrop,
+    setCompletedCrop,
+    setZoom,
+    setMediaSize,
+  } = useImageCropContext();
 
   const onImageLoad = React.useCallback(
     (e: React.SyntheticEvent<HTMLImageElement>) => {
@@ -183,9 +205,16 @@ export function ImageCropContent({className, ...props}: ImageCropContentProps) {
     );
   }
 
+  const zoomed = zoom > 1;
+
   return (
     <div className={cn('flex flex-col gap-3', className)} {...props}>
-      <div className="flex max-h-[min(50dvh,420px)] w-full items-center justify-center overflow-hidden rounded-card bg-muted">
+      <div
+        className={cn(
+          'flex max-h-[min(50dvh,420px)] w-full items-center justify-center overflow-hidden rounded-card bg-muted',
+          zoomed && 'overflow-auto',
+        )}
+      >
         <ReactCrop
           crop={crop}
           onChange={(_, percentCrop) => setCrop(percentCrop)}
@@ -199,10 +228,31 @@ export function ImageCropContent({className, ...props}: ImageCropContentProps) {
             src={imageUrl}
             alt=""
             onLoad={onImageLoad}
-            className="max-h-[inherit] w-auto max-w-full"
+            className={cn(
+              'mx-auto w-auto max-w-full',
+              !zoomed && 'max-h-[min(50dvh,420px)]',
+            )}
+            style={zoomed ? {width: `${zoom * 100}%`, maxWidth: 'none'} : undefined}
           />
         </ReactCrop>
       </div>
+      <Slider
+        min={1}
+        max={3}
+        step={0.1}
+        value={zoom}
+        onValueChange={v => setZoom((v as number) ?? 1)}
+      >
+        <Slider.Label>
+          <Trans message="Zoom" />
+        </Slider.Label>
+        <Slider.Control>
+          <Slider.Track>
+            <Slider.Indicator />
+          </Slider.Track>
+          <Slider.Thumb className="bg-primary ring-primary/30" />
+        </Slider.Control>
+      </Slider>
     </div>
   );
 }
