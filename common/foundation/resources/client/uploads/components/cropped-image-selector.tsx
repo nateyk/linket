@@ -249,7 +249,7 @@ export function CroppedImageSelector({
       <Dialog.Root open={cropOpen} onOpenChange={setCropOpen}>
         <Dialog.Portal>
           <Dialog.Backdrop />
-          <Dialog.Content className="max-w-[calc(100vw-2rem)] sm:max-w-4xl">
+          <Dialog.Content className="max-w-[calc(100vw-2rem)] sm:max-w-2xl">
             {pendingFile ? (
               <ImageCrop aspect={aspect} file={pendingFile} onCrop={handleCrop}>
                 <Dialog.Header>
