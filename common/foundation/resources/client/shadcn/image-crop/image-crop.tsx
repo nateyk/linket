@@ -209,7 +209,7 @@ export function ImageCrop({
 
   return (
     <ImageCropContext.Provider value={value}>
-      <div className={cn('flex w-full flex-col gap-3', className)}>
+      <div className={cn('flex min-h-0 w-full flex-col gap-3', className)}>
         {children}
       </div>
     </ImageCropContext.Provider>
