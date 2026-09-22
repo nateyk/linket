@@ -274,7 +274,7 @@ export function ImageCropContent({className, ...props}: ImageCropContentProps) {
     <div className={cn('flex flex-col gap-3', className)} {...props}>
       <div
         ref={stageRef}
-        className="relative h-[min(50dvh,700px)] w-full overflow-hidden rounded-card bg-muted sm:h-[min(80dvh,900px)]"
+        className="relative h-[min(50dvh,600px)] w-full overflow-hidden rounded-card bg-muted sm:h-[min(70dvh,700px)]"
       >
         <Cropper
           image={imageUrl}

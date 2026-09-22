@@ -10,7 +10,7 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
-    "@base-ui/react": "^1.5.0",
+    "@base-ui/react": "^1.8.0",
     "@dagrejs/dagre": "^1.1.4",
     "@floating-ui/react-dom": "^2.1.2",
     "@fontsource-variable/inter": "^5.2.8",
