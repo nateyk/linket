@@ -97,6 +97,15 @@ describe('reusable image crop composer', () => {
     expect(cropSource).toContain('coverZoomForCrop');
     expect(cropSource).toContain('aspectFitCropSize');
     expect(cropSource).toContain('minZoom={minZoom}');
+    // the stage mounts one render AFTER imageUrl is set, so the measuring
+    // effect must re-run when it appears — a [] dep list observed the
+    // placeholder render (null ref) and never attached the observer
+    expect(cropSource).toContain('observer.observe(element);\n    return () => observer.disconnect();\n  }, [imageUrl]);');
+    // coverage zoom must not live inside onMediaLoaded: if the image loads
+    // before the first ResizeObserver tick, stageSize is still empty and the
+    // callback bails — compute it in an effect keyed on the recorded size
+    expect(cropSource).toContain('setMediaSize(media)');
+    expect(cropSource).not.toContain('if (!stageSize.width || !stageSize.height || !cropSize) return');
     // slider-driven zoom with themed thumb, clamped minZoom-3
     expect(cropSource).toContain('<Slider');
     expect(cropSource).toContain('bg-primary ring-primary/30');
