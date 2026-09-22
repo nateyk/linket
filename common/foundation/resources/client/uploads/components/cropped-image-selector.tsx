@@ -249,7 +249,7 @@ export function CroppedImageSelector({
       <Dialog.Root open={cropOpen} onOpenChange={setCropOpen}>
         <Dialog.Portal>
           <Dialog.Backdrop />
-          <Dialog.Content className="max-w-[calc(100vw-2rem)] sm:max-w-3xl">
+          <Dialog.Content className="max-w-[calc(100vw-2rem)] sm:max-w-5xl">
             {pendingFile ? (
               <ImageCrop aspect={aspect} file={pendingFile} onCrop={handleCrop}>
                 <Dialog.Header>
@@ -263,22 +263,26 @@ export function CroppedImageSelector({
                 <Dialog.Body>
                   <ImageCropContent />
                 </Dialog.Body>
-                <Dialog.Footer className="flex-row flex-wrap items-center sm:justify-end gap-2">
-                  <ImageCropReset asChild>
-                    <Button type="button" variant="ghost">
-                      <Trans message="Reset" />
-                    </Button>
-                  </ImageCropReset>
-                  <Dialog.CloseButton variant="outline">
-                    <Trans message="Cancel" />
-                  </Dialog.CloseButton>
-                  <ImageCropApply asChild>
-                    <Button type="button">
-                      <Trans message="Apply crop" />
-                    </Button>
-                  </ImageCropApply>
+                <Dialog.Footer className="flex items-center justify-end gap-2 px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <ImageCropReset asChild>
+                      <Button type="button" variant="ghost" size="sm">
+                        <Trans message="Reset" />
+                      </Button>
+                    </ImageCropReset>
+                    <Dialog.CloseButton variant="outline" size="sm">
+                      <Trans message="Cancel" />
+                    </Dialog.CloseButton>
+                  </div>
+                  <div className="ml-4">
+                    <ImageCropApply asChild>
+                      <Button type="button" size="sm">
+                        <Trans message="Apply crop" />
+                      </Button>
+                    </ImageCropApply>
+                  </div>
                 </Dialog.Footer>
-              </ImageCrop>
+                </ImageCrop>
             ) : (
               <p className="text-sm text-muted-foreground">
                 <Trans message="No image selected." />

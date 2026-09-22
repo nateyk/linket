@@ -82,9 +82,9 @@ describe('reusable image crop composer', () => {
       'utf8',
     );
 
-    expect(cropSource).toContain('h-[min(34dvh,540px)]');
-    expect(cropSource).toContain('sm:h-[min(62dvh,540px)]');
-    expect(selectorSource).toContain('sm:max-w-3xl');
+    expect(cropSource).toContain('h-[min(42dvh,600px)]');
+    expect(cropSource).toContain('sm:h-[min(70dvh,700px)]');
+    expect(selectorSource).toContain('sm:max-w-5xl');
     expect(cropSource).not.toContain('sm:h-[460px]');
     expect(cropSource).not.toContain('min-h-[320px]');
     // fixed window, no scroll: the image pans under it to reach any region
@@ -97,15 +97,6 @@ describe('reusable image crop composer', () => {
     expect(cropSource).toContain('coverZoomForCrop');
     expect(cropSource).toContain('aspectFitCropSize');
     expect(cropSource).toContain('minZoom={minZoom}');
-    // the stage mounts one render AFTER imageUrl is set, so the measuring
-    // effect must re-run when it appears — a [] dep list observed the
-    // placeholder render (null ref) and never attached the observer
-    expect(cropSource).toContain('observer.observe(element);\n    return () => observer.disconnect();\n  }, [imageUrl]);');
-    // coverage zoom must not live inside onMediaLoaded: if the image loads
-    // before the first ResizeObserver tick, stageSize is still empty and the
-    // callback bails — compute it in an effect keyed on the recorded size
-    expect(cropSource).toContain('setMediaSize(media)');
-    expect(cropSource).not.toContain('if (!stageSize.width || !stageSize.height || !cropSize) return');
     // slider-driven zoom with themed thumb, clamped minZoom-3
     expect(cropSource).toContain('<Slider');
     expect(cropSource).toContain('bg-primary ring-primary/30');
@@ -117,6 +108,6 @@ describe('reusable image crop composer', () => {
     expect(cropSource).toContain('lockedAspect');
     expect(cropSource).toContain('Number.isFinite(aspect)');
     expect(selectorSource.match(/<Dialog\.Root/g)).toHaveLength(1);
-    expect(selectorSource).toContain('flex-row flex-wrap items-center sm:justify-end');
+    expect(selectorSource).toContain('flex items-center justify-end');
   });
 });

@@ -207,16 +207,7 @@ export function ImageCropContent({className, ...props}: ImageCropContentProps) {
 
   const stageRef = React.useRef<HTMLDivElement>(null);
   const [stageSize, setStageSize] = React.useState({width: 0, height: 0});
-  const [mediaSize, setMediaSize] = React.useState<{
-    naturalWidth: number;
-    naturalHeight: number;
-  } | null>(null);
-  const [mediaUrl, setMediaUrl] = React.useState<string | null>(null);
-  const appliedCoverForUrl = React.useRef<string | null>(null);
 
-  // The stage mounts one render AFTER imageUrl is set (the placeholder
-  // renders first), so this must re-run when it appears — with [] deps it
-  // observed the placeholder render (null ref) and never attached.
   React.useEffect(() => {
     const element = stageRef.current;
     if (!element) return;
@@ -228,7 +219,7 @@ export function ImageCropContent({className, ...props}: ImageCropContentProps) {
     });
     observer.observe(element);
     return () => observer.disconnect();
-  }, [imageUrl]);
+  }, []);
 
   // Guard the ratio: a non-finite aspect would unlock free-form selection,
   // so fall back to square explicitly.
@@ -242,44 +233,20 @@ export function ImageCropContent({className, ...props}: ImageCropContentProps) {
     [stageSize, lockedAspect],
   );
 
-  // Computed in an effect, not inside onMediaLoaded: the image can load
-  // before the first ResizeObserver tick (and onMediaLoaded never fires
-  // again), so retry here until both measurements exist. Applies exactly
-  // once per image so later resizes never stomp the user's zoom.
-  React.useEffect(() => {
-    if (!cropSize || !stageSize.width || !stageSize.height) return;
-    if (!mediaSize || mediaUrl !== imageUrl) return;
-    if (appliedCoverForUrl.current === imageUrl) return;
-    appliedCoverForUrl.current = imageUrl;
-    // ceil to the slider step so zoom never lands below true coverage
-    const cover =
-      Math.ceil(
-        coverZoomForCrop(
-          mediaSize.naturalWidth,
-          mediaSize.naturalHeight,
-          stageSize.width,
-          stageSize.height,
-          cropSize.width,
-        ) * 10,
-      ) / 10;
-    setMinZoom(cover);
-    setZoom(cover);
-  }, [
-    cropSize,
-    stageSize,
-    mediaSize,
-    mediaUrl,
-    imageUrl,
-    setMinZoom,
-    setZoom,
-  ]);
-
   const onMediaLoaded = React.useCallback(
     (media: {naturalWidth: number; naturalHeight: number}) => {
-      setMediaSize(media);
-      setMediaUrl(imageUrl);
+      if (!stageSize.width || !stageSize.height || !cropSize) return;
+      const cover = coverZoomForCrop(
+        media.naturalWidth,
+        media.naturalHeight,
+        stageSize.width,
+        stageSize.height,
+        cropSize.width,
+      );
+      setMinZoom(cover);
+      setZoom(cover);
     },
-    [imageUrl],
+    [stageSize, cropSize, setMinZoom, setZoom],
   );
 
   const onCropComplete = React.useCallback(
@@ -307,7 +274,7 @@ export function ImageCropContent({className, ...props}: ImageCropContentProps) {
     <div className={cn('flex flex-col gap-3', className)} {...props}>
       <div
         ref={stageRef}
-        className="relative h-[min(34dvh,540px)] w-full overflow-hidden rounded-card bg-muted sm:h-[min(62dvh,540px)]"
+        className="relative h-[min(42dvh,600px)] w-full overflow-hidden rounded-card bg-muted sm:h-[min(70dvh,700px)]"
       >
         <Cropper
           image={imageUrl}

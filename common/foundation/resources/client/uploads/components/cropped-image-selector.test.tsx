@@ -21,7 +21,7 @@ describe('cropped image selector', () => {
       ),
       'utf8',
     );
-    expect(source).toContain('sm:justify-end');
+    expect(source).toContain('flex items-center justify-end');
     expect(source).not.toContain('sm:justify-between');
   });
   test('uses semantic tokens, no hardcoded white surfaces', () => {
