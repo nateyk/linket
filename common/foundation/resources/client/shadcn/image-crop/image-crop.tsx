@@ -207,19 +207,28 @@ export function ImageCropContent({className, ...props}: ImageCropContentProps) {
 
   const stageRef = React.useRef<HTMLDivElement>(null);
   const [stageSize, setStageSize] = React.useState({width: 0, height: 0});
+  // Mirror for onMediaLoaded: the observer effect below may run before or
+  // after the media load, so the load handler must read live dims, never a
+  // stale closure.
+  const stageSizeRef = React.useRef(stageSize);
+  stageSizeRef.current = stageSize;
 
   React.useEffect(() => {
+    // The stage div only exists once imageUrl is set; re-attach then so the
+    // observer is never left watching a null ref from the first mount.
     const element = stageRef.current;
     if (!element) return;
     const observer = new ResizeObserver(entries => {
       const rect = entries[0].contentRect;
       if (rect.width > 0 && rect.height > 0) {
-        setStageSize({width: rect.width, height: rect.height});
+        const next = {width: rect.width, height: rect.height};
+        stageSizeRef.current = next;
+        setStageSize(next);
       }
     });
     observer.observe(element);
     return () => observer.disconnect();
-  }, []);
+  }, [imageUrl]);
 
   // Guard the ratio: a non-finite aspect would unlock free-form selection,
   // so fall back to square explicitly.
@@ -235,18 +244,20 @@ export function ImageCropContent({className, ...props}: ImageCropContentProps) {
 
   const onMediaLoaded = React.useCallback(
     (media: {naturalWidth: number; naturalHeight: number}) => {
-      if (!stageSize.width || !stageSize.height || !cropSize) return;
+      const live = stageSizeRef.current;
+      if (!live.width || !live.height) return;
+      const size = aspectFitCropSize(live.width, live.height, lockedAspect);
       const cover = coverZoomForCrop(
         media.naturalWidth,
         media.naturalHeight,
-        stageSize.width,
-        stageSize.height,
-        cropSize.width,
+        live.width,
+        live.height,
+        size.width,
       );
       setMinZoom(cover);
       setZoom(cover);
     },
-    [stageSize, cropSize, setMinZoom, setZoom],
+    [lockedAspect, setMinZoom, setZoom],
   );
 
   const onCropComplete = React.useCallback(
