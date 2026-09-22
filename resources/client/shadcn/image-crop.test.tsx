@@ -106,6 +106,9 @@ describe('reusable image crop composer', () => {
     // observer re-attaches when the stage mounts (imageUrl), never stuck on null ref
     expect(cropSource).toContain('stageSizeRef');
     expect(cropSource).toContain('}, [imageUrl]);');
+    // provider wrapper allows shrinking so the dialog cap holds and the
+    // body scrolls instead of pushing the footer out of the card
+    expect(cropSource).toContain('flex min-h-0 w-full flex-col gap-3');
     // slider-driven zoom with themed thumb, clamped minZoom-3
     expect(cropSource).toContain('<Slider');
     expect(cropSource).toContain('bg-primary ring-primary/30');
