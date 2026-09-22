@@ -82,8 +82,8 @@ describe('reusable image crop composer', () => {
       'utf8',
     );
 
-    expect(cropSource).toContain('h-[min(42dvh,600px)]');
-    expect(cropSource).toContain('sm:h-[min(70dvh,700px)]');
+    expect(cropSource).toContain('h-[min(50dvh,700px)]');
+    expect(cropSource).toContain('sm:h-[min(80dvh,900px)]');
     expect(selectorSource).toContain('sm:max-w-5xl');
     expect(cropSource).not.toContain('sm:h-[460px]');
     expect(cropSource).not.toContain('min-h-[320px]');
