@@ -97,6 +97,9 @@ describe('reusable image crop composer', () => {
     expect(cropSource).toContain('coverZoomForCrop');
     expect(cropSource).toContain('aspectFitCropSize');
     expect(cropSource).toContain('minZoom={minZoom}');
+    // observer re-attaches when the stage mounts (imageUrl), never stuck on null ref
+    expect(cropSource).toContain('stageSizeRef');
+    expect(cropSource).toContain('}, [imageUrl]);');
     // slider-driven zoom with themed thumb, clamped minZoom-3
     expect(cropSource).toContain('<Slider');
     expect(cropSource).toContain('bg-primary ring-primary/30');
