@@ -521,3 +521,16 @@ describe('course settings price', () => {
     expect(source).toContain('Enter the correct ETB price and confirm the currency conversion before saving.');
   });
 });
+describe('course settings description', () => {
+  const source = fs.readFileSync(
+    path.resolve('resources/client/dashboard/courses/course-builder-page.tsx'),
+    'utf8',
+  );
+
+  test('edits the description in rich text', () => {
+    expect(source).toContain('CourseSettingsDescriptionEditor');
+    expect(source).toContain('TipTapEditorProvider');
+    expect(source).toContain('TiptapEditorContent');
+    expect(source).not.toContain('maxLength={20000}');
+  });
+});

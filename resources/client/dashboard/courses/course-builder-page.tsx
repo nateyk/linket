@@ -2537,12 +2537,9 @@ function CourseSettingsContent({
         <Field.Label htmlFor={`${inputId}-description`}>
           <Trans message="Description" />
         </Field.Label>
-        <Input
-          id={`${inputId}-description`}
+        <CourseSettingsDescriptionEditor
           value={description}
-          onChange={e => setDescription(e.target.value)}
-          placeholder="What will students learn?"
-          maxLength={20000}
+          onChange={setDescription}
         />
       </Field.Root>
 
@@ -2692,6 +2689,37 @@ function CourseSettingsContent({
         </div>
       </Field.Root>
     </div>
+  );
+}
+
+function CourseSettingsDescriptionEditor({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <TipTapEditorProvider
+      extensions={articleEditorTipTapExtensions}
+      initialContent={value}
+      onChange={onChange}
+    >
+      <div className="overflow-hidden rounded-card-sm border border-border">
+        <div className="no-scrollbar flex shrink-0 items-center gap-0.5 overflow-x-auto border-b px-1.5 py-1 text-muted-foreground">
+          <FormatDropdown />
+          <Divider />
+          <FontStyleButtons />
+          <Divider />
+          <ListButtons />
+          <Divider />
+          <LinkButton />
+          <Divider />
+          <ClearFormatButton />
+        </div>
+        <TiptapEditorContent className="prose prose-sm min-h-[180px] max-w-none px-3 py-2.5 dark:prose-invert" />
+      </div>
+    </TipTapEditorProvider>
   );
 }
 
