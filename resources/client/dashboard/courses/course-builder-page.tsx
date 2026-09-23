@@ -26,6 +26,7 @@ import {Input} from '@shadcn/forms/input/input';
 import {Checkbox} from '@shadcn/forms/checkbox/checkbox';
 import {Select} from '@shadcn/forms/select/select';
 import {Tabs} from '@shadcn/tabs/tabs';
+import {Tooltip} from '@shadcn/tooltip/tooltip';
 import {ChipField} from '@ui/forms/input-field/chip-field/chip-field';
 import {Chip} from '@ui/forms/input-field/chip-field/chip';
 import {
@@ -150,7 +151,18 @@ export function Component() {
 
 function CourseBuilder() {
   const {productId} = useParams();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const movedNotice = searchParams.get('notice') === 'moved-to-builder';
+  const dismissNotice = () => {
+    setSearchParams(
+      previous => {
+        const next = new URLSearchParams(previous);
+        next.delete('notice');
+        return next;
+      },
+      {replace: true},
+    );
+  };
   const [course, setCourse] = useState<Course | null>(null);
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [mobileSurface, setMobileSurface] = useState<'curriculum' | 'editor'>(
@@ -274,7 +286,9 @@ function CourseBuilder() {
   };
 
   const updateChapterTitle = async (chapterId: number, title: string) => {
-    await apiClient.put(`/api/v1/course-chapters/${chapterId}`, {title});
+    const previousTitle = course?.chapters.find(
+      c => c.id === chapterId,
+    )?.title;
     setCourse(c => {
       if (!c) return c;
       return {
@@ -284,6 +298,24 @@ function CourseBuilder() {
         ),
       };
     });
+    try {
+      await apiClient.put(`/api/v1/course-chapters/${chapterId}`, {title});
+      toast.positive('Chapter title saved');
+    } catch (e: any) {
+      if (previousTitle !== undefined) {
+        const revertedTitle = previousTitle;
+        setCourse(c => {
+          if (!c) return c;
+          return {
+            ...c,
+            chapters: c.chapters.map(ch =>
+              ch.id === chapterId ? {...ch, title: revertedTitle} : ch,
+            ),
+          };
+        });
+      }
+      toast.danger(e.message ?? 'Unable to save chapter title');
+    }
   };
 
   const deleteChapter = (chapter: Chapter) => {
@@ -481,6 +513,8 @@ function CourseBuilder() {
   ) => {
     if (!course || reordering) return false;
 
+    const targetCount =
+      course.chapters.find(c => c.id === targetChapterId)?.lessons.length ?? 0;
     const previousCourse = course;
     setCourse(current =>
       current
@@ -497,7 +531,7 @@ function CourseBuilder() {
     try {
       await apiClient.post(`/api/v1/course-lessons/${lesson.id}/move`, {
         target_chapter_id: targetChapterId,
-        position: 0,
+        position: targetCount,
       });
       return true;
     } catch (e: any) {
@@ -671,21 +705,55 @@ function CourseBuilder() {
               </Dropdown.Item>
             </Dropdown.Content>
           </Dropdown.Root>
-          <Button
-            size="sm"
-            onClick={() => void submit()}
-            disabled={publishing || !canSubmit || !hasPublishedLesson}
-          >
-            <Trans
-              message={
-                publishing
-                  ? 'Submitting...'
-                  : hasPublishedLesson
-                    ? 'Submit for review'
-                    : 'Add a published lesson'
-              }
-            />
-          </Button>
+          <div className="flex min-w-0 flex-col items-end gap-1">
+            {!hasPublishedLesson && canSubmit && !publishing && (
+              <p className="text-xs text-muted-foreground">
+                <Trans message="Publish at least one lesson to submit for review." />
+              </p>
+            )}
+            {!canSubmit && (
+              <p className="text-xs text-muted-foreground">
+                <Trans message="Edits will return this course to draft." />
+              </p>
+            )}
+            <Tooltip.Root>
+              <Tooltip.Trigger
+                aria-label="Submit for review"
+                render={
+                  <span className="inline-flex">
+                    <Button
+                      size="sm"
+                      onClick={() => void submit()}
+                      disabled={publishing || !canSubmit || !hasPublishedLesson}
+                    >
+                      <Trans
+                        message={
+                          publishing
+                            ? 'Submitting...'
+                            : hasPublishedLesson
+                              ? 'Submit for review'
+                              : 'Add a published lesson'
+                        }
+                      />
+                    </Button>
+                  </span>
+                }
+              >
+                <span className="sr-only">
+                  <Trans message="Submit requirements" />
+                </span>
+              </Tooltip.Trigger>
+              <Tooltip.Content>
+                {!hasPublishedLesson ? (
+                  <Trans message="Publish at least one lesson before submitting." />
+                ) : !canSubmit ? (
+                  <Trans message="This course is live or in review." />
+                ) : (
+                  <Trans message="Submit this course for review." />
+                )}
+              </Tooltip.Content>
+            </Tooltip.Root>
+          </div>
         </div>
       </DashboardLayout.SectionHeader>
 
@@ -698,6 +766,18 @@ function CourseBuilder() {
               mobileSurface === 'editor' && 'hidden lg:flex',
             )}
           >
+            {movedNotice && (
+              <div className="border-b px-3 py-3">
+                <Alert.Root className="border-primary/20 bg-primary/5">
+                  <Alert.Description className="flex flex-wrap items-center justify-between gap-2">
+                    <Trans message="Course details live here in the course builder." />
+                    <Button size="sm" variant="ghost" onClick={dismissNotice}>
+                      <Trans message="Dismiss" />
+                    </Button>
+                  </Alert.Description>
+                </Alert.Root>
+              </div>
+            )}
             <div className="flex items-center justify-between gap-2 border-b p-3">
               <h2 className="text-sm font-semibold">
                 <Trans message="Curriculum" />
@@ -1138,8 +1218,8 @@ function moveLessonInCourse(
         return {
           ...chapter,
           lessons: [
-            {...lesson, chapter_id: targetChapterId},
             ...chapter.lessons,
+            {...lesson, chapter_id: targetChapterId},
           ].map((item, sortOrder) => ({...item, sort_order: sortOrder})),
         };
       }

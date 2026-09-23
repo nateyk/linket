@@ -463,3 +463,47 @@ describe('course builder quiz question cards', () => {
     expect(source).toContain('Untitled question');
   });
 });
+
+describe('moved-to-builder notice', () => {
+  const source = fs.readFileSync(
+    path.resolve('resources/client/dashboard/courses/course-builder-page.tsx'),
+    'utf8',
+  );
+
+  test('explains the redirect once, then cleans the param', () => {
+    expect(source).toContain('moved-to-builder');
+    expect(source).toContain('Course details live here in the course builder.');
+    expect(source).toContain('Dismiss');
+    expect(source).toContain("next.delete('notice')");
+  });
+});
+
+describe('submit gating guidance', () => {
+  const source = fs.readFileSync(
+    path.resolve('resources/client/dashboard/courses/course-builder-page.tsx'),
+    'utf8',
+  );
+
+  test('explains blocked and approved states next to the button', () => {
+    expect(source).toContain(
+      'Publish at least one lesson to submit for review.',
+    );
+    expect(source).toContain('Edits will return this course to draft.');
+    expect(source).toContain("from '@shadcn/tooltip/tooltip'");
+    expect(source).toContain('<Tooltip.Root');
+    expect(source).toContain('Tooltip.Content');
+  });
+});
+describe('chapter rename feedback', () => {
+  const source = fs.readFileSync(
+    path.resolve('resources/client/dashboard/courses/course-builder-page.tsx'),
+    'utf8',
+  );
+
+  test('saves optimistically with success and revert paths', () => {
+    expect(source).toContain('previousTitle');
+    expect(source).toContain("toast.positive('Chapter title saved')");
+    expect(source).toContain('title: revertedTitle');
+    expect(source).toContain("toast.danger(e.message ?? 'Unable to save chapter title')");
+  });
+});

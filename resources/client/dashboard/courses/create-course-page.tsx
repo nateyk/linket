@@ -113,6 +113,18 @@ export function Component() {
       </DashboardLayout.SectionHeader>
       <DashboardLayout.SectionContent className="overflow-y-auto">
         <div className="mx-auto flex w-full max-w-xl flex-col gap-5 py-4 sm:py-5">
+          {prefill.billing !== null && (
+            <p className="text-sm text-muted-foreground">
+              {isFree ? (
+                <Trans message="From previous step: Free." />
+              ) : (
+                <Trans
+                  message="From previous step: Paid · ETB :price — you can change it here."
+                  values={{price: price.trim() === '' ? '0.00' : price}}
+                />
+              )}
+            </p>
+          )}
           {isFree && (
             <div>
               <Badge variant="secondary">
@@ -206,7 +218,7 @@ export function Component() {
                     <Trans message="Check My Products" />
                   </Button>
                 )}
-                <Button type="submit" disabled={creating || creationUncertain}>
+                <Button type="submit" disabled={creating}>
                   {creating ? (
                     <Spinner data-icon="inline-start" />
                   ) : (

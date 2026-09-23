@@ -39,3 +39,32 @@ describe('course creation page', () => {
     expect(source).not.toContain("setError('Add a course title");
   });
 });
+
+describe('wizard handoff provenance', () => {
+  const source = fs.readFileSync(
+    path.resolve('resources/client/dashboard/courses/create-course-page.tsx'),
+    'utf8',
+  );
+
+  test('states where the billing and price came from', () => {
+    expect(source).toContain('prefill.billing !== null');
+    expect(source).toContain('From previous step: Free.');
+    expect(source).toContain('From previous step: Paid');
+  });
+});
+describe('uncertain creation recovery', () => {
+  const source = fs.readFileSync(
+    path.resolve('resources/client/dashboard/courses/create-course-page.tsx'),
+    'utf8',
+  );
+
+  test('keeps submit enabled for direct retry', () => {
+    expect(source).toContain('disabled={creating}>');
+    expect(source).not.toContain('disabled={creating || creationUncertain}');
+  });
+
+  test('keeps the my-products escape hatch', () => {
+    expect(source).toContain('creationUncertain');
+    expect(source).toContain('Check My Products');
+  });
+});

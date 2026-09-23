@@ -69,7 +69,7 @@ describe('digital product form submission', () => {
 
     expect(source).toContain("if (item.type === 'course')");
     expect(source).toMatch(
-      /navigate\(`\/dashboard\/my-products\/\$\{item\.id\}\/course`,\s*\{\s*replace: true,?\s*\}\);/,
+      /navigate\(\s*`\/dashboard\/my-products\/\$\{item\.id\}\/course\?notice=moved-to-builder`,\s*\{\s*replace: true,?\s*\}\s*,?\s*\);/,
     );
     expect(
       source.indexOf('/api/v1/digital-products/${productId}'),
@@ -329,5 +329,18 @@ describe('product cover and attached files', () => {
     expect(source).toContain('<Attachment state="done"');
     expect(source).toContain('fileTypeIcon');
     expect(source).toContain('FileArchiveIcon');
+  });
+});
+
+describe('course edit redirect', () => {
+  test('routes course edits into the builder with an explanatory notice', () => {
+    const source = fs.readFileSync(
+      path.resolve(
+        'resources/client/dashboard/digital-products/digital-product-form-page.tsx',
+      ),
+      'utf8',
+    );
+
+    expect(source).toContain('?notice=moved-to-builder');
   });
 });

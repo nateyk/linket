@@ -22,7 +22,9 @@ describe('course move', () => {
     expect(source).toContain(
       '.filter(item => item.id !== lessonId)\n            .map((item, sortOrder) => ({...item, sort_order: sortOrder}))',
     );
-    expect(source).toContain('{...lesson, chapter_id: targetChapterId}');
+    expect(source).toContain(
+      '...chapter.lessons,\n            {...lesson, chapter_id: targetChapterId},',
+    );
     expect(source).toContain(
       '].map((item, sortOrder) => ({...item, sort_order: sortOrder}))',
     );
@@ -31,9 +33,8 @@ describe('course move', () => {
 
   test('posts the selected destination and restores the exact course on failure', () => {
     expect(source).toContain('const previousCourse = course;');
-    expect(source).toContain(
-      'await apiClient.post(`/api/v1/course-lessons/${lesson.id}/move`, {\n        target_chapter_id: targetChapterId,\n        position: 0,\n      })',
-    );
+    expect(source).toContain('const targetCount =');
+    expect(source).toContain('position: targetCount,');
     expect(source).toContain('setCourse(previousCourse);');
     expect(source).toContain(
       "toast.danger(e?.message ?? 'Unable to move lesson')",
