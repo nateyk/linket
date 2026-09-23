@@ -10,8 +10,8 @@ import {TiptapEditorContent} from '@common/text-editor/tiptap-editor-content';
 import {TipTapEditorProvider} from '@common/text-editor/tiptap-editor-provider';
 import {useCurrentTextEditor} from '@common/text-editor/tiptap-editor-context';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
+import {CroppedCover} from '@common/uploads/components/cropped-image-selector';
 import {FileUploadProvider} from '@common/uploads/uploader/file-upload-provider';
-import {useActiveUpload} from '@common/uploads/uploader/use-active-upload';
 import {Alert} from '@shadcn/alert/alert';
 import {AlertDialog} from '@shadcn/alert-dialog/alert-dialog';
 import {Badge} from '@shadcn/badge/badge';
@@ -23,6 +23,12 @@ import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {Empty} from '@shadcn/empty/empty';
 import {Field} from '@shadcn/forms/field';
 import {Input} from '@shadcn/forms/input/input';
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+  InputGroupText,
+} from '@shadcn/forms/input-group/input-group';
 import {Checkbox} from '@shadcn/forms/checkbox/checkbox';
 import {Select} from '@shadcn/forms/select/select';
 import {Tabs} from '@shadcn/tabs/tabs';
@@ -36,11 +42,9 @@ import {
 } from '@shadcn/scroll-area/scroll-area';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {Switch} from '@shadcn/forms/switch/switch';
-import {FileDropzone} from '@common/ui/file-dropzone';
 import {SharedFileUploader} from '@common/ui/file-uploader';
 import {Trans} from '@ui/i18n/trans';
 import {useSortable} from '@ui/interactions/dnd/sortable/use-sortable';
-import {ProductCover} from '@ui/product-cover';
 import {toast} from '@ui/toast/toast';
 import {cn} from '@ui/utils/cn';
 import {useMediaQuery} from '@ui/utils/hooks/use-media-query';
@@ -49,12 +53,6 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@shadcn/collapsible/collapsible';
-import {
-  ImageCrop,
-  ImageCropApply,
-  ImageCropContent,
-  ImageCropReset,
-} from '@shadcn/image-crop/image-crop';
 import {
   ArrowLeftIcon,
   BarChart3Icon,
@@ -2480,6 +2478,9 @@ type CourseSettingsContentProps = {
   setCoverFileId: (value: number | null) => void;
   price: string;
   setPrice: (value: string) => void;
+  legacyCurrency: string;
+  convertToEtb: boolean;
+  setConvertToEtb: (value: boolean) => void;
   requireSeq: boolean;
   setRequireSeq: (value: boolean) => void;
   biolinks: Biolink[];
@@ -2500,6 +2501,9 @@ function CourseSettingsContent({
   setCoverFileId,
   price,
   setPrice,
+  legacyCurrency,
+  convertToEtb,
+  setConvertToEtb,
   requireSeq,
   setRequireSeq,
   biolinks,
@@ -2525,12 +2529,9 @@ function CourseSettingsContent({
         <Field.Label htmlFor={`${inputId}-description`}>
           <Trans message="Description" />
         </Field.Label>
-        <Input
-          id={`${inputId}-description`}
+        <CourseSettingsDescriptionEditor
           value={description}
-          onChange={e => setDescription(e.target.value)}
-          placeholder="What will students learn?"
-          maxLength={20000}
+          onChange={setDescription}
         />
       </Field.Root>
 
@@ -2551,48 +2552,53 @@ function CourseSettingsContent({
         <Field.Label>
           <Trans message="Cover Image" />
         </Field.Label>
-        <div className="flex w-full flex-col gap-3">
-          {coverUrl && (
-            <div className="overflow-hidden rounded-xl border">
-              <ProductCover cover={{url: coverUrl}} className="aspect-video" />
-            </div>
-          )}
-          <CoverImageDropzone
-            coverUrl={coverUrl}
-            onCoverChange={(url, id) => {
-              setCoverUrl(url);
-              setCoverFileId(id);
-            }}
-          />
-          <p className="text-xs text-muted-foreground">
-            <Trans message="Recommended size: 1200x514px • Max size: 5MB" />
-          </p>
-          {coverUrl && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setCoverUrl('');
-                setCoverFileId(null);
-              }}
-            >
-              <Trans message="Remove cover" />
-            </Button>
-          )}
-        </div>
+        <CroppedCover
+          value={coverUrl}
+          onChange={(url, entry) => {
+            setCoverUrl(url);
+            setCoverFileId(entry?.id ?? null);
+          }}
+          uploadType="linkImages"
+          aspect={16 / 9}
+        />
+        <Field.Description>
+          <Trans message="Recommended size: 1200x514px • Max size: 5MB" />
+        </Field.Description>
       </Field.Root>
 
       <Field.Root>
-        <Field.Label>
+        <Field.Label htmlFor={`${inputId}-price`}>
           <Trans message="Price (ETB)" />
         </Field.Label>
-        <Input
-          value={price}
-          onChange={e => setPrice(e.target.value)}
-          type="number"
-          min="0"
-          step="0.01"
-        />
+        <InputGroup>
+          <InputGroupAddon align="inline-start">
+            <InputGroupText>ETB</InputGroupText>
+          </InputGroupAddon>
+          <InputGroupInput
+            id={`${inputId}-price`}
+            value={price}
+            onChange={e => setPrice(e.target.value)}
+            type="number"
+            min="0"
+            step="0.01"
+          />
+        </InputGroup>
+        {legacyCurrency.toLowerCase() !== 'etb' && (
+          <label className="mt-2 flex items-start gap-3 rounded-card-sm border border-border bg-muted/30 p-3 text-sm">
+            <Checkbox
+              checked={convertToEtb}
+              onCheckedChange={value => setConvertToEtb(value === true)}
+            />
+            <span>
+              <span className="block font-medium">
+                <Trans message="Convert this product price to ETB" />
+              </span>
+              <span className="mt-0.5 block text-[13px] text-muted-foreground">
+                <Trans message="Set the correct Ethiopian birr amount above. Existing sales remain in their original currency." />
+              </span>
+            </span>
+          </label>
+        )}
       </Field.Root>
 
       <Field.Root>
@@ -2661,6 +2667,37 @@ function CourseSettingsContent({
   );
 }
 
+function CourseSettingsDescriptionEditor({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <TipTapEditorProvider
+      extensions={articleEditorTipTapExtensions}
+      initialContent={value}
+      onChange={onChange}
+    >
+      <div className="overflow-hidden rounded-card-sm border border-border">
+        <div className="no-scrollbar flex shrink-0 items-center gap-0.5 overflow-x-auto border-b px-1.5 py-1 text-muted-foreground">
+          <FormatDropdown />
+          <Divider />
+          <FontStyleButtons />
+          <Divider />
+          <ListButtons />
+          <Divider />
+          <LinkButton />
+          <Divider />
+          <ClearFormatButton />
+        </div>
+        <TiptapEditorContent className="prose prose-sm min-h-[180px] max-w-none px-3 py-2.5 dark:prose-invert" />
+      </div>
+    </TipTapEditorProvider>
+  );
+}
+
 function CourseSettingsDialog({
   open,
   onOpenChange,
@@ -2699,6 +2736,7 @@ function CourseSettingsDialog({
   );
   const [discardOpen, setDiscardOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [convertToEtb, setConvertToEtb] = useState(false);
 
   useEffect(() => {
     setTitle(course.product.title);
@@ -2708,6 +2746,7 @@ function CourseSettingsDialog({
     setRequireSeq(course.require_sequential_completion);
     setBiolinkIds(course.product.biolink_ids ?? []);
     setPrice((course.product.price_cents / 100).toFixed(2));
+    setConvertToEtb(false);
     setLearningOutcomes((course.product.learning_outcomes ?? []).map(text => ({
       id: crypto.randomUUID(),
       text,
@@ -2731,6 +2770,7 @@ function CourseSettingsDialog({
     setRequireSeq(course.require_sequential_completion);
     setBiolinkIds(course.product.biolink_ids ?? []);
     setPrice((course.product.price_cents / 100).toFixed(2));
+    setConvertToEtb(false);
     setLearningOutcomes((course.product.learning_outcomes ?? []).map(text => ({
       id: crypto.randomUUID(),
       text,
@@ -2740,13 +2780,18 @@ function CourseSettingsDialog({
   const hasPlacementChanges =
     biolinkIds.length !== (course.product.biolink_ids ?? []).length ||
     biolinkIds.some(id => !(course.product.biolink_ids ?? []).includes(id));
+  const savedOutcomes = course.product.learning_outcomes ?? [];
+  const hasOutcomeChanges =
+    learningOutcomes.length !== savedOutcomes.length ||
+    learningOutcomes.some((item, index) => item.text !== savedOutcomes[index]);
   const isDirty =
     title !== course.product.title ||
     description !== (course.product.description ?? '') ||
     coverFileId !== (course.product.cover?.id ?? null) ||
     price !== (course.product.price_cents / 100).toFixed(2) ||
     requireSeq !== course.require_sequential_completion ||
-    hasPlacementChanges;
+    hasPlacementChanges ||
+    hasOutcomeChanges;
 
   const requestClose = (nextOpen: boolean) => {
     if (!nextOpen && saving) return;
@@ -2766,6 +2811,12 @@ function CourseSettingsDialog({
 
   const save = async () => {
     if (saving) return;
+    if (course.product.currency.toLowerCase() !== 'etb' && !convertToEtb) {
+      toast.danger(
+        'Enter the correct ETB price and confirm the currency conversion before saving.',
+      );
+      return;
+    }
 
     const cents = Math.round(Number(price || '0') * 100);
     setSaving(true);
@@ -2803,6 +2854,9 @@ function CourseSettingsDialog({
     setCoverFileId,
     price,
     setPrice,
+    legacyCurrency: course.product.currency,
+    convertToEtb,
+    setConvertToEtb,
     requireSeq,
     setRequireSeq,
     biolinks,
@@ -2967,89 +3021,5 @@ function DeleteCourseItemDialog({
         </AlertDialog.Content>
       </AlertDialog.Portal>
     </AlertDialog.Root>
-  );
-}
-
-function CoverImageDropzone({
-  coverUrl,
-  onCoverChange,
-}: {
-  coverUrl: string;
-  onCoverChange: (url: string, id: number | null) => void;
-}) {
-  const {uploadFile, uploadStatus, percentage} = useActiveUpload();
-  const uploading = uploadStatus === 'inProgress';
-  const [pendingFile, setPendingFile] = useState<File | null>(null);
-  const [cropOpen, setCropOpen] = useState(false);
-
-  const handleFile = (file: File) => {
-    setPendingFile(file);
-    setCropOpen(true);
-  };
-
-  const handleCrop = (preview: string, croppedFile?: File) => {
-    if (!croppedFile) return;
-    uploadFile(croppedFile, {
-      uploadType: 'linkImages',
-      showToastOnRestrictionFail: true,
-      showToastOnBackendError: true,
-      onSuccess: entry => {
-        onCoverChange(entry.url, entry.id);
-        setCropOpen(false);
-        setPendingFile(null);
-      },
-    });
-  };
-
-  return (
-    <>
-      <FileDropzone
-        accept="image/*"
-        title={<Trans message="Upload Cover Image" />}
-        description={<Trans message="Drag and drop or click to browse" />}
-        hint="1200x514 • 5MB"
-        status={uploading ? 'uploading' : 'idle'}
-        progress={percentage}
-        onFile={handleFile}
-        className={coverUrl ? 'border-muted' : undefined}
-      />
-      {pendingFile && (
-        <Dialog.Root open={cropOpen} onOpenChange={setCropOpen}>
-          <ImageCrop aspect={16 / 9} file={pendingFile} onCrop={handleCrop}>
-            <Dialog.Portal>
-              <Dialog.Backdrop />
-              <Dialog.Content className="max-w-[calc(100vw-2rem)] sm:max-w-xl">
-                <Dialog.Header>
-                  <Dialog.Title>
-                    <Trans message="Crop cover image" />
-                  </Dialog.Title>
-                  <Dialog.Description>
-                    <Trans message="Adjust the preferred region, then apply." />
-                  </Dialog.Description>
-                </Dialog.Header>
-                <Dialog.Body>
-                  <ImageCropContent />
-                </Dialog.Body>
-                <Dialog.Footer className="flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <ImageCropReset asChild>
-                    <Button type="button" variant="ghost">
-                      <Trans message="Reset" />
-                    </Button>
-                  </ImageCropReset>
-                  <Dialog.CloseButton variant="outline">
-                    <Trans message="Cancel" />
-                  </Dialog.CloseButton>
-                  <ImageCropApply asChild>
-                    <Button type="button">
-                      <Trans message="Apply crop" />
-                    </Button>
-                  </ImageCropApply>
-                </Dialog.Footer>
-              </Dialog.Content>
-            </Dialog.Portal>
-          </ImageCrop>
-        </Dialog.Root>
-      )}
-    </>
   );
 }

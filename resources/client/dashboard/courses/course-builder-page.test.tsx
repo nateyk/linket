@@ -15,13 +15,13 @@ describe('course builder uploads', () => {
       "toast.danger('Unable to attach the uploaded video')",
     );
     expect(source).toContain("toast.danger('Unable to attach the resource')");
-    // Lesson resources and video upload through the shared uploader; only
-    // cover keeps an inline upload config.
+    // Lesson resources and video upload through the shared uploader, and the
+    // cover now uses the shared CroppedCover — no inline upload config remains.
     expect(source).toContain('<SharedFileUploader');
     expect(source).toContain('uploadType="courseResources"');
     expect(source).toContain('uploadType="courseVideos"');
-    expect(source.match(/showToastOnRestrictionFail: true/g)).toHaveLength(1);
-    expect(source.match(/showToastOnBackendError: true/g)).toHaveLength(1);
+    expect(source.match(/showToastOnRestrictionFail: true/g)).toBeNull();
+    expect(source.match(/showToastOnBackendError: true/g)).toBeNull();
     const uploaderSource = fs.readFileSync(
       path.resolve('common/foundation/resources/client/ui/file-uploader.tsx'),
       'utf8',
@@ -505,5 +505,61 @@ describe('chapter rename feedback', () => {
     expect(source).toContain("toast.positive('Chapter title saved')");
     expect(source).toContain('title: revertedTitle');
     expect(source).toContain("toast.danger(e.message ?? 'Unable to save chapter title')");
+  });
+});
+describe('course settings price', () => {
+  const source = fs.readFileSync(
+    path.resolve('resources/client/dashboard/courses/course-builder-page.tsx'),
+    'utf8',
+  );
+
+  test('uses the ETB input group with a legacy-currency convert guard', () => {
+    expect(source).toContain("from '@shadcn/forms/input-group/input-group'");
+    expect(source).toContain('<InputGroupText>ETB</InputGroupText>');
+    expect(source).toContain('Convert this product price to ETB');
+    expect(source).toContain('convertToEtb');
+    expect(source).toContain('Enter the correct ETB price and confirm the currency conversion before saving.');
+  });
+});
+describe('course settings description', () => {
+  const source = fs.readFileSync(
+    path.resolve('resources/client/dashboard/courses/course-builder-page.tsx'),
+    'utf8',
+  );
+
+  test('edits the description in rich text', () => {
+    expect(source).toContain('CourseSettingsDescriptionEditor');
+    expect(source).toContain('TipTapEditorProvider');
+    expect(source).toContain('TiptapEditorContent');
+    expect(source).not.toContain('maxLength={20000}');
+  });
+});
+describe('course settings cover', () => {
+  const source = fs.readFileSync(
+    path.resolve('resources/client/dashboard/courses/course-builder-page.tsx'),
+    'utf8',
+  );
+
+  test('reuses the shared cropped cover uploader', () => {
+    expect(source).toContain(
+      "import {CroppedCover} from '@common/uploads/components/cropped-image-selector'",
+    );
+    expect(source).toContain('<CroppedCover');
+    expect(source).toContain('uploadType="linkImages"');
+    expect(source).toContain('aspect={16 / 9}');
+    expect(source).not.toContain('CoverImageDropzone');
+    expect(source).not.toContain('FileDropzone');
+  });
+});
+describe('course settings outcomes dirty tracking', () => {
+  const source = fs.readFileSync(
+    path.resolve('resources/client/dashboard/courses/course-builder-page.tsx'),
+    'utf8',
+  );
+
+  test('outcome edits participate in the discard guard', () => {
+    expect(source).toContain('hasOutcomeChanges');
+    expect(source).toContain('learning_outcomes ?? []');
+    expect(source).toContain('item.text !== savedOutcomes[index]');
   });
 });
