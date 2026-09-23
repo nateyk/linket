@@ -10,8 +10,8 @@ import {TiptapEditorContent} from '@common/text-editor/tiptap-editor-content';
 import {TipTapEditorProvider} from '@common/text-editor/tiptap-editor-provider';
 import {useCurrentTextEditor} from '@common/text-editor/tiptap-editor-context';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
+import {CroppedCover} from '@common/uploads/components/cropped-image-selector';
 import {FileUploadProvider} from '@common/uploads/uploader/file-upload-provider';
-import {useActiveUpload} from '@common/uploads/uploader/use-active-upload';
 import {Alert} from '@shadcn/alert/alert';
 import {AlertDialog} from '@shadcn/alert-dialog/alert-dialog';
 import {Badge} from '@shadcn/badge/badge';
@@ -42,11 +42,9 @@ import {
 } from '@shadcn/scroll-area/scroll-area';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {Switch} from '@shadcn/forms/switch/switch';
-import {FileDropzone} from '@common/ui/file-dropzone';
 import {SharedFileUploader} from '@common/ui/file-uploader';
 import {Trans} from '@ui/i18n/trans';
 import {useSortable} from '@ui/interactions/dnd/sortable/use-sortable';
-import {ProductCover} from '@ui/product-cover';
 import {toast} from '@ui/toast/toast';
 import {cn} from '@ui/utils/cn';
 import {useMediaQuery} from '@ui/utils/hooks/use-media-query';
@@ -55,12 +53,6 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@shadcn/collapsible/collapsible';
-import {
-  ImageCrop,
-  ImageCropApply,
-  ImageCropContent,
-  ImageCropReset,
-} from '@shadcn/image-crop/image-crop';
 import {
   ArrowLeftIcon,
   BarChart3Icon,
@@ -2560,35 +2552,18 @@ function CourseSettingsContent({
         <Field.Label>
           <Trans message="Cover Image" />
         </Field.Label>
-        <div className="flex w-full flex-col gap-3">
-          {coverUrl && (
-            <div className="overflow-hidden rounded-xl border">
-              <ProductCover cover={{url: coverUrl}} className="aspect-video" />
-            </div>
-          )}
-          <CoverImageDropzone
-            coverUrl={coverUrl}
-            onCoverChange={(url, id) => {
-              setCoverUrl(url);
-              setCoverFileId(id);
-            }}
-          />
-          <p className="text-xs text-muted-foreground">
-            <Trans message="Recommended size: 1200x514px • Max size: 5MB" />
-          </p>
-          {coverUrl && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setCoverUrl('');
-                setCoverFileId(null);
-              }}
-            >
-              <Trans message="Remove cover" />
-            </Button>
-          )}
-        </div>
+        <CroppedCover
+          value={coverUrl}
+          onChange={(url, entry) => {
+            setCoverUrl(url);
+            setCoverFileId(entry?.id ?? null);
+          }}
+          uploadType="linkImages"
+          aspect={16 / 9}
+        />
+        <Field.Description>
+          <Trans message="Recommended size: 1200x514px • Max size: 5MB" />
+        </Field.Description>
       </Field.Root>
 
       <Field.Root>
@@ -3041,89 +3016,5 @@ function DeleteCourseItemDialog({
         </AlertDialog.Content>
       </AlertDialog.Portal>
     </AlertDialog.Root>
-  );
-}
-
-function CoverImageDropzone({
-  coverUrl,
-  onCoverChange,
-}: {
-  coverUrl: string;
-  onCoverChange: (url: string, id: number | null) => void;
-}) {
-  const {uploadFile, uploadStatus, percentage} = useActiveUpload();
-  const uploading = uploadStatus === 'inProgress';
-  const [pendingFile, setPendingFile] = useState<File | null>(null);
-  const [cropOpen, setCropOpen] = useState(false);
-
-  const handleFile = (file: File) => {
-    setPendingFile(file);
-    setCropOpen(true);
-  };
-
-  const handleCrop = (preview: string, croppedFile?: File) => {
-    if (!croppedFile) return;
-    uploadFile(croppedFile, {
-      uploadType: 'linkImages',
-      showToastOnRestrictionFail: true,
-      showToastOnBackendError: true,
-      onSuccess: entry => {
-        onCoverChange(entry.url, entry.id);
-        setCropOpen(false);
-        setPendingFile(null);
-      },
-    });
-  };
-
-  return (
-    <>
-      <FileDropzone
-        accept="image/*"
-        title={<Trans message="Upload Cover Image" />}
-        description={<Trans message="Drag and drop or click to browse" />}
-        hint="1200x514 • 5MB"
-        status={uploading ? 'uploading' : 'idle'}
-        progress={percentage}
-        onFile={handleFile}
-        className={coverUrl ? 'border-muted' : undefined}
-      />
-      {pendingFile && (
-        <Dialog.Root open={cropOpen} onOpenChange={setCropOpen}>
-          <ImageCrop aspect={16 / 9} file={pendingFile} onCrop={handleCrop}>
-            <Dialog.Portal>
-              <Dialog.Backdrop />
-              <Dialog.Content className="max-w-[calc(100vw-2rem)] sm:max-w-xl">
-                <Dialog.Header>
-                  <Dialog.Title>
-                    <Trans message="Crop cover image" />
-                  </Dialog.Title>
-                  <Dialog.Description>
-                    <Trans message="Adjust the preferred region, then apply." />
-                  </Dialog.Description>
-                </Dialog.Header>
-                <Dialog.Body>
-                  <ImageCropContent />
-                </Dialog.Body>
-                <Dialog.Footer className="flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <ImageCropReset asChild>
-                    <Button type="button" variant="ghost">
-                      <Trans message="Reset" />
-                    </Button>
-                  </ImageCropReset>
-                  <Dialog.CloseButton variant="outline">
-                    <Trans message="Cancel" />
-                  </Dialog.CloseButton>
-                  <ImageCropApply asChild>
-                    <Button type="button">
-                      <Trans message="Apply crop" />
-                    </Button>
-                  </ImageCropApply>
-                </Dialog.Footer>
-              </Dialog.Content>
-            </Dialog.Portal>
-          </ImageCrop>
-        </Dialog.Root>
-      )}
-    </>
   );
 }

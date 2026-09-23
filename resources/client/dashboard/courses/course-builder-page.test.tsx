@@ -15,13 +15,13 @@ describe('course builder uploads', () => {
       "toast.danger('Unable to attach the uploaded video')",
     );
     expect(source).toContain("toast.danger('Unable to attach the resource')");
-    // Lesson resources and video upload through the shared uploader; only
-    // cover keeps an inline upload config.
+    // Lesson resources and video upload through the shared uploader, and the
+    // cover now uses the shared CroppedCover — no inline upload config remains.
     expect(source).toContain('<SharedFileUploader');
     expect(source).toContain('uploadType="courseResources"');
     expect(source).toContain('uploadType="courseVideos"');
-    expect(source.match(/showToastOnRestrictionFail: true/g)).toHaveLength(1);
-    expect(source.match(/showToastOnBackendError: true/g)).toHaveLength(1);
+    expect(source.match(/showToastOnRestrictionFail: true/g)).toBeNull();
+    expect(source.match(/showToastOnBackendError: true/g)).toBeNull();
     const uploaderSource = fs.readFileSync(
       path.resolve('common/foundation/resources/client/ui/file-uploader.tsx'),
       'utf8',
@@ -532,5 +532,22 @@ describe('course settings description', () => {
     expect(source).toContain('TipTapEditorProvider');
     expect(source).toContain('TiptapEditorContent');
     expect(source).not.toContain('maxLength={20000}');
+  });
+});
+describe('course settings cover', () => {
+  const source = fs.readFileSync(
+    path.resolve('resources/client/dashboard/courses/course-builder-page.tsx'),
+    'utf8',
+  );
+
+  test('reuses the shared cropped cover uploader', () => {
+    expect(source).toContain(
+      "import {CroppedCover} from '@common/uploads/components/cropped-image-selector'",
+    );
+    expect(source).toContain('<CroppedCover');
+    expect(source).toContain('uploadType="linkImages"');
+    expect(source).toContain('aspect={16 / 9}');
+    expect(source).not.toContain('CoverImageDropzone');
+    expect(source).not.toContain('FileDropzone');
   });
 });
