@@ -23,6 +23,12 @@ import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {Empty} from '@shadcn/empty/empty';
 import {Field} from '@shadcn/forms/field';
 import {Input} from '@shadcn/forms/input/input';
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+  InputGroupText,
+} from '@shadcn/forms/input-group/input-group';
 import {Checkbox} from '@shadcn/forms/checkbox/checkbox';
 import {Select} from '@shadcn/forms/select/select';
 import {Tabs} from '@shadcn/tabs/tabs';
@@ -2480,6 +2486,9 @@ type CourseSettingsContentProps = {
   setCoverFileId: (value: number | null) => void;
   price: string;
   setPrice: (value: string) => void;
+  legacyCurrency: string;
+  convertToEtb: boolean;
+  setConvertToEtb: (value: boolean) => void;
   requireSeq: boolean;
   setRequireSeq: (value: boolean) => void;
   biolinks: Biolink[];
@@ -2500,6 +2509,9 @@ function CourseSettingsContent({
   setCoverFileId,
   price,
   setPrice,
+  legacyCurrency,
+  convertToEtb,
+  setConvertToEtb,
   requireSeq,
   setRequireSeq,
   biolinks,
@@ -2583,16 +2595,38 @@ function CourseSettingsContent({
       </Field.Root>
 
       <Field.Root>
-        <Field.Label>
+        <Field.Label htmlFor={`${inputId}-price`}>
           <Trans message="Price (ETB)" />
         </Field.Label>
-        <Input
-          value={price}
-          onChange={e => setPrice(e.target.value)}
-          type="number"
-          min="0"
-          step="0.01"
-        />
+        <InputGroup>
+          <InputGroupAddon align="inline-start">
+            <InputGroupText>ETB</InputGroupText>
+          </InputGroupAddon>
+          <InputGroupInput
+            id={`${inputId}-price`}
+            value={price}
+            onChange={e => setPrice(e.target.value)}
+            type="number"
+            min="0"
+            step="0.01"
+          />
+        </InputGroup>
+        {legacyCurrency.toLowerCase() !== 'etb' && (
+          <label className="mt-2 flex items-start gap-3 rounded-card-sm border border-border bg-muted/30 p-3 text-sm">
+            <Checkbox
+              checked={convertToEtb}
+              onCheckedChange={value => setConvertToEtb(value === true)}
+            />
+            <span>
+              <span className="block font-medium">
+                <Trans message="Convert this product price to ETB" />
+              </span>
+              <span className="mt-0.5 block text-[13px] text-muted-foreground">
+                <Trans message="Set the correct Ethiopian birr amount above. Existing sales remain in their original currency." />
+              </span>
+            </span>
+          </label>
+        )}
       </Field.Root>
 
       <Field.Root>
@@ -2699,6 +2733,7 @@ function CourseSettingsDialog({
   );
   const [discardOpen, setDiscardOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [convertToEtb, setConvertToEtb] = useState(false);
 
   useEffect(() => {
     setTitle(course.product.title);
@@ -2708,6 +2743,7 @@ function CourseSettingsDialog({
     setRequireSeq(course.require_sequential_completion);
     setBiolinkIds(course.product.biolink_ids ?? []);
     setPrice((course.product.price_cents / 100).toFixed(2));
+    setConvertToEtb(false);
     setLearningOutcomes((course.product.learning_outcomes ?? []).map(text => ({
       id: crypto.randomUUID(),
       text,
@@ -2731,6 +2767,7 @@ function CourseSettingsDialog({
     setRequireSeq(course.require_sequential_completion);
     setBiolinkIds(course.product.biolink_ids ?? []);
     setPrice((course.product.price_cents / 100).toFixed(2));
+    setConvertToEtb(false);
     setLearningOutcomes((course.product.learning_outcomes ?? []).map(text => ({
       id: crypto.randomUUID(),
       text,
@@ -2766,6 +2803,12 @@ function CourseSettingsDialog({
 
   const save = async () => {
     if (saving) return;
+    if (course.product.currency.toLowerCase() !== 'etb' && !convertToEtb) {
+      toast.danger(
+        'Enter the correct ETB price and confirm the currency conversion before saving.',
+      );
+      return;
+    }
 
     const cents = Math.round(Number(price || '0') * 100);
     setSaving(true);
@@ -2803,6 +2846,9 @@ function CourseSettingsDialog({
     setCoverFileId,
     price,
     setPrice,
+    legacyCurrency: course.product.currency,
+    convertToEtb,
+    setConvertToEtb,
     requireSeq,
     setRequireSeq,
     biolinks,

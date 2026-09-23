@@ -507,3 +507,17 @@ describe('chapter rename feedback', () => {
     expect(source).toContain("toast.danger(e.message ?? 'Unable to save chapter title')");
   });
 });
+describe('course settings price', () => {
+  const source = fs.readFileSync(
+    path.resolve('resources/client/dashboard/courses/course-builder-page.tsx'),
+    'utf8',
+  );
+
+  test('uses the ETB input group with a legacy-currency convert guard', () => {
+    expect(source).toContain("from '@shadcn/forms/input-group/input-group'");
+    expect(source).toContain('<InputGroupText>ETB</InputGroupText>');
+    expect(source).toContain('Convert this product price to ETB');
+    expect(source).toContain('convertToEtb');
+    expect(source).toContain('Enter the correct ETB price and confirm the currency conversion before saving.');
+  });
+});
