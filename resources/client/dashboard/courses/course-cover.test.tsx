@@ -5,7 +5,10 @@ describe('course cover aspect',()=>{
     const prod=fs.readFileSync(path.resolve('resources/client/dashboard/digital-products/product-preview.tsx'),'utf8');
     const card=fs.readFileSync(path.resolve('resources/client/digital-products/shared/product-card.tsx'),'utf8');
     expect(builder).toContain('16 / 9'); expect(builder).not.toContain('1200 / 514');
-    expect(builder).toContain('ProductCover');
+    // Cover renders through the shared CroppedCover (which owns the shared
+    // crop dialog + upload flow) instead of the bespoke dropzone.
+    expect(builder).toContain('<CroppedCover');
+    expect(builder).toContain('aspect={16 / 9}');
     // The form-page preview renders covers through the shared ProductCard,
     // which itself delegates to the shared ProductCover.
     expect(prod).toContain('shared/product-card');
