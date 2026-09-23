@@ -1,9 +1,10 @@
 import {apiClient} from '@common/http/query-client';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {Alert} from '@shadcn/alert/alert';
+import {Badge} from '@shadcn/badge/badge';
+import {Breadcrumb} from '@shadcn/breadcrumb/breadcrumb';
 import {Button} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
-import {Field} from '@shadcn/forms/field';
 import {
   InputGroup,
   InputGroupAddon,
@@ -14,36 +15,51 @@ import {Input} from '@shadcn/forms/input/input';
 import {Spinner} from '@shadcn/spinner/spinner';
 import {Trans} from '@ui/i18n/trans';
 import {isAxiosError} from 'axios';
-import {
-  ArrowLeftIcon,
-  GraduationCapIcon,
-  TriangleAlertIcon,
-} from 'lucide-react';
+import {GraduationCapIcon, TriangleAlertIcon} from 'lucide-react';
 import {FormEvent, useState} from 'react';
 import {Link, useNavigate, useSearchParams} from 'react-router';
-import {initialPriceFromParam} from '../digital-products/product-create-flow';
+import {parseWizardPrefill} from '../digital-products/product-create-flow';
+import {ProductFormField} from '../digital-products/product-form-field';
 
 type CreatedProduct = {id: number};
 
+type CourseFieldErrors = {title?: string; price?: string};
+
 export function Component() {
   const navigate = useNavigate();
-  const [title, setTitle] = useState('');
   const [searchParams] = useSearchParams();
-  const [price, setPrice] = useState<string>(
-    () => initialPriceFromParam(searchParams.get('price_cents')) ?? '0',
-  );
+  const prefill = parseWizardPrefill(searchParams);
+  const isFree = prefill.billing === 'free';
+  const [title, setTitle] = useState('');
+  const [price, setPrice] = useState<string>(() => prefill.price ?? '0');
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string>();
+  const [fieldErrors, setFieldErrors] = useState<CourseFieldErrors>({});
   const [creationUncertain, setCreationUncertain] = useState(false);
+
+  const validate = (nextTitle: string, nextPrice: string) => {
+    const errors: CourseFieldErrors = {};
+    if (!nextTitle.trim()) errors.title = 'Add a course title.';
+    if (!isFree) {
+      const cents = Math.round(Number(nextPrice) * 100);
+      if (!Number.isFinite(cents) || cents < 0) {
+        errors.price = 'Add a valid price of ETB 0 or more.';
+      }
+    }
+    return errors;
+  };
 
   const createCourse = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const priceCents = Math.round(Number(price) * 100);
-
-    if (!title.trim() || !Number.isFinite(priceCents) || priceCents < 0) {
-      setError('Add a course title and a valid price.');
+    const validation = validate(title, price);
+    setFieldErrors(validation);
+    if (Object.keys(validation).length) {
+      document
+        .getElementById(validation.title ? 'course-title' : 'course-price')
+        ?.focus();
       return;
     }
+    const priceCents = isFree ? 0 : Math.round(Number(price) * 100);
 
     setCreating(true);
     setError(undefined);
@@ -78,21 +94,32 @@ export function Component() {
     <DashboardLayout.MainSection>
       <DashboardLayout.SectionHeader>
         <DashboardLayout.SidebarToggle />
+        <Breadcrumb>
+          <Breadcrumb.Item>
+            <Breadcrumb.Link to="/dashboard/my-products">
+              <Trans message="All products" />
+            </Breadcrumb.Link>
+          </Breadcrumb.Item>
+          <Breadcrumb.Separator />
+          <Breadcrumb.Item>
+            <Breadcrumb.Page>
+              <Trans message="Create course" />
+            </Breadcrumb.Page>
+          </Breadcrumb.Item>
+        </Breadcrumb>
         <DashboardLayout.SectionTitle>
           <Trans message="Create course" />
         </DashboardLayout.SectionTitle>
       </DashboardLayout.SectionHeader>
       <DashboardLayout.SectionContent className="overflow-y-auto">
-        <div className="mx-auto flex w-full max-w-xl flex-col gap-5 py-6">
-          <Button
-            className="w-fit"
-            variant="ghost"
-            render={<Link to="/dashboard/my-products/new" />}
-          >
-            <ArrowLeftIcon data-icon="inline-start" />
-            <Trans message="Choose another product type" />
-          </Button>
-
+        <div className="mx-auto flex w-full max-w-xl flex-col gap-5 py-4 sm:py-5">
+          {isFree && (
+            <div>
+              <Badge variant="secondary">
+                <Trans message="Free" />
+              </Badge>
+            </div>
+          )}
           <Card.Root>
             <Card.Header>
               <Card.Title>
@@ -104,50 +131,71 @@ export function Component() {
             </Card.Header>
             <form onSubmit={createCourse}>
               <Card.Content>
-                <Field.Group>
-                  <Field.Root data-invalid={!!error}>
-                    <Field.Label htmlFor="course-title">
-                      <Trans message="Course title" />
-                    </Field.Label>
-                      <Input
-                        id="course-title"
-                        aria-invalid={!!error}
+                <div className="flex flex-col gap-4">
+                  <ProductFormField
+                    label="Course title"
+                    description="Choose a clear title learners can easily understand."
+                    error={fieldErrors.title}
+                    htmlFor="course-title"
+                    required
+                  >
+                    <Input
+                      id="course-title"
+                      aria-invalid={!!fieldErrors.title}
                       value={title}
-                      onChange={event => setTitle(event.target.value)}
-                      placeholder="Complete course title"
                       maxLength={160}
+                      onChange={event => {
+                        setTitle(event.target.value);
+                        if (fieldErrors.title) {
+                          setFieldErrors(current => ({...current, title: undefined}));
+                        }
+                      }}
+                      placeholder="Complete course title"
                       autoFocus
                     />
-                  </Field.Root>
-                  <Field.Root data-invalid={!!error}>
-                    <Field.Label htmlFor="course-price">
-                      <Trans message="Price" />
-                    </Field.Label>
-                    <InputGroup>
-                      <InputGroupAddon align="inline-start">
-                        <InputGroupText>ETB</InputGroupText>
-                      </InputGroupAddon>
+                  </ProductFormField>
+
+                  {!isFree && (
+                    <ProductFormField
+                      label="Price"
+                      description="Set ETB 0 to offer this course for free."
+                      error={fieldErrors.price}
+                      htmlFor="course-price"
+                      required
+                    >
+                      <InputGroup>
+                        <InputGroupAddon align="inline-start">
+                          <InputGroupText>ETB</InputGroupText>
+                        </InputGroupAddon>
                         <InputGroupInput
                           id="course-price"
-                          aria-invalid={!!error}
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={price}
-                        onChange={event => setPrice(event.target.value)}
-                      />
-                    </InputGroup>
-                    <Field.Description>
-                      <Trans message="Enter 0 to publish a free course." />
-                    </Field.Description>
-                  </Field.Root>
+                          aria-invalid={!!fieldErrors.price}
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={price}
+                          onChange={event => {
+                            setPrice(event.target.value);
+                            if (fieldErrors.price) {
+                              setFieldErrors(current => ({
+                                ...current,
+                                price: undefined,
+                              }));
+                            }
+                          }}
+                          placeholder="0.00"
+                        />
+                      </InputGroup>
+                    </ProductFormField>
+                  )}
+
                   {error && (
                     <Alert.Root variant="destructive" fillStyle="subtleFill">
                       <TriangleAlertIcon />
                       <Alert.Description>{error}</Alert.Description>
                     </Alert.Root>
                   )}
-                </Field.Group>
+                </div>
               </Card.Content>
               <Card.Footer className="justify-end">
                 {creationUncertain && (
