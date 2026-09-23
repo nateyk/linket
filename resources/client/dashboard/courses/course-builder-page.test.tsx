@@ -494,3 +494,16 @@ describe('submit gating guidance', () => {
     expect(source).toContain('Tooltip.Content');
   });
 });
+describe('chapter rename feedback', () => {
+  const source = fs.readFileSync(
+    path.resolve('resources/client/dashboard/courses/course-builder-page.tsx'),
+    'utf8',
+  );
+
+  test('saves optimistically with success and revert paths', () => {
+    expect(source).toContain('previousTitle');
+    expect(source).toContain("toast.positive('Chapter title saved')");
+    expect(source).toContain('title: revertedTitle');
+    expect(source).toContain("toast.danger(e.message ?? 'Unable to save chapter title')");
+  });
+});

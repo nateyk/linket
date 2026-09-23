@@ -286,7 +286,9 @@ function CourseBuilder() {
   };
 
   const updateChapterTitle = async (chapterId: number, title: string) => {
-    await apiClient.put(`/api/v1/course-chapters/${chapterId}`, {title});
+    const previousTitle = course?.chapters.find(
+      c => c.id === chapterId,
+    )?.title;
     setCourse(c => {
       if (!c) return c;
       return {
@@ -296,6 +298,24 @@ function CourseBuilder() {
         ),
       };
     });
+    try {
+      await apiClient.put(`/api/v1/course-chapters/${chapterId}`, {title});
+      toast.positive('Chapter title saved');
+    } catch (e: any) {
+      if (previousTitle !== undefined) {
+        const revertedTitle = previousTitle;
+        setCourse(c => {
+          if (!c) return c;
+          return {
+            ...c,
+            chapters: c.chapters.map(ch =>
+              ch.id === chapterId ? {...ch, title: revertedTitle} : ch,
+            ),
+          };
+        });
+      }
+      toast.danger(e.message ?? 'Unable to save chapter title');
+    }
   };
 
   const deleteChapter = (chapter: Chapter) => {
@@ -493,6 +513,8 @@ function CourseBuilder() {
   ) => {
     if (!course || reordering) return false;
 
+    const targetCount =
+      course.chapters.find(c => c.id === targetChapterId)?.lessons.length ?? 0;
     const previousCourse = course;
     setCourse(current =>
       current
@@ -509,7 +531,7 @@ function CourseBuilder() {
     try {
       await apiClient.post(`/api/v1/course-lessons/${lesson.id}/move`, {
         target_chapter_id: targetChapterId,
-        position: 0,
+        position: targetCount,
       });
       return true;
     } catch (e: any) {
@@ -1196,8 +1218,8 @@ function moveLessonInCourse(
         return {
           ...chapter,
           lessons: [
-            {...lesson, chapter_id: targetChapterId},
             ...chapter.lessons,
+            {...lesson, chapter_id: targetChapterId},
           ].map((item, sortOrder) => ({...item, sort_order: sortOrder})),
         };
       }
