@@ -218,7 +218,7 @@ export function Component() {
                     <Trans message="Check My Products" />
                   </Button>
                 )}
-                <Button type="submit" disabled={creating || creationUncertain}>
+                <Button type="submit" disabled={creating}>
                   {creating ? (
                     <Spinner data-icon="inline-start" />
                   ) : (
