@@ -477,3 +477,20 @@ describe('moved-to-builder notice', () => {
     expect(source).toContain("next.delete('notice')");
   });
 });
+
+describe('submit gating guidance', () => {
+  const source = fs.readFileSync(
+    path.resolve('resources/client/dashboard/courses/course-builder-page.tsx'),
+    'utf8',
+  );
+
+  test('explains blocked and approved states next to the button', () => {
+    expect(source).toContain(
+      'Publish at least one lesson to submit for review.',
+    );
+    expect(source).toContain('Edits will return this course to draft.');
+    expect(source).toContain("from '@shadcn/tooltip/tooltip'");
+    expect(source).toContain('<Tooltip.Root');
+    expect(source).toContain('Tooltip.Content');
+  });
+});

@@ -26,6 +26,7 @@ import {Input} from '@shadcn/forms/input/input';
 import {Checkbox} from '@shadcn/forms/checkbox/checkbox';
 import {Select} from '@shadcn/forms/select/select';
 import {Tabs} from '@shadcn/tabs/tabs';
+import {Tooltip} from '@shadcn/tooltip/tooltip';
 import {ChipField} from '@ui/forms/input-field/chip-field/chip-field';
 import {Chip} from '@ui/forms/input-field/chip-field/chip';
 import {
@@ -682,21 +683,55 @@ function CourseBuilder() {
               </Dropdown.Item>
             </Dropdown.Content>
           </Dropdown.Root>
-          <Button
-            size="sm"
-            onClick={() => void submit()}
-            disabled={publishing || !canSubmit || !hasPublishedLesson}
-          >
-            <Trans
-              message={
-                publishing
-                  ? 'Submitting...'
-                  : hasPublishedLesson
-                    ? 'Submit for review'
-                    : 'Add a published lesson'
-              }
-            />
-          </Button>
+          <div className="flex min-w-0 flex-col items-end gap-1">
+            {!hasPublishedLesson && canSubmit && !publishing && (
+              <p className="text-xs text-muted-foreground">
+                <Trans message="Publish at least one lesson to submit for review." />
+              </p>
+            )}
+            {!canSubmit && (
+              <p className="text-xs text-muted-foreground">
+                <Trans message="Edits will return this course to draft." />
+              </p>
+            )}
+            <Tooltip.Root>
+              <Tooltip.Trigger
+                aria-label="Submit for review"
+                render={
+                  <span className="inline-flex">
+                    <Button
+                      size="sm"
+                      onClick={() => void submit()}
+                      disabled={publishing || !canSubmit || !hasPublishedLesson}
+                    >
+                      <Trans
+                        message={
+                          publishing
+                            ? 'Submitting...'
+                            : hasPublishedLesson
+                              ? 'Submit for review'
+                              : 'Add a published lesson'
+                        }
+                      />
+                    </Button>
+                  </span>
+                }
+              >
+                <span className="sr-only">
+                  <Trans message="Submit requirements" />
+                </span>
+              </Tooltip.Trigger>
+              <Tooltip.Content>
+                {!hasPublishedLesson ? (
+                  <Trans message="Publish at least one lesson before submitting." />
+                ) : !canSubmit ? (
+                  <Trans message="This course is live or in review." />
+                ) : (
+                  <Trans message="Submit this course for review." />
+                )}
+              </Tooltip.Content>
+            </Tooltip.Root>
+          </div>
         </div>
       </DashboardLayout.SectionHeader>
 
