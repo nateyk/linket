@@ -60,18 +60,16 @@ describe('reusable image crop composer', () => {
     );
     // default aspect 1 and ability to pass any number (checked via aspect prop)
     expect(source).toMatch(/aspect\s*\??\s*:\s*number/);
-    expect(source).toContain('initialAspect = 1');
+    expect(source).toContain('aspect = 1,');
     // pan-the-image engine with a locked aspect window
     expect(source).toContain('<Cropper');
     expect(source).toContain('onCropComplete');
     expect(source).toContain('lockedAspect');
     expect(source).toContain('Number.isFinite(aspect)');
-    // aspect is user-switchable, free-form included
-    expect(source).toContain('CROP_ASPECT_OPTIONS');
-    expect(source).toContain('ImageCropAspectSelect');
-    expect(source).toContain('setAspect');
-    // trigger label resolves through the options, not the raw value
-    expect(source).toContain('aspectLabelForValue');
+    // aspect is fixed by the caller: no switch UI, no free-form path
+    expect(source).not.toContain('CROP_ASPECT_OPTIONS');
+    expect(source).not.toContain('ImageCropAspectSelect');
+    expect(source).not.toContain('setAspect');
   });
 
   test('uses viewport-safe sizing with a single selector dialog tree', () => {
@@ -116,10 +114,12 @@ describe('reusable image crop composer', () => {
     expect(cropSource).not.toContain('zoomIn');
     expect(cropSource).not.toContain('zoomOut');
     expect(cropSource).not.toContain('ImageCropZoomControls');
-    // ratio stays locked unless the user explicitly picks Free
+    // ratio always locked to the caller aspect, remount is keyed to the
+    // measured window so the engine starts from final values
     expect(cropSource).toContain('lockedAspect');
     expect(cropSource).toContain('Number.isFinite(aspect)');
-    expect(cropSource).toContain("'free'");
+    expect(cropSource).toContain('cropperKey');
+    expect(cropSource).not.toContain("'free'");
     expect(selectorSource.match(/<Dialog\.Root/g)).toHaveLength(1);
     expect(selectorSource).toContain('flex items-center justify-end');
   });
