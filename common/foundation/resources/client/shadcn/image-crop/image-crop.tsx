@@ -1,37 +1,14 @@
 'use client';
 
 import {cn} from '@ui/utils/cn';
-import {Select} from '@shadcn/forms/select/select';
 import {Slider} from '@shadcn/forms/slider/slider';
 import {Trans} from '@ui/i18n/trans';
 import * as React from 'react';
 import Cropper, {type Area} from 'react-easy-crop';
 import 'react-easy-crop/react-easy-crop.css';
 
-export const CROP_ASPECT_OPTIONS = [
-  {value: '1', label: '1:1 (Square)', ratio: 1},
-  {value: '4:3', label: '4:3', ratio: 4 / 3},
-  {value: '16:9', label: '16:9', ratio: 16 / 9},
-  {value: 'free', label: 'Free', ratio: undefined},
-] as const;
-
-export function aspectValueForRatio(
-  ratio: number | undefined,
-): string {
-  return ratio === undefined
-    ? 'free'
-    : (CROP_ASPECT_OPTIONS.find(option => option.ratio === ratio)?.value ??
-        'free');
-}
-
-export function aspectLabelForValue(value: string | null): string {
-  return (
-    CROP_ASPECT_OPTIONS.find(option => option.value === value)?.label ?? ''
-  );
-}
-
 type ImageCropContextValue = {
-  aspect: number | undefined;
+  aspect: number;
   file: File | null;
   imageUrl: string | null;
   crop: {x: number; y: number};
@@ -41,7 +18,6 @@ type ImageCropContextValue = {
   setCrop: (crop: {x: number; y: number}) => void;
   setZoom: (zoom: number) => void;
   setMinZoom: (zoom: number) => void;
-  setAspect: (aspect: number | undefined) => void;
   setCroppedAreaPixels: (area: Area | null) => void;
   handleApply: () => Promise<void>;
   handleReset: () => void;
@@ -108,7 +84,7 @@ export interface ImageCropProps {
 }
 
 export function ImageCrop({
-  aspect: initialAspect = 1,
+  aspect = 1,
   file,
   onCrop,
   onError,
@@ -116,9 +92,6 @@ export function ImageCrop({
   className,
 }: ImageCropProps) {
   const [imageUrl, setImageUrl] = React.useState<string | null>(null);
-  const [aspect, setAspect] = React.useState<number | undefined>(
-    initialAspect,
-  );
   const [crop, setCrop] = React.useState({x: 0, y: 0});
   const [zoom, setZoom] = React.useState(1);
   const [minZoom, setMinZoom] = React.useState(1);
@@ -186,7 +159,6 @@ export function ImageCrop({
       setCrop,
       setZoom: setZoomClamped,
       setMinZoom,
-      setAspect,
       setCroppedAreaPixels,
       handleApply,
       handleReset,
@@ -258,25 +230,29 @@ export function ImageCropContent({className, ...props}: ImageCropContentProps) {
     return () => observer.disconnect();
   }, [imageUrl]);
 
-  // Free-form when the user picks "Free"; otherwise the locked ratio can
-  // never silently unlock into an unintended shape.
-  const lockedAspect =
-    aspect !== undefined && Number.isFinite(aspect) && aspect > 0
-      ? aspect
-      : undefined;
+  // Fixed ratio from the caller (cover 16:9, avatar 1:1); a non-finite
+  // aspect falls back to square explicitly so the window can never
+  // silently unlock into free-form.
+  const lockedAspect = Number.isFinite(aspect) && aspect > 0 ? aspect : 1;
 
   const cropSize = React.useMemo(
     () =>
-      stageSize.width > 0 && stageSize.height > 0 && lockedAspect !== undefined
+      stageSize.width > 0 && stageSize.height > 0
         ? aspectFitCropSize(stageSize.width, stageSize.height, lockedAspect)
         : undefined,
     [stageSize, lockedAspect],
   );
+  // Stable remount key: once the stage is measured, the crop engine mounts
+  // fresh with the final window from the start, so no late-prop-update path
+  // inside the engine can leave a stale small window behind.
+  const cropperKey = cropSize
+    ? `crop-${Math.round(cropSize.width)}x${Math.round(cropSize.height)}`
+    : 'crop-measuring';
 
   const onMediaLoaded = React.useCallback(
     (media: {naturalWidth: number; naturalHeight: number}) => {
       const live = stageSizeRef.current;
-      if (!live.width || !live.height || lockedAspect === undefined) return;
+      if (!live.width || !live.height) return;
       const size = aspectFitCropSize(live.width, live.height, lockedAspect);
       const cover = coverZoomForCrop(
         media.naturalWidth,
@@ -319,6 +295,7 @@ export function ImageCropContent({className, ...props}: ImageCropContentProps) {
         className="relative h-[min(34dvh,420px)] w-full overflow-hidden rounded-card bg-muted sm:h-[min(52dvh,520px)]"
       >
         <Cropper
+          key={cropperKey}
           image={imageUrl}
           crop={crop}
           zoom={zoom}
@@ -348,43 +325,7 @@ export function ImageCropContent({className, ...props}: ImageCropContentProps) {
           <Slider.Thumb className="bg-primary ring-primary/30" />
         </Slider.Control>
       </Slider>
-      <div className="flex items-center gap-2">
-        <span className="text-sm font-medium">
-          <Trans message="Aspect ratio:" />
-        </span>
-        <ImageCropAspectSelect />
-      </div>
     </div>
-  );
-}
-
-export function ImageCropAspectSelect({className}: {className?: string}) {
-  const {aspect, setAspect} = useImageCropContext();
-
-  return (
-    <Select.Root
-      value={aspectValueForRatio(aspect)}
-      onValueChange={value =>
-        setAspect(
-          CROP_ASPECT_OPTIONS.find(option => option.value === value)?.ratio,
-        )
-      }
-    >
-      <Select.Trigger className={cn('w-40', className)}>
-        <Select.Value>
-          {(current: string | null) => (
-            <Trans message={aspectLabelForValue(current)} />
-          )}
-        </Select.Value>
-      </Select.Trigger>
-      <Select.Content>
-        {CROP_ASPECT_OPTIONS.map(option => (
-          <Select.Item key={option.value} value={option.value}>
-            <Trans message={option.label} />
-          </Select.Item>
-        ))}
-      </Select.Content>
-    </Select.Root>
   );
 }
 
