@@ -30,6 +30,10 @@ describe('product type selection page wizard', () => {
     expect(source).toContain('finishUrl');
     expect(source).not.toContain('selectedType');
   });
+  test('clears wizard state when finishing', () => {
+    const source = read('product-type-selection-page.tsx');
+    expect(source).toContain('wizard.reset()');
+  });
 });
 
 describe('wizard price prefill', () => {
