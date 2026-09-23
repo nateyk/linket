@@ -2780,13 +2780,18 @@ function CourseSettingsDialog({
   const hasPlacementChanges =
     biolinkIds.length !== (course.product.biolink_ids ?? []).length ||
     biolinkIds.some(id => !(course.product.biolink_ids ?? []).includes(id));
+  const savedOutcomes = course.product.learning_outcomes ?? [];
+  const hasOutcomeChanges =
+    learningOutcomes.length !== savedOutcomes.length ||
+    learningOutcomes.some((item, index) => item.text !== savedOutcomes[index]);
   const isDirty =
     title !== course.product.title ||
     description !== (course.product.description ?? '') ||
     coverFileId !== (course.product.cover?.id ?? null) ||
     price !== (course.product.price_cents / 100).toFixed(2) ||
     requireSeq !== course.require_sequential_completion ||
-    hasPlacementChanges;
+    hasPlacementChanges ||
+    hasOutcomeChanges;
 
   const requestClose = (nextOpen: boolean) => {
     if (!nextOpen && saving) return;

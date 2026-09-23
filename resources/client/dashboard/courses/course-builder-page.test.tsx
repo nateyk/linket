@@ -551,3 +551,15 @@ describe('course settings cover', () => {
     expect(source).not.toContain('FileDropzone');
   });
 });
+describe('course settings outcomes dirty tracking', () => {
+  const source = fs.readFileSync(
+    path.resolve('resources/client/dashboard/courses/course-builder-page.tsx'),
+    'utf8',
+  );
+
+  test('outcome edits participate in the discard guard', () => {
+    expect(source).toContain('hasOutcomeChanges');
+    expect(source).toContain('learning_outcomes ?? []');
+    expect(source).toContain('item.text !== savedOutcomes[index]');
+  });
+});
