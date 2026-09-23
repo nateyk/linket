@@ -234,9 +234,12 @@ function DigitalProductForm() {
           );
           const item = response.data.data as Product;
           if (item.type === 'course') {
-            navigate(`/dashboard/my-products/${item.id}/course`, {
-              replace: true,
-            });
+            navigate(
+              `/dashboard/my-products/${item.id}/course?notice=moved-to-builder`,
+              {
+                replace: true,
+              },
+            );
             return;
           }
           setProduct(item);

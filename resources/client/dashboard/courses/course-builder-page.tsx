@@ -150,7 +150,18 @@ export function Component() {
 
 function CourseBuilder() {
   const {productId} = useParams();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const movedNotice = searchParams.get('notice') === 'moved-to-builder';
+  const dismissNotice = () => {
+    setSearchParams(
+      previous => {
+        const next = new URLSearchParams(previous);
+        next.delete('notice');
+        return next;
+      },
+      {replace: true},
+    );
+  };
   const [course, setCourse] = useState<Course | null>(null);
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [mobileSurface, setMobileSurface] = useState<'curriculum' | 'editor'>(
@@ -698,6 +709,18 @@ function CourseBuilder() {
               mobileSurface === 'editor' && 'hidden lg:flex',
             )}
           >
+            {movedNotice && (
+              <div className="border-b px-3 py-3">
+                <Alert.Root className="border-primary/20 bg-primary/5">
+                  <Alert.Description className="flex flex-wrap items-center justify-between gap-2">
+                    <Trans message="Course details live here in the course builder." />
+                    <Button size="sm" variant="ghost" onClick={dismissNotice}>
+                      <Trans message="Dismiss" />
+                    </Button>
+                  </Alert.Description>
+                </Alert.Root>
+              </div>
+            )}
             <div className="flex items-center justify-between gap-2 border-b p-3">
               <h2 className="text-sm font-semibold">
                 <Trans message="Curriculum" />

@@ -463,3 +463,17 @@ describe('course builder quiz question cards', () => {
     expect(source).toContain('Untitled question');
   });
 });
+
+describe('moved-to-builder notice', () => {
+  const source = fs.readFileSync(
+    path.resolve('resources/client/dashboard/courses/course-builder-page.tsx'),
+    'utf8',
+  );
+
+  test('explains the redirect once, then cleans the param', () => {
+    expect(source).toContain('moved-to-builder');
+    expect(source).toContain('Course details live here in the course builder.');
+    expect(source).toContain('Dismiss');
+    expect(source).toContain("next.delete('notice')");
+  });
+});
