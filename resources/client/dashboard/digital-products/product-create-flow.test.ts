@@ -93,10 +93,10 @@ describe('buildCreateUrl', () => {
   test('routes courses to the course page with price only when paid', () => {
     expect(
       buildCreateUrl({type: 'course', billing: 'paid', price: '19.99'}),
-    ).toBe('/dashboard/my-products/new/course?price_cents=1999');
+    ).toBe('/dashboard/my-products/new/course?billing=paid&price_cents=1999');
     expect(
       buildCreateUrl({type: 'course', billing: 'free', price: ''}),
-    ).toBe('/dashboard/my-products/new/course');
+    ).toBe('/dashboard/my-products/new/course?billing=free');
   });
   test('routes other types to details with type and paid price', () => {
     expect(
@@ -125,10 +125,13 @@ describe('wizard prefill transport', () => {
       buildCreateUrl({type: 'audio', billing: 'free', price: ''}),
     ).toBe('/dashboard/my-products/new/details?type=audio&billing=free');
   });
-  test('course urls are unchanged', () => {
+  test('course urls carry the billing mode', () => {
     expect(
       buildCreateUrl({type: 'course', billing: 'paid', price: '19.99'}),
-    ).toBe('/dashboard/my-products/new/course?price_cents=1999');
+    ).toBe('/dashboard/my-products/new/course?billing=paid&price_cents=1999');
+    expect(
+      buildCreateUrl({type: 'course', billing: 'free', price: ''}),
+    ).toBe('/dashboard/my-products/new/course?billing=free');
   });
   test('parseWizardPrefill validates type, billing, and price', () => {
     expect(
