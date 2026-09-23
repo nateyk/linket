@@ -30,6 +30,10 @@ describe('product type selection page wizard', () => {
     expect(source).toContain('finishUrl');
     expect(source).not.toContain('selectedType');
   });
+  test('clears wizard state when finishing', () => {
+    const source = read('product-type-selection-page.tsx');
+    expect(source).toContain('wizard.reset()');
+  });
 });
 
 describe('wizard price prefill', () => {
@@ -39,14 +43,14 @@ describe('wizard price prefill', () => {
     expect(source).toContain('<ProductCreationProvider');
     expect(source).toContain('useProductCreation');
   });
-  test('course form seeds price from price_cents param', () => {
+  test('course form reads billing and price through the shared prefill parser', () => {
     const course = fs.readFileSync(
       path.resolve(
         'resources/client/dashboard/courses/create-course-page.tsx',
       ),
       'utf8',
     );
-    expect(course).toContain("searchParams.get('price_cents')");
-    expect(course).toContain('initialPriceFromParam');
+    expect(course).toContain('parseWizardPrefill');
+    expect(course).toContain("billing === 'free'");
   });
 });

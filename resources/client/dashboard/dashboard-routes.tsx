@@ -415,9 +415,14 @@ export const dashboardRoutes: RouteObject[] = [
         path: 'my-products/new/details',
         loader: ({request}) => {
           const url = new URL(request.url);
-          return url.searchParams.get('type') === 'course'
-            ? redirect('/dashboard/my-products/new/course')
-            : null;
+          if (url.searchParams.get('type') !== 'course') return null;
+          const forward = new URLSearchParams();
+          for (const key of ['price_cents', 'billing'] as const) {
+            const value = url.searchParams.get(key);
+            if (value !== null && value !== '') forward.set(key, value);
+          }
+          const suffix = [...forward].length ? `?${forward}` : '';
+          return redirect(`/dashboard/my-products/new/course${suffix}`);
         },
         lazy: () =>
           import('@app/dashboard/digital-products/digital-product-form-page'),

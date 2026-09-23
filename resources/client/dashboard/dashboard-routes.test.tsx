@@ -116,6 +116,26 @@ describe('course product creation', () => {
       "path: 'dashboard/my-products/:productId/course/analytics'",
     );
   });
+
+  test('course redirect forwards wizard params', async () => {
+    const details = dashboardRoutes[0].children!.find(
+      (r: any) => r.path === 'my-products/new/details',
+    ) as any;
+    const redirected = await details.loader({
+      request: {
+        url: 'http://localhost/dashboard/my-products/new/details?type=course&price_cents=1999&billing=paid',
+      },
+    });
+    expect(redirected.headers.get('Location')).toBe(
+      '/dashboard/my-products/new/course?price_cents=1999&billing=paid',
+    );
+    const passthrough = await details.loader({
+      request: {
+        url: 'http://localhost/dashboard/my-products/new/details?type=ebook',
+      },
+    });
+    expect(passthrough).toBeNull();
+  });
 });
 
 describe('buyer course routes', () => {

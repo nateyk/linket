@@ -18,8 +18,10 @@ export function Component() {
   const MetaIcon = meta.icon;
 
   const handleFinish = () => {
-    if (wizard.finishUrl) {
-      navigate(wizard.finishUrl);
+    const destination = wizard.finishUrl;
+    if (destination) {
+      wizard.reset();
+      navigate(destination);
     }
   };
 

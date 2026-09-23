@@ -93,8 +93,8 @@ export function buildCreateUrl(state: WizardState): string | null {
   if (cents === null || cents < 0) return null;
   if (state.billing === 'paid' && cents === 0) return null;
   if (state.type === 'course') {
-    return `/dashboard/my-products/new/course${
-      state.billing === 'paid' ? `?price_cents=${cents}` : ''
+    return `/dashboard/my-products/new/course?billing=${state.billing}${
+      state.billing === 'paid' ? `&price_cents=${cents}` : ''
     }`;
   }
   return `/dashboard/my-products/new/details?type=${state.type}&billing=${state.billing}${
