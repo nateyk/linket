@@ -39,3 +39,16 @@ describe('course creation page', () => {
     expect(source).not.toContain("setError('Add a course title");
   });
 });
+
+describe('wizard handoff provenance', () => {
+  const source = fs.readFileSync(
+    path.resolve('resources/client/dashboard/courses/create-course-page.tsx'),
+    'utf8',
+  );
+
+  test('states where the billing and price came from', () => {
+    expect(source).toContain('prefill.billing !== null');
+    expect(source).toContain('From previous step: Free.');
+    expect(source).toContain('From previous step: Paid');
+  });
+});
