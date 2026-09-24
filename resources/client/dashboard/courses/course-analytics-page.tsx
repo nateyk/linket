@@ -3,6 +3,7 @@ import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {Accordion} from '@shadcn/accordion/accordion';
 import {Alert} from '@shadcn/alert/alert';
 import {Button} from '@shadcn/button/button';
+import {Badge} from '@shadcn/badge/badge';
 import {Card} from '@shadcn/card/card';
 import {Empty} from '@shadcn/empty/empty';
 import {Progress} from '@shadcn/progress/progress';
@@ -182,17 +183,17 @@ export function CourseAnalyticsPage() {
           <MetricCard label="Avg. chapter" value={`${analytics.avgChapterCompletion.toFixed(0)}%`} hint={<Trans message=":count chapters" values={{count: analytics.totalChapters}} />} icon={<LayersIcon />} tone={analytics.avgChapterCompletion >= 50 ? 'positive' : 'default'} compact />
         </div>
 
-        <div className="overflow-hidden rounded-card border bg-card shadow-xs">
+        <div className="overflow-hidden rounded-card border bg-card">
           <div className="flex items-center justify-between border-b bg-muted/20 px-5 py-3">
             <h2 className="text-sm font-semibold">
               <Trans message="Detailed performance" />
             </h2>
-            <span className="rounded-full bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground ring-1 ring-border">
+            <Badge variant="secondary" className="text-xs">
               <Trans
                 message=":chapters chapters · :lessons lessons"
                 values={{chapters: analytics.chapters.length, lessons: analytics.totalLessons}}
               />
-            </span>
+            </Badge>
           </div>
           {analytics.chapters.length === 0 ? (
             <Empty.Root className="border-0 py-12">
@@ -213,25 +214,24 @@ export function CourseAnalyticsPage() {
               {analytics.chapters.map(ch => (
                 <Accordion.Item key={ch.id} value={String(ch.id)} className="border-0">
                   <Accordion.Trigger className="gap-3 px-5 py-3 hover:bg-muted/40 hover:no-underline data-[state=open]:bg-muted/30">
-                    <div className="flex flex-1 items-center gap-3 text-left">
-                      <span className="flex size-7 items-center justify-center rounded-full bg-primary/10 text-primary ring-1 ring-primary/10">
+                    <span className="flex min-w-0 flex-1 items-start gap-3 py-1">
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-card-sm bg-muted text-muted-foreground">
                         <BookOpenIcon className="size-3.5" />
                       </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium leading-none">{ch.title}</p>
-                        <p className="mt-1 flex flex-wrap gap-1.5 text-xs">
+                      <span className="flex min-w-0 flex-1 flex-col gap-0.5 text-start">
+                        <span className="truncate text-sm font-medium">{ch.title}</span>
+                        <span className="flex flex-wrap gap-1.5 text-xs">
                           <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 font-medium"><Trans message=":count lessons" values={{count: ch.lessonsCount}} /></span>
                           <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5"><Trans message=":count learners" values={{count: ch.completedLearners}} /></span>
                           <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium ${ch.completionRate >= 50 ? 'bg-positive/10 text-positive' : 'bg-warning/10 text-warning'}`}>{ch.completionRate.toFixed(0)}%</span>
-                        </p>
-                      </div>
-                    </div>
+                        </span>
+                      </span>
+                    </span>
                   </Accordion.Trigger>
-                  <Accordion.Content className="px-0 pb-0">
-                    <div className="overflow-x-auto border-y bg-card">
+                  <Accordion.Content className="border-t pt-4 px-0 pb-0">
                       <Table.Root>
                         <Table.Header>
-                          <Table.Row className="border-b bg-muted/20 hover:bg-muted/20">
+                          <Table.Row className="border-b bg-muted/20">
                             <Table.Head className="h-8 px-5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                               <Trans message="Lesson" />
                             </Table.Head>
@@ -283,8 +283,7 @@ export function CourseAnalyticsPage() {
                           ))}
                         </Table.Body>
                       </Table.Root>
-                    </div>
-                  </Accordion.Content>
+                    </Accordion.Content>
                 </Accordion.Item>
               ))}
             </Accordion.Root>
