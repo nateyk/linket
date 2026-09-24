@@ -33,6 +33,7 @@ import {Checkbox} from '@shadcn/forms/checkbox/checkbox';
 import {Select} from '@shadcn/forms/select/select';
 import {Tabs} from '@shadcn/tabs/tabs';
 import {Tooltip} from '@shadcn/tooltip/tooltip';
+import {ButtonGroup} from '@shadcn/button-group/button-group';
 
 import {
   ScrollArea,
@@ -1476,7 +1477,7 @@ function LessonEditor({
   const [videoFileEntryId, setVideoFileEntryId] = useState<number | null>(lesson.video_file_entry_id ?? null);
   const [content, setContent] = useState(lesson.content ?? '');
   const [contentType, setContentType] = useState<Lesson['content_type']>(lesson.content_type ?? 'video');
-  const [activeTab, setActiveTab] = useState<'summary' | 'attachments' | 'quiz'>('summary');
+  const [activeTab, setActiveTab] = useState<'summary' | 'content' | 'attachments' | 'quiz'>('summary');
   const [saving, setSaving] = useState(false);
   const [resources, setResources] = useState<LessonResource[]>(
     lesson.resources ?? [],
@@ -1968,23 +1969,47 @@ function LessonEditor({
       )}
 
       <Tabs.Root value={activeTab} onValueChange={setActiveTab} defaultValue={contentType === 'video' ? 'summary' : 'content'} className="w-full">
-        <Tabs.List variant="default" className="w-full">
+        <ButtonGroup.Root variant="segmented" className="w-full" role="tablist">
           {contentType === 'video' ? (
-            <Tabs.Tab value="summary">
+            <Button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'summary'}
+              onClick={() => setActiveTab('summary')}
+              data-pressed={activeTab === 'summary'}
+            >
               <Trans message="Summary" />
-            </Tabs.Tab>
+            </Button>
           ) : (
-            <Tabs.Tab value="content">
+            <Button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'content'}
+              onClick={() => setActiveTab('content')}
+              data-pressed={activeTab === 'content'}
+            >
               <Trans message="Content" />
-            </Tabs.Tab>
+            </Button>
           )}
-          <Tabs.Tab value="attachments">
+          <Button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'attachments'}
+            onClick={() => setActiveTab('attachments')}
+            data-pressed={activeTab === 'attachments'}
+          >
             <Trans message="Attachments" />
-          </Tabs.Tab>
-          <Tabs.Tab value="quiz">
+          </Button>
+          <Button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'quiz'}
+            onClick={() => setActiveTab('quiz')}
+            data-pressed={activeTab === 'quiz'}
+          >
             <Trans message="Quiz" />
-          </Tabs.Tab>
-        </Tabs.List>
+          </Button>
+        </ButtonGroup.Root>
 
         {contentType === 'video' && (
           <Tabs.Panel value="summary">
