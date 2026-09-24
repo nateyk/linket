@@ -53,12 +53,12 @@ export function CreateProductDialog({
               <Trans message={meta.description} />
             </Dialog.Description>
           </Dialog.Header>
-          <Dialog.Body className="flex flex-col gap-4 pt-2">
+          <div className="flex flex-col gap-4 pt-2">
             <WizardStepDots wizard={wizard} />
             <div key={wizard.step} className="animate-in fade-in duration-200">
               <WizardStepBody wizard={wizard} />
             </div>
-          </Dialog.Body>
+          </div>
           <Dialog.Footer variant="muted" className="py-4 sm:justify-between">
             {wizard.step === 'type' ? (
               <Dialog.CloseButton render={<Button variant="outline" />}>
