@@ -33,8 +33,7 @@ import {Checkbox} from '@shadcn/forms/checkbox/checkbox';
 import {Select} from '@shadcn/forms/select/select';
 import {Tabs} from '@shadcn/tabs/tabs';
 import {Tooltip} from '@shadcn/tooltip/tooltip';
-import {ChipField} from '@ui/forms/input-field/chip-field/chip-field';
-import {Chip} from '@ui/forms/input-field/chip-field/chip';
+
 import {
   ScrollArea,
   ScrollAreaScrollBar,
@@ -1549,7 +1548,6 @@ function LessonEditor({
       .finally(() => {
         if (!controller.signal.aborted) setQuizLoading(false);
       });
-    return () => controller.abort();
     lessonSnapshotRef.current = {
       title: lesson.title,
       status: lesson.status,
@@ -1561,6 +1559,7 @@ function LessonEditor({
       resourceIds: (lesson.resources ?? []).map(r => r.id).sort((a, b) => a - b),
       quizJson: null,
     };
+    return () => controller.abort();
   }, [lesson]);
 
   const hasUnsavedChanges = () => {
@@ -1921,16 +1920,15 @@ function LessonEditor({
       </Field.Root>
 
       {contentType === 'video' && (
-        <Card.Root className="gap-0 py-0">
+        <Card.Root className="gap-0 py-0 overflow-hidden">
           <Card.Header className="p-4">
-            <Card.Title className="text-sm">
-              <Trans message="Video" />
-            </Card.Title>
-            <Card.Description>
-              <Trans message="Upload a video or paste a YouTube/Vimeo URL." />
-            </Card.Description>
+            <div className="flex items-center gap-2">
+              <VideoIcon className="size-4 text-muted-foreground" aria-hidden="true" />
+              <Card.Title className="text-sm"><Trans message="Video" /></Card.Title>
+            </div>
+            <Card.Description><Trans message="Upload a video or paste a YouTube/Vimeo URL." /></Card.Description>
           </Card.Header>
-          <Card.Content className="flex flex-col gap-3 p-4 pt-0">
+          <Card.Content className="flex flex-col gap-4 p-4 pt-0">
             <SharedFileUploader
               uploadType="courseVideos"
               onUploaded={attachVideoEntry}
@@ -1940,37 +1938,25 @@ function LessonEditor({
               bare
               title={<Trans message="Upload a video" />}
               description={<Trans message=".mp4, .mov, .mpeg, or .webm" />}
+              hint={<Trans message="Max 2GB per video" />}
             />
-            <div className="flex items-center gap-3">
-              <div className="h-px flex-1 bg-border" />
-              <span className="text-xs text-muted-foreground"><Trans message="or" /></span>
-              <div className="h-px flex-1 bg-border" />
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs text-muted-foreground bg-card px-2"><Trans message="or" /></div>
             </div>
             <Field.Root>
-              <Field.Label>
-                <Trans message="Video URL" />
-              </Field.Label>
-              <Input
-                value={videoUrl}
-                onChange={e => setVideoUrl(e.target.value)}
-                placeholder="https://www.youtube.com/watch?v=..."
-              />
-              <Field.Description>
-                <Trans message="Paste a YouTube or Vimeo URL" />
-              </Field.Description>
+              <Field.Label><Trans message="Video URL" /></Field.Label>
+              <Input value={videoUrl} onChange={e => setVideoUrl(e.target.value)} placeholder="https://www.youtube.com/watch?v=..." />
+              <Field.Description><Trans message="Paste a YouTube or Vimeo URL" /></Field.Description>
             </Field.Root>
             {(videoUrl || videoFileEntryId) && (
               <div className="rounded-card border bg-muted/20 p-3 text-xs">
                 {videoUrl ? (
                   <span className="block truncate">
                     <Trans message="Current: :name" values={{name: videoUrl}} /> —{' '}
-                    <a
-                      href={videoUrl}
-                      target="_blank"
-                      className="underline"
-                    >
-                      <Trans message="View" />
-                    </a>
+                    <a href={videoUrl} target="_blank" className="underline"><Trans message="View" /></a>
                   </span>
                 ) : (
                   <Trans message="Uploaded video attached" />
@@ -2079,42 +2065,45 @@ function LessonEditor({
                   <Trans message="PDF, DOC, TXT, images up to 100MB" />
                 </Card.Description>
               </Card.Header>
-              <Card.Content className="flex flex-col gap-3 p-4 pt-0">
+              <Card.Content className="flex flex-col gap-4 p-4 pt-0">
                 <SharedFileUploader
                   uploadType="courseResources"
                   onUploaded={attachResourceEntry}
                   accept=".pdf,.doc,.docx,.txt,.csv,.png,.jpg,.jpeg,.webp,.zip"
                   bare
-                  title={<Trans message="Drop your files here" />}
-                  description={
-                    <Trans message="PDF, DOC, images up to 100MB" />
-                  }
+                  title={<Trans message="Drop files here or click to upload" />}
+                  description={<Trans message="PDF, DOC, images up to 100MB" />}
                 />
                 {resources.length > 0 ? (
-                  <div className="flex flex-col gap-2">
-                    {resources.map(r => (
-                      <div key={r.id} className="flex items-center gap-2.5 rounded-md border p-3">
-                        <div className="flex size-10 shrink-0 items-center justify-center rounded border bg-accent/50">
-                          <FileTextIcon className="size-5" />
+                  <div className="flex flex-col gap-2 border-t pt-3">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      <Trans message="Attached files (:count)" values={{count: resources.length}} />
+                    </p>
+                    <div className="flex flex-col gap-2">
+                      {resources.map(r => (
+                        <div key={r.id} className="flex items-center gap-3 rounded-card border bg-card/50 p-3 transition-colors hover:bg-muted/30">
+                          <div className="flex size-10 shrink-0 items-center justify-center rounded-card-sm bg-primary/10 text-primary">
+                            <FileTextIcon className="size-5" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium">{r.display_name}</p>
+                            <p className="truncate text-xs text-muted-foreground">{r.file?.name ?? 'file'}</p>
+                          </div>
+                          <Button
+                            size="icon-sm"
+                            variant="ghost"
+                            className="size-7 shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+                            onClick={async () => {
+                              await apiClient.delete(`/api/v1/course-lesson-resources/${r.id}`);
+                              setResources(prev => prev.filter(x => x.id !== r.id));
+                            }}
+                            aria-label="Remove file"
+                          >
+                            <XIcon className="size-4" />
+                          </Button>
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium">{r.display_name}</p>
-                          <p className="truncate text-xs text-muted-foreground">{r.file?.name ?? 'file'}</p>
-                        </div>
-                        <Button
-                          size="icon-sm"
-                          variant="ghost"
-                          className="size-7 shrink-0"
-                          onClick={async () => {
-                            await apiClient.delete(`/api/v1/course-lesson-resources/${r.id}`);
-                            setResources(prev => prev.filter(x => x.id !== r.id));
-                          }}
-                          aria-label="Remove file"
-                        >
-                          <XIcon className="size-4" />
-                        </Button>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 ) : (
                   <p className="py-2 text-center text-sm text-muted-foreground"><Trans message="No files attached yet" /></p>
@@ -2558,7 +2547,7 @@ function OutcomesChipList({
       </div>
       {outcomes.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          {outcomes.map((item, index) => (
+          {outcomes.map(item => (
             <SortableOutcomeItem
               key={item.id}
               id={item.id}

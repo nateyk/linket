@@ -35,7 +35,7 @@ describe('course creation page', () => {
   test('labels static copy through Trans', () => {
     expect(source).toContain('<Trans message="Create course" />');
     expect(source).toContain('label="Course title"');
-    expect(source).toContain('label="Price"');
+    expect(source).toContain('label="Price (ETB)"');
     expect(source).not.toContain("setError('Add a course title");
   });
 });
