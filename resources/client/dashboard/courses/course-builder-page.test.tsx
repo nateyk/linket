@@ -563,3 +563,34 @@ describe('course settings outcomes dirty tracking', () => {
     expect(source).toContain('item.text !== savedOutcomes[index]');
   });
 });
+
+describe('builder rhythm and loading conventions', () => {
+  const source = fs.readFileSync(
+    path.resolve('resources/client/dashboard/courses/course-builder-page.tsx'),
+    'utf8',
+  );
+
+  test('uses gap rhythm, token radii, and size utilities', () => {
+    expect(source).not.toMatch(/space-y-\d/);
+    expect(source).not.toContain('rounded-xl');
+    expect(source).not.toContain('h-8 w-8');
+    expect(source).toContain('rounded-card');
+  });
+
+  test('labels icon-only buttons and flags button icons', () => {
+    expect(source).toContain('aria-label="Delete chapter"');
+    expect(source).toContain('<EyeIcon data-icon="inline-start" />');
+    expect(source).toContain('<SettingsIcon data-icon="inline-start" />');
+  });
+
+  test('saves show spinner state instead of label swapping', () => {
+    expect(source).toContain('<Spinner data-icon="inline-start" />');
+    expect(source).not.toContain("message={saving ? 'Saving...' : 'Save changes'}");
+    expect(source).not.toContain("message={quizSaving ? 'Saving...' : 'Save quiz'}");
+  });
+
+  test('quiz errors use the filled destructive alert', () => {
+    expect(source).toContain('fillStyle="subtleFill"');
+    expect(source).toContain('<TriangleAlertIcon />');
+  });
+});

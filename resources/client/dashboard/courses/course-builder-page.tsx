@@ -41,6 +41,7 @@ import {
   ScrollAreaViewport,
 } from '@shadcn/scroll-area/scroll-area';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
+import {Spinner} from '@shadcn/spinner/spinner';
 import {Switch} from '@shadcn/forms/switch/switch';
 import {SharedFileUploader} from '@common/ui/file-uploader';
 import {Trans} from '@ui/i18n/trans';
@@ -67,6 +68,7 @@ import {
   PlusIcon,
   SettingsIcon,
   Trash2Icon,
+  TriangleAlertIcon,
   VideoIcon,
   XIcon,
   CheckIcon,
@@ -573,7 +575,7 @@ function CourseBuilder() {
                 <Skeleton className="h-5 w-24" />
                 <Skeleton className="h-8 w-28" />
               </div>
-              <div className="space-y-3 p-3">
+              <div className="flex flex-col gap-3 p-3">
                 <Skeleton className="h-16 w-full rounded-card" />
                 <Skeleton className="h-12 w-full rounded-card" />
                 <Skeleton className="h-12 w-full rounded-card" />
@@ -638,7 +640,7 @@ function CourseBuilder() {
                 )
               }
             >
-              <EyeIcon />
+              <EyeIcon data-icon="inline-start" />
               <Trans message="Preview" />
             </Button>
             <Button
@@ -646,7 +648,7 @@ function CourseBuilder() {
               size="sm"
               onClick={() => setSettingsOpen(true)}
             >
-              <SettingsIcon />
+              <SettingsIcon data-icon="inline-start" />
               <Trans message="Configure" />
             </Button>
             <Button
@@ -825,7 +827,7 @@ function CourseBuilder() {
                         {dragHandleRef => (
                           <Collapsible
                             defaultOpen
-                            className="overflow-hidden rounded-xl border bg-background"
+                            className="overflow-hidden rounded-card-xs border bg-background"
                           >
                             <div className="flex items-center gap-2 bg-muted/30 p-2">
                               <div className="hidden lg:block">
@@ -899,6 +901,7 @@ function CourseBuilder() {
                               <Button
                                 size="icon-sm"
                                 variant="ghost"
+                                aria-label="Delete chapter"
                                 onClick={() => deleteChapter(chapter)}
                               >
                                 <Trash2Icon className="size-4" />
@@ -1952,7 +1955,7 @@ function LessonEditor({
                   <Trans message="PDF, DOC, TXT, images up to 100MB" />
                 </Card.Description>
               </Card.Header>
-              <Card.Content className="space-y-3 p-4 pt-0">
+              <Card.Content className="flex flex-col gap-3 p-4 pt-0">
                 <SharedFileUploader
                   uploadType="courseResources"
                   onUploaded={attachResourceEntry}
@@ -1964,7 +1967,7 @@ function LessonEditor({
                   }
                 />
                 {resources.length > 0 ? (
-                  <div className="space-y-2">
+                  <div className="flex flex-col gap-2">
                     {resources.map(r => (
                       <div key={r.id} className="flex items-center gap-2.5 rounded-md border p-3">
                         <div className="flex size-10 shrink-0 items-center justify-center rounded border bg-accent/50">
@@ -1998,14 +2001,15 @@ function LessonEditor({
         </Tabs.Panel>
 
         <Tabs.Panel value="quiz">
-          <div className="space-y-6 p-4">
+          <div className="flex flex-col gap-6 p-4">
             {quizLoading && (
               <div className="flex items-center justify-center py-8">
                 <Skeleton className="h-4 w-48" />
               </div>
             )}
             {quizError && !quizLoading && (
-              <Alert variant="destructive" className="mb-4">
+              <Alert variant="destructive" fillStyle="subtleFill" className="mb-4">
+                <TriangleAlertIcon />
                 <Alert.Title>Error loading quiz</Alert.Title>
                 <Alert.Description>{quizError}</Alert.Description>
               </Alert>
@@ -2032,14 +2036,14 @@ function LessonEditor({
               </Empty.Root>
             )}
             {quiz && !quizLoading && (
-              <form onSubmit={(e) => { e.preventDefault(); saveQuiz(); }} className="space-y-6">
+              <form onSubmit={(e) => { e.preventDefault(); saveQuiz(); }} className="flex flex-col gap-6">
                 <Card>
                   <Card.Header>
                     <Card.Title className="text-base">
                       <Trans message="Quiz Settings" />
                     </Card.Title>
                   </Card.Header>
-                  <Card.Content className="space-y-4 pt-0">
+                  <Card.Content className="flex flex-col gap-4 pt-0">
                     <Field.Root>
                       <Field.Label>
                         <Trans message="Require passing to progress" />
@@ -2083,13 +2087,13 @@ function LessonEditor({
                       <Trans message="Add question" />
                     </Button>
                   </Card.Header>
-                  <Card.Content className="space-y-4 pt-0">
+                  <Card.Content className="flex flex-col gap-4 pt-0">
                     {quiz.questions.length === 0 ? (
                       <p className="text-center text-muted-foreground py-8">
                         <Trans message="No questions yet. Click 'Add question' to start." />
                       </p>
                     ) : (
-                      <div className="space-y-4">
+                      <div className="flex flex-col gap-4">
                         {quiz.questions.map((q, qi) => {
                           const questionKey = q.key ?? `question-${qi}`;
                           const questionPreview = q.question_text.trim();
@@ -2099,7 +2103,7 @@ function LessonEditor({
                               key={questionKey}
                               open={expandedQuestionKeys.has(questionKey)}
                               onOpenChange={isOpen => setQuestionOpen(questionKey, isOpen)}
-                              className="overflow-hidden rounded-xl border bg-background"
+                              className="overflow-hidden rounded-card-xs border bg-background"
                             >
                               <div className="flex items-center gap-2 bg-muted/30 p-2">
                                 <CollapsibleTrigger
@@ -2190,7 +2194,7 @@ function LessonEditor({
                             </Field.Root>
 
                             {q.type === 'multiple_choice' && (
-                              <div className="space-y-3">
+                              <div className="flex flex-col gap-3">
                                 <div className="flex items-center justify-between">
                                   <span className="text-sm font-medium">
                                     <Trans message="Options" />
@@ -2215,7 +2219,7 @@ function LessonEditor({
                                         size="icon"
                                         onClick={() => toggleCorrectOption(qi, oi)}
                                         aria-label={isCorrect ? 'Correct answer' : 'Mark as correct'}
-                                        className="h-8 w-8"
+                                        className="size-8"
                                       >
                                         {isCorrect ? <CheckIcon className="size-4" /> : <CircleIcon className="size-4" />}
                                       </Button>
@@ -2286,7 +2290,8 @@ function LessonEditor({
                     <Trans message="Delete quiz" />
                   </Button>
                   <Button type="submit" disabled={quizSaving}>
-                    <Trans message={quizSaving ? 'Saving...' : 'Save quiz'} />
+                    {quizSaving && <Spinner data-icon="inline-start" />}
+                    <Trans message="Save quiz" />
                   </Button>
                 </div>
               </form>
@@ -2338,7 +2343,8 @@ function LessonEditor({
           <Trans message="Published" />
         </label>
         <Button onClick={() => void save()} disabled={saving}>
-          <Trans message={saving ? 'Saving...' : 'Save changes'} />
+          {saving && <Spinner data-icon="inline-start" />}
+          <Trans message="Save changes" />
         </Button>
       </div>
     </div>
