@@ -2258,53 +2258,52 @@ function LessonEditor({
                               </div>
                               <CollapsibleContent>
                                 <div className="flex flex-col gap-4 p-4">
+                                  <Field.Root>
+                                    <Field.Label>
+                                      <Trans message="Question type" />
+                                    </Field.Label>
+                                    <Select.Root
+                                      value={q.type}
+                                      onValueChange={(v) => {
+                                        const type = v as 'multiple_choice' | 'true_false';
+                                        updateQuestion(qi, {
+                                          type,
+                                          options: type === 'multiple_choice' ? (q.options ?? ['', '']) : undefined,
+                                          correct_answer: type === 'true_false' ? 'true' : '',
+                                        });
+                                      }}
+                                    >
+                                      <Select.Trigger className="w-full">
+                                        <Select.Value>
+                                          {(value: string | null) =>
+                                            value === 'multiple_choice' ? (
+                                              <Trans message="Multiple choice" />
+                                            ) : value === 'true_false' ? (
+                                              <Trans message="True / False" />
+                                            ) : null}
+                                        </Select.Value>
+                                      </Select.Trigger>
+                                      <Select.Content>
+                                        <Select.Item value="multiple_choice">
+                                          <Trans message="Multiple choice" />
+                                        </Select.Item>
+                                        <Select.Item value="true_false">
+                                          <Trans message="True / False" />
+                                        </Select.Item>
+                                      </Select.Content>
+                                    </Select.Root>
+                                  </Field.Root>
 
-                            <Field.Root>
-                              <Field.Label>
-                                <Trans message="Question type" />
-                              </Field.Label>
-                              <Select.Root
-                                value={q.type}
-                                onValueChange={(v) => {
-                                  const type = v as 'multiple_choice' | 'true_false';
-                                  updateQuestion(qi, {
-                                    type,
-                                    options: type === 'multiple_choice' ? (q.options ?? ['', '']) : undefined,
-                                    correct_answer: type === 'true_false' ? 'true' : '',
-                                  });
-                                }}
-                              >
-                                <Select.Trigger className="w-full max-w-xs">
-                                  <Select.Value>
-                                    {(value: string | null) =>
-                                      value === 'multiple_choice' ? (
-                                        <Trans message="Multiple choice" />
-                                      ) : value === 'true_false' ? (
-                                        <Trans message="True / False" />
-                                      ) : null}
-                                  </Select.Value>
-                                </Select.Trigger>
-                                <Select.Content>
-                                  <Select.Item value="multiple_choice">
-                                    <Trans message="Multiple choice" />
-                                  </Select.Item>
-                                  <Select.Item value="true_false">
-                                    <Trans message="True / False" />
-                                  </Select.Item>
-                                </Select.Content>
-                              </Select.Root>
-                            </Field.Root>
-
-                            <Field.Root>
-                              <Field.Label>
-                                <Trans message="Question text" />
-                              </Field.Label>
-                              <Input
-                                value={q.question_text}
-                                onChange={(e) => updateQuestion(qi, { question_text: e.target.value })}
-                                placeholder="Enter your question"
-                              />
-                            </Field.Root>
+                                  <Field.Root>
+                                    <Field.Label>
+                                      <Trans message="Question text" />
+                                    </Field.Label>
+                                    <Input
+                                      value={q.question_text}
+                                      onChange={(e) => updateQuestion(qi, { question_text: e.target.value })}
+                                      placeholder="Enter your question"
+                                    />
+                                  </Field.Root>
 
                             {q.type === 'multiple_choice' && (
                               <div className="flex flex-col gap-3">
@@ -2323,16 +2322,16 @@ function LessonEditor({
                                   </Button>
                                 </div>
                                 {q.options?.map((opt, oi) => {
-                                  const isCorrect = opt === q.correct_answer;
+                                  const firstCorrectIndex = (q.options ?? []).findIndex(o => o !== '' && o === q.correct_answer);
+                                  const isCorrect = oi === firstCorrectIndex;
                                   return (
                                     <div key={oi} className="flex items-center gap-2">
                                       <Button
                                         type="button"
                                         variant={isCorrect ? 'default' : 'outline'}
-                                        size="icon"
+                                        size="icon-sm"
                                         onClick={() => toggleCorrectOption(qi, oi)}
                                         aria-label={isCorrect ? 'Correct answer' : 'Mark as correct'}
-                                        className="size-8"
                                       >
                                         {isCorrect ? <CheckIcon className="size-4" /> : <CircleIcon className="size-4" />}
                                       </Button>
@@ -2350,7 +2349,7 @@ function LessonEditor({
                                         <Button
                                           type="button"
                                           variant="ghost"
-                                          size="icon"
+                                          size="icon-sm"
                                           onClick={() => removeOption(qi, oi)}
                                           aria-label="Remove option"
                                         >

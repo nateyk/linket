@@ -643,3 +643,21 @@ describe('lesson editor preservation and guard', () => {
     expect(source).toContain('Discard unsaved changes?');
   });
 });
+
+describe('quiz option correctness', () => {
+  const source = fs.readFileSync(
+    path.resolve('resources/client/dashboard/courses/course-builder-page.tsx'),
+    'utf8',
+  );
+
+  test('marks at most one option correct by position, never on empty text', () => {
+    expect(source).toContain('firstCorrectIndex');
+    expect(source).toContain("findIndex(o => o !== '' && o === q.correct_answer)");
+    expect(source).toContain('const isCorrect = oi === firstCorrectIndex;');
+    expect(source).not.toContain('const isCorrect = opt === q.correct_answer;');
+  });
+
+  test('uses the icon-sm button size without manual overrides', () => {
+    expect(source).not.toContain('size="icon"');
+  });
+});
