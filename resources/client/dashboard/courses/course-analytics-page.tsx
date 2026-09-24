@@ -176,10 +176,10 @@ export function CourseAnalyticsPage() {
       <DashboardLayout.SectionContent className="overflow-y-auto">
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 py-6">
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-          <MetricCard label="Active learners" value={String(analytics.activeLearners)} hint="Enrolled" icon={<UsersIcon />} tone="default" compact />
-          <MetricCard label="Avg. completion" value={`${analytics.avgLessonCompletion.toFixed(0)}%`} hint={`${analytics.totalLessons} lessons`} icon={<BookOpenIcon />} tone={analytics.avgLessonCompletion >= 50 ? 'positive' : 'warning'} compact />
-          <MetricCard label="Completions" value={String(analytics.lessonCompletions)} hint="Total" icon={<CheckCircleIcon />} tone="positive" compact />
-          <MetricCard label="Avg. chapter" value={`${analytics.avgChapterCompletion.toFixed(0)}%`} hint={`${analytics.totalChapters} chapters`} icon={<LayersIcon />} tone={analytics.avgChapterCompletion >= 50 ? 'positive' : 'default'} compact />
+          <MetricCard label="Active learners" value={String(analytics.activeLearners)} hint={<Trans message="Enrolled" />} icon={<UsersIcon />} tone="default" compact />
+          <MetricCard label="Avg. completion" value={`${analytics.avgLessonCompletion.toFixed(0)}%`} hint={<Trans message=":count lessons" values={{count: analytics.totalLessons}} />} icon={<BookOpenIcon />} tone={analytics.avgLessonCompletion >= 50 ? 'positive' : 'warning'} compact />
+          <MetricCard label="Completions" value={String(analytics.lessonCompletions)} hint={<Trans message="Total" />} icon={<CheckCircleIcon />} tone="positive" compact />
+          <MetricCard label="Avg. chapter" value={`${analytics.avgChapterCompletion.toFixed(0)}%`} hint={<Trans message=":count chapters" values={{count: analytics.totalChapters}} />} icon={<LayersIcon />} tone={analytics.avgChapterCompletion >= 50 ? 'positive' : 'default'} compact />
         </div>
 
         <div className="overflow-hidden rounded-card border bg-card shadow-xs">
@@ -188,7 +188,10 @@ export function CourseAnalyticsPage() {
               <Trans message="Detailed performance" />
             </h2>
             <span className="rounded-full bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground ring-1 ring-border">
-              {analytics.chapters.length} chapters · {analytics.totalLessons} lessons
+              <Trans
+                message=":chapters chapters · :lessons lessons"
+                values={{chapters: analytics.chapters.length, lessons: analytics.totalLessons}}
+              />
             </span>
           </div>
           {analytics.chapters.length === 0 ? (
@@ -217,8 +220,8 @@ export function CourseAnalyticsPage() {
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium leading-none">{ch.title}</p>
                         <p className="mt-1 flex flex-wrap gap-1.5 text-xs">
-                          <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 font-medium">{ch.lessonsCount} lessons</span>
-                          <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5">{ch.completedLearners} learners</span>
+                          <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 font-medium"><Trans message=":count lessons" values={{count: ch.lessonsCount}} /></span>
+                          <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5"><Trans message=":count learners" values={{count: ch.completedLearners}} /></span>
                           <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium ${ch.completionRate >= 50 ? 'bg-positive/10 text-positive' : 'bg-warning/10 text-warning'}`}>{ch.completionRate.toFixed(0)}%</span>
                         </p>
                       </div>
@@ -303,7 +306,7 @@ function MetricCard({
 }: {
   label: string;
   value: string;
-  hint: string;
+  hint: ReactNode;
   icon: ReactNode;
   tone?: 'default' | 'positive' | 'warning';
   compact?: boolean;

@@ -40,3 +40,22 @@ describe('analytics theme tokens', () => {
     expect(source).toContain('bg-warning/10');
   });
 });
+
+describe('analytics copy is translatable', () => {
+  const source = fs.readFileSync(
+    path.resolve(
+      'resources/client/dashboard/courses/course-analytics-page.tsx',
+    ),
+    'utf8',
+  );
+
+  test('hints and pills go through Trans with static messages', () => {
+    expect(source).toContain('hint={<Trans message="Enrolled" />');
+    expect(source).toContain('message=":count lessons"');
+    expect(source).toContain('hint={<Trans message="Total" />');
+    expect(source).toContain('message=":count chapters"');
+    expect(source).toContain('message=":chapters chapters · :lessons lessons"');
+    expect(source).not.toContain('hint="Enrolled"');
+    expect(source).not.toContain('hint={`${');
+  });
+});
