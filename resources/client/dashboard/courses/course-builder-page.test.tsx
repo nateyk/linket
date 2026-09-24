@@ -109,7 +109,10 @@ describe('course builder mobile navigation', () => {
     );
 
     expect(source).toMatch(
-      /onClick=\{\(\) => \{\s*setSelectedLesson\(lesson\);\s*setSelectedChapterId\(chapter\.id\);\s*setMobileSurface\('editor'\);\s*\}\}/,
+      /onClick=\{\(\) => \{\s*if \(lessonDirtyCheckRef\.current\?\.\(\)\) \{\s*setPendingSwitch\(\{\s*lesson,\s*chapterId: chapter\.id,\s*\}\);\s*return;\s*\}\s*switchToLesson\(lesson, chapter\.id\);\s*\}\}/,
+    );
+    expect(source).toMatch(
+      /const switchToLesson = \(nextLesson: Lesson, nextChapterId: number\) => \{\s*setSelectedLesson\(nextLesson\);\s*setSelectedChapterId\(nextChapterId\);\s*setMobileSurface\('editor'\);/,
     );
     expect(source).toMatch(
       /const addLesson = async \(chapterId: number\) => \{[\s\S]*?setSelectedLesson\(lesson\);\s*setSelectedChapterId\(chapterId\);\s*setMobileSurface\('editor'\);/,
@@ -616,5 +619,27 @@ describe('builder copy is translatable', () => {
     expect(source).toContain('message="Delete :name?"');
     expect(source).not.toContain('message={`Choose a chapter');
     expect(source).not.toContain('message={`Delete "');
+  });
+});
+
+describe('lesson editor preservation and guard', () => {
+  const source = fs.readFileSync(
+    path.resolve('resources/client/dashboard/courses/course-builder-page.tsx'),
+    'utf8',
+  );
+
+  test('type switching preserves both sides for save to decide', () => {
+    expect(source).not.toMatch(/setContentType\(next\);\s*if \(next === 'readable'\)/);
+  });
+
+  test('video box reflects local editing state', () => {
+    expect(source).toContain('Uploaded video attached');
+    expect(source).not.toContain('{lesson.video && (');
+  });
+
+  test('lesson switching guards unsaved edits', () => {
+    expect(source).toContain('pendingSwitch');
+    expect(source).toContain('isLessonEditorDirty');
+    expect(source).toContain('Discard unsaved changes?');
   });
 });

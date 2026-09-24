@@ -83,6 +83,11 @@ import {
   type RefObject,
 } from 'react';
 import {Link, useParams, useSearchParams} from 'react-router';
+import {
+  isLessonEditorDirty,
+  normalizeQuizForCompare,
+  type LessonDirtySnapshot,
+} from './lesson-dirty';
 
 // Types
 type Course = {
@@ -184,6 +189,18 @@ function CourseBuilder() {
     null,
   );
   const [deleting, setDeleting] = useState(false);
+  const [pendingSwitch, setPendingSwitch] = useState<{
+    lesson: Lesson;
+    chapterId: number;
+  } | null>(null);
+  const lessonDirtyCheckRef = useRef<(() => boolean) | null>(null);
+
+  const switchToLesson = (nextLesson: Lesson, nextChapterId: number) => {
+    setSelectedLesson(nextLesson);
+    setSelectedChapterId(nextChapterId);
+    setMobileSurface('editor');
+    setPendingSwitch(null);
+  };
 
   const load = useCallback(async () => {
     if (!productId) return;
@@ -956,9 +973,14 @@ function CourseBuilder() {
                                           <button
                                             className="flex-1 truncate text-left font-medium"
                                             onClick={() => {
-                                              setSelectedLesson(lesson);
-                                              setSelectedChapterId(chapter.id);
-                                              setMobileSurface('editor');
+                                              if (lessonDirtyCheckRef.current?.()) {
+                                                setPendingSwitch({
+                                                  lesson,
+                                                  chapterId: chapter.id,
+                                                });
+                                                return;
+                                              }
+                                              switchToLesson(lesson, chapter.id);
                                             }}
                                           >
                                             {lesson.title}
@@ -1135,6 +1157,7 @@ function CourseBuilder() {
                 onSaved={load}
                 onSelectLesson={setSelectedLesson}
                 onBackToCurriculum={() => setMobileSurface('curriculum')}
+                dirtyCheckRef={lessonDirtyCheckRef}
               />
             ) : (
               <Empty.Root className="m-auto">
@@ -1169,6 +1192,43 @@ function CourseBuilder() {
         }}
         onDelete={() => void confirmDelete()}
       />
+      <AlertDialog.Root
+        open={pendingSwitch !== null}
+        onOpenChange={open => {
+          if (!open) setPendingSwitch(null);
+        }}
+      >
+        <AlertDialog.Portal>
+          <AlertDialog.Backdrop />
+          <AlertDialog.Content size="sm">
+            <AlertDialog.Header>
+              <AlertDialog.Title>
+                <Trans message="Discard unsaved changes?" />
+              </AlertDialog.Title>
+              <AlertDialog.Description>
+                <Trans message="Switching lessons will discard your unsaved edits to this lesson." />
+              </AlertDialog.Description>
+            </AlertDialog.Header>
+            <AlertDialog.Footer>
+              <AlertDialog.Cancel>
+                <Trans message="Keep editing" />
+              </AlertDialog.Cancel>
+              <AlertDialog.Action
+                onClick={() => {
+                  if (pendingSwitch) {
+                    switchToLesson(
+                      pendingSwitch.lesson,
+                      pendingSwitch.chapterId,
+                    );
+                  }
+                }}
+              >
+                <Trans message="Discard" />
+              </AlertDialog.Action>
+            </AlertDialog.Footer>
+          </AlertDialog.Content>
+        </AlertDialog.Portal>
+      </AlertDialog.Root>
       {moveRequest && (
         <MoveLessonDialog
           course={course}
@@ -1401,12 +1461,14 @@ function LessonEditor({
   onSaved,
   onSelectLesson,
   onBackToCurriculum,
+  dirtyCheckRef,
 }: {
   lesson: Lesson;
   chapterId: number | null;
   onSaved: () => void;
   onSelectLesson: (l: Lesson) => void;
   onBackToCurriculum: () => void;
+  dirtyCheckRef?: RefObject<(() => boolean) | null>;
 }) {
   const [title, setTitle] = useState(lesson.title);
   const [status, setStatus] = useState(lesson.status);
@@ -1438,6 +1500,8 @@ function LessonEditor({
   const [quizSaving, setQuizSaving] = useState(false);
   const [quizError, setQuizError] = useState<string | null>(null);
   const [expandedQuestionKeys, setExpandedQuestionKeys] = useState<Set<string>>(new Set());
+  const lessonSnapshotRef = useRef<LessonDirtySnapshot | null>(null);
+  const quizSnapshotRef = useRef<string | null>(null);
 
   useEffect(() => {
     setTitle(lesson.title);
@@ -1468,15 +1532,51 @@ function LessonEditor({
               }
             : null,
         );
+        quizSnapshotRef.current = normalizeQuizForCompare(data ?? null);
       })
       .catch((err) => {
         if (err.response?.status !== 404) {
           setQuizError(err.response?.data?.message ?? 'Failed to load quiz');
         }
         setQuiz(null);
+        quizSnapshotRef.current = null;
       })
       .finally(() => setQuizLoading(false));
+    lessonSnapshotRef.current = {
+      title: lesson.title,
+      status: lesson.status,
+      videoUrl: lesson.video_url ?? '',
+      videoType: lesson.video_type ?? null,
+      videoFileEntryId: lesson.video_file_entry_id ?? null,
+      content: lesson.content ?? '',
+      contentType: lesson.content_type ?? 'video',
+      resourceIds: (lesson.resources ?? []).map(resource => resource.id),
+      quizJson: null,
+    };
   }, [lesson]);
+
+  const hasUnsavedChanges = () => {
+    const baseline = lessonSnapshotRef.current;
+    if (baseline === null) return false;
+    return isLessonEditorDirty(
+      {
+        title,
+        status,
+        videoUrl,
+        videoType: videoType ?? null,
+        videoFileEntryId,
+        content,
+        contentType: contentType ?? 'video',
+        resourceIds: resources.map(resource => resource.id),
+        quizJson: normalizeQuizForCompare(quiz),
+      },
+      {...baseline, quizJson: quizSnapshotRef.current},
+    );
+  };
+
+  useEffect(() => {
+    if (dirtyCheckRef) dirtyCheckRef.current = hasUnsavedChanges;
+  });
 
   const save = async () => {
     setSaving(true);
@@ -1510,6 +1610,17 @@ function LessonEditor({
       const updated = (res.data as any).data as Lesson;
       onSelectLesson(updated);
       toast.positive('Lesson saved');
+      lessonSnapshotRef.current = {
+        title,
+        status,
+        videoUrl,
+        videoType: videoType ?? null,
+        videoFileEntryId,
+        content,
+        contentType: contentType ?? 'video',
+        resourceIds: resources.map(resource => resource.id),
+        quizJson: null,
+      };
       onSaved();
     } catch (e: any) {
       toast.danger(e.message ?? 'Unable to save');
@@ -1539,6 +1650,7 @@ function LessonEditor({
         const res = await apiClient.post(`/api/v1/course-lessons/${lesson.id}/quiz`, payload);
         setQuiz((prev) => (prev ? { ...prev, id: res.data.data.id } : null));
       }
+      quizSnapshotRef.current = normalizeQuizForCompare(quiz);
       toast.positive('Quiz saved');
     } catch (e: any) {
       const msg = e.response?.data?.message ?? e.message ?? 'Unable to save quiz';
@@ -1765,13 +1877,7 @@ function LessonEditor({
         <Select.Root
           value={contentType}
           onValueChange={value => {
-            const next = value as 'video' | 'readable';
-            setContentType(next);
-            if (next === 'readable') {
-              setVideoUrl('');
-              setVideoType(null);
-              setVideoFileEntryId(null);
-            }
+            setContentType(value as 'video' | 'readable');
           }}
         >
           <Select.Trigger className="w-full">
@@ -1845,12 +1951,22 @@ function LessonEditor({
                 <Trans message="Paste a YouTube or Vimeo URL" />
               </Field.Description>
             </Field.Root>
-            {lesson.video && (
+            {(videoUrl || videoFileEntryId) && (
               <div className="rounded-card border bg-muted/20 p-3 text-xs">
-                <Trans message="Current: :name" values={{name: lesson.video.name}} /> —{' '}
-                <a href={lesson.video.url} target="_blank" className="underline">
-                  <Trans message="View" />
-                </a>
+                {videoUrl ? (
+                  <span className="block truncate">
+                    <Trans message="Current: :name" values={{name: videoUrl}} /> —{' '}
+                    <a
+                      href={videoUrl}
+                      target="_blank"
+                      className="underline"
+                    >
+                      <Trans message="View" />
+                    </a>
+                  </span>
+                ) : (
+                  <Trans message="Uploaded video attached" />
+                )}
               </div>
             )}
           </Card.Content>
