@@ -1502,6 +1502,7 @@ function LessonEditor({
   const [expandedQuestionKeys, setExpandedQuestionKeys] = useState<Set<string>>(new Set());
   const lessonSnapshotRef = useRef<LessonDirtySnapshot | null>(null);
   const quizSnapshotRef = useRef<string | null>(null);
+  const quizAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     setTitle(lesson.title);
@@ -1517,9 +1518,12 @@ function LessonEditor({
     setExpandedQuestionKeys(new Set());
     setQuizLoading(true);
     setQuizError(null);
+    const controller = new AbortController();
+    quizAbortRef.current = controller;
     apiClient
-      .get(`/api/v1/course-lessons/${lesson.id}/quiz`)
+      .get(`/api/v1/course-lessons/${lesson.id}/quiz`, {signal: controller.signal})
       .then((res) => {
+        if (controller.signal.aborted) return;
         const data = res.data.data;
         setQuiz(
           data
@@ -1535,13 +1539,17 @@ function LessonEditor({
         quizSnapshotRef.current = normalizeQuizForCompare(data ?? null);
       })
       .catch((err) => {
+        if (controller.signal.aborted) return;
         if (err.response?.status !== 404) {
           setQuizError(err.response?.data?.message ?? 'Failed to load quiz');
         }
         setQuiz(null);
         quizSnapshotRef.current = null;
       })
-      .finally(() => setQuizLoading(false));
+      .finally(() => {
+        if (!controller.signal.aborted) setQuizLoading(false);
+      });
+    return () => controller.abort();
     lessonSnapshotRef.current = {
       title: lesson.title,
       status: lesson.status,
@@ -1550,7 +1558,7 @@ function LessonEditor({
       videoFileEntryId: lesson.video_file_entry_id ?? null,
       content: lesson.content ?? '',
       contentType: lesson.content_type ?? 'video',
-      resourceIds: (lesson.resources ?? []).map(resource => resource.id),
+      resourceIds: (lesson.resources ?? []).map(r => r.id).sort((a, b) => a - b),
       quizJson: null,
     };
   }, [lesson]);
@@ -1567,7 +1575,7 @@ function LessonEditor({
         videoFileEntryId,
         content,
         contentType: contentType ?? 'video',
-        resourceIds: resources.map(resource => resource.id),
+        resourceIds: resources.map(r => r.id).sort((a, b) => a - b),
         quizJson: normalizeQuizForCompare(quiz),
       },
       {...baseline, quizJson: quizSnapshotRef.current},
@@ -1618,7 +1626,7 @@ function LessonEditor({
         videoFileEntryId,
         content,
         contentType: contentType ?? 'video',
-        resourceIds: resources.map(resource => resource.id),
+        resourceIds: resources.map(r => r.id).sort((a, b) => a - b),
         quizJson: null,
       };
       onSaved();
@@ -2005,7 +2013,7 @@ function LessonEditor({
                 onChange={setContent}
               >
                 <EditorContentSync content={content} />
-                <div className="overflow-hidden rounded-card border">
+                <div className="overflow-hidden rounded-card-xs border">
                   <div className="flex flex-wrap items-center gap-0.5 border-b bg-muted/30 p-2">
                     <FormatDropdown />
                     <Divider />
@@ -2037,7 +2045,7 @@ function LessonEditor({
                 onChange={setContent}
               >
                 <EditorContentSync content={content} />
-                <div className="overflow-hidden rounded-card border">
+                <div className="overflow-hidden rounded-card-xs border">
                   <div className="flex flex-wrap items-center gap-0.5 border-b bg-muted/30 p-2">
                     <FormatDropdown />
                     <Divider />
