@@ -661,7 +661,7 @@ function CourseBuilder() {
               }
             >
               <BarChart3Icon data-icon="inline-start" />
-              Analytics
+              <Trans message="Analytics" />
             </Button>
           </div>
           <Dropdown.Root>
@@ -701,7 +701,7 @@ function CourseBuilder() {
                 }
               >
                 <BarChart3Icon />
-                Analytics
+                <Trans message="Analytics" />
               </Dropdown.Item>
             </Dropdown.Content>
           </Dropdown.Root>
@@ -1280,7 +1280,7 @@ function MoveLessonDialog({
               <Trans message="Move lesson" />
             </Dialog.Title>
             <Dialog.Description>
-              <Trans message={`Choose a chapter for "${lesson.title}".`} />
+              <Trans message="Choose a chapter for :name." values={{name: lesson.title}} />
             </Dialog.Description>
           </Dialog.Header>
           <Dialog.Body>
@@ -1740,7 +1740,7 @@ function LessonEditor({
       </Button>
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs text-muted-foreground">
-          Chapter {chapterId} • Lesson editor
+          <Trans message="Chapter :id • Lesson editor" values={{id: chapterId}} />
         </p>
         <Badge variant={status === 'published' ? 'positive' : 'outline'}>
           {status}
@@ -1825,11 +1825,11 @@ function LessonEditor({
               multiple={false}
               bare
               title={<Trans message="Upload a video" />}
-              description=".mp4, .mov, .mpeg, or .webm"
+              description={<Trans message=".mp4, .mov, .mpeg, or .webm" />}
             />
             <div className="flex items-center gap-3">
               <div className="h-px flex-1 bg-border" />
-              <span className="text-xs text-muted-foreground">or</span>
+              <span className="text-xs text-muted-foreground"><Trans message="or" /></span>
               <div className="h-px flex-1 bg-border" />
             </div>
             <Field.Root>
@@ -1847,9 +1847,9 @@ function LessonEditor({
             </Field.Root>
             {lesson.video && (
               <div className="rounded-card border bg-muted/20 p-3 text-xs">
-                Current: {lesson.video.name} —{' '}
+                <Trans message="Current: :name" values={{name: lesson.video.name}} /> —{' '}
                 <a href={lesson.video.url} target="_blank" className="underline">
-                  View
+                  <Trans message="View" />
                 </a>
               </div>
             )}
@@ -2010,7 +2010,7 @@ function LessonEditor({
             {quizError && !quizLoading && (
               <Alert variant="destructive" fillStyle="subtleFill" className="mb-4">
                 <TriangleAlertIcon />
-                <Alert.Title>Error loading quiz</Alert.Title>
+                <Alert.Title><Trans message="Error loading quiz" /></Alert.Title>
                 <Alert.Description>{quizError}</Alert.Description>
               </Alert>
             )}
@@ -3000,7 +3000,7 @@ function DeleteCourseItemDialog({
               <Trash2Icon />
             </AlertDialog.Media>
             <AlertDialog.Title>
-              <Trans message={`Delete "${itemName}"?`} />
+              <Trans message="Delete :name?" values={{name: itemName}} />
             </AlertDialog.Title>
             <AlertDialog.Description>
               <Trans

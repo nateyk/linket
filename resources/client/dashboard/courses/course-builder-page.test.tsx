@@ -594,3 +594,27 @@ describe('builder rhythm and loading conventions', () => {
     expect(source).toContain('<TriangleAlertIcon />');
   });
 });
+
+describe('builder copy is translatable', () => {
+  const source = fs.readFileSync(
+    path.resolve('resources/client/dashboard/courses/course-builder-page.tsx'),
+    'utf8',
+  );
+
+  test('wraps bare labels through Trans', () => {
+    expect(source).toContain('<Trans message="Analytics" />');
+    expect(source).toContain('message="Chapter :id • Lesson editor"');
+    expect(source).toContain('<Trans message="or" />');
+    expect(source).toContain('message="Current: :name"');
+    expect(source).toContain('<Trans message="View" />');
+    expect(source).toContain('message="Error loading quiz"');
+    expect(source).toContain('message=".mp4, .mov, .mpeg, or .webm"');
+  });
+
+  test('uses static messages with interpolation for dynamic titles', () => {
+    expect(source).toContain('message="Choose a chapter for :name."');
+    expect(source).toContain('message="Delete :name?"');
+    expect(source).not.toContain('message={`Choose a chapter');
+    expect(source).not.toContain('message={`Delete "');
+  });
+});
