@@ -43,34 +43,23 @@ export function CreateProductDialog({
     <Dialog.Root open={open} onOpenChange={handleOpenChange}>
       <Dialog.Portal>
         <Dialog.Backdrop />
-        <Dialog.Content className="gap-0 overflow-hidden p-0 shadow-2xl sm:max-w-xl">
-          <Dialog.Header className="border-b px-6 py-5 pe-14">
-            <div className="flex items-start gap-3">
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-card-sm bg-primary/8 text-primary ring-1 ring-primary/15">
-                <MetaIcon className="size-5" />
-              </span>
-              <div className="min-w-0">
-                <Dialog.Title className="text-lg leading-tight font-semibold">
-                  <Trans message={meta.title} />
-                </Dialog.Title>
-                <Dialog.Description className="mt-1 max-w-md leading-relaxed">
-                  <Trans message={meta.description} />
-                </Dialog.Description>
-                <div className="mt-3">
-                  <WizardStepDots wizard={wizard} />
-                </div>
-              </div>
-            </div>
+        <Dialog.Content className="sm:max-w-xl">
+          <Dialog.Header>
+            <Dialog.Title>
+              <MetaIcon className="size-5" />
+              <Trans message={meta.title} />
+            </Dialog.Title>
+            <Dialog.Description>
+              <Trans message={meta.description} />
+            </Dialog.Description>
           </Dialog.Header>
-          <Dialog.Body className="mx-0 px-6 py-5">
+          <Dialog.Body className="flex flex-col gap-4 pt-2">
+            <WizardStepDots wizard={wizard} />
             <div key={wizard.step} className="animate-in fade-in duration-200">
               <WizardStepBody wizard={wizard} />
             </div>
           </Dialog.Body>
-          <Dialog.Footer
-            variant="muted"
-            className="mx-0 mb-0 px-6 py-4 sm:items-center"
-          >
+          <Dialog.Footer variant="muted" className="py-4 sm:justify-between">
             {wizard.step === 'type' ? (
               <Dialog.CloseButton render={<Button variant="outline" />}>
                 <Trans message="Cancel" />
