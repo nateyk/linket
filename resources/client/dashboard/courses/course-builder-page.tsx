@@ -859,7 +859,7 @@ function CourseBuilder() {
                               </div>
                               <CollapsibleTrigger
                                 aria-label="Toggle chapter lessons"
-                                className="group flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                                className="group flex size-8 shrink-0 items-center justify-center rounded-card-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                               >
                                 <ChevronDownIcon className="size-4 transition-transform group-data-panel-open:rotate-180" />
                               </CollapsibleTrigger>
@@ -1920,7 +1920,7 @@ function LessonEditor({
       </Field.Root>
 
       {contentType === 'video' && (
-        <Card.Root className="gap-0 py-0 overflow-hidden">
+        <Card.Root className="gap-0 overflow-hidden border py-0 ring-0">
           <Card.Header className="p-4">
             <div className="flex items-center gap-2">
               <VideoIcon className="size-4 text-muted-foreground" aria-hidden="true" />
@@ -2055,7 +2055,7 @@ function LessonEditor({
             <Field.Label>
               <Trans message="File attachments" />
             </Field.Label>
-            <Card className="overflow-hidden">
+            <Card className="overflow-hidden border ring-0">
               <Card.Header className="pb-3">
                 <Card.Title className="flex items-center gap-2 text-sm">
                   <FileTextIcon className="size-4" />
@@ -2114,14 +2114,14 @@ function LessonEditor({
         </Tabs.Panel>
 
         <Tabs.Panel value="quiz">
-          <div className="flex flex-col gap-6 p-4">
+          <div className="flex flex-col gap-4">
             {quizLoading && (
               <div className="flex items-center justify-center py-8">
                 <Skeleton className="h-4 w-48" />
               </div>
             )}
             {quizError && !quizLoading && (
-              <Alert variant="destructive" fillStyle="subtleFill" className="mb-4">
+              <Alert variant="destructive" fillStyle="subtleFill">
                 <TriangleAlertIcon />
                 <Alert.Title><Trans message="Error loading quiz" /></Alert.Title>
                 <Alert.Description>{quizError}</Alert.Description>
@@ -2149,14 +2149,14 @@ function LessonEditor({
               </Empty.Root>
             )}
             {quiz && !quizLoading && (
-              <form onSubmit={(e) => { e.preventDefault(); saveQuiz(); }} className="flex flex-col gap-6">
-                <Card>
-                  <Card.Header>
-                    <Card.Title className="text-base">
+              <form onSubmit={(e) => { e.preventDefault(); saveQuiz(); }} className="flex flex-col gap-4">
+                <Card className="gap-0 border py-0 ring-0">
+                  <Card.Header className="p-4">
+                    <Card.Title className="text-sm">
                       <Trans message="Quiz Settings" />
                     </Card.Title>
                   </Card.Header>
-                  <Card.Content className="flex flex-col gap-4 pt-0">
+                  <Card.Content className="flex flex-col gap-4 p-4 pt-0">
                     <Field.Root>
                       <Field.Label>
                         <Trans message="Require passing to progress" />
@@ -2190,9 +2190,9 @@ function LessonEditor({
                   </Card.Content>
                 </Card>
 
-                <Card>
-                  <Card.Header className="flex items-center justify-between">
-                    <Card.Title className="text-base">
+                <Card className="gap-0 border py-0 ring-0">
+                  <Card.Header className="flex items-center justify-between p-4">
+                    <Card.Title className="text-sm">
                       <Trans message="Questions" />
                     </Card.Title>
                     <Button type="button" variant="outline" size="sm" onClick={addQuestion}>
@@ -2200,7 +2200,7 @@ function LessonEditor({
                       <Trans message="Add question" />
                     </Button>
                   </Card.Header>
-                  <Card.Content className="flex flex-col gap-4 pt-0">
+                  <Card.Content className="flex flex-col gap-4 p-4 pt-0">
                     {quiz.questions.length === 0 ? (
                       <p className="text-center text-muted-foreground py-8">
                         <Trans message="No questions yet. Click 'Add question' to start." />
@@ -2221,7 +2221,7 @@ function LessonEditor({
                               <div className="flex items-center gap-2 bg-muted/30 p-2">
                                 <CollapsibleTrigger
                                   aria-label={`Toggle question ${qi + 1}`}
-                                  className="group flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1 rounded-md p-1 text-start hover:bg-muted/50"
+                                  className="group flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1 rounded-card-sm p-1 text-start hover:bg-muted/50"
                                 >
                                   <span className="shrink-0 text-sm font-medium">
                                     <Trans message="Question" /> {qi + 1}
@@ -2556,7 +2556,7 @@ function OutcomesChipList({
               onSortEnd={handleReorder}
             >
               {dragHandleRef => (
-                <div className="flex items-center gap-1.5 rounded-md border bg-background px-2.5 py-1 text-sm">
+                <div className="flex items-center gap-1.5 rounded-card-sm border bg-background px-2.5 py-1 text-sm">
                   <button
                     ref={dragHandleRef}
                     type="button"
