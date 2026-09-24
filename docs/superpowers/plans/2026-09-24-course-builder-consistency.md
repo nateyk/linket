@@ -174,7 +174,7 @@ git commit -m "feat(courses): translatable analytics hints and counts"
 - Test: `resources/client/dashboard/courses/course-builder-page.test.tsx` (append)
 
 **Interfaces:**
-- Consumes: `Spinner` from `@shadcn/spinner/spinner` (new import — path verified in committed `create-course-page.tsx:14`); `TriangleAlertIcon` (new lucide import — add to the existing lucide block after `Trash2Icon`, keeping alpha order).
+- Consumes: `Spinner` from `@shadcn/spinner/spinner` (new import — path verified in committed `create-course-page.tsx:15`); `TriangleAlertIcon` (new lucide import — add to the existing lucide block after `Trash2Icon`, keeping alpha order).
 - Produces: no behavior change except loading affordances.
 
 - [ ] **Step 1: Write the failing test**
