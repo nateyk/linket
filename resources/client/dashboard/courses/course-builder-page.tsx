@@ -1968,7 +1968,7 @@ function LessonEditor({
       )}
 
       <Tabs.Root value={activeTab} onValueChange={setActiveTab} defaultValue={contentType === 'video' ? 'summary' : 'content'} className="w-full">
-        <Tabs.List variant="line" className="w-full">
+        <Tabs.List variant="default" className="w-full">
           {contentType === 'video' ? (
             <Tabs.Tab value="summary">
               <Trans message="Summary" />
