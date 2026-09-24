@@ -96,14 +96,14 @@ export function CourseAnalyticsPage() {
           </DashboardLayout.SectionTitle>
         </DashboardLayout.SectionHeader>
         <DashboardLayout.SectionContent className="overflow-y-auto">
-          <div className="mx-auto w-full max-w-6xl space-y-5 py-6">
+          <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 py-6">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-              <Skeleton className="h-28 w-full rounded-xl" />
-              <Skeleton className="h-28 w-full rounded-xl" />
-              <Skeleton className="h-28 w-full rounded-xl" />
-              <Skeleton className="h-28 w-full rounded-xl" />
+              <Skeleton className="h-28 w-full rounded-card" />
+              <Skeleton className="h-28 w-full rounded-card" />
+              <Skeleton className="h-28 w-full rounded-card" />
+              <Skeleton className="h-28 w-full rounded-card" />
             </div>
-            <Skeleton className="h-80 w-full rounded-xl" />
+            <Skeleton className="h-80 w-full rounded-card" />
           </div>
         </DashboardLayout.SectionContent>
       </DashboardLayout.MainSection>
@@ -141,7 +141,7 @@ export function CourseAnalyticsPage() {
         </DashboardLayout.SectionHeader>
         <DashboardLayout.SectionContent className="overflow-y-auto">
           <div className="mx-auto w-full max-w-6xl py-6">
-            <Empty.Root className="rounded-xl border border-dashed py-16">
+            <Empty.Root className="rounded-card border border-dashed py-16">
               <Empty.Header>
                 <Empty.Media variant="icon">
                   <BarChart3Icon />
@@ -174,7 +174,7 @@ export function CourseAnalyticsPage() {
       </DashboardLayout.SectionHeader>
 
       <DashboardLayout.SectionContent className="overflow-y-auto">
-        <div className="mx-auto w-full max-w-6xl space-y-5 py-6">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 py-6">
         <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           <MetricCard label="Active learners" value={String(analytics.activeLearners)} hint="Enrolled" icon={<UsersIcon />} tone="default" compact />
           <MetricCard label="Avg. completion" value={`${analytics.avgLessonCompletion.toFixed(0)}%`} hint={`${analytics.totalLessons} lessons`} icon={<BookOpenIcon />} tone={analytics.avgLessonCompletion >= 50 ? 'positive' : 'warning'} compact />
@@ -182,7 +182,7 @@ export function CourseAnalyticsPage() {
           <MetricCard label="Avg. chapter" value={`${analytics.avgChapterCompletion.toFixed(0)}%`} hint={`${analytics.totalChapters} chapters`} icon={<LayersIcon />} tone={analytics.avgChapterCompletion >= 50 ? 'positive' : 'default'} compact />
         </div>
 
-        <div className="overflow-hidden rounded-xl border bg-card shadow-xs">
+        <div className="overflow-hidden rounded-card border bg-card shadow-xs">
           <div className="flex items-center justify-between border-b bg-muted/20 px-5 py-3">
             <h2 className="text-sm font-semibold">
               <Trans message="Detailed performance" />
@@ -219,7 +219,7 @@ export function CourseAnalyticsPage() {
                         <p className="mt-1 flex flex-wrap gap-1.5 text-xs">
                           <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 font-medium">{ch.lessonsCount} lessons</span>
                           <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5">{ch.completedLearners} learners</span>
-                          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium ${ch.completionRate >= 50 ? 'bg-positive/10 text-positive' : 'bg-amber-500/10 text-amber-700 dark:text-amber-400'}`}>{ch.completionRate.toFixed(0)}%</span>
+                          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium ${ch.completionRate >= 50 ? 'bg-positive/10 text-positive' : 'bg-warning/10 text-warning'}`}>{ch.completionRate.toFixed(0)}%</span>
                         </p>
                       </div>
                     </div>
@@ -265,7 +265,7 @@ export function CourseAnalyticsPage() {
                                 <div className="flex w-28 items-center gap-2">
                                   <Progress.Root value={l.dropOffRate} className="flex-1">
                                     <Progress.Track className="h-1.5 bg-muted">
-                                      <Progress.Indicator className="bg-amber-500" />
+                                      <Progress.Indicator className="bg-warning" />
                                     </Progress.Track>
                                   </Progress.Root>
                                   <span className="w-8 text-right text-xs tabular-nums text-muted-foreground">{l.dropOffRate.toFixed(0)}%</span>
@@ -312,7 +312,7 @@ function MetricCard({
     tone === 'positive'
       ? 'text-positive bg-positive/10'
       : tone === 'warning'
-        ? 'text-amber-600 bg-amber-500/10 dark:text-amber-400'
+        ? 'text-warning bg-warning/10'
         : 'text-muted-foreground bg-muted';
   return (
     <Card size="sm" className={compact ? "gap-2 py-3" : "gap-3"}>

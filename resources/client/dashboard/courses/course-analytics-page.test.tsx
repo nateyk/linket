@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import path from 'node:path';
 import {describe, expect, test} from 'vitest';
 describe('course analytics page', () => {
   test('requests the analytics endpoint and renders the reference labels', () => {
@@ -15,5 +16,27 @@ describe('course analytics page', () => {
     const src = fs.readFileSync('resources/client/dashboard/courses/course-analytics-page.tsx', 'utf8');
 
     expect(src).toContain('course?lessonId=${l.id}');
+  });
+});
+
+describe('analytics theme tokens', () => {
+  const source = fs.readFileSync(
+    path.resolve(
+      'resources/client/dashboard/courses/course-analytics-page.tsx',
+    ),
+    'utf8',
+  );
+
+  test('uses rhythm and radius tokens, not literals', () => {
+    expect(source).not.toMatch(/space-y-\d/);
+    expect(source).not.toContain('rounded-xl');
+    expect(source).not.toContain('bg-amber-500');
+    expect(source).not.toContain('text-amber-');
+    expect(source).not.toContain('dark:');
+    expect(source).toContain('rounded-card');
+  });
+
+  test('warning tone resolves through the theme', () => {
+    expect(source).toContain('bg-warning/10');
   });
 });
