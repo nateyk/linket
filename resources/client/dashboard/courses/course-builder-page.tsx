@@ -33,7 +33,6 @@ import {Checkbox} from '@shadcn/forms/checkbox/checkbox';
 import {Select} from '@shadcn/forms/select/select';
 import {Tabs} from '@shadcn/tabs/tabs';
 import {Tooltip} from '@shadcn/tooltip/tooltip';
-import {ButtonGroup} from '@shadcn/button-group/button-group';
 
 import {
   ScrollArea,
@@ -1969,47 +1968,23 @@ function LessonEditor({
       )}
 
       <Tabs.Root value={activeTab} onValueChange={setActiveTab} defaultValue={contentType === 'video' ? 'summary' : 'content'} className="w-full">
-        <ButtonGroup.Root variant="segmented" className="w-full" role="tablist">
+        <Tabs.List variant="line" className="w-full">
           {contentType === 'video' ? (
-            <Button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === 'summary'}
-              onClick={() => setActiveTab('summary')}
-              data-pressed={activeTab === 'summary'}
-            >
+            <Tabs.Tab value="summary">
               <Trans message="Summary" />
-            </Button>
+            </Tabs.Tab>
           ) : (
-            <Button
-              type="button"
-              role="tab"
-              aria-selected={activeTab === 'content'}
-              onClick={() => setActiveTab('content')}
-              data-pressed={activeTab === 'content'}
-            >
+            <Tabs.Tab value="content">
               <Trans message="Content" />
-            </Button>
+            </Tabs.Tab>
           )}
-          <Button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === 'attachments'}
-            onClick={() => setActiveTab('attachments')}
-            data-pressed={activeTab === 'attachments'}
-          >
+          <Tabs.Tab value="attachments">
             <Trans message="Attachments" />
-          </Button>
-          <Button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === 'quiz'}
-            onClick={() => setActiveTab('quiz')}
-            data-pressed={activeTab === 'quiz'}
-          >
+          </Tabs.Tab>
+          <Tabs.Tab value="quiz">
             <Trans message="Quiz" />
-          </Button>
-        </ButtonGroup.Root>
+          </Tabs.Tab>
+        </Tabs.List>
 
         {contentType === 'video' && (
           <Tabs.Panel value="summary">
