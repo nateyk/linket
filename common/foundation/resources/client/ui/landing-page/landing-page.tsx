@@ -31,13 +31,17 @@ export function LandingPage() {
     ? sections.findIndex(s => s.name.startsWith('hero-'))
     : null;
 
+  const anchors = buildSectionAnchors(sections);
+
   return (
     <div>
       <Header />
       <DefaultMetaTags />
       {sections.map((section, index) => (
         <Fragment key={index}>
-          <Section config={section} index={index} />
+          <div id={anchors[index]}>
+            <Section config={section} index={index} />
+          </div>
           {heroAdSlotIndex === index && adSlotAfterHero && (
             <AdHost slot={adSlotAfterHero} className="px-8" />
           )}
@@ -45,6 +49,43 @@ export function LandingPage() {
       ))}
     </div>
   );
+}
+
+// Sections are configurable, so anchors are derived from their content rather
+// than hardcoded. Header and footer nav link against these ids, and every id is
+// de-duplicated so repeated section types still yield unique targets.
+function buildSectionAnchors(sections: SectionConfig[]): (string | undefined)[] {
+  const seen = new Set<string>();
+
+  return sections.map(section => {
+    // The pricing section renders its own `pricing-section` id, which the hero
+    // CTA already targets.
+    if (section.name === 'pricing') return undefined;
+
+    const {title, badge, name} = section as SectionConfig & {
+      title?: string;
+      badge?: string;
+    };
+    const slug = slugifySectionTitle(title || badge || name);
+    if (!slug) return undefined;
+
+    let anchor = slug;
+    let suffix = 1;
+    while (seen.has(anchor)) {
+      anchor = `${slug}-${++suffix}`;
+    }
+    seen.add(anchor);
+    return anchor;
+  });
+}
+
+function slugifySectionTitle(value: string) {
+  return value
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
 type SectionProps = {

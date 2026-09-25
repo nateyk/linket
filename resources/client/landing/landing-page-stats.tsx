@@ -8,24 +8,44 @@ import {ReactElement} from 'react';
 export function LandingPageStats() {
   const query = useLandingPageData();
 
+  const stats = [
+    {
+      key: 'links',
+      label: <Trans message="Total links shortened" />,
+      icon: <LinkIcon className="size-10" />,
+      number: query.data.stats.links,
+    },
+    {
+      key: 'clicks',
+      label: <Trans message="Total events tracked" />,
+      icon: <MousePointerClickIcon className="size-10" />,
+      number: query.data.stats.clicks,
+    },
+    {
+      key: 'qrCodes',
+      label: <Trans message="QR codes generated" />,
+      icon: <QrCodeIcon className="size-10" />,
+      number: query.data.stats.qrCodes,
+    },
+  ].filter(stat => stat.number > 0);
+
+  // Social proof that leads with 0s reads as "nobody uses this", so the section
+  // only appears once there is a real number behind it.
+  if (!stats.length) {
+    return null;
+  }
+
   return (
     <section className="bg-muted/50 dark:bg-card">
       <div className="compact-scrollbar mx-auto flex max-w-7xl justify-between gap-15 overflow-x-auto px-6 py-24 sm:py-32 lg:px-8">
-        <StatLayout
-          label={<Trans message="Total links shortened" />}
-          icon={<LinkIcon className="size-10" />}
-          number={query.data.stats.links}
-        />
-        <StatLayout
-          label={<Trans message="Total events tracked" />}
-          icon={<MousePointerClickIcon className="size-10" />}
-          number={query.data.stats.clicks}
-        />
-        <StatLayout
-          label={<Trans message="QR codes generated" />}
-          icon={<QrCodeIcon className="size-10" />}
-          number={query.data.stats.qrCodes}
-        />
+        {stats.map(stat => (
+          <StatLayout
+            key={stat.key}
+            label={stat.label}
+            icon={stat.icon}
+            number={stat.number}
+          />
+        ))}
       </div>
     </section>
   );

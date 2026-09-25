@@ -10,6 +10,7 @@ import {Badge} from '@shadcn/badge/badge';
 import {Button} from '@shadcn/button/button';
 import {Trans} from '@ui/i18n/trans';
 import {cn} from '@ui/utils/cn';
+import {getSiteCurrency} from '@ui/i18n/format-money';
 import {setInLocalStorage} from '@ui/utils/hooks/local-storage';
 import {Fragment} from 'react';
 import {useNavigate} from 'react-router';
@@ -54,6 +55,15 @@ function PlanList({plans, selectedPeriod}: PlanListProps) {
         const isFirst = index === 0;
         const isLast = index === filteredPlans.length - 1;
         const price = findBestPrice(selectedPeriod, plan.prices ?? []);
+        // Free plans have no price record. Rendering an explicit zero keeps the
+        // price block in the same format as paid tiers — otherwise the card
+        // prints the tier name ("Free") twice, once as name and once as price.
+        const displayPrice = price ?? {
+          amount: 0,
+          currency: getSiteCurrency(),
+          interval: 'month',
+          interval_count: 1,
+        };
 
         let upgradeRoute: string | undefined;
         if (!isLoggedIn) {
@@ -95,18 +105,12 @@ function PlanList({plans, selectedPeriod}: PlanListProps) {
               ) : null}
             </div>
             <div>
-              {price ? (
-                <FormattedPrice
-                  priceClassName="font-bold text-4xl"
-                  periodClassName="text-muted-foreground text-xs"
-                  variant="separateLine"
-                  price={price}
-                />
-              ) : (
-                <div className="text-4xl font-bold">
-                  <Trans message="Free" />
-                </div>
-              )}
+              <FormattedPrice
+                priceClassName="font-bold text-4xl"
+                periodClassName="text-muted-foreground text-xs"
+                variant="separateLine"
+                price={displayPrice}
+              />
               <div className="mt-15">
                 <Button
                   variant={plan.recommended ? 'default' : 'outline'}

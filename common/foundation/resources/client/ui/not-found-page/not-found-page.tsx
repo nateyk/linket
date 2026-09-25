@@ -6,7 +6,7 @@ import imgUrl2 from './404-2.png';
 
 export function NotFoundPage() {
   return (
-    <div className="isolate flex flex-col-reverse items-center justify-center gap-16 px-4 py-24 md:gap-28 md:px-44 md:py-20 lg:flex-row lg:px-24 lg:py-24">
+    <div className="isolate flex min-h-dvh flex-col-reverse items-center justify-center gap-16 px-4 py-24 md:gap-28 md:px-44 md:py-20 lg:flex-row lg:px-24 lg:py-24">
       <div className="relative w-full pb-12 lg:pb-0 xl:w-1/2 xl:pt-24">
         <div className="relative">
           <div className="absolute">

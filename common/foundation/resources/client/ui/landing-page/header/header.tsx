@@ -26,7 +26,6 @@ import {
 } from '@shadcn/sheet/sheet';
 import {
   ChevronDownIcon,
-  GithubIcon,
   LayoutDashboardIcon,
   MenuIcon,
   MoonIcon,
@@ -37,33 +36,34 @@ import {useSettings} from '@ui/settings/use-settings';
 import {use, useState} from 'react';
 import {MegaMenu} from './mega-menu';
 
+// Every href must resolve to a real anchor on the landing page (see
+// buildSectionAnchors) or to an actual route.
 const navigationItems = [
-  {name: 'Home', href: '#hero'},
-  {name: 'Features', href: '#features'},
-  {name: 'Solutions', href: '#features', hasMegaMenu: true},
-  {name: 'Team', href: '#team'},
-  {name: 'Pricing', href: '#pricing'},
-  {name: 'FAQ', href: '#faq'},
-  {name: 'Contact', href: '#contact'},
+  {
+    name: 'Features',
+    href: '#links-that-work-harder-for-you',
+    hasMegaMenu: true,
+  },
+  {name: 'Pricing', href: '#pricing-section'},
+  {name: 'Contact', href: '/contact'},
 ];
 
-// Solutions menu items for mobile
-const solutionsItems = [
-  {title: 'Browse Products'},
-  {name: 'Free Blocks', href: '#free-blocks'},
-  {name: 'Premium Templates', href: '#premium-templates'},
-  {name: 'Admin Dashboards', href: '#admin-dashboards'},
-  {name: 'Landing Pages', href: '#landing-pages'},
-  {title: 'Categories'},
-  {name: 'E-commerce', href: '#ecommerce'},
-  {name: 'SaaS Dashboards', href: '#saas-dashboards'},
-  {name: 'Analytics', href: '#analytics'},
-  {name: 'Authentication', href: '#authentication'},
-  {title: 'Resources'},
-  {name: 'Documentation', href: '#docs'},
-  {name: 'Component Showcase', href: '#showcase'},
-  {name: 'GitHub Repository', href: '#github'},
-  {name: 'Design System', href: '#design-system'},
+type MobileNavItem = {
+  title?: string;
+  name?: string;
+  href?: string;
+};
+
+// Same anchors as the desktop mega menu, flattened for the mobile sheet.
+const solutionsItems: MobileNavItem[] = [
+  {title: 'Create'},
+  {name: 'Short links', href: '#short-urls-with-serious-control'},
+  {name: 'Storefront', href: '#one-link-for-everything-you-share'},
+  {name: 'QR codes', href: '#turn-any-link-into-a-scannable-code'},
+  {title: 'Manage & measure'},
+  {name: 'Everything in one place', href: '#links-that-work-harder-for-you'},
+  {name: 'Growth toolkit', href: '#the-toolkit-serious-marketers-expect'},
+  {name: 'Plans & pricing', href: '#pricing-section'},
 ];
 
 // Smooth scroll function
@@ -145,21 +145,6 @@ export function Header() {
           >
             {colorScheme === 'light' ? <MoonIcon /> : <SunIcon />}
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="cursor-pointer"
-            render={
-              <a
-                href="https://github.com/silicondeck/shadcn-dashboard-landing-template"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="GitHub Repository"
-              />
-            }
-          >
-            <GithubIcon />
-          </Button>
           <LinkButton
             variant="outline"
             to={getRedirectUri()}
@@ -222,21 +207,6 @@ export function Header() {
                     <Button
                       variant="ghost"
                       size="icon-sm"
-                      className="cursor-pointer"
-                      render={
-                        <a
-                          href="https://github.com/silicondeck/shadcn-dashboard-landing-template"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          aria-label="GitHub Repository"
-                        />
-                      }
-                    >
-                      <GithubIcon />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
                       onClick={() => setIsOpen(false)}
                       className="cursor-pointer"
                       aria-label="Close menu"
@@ -279,12 +249,10 @@ export function Header() {
                                   className="flex items-center px-4 py-2 text-sm rounded-lg transition-colors hover:bg-accent hover:text-accent-foreground cursor-pointer"
                                   onClick={e => {
                                     setIsOpen(false);
-                                    if (solution.href?.startsWith('#')) {
+                                    const href = solution.href;
+                                    if (href && href.startsWith('#')) {
                                       e.preventDefault();
-                                      setTimeout(
-                                        () => smoothScrollTo(solution.href),
-                                        100,
-                                      );
+                                      setTimeout(() => smoothScrollTo(href), 100);
                                     }
                                   }}
                                 >

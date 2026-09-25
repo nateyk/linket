@@ -22,7 +22,10 @@ export function LocalizationPanel({user}: {user: User}) {
   const form = useForm<UpdateUserBody>({
     defaultValues: {
       language: user.language || '',
-      country: user.country || '',
+      // Left as undefined when unset: Base UI's combobox only enters its
+      // placeholder state for a missing value, so an empty string renders a
+      // blank control instead of "Select country".
+      country: user.country || undefined,
       timezone: user.timezone || 'UTC',
     },
   });
