@@ -7,6 +7,7 @@ import {Field} from '@shadcn/forms/field';
 import {Input} from '@shadcn/forms/input/input';
 import {Select} from '@shadcn/forms/select/select';
 import {Textarea} from '@shadcn/forms/textarea/textarea';
+import {Spinner} from '@shadcn/spinner/spinner';
 import {Table} from '@shadcn/table/table';
 import {Trans} from '@ui/i18n/trans';
 import {formatMoney} from '@ui/i18n/format-money';
@@ -148,7 +149,7 @@ export function Component() {
     return (
       <DashboardLayout.MainSection>
         <div className="flex h-64 items-center justify-center">
-          <div className="size-8 animate-spin rounded-full border-b-2 border-primary" />
+          <Spinner className="size-8" />
         </div>
       </DashboardLayout.MainSection>
     );

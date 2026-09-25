@@ -5,6 +5,7 @@ import {Card} from '@shadcn/card/card';
 import {Field} from '@shadcn/forms/field';
 import {Input} from '@shadcn/forms/input/input';
 import {Textarea} from '@shadcn/forms/textarea/textarea';
+import {Spinner} from '@shadcn/spinner/spinner';
 import {Trans} from '@ui/i18n/trans';
 import {ArrowLeftIcon, SaveIcon} from 'lucide-react';
 import {useCallback, useEffect, useState} from 'react';
@@ -96,7 +97,7 @@ export function Component() {
     return (
       <DashboardLayout.MainSection>
         <div className="flex h-64 items-center justify-center">
-          <div className="size-8 animate-spin rounded-full border-b-2 border-primary" />
+          <Spinner className="size-8" />
         </div>
       </DashboardLayout.MainSection>
     );

@@ -1,0 +1,35 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "bounce-easing",
+        "value": "*",
+        "files": [
+          "resources/client/dashboard/stores/store-editor/content/link-content-item/animate.min.css"
+        ],
+        "createdAt": "2026-09-25T07:52:29.666Z",
+        "reason": "Vendored animate.css, not authored motion: 'bounce' and 'wobble' are creator-selectable link entrance animations exposed by LinkAnimationDialog.animationsList, and the remaining keys ship with the library."
+      },
+      {
+        "rule": "design-system-color",
+        "value": "#000000",
+        "files": [
+          "resources/client/dashboard/qr-codes/qr-code-renderer.tsx"
+        ],
+        "createdAt": "2026-09-25T07:52:55.442Z",
+        "reason": "QR module colour: defaults to pure black for maximum light/dark scan contrast. DESIGN.md deliberately has no pure-black token, so this is an intentional exception for scannability, not palette drift."
+      },
+      {
+        "rule": "layout-transition",
+        "value": "*",
+        "files": [
+          "common/foundation/resources/client/shadcn/toast/toast.tsx"
+        ],
+        "createdAt": "2026-09-25T07:58:02.379Z",
+        "reason": "False positive after fix: height_0.15s was removed from the toast's transition, which is now transform+opacity only, so height changes are not animated. The rule still fires because the element carries a variable-driven h-(--height) alongside any transition (verified: transition+h-8 is clean, transition+h-(--height) is not). The height var is required for stack positioning and cannot be removed."
+      }
+    ]
+  }
+}

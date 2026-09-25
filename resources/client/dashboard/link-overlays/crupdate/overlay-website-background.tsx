@@ -3,16 +3,13 @@ export function OverlayWebsiteBackground() {
     <div className="h-full overflow-hidden rounded-card bg">
       <div className="navbar flex h-9 w-full items-center bg-black/70 dark:border-b dark:bg-muted">
         <div
-          className="os-button ml-2.5 size-3.5 rounded-full"
-          style={{background: '#d7665d'}}
+          className="os-button ml-2.5 size-3.5 rounded-full bg-destructive"
         />
         <div
-          className="os-button ml-2.5 size-3.5 rounded-full"
-          style={{background: '#deab54'}}
+          className="os-button ml-2.5 size-3.5 rounded-full bg-warning"
         />
         <div
-          className="os-button ml-2.5 size-3.5 rounded-full"
-          style={{background: '#6fb54c'}}
+          className="os-button ml-2.5 size-3.5 rounded-full bg-positive"
         />
       </div>
 

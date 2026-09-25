@@ -73,7 +73,11 @@ function AutoLogo({color, className, url}: Omit<Props, 'logoType'>) {
       <picture>
         <source srcSet={compactLogo || wideLogo} media="(max-width: 768px)" />
         <source srcSet={wideLogo} media="(min-width: 768px)" />
-        <img className={cn('block h-full w-auto', className)} alt="" />
+        <img
+          src={wideLogo || compactLogo}
+          className={cn('block h-full w-auto', className)}
+          alt=""
+        />
       </picture>
     </WrapperLink>
   );
