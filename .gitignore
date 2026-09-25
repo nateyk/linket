@@ -74,3 +74,13 @@ C:\Users\*
 **/.impeccable/live/deferred-svelte-component-accepts.json
 **/.impeccable/live/*.png
 # impeccable-ignore-end
+
+# --- impeccable installer output under .opencode/ ------------------------------
+# This is third-party install output, not project source: it carries a
+# 16MB linux-x64-only binary plus vendored font/browser data, and a binary
+# committed to history is never usable by a teammate on another platform.
+# Recreate it locally with:
+#   npx impeccable install --providers=opencode --scope=project
+# Project-authored files in .opencode/ stay tracked (mcp-laravel-boost.sh).
+.opencode/skills/impeccable/
+.opencode/commands/impeccable.md
