@@ -214,8 +214,8 @@ function ReviewRow({review}: {review: PublicReview}) {
         </p>
       )}
       <div className="mt-1 flex items-center gap-2">
-        <Avatar.Root className="size-6">
-          <Avatar.ColorFallback className="text-[10px]">
+        <Avatar.Root size="sm">
+          <Avatar.ColorFallback>
             {review.buyer_name}
           </Avatar.ColorFallback>
         </Avatar.Root>

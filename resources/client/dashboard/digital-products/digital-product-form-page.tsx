@@ -812,7 +812,7 @@ function DetailsPanel({
               <span className="block font-medium">
                 <Trans message="Convert this product price to ETB" />
               </span>
-              <span className="mt-0.5 block text-[13px] text-muted-foreground">
+              <span className="mt-0.5 block text-sm text-muted-foreground">
                 <Trans message="Set the correct Ethiopian birr amount above. Existing sales remain in their original currency." />
               </span>
             </span>
@@ -972,7 +972,7 @@ function BioPagesPanel({
 }) {
   if (!biolinks.length) {
     return (
-      <p className="py-4 text-[13px] text-muted-foreground">
+      <p className="py-4 text-sm text-muted-foreground">
         <Trans message="You can sell this product directly. Create a Storefront later if you want to display it there." />
       </p>
     );
@@ -999,7 +999,7 @@ function BioPagesPanel({
           <span className="min-w-0">
             <span className="block truncate font-medium">{page.name}</span>
             {page.short_url && (
-              <span className="block truncate text-[12px] text-muted-foreground">
+              <span className="block truncate text-xs text-muted-foreground">
                 {page.short_url}
               </span>
             )}

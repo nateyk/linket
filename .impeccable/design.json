@@ -172,6 +172,14 @@
         "displayName": "Label Strong",
         "purpose": "Buttons, badges, active nav items, font-medium table cells."
       },
+      "section-title": {
+        "displayName": "Section Title",
+        "purpose": "Dialog, panel and subsection headings — text-xl font-semibold. Named by role, not picked by size."
+      },
+      "page-title": {
+        "displayName": "Page Title",
+        "purpose": "The single top heading on a dashboard screen — text-2xl font-semibold tracking-tight."
+      },
       "caption": {
         "displayName": "Caption",
         "purpose": "Badges, xs buttons, chart ticks, tight metadata. 12px is not a working size."

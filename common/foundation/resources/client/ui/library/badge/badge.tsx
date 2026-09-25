@@ -20,7 +20,7 @@ export function Badge({
   return (
     <span
       className={clsx(
-        'absolute flex items-center justify-center whitespace-nowrap rounded-full text-[11px] font-bold shadow-sm',
+        'absolute flex items-center justify-center whitespace-nowrap rounded-full text-[12px] font-bold shadow-sm',
         withBorder && 'border-2 border-white',
         color,
         children ? 'w-max p-1 leading-[0.6]' : 'h-3 w-3',

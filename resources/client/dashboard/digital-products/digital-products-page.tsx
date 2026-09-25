@@ -280,7 +280,7 @@ function ProductCard({
           <div className="flex min-w-0 flex-col gap-1">
           <div className="flex min-h-5 items-center gap-2">
             {isCourse && (
-              <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
+              <Badge variant="outline" className="h-5 px-1.5">
                 <Trans message="Course" />
               </Badge>
             )}

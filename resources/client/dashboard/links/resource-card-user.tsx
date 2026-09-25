@@ -1,7 +1,6 @@
 import {Avatar} from '@shadcn/avatar/avatar';
 import {Item} from '@shadcn/item/item';
 import {Popover} from '@shadcn/popover/popover';
-import {cn} from '@ui/utils/cn';
 
 export function ResourceCardUser({
   user,
@@ -18,9 +17,9 @@ export function ResourceCardUser({
   return (
     <Popover.Root>
       <Popover.Trigger openOnHover>
-        <Avatar.Root className={cn('size-4', className)}>
+        <Avatar.Root size="xs" className={className}>
           {user.image && <Avatar.Image src={user.image} />}
-          <Avatar.ColorFallback className="text-[10px]">
+          <Avatar.ColorFallback>
             {user.name}
           </Avatar.ColorFallback>
         </Avatar.Root>

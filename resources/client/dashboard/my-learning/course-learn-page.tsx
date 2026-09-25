@@ -182,7 +182,7 @@ export function Component() {
                         )}
                         <span className="flex-1">{lesson.title}</span>
                         {!isPublished && (
-                          <Badge variant="outline" className="text-[10px]">
+                          <Badge variant="outline">
                             <Trans message="Draft" />
                           </Badge>
                         )}

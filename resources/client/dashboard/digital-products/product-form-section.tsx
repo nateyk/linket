@@ -45,7 +45,7 @@ export function ProductFormSection({
             count !== null && count !== undefined && count > 0 ? (
               <Badge
                 variant="secondary"
-                className="h-4 min-w-[16px] px-1 text-[10px]"
+                className="h-4 min-w-[16px] px-1"
               >
                 {count}
               </Badge>

@@ -377,7 +377,7 @@ describe('course builder UI polish', () => {
       'utf8',
     );
 
-    expect(source).toContain('className="h-5 shrink-0 px-1.5 text-[10px]"');
+    expect(source).toContain('className="h-5 shrink-0 px-1.5"');
   });
 });
 

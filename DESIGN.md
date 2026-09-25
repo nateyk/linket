@@ -50,6 +50,16 @@ typography:
     fontSize: "14px"
     fontWeight: 500
     lineHeight: "20px"
+  section-title:
+    fontFamily: "inherit"
+    fontSize: "20px"
+    fontWeight: 600
+    lineHeight: "28px"
+  page-title:
+    fontFamily: "inherit"
+    fontSize: "24px"
+    fontWeight: 600
+    lineHeight: "32px"
   caption:
     fontFamily: "inherit"
     fontSize: "12px"
@@ -197,9 +207,10 @@ brand color to make a screen work, the screen's hierarchy is wrong, not its pale
 
 ## Typography
 
-**Display Font:** none defined at the system level — there is no hero/display tier in
-the token set, and marketing headings come from landing-page sections rather than the
-system scale.
+**Display Font:** no distinct display face — display sizes reuse the body family.
+Headings and marketing type run on the same stack as body copy, which is why the
+dashboard reads as instrumentation rather than branding. Display *sizes* (30–48px)
+exist only on public storefront and landing surfaces; see Hierarchy.
 
 **Body Font:** the theme-selected family, defaulting to the system UI stack
 (`ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
@@ -220,6 +231,19 @@ would be a change to this file, not an extraction from it.
 
 ### Hierarchy
 
+Headings sit above the working scale and are named by role, never chosen by size:
+
+- **Page title** (600, 24px, 32px): the single top heading on a dashboard screen —
+  `text-2xl font-semibold tracking-tight`.
+- **Section title** (600, 20px, 28px): dialog, panel and subsection headings —
+  `text-xl font-semibold`.
+- **Subsection title** (600, 18px, 28px): card and block headings inside a section —
+  `text-lg font-semibold`.
+- **Display** (30–48px, 600): `text-3xl`–`text-5xl`, public storefront and landing
+  only. Never inside the dashboard.
+
+Below them, the working scale:
+
 - **Body** (400, 16px, 24px): default reading size for prose and form content.
   Inputs opt out deliberately — `text-base` on mobile (16px prevents iOS zoom),
   dropping to `text-sm` (14px) at the `md` breakpoint.
@@ -230,13 +254,19 @@ would be a change to this file, not an extraction from it.
 - **Label Strong** (500, 14px, 20px): buttons, badges, active nav items, table cells
   marked `font-medium`.
 - **Caption** (500, 12px, 16px): badges, `xs` buttons, chart ticks, tight metadata.
+- **Avatar initials** (500): the one sub-12px text in the system. `Avatar` steps its
+  fallback with its own container — 32px→14px, 24px→12px, 18px (`size="xs"`)→10px.
+  It is a component scale, not a type role: never hand-set `text-[10px]` to imitate
+  it, pass `size` instead.
 
 ### Named Rules
 
 **The Two-Size Rule.** Working UI runs on exactly two sizes: 16px for reading and
 input, 14px for controls, tables and navigation. 12px is for badges and metadata only.
 If you're reaching for a third working size, the content wants to be restructured, not
-rescaled.
+rescaled. Headings are exempt because they are named by role — a page title is a page
+title, not a size you picked. Between 12px and 16px there is no step: never reach for
+13px or 15px.
 
 **The Weight-First Rule.** Establish hierarchy with weight before size. Titles and body
 are both 16px; they differ by 100 weight. Reserve size jumps for genuine section

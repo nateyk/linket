@@ -41,7 +41,7 @@ function StatLayout({label, icon, number}: StatLayoutProps) {
     <div className="flex flex-1 items-center rounded-card border bg-card p-10">
       {icon}
       <div className="ml-6 border-l-2 pl-6">
-        <div className="text-[15px] whitespace-nowrap uppercase">{label}</div>
+        <div className="text-sm whitespace-nowrap uppercase">{label}</div>
         <div className="mt-1.5 text-3xl font-medium">
           <FormattedNumber value={number} />
         </div>

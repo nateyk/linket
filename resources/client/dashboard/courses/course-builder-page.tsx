@@ -990,7 +990,7 @@ function CourseBuilder() {
                                                 ? 'positive'
                                                 : 'outline'
                                             }
-                                            className="h-5 shrink-0 px-1.5 text-[10px]"
+                                            className="h-5 shrink-0 px-1.5"
                                           >
                                             <Trans
                                               message={
@@ -2711,7 +2711,7 @@ function CourseSettingsContent({
               <span className="block font-medium">
                 <Trans message="Convert this product price to ETB" />
               </span>
-              <span className="mt-0.5 block text-[13px] text-muted-foreground">
+              <span className="mt-0.5 block text-sm text-muted-foreground">
                 <Trans message="Set the correct Ethiopian birr amount above. Existing sales remain in their original currency." />
               </span>
             </span>

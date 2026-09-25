@@ -118,7 +118,6 @@ function ClicksButton({link}: ClicksButtonProps) {
       variant="outline"
       color="default"
       size="xs"
-      className="text-[13px]"
     >
       <MousePointerClick />
       {isMobileMode ? (
