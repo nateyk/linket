@@ -1,0 +1,440 @@
+---
+name: Linket
+description: Creator storefront and link-in-bio dashboard — quiet, neutral, token-driven, with one working blue accent.
+colors:
+  primary: "oklch(62.3% 0.214 259.815)"
+  primary-fg: "oklch(0.9911 0 190.05)"
+  primary-dark: "oklch(88.2% 0.059 254.128)"
+  primary-dark-fg: "oklch(0.2478 0 0)"
+  background: "oklch(1 0 0)"
+  foreground: "oklch(0.2478 0 0)"
+  card: "oklch(1 0 0)"
+  card-fg: "oklch(0.2478 0 0)"
+  secondary: "oklch(0.967 0.001 286.375)"
+  secondary-fg: "oklch(0.21 0.006 285.885)"
+  muted: "oklch(0.97 0 0)"
+  muted-fg: "oklch(0.556 0 0)"
+  accent: "oklch(0.97 0 0)"
+  accent-fg: "oklch(0.205 0 0)"
+  border: "oklch(0.922 0 0)"
+  input: "oklch(0.922 0 0)"
+  sidebar: "oklch(0.985 0 0)"
+  sidebar-fg: "oklch(0.145 0 0)"
+  positive: "oklch(0.7227 0.192 149.58)"
+  warning: "oklch(0.7785 0.152 70.88)"
+  note: "oklch(0.9619 0.058 95.62)"
+  destructive: "oklch(0.6532 0.2328 25.74)"
+  dark-background: "oklch(0.145 0 0)"
+  dark-foreground: "oklch(0.985 0 0)"
+  dark-card: "oklch(0.205 0 0)"
+  dark-border: "oklch(1 0 0 / 10%)"
+  dark-input: "oklch(1 0 0 / 15%)"
+typography:
+  body:
+    fontFamily: "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+    fontSize: "16px"
+    fontWeight: 400
+    lineHeight: "24px"
+  title:
+    fontFamily: "inherit"
+    fontSize: "16px"
+    fontWeight: 500
+    lineHeight: "24px"
+  label:
+    fontFamily: "inherit"
+    fontSize: "14px"
+    fontWeight: 400
+    lineHeight: "20px"
+  label-strong:
+    fontFamily: "inherit"
+    fontSize: "14px"
+    fontWeight: 500
+    lineHeight: "20px"
+  caption:
+    fontFamily: "inherit"
+    fontSize: "12px"
+    fontWeight: 500
+    lineHeight: "16px"
+rounded:
+  input: "12px"
+  button: "24px"
+  card: "24px"
+  card-sm: "16px"
+  card-xs: "12px"
+  pill: "9999px"
+spacing:
+  1: "4px"
+  2: "8px"
+  3: "12px"
+  4: "16px"
+  5: "20px"
+  6: "24px"
+components:
+  button-primary:
+    backgroundColor: "{colors.primary}"
+    textColor: "{colors.primary-fg}"
+    rounded: "{rounded.button}"
+    height: "36px"
+    padding: "0 12px"
+    typography: "{typography.label-strong}"
+  button-primary-hover:
+    backgroundColor: "color-mix(in oklch, oklch(62.3% 0.214 259.815) 80%, transparent)"
+    textColor: "{colors.primary-fg}"
+    rounded: "{rounded.button}"
+    height: "36px"
+    padding: "0 12px"
+  button-outline:
+    backgroundColor: "transparent"
+    textColor: "{colors.primary}"
+    rounded: "{rounded.button}"
+    height: "36px"
+    padding: "0 12px"
+  input:
+    backgroundColor: "transparent"
+    textColor: "{colors.foreground}"
+    rounded: "{rounded.input}"
+    height: "36px"
+    padding: "0 12px"
+  card:
+    backgroundColor: "{colors.card}"
+    textColor: "{colors.card-fg}"
+    rounded: "{rounded.card}"
+    padding: "24px 24px"
+  badge:
+    backgroundColor: "{colors.primary}"
+    textColor: "{colors.primary-fg}"
+    rounded: "{rounded.card-sm}"
+    height: "20px"
+    padding: "0 8px"
+---
+
+# Design System: Linket
+
+## Overview
+
+**Creative North Star: "The Creator's Counter"**
+
+Linket's interface is a shop counter, not a showroom. The counter is where goods are
+laid out, where the transaction happens, and where the person behind it stands all day.
+That means the chrome is quiet and the products are loud: our own UI should recede so a
+creator's links, products, orders and payouts are the most visible thing on screen. The
+dashboard is a working surface — scannable at a glance, dense where density helps,
+never decorative for its own sake.
+
+The system is semantic-token driven end to end. Nothing in a component is allowed to
+name a raw color; every surface, border and label resolves through the `--be-*`
+variables that a theme supplies. The default record is neutral and near-achromatic
+(white paper, ink-grey text, hairline borders) with exactly one chromatic accent — a
+working blue — reserved for actions. Dark mode is a first-class twin, not an afterthought:
+it remaps the same token names rather than introducing new ones.
+
+Expressiveness is delegated, not absent. A creator's public page is theirs to make
+loud; the dashboard that builds it stays restrained. When a decision is close, choose
+the quieter surface.
+
+**Key Characteristics:**
+
+- Semantic tokens only — no raw color values in components
+- One working blue as the single decorative accent; status colors are earned by meaning
+- Flat by default, separated by a 1px ring rather than shadow
+- Generous, pill-like control radius (24px) against 12px fields and 16px badges
+- 4px spacing grid; 24px card padding; 14px/16px working type sizes
+- Logical properties everywhere — the UI is RTL-ready by construction
+
+## Colors
+
+A quiet, near-achromatic palette with one working accent: color means *action* or
+*state*, never decoration.
+
+### Primary
+
+- **Counter Blue** (`oklch(62.3% 0.214 259.815)`): the only accent. Fills primary
+  buttons, draws focus outlines, marks progress, tints outline-button borders and
+  active nav. Used wherever the user is meant to act.
+- **Counter Blue, Light** (`oklch(88.2% 0.059 254.128)`): the dark-mode equivalent —
+  the same blue lifted for legibility on a near-black ground. Primary foreground on it
+  flips to `oklch(0.2478 0 0)`.
+
+### Tertiary — Status & Semantics
+
+Chromatic color is spent only on meaning:
+
+- **Confirm Green** (`oklch(0.7227 0.192 149.58)`): positive outcomes — success
+  badges, positive buttons, info-block accents. Always paired with a 10–20% wash of
+  itself, never a solid slab behind text.
+- **Caution Amber** (`oklch(0.7785 0.152 70.88)`): warnings and attention states.
+- **Notice Cream** (`oklch(0.9619 0.058 95.62)`): the quietest status tone, for
+  informational callouts that must not read as an alert.
+- **Alarm Red** (`oklch(0.6532 0.2328 25.74)`): destructive actions and form errors.
+  Solid fill only on `danger` buttons; otherwise a 10% wash with red text.
+
+### Neutral
+
+- **Counter Slab** (`oklch(0.985 0 0)`): the sidebar ground — a half-step off page white
+  so navigation reads as a separate plane without a heavy border.
+- **Sheet White** (`oklch(1 0 0)`): cards, popovers and the page background. Cards are
+  the *same* white as the page; they are distinguished by their ring, not by tone.
+- **Soft Ink** (`oklch(0.2478 0 0)`): primary text. Never pure black — the system is
+  tinted-neutral by construction, not `#000`.
+- **Counter Ink** (`oklch(0.145 0 0)`): sidebar text and the dark-mode page ground.
+- **Label Grey** (`oklch(0.556 0 0)`): secondary and placeholder text, card
+  descriptions. This is the floor for small text — lighter loses contrast.
+- **Hairline Grey** (`oklch(0.922 0 0)`): borders and dividers, light mode. In dark mode
+  this becomes `oklch(1 0 0 / 10%)`, a translucent white at 10%.
+- **Panel Grey** (`oklch(0.967 0.001 286.375)`): the secondary-button fill and other
+  quiet-but-present surfaces; slightly cooler than the muted greys.
+- **Touch Grey** (`oklch(0.97 0 0)`): hover and selected washes. Never a resting state.
+
+### Named Rules
+
+**The Token-Only Rule.** No raw color ever appears in a component. `text-muted-foreground`,
+never `text-gray-200`. If a value isn't in the token set, the token set gets a new
+entry — components don't get a hard-coded escape hatch.
+
+**The Single Accent Rule.** Counter Blue is the only decorative accent on a screen.
+Status colors may appear only when they report real state. If you need a second
+brand color to make a screen work, the screen's hierarchy is wrong, not its palette.
+
+## Typography
+
+**Display Font:** none defined at the system level — there is no hero/display tier in
+the token set, and marketing headings come from landing-page sections rather than the
+system scale.
+
+**Body Font:** the theme-selected family, defaulting to the system UI stack
+(`ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+'Helvetica Neue', Arial, sans-serif`). A theme may substitute a Google font, loaded at
+weights 400/500/600/700 and bound via `--be-font-family`.
+
+**Label/Mono Font:** `--font-mono` (Tailwind's default mono stack) for code, IDs and
+numeric columns.
+
+**Character:** a plain, high-legibility UI stack with no personality of its own — which
+is the point. The type is deliberately characterless so creator content carries the
+voice. Weight does the work that size does not: 400 for prose, 500 for anything
+interactive or titled, 600 available for emphasis.
+
+Note: `@fontsource-variable/inter` is declared in `package.json`, but no import of it
+was found in the source. The rendered default is the system stack above. Adding Inter
+would be a change to this file, not an extraction from it.
+
+### Hierarchy
+
+- **Body** (400, 16px, 24px): default reading size for prose and form content.
+  Inputs opt out deliberately — `text-base` on mobile (16px prevents iOS zoom),
+  dropping to `text-sm` (14px) at the `md` breakpoint.
+- **Title** (500, 16px, 24px): card and panel titles (`Card.Title`). Same size as body;
+  weight is the only signal.
+- **Label** (400, 14px, 20px): the workhorse. Table cells, list rows, sidebar items,
+  nav links, and button text all sit at 14px.
+- **Label Strong** (500, 14px, 20px): buttons, badges, active nav items, table cells
+  marked `font-medium`.
+- **Caption** (500, 12px, 16px): badges, `xs` buttons, chart ticks, tight metadata.
+
+### Named Rules
+
+**The Two-Size Rule.** Working UI runs on exactly two sizes: 16px for reading and
+input, 14px for controls, tables and navigation. 12px is for badges and metadata only.
+If you're reaching for a third working size, the content wants to be restructured, not
+rescaled.
+
+**The Weight-First Rule.** Establish hierarchy with weight before size. Titles and body
+are both 16px; they differ by 100 weight. Reserve size jumps for genuine section
+breaks.
+
+## Layout
+
+The dashboard is a viewport, not a document. `DashboardLayout` renders a `h-screen`
+flex column with `overflow-hidden`; scrolling happens inside content regions rather
+than on the page. This is why panels, tables and the sidebar never fight the window.
+
+- **Content container:** `max-w-7xl` (80rem), centered, `py-4` (16px) with `gap-5`
+  (20px) between stacked sections — the standard page rhythm.
+- **Sidebar:** `w-3xs` (16rem / 256px) expanded, collapsing to a 60px icon rail
+  (`w-15`), and becoming an off-canvas `Drawer` on mobile. Items are `px-3 py-2`
+  (12px/8px) at 14px.
+- **Navbar:** `gap-4 px-2` (16px / 8px). The `default` variant adds `border-b py-2`;
+  `inset` and `floating` variants drop the border and let the frame float on a muted
+  ground instead.
+- **Section variants:** three sanctioned frames — `default` (bordered), `inset`
+  (floating content inside a padded shell), `floating` (everything on `bg-muted` with
+  8px gaps). Pick one per screen; don't mix within a screen.
+- **Spacing rhythm:** a strict 4px base grid (`--spacing: 0.25rem`). Component internals
+  use 8/12/16; card padding is 24; section gaps are 20.
+- **Breakpoints:** Tailwind defaults — `sm` 640px, `md` 768px, `lg` 1024px,
+  `xl` 1280px.
+- **RTL:** `components.json` sets `"rtl": true`, and the codebase uses logical
+  properties throughout (`px`/`py`, `ms`/`me`, `ps`/`pe`, `start`/`end`). Never write a
+  physical `left`/`right` margin or padding in shared components.
+
+### Named Rules
+
+**The One-Container Rule.** Every dashboard page centers on `max-w-7xl`. A page that
+needs more width is a page that needs a table with horizontal scroll, not a wider
+container.
+
+## Elevation & Depth
+
+The system is flat by default and separates surfaces with a hairline ring, not with
+shadow. `Card` carries no `box-shadow` at all — it uses `ring-1 ring-foreground/10`,
+a 10% foreground outline that reads correctly on both light and dark grounds without
+a second token.
+
+Shadows exist, but they belong to layers that genuinely float above the plane:
+dialogs, popovers, dropdowns, tooltips and drawers. Because those are transient, the
+shadow vocabulary is allowed to differ between theme presets without breaking the
+system — the resting surface never moves.
+
+### Shadow Vocabulary
+
+- **Ambient float** (default scale: `0 1px 3px 0 rgb(0 0 0 / 0.1),
+  0 1px 2px -1px rgb(0 0 0 / 0.1)`): dropdowns and popovers at rest; stepping up to
+  `0 4px 6px -1px` for menus and `0 10px 15px -3px` for dialogs.
+- **Preset override — brutalist:** hard offset, no blur — `4px 4px 0 0` in solid black.
+  An intentional reskin; permitted only under `data-theme-preset="brutalist"`.
+- **Preset override — tangerine / soft-pop:** softer, lower-contrast ambient shadows
+  tuned to their warmer grounds.
+
+### Named Rules
+
+**The Ring Rule.** Containers are separated by `ring-1 ring-foreground/10`. If two
+surfaces need to be told apart and a ring won't do it, they aren't the same level of
+the hierarchy — restructure rather than add a shadow.
+
+**The Flat-By-Default Rule.** Resting surfaces have no shadow. Shadow is a response to
+state (hover, open, elevated), never a starting condition.
+
+## Shapes
+
+One radius family, three members, remapped as a unit.
+
+- **Controls are pills.** `rounded-button` resolves to 24px. At the default 36px
+  control height that exceeds half-height and clamps — so buttons render as full pills.
+  The same token governs sidebar menu items, so navigation reads as a row of soft pills
+  too.
+- **Fields are softly squared.** `rounded-input` resolves to 12px — visibly tighter
+  than buttons, so an input never reads as a button.
+- **Cards are generous.** `rounded-card` is 24px, stepping down to `card-sm` (16px) for
+  badges and `card-xs` (12px) for nested elements.
+- **Radius is a theme dimension, not a component decision.** The `radius-none` /
+  `radius-sm` / `radius-md` / `radius-lg` utility classes remap *every* component radius
+  at once. Choose one per theme; never override a radius inline on a single component.
+- **Borders are 1px, always.** `--default-outline-width: 1px`. There is no 2px border in
+  the system; emphasis comes from color or ring, not thickness.
+- **Cards clip.** `Card` is `overflow-hidden`, so first/last child images inherit the
+  card radius automatically.
+
+### Named Rules
+
+**The Three-Radius Rule.** Only 24px (controls/cards), 16px (badges) and 12px (fields)
+exist. A fourth value means a component is being styled outside the system.
+
+## Components
+
+Precise and firm: solid tokens, tight internal rhythm, visible focus, and a 1px press
+that confirms every click. Nothing bounces, nothing floats at rest.
+
+### Buttons
+
+- **Shape:** pill (24px radius, clamping to full-round at control height).
+- **Sizes:** `xs` h-6, `sm` h-8, `default` h-9, `lg` h-10, plus icon variants at
+  24/32/36/40px. Horizontal padding 8–16px by size; `gap-1.5` (6px) to icons.
+- **Primary:** `bg-primary text-primary-foreground`, 14px/500, `border-transparent`.
+  This is the default — a flat button with no explicit color resolves to primary.
+- **Outline:** transparent fill, `border-primary/50 text-primary`, hovering to
+  `bg-primary/4`.
+- **Ghost:** no fill, no border, hovering to `bg-accent`.
+- **Link:** no box at all — `text-primary` with a 4px underline offset on hover.
+- **Colors:** `default` (secondary fill), `primary`, `danger`, `positive`, `white`.
+  `danger` and `positive` mirror the primary recipe using their status tokens.
+- **Hover / Press:** fill drops to 80% opacity (`hover:bg-primary/80`); press adds
+  `translate-y-px` — one pixel down, no transform animation.
+- **Focus:** `outline-2 outline-solid` in the primary color, from the global base-layer
+  `outline-color`. Always visible, never removed.
+- **Disabled:** `opacity-50` with pointer events off.
+
+### Inputs / Fields
+
+- **Style:** `h-9` (36px), `rounded-input` (12px), `border border-input`, `px-3`,
+  transparent background on light and `bg-input/30` on dark.
+- **Text:** 16px on mobile, 14px from `md` up — the iOS-zoom guard.
+- **Focus:** border shifts to `border-foreground/20` on hover; focus uses the global
+  primary outline.
+- **Placeholder:** `text-muted-foreground`.
+- **Error:** `aria-invalid:border-destructive` — the border itself carries the error,
+  no icon required.
+- **Disabled:** `bg-input/50 opacity-50` light, `bg-input/80` dark.
+
+### Cards / Containers
+
+- **Character:** the unit of grouping. Flat white sheet, ringed, generous.
+- **Corner Style:** `rounded-card` (24px), with `overflow-hidden`.
+- **Background:** `bg-card` — identical to the page background.
+- **Shadow Strategy:** none. See the Ring Rule.
+- **Border:** `ring-1 ring-foreground/10`.
+- **Internal Padding:** `py-6` (24px) with header/content `px-6` (24px); `gap-6`
+  (24px) between blocks. The `sm` size tightens to `py-4` / `px-4` / `gap-4`.
+- **Anatomy:** `Card.Header` → `Card.Title` (16px/500) → `Card.Description`
+  (14px, `text-muted-foreground`) → `Card.Content` → `Card.Footer`. The action slot
+  pins to the header's trailing top corner.
+
+### Badges
+
+- **Shape:** `h-5` (20px), `rounded-card-sm` (16px), `px-2`, 12px/500.
+- **Status variants:** `destructive` and `positive` use a 10% wash of their token with
+  full-strength text — a tint, never a solid slab.
+- **Neutral variants:** `default` (solid primary), `secondary` (panel grey),
+  `outline`, `ghost`, `link`.
+
+### Navigation
+
+- **Sidebar item:** `rounded-button px-3 py-2`, `h-9`, 14px. Icon `size-4` (16px),
+  `gap-2` (8px).
+- **States:** hover and current-page both resolve to `bg-sidebar-accent` +
+  `text-accent-foreground`; current page adds `font-medium` as the only extra signal —
+  position, fill and weight together, no left-border indicator.
+- **Collapsed:** the icon rail is `size-8` (32px) square items — same fill behaviour.
+- **Mobile:** becomes a left `Drawer` with backdrop; a bottom nav bar covers primary
+  destinations.
+
+### Signature: The Press
+
+Every interactive element in the system shares `active:translate-y-px` (buttons) or a
+fill-to-80% response (fills that can't move). It is the system's entire motion
+vocabulary for input — no scale, no bounce, no spring. Motion elsewhere is
+`transition-button` / `transition-colors` at 150ms on the standard
+`cubic-bezier(0.4, 0, 0.2, 1)`.
+
+## Do's and Don'ts
+
+### Do:
+
+- **Do** express every color through a semantic token — `bg-primary`,
+  `text-muted-foreground`, `border-border`.
+- **Do** separate surfaces with `ring-1 ring-foreground/10` and leave them shadowless
+  at rest.
+- **Do** build on the 4px grid: 12/16px inside controls, 24px inside cards, 20px
+  between sections, `max-w-7xl` for page content.
+- **Do** use logical properties (`ps-`/`pe-`/`ms-`/`me-`) so the UI keeps working in RTL.
+- **Do** keep focus visible — `focus-visible:outline-2` in primary on every interactive
+  element.
+- **Do** keep 16px for reading and input, 14px for controls and tables, 12px for badges.
+- **Do** establish hierarchy with weight (400 vs 500) before changing size.
+- **Do** give status color a real status to report — green means confirmed, red means
+  destructive or invalid.
+
+### Don't:
+
+- **Don't** hard-code a hex, `rgb()` or a Tailwind palette class like `text-gray-200`
+  in a component.
+- **Don't** put a resting shadow on a card, panel or section.
+- **Don't** nest a card inside a card — use `Card.Content` sections or a plain
+  bordered group.
+- **Don't** invent a radius, a border width or a type size outside the scales above.
+- **Don't** use `#000` or `#fff` directly for text or grounds; the neutrals are tinted
+  (`Soft Ink`, `Sheet White`) and pure values break the ladder.
+- **Don't** add a second accent color to a screen, or use status colors decoratively.
+- **Don't** reach for physical directional styles (`ml-`, `mr-`, `left-`, `right-`) in
+  shared components.
+- **Don't** remove or soften the focus outline, and don't add bounce or elastic
+  easing — the press is the only input motion.

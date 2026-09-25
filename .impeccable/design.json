@@ -1,0 +1,360 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-25T09:20:00.000Z",
+  "title": "Design System: Linket",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Counter Blue",
+        "canonical": "oklch(62.3% 0.214 259.815)",
+        "tonalRamp": [
+          "oklch(0.15 0.214 259.815)",
+          "oklch(0.27 0.214 259.815)",
+          "oklch(0.39 0.214 259.815)",
+          "oklch(0.51 0.214 259.815)",
+          "oklch(0.623 0.214 259.815)",
+          "oklch(0.74 0.19 259.815)",
+          "oklch(0.84 0.13 259.815)",
+          "oklch(0.93 0.06 259.815)"
+        ]
+      },
+      "primary-dark": {
+        "role": "primary",
+        "displayName": "Counter Blue, Light (dark mode)",
+        "canonical": "oklch(88.2% 0.059 254.128)",
+        "tonalRamp": [
+          "oklch(0.16 0.059 254.128)",
+          "oklch(0.28 0.059 254.128)",
+          "oklch(0.4 0.059 254.128)",
+          "oklch(0.52 0.059 254.128)",
+          "oklch(0.64 0.059 254.128)",
+          "oklch(0.76 0.059 254.128)",
+          "oklch(0.882 0.059 254.128)",
+          "oklch(0.95 0.04 254.128)"
+        ]
+      },
+      "background": {
+        "role": "neutral",
+        "displayName": "Sheet White",
+        "canonical": "oklch(1 0 0)",
+        "tonalRamp": [
+          "oklch(0.15 0 0)",
+          "oklch(0.28 0 0)",
+          "oklch(0.41 0 0)",
+          "oklch(0.54 0 0)",
+          "oklch(0.67 0 0)",
+          "oklch(0.8 0 0)",
+          "oklch(0.9 0 0)",
+          "oklch(1 0 0)"
+        ]
+      },
+      "foreground": {
+        "role": "neutral",
+        "displayName": "Soft Ink",
+        "canonical": "oklch(0.2478 0 0)",
+        "tonalRamp": [
+          "oklch(0.15 0 0)",
+          "oklch(0.2478 0 0)",
+          "oklch(0.36 0 0)",
+          "oklch(0.48 0 0)",
+          "oklch(0.6 0 0)",
+          "oklch(0.72 0 0)",
+          "oklch(0.85 0 0)",
+          "oklch(0.95 0 0)"
+        ]
+      },
+      "muted-fg": {
+        "role": "neutral",
+        "displayName": "Label Grey",
+        "canonical": "oklch(0.556 0 0)",
+        "tonalRamp": [
+          "oklch(0.16 0 0)",
+          "oklch(0.28 0 0)",
+          "oklch(0.4 0 0)",
+          "oklch(0.5 0 0)",
+          "oklch(0.556 0 0)",
+          "oklch(0.68 0 0)",
+          "oklch(0.82 0 0)",
+          "oklch(0.93 0 0)"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Hairline Grey",
+        "canonical": "oklch(0.922 0 0)",
+        "tonalRamp": [
+          "oklch(0.2 0 0)",
+          "oklch(0.32 0 0)",
+          "oklch(0.44 0 0)",
+          "oklch(0.56 0 0)",
+          "oklch(0.68 0 0)",
+          "oklch(0.8 0 0)",
+          "oklch(0.922 0 0)",
+          "oklch(0.97 0 0)"
+        ]
+      },
+      "sidebar": {
+        "role": "neutral",
+        "displayName": "Counter Slab",
+        "canonical": "oklch(0.985 0 0)",
+        "tonalRamp": [
+          "oklch(0.15 0 0)",
+          "oklch(0.28 0 0)",
+          "oklch(0.41 0 0)",
+          "oklch(0.54 0 0)",
+          "oklch(0.67 0 0)",
+          "oklch(0.8 0 0)",
+          "oklch(0.9 0 0)",
+          "oklch(0.985 0 0)"
+        ]
+      },
+      "positive": {
+        "role": "status",
+        "displayName": "Confirm Green",
+        "canonical": "oklch(0.7227 0.192 149.58)",
+        "tonalRamp": [
+          "oklch(0.16 0.192 149.58)",
+          "oklch(0.28 0.192 149.58)",
+          "oklch(0.4 0.192 149.58)",
+          "oklch(0.52 0.192 149.58)",
+          "oklch(0.64 0.192 149.58)",
+          "oklch(0.7227 0.192 149.58)",
+          "oklch(0.85 0.13 149.58)",
+          "oklch(0.94 0.06 149.58)"
+        ]
+      },
+      "warning": {
+        "role": "status",
+        "displayName": "Caution Amber",
+        "canonical": "oklch(0.7785 0.152 70.88)",
+        "tonalRamp": [
+          "oklch(0.16 0.152 70.88)",
+          "oklch(0.28 0.152 70.88)",
+          "oklch(0.4 0.152 70.88)",
+          "oklch(0.52 0.152 70.88)",
+          "oklch(0.65 0.152 70.88)",
+          "oklch(0.7785 0.152 70.88)",
+          "oklch(0.87 0.11 70.88)",
+          "oklch(0.95 0.05 70.88)"
+        ]
+      },
+      "destructive": {
+        "role": "status",
+        "displayName": "Alarm Red",
+        "canonical": "oklch(0.6532 0.2328 25.74)",
+        "tonalRamp": [
+          "oklch(0.16 0.2328 25.74)",
+          "oklch(0.28 0.2328 25.74)",
+          "oklch(0.4 0.2328 25.74)",
+          "oklch(0.52 0.2328 25.74)",
+          "oklch(0.6532 0.2328 25.74)",
+          "oklch(0.76 0.18 25.74)",
+          "oklch(0.86 0.11 25.74)",
+          "oklch(0.94 0.05 25.74)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "body": {
+        "displayName": "Body",
+        "purpose": "Prose and form content. Inputs run 16px on mobile to prevent iOS zoom, dropping to 14px at the md breakpoint."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Card and panel titles. Same size as body — weight (500) is the only signal."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "The workhorse: table cells, list rows, sidebar items, nav links, button text."
+      },
+      "label-strong": {
+        "displayName": "Label Strong",
+        "purpose": "Buttons, badges, active nav items, font-medium table cells."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Badges, xs buttons, chart ticks, tight metadata. 12px is not a working size."
+      }
+    },
+    "shadows": [
+      {
+        "name": "ring",
+        "value": "0 0 0 1px color-mix(in oklab, var(--be-foreground, oklch(0.2478 0 0)) 10%, transparent)",
+        "purpose": "Card and resting-surface separation. Not a shadow — the Ring Rule's only mechanism."
+      },
+      {
+        "name": "float-xs",
+        "value": "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
+        "purpose": "Dropdowns and popovers at rest."
+      },
+      {
+        "name": "float-md",
+        "value": "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
+        "purpose": "Open menus and transient panels."
+      },
+      {
+        "name": "float-lg",
+        "value": "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
+        "purpose": "Dialogs. Dialogs are capped at 90vw x 90vh."
+      },
+      {
+        "name": "brutalist-offset",
+        "value": "4px 4px 0 0 rgb(0 0 0 / 1)",
+        "purpose": "Preset only (data-theme-preset=brutalist). Hard offset, no blur — permitted nowhere else."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-standard",
+        "value": "cubic-bezier(0.4, 0, 0.2, 1)",
+        "purpose": "The only easing in the system. No bounce, no elastic."
+      },
+      {
+        "name": "duration-fast",
+        "value": "150ms",
+        "purpose": "Default transition-button / transition-colors duration."
+      },
+      {
+        "name": "press-offset",
+        "value": "translateY(1px)",
+        "purpose": "The system's entire input feedback: active:translate-y-px on buttons."
+      },
+      {
+        "name": "hover-wash",
+        "value": "80% fill opacity",
+        "purpose": "Filled buttons drop to 80% on hover; ghost/wash states use 4-8% foreground."
+      }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The default action. Fill drops to 80% on hover, presses 1px on active.",
+      "html": "<button class=\"ds-btn-primary\"><svg class=\"ds-btn-icon\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M5 12h14\"/><path d=\"m12 5 7 7-7 7\"/></svg>Get started</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 36px; padding: 0 12px; border: 1px solid transparent; border-radius: 24px; background: var(--be-primary, oklch(62.3% 0.214 259.815)); color: var(--be-primary-foreground, oklch(0.9911 0 190.05)); font-size: 14px; line-height: 20px; font-weight: 500; white-space: nowrap; cursor: pointer; transition: background-color 150ms cubic-bezier(0.4,0,0.2,1), transform 150ms cubic-bezier(0.4,0,0.2,1), outline-color 150ms cubic-bezier(0.4,0,0.2,1); } .ds-btn-primary .ds-btn-icon { width: 16px; height: 16px; } .ds-btn-primary:hover { background: color-mix(in oklab, var(--be-primary, oklch(62.3% 0.214 259.815)) 80%, transparent); } .ds-btn-primary:active { transform: translateY(1px); } .ds-btn-primary:focus-visible { outline: 2px solid var(--be-primary, oklch(62.3% 0.214 259.815)); outline-offset: 2px; } .ds-btn-primary:disabled { opacity: 0.5; pointer-events: none; }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Secondary action. Half-strength border at rest, full primary on hover.",
+      "html": "<button class=\"ds-btn-outline\">View plans</button>",
+      "css": ".ds-btn-outline { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 36px; padding: 0 12px; border-radius: 24px; background: transparent; border: 1px solid color-mix(in oklab, var(--be-primary, oklch(62.3% 0.214 259.815)) 50%, transparent); color: var(--be-primary, oklch(62.3% 0.214 259.815)); font-size: 14px; line-height: 20px; font-weight: 500; white-space: nowrap; cursor: pointer; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); transition: background-color 150ms cubic-bezier(0.4,0,0.2,1), border-color 150ms cubic-bezier(0.4,0,0.2,1), transform 150ms cubic-bezier(0.4,0,0.2,1); } .ds-btn-outline:hover { background: color-mix(in oklab, var(--be-primary, oklch(62.3% 0.214 259.815)) 4%, transparent); border-color: var(--be-primary, oklch(62.3% 0.214 259.815)); } .ds-btn-outline:active { transform: translateY(1px); } .ds-btn-outline:focus-visible { outline: 2px solid var(--be-primary, oklch(62.3% 0.214 259.815)); outline-offset: 2px; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "The only field style. 12px radius so it never reads as a button; border carries error state.",
+      "html": "<input class=\"ds-input\" type=\"email\" placeholder=\"m@example.com\" />",
+      "css": ".ds-input { display: block; width: 100%; height: 36px; box-sizing: border-box; border-radius: 12px; border: 1px solid var(--be-input, oklch(0.922 0 0)); background: transparent; padding: 0 12px; font-size: 14px; line-height: 20px; color: var(--be-foreground, oklch(0.2478 0 0)); transition: border-color 150ms cubic-bezier(0.4,0,0.2,1); } .ds-input::placeholder { color: var(--be-muted-foreground, oklch(0.556 0 0)); } .ds-input:hover { border-color: color-mix(in oklab, var(--be-foreground, oklch(0.2478 0 0)) 20%, transparent); } .ds-input:focus-visible { outline: 2px solid var(--be-primary, oklch(62.3% 0.214 259.815)); outline-offset: 2px; } .ds-input[aria-invalid=\"true\"] { border-color: var(--be-destructive, oklch(0.6532 0.2328 25.74)); } .ds-input:disabled { background: color-mix(in oklab, var(--be-input, oklch(0.922 0 0)) 50%, transparent); opacity: 0.5; cursor: not-allowed; }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "The unit of grouping. Same white as the page, separated only by its ring.",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-header\"><div class=\"ds-card-title\">Sales summary</div><div class=\"ds-card-desc\">Earnings and payouts for the selected period.</div></div><div class=\"ds-card-content\">Lifetime earnings, available payout, and recent orders.</div></div>",
+      "css": ".ds-card { display: flex; flex-direction: column; gap: 24px; padding: 24px; border-radius: 24px; background: var(--be-card, oklch(1 0 0)); color: var(--be-card-foreground, oklch(0.2478 0 0)); font-size: 14px; line-height: 20px; overflow: hidden; box-shadow: 0 0 0 1px color-mix(in oklab, var(--be-foreground, oklch(0.2478 0 0)) 10%, transparent); } .ds-card-header { display: grid; gap: 4px; } .ds-card-title { font-size: 16px; line-height: 24px; font-weight: 500; } .ds-card-desc { font-size: 14px; line-height: 20px; color: var(--be-muted-foreground, oklch(0.556 0 0)); } .ds-card-content { font-size: 14px; line-height: 20px; }"
+    },
+    {
+      "name": "Status Badge",
+      "kind": "chip",
+      "refersTo": "badge",
+      "description": "20px tall, 16px radius. Status variants are a 10% wash, never a solid slab.",
+      "html": "<span class=\"ds-badge\">Pro</span> <span class=\"ds-badge ds-badge--positive\">Paid</span> <span class=\"ds-badge ds-badge--destructive\">Failed</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; justify-content: center; gap: 4px; height: 20px; padding: 0 8px; border-radius: 16px; border: 1px solid transparent; background: var(--be-primary, oklch(62.3% 0.214 259.815)); color: var(--be-primary-foreground, oklch(0.9911 0 190.05)); font-size: 12px; line-height: 16px; font-weight: 500; white-space: nowrap; } .ds-badge--positive { background: color-mix(in oklab, oklch(0.7227 0.192 149.58) 10%, transparent); color: oklch(0.7227 0.192 149.58); } .ds-badge--destructive { background: color-mix(in oklab, oklch(0.6532 0.2328 25.74) 10%, transparent); color: oklch(0.6532 0.2328 25.74); } .ds-badge--outline { background: transparent; border-color: color-mix(in oklab, var(--be-foreground, oklch(0.2478 0 0)) 92.2%, transparent); color: var(--be-foreground, oklch(0.2478 0 0)); }"
+    },
+    {
+      "name": "Sidebar Nav Item",
+      "kind": "nav",
+      "refersTo": "navigation",
+      "description": "Pill-shaped row. Current page is signalled by fill + weight, never a left border.",
+      "html": "<button class=\"ds-nav-item\" aria-current=\"page\"><svg class=\"ds-nav-icon\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 3v16a2 2 0 0 0 2 2h16\"/><path d=\"M7 15l4-4 4 4 4-6\"/></svg>Insights</button>",
+      "css": ".ds-nav-item { display: flex; align-items: center; gap: 8px; width: 100%; height: 36px; padding: 8px 12px; border: 0; border-radius: 24px; background: transparent; color: var(--be-sidebar-foreground, oklch(0.145 0 0)); font-size: 14px; line-height: 20px; text-align: start; cursor: pointer; transition: background-color 150ms cubic-bezier(0.4,0,0.2,1), color 150ms cubic-bezier(0.4,0,0.2,1); } .ds-nav-item .ds-nav-icon { width: 16px; height: 16px; flex-shrink: 0; } .ds-nav-item:hover, .ds-nav-item[data-open] { background: var(--be-sidebar-accent, color-mix(in oklab, var(--be-foreground, oklch(0.2478 0 0)) 8%, transparent)); color: var(--be-accent-foreground, oklch(0.205 0 0)); } .ds-nav-item[aria-current=\"page\"] { background: var(--be-sidebar-accent, color-mix(in oklab, var(--be-foreground, oklch(0.2478 0 0)) 8%, transparent)); color: var(--be-accent-foreground, oklch(0.205 0 0)); font-weight: 500; } .ds-nav-item:focus-visible { outline: 2px solid var(--be-primary, oklch(62.3% 0.214 259.815)); outline-offset: 2px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Creator's Counter",
+    "overview": "Linket's interface is a shop counter, not a showroom. The counter is where goods are laid out, where the transaction happens, and where the person behind it stands all day. That means the chrome is quiet and the products are loud: our own UI should recede so a creator's links, products, orders and payouts are the most visible thing on screen. The dashboard is a working surface — scannable at a glance, dense where density helps, never decorative for its own sake.\n\nThe system is semantic-token driven end to end. Nothing in a component is allowed to name a raw color; every surface, border and label resolves through the --be-* variables that a theme supplies. The default record is neutral and near-achromatic (white paper, ink-grey text, hairline borders) with exactly one chromatic accent — a working blue — reserved for actions. Dark mode is a first-class twin, not an afterthought: it remaps the same token names rather than introducing new ones.\n\nExpressiveness is delegated, not absent. A creator's public page is theirs to make loud; the dashboard that builds it stays restrained. When a decision is close, choose the quieter surface.",
+    "keyCharacteristics": [
+      "Semantic tokens only — no raw color values in components",
+      "One working blue as the single decorative accent; status colors are earned by meaning",
+      "Flat by default, separated by a 1px ring rather than shadow",
+      "Generous, pill-like control radius (24px) against 12px fields and 16px badges",
+      "4px spacing grid; 24px card padding; 14px/16px working type sizes",
+      "Logical properties everywhere — the UI is RTL-ready by construction"
+    ],
+    "rules": [
+      {
+        "name": "The Token-Only Rule",
+        "body": "No raw color ever appears in a component. text-muted-foreground, never text-gray-200. If a value isn't in the token set, the token set gets a new entry — components don't get a hard-coded escape hatch.",
+        "section": "colors"
+      },
+      {
+        "name": "The Single Accent Rule",
+        "body": "Counter Blue is the only decorative accent on a screen. Status colors may appear only when they report real state. If you need a second brand color to make a screen work, the screen's hierarchy is wrong, not its palette.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two-Size Rule",
+        "body": "Working UI runs on exactly two sizes: 16px for reading and input, 14px for controls, tables and navigation. 12px is for badges and metadata only. If you're reaching for a third working size, the content wants to be restructured, not rescaled.",
+        "section": "typography"
+      },
+      {
+        "name": "The Weight-First Rule",
+        "body": "Establish hierarchy with weight before size. Titles and body are both 16px; they differ by 100 weight. Reserve size jumps for genuine section breaks.",
+        "section": "typography"
+      },
+      {
+        "name": "The One-Container Rule",
+        "body": "Every dashboard page centers on max-w-7xl. A page that needs more width is a page that needs a table with horizontal scroll, not a wider container.",
+        "section": "layout"
+      },
+      {
+        "name": "The Ring Rule",
+        "body": "Containers are separated by ring-1 ring-foreground/10. If two surfaces need to be told apart and a ring won't do it, they aren't the same level of the hierarchy — restructure rather than add a shadow.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Flat-By-Default Rule",
+        "body": "Resting surfaces have no shadow. Shadow is a response to state (hover, open, elevated), never a starting condition.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Three-Radius Rule",
+        "body": "Only 24px (controls/cards), 16px (badges) and 12px (fields) exist. A fourth value means a component is being styled outside the system.",
+        "section": "shapes"
+      }
+    ],
+    "dos": [
+      "Do express every color through a semantic token — bg-primary, text-muted-foreground, border-border.",
+      "Do separate surfaces with ring-1 ring-foreground/10 and leave them shadowless at rest.",
+      "Do build on the 4px grid: 12/16px inside controls, 24px inside cards, 20px between sections, max-w-7xl for page content.",
+      "Do use logical properties (ps-/pe-/ms-/me-) so the UI keeps working in RTL.",
+      "Do keep focus visible — focus-visible:outline-2 in primary on every interactive element.",
+      "Do keep 16px for reading and input, 14px for controls and tables, 12px for badges.",
+      "Do establish hierarchy with weight (400 vs 500) before changing size.",
+      "Do give status color a real status to report — green means confirmed, red means destructive or invalid."
+    ],
+    "donts": [
+      "Don't hard-code a hex, rgb() or a Tailwind palette class like text-gray-200 in a component.",
+      "Don't put a resting shadow on a card, panel or section.",
+      "Don't nest a card inside a card — use Card.Content sections or a plain bordered group.",
+      "Don't invent a radius, a border width or a type size outside the scales above.",
+      "Don't use #000 or #fff directly for text or grounds; the neutrals are tinted (Soft Ink, Sheet White) and pure values break the ladder.",
+      "Don't add a second accent color to a screen, or use status colors decoratively.",
+      "Don't reach for physical directional styles (ml-, mr-, left-, right-) in shared components.",
+      "Don't remove or soften the focus outline, and don't add bounce or elastic easing — the press is the only input motion."
+    ]
+  }
+}
