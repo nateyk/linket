@@ -1,4 +1,3 @@
-import {useTrans} from '@ui/i18n/use-trans';
 import {useSettings} from '@ui/settings/use-settings';
 import {useIsDarkMode} from '@ui/themes/use-is-dark-mode';
 import {ReactNode} from 'react';
@@ -14,24 +13,21 @@ interface AuthPageProps {
 export function AuthLayout({heading, children, message}: AuthPageProps) {
   const {branding} = useSettings();
   const isDarkMode = useIsDarkMode();
-  const {trans} = useTrans();
 
   return (
     <main
       className="md:px-10vw flex h-screen flex-col items-center overflow-y-auto bg-muted px-3.5 pt-17.5 dark:bg-background"
       style={{backgroundImage: isDarkMode ? undefined : `url("${authBgSvg}")`}}
     >
-      <Link
-        to="/"
-        className="mb-10 flex shrink-0 items-center gap-2.5"
-        aria-label={trans({message: 'Go to homepage'})}
-      >
+      <Link to="/" className="mb-10 flex shrink-0 items-center gap-2.5">
         <img
           src={isDarkMode ? branding.logo_light : branding?.logo_dark}
           className="block h-10 w-auto"
           alt=""
         />
-        <span className="text-2xl font-semibold tracking-tight">Linket</span>
+        <span className="text-2xl font-semibold tracking-tight">
+          {branding.site_name}
+        </span>
       </Link>
       <div className="mx-auto w-full max-w-110 rounded-card bg-card px-10 pt-10 pb-8 shadow-sm md:shadow-xl">
         {heading && <h1 className="mb-5 text-xl">{heading}</h1>}

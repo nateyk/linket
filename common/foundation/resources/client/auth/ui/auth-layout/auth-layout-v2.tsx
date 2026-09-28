@@ -70,9 +70,11 @@ export function AuthLayoutV2({children, topAction}: AuthLayoutV2Props) {
                   />
                 )}
                 {/* The brand name is real text, not part of the logo image —
-                    DESIGN.md's page title role (600, 24px, 32px). */}
+                    DESIGN.md's page title role (600, 24px, 32px). It comes from
+                    branding.site_name, the same source as the footer below, so
+                    one configured name serves the whole screen. */}
                 <span className="text-2xl font-semibold tracking-tight">
-                  Linket
+                  {branding.site_name}
                 </span>
               </Link>
               {children}

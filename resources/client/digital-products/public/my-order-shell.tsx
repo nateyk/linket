@@ -21,9 +21,11 @@ export function MyOrderShell({
               <img src={branding.logo_dark} alt="" className="h-7 w-auto" />
             ) : null}
             {/* The brand name is real text, not part of the logo image —
-                DESIGN.md's page title role (600, 24px, 32px). */}
+                DESIGN.md's page title role (600, 24px, 32px). It renders from
+                branding.site_name (config app.name, default "Linket"), the same
+                source the footer below uses. */}
             <span className="text-2xl font-semibold tracking-tight">
-              Linket
+              {branding.site_name}
             </span>
           </Link>
           <span className="hidden text-sm text-muted-foreground sm:block">

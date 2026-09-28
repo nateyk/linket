@@ -28,6 +28,9 @@ $buttonClass =
             alt=""
             class="block h-10 w-auto"
         />
+        {{-- Literal brand name on purpose: this layout renders before install
+             completes, so the settings table it would read from may not exist
+             yet. Every post-install surface reads branding.site_name instead. --}}
         <span class="text-2xl font-semibold tracking-tight">Linket</span>
     </div>
     <div class="bg-background w-195 rounded-md border p-6 shadow-sm">{{ $slot }}</div>

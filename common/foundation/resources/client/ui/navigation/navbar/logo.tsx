@@ -35,6 +35,7 @@ export function Logo({
 
 function CompactLogo({color, className, url}: Omit<Props, 'logoType'>) {
   const {branding} = useSettings();
+  const {trans} = useTrans();
 
   // fallback to light logo if dark logo is not available
   const src =
@@ -45,7 +46,7 @@ function CompactLogo({color, className, url}: Omit<Props, 'logoType'>) {
   if (!src) return null;
 
   return (
-    <WrapperLink url={url}>
+    <WrapperLink url={url} ariaLabel={trans({message: 'Go to homepage'})}>
       <img src={src} className={cn('block w-auto', className)} alt="" />
     </WrapperLink>
   );
@@ -107,25 +108,36 @@ function WideLogo({color, className, url}: Omit<Props, 'logoType'>) {
 }
 
 // The brand name is real text, not part of the logo image — DESIGN.md's page
-// title role (600, 24px, 32px) is the header lockup size.
+// title role (600, 24px, 32px) is the header lockup size. It renders from
+// branding.site_name (config app.name, default "Linket"), the same source the
+// footer and header use, so the admin-configurable site name stays in charge.
 function BrandName() {
-  return <span className="text-2xl font-semibold tracking-tight">Linket</span>;
+  const {branding} = useSettings();
+
+  return (
+    <span className="text-2xl font-semibold tracking-tight">
+      {branding.site_name}
+    </span>
+  );
 }
 
 type WrapperLinkProps = {
   className?: string;
   children: ReactNode;
   url?: string;
+  /** Only for lockups with no visible text (the compact icon) — a lockup that
+   * renders the site name must not carry an aria-label, or the accessible name
+   * stops containing the visible label (WCAG 2.5.3 "Label in Name"). */
+  ariaLabel?: string;
 };
-function WrapperLink({className, children, url}: WrapperLinkProps) {
-  const {trans} = useTrans();
+function WrapperLink({className, children, url, ariaLabel}: WrapperLinkProps) {
   const {getRedirectUri} = useAuth();
 
   return (
     <Link
       to={url || getRedirectUri()}
       className={cn('block shrink-0', className)}
-      aria-label={trans({message: 'Go to homepage'})}
+      aria-label={ariaLabel}
     >
       {children}
     </Link>

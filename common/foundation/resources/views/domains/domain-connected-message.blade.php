@@ -19,7 +19,10 @@ $cssVariables = collect(config('themes.light'))
             alt=""
             class="block h-10 w-auto"
         />
-        <span class="text-2xl font-semibold tracking-tight">Linket</span>
+        {{-- Post-install page: the site name comes from the same settings source
+             every other blade uses (settings('branding.site_name') → config
+             app.name, default "Linket"). --}}
+        <span class="text-2xl font-semibold tracking-tight">{{ settings('branding.site_name') }}</span>
     </div>
     <div class="w-680 max-w-full rounded-md border bg p-24 text-center shadow">
         {{ $content }}

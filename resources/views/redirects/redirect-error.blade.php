@@ -57,7 +57,9 @@
 <div class="logo">
     <span class="lockup">
         <img class="img-responsive" src="{{ $settings->get('branding.logo_dark') }}" alt="">
-        <span class="brand-name">Linket</span>
+        {{-- Reads the same $settings source as the logo above, so one
+             configured name serves the lockup (default "Linket"). --}}
+        <span class="brand-name">{{ $settings->get('branding.site_name') }}</span>
     </span>
 </div>
 <div class="panel">
