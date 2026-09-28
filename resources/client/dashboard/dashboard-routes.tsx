@@ -362,7 +362,7 @@ export const dashboardRoutes: RouteObject[] = [
       },
     ],
     lazy: () => import('@app/dashboard/layout/app-dasbboard-layout'),
-    handle: {belinkRoutesType: 'dashboard'},
+    handle: {linketRoutesType: 'dashboard'},
     loader: () => {
       // no need to wait for the query to complete
       queryClient.ensureQueryData(usageOptions());

@@ -22,11 +22,14 @@ $buttonClass =
 <body
     class="bg-muted text-foreground flex flex-col items-center justify-center"
 >
-    <img
-        src="{{ file_exists(public_path('images/logo-dark.png')) ? asset('images/logo-dark.png') : asset('images/logo-dark.svg') }}"
-        alt="Logo"
-        class="mb-8.5 h-10"
-    />
+    <div class="mb-8.5 flex items-center gap-2.5">
+        <img
+            src="{{ file_exists(public_path('images/logo-dark.png')) ? asset('images/logo-dark.png') : asset('images/logo-dark.svg') }}"
+            alt=""
+            class="block h-10 w-auto"
+        />
+        <span class="text-2xl font-semibold tracking-tight">Linket</span>
+    </div>
     <div class="bg-background w-195 rounded-md border p-6 shadow-sm">{{ $slot }}</div>
 </body>
 </html>

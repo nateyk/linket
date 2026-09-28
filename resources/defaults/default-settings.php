@@ -62,7 +62,7 @@ return [
                     'badge' => 'Everything in one place',
                     'title' => 'Links that work harder for you',
                     'description' =>
-                        "Whether you're sharing one campaign link or building a full link-in-bio, BeLink gives you the tools to create, brand, and measure every touchpoint.",
+                        "Whether you're sharing one campaign link or building a full link-in-bio, Linket gives you the tools to create, brand, and measure every touchpoint.",
                     'maxColumns' => 3,
                     'iconsOnTop' => true,
                     'mutedBg' => true,
@@ -191,7 +191,7 @@ return [
                             'icon' => 'insights',
                             'title' => 'Track every scan',
                             'description' =>
-                                'See how often your codes get scanned, alongside clicks and visits from the rest of your BeLink dashboard.',
+                                'See how often your codes get scanned, alongside clicks and visits from the rest of your Linket dashboard.',
                         ],
                     ],
                 ],
@@ -201,7 +201,7 @@ return [
                     'badge' => 'Built for growth',
                     'title' => 'The toolkit serious marketers expect',
                     'description' =>
-                        'From solo creators to growing teams, BeLink scales with the features you need to manage links at volume.',
+                        'From solo creators to growing teams, Linket scales with the features you need to manage links at volume.',
                     'maxColumns' => 3,
                     'iconsOnTop' => true,
                     'features' => [
@@ -239,7 +239,7 @@ return [
                             'icon' => 'api',
                             'title' => 'API & webhooks',
                             'description' =>
-                                'Automate link creation and get notified when links are clicked — integrate BeLink into your stack.',
+                                'Automate link creation and get notified when links are clicked — integrate Linket into your stack.',
                         ],
                     ],
                 ],

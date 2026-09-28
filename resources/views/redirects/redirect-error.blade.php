@@ -18,8 +18,20 @@
             text-align: center;
             margin-bottom: 25px;
         }
+        .logo .lockup {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
         img {
-            max-width: 200px;
+            max-width: 64px;
+        }
+        .brand-name {
+            font-size: 24px;
+            line-height: 32px;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+            color: rgba(0, 0, 0, 0.87);
         }
         .panel {
             background: rgb(255, 255, 255);
@@ -43,7 +55,10 @@
 </head>
 <body>
 <div class="logo">
-    <img class="img-responsive" src="{{ $settings->get('branding.logo_dark') }}" alt="logo">
+    <span class="lockup">
+        <img class="img-responsive" src="{{ $settings->get('branding.logo_dark') }}" alt="">
+        <span class="brand-name">Linket</span>
+    </span>
 </div>
 <div class="panel">
     <h1>Could not redirect to destination url</h1>

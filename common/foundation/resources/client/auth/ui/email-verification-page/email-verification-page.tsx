@@ -64,7 +64,9 @@ export function Component() {
           <Trans message="Logout" />
         </Button>
 
-        <Logo className="mx-auto mb-11 block max-h-10.5 w-auto" />
+        <div className="mx-auto mb-11 w-fit">
+          <Logo className="block max-h-10.5 w-auto" />
+        </div>
 
         <div className="text-center">
           <h1 className="mb-6 text-3xl">

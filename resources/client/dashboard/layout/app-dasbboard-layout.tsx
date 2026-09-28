@@ -31,7 +31,7 @@ export function Component() {
   );
 
   return (
-    <DashboardLayout.Root name="belink-dashboard">
+    <DashboardLayout.Root name="linket-dashboard">
       {!isCompactLayout ? <AppNavbar /> : null}
       <DashboardLayout.Content>
         <AppDashboardSidebar />

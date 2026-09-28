@@ -165,7 +165,7 @@ export const Required = meta.story({
           <Trans message="Workspace name" />
           <span className="text-destructive">*</span>
         </Field.Label>
-        <Input id="required-input" required placeholder="Belink Team" />
+        <Input id="required-input" required placeholder="Linket Team" />
         <Field.Description>
           <Trans message="This field is required." />
         </Field.Description>

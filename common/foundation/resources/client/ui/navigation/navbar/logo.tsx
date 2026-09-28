@@ -70,15 +70,18 @@ function AutoLogo({color, className, url}: Omit<Props, 'logoType'>) {
 
   return (
     <WrapperLink url={url}>
-      <picture>
-        <source srcSet={compactLogo || wideLogo} media="(max-width: 768px)" />
-        <source srcSet={wideLogo} media="(min-width: 768px)" />
-        <img
-          src={wideLogo || compactLogo}
-          className={cn('block h-full w-auto', className)}
-          alt=""
-        />
-      </picture>
+      <span className="flex items-center gap-2">
+        <picture>
+          <source srcSet={compactLogo || wideLogo} media="(max-width: 768px)" />
+          <source srcSet={wideLogo} media="(min-width: 768px)" />
+          <img
+            src={wideLogo || compactLogo}
+            className={cn('block h-8 w-auto', className)}
+            alt=""
+          />
+        </picture>
+        <BrandName />
+      </span>
     </WrapperLink>
   );
 }
@@ -95,9 +98,18 @@ function WideLogo({color, className, url}: Omit<Props, 'logoType'>) {
 
   return (
     <WrapperLink url={url}>
-      <img src={src} className={cn('block h-full w-auto', className)} alt="" />
+      <span className="flex items-center gap-2">
+        <img src={src} className={cn('block h-8 w-auto', className)} alt="" />
+        <BrandName />
+      </span>
     </WrapperLink>
   );
+}
+
+// The brand name is real text, not part of the logo image — DESIGN.md's page
+// title role (600, 24px, 32px) is the header lockup size.
+function BrandName() {
+  return <span className="text-2xl font-semibold tracking-tight">Linket</span>;
 }
 
 type WrapperLinkProps = {

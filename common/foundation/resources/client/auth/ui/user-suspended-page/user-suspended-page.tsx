@@ -25,13 +25,14 @@ export function Component() {
         >
           <Trans message="Logout" />
         </Button>
-        {logoSrc && (
-          <img
-            src={logoSrc}
-            alt="Site logo"
-            className="mx-auto mb-11 block h-10.5 w-auto"
-          />
-        )}
+        <div className="mx-auto mb-11 flex w-fit items-center gap-2.5">
+          {logoSrc && (
+            <img src={logoSrc} alt="" className="block h-10 w-auto" />
+          )}
+          {/* The brand name is real text, not part of the logo image —
+              DESIGN.md's page title role (600, 24px, 32px). */}
+          <span className="text-2xl font-semibold tracking-tight">Linket</span>
+        </div>
         <div className="text-center">
           <h1 className="mb-6 text-3xl">
             <Trans message="Your account is suspended" />

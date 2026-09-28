@@ -18,10 +18,13 @@ export function MyOrderShell({
         <header className="flex items-center justify-between px-6 py-4 lg:px-8">
           <Link to="/" className="flex items-center gap-2">
             {branding.logo_dark ? (
-              <img src={branding.logo_dark} alt={branding.site_name} className="h-7 w-auto" />
-            ) : (
-              <span className="text-sm font-semibold tracking-tight">{branding.site_name}</span>
-            )}
+              <img src={branding.logo_dark} alt="" className="h-7 w-auto" />
+            ) : null}
+            {/* The brand name is real text, not part of the logo image —
+                DESIGN.md's page title role (600, 24px, 32px). */}
+            <span className="text-2xl font-semibold tracking-tight">
+              Linket
+            </span>
           </Link>
           <span className="hidden text-sm text-muted-foreground sm:block">
             <Trans message="Need help? Contact support." />

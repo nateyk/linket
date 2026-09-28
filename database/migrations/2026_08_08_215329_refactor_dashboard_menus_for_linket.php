@@ -173,6 +173,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        // Irreversible — restoring original BeLink menus is not supported
+        // Irreversible — restoring original Linket menus is not supported
     }
 };

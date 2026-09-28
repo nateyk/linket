@@ -45,7 +45,7 @@ class VerifyCsrfToken extends LaravelVerifyCsrfToken
     protected function addCookieToResponse($request, $response)
     {
         // don't add cookie if session is set to null
-        // (belink needs to disable laravel headers for 301 redirect)
+        // (linket needs to disable laravel headers for 301 redirect)
         if (config('session.driver') === null) {
             return $response;
         }

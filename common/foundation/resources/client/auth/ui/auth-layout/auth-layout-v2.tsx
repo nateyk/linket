@@ -1,7 +1,9 @@
 import {Separator} from '@shadcn/separator';
 import {Trans} from '@ui/i18n/trans';
 import {useSettings} from '@ui/settings/use-settings';
+import {useIsDarkMode} from '@ui/themes/use-is-dark-mode';
 import {ReactNode} from 'react';
+import {Link} from 'react-router';
 import {Command, Globe} from 'lucide-react';
 
 interface AuthLayoutV2Props {
@@ -11,6 +13,7 @@ interface AuthLayoutV2Props {
 
 export function AuthLayoutV2({children, topAction}: AuthLayoutV2Props) {
   const {branding} = useSettings();
+  const isDarkMode = useIsDarkMode();
 
   return (
     <main>
@@ -58,6 +61,20 @@ export function AuthLayoutV2({children, topAction}: AuthLayoutV2Props) {
           {/* Centered form */}
           <div className="flex flex-1 items-center justify-center p-4 lg:p-8">
             <div className="mx-auto flex w-full max-w-[350px] flex-col justify-center space-y-8">
+              <Link to="/" className="flex w-fit shrink-0 items-center gap-2.5">
+                {(isDarkMode ? branding.logo_light : branding.logo_dark) && (
+                  <img
+                    src={isDarkMode ? branding.logo_light : branding.logo_dark}
+                    alt=""
+                    className="block h-10 w-auto"
+                  />
+                )}
+                {/* The brand name is real text, not part of the logo image —
+                    DESIGN.md's page title role (600, 24px, 32px). */}
+                <span className="text-2xl font-semibold tracking-tight">
+                  Linket
+                </span>
+              </Link>
               {children}
             </div>
           </div>

@@ -95,7 +95,7 @@ return [
             ],
         ],
 
-        // todo: move to architect/belink
+        // todo: move to architect/linket
         'custom_domains' => [
             [
                 'name' => 'custom_domains.create',

@@ -13,7 +13,7 @@ export function useDatatableRouteType(): Response {
   const activeWorkspace = useWorkspaceStore(s => s.activeWorkspace);
 
   const routeType = matches.some(
-    match => (match.handle as any)?.belinkRoutesType === 'dashboard',
+    match => (match.handle as any)?.linketRoutesType === 'dashboard',
   )
     ? 'dashboard'
     : 'admin';

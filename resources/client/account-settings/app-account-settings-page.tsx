@@ -38,7 +38,7 @@ export function Component() {
   const query = useSuspenseQuery(getAccountSettingsOptions());
   return (
     <ConfirmPasswordDialogProvider>
-      <DashboardLayout.Root name="belink-accunt-settings">
+      <DashboardLayout.Root name="linket-accunt-settings">
         {!isCompactLayout ? <AppNavbar /> : null}
         <DashboardLayout.Content>
           <AccountSettingsSidebar />

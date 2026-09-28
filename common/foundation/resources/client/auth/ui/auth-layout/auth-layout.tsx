@@ -23,14 +23,15 @@ export function AuthLayout({heading, children, message}: AuthPageProps) {
     >
       <Link
         to="/"
-        className="mb-10 block shrink-0"
+        className="mb-10 flex shrink-0 items-center gap-2.5"
         aria-label={trans({message: 'Go to homepage'})}
       >
         <img
           src={isDarkMode ? branding.logo_light : branding?.logo_dark}
-          className="m-auto block h-10.5 w-auto"
+          className="block h-10 w-auto"
           alt=""
         />
+        <span className="text-2xl font-semibold tracking-tight">Linket</span>
       </Link>
       <div className="mx-auto w-full max-w-110 rounded-card bg-card px-10 pt-10 pb-8 shadow-sm md:shadow-xl">
         {heading && <h1 className="mb-5 text-xl">{heading}</h1>}
