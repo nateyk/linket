@@ -8,7 +8,7 @@ return new class extends Migration
 {
     private const FREE_BENEFITS = [
         'max_products' => 5,
-        'commission_bps' => 500,
+        'commission_bps' => 1000,
         'max_upload_bytes' => 1073741824,
     ];
 
@@ -47,7 +47,7 @@ return new class extends Migration
                     'feature_list' => json_encode([
                         '1 Storefront / Link in Bio',
                         '5 Digital Products',
-                        '5% Linket transaction fee',
+                        '10% Linket transaction fee',
                         '1 GB Storage',
                         'Basic Insights',
                     ]),

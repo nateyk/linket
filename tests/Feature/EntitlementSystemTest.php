@@ -527,7 +527,7 @@ class EntitlementSystemTest extends TestCase
         $this->assertContains('5 free products', $data['pricing_features']);
         $this->assertContains('5 paid products', $data['pricing_features']);
         $this->assertContains('1 GB storage', $data['pricing_features']);
-        $this->assertContains('5% Linket transaction fee', $data['pricing_features']);
+        $this->assertContains('10% Linket transaction fee', $data['pricing_features']);
     }
 
     public function testMarkingNewDefaultPlanClearsOldDefault(): void
