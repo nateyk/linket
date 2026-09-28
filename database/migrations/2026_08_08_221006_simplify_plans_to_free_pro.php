@@ -6,15 +6,21 @@ use Illuminate\Support\Str;
 
 return new class extends Migration
 {
+    // PRODUCT.md:33 — commission rates are product facts: Free 10%, Pro 5%.
+    // platform_fee_percent is stored alongside commission_bps so the rendered
+    // feature string (ProductResource::pricingFeatures) cannot drift from the
+    // fee actually charged.
     private const FREE_BENEFITS = [
         'max_products' => 5,
         'commission_bps' => 1000,
+        'platform_fee_percent' => 10.0,
         'max_upload_bytes' => 1073741824,
     ];
 
     private const PRO_BENEFITS = [
         'max_products' => null,
-        'commission_bps' => 0,
+        'commission_bps' => 500,
+        'platform_fee_percent' => 5.0,
         'max_upload_bytes' => 26843545600,
     ];
 

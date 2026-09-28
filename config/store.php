@@ -49,8 +49,9 @@ return [
             'advanced_analytics_enabled' => false,
         ],
         'pro' => [
-            'platform_fee_percent' => 0.0,
-            'commission_bps' => 0,
+            // PRODUCT.md:33 — Pro 5%.
+            'platform_fee_percent' => 5.0,
+            'commission_bps' => 500,
             'max_products' => null,
             'max_free_products' => null,
             'max_paid_products' => null,
