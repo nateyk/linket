@@ -33,12 +33,12 @@ export function BillingCycleRadio({
       {...radioGroupProps}
     >
       <label className="flex items-center gap-2">
-        <RadioGroupItem value="yearly" />
+        <RadioGroupItem value="yearly" className="after:-inset-3.5" />
         <Trans message="Annual" />
         <UpsellLabel products={products} />
       </label>
       <label className="flex items-center gap-2">
-        <RadioGroupItem value="monthly" />
+        <RadioGroupItem value="monthly" className="after:-inset-3.5" />
         <Trans message="Monthly" />
       </label>
     </RadioGroup>

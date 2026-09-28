@@ -9,14 +9,17 @@ export function AuthLayoutFooter() {
 
   return (
     <div className="mt-auto flex items-center gap-7.5 pt-10.5 pb-8 text-sm text-muted-foreground">
-      <Link className="hover:underline" to="/">
+      <Link
+        className="inline-flex min-h-6 items-center hover:underline"
+        to="/"
+      >
         © {branding.site_name}
       </Link>
       {menu?.items.map(item => (
         <UnstyledCustomMenuItem
           key={item.id}
           item={item}
-          className="transition-colors hover:underline"
+          className="inline-flex min-h-6 items-center transition-colors hover:underline"
         />
       ))}
     </div>

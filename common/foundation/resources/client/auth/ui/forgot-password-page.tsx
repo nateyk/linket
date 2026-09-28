@@ -41,7 +41,10 @@ export function Component() {
     <Trans
       values={{
         a: parts => (
-          <Link className={LinkStyle} to="/register">
+          <Link
+            className={`${LinkStyle} inline-flex min-h-6 items-center`}
+            to="/register"
+          >
             {parts}
           </Link>
         ),

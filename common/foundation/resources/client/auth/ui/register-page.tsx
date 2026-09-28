@@ -62,7 +62,10 @@ export function RegisterPage({inviteType, fields, children}: Props) {
     <Trans
       values={{
         a: parts => (
-          <Link className={LinkStyle} to="/login">
+          <Link
+            className={`${LinkStyle} inline-flex min-h-6 items-center`}
+            to="/login"
+          >
             {parts}
           </Link>
         ),

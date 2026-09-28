@@ -37,7 +37,7 @@ function Checkbox({
     <CheckboxPrimitive.Root
       data-slot="checkbox"
       className={cn(
-        'peer relative flex size-4 shrink-0 items-center justify-center rounded-[5px] border border-input outline-offset-2 transition-colors group-has-disabled/field:opacity-50 focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive dark:bg-input/30 data-checked:border-primary data-checked:bg-primary data-checked:text-primary-foreground aria-invalid:data-checked:bg-destructive',
+        'peer relative flex size-4 shrink-0 items-center justify-center rounded-[5px] border border-input outline-offset-2 transition-colors group-has-disabled/field:opacity-50 after:absolute after:-inset-3.5 focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive dark:bg-input/30 data-checked:border-primary data-checked:bg-primary data-checked:text-primary-foreground aria-invalid:data-checked:bg-destructive',
         className,
       )}
       checked={mergedChecked}

@@ -7,12 +7,12 @@
       "primary": {
         "role": "primary",
         "displayName": "Counter Blue",
-        "canonical": "oklch(62.3% 0.214 259.815)",
+        "canonical": "oklch(46% 0.214 259.815)",
         "tonalRamp": [
           "oklch(0.15 0.214 259.815)",
           "oklch(0.27 0.214 259.815)",
           "oklch(0.39 0.214 259.815)",
-          "oklch(0.51 0.214 259.815)",
+          "oklch(0.46 0.214 259.815)",
           "oklch(0.623 0.214 259.815)",
           "oklch(0.74 0.19 259.815)",
           "oklch(0.84 0.13 259.815)",
@@ -112,12 +112,12 @@
       "positive": {
         "role": "status",
         "displayName": "Confirm Green",
-        "canonical": "oklch(0.7227 0.192 149.58)",
+        "canonical": "oklch(0.49 0.192 149.58)",
         "tonalRamp": [
           "oklch(0.16 0.192 149.58)",
           "oklch(0.28 0.192 149.58)",
           "oklch(0.4 0.192 149.58)",
-          "oklch(0.52 0.192 149.58)",
+          "oklch(0.49 0.192 149.58)",
           "oklch(0.64 0.192 149.58)",
           "oklch(0.7227 0.192 149.58)",
           "oklch(0.85 0.13 149.58)",
@@ -127,12 +127,12 @@
       "warning": {
         "role": "status",
         "displayName": "Caution Amber",
-        "canonical": "oklch(0.7785 0.152 70.88)",
+        "canonical": "oklch(0.53 0.152 70.88)",
         "tonalRamp": [
           "oklch(0.16 0.152 70.88)",
           "oklch(0.28 0.152 70.88)",
           "oklch(0.4 0.152 70.88)",
-          "oklch(0.52 0.152 70.88)",
+          "oklch(0.53 0.152 70.88)",
           "oklch(0.65 0.152 70.88)",
           "oklch(0.7785 0.152 70.88)",
           "oklch(0.87 0.11 70.88)",
@@ -248,7 +248,7 @@
       "refersTo": "button-primary",
       "description": "The default action. Fill drops to 80% on hover, presses 1px on active.",
       "html": "<button class=\"ds-btn-primary\"><svg class=\"ds-btn-icon\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M5 12h14\"/><path d=\"m12 5 7 7-7 7\"/></svg>Get started</button>",
-      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 36px; padding: 0 12px; border: 1px solid transparent; border-radius: 24px; background: var(--be-primary, oklch(62.3% 0.214 259.815)); color: var(--be-primary-foreground, oklch(0.9911 0 190.05)); font-size: 14px; line-height: 20px; font-weight: 500; white-space: nowrap; cursor: pointer; transition: background-color 150ms cubic-bezier(0.4,0,0.2,1), transform 150ms cubic-bezier(0.4,0,0.2,1), outline-color 150ms cubic-bezier(0.4,0,0.2,1); } .ds-btn-primary .ds-btn-icon { width: 16px; height: 16px; } .ds-btn-primary:hover { background: color-mix(in oklab, var(--be-primary, oklch(62.3% 0.214 259.815)) 80%, transparent); } .ds-btn-primary:active { transform: translateY(1px); } .ds-btn-primary:focus-visible { outline: 2px solid var(--be-primary, oklch(62.3% 0.214 259.815)); outline-offset: 2px; } .ds-btn-primary:disabled { opacity: 0.5; pointer-events: none; }"
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 36px; padding: 0 12px; border: 1px solid transparent; border-radius: 24px; background: var(--be-primary, oklch(46% 0.214 259.815)); color: var(--be-primary-foreground, oklch(0.9911 0 190.05)); font-size: 14px; line-height: 20px; font-weight: 500; white-space: nowrap; cursor: pointer; transition: background-color 150ms cubic-bezier(0.4,0,0.2,1), transform 150ms cubic-bezier(0.4,0,0.2,1), outline-color 150ms cubic-bezier(0.4,0,0.2,1); } .ds-btn-primary .ds-btn-icon { width: 16px; height: 16px; } .ds-btn-primary:hover { background: color-mix(in oklab, var(--be-primary, oklch(46% 0.214 259.815)) 80%, transparent); } .ds-btn-primary:active { transform: translateY(1px); } .ds-btn-primary:focus-visible { outline: 2px solid var(--be-primary, oklch(46% 0.214 259.815)); outline-offset: 2px; } .ds-btn-primary:disabled { opacity: 0.5; pointer-events: none; }"
     },
     {
       "name": "Outline Button",
@@ -256,7 +256,7 @@
       "refersTo": "button-outline",
       "description": "Secondary action. Half-strength border at rest, full primary on hover.",
       "html": "<button class=\"ds-btn-outline\">View plans</button>",
-      "css": ".ds-btn-outline { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 36px; padding: 0 12px; border-radius: 24px; background: transparent; border: 1px solid color-mix(in oklab, var(--be-primary, oklch(62.3% 0.214 259.815)) 50%, transparent); color: var(--be-primary, oklch(62.3% 0.214 259.815)); font-size: 14px; line-height: 20px; font-weight: 500; white-space: nowrap; cursor: pointer; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); transition: background-color 150ms cubic-bezier(0.4,0,0.2,1), border-color 150ms cubic-bezier(0.4,0,0.2,1), transform 150ms cubic-bezier(0.4,0,0.2,1); } .ds-btn-outline:hover { background: color-mix(in oklab, var(--be-primary, oklch(62.3% 0.214 259.815)) 4%, transparent); border-color: var(--be-primary, oklch(62.3% 0.214 259.815)); } .ds-btn-outline:active { transform: translateY(1px); } .ds-btn-outline:focus-visible { outline: 2px solid var(--be-primary, oklch(62.3% 0.214 259.815)); outline-offset: 2px; }"
+      "css": ".ds-btn-outline { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 36px; padding: 0 12px; border-radius: 24px; background: transparent; border: 1px solid color-mix(in oklab, var(--be-primary, oklch(46% 0.214 259.815)) 50%, transparent); color: var(--be-primary, oklch(46% 0.214 259.815)); font-size: 14px; line-height: 20px; font-weight: 500; white-space: nowrap; cursor: pointer; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); transition: background-color 150ms cubic-bezier(0.4,0,0.2,1), border-color 150ms cubic-bezier(0.4,0,0.2,1), transform 150ms cubic-bezier(0.4,0,0.2,1); } .ds-btn-outline:hover { background: color-mix(in oklab, var(--be-primary, oklch(46% 0.214 259.815)) 4%, transparent); border-color: var(--be-primary, oklch(46% 0.214 259.815)); } .ds-btn-outline:active { transform: translateY(1px); } .ds-btn-outline:focus-visible { outline: 2px solid var(--be-primary, oklch(46% 0.214 259.815)); outline-offset: 2px; }"
     },
     {
       "name": "Text Field",
@@ -264,7 +264,7 @@
       "refersTo": "input",
       "description": "The only field style. 12px radius so it never reads as a button; border carries error state.",
       "html": "<input class=\"ds-input\" type=\"email\" placeholder=\"m@example.com\" />",
-      "css": ".ds-input { display: block; width: 100%; height: 36px; box-sizing: border-box; border-radius: 12px; border: 1px solid var(--be-input, oklch(0.922 0 0)); background: transparent; padding: 0 12px; font-size: 14px; line-height: 20px; color: var(--be-foreground, oklch(0.2478 0 0)); transition: border-color 150ms cubic-bezier(0.4,0,0.2,1); } .ds-input::placeholder { color: var(--be-muted-foreground, oklch(0.556 0 0)); } .ds-input:hover { border-color: color-mix(in oklab, var(--be-foreground, oklch(0.2478 0 0)) 20%, transparent); } .ds-input:focus-visible { outline: 2px solid var(--be-primary, oklch(62.3% 0.214 259.815)); outline-offset: 2px; } .ds-input[aria-invalid=\"true\"] { border-color: var(--be-destructive, oklch(0.6532 0.2328 25.74)); } .ds-input:disabled { background: color-mix(in oklab, var(--be-input, oklch(0.922 0 0)) 50%, transparent); opacity: 0.5; cursor: not-allowed; }"
+      "css": ".ds-input { display: block; width: 100%; height: 36px; box-sizing: border-box; border-radius: 12px; border: 1px solid var(--be-input, oklch(0.922 0 0)); background: transparent; padding: 0 12px; font-size: 14px; line-height: 20px; color: var(--be-foreground, oklch(0.2478 0 0)); transition: border-color 150ms cubic-bezier(0.4,0,0.2,1); } .ds-input::placeholder { color: var(--be-muted-foreground, oklch(0.556 0 0)); } .ds-input:hover { border-color: color-mix(in oklab, var(--be-foreground, oklch(0.2478 0 0)) 20%, transparent); } .ds-input:focus-visible { outline: 2px solid var(--be-primary, oklch(46% 0.214 259.815)); outline-offset: 2px; } .ds-input[aria-invalid=\"true\"] { border-color: var(--be-destructive, oklch(0.6532 0.2328 25.74)); } .ds-input:disabled { background: color-mix(in oklab, var(--be-input, oklch(0.922 0 0)) 50%, transparent); opacity: 0.5; cursor: not-allowed; }"
     },
     {
       "name": "Card",
@@ -280,7 +280,7 @@
       "refersTo": "badge",
       "description": "20px tall, 16px radius. Status variants are a 10% wash, never a solid slab.",
       "html": "<span class=\"ds-badge\">Pro</span> <span class=\"ds-badge ds-badge--positive\">Paid</span> <span class=\"ds-badge ds-badge--destructive\">Failed</span>",
-      "css": ".ds-badge { display: inline-flex; align-items: center; justify-content: center; gap: 4px; height: 20px; padding: 0 8px; border-radius: 16px; border: 1px solid transparent; background: var(--be-primary, oklch(62.3% 0.214 259.815)); color: var(--be-primary-foreground, oklch(0.9911 0 190.05)); font-size: 12px; line-height: 16px; font-weight: 500; white-space: nowrap; } .ds-badge--positive { background: color-mix(in oklab, oklch(0.7227 0.192 149.58) 10%, transparent); color: oklch(0.7227 0.192 149.58); } .ds-badge--destructive { background: color-mix(in oklab, oklch(0.6532 0.2328 25.74) 10%, transparent); color: oklch(0.6532 0.2328 25.74); } .ds-badge--outline { background: transparent; border-color: color-mix(in oklab, var(--be-foreground, oklch(0.2478 0 0)) 92.2%, transparent); color: var(--be-foreground, oklch(0.2478 0 0)); }"
+      "css": ".ds-badge { display: inline-flex; align-items: center; justify-content: center; gap: 4px; height: 20px; padding: 0 8px; border-radius: 16px; border: 1px solid transparent; background: var(--be-primary, oklch(46% 0.214 259.815)); color: var(--be-primary-foreground, oklch(0.9911 0 190.05)); font-size: 12px; line-height: 16px; font-weight: 500; white-space: nowrap; } .ds-badge--positive { background: color-mix(in oklab, oklch(0.49 0.192 149.58) 10%, transparent); color: oklch(0.49 0.192 149.58); } .ds-badge--destructive { background: color-mix(in oklab, oklch(0.6532 0.2328 25.74) 10%, transparent); color: oklch(0.6532 0.2328 25.74); } .ds-badge--outline { background: transparent; border-color: color-mix(in oklab, var(--be-foreground, oklch(0.2478 0 0)) 92.2%, transparent); color: var(--be-foreground, oklch(0.2478 0 0)); }"
     },
     {
       "name": "Sidebar Nav Item",
@@ -288,7 +288,7 @@
       "refersTo": "navigation",
       "description": "Pill-shaped row. Current page is signalled by fill + weight, never a left border.",
       "html": "<button class=\"ds-nav-item\" aria-current=\"page\"><svg class=\"ds-nav-icon\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 3v16a2 2 0 0 0 2 2h16\"/><path d=\"M7 15l4-4 4 4 4-6\"/></svg>Insights</button>",
-      "css": ".ds-nav-item { display: flex; align-items: center; gap: 8px; width: 100%; height: 36px; padding: 8px 12px; border: 0; border-radius: 24px; background: transparent; color: var(--be-sidebar-foreground, oklch(0.145 0 0)); font-size: 14px; line-height: 20px; text-align: start; cursor: pointer; transition: background-color 150ms cubic-bezier(0.4,0,0.2,1), color 150ms cubic-bezier(0.4,0,0.2,1); } .ds-nav-item .ds-nav-icon { width: 16px; height: 16px; flex-shrink: 0; } .ds-nav-item:hover, .ds-nav-item[data-open] { background: var(--be-sidebar-accent, color-mix(in oklab, var(--be-foreground, oklch(0.2478 0 0)) 8%, transparent)); color: var(--be-accent-foreground, oklch(0.205 0 0)); } .ds-nav-item[aria-current=\"page\"] { background: var(--be-sidebar-accent, color-mix(in oklab, var(--be-foreground, oklch(0.2478 0 0)) 8%, transparent)); color: var(--be-accent-foreground, oklch(0.205 0 0)); font-weight: 500; } .ds-nav-item:focus-visible { outline: 2px solid var(--be-primary, oklch(62.3% 0.214 259.815)); outline-offset: 2px; }"
+      "css": ".ds-nav-item { display: flex; align-items: center; gap: 8px; width: 100%; height: 36px; padding: 8px 12px; border: 0; border-radius: 24px; background: transparent; color: var(--be-sidebar-foreground, oklch(0.145 0 0)); font-size: 14px; line-height: 20px; text-align: start; cursor: pointer; transition: background-color 150ms cubic-bezier(0.4,0,0.2,1), color 150ms cubic-bezier(0.4,0,0.2,1); } .ds-nav-item .ds-nav-icon { width: 16px; height: 16px; flex-shrink: 0; } .ds-nav-item:hover, .ds-nav-item[data-open] { background: var(--be-sidebar-accent, color-mix(in oklab, var(--be-foreground, oklch(0.2478 0 0)) 8%, transparent)); color: var(--be-accent-foreground, oklch(0.205 0 0)); } .ds-nav-item[aria-current=\"page\"] { background: var(--be-sidebar-accent, color-mix(in oklab, var(--be-foreground, oklch(0.2478 0 0)) 8%, transparent)); color: var(--be-accent-foreground, oklch(0.205 0 0)); font-weight: 500; } .ds-nav-item:focus-visible { outline: 2px solid var(--be-primary, oklch(46% 0.214 259.815)); outline-offset: 2px; }"
     }
   ],
   "narrative": {

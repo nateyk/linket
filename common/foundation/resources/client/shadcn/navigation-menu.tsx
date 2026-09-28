@@ -36,7 +36,7 @@ function NavigationMenuTrigger({className, children, ...props}: React.ComponentP
     <button
       data-slot="navigation-menu-trigger"
       className={cn(
-        "inline-flex h-9 items-center justify-center rounded-md bg-transparent px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50 group-data-[state=open]:bg-accent/50",
+        "inline-flex h-9 items-center justify-center rounded-md bg-transparent px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus-visible:outline-2 disabled:pointer-events-none disabled:opacity-50 group-data-[state=open]:bg-accent/50",
         className
       )}
       {...props}
@@ -82,7 +82,7 @@ function NavigationMenuLink({className, children, asChild, ...props}: React.Comp
     <Comp
       data-slot="navigation-menu-link"
       className={cn(
-        "block select-none rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
+        "block select-none rounded-md p-3 leading-none no-underline transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-2",
         className
       )}
       {...props}

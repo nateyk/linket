@@ -11,7 +11,7 @@ return [
         '--be-popover' => 'oklch(1 0 0)',
         '--be-popover-foreground' => 'oklch(0.2478 0 0)',
 
-        '--be-primary' => 'oklch(62.3% 0.214 259.815)',
+        '--be-primary' => 'oklch(46% 0.214 259.815)',
         '--be-primary-foreground' => 'oklch(0.9911 0 190.05)',
 
         '--be-secondary' => 'oklch(0.967 0.001 286.375)',

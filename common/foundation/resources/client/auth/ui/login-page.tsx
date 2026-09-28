@@ -63,7 +63,10 @@ export function LoginPage({
             message="Don't have an account? <a>Sign up.</a>"
             values={{
               a: parts => (
-                <Link className={LinkStyle} to="/register">
+                <Link
+                  className={`${LinkStyle} inline-flex min-h-6 items-center`}
+                  to="/register"
+                >
                   {parts}
                 </Link>
               ),
@@ -147,7 +150,7 @@ export function LoginPage({
                   <Trans message="Password" />
                 </Field.Label>
                 <Link
-                  className="text-sm hover:underline"
+                  className="inline-flex min-h-6 items-center text-sm hover:underline"
                   to="/forgot-password"
                   tabIndex={-1}
                 >

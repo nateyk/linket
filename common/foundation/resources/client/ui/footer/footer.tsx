@@ -60,7 +60,7 @@ function Menus() {
             <UnstyledCustomMenuItem
               key={item.id}
               item={item}
-              className="hover:underline"
+              className="flex min-h-11 items-center px-0.5 hover:underline"
             />
           ))}
         </div>
@@ -73,7 +73,12 @@ function Menus() {
                 <SocialIcon icon={item.icon} />
               ) : null;
             return (
-              <UnstyledCustomMenuItem key={item.id} item={item} icon={icon} />
+              <UnstyledCustomMenuItem
+                key={item.id}
+                item={item}
+                icon={icon}
+                className="flex size-11 items-center justify-center"
+              />
             );
           })}
         </div>

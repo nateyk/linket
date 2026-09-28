@@ -15,7 +15,7 @@ export function Badge({
   withBorder = true,
   top = 'top-0.5',
   right = 'right-1',
-  color = 'bg-warning text-white',
+  color = 'bg-warning text-primary-foreground',
 }: BadgeProps) {
   return (
     <span

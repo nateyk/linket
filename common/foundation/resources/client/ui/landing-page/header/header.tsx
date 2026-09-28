@@ -112,7 +112,7 @@ export function Header() {
                   </>
                 ) : (
                   <NavigationMenuLink
-                    className="group inline-flex h-10 w-max items-center justify-center px-4 py-2 text-sm font-medium transition-colors hover:text-primary focus:text-primary focus:outline-none cursor-pointer"
+                    className="group inline-flex h-10 w-max items-center justify-center px-4 py-2 text-sm font-medium transition-colors hover:text-primary focus:text-primary focus-visible:outline-2 cursor-pointer"
                     onClick={e => {
                       e.preventDefault();
                       if (item.href.startsWith('#')) {
@@ -168,7 +168,7 @@ export function Header() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="xl:hidden cursor-pointer"
+                className="xl:hidden size-11 cursor-pointer"
               />
             }
           >
@@ -184,7 +184,12 @@ export function Header() {
               <SheetHeader className="p-4 pb-2 border-b">
                 <div className="flex items-center gap-2">
                   <div className="p-2 bg-primary/10 rounded-lg">
-                    <Logo logoType="compact" className="h-4" url="/" />
+                    {/* The compact logo renders a 16px image inside its link;
+                        pad the link (not the glyph) so the target clears the
+                        WCAG 2.5.8 24px floor. */}
+                    <span className="flex [&>a]:flex [&>a]:min-h-6 [&>a]:min-w-6 [&>a]:items-center [&>a]:justify-center">
+                      <Logo logoType="compact" className="h-4" url="/" />
+                    </span>
                   </div>
                   <SheetTitle className="text-lg font-semibold">
                     {branding.site_name}

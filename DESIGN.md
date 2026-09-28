@@ -2,7 +2,7 @@
 name: Linket
 description: Creator storefront and link-in-bio dashboard — quiet, neutral, token-driven, with one working blue accent.
 colors:
-  primary: "oklch(62.3% 0.214 259.815)"
+  primary: "oklch(46% 0.214 259.815)"
   primary-fg: "oklch(0.9911 0 190.05)"
   primary-dark: "oklch(88.2% 0.059 254.128)"
   primary-dark-fg: "oklch(0.2478 0 0)"
@@ -20,8 +20,8 @@ colors:
   input: "oklch(0.922 0 0)"
   sidebar: "oklch(0.985 0 0)"
   sidebar-fg: "oklch(0.145 0 0)"
-  positive: "oklch(0.7227 0.192 149.58)"
-  warning: "oklch(0.7785 0.152 70.88)"
+  positive: "oklch(0.49 0.192 149.58)"
+  warning: "oklch(0.53 0.152 70.88)"
   note: "oklch(0.9619 0.058 95.62)"
   destructive: "oklch(0.6532 0.2328 25.74)"
   dark-background: "oklch(0.145 0 0)"
@@ -29,6 +29,8 @@ colors:
   dark-card: "oklch(0.205 0 0)"
   dark-border: "oklch(1 0 0 / 10%)"
   dark-input: "oklch(1 0 0 / 15%)"
+  dark-positive: "oklch(0.7227 0.192 149.58)"
+  dark-warning: "oklch(0.7785 0.152 70.88)"
 typography:
   body:
     fontFamily: "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
@@ -88,7 +90,7 @@ components:
     padding: "0 12px"
     typography: "{typography.label-strong}"
   button-primary-hover:
-    backgroundColor: "color-mix(in oklch, oklch(62.3% 0.214 259.815) 80%, transparent)"
+    backgroundColor: "color-mix(in oklch, oklch(46% 0.214 259.815) 80%, transparent)"
     textColor: "{colors.primary-fg}"
     rounded: "{rounded.button}"
     height: "36px"
@@ -158,9 +160,11 @@ A quiet, near-achromatic palette with one working accent: color means *action* o
 
 ### Primary
 
-- **Counter Blue** (`oklch(62.3% 0.214 259.815)`): the only accent. Fills primary
+- **Counter Blue** (`oklch(46% 0.214 259.815)`): the only accent. Fills primary
   buttons, draws focus outlines, marks progress, tints outline-button borders and
-  active nav. Used wherever the user is meant to act.
+  active nav. Used wherever the user is meant to act. The lightness is pinned so the
+  accent clears WCAG AA in both directions — accent text on white and near-white
+  labels on the accent both measure ≥ 4.5:1.
 - **Counter Blue, Light** (`oklch(88.2% 0.059 254.128)`): the dark-mode equivalent —
   the same blue lifted for legibility on a near-black ground. Primary foreground on it
   flips to `oklch(0.2478 0 0)`.
@@ -169,10 +173,14 @@ A quiet, near-achromatic palette with one working accent: color means *action* o
 
 Chromatic color is spent only on meaning:
 
-- **Confirm Green** (`oklch(0.7227 0.192 149.58)`): positive outcomes — success
+- **Confirm Green** (`oklch(0.49 0.192 149.58)`): positive outcomes — success
   badges, positive buttons, info-block accents. Always paired with a 10–20% wash of
-  itself, never a solid slab behind text.
-- **Caution Amber** (`oklch(0.7785 0.152 70.88)`): warnings and attention states.
+  itself, never a solid slab behind text. Darkened for AA (near-white labels on the
+  solid tone measure ≥ 4.5:1); the dark scheme keeps `oklch(0.7227 0.192 149.58)`,
+  where the token is text on a near-black ground rather than a fill.
+- **Caution Amber** (`oklch(0.53 0.152 70.88)`): warnings and attention states, with
+  the same AA darkening and the same dark-scheme exception
+  (`oklch(0.7785 0.152 70.88)`).
 - **Notice Cream** (`oklch(0.9619 0.058 95.62)`): the quietest status tone, for
   informational callouts that must not read as an alert.
 - **Alarm Red** (`oklch(0.6532 0.2328 25.74)`): destructive actions and form errors.
