@@ -384,9 +384,16 @@ that confirms every click. Nothing bounces, nothing floats at rest.
 - **Ghost:** no fill, no border, hovering to `bg-accent`.
 - **Link:** no box at all — `text-primary` with a 4px underline offset on hover.
 - **Colors:** `default` (secondary fill), `primary`, `danger`, `positive`, `white`.
-  `danger` and `positive` mirror the primary recipe using their status tokens.
-- **Hover / Press:** fill drops to 80% opacity (`hover:bg-primary/80`); press adds
-  `translate-y-px` — one pixel down, no transform animation.
+  `positive` mirrors the primary recipe using its status token (`bg-positive
+  text-primary-foreground`). `danger` does not: it fills with the destructive token
+  at 95% (`bg-lighten-destructive/95`, a 95/5 mix with the scheme background) and
+  takes a `text-foreground` label — the mix tracks the surface, so the label clears
+  4.5:1 in both schemes, where a `text-primary-foreground` label misses AA on the
+  solid token.
+- **Hover / Press:** fill drops to 80% opacity (`hover:bg-primary/80`); `positive`
+  holds at 95% (`hover:bg-positive/95`, same on `data-pressed`) so its label keeps
+  4.5:1 on the hover fill. Press adds `translate-y-px` — one pixel down, no transform
+  animation.
 - **Focus:** `outline-2 outline-solid` in the primary color, from the global base-layer
   `outline-color`. Always visible, never removed.
 - **Disabled:** `opacity-50` with pointer events off.
