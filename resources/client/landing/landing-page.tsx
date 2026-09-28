@@ -60,7 +60,11 @@ function HeroCallToAction() {
             color: 'default',
             size: 'lg',
           }),
-          'h-12 min-w-22 p-3',
+          // The hero CTA slot renders inside a forced `.light` island, which
+          // pins light-scheme tokens even when the page ground is dark. Mirror
+          // the dark-scheme outline colors so the label/border stay legible on
+          // the dark ground (WCAG AA 4.5:1).
+          'h-12 min-w-22 p-3 dark:text-white dark:hover:bg-white/10 dark:data-pressed:bg-white/10',
         )}
         href="#pricing-section"
         onClick={e => {

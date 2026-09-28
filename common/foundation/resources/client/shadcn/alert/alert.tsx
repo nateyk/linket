@@ -58,19 +58,19 @@ const alertVariants = cva(
         variant: 'destructive',
         fillStyle: 'boldFill',
         className:
-          'border-destructive bg-lighten-destructive/95 text-white *:data-[slot=alert-description]:text-white',
+          'border-destructive bg-lighten-destructive/95 text-foreground *:data-[slot=alert-description]:text-foreground',
       },
       {
         variant: 'positive',
         fillStyle: 'boldFill',
         className:
-          'border-positive bg-lighten-positive/95 text-white *:data-[slot=alert-description]:text-white',
+          'border-positive bg-lighten-positive/95 text-primary-foreground *:data-[slot=alert-description]:text-primary-foreground',
       },
       {
         variant: 'warning',
         fillStyle: 'boldFill',
         className:
-          'border-warning bg-lighten-warning/95 text-white *:data-[slot=alert-description]:text-white',
+          'border-warning bg-lighten-warning/95 text-primary-foreground *:data-[slot=alert-description]:text-primary-foreground',
       },
     ],
     defaultVariants: {
