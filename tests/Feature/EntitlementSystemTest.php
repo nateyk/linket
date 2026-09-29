@@ -528,6 +528,14 @@ class EntitlementSystemTest extends TestCase
         $this->assertContains('5 paid products', $data['pricing_features']);
         $this->assertContains('1 GB storage', $data['pricing_features']);
         $this->assertContains('10% Linket transaction fee', $data['pricing_features']);
+
+        // The charge fact is pinned as a literal, not just the displayed string:
+        // a half-edit (commission 500 + display "10%") fails here.
+        $benefits = $plan->storefront_benefits;
+        if (is_string($benefits)) {
+            $benefits = json_decode($benefits, true);
+        }
+        $this->assertSame(1000, (int) $benefits['commission_bps']);
     }
 
     public function testMarkingNewDefaultPlanClearsOldDefault(): void
