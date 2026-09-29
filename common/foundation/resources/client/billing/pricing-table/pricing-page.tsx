@@ -11,7 +11,7 @@ import {MessagesSquareIcon} from 'lucide-react';
 import {useState} from 'react';
 import {StaticPageTitle} from '../../seo/static-page-title';
 import {Footer} from '../../ui/footer/footer';
-import {Navbar} from '../../ui/navigation/navbar/navbar';
+import {Header} from '../../ui/landing-page/header/header';
 import {BillingCycleRadio} from './billing-cycle-radio';
 import {UpsellBillingCycle} from './find-best-price';
 
@@ -25,13 +25,7 @@ export function Component() {
         <Trans message="Pricing" />
       </StaticPageTitle>
 
-      <Navbar.Root className="border-b">
-        <Navbar.Logo />
-        <Navbar.Menu position="pricing-table-page" />
-        <Navbar.Content className="ml-auto">
-          <Navbar.AuthContent />
-        </Navbar.Content>
-      </Navbar.Root>
+      <Header />
 
       <main className="mx-auto max-w-6xl px-6">
         <h1 className="mt-7.5 mb-7.5 text-center text-3xl font-normal md:mt-15 md:text-4xl md:font-medium">

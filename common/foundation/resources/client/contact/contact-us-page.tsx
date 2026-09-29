@@ -1,6 +1,6 @@
 import {CaptchaContainer} from '@common/captcha/captcha-container';
 import {Footer} from '@common/ui/footer/footer';
-import {Navbar} from '@common/ui/navigation/navbar/navbar';
+import {Header} from '@common/ui/landing-page/header/header';
 import {Button} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
 import {Field} from '@shadcn/forms/field';
@@ -28,13 +28,7 @@ export function Component() {
         <Trans message="Contact us" />
       </StaticPageTitle>
 
-      <Navbar.Root className="sticky top-0 z-10 border-b bg-background">
-        <Navbar.Logo />
-        <Navbar.Menu position="contact-us-page" />
-        <Navbar.Content className="ml-auto">
-          <Navbar.AuthContent />
-        </Navbar.Content>
-      </Navbar.Root>
+      <Header />
 
       <div className="flex w-full flex-auto items-center justify-center p-6 md:p-10">
         <Card.Root className="w-full max-w-155">

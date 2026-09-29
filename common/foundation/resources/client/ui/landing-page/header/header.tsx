@@ -33,7 +33,7 @@ import {
   XIcon,
 } from 'lucide-react';
 import {useSettings} from '@ui/settings/use-settings';
-import {use, useState} from 'react';
+import {use, useState, useEffect, MouseEvent} from 'react';
 import {MegaMenu} from './mega-menu';
 
 // Every href must resolve to a real anchor on the landing page (see
@@ -66,6 +66,18 @@ const solutionsItems: MobileNavItem[] = [
   {name: 'Plans & pricing', href: '#pricing-section'},
 ];
 
+// Section anchors ("#…") live on the landing page. When this header renders on
+// another route (e.g. /pricing) the target isn't on the page, so hand the click
+// to the landing instead of swallowing it. On the landing itself a target that
+// isn't there stays a no-op, exactly as before.
+const goToLandingSection = (targetId: string) => {
+  if (window.location.pathname !== '/') {
+    window.location.href = `/${targetId}`;
+    return true;
+  }
+  return false;
+};
+
 // Smooth scroll function
 const smoothScrollTo = (targetId: string) => {
   if (targetId.startsWith('#')) {
@@ -75,8 +87,23 @@ const smoothScrollTo = (targetId: string) => {
         behavior: 'smooth',
         block: 'start',
       });
+    } else {
+      goToLandingSection(targetId);
     }
   }
+};
+
+// Mega-menu links are plain "#…" anchors, so off the landing the browser would
+// only swap in a dead hash. Reroute them to the landing's section; on the
+// landing the browser's own jump (or its no-op when a section is gone) is
+// untouched.
+const onMegaMenuClick = (e: MouseEvent<HTMLDivElement>) => {
+  const href = (e.target as Element | null)?.closest?.('a[href^="#"]')
+    ?.getAttribute('href');
+  if (!href || document.querySelector(href)) return;
+  if (window.location.pathname === '/') return;
+  e.preventDefault();
+  goToLandingSection(href);
 };
 
 export function Header() {
@@ -85,6 +112,54 @@ export function Header() {
   const {colorScheme, setColorScheme} = use(ColorSchemeContext);
   const {getRedirectUri} = useAuth();
   const {branding} = useSettings();
+
+  // Section links from other routes ("/pricing", "/contact") reload into
+  // "/#…". The browser's fragment scroll races React's render of the landing
+  // sections and the router's scroll restoration, which can reset the view to
+  // the top right after the first scroll lands — so keep aiming until the
+  // view settles. Visits without a hash (every normal landing visit) never
+  // reach this scroll, and a user gesture during it wins immediately.
+  useEffect(() => {
+    if (window.location.pathname !== '/' || !window.location.hash) return;
+    const id = decodeURIComponent(window.location.hash.slice(1));
+    if (!id) return;
+
+    let stopped = false;
+    let attempts = 0;
+    let settledFrames = 0;
+    const userGaveInput = () => {
+      stopped = true;
+    };
+    ['wheel', 'touchstart', 'keydown', 'pointerdown'].forEach(type =>
+      window.addEventListener(type, userGaveInput, {passive: true})
+    );
+
+    const scrollToTarget = () => {
+      if (stopped) return;
+      const target = document.getElementById(id);
+      if (target) {
+        const wanted = target.getBoundingClientRect().top + window.scrollY;
+        if (Math.abs(window.scrollY - wanted) > 8) {
+          // Late section mounts and router scroll restoration both land after
+          // the first scroll; snap back until nothing displaces us.
+          target.scrollIntoView({block: 'start'});
+          settledFrames = 0;
+        } else if (++settledFrames > 45) {
+          return;
+        }
+      }
+      // Sections are data-driven and may mount a frame or two late.
+      if (++attempts < 600) requestAnimationFrame(scrollToTarget);
+    };
+    scrollToTarget();
+
+    return () => {
+      stopped = true;
+      ['wheel', 'touchstart', 'keydown', 'pointerdown'].forEach(type =>
+        window.removeEventListener(type, userGaveInput)
+      );
+    };
+  }, []);
 
   const toggleColorScheme = () => {
     setColorScheme(colorScheme === 'light' ? 'dark' : 'light');
@@ -106,7 +181,10 @@ export function Header() {
                     <NavigationMenuTrigger className="bg-transparent hover:bg-transparent focus:bg-transparent data-[active]:bg-transparent data-[state=open]:bg-transparent px-4 py-2 text-sm font-medium transition-colors hover:text-primary focus:text-primary cursor-pointer">
                       {item.name}
                     </NavigationMenuTrigger>
-                    <NavigationMenuContent className="left-1/2 w-[700px] max-w-[95vw] -translate-x-1/2 overflow-hidden rounded-xl border border-border/40 bg-card/95 shadow-xl backdrop-blur">
+                    <NavigationMenuContent
+                      className="left-1/2 w-[700px] max-w-[95vw] -translate-x-1/2 overflow-hidden rounded-xl border border-border/40 bg-card/95 shadow-xl backdrop-blur"
+                      onClick={onMegaMenuClick}
+                    >
                       <MegaMenu />
                     </NavigationMenuContent>
                   </>
