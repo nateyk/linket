@@ -133,7 +133,7 @@ export function ShopWidgetRenderer({
                 </Button>
               }
               classNames={{
-                root: 'bg-[var(--biolink-surface)] text-[var(--biolink-text)] ring-[var(--biolink-border)] backdrop-blur-md',
+                root: 'bg-[var(--biolink-surface)] text-[var(--biolink-text)] shadow-none ring-[var(--biolink-border)] backdrop-blur-md',
                 media: 'bg-[var(--biolink-surface-muted)]',
                 footer:
                   'border-t border-[var(--biolink-border)] pt-2',

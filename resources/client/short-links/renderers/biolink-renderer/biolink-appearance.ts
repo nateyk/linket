@@ -12,7 +12,100 @@ type BiolinkThemeVariables = CSSProperties & {
   '--biolink-surface-strong': string;
   '--biolink-surface-muted': string;
   '--biolink-border': string;
+} & BiolinkRadiusVariables;
+
+type BiolinkRadiusVariables = CSSProperties & {
+  '--be-radius-button': string;
+  '--be-radius-input': string;
+  '--be-radius-card': string;
+  '--be-radius-card-sm': string;
+  '--be-radius-card-xs': string;
 };
+
+type BiolinkRadiusScale = {
+  button: string;
+  input: string;
+  card: string;
+  cardSm: string;
+  cardXs: string;
+};
+
+/**
+ * The appearance editor's "Corner roundness" choice is the storefront's radius
+ * dimension. One selection remaps every rounded surface of the public page the
+ * same way the dashboard's `radius-*` theme utilities do.
+ *
+ * Two rules hold the scale together:
+ *
+ * - **Surfaces share one radius.** `card` and `card-sm` are deliberately equal,
+ *   so the creator card (which rounds itself with `rounded-card`) and everything
+ *   that rounds with `rounded-card-sm` (the About panel, badges, the editor's
+ *   cover and avatar previews) can never drift apart — one number, whichever
+ *   token a component happens to reach for. `card-xs` stays a step tighter for
+ *   media nested inside a framed slot.
+ * - **Controls stay crisp.** Buttons keep the control-scale value the selector
+ *   previews; fields sit between the two.
+ *
+ * `systemRadiusScale` is what the page renders before the creator picks a
+ * roundness — the core UI tokens themselves, so an untouched Appearance tab
+ * renders exactly what it did before the knob existed.
+ */
+const radiusScales: Record<
+  NonNullable<BiolinkAppearanceConfigBtnConfig['radius']>,
+  BiolinkRadiusScale
+> = {
+  'rounded-none': {
+    button: '0',
+    input: '0',
+    card: '0',
+    cardSm: '0',
+    cardXs: '0',
+  },
+  'rounded-sm': {
+    button: '4px',
+    input: '12px',
+    card: '16px',
+    cardSm: '16px',
+    cardXs: '8px',
+  },
+  'rounded-lg': {
+    button: '8px',
+    input: '16px',
+    card: '24px',
+    cardSm: '24px',
+    cardXs: '12px',
+  },
+  'rounded-full': {
+    button: '9999px',
+    input: '24px',
+    card: '32px',
+    cardSm: '32px',
+    cardXs: '16px',
+  },
+};
+
+const systemRadiusScale: BiolinkRadiusScale = {
+  button: 'var(--radius-3xl)',
+  input: 'var(--radius-xl)',
+  card: 'var(--radius-3xl)',
+  cardSm: 'var(--radius-2xl)',
+  cardXs: 'var(--radius-xl)',
+};
+
+export function resolveBiolinkRadiusVariables(
+  appearance?: BiolinkAppearanceConfig | null,
+): BiolinkRadiusVariables {
+  const setting = appearance?.btnConfig?.radius;
+  const scale = (setting && radiusScales[setting]) || systemRadiusScale;
+
+  return {
+    '--be-radius-button': scale.button,
+    '--be-radius-input': scale.input,
+    '--be-radius-card': scale.card,
+    '--be-radius-card-sm': scale.cardSm,
+    '--be-radius-card-xs': scale.cardXs,
+  };
+}
 
 type BiolinkButtonVariables = CSSProperties & {
   '--biolink-button-background': string;
@@ -97,6 +190,105 @@ export function resolveBiolinkButtonAppearance(
   };
 }
 
+/**
+ * Radius classes for surfaces that carry content (the creator card, its cover
+ * and avatar, the About panel) as opposed to controls.
+ */
+export type BiolinkContainerRadius =
+  | 'rounded-none'
+  | 'rounded-card-sm'
+  | 'rounded-card'
+  | 'rounded-4xl';
+
+export interface ResolvedBiolinkContainerRadius {
+  /** Pass to `cn()` on the card shell, its cover and the About panel. */
+  className: BiolinkContainerRadius;
+  /**
+   * Pass to `cn()` on media framed by a card — the profile avatar. Tracks
+   * `className` everywhere except Full, where framed media earns a true circle
+   * and only the shell has to hold back.
+   */
+  avatarClassName: BiolinkContainerRadius | 'rounded-full';
+  /** Raw CSS length, for surfaces that can't take a class (crop frames). */
+  value: string;
+  /** Raw CSS length matching `avatarClassName` — the avatar's crop frame. */
+  avatarValue: string;
+}
+
+/**
+ * The creator's "Corner roundness" choice, read at the container scale. One
+ * setting drives every corner, but the same four options have to grow with the
+ * surface: `rounded-sm` is a soft button and a sharp card, so containers step
+ * up to the core UI radius tokens instead of the control-scale values.
+ *
+ * "Full" deliberately stops at `rounded-4xl` for the shell. A shell is a tall
+ * box, so a capsule radius resolves to half its width — roughly 180px — and the
+ * arc would sweep through the socials and branding rows and clip them off the
+ * `overflow-hidden` card. Full spends its roundness on the avatar and the
+ * controls instead, where a capsule is the point.
+ */
+const containerRadiusForSetting: Record<
+  NonNullable<BiolinkAppearanceConfigBtnConfig['radius']>,
+  BiolinkContainerRadius
+> = {
+  'rounded-none': 'rounded-none',
+  'rounded-sm': 'rounded-card-sm',
+  'rounded-lg': 'rounded-card',
+  'rounded-full': 'rounded-4xl',
+};
+
+const avatarRadiusForSetting: Record<
+  NonNullable<BiolinkAppearanceConfigBtnConfig['radius']>,
+  ResolvedBiolinkContainerRadius['avatarClassName']
+> = {
+  ...containerRadiusForSetting,
+  'rounded-full': 'rounded-full',
+};
+
+/**
+ * Raw length each container class resolves to *inside* the page.
+ *
+ * The card tokens can't be handed out as `var(--radius-card*)`: the page
+ * remaps `--be-radius-*` for the chosen roundness, while the crop dialog is
+ * portalled into the dashboard, where the same token resolves to the
+ * dashboard's own radius. So the token classes read their length from the very
+ * scale the page remaps with, and the two classes that don't go through
+ * `--be-radius-*` keep their token (same document, same value).
+ */
+const containerRadiusLength: Record<
+  BiolinkContainerRadius | 'rounded-full',
+  (radius: BiolinkRadiusVariables) => string
+> = {
+  'rounded-none': () => '0px',
+  'rounded-card-sm': radius => radius['--be-radius-card-sm'],
+  'rounded-card': radius => radius['--be-radius-card'],
+  'rounded-4xl': () => 'var(--radius-4xl)',
+  'rounded-full': () => '9999px',
+};
+
+/**
+ * Container radius for a profile surface. Falls back to the core UI card token
+ * when the creator hasn't picked a roundness, so an untouched Appearance tab
+ * keeps rendering the theme default.
+ */
+export function resolveBiolinkContainerRadius(
+  appearance?: BiolinkAppearanceConfig | null,
+): ResolvedBiolinkContainerRadius {
+  const setting = appearance?.btnConfig?.radius;
+  const className =
+    (setting && containerRadiusForSetting[setting]) || 'rounded-card';
+  const avatarClassName =
+    (setting && avatarRadiusForSetting[setting]) || className;
+  const radius = resolveBiolinkRadiusVariables(appearance);
+
+  return {
+    className,
+    avatarClassName,
+    value: containerRadiusLength[className](radius),
+    avatarValue: containerRadiusLength[avatarClassName](radius),
+  };
+}
+
 export function resolveBiolinkThemeVariables(
   appearance?: BiolinkAppearanceConfig | null,
 ): BiolinkThemeVariables {
@@ -104,6 +296,7 @@ export function resolveBiolinkThemeVariables(
 
   if (!foreground) {
     return {
+      ...resolveBiolinkRadiusVariables(appearance),
       '--biolink-text': 'var(--color-foreground)',
       '--biolink-muted-text': 'var(--color-muted-foreground)',
       '--biolink-surface':
@@ -119,7 +312,10 @@ export function resolveBiolinkThemeVariables(
 
   const foregroundColor = parseColor(foreground);
   if (!foregroundColor) {
-    return resolveBiolinkThemeVariables();
+    return {
+      ...resolveBiolinkThemeVariables(),
+      ...resolveBiolinkRadiusVariables(appearance),
+    };
   }
 
   const surfaceColor = chooseHighestContrastSurface(foregroundColor);
@@ -127,6 +323,7 @@ export function resolveBiolinkThemeVariables(
   const mutedText = resolveMutedTextColor(foregroundColor, surfaceColor);
 
   return {
+    ...resolveBiolinkRadiusVariables(appearance),
     '--biolink-text': foreground,
     '--biolink-muted-text': mutedText,
     '--biolink-surface': `color-mix(in srgb, ${surfaceBase} 96%, transparent)`,

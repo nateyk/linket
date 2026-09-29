@@ -5,6 +5,7 @@ import {
   SocialsList,
   SocialsType,
 } from '@app/dashboard/stores/store-editor/content/widgets/socials-widget/socials-list';
+import {resolveBiolinkContainerRadius} from '@app/short-links/renderers/biolink-renderer/biolink-appearance';
 import {digitalProductsIndex} from '@app/gen/digital-products';
 import {useAuth} from '@common/auth/use-auth';
 import {ClearFormatButton} from '@common/text-editor/menubar/clear-format-button';
@@ -47,6 +48,7 @@ import {message} from '@ui/i18n/message';
 import {FormattedCurrency} from '@ui/i18n/formatted-currency';
 import {Trans} from '@ui/i18n/trans';
 import {useTrans} from '@ui/i18n/use-trans';
+import {cn} from '@ui/utils/cn';
 import {
   AtSignIcon,
   ChevronDownIcon,
@@ -174,6 +176,8 @@ export function CreatorProfileEditor({
   const setFeaturedProductIds = useBiolinkEditorStore(
     s => s.setFeaturedProductIds,
   );
+  const appearance = useBiolinkEditorStore(s => s.appearance);
+  const containerRadius = resolveBiolinkContainerRadius(appearance);
   const [openSection, setOpenSection] = useState<CreatorProfileSection | null>(
     tab === 'content' ? 'profile' : null,
   );
@@ -357,7 +361,11 @@ export function CreatorProfileEditor({
                         <Trans message="Cover image" />
                       </Field.Label>
                       <CroppedCover
-                        className="h-28 w-full sm:h-32"
+                        className={cn(
+                          'h-28 w-full max-w-[22.5rem] sm:h-30',
+                          containerRadius.className,
+                        )}
+                        cropRadius={containerRadius.value}
                         value={values.cover_url || ''}
                         onChange={value =>
                           form.setValue('cover_url', value || '', {
@@ -365,7 +373,7 @@ export function CreatorProfileEditor({
                           })
                         }
                         uploadType="linkImages"
-                        aspect={16 / 9}
+                        aspect={3}
                       />
                     </HookForm.Field>
 
@@ -375,8 +383,12 @@ export function CreatorProfileEditor({
                           <Trans message="Profile photo" />
                         </Field.Label>
                         <CroppedAvatar
-                          className="size-22 rounded-card-sm bg-background p-1"
-                          previewClassName="rounded-card-xs"
+                          className={cn(
+                            'size-22 bg-background p-1',
+                            containerRadius.avatarClassName,
+                          )}
+                          previewClassName={containerRadius.avatarClassName}
+                          cropRadius={containerRadius.avatarValue}
                           value={values.avatar_url || ''}
                           onChange={value =>
                             form.setValue('avatar_url', value || '', {

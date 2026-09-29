@@ -31,6 +31,11 @@ interface CroppedImageSelectorProps {
   fit?: 'cover' | 'contain';
   shape?: 'circle' | 'square' | 'cover';
   placeholderIcon?: React.ReactNode;
+  /**
+   * Raw CSS length for the crop frame corners, so the dialog previews the
+   * radius the image will actually render with instead of a sharp rectangle.
+   */
+  cropRadius?: string;
 }
 
 function useCroppedUpload({
@@ -68,6 +73,7 @@ export function CroppedImageSelector({
   fit = 'cover',
   shape = 'square',
   placeholderIcon,
+  cropRadius,
 }: CroppedImageSelectorProps) {
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [cropOpen, setCropOpen] = useState(false);
@@ -251,7 +257,12 @@ export function CroppedImageSelector({
           <Dialog.Backdrop />
           <Dialog.Content className="max-w-[calc(100vw-2rem)] sm:max-w-2xl">
             {pendingFile ? (
-              <ImageCrop aspect={aspect} file={pendingFile} onCrop={handleCrop}>
+              <ImageCrop
+                aspect={aspect}
+                file={pendingFile}
+                onCrop={handleCrop}
+                radius={cropRadius}
+              >
                 <Dialog.Header>
                   <Dialog.Title>
                     <Trans message="Crop image" />

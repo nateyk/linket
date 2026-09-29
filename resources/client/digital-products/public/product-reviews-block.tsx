@@ -83,7 +83,7 @@ export function ProductReviewsBlock({
       <div className="grid items-stretch gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]">
         <SummaryCard summary={summary} loading={loading} />
         {reviews.length ? (
-          <div className="flex flex-col rounded-card border border-[var(--biolink-border)] bg-[var(--biolink-surface-strong)] text-[var(--biolink-text)] shadow-xl ring-1 ring-[var(--biolink-border)] backdrop-blur-xl">
+          <div className="flex flex-col rounded-card bg-[var(--biolink-surface-strong)] text-[var(--biolink-text)] ring-1 ring-[var(--biolink-border)] backdrop-blur-xl">
             {visibleReviews.map((review, index) => (
               <div key={review.id}>
                 {index > 0 && (
@@ -143,7 +143,7 @@ function SummaryCard({
   const total = summary?.rating_stats?.total ?? 0;
 
   return (
-    <div className="flex flex-col rounded-card border border-[var(--biolink-border)] bg-[var(--biolink-surface-strong)] p-5 text-[var(--biolink-text)] shadow-xl ring-1 ring-[var(--biolink-border)] backdrop-blur-xl">
+    <div className="flex flex-col rounded-card bg-[var(--biolink-surface-strong)] p-5 text-[var(--biolink-text)] ring-1 ring-[var(--biolink-border)] backdrop-blur-xl">
       <div className="flex items-center gap-3">
         <p className="text-4xl leading-none font-semibold tracking-tight">
           {loading ? '—' : average.toFixed(1)}

@@ -1,0 +1,11 @@
+/*
+ * Rounds the crop frame to the radius the cropped image will render with, so
+ * the dialog previews the result instead of a sharp rectangle.
+ *
+ * Deliberately unlayered: react-easy-crop's own stylesheet is unlayered, and an
+ * unlayered rule outranks Tailwind's layered utilities. Scoped to the stage so
+ * callers that pass no radius never match and keep the stock frame.
+ */
+[data-crop-radius] .reactEasyCrop_CropArea {
+  border-radius: var(--crop-radius, 0px);
+}

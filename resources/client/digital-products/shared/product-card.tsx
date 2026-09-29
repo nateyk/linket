@@ -93,7 +93,7 @@ export function ProductCard({
   return (
     <div
       className={cn(
-        'group flex h-full w-full flex-col overflow-hidden rounded-card bg-card text-card-foreground shadow-sm ring-1 ring-foreground/10 transition-shadow duration-200 hover:shadow-md',
+        'group flex h-full w-full flex-col overflow-hidden rounded-card bg-card text-card-foreground ring-1 ring-foreground/10 transition-shadow duration-200 hover:shadow-md',
         classNames?.root,
         className,
       )}
@@ -154,7 +154,7 @@ export function ProductCard({
               )}
 
             {tags.length > 0 && (
-              <div className="absolute top-3 left-3 flex gap-2">
+              <div className="absolute top-3 start-3 flex gap-2">
                 {tags.map(tag => (
                   <Badge
                     key={tag}
@@ -167,7 +167,7 @@ export function ProductCard({
               </div>
             )}
             {rating != null && (
-              <div className="absolute top-3 right-3">
+              <div className="absolute top-3 end-3">
                 <Badge
                   variant="secondary"
                   className="flex items-center gap-1 bg-background/70 backdrop-blur-sm"

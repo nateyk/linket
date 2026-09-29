@@ -10,6 +10,7 @@ import {
 import {ShopWidgetRenderer} from '@app/dashboard/stores/store-editor/content/widgets/shop-widget/shop-widget-renderer';
 import {
   resolveBiolinkButtonAppearance,
+  resolveBiolinkContainerRadius,
   shouldUseLightBiolinkLogo,
 } from '@app/short-links/renderers/biolink-renderer/biolink-appearance';
 import {BiolinkAppearanceConfig} from '@app/gen/schemas/biolink-appearance-config';
@@ -19,6 +20,7 @@ import {Avatar} from '@shadcn/avatar/avatar';
 import {Badge} from '@shadcn/badge/badge';
 import {LinkButton} from '@shadcn/button/button';
 import BottomNavBar from '@shadcn/bottom-nav-bar';
+import {Card} from '@shadcn/card/card';
 import {Tabs} from '@shadcn/tabs/tabs';
 import {Trans} from '@ui/i18n/trans';
 import {message} from '@ui/i18n/message';
@@ -244,23 +246,17 @@ function CreatorCard({
   const visibleSocialLinks = compact ? socialLinks.slice(0, 6) : socialLinks;
   const showContactAction = !!profile.contact_url;
   const buttonAppearance = resolveBiolinkButtonAppearance(appearance);
+  const containerRadius = resolveBiolinkContainerRadius(appearance);
 
   return (
-    <aside
+    <Card.Root
       className={cn(
-        'overflow-hidden rounded-card bg-[var(--biolink-surface)] text-[var(--biolink-text)] ring-1 ring-[var(--biolink-border)] backdrop-blur-md',
-        compact
-          ? 'bg-[var(--biolink-surface-strong)] shadow-sm backdrop-blur-xl'
-          : 'shadow-sm',
+        'gap-0 py-0 bg-[var(--biolink-surface)] text-[var(--biolink-text)] ring-1 ring-[var(--biolink-border)] backdrop-blur-md',
         !compact && '@4xl:sticky @4xl:top-8',
+        containerRadius.className,
       )}
     >
-      <div
-        className={cn(
-          'relative h-28 bg-[var(--biolink-surface-muted)]',
-          !compact && 'sm:h-30',
-        )}
-      >
+      <div className="relative aspect-[3/1] w-full shrink-0 bg-[var(--biolink-surface-muted)] bg-linear-to-br from-[var(--biolink-surface-muted)] to-[var(--biolink-surface-strong)]">
         {profile.cover_url && (
           <img
             className="size-full object-cover"
@@ -272,8 +268,7 @@ function CreatorCard({
           <Badge
             variant="secondary"
             className={cn(
-              'absolute right-4 bottom-4 border-[var(--biolink-border)] bg-[var(--biolink-surface-strong)] text-[var(--biolink-text)] shadow-sm backdrop-blur-sm',
-              buttonAppearance.radius,
+              'absolute end-4 bottom-4 border-[var(--biolink-border)] bg-[var(--biolink-surface-strong)] text-[var(--biolink-text)] shadow-sm backdrop-blur-sm',
             )}
           >
             <BriefcaseBusinessIcon />
@@ -282,7 +277,7 @@ function CreatorCard({
         )}
       </div>
 
-      <div
+      <Card.Content
         className={cn(
           'px-4 pb-4',
           compact && 'flex flex-col',
@@ -290,13 +285,21 @@ function CreatorCard({
         )}
       >
         <div className="grid grid-cols-[auto_minmax(0,1fr)] items-end gap-3">
-          <Avatar.Root className="-mt-10 aspect-square size-20 overflow-hidden rounded-card-sm bg-[var(--biolink-surface-strong)] shadow-sm ring-1 ring-[var(--biolink-surface-strong)] after:hidden">
+          <Avatar.Root
+            className={cn(
+              '-mt-10 aspect-square size-22 overflow-hidden bg-[var(--biolink-surface-strong)] p-1 after:hidden',
+              containerRadius.avatarClassName,
+            )}
+          >
             <Avatar.Image
-              className="size-full rounded-card-sm object-cover"
+              className={cn(
+                'size-full object-cover',
+                containerRadius.avatarClassName,
+              )}
               src={profile.avatar_url}
               alt={profile.display_name}
             />
-            <Avatar.ColorFallback className="rounded-card-sm">
+            <Avatar.ColorFallback className={containerRadius.avatarClassName}>
               {profile.display_name}
             </Avatar.ColorFallback>
           </Avatar.Root>
@@ -369,8 +372,7 @@ function CreatorCard({
                   key={skill}
                   variant="outline"
                   className={cn(
-                    'max-w-full border-[var(--biolink-border)] bg-[var(--biolink-surface-muted)] break-words whitespace-normal text-[var(--biolink-text)]',
-                    buttonAppearance.radius,
+                    'h-auto max-w-full border-[var(--biolink-border)] bg-[var(--biolink-surface-muted)] break-words whitespace-normal text-[var(--biolink-text)]',
                   )}
                 >
                   {skill}
@@ -407,8 +409,8 @@ function CreatorCard({
             <CreatorBranding appearance={appearance} />
           </div>
         </div>
-      </div>
-    </aside>
+      </Card.Content>
+    </Card.Root>
   );
 }
 
@@ -468,13 +470,13 @@ function CreatorProfileContent({
           >
             <Tabs.Tab
               value="products"
-              className="h-[calc(100%-1px)] flex-none rounded-full px-3 py-1 text-[var(--biolink-muted-text)] data-active:text-[var(--biolink-text)]"
+              className="h-[calc(100%-1px)] flex-none rounded-button px-3 py-1 text-[var(--biolink-muted-text)] data-active:text-[var(--biolink-text)]"
             >
               <Trans message="Products" />
             </Tabs.Tab>
             <Tabs.Tab
               value="about"
-              className="h-[calc(100%-1px)] flex-none rounded-full px-3 py-1 text-[var(--biolink-muted-text)] data-active:text-[var(--biolink-text)]"
+              className="h-[calc(100%-1px)] flex-none rounded-button px-3 py-1 text-[var(--biolink-muted-text)] data-active:text-[var(--biolink-text)]"
             >
               <Trans message="About" />
             </Tabs.Tab>
@@ -516,13 +518,13 @@ function AboutSection({
   appearance: BiolinkAppearanceConfig | null;
   compact?: boolean;
 }) {
-  const buttonAppearance = resolveBiolinkButtonAppearance(appearance);
+  const containerRadius = resolveBiolinkContainerRadius(appearance);
 
   return (
-    <section
+    <Card.Root
       className={cn(
-        'bg-[var(--biolink-surface)] text-[var(--biolink-text)] ring-1 ring-[var(--biolink-border)] backdrop-blur-md',
-        buttonAppearance.radius,
+        'gap-0 bg-[var(--biolink-surface)] text-[var(--biolink-text)] ring-1 ring-[var(--biolink-border)] backdrop-blur-md',
+        containerRadius.className,
         compact ? 'p-3.5' : 'p-5 sm:p-6',
       )}
     >
@@ -544,7 +546,7 @@ function AboutSection({
         )}
         dangerouslySetInnerHTML={{__html: profile.about_html}}
       />
-    </section>
+    </Card.Root>
   );
 }
 

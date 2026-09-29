@@ -174,7 +174,7 @@ export function PublicDigitalProductPage({
     >
       <div className="flex w-full max-w-6xl flex-col gap-4 sm:gap-5">
         <div className="grid min-w-0 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-6">
-          <Card.Root className="gap-0 overflow-hidden bg-[var(--biolink-surface-strong)] py-0 text-[var(--biolink-text)] shadow-xl ring-1 ring-[var(--biolink-border)] backdrop-blur-xl">
+          <Card.Root className="gap-0 overflow-hidden bg-[var(--biolink-surface-strong)] py-0 text-[var(--biolink-text)] ring-1 ring-[var(--biolink-border)] backdrop-blur-xl">
             <DigitalProductCover product={data.product} />
             <Card.Content className="flex min-w-0 flex-col gap-6 p-5 sm:p-7">
               <div className="flex min-w-0 flex-col gap-4">
@@ -226,7 +226,7 @@ export function PublicDigitalProductPage({
             </Card.Content>
           </Card.Root>
 
-          <Card.Root className="gap-0 overflow-hidden bg-[var(--biolink-surface-strong)] py-0 text-[var(--biolink-text)] shadow-xl ring-1 ring-[var(--biolink-border)] backdrop-blur-xl lg:sticky lg:top-6">
+          <Card.Root className="gap-0 overflow-hidden bg-[var(--biolink-surface-strong)] py-0 text-[var(--biolink-text)] ring-1 ring-[var(--biolink-border)] backdrop-blur-xl lg:sticky lg:top-6">
             <Card.Content className="flex flex-col gap-5 p-5 sm:p-6">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex min-w-0 flex-col gap-1.5">
@@ -361,7 +361,7 @@ export function PublicDigitalProductOrderSuccessPage({
       backUrl={data.back_url}
       backLabel={<Trans message="Return to bio" />}
     >
-      <Card.Root className="w-full max-w-xl gap-0 overflow-hidden bg-[var(--biolink-surface-strong)] py-0 text-[var(--biolink-text)] shadow-xl ring-1 ring-[var(--biolink-border)] backdrop-blur-xl">
+      <Card.Root className="w-full max-w-xl gap-0 overflow-hidden bg-[var(--biolink-surface-strong)] py-0 text-[var(--biolink-text)] ring-1 ring-[var(--biolink-border)] backdrop-blur-xl">
         <div
           className={cn(
             'border-b px-5 py-5 sm:px-6',
@@ -788,10 +788,13 @@ function CreatorIdentity({
         inverted ? 'text-white' : 'text-[var(--biolink-muted-text)]',
       )}
     >
-      <Avatar.Root size="sm">
-        <Avatar.Image src={avatar} alt="" />
+      <Avatar.Root size="sm" className="rounded-card-sm after:rounded-card-sm">
+        <Avatar.Image src={avatar} alt="" className="rounded-card-sm" />
         <Avatar.ColorFallback
-          className={inverted ? 'bg-white/90 text-foreground' : undefined}
+          className={cn(
+            'rounded-card-sm',
+            inverted ? 'bg-white/90 text-foreground' : undefined,
+          )}
         >
           {name}
         </Avatar.ColorFallback>

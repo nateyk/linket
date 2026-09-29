@@ -6,11 +6,13 @@ import {Trans} from '@ui/i18n/trans';
 import * as React from 'react';
 import Cropper, {type Area} from 'react-easy-crop';
 import 'react-easy-crop/react-easy-crop.css';
+import './image-crop-frame.css';
 
 type ImageCropContextValue = {
   aspect: number;
   file: File | null;
   imageUrl: string | null;
+  radius: string | undefined;
   crop: {x: number; y: number};
   zoom: number;
   minZoom: number;
@@ -81,6 +83,12 @@ export interface ImageCropProps {
   onError?: (message: string) => void;
   children?: React.ReactNode;
   className?: string;
+  /**
+   * Raw CSS length (e.g. `16px`) applied to the crop frame, so the dialog
+   * previews the corner radius the cropped image renders with. Omitted, the
+   * frame stays a sharp rectangle.
+   */
+  radius?: string;
 }
 
 export function ImageCrop({
@@ -90,6 +98,7 @@ export function ImageCrop({
   onError,
   children,
   className,
+  radius,
 }: ImageCropProps) {
   const [imageUrl, setImageUrl] = React.useState<string | null>(null);
   const [crop, setCrop] = React.useState({x: 0, y: 0});
@@ -152,6 +161,7 @@ export function ImageCrop({
       aspect,
       file,
       imageUrl,
+      radius,
       crop,
       zoom,
       minZoom,
@@ -168,6 +178,7 @@ export function ImageCrop({
       aspect,
       file,
       imageUrl,
+      radius,
       crop,
       zoom,
       minZoom,
@@ -195,6 +206,7 @@ export interface ImageCropContentProps extends React.ComponentProps<'div'> {
 export function ImageCropContent({className, ...props}: ImageCropContentProps) {
   const {
     imageUrl,
+    radius,
     crop,
     aspect,
     zoom,
@@ -292,6 +304,12 @@ export function ImageCropContent({className, ...props}: ImageCropContentProps) {
     <div className={cn('flex flex-col gap-3', className)} {...props}>
       <div
         ref={stageRef}
+        data-crop-radius={radius ? '' : undefined}
+        style={
+          radius
+            ? ({'--crop-radius': radius} as React.CSSProperties)
+            : undefined
+        }
         className="relative h-[min(30dvh,360px)] w-full overflow-hidden rounded-card bg-muted sm:h-[min(44dvh,440px)]"
       >
         <Cropper
