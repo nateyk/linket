@@ -121,7 +121,11 @@ export function Header() {
   // reach this scroll, and a user gesture during it wins immediately.
   useEffect(() => {
     if (window.location.pathname !== '/' || !window.location.hash) return;
-    const id = decodeURIComponent(window.location.hash.slice(1));
+    // Undecoded on purpose: every anchor id is kebab-case ASCII (see
+    // buildSectionAnchors/slugifySectionTitle and the header's static hrefs),
+    // so decoding buys nothing — and decodeURIComponent throws URIError on a
+    // malformed fragment like "/#%", which would blank the landing.
+    const id = window.location.hash.slice(1);
     if (!id) return;
 
     let stopped = false;
