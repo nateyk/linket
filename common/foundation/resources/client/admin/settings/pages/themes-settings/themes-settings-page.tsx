@@ -234,24 +234,6 @@ const roundnessOptions = [
     ),
   },
   {
-    value: 'sm',
-    label: (
-      <>
-        <RoundnessPreview d="M4 20V8C4 5.79086 5.79086 4 8 4H20" />
-        <Trans message="Round" />
-      </>
-    ),
-  },
-  {
-    value: 'md',
-    label: (
-      <>
-        <RoundnessPreview d="M4 20V12C4 7.58172 7.58172 4 12 4H20" />
-        <Trans message="Rounder" />
-      </>
-    ),
-  },
-  {
     value: 'default',
     label: (
       <>
