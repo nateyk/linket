@@ -234,7 +234,10 @@ describe('creator profile card wiring', () => {
       /function AboutSection[\s\S]*?containerRadius\.className/,
     );
     expect(source).not.toContain('rounded-card-sm');
-    expect(source).not.toContain('buttonAppearance.radius');
+  });
+
+  test('passes the button radius to the bottom navigation bar', () => {
+    expect(source).toContain('radius={buttonAppearance.radius}');
   });
 
   test('keeps the card flat: depth comes from the ring alone', () => {

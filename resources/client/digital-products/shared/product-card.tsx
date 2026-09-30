@@ -138,7 +138,7 @@ export function ProductCard({
                     type="button"
                     onClick={() => changeImage(-1)}
                     aria-label="Previous image"
-                    className="flex size-8 items-center justify-center rounded-full bg-black/30 text-white transition-colors hover:bg-black/50"
+                    className="flex size-8 items-center justify-center rounded-button bg-black/30 text-white transition-colors hover:bg-black/50"
                   >
                     <ChevronLeftIcon className="size-4" />
                   </button>
@@ -146,7 +146,7 @@ export function ProductCard({
                     type="button"
                     onClick={() => changeImage(1)}
                     aria-label="Next image"
-                    className="flex size-8 items-center justify-center rounded-full bg-black/30 text-white transition-colors hover:bg-black/50"
+                    className="flex size-8 items-center justify-center rounded-button bg-black/30 text-white transition-colors hover:bg-black/50"
                   >
                     <ChevronRightIcon className="size-4" />
                   </button>

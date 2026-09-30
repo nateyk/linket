@@ -161,6 +161,7 @@ function MobileCreatorProfile({
     ...(hasProducts ? [{label: "Products", icon: PackageIcon, value: "products"}] : []),
     ...(hasAbout ? [{label: "About", icon: InfoIcon, value: "about"}] : []),
   ];
+  const buttonAppearance = resolveBiolinkButtonAppearance(appearance);
 
   return (
     <Tabs.Root
@@ -219,6 +220,7 @@ function MobileCreatorProfile({
               const item = biolinkNavItems[idx];
               if (item) setActiveTab(item.value);
             }}
+            radius={buttonAppearance.radius}
             stickyBottom
           />
         </div>
