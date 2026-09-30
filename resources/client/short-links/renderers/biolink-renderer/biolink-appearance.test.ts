@@ -327,6 +327,56 @@ describe('creator profile card wiring', () => {
   });
 });
 
+describe('creator card shadow wiring', () => {
+  const source = readSource('creator-profile-layout.tsx');
+
+  test('derives one shadow local from the already-resolved button appearance', () => {
+    // No resolver change: both card components reuse
+    // `buttonAppearance.style.boxShadow` computed from `btnConfig.shadow`.
+    expect(
+      source.match(/const buttonShadow = buttonAppearance\.style\.boxShadow;/g),
+    ).toHaveLength(2);
+  });
+
+  test('spreads the button shadow onto the creator card shell', () => {
+    expect(source).toMatch(
+      /'gap-0 py-0 bg-\[var\(--biolink-surface\)\][\s\S]{0,400}?containerRadius\.className[\s\S]{0,80}?style=\{\{boxShadow: buttonShadow\}\}/,
+    );
+  });
+
+  test('spreads the button shadow onto the avatar wrapper', () => {
+    expect(source).toMatch(
+      /<Avatar\.Root\s+className=\{cn\([\s\S]{0,400}?containerRadius\.avatarClassName[\s\S]{0,80}?style=\{\{boxShadow: buttonShadow\}\}/,
+    );
+  });
+
+  test('spreads the button shadow onto the About panel', () => {
+    expect(source).toMatch(
+      /function AboutSection[\s\S]*?resolveBiolinkButtonAppearance\(appearance\)/,
+    );
+    expect(source).toMatch(
+      /compact \? 'p-3\.5' : 'p-5 sm:p-6',[\s\S]{0,80}?style=\{\{boxShadow: buttonShadow\}\}/,
+    );
+  });
+
+  test('the none setting yields no shadow: an empty boxShadow renders nothing', () => {
+    // `availableShadows.none` is `''` — falsy, and `style={{boxShadow: ''}}`
+    // is valid React that paints nothing, so the default page stays flat.
+    const boxShadow = resolveBiolinkButtonAppearance({
+      btnConfig: {shadow: 'none'},
+    }).style.boxShadow;
+    expect(boxShadow).toBe('');
+    expect(boxShadow).toBeFalsy();
+  });
+
+  test('the hard setting resolves a concrete shadow for the card family', () => {
+    expect(
+      resolveBiolinkButtonAppearance({btnConfig: {shadow: 'hard'}}).style
+        .boxShadow,
+    ).toBe('rgb(0 0 0 / 75%) 0.3rem 0.4rem 0px');
+  });
+});
+
 describe('storefront bottom nav appearance wiring', () => {
   const navSource = fs.readFileSync(
     path.resolve(

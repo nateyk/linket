@@ -250,6 +250,7 @@ function CreatorCard({
   const visibleSocialLinks = compact ? socialLinks.slice(0, 6) : socialLinks;
   const showContactAction = !!profile.contact_url;
   const buttonAppearance = resolveBiolinkButtonAppearance(appearance);
+  const buttonShadow = buttonAppearance.style.boxShadow;
   const containerRadius = resolveBiolinkContainerRadius(appearance);
   // The avatar frame is a 4px (`p-1`) pad nested inside the outer radius, so
   // the media inside rounds a step tighter and the pad reads even all round.
@@ -268,6 +269,7 @@ function CreatorCard({
         !compact && '@4xl:sticky @4xl:top-8',
         containerRadius.className,
       )}
+      style={{boxShadow: buttonShadow}}
     >
       <div className="relative aspect-[3/1] w-full shrink-0 bg-[var(--biolink-surface-muted)] bg-linear-to-br from-[var(--biolink-surface-muted)] to-[var(--biolink-surface-strong)]">
         {profile.cover_url && (
@@ -303,6 +305,7 @@ function CreatorCard({
               '-mt-10 aspect-square size-22 overflow-hidden bg-[var(--biolink-surface-strong)] p-1 after:rounded-[inherit] after:border-[var(--biolink-border)]',
               containerRadius.avatarClassName,
             )}
+            style={{boxShadow: buttonShadow}}
           >
             <Avatar.Image
               className={cn(
@@ -535,6 +538,8 @@ function AboutSection({
   appearance: BiolinkAppearanceConfig | null;
   compact?: boolean;
 }) {
+  const buttonAppearance = resolveBiolinkButtonAppearance(appearance);
+  const buttonShadow = buttonAppearance.style.boxShadow;
   const containerRadius = resolveBiolinkContainerRadius(appearance);
 
   return (
@@ -544,6 +549,7 @@ function AboutSection({
         containerRadius.className,
         compact ? 'p-3.5' : 'p-5 sm:p-6',
       )}
+      style={{boxShadow: buttonShadow}}
     >
       <div className={cn('mb-4', compact && 'mb-3')}>
         <h2 className={cn('font-semibold', compact ? 'text-lg' : 'text-xl')}>
