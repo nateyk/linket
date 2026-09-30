@@ -221,6 +221,8 @@ function MobileCreatorProfile({
               if (item) setActiveTab(item.value);
             }}
             radius={buttonAppearance.radius}
+            activeButtonClassName={buttonAppearance.className}
+            activeButtonStyle={buttonAppearance.style}
             stickyBottom
           />
         </div>

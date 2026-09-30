@@ -1,6 +1,6 @@
 "use client";
 
-import {useState} from "react";
+import {useState, type CSSProperties} from "react";
 import {motion} from "framer-motion";
 import {Home, LineChart, CreditCard, MessageCircle, Trophy, User} from "lucide-react";
 import {cn} from "@ui/utils/cn";
@@ -30,6 +30,14 @@ type BottomNavBarProps = {
    * button radius so the bar respects the creator's "Corner roundness" choice.
    */
   radius?: string;
+  /**
+   * Resolved appearance button design for the ACTIVE nav button. When provided,
+   * the active button renders the creator's button design (fill/text/border via
+   * CSS vars) instead of the default theme chrome. Absent, the theme chrome is
+   * unchanged.
+   */
+  activeButtonClassName?: string;
+  activeButtonStyle?: CSSProperties;
 };
 
 export function BottomNavBar({
@@ -40,6 +48,8 @@ export function BottomNavBar({
   activeIndex: controlledIndex,
   onIndexChange,
   radius = "rounded-button",
+  activeButtonClassName,
+  activeButtonStyle,
 }: BottomNavBarProps) {
   const [internalIndex, setInternalIndex] = useState(defaultIndex);
   const activeIndex = controlledIndex ?? internalIndex;
@@ -74,10 +84,15 @@ export function BottomNavBar({
               "flex items-center gap-0 px-3 py-2 transition-all duration-200 relative h-10 min-w-[44px] min-h-[40px] max-h-[44px] font-medium",
               radius,
               isActive
-                ? "bg-primary text-primary-foreground shadow-sm gap-2"
+                ? cn(
+                    "shadow-sm gap-2",
+                    activeButtonClassName ??
+                      "bg-primary text-primary-foreground",
+                  )
                 : "bg-transparent text-muted-foreground hover:bg-accent hover:text-accent-foreground",
               "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
             )}
+            style={isActive ? activeButtonStyle : undefined}
             onClick={() => setActiveIndex(idx)}
             aria-label={item.label}
             aria-pressed={isActive}
@@ -107,7 +122,11 @@ export function BottomNavBar({
               <span
                 className={cn(
                   "font-semibold text-xs whitespace-nowrap select-none transition-opacity duration-200 overflow-hidden text-ellipsis leading-[1.9]",
-                  isActive ? "text-primary-foreground" : "opacity-0",
+                  isActive
+                    ? (activeButtonClassName
+                      ? "text-[var(--biolink-button-text)]"
+                      : "text-primary-foreground")
+                    : "opacity-0",
                 )}
                 title={item.label}
               >

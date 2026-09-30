@@ -268,6 +268,13 @@ describe('creator profile card wiring', () => {
     expect(source).toContain('radius={buttonAppearance.radius}');
   });
 
+  test('passes the resolved button appearance to the bottom navigation bar', () => {
+    expect(source).toContain(
+      'activeButtonClassName={buttonAppearance.className}',
+    );
+    expect(source).toContain('activeButtonStyle={buttonAppearance.style}');
+  });
+
   test('keeps the card flat: depth comes from the ring alone', () => {
     const shell = source.match(
       /'gap-0 py-0 bg-\[var\(--biolink-surface\)\][^']*'/,
@@ -317,6 +324,66 @@ describe('creator profile card wiring', () => {
     expect(source).toMatch(
       /className="size-full object-cover"\s+src=\{profile\.cover_url\}/,
     );
+  });
+});
+
+describe('storefront bottom nav appearance wiring', () => {
+  const navSource = fs.readFileSync(
+    path.resolve(
+      'common/foundation/resources/client/shadcn/bottom-nav-bar.tsx',
+    ),
+    'utf8',
+  );
+
+  test('paints the active button from the appearance design, not theme chrome', () => {
+    // The style object sets the --biolink-button-* vars on the button; the
+    // className paints fill/text/border from those vars, mirroring the
+    // social buttons.
+    expect(navSource).toContain('activeButtonClassName');
+    expect(navSource).toContain('activeButtonStyle');
+    expect(navSource).toContain(
+      'style={isActive ? activeButtonStyle : undefined}',
+    );
+    // The old combined active string is gone: when an appearance is provided
+    // its classes reach `cn()` unopposed, so no merge order decides the winner.
+    expect(navSource).not.toContain(
+      '"bg-primary text-primary-foreground shadow-sm gap-2"',
+    );
+  });
+
+  test('keeps theme chrome as the default when no appearance is passed', () => {
+    // The old strings survive only as the fallback for callers that pass no
+    // appearance, so the component default is unchanged.
+    expect(navSource).toMatch(
+      /activeButtonClassName \?\?\s*"bg-primary text-primary-foreground"/,
+    );
+    expect(navSource).toContain(
+      '"bg-transparent text-muted-foreground hover:bg-accent hover:text-accent-foreground"',
+    );
+    expect(navSource).toContain('bg-card/95');
+  });
+
+  test('follows the appearance label color on the active label span', () => {
+    // The span would otherwise pin `text-primary-foreground` over the
+    // inherited button color; with an appearance it reads the same label var
+    // the style object sets on the button.
+    expect(navSource).toContain('"text-[var(--biolink-button-text)]"');
+    expect(navSource).toMatch(
+      /activeButtonClassName\s*\?\s*"text-\[var\(--biolink-button-text\)\]"/,
+    );
+    expect(navSource).not.toContain('isActive ? "text-primary-foreground"');
+  });
+
+  test('leaves the dashboard bottom navbar on its own component', () => {
+    const dashboardNav = fs.readFileSync(
+      path.resolve(
+        'resources/client/dashboard/layout/mobile-bottom-navbar.tsx',
+      ),
+      'utf8',
+    );
+    expect(dashboardNav).not.toContain('BottomNavBar');
+    expect(dashboardNav).not.toContain('bottom-nav-bar');
+    expect(navSource).not.toContain('MobileBottomNavbar');
   });
 });
 
