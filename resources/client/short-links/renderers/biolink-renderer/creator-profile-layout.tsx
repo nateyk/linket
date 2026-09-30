@@ -578,13 +578,14 @@ function CreatorBranding({
     <Link
       to="/"
       aria-label={branding.site_name}
-      className="inline-flex items-center justify-center opacity-70 transition-opacity duration-150 hover:opacity-100"
+      className="inline-flex items-center justify-center gap-1.5"
     >
       <img
         className="h-4.5 w-auto"
         src={src}
         alt={trans(message(':site logo', {values: {site: branding.site_name}}))}
       />
+      <span className="text-xs text-foreground">{branding.site_name}</span>
     </Link>
   );
 }

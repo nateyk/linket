@@ -365,14 +365,15 @@ function Branding({appearance}: {appearance?: BiolinkAppearanceConfig | null}) {
 
   return (
     <div className="shrink-0">
-      <Link to="/">
+      <Link to="/" className="flex items-center justify-center gap-1.5">
         <img
-          className="mx-auto h-6 w-auto"
+          className="h-6 w-auto"
           src={src}
           alt={trans(
             message(':site logo', {values: {site: branding.site_name}}),
           )}
         />
+        <span className="text-xs text-foreground">{branding.site_name}</span>
       </Link>
     </div>
   );
