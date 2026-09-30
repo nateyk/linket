@@ -1,6 +1,7 @@
 import {ShopWidgetConfig} from '@app/dashboard/stores/store-editor/content/widgets/shop-widget/shop-widget-dialog';
 import {WidgetRendererProps} from '@app/dashboard/stores/store-editor/content/widgets/widget-renderer-props';
 import {ProductCard} from '@app/digital-products/shared/product-card';
+import {resolveBiolinkButtonAppearance} from '@app/short-links/renderers/biolink-renderer/biolink-appearance';
 import {apiClient} from '@common/http/query-client';
 import {Button} from '@shadcn/button/button';
 import {Trans} from '@ui/i18n/trans';
@@ -87,6 +88,10 @@ export function ShopWidgetRenderer({
   }
   if (!products.length || !biolink) return null;
 
+  const buttonAppearance = resolveBiolinkButtonAppearance(
+    biolink.appearance?.config ?? null,
+  );
+
   return (
     <section className="w-full min-w-0">
       {showHeading && (
@@ -126,6 +131,8 @@ export function ShopWidgetRenderer({
               action={
                 <Button
                   size="sm"
+                  className={buttonAppearance.className}
+                  style={buttonAppearance.style}
                   render={<a href={href} />}
                 >
                   <Trans message="View product" />
