@@ -185,10 +185,10 @@ export const Tooltip = forwardRef<HTMLElement, Props>(
               hideTooltip();
             }}
             className={clsx(
-              'z-50 my-1 max-w-60 rounded-sm px-2 py-1 text-xs wrap-break-word text-white shadow-sm',
-              variant === 'positive' && 'bg-positive',
-              variant === 'danger' && 'bg-destructive',
-              variant === 'neutral' && 'bg-toast',
+              'z-50 my-1 max-w-60 rounded-sm px-2 py-1 text-xs wrap-break-word shadow-sm',
+              variant === 'positive' && 'bg-positive text-primary-foreground',
+              variant === 'danger' && 'bg-destructive text-primary-foreground',
+              variant === 'neutral' && 'bg-toast text-white',
             )}
             style={{
               position: strategy,

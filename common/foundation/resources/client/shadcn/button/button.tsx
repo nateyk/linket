@@ -61,7 +61,7 @@ const buttonVariants = cva(
         variant: 'default',
         color: 'danger',
         className:
-          'border-destructive bg-lighten-destructive/95 text-foreground hover:bg-destructive/80 data-pressed:bg-destructive/80',
+          'border-destructive bg-destructive text-primary-foreground hover:bg-destructive/80 data-pressed:bg-destructive/80',
       },
       {
         variant: 'default',

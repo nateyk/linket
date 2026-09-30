@@ -23,7 +23,7 @@ return [
         '--be-accent' => 'oklch(0.97 0 0)',
         '--be-accent-foreground' => 'oklch(0.205 0 0)',
 
-        '--be-destructive' => 'oklch(0.6532 0.2328 25.74)',
+        '--be-destructive' => 'oklch(0.46 0.187 25.74)',
 
         '--be-border' => 'oklch(0.922 0 0)',
         '--be-input' => 'oklch(0.922 0 0)',
@@ -58,7 +58,7 @@ return [
         '--be-accent' => 'oklch(0.269 0 0)',
         '--be-accent-foreground' => 'oklch(0.985 0 0)',
 
-        '--be-destructive' => 'oklch(0.594 0.1967 24.63)',
+        '--be-destructive' => 'oklch(0.77 0.136 24.63)',
 
         '--be-border' => 'oklch(1 0 0 / 10%)',
         '--be-input' => 'oklch(1 0 0 / 15%)',

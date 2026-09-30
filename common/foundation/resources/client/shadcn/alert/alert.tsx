@@ -58,7 +58,7 @@ const alertVariants = cva(
         variant: 'destructive',
         fillStyle: 'boldFill',
         className:
-          'border-destructive bg-lighten-destructive/95 text-foreground *:data-[slot=alert-description]:text-foreground',
+          'border-destructive bg-destructive text-primary-foreground *:data-[slot=alert-description]:text-primary-foreground',
       },
       {
         variant: 'positive',

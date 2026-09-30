@@ -23,7 +23,7 @@ colors:
   positive: "oklch(0.49 0.192 149.58)"
   warning: "oklch(0.53 0.152 70.88)"
   note: "oklch(0.9619 0.058 95.62)"
-  destructive: "oklch(0.6532 0.2328 25.74)"
+  destructive: "oklch(0.46 0.187 25.74)"
   dark-background: "oklch(0.145 0 0)"
   dark-foreground: "oklch(0.985 0 0)"
   dark-card: "oklch(0.205 0 0)"
@@ -31,6 +31,7 @@ colors:
   dark-input: "oklch(1 0 0 / 15%)"
   dark-positive: "oklch(0.7227 0.192 149.58)"
   dark-warning: "oklch(0.7785 0.152 70.88)"
+  dark-destructive: "oklch(0.77 0.136 24.63)"
 typography:
   body:
     fontFamily: "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
@@ -183,8 +184,12 @@ Chromatic color is spent only on meaning:
   (`oklch(0.7785 0.152 70.88)`).
 - **Notice Cream** (`oklch(0.9619 0.058 95.62)`): the quietest status tone, for
   informational callouts that must not read as an alert.
-- **Alarm Red** (`oklch(0.6532 0.2328 25.74)`): destructive actions and form errors.
-  Solid fill only on `danger` buttons; otherwise a 10% wash with red text.
+- **Alarm Red** (`oklch(0.46 0.187 25.74)` light, `oklch(0.77 0.136 24.63)` dark):
+  destructive actions and form errors. Solid fill only on `danger` buttons;
+  otherwise a 10% wash with red text. The token has a light and a dark scheme
+  value — AA-dark in light mode, AA-bright in dark mode — so solid fills take a
+  `text-primary-foreground` label (near-white in light, ink in dark) that clears
+  4.5:1 in both schemes.
 
 ### Neutral
 
@@ -367,6 +372,10 @@ One radius family, three members, remapped as a unit.
 **The Three-Radius Rule.** Only 24px (controls/cards), 16px (badges) and 12px (fields)
 exist. A fourth value means a component is being styled outside the system.
 
+**The Square Exception.** A theme deliberately set to all-zero radius — selected as
+"Square" in admin — is the one sanctioned exception to the three-radius rule, since
+`.radius-none` ships in core CSS and the brutalist preset calls for it.
+
 ## Components
 
 Precise and firm: solid tokens, tight internal rhythm, visible focus, and a 1px press
@@ -385,11 +394,11 @@ that confirms every click. Nothing bounces, nothing floats at rest.
 - **Link:** no box at all — `text-primary` with a 4px underline offset on hover.
 - **Colors:** `default` (secondary fill), `primary`, `danger`, `positive`, `white`.
   `positive` mirrors the primary recipe using its status token (`bg-positive
-  text-primary-foreground`). `danger` does not: it fills with the destructive token
-  at 95% (`bg-lighten-destructive/95`, a 95/5 mix with the scheme background) and
-  takes a `text-foreground` label — the mix tracks the surface, so the label clears
-  4.5:1 in both schemes, where a `text-primary-foreground` label misses AA on the
-  solid token.
+  text-primary-foreground`). `danger` mirrors it too: a solid destructive fill
+  (`bg-destructive`) with a `text-primary-foreground` label. The token is AA-dark in
+  light mode and AA-bright in dark mode, so the scheme-aware label clears 4.5:1 on
+  the solid fill in both schemes — this reverses the earlier lighten-fill wording,
+  which existed because the old token was too light to carry a near-white label.
 - **Hover / Press:** fill drops to 80% opacity (`hover:bg-primary/80`); `positive`
   holds at 95% (`hover:bg-positive/95`, same on `data-pressed`) so its label keeps
   4.5:1 on the hover fill. Press adds `translate-y-px` — one pixel down, no transform
