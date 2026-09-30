@@ -35,7 +35,7 @@ export function GlobalSearchInput() {
         }
       }}
     >
-      <InputGroup className="h-11.5 rounded-button border-none bg-background in-data-[variant=default]:bg-accent in-data-[variant=inset]:shadow-sm *:data-[slot=input-group-control]:md:text-base dark:bg-card">
+      <InputGroup className="h-11.5 rounded-input border-none bg-background in-data-[variant=default]:bg-accent in-data-[variant=inset]:shadow-sm *:data-[slot=input-group-control]:md:text-base dark:bg-card">
         <InputGroupAddon>
           <InputGroupButton size="icon-sm" type="submit">
             <SearchIcon />
