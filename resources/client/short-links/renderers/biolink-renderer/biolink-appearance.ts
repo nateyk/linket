@@ -46,6 +46,12 @@ type BiolinkRadiusScale = {
  * - **Controls stay crisp.** Buttons keep the control-scale value the selector
  *   previews; fields sit between the two.
  *
+ * Round (`rounded-sm`) is the calm step: cards render at 8px
+ * (`--radius-lg`), exactly the admin theme's Round (`.radius-sm`) card, with
+ * buttons at 4px and fields at 12px. Each step up grows every surface together
+ * (`rounded-lg`: 8px / 16px / 24px; `rounded-full`: capsule controls, 24px
+ * fields, 32px cards).
+ *
  * `systemRadiusScale` is what the page renders before the creator picks a
  * roundness — the core UI tokens themselves, so an untouched Appearance tab
  * renders exactly what it did before the knob existed.
@@ -64,8 +70,8 @@ const radiusScales: Record<
   'rounded-sm': {
     button: '4px',
     input: '12px',
-    card: '16px',
-    cardSm: '16px',
+    card: '8px',
+    cardSm: '8px',
     cardXs: '8px',
   },
   'rounded-lg': {

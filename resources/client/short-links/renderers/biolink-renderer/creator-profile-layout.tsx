@@ -249,6 +249,15 @@ function CreatorCard({
   const showContactAction = !!profile.contact_url;
   const buttonAppearance = resolveBiolinkButtonAppearance(appearance);
   const containerRadius = resolveBiolinkContainerRadius(appearance);
+  // The avatar frame is a 4px (`p-1`) pad nested inside the outer radius, so
+  // the media inside rounds a step tighter and the pad reads even all round.
+  // Full keeps its true circle via the class alone; Square needs no inset.
+  const avatarInnerStyle =
+    containerRadius.avatarClassName === 'rounded-full' ||
+    containerRadius.avatarValue === '0px' ||
+    containerRadius.avatarValue === '0'
+      ? undefined
+      : {borderRadius: `calc(${containerRadius.avatarValue} - 4px)`};
 
   return (
     <Card.Root
@@ -286,10 +295,10 @@ function CreatorCard({
           !compact && 'sm:px-5 sm:pb-5',
         )}
       >
-        <div className="grid grid-cols-[auto_minmax(0,1fr)] items-end gap-3">
+        <div className="grid grid-cols-[auto_minmax(0,1fr)] items-end gap-4">
           <Avatar.Root
             className={cn(
-              '-mt-10 aspect-square size-22 overflow-hidden bg-[var(--biolink-surface-strong)] p-1 after:hidden',
+              '-mt-10 aspect-square size-22 overflow-hidden bg-[var(--biolink-surface-strong)] p-1 after:rounded-[inherit] after:border-[var(--biolink-border)]',
               containerRadius.avatarClassName,
             )}
           >
@@ -298,10 +307,14 @@ function CreatorCard({
                 'size-full object-cover',
                 containerRadius.avatarClassName,
               )}
+              style={avatarInnerStyle}
               src={profile.avatar_url}
               alt={profile.display_name}
             />
-            <Avatar.ColorFallback className={containerRadius.avatarClassName}>
+            <Avatar.ColorFallback
+              className={containerRadius.avatarClassName}
+              style={avatarInnerStyle}
+            >
               {profile.display_name}
             </Avatar.ColorFallback>
           </Avatar.Root>

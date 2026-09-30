@@ -58,8 +58,8 @@ describe('corner roundness radius variables', () => {
       'rounded-sm': {
         '--be-radius-button': '4px',
         '--be-radius-input': '12px',
-        '--be-radius-card': '16px',
-        '--be-radius-card-sm': '16px',
+        '--be-radius-card': '8px',
+        '--be-radius-card-sm': '8px',
         '--be-radius-card-xs': '8px',
       },
       'rounded-lg': {
@@ -94,6 +94,24 @@ describe('corner roundness radius variables', () => {
         variables['--be-radius-card-sm'],
       );
     }
+  });
+
+  test('renders Round containers at the admin Round card radius', () => {
+    // The admin theme's Round (`.radius-sm` in common-tailwind.css) maps the
+    // card tokens to `var(--radius-lg)` — 8px by Tailwind default. Storefront
+    // Round must resolve its containers to that same length, or Round reads
+    // as Rounder next to the dashboard.
+    const round = resolveBiolinkRadiusVariables({
+      btnConfig: {radius: 'rounded-sm'},
+    });
+    expect(round['--be-radius-card']).toBe('8px');
+    expect(round['--be-radius-card-sm']).toBe('8px');
+
+    const container = resolveBiolinkContainerRadius({
+      btnConfig: {radius: 'rounded-sm'},
+    });
+    expect(container.value).toBe('8px');
+    expect(container.avatarValue).toBe('8px');
   });
 
   test('matches the length the roundness knob draws its own tiles with', () => {
@@ -198,7 +216,7 @@ describe('container corner roundness', () => {
     // radius in there).
     const cases: Record<RadiusSetting, {value: string; avatarValue: string}> = {
       'rounded-none': {value: '0px', avatarValue: '0px'},
-      'rounded-sm': {value: '16px', avatarValue: '16px'},
+      'rounded-sm': {value: '8px', avatarValue: '8px'},
       'rounded-lg': {value: '24px', avatarValue: '24px'},
       'rounded-full': {value: 'var(--radius-4xl)', avatarValue: '9999px'},
     };
@@ -227,9 +245,10 @@ describe('creator profile card wiring', () => {
     expect(source).toMatch(
       /<Avatar\.Root\s+className=\{cn\(\s*'[^']*'[\s\S]{0,200}?containerRadius\.avatarClassName/,
     );
-    expect(source).toContain(
-      '<Avatar.ColorFallback className={containerRadius.avatarClassName}>',
+    expect(source).toMatch(
+      /<Avatar\.ColorFallback[\s\S]{0,200}?containerRadius\.avatarClassName/,
     );
+    expect(source).toContain('style={avatarInnerStyle}');
     expect(source).toMatch(
       /function AboutSection[\s\S]*?containerRadius\.className/,
     );
@@ -261,7 +280,24 @@ describe('creator profile card wiring', () => {
 
   test('frames the avatar at the size the editor previews', () => {
     expect(source).toContain('-mt-10 aspect-square size-22');
-    expect(source).toContain('p-1 after:hidden');
+    expect(source).toContain('p-1 after:rounded-[inherit]');
+  });
+
+  test('rings the avatar with the wrapper radius at every setting', () => {
+    // The shared Avatar primitive draws its ring as `after:rounded-full`; the
+    // storefront wrapper carries `avatarClassName` instead, so the ring
+    // inherits the wrapper radius rather than pinning a circle — except Full,
+    // where the wrapper itself is a true circle.
+    expect(source).toContain('after:rounded-[inherit]');
+    expect(source).not.toContain('after:hidden');
+    expect(source).not.toContain('after:rounded-full');
+  });
+
+  test('nests the avatar media inside the frame pad', () => {
+    // The `p-1` frame is 4px, so the image/fallback inside rounds 4px tighter
+    // than the wrapper and the pad reads even all round.
+    expect(source).toContain('avatarInnerStyle');
+    expect(source).toContain('calc(${containerRadius.avatarValue} - 4px)');
   });
 
   test('draws the cover at the 3:1 box the editor crops to', () => {
