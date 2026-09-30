@@ -373,7 +373,7 @@ function Branding({appearance}: {appearance?: BiolinkAppearanceConfig | null}) {
             message(':site logo', {values: {site: branding.site_name}}),
           )}
         />
-        <span className="text-xs text-foreground">{branding.site_name}</span>
+        <span className="text-xs text-[var(--biolink-text)]">{branding.site_name}</span>
       </Link>
     </div>
   );

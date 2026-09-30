@@ -1,6 +1,10 @@
 import {appearanceHeaderClassnames} from '@app/dashboard/stores/store-editor/appearance/header-classnames';
 import {useBiolinkEditorStore} from '@app/dashboard/stores/store-editor/biolink-editor-store';
 import {BiolinkAppearanceConfigBtnConfig} from '@app/gen/schemas/biolink-appearance-config-btn-config';
+import {
+  measureContrastRatio,
+  MIN_TEXT_CONTRAST,
+} from '@common/background-selector/gradients/gradient-backgrounds';
 import {ColorField} from '@ui/color-picker/color-field';
 import {Trans} from '@ui/i18n/trans';
 import {useIsDarkMode} from '@ui/themes/use-is-dark-mode';
@@ -181,6 +185,13 @@ function ColorSelector() {
     '--be-primary-foreground',
     '#ffffff',
   );
+  // Cross-validate the pair without blocking saving: the storefront resolver
+  // derives the missing side at render time, but a creator who sets both
+  // sides to a failing combination should see that before publishing.
+  const buttonRatio = measureContrastRatio(
+    btnConfig?.color || defaultButtonColor,
+    btnConfig?.textColor || defaultTextColor,
+  );
 
   return (
     <div className="grid gap-4 sm:grid-cols-2">
@@ -210,6 +221,17 @@ function ColorSelector() {
           });
         }}
       />
+      {buttonRatio !== null && buttonRatio < MIN_TEXT_CONTRAST ? (
+        <p className="text-sm text-warning sm:col-span-2">
+          <Trans
+            message="Button text contrast is :ratio:1, below the :target:1 target — visitors may struggle to read the label. Adjust either color to raise it."
+            values={{
+              ratio: buttonRatio.toFixed(2),
+              target: MIN_TEXT_CONTRAST.toFixed(1),
+            }}
+          />
+        </p>
+      ) : null}
     </div>
   );
 }

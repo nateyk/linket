@@ -1,4 +1,113 @@
 import {BackgroundSelectorConfig} from '@common/background-selector/background-selector-config';
+import Color from 'colorjs.io';
+
+/**
+ * Minimum text contrast the storefront resolvers guarantee when they derive a
+ * color themselves. Mirrors the 4.5:1 target `resolveMutedTextColor` already
+ * aims for in the biolink appearance resolver.
+ */
+export const MIN_TEXT_CONTRAST = 4.5;
+
+export type ContrastTextColor = '#000000' | '#ffffff';
+
+/**
+ * WCAG contrast ratio between two CSS colors, or `null` when either side does
+ * not parse. Same colorjs.io path the storefront resolvers use.
+ */
+export function measureContrastRatio(
+  first: string,
+  second: string,
+): number | null {
+  try {
+    const firstColor = new Color(first).to('srgb');
+    const secondColor = new Color(second).to('srgb');
+    const lighter = Math.max(firstColor.luminance, secondColor.luminance);
+    const darker = Math.min(firstColor.luminance, secondColor.luminance);
+    return (lighter + 0.05) / (darker + 0.05);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Average paint color of a gradient `backgroundImage`, as hex. Extracts every
+ * `#hex` / `rgb()` / `hsl()` stop and averages their sRGB channels, so text
+ * resolved against it reads across the whole gradient rather than one end.
+ * Returns `null` for image backgrounds (`url(...)`), keyword-only gradients,
+ * or anything unparseable — the caller keeps its previous behavior then.
+ */
+export function sampleGradientAverage(
+  backgroundImage: string | undefined,
+): string | null {
+  if (!backgroundImage || /url\(/i.test(backgroundImage)) {
+    return null;
+  }
+
+  const tokens =
+    backgroundImage.match(
+      /#[0-9a-f]{3,8}\b|rgba?\([^)]*\)|hsla?\([^)]*\)/gi,
+    ) ?? [];
+  const coords: Array<[number, number, number]> = [];
+  for (const token of tokens) {
+    try {
+      coords.push(new Color(token).to('srgb').coords as [number, number, number]);
+    } catch {
+      // Skip stops colorjs.io cannot parse; the remaining stops still sample.
+    }
+  }
+  if (!coords.length) {
+    return null;
+  }
+
+  const averaged = [0, 1, 2].map(
+    index =>
+      coords.reduce((sum, channels) => sum + (channels[index] ?? 0), 0) /
+      coords.length,
+  ) as [number, number, number];
+  return new Color('srgb', averaged).toString({format: 'hex'});
+}
+
+/**
+ * Black or white, whichever contrasts the given background color more. One of
+ * the two always clears 4.5:1 against any background, so derived text built on
+ * this never ships a failing pair.
+ */
+export function resolveContrastTextColor(
+  background: string,
+): ContrastTextColor {
+  let backgroundColor: Color | null = null;
+  try {
+    backgroundColor = new Color(background).to('srgb');
+  } catch {
+    return '#000000';
+  }
+
+  const black = new Color('black');
+  const white = new Color('white');
+  return contrastRatio(white, backgroundColor) >=
+    contrastRatio(black, backgroundColor)
+    ? '#ffffff'
+    : '#000000';
+}
+
+/**
+ * Foreground for a picked gradient: black or white from the stops' average
+ * luminance. Never `null` — unparseable input falls back to black, matching
+ * the appearance editor's default text color.
+ */
+export function deriveGradientTextColor(
+  backgroundImage: string | undefined,
+): ContrastTextColor {
+  const average = sampleGradientAverage(backgroundImage);
+  return average ? resolveContrastTextColor(average) : '#000000';
+}
+
+function contrastRatio(first: Color, second: Color): number {
+  const lighter = Math.max(first.luminance, second.luminance);
+  const darker = Math.min(first.luminance, second.luminance);
+
+  return (lighter + 0.05) / (darker + 0.05);
+}
 
 export const GradientBackgrounds: BackgroundSelectorConfig[] = [
   {
@@ -71,8 +180,9 @@ export const GradientBackgrounds: BackgroundSelectorConfig[] = [
     backgroundImage: 'linear-gradient(90deg, #fffcdc, #d9a7c7)',
   },
   {
+    // No shipped `color`: white fails on these stops (2.89/1.55:1), so the
+    // text is derived from the gradient luminance (black) instead.
     backgroundImage: 'linear-gradient(90deg, #56ab2f, #a8e063)',
-    color: 'rgb(255, 255, 255)',
   },
   {
     backgroundImage: 'linear-gradient(90deg, #606c88, #3f4c6b)',
@@ -89,8 +199,9 @@ export const GradientBackgrounds: BackgroundSelectorConfig[] = [
     backgroundImage: 'linear-gradient(90deg, #f09819, #edde5d)',
   },
   {
+    // No shipped `color`: white fails on the light stop (2.65:1), so the text
+    // is derived from the gradient luminance (black) instead.
     backgroundImage: 'linear-gradient(90deg, #b79891, #94716b)',
-    color: 'rgb(255, 255, 255)',
   },
   {
     backgroundImage:

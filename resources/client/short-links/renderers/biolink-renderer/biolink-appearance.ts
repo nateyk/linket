@@ -1,6 +1,13 @@
 import {BiolinkAppearanceConfig} from '@app/gen/schemas/biolink-appearance-config';
+import {BiolinkAppearanceConfigBgConfig} from '@app/gen/schemas/biolink-appearance-config-bg-config';
 import {BiolinkAppearanceConfigBtnConfig} from '@app/gen/schemas/biolink-appearance-config-btn-config';
 import {BiolinkAppearanceConfigBtnConfigShadow} from '@app/gen/schemas/biolink-appearance-config-btn-config-shadow';
+import {
+  measureContrastRatio,
+  MIN_TEXT_CONTRAST,
+  resolveContrastTextColor,
+  sampleGradientAverage,
+} from '@common/background-selector/gradients/gradient-backgrounds';
 import {cn} from '@ui/utils/cn';
 import Color from 'colorjs.io';
 import type {CSSProperties} from 'react';
@@ -144,31 +151,96 @@ export function resolveBiolinkButtonAppearance(
   const shadow = appearance?.btnConfig?.shadow ?? 'none';
   const buttonColor = appearance?.btnConfig?.color;
   const buttonTextColor = appearance?.btnConfig?.textColor;
-  const resolvedButtonColor = buttonColor || 'var(--color-primary)';
-  const resolvedTextColor =
-    buttonTextColor ||
-    (variant === 'outline'
-      ? 'var(--color-primary)'
-      : 'var(--color-primary-foreground)');
-  const glassTint = buttonColor || 'rgb(255 255 255)';
+  const parsedButtonText = buttonTextColor
+    ? parseColor(buttonTextColor)
+    : null;
+
+  // The painted page behind the buttons. Every field is null on a default
+  // appearance, where the theme tokens below stay in charge: the default
+  // primary pair is scheme-correct by design in both color schemes.
+  const background = resolveBackgroundContext(appearance?.bgConfig);
+  const seats = [background.surface, background.sample].filter(
+    (seat): seat is Color => seat !== null,
+  );
+
+  // Face fill for solid, wash tint for glass, stroke for outline.
+  let face: string;
+  // Label color.
+  let label: string;
+  // Focus ring color.
+  let focus: string;
+
+  if (variant === 'outline') {
+    // Transparent face: the stroke must read on the surface it sits on — the
+    // card face first, the raw background second — so an unset stroke derives
+    // black/white from those seats instead of a scheme-dependent primary that
+    // fails on black cards and dark gradients.
+    face =
+      buttonColor ??
+      buttonTextColor ??
+      (seats.length > 0
+        ? strongestAgainstSeats(seats)
+        : 'var(--color-primary)');
+    label =
+      buttonTextColor ??
+      (isCssVariable(face) ||
+      seats.length === 0 ||
+      passesAgainstSeats(face, seats)
+        ? face
+        : strongestAgainstSeats(seats));
+    focus = face;
+  } else if (variant === 'glass') {
+    // Translucent face over the page: tint from the explicit color, the label
+    // color, or the page foreground; the label derives from the tinted face so
+    // it never defaults to near-white text on a whitish face.
+    face =
+      buttonColor ??
+      buttonTextColor ??
+      background.foreground ??
+      'rgb(255 255 255)';
+    const tintedFace = resolveGlassFace(face, background.sample);
+    label =
+      buttonTextColor ??
+      (tintedFace
+        ? resolveContrastTextColor(tintedFace)
+        : 'var(--color-foreground)');
+    focus = label;
+  } else {
+    // Solid: a set fill gets a derived label (a white fill with the default
+    // white text is 1.03:1 today) and a set label gets a derived fill; unset
+    // sides echo the page foreground so the pair stays concrete — identical in
+    // both OS color schemes — whenever a custom background is painted.
+    face =
+      buttonColor ??
+      (parsedButtonText && buttonTextColor
+        ? resolveContrastTextColor(buttonTextColor)
+        : (background.foreground ?? 'var(--color-primary)'));
+    const parsedFace = parseColor(face);
+    label =
+      buttonTextColor ??
+      (parsedFace
+        ? resolveContrastTextColor(face)
+        : 'var(--color-primary-foreground)');
+    focus = face;
+  }
 
   const backgrounds =
     variant === 'glass'
       ? {
-          base: `linear-gradient(180deg, rgb(255 255 255 / 10%) 0%, transparent 100%), color-mix(in srgb, ${glassTint} 10%, transparent)`,
-          hover: `linear-gradient(180deg, rgb(255 255 255 / 14%) 0%, transparent 100%), color-mix(in srgb, ${glassTint} 18%, transparent)`,
-          pressed: `linear-gradient(180deg, rgb(255 255 255 / 8%) 0%, transparent 100%), color-mix(in srgb, ${glassTint} 24%, transparent)`,
+          base: `linear-gradient(180deg, rgb(255 255 255 / 10%) 0%, transparent 100%), color-mix(in srgb, ${face} 10%, transparent)`,
+          hover: `linear-gradient(180deg, rgb(255 255 255 / 14%) 0%, transparent 100%), color-mix(in srgb, ${face} 18%, transparent)`,
+          pressed: `linear-gradient(180deg, rgb(255 255 255 / 8%) 0%, transparent 100%), color-mix(in srgb, ${face} 24%, transparent)`,
         }
       : variant === 'outline'
         ? {
             base: 'transparent',
-            hover: `color-mix(in srgb, ${resolvedButtonColor} 10%, transparent)`,
-            pressed: `color-mix(in srgb, ${resolvedButtonColor} 16%, transparent)`,
+            hover: `color-mix(in srgb, ${face} 10%, transparent)`,
+            pressed: `color-mix(in srgb, ${face} 16%, transparent)`,
           }
         : {
-            base: resolvedButtonColor,
-            hover: `color-mix(in srgb, ${resolvedButtonColor} 88%, ${resolvedTextColor})`,
-            pressed: `color-mix(in srgb, ${resolvedButtonColor} 80%, ${resolvedTextColor})`,
+            base: face,
+            hover: `color-mix(in srgb, ${face} 88%, ${label})`,
+            pressed: `color-mix(in srgb, ${face} 80%, ${label})`,
           };
 
   const style: BiolinkButtonVariables = {
@@ -176,9 +248,9 @@ export function resolveBiolinkButtonAppearance(
     '--biolink-button-hover': backgrounds.hover,
     '--biolink-button-pressed': backgrounds.pressed,
     '--biolink-button-border':
-      variant === 'glass' ? 'transparent' : resolvedButtonColor,
-    '--biolink-button-text': resolvedTextColor,
-    '--biolink-button-focus': resolvedButtonColor,
+      variant === 'glass' ? 'transparent' : face,
+    '--biolink-button-text': label,
+    '--biolink-button-focus': focus,
     boxShadow: availableShadows[shadow],
     backdropFilter:
       variant === 'glass'
@@ -298,11 +370,12 @@ export function resolveBiolinkContainerRadius(
 export function resolveBiolinkThemeVariables(
   appearance?: BiolinkAppearanceConfig | null,
 ): BiolinkThemeVariables {
-  const foreground = appearance?.bgConfig?.color;
+  const radius = resolveBiolinkRadiusVariables(appearance);
+  const background = resolveBackgroundContext(appearance?.bgConfig);
 
-  if (!foreground) {
+  if (!background.foreground || !background.foregroundColor) {
     return {
-      ...resolveBiolinkRadiusVariables(appearance),
+      ...radius,
       '--biolink-text': 'var(--color-foreground)',
       '--biolink-muted-text': 'var(--color-muted-foreground)',
       '--biolink-surface':
@@ -316,26 +389,23 @@ export function resolveBiolinkThemeVariables(
     };
   }
 
-  const foregroundColor = parseColor(foreground);
-  if (!foregroundColor) {
-    return {
-      ...resolveBiolinkThemeVariables(),
-      ...resolveBiolinkRadiusVariables(appearance),
-    };
-  }
-
-  const surfaceColor = chooseHighestContrastSurface(foregroundColor);
+  const surfaceColor = chooseHighestContrastSurface(
+    background.foregroundColor,
+  );
   const surfaceBase = surfaceColor.toString({format: 'hex'});
-  const mutedText = resolveMutedTextColor(foregroundColor, surfaceColor);
+  const mutedText = resolveMutedTextColor(
+    background.foregroundColor,
+    surfaceColor,
+  );
 
   return {
-    ...resolveBiolinkRadiusVariables(appearance),
-    '--biolink-text': foreground,
+    ...radius,
+    '--biolink-text': background.foreground,
     '--biolink-muted-text': mutedText,
     '--biolink-surface': `color-mix(in srgb, ${surfaceBase} 96%, transparent)`,
     '--biolink-surface-strong': `color-mix(in srgb, ${surfaceBase} 99%, transparent)`,
     '--biolink-surface-muted': `color-mix(in srgb, ${surfaceBase} 90%, transparent)`,
-    '--biolink-border': `color-mix(in srgb, ${foreground} 24%, transparent)`,
+    '--biolink-border': `color-mix(in srgb, ${background.foreground} 24%, transparent)`,
   };
 }
 
@@ -394,4 +464,129 @@ function contrastRatio(first: Color, second: Color): number {
   const darker = Math.min(first.luminance, second.luminance);
 
   return (lighter + 0.05) / (darker + 0.05);
+}
+
+interface BiolinkBackgroundContext {
+  /**
+   * Concrete page foreground: the explicit `bgConfig.color`, or black/white
+   * derived from the painted background's luminance when the explicit color
+   * is absent, unusable, or stale-carried onto a gradient/image it fails on.
+   * Null on a default appearance, where theme tokens stay in charge.
+   */
+  foreground: string | null;
+  foregroundColor: Color | null;
+  /** Card-surface sample once the foreground is known, else null. */
+  surface: Color | null;
+  /**
+   * Raw painted-background sample — gradient stop average, solid color, or an
+   * image's `backgroundColor` fallback — else null when unknowable.
+   */
+  sample: Color | null;
+}
+
+/**
+ * The systemic fix: appearance resolution finally reads the background it
+ * paints on. Samples the effective background (`backgroundImage` gradient
+ * average first, `backgroundColor` fallback) and derives a concrete
+ * foreground from its luminance whenever the effective one contrasts the face
+ * below {@link MIN_TEXT_CONTRAST} — absent or stale-carried alike. Explicit
+ * colors that already pass, white on dark faces included, come back untouched;
+ * solid backgrounds keep today's verbatim behavior.
+ */
+function resolveBackgroundContext(
+  bgConfig?: BiolinkAppearanceConfigBgConfig | null,
+): BiolinkBackgroundContext {
+  let sample: Color | null = null;
+  if (bgConfig?.backgroundImage) {
+    const average = sampleGradientAverage(bgConfig.backgroundImage);
+    sample = average ? parseColor(average) : null;
+  }
+  if (!sample && bgConfig?.backgroundColor) {
+    sample = parseColor(bgConfig.backgroundColor);
+  }
+
+  const explicitColor = bgConfig?.color || null;
+  const parsedExplicit = explicitColor ? parseColor(explicitColor) : null;
+
+  let foreground: string | null = null;
+  let foregroundColor: Color | null = null;
+  if (parsedExplicit && explicitColor) {
+    if (bgConfig?.backgroundImage && sample) {
+      const sampleHex = sample.toString({format: 'hex'});
+      const ratio = measureContrastRatio(explicitColor, sampleHex);
+      if (ratio !== null && ratio < MIN_TEXT_CONTRAST) {
+        foreground = resolveContrastTextColor(sampleHex);
+        foregroundColor = parseColor(foreground);
+      } else {
+        foreground = explicitColor;
+        foregroundColor = parsedExplicit;
+      }
+    } else {
+      foreground = explicitColor;
+      foregroundColor = parsedExplicit;
+    }
+  } else if (!parsedExplicit && sample) {
+    foreground = resolveContrastTextColor(sample.toString({format: 'hex'}));
+    foregroundColor = parseColor(foreground);
+  }
+
+  return {
+    foreground,
+    foregroundColor,
+    surface:
+      foregroundColor != null
+        ? chooseHighestContrastSurface(foregroundColor)
+        : null,
+    sample,
+  };
+}
+
+/**
+ * Black or white, whichever reads best across every seat a transparent-face
+ * button can sit on (card face, raw background). Maximizes the worst seat, so
+ * the stroke never inherits a scheme-dependent default that vanishes on one.
+ */
+function strongestAgainstSeats(seats: Color[]): '#000000' | '#ffffff' {
+  const black = new Color('black');
+  const white = new Color('white');
+  const worstSeat = (candidate: Color) =>
+    Math.min(...seats.map(seat => contrastRatio(candidate, seat)));
+
+  return worstSeat(white) >= worstSeat(black) ? '#ffffff' : '#000000';
+}
+
+function passesAgainstSeats(color: string, seats: Color[]): boolean {
+  const parsed = parseColor(color);
+  if (!parsed) {
+    return false;
+  }
+
+  return seats.every(
+    seat => contrastRatio(parsed, seat) >= MIN_TEXT_CONTRAST,
+  );
+}
+
+/**
+ * Approximates the rendered glass face for label derivation: a 10% tint wash
+ * plus the white sheen gradient (averaged at ~5%) over the page background.
+ * Null when the background is unknowable and the caller must fall back to a
+ * theme-aware token instead.
+ */
+function resolveGlassFace(
+  tint: string,
+  background: Color | null,
+): string | null {
+  if (!background) {
+    return null;
+  }
+
+  const tintColor = parseColor(tint) ?? new Color('white');
+  const wash = tintColor.mix(background, 0.9, {space: 'srgb'});
+  return new Color('white')
+    .mix(wash, 0.95, {space: 'srgb'})
+    .toString({format: 'hex'});
+}
+
+function isCssVariable(value: string): boolean {
+  return value.trimStart().startsWith('var(');
 }

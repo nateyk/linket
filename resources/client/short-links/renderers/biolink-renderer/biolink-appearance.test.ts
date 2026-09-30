@@ -4,7 +4,16 @@ import {describe, expect, test} from 'vitest';
 import {BiolinkAppearanceConfig} from '@app/gen/schemas/biolink-appearance-config';
 import {BiolinkAppearanceConfigBtnConfig} from '@app/gen/schemas/biolink-appearance-config-btn-config';
 import {
+  deriveGradientTextColor,
+  GradientBackgrounds,
+  measureContrastRatio,
+  MIN_TEXT_CONTRAST,
+  sampleGradientAverage,
+} from '@common/background-selector/gradients/gradient-backgrounds';
+import {
   BiolinkContainerRadius,
+  ResolvedBiolinkButtonAppearance,
+  resolveBiolinkButtonAppearance,
   resolveBiolinkContainerRadius,
   resolveBiolinkRadiusVariables,
   resolveBiolinkThemeVariables,
@@ -331,5 +340,313 @@ describe('creator profile editor wiring', () => {
   test('crops the cover at the same 3:1 box the card renders', () => {
     expect(source).toContain('aspect={3}');
     expect(source).toMatch(/'h-28 w-full max-w-\[22\.5rem\] sm:h-30'/);
+  });
+});
+
+const LIGHT_GREEN_GRADIENT =
+  'linear-gradient(90deg, #56ab2f, #a8e063)';
+const MAUVE_GRADIENT = 'linear-gradient(90deg, #b79891, #94716b)';
+const DARK_GRADIENT = 'linear-gradient(90deg, #29323c, #485563)';
+
+function measuredContrast(first: string, second: string): number {
+  const ratio = measureContrastRatio(first, second);
+  if (ratio === null) {
+    throw new Error(`unparseable test pair: ${first} / ${second}`);
+  }
+  return ratio;
+}
+
+function buttonVars(
+  resolved: ResolvedBiolinkButtonAppearance,
+): Record<string, string> {
+  return resolved.style as unknown as Record<string, string>;
+}
+
+describe('storefront appearance contrast', () => {
+  test('P0-1 stale white on light green gradient derives black text (white vs #7fc549 2.10:1 → black 9.98:1)', () => {
+    const average = sampleGradientAverage(LIGHT_GREEN_GRADIENT);
+    expect(average).toBe('#7fc549');
+    // The failing pair, as carried: white text on the light gradient face.
+    expect(measuredContrast('#ffffff', average as string)).toBeLessThan(
+      MIN_TEXT_CONTRAST,
+    );
+
+    const variables = resolveBiolinkThemeVariables({
+      bgConfig: {backgroundImage: LIGHT_GREEN_GRADIENT, color: '#ffffff'},
+    });
+    expect(variables['--biolink-text']).toBe('#000000');
+    expect(
+      measuredContrast(
+        variables['--biolink-text'] as string,
+        average as string,
+      ),
+    ).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST);
+  });
+
+  test('P0-1 absent foreground on mauve gradient derives black text (white vs #a6847e 3.37:1 → black 6.22:1)', () => {
+    const average = sampleGradientAverage(MAUVE_GRADIENT);
+    expect(average).toBe('#a6847e');
+    expect(measuredContrast('#ffffff', average as string)).toBeLessThan(
+      MIN_TEXT_CONTRAST,
+    );
+
+    const variables = resolveBiolinkThemeVariables({
+      bgConfig: {backgroundImage: MAUVE_GRADIENT},
+    });
+    expect(variables['--biolink-text']).toBe('#000000');
+    expect(
+      measuredContrast(
+        variables['--biolink-text'] as string,
+        average as string,
+      ),
+    ).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST);
+  });
+
+  test('P0-1 explicit white on dark gradient is respected untouched (white vs #394450 9.92:1)', () => {
+    const average = sampleGradientAverage(DARK_GRADIENT);
+    expect(average).toBe('#394450');
+    expect(measuredContrast('#ffffff', average as string)).toBeGreaterThanOrEqual(
+      MIN_TEXT_CONTRAST,
+    );
+
+    const variables = resolveBiolinkThemeVariables({
+      bgConfig: {backgroundImage: DARK_GRADIENT, color: '#ffffff'},
+    });
+    expect(variables['--biolink-text']).toBe('#ffffff');
+  });
+
+  test('P0-1 explicit colors on solid backgrounds keep verbatim behavior', () => {
+    // P0-1 is scoped to gradient/image faces; a solid pair is untouched even
+    // when it fails, so creators keep full control there.
+    const variables = resolveBiolinkThemeVariables({
+      bgConfig: {backgroundColor: '#ffffff', color: '#ffffff'},
+    });
+    expect(variables['--biolink-text']).toBe('#ffffff');
+  });
+
+  test('keep-list: white text resolves a black surface with #e0e0e0 muted at 15.91:1', () => {
+    const variables = resolveBiolinkThemeVariables({
+      bgConfig: {backgroundColor: '#111111', color: '#ffffff'},
+    });
+    expect(variables['--biolink-text']).toBe('#ffffff');
+    expect(variables['--biolink-surface']).toContain('#000');
+    expect(variables['--biolink-muted-text']).toBe('#e0e0e0');
+    expect(
+      measuredContrast(
+        variables['--biolink-muted-text'] as string,
+        '#000000',
+      ).toFixed(2),
+    ).toBe('15.91');
+  });
+
+  test('P0-2 glass on light gradient derives black text and tint (black vs #79b54b face 8.52:1)', () => {
+    const appearance = resolveBiolinkButtonAppearance({
+      bgConfig: {backgroundImage: LIGHT_GREEN_GRADIENT},
+      btnConfig: {variant: 'glass'},
+    });
+    expect(buttonVars(appearance)['--biolink-button-text']).toBe('#000000');
+    expect(buttonVars(appearance)['--biolink-button-background']).toContain(
+      'color-mix(in srgb, #000000 10%, transparent)',
+    );
+    // Recompute the rendered face independently: 10% black wash plus the
+    // white sheen over the gradient average.
+    const face = '#79b54b';
+    expect(measuredContrast('#000000', face).toFixed(2)).toBe('8.52');
+    expect(measuredContrast('#000000', face)).toBeGreaterThanOrEqual(
+      MIN_TEXT_CONTRAST,
+    );
+  });
+
+  test('P0-2 glass on dark gradient derives white text and tint (white vs #565f69 face 6.49:1)', () => {
+    const appearance = resolveBiolinkButtonAppearance({
+      bgConfig: {backgroundImage: DARK_GRADIENT},
+      btnConfig: {variant: 'glass'},
+    });
+    expect(buttonVars(appearance)['--biolink-button-text']).toBe('#ffffff');
+    expect(buttonVars(appearance)['--biolink-button-background']).toContain(
+      'color-mix(in srgb, #ffffff 10%, transparent)',
+    );
+    const face = '#565f69';
+    expect(measuredContrast('#ffffff', face).toFixed(2)).toBe('6.49');
+    expect(measuredContrast('#ffffff', face)).toBeGreaterThanOrEqual(
+      MIN_TEXT_CONTRAST,
+    );
+  });
+
+  test('P0-2 glass without a painted background falls back to theme foreground, not near-white primary', () => {
+    // The old default (`--color-primary-foreground`) is near-white in the
+    // light scheme — ~1.03:1 on the default whitish glass face. The theme
+    // foreground token reads on the face in both schemes instead.
+    const appearance = resolveBiolinkButtonAppearance({
+      btnConfig: {variant: 'glass'},
+    });
+    expect(buttonVars(appearance)['--biolink-button-text']).toBe(
+      'var(--color-foreground)',
+    );
+  });
+
+  test('P0-3 solid white fill derives a black label (white vs white 1.00:1 → 21.00:1)', () => {
+    const appearance = resolveBiolinkButtonAppearance({
+      btnConfig: {color: '#ffffff'},
+    });
+    expect(buttonVars(appearance)['--biolink-button-background']).toBe('#ffffff');
+    expect(buttonVars(appearance)['--biolink-button-text']).toBe('#000000');
+    expect(measuredContrast('#000000', '#ffffff').toFixed(2)).toBe('21.00');
+  });
+
+  test('P0-3 solid black fill derives a white label (21.00:1)', () => {
+    const appearance = resolveBiolinkButtonAppearance({
+      btnConfig: {color: '#000000'},
+    });
+    expect(buttonVars(appearance)['--biolink-button-text']).toBe('#ffffff');
+  });
+
+  test('P0-3 solid set label derives its fill (black label → white fill, 21.00:1)', () => {
+    const appearance = resolveBiolinkButtonAppearance({
+      btnConfig: {textColor: '#000000'},
+    });
+    expect(buttonVars(appearance)['--biolink-button-background']).toBe('#ffffff');
+    expect(buttonVars(appearance)['--biolink-button-text']).toBe('#000000');
+  });
+
+  test('P0-4 outline on a black card resolves a white stroke (white vs black 21.00:1)', () => {
+    // White page text resolves a black card surface; the unset outline stroke
+    // must read on that surface instead of a light scheme primary (2.80:1).
+    const appearance = resolveBiolinkButtonAppearance({
+      bgConfig: {color: '#ffffff'},
+      btnConfig: {variant: 'outline'},
+    });
+    expect(buttonVars(appearance)['--biolink-button-border']).toBe('#ffffff');
+    expect(buttonVars(appearance)['--biolink-button-text']).toBe('#ffffff');
+    expect(measuredContrast('#ffffff', '#000000').toFixed(2)).toBe('21.00');
+  });
+
+  test('P0-4 outline on a dark gradient resolves a white stroke (white vs #394450 9.92:1)', () => {
+    const appearance = resolveBiolinkButtonAppearance({
+      bgConfig: {backgroundImage: DARK_GRADIENT},
+      btnConfig: {variant: 'outline'},
+    });
+    expect(buttonVars(appearance)['--biolink-button-border']).toBe('#ffffff');
+    expect(buttonVars(appearance)['--biolink-button-text']).toBe('#ffffff');
+    const average = sampleGradientAverage(DARK_GRADIENT);
+    expect(
+      measuredContrast('#ffffff', average as string),
+    ).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST);
+  });
+
+  test('P0-5 default buttons on a light custom background resolve concrete scheme-safe colors (black fill + white label 21.00:1)', () => {
+    // Theme tokens flip per OS scheme (dark primary on a light page is
+    // ~1.2–1.4:1); derived concrete colors render identically everywhere.
+    const appearance = resolveBiolinkButtonAppearance({
+      bgConfig: {backgroundColor: '#f5f5f5'},
+    });
+    const style = buttonVars(appearance);
+    expect(style['--biolink-button-background']).toBe('#000000');
+    expect(style['--biolink-button-text']).toBe('#ffffff');
+    expect(style['--biolink-button-border']).toBe('#000000');
+    expect(style['--biolink-button-focus']).toBe('#000000');
+    for (const key of [
+      '--biolink-button-background',
+      '--biolink-button-text',
+      '--biolink-button-border',
+      '--biolink-button-focus',
+    ]) {
+      expect(String(style[key])).not.toContain('var(');
+    }
+  });
+
+  test('default buttons without a custom appearance keep the scheme-correct theme pair', () => {
+    // Light 7.31:1 / dark 11.32:1 by theme design — no reason to derive.
+    for (const appearance of [null, undefined, {}] as const) {
+      const resolved = buttonVars(resolveBiolinkButtonAppearance(appearance));
+      expect(resolved['--biolink-button-background']).toBe(
+        'var(--color-primary)',
+      );
+      expect(resolved['--biolink-button-text']).toBe(
+        'var(--color-primary-foreground)',
+      );
+    }
+  });
+});
+
+describe('gradient preset contrast data', () => {
+  test('P1-1 every shipped preset text color passes on its own stops', () => {
+    for (const entry of GradientBackgrounds) {
+      if (!entry.color || !entry.backgroundImage) continue;
+      const stops = entry.backgroundImage.match(
+        /#[0-9a-f]{3,8}\b|rgba?\([^)]*\)/gi,
+      );
+      expect(stops?.length).toBeGreaterThan(0);
+      for (const stop of stops as string[]) {
+        expect(
+          measuredContrast(entry.color, stop),
+          `${entry.backgroundImage} text ${entry.color} on ${stop}`,
+        ).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST);
+      }
+    }
+  });
+
+  test('P1-1 green #56ab2f→#a8e063 and mauve #b79891→#94716b ship no failing white (derive black)', () => {
+    const green = GradientBackgrounds.find(entry =>
+      entry.backgroundImage?.includes('#56ab2f'),
+    );
+    const mauve = GradientBackgrounds.find(entry =>
+      entry.backgroundImage?.includes('#b79891'),
+    );
+    expect(green).toBeDefined();
+    expect(mauve).toBeDefined();
+    expect(green?.color).toBeUndefined();
+    expect(mauve?.color).toBeUndefined();
+    expect(deriveGradientTextColor(green?.backgroundImage)).toBe('#000000');
+    expect(deriveGradientTextColor(mauve?.backgroundImage)).toBe('#000000');
+  });
+
+  test('gradient sampler ignores image backgrounds and unparseable input', () => {
+    expect(sampleGradientAverage('url(https://example.com/bg.webp)')).toBeNull();
+    expect(sampleGradientAverage(undefined)).toBeNull();
+    expect(sampleGradientAverage('definitely-not-a-gradient')).toBeNull();
+  });
+});
+
+describe('storefront contrast wiring', () => {
+  test('P1-6 both branding wordmarks read the resolved page text token', () => {
+    const wordmark =
+      '<span className="text-xs text-[var(--biolink-text)]">{branding.site_name}</span>';
+    for (const file of ['biolink-layout.tsx', 'creator-profile-layout.tsx']) {
+      const source = fs.readFileSync(
+        path.resolve(
+          'resources/client/short-links/renderers/biolink-renderer',
+          file,
+        ),
+        'utf8',
+      );
+      expect(source).toContain(wordmark);
+      expect(source).not.toContain(
+        '<span className="text-xs text-foreground">{branding.site_name}</span>',
+      );
+    }
+  });
+
+  test('gradient picks derive the foreground when the preset ships none', () => {
+    const source = fs.readFileSync(
+      path.resolve(
+        'common/foundation/resources/client/background-selector/gradients/gradient-background-tab.tsx',
+      ),
+      'utf8',
+    );
+    expect(source).toContain('deriveGradientTextColor');
+    expect(source).toMatch(/color:\s*gradient\.color\s*\?\?\s*deriveGradientTextColor/);
+  });
+
+  test('button editor cross-validates the button color pair without blocking save', () => {
+    const source = fs.readFileSync(
+      path.resolve(
+        'resources/client/dashboard/stores/store-editor/appearance/button-style.tsx',
+      ),
+      'utf8',
+    );
+    expect(source).toContain('measureContrastRatio');
+    expect(source).toContain('MIN_TEXT_CONTRAST');
+    expect(source).toContain('text-warning');
   });
 });

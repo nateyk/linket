@@ -1,6 +1,9 @@
 import {BackgroundSelectorConfig} from '@common/background-selector/background-selector-config';
 import {BgSelectorTabProps} from '@common/background-selector/bg-selector-tab-props';
-import {GradientBackgrounds} from '@common/background-selector/gradients/gradient-backgrounds';
+import {
+  deriveGradientTextColor,
+  GradientBackgrounds,
+} from '@common/background-selector/gradients/gradient-backgrounds';
 import {TypeButton} from '@common/background-selector/type-button';
 import {Button} from '@shadcn/button/button';
 import {Field} from '@shadcn/forms/field';
@@ -267,6 +270,14 @@ function PreMadeGradientsList({
                 ...value,
                 backgroundColor: parsed?.colorStops[1],
                 ...gradient,
+                // Entries without their own `color` get black/white from the
+                // picked stops' luminance, so a stale foreground (e.g. white
+                // from a previous dark background) is never carried onto a
+                // gradient it fails on. The storefront resolver re-derives
+                // this same value at render time as a backstop.
+                color:
+                  gradient.color ??
+                  deriveGradientTextColor(gradient.backgroundImage),
               });
             }}
           />
