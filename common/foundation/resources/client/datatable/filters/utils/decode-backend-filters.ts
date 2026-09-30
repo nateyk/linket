@@ -5,8 +5,15 @@ export function decodeBackendFilters(
 ): FilterListValue[] {
   if (!encodedFilters) return [];
   let filtersFromQuery: FilterListValue[] = [];
+  let decodedFilters: string;
   try {
-    filtersFromQuery = JSON.parse(atob(decodeURIComponent(encodedFilters)));
+    decodedFilters = decodeURIComponent(encodedFilters);
+  } catch {
+    // malformed percent-encoding in the query string — treat as no filters
+    return [];
+  }
+  try {
+    filtersFromQuery = JSON.parse(atob(decodedFilters));
     filtersFromQuery.map(filterValue => {
       // set value key as value so selects work properly
       if (filterValue.valueKey != null) {

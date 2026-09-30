@@ -70,7 +70,13 @@ export function getCookie(name: string, initialValue = '') {
     (document.cookie &&
       document.cookie.split('; ').reduce((r, v) => {
         const parts = v.split('=');
-        return parts[0] === name ? decodeURIComponent(parts[1]) : r;
+        if (parts[0] !== name) return r;
+        try {
+          return decodeURIComponent(parts[1]);
+        } catch {
+          // malformed percent-encoding: return the raw value instead of throwing
+          return parts[1];
+        }
       }, '')) ||
     initialValue
   );
