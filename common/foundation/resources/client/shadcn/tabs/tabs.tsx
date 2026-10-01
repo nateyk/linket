@@ -40,12 +40,24 @@ const tabsListVariants = cva(
   },
 );
 
+type TabsListProps = TabsPrimitive.List.Props &
+  VariantProps<typeof tabsListVariants> & {
+    /**
+     * Extra classes for the sliding indicator, merged after the defaults.
+     * Lets consumers restyle the indicator (recolor it, for example) through
+     * a supported slot instead of DOM-position selectors like
+     * `[&>span:last-child]:...`.
+     */
+    indicatorClass?: string;
+  };
+
 function TabsList({
   className,
   children,
   variant = 'default',
+  indicatorClass,
   ...props
-}: TabsPrimitive.List.Props & VariantProps<typeof tabsListVariants>) {
+}: TabsListProps) {
   return (
     <TabsPrimitive.List
       data-slot="tabs-list"
@@ -54,7 +66,12 @@ function TabsList({
       {...props}
     >
       {children}
-      <TabsPrimitive.Indicator className="absolute bottom-(--active-tab-bottom) left-0 z-[-1] h-(--active-tab-height) w-(--active-tab-width) translate-x-(--active-tab-left) rounded-card-sm bg-background transition-all duration-200 ease-in-out group-data-[variant=default]/tabs-list:top-(--active-tab-top) group-data-[variant=line]/tabs-list:bottom-[calc(var(--active-tab-bottom)-6px)] group-data-[variant=line]/tabs-list:h-0.5 group-data-[variant=line]/tabs-list:bg-primary dark:bg-input/30" />
+      <TabsPrimitive.Indicator
+        className={cn(
+          'absolute bottom-(--active-tab-bottom) left-0 z-[-1] h-(--active-tab-height) w-(--active-tab-width) translate-x-(--active-tab-left) rounded-card-sm bg-background transition-all duration-200 ease-in-out group-data-[variant=default]/tabs-list:top-(--active-tab-top) group-data-[variant=line]/tabs-list:bottom-[calc(var(--active-tab-bottom)-6px)] group-data-[variant=line]/tabs-list:h-0.5 group-data-[variant=line]/tabs-list:bg-primary dark:bg-input/30',
+          indicatorClass,
+        )}
+      />
     </TabsPrimitive.List>
   );
 }

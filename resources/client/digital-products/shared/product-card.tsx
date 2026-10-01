@@ -1,8 +1,14 @@
 import {Badge} from '@shadcn/badge/badge';
 import {Trans} from '@ui/i18n/trans';
+import {useTrans} from '@ui/i18n/use-trans';
 import {ProductCover} from '@ui/product-cover';
 import {cn} from '@ui/utils/cn';
-import {AnimatePresence, motion, type Variants} from 'framer-motion';
+import {
+  AnimatePresence,
+  motion,
+  useReducedMotion,
+  type Variants,
+} from 'framer-motion';
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -17,6 +23,7 @@ export interface ProductCardClassNames {
   body?: string;
   title?: string;
   footer?: string;
+  price?: string;
 }
 
 export interface ProductCardProps {
@@ -30,6 +37,8 @@ export interface ProductCardProps {
   price: ReactNode;
   action?: ReactNode;
   meta?: ReactNode;
+  /** Rendered over the media (top-start), e.g. the product type chip. */
+  mediaOverlay?: ReactNode;
   imageFallback?: ReactNode;
   classNames?: ProductCardClassNames;
   className?: string;
@@ -63,12 +72,15 @@ export function ProductCard({
   price,
   action,
   meta,
+  mediaOverlay,
   imageFallback,
   classNames,
   className,
 }: ProductCardProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState(0);
+  const {trans} = useTrans();
+  const reduceMotion = useReducedMotion();
 
   const showCarouselUI = images.length > 1;
   const safeIndex = images.length ? currentIndex % images.length : 0;
@@ -108,53 +120,57 @@ export function ProductCard({
           fallbackBlock
         ) : (
           <>
-              <AnimatePresence initial={false} custom={direction}>
-                <motion.div
-                  key={safeIndex}
-                  custom={direction}
-                  variants={carouselVariants}
-                  initial="enter"
-                  animate="center"
-                  exit="exit"
-                  transition={{
-                    x: {type: 'spring', stiffness: 300, damping: 30},
-                    opacity: {duration: 0.2},
-                  }}
-                  className="absolute h-full w-full"
-                >
-                  <ProductCover
-                    cover={{url: images[safeIndex]}}
-                    alt={title}
-                    aspect=""
-                    className="h-full w-full transition-transform duration-300 group-hover:scale-[1.025]"
-                    fallback={fallbackBlock}
-                  />
-                </motion.div>
-              </AnimatePresence>
+            <AnimatePresence initial={false} custom={direction}>
+              <motion.div
+                key={safeIndex}
+                custom={direction}
+                variants={carouselVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={
+                  reduceMotion
+                    ? {duration: 0}
+                    : {
+                        x: {type: 'spring', stiffness: 300, damping: 30},
+                        opacity: {duration: 0.2},
+                      }
+                }
+                className="absolute h-full w-full"
+              >
+                <ProductCover
+                  cover={{url: images[safeIndex]}}
+                  alt={title}
+                  aspect=""
+                  className="h-full w-full transition-transform duration-300 motion-safe:group-hover:scale-[1.025]"
+                  fallback={fallbackBlock}
+                />
+              </motion.div>
+            </AnimatePresence>
 
-              {showCarouselUI && (
-                <div className="absolute inset-0 flex items-center justify-between p-2 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
-                  <button
-                    type="button"
-                    onClick={() => changeImage(-1)}
-                    aria-label="Previous image"
-                    className="flex size-8 items-center justify-center rounded-button bg-black/30 text-white transition-colors hover:bg-black/50"
-                  >
-                    <ChevronLeftIcon className="size-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => changeImage(1)}
-                    aria-label="Next image"
-                    className="flex size-8 items-center justify-center rounded-button bg-black/30 text-white transition-colors hover:bg-black/50"
-                  >
-                    <ChevronRightIcon className="size-4" />
-                  </button>
-                </div>
-              )}
+            {showCarouselUI && (
+              <div className="absolute inset-0 flex items-center justify-between p-2 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100 pointer-coarse:opacity-100">
+                <button
+                  type="button"
+                  onClick={() => changeImage(-1)}
+                  aria-label={trans({message: 'Previous image'})}
+                  className="flex size-8 items-center justify-center rounded-button bg-foreground/60 text-background transition-colors hover:bg-foreground/80 focus-visible:outline-2 focus-visible:outline-offset-2"
+                >
+                  <ChevronLeftIcon className="size-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => changeImage(1)}
+                  aria-label={trans({message: 'Next image'})}
+                  className="flex size-8 items-center justify-center rounded-button bg-foreground/60 text-background transition-colors hover:bg-foreground/80 focus-visible:outline-2 focus-visible:outline-offset-2"
+                >
+                  <ChevronRightIcon className="size-4" />
+                </button>
+              </div>
+            )}
 
             {tags.length > 0 && (
-              <div className="absolute top-3 start-3 flex gap-2">
+              <div className="absolute start-3 top-3 flex gap-2">
                 {tags.map(tag => (
                   <Badge
                     key={tag}
@@ -167,33 +183,45 @@ export function ProductCard({
               </div>
             )}
             {rating != null && (
-              <div className="absolute top-3 end-3">
+              <div className="absolute end-3 top-3">
                 <Badge
                   variant="secondary"
                   className="flex items-center gap-1 bg-background/70 backdrop-blur-sm"
                 >
-                  <StarIcon className="size-4 fill-current text-amber-500" />{' '}
+                  <StarIcon className="size-4 fill-current text-warning" />{' '}
                   {rating}
                 </Badge>
               </div>
             )}
             {showCarouselUI && (
-              <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1.5">
+              <div className="absolute start-0 end-0 bottom-1 flex justify-center">
                 {images.map((src, index) => (
                   <button
                     key={`${src}-${index}`}
                     type="button"
                     onClick={() => setCurrentIndex(index)}
-                    className={cn(
-                      'h-1.5 rounded-full transition-all',
-                      safeIndex === index ? 'w-4 bg-white' : 'w-1.5 bg-white/50',
-                    )}
-                    aria-label={`Go to image ${index + 1}`}
-                  />
+                    aria-label={trans({
+                      message: 'Go to image :number',
+                      values: {number: index + 1},
+                    })}
+                    aria-current={safeIndex === index ? 'true' : undefined}
+                    className="flex size-6 shrink-0 items-center justify-center rounded-full focus-visible:outline-2"
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={cn(
+                        'h-1.5 rounded-full bg-background/60 ring-1 ring-foreground/60 transition-all motion-reduce:transition-none',
+                        safeIndex === index ? 'w-4' : 'w-1.5',
+                      )}
+                    />
+                  </button>
                 ))}
               </div>
             )}
           </>
+        )}
+        {mediaOverlay && (
+          <div className="absolute start-3 top-3 z-10">{mediaOverlay}</div>
         )}
       </div>
 
@@ -205,11 +233,7 @@ export function ProductCard({
               classNames?.title,
             )}
           >
-            {titleHref ? (
-              <a href={titleHref}>{title}</a>
-            ) : (
-              title
-            )}
+            {titleHref ? <a href={titleHref}>{title}</a> : title}
           </h3>
           {topRated && (
             <Badge variant="outline" className="shrink-0">
@@ -232,7 +256,14 @@ export function ProductCard({
             classNames?.footer,
           )}
         >
-          <div className="text-sm leading-none font-semibold">{price}</div>
+          <div
+            className={cn(
+              'text-sm leading-none font-semibold',
+              classNames?.price,
+            )}
+          >
+            {price}
+          </div>
           {action}
         </div>
       </div>

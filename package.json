@@ -4,7 +4,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "storybook": "storybook dev -p 6006 -c common/foundation/resources/client/.storybook",
-    "extract": "node ./resources/scripts/extract-translations.js",
+    "extract": "node ./resources/scripts/extract-translations.js --write",
     "lint": "oxlint",
     "test": "vitest run",
     "test:e2e": "playwright test"

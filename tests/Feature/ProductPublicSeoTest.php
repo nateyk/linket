@@ -35,6 +35,21 @@ class ProductPublicSeoTest extends TestCase
         $response->assertSee('rel="canonical"', false);
         $response->assertSee('twitter:title', false);
         $response->assertSee('application/ld+json', false);
+
+        $schema = $this->decodeJsonLd($response->getContent());
+
+        $this->assertIsArray($schema, 'The application/ld+json block must decode to an object.');
+        $this->assertArrayHasKey(
+            '@context',
+            $schema,
+            'The JSON-LD @context key must survive Blade compilation intact.',
+        );
+        $this->assertSame('https://schema.org', $schema['@context']);
+        $this->assertSame('Product', $schema['@type']);
+        $this->assertSame('Test Guide', $schema['name']);
+        $this->assertArrayHasKey('offers', $schema);
+        $this->assertSame('Offer', $schema['offers']['@type']);
+        $this->assertSame('10.00', $schema['offers']['price']);
     }
 
     public function test_crawler_meta_description_has_no_html_tags(): void
@@ -67,6 +82,36 @@ class ProductPublicSeoTest extends TestCase
         ActiveWorkspace::clearCache();
 
         $this->get("/{$biolink->back_half}/products/{$product->id}?_escaped_fragment_=")->assertNotFound();
+    }
+
+    /**
+     * Decode the first <script type="application/ld+json"> block of a response.
+     *
+     * @return mixed  whatever the JSON-LD block decodes to; callers assert on it.
+     */
+    private function decodeJsonLd(string $html): mixed
+    {
+        $matched = preg_match(
+            '#<script type="application/ld\+json">(.*?)</script>#s',
+            $html,
+            $matches,
+        );
+
+        $this->assertSame(
+            1,
+            $matched,
+            'Expected exactly one application/ld+json block in the prerendered page.',
+        );
+
+        $decoded = json_decode(trim($matches[1]), true);
+
+        $this->assertSame(
+            JSON_ERROR_NONE,
+            json_last_error(),
+            'The application/ld+json block must contain valid JSON: '.json_last_error_msg(),
+        );
+
+        return $decoded;
     }
 
     /**

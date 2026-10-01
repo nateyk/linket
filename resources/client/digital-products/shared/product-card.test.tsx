@@ -27,12 +27,56 @@ describe('shared product card consistency', () => {
   test('uses theme tokens and app conventions, not hardcoded values', () => {
     expect(source).toContain('rounded-card');
     expect(source).not.toContain('rounded-2xl');
-    expect(source).toContain('fill-current text-amber-500');
+    expect(source).toContain('fill-current text-warning');
+    expect(source).not.toContain('text-amber-500');
     expect(source).not.toContain('text-yellow-400');
     expect(source).not.toContain('text-m ');
     expect(source).toContain('size-4');
     expect(source).not.toContain('h-4 w-4');
     expect(source).not.toContain('ml-2');
+  });
+
+  test('paints carousel scrims and dots with theme tokens only', () => {
+    // Scrim: theme-derived ink/white pair instead of raw black/white, so it
+    // reads on light and dark grounds and over arbitrary cover art.
+    expect(source).toContain('bg-foreground/60');
+    expect(source).toContain('text-background');
+    expect(source).toContain('hover:bg-foreground/80');
+    expect(source).not.toContain('bg-black/');
+    expect(source).not.toContain('hover:bg-black/');
+    expect(source).not.toContain('text-white');
+    // Dot strip: background + foreground ring so it survives white covers.
+    expect(source).toContain('bg-background/60');
+    expect(source).toContain('ring-foreground/60');
+    expect(source).not.toContain('bg-white');
+  });
+
+  test('centers the dot strip with logical properties, not physical offsets', () => {
+    expect(source).toContain('start-0 end-0');
+    expect(source).toContain('justify-center');
+    expect(source).not.toContain('left-1/2');
+    expect(source).not.toContain('-translate-x-1/2');
+    expect(source).not.toContain(' translate-x-');
+  });
+
+  test('keeps carousel controls reachable without a hover device', () => {
+    // Coarse pointers (touch) always see the arrows; fine pointers keep the
+    // reveal-on-hover behaviour, and keyboard focus reveals them either way.
+    expect(source).toContain('pointer-coarse:opacity-100');
+    expect(source).toContain('focus-within:opacity-100');
+    expect(source).toContain('group-hover:opacity-100');
+    // Arrows 32px, dot hit areas 24px (WCAG 2.5.8 minimum), pinned against
+    // flex shrink so many-image cards can never compress them.
+    expect(source).toContain('size-8');
+    expect(source).toContain('size-6 shrink-0');
+    expect(source).toMatch(/focus-visible:outline-2/);
+  });
+
+  test('respects prefers-reduced-motion for the slide and the cover zoom', () => {
+    expect(source).toContain('useReducedMotion');
+    expect(source).toContain('{duration: 0}');
+    expect(source).toContain('motion-safe:group-hover:scale-[1.025]');
+    expect(source).toContain('motion-reduce:transition-none');
   });
 
   test('has no travel-domain leftovers', () => {
@@ -45,8 +89,13 @@ describe('shared product card consistency', () => {
   });
 
   test('keeps accessible carousel controls and translated strings', () => {
-    expect(source).toContain('aria-label="Previous image"');
-    expect(source).toContain('aria-label="Next image"');
+    expect(source).toContain("import {useTrans} from '@ui/i18n/use-trans'");
+    expect(source).toContain("aria-label={trans({message: 'Previous image'})}");
+    expect(source).toContain("aria-label={trans({message: 'Next image'})}");
+    expect(source).toContain("message: 'Go to image :number'");
+    expect(source).not.toContain('aria-label="Previous image"');
+    expect(source).not.toContain('aria-label="Next image"');
+    expect(source).not.toContain('aria-label={`Go to image');
     expect(source).toContain('<Trans message="Top rated" />');
     expect(source).toContain('AnimatePresence');
     expect(source).toContain(
@@ -80,5 +129,22 @@ describe('shared product card meta slot', () => {
   test('exposes a meta slot rendered between description and footer', () => {
     expect(source).toContain('meta?: ReactNode');
     expect(source).toContain('{meta}');
+  });
+});
+
+describe('shared product cover loading', () => {
+  const coverSource = fs.readFileSync(
+    path.resolve('common/foundation/resources/client/ui/product-cover.tsx'),
+    'utf8',
+  );
+
+  test('lazy-loads covers by default with async decoding', () => {
+    expect(coverSource).toContain("loading = 'lazy'");
+    expect(coverSource).toContain("loading?: 'lazy' | 'eager'");
+    expect(coverSource).toContain('loading={loading}');
+    expect(coverSource).toContain('decoding="async"');
+    // Above-the-fold call sites (product gallery hero) opt out with eager;
+    // they are owned by other workstreams, so only the default is enforced here.
+    expect(coverSource).not.toContain('loading="eager"');
   });
 });

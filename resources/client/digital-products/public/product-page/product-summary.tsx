@@ -15,6 +15,7 @@ import type {
 import type {ProductReviewsSummary} from '../product-reviews-block';
 import {RatingStars} from '../product-rating-stars';
 import {CreatorIdentity} from './creator-identity';
+import {productDeck} from './product-description';
 
 export function ProductSummary({
   product,
@@ -71,8 +72,9 @@ export function ProductSummary({
     }
   }
 
-  // The cover overlay already carries the product type, so this row only
-  // holds counts that have no tile of their own.
+  // The gallery overlay already carries the product type and courses get
+  // stat tiles below, so the meta row carries the file count for
+  // download/ebook/audio products — every type leaves a filled meta row.
   const filesChip =
     !isCourse && typeof product.files_count === 'number' ? (
       <StatChip icon={FileDownIcon}>
@@ -83,15 +85,21 @@ export function ProductSummary({
       </StatChip>
     ) : null;
 
+  // Creator-authored description, distilled to a lead line. Renders nothing
+  // when the description is empty so there is no blank box under the H1.
+  const deck = productDeck(product.description);
+
   return (
     <div className="flex min-w-0 flex-col gap-4">
-      {filesChip && (
-        <div className="flex flex-wrap items-center gap-2">{filesChip}</div>
-      )}
-
       <h1 className="max-w-3xl text-3xl leading-tight font-semibold tracking-tight text-balance sm:text-4xl">
         {product.title}
       </h1>
+
+      {deck && (
+        <p className="max-w-[70ch] text-base leading-6 text-[var(--biolink-muted-text)]">
+          {deck}
+        </p>
+      )}
 
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
         {showRating && (
@@ -106,6 +114,7 @@ export function ProductSummary({
           </div>
         )}
         <CreatorIdentity creator={creator} biolink={biolink} />
+        {filesChip}
       </div>
 
       {stats.length > 0 && (

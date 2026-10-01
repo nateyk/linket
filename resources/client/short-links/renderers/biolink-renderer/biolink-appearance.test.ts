@@ -686,6 +686,62 @@ describe('storefront appearance contrast', () => {
   });
 });
 
+describe('painted-panel accent pair', () => {
+  test('a dark chosen surface lifts accent and focus to Counter Blue Light (14.76:1 text, 11.32:1 label)', () => {
+    // White page text resolves a black card surface (keep-list above): Counter
+    // Blue pinned at 46% lands at 2.80:1 there — failing accent text (4.5:1)
+    // and the focus ring (3:1) — so both lift to the dark-mode blue.
+    const variables = resolveBiolinkThemeVariables({
+      bgConfig: {backgroundColor: '#111111', color: '#ffffff'},
+    });
+    expect(variables['--biolink-surface']).toContain('#000');
+    expect(variables['--biolink-accent']).toBe('oklch(88.2% 0.059 254.128)');
+    expect(variables['--biolink-focus']).toBe('oklch(88.2% 0.059 254.128)');
+    expect(variables['--biolink-accent-foreground']).toBe('oklch(0.2478 0 0)');
+
+    const accent = variables['--biolink-accent'] as string;
+    expect(measuredContrast(accent, '#000000').toFixed(2)).toBe('14.76');
+    expect(measuredContrast(accent, '#000000')).toBeGreaterThanOrEqual(
+      MIN_TEXT_CONTRAST,
+    );
+    expect(
+      measuredContrast(
+        variables['--biolink-focus'] as string,
+        '#000000',
+      ),
+    ).toBeGreaterThanOrEqual(3);
+    expect(
+      measuredContrast(
+        variables['--biolink-accent-foreground'] as string,
+        accent,
+      ),
+    ).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST);
+  });
+
+  test('a light chosen surface keeps the theme pair (7.50:1 accent text on white)', () => {
+    const variables = resolveBiolinkThemeVariables({
+      bgConfig: {backgroundColor: '#f5f5f5', color: '#000000'},
+    });
+    expect(variables['--biolink-surface']).toContain('#fff');
+    expect(variables['--biolink-accent']).toBe('var(--color-primary)');
+    expect(variables['--biolink-accent-foreground']).toBe(
+      'var(--color-primary-foreground)',
+    );
+    expect(variables['--biolink-focus']).toBe('var(--be-primary)');
+  });
+
+  test('an unpainted store resolves the same theme pair consumers fall back to', () => {
+    for (const appearance of [null, undefined, {}] as const) {
+      const variables = resolveBiolinkThemeVariables(appearance);
+      expect(variables['--biolink-accent']).toBe('var(--color-primary)');
+      expect(variables['--biolink-accent-foreground']).toBe(
+        'var(--color-primary-foreground)',
+      );
+      expect(variables['--biolink-focus']).toBe('var(--be-primary)');
+    }
+  });
+});
+
 describe('gradient preset contrast data', () => {
   test('P1-1 every shipped preset text color passes on its own stops', () => {
     for (const entry of GradientBackgrounds) {

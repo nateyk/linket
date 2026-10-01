@@ -10,12 +10,15 @@ export function ProductCover({
   fallback,
   className,
   aspect = 'aspect-video',
+  loading = 'lazy',
 }: {
   cover?: {url: string} | null;
   alt?: string;
   fallback?: ReactNode;
   className?: string;
   aspect?: string;
+  /** Defaults to lazy; above-the-fold heroes (e.g. the product gallery) should opt out with `eager`. */
+  loading?: 'lazy' | 'eager';
 }) {
   const [imageError, setImageError] = useState(false);
   const normalizedUrl = cover?.url
@@ -41,6 +44,8 @@ export function ProductCover({
     <img
       src={normalizedUrl}
       alt={alt}
+      loading={loading}
+      decoding="async"
       onError={() => setImageError(true)}
       className={cn('w-full object-cover', aspect, className)}
     />

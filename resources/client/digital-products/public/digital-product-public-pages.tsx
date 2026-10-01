@@ -16,6 +16,7 @@ import {
   biolinkSectionTitle,
   biolinkSurfaceCard,
 } from '@app/digital-products/public/product-page/surface';
+import {Accordion} from '@shadcn/accordion/accordion';
 import {Alert} from '@shadcn/alert/alert';
 import {Button} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
@@ -34,20 +35,27 @@ import {
 } from '@common/background-selector/utils/css-props-from-bg-config';
 import {apiClient} from '@common/http/query-client';
 import {loadFonts} from '@ui/fonts/font-picker/load-fonts';
+import {FormattedDate} from '@ui/i18n/formatted-date';
 import {formatMoney as formatPrice} from '@ui/i18n/format-money';
 import {Trans} from '@ui/i18n/trans';
+import {useTrans} from '@ui/i18n/use-trans';
 import {cn} from '@ui/utils/cn';
+import {MotionConfig} from 'framer-motion';
 import {
   ArrowLeftIcon,
+  BookOpenIcon,
   CheckCircle2Icon,
+  ClockIcon,
   DownloadIcon,
   FileDownIcon,
   FileIcon,
   GraduationCapIcon,
   LockKeyholeIcon,
   RefreshCwIcon,
+  XIcon,
 } from 'lucide-react';
 import {useCallback, useEffect, useState} from 'react';
+import {productTypeIcon} from './product-page/product-type';
 import {
   ProductReviewsBlock,
   type ProductReviewsSummary,
@@ -194,7 +202,12 @@ export function PublicDigitalProductPage({
     tabSections.push({
       value: 'curriculum',
       label: <Trans message="Curriculum" />,
-      content: <CourseCurriculum courseId={data.product.course_id} />,
+      content: (
+        <CourseCurriculum
+          courseId={data.product.course_id}
+          appearance={data.appearance}
+        />
+      ),
     });
   }
 
@@ -235,7 +248,7 @@ export function PublicDigitalProductPage({
       backLabel={<Trans message="Back to bio" />}
       wide
     >
-      <div className="flex w-full max-w-6xl flex-col gap-4 sm:gap-5">
+      <div className="flex w-full flex-col gap-4 sm:gap-5">
         <div className="grid min-w-0 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-6">
           <div className="flex min-w-0 flex-col gap-5 lg:col-start-1 lg:row-start-1">
             <Card.Root className={biolinkSurfaceCard}>
@@ -251,9 +264,10 @@ export function PublicDigitalProductPage({
             </Card.Root>
           </div>
 
-          <aside className="min-w-0 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:sticky lg:top-6">
+          <aside className="min-w-0 lg:sticky lg:top-6 lg:col-start-2 lg:row-span-2 lg:row-start-1">
             <ProductPricingCard
               product={data.product}
+              reviews={reviewsSummary}
               appearance={data.appearance}
               checkoutCancelled={checkoutCancelled}
               checkoutFailed={checkoutFailed}
@@ -269,6 +283,7 @@ export function PublicDigitalProductPage({
       </div>
       <BuyerDetailsDialog
         appearance={data.appearance}
+        product={data.product}
         open={buyerDialogOpen}
         submitting={submitting}
         name={buyerName}
@@ -323,7 +338,7 @@ export function PublicDigitalProductOrderSuccessPage({
     <PublicProductShell
       appearance={data.appearance}
       backUrl={data.back_url}
-      backLabel={<Trans message="Return to bio" />}
+      backLabel={<Trans message="Back to bio" />}
     >
       <Card.Root className="w-full max-w-xl gap-0 overflow-hidden bg-[var(--biolink-surface-strong)] py-0 text-[var(--biolink-text)] ring-1 ring-[var(--biolink-border)] backdrop-blur-xl">
         <div
@@ -351,7 +366,7 @@ export function PublicDigitalProductOrderSuccessPage({
             </div>
           ) : (
             <div className="flex items-start gap-3">
-              <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+              <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary/10 text-[var(--biolink-accent,var(--color-primary))]">
                 <Spinner className="size-5" />
               </span>
               <div>
@@ -399,6 +414,7 @@ export function PublicDigitalProductOrderSuccessPage({
 
 function BuyerDetailsDialog({
   appearance,
+  product,
   open,
   submitting,
   name,
@@ -412,6 +428,7 @@ function BuyerDetailsDialog({
   onSubmit,
 }: {
   appearance?: BiolinkAppearanceConfig | null;
+  product: PublicDigitalProduct;
   open: boolean;
   submitting: boolean;
   name: string;
@@ -426,6 +443,8 @@ function BuyerDetailsDialog({
 }) {
   const buttonAppearance = resolveBiolinkButtonAppearance(appearance);
   const themeVariables = resolveBiolinkThemeVariables(appearance);
+  const {trans} = useTrans();
+  const TypeIcon = productTypeIcon(product.type);
 
   return (
     <Dialog.Root
@@ -446,13 +465,48 @@ function BuyerDetailsDialog({
             fontFamily: appearance?.fontConfig?.family,
           }}
         >
+          <Dialog.CloseButton
+            render={
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="absolute inset-e-4 top-4"
+              />
+            }
+            disabled={submitting}
+            aria-label={trans({message: 'Close dialog'})}
+          >
+            <XIcon />
+          </Dialog.CloseButton>
           <Dialog.Header>
-            <Dialog.Title>
+            <Dialog.Title className="pe-11">
               <LockKeyholeIcon />
-              <Trans message="Continue to secure payment" />
+              <Trans message="Complete your purchase" />
             </Dialog.Title>
+            <div className="flex items-center gap-3 rounded-card-xs border border-[var(--biolink-border)] bg-[var(--biolink-surface)] px-3 py-2.5">
+              {product.cover?.url ? (
+                <img
+                  src={product.cover.url}
+                  alt=""
+                  className="size-10 shrink-0 rounded-card-xs object-cover"
+                />
+              ) : (
+                <span className="grid size-10 shrink-0 place-items-center rounded-card-xs bg-[var(--biolink-surface-strong)] text-[var(--biolink-muted-text)] ring-1 ring-[var(--biolink-border)]">
+                  <TypeIcon className="size-5" aria-hidden="true" />
+                </span>
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">{product.title}</p>
+                <p className="text-xs font-medium text-[var(--biolink-muted-text)]">
+                  <Trans message="Total" />
+                </p>
+              </div>
+              <span className="shrink-0 text-sm font-semibold tabular-nums">
+                {formatPrice(product.price_cents, product.currency)}
+              </span>
+            </div>
             <Dialog.Description className="text-[var(--biolink-muted-text)]">
-              <Trans message="We use your email to send your receipt and protected download links." />
+              <Trans message="You'll continue to your payment provider's secure checkout to pay, then return to this page." />
             </Dialog.Description>
           </Dialog.Header>
           <Dialog.Body>
@@ -524,9 +578,25 @@ function BuyerDetailsDialog({
                   onChange={event => onPhoneChange(event.target.value)}
                 />
                 <Field.Description className="text-[var(--biolink-muted-text)]">
-                  <Trans message="Only shared with Chapa to support this payment." />
+                  <Trans message="Only shared with your payment provider to process this payment." />
                 </Field.Description>
               </Field.Root>
+              <ul className="flex flex-col gap-2 border-t border-[var(--biolink-border)] pt-4 text-sm text-[var(--biolink-muted-text)]">
+                <li className="flex items-start gap-2">
+                  <CheckCircle2Icon
+                    className="mt-0.5 size-4 shrink-0 text-positive"
+                    aria-hidden="true"
+                  />
+                  <Trans message="One-time payment, no subscription." />
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2Icon
+                    className="mt-0.5 size-4 shrink-0 text-positive"
+                    aria-hidden="true"
+                  />
+                  <Trans message="We email your receipt and protected download links as soon as payment is confirmed." />
+                </li>
+              </ul>
             </form>
           </Dialog.Body>
           <Dialog.Footer
@@ -552,7 +622,7 @@ function BuyerDetailsDialog({
                 message={
                   submitting
                     ? 'Opening secure checkout...'
-                    : 'Continue to payment'
+                    : 'Continue to secure checkout'
                 }
               />
             </Button>
@@ -570,6 +640,7 @@ function OrderSummary({
   order: DigitalProductOrder;
   product: PublicDigitalProduct;
 }) {
+  const {trans} = useTrans();
   const total =
     typeof order.gross_amount_cents === 'number'
       ? formatPrice(
@@ -581,7 +652,7 @@ function OrderSummary({
   return (
     <section
       className="divide-y divide-[var(--biolink-border)] rounded-card border border-[var(--biolink-border)]"
-      aria-label="Order summary"
+      aria-label={trans({message: 'Order summary'})}
     >
       <div className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
         <span className="text-[var(--biolink-muted-text)]">
@@ -613,7 +684,12 @@ function OrderSummary({
           <span className="text-[var(--biolink-muted-text)]">
             <Trans message="Paid" />
           </span>
-          <span>{formatDate(order.paid_at)}</span>
+          <span>
+            <FormattedDate
+              date={order.paid_at}
+              options={{dateStyle: 'medium', timeStyle: 'short'}}
+            />
+          </span>
         </div>
       )}
     </section>
@@ -639,24 +715,26 @@ function PublicProductShell({
   }, [appearance?.fontConfig]);
 
   return (
-    <div
-      className="relative isolate min-h-screen px-4 py-5 text-[var(--biolink-text)] sm:px-6 sm:py-10"
-      style={{
-        ...resolveBiolinkThemeVariables(appearance),
-        fontFamily: appearance?.fontConfig?.family,
-      }}
-    >
-      <ProductBackground appearance={appearance ?? null} />
-      <main
-        className={cn(
-          'relative mx-auto flex w-full flex-col gap-4',
-          wide ? 'max-w-5xl' : 'max-w-xl',
-        )}
+    <MotionConfig reducedMotion="user">
+      <div
+        className="relative isolate min-h-screen px-4 py-5 text-[var(--biolink-text)] sm:px-6 sm:py-10"
+        style={{
+          ...resolveBiolinkThemeVariables(appearance),
+          fontFamily: appearance?.fontConfig?.family,
+        }}
       >
-        <BackToBio backUrl={backUrl}>{backLabel}</BackToBio>
-        {children}
-      </main>
-    </div>
+        <ProductBackground appearance={appearance ?? null} />
+        <main
+          className={cn(
+            'relative mx-auto flex w-full flex-col gap-4',
+            wide ? 'max-w-5xl' : 'max-w-xl',
+          )}
+        >
+          <BackToBio backUrl={backUrl}>{backLabel}</BackToBio>
+          {children}
+        </main>
+      </div>
+    </MotionConfig>
   );
 }
 
@@ -747,12 +825,16 @@ function DownloadList({
 
   if (!downloads.length) {
     return (
-      <Alert variant="warning" fillStyle="subtleFill">
-        <FileIcon />
+      <Alert
+        variant="warning"
+        fillStyle="subtleFill"
+        className="border-[var(--biolink-border,var(--color-border))]!"
+      >
+        <FileIcon className="text-[var(--biolink-muted-text,var(--color-muted-foreground))]!" />
         <Alert.Title>
           <Trans message="Your files are being prepared" />
         </Alert.Title>
-        <Alert.Description>
+        <Alert.Description className="text-[var(--biolink-muted-text,var(--color-muted-foreground))]!">
           <Trans message="Please refresh this page in a moment." />
         </Alert.Description>
       </Alert>
@@ -802,80 +884,270 @@ function DownloadList({
   );
 }
 
-function CourseCurriculum({courseId}: {courseId: number}) {
-  const [curriculum, setCurriculum] = useState<null | {chapters: {id: number; title: string; lessons: {id: number; title: string}[]}[]}>(null);
+type CurriculumLesson = {
+  id: number;
+  title: string;
+  duration_seconds?: number | null;
+};
+type CurriculumChapter = {
+  id: number;
+  title: string;
+  lessons: CurriculumLesson[];
+};
+
+function DurationLabel({totalSeconds}: {totalSeconds: number}) {
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.round((totalSeconds % 3600) / 60);
+  if (hours > 0) {
+    return (
+      <Trans
+        message=":hours hr :minutes min"
+        values={{
+          hours,
+          minutes: String(minutes).padStart(2, '0'),
+        }}
+      />
+    );
+  }
+  return <Trans message=":minutes min" values={{minutes}} />;
+}
+
+type CurriculumStatus = 'error' | 'loading' | 'ready';
+
+function CourseCurriculum({
+  courseId,
+  appearance,
+}: {
+  courseId: number;
+  appearance?: BiolinkAppearanceConfig | null;
+}) {
+  const [curriculum, setCurriculum] = useState<null | {
+    chapters: CurriculumChapter[];
+  }>(null);
+  const [status, setStatus] = useState<CurriculumStatus>('loading');
+  const [attempt, setAttempt] = useState(0);
+
   useEffect(() => {
+    let active = true;
+    setStatus('loading');
+    setCurriculum(null);
     void (async () => {
       try {
         const {data: payload} = await apiClient.get(
           `/api/v1/public/courses/${courseId}/curriculum`,
         );
+        if (!active) return;
         setCurriculum(payload.data ?? payload);
+        setStatus('ready');
       } catch {
-        // Leave the optional curriculum section hidden when it cannot load.
+        // The tab stays registered whatever happens, so a failed fetch has to
+        // render a way out instead of a panel with nothing in it.
+        if (active) setStatus('error');
       }
     })();
-  }, [courseId]);
-  if (!curriculum?.chapters?.length) return null;
+    return () => {
+      active = false;
+    };
+  }, [courseId, attempt]);
+
+  const buttonAppearance = resolveBiolinkButtonAppearance(appearance);
+  const chapters = curriculum?.chapters ?? [];
+
+  if (status === 'loading') {
+    return (
+      <CurriculumStateCard>
+        <div className="flex flex-col items-center gap-3 rounded-card border border-dashed px-4 py-8 text-center">
+          <Spinner className="size-5 text-[var(--biolink-muted-text)]" />
+          <p className="text-sm text-[var(--biolink-muted-text)]">
+            <Trans message="Loading the course curriculum..." />
+          </p>
+        </div>
+      </CurriculumStateCard>
+    );
+  }
+
+  if (status === 'error') {
+    return (
+      <CurriculumStateCard>
+        <div className="flex flex-col items-center gap-1 rounded-card border border-dashed px-4 py-6 text-center">
+          <p className="text-sm font-medium">
+            <Trans message="We could not load the course curriculum." />
+          </p>
+          <p className="text-sm text-[var(--biolink-muted-text)]">
+            <Trans message="It may still be publishing. Try again in a moment." />
+          </p>
+          <Button
+            variant="ghost"
+            className={cn('mt-3', buttonAppearance.className)}
+            style={buttonAppearance.style}
+            onClick={() => setAttempt(current => current + 1)}
+          >
+            <RefreshCwIcon />
+            <Trans message="Try again" />
+          </Button>
+        </div>
+      </CurriculumStateCard>
+    );
+  }
+
+  if (!chapters.length) {
+    return (
+      <CurriculumStateCard>
+        <p className="rounded-card border border-dashed px-4 py-6 text-center text-sm text-[var(--biolink-muted-text)]">
+          <Trans message="No chapters have been published yet." />
+        </p>
+      </CurriculumStateCard>
+    );
+  }
+
+  const lessonCount = chapters.reduce(
+    (total, chapter) => total + chapter.lessons.length,
+    0,
+  );
+  const timedLessonCount = chapters.reduce(
+    (total, chapter) =>
+      total +
+      chapter.lessons.filter(lesson => (lesson.duration_seconds ?? 0) > 0)
+        .length,
+    0,
+  );
+  // Only surface a total when every lesson carries a real duration, so the
+  // strip never understates a partially timed course.
+  const hasFullDurations = lessonCount > 0 && timedLessonCount === lessonCount;
+  const totalSeconds = chapters.reduce(
+    (total, chapter) =>
+      total +
+      chapter.lessons.reduce(
+        (sum, lesson) => sum + (lesson.duration_seconds ?? 0),
+        0,
+      ),
+    0,
+  );
 
   return (
     <Card.Root className={biolinkSurfaceCard}>
       <Card.Content className="flex min-w-0 flex-col gap-4 p-5 sm:p-6">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
           <h2 className={biolinkSectionTitle}>
             <Trans message="Course curriculum" />
           </h2>
-          <span className="text-xs font-medium text-[var(--biolink-muted-text)]">
-            <Trans
-              message="[one :count chapter|other :count chapters]"
-              values={{count: curriculum.chapters.length}}
-            />
-          </span>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs font-medium text-[var(--biolink-muted-text)]">
+            <span className="inline-flex items-center gap-1.5">
+              <BookOpenIcon className="size-3.5" aria-hidden="true" />
+              <Trans
+                message="[one :count chapter|other :count chapters]"
+                values={{count: chapters.length}}
+              />
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <GraduationCapIcon className="size-3.5" aria-hidden="true" />
+              <Trans
+                message="[one :count lesson|other :count lessons]"
+                values={{count: lessonCount}}
+              />
+            </span>
+            {hasFullDurations && totalSeconds > 0 && (
+              <span className="inline-flex items-center gap-1.5">
+                <ClockIcon className="size-3.5" aria-hidden="true" />
+                <DurationLabel totalSeconds={totalSeconds} />
+              </span>
+            )}
+          </div>
         </div>
 
-        <ol className="flex flex-col gap-2">
-          {curriculum.chapters.map((chapter, index) => (
-            <li
-              key={chapter.id}
-              className="flex flex-col gap-2 rounded-card border border-[var(--biolink-border)] bg-[var(--biolink-surface)] p-3"
-            >
-              <div className="flex items-center gap-3">
-                <span className="grid size-7 shrink-0 place-items-center rounded-card-xs bg-[var(--biolink-surface-strong)] text-xs font-semibold tabular-nums text-[var(--biolink-text)] ring-1 ring-[var(--biolink-border)]">
-                  {index + 1}
-                </span>
-                <div className="flex min-w-0 flex-1 flex-col">
-                  <h3 className="truncate text-sm font-medium">
-                    {chapter.title}
-                  </h3>
-                  <p className="text-xs text-[var(--biolink-muted-text)]">
-                    <Trans
-                      message="[one :count lesson|other :count lessons]"
-                      values={{count: chapter.lessons.length}}
-                    />
-                  </p>
-                </div>
-              </div>
-              {chapter.lessons.length > 0 && (
-                <ul className="flex flex-col">
-                  {chapter.lessons.map(lesson => (
-                    <li
-                      key={lesson.id}
-                      className="flex items-center gap-2 border-t border-[var(--biolink-border)] py-2 text-sm"
-                    >
-                      <GraduationCapIcon
-                        className="size-4 shrink-0 text-[var(--biolink-muted-text)]"
-                        aria-hidden="true"
-                      />
-                      <span className="min-w-0 flex-1 truncate">
-                        {lesson.title}
+        <Accordion.Root
+          defaultValue={[String(chapters[0].id)]}
+          className="flex flex-col gap-2"
+        >
+          {chapters.map((chapter, index) => {
+            const chapterSeconds = chapter.lessons.reduce(
+              (sum, lesson) => sum + (lesson.duration_seconds ?? 0),
+              0,
+            );
+            const chapterIsTimed =
+              chapter.lessons.length > 0 &&
+              chapter.lessons.every(
+                lesson => (lesson.duration_seconds ?? 0) > 0,
+              );
+
+            return (
+              <Accordion.Item
+                key={chapter.id}
+                value={String(chapter.id)}
+                className="rounded-card border border-[var(--biolink-border)] bg-[var(--biolink-surface)]"
+              >
+                <Accordion.Trigger>
+                  <span className="flex min-w-0 flex-1 items-center gap-3">
+                    <span className="grid size-7 shrink-0 place-items-center rounded-card-xs bg-[var(--biolink-surface-strong)] text-xs font-semibold text-[var(--biolink-text)] tabular-nums ring-1 ring-[var(--biolink-border)]">
+                      {index + 1}
+                    </span>
+                    <span className="flex min-w-0 flex-1 flex-col gap-0.5 text-start sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                      <span className="truncate text-sm font-medium text-[var(--biolink-text)]">
+                        {chapter.title}
                       </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </li>
-          ))}
-        </ol>
+                      <span className="shrink-0 text-xs font-normal text-[var(--biolink-muted-text)]">
+                        <Trans
+                          message="[one :count lesson|other :count lessons]"
+                          values={{count: chapter.lessons.length}}
+                        />
+                        {chapterIsTimed && (
+                          <>
+                            {' · '}
+                            <DurationLabel totalSeconds={chapterSeconds} />
+                          </>
+                        )}
+                      </span>
+                    </span>
+                  </span>
+                </Accordion.Trigger>
+                <Accordion.Content className="px-3 pb-3.5">
+                  {chapter.lessons.length > 0 ? (
+                    <ul className="flex flex-col">
+                      {chapter.lessons.map(lesson => (
+                        <li
+                          key={lesson.id}
+                          className="flex items-center gap-2 border-t border-[var(--biolink-border)] py-2 text-sm"
+                        >
+                          <GraduationCapIcon
+                            className="size-4 shrink-0 text-[var(--biolink-muted-text)]"
+                            aria-hidden="true"
+                          />
+                          <span className="min-w-0 flex-1 truncate text-[var(--biolink-text)]">
+                            {lesson.title}
+                          </span>
+                          {(lesson.duration_seconds ?? 0) > 0 && (
+                            <span className="shrink-0 text-xs text-[var(--biolink-muted-text)] tabular-nums">
+                              <DurationLabel
+                                totalSeconds={lesson.duration_seconds!}
+                              />
+                            </span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="border-t border-[var(--biolink-border)] py-3 text-sm text-[var(--biolink-muted-text)]">
+                      <Trans message="No published lessons yet." />
+                    </p>
+                  )}
+                </Accordion.Content>
+              </Accordion.Item>
+            );
+          })}
+        </Accordion.Root>
+      </Card.Content>
+    </Card.Root>
+  );
+}
+
+function CurriculumStateCard({children}: {children: React.ReactNode}) {
+  return (
+    <Card.Root className={biolinkSurfaceCard}>
+      <Card.Content className="flex min-w-0 flex-col gap-4 p-5 sm:p-6">
+        <h2 className={biolinkSectionTitle}>
+          <Trans message="Course curriculum" />
+        </h2>
+        {children}
       </Card.Content>
     </Card.Root>
   );
@@ -909,13 +1181,6 @@ function ProductBackground({
 
 function isPaid(order: DigitalProductOrder) {
   return order.status === 'paid' || order.payment_status === 'paid';
-}
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(value));
 }
 
 function shortReference(reference: string) {

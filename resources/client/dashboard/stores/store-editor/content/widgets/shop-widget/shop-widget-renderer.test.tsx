@@ -37,12 +37,14 @@ describe('ShopWidgetRenderer product action appearance', () => {
     expect(source).toMatch(
       /resolveBiolinkButtonAppearance\(\s*biolink\.appearance\?\.config \?\? null,?\s*\)/,
     );
-    expect(source).toContain('className={buttonAppearance.className}');
+    expect(source).toContain(
+      "className={cn('w-full', buttonAppearance.className)}",
+    );
     expect(source).toContain('style={buttonAppearance.style}');
   });
 
-  test('keeps the action button size, link render, label and href', () => {
-    expect(source).toContain('size="sm"');
+  test('keeps the action button full-width, link render, label and href', () => {
+    expect(source).toContain("'w-full'");
     expect(source).toContain('render={<a href={href} />}');
     expect(source).toContain('<Trans message="View product" />');
   });

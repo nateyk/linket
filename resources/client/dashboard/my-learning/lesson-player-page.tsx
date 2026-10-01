@@ -112,7 +112,7 @@ export function Component() {
   const [progressError, setProgressError] = useState<string>();
 
   const [quiz, setQuiz] = useState<QuizData | null>(null);
-  const [quizLoading, setQuizLoading] = useState(false);
+  const [, setQuizLoading] = useState(false);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<QuizAttemptResult | null>(null);

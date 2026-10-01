@@ -9,12 +9,12 @@ export function ProductGallery({product}: {product: PublicDigitalProduct}) {
   const TypeIcon = productTypeIcon(product.type);
 
   const fallback = (
-    <div className="flex size-full min-h-64 flex-col items-center justify-center gap-3 bg-[radial-gradient(circle_at_center,var(--biolink-surface-strong),transparent_68%)] px-6 text-center text-[var(--biolink-muted-text)] sm:min-h-80">
-      <span className="grid size-14 place-items-center rounded-card bg-[var(--biolink-surface-strong)] shadow-xs ring-1 ring-[var(--biolink-border)]">
+    <div className="flex size-full min-h-64 flex-col items-center justify-center gap-3 bg-[var(--biolink-surface-muted)] px-6 text-center text-[var(--biolink-muted-text)] sm:min-h-80">
+      <span className="grid size-14 place-items-center rounded-card bg-[var(--biolink-surface-strong)] ring-1 ring-[var(--biolink-border)]">
         <PackageOpenIcon className="size-5" />
       </span>
       <span className="text-xs">
-        <Trans message="Secure access after purchase" />
+        <Trans message="Image not available" />
       </span>
     </div>
   );
@@ -37,7 +37,7 @@ export function ProductGallery({product}: {product: PublicDigitalProduct}) {
         fallback
       )}
 
-      <span className="absolute top-4 start-4 inline-flex items-center gap-1.5 rounded-full border border-[var(--biolink-border)] bg-[var(--biolink-surface-strong)] px-3 py-1 text-xs font-medium text-[var(--biolink-text)] shadow-xs">
+      <span className="absolute top-4 start-4 inline-flex h-5 items-center gap-1.5 rounded-card-sm border border-[var(--biolink-border)] bg-[var(--biolink-surface-strong)] px-2 text-xs font-medium text-[var(--biolink-text)]">
         <TypeIcon className="size-3.5 shrink-0" aria-hidden="true" />
         <ProductTypeLabel type={product.type} />
       </span>

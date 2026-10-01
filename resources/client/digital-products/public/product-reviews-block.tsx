@@ -1,9 +1,15 @@
 import {Avatar} from '@shadcn/avatar/avatar';
 import {Badge} from '@shadcn/badge/badge';
-import {Separator} from '@shadcn/separator';
+import {Button} from '@shadcn/button/button';
 import {apiClient} from '@common/http/query-client';
+import {FormattedDate} from '@ui/i18n/formatted-date';
 import {Trans} from '@ui/i18n/trans';
-import {BadgeCheckIcon, StarIcon, StarOffIcon} from 'lucide-react';
+import {
+  BadgeCheckIcon,
+  CircleAlertIcon,
+  StarIcon,
+  StarOffIcon,
+} from 'lucide-react';
 import {useCallback, useEffect, useState} from 'react';
 import {Link} from 'react-router';
 import {RatingStars} from './product-rating-stars';
@@ -47,7 +53,7 @@ export function ProductReviewsBlock({
   const [reviews, setReviews] = useState<PublicReview[]>([]);
   const [summary, setSummary] = useState<ProductReviewsSummary>();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string>();
+  const [error, setError] = useState(false);
   const [showAllReviews, setShowAllReviews] = useState(false);
 
   const baseUrl = `/api/v1/public/biolinks/${biolinkId}/digital-products/${product.id}/reviews`;
@@ -57,14 +63,13 @@ export function ProductReviewsBlock({
 
   const load = useCallback(async () => {
     setLoading(true);
-    setError(undefined);
+    setError(false);
     try {
       const {data: payload} = await apiClient.get<ReviewsResponse>(baseUrl);
       setReviews(payload.data ?? []);
       setSummary(payload.summary);
-
     } catch {
-      setError('Unable to load reviews.');
+      setError(true);
     } finally {
       setLoading(false);
     }
@@ -95,35 +100,28 @@ export function ProductReviewsBlock({
         <SummaryCard summary={summary} loading={loading} />
 
         {reviews.length ? (
-          <div className="flex flex-col rounded-card bg-[var(--biolink-surface)] text-[var(--biolink-text)] ring-1 ring-[var(--biolink-border)]">
-            {visibleReviews.map((review, index) => (
-              <div key={review.id}>
-                {index > 0 && (
-                  <Separator className="bg-[var(--biolink-border)]" />
-                )}
-                <div className="p-5">
-                  <ReviewRow review={review} />
-                </div>
+          <div className="divide-y divide-[var(--biolink-border)] rounded-card border border-[var(--biolink-border)]">
+            {visibleReviews.map(review => (
+              <div key={review.id} className="p-5">
+                <ReviewRow review={review} />
               </div>
             ))}
             {reviews.length > visibleReviews.length && (
-              <>
-                <Separator className="bg-[var(--biolink-border)]" />
-                <button
-                  type="button"
-                  onClick={() => setShowAllReviews(true)}
-                  className="flex w-full items-center justify-center gap-2 rounded-b-card p-3 text-sm font-medium text-[var(--biolink-text)] transition-colors hover:bg-[var(--biolink-surface)]"
-                >
-                  <Trans
-                    message="Show all :count reviews"
-                    values={{count: reviews.length}}
-                  />
-                </button>
-              </>
+              <button
+                type="button"
+                onClick={() => setShowAllReviews(true)}
+                className="flex w-full items-center justify-center gap-2 rounded-b-card p-3 text-sm font-medium text-[var(--biolink-text)] transition-colors hover:bg-[var(--biolink-surface)]"
+              >
+                <Trans
+                  message="Show all :count reviews"
+                  values={{count: reviews.length}}
+                />
+              </button>
             )}
           </div>
         ) : (
-          !loading && (
+          !loading &&
+          !error && (
             <div className="flex min-h-28 flex-col items-center justify-center gap-2 rounded-card border border-dashed p-6 text-center text-sm text-[var(--biolink-muted-text)]">
               <StarOffIcon className="size-5" />
               <Trans message="No reviews yet." />
@@ -133,11 +131,25 @@ export function ProductReviewsBlock({
       </div>
 
       {error && (
-        <p className="text-center text-sm text-[var(--biolink-muted-text)]">
-          {error}
-        </p>
+        <div
+          role="alert"
+          aria-live="polite"
+          className="flex items-center gap-3 rounded-card border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+        >
+          <CircleAlertIcon className="size-4 shrink-0" aria-hidden="true" />
+          <span className="min-w-0 flex-1">
+            <Trans message="Unable to load reviews." />
+          </span>
+          <Button
+            size="sm"
+            variant="outline"
+            color="danger"
+            onClick={() => void load()}
+          >
+            <Trans message="Retry" />
+          </Button>
+        </div>
       )}
-
     </section>
   );
 }
@@ -155,7 +167,7 @@ function SummaryCard({
   const total = summary?.rating_stats?.total ?? 0;
 
   return (
-    <div className="flex flex-col rounded-card bg-[var(--biolink-surface)] p-5 text-[var(--biolink-text)] ring-1 ring-[var(--biolink-border)]">
+    <div className="flex flex-col rounded-card border border-[var(--biolink-border)] p-5">
       <div className="flex items-center gap-3">
         <p className="text-4xl leading-none font-semibold tracking-tight">
           {loading ? '—' : average.toFixed(1)}
@@ -194,9 +206,12 @@ function SummaryCard({
       )}
 
       <div className="mt-4 border-t border-[var(--biolink-border)] pt-4">
-        <p className="text-center text-xs text-[var(--biolink-muted-text)]">
+        <p className="text-center text-sm text-[var(--biolink-muted-text)]">
           <Trans message="Verified buyers can leave a review from" />{' '}
-          <Link to="/my-order" className="font-medium text-primary underline-offset-4 hover:underline">
+          <Link
+            to="/my-order"
+            className="font-medium text-[var(--biolink-accent,var(--color-primary))] underline-offset-4 hover:underline"
+          >
             <Trans message="My Orders" />
           </Link>
         </p>
@@ -215,7 +230,7 @@ function ReviewRow({review}: {review: PublicReview}) {
             className="shrink-0 text-xs text-[var(--biolink-muted-text)]"
             dateTime={review.created_at}
           >
-            {formatDate(review.created_at)}
+            <FormattedDate date={review.created_at} />
           </time>
         )}
       </div>
@@ -242,11 +257,5 @@ function ReviewRow({review}: {review: PublicReview}) {
         )}
       </div>
     </article>
-  );
-}
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat(undefined, {dateStyle: 'medium'}).format(
-    new Date(value),
   );
 }

@@ -3,6 +3,8 @@ import {Trans} from '@ui/i18n/trans';
 import {cn} from '@ui/utils/cn';
 import {CheckIcon} from 'lucide-react';
 import type {PublicDigitalProduct} from '../digital-product-public-pages';
+import {plainTextDescription} from './product-description';
+import {ProductFaq} from './product-faq';
 import {biolinkSectionTitle, biolinkSurfaceCard} from './surface';
 
 export function ProductOverview({product}: {product: PublicDigitalProduct}) {
@@ -47,7 +49,10 @@ export function ProductOverview({product}: {product: PublicDigitalProduct}) {
               {outcomes.map((outcome, index) => (
                 <li key={index} className="flex items-start gap-2.5 text-sm">
                   <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-[var(--biolink-surface)] ring-1 ring-[var(--biolink-border)]">
-                    <CheckIcon className="size-3 text-positive" aria-hidden="true" />
+                    <CheckIcon
+                      className="size-3 text-[var(--biolink-text)]"
+                      aria-hidden="true"
+                    />
                   </span>
                   <span className="text-[var(--biolink-muted-text)]">
                     {outcome}
@@ -57,19 +62,9 @@ export function ProductOverview({product}: {product: PublicDigitalProduct}) {
             </ul>
           </section>
         )}
+
+        <ProductFaq product={product} />
       </Card.Content>
     </Card.Root>
   );
-}
-
-function plainTextDescription(value: string) {
-  if (typeof DOMParser !== 'undefined') {
-    const document = new DOMParser().parseFromString(value, 'text/html');
-    return document.body.textContent?.trim() ?? '';
-  }
-
-  return value
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
 }

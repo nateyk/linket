@@ -11,6 +11,7 @@ import {
   BookOpenIcon,
   GraduationCapIcon,
   LockKeyholeIcon,
+  ReceiptIcon,
   RefreshCwIcon,
   ShieldCheckIcon,
   ShoppingBagIcon,
@@ -18,11 +19,14 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type {PublicDigitalProduct} from '../digital-product-public-pages';
+import type {ProductReviewsSummary} from '../product-reviews-block';
+import {RatingStars} from '../product-rating-stars';
 import {productTypeIcon} from './product-type';
 import {biolinkSurfaceCard, biolinkSurfaceContent} from './surface';
 
 export function ProductPricingCard({
   product,
+  reviews,
   appearance,
   checkoutCancelled,
   checkoutFailed,
@@ -30,6 +34,7 @@ export function ProductPricingCard({
   onBuy,
 }: {
   product: PublicDigitalProduct;
+  reviews?: ProductReviewsSummary;
   appearance?: BiolinkAppearanceConfig | null;
   checkoutCancelled: boolean;
   checkoutFailed: boolean;
@@ -39,6 +44,9 @@ export function ProductPricingCard({
   const buttonAppearance = resolveBiolinkButtonAppearance(appearance);
   const TypeIcon = productTypeIcon(product.type);
   const isCourse = !!product.is_course;
+  const average = reviews?.average;
+  const reviewCount = reviews?.rating_stats?.total ?? 0;
+  const showRating = typeof average === 'number' && reviewCount > 0;
 
   return (
     <Card.Root className={biolinkSurfaceCard}>
@@ -51,6 +59,22 @@ export function ProductPricingCard({
             <p className="text-4xl leading-none font-semibold tracking-tight">
               {formatPrice(product.price_cents, product.currency)}
             </p>
+            {showRating && (
+              <div className="mt-0.5 flex flex-wrap items-center gap-2 text-sm">
+                <RatingStars value={Math.round(average)} />
+                <span className="font-medium text-[var(--biolink-text)] tabular-nums">
+                  {average.toFixed(1)}
+                </span>
+                <span className="text-[var(--biolink-muted-text)]">
+                  (
+                  <Trans
+                    message=":count reviews"
+                    values={{count: reviewCount}}
+                  />
+                  )
+                </span>
+              </div>
+            )}
           </div>
           <span className="grid size-10 shrink-0 place-items-center rounded-card-sm bg-[var(--biolink-surface)] text-[var(--biolink-muted-text)] ring-1 ring-[var(--biolink-border)]">
             <TypeIcon className="size-5" aria-hidden="true" />
@@ -58,23 +82,31 @@ export function ProductPricingCard({
         </div>
 
         {checkoutCancelled && (
-          <Alert variant="warning" fillStyle="subtleFill">
-            <RefreshCwIcon />
+          <Alert
+            variant="warning"
+            fillStyle="subtleFill"
+            className="border-[var(--biolink-border,var(--color-border))]!"
+          >
+            <RefreshCwIcon className="text-[var(--biolink-muted-text,var(--color-muted-foreground))]!" />
             <Alert.Title>
               <Trans message="Checkout cancelled" />
             </Alert.Title>
-            <Alert.Description>
+            <Alert.Description className="text-[var(--biolink-muted-text,var(--color-muted-foreground))]!">
               <Trans message="Your product is still available when you are ready." />
             </Alert.Description>
           </Alert>
         )}
         {checkoutFailed && (
-          <Alert variant="destructive" fillStyle="subtleFill">
-            <RefreshCwIcon />
+          <Alert
+            variant="destructive"
+            fillStyle="subtleFill"
+            className="border-[var(--biolink-border,var(--color-border))]!"
+          >
+            <RefreshCwIcon className="text-[var(--biolink-muted-text,var(--color-muted-foreground))]!" />
             <Alert.Title>
               <Trans message="Unable to start checkout" />
             </Alert.Title>
-            <Alert.Description>
+            <Alert.Description className="text-[var(--biolink-muted-text,var(--color-muted-foreground))]!">
               <Trans message="Please try again in a moment." />
             </Alert.Description>
           </Alert>
@@ -130,9 +162,12 @@ export function ProductPricingCard({
           <IncludesItem icon={TimerIcon}>
             <Trans message="One-time payment, no subscription" />
           </IncludesItem>
+          <IncludesItem icon={ReceiptIcon}>
+            <Trans message="We email your receipt and protected download links as soon as payment is confirmed." />
+          </IncludesItem>
         </ul>
 
-        <div className="flex items-start gap-2 rounded-card bg-[var(--biolink-surface)] p-3 text-xs text-[var(--biolink-muted-text)]">
+        <div className="flex items-start gap-2 rounded-card bg-[var(--biolink-surface)] p-3 text-sm text-[var(--biolink-muted-text)]">
           <ShieldCheckIcon
             className="mt-0.5 size-4 shrink-0 text-positive"
             aria-hidden="true"
@@ -152,12 +187,11 @@ function IncludesItem({
   children: React.ReactNode;
 }) {
   return (
-    <li className="flex items-start gap-2.5">
-      <Icon
-        className="mt-0.5 size-4 shrink-0 text-[var(--biolink-text)]"
-        aria-hidden
-      />
-      <span>{children}</span>
+    <li className="flex items-start gap-3">
+      <span className="grid size-7 shrink-0 place-items-center rounded-card-xs bg-[var(--biolink-surface)] text-[var(--biolink-muted-text)] ring-1 ring-[var(--biolink-border)]">
+        <Icon className="size-4" aria-hidden="true" />
+      </span>
+      <span className="min-w-0 flex-1 pt-1 leading-5">{children}</span>
     </li>
   );
 }

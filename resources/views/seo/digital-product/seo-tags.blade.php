@@ -27,7 +27,7 @@
 @php($schemaOfferPrice = number_format(($data['product']['price_cents'] ?? 0) / 100, 2, '.', ''))
 <script type="application/ld+json">
 {!! json_encode(array_filter([
-    '@context' => 'https://schema.org',
+    '@@context' => 'https://schema.org',
     '@type' => 'Product',
     'name' => $data['product']['title'],
     'description' => $metaDescription,

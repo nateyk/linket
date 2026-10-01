@@ -19,6 +19,9 @@ type BiolinkThemeVariables = CSSProperties & {
   '--biolink-surface-strong': string;
   '--biolink-surface-muted': string;
   '--biolink-border': string;
+  '--biolink-accent': string;
+  '--biolink-accent-foreground': string;
+  '--biolink-focus': string;
 } & BiolinkRadiusVariables;
 
 type BiolinkRadiusVariables = CSSProperties & {
@@ -386,6 +389,11 @@ export function resolveBiolinkThemeVariables(
         'color-mix(in srgb, var(--color-muted) 82%, transparent)',
       '--biolink-border':
         'color-mix(in srgb, var(--color-foreground) 12%, transparent)',
+      // Unpainted stores stay on the theme pair, exactly as consumers find it
+      // in their own `var(--biolink-accent, var(--color-primary))` fallbacks.
+      '--biolink-accent': 'var(--color-primary)',
+      '--biolink-accent-foreground': 'var(--color-primary-foreground)',
+      '--biolink-focus': 'var(--be-primary)',
     };
   }
 
@@ -397,6 +405,7 @@ export function resolveBiolinkThemeVariables(
     background.foregroundColor,
     surfaceColor,
   );
+  const accent = resolveAccentPair(surfaceColor);
 
   return {
     ...radius,
@@ -406,6 +415,9 @@ export function resolveBiolinkThemeVariables(
     '--biolink-surface-strong': `color-mix(in srgb, ${surfaceBase} 99%, transparent)`,
     '--biolink-surface-muted': `color-mix(in srgb, ${surfaceBase} 90%, transparent)`,
     '--biolink-border': `color-mix(in srgb, ${background.foreground} 24%, transparent)`,
+    '--biolink-accent': accent.accent,
+    '--biolink-accent-foreground': accent.accentForeground,
+    '--biolink-focus': accent.focus,
   };
 }
 
@@ -419,7 +431,16 @@ export function shouldUseLightBiolinkLogo(
 
 function isLightColor(color: string): boolean {
   const parsedColor = parseColor(color);
-  return parsedColor ? parsedColor.luminance > 0.5 : false;
+  return parsedColor ? isLightSurface(parsedColor) : false;
+}
+
+/**
+ * The file's single darkness test — sRGB relative luminance above 0.5 —
+ * shared by the logo choice and the accent derivation so the surface and the
+ * pair drawn on it can never disagree about which one is "light".
+ */
+function isLightSurface(color: Color): boolean {
+  return color.luminance > 0.5;
 }
 
 function parseColor(color: string): Color | null {
@@ -464,6 +485,53 @@ function contrastRatio(first: Color, second: Color): number {
   const darker = Math.min(first.luminance, second.luminance);
 
   return (lighter + 0.05) / (darker + 0.05);
+}
+
+interface BiolinkAccentPair {
+  /** Accent text / link color on the chosen surface. */
+  accent: string;
+  /** Label on a solid accent fill. */
+  accentForeground: string;
+  /** Focus ring drawn on the chosen surface. */
+  focus: string;
+}
+
+/**
+ * The accent pair for a *painted* panel, read off the surface this file
+ * already derived for it ({@link chooseHighestContrastSurface}) — the same
+ * luminance test {@link isLightSurface} applies everywhere else, never a
+ * second darkness check.
+ *
+ * Counter Blue is pinned at 46% lightness so it clears AA on the theme's own
+ * grounds, but that pin leaves it at 2.80:1 on the near-black surface a
+ * light-on-dark painted panel resolves to — failing both accent text (4.5:1)
+ * and the focus ring (3:1), and injecting a second, darker blue that reads as
+ * a different accent. Dark surfaces therefore get **Counter Blue Light**
+ * (`oklch(88.2% 0.059 254.128)`), the lifted twin DESIGN.md ships as the
+ * dark-mode primary, with its label flipped to Soft Ink: 14.76:1 as accent
+ * text and focus ring on black, 11.32:1 for the label on the accent fill.
+ * No CSS var names that blue independently of the OS scheme — `--color-primary`
+ * follows `--be-primary`, which only holds the lifted value in the dark
+ * scheme — so the literal is the scheme-independent choice here.
+ *
+ * A light surface stays on the theme pair (`var(--color-primary)` at 7.50:1 on
+ * white), exactly the values an unpainted store renders, because there the
+ * theme's own surfaces are what the pair was tuned for.
+ */
+function resolveAccentPair(surface: Color): BiolinkAccentPair {
+  if (isLightSurface(surface)) {
+    return {
+      accent: 'var(--color-primary)',
+      accentForeground: 'var(--color-primary-foreground)',
+      focus: 'var(--be-primary)',
+    };
+  }
+
+  return {
+    accent: 'oklch(88.2% 0.059 254.128)',
+    accentForeground: 'oklch(0.2478 0 0)',
+    focus: 'oklch(88.2% 0.059 254.128)',
+  };
 }
 
 interface BiolinkBackgroundContext {

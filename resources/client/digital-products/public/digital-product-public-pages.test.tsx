@@ -42,11 +42,79 @@ describe('public checkout', () => {
       'utf8',
     );
 
-    expect(page).toMatch(
-      /await apiClient\.post\(\s*data\.checkout_endpoint/,
-    );
+    expect(page).toMatch(/await apiClient\.post\(\s*data\.checkout_endpoint/);
     expect(page).toMatch(
       /`\/api\/v1\/digital-products\/\$\{data\.product\.id\}\/checkout`/,
     );
+  });
+});
+
+const readPage = () =>
+  fs.readFileSync(
+    path.resolve(
+      'resources/client/digital-products/public/digital-product-public-pages.tsx',
+    ),
+    'utf8',
+  );
+
+describe('buyer payment dialog', () => {
+  test('recaps the order and names the off-site redirect', () => {
+    const page = readPage();
+
+    // The buyer sees the product and the formatted total before handing over PII.
+    expect(page).toContain('product.cover?.url');
+    expect(page).toContain(
+      'formatPrice(product.price_cents, product.currency)',
+    );
+    // The submit action admits that payment happens on the provider's page.
+    expect(page).toContain("'Continue to secure checkout'");
+    expect(page).toContain(
+      "You'll continue to your payment provider's secure checkout to pay, then return to this page.",
+    );
+    // Facts only: no refund policy exists in this repo, so none may be promised.
+    expect(page).not.toMatch(/money-back|refund/i);
+  });
+
+  test('keeps a visible, translated close control and the mid-submit guard', () => {
+    const page = readPage();
+
+    expect(page).toMatch(
+      /<Dialog\.CloseButton[\s\S]{0,400}?disabled=\{submitting\}/,
+    );
+    expect(page).toContain("trans({message: 'Close dialog'})");
+    expect(page).toMatch(
+      /onOpenChange=\{nextOpen => \{\s*if \(!submitting \|\| nextOpen\) \{/,
+    );
+  });
+});
+
+describe('painted-panel colors and locale safety', () => {
+  test('scopes alert colors to biolink tokens with css fallbacks', () => {
+    const page = readPage();
+
+    expect(page).toContain(
+      'border-[var(--biolink-border,var(--color-border))]!',
+    );
+    expect(page).toContain(
+      'text-[var(--biolink-muted-text,var(--color-muted-foreground))]!',
+    );
+    expect(page).toContain('text-[var(--biolink-accent,var(--color-primary))]');
+  });
+
+  test('uses the shared locale-aware formatters', () => {
+    const page = readPage();
+
+    expect(page).toContain(
+      "import {FormattedDate} from '@ui/i18n/formatted-date';",
+    );
+    expect(page).not.toContain('Intl.DateTimeFormat(undefined');
+    expect(page).not.toContain('aria-label="Order summary"');
+    // Duration units go through Trans instead of hardcoded English.
+    expect(page).not.toContain('}h ${String(minutes)');
+    expect(page).toContain('message=":minutes min"');
+  });
+
+  test('wraps the page tree in a reduced-motion config', () => {
+    expect(readPage()).toContain('<MotionConfig reducedMotion="user">');
   });
 });
