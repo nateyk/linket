@@ -6,6 +6,7 @@ import {Trans} from '@ui/i18n/trans';
 import {BadgeCheckIcon, StarIcon, StarOffIcon} from 'lucide-react';
 import {useCallback, useEffect, useState} from 'react';
 import {Link} from 'react-router';
+import {RatingStars} from './product-rating-stars';
 import type {PublicDigitalProduct} from './digital-product-public-pages';
 
 type PublicReview = {
@@ -30,17 +31,21 @@ type ReviewsResponse = {
   };
 };
 
+export type ProductReviewsSummary = NonNullable<ReviewsResponse['summary']>;
+
 const REVIEWS_PER_PAGE = 5;
 
 export function ProductReviewsBlock({
   product,
   biolinkId,
+  onSummary,
 }: {
   product: PublicDigitalProduct;
   biolinkId: number;
+  onSummary?: (summary: ProductReviewsSummary) => void;
 }) {
   const [reviews, setReviews] = useState<PublicReview[]>([]);
-  const [summary, setSummary] = useState<ReviewsResponse['summary']>();
+  const [summary, setSummary] = useState<ProductReviewsSummary>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
   const [showAllReviews, setShowAllReviews] = useState(false);
@@ -69,6 +74,12 @@ export function ProductReviewsBlock({
     void load();
   }, [load]);
 
+  useEffect(() => {
+    if (summary) {
+      onSummary?.(summary);
+    }
+  }, [summary, onSummary]);
+
   return (
     <section
       className="flex w-full flex-col gap-4"
@@ -80,10 +91,11 @@ export function ProductReviewsBlock({
       >
         <Trans message="Customer reviews" />
       </h2>
-      <div className="grid items-stretch gap-4 lg:grid-cols-[16rem_minmax(0,1fr)]">
+      <div className="grid items-stretch gap-4">
         <SummaryCard summary={summary} loading={loading} />
+
         {reviews.length ? (
-          <div className="flex flex-col rounded-card bg-[var(--biolink-surface-strong)] text-[var(--biolink-text)] ring-1 ring-[var(--biolink-border)] backdrop-blur-xl">
+          <div className="flex flex-col rounded-card bg-[var(--biolink-surface)] text-[var(--biolink-text)] ring-1 ring-[var(--biolink-border)]">
             {visibleReviews.map((review, index) => (
               <div key={review.id}>
                 {index > 0 && (
@@ -134,7 +146,7 @@ function SummaryCard({
   summary,
   loading,
 }: {
-  summary?: ReviewsResponse['summary'];
+  summary?: ProductReviewsSummary;
   loading: boolean;
 }) {
   const average = summary?.average ?? 0;
@@ -143,13 +155,13 @@ function SummaryCard({
   const total = summary?.rating_stats?.total ?? 0;
 
   return (
-    <div className="flex flex-col rounded-card bg-[var(--biolink-surface-strong)] p-5 text-[var(--biolink-text)] ring-1 ring-[var(--biolink-border)] backdrop-blur-xl">
+    <div className="flex flex-col rounded-card bg-[var(--biolink-surface)] p-5 text-[var(--biolink-text)] ring-1 ring-[var(--biolink-border)]">
       <div className="flex items-center gap-3">
         <p className="text-4xl leading-none font-semibold tracking-tight">
           {loading ? '—' : average.toFixed(1)}
         </p>
         <div className="flex flex-col gap-1">
-          <StarRow value={Math.round(average)} />
+          <RatingStars value={Math.round(average)} />
           <p className="text-xs text-[var(--biolink-muted-text)]">
             <Trans
               message=":average out of 5 · :count reviews"
@@ -165,11 +177,11 @@ function SummaryCard({
             <div key={star} className="flex items-center gap-2 text-xs">
               <span className="flex w-6 items-center justify-end gap-0.5 text-[var(--biolink-muted-text)]">
                 {star}
-                <StarIcon className="size-3 fill-current text-amber-500" />
+                <StarIcon className="size-3 fill-current text-warning" />
               </span>
-              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--biolink-surface)]">
+              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--biolink-surface-strong)]">
                 <div
-                  className="h-full rounded-full bg-amber-500"
+                  className="h-full rounded-full bg-warning"
                   style={{width: `${percentages[star] ?? 0}%`}}
                 />
               </div>
@@ -197,7 +209,7 @@ function ReviewRow({review}: {review: PublicReview}) {
   return (
     <article className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-3">
-        <StarRow value={review.stars ?? 0} />
+        <RatingStars value={review.stars ?? 0} />
         {review.created_at && (
           <time
             className="shrink-0 text-xs text-[var(--biolink-muted-text)]"
@@ -230,23 +242,6 @@ function ReviewRow({review}: {review: PublicReview}) {
         )}
       </div>
     </article>
-  );
-}
-
-function StarRow({value}: {value: number}) {
-  return (
-    <div className="flex items-center gap-0.5" aria-label={`${value} / 5`}>
-      {[1, 2, 3, 4, 5].map(star => (
-        <StarIcon
-          key={star}
-          className={
-            star <= value
-              ? 'size-4 fill-current text-amber-500'
-              : 'size-4 text-[var(--biolink-muted-text)]'
-          }
-        />
-      ))}
-    </div>
   );
 }
 

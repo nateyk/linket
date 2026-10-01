@@ -203,8 +203,9 @@ class AppServiceProvider extends ServiceProvider
             \Illuminate\Support\Facades\Route::get('courses/{course}/progress', [\App\Courses\Controllers\LessonProgressController::class, 'progress']);
         });
 
-        // Public curriculum (no auth)
-        \Illuminate\Support\Facades\Route::prefix('api/v1/public')->group(function () {
+        // Public curriculum (no auth). The "api" group is required here so
+        // SubstituteBindings runs and {course} resolves to a Course model.
+        \Illuminate\Support\Facades\Route::prefix('api/v1/public')->middleware(['api'])->group(function () {
             \Illuminate\Support\Facades\Route::get('courses/{course}/curriculum', [\App\Courses\Controllers\StudentCoursesController::class, 'curriculum']);
         });
     }

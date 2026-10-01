@@ -10,6 +10,13 @@ describe('digital product covers', () => {
       ),
       'utf8',
     );
+    // The public page renders its cover through the product-page gallery.
+    const coverSource = fs.readFileSync(
+      path.resolve(
+        'resources/client/digital-products/public/product-page/product-gallery.tsx',
+      ),
+      'utf8',
+    );
     const cardSource = fs.readFileSync(
       path.resolve(
         'resources/client/digital-products/shared/product-card.tsx',
@@ -23,7 +30,8 @@ describe('digital product covers', () => {
       'utf8',
     );
 
-    expect(publicSource).toContain("import {ProductCover} from '@ui/product-cover'");
+    expect(coverSource).toContain("import {ProductCover} from '@ui/product-cover'");
+    expect(coverSource).not.toContain('const [imageError, setImageError]');
     // The storefront grid renders covers through the shared ProductCard,
     // which itself delegates to the shared ProductCover.
     expect(cardSource).toContain("import {ProductCover} from '@ui/product-cover'");

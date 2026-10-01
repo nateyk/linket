@@ -31,6 +31,7 @@ class PublicDigitalProductResource extends JsonResource
             'id' => $this->id,
             'title' => $this->title,
             'description' => $this->description,
+            'learning_outcomes' => $this->learning_outcomes,
             'price_cents' => $this->price_cents,
             'currency' => $this->currency,
             'type' => $this->type ?? 'digital',

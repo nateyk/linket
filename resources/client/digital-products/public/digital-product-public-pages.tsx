@@ -3,9 +3,20 @@ import {
   resolveBiolinkButtonAppearance,
   resolveBiolinkThemeVariables,
 } from '@app/short-links/renderers/biolink-renderer/biolink-appearance';
+import {ProductGallery} from '@app/digital-products/public/product-page/product-gallery';
+import {ProductCreatorCard} from '@app/digital-products/public/product-page/product-creator-card';
+import {ProductOverview} from '@app/digital-products/public/product-page/product-overview';
+import {ProductPricingCard} from '@app/digital-products/public/product-page/product-pricing-card';
+import {ProductSummary} from '@app/digital-products/public/product-page/product-summary';
+import {
+  ProductTabs,
+  type ProductTabSection,
+} from '@app/digital-products/public/product-page/product-tabs';
+import {
+  biolinkSectionTitle,
+  biolinkSurfaceCard,
+} from '@app/digital-products/public/product-page/surface';
 import {Alert} from '@shadcn/alert/alert';
-import {Avatar} from '@shadcn/avatar/avatar';
-import {Badge} from '@shadcn/badge/badge';
 import {Button} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
 import {Dialog} from '@shadcn/dialog/dialog';
@@ -23,42 +34,42 @@ import {
 } from '@common/background-selector/utils/css-props-from-bg-config';
 import {apiClient} from '@common/http/query-client';
 import {loadFonts} from '@ui/fonts/font-picker/load-fonts';
-import {normalizeMediaUrl} from '@common/uploads/normalize-media-url';
 import {formatMoney as formatPrice} from '@ui/i18n/format-money';
 import {Trans} from '@ui/i18n/trans';
-import {ProductCover} from '@ui/product-cover';
 import {cn} from '@ui/utils/cn';
 import {
   ArrowLeftIcon,
-  BadgeCheckIcon,
   CheckCircle2Icon,
   DownloadIcon,
   FileDownIcon,
   FileIcon,
   GraduationCapIcon,
   LockKeyholeIcon,
-  PackageOpenIcon,
   RefreshCwIcon,
-  ShieldCheckIcon,
 } from 'lucide-react';
 import {useCallback, useEffect, useState} from 'react';
-import {ProductReviewsBlock} from './product-reviews-block';
+import {
+  ProductReviewsBlock,
+  type ProductReviewsSummary,
+} from './product-reviews-block';
 
 export type PublicDigitalProduct = {
   id: number;
   title: string;
   description?: string | null;
+  learning_outcomes?: string[] | null;
   price_cents: number;
   currency: string;
   type?: string;
   is_course?: boolean;
+  course_id?: number | null;
   lessons_count?: number | null;
   chapters_count?: number | null;
   cover?: {url: string} | null;
   files_count?: number;
 };
 
-type PublicBiolink = {
+export type PublicBiolink = {
   id: number;
   name: string;
   short_url?: string | null;
@@ -69,7 +80,7 @@ type PublicBiolink = {
   } | null;
 };
 
-type PublicCreator = {
+export type PublicCreator = {
   name?: string | null;
   avatar?: string | null;
   verified?: boolean;
@@ -116,7 +127,6 @@ export function PublicDigitalProductPage({
 }: {
   data: DigitalProductPageData;
 }) {
-  const buttonAppearance = resolveBiolinkButtonAppearance(data.appearance);
   const [submitting, setSubmitting] = useState(false);
   const [buyerDialogOpen, setBuyerDialogOpen] = useState(false);
   const [buyerName, setBuyerName] = useState('');
@@ -124,6 +134,7 @@ export function PublicDigitalProductPage({
   const [buyerPhone, setBuyerPhone] = useState('');
   const [buyerError, setBuyerError] = useState<'name' | 'email'>();
   const [checkoutFailed, setCheckoutFailed] = useState(false);
+  const [reviewsSummary, setReviewsSummary] = useState<ProductReviewsSummary>();
   const checkoutCancelled =
     new URLSearchParams(window.location.search).get('checkout') === 'cancelled';
 
@@ -165,6 +176,58 @@ export function PublicDigitalProductPage({
     }
   };
 
+  const reviewsEnabled = data.reviews_enabled !== false;
+  const tabSections: ProductTabSection[] = [];
+
+  if (
+    data.product.description ||
+    (data.product.learning_outcomes?.length ?? 0) > 0
+  ) {
+    tabSections.push({
+      value: 'overview',
+      label: <Trans message="Overview" />,
+      content: <ProductOverview product={data.product} />,
+    });
+  }
+
+  if (data.product.is_course && data.product.course_id) {
+    tabSections.push({
+      value: 'curriculum',
+      label: <Trans message="Curriculum" />,
+      content: <CourseCurriculum courseId={data.product.course_id} />,
+    });
+  }
+
+  if (reviewsEnabled) {
+    tabSections.push({
+      value: 'reviews',
+      label: <Trans message="Reviews" />,
+      content: (
+        <Card.Root className={biolinkSurfaceCard}>
+          <Card.Content className="flex min-w-0 flex-col gap-4 p-5 sm:p-6">
+            <ProductReviewsBlock
+              product={data.product}
+              biolinkId={data.biolink.id}
+              onSummary={setReviewsSummary}
+            />
+          </Card.Content>
+        </Card.Root>
+      ),
+    });
+  }
+
+  tabSections.push({
+    value: 'creator',
+    label: <Trans message="Creator" />,
+    content: (
+      <ProductCreatorCard
+        creator={data.creator}
+        biolink={data.biolink}
+        storeUrl={data.back_url}
+      />
+    ),
+  });
+
   return (
     <PublicProductShell
       appearance={data.appearance}
@@ -174,135 +237,36 @@ export function PublicDigitalProductPage({
     >
       <div className="flex w-full max-w-6xl flex-col gap-4 sm:gap-5">
         <div className="grid min-w-0 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-6">
-          <Card.Root className="gap-0 overflow-hidden bg-[var(--biolink-surface-strong)] py-0 text-[var(--biolink-text)] ring-1 ring-[var(--biolink-border)] backdrop-blur-xl">
-            <DigitalProductCover product={data.product} />
-            <Card.Content className="flex min-w-0 flex-col gap-6 p-5 sm:p-7">
-              <div className="flex min-w-0 flex-col gap-4">
-                <div className="flex flex-wrap items-center gap-2">
-                  {data.product.is_course ? (
-                    <>
-                      <Badge className="bg-[var(--biolink-surface)] text-[var(--biolink-text)] ring-1 ring-[var(--biolink-border)]">
-                        <GraduationCapIcon />
-                        <Trans message="Course" />
-                      </Badge>
-                      <span className="flex items-center gap-1.5 text-xs font-medium text-[var(--biolink-muted-text)]">
-                        <GraduationCapIcon className="size-4 shrink-0" />
-                        <Trans message=":count lessons" values={{count: data.product.lessons_count ?? 0}} />
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <Badge className="bg-[var(--biolink-surface)] text-[var(--biolink-text)] ring-1 ring-[var(--biolink-border)]">
-                        <FileDownIcon />
-                        <Trans message="Digital download" />
-                      </Badge>
-                      <span className="flex items-center gap-1.5 text-xs font-medium text-[var(--biolink-muted-text)]">
-                        <FileIcon className="size-4 shrink-0" />
-                        <Trans message=":count files" values={{count: data.product.files_count ?? 1}} />
-                      </span>
-                    </>
-                  )}
-                </div>
-                <h1 className="max-w-3xl text-3xl leading-tight font-semibold tracking-tight text-balance sm:text-4xl">
-                  {data.product.title}
-                </h1>
-                <CreatorIdentity
+          <div className="flex min-w-0 flex-col gap-5 lg:col-start-1 lg:row-start-1">
+            <Card.Root className={biolinkSurfaceCard}>
+              <ProductGallery product={data.product} />
+              <Card.Content className="flex min-w-0 flex-col gap-6 p-5 sm:p-7">
+                <ProductSummary
+                  product={data.product}
                   creator={data.creator}
                   biolink={data.biolink}
+                  reviews={reviewsSummary}
                 />
-              </div>
+              </Card.Content>
+            </Card.Root>
+          </div>
 
-              {data.product.description && (
-                <section className="flex flex-col gap-2 border-t border-[var(--biolink-border)] pt-5">
-                  <h2 className="text-sm font-semibold">
-                    <Trans message="Product details" />
-                  </h2>
-                  <p className="text-sm leading-6 whitespace-pre-line text-[var(--biolink-muted-text)]">
-                    {plainTextDescription(data.product.description)}
-                  </p>
-                </section>
-              )}
-              {data.product.is_course && (data.product as any).course_id && <CourseCurriculum courseId={(data.product as any).course_id} />}
-            </Card.Content>
-          </Card.Root>
+          <aside className="min-w-0 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:sticky lg:top-6">
+            <ProductPricingCard
+              product={data.product}
+              appearance={data.appearance}
+              checkoutCancelled={checkoutCancelled}
+              checkoutFailed={checkoutFailed}
+              submitting={submitting}
+              onBuy={() => setBuyerDialogOpen(true)}
+            />
+          </aside>
 
-          <Card.Root className="gap-0 overflow-hidden bg-[var(--biolink-surface-strong)] py-0 text-[var(--biolink-text)] ring-1 ring-[var(--biolink-border)] backdrop-blur-xl lg:sticky lg:top-6">
-            <Card.Content className="flex flex-col gap-5 p-5 sm:p-6">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex min-w-0 flex-col gap-1.5">
-                  <span className="text-xs font-medium tracking-wide text-[var(--biolink-muted-text)] uppercase">
-                    <Trans message="One-time purchase" />
-                  </span>
-                  <p className="text-4xl leading-none font-semibold tracking-tight">
-                    {formatPrice(
-                      data.product.price_cents,
-                      data.product.currency,
-                    )}
-                  </p>
-                </div>
-                <span className="grid size-10 shrink-0 place-items-center rounded-card-sm bg-[var(--biolink-surface)] text-[var(--biolink-muted-text)] ring-1 ring-[var(--biolink-border)]">
-                  <FileDownIcon className="size-5" />
-                </span>
-              </div>
-
-              {checkoutCancelled && (
-                <Alert variant="warning" fillStyle="subtleFill">
-                  <RefreshCwIcon />
-                  <Alert.Title>
-                    <Trans message="Checkout cancelled" />
-                  </Alert.Title>
-                  <Alert.Description>
-                    <Trans message="Your product is still available when you are ready." />
-                  </Alert.Description>
-                </Alert>
-              )}
-              {checkoutFailed && (
-                <Alert variant="destructive" fillStyle="subtleFill">
-                  <RefreshCwIcon />
-                  <Alert.Title>
-                    <Trans message="Unable to start checkout" />
-                  </Alert.Title>
-                  <Alert.Description>
-                    <Trans message="Please try again in a moment." />
-                  </Alert.Description>
-                </Alert>
-              )}
-
-              <Button
-                variant="ghost"
-                className={cn('w-full', buttonAppearance.className)}
-                style={buttonAppearance.style}
-                size="lg"
-                disabled={submitting}
-                onClick={() => setBuyerDialogOpen(true)}
-              >
-                <LockKeyholeIcon />
-                <Trans message="Buy now" />
-              </Button>
-
-              <div className="grid gap-3 border-t border-[var(--biolink-border)] pt-4 text-sm text-[var(--biolink-muted-text)]">
-                <div className="flex items-center gap-2">
-                  <FileDownIcon className="size-4 shrink-0" />
-                  <Trans
-                    message=":count files included"
-                    values={{count: data.product.files_count ?? 1}}
-                  />
-                </div>
-                <div className="flex items-start gap-2">
-                  <ShieldCheckIcon className="mt-0.5 size-4 shrink-0 text-positive" />
-                  <Trans message="Secure payment with protected access after confirmation." />
-                </div>
-              </div>
-            </Card.Content>
-          </Card.Root>
+          <div className="flex min-w-0 flex-col gap-5 lg:col-start-1 lg:row-start-2">
+            <ProductTabs sections={tabSections} />
+          </div>
         </div>
       </div>
-      {data.reviews_enabled !== false && (
-        <ProductReviewsBlock
-          product={data.product}
-          biolinkId={data.biolink.id}
-        />
-      )}
       <BuyerDetailsDialog
         appearance={data.appearance}
         open={buyerDialogOpen}
@@ -676,7 +640,7 @@ function PublicProductShell({
 
   return (
     <div
-      className="relative isolate min-h-screen overflow-hidden px-4 py-5 text-[var(--biolink-text)] sm:px-6 sm:py-10"
+      className="relative isolate min-h-screen px-4 py-5 text-[var(--biolink-text)] sm:px-6 sm:py-10"
       style={{
         ...resolveBiolinkThemeVariables(appearance),
         fontFamily: appearance?.fontConfig?.family,
@@ -724,93 +688,6 @@ function BackToBio({
       <ArrowLeftIcon className="size-4" />
       {children}
     </button>
-  );
-}
-
-function DigitalProductCover({product}: {product: PublicDigitalProduct}) {
-  const fallback = (
-    <div className="flex size-full min-h-64 flex-col items-center justify-center gap-3 bg-[radial-gradient(circle_at_center,var(--biolink-surface-strong),transparent_68%)] px-6 text-center text-[var(--biolink-muted-text)] sm:min-h-80">
-      <span className="grid size-14 place-items-center rounded-card bg-[var(--biolink-surface-strong)] shadow-sm ring-1 ring-[var(--biolink-border)]">
-        <PackageOpenIcon className="size-5" />
-      </span>
-      <div className="flex flex-col gap-1">
-        <span className="text-sm font-semibold text-[var(--biolink-text)]">
-          <Trans message="Digital download" />
-        </span>
-        <span className="text-xs">
-          <Trans message="Secure access after purchase" />
-        </span>
-      </div>
-    </div>
-  );
-
-  return (
-    <div
-      className={cn(
-        'relative overflow-hidden bg-[var(--biolink-surface)]',
-        product.cover?.url ? 'aspect-video' : 'min-h-64 sm:min-h-80',
-      )}
-    >
-      {product.cover?.url ? (
-        <ProductCover
-          cover={product.cover}
-          alt={product.title}
-          className="size-full"
-          fallback={fallback}
-        />
-      ) : (
-        fallback
-      )}
-    </div>
-  );
-}
-
-function CreatorIdentity({
-  creator,
-  biolink,
-  inverted = false,
-}: {
-  creator?: PublicCreator | null;
-  biolink: PublicBiolink;
-  inverted?: boolean;
-}) {
-  const name =
-    biolink.profile_config?.display_name || creator?.name || biolink.name;
-  const avatar = normalizeMediaUrl(
-    biolink.profile_config?.avatar_url || creator?.avatar || '',
-  );
-  const verified = biolink.is_verified ?? creator?.verified;
-
-  return (
-    <div
-      className={cn(
-        'flex min-w-0 items-center gap-2 text-sm',
-        inverted ? 'text-white' : 'text-[var(--biolink-muted-text)]',
-      )}
-    >
-      <Avatar.Root size="sm" className="rounded-card-sm after:rounded-card-sm">
-        <Avatar.Image src={avatar} alt="" className="rounded-card-sm" />
-        <Avatar.ColorFallback
-          className={cn(
-            'rounded-card-sm',
-            inverted ? 'bg-white/90 text-foreground' : undefined,
-          )}
-        >
-          {name}
-        </Avatar.ColorFallback>
-      </Avatar.Root>
-      <span className="min-w-0 truncate">
-        <Trans message="By :creator" values={{creator: name}} />
-      </span>
-      {verified && (
-        <>
-          <BadgeCheckIcon className="size-4 fill-current" aria-hidden="true" />
-          <span className="sr-only">
-            <Trans message="Verified creator" />
-          </span>
-        </>
-      )}
-    </div>
   );
 }
 
@@ -940,28 +817,67 @@ function CourseCurriculum({courseId}: {courseId: number}) {
     })();
   }, [courseId]);
   if (!curriculum?.chapters?.length) return null;
+
   return (
-    <section className="flex flex-col gap-3 border-t border-[var(--biolink-border)] pt-5">
-      <h2 className="text-sm font-semibold">
-        <Trans message="Course curriculum" />
-      </h2>
-      <div className="space-y-3">
-        {curriculum.chapters.map(ch => (
-          <div key={ch.id} className="rounded-card border border-[var(--biolink-border)] bg-[var(--biolink-surface)] p-3">
-            <h3 className="text-sm font-medium">{ch.title}</h3>
-            <p className="text-xs text-[var(--biolink-muted-text)]">{ch.lessons.length} lessons</p>
-            <div className="mt-2 space-y-1">
-              {ch.lessons.map(lesson => (
-                <div key={lesson.id} className="flex items-center gap-2 rounded-card border border-[var(--biolink-border)] bg-[var(--biolink-surface-strong)] px-3 py-2 text-sm">
-                  <GraduationCapIcon className="size-4 text-[var(--biolink-muted-text)]" />
-                  <span className="flex-1 truncate">{lesson.title}</span>
+    <Card.Root className={biolinkSurfaceCard}>
+      <Card.Content className="flex min-w-0 flex-col gap-4 p-5 sm:p-6">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className={biolinkSectionTitle}>
+            <Trans message="Course curriculum" />
+          </h2>
+          <span className="text-xs font-medium text-[var(--biolink-muted-text)]">
+            <Trans
+              message="[one :count chapter|other :count chapters]"
+              values={{count: curriculum.chapters.length}}
+            />
+          </span>
+        </div>
+
+        <ol className="flex flex-col gap-2">
+          {curriculum.chapters.map((chapter, index) => (
+            <li
+              key={chapter.id}
+              className="flex flex-col gap-2 rounded-card border border-[var(--biolink-border)] bg-[var(--biolink-surface)] p-3"
+            >
+              <div className="flex items-center gap-3">
+                <span className="grid size-7 shrink-0 place-items-center rounded-card-xs bg-[var(--biolink-surface-strong)] text-xs font-semibold tabular-nums text-[var(--biolink-text)] ring-1 ring-[var(--biolink-border)]">
+                  {index + 1}
+                </span>
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <h3 className="truncate text-sm font-medium">
+                    {chapter.title}
+                  </h3>
+                  <p className="text-xs text-[var(--biolink-muted-text)]">
+                    <Trans
+                      message="[one :count lesson|other :count lessons]"
+                      values={{count: chapter.lessons.length}}
+                    />
+                  </p>
                 </div>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
+              </div>
+              {chapter.lessons.length > 0 && (
+                <ul className="flex flex-col">
+                  {chapter.lessons.map(lesson => (
+                    <li
+                      key={lesson.id}
+                      className="flex items-center gap-2 border-t border-[var(--biolink-border)] py-2 text-sm"
+                    >
+                      <GraduationCapIcon
+                        className="size-4 shrink-0 text-[var(--biolink-muted-text)]"
+                        aria-hidden="true"
+                      />
+                      <span className="min-w-0 flex-1 truncate">
+                        {lesson.title}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </li>
+          ))}
+        </ol>
+      </Card.Content>
+    </Card.Root>
   );
 }
 
@@ -995,17 +911,6 @@ function isPaid(order: DigitalProductOrder) {
   return order.status === 'paid' || order.payment_status === 'paid';
 }
 
-function plainTextDescription(value: string) {
-  if (typeof DOMParser !== 'undefined') {
-    const document = new DOMParser().parseFromString(value, 'text/html');
-    return document.body.textContent?.trim() ?? '';
-  }
-
-  return value
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
 function formatDate(value: string) {
   return new Intl.DateTimeFormat(undefined, {
     dateStyle: 'medium',
