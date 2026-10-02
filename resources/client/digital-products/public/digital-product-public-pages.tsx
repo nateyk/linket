@@ -54,7 +54,7 @@ import {
   RefreshCwIcon,
   XIcon,
 } from 'lucide-react';
-import {useCallback, useEffect, useState} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import {productTypeIcon} from './product-page/product-type';
 import {
   ProductReviewsBlock,
@@ -145,6 +145,23 @@ export function PublicDigitalProductPage({
   const [reviewsSummary, setReviewsSummary] = useState<ProductReviewsSummary>();
   const checkoutCancelled =
     new URLSearchParams(window.location.search).get('checkout') === 'cancelled';
+  const buttonAppearance = resolveBiolinkButtonAppearance(data.appearance);
+  const railRef = useRef<HTMLElement | null>(null);
+  const [railInView, setRailInView] = useState(true);
+
+  // The pricing rail is only sticky from lg up, so on phones the buy action
+  // scrolls out of reach. A compact bottom bar takes over whenever the rail
+  // is off screen, and steps aside the moment the rail (or the dialog) is.
+  useEffect(() => {
+    const rail = railRef.current;
+    if (!rail || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setRailInView(entry.isIntersecting),
+      {threshold: 0},
+    );
+    observer.observe(rail);
+    return () => observer.disconnect();
+  }, []);
 
   const beginCheckout = async () => {
     if (buyerName.trim().length < 2) {
@@ -246,7 +263,7 @@ export function PublicDigitalProductPage({
       backLabel={<Trans message="Back to bio" />}
       wide
     >
-      <div className="flex w-full flex-col gap-4 sm:gap-5">
+      <div className="flex w-full flex-col gap-4 pb-24 sm:gap-5 lg:pb-0">
         <div className="grid min-w-0 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-6">
           <div className="flex min-w-0 flex-col gap-5 lg:col-start-1 lg:row-start-1">
             <Card.Root className={biolinkSurfaceCard}>
@@ -262,7 +279,10 @@ export function PublicDigitalProductPage({
             </Card.Root>
           </div>
 
-          <aside className="min-w-0 lg:sticky lg:top-6 lg:col-start-2 lg:row-span-2 lg:row-start-1">
+          <aside
+            ref={railRef}
+            className="min-w-0 lg:sticky lg:top-6 lg:col-start-2 lg:row-span-2 lg:row-start-1"
+          >
             <ProductPricingCard
               product={data.product}
               reviews={reviewsSummary}
@@ -276,6 +296,30 @@ export function PublicDigitalProductPage({
 
           <div className="flex min-w-0 flex-col gap-5 lg:col-start-1 lg:row-start-2">
             <ProductTabs sections={tabSections} />
+          </div>
+        </div>
+
+        <div
+          className={cn(
+            'fixed inset-x-0 bottom-0 z-30 border-t border-[var(--biolink-border)] bg-[var(--biolink-surface-strong)] px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] transition-[transform,visibility] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none lg:hidden',
+            railInView ? 'invisible translate-y-full' : 'visible translate-y-0',
+          )}
+        >
+          <div className="flex items-center justify-between gap-4">
+            <span className="text-base font-semibold tabular-nums">
+              {formatPrice(data.product.price_cents, data.product.currency)}
+            </span>
+            <Button
+              variant="ghost"
+              className={cn('shrink-0', buttonAppearance.className)}
+              style={buttonAppearance.style}
+              size="lg"
+              disabled={submitting}
+              onClick={() => setBuyerDialogOpen(true)}
+            >
+              <LockKeyholeIcon />
+              <Trans message="Buy now" />
+            </Button>
           </div>
         </div>
       </div>

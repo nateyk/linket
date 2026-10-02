@@ -7,6 +7,7 @@ import {Input} from '@shadcn/forms/input/input';
 import {Textarea} from '@shadcn/forms/textarea/textarea';
 import {Spinner} from '@shadcn/spinner/spinner';
 import {Trans} from '@ui/i18n/trans';
+import {useTrans} from '@ui/i18n/use-trans';
 import {formatMoney as formatPrice} from '@ui/i18n/format-money';
 import {message} from '@ui/i18n/message';
 import {FormattedDate} from '@ui/i18n/formatted-date';
@@ -268,7 +269,7 @@ function RecoveryRequest() {
         <div className="mx-auto flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary">
           <PackageOpenIcon className="size-5" />
         </div>
-        <h1 className="font-medium text-3xl">
+        <h1 className="text-3xl font-medium">
           <Trans message="Your purchases" />
         </h1>
         <p className="text-sm text-muted-foreground">
@@ -298,7 +299,9 @@ function RecoveryRequest() {
                 autoComplete="one-time-code"
                 maxLength={6}
                 value={code}
-                onChange={event => setCode(event.target.value.replace(/\D/g, ''))}
+                onChange={event =>
+                  setCode(event.target.value.replace(/\D/g, ''))
+                }
                 disabled={submitting}
                 bindToHookForm={false}
                 className="text-center font-mono text-xl tracking-[0.45em]"
@@ -325,7 +328,10 @@ function RecoveryRequest() {
         ) : (
           <>
             <div className="space-y-2">
-              <label htmlFor="purchase-recovery-email" className="text-sm font-medium">
+              <label
+                htmlFor="purchase-recovery-email"
+                className="text-sm font-medium"
+              >
                 <Trans message="Email address" />
               </label>
               <Input
@@ -345,7 +351,9 @@ function RecoveryRequest() {
                 <Alert.Title>
                   <Trans message="Unable to continue" />
                 </Alert.Title>
-                <Alert.Description>{error}</Alert.Description>
+                <Alert.Description>
+                  {error ? <Trans message={error} /> : null}
+                </Alert.Description>
               </Alert>
             )}
             <Button
@@ -490,7 +498,7 @@ function PurchaseOrders() {
             <Trans message="Session unavailable" />
           </Alert.Title>
           <Alert.Description>
-            <p>{error}</p>
+            <p>{error ? <Trans message={error} /> : null}</p>
             <Button
               className="mt-3"
               size="sm"
@@ -573,6 +581,7 @@ function PortalReviewDialog({
   const [review, setReview] = useState(order.review?.review ?? '');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string>();
+  const {trans} = useTrans();
 
   const submit = async () => {
     if (!stars) {
@@ -628,7 +637,7 @@ function PortalReviewDialog({
         <Dialog.Content className="sm:max-w-md">
           <Dialog.Header>
             <Dialog.Title>
-              <StarIcon className="text-amber-500" />
+              <StarIcon className="text-warning" />
               {order.review ? (
                 <Trans message="Edit your review" />
               ) : (
@@ -638,7 +647,10 @@ function PortalReviewDialog({
           </Dialog.Header>
           <Dialog.Body>
             <div className="space-y-4">
-              <div className="flex gap-1" aria-label="Star rating">
+              <div
+                className="flex gap-1"
+                aria-label={trans({message: 'Star rating'})}
+              >
                 {[1, 2, 3, 4, 5].map(value => (
                   <Button
                     key={value}
@@ -647,7 +659,10 @@ function PortalReviewDialog({
                     variant="ghost"
                     className="size-9"
                     onClick={() => setStars(value)}
-                    aria-label={`${value} stars`}
+                    aria-label={trans({
+                      message: '[one :value star|other :value stars]',
+                      values: {value},
+                    })}
                   >
                     <StarIcon
                       className={
@@ -684,7 +699,9 @@ function PortalReviewDialog({
               </Field.Root>
               {error && (
                 <Alert variant="destructive" fillStyle="subtleFill">
-                  <Alert.Description>{error}</Alert.Description>
+                  <Alert.Description>
+                    {error ? <Trans message={error} /> : null}
+                  </Alert.Description>
                 </Alert>
               )}
             </div>
