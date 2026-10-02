@@ -37,6 +37,10 @@ import {
   PackageIcon,
   InfoIcon,
 } from 'lucide-react';
+import {
+  looksLikeMarkdown,
+  renderMarkdownToHtml,
+} from './about-markdown';
 import {Link} from 'react-router';
 import {useRef, useState} from 'react';
 
@@ -246,7 +250,10 @@ function MobileCreatorProfile({
             activeIndex={biolinkNavItems.findIndex(item => item.value === activeTab)}
             onIndexChange={(idx: number) => {
               const item = biolinkNavItems[idx];
-              if (item) setActiveTab(item.value);
+              if (item) {
+                setActiveTab(item.value);
+                window.scrollTo({top: 0});
+              }
             }}
             radius={buttonAppearance.radius}
             activeButtonClassName={buttonAppearance.className}
@@ -531,17 +538,17 @@ function CreatorProfileContent({
             variant="line"
             aria-label={trans(message('Creator profile sections'))}
             indicatorClass="bg-[var(--biolink-accent)]!"
-            className="w-fit gap-1 bg-transparent p-1 text-[var(--biolink-muted-text)]"
+            className="w-fit gap-2 bg-transparent px-2 py-0 text-[var(--biolink-muted-text)]"
           >
             <Tabs.Tab
               value="products"
-              className="flex-none px-3 py-1 text-[var(--biolink-muted-text)] not-data-active:hover:text-[var(--biolink-text)]! data-active:text-[var(--biolink-accent)]! pointer-coarse:min-h-11"
+              className="flex-none px-3 py-2.5 text-[var(--biolink-muted-text)] not-data-active:hover:text-[var(--biolink-text)]! data-active:text-[var(--biolink-accent)]! pointer-coarse:min-h-11"
             >
               <Trans message="Products" />
             </Tabs.Tab>
             <Tabs.Tab
               value="about"
-              className="flex-none px-3 py-1 text-[var(--biolink-muted-text)] not-data-active:hover:text-[var(--biolink-text)]! data-active:text-[var(--biolink-accent)]! pointer-coarse:min-h-11"
+              className="flex-none px-3 py-2.5 text-[var(--biolink-muted-text)] not-data-active:hover:text-[var(--biolink-text)]! data-active:text-[var(--biolink-accent)]! pointer-coarse:min-h-11"
             >
               <Trans message="About" />
             </Tabs.Tab>
@@ -549,7 +556,7 @@ function CreatorProfileContent({
         </div>
         <div
           ref={panelScrollerRef}
-          className="min-h-0 flex-1 no-scrollbar @4xl:overflow-y-auto @4xl:overscroll-contain"
+          className="min-h-0 min-w-0 flex-1 no-scrollbar @4xl:overflow-y-auto @4xl:overscroll-contain"
         >
           <Tabs.Panel value="products">
             <ShopSection
@@ -599,7 +606,7 @@ function AboutSection({
   return (
     <Card.Root
       className={cn(
-        'gap-0 bg-[var(--biolink-surface)] text-[var(--biolink-text)] ring-1 ring-(color:--biolink-border) backdrop-blur-md',
+        'min-w-0 gap-0 bg-[var(--biolink-surface)] text-[var(--biolink-text)] ring-1 ring-(color:--biolink-border) backdrop-blur-md',
         containerRadius.className,
         compact ? 'p-3.5' : 'p-5 sm:p-6',
       )}
@@ -626,11 +633,15 @@ function AboutSection({
       )}
       <div
         className={cn(
-          'space-y-3 text-base leading-7 break-words text-[var(--biolink-muted-text)] [&_a]:font-medium [&_a]:text-[var(--biolink-text)] [&_a]:underline [&_a]:underline-offset-4 [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--biolink-border)] [&_blockquote]:pl-4 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:text-[var(--biolink-text)] [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:text-[var(--biolink-text)] [&_ol]:ml-5 [&_ol]:list-decimal [&_ul]:ml-5 [&_ul]:list-disc',
+          'space-y-3 text-start text-base leading-7 break-words text-[var(--biolink-muted-text)] [&_a]:font-medium [&_a]:text-[var(--biolink-text)] [&_a]:underline [&_a]:underline-offset-4 [&_blockquote]:border-s-2 [&_blockquote]:border-[var(--biolink-border)] [&_blockquote]:ps-4 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:text-balance [&_h2]:text-[var(--biolink-text)] [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:text-balance [&_h3]:text-[var(--biolink-text)] [&_h4]:text-base [&_h4]:font-semibold [&_h4]:text-[var(--biolink-text)] [&_hr]:my-4 [&_hr]:border-[var(--biolink-border)] [&_li]:mb-1.5 [&_li]:leading-7 [&_li::marker]:text-[var(--biolink-muted-text)] [&_ol]:ps-5 [&_ol]:list-decimal [&_p]:m-0 [&_strong]:font-semibold [&_strong]:text-[var(--biolink-text)] [&_ul]:ps-5 [&_ul]:list-disc',
           compact &&
             'line-clamp-6 text-sm leading-6 [&_h2]:text-base [&_h3]:text-sm',
         )}
-        dangerouslySetInnerHTML={{__html: profile.about_html}}
+        dangerouslySetInnerHTML={{
+          __html: looksLikeMarkdown(profile.about_html)
+            ? renderMarkdownToHtml(profile.about_html)
+            : profile.about_html,
+        }}
       />
     </Card.Root>
   );
