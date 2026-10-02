@@ -10,7 +10,7 @@ export function ProductGallery({product}: {product: PublicDigitalProduct}) {
 
   const fallback = (
     <div className="flex size-full min-h-64 flex-col items-center justify-center gap-3 bg-[var(--biolink-surface-muted)] px-6 text-center text-[var(--biolink-muted-text)] sm:min-h-80">
-      <span className="grid size-14 place-items-center rounded-card bg-[var(--biolink-surface-strong)] ring-1 ring-[var(--biolink-border)]">
+      <span className="grid size-14 place-items-center rounded-card bg-[var(--biolink-surface-strong)] ring-1 ring-(color:--biolink-border)">
         <PackageOpenIcon className="size-5" />
       </span>
       <span className="text-xs">

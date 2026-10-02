@@ -151,7 +151,11 @@ export function PublicDigitalProductPage({
 
   // The pricing rail is only sticky from lg up, so on phones the buy action
   // scrolls out of reach. A compact bottom bar takes over whenever the rail
-  // is off screen, and steps aside the moment the rail (or the dialog) is.
+  // is off screen. A cancelled/failed return always keeps the bar up too:
+  // the rail can still intersect the viewport while its CTA sits below the
+  // fold (alert above it), which is exactly the moment of hesitation that
+  // must keep an action above the fold. The bar steps aside while the buyer
+  // dialog is open.
   useEffect(() => {
     const rail = railRef.current;
     if (!rail || typeof IntersectionObserver === 'undefined') return;
@@ -263,7 +267,15 @@ export function PublicDigitalProductPage({
       backLabel={<Trans message="Back to bio" />}
       wide
     >
-      <div className="flex w-full flex-col gap-4 pb-24 sm:gap-5 lg:pb-0">
+      <div
+        className="flex w-full flex-col gap-4 pb-24 sm:gap-5 lg:pb-0"
+        // The buyer dialog is a true modal (Dialog.Root defaults to
+        // modal, re-stated below): while it is open the page behind must
+        // never be focusable or operable — belt-and-suspenders alongside
+        // Base UI's own focus trap, so a keyboard/SR buyer cannot reach the
+        // very Buy button the dialog sits on.
+        inert={buyerDialogOpen || undefined}
+      >
         <div className="grid min-w-0 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-6">
           <div className="flex min-w-0 flex-col gap-5 lg:col-start-1 lg:row-start-1">
             <Card.Root className={biolinkSurfaceCard}>
@@ -302,7 +314,11 @@ export function PublicDigitalProductPage({
         <div
           className={cn(
             'fixed inset-x-0 bottom-0 z-30 border-t border-[var(--biolink-border)] bg-[var(--biolink-surface-strong)] px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] transition-[transform,visibility] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none lg:hidden',
-            railInView ? 'invisible translate-y-full' : 'visible translate-y-0',
+            !railInView || checkoutCancelled || checkoutFailed
+              ? buyerDialogOpen
+                ? 'invisible translate-y-full'
+                : 'visible translate-y-0'
+              : 'invisible translate-y-full',
           )}
         >
           <div className="flex items-center justify-between gap-4">
@@ -326,6 +342,8 @@ export function PublicDigitalProductPage({
       <BuyerDetailsDialog
         appearance={data.appearance}
         product={data.product}
+        biolink={data.biolink}
+        creator={data.creator}
         open={buyerDialogOpen}
         submitting={submitting}
         name={buyerName}
@@ -382,7 +400,7 @@ export function PublicDigitalProductOrderSuccessPage({
       backUrl={data.back_url}
       backLabel={<Trans message="Back to bio" />}
     >
-      <Card.Root className="w-full max-w-xl gap-0 overflow-hidden bg-[var(--biolink-surface-strong)] py-0 text-[var(--biolink-text)] ring-1 ring-[var(--biolink-border)] backdrop-blur-xl">
+      <Card.Root className="w-full max-w-xl gap-0 overflow-hidden bg-[var(--biolink-surface-strong)] py-0 text-[var(--biolink-text)] ring-1 ring-(color:--biolink-border) backdrop-blur-xl">
         <div
           className={cn(
             'border-b px-5 py-5 sm:px-6',
@@ -457,6 +475,8 @@ export function PublicDigitalProductOrderSuccessPage({
 function BuyerDetailsDialog({
   appearance,
   product,
+  biolink,
+  creator,
   open,
   submitting,
   name,
@@ -471,6 +491,8 @@ function BuyerDetailsDialog({
 }: {
   appearance?: BiolinkAppearanceConfig | null;
   product: PublicDigitalProduct;
+  biolink: PublicBiolink;
+  creator?: PublicCreator | null;
   open: boolean;
   submitting: boolean;
   name: string;
@@ -487,10 +509,42 @@ function BuyerDetailsDialog({
   const themeVariables = resolveBiolinkThemeVariables(appearance);
   const {trans} = useTrans();
   const TypeIcon = productTypeIcon(product.type);
+  // Store identity for the payment moment: the buyer sees who takes the
+  // card before handing over PII — never an anonymous checkout.
+  const storeName =
+    biolink.profile_config?.display_name || creator?.name || biolink.name;
+  const nameInputRef = useRef<HTMLInputElement | null>(null);
+  const emailInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Validation errors are announced (Field.Error) but focus used to stay on
+  // the submit button — move it to the offending field so keyboard and SR
+  // buyers land where the fix happens.
+  useEffect(() => {
+    if (!open) return;
+    if (error === 'name') {
+      nameInputRef.current?.focus();
+    } else if (error === 'email') {
+      emailInputRef.current?.focus();
+    }
+  }, [error, open]);
+
+  // Initial focus belongs in the dialog, on the first field, the moment it
+  // opens — a visible stop that also proves the modal trap engaged.
+  useEffect(() => {
+    if (!open) return;
+    const timer = window.setTimeout(() => {
+      (nameInputRef.current ?? emailInputRef.current)?.focus();
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [open]);
 
   return (
     <Dialog.Root
       open={open}
+      // Explicit: payment is a true modal — focus is trapped, page scroll is
+      // locked, outside pointer interaction is disabled. Never weaken this
+      // to 'trap-focus' or false: the page behind holds a live Buy button.
+      modal
       onOpenChange={nextOpen => {
         if (!submitting || nextOpen) {
           onOpenChange(nextOpen);
@@ -533,12 +587,18 @@ function BuyerDetailsDialog({
                   className="size-10 shrink-0 rounded-card-xs object-cover"
                 />
               ) : (
-                <span className="grid size-10 shrink-0 place-items-center rounded-card-xs bg-[var(--biolink-surface-strong)] text-[var(--biolink-muted-text)] ring-1 ring-[var(--biolink-border)]">
+                <span className="grid size-10 shrink-0 place-items-center rounded-card-xs bg-[var(--biolink-surface-strong)] text-[var(--biolink-muted-text)] ring-1 ring-(color:--biolink-border)">
                   <TypeIcon className="size-5" aria-hidden="true" />
                 </span>
               )}
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{product.title}</p>
+                <p className="truncate text-xs font-medium text-[var(--biolink-muted-text)]">
+                  <Trans
+                    message="Sold by :store"
+                    values={{store: storeName}}
+                  />
+                </p>
                 <p className="text-xs font-medium text-[var(--biolink-muted-text)]">
                   <Trans message="Total" />
                 </p>
@@ -548,7 +608,7 @@ function BuyerDetailsDialog({
               </span>
             </div>
             <Dialog.Description className="text-[var(--biolink-muted-text)]">
-              <Trans message="You'll continue to your payment provider's secure checkout to pay, then return to this page." />
+              <Trans message="You'll continue to Chapa's secure checkout to pay, then return to this page." />
             </Dialog.Description>
           </Dialog.Header>
           <Dialog.Body>
@@ -565,6 +625,7 @@ function BuyerDetailsDialog({
                   <Trans message="Name" />
                 </Field.Label>
                 <Input
+                  ref={nameInputRef}
                   aria-invalid={error === 'name' ? true : undefined}
                   aria-describedby={
                     error === 'name'
@@ -588,6 +649,7 @@ function BuyerDetailsDialog({
                   <Trans message="Email" />
                 </Field.Label>
                 <Input
+                  ref={emailInputRef}
                   aria-invalid={error === 'email' ? true : undefined}
                   aria-describedby={
                     error === 'email'
@@ -620,7 +682,7 @@ function BuyerDetailsDialog({
                   onChange={event => onPhoneChange(event.target.value)}
                 />
                 <Field.Description className="text-[var(--biolink-muted-text)]">
-                  <Trans message="Only shared with your payment provider to process this payment." />
+                  <Trans message="Only shared with Chapa to process this payment." />
                 </Field.Description>
               </Field.Root>
               <ul className="flex flex-col gap-2 border-t border-[var(--biolink-border)] pt-4 text-sm text-[var(--biolink-muted-text)]">
@@ -637,6 +699,13 @@ function BuyerDetailsDialog({
                     aria-hidden="true"
                   />
                   <Trans message="We email your receipt and protected download links as soon as payment is confirmed." />
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle2Icon
+                    className="mt-0.5 size-4 shrink-0 text-positive"
+                    aria-hidden="true"
+                  />
+                  <Trans message="Digital delivery is instant; refunds are at the creator's discretion." />
                 </li>
               </ul>
             </form>
@@ -753,7 +822,13 @@ function PublicProductShell({
 }) {
   useEffect(() => {
     if (!appearance?.fontConfig) return;
-    loadFonts([appearance.fontConfig], {id: 'digital-product-fonts'});
+    // Painted fonts render at 400/500/600 in this UI (body, titles, prices)
+    // — load every weight the page computes so Oswald never falls back to
+    // synthesized bold in its condensed face.
+    loadFonts([appearance.fontConfig], {
+      id: 'digital-product-fonts',
+      weights: [400, 500, 600, 700],
+    });
   }, [appearance?.fontConfig]);
 
   return (
@@ -788,7 +863,7 @@ function BackToBio({
   children: React.ReactNode;
 }) {
   const className =
-    'inline-flex h-9 w-fit items-center gap-2 self-start rounded-button bg-[var(--biolink-surface-strong)] px-3 text-sm font-medium text-[var(--biolink-text)] shadow-xs ring-1 ring-[var(--biolink-border)] backdrop-blur-sm transition-colors hover:bg-[var(--biolink-surface)] focus-visible:outline-2 focus-visible:outline-offset-4';
+    'inline-flex h-9 w-fit items-center gap-2 self-start rounded-button bg-[var(--biolink-surface-strong)] px-3 text-sm font-medium text-[var(--biolink-text)] shadow-xs ring-1 ring-(color:--biolink-border) backdrop-blur-sm transition-colors hover:bg-[var(--biolink-surface)] focus-visible:outline-2 focus-visible:outline-offset-4';
 
   if (backUrl) {
     return (
@@ -1120,7 +1195,7 @@ function CourseCurriculum({
               >
                 <Accordion.Trigger>
                   <span className="flex min-w-0 flex-1 items-center gap-3">
-                    <span className="grid size-7 shrink-0 place-items-center rounded-card-xs bg-[var(--biolink-surface-strong)] text-xs font-semibold text-[var(--biolink-text)] tabular-nums ring-1 ring-[var(--biolink-border)]">
+                    <span className="grid size-7 shrink-0 place-items-center rounded-card-xs bg-[var(--biolink-surface-strong)] text-xs font-semibold text-[var(--biolink-text)] tabular-nums ring-1 ring-(color:--biolink-border)">
                       {index + 1}
                     </span>
                     <span className="flex min-w-0 flex-1 flex-col gap-0.5 text-start sm:flex-row sm:items-center sm:justify-between sm:gap-3">

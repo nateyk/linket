@@ -76,10 +76,25 @@ export function ProductPricingCard({
               </div>
             )}
           </div>
-          <span className="grid size-10 shrink-0 place-items-center rounded-card-sm bg-[var(--biolink-surface)] text-[var(--biolink-muted-text)] ring-1 ring-[var(--biolink-border)]">
+          <span className="grid size-10 shrink-0 place-items-center rounded-card-sm bg-[var(--biolink-surface)] text-[var(--biolink-muted-text)] ring-1 ring-(color:--biolink-border)">
             <TypeIcon className="size-5" aria-hidden="true" />
           </span>
         </div>
+
+        {/* The Buy action stays pinned directly under the price so a
+            cancelled/failed return never pushes the only recovery CTA below
+            the fold — the alerts below it carry their own Try again. */}
+        <Button
+          variant="ghost"
+          className={cn('w-full', buttonAppearance.className)}
+          style={buttonAppearance.style}
+          size="lg"
+          disabled={submitting}
+          onClick={onBuy}
+        >
+          <LockKeyholeIcon />
+          <Trans message="Buy now" />
+        </Button>
 
         {checkoutCancelled && (
           <Alert
@@ -94,6 +109,16 @@ export function ProductPricingCard({
             <Alert.Description className="text-[var(--biolink-muted-text,var(--color-muted-foreground))]!">
               <Trans message="Your product is still available when you are ready." />
             </Alert.Description>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-3 w-fit"
+              disabled={submitting}
+              onClick={onBuy}
+            >
+              <RefreshCwIcon />
+              <Trans message="Try again" />
+            </Button>
           </Alert>
         )}
         {checkoutFailed && (
@@ -109,24 +134,22 @@ export function ProductPricingCard({
             <Alert.Description className="text-[var(--biolink-muted-text,var(--color-muted-foreground))]!">
               <Trans message="Please try again in a moment." />
             </Alert.Description>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-3 w-fit"
+              disabled={submitting}
+              onClick={onBuy}
+            >
+              <RefreshCwIcon />
+              <Trans message="Try again" />
+            </Button>
           </Alert>
         )}
 
-        <Button
-          variant="ghost"
-          className={cn('w-full', buttonAppearance.className)}
-          style={buttonAppearance.style}
-          size="lg"
-          disabled={submitting}
-          onClick={onBuy}
-        >
-          <LockKeyholeIcon />
-          <Trans message="Buy now" />
-        </Button>
-
         <Separator className="bg-[var(--biolink-border)]" />
 
-        <ul className="flex flex-col gap-3 text-sm text-[var(--biolink-muted-text)]">
+        <ul className="flex flex-col gap-3 text-base text-[var(--biolink-muted-text)]">
           {isCourse ? (
             <>
               {typeof product.lessons_count === 'number' && (
@@ -167,7 +190,7 @@ export function ProductPricingCard({
           </IncludesItem>
         </ul>
 
-        <div className="flex items-start gap-2 rounded-card bg-[var(--biolink-surface)] p-3 text-sm text-[var(--biolink-muted-text)]">
+        <div className="flex items-start gap-2 rounded-card bg-[var(--biolink-surface)] p-3 text-base text-[var(--biolink-muted-text)]">
           <ShieldCheckIcon
             className="mt-0.5 size-4 shrink-0 text-positive"
             aria-hidden="true"
@@ -188,7 +211,7 @@ function IncludesItem({
 }) {
   return (
     <li className="flex items-start gap-3">
-      <span className="grid size-7 shrink-0 place-items-center rounded-card-xs bg-[var(--biolink-surface)] text-[var(--biolink-muted-text)] ring-1 ring-[var(--biolink-border)]">
+      <span className="grid size-7 shrink-0 place-items-center rounded-card-xs bg-[var(--biolink-surface)] text-[var(--biolink-muted-text)] ring-1 ring-(color:--biolink-border)">
         <Icon className="size-4" aria-hidden="true" />
       </span>
       <span className="min-w-0 flex-1 pt-1 leading-5">{children}</span>

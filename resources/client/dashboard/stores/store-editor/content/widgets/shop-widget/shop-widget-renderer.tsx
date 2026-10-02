@@ -5,6 +5,8 @@ import {resolveBiolinkButtonAppearance} from '@app/short-links/renderers/biolink
 import {apiClient} from '@common/http/query-client';
 import {Button} from '@shadcn/button/button';
 import {Trans} from '@ui/i18n/trans';
+import {message} from '@ui/i18n/message';
+import {useTrans} from '@ui/i18n/use-trans';
 import {formatMoney} from '@ui/i18n/format-money';
 import {useEffect, useState} from 'react';
 import type {ReactNode} from 'react';
@@ -34,6 +36,7 @@ export function ShopWidgetRenderer({
   const productIdsKey = productIds.join(',');
   const storeId = biolink?.id;
   const [products, setProducts] = useState<Product[]>([]);
+  const {trans} = useTrans();
 
   useEffect(() => {
     if (variant !== 'biolinkPage' || !storeId) {
@@ -131,13 +134,18 @@ export function ShopWidgetRenderer({
                   size="sm"
                   className={buttonAppearance.className}
                   style={buttonAppearance.style}
+                  aria-label={trans(
+                    message('View :title', {
+                      values: {title: product.title},
+                    }),
+                  )}
                   render={<a href={href} />}
                 >
                   <Trans message="View" />
                 </Button>
               }
               classNames={{
-                root: 'bg-[var(--biolink-surface)] text-[var(--biolink-text)] shadow-none ring-[var(--biolink-border)]',
+                root: 'bg-[var(--biolink-surface)] text-[var(--biolink-text)] shadow-none ring-1 ring-(color:--biolink-border)',
                 media: 'bg-[var(--biolink-surface-muted)]',
                 title: 'text-base leading-snug',
                 price: 'text-lg tracking-tight tabular-nums',

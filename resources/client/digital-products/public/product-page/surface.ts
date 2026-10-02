@@ -8,7 +8,7 @@
  * (Flat-By-Default).
  */
 export const biolinkSurfaceCard =
-  'gap-0 overflow-hidden bg-[var(--biolink-surface-strong,color-mix(in_srgb,var(--color-background)_94%,transparent))] py-0 text-[var(--biolink-text,var(--color-foreground))] ring-1 ring-[var(--biolink-border,color-mix(in_srgb,var(--color-foreground)_12%,transparent))]';
+  'gap-0 overflow-hidden bg-[var(--biolink-surface-strong,color-mix(in_srgb,var(--color-background)_94%,transparent))] py-0 text-[var(--biolink-text,var(--color-foreground))] ring-1 ring-(color:--biolink-border)';
 
 export const biolinkSurfaceContent = 'flex min-w-0 flex-col gap-5 p-5 sm:p-6';
 

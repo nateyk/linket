@@ -25,7 +25,7 @@ export function ProductTabs({sections}: {sections: ProductTabSection[]}) {
 
   return (
     <Tabs.Root defaultValue={sections[0].value} className="min-w-0 gap-4">
-      <div className="sticky top-0 z-20 flex snap-x snap-mandatory scroll-px-1 scrollbar-none overflow-x-auto overscroll-x-contain rounded-card bg-[var(--biolink-surface-strong)] p-1 ring-1 ring-[var(--biolink-border)]">
+      <div className="sticky top-0 z-20 flex snap-x snap-mandatory scroll-px-1 scrollbar-none overflow-x-auto overscroll-x-contain rounded-card bg-[var(--biolink-surface-strong)] p-1 ring-1 ring-(color:--biolink-border)">
         <Tabs.List
           variant="line"
           aria-label={trans({message: 'Product information'})}

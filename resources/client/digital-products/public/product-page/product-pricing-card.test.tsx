@@ -43,12 +43,12 @@ describe('product pricing card', () => {
     expect(source).not.toMatch(/refund|money-back|money back|guarantee/i);
   });
 
-  test('sentences sit at 14px; 12px is reserved for the badge label', () => {
+  test('sentences sit at 16px; 12px is reserved for the badge label', () => {
     const source = readSource();
 
     // The trust note is prose, not metadata.
     expect(source).toContain(
-      'p-3 text-sm text-[var(--biolink-muted-text)]',
+      'p-3 text-base text-[var(--biolink-muted-text)]',
     );
     expect(source).not.toContain('p-3 text-xs');
     // "One-time purchase" stays a 12px uppercase badge label.

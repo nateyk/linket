@@ -24,11 +24,11 @@ export function ProductOverview({product}: {product: PublicDigitalProduct}) {
               <Trans message="About this product" />
             </h2>
             {text ? (
-              <p className="text-sm leading-6 whitespace-pre-line text-[var(--biolink-muted-text)]">
+              <p className="text-base leading-7 whitespace-pre-line text-[var(--biolink-muted-text)]">
                 {text}
               </p>
             ) : (
-              <p className="text-sm text-[var(--biolink-muted-text)]">
+              <p className="text-base text-[var(--biolink-muted-text)]">
                 <Trans message="No product details have been added yet." />
               </p>
             )}
@@ -48,7 +48,7 @@ export function ProductOverview({product}: {product: PublicDigitalProduct}) {
             <ul className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
               {outcomes.map((outcome, index) => (
                 <li key={index} className="flex items-start gap-2.5 text-sm">
-                  <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-[var(--biolink-surface)] ring-1 ring-[var(--biolink-border)]">
+                  <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-[var(--biolink-surface)] ring-1 ring-(color:--biolink-border)">
                     <CheckIcon
                       className="size-3 text-[var(--biolink-text)]"
                       aria-hidden="true"

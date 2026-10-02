@@ -15,9 +15,10 @@ type FaqEntry = {
  * type (App\Storefront\ProductFileFormats via bootstrap data).
  *
  * Only system-true questions are asked: receipt delivery, the My Orders
- * email-code portal, file formats and guest checkout. No refund or
- * policy question appears because no creator refund policy exists to
- * state.
+ * email-code portal, file formats and guest checkout — plus the one refund
+ * stance this repo can state as fact: delivery is instant, so refunds rest
+ * with the creator. No window, guarantee, or support promise is offered
+ * because none exists to state.
  */
 export function ProductFaq({product}: {product: PublicDigitalProduct}) {
   const isCourse = !!product.is_course;
@@ -77,6 +78,13 @@ export function ProductFaq({product}: {product: PublicDigitalProduct}) {
     ),
   });
 
+  entries.push({
+    question: <Trans message="What is the refund policy?" />,
+    answer: (
+      <Trans message="Digital delivery is instant; refunds are at the creator's discretion. Contact the creator through their store if something is wrong with your purchase." />
+    ),
+  });
+
   return (
     <section className="flex min-w-0 flex-col gap-3 border-t border-[var(--biolink-border)] pt-5">
       <h3 className="text-sm font-semibold">
@@ -88,7 +96,7 @@ export function ProductFaq({product}: {product: PublicDigitalProduct}) {
             <dt className="text-sm font-medium text-[var(--biolink-text)]">
               {entry.question}
             </dt>
-            <dd className="text-sm leading-6 text-[var(--biolink-muted-text)]">
+            <dd className="text-base leading-7 text-[var(--biolink-muted-text)]">
               {entry.answer}
             </dd>
           </div>

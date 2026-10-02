@@ -24,14 +24,20 @@ export function plainTextDescription(value: string): string {
  *
  * Degrades gracefully: missing / blank / markup-only descriptions return
  * null so callers render no block at all — never an empty one. A short
- * description comes through verbatim (one sentence, or two when they both
- * fit the cap).
+ * description that already fits the cap also returns null: the Overview
+ * section below renders it in full, so a deck would repeat the lead
+ * sentence verbatim and read as filler. Only long descriptions earn a deck,
+ * and the truncation (word-boundary cut + ellipsis) keeps it visibly a
+ * teaser rather than a duplicate.
  */
 export function productDeck(description?: string | null): string | null {
   const text = plainTextDescription(description ?? '')
     .replace(/\s+/g, ' ')
     .trim();
   if (!text) return null;
+
+  // Short descriptions live in full in the Overview — no deck, no duplicate.
+  if (text.length <= DECK_MAX_LENGTH) return null;
 
   const sentences = (text.match(/[^.!?]+[.!?]*/g) ?? [text])
     .map(sentence => sentence.trim())

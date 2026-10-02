@@ -67,7 +67,10 @@ export function BiolinkLayout({
   useEffect(() => {
     const id = 'biolink-fonts';
     if (appearance?.fontConfig) {
-      loadFonts([appearance?.fontConfig], {id});
+      loadFonts([appearance?.fontConfig], {
+        id,
+        weights: [400, 500, 600, 700],
+      });
     }
   }, [appearance?.fontConfig]);
 
@@ -334,6 +337,7 @@ function LinkButton({link, appearance}: LinkButtonProps) {
       style={buttonAppearance.style}
       target="_blank"
       href={link.short_url}
+      aria-label={link.name || link.short_url}
     >
       {link.image ? (
         <img
@@ -346,7 +350,7 @@ function LinkButton({link, appearance}: LinkButtonProps) {
           loading="lazy"
         />
       ) : null}
-      {link.name}
+      {link.name || link.short_url}
     </a>
   );
 }

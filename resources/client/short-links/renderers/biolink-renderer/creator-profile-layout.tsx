@@ -168,53 +168,76 @@ function MobileCreatorProfile({
   ];
   const buttonAppearance = resolveBiolinkButtonAppearance(appearance);
 
+  // Mobile is navigation, not tabs: the bottom bar is a real nav (buttons
+  // with aria-pressed) switching plain sections — never a tablist without
+  // tabs, which announced toggles as tabpanels with no associated tab.
+  // Each section carries its own translated label for AT.
+  const sectionLabel =
+    activeTab === 'products'
+      ? trans(message('Products'))
+      : activeTab === 'about'
+        ? trans(message('About'))
+        : trans(message('Profile'));
+
   return (
-    <Tabs.Root
-      value={activeTab}
-      onValueChange={setActiveTab}
+    <div
       className={cn(
         'relative min-w-0 gap-0',
         compact && 'flex min-h-full flex-col justify-start',
       )}
     >
-      <Tabs.Panel
-        value="profile"
-        className={cn('min-w-0', compact ? 'pb-0' : 'pb-20')}
-      >
-        <CreatorCard
-          biolink={biolink}
-          appearance={appearance}
-          profile={profile}
-          compact={compact}
-        />
-        {showAds && (
-          <div className="mt-4">
-            <AdHost slot="biolink_top" />
-          </div>
-        )}
-      </Tabs.Panel>
-
-      {hasProducts && (
-        <Tabs.Panel
-          value="products"
-          className={cn('min-w-0', compact ? 'pb-0' : 'pb-20')}
+      {activeTab === 'profile' && (
+        <section
+          aria-label={trans(message('Profile'))}
+          className={cn(
+            'min-w-0 focus-visible:outline-2 focus-visible:outline-offset-2',
+            compact ? 'pb-0' : 'pb-20',
+          )}
         >
-          <ShopSection widget={shopWidget} biolink={biolink} />
-        </Tabs.Panel>
+          <CreatorCard
+            biolink={biolink}
+            appearance={appearance}
+            profile={profile}
+            compact={compact}
+          />
+          {showAds && (
+            <div className="mt-4">
+              <AdHost slot="biolink_top" />
+            </div>
+          )}
+        </section>
       )}
 
-      {hasAbout && (
-        <Tabs.Panel
-          value="about"
-          className={cn('min-w-0', compact ? 'pb-0' : 'pb-20')}
+      {hasProducts && activeTab === 'products' && (
+        <section
+          aria-label={trans(message('Products'))}
+          className={cn(
+            'min-w-0 focus-visible:outline-2 focus-visible:outline-offset-2',
+            compact ? 'pb-0' : 'pb-20',
+          )}
+        >
+          <ShopSection widget={shopWidget} biolink={biolink} />
+        </section>
+      )}
+
+      {hasAbout && activeTab === 'about' && (
+        <section
+          aria-label={trans(message('About'))}
+          className={cn(
+            'min-w-0 focus-visible:outline-2 focus-visible:outline-offset-2',
+            compact ? 'pb-0' : 'pb-20',
+          )}
         >
           <AboutSection
             profile={profile}
             appearance={appearance}
             compact={compact}
           />
-        </Tabs.Panel>
+        </section>
       )}
+      <span className="sr-only" role="status">
+        {sectionLabel}
+      </span>
 
       {showNavigation && (
         <div className="flex justify-center py-6 @4xl:hidden">
@@ -232,7 +255,7 @@ function MobileCreatorProfile({
           />
         </div>
       )}
-    </Tabs.Root>
+    </div>
   );
 }
 
@@ -270,7 +293,7 @@ function CreatorCard({
   return (
     <Card.Root
       className={cn(
-        'gap-0 py-0 bg-[var(--biolink-surface)] text-[var(--biolink-text)] ring-1 ring-[var(--biolink-border)] backdrop-blur-md',
+        'gap-0 py-0 bg-[var(--biolink-surface)] text-[var(--biolink-text)] ring-1 ring-(color:--biolink-border) backdrop-blur-md',
         !compact && '@4xl:sticky @4xl:top-8',
         containerRadius.className,
       )}
@@ -419,7 +442,7 @@ function CreatorCard({
                     rel="noreferrer"
                     variant="ghost"
                     size="icon-sm"
-                    aria-label={trans(social.name)}
+                    aria-label={trans(social.name) || type}
                     className={buttonAppearance.className}
                     style={buttonAppearance.style}
                   >
@@ -497,13 +520,13 @@ function CreatorProfileContent({
           >
             <Tabs.Tab
               value="products"
-              className="flex-none px-3 py-1 text-[var(--biolink-muted-text)] not-data-active:hover:text-[var(--biolink-text)]! data-active:text-[var(--biolink-accent)]!"
+              className="flex-none px-3 py-1 text-[var(--biolink-muted-text)] not-data-active:hover:text-[var(--biolink-text)]! data-active:text-[var(--biolink-accent)]! pointer-coarse:min-h-11"
             >
               <Trans message="Products" />
             </Tabs.Tab>
             <Tabs.Tab
               value="about"
-              className="flex-none px-3 py-1 text-[var(--biolink-muted-text)] not-data-active:hover:text-[var(--biolink-text)]! data-active:text-[var(--biolink-accent)]!"
+              className="flex-none px-3 py-1 text-[var(--biolink-muted-text)] not-data-active:hover:text-[var(--biolink-text)]! data-active:text-[var(--biolink-accent)]! pointer-coarse:min-h-11"
             >
               <Trans message="About" />
             </Tabs.Tab>
@@ -552,7 +575,7 @@ function AboutSection({
   return (
     <Card.Root
       className={cn(
-        'gap-0 bg-[var(--biolink-surface)] text-[var(--biolink-text)] ring-1 ring-[var(--biolink-border)] backdrop-blur-md',
+        'gap-0 bg-[var(--biolink-surface)] text-[var(--biolink-text)] ring-1 ring-(color:--biolink-border) backdrop-blur-md',
         containerRadius.className,
         compact ? 'p-3.5' : 'p-5 sm:p-6',
       )}
@@ -570,9 +593,9 @@ function AboutSection({
       </div>
       <div
         className={cn(
-          'space-y-3 text-sm leading-7 break-words text-[var(--biolink-muted-text)] [&_a]:font-medium [&_a]:text-[var(--biolink-text)] [&_a]:underline [&_a]:underline-offset-4 [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--biolink-border)] [&_blockquote]:pl-4 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:text-[var(--biolink-text)] [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:text-[var(--biolink-text)] [&_ol]:ml-5 [&_ol]:list-decimal [&_ul]:ml-5 [&_ul]:list-disc',
+          'space-y-3 text-base leading-7 break-words text-[var(--biolink-muted-text)] [&_a]:font-medium [&_a]:text-[var(--biolink-text)] [&_a]:underline [&_a]:underline-offset-4 [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--biolink-border)] [&_blockquote]:pl-4 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:text-[var(--biolink-text)] [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:text-[var(--biolink-text)] [&_ol]:ml-5 [&_ol]:list-decimal [&_ul]:ml-5 [&_ul]:list-disc',
           compact &&
-            'line-clamp-6 text-xs leading-5 [&_h2]:text-base [&_h3]:text-sm',
+            'line-clamp-6 text-sm leading-6 [&_h2]:text-base [&_h3]:text-sm',
         )}
         dangerouslySetInnerHTML={{__html: profile.about_html}}
       />

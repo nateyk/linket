@@ -12,16 +12,16 @@ describe('product deck', () => {
     expect(productDeck('<p> </p>')).toBeNull();
   });
 
-  test('passes a short description through verbatim', () => {
-    expect(productDeck('A compact Figma course.')).toBe(
-      'A compact Figma course.',
-    );
+  test('renders nothing for short descriptions — the Overview shows them in full', () => {
+    // A deck that fits the cap would repeat the Overview lead verbatim, so
+    // short descriptions earn no deck at all.
+    expect(productDeck('A compact Figma course.')).toBeNull();
   });
 
-  test('keeps a second sentence when both fit the cap', () => {
-    expect(productDeck('Learn Figma fast. Build three real projects.')).toBe(
-      'Learn Figma fast. Build three real projects.',
-    );
+  test('renders nothing when two sentences already fit the cap', () => {
+    expect(
+      productDeck('Learn Figma fast. Build three real projects.'),
+    ).toBeNull();
   });
 
   test('keeps only the first sentence when two sentences exceed the cap', () => {
@@ -42,9 +42,8 @@ describe('product deck', () => {
   });
 
   test('strips markup and collapses whitespace', () => {
-    expect(productDeck('<p>Rich  <strong>text</strong>\n here.</p>')).toBe(
-      'Rich text here.',
-    );
+    // Short after stripping → no deck (Overview carries it in full).
+    expect(productDeck('<p>Rich  <strong>text</strong>\n here.</p>')).toBeNull();
   });
 });
 
@@ -72,15 +71,20 @@ describe('product page mounting', () => {
     );
   });
 
-  test('FAQ copy never promises refunds or guarantees', () => {
+  test('FAQ states the single factual refund stance — never a guarantee', () => {
     const source = read('product-faq.tsx');
     const messages = [...source.matchAll(/message="([^"]+)"/g)].map(
       match => match[1],
     );
     expect(messages.length).toBeGreaterThan(0);
+    // The one allowed stance: instant delivery, refunds at creator discretion.
+    expect(messages).toContain(
+      "Digital delivery is instant; refunds are at the creator's discretion. Contact the creator through their store if something is wrong with your purchase.",
+    );
+    // No money-back promise, guarantee, or refund window exists to offer.
     expect(
       messages.filter(message =>
-        /refund|money.back|guarantee/i.test(message),
+        /money.back|guarantee|refund window/i.test(message),
       ),
     ).toEqual([]);
   });

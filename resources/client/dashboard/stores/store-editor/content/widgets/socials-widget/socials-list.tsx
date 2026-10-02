@@ -105,7 +105,7 @@ export const SocialsList: Record<SocialsType, SocialsListItem> = {
     icon: <SiBandcamp />,
   },
   [SocialsType.LinkedIn]: {
-    name: message('LinkedIn url'),
+    name: message('LinkedIn'),
     placeholder: 'https://linkedin.com/in/username',
     inputType: 'url',
     pattern: 'https://(www.)?linkedin.com/[a-zA-Z0-9._%-]+/[a-zA-Z0-9._%-]+$',

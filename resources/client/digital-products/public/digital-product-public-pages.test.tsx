@@ -69,10 +69,18 @@ describe('buyer payment dialog', () => {
     // The submit action admits that payment happens on the provider's page.
     expect(page).toContain("'Continue to secure checkout'");
     expect(page).toContain(
-      "You'll continue to your payment provider's secure checkout to pay, then return to this page.",
+      "You'll continue to Chapa's secure checkout to pay, then return to this page.",
     );
-    // Facts only: no refund policy exists in this repo, so none may be promised.
-    expect(page).not.toMatch(/money-back|refund/i);
+    // The dialog names the counterparty: store identity travels with the
+    // product recap, and the provider is named (Chapa powers checkout).
+    expect(page).toContain('Sold by :store');
+    // Facts only: instant delivery with refunds at the creator's discretion
+    // is the single refund stance this repo can state — no money-back
+    // guarantee or refund window may be promised.
+    expect(page).toContain(
+      "Digital delivery is instant; refunds are at the creator's discretion.",
+    );
+    expect(page).not.toMatch(/money-back|guarantee|refund window/i);
   });
 
   test('keeps a visible, translated close control and the mid-submit guard', () => {
