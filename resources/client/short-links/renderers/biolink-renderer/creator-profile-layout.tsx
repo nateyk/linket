@@ -540,7 +540,7 @@ function CreatorProfileContent({
             </Tabs.Tab>
           </Tabs.List>
         </div>
-        <div className="biolink-scrollbar min-h-0 flex-1 @4xl:overflow-y-auto @4xl:overscroll-contain @4xl:pe-1">
+        <div className="min-h-0 flex-1 no-scrollbar @4xl:overflow-y-auto @4xl:overscroll-contain">
           <Tabs.Panel value="products">
             <ShopSection
               widget={shopWidget}
