@@ -38,7 +38,7 @@ import {
   InfoIcon,
 } from 'lucide-react';
 import {Link} from 'react-router';
-import {useEffect, useRef, useState} from 'react';
+import {useState} from 'react';
 
 interface CreatorProfileLayoutProps {
   biolink: Biolink;
@@ -506,52 +506,12 @@ function CreatorProfileContent({
   const hasAbout = hasVisibleAbout(profile.about_html);
   const {trans} = useTrans();
 
-  // The strip is transparent at rest (boxless line-tab look) and gains the
-  // painted surface bar only while stuck, so scrolled content never shows
-  // through the labels. getComputedStyle resolves the breakpoint-specific
-  // sticky offset (top-5 / sm:top-8 / @4xl:top-10); the strip is stuck
-  // exactly when the viewport has scrolled it down to that offset.
-  const stripRef = useRef<HTMLDivElement>(null);
-  const [stripStuck, setStripStuck] = useState(false);
-  useEffect(() => {
-    const strip = stripRef.current;
-    if (!strip) return;
-    let raf = 0;
-    const update = () => {
-      raf = 0;
-      const offset = Number.parseFloat(getComputedStyle(strip).top) || 0;
-      const stuck =
-        window.scrollY > 0 &&
-        strip.getBoundingClientRect().top <= offset + 1;
-      setStripStuck(previous => (previous === stuck ? previous : stuck));
-    };
-    const schedule = () => {
-      if (!raf) raf = requestAnimationFrame(update);
-    };
-    update();
-    window.addEventListener('scroll', schedule, {passive: true});
-    window.addEventListener('resize', schedule);
-    return () => {
-      window.removeEventListener('scroll', schedule);
-      window.removeEventListener('resize', schedule);
-      if (raf) cancelAnimationFrame(raf);
-    };
-  }, []);
-
   if (!hasProducts && !hasAbout) return null;
 
   if (hasProducts && hasAbout) {
     return (
       <Tabs.Root defaultValue="products" className="min-w-0 gap-4">
-        <div
-          ref={stripRef}
-          className={cn(
-            'sticky top-5 z-10 border-b border-[var(--biolink-border)] sm:top-8 @4xl:top-10',
-            stripStuck
-              ? 'bg-[var(--biolink-surface-strong)]'
-              : 'bg-transparent',
-          )}
-        >
+        <div className="sticky top-5 z-10 border-b border-[var(--biolink-border)] bg-[var(--biolink-surface-strong)] sm:top-8 @4xl:top-10">
           <Tabs.List
             variant="line"
             aria-label={trans(message('Creator profile sections'))}
