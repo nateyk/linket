@@ -38,7 +38,7 @@ import {
   InfoIcon,
 } from 'lucide-react';
 import {Link} from 'react-router';
-import {useState} from 'react';
+import {useRef, useState} from 'react';
 
 interface CreatorProfileLayoutProps {
   biolink: Biolink;
@@ -506,6 +506,10 @@ function CreatorProfileContent({
   const hasAbout = hasVisibleAbout(profile.about_html);
   const {trans} = useTrans();
 
+  // Both panels share one scroll container, so without this a tab switch
+  // would open the new panel at the old panel's scroll position.
+  const panelScrollerRef = useRef<HTMLDivElement>(null);
+
   if (!hasProducts && !hasAbout) return null;
 
   if (hasProducts && hasAbout) {
@@ -518,6 +522,9 @@ function CreatorProfileContent({
       <Tabs.Root
         defaultValue="products"
         className="min-w-0 gap-4 @4xl:max-h-[calc(100dvh-5rem)]"
+        onValueChange={() => {
+          panelScrollerRef.current?.scrollTo({top: 0});
+        }}
       >
         <div className="shrink-0 border-b border-[var(--biolink-border)]">
           <Tabs.List
@@ -540,7 +547,10 @@ function CreatorProfileContent({
             </Tabs.Tab>
           </Tabs.List>
         </div>
-        <div className="min-h-0 flex-1 no-scrollbar @4xl:overflow-y-auto @4xl:overscroll-contain">
+        <div
+          ref={panelScrollerRef}
+          className="min-h-0 flex-1 no-scrollbar @4xl:overflow-y-auto @4xl:overscroll-contain"
+        >
           <Tabs.Panel value="products">
             <ShopSection
               widget={shopWidget}
