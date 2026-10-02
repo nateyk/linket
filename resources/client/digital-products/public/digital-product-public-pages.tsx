@@ -187,16 +187,14 @@ export function PublicDigitalProductPage({
   const reviewsEnabled = data.reviews_enabled !== false;
   const tabSections: ProductTabSection[] = [];
 
-  if (
-    data.product.description ||
-    (data.product.learning_outcomes?.length ?? 0) > 0
-  ) {
-    tabSections.push({
-      value: 'overview',
-      label: <Trans message="Overview" />,
-      content: <ProductOverview product={data.product} />,
-    });
-  }
+  // The overview card always renders: even with no description or learning
+  // outcomes it carries the system FAQ (receipt, My Orders portal, formats,
+  // guest checkout), which must stay reachable pre-purchase.
+  tabSections.push({
+    value: 'overview',
+    label: <Trans message="Overview" />,
+    content: <ProductOverview product={data.product} />,
+  });
 
   if (data.product.is_course && data.product.course_id) {
     tabSections.push({

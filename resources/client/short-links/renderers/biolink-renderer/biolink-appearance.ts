@@ -154,9 +154,7 @@ export function resolveBiolinkButtonAppearance(
   const shadow = appearance?.btnConfig?.shadow ?? 'none';
   const buttonColor = appearance?.btnConfig?.color;
   const buttonTextColor = appearance?.btnConfig?.textColor;
-  const parsedButtonText = buttonTextColor
-    ? parseColor(buttonTextColor)
-    : null;
+  const parsedButtonText = buttonTextColor ? parseColor(buttonTextColor) : null;
 
   // The painted page behind the buttons. Every field is null on a default
   // appearance, where the theme tokens below stay in charge: the default
@@ -250,8 +248,7 @@ export function resolveBiolinkButtonAppearance(
     '--biolink-button-background': backgrounds.base,
     '--biolink-button-hover': backgrounds.hover,
     '--biolink-button-pressed': backgrounds.pressed,
-    '--biolink-button-border':
-      variant === 'glass' ? 'transparent' : face,
+    '--biolink-button-border': variant === 'glass' ? 'transparent' : face,
     '--biolink-button-text': label,
     '--biolink-button-focus': focus,
     boxShadow: availableShadows[shadow],
@@ -397,9 +394,7 @@ export function resolveBiolinkThemeVariables(
     };
   }
 
-  const surfaceColor = chooseHighestContrastSurface(
-    background.foregroundColor,
-  );
+  const surfaceColor = chooseHighestContrastSurface(background.foregroundColor);
   const surfaceBase = surfaceColor.toString({format: 'hex'});
   const mutedText = resolveMutedTextColor(
     background.foregroundColor,
@@ -514,16 +509,21 @@ interface BiolinkAccentPair {
  * follows `--be-primary`, which only holds the lifted value in the dark
  * scheme — so the literal is the scheme-independent choice here.
  *
- * A light surface stays on the theme pair (`var(--color-primary)` at 7.50:1 on
- * white), exactly the values an unpainted store renders, because there the
- * theme's own surfaces are what the pair was tuned for.
+ * A light surface gets the same scheme-independent treatment, mirrored:
+ * `var(--color-primary)` only holds Counter Blue while the OS scheme is
+ * light — a dark OS scheme flips it to the 88.2% lifted twin, which lands
+ * at 1.42:1 on that very light surface. The literal `oklch(46% 0.214
+ * 259.815)` (DESIGN.md Counter Blue = `#0049cc`, 7.43:1 on white) with its
+ * label `oklch(0.9911 0 190.05)` (7.25:1 on the fill) renders identically
+ * in both schemes, exactly matching what an unpainted store shows under
+ * the light scheme these painted panels emulate.
  */
 function resolveAccentPair(surface: Color): BiolinkAccentPair {
   if (isLightSurface(surface)) {
     return {
-      accent: 'var(--color-primary)',
-      accentForeground: 'var(--color-primary-foreground)',
-      focus: 'var(--be-primary)',
+      accent: 'oklch(46% 0.214 259.815)',
+      accentForeground: 'oklch(0.9911 0 190.05)',
+      focus: 'oklch(46% 0.214 259.815)',
     };
   }
 
@@ -629,9 +629,7 @@ function passesAgainstSeats(color: string, seats: Color[]): boolean {
     return false;
   }
 
-  return seats.every(
-    seat => contrastRatio(parsed, seat) >= MIN_TEXT_CONTRAST,
-  );
+  return seats.every(seat => contrastRatio(parsed, seat) >= MIN_TEXT_CONTRAST);
 }
 
 /**

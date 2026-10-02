@@ -31,13 +31,14 @@ export function ProductGallery({product}: {product: PublicDigitalProduct}) {
           cover={product.cover}
           alt={product.title}
           className="size-full"
+          loading="eager"
           fallback={fallback}
         />
       ) : (
         fallback
       )}
 
-      <span className="absolute top-4 start-4 inline-flex h-5 items-center gap-1.5 rounded-card-sm border border-[var(--biolink-border)] bg-[var(--biolink-surface-strong)] px-2 text-xs font-medium text-[var(--biolink-text)]">
+      <span className="absolute start-4 top-4 inline-flex h-5 items-center gap-1.5 rounded-card-sm border border-[var(--biolink-border)] bg-[var(--biolink-surface-strong)] px-2 text-xs font-medium text-[var(--biolink-text)]">
         <TypeIcon className="size-3.5 shrink-0" aria-hidden="true" />
         <ProductTypeLabel type={product.type} />
       </span>

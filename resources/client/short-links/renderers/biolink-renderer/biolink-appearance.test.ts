@@ -284,9 +284,7 @@ describe('creator profile card wiring', () => {
 
     // The shell is a Card, so the card primitive has to be flat too.
     const cardPrimitive = fs.readFileSync(
-      path.resolve(
-        'common/foundation/resources/client/shadcn/card/card.tsx',
-      ),
+      path.resolve('common/foundation/resources/client/shadcn/card/card.tsx'),
       'utf8',
     );
     const cardRoot = cardPrimitive.match(/'group\/card[^']*'/)?.[0];
@@ -460,8 +458,7 @@ describe('creator profile editor wiring', () => {
   });
 });
 
-const LIGHT_GREEN_GRADIENT =
-  'linear-gradient(90deg, #56ab2f, #a8e063)';
+const LIGHT_GREEN_GRADIENT = 'linear-gradient(90deg, #56ab2f, #a8e063)';
 const MAUVE_GRADIENT = 'linear-gradient(90deg, #b79891, #94716b)';
 const DARK_GRADIENT = 'linear-gradient(90deg, #29323c, #485563)';
 
@@ -522,9 +519,9 @@ describe('storefront appearance contrast', () => {
   test('P0-1 explicit white on dark gradient is respected untouched (white vs #394450 9.92:1)', () => {
     const average = sampleGradientAverage(DARK_GRADIENT);
     expect(average).toBe('#394450');
-    expect(measuredContrast('#ffffff', average as string)).toBeGreaterThanOrEqual(
-      MIN_TEXT_CONTRAST,
-    );
+    expect(
+      measuredContrast('#ffffff', average as string),
+    ).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST);
 
     const variables = resolveBiolinkThemeVariables({
       bgConfig: {backgroundImage: DARK_GRADIENT, color: '#ffffff'},
@@ -606,7 +603,9 @@ describe('storefront appearance contrast', () => {
     const appearance = resolveBiolinkButtonAppearance({
       btnConfig: {color: '#ffffff'},
     });
-    expect(buttonVars(appearance)['--biolink-button-background']).toBe('#ffffff');
+    expect(buttonVars(appearance)['--biolink-button-background']).toBe(
+      '#ffffff',
+    );
     expect(buttonVars(appearance)['--biolink-button-text']).toBe('#000000');
     expect(measuredContrast('#000000', '#ffffff').toFixed(2)).toBe('21.00');
   });
@@ -622,7 +621,9 @@ describe('storefront appearance contrast', () => {
     const appearance = resolveBiolinkButtonAppearance({
       btnConfig: {textColor: '#000000'},
     });
-    expect(buttonVars(appearance)['--biolink-button-background']).toBe('#ffffff');
+    expect(buttonVars(appearance)['--biolink-button-background']).toBe(
+      '#ffffff',
+    );
     expect(buttonVars(appearance)['--biolink-button-text']).toBe('#000000');
   });
 
@@ -705,10 +706,7 @@ describe('painted-panel accent pair', () => {
       MIN_TEXT_CONTRAST,
     );
     expect(
-      measuredContrast(
-        variables['--biolink-focus'] as string,
-        '#000000',
-      ),
+      measuredContrast(variables['--biolink-focus'] as string, '#000000'),
     ).toBeGreaterThanOrEqual(3);
     expect(
       measuredContrast(
@@ -718,16 +716,40 @@ describe('painted-panel accent pair', () => {
     ).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST);
   });
 
-  test('a light chosen surface keeps the theme pair (7.50:1 accent text on white)', () => {
+  test('a light chosen surface pins Counter Blue literally (scheme-independent, 7.43:1 accent text on white)', () => {
+    // var(--color-primary) follows the OS scheme: under a dark scheme it
+    // holds the 88.2% lifted twin, which sits at 1.42:1 on this light
+    // surface. The painted-panel accent must not depend on the OS scheme.
     const variables = resolveBiolinkThemeVariables({
       bgConfig: {backgroundColor: '#f5f5f5', color: '#000000'},
     });
     expect(variables['--biolink-surface']).toContain('#fff');
-    expect(variables['--biolink-accent']).toBe('var(--color-primary)');
+    expect(variables['--biolink-accent']).toBe('oklch(46% 0.214 259.815)');
     expect(variables['--biolink-accent-foreground']).toBe(
-      'var(--color-primary-foreground)',
+      'oklch(0.9911 0 190.05)',
     );
-    expect(variables['--biolink-focus']).toBe('var(--be-primary)');
+    expect(variables['--biolink-focus']).toBe('oklch(46% 0.214 259.815)');
+    for (const key of [
+      '--biolink-accent',
+      '--biolink-accent-foreground',
+      '--biolink-focus',
+    ] as const) {
+      expect(String(variables[key])).not.toContain('var(');
+    }
+
+    const accent = variables['--biolink-accent'] as string;
+    expect(measuredContrast(accent, '#ffffff')).toBeGreaterThanOrEqual(
+      MIN_TEXT_CONTRAST,
+    );
+    expect(
+      measuredContrast(variables['--biolink-focus'] as string, '#ffffff'),
+    ).toBeGreaterThanOrEqual(3);
+    expect(
+      measuredContrast(
+        variables['--biolink-accent-foreground'] as string,
+        accent,
+      ),
+    ).toBeGreaterThanOrEqual(MIN_TEXT_CONTRAST);
   });
 
   test('an unpainted store resolves the same theme pair consumers fall back to', () => {
@@ -775,7 +797,9 @@ describe('gradient preset contrast data', () => {
   });
 
   test('gradient sampler ignores image backgrounds and unparseable input', () => {
-    expect(sampleGradientAverage('url(https://example.com/bg.webp)')).toBeNull();
+    expect(
+      sampleGradientAverage('url(https://example.com/bg.webp)'),
+    ).toBeNull();
     expect(sampleGradientAverage(undefined)).toBeNull();
     expect(sampleGradientAverage('definitely-not-a-gradient')).toBeNull();
   });
@@ -808,7 +832,9 @@ describe('storefront contrast wiring', () => {
       'utf8',
     );
     expect(source).toContain('deriveGradientTextColor');
-    expect(source).toMatch(/color:\s*gradient\.color\s*\?\?\s*deriveGradientTextColor/);
+    expect(source).toMatch(
+      /color:\s*gradient\.color\s*\?\?\s*deriveGradientTextColor/,
+    );
   });
 
   test('button editor cross-validates the button color pair without blocking save', () => {
