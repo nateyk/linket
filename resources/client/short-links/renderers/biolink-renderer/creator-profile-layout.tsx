@@ -511,7 +511,7 @@ function CreatorProfileContent({
   if (hasProducts && hasAbout) {
     return (
       <Tabs.Root defaultValue="products" className="min-w-0 gap-4">
-        <div className="sticky top-0 z-10 border-b border-[var(--biolink-border)] bg-[var(--biolink-surface-strong)]">
+        <div className="sticky top-5 z-10 border-b border-[var(--biolink-border)] bg-[var(--biolink-surface-strong)] sm:top-8 @4xl:top-10">
           <Tabs.List
             variant="line"
             aria-label={trans(message('Creator profile sections'))}
