@@ -510,8 +510,16 @@ function CreatorProfileContent({
 
   if (hasProducts && hasAbout) {
     return (
-      <Tabs.Root defaultValue="products" className="min-w-0 gap-4">
-        <div className="sticky top-5 z-10 border-b border-[var(--biolink-border)] bg-[var(--biolink-surface-strong)] sm:top-8 @4xl:top-10">
+      // The panel scrolls inside its own column while the tab strip stays a
+      // static header of that column. Pinning the strip to the page instead
+      // would force it to cover whatever scrolls past it — a filled bar the
+      // painted page background can never match — and would leave content
+      // visible in the gap above a `top-*` offset.
+      <Tabs.Root
+        defaultValue="products"
+        className="min-w-0 gap-4 @4xl:max-h-[calc(100dvh-5rem)]"
+      >
+        <div className="shrink-0 border-b border-[var(--biolink-border)]">
           <Tabs.List
             variant="line"
             aria-label={trans(message('Creator profile sections'))}
@@ -532,20 +540,23 @@ function CreatorProfileContent({
             </Tabs.Tab>
           </Tabs.List>
         </div>
-        <Tabs.Panel value="products">
-          <ShopSection
-            widget={shopWidget}
-            biolink={biolink}
-            showHeading={false}
-          />
-        </Tabs.Panel>
-        <Tabs.Panel value="about">
-          <AboutSection
-            profile={profile}
-            appearance={appearance}
-            compact={compact}
-          />
-        </Tabs.Panel>
+        <div className="biolink-scrollbar min-h-0 flex-1 @4xl:overflow-y-auto @4xl:overscroll-contain @4xl:pe-1">
+          <Tabs.Panel value="products">
+            <ShopSection
+              widget={shopWidget}
+              biolink={biolink}
+              showHeading={false}
+            />
+          </Tabs.Panel>
+          <Tabs.Panel value="about">
+            <AboutSection
+              profile={profile}
+              appearance={appearance}
+              compact={compact}
+              showHeading={false}
+            />
+          </Tabs.Panel>
+        </div>
       </Tabs.Root>
     );
   }
@@ -563,10 +574,13 @@ function AboutSection({
   profile,
   appearance,
   compact = false,
+  showHeading = true,
 }: {
   profile: CreatorProfileConfig;
   appearance: BiolinkAppearanceConfig | null;
   compact?: boolean;
+  /** False inside the tab panel: the active tab already names the section. */
+  showHeading?: boolean;
 }) {
   const buttonAppearance = resolveBiolinkButtonAppearance(appearance);
   const buttonShadow = buttonAppearance.style.boxShadow;
@@ -581,16 +595,25 @@ function AboutSection({
       )}
       style={{boxShadow: buttonShadow}}
     >
-      <div className={cn('mb-4', compact && 'mb-3')}>
-        <h2 className={cn('font-semibold', compact ? 'text-lg' : 'text-xl')}>
-          <Trans message="About" />
-        </h2>
-        {profile.profile_title && (
-          <p className="mt-1 text-sm font-medium text-[var(--biolink-text)]">
-            {profile.profile_title}
-          </p>
-        )}
-      </div>
+      {(showHeading || profile.profile_title) && (
+        <div className={cn('mb-4', compact && 'mb-3')}>
+          {showHeading && (
+            <h2 className={cn('font-semibold', compact ? 'text-lg' : 'text-xl')}>
+              <Trans message="About" />
+            </h2>
+          )}
+          {profile.profile_title && (
+            <p
+              className={cn(
+                'text-sm font-medium text-[var(--biolink-text)]',
+                showHeading && 'mt-1',
+              )}
+            >
+              {profile.profile_title}
+            </p>
+          )}
+        </div>
+      )}
       <div
         className={cn(
           'space-y-3 text-base leading-7 break-words text-[var(--biolink-muted-text)] [&_a]:font-medium [&_a]:text-[var(--biolink-text)] [&_a]:underline [&_a]:underline-offset-4 [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--biolink-border)] [&_blockquote]:pl-4 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:text-[var(--biolink-text)] [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:text-[var(--biolink-text)] [&_ol]:ml-5 [&_ol]:list-decimal [&_ul]:ml-5 [&_ul]:list-disc',
