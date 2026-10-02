@@ -68,7 +68,7 @@ function TabsList({
       {children}
       <TabsPrimitive.Indicator
         className={cn(
-          'absolute bottom-(--active-tab-bottom) left-0 z-[-1] h-(--active-tab-height) w-(--active-tab-width) translate-x-(--active-tab-left) rounded-card-sm bg-background transition-all duration-200 ease-in-out group-data-[variant=default]/tabs-list:top-(--active-tab-top) group-data-[variant=line]/tabs-list:bottom-[calc(var(--active-tab-bottom)-6px)] group-data-[variant=line]/tabs-list:h-0.5 group-data-[variant=line]/tabs-list:bg-primary dark:bg-input/30',
+          'absolute bottom-(--active-tab-bottom) left-0 z-[-1] h-(--active-tab-height) w-(--active-tab-width) translate-x-(--active-tab-left) rounded-card-sm bg-background transition-all duration-200 ease-in-out group-data-[variant=default]/tabs-list:top-(--active-tab-top) group-data-[variant=line]/tabs-list:bottom-[-1px] group-data-[variant=line]/tabs-list:h-0.5 group-data-[variant=line]/tabs-list:bg-primary dark:bg-input/30',
           indicatorClass,
         )}
       />
