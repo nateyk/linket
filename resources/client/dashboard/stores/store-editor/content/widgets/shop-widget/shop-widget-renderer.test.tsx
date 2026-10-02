@@ -30,23 +30,28 @@ describe('ShopWidgetRenderer product action appearance', () => {
     'utf8',
   );
 
-  test('paints the View product action from the appearance button design', () => {
+  test('paints the View action from the appearance button design', () => {
     expect(source).toContain(
       "import {resolveBiolinkButtonAppearance} from '@app/short-links/renderers/biolink-renderer/biolink-appearance';",
     );
     expect(source).toMatch(
       /resolveBiolinkButtonAppearance\(\s*biolink\.appearance\?\.config \?\? null,?\s*\)/,
     );
-    expect(source).toContain(
-      "className={cn('w-full', buttonAppearance.className)}",
-    );
+    expect(source).toContain('className={buttonAppearance.className}');
     expect(source).toContain('style={buttonAppearance.style}');
   });
 
-  test('keeps the action button full-width, link render, label and href', () => {
-    expect(source).toContain("'w-full'");
+  test('keeps the action button size, link render, label and href', () => {
+    expect(source).toContain('size="sm"');
     expect(source).toContain('render={<a href={href} />}');
-    expect(source).toContain('<Trans message="View product" />');
+    expect(source).toContain('<Trans message="View" />');
+  });
+
+  test('keeps the card body clean: title, price and view button only', () => {
+    expect(source).not.toContain('description=');
+    expect(source).not.toContain('mediaOverlay=');
+    expect(source).not.toContain('meta=');
+    expect(source).not.toContain('ArrowRightIcon');
   });
 
   test('falls back safely when the biolink carries no appearance', () => {
