@@ -2,6 +2,7 @@ import {GuestRoute} from '@common/auth/guards/guest-route';
 import {TwoFactorChallengePage} from '@common/auth/ui/account-settings/two-factor/two-factor-challenge-page';
 import {LoginPage} from '@common/auth/ui/login-page';
 import {Button} from '@shadcn/button/button';
+import {Trans} from '@ui/i18n/trans';
 import {useSettings} from '@ui/settings/use-settings';
 import {useState} from 'react';
 
@@ -15,7 +16,9 @@ export function Component() {
     <LoginPage onTwoFactorChallenge={() => setIsTwoFactor(true)}>
       {site?.demo ? (
         <div className="fixed top-0 left-0 m-4 flex w-110 max-w-full flex-col gap-0.5 rounded-card border bg-card p-4 shadow-md">
-          <div className="font-medium">Demo mode</div>
+          <div className="font-medium">
+            <Trans message="Demo mode" />
+          </div>
           <div className="text-sm text-muted-foreground">
             Use demo one-click login buttons to login with a premade account or
             create a new account and login manually.

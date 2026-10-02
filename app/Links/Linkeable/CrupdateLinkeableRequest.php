@@ -108,7 +108,11 @@ abstract class CrupdateLinkeableRequest extends FormRequest
                         fn($item) => Str::contains($value, $item),
                     )
                 ) {
-                    $fail(__("Back-half can't contain '$keyword'."));
+                    $fail(
+                        __('Back-half can\'t contain \':keyword\'.', [
+                            'keyword' => $keyword,
+                        ]),
+                    );
                 }
             },
             $this->getBackHalfUniqueRule(
@@ -205,7 +209,8 @@ abstract class CrupdateLinkeableRequest extends FormRequest
                 ->add(
                     $errorKey,
                     __(
-                        "$start does not allow framing. Please select a different link type.",
+                        ':start does not allow framing. Please select a different link type.',
+                        ['start' => $start],
                     ),
                 );
         }
@@ -255,7 +260,9 @@ abstract class CrupdateLinkeableRequest extends FormRequest
                 ->errors()
                 ->add(
                     $errorKey,
-                    __("$start can't be shortened, because it is unsafe."),
+                    __(':start can\'t be shortened, because it is unsafe.', [
+                        'start' => $start,
+                    ]),
                 );
         }
     }
@@ -274,7 +281,8 @@ abstract class CrupdateLinkeableRequest extends FormRequest
                 ->add(
                     $errorKey,
                     __(
-                        "$start can't be shortened, because it is used for phising.",
+                        ':start can\'t be shortened, because it is used for phishing.',
+                        ['start' => $start],
                     ),
                 );
         }

@@ -164,7 +164,7 @@ function WebhooksEmptyState({siteName}: {siteName: string | undefined}) {
         </Empty.Title>
         <Empty.Description>
           <Trans
-            message="Receive real-time http requests when a specific event (e.g. someone clicked your link) occure in :siteName."
+            message="Receive real-time http requests when a specific event (e.g. someone clicked your link) occur in :siteName."
             values={{siteName}}
           />
         </Empty.Description>

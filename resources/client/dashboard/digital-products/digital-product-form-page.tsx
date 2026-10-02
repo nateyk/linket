@@ -547,7 +547,9 @@ function DigitalProductForm() {
           {(productType === 'course' || product?.type === 'course') && (
             <Alert.Root className="mb-5 border-primary/20 bg-primary/5">
               <GraduationCapIcon />
-              <Alert.Title>Course product</Alert.Title>
+              <Alert.Title>
+                <Trans message="Course product" />
+              </Alert.Title>
               <Alert.Description className="flex flex-wrap items-center gap-2">
                 <span>
                   After saving, you’ll build your curriculum in the course
