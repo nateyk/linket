@@ -156,10 +156,15 @@ function MobileCreatorProfile({
   const hasAbout = hasVisibleAbout(profile.about_html);
   const showNavigation = hasProducts || hasAbout;
   const [activeTab, setActiveTab] = useState("profile");
+  const {trans} = useTrans();
   const biolinkNavItems = [
-    {label: "Profile", icon: UserIcon, value: "profile"},
-    ...(hasProducts ? [{label: "Products", icon: PackageIcon, value: "products"}] : []),
-    ...(hasAbout ? [{label: "About", icon: InfoIcon, value: "about"}] : []),
+    {label: trans(message('Profile')), icon: UserIcon, value: 'profile'},
+    ...(hasProducts
+      ? [{label: trans(message('Products')), icon: PackageIcon, value: 'products'}]
+      : []),
+    ...(hasAbout
+      ? [{label: trans(message('About')), icon: InfoIcon, value: 'about'}]
+      : []),
   ];
   const buttonAppearance = resolveBiolinkButtonAppearance(appearance);
 
@@ -476,6 +481,7 @@ function CreatorProfileContent({
       ? biolink.public_item_count > 0
       : configuredProductIds.length > 0);
   const hasAbout = hasVisibleAbout(profile.about_html);
+  const {trans} = useTrans();
 
   if (!hasProducts && !hasAbout) return null;
 
@@ -485,18 +491,19 @@ function CreatorProfileContent({
         <div className="border-b border-[var(--biolink-border)]">
           <Tabs.List
             variant="line"
-            aria-label="Creator profile sections"
-            className="w-fit gap-1 bg-transparent p-1 text-[var(--biolink-muted-text)] [&>span:last-child]:bg-[var(--biolink-text)]"
+            aria-label={trans(message('Creator profile sections'))}
+            indicatorClass="bg-[var(--biolink-accent)]!"
+            className="w-fit gap-1 bg-transparent p-1 text-[var(--biolink-muted-text)]"
           >
             <Tabs.Tab
               value="products"
-              className="h-[calc(100%-1px)] flex-none rounded-button px-3 py-1 text-[var(--biolink-muted-text)] data-active:text-[var(--biolink-text)]"
+              className="flex-none px-3 py-1 text-[var(--biolink-muted-text)] not-data-active:hover:text-[var(--biolink-text)]! data-active:text-[var(--biolink-accent)]!"
             >
               <Trans message="Products" />
             </Tabs.Tab>
             <Tabs.Tab
               value="about"
-              className="h-[calc(100%-1px)] flex-none rounded-button px-3 py-1 text-[var(--biolink-muted-text)] data-active:text-[var(--biolink-text)]"
+              className="flex-none px-3 py-1 text-[var(--biolink-muted-text)] not-data-active:hover:text-[var(--biolink-text)]! data-active:text-[var(--biolink-accent)]!"
             >
               <Trans message="About" />
             </Tabs.Tab>

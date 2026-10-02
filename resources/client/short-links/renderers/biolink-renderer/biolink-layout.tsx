@@ -111,7 +111,11 @@ export function BiolinkLayout({
             isPreview
               ? 'relative z-2 h-full min-h-full overflow-x-hidden'
               : isSidebar
-                ? 'relative z-2 min-h-screen overflow-hidden'
+                // overflow-x-clip (NOT overflow-x-hidden) keeps the background
+                // from painting past the edges without creating a scroll
+                // container — a hidden axis computes the other to `auto` and
+                // silently kills the sticky CreatorCard inside.
+                ? 'relative z-2 min-h-screen overflow-x-clip'
                 : 'relative z-2 mx-auto min-h-screen max-w-2xl overflow-hidden @2xl:min-h-[calc(100vh-2.5rem)] @2xl:rounded-t-card @2xl:shadow-2xl',
           )}
           style={{

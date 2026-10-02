@@ -4,6 +4,8 @@ import {useState, type CSSProperties} from "react";
 import {motion} from "framer-motion";
 import {Home, LineChart, CreditCard, MessageCircle, Trophy, User} from "lucide-react";
 import {cn} from "@ui/utils/cn";
+import {message} from "@ui/i18n/message";
+import {useTrans} from "@ui/i18n/use-trans";
 
 const navItems = [
   {label: "Home", icon: Home},
@@ -53,6 +55,7 @@ export function BottomNavBar({
 }: BottomNavBarProps) {
   const [internalIndex, setInternalIndex] = useState(defaultIndex);
   const activeIndex = controlledIndex ?? internalIndex;
+  const {trans} = useTrans();
   const setActiveIndex = (idx: number) => {
     if (onIndexChange) onIndexChange(idx);
     else setInternalIndex(idx);
@@ -64,7 +67,7 @@ export function BottomNavBar({
       animate={{scale: 1, opacity: 1}}
       transition={{type: "spring", stiffness: 300, damping: 26}}
       role="navigation"
-      aria-label="Bottom Navigation"
+      aria-label={trans(message("Bottom Navigation"))}
       className={cn(
         "bg-card/95 backdrop-blur-xl supports-[backdrop-filter]:bg-card/80 border border-border/40 dark:border-border/50 flex items-center p-1.5 shadow-lg shadow-black/5 ring-1 ring-foreground/5 gap-1 max-w-[95vw] h-[52px] w-fit min-w-0",
         radius,
