@@ -8,6 +8,7 @@ p1_count: 3
 target_identity: "file:/home/nate/projects/linket/common/foundation/resources/client"
 timestamp: 2026-09-26T08-23-44Z
 slug: common-foundation-resources-client
+closed: true
 ---
 # Design Critique — linket client trees
 
