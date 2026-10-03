@@ -39,7 +39,7 @@ import {
 } from 'lucide-react';
 import {renderAboutHtml} from './about-markdown';
 import {Link} from 'react-router';
-import {useRef, useState} from 'react';
+import {useState} from 'react';
 
 interface CreatorProfileLayoutProps {
   biolink: Biolink;
@@ -510,24 +510,20 @@ function CreatorProfileContent({
   const hasAbout = hasVisibleAbout(profile.about_html);
   const {trans} = useTrans();
 
-  // Both panels share one scroll container, so without this a tab switch
-  // would open the new panel at the old panel's scroll position.
-  const panelScrollerRef = useRef<HTMLDivElement>(null);
-
   if (!hasProducts && !hasAbout) return null;
 
   if (hasProducts && hasAbout) {
     return (
-      // Flex skeleton: fixed header row (the tab strip) + one scroll
-      // container below it (the panel wrapper). Content is clipped exactly
-      // at the wrapper's top edge — the tab line — so it can never slide
-      // over or under the tabs. Tab switches reset to top (see
-      // onValueChange); per-tab positions are not preserved.
+      // Static header row (the tab strip) + a naturally-sized panel below
+      // it. Nothing here scrolls internally and nothing is height-capped:
+      // the card grows to its content and the page carries the one
+      // scrollbar. Tab switches reset the page to top (see onValueChange);
+      // per-tab positions are not preserved.
       <Tabs.Root
         defaultValue="products"
-        className="min-w-0 flex-col gap-0 @4xl:max-h-[calc(100dvh-5rem)]"
+        className="min-w-0 flex-col gap-0"
         onValueChange={() => {
-          panelScrollerRef.current?.scrollTo({top: 0});
+          window.scrollTo({top: 0});
         }}
       >
         <div className="flex-none relative z-2 border-b border-[var(--biolink-border)]">
@@ -551,10 +547,7 @@ function CreatorProfileContent({
             </Tabs.Tab>
           </Tabs.List>
         </div>
-        <div
-          ref={panelScrollerRef}
-          className="min-h-0 min-w-0 flex-1 no-scrollbar px-4 pt-4 pb-8 @4xl:overflow-x-hidden @4xl:overflow-y-auto @4xl:overscroll-contain"
-        >
+        <div className="min-w-0 px-4 pt-4 pb-8">
           <Tabs.Panel value="products">
             <ShopSection
               widget={shopWidget}
