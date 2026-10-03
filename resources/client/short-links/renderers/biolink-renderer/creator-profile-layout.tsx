@@ -206,16 +206,11 @@ function MobileCreatorProfile({
               <AdHost slot="biolink_top" />
             </div>
           )}
-          {/* The storefront lives with the profile on mobile: the tabs
-              and first items fill the screen below the card instead of
-              leaving an empty band of background above the nav. */}
-          <CreatorProfileContent
-            profile={profile}
-            shopWidget={shopWidget}
-            biolink={biolink}
-            appearance={appearance}
-            compact={compact}
-          />
+          {/* Profile is the card and nothing else on mobile. The storefront
+              (tabs + panels) is the desktop arrangement, where both live
+              side by side; here the bottom nav is the only way to reach
+              Products and About, so putting them here too would repeat the
+              same content under a second set of controls. */}
         </section>
       )}
 
