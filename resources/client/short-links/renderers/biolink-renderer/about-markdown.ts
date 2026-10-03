@@ -92,6 +92,113 @@ interface OpenList {
   items: string[];
 }
 
+/** A top-level block of sanitizer output: paragraphs, real headings and
+ * lists (passed through untouched), rules and line breaks. */
+function topLevelBlocks(): RegExp {
+  return /<(p|h[2-4]|ul|ol|blockquote)\b[^>]*>[\s\S]*?<\/\1>|<(hr|br)\b[^>]*\/?>/gi;
+}
+
+function innerTextOf(html: string): string {
+  return html
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ');
+}
+
+/**
+ * Normalize hybrid About HTML: rich-text paragraphs whose *text* is
+ * markdown (`<p>### Title</p>`, `<p>* item</p>`, `<p>---</p>`) become real
+ * headings, list items (consecutive runs grouped into one `ul`/`ol`) and
+ * rules. Every other block — genuine headings, lists, quotes, plain
+ * paragraphs (including ones with mangled inline remnants) — passes through
+ * byte-identical, and empty paragraphs are dropped.
+ */
+export function normalizeHybridAboutHtml(source: string): string {
+  const pattern = topLevelBlocks();
+  const out: string[] = [];
+  let openList: OpenList | null = null;
+  let cursor = 0;
+
+  const flushList = () => {
+    if (openList) {
+      const tag = openList.ordered ? 'ol' : 'ul';
+      out.push(
+        `<${tag}>${openList.items.map(item => `<li>${item}</li>`).join('')}</${tag}>`,
+      );
+      openList = null;
+    }
+  };
+
+  const pushListItem = (ordered: boolean, item: string) => {
+    if (!openList || openList.ordered !== ordered) {
+      flushList();
+      openList = {ordered, items: []};
+    }
+    openList.items.push(item);
+  };
+
+  const handleGap = (gap: string) => {
+    if (gap.trim()) {
+      flushList();
+      out.push(`<p>${escapeHtmlText(gap.trim())}</p>`);
+    }
+  };
+
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(source)) !== null) {
+    handleGap(source.slice(cursor, match.index));
+    cursor = match.index + match[0].length;
+    const block = match[0];
+    const paragraph = /^<p\b[^>]*>([\s\S]*?)<\/p>$/i.exec(block);
+    if (!paragraph) {
+      flushList();
+      out.push(block);
+      continue;
+    }
+    const inner = paragraph[1];
+    const text = innerTextOf(inner).trim();
+    if (!text) continue;
+    if (/^-{3,}$/.test(text)) {
+      flushList();
+      out.push('<hr>');
+      continue;
+    }
+    const heading = /^(#{1,4})\s+/.exec(text);
+    if (heading) {
+      flushList();
+      const level = Math.min(heading[1].length + 1, 4);
+      out.push(
+        `<h${level}>${inner.replace(/^(?:<[^>]+>|\s)*#{1,4}\s+/, '')}</h${level}>`,
+      );
+      continue;
+    }
+    const listMarker = /^\s*([-*]|\d+\.)\s+/.exec(text);
+    if (listMarker) {
+      const ordered = /^\s*\d+\./.test(text);
+      pushListItem(
+        ordered,
+        inner.replace(/^(?:<[^>]+>|\s)*(?:[-*]|\d+\.)\s+/, ''),
+      );
+      continue;
+    }
+    flushList();
+    out.push(block);
+  }
+  handleGap(source.slice(cursor));
+  flushList();
+  return out.join('');
+}
+
+/**
+ * Render About content however it was authored: tag-free markdown-flavoured
+ * text goes through the markdown renderer, everything else (sanitized HTML,
+ * including hybrid `<p>`-wrapped markdown) goes through the normalizer.
+ */
+export function renderAboutHtml(source: string): string {
+  return looksLikeMarkdown(source)
+    ? renderMarkdownToHtml(source)
+    : normalizeHybridAboutHtml(source);
+}
+
 /**
  * Render markdown-flavoured plain text to an HTML string. Heading levels are
  * capped at `h2` so embedded content can never outrank the page's own `h1`.

@@ -1,6 +1,8 @@
 import {describe, expect, test} from 'vitest';
 import {
   looksLikeMarkdown,
+  normalizeHybridAboutHtml,
+  renderAboutHtml,
   renderMarkdownToHtml,
 } from './about-markdown';
 
@@ -89,5 +91,72 @@ describe('renderMarkdownToHtml', () => {
     );
     expect(out).toContain('<hr>');
     expect(out).toContain('<p>Plain close.</p>');
+  });
+});
+
+describe('normalizeHybridAboutHtml', () => {
+  test('converts p-wrapped markers to rules, headings and grouped lists', () => {
+    expect(normalizeHybridAboutHtml('<p>---</p>')).toBe('<hr>');
+    expect(normalizeHybridAboutHtml('<p>### Seller Dashboard</p>')).toBe(
+      '<h4>Seller Dashboard</h4>',
+    );
+    expect(normalizeHybridAboutHtml('<p># Top</p>')).toBe('<h2>Top</h2>');
+    expect(
+      normalizeHybridAboutHtml('<p>* one</p><p>* two</p><p>after</p>'),
+    ).toBe('<ul><li>one</li><li>two</li></ul><p>after</p>');
+    expect(normalizeHybridAboutHtml('<p>1. one</p><p>2. two</p>')).toBe(
+      '<ol><li>one</li><li>two</li></ol>',
+    );
+  });
+
+  test('keeps inner tags and drops empty paragraphs', () => {
+    expect(
+      normalizeHybridAboutHtml(
+        '<p>* <strong>Full Deals Management:</strong> easy.</p>',
+      ),
+    ).toBe(
+      '<ul><li><strong>Full Deals Management:</strong> easy.</li></ul>',
+    );
+    expect(normalizeHybridAboutHtml('<p>plain</p><p></p>')).toBe(
+      '<p>plain</p>',
+    );
+  });
+
+  test('passes genuine structure and mangled copy through byte-identical', () => {
+    expect(
+      normalizeHybridAboutHtml('<h2>Real head</h2><ul><li>x</li></ul>'),
+    ).toBe('<h2>Real head</h2><ul><li>x</li></ul>');
+    const mangled =
+      '<p>See <strong>[name](</strong><a href="https://example.com/a?b&#61;1)**">https://example.com/a</a> here:</p>';
+    expect(normalizeHybridAboutHtml(mangled)).toBe(mangled);
+  });
+
+  test('renders the stored noval excerpt with no marker remnants', () => {
+    const stored =
+      '<p>---</p><p>### 🏪 Seller Dashboard</p>' +
+      '<p>* <strong>Full Deals Management:</strong> Create with ease.</p>' +
+      '<p>* <strong>Deal Analytics:</strong> View stats.</p><p></p>';
+    const out = normalizeHybridAboutHtml(stored);
+    expect(out).toBe(
+      '<hr><h4>🏪 Seller Dashboard</h4>' +
+        '<ul><li><strong>Full Deals Management:</strong> Create with ease.</li>' +
+        '<li><strong>Deal Analytics:</strong> View stats.</li></ul>',
+    );
+    expect(out).not.toContain('###');
+    expect(out).not.toContain('<p>* ');
+  });
+});
+
+describe('renderAboutHtml', () => {
+  test('routes plain markdown text and hybrid HTML correctly', () => {
+    expect(renderAboutHtml('### Title\n* item')).toBe(
+      '<h4>Title</h4><ul><li>item</li></ul>',
+    );
+    expect(renderAboutHtml('<p>### Title</p><p>* item</p>')).toBe(
+      '<h4>Title</h4><ul><li>item</li></ul>',
+    );
+    expect(renderAboutHtml('<p>Just <strong>rich</strong> text.</p>')).toBe(
+      '<p>Just <strong>rich</strong> text.</p>',
+    );
   });
 });

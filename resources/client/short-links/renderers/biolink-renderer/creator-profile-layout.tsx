@@ -37,10 +37,7 @@ import {
   PackageIcon,
   InfoIcon,
 } from 'lucide-react';
-import {
-  looksLikeMarkdown,
-  renderMarkdownToHtml,
-} from './about-markdown';
+import {renderAboutHtml} from './about-markdown';
 import {Link} from 'react-router';
 import {useRef, useState} from 'react';
 
@@ -556,7 +553,7 @@ function CreatorProfileContent({
         </div>
         <div
           ref={panelScrollerRef}
-          className="min-h-0 min-w-0 flex-1 no-scrollbar pt-4 @4xl:overflow-x-hidden @4xl:overflow-y-auto @4xl:overscroll-contain"
+          className="min-h-0 min-w-0 flex-1 no-scrollbar px-4 pt-4 pb-8 @4xl:overflow-x-hidden @4xl:overflow-y-auto @4xl:overscroll-contain"
         >
           <Tabs.Panel value="products">
             <ShopSection
@@ -638,9 +635,7 @@ function AboutSection({
             'line-clamp-6 text-sm leading-6 [&_h2]:text-base [&_h3]:text-sm',
         )}
         dangerouslySetInnerHTML={{
-          __html: looksLikeMarkdown(profile.about_html)
-            ? renderMarkdownToHtml(profile.about_html)
-            : profile.about_html,
+          __html: renderAboutHtml(profile.about_html),
         }}
       />
     </Card.Root>
