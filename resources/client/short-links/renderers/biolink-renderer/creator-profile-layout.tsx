@@ -521,19 +521,19 @@ function CreatorProfileContent({
 
   if (hasProducts && hasAbout) {
     return (
-      // The panel scrolls inside its own column while the tab strip stays a
-      // static header of that column. Pinning the strip to the page instead
-      // would force it to cover whatever scrolls past it — a filled bar the
-      // painted page background can never match — and would leave content
-      // visible in the gap above a `top-*` offset.
+      // Flex skeleton: fixed header row (the tab strip) + one scroll
+      // container below it (the panel wrapper). Content is clipped exactly
+      // at the wrapper's top edge — the tab line — so it can never slide
+      // over or under the tabs. Tab switches reset to top (see
+      // onValueChange); per-tab positions are not preserved.
       <Tabs.Root
         defaultValue="products"
-        className="min-w-0 gap-4 @4xl:max-h-[calc(100dvh-5rem)]"
+        className="min-w-0 flex-col gap-0 @4xl:max-h-[calc(100dvh-5rem)]"
         onValueChange={() => {
           panelScrollerRef.current?.scrollTo({top: 0});
         }}
       >
-        <div className="shrink-0 border-b border-[var(--biolink-border)]">
+        <div className="flex-none relative z-2 border-b border-[var(--biolink-border)]">
           <Tabs.List
             variant="line"
             aria-label={trans(message('Creator profile sections'))}
@@ -556,7 +556,7 @@ function CreatorProfileContent({
         </div>
         <div
           ref={panelScrollerRef}
-          className="min-h-0 min-w-0 flex-1 no-scrollbar @4xl:overflow-y-auto @4xl:overscroll-contain"
+          className="min-h-0 min-w-0 flex-1 no-scrollbar pt-4 @4xl:overflow-x-hidden @4xl:overflow-y-auto @4xl:overscroll-contain"
         >
           <Tabs.Panel value="products">
             <ShopSection
