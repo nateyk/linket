@@ -353,7 +353,7 @@ describe('creator card shadow wiring', () => {
       /function AboutSection[\s\S]*?resolveBiolinkButtonAppearance\(appearance\)/,
     );
     expect(source).toMatch(
-      /compact \? 'p-3\.5' : 'p-5 sm:p-6',[\s\S]{0,80}?style=\{\{boxShadow: buttonShadow\}\}/,
+      /compact \? 'p-3\.5' : 'p-5 pb-6',[\s\S]{0,80}?style=\{\{boxShadow: buttonShadow\}\}/,
     );
   });
 

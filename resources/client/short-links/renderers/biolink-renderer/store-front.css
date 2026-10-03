@@ -1,0 +1,40 @@
+/* Compact type + spacing scale for the creator-profile About card
+ * (.about-prose, applied by AboutSection). Fluid sizing keeps the text
+ * dense on mobile, tablet and desktop: only type uses clamp(), the card
+ * padding itself is the fixed 20px 20px 24px spec. Colors and text
+ * decoration stay token utilities in the markup — these rules own size,
+ * spacing and rhythm only. Unlayered, so they win over Tailwind's
+ * layered utilities of equal specificity. */
+
+.about-prose {
+  font-size: clamp(0.875rem, 0.8125rem + 0.25vw, 0.9375rem); /* 14–15px */
+  line-height: 1.45;
+}
+
+.about-prose :is(h2, h3, h4) {
+  margin: 16px 0 8px;
+  font-size: clamp(1rem, 0.9375rem + 0.3vw, 1.125rem); /* 16–18px */
+  line-height: 1.45;
+}
+
+.about-prose p {
+  margin: 0 0 8px;
+}
+
+.about-prose :is(ul, ol) {
+  margin: 0 0 8px;
+  padding-inline-start: 1.25rem; /* matches the old ps-5 indent */
+}
+
+.about-prose li {
+  margin: 0 0 6px; /* list item gap: 6–8px band */
+  line-height: 1.45;
+}
+
+.about-prose hr {
+  margin: 12px 0;
+}
+
+.about-prose :is(p, ul, ol, li, hr):last-child {
+  margin-bottom: 0;
+}

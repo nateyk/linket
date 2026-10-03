@@ -21,7 +21,6 @@ import {Badge} from '@shadcn/badge/badge';
 import {LinkButton} from '@shadcn/button/button';
 import BottomNavBar from '@shadcn/bottom-nav-bar';
 import {Card} from '@shadcn/card/card';
-import {Tabs} from '@shadcn/tabs/tabs';
 import {Trans} from '@ui/i18n/trans';
 import {message} from '@ui/i18n/message';
 import {useTrans} from '@ui/i18n/use-trans';
@@ -38,7 +37,7 @@ import {
   InfoIcon,
 } from 'lucide-react';
 import {renderAboutHtml} from './about-markdown';
-import {Background} from './biolink-background';
+import {StoreFront} from './store-front';
 import {Link} from 'react-router';
 import {useState} from 'react';
 
@@ -509,67 +508,45 @@ function CreatorProfileContent({
       ? biolink.public_item_count > 0
       : configuredProductIds.length > 0);
   const hasAbout = hasVisibleAbout(profile.about_html);
-  const {trans} = useTrans();
 
   if (!hasProducts && !hasAbout) return null;
 
   if (hasProducts && hasAbout) {
     return (
-      // The strip sticks to the top of the viewport; the panel below it is
-      // a plain block, so the card grows to full content height and the
-      // page carries the one scrollbar. The strip is opaque: it repaints
-      // the page background with both copies viewport-anchored (see
-      // Background's viewportFixed), so the card is hidden exactly at the
-      // tab line as it scrolls behind instead of showing through. Tab
-      // switches reset the page to top (see onValueChange); per-tab
-      // positions are not preserved.
-      <Tabs.Root
-        defaultValue="products"
-        className="min-w-0 flex-col gap-0"
-        onValueChange={() => {
-          window.scrollTo({top: 0});
-        }}
-      >
-        <div className="sticky top-0 z-10 flex-none border-b border-[var(--biolink-border)] bg-background">
-          <Background appearance={appearance} viewportFixed omitNoiseDef />
-          <Tabs.List
-            variant="line"
-            aria-label={trans(message('Creator profile sections'))}
-            indicatorClass="bg-[var(--biolink-accent)]!"
-            className="w-fit gap-2 bg-transparent px-2 py-0 text-[var(--biolink-muted-text)]"
-          >
-            <Tabs.Tab
-              value="products"
-              className="flex-none px-3 py-2.5 text-[var(--biolink-muted-text)] not-data-active:hover:text-[var(--biolink-text)]! data-active:text-[var(--biolink-accent)]! pointer-coarse:min-h-11"
-            >
-              <Trans message="Products" />
-            </Tabs.Tab>
-            <Tabs.Tab
-              value="about"
-              className="flex-none px-3 py-2.5 text-[var(--biolink-muted-text)] not-data-active:hover:text-[var(--biolink-text)]! data-active:text-[var(--biolink-accent)]! pointer-coarse:min-h-11"
-            >
-              <Trans message="About" />
-            </Tabs.Tab>
-          </Tabs.List>
-        </div>
-        <div className="min-w-0 px-4 pt-4 pb-8">
-          <Tabs.Panel value="products">
-            <ShopSection
-              widget={shopWidget}
-              biolink={biolink}
-              showHeading={false}
-            />
-          </Tabs.Panel>
-          <Tabs.Panel value="about">
-            <AboutSection
-              profile={profile}
-              appearance={appearance}
-              compact={compact}
-              showHeading={false}
-            />
-          </Tabs.Panel>
-        </div>
-      </Tabs.Root>
+      // The strip, panels and card frame live in StoreFront: the strip
+      // sticks to the top of the viewport (opaque, repainting the page
+      // background), the card scrolls behind it and hides exactly at the
+      // tab line, and the page keeps the one scrollbar (StoreFront resets
+      // scroll to top on tab switches).
+      <StoreFront
+        appearance={appearance}
+        defaultTab="products"
+        tabs={[
+          {
+            id: 'products',
+            label: <Trans message="Products" />,
+            content: (
+              <ShopSection
+                widget={shopWidget}
+                biolink={biolink}
+                showHeading={false}
+              />
+            ),
+          },
+          {
+            id: 'about',
+            label: <Trans message="About" />,
+            content: (
+              <AboutSection
+                profile={profile}
+                appearance={appearance}
+                compact={compact}
+                showHeading={false}
+              />
+            ),
+          },
+        ]}
+      />
     );
   }
 
@@ -603,7 +580,7 @@ function AboutSection({
       className={cn(
         'min-w-0 gap-0 bg-[var(--biolink-surface)] text-[var(--biolink-text)] ring-1 ring-(color:--biolink-border) backdrop-blur-md',
         containerRadius.className,
-        compact ? 'p-3.5' : 'p-5 sm:p-6',
+        compact ? 'p-3.5' : 'p-5 pb-6',
       )}
       style={{boxShadow: buttonShadow}}
     >
@@ -628,9 +605,10 @@ function AboutSection({
       )}
       <div
         className={cn(
-          'space-y-3 text-start text-base leading-7 break-words text-[var(--biolink-muted-text)] [&_a]:font-medium [&_a]:text-[var(--biolink-text)] [&_a]:underline [&_a]:underline-offset-4 [&_blockquote]:border-s-2 [&_blockquote]:border-[var(--biolink-border)] [&_blockquote]:ps-4 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:text-balance [&_h2]:text-[var(--biolink-text)] [&_h3]:text-lg [&_h3]:font-semibold [&_h3]:text-balance [&_h3]:text-[var(--biolink-text)] [&_h4]:text-base [&_h4]:font-semibold [&_h4]:text-[var(--biolink-text)] [&_hr]:my-4 [&_hr]:border-[var(--biolink-border)] [&_li]:mb-1.5 [&_li]:leading-7 [&_li::marker]:text-[var(--biolink-muted-text)] [&_ol]:ps-5 [&_ol]:list-decimal [&_p]:m-0 [&_strong]:font-semibold [&_strong]:text-[var(--biolink-text)] [&_ul]:ps-5 [&_ul]:list-disc',
-          compact &&
-            'line-clamp-6 text-sm leading-6 [&_h2]:text-base [&_h3]:text-sm',
+          // Spacing and type scale live in store-front.css (.about-prose);
+          // colors and decoration stay token utilities here.
+          'about-prose text-start break-words text-[var(--biolink-muted-text)] [&_a]:font-medium [&_a]:text-[var(--biolink-text)] [&_a]:underline [&_a]:underline-offset-4 [&_blockquote]:border-s-2 [&_blockquote]:border-[var(--biolink-border)] [&_blockquote]:ps-4 [&_h2]:font-semibold [&_h2]:text-balance [&_h2]:text-[var(--biolink-text)] [&_h3]:font-semibold [&_h3]:text-balance [&_h3]:text-[var(--biolink-text)] [&_h4]:font-semibold [&_h4]:text-[var(--biolink-text)] [&_hr]:border-[var(--biolink-border)] [&_li::marker]:text-[var(--biolink-muted-text)] [&_ol]:list-decimal [&_strong]:font-semibold [&_strong]:text-[var(--biolink-text)] [&_ul]:list-disc',
+          compact && 'line-clamp-6',
         )}
         dangerouslySetInnerHTML={{
           __html: renderAboutHtml(profile.about_html),
