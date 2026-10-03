@@ -3,7 +3,7 @@ import {Tabs} from '@shadcn/tabs/tabs';
 import {message} from '@ui/i18n/message';
 import {useTrans} from '@ui/i18n/use-trans';
 import {cn} from '@ui/utils/cn';
-import {ReactNode} from 'react';
+import {ReactNode, useRef, type RefObject} from 'react';
 import {Background} from './biolink-background';
 import './store-front.css';
 
@@ -31,17 +31,30 @@ export function StoreFront({
   className,
   appearance,
 }: StoreFrontProps) {
+  const stripRef = useRef<HTMLDivElement>(null);
+
   return (
     <Tabs.Root
       defaultValue={defaultTab ?? tabs[0]?.id}
       className={cn('min-w-0 max-w-full flex-col gap-0', className)}
       onValueChange={() => {
-        // Tab switches reset the page to top; per-tab positions are not
-        // preserved (one page scrollbar, no inner panel scroll).
-        window.scrollTo({top: 0});
+        // A tab switch lands on the newly selected panel with the strip
+        // stuck at its top offset: jump to the strip's position instead
+        // of resetting to the page top (which on mobile sits behind the
+        // profile card). Per-tab scroll positions are not preserved —
+        // one page scrollbar, no inner panel scroll.
+        const strip = stripRef.current;
+        if (!strip) {
+          window.scrollTo({top: 0});
+          return;
+        }
+        const inset =
+          parseFloat(getComputedStyle(strip.closest('main') ?? document.body).paddingTop) || 0;
+        const top = strip.getBoundingClientRect().top + window.scrollY - inset;
+        window.scrollTo({top: Math.max(top, 0)});
       }}
     >
-      <StoreTabs tabs={tabs} appearance={appearance} />
+      <StoreTabs tabs={tabs} appearance={appearance} stripRef={stripRef} />
       <StoreCard>
         {tabs.map(tab => (
           <Tabs.Panel key={tab.id} value={tab.id}>
@@ -56,9 +69,11 @@ export function StoreFront({
 function StoreTabs({
   tabs,
   appearance,
+  stripRef,
 }: {
   tabs: StoreFrontTab[];
   appearance: BiolinkAppearanceConfig | null;
+  stripRef: RefObject<HTMLDivElement | null>;
 }) {
   const {trans} = useTrans();
 
@@ -67,9 +82,14 @@ function StoreTabs({
   // carries the one scrollbar. The strip is opaque: it repaints the page
   // background with both copies viewport-anchored (see Background's
   // viewportFixed), so the card is hidden exactly at the tab line as it
-  // scrolls behind instead of showing through.
+  // scrolls behind instead of showing through. It sticks below the
+  // safe-area inset (`--safe-top` in the phone preview) so the strip
+  // never slides under the status bar or Dynamic Island.
   return (
-    <div className="sticky top-0 z-10 flex-none border-b border-[var(--biolink-border)] bg-background">
+    <div
+      ref={stripRef}
+      className="sticky top-[var(--safe-top,env(safe-area-inset-top,0px))] z-10 flex-none border-b border-[var(--biolink-border)] bg-background"
+    >
       <Background appearance={appearance} viewportFixed omitNoiseDef />
       <Tabs.List
         variant="line"

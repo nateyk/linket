@@ -71,7 +71,8 @@ export function BottomNavBar({
       className={cn(
         "bg-card/95 backdrop-blur-xl supports-[backdrop-filter]:bg-card/80 border border-border/40 dark:border-border/50 flex items-center p-1.5 shadow-lg shadow-black/5 ring-1 ring-foreground/5 gap-1 max-w-[95vw] h-[52px] w-fit min-w-0",
         radius,
-        stickyBottom && "fixed inset-x-0 bottom-4 mx-auto z-20",
+        stickyBottom &&
+          "fixed inset-x-0 mx-auto z-20 bottom-[max(1rem,var(--safe-bottom,env(safe-area-inset-bottom,0px)))]",
         className,
       )}
     >

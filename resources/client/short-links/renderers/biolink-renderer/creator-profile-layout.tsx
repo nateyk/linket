@@ -63,7 +63,7 @@ export function CreatorProfileLayout({
     .at(-1) as BiolinkWidget | undefined;
 
   return (
-    <main className="relative z-4 min-h-screen px-4 pt-5 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-6 sm:pt-8 @4xl:px-8 @4xl:py-10">
+    <main className="relative z-4 min-h-screen px-4 pt-[max(1.25rem,var(--safe-top,env(safe-area-inset-top,0px)))] pb-[calc(6rem_+_var(--safe-bottom,env(safe-area-inset-bottom,0px)))] sm:px-6 sm:pt-8 @4xl:px-8 @4xl:py-10">
       <div className="mx-auto w-full max-w-7xl @4xl:hidden">
         <MobileCreatorProfile
           biolink={biolink}
@@ -206,6 +206,16 @@ function MobileCreatorProfile({
               <AdHost slot="biolink_top" />
             </div>
           )}
+          {/* The storefront lives with the profile on mobile: the tabs
+              and first items fill the screen below the card instead of
+              leaving an empty band of background above the nav. */}
+          <CreatorProfileContent
+            profile={profile}
+            shopWidget={shopWidget}
+            biolink={biolink}
+            appearance={appearance}
+            compact={compact}
+          />
         </section>
       )}
 
@@ -294,16 +304,12 @@ function CreatorCard({
       ? undefined
       : {borderRadius: `calc(${containerRadius.avatarValue} - 4px)`};
 
-  // In preview the phone frame supplies the shape: the card drops its
-  // border, radius and shadow instead of floating as a card on the
-  // screen-painted page (live rendering keeps all three).
   return (
     <Card.Root
       className={cn(
         'gap-0 py-0 bg-[var(--biolink-surface)] text-[var(--biolink-text)] ring-1 ring-(color:--biolink-border) backdrop-blur-md',
         !compact && '@4xl:sticky @4xl:top-8',
         containerRadius.className,
-        compact && 'rounded-none! ring-0! shadow-none!',
       )}
       style={{boxShadow: buttonShadow}}
     >

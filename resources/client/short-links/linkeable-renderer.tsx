@@ -1,4 +1,6 @@
+import {CreatorProfileConfig} from '@app/dashboard/stores/store-editor/creator-profile-types';
 import {Biolink} from '@app/gen/schemas/biolink';
+import {BiolinkAppearanceConfig} from '@app/gen/schemas/biolink-appearance-config';
 import {Folder} from '@app/gen/schemas/folder';
 import {Link as LinkType} from '@app/gen/schemas/link';
 import {PasswordPage} from '@app/short-links/password-page';
@@ -14,13 +16,109 @@ import {
 } from '@app/digital-products/public/digital-product-public-pages';
 import {NotFoundPage} from '@common/ui/not-found-page/not-found-page';
 import {getBootstrapData} from '@ui/bootstrap-data/bootstrap-data-store';
-import {useState} from 'react';
+import {useEffect, useState} from 'react';
 
 type Linkeable = LinkType | Folder | Biolink;
+
+/**
+ * The editor frames this route in the phone preview (`?preview=1`) and
+ * streams draft edits over postMessage; the frame never reloads.
+ */
+const PREVIEW_PARAM = 'preview';
+const PREVIEW_MESSAGE = 'linket:store-preview';
+const PREVIEW_READY_MESSAGE = 'linket:store-preview-ready';
+/* iPhone 14 Pro: status bar + Dynamic Island / home indicator zone. */
+const PREVIEW_SAFE_TOP = '59px';
+const PREVIEW_SAFE_BOTTOM = '34px';
+
+interface PreviewSyncPayload {
+  biolink: Partial<Biolink>;
+  appearance: BiolinkAppearanceConfig;
+  content: NonNullable<Biolink['content']>;
+  profileConfig: CreatorProfileConfig;
+}
+
+interface PreviewState {
+  biolink: Linkeable;
+  appearance?: BiolinkAppearanceConfig;
+  content?: NonNullable<Biolink['content']>;
+  profileConfig?: CreatorProfileConfig;
+  isPreview: boolean;
+}
+
+/**
+ * Preview mode only: publishes the device safe-area insets as CSS
+ * variables and merges the editor's draft state as it changes. Outside
+ * `?preview=1` this is a no-op and the page renders exactly as live.
+ */
+function usePreviewSync(initial: Linkeable | undefined): PreviewState {
+  const isPreview =
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).has(PREVIEW_PARAM);
+
+  const [biolink, setBiolink] = useState<Linkeable | undefined>(initial);
+  const [overrides, setOverrides] = useState<
+    Omit<PreviewState, 'biolink' | 'isPreview'>
+  >({});
+
+  useEffect(() => {
+    if (!isPreview) return;
+
+    const root = document.documentElement;
+    root.style.setProperty('--safe-top', PREVIEW_SAFE_TOP);
+    root.style.setProperty('--safe-bottom', PREVIEW_SAFE_BOTTOM);
+
+    const onMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      const msg = event.data as
+        | {type?: string; payload?: PreviewSyncPayload}
+        | undefined;
+      if (msg?.type !== PREVIEW_MESSAGE || !msg.payload) return;
+      const payload = msg.payload;
+      setBiolink(prev =>
+        prev
+          ? ({
+              ...prev,
+              ...payload.biolink,
+              // The editor entity is a Store (`model_type: 'store'`), but
+              // this route resolved as a biolink page — keep the type the
+              // server rendered so the renderer switch stays on biolink.
+              model_type: prev.model_type,
+            } as Linkeable)
+          : prev,
+      );
+      setOverrides({
+        appearance: payload.appearance,
+        content: payload.content,
+        profileConfig: payload.profileConfig,
+      });
+    };
+    window.addEventListener('message', onMessage);
+    // The editor may have posted before this listener attached — ask it
+    // for the current draft so the frame never shows stale server data.
+    window.parent.postMessage(
+      {type: PREVIEW_READY_MESSAGE},
+      window.location.origin,
+    );
+
+    return () => {
+      window.removeEventListener('message', onMessage);
+      root.style.removeProperty('--safe-top');
+      root.style.removeProperty('--safe-bottom');
+    };
+  }, [isPreview]);
+
+  return {
+    biolink: (biolink ?? initial) as Linkeable,
+    ...overrides,
+    isPreview,
+  };
+}
 
 export function Component() {
   const loaders = getBootstrapData().loaders;
   const linkeablePage = loaders?.linkeablePage;
+  const preview = usePreviewSync(linkeablePage?.data);
 
   if (loaders?.digitalProductPage) {
     return <PublicDigitalProductPage data={loaders.digitalProductPage.data} />;
@@ -34,14 +132,34 @@ export function Component() {
     );
   }
 
-  return linkeablePage ? (
-    <LinkeableRenderer linkeable={linkeablePage.data} />
-  ) : (
-    <NotFoundPage />
+  if (!linkeablePage) {
+    return <NotFoundPage />;
+  }
+
+  return (
+    <LinkeableRenderer
+      linkeable={preview.biolink ?? linkeablePage.data}
+      appearance={preview.appearance}
+      content={preview.content}
+      profileConfig={preview.profileConfig}
+      preview={preview.isPreview}
+    />
   );
 }
 
-export function LinkeableRenderer({linkeable}: {linkeable: Linkeable}) {
+export function LinkeableRenderer({
+  linkeable,
+  appearance,
+  content,
+  profileConfig,
+  preview = false,
+}: {
+  linkeable: Linkeable;
+  appearance?: BiolinkAppearanceConfig;
+  content?: NonNullable<Biolink['content']>;
+  profileConfig?: CreatorProfileConfig;
+  preview?: boolean;
+}) {
   const [passwordValid, setPasswordValid] = useState(!linkeable.password);
   if (linkeable.password && !passwordValid) {
     return (
@@ -58,7 +176,15 @@ export function LinkeableRenderer({linkeable}: {linkeable: Linkeable}) {
     case 'folder':
       return <FolderRenderer folder={linkeable} />;
     case 'biolink':
-      return <BiolinkRenderer biolink={linkeable} />;
+      return (
+        <BiolinkRenderer
+          biolink={linkeable}
+          appearance={appearance}
+          content={content}
+          profileConfig={profileConfig}
+          preview={preview}
+        />
+      );
     default:
       return <NotFoundPage />;
   }

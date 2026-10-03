@@ -88,7 +88,9 @@ class FallbackRouteController extends Controller
             abort(403);
         }
 
-        (new LogTrackedEvent())->execute($linkeable);
+        if (!$this->isOwnerPreview($linkeable)) {
+            (new LogTrackedEvent())->execute($linkeable);
+        }
 
         if ($route === 'qr' && ($qrCode = $linkeable->qrCode)) {
             return app(QrCodesController::class)->renderQrCode($qrCode);
@@ -138,6 +140,24 @@ class FallbackRouteController extends Controller
             'noPrerender' => !!$linkeable->password,
             ...$data,
         ]);
+    }
+
+    /**
+     * The store editor frames this page (?preview=1) for its phone
+     * preview; an owner viewing their own draft is not a click. Visitors
+     * adding ?preview=1 still count — only the owner's session skips.
+     */
+    private function isOwnerPreview(Linkeable $linkeable): bool
+    {
+        if (!request()->boolean('preview') || !auth()->check()) {
+            return false;
+        }
+
+        $ownerId = $linkeable->workspace_id
+            ? \DB::table('workspaces')->where('id', $linkeable->workspace_id)->value('owner_id')
+            : $linkeable->user_id;
+
+        return $ownerId && (int) $ownerId === (int) auth()->id();
     }
 
     private function pixelsEnabledForLinkeable(Linkeable $linkeable): bool
