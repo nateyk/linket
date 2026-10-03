@@ -124,12 +124,11 @@ export function BiolinkLayout({
             color: 'var(--biolink-text)',
           }}
         >
-          {(!isSidebar || isPreview) && (
-            <Background
-              className={cn('z-3', isPreview && 'inset-0 size-auto')}
-              appearance={appearance}
-            />
-          )}
+          {/* Preview used to paint a second copy of the page background
+              here; the phone frame now paints it on its screen
+              (PhonePreview's background layer) so the gradient stays put
+              like the live fixed copy while content scrolls over it. A
+              copy inside the scrolled page would drift against it. */}
 
           {isCreatorProfileBiolink(biolink) && creatorProfileOnly ? (
             <CreatorProfilePreview

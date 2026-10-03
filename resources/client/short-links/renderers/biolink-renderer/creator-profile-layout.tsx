@@ -294,12 +294,16 @@ function CreatorCard({
       ? undefined
       : {borderRadius: `calc(${containerRadius.avatarValue} - 4px)`};
 
+  // In preview the phone frame supplies the shape: the card drops its
+  // border, radius and shadow instead of floating as a card on the
+  // screen-painted page (live rendering keeps all three).
   return (
     <Card.Root
       className={cn(
         'gap-0 py-0 bg-[var(--biolink-surface)] text-[var(--biolink-text)] ring-1 ring-(color:--biolink-border) backdrop-blur-md',
         !compact && '@4xl:sticky @4xl:top-8',
         containerRadius.className,
+        compact && 'rounded-none! ring-0! shadow-none!',
       )}
       style={{boxShadow: buttonShadow}}
     >
