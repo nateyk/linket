@@ -1,5 +1,5 @@
 import {cn} from '@ui/utils/cn';
-import {ReactNode, useRef} from 'react';
+import {CSSProperties, ReactNode, useRef} from 'react';
 import {
   PHONE_FRAME_ASPECT,
   PHONE_PREVIEW_DOCUMENT_STYLE,
@@ -14,6 +14,8 @@ import front from './iphone-14-pro-front.svg';
 interface PhonePreviewProps {
   children: ReactNode;
   className?: string;
+  /** Escape hatch for the fit rules; the frame's own ratio wins by default. */
+  style?: CSSProperties;
 }
 
 /**
@@ -31,14 +33,14 @@ interface PhonePreviewProps {
  * The front plate is transparent to clicks, so the page underneath keeps its
  * scroll, its nav and its focus.
  */
-export function PhonePreview({children, className}: PhonePreviewProps) {
+export function PhonePreview({children, className, style}: PhonePreviewProps) {
   const screenRef = useRef<HTMLDivElement>(null);
   usePhoneScale(screenRef);
 
   return (
     <div
       className={cn('relative select-none', className)}
-      style={{aspectRatio: PHONE_FRAME_ASPECT}}
+      style={{aspectRatio: PHONE_FRAME_ASPECT, ...style}}
     >
       <img
         src={back}

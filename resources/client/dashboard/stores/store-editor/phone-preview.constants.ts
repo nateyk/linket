@@ -67,6 +67,13 @@ export const PHONE_GEOMETRY = {
 export const PHONE_FRAME_ASPECT = `${PHONE_GEOMETRY.viewBox.width} / ${PHONE_GEOMETRY.viewBox.height}`;
 
 /**
+ * The same ratio as a plain number, for arithmetic in `calc()` when fitting
+ * the frame to a container.
+ */
+export const PHONE_FRAME_ASPECT_RATIO =
+  PHONE_GEOMETRY.viewBox.width / PHONE_GEOMETRY.viewBox.height;
+
+/**
  * The screen box and the page viewport, ready for a `style` prop.
  *
  * The box is a percentage of the artwork; the document inside it is the

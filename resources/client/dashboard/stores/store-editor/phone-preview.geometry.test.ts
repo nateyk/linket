@@ -3,6 +3,8 @@ import {describe, expect, test} from 'vitest';
 import {
   frameHeightFor,
   frameWidthFor,
+  PHONE_FRAME_ASPECT,
+  PHONE_FRAME_ASPECT_RATIO,
   PHONE_GEOMETRY,
   scaleFor,
 } from './phone-preview.constants';
@@ -207,6 +209,12 @@ describe('derived helpers', () => {
     expect(scaleFor(PHONE_GEOMETRY.viewport.width)).toBe(1);
     expect(scaleFor(0)).toBe(0);
     expect(scaleFor(196.5)).toBe(0.5);
+  });
+
+  test('the numeric aspect ratio matches the CSS one', () => {
+    const {width, height} = PHONE_GEOMETRY.viewBox;
+    expect(PHONE_FRAME_ASPECT).toBe(`${width} / ${height}`);
+    expect(PHONE_FRAME_ASPECT_RATIO).toBeCloseTo(width / height, 12);
   });
 
   test('safe areas sit inside the viewport', () => {
