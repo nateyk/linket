@@ -46,6 +46,10 @@ export default defineConfig({
     ],
     environment: 'node',
     globals: true,
+    // Vitest 4 dropped environmentMatchGlobs: a test that renders opts into
+    // jsdom with a `@vitest-environment` docblock, and picks up the stubs in
+    // test-dom-setup.ts. Everything else stays on node, which is faster.
+    setupFiles: ['resources/client/test-dom-setup.ts'],
   },
   build: {
     sourcemap: true,
