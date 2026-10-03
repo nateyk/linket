@@ -38,6 +38,7 @@ import {
   InfoIcon,
 } from 'lucide-react';
 import {renderAboutHtml} from './about-markdown';
+import {Background} from './biolink-background';
 import {Link} from 'react-router';
 import {useState} from 'react';
 
@@ -514,11 +515,14 @@ function CreatorProfileContent({
 
   if (hasProducts && hasAbout) {
     return (
-      // Static header row (the tab strip) + a naturally-sized panel below
-      // it. Nothing here scrolls internally and nothing is height-capped:
-      // the card grows to its content and the page carries the one
-      // scrollbar. Tab switches reset the page to top (see onValueChange);
-      // per-tab positions are not preserved.
+      // The strip sticks to the top of the viewport; the panel below it is
+      // a plain block, so the card grows to full content height and the
+      // page carries the one scrollbar. The strip is opaque: it repaints
+      // the page background with both copies viewport-anchored (see
+      // Background's viewportFixed), so the card is hidden exactly at the
+      // tab line as it scrolls behind instead of showing through. Tab
+      // switches reset the page to top (see onValueChange); per-tab
+      // positions are not preserved.
       <Tabs.Root
         defaultValue="products"
         className="min-w-0 flex-col gap-0"
@@ -526,7 +530,8 @@ function CreatorProfileContent({
           window.scrollTo({top: 0});
         }}
       >
-        <div className="flex-none relative z-2 border-b border-[var(--biolink-border)]">
+        <div className="sticky top-0 z-10 flex-none border-b border-[var(--biolink-border)] bg-background">
+          <Background appearance={appearance} viewportFixed omitNoiseDef />
           <Tabs.List
             variant="line"
             aria-label={trans(message('Creator profile sections'))}

@@ -12,20 +12,12 @@ import {
   resolveBiolinkThemeVariables,
   shouldUseLightBiolinkLogo,
 } from '@app/short-links/renderers/biolink-renderer/biolink-appearance';
+import {Background} from '@app/short-links/renderers/biolink-renderer/biolink-background';
 import {Biolink} from '@app/gen/schemas/biolink';
 import {BiolinkAppearanceConfig} from '@app/gen/schemas/biolink-appearance-config';
 import {BiolinkLink} from '@app/gen/schemas/biolink-link';
 import {BiolinkWidget} from '@app/gen/schemas/biolink-widget';
 import {AdHost} from '@common/admin/ads/ad-host';
-import {
-  getImageBackgroundEffectStyle,
-  ImageBackgroundEffectOverlay,
-} from '@common/background-selector/image-background-effect';
-import {NoiseFilter} from '@common/background-selector/images/noise-filter';
-import {
-  cssPropsFromBgConfig,
-  getBgTintStyle,
-} from '@common/background-selector/utils/css-props-from-bg-config';
 import {loadFonts} from '@ui/fonts/font-picker/load-fonts';
 import {message} from '@ui/i18n/message';
 import {useTrans} from '@ui/i18n/use-trans';
@@ -105,7 +97,13 @@ export function BiolinkLayout({
               !isSidebar && 'hidden @2xl:block',
             )}
           >
-            <Background appearance={appearance} />
+            {/* Creator profiles paint the same background again inside the
+                sticky tab strip, so both copies anchor to the viewport
+                instead of their (differently sized) boxes. */}
+            <Background
+              appearance={appearance}
+              viewportFixed={isCreatorProfileBiolink(biolink)}
+            />
           </div>
         )}
 
@@ -383,44 +381,6 @@ function Branding({appearance}: {appearance?: BiolinkAppearanceConfig | null}) {
         />
         <span className="text-xs text-[var(--biolink-text)]">{branding.site_name}</span>
       </Link>
-    </div>
-  );
-}
-
-function Background({
-  appearance,
-  className,
-}: {
-  appearance: BiolinkAppearanceConfig | null;
-  className?: string;
-}) {
-  const bgTintStyle = getBgTintStyle(appearance?.bgConfig?.tint);
-  const bgEffectStyle = getImageBackgroundEffectStyle(
-    appearance?.bgConfig?.imageEffect,
-    appearance?.bgConfig?.noise,
-  );
-
-  return (
-    <div
-      className={cn(
-        'pointer-events-none absolute size-full overflow-hidden',
-        className,
-      )}
-    >
-      <div
-        className="absolute inset-0 mx-auto"
-        style={{
-          ...cssPropsFromBgConfig(appearance?.bgConfig),
-          ...bgEffectStyle,
-        }}
-      />
-      <ImageBackgroundEffectOverlay
-        effect={appearance?.bgConfig?.imageEffect}
-      />
-      {bgTintStyle && (
-        <div className="absolute inset-0 mx-auto" style={bgTintStyle} />
-      )}
-      {appearance?.bgConfig?.noise && <NoiseFilter />}
     </div>
   );
 }
