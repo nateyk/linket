@@ -1,5 +1,13 @@
+import {CharacterCounter} from '@app/dashboard/stores/store-editor/character-counter';
+import {CreatorAboutEditor} from '@app/dashboard/stores/store-editor/creator-about-editor';
 import {useBiolinkEditorStore} from '@app/dashboard/stores/store-editor/biolink-editor-store';
 import {BuilderSectionHeader} from '@app/dashboard/stores/store-editor/builder-section-header';
+import {
+  BIO_MAX_LENGTH,
+  buildInitialProfileFormValues,
+  CreatorProfileForm,
+  rebaseAboutFormOnEditorReady,
+} from '@app/dashboard/stores/store-editor/creator-profile-form-values';
 import {CreatorProfileConfig} from '@app/dashboard/stores/store-editor/creator-profile-types';
 import {
   SocialsList,
@@ -8,13 +16,6 @@ import {
 import {resolveBiolinkContainerRadius} from '@app/short-links/renderers/biolink-renderer/biolink-appearance';
 import {digitalProductsIndex} from '@app/gen/digital-products';
 import {useAuth} from '@common/auth/use-auth';
-import {ClearFormatButton} from '@common/text-editor/menubar/clear-format-button';
-import {Divider} from '@common/text-editor/menubar/divider';
-import {FontStyleButtons} from '@common/text-editor/menubar/font-style-buttons';
-import {LinkButton as EditorLinkButton} from '@common/text-editor/menubar/link-button';
-import {ListButtons} from '@common/text-editor/menubar/list-buttons';
-import {TiptapEditorContent} from '@common/text-editor/tiptap-editor-content';
-import {TipTapEditorProvider} from '@common/text-editor/tiptap-editor-provider';
 import {
   CroppedAvatar,
   CroppedCover,
@@ -26,7 +27,6 @@ import {Button} from '@shadcn/button/button';
 import {Checkbox} from '@shadcn/forms/checkbox/checkbox';
 import {Combobox} from '@shadcn/forms/combobox/combobox';
 import {Dialog} from '@shadcn/dialog/dialog';
-import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {Empty} from '@shadcn/empty/empty';
 import {Field} from '@shadcn/forms/field';
 import {HookForm} from '@shadcn/forms/form/hook-form';
@@ -41,9 +41,6 @@ import {Textarea} from '@shadcn/forms/textarea/textarea';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {toast} from '@shadcn/toast/toast';
 import {useQuery} from '@tanstack/react-query';
-import {Placeholder} from '@tiptap/extensions';
-import StarterKit from '@tiptap/starter-kit';
-import {useCurrentTextEditor} from '@common/text-editor/tiptap-editor-context';
 import {message} from '@ui/i18n/message';
 import {FormattedCurrency} from '@ui/i18n/formatted-currency';
 import {Trans} from '@ui/i18n/trans';
@@ -51,7 +48,6 @@ import {useTrans} from '@ui/i18n/use-trans';
 import {cn} from '@ui/utils/cn';
 import {
   AtSignIcon,
-  ChevronDownIcon,
   LinkIcon,
   MailIcon,
   PackageCheckIcon,
@@ -64,10 +60,6 @@ import {
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {useForm, useWatch} from 'react-hook-form';
 import {Link} from 'react-router';
-
-type CreatorProfileForm = Omit<CreatorProfileConfig, 'skills'> & {
-  skills: string;
-};
 
 type CreatorProfileSection = 'actions' | 'products' | 'profile' | 'socials';
 
@@ -144,22 +136,6 @@ const primarySocials: SocialsType[] = [
   SocialsType.Mail,
 ];
 
-const creatorAboutExtensions = [
-  StarterKit.configure({
-    heading: {levels: [2, 3]},
-    code: false,
-    codeBlock: false,
-    strike: false,
-    underline: {},
-    link: {
-      shouldAutoLink: value => /^https?:\/\//.test(value),
-    },
-  }),
-  Placeholder.configure({
-    placeholder: 'Share your story, experience, and approach...',
-  }),
-];
-
 export function CreatorProfileEditor({
   tab = 'content',
 }: {
@@ -195,10 +171,7 @@ export function CreatorProfileEditor({
   );
 
   const form = useForm<CreatorProfileForm>({
-    defaultValues: {
-      ...profileConfig,
-      skills: profileConfig.skills.join(', '),
-    },
+    defaultValues: buildInitialProfileFormValues(profileConfig),
   });
   const values = useWatch({control: form.control});
   const accountEmail = user?.email || '';
@@ -327,6 +300,13 @@ export function CreatorProfileEditor({
                     form.setValue('about_html', aboutHtml, {
                       shouldDirty: true,
                     })
+                  }
+                  onEditorReady={canonicalHtml =>
+                    rebaseAboutFormOnEditorReady(
+                      form,
+                      values.about_html,
+                      canonicalHtml,
+                    )
                   }
                 />
                 <Field.Description>
@@ -462,9 +442,15 @@ export function CreatorProfileEditor({
                       <Field.Label>
                         <Trans message="About" />
                       </Field.Label>
-                      <Textarea rows={4} maxLength={600} />
-                      <Field.Description>
-                        <Trans message="A short introduction to your work and audience." />
+                      <Textarea rows={4} maxLength={BIO_MAX_LENGTH} />
+                      <Field.Description className="flex items-start justify-between gap-3">
+                        <span>
+                          <Trans message="A short introduction to your work and audience." />
+                        </span>
+                        <CharacterCounter
+                          current={values.bio?.length ?? 0}
+                          max={BIO_MAX_LENGTH}
+                        />
                       </Field.Description>
                       <Field.Error />
                     </HookForm.Field>
@@ -744,80 +730,6 @@ export function CreatorProfileEditor({
         </div>
       </HookForm.Root>
     </FileUploadProvider>
-  );
-}
-
-function CreatorAboutEditor({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <TipTapEditorProvider
-      extensions={creatorAboutExtensions}
-      initialContent={value}
-      onChange={onChange}
-    >
-      <div className="overflow-hidden rounded-card-sm border bg-background focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/30">
-        <div className="no-scrollbar flex items-center gap-0.5 overflow-x-auto border-b px-1.5 py-1 text-muted-foreground">
-          <AboutFormatDropdown />
-          <Divider />
-          <FontStyleButtons />
-          <Divider />
-          <ListButtons />
-          <Divider />
-          <EditorLinkButton />
-          <Divider />
-          <ClearFormatButton />
-        </div>
-        <TiptapEditorContent className="prose prose-sm min-h-52 max-w-none px-3.5 py-3 text-foreground dark:prose-invert" />
-      </div>
-    </TipTapEditorProvider>
-  );
-}
-
-function AboutFormatDropdown() {
-  const editor = useCurrentTextEditor();
-
-  return (
-    <Dropdown.Root>
-      <Dropdown.Trigger
-        render={
-          <Button type="button" variant="ghost" size="sm" disabled={!editor} />
-        }
-      >
-        <Trans message="Format" />
-        <ChevronDownIcon data-icon="inline-end" />
-      </Dropdown.Trigger>
-      <Dropdown.Content>
-        <Dropdown.Item
-          onClick={() => editor?.chain().focus().setParagraph().run()}
-        >
-          <Trans message="Paragraph" />
-        </Dropdown.Item>
-        <Dropdown.Item
-          onClick={() =>
-            editor?.chain().focus().toggleHeading({level: 2}).run()
-          }
-        >
-          <Trans message="Heading :number" values={{number: 2}} />
-        </Dropdown.Item>
-        <Dropdown.Item
-          onClick={() =>
-            editor?.chain().focus().toggleHeading({level: 3}).run()
-          }
-        >
-          <Trans message="Heading :number" values={{number: 3}} />
-        </Dropdown.Item>
-        <Dropdown.Item
-          onClick={() => editor?.chain().focus().toggleBlockquote().run()}
-        >
-          <Trans message="Blockquote" />
-        </Dropdown.Item>
-      </Dropdown.Content>
-    </Dropdown.Root>
   );
 }
 

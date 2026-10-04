@@ -5,6 +5,7 @@ import {
   renderAboutHtml,
   renderMarkdownToHtml,
 } from './about-markdown';
+import {STORE_3006_ABOUT_HTML} from './store-3006-about.fixture';
 
 describe('looksLikeMarkdown', () => {
   test('detects headings, lists, bold, rules and links', () => {
@@ -122,13 +123,21 @@ describe('normalizeHybridAboutHtml', () => {
     );
   });
 
-  test('passes genuine structure and mangled copy through byte-identical', () => {
+  test('passes genuine structure through byte-identical and repairs the mangled link', () => {
     expect(
       normalizeHybridAboutHtml('<h2>Real head</h2><ul><li>x</li></ul>'),
     ).toBe('<h2>Real head</h2><ul><li>x</li></ul>');
+    // A markdown link mangled by the sanitizer kept a `)**` suffix in the
+    // href; the repair strips exactly that residue and nothing else (A-01).
     const mangled =
       '<p>See <strong>[name](</strong><a href="https://example.com/a?b&#61;1)**">https://example.com/a</a> here:</p>';
-    expect(normalizeHybridAboutHtml(mangled)).toBe(mangled);
+    expect(normalizeHybridAboutHtml(mangled)).toBe(
+      '<p>See <strong>[name](</strong><a href="https://example.com/a?b&#61;1">https://example.com/a</a> here:</p>',
+    );
+    // A href without markdown residue is never touched.
+    const clean =
+      '<p><a href="https://example.com/a?b=1**x">https://example.com/a</a></p>';
+    expect(normalizeHybridAboutHtml(clean)).toBe(clean);
   });
 
   test('renders the stored noval excerpt with no marker remnants', () => {
@@ -144,6 +153,39 @@ describe('normalizeHybridAboutHtml', () => {
     );
     expect(out).not.toContain('###');
     expect(out).not.toContain('<p>* ');
+  });
+});
+
+describe('store 3006 real stored About HTML (A-01 fidelity)', () => {
+  test('repairs the mangled link so the href is exactly the original URL', () => {
+    const out = normalizeHybridAboutHtml(STORE_3006_ABOUT_HTML);
+    // `&#61;` is how the sanitizer stored `=`; parsed by the browser the href
+    // below is exactly the original markdown link target.
+    expect(out).toContain(
+      '<a href="https://codecanyon.net/item/gadgetza-deals-listing-platform-saas/41758961?s_rank&#61;3"',
+    );
+    expect(out).not.toContain(')**');
+  });
+
+  test('leaves a non-http href ending in markdown residue untouched', () => {
+    // The repair must never turn an inert href into a live one (A-01 keeps
+    // sanitization strict: only https? URLs are ever rewritten).
+    const inert = '<p><a href="javascript:alert(1))**">x</a></p>';
+    expect(normalizeHybridAboutHtml(inert)).toBe(inert);
+  });
+
+  test('renders the stored hybrid HTML as canonical blocks idempotently', () => {
+    const once = renderAboutHtml(STORE_3006_ABOUT_HTML);
+    expect(once).toContain('<hr>');
+    expect(once).toContain('<h4>🌟 Core &amp; General Features</h4>');
+    expect(once).toContain('<ul>');
+    expect(once).toContain('<li><strong>Full Deals Management:</strong>');
+    expect(once).not.toContain('###');
+    expect(once).not.toContain('<p>* ');
+    // Idempotent: the editor feeds this back through the same renderer on
+    // every subsequent load, and a second pass must change nothing.
+    expect(renderAboutHtml(once)).toBe(once);
+    expect(normalizeHybridAboutHtml(once)).toBe(once);
   });
 });
 

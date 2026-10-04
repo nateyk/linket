@@ -105,12 +105,24 @@ function innerTextOf(html: string): string {
 }
 
 /**
+ * Strip the `)**` residue a mangled markdown link leaves at the end of an
+ * href — the sanitizer turned `[label](url)` into `<a href="url)**">`, so
+ * the link 404s. Only `https?` hrefs are ever rewritten: an inert href can
+ * never become a live one, the allowed tag set is untouched, and the strip
+ * is idempotent (once removed the pattern no longer matches).
+ */
+function repairMangledLinkHrefs(html: string): string {
+  return html.replace(/href="(https?:\/\/[^"]*)\)\*\*"/g, 'href="$1"');
+}
+
+/**
  * Normalize hybrid About HTML: rich-text paragraphs whose *text* is
  * markdown (`<p>### Title</p>`, `<p>* item</p>`, `<p>---</p>`) become real
  * headings, list items (consecutive runs grouped into one `ul`/`ol`) and
  * rules. Every other block — genuine headings, lists, quotes, plain
  * paragraphs (including ones with mangled inline remnants) — passes through
- * byte-identical, and empty paragraphs are dropped.
+ * byte-identical, empty paragraphs are dropped, and mangled link hrefs are
+ * repaired. Output is canonical: re-running it changes nothing.
  */
 export function normalizeHybridAboutHtml(source: string): string {
   const pattern = topLevelBlocks();
@@ -185,7 +197,7 @@ export function normalizeHybridAboutHtml(source: string): string {
   }
   handleGap(source.slice(cursor));
   flushList();
-  return out.join('');
+  return repairMangledLinkHrefs(out.join(''));
 }
 
 /**

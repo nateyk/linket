@@ -58,6 +58,10 @@ import {
 } from 'lucide-react';
 import {useState} from 'react';
 import {Outlet, useLocation, useNavigate} from 'react-router';
+import {
+  isWithinStoreEditorPath,
+  UnsavedChangesGuard,
+} from './unsaved-changes-guard';
 
 export function Component() {
   const {routeType} = useDatatableRouteType();
@@ -83,7 +87,7 @@ export function Component() {
       key={`${biolink.id}-${biolink.builder_mode}`}
     >
       <DashboardLayout.MainSection>
-        <BiolinkEditorHeader />
+        <EditorHeaderWithGuard baseUrl={baseUrl} />
         <section className="flex min-h-0 flex-auto flex-col overflow-x-hidden overflow-y-auto lg:flex-row lg:overflow-hidden">
           <div className="flex min-w-0 shrink-0 flex-col lg:min-h-0 lg:flex-auto lg:overflow-hidden">
             {!isInsightsTab && (
@@ -131,66 +135,18 @@ export function Component() {
   );
 }
 
-function BiolinkEditorHeader() {
+function BiolinkEditorHeader({save}: {save: StoreEditorSave}) {
   const {routeType} = useDatatableRouteType();
   const biolink = useBiolinkEditorStore(s => s.biolink);
-  const getState = useBiolinkEditorStore(s => s.getState);
-  const appearanceIsDirty = useBiolinkEditorStore(s => s.appearanceIsDirty);
-  const setAppearanceIsDirty = useBiolinkEditorStore(
-    s => s.setAppearanceIsDirty,
-  );
-  const profileIsDirty = useBiolinkEditorStore(s => s.profileIsDirty);
-  const setProfileIsDirty = useBiolinkEditorStore(s => s.setProfileIsDirty);
   const location = useLocation();
   const isAppearanceTab = location.pathname.endsWith('appearance');
   const isProfileTab =
     !isAppearanceTab && !location.pathname.endsWith('insights');
-
-  const saveAppearance = useMutation(
-    updateStoreAppearanceOptions(String(biolink.id)),
-  );
-  const saveProfile = useMutation({
-    mutationFn: (payload: Parameters<typeof updateStoreCreatorProfile>[1]) =>
-      updateStoreCreatorProfile(String(biolink.id), payload),
-    onSuccess: () => {
-      setProfileIsDirty(false);
-      queryClient.invalidateQueries({queryKey: storesBaseKey});
-      queryClient.invalidateQueries({queryKey: ['digital-products']});
-      toast.success(<Trans message="Changes saved" />);
-    },
-    onError: error => showHttpErrorToast(error),
-  });
-
-  const handleSave = () => {
-    const state = getState();
-    if (isAppearanceTab && state.appearanceIsDirty) {
-      saveAppearance.mutate(
-        {config: state.appearance as any},
-        {
-          onSuccess: () => {
-            setAppearanceIsDirty(false);
-            toast.success(<Trans message="Changes saved" />);
-          },
-          onError: err => {
-            showHttpErrorToast(
-              err,
-              <Trans message="Could not save appearance" />,
-            );
-          },
-        },
-      );
-    } else if (isProfileTab && state.profileIsDirty) {
-      saveProfile.mutate({
-        ...state.profileConfig,
-        skills: state.profileConfig.skills.slice(0, 8),
-        featured_product_ids: state.featuredProductIds.slice(0, 6),
-      } as Parameters<typeof updateStoreCreatorProfile>[1]);
-    }
-  };
+  const appearanceIsDirty = useBiolinkEditorStore(s => s.appearanceIsDirty);
+  const profileIsDirty = useBiolinkEditorStore(s => s.profileIsDirty);
 
   const showSaveButton =
     (isAppearanceTab && appearanceIsDirty) || (isProfileTab && profileIsDirty);
-  const isSaving = saveAppearance.isPending || saveProfile.isPending;
 
   return (
     <DashboardLayout.SectionHeader className="min-h-16 gap-2 border-none px-4 sm:px-6">
@@ -204,7 +160,10 @@ function BiolinkEditorHeader() {
         className="max-lg:hidden"
       />
       {(isProfileTab || isAppearanceTab) && (
-        <Button onClick={handleSave} disabled={!showSaveButton || isSaving}>
+        <Button
+          onClick={save.saveCurrentTab}
+          disabled={!showSaveButton || save.isSaving}
+        >
           <SaveIcon data-icon="inline-start" />
           <span className="hidden sm:inline">
             <Trans message="Save changes" />
@@ -215,6 +174,108 @@ function BiolinkEditorHeader() {
         </Button>
       )}
     </DashboardLayout.SectionHeader>
+  );
+}
+
+/**
+ * Single save implementation for the editor: the header's Save button and
+ * the unsaved-changes guard's "Save & leave" share it, so both save every
+ * dirty part with the same payloads and the same toasts.
+ */
+function useStoreEditorSave() {
+  const biolink = useBiolinkEditorStore(s => s.biolink);
+  const getState = useBiolinkEditorStore(s => s.getState);
+  const setAppearanceIsDirty = useBiolinkEditorStore(
+    s => s.setAppearanceIsDirty,
+  );
+  const setProfileIsDirty = useBiolinkEditorStore(s => s.setProfileIsDirty);
+  const location = useLocation();
+  const isAppearanceTab = location.pathname.endsWith('appearance');
+  const isProfileTab =
+    !isAppearanceTab && !location.pathname.endsWith('insights');
+
+  const saveAppearance = useMutation({
+    ...updateStoreAppearanceOptions(String(biolink.id)),
+    onSuccess: () => {
+      setAppearanceIsDirty(false);
+      toast.success(<Trans message="Changes saved" />);
+    },
+    onError: error => {
+      showHttpErrorToast(error, <Trans message="Could not save appearance" />);
+    },
+  });
+  const saveProfile = useMutation({
+    mutationFn: (payload: Parameters<typeof updateStoreCreatorProfile>[1]) =>
+      updateStoreCreatorProfile(String(biolink.id), payload),
+    onSuccess: () => {
+      setProfileIsDirty(false);
+      queryClient.invalidateQueries({queryKey: storesBaseKey});
+      queryClient.invalidateQueries({queryKey: ['digital-products']});
+      toast.success(<Trans message="Changes saved" />);
+    },
+    onError: error => showHttpErrorToast(error),
+  });
+
+  const saveProfilePayload = () => {
+    const state = getState();
+    return {
+      ...state.profileConfig,
+      skills: state.profileConfig.skills.slice(0, 8),
+      featured_product_ids: state.featuredProductIds.slice(0, 6),
+    } as Parameters<typeof updateStoreCreatorProfile>[1];
+  };
+
+  const saveCurrentTab = () => {
+    const state = getState();
+    if (isAppearanceTab && state.appearanceIsDirty) {
+      saveAppearance.mutate({config: state.appearance as any});
+    } else if (isProfileTab && state.profileIsDirty) {
+      saveProfile.mutate(saveProfilePayload());
+    }
+  };
+
+  const saveAll = async () => {
+    const state = getState();
+    const pending: Promise<unknown>[] = [];
+    if (state.appearanceIsDirty) {
+      pending.push(saveAppearance.mutateAsync({config: state.appearance as any}));
+    }
+    if (state.profileIsDirty) {
+      pending.push(saveProfile.mutateAsync(saveProfilePayload()));
+    }
+    await Promise.all(pending);
+  };
+
+  return {
+    saveCurrentTab,
+    saveAll,
+    isSaving: saveAppearance.isPending || saveProfile.isPending,
+  };
+}
+
+type StoreEditorSave = ReturnType<typeof useStoreEditorSave>;
+
+/**
+ * Editor header paired with the unsaved-changes guard. Navigating anywhere
+ * outside the editor while a form is dirty (sidebar links, back button,
+ * biolink selector, tab close) opens an accessible dialog offering
+ * "Save & leave", "Discard changes" or "Stay". Switching editor tabs is not
+ * blocked: tab content is kept mounted, so the dirty state survives.
+ */
+function EditorHeaderWithGuard({baseUrl}: {baseUrl: string}) {
+  const profileIsDirty = useBiolinkEditorStore(s => s.profileIsDirty);
+  const appearanceIsDirty = useBiolinkEditorStore(s => s.appearanceIsDirty);
+  const save = useStoreEditorSave();
+
+  return (
+    <>
+      <BiolinkEditorHeader save={save} />
+      <UnsavedChangesGuard
+        isDirty={profileIsDirty || appearanceIsDirty}
+        isEditorPath={path => isWithinStoreEditorPath(baseUrl, path)}
+        saveAndLeave={save.saveAll}
+      />
+    </>
   );
 }
 
