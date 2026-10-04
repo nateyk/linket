@@ -2,6 +2,7 @@
 
 import {useState, type CSSProperties} from "react";
 import {motion} from "framer-motion";
+import {useReducedMotion} from "framer-motion";
 import {Home, LineChart, CreditCard, MessageCircle, Trophy, User} from "lucide-react";
 import {cn} from "@ui/utils/cn";
 import {message} from "@ui/i18n/message";
@@ -56,6 +57,7 @@ export function BottomNavBar({
   const [internalIndex, setInternalIndex] = useState(defaultIndex);
   const activeIndex = controlledIndex ?? internalIndex;
   const {trans} = useTrans();
+  const reduceMotion = useReducedMotion();
   const setActiveIndex = (idx: number) => {
     if (onIndexChange) onIndexChange(idx);
     else setInternalIndex(idx);
@@ -65,12 +67,19 @@ export function BottomNavBar({
     <motion.nav
       initial={{scale: 0.9, opacity: 0}}
       animate={{scale: 1, opacity: 1}}
-      transition={{type: "spring", stiffness: 300, damping: 26}}
+      transition={
+        reduceMotion
+          ? {duration: 0}
+          : {type: "spring", stiffness: 300, damping: 26}
+      }
       role="navigation"
       aria-label={trans(message("Bottom Navigation"))}
       className={cn(
         "bg-card/95 backdrop-blur-xl supports-[backdrop-filter]:bg-card/80 border border-border/40 dark:border-border/50 flex items-center p-1.5 shadow-lg shadow-black/5 ring-1 ring-foreground/5 gap-1 max-w-[95vw] h-[52px] w-fit min-w-0",
         radius,
+        // The bar springs in on mount and the label slides open on switch.
+        // Both are decorative, so they stand down when motion is reduced.
+        reduceMotion && "motion-reduce:transition-none",
         stickyBottom &&
           "fixed inset-x-0 mx-auto z-20 bottom-[max(1rem,var(--safe-bottom,env(safe-area-inset-bottom,0px)))]",
         className,
@@ -83,10 +92,11 @@ export function BottomNavBar({
         return (
           <motion.button
             key={item.label}
-            whileTap={{scale: 0.97}}
+            whileTap={reduceMotion ? undefined : {scale: 0.97}}
             className={cn(
               "flex items-center gap-0 px-3 py-2 transition-all duration-200 relative h-10 min-w-[44px] min-h-[40px] max-h-[44px] font-medium",
               radius,
+              reduceMotion && "motion-reduce:transition-none",
               isActive
                 ? cn(
                     "shadow-sm gap-2",
@@ -116,11 +126,15 @@ export function BottomNavBar({
                 opacity: isActive ? 1 : 0,
                 marginLeft: isActive ? "8px" : "0px",
               }}
-              transition={{
-                width: {type: "spring", stiffness: 350, damping: 32},
-                opacity: {duration: 0.19},
-                marginLeft: {duration: 0.19},
-              }}
+              transition={
+                reduceMotion
+                  ? {duration: 0}
+                  : {
+                      width: {type: "spring", stiffness: 350, damping: 32},
+                      opacity: {duration: 0.19},
+                      marginLeft: {duration: 0.19},
+                    }
+              }
               className="overflow-hidden flex items-center max-w-[72px]"
             >
               <span

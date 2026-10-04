@@ -153,6 +153,26 @@ describe('LivePreview fit', () => {
     vi.unstubAllGlobals();
   });
 
+  test('an edit never reloads the frame', () => {
+    vi.useFakeTimers();
+    const {container, rerender} = render(<LivePreview />);
+    const iframe = container.querySelector('iframe')!;
+    // src is the only thing that would trigger a load, and the element is
+    // keyed on the slug so a draft change cannot remount it.
+    const src = iframe.getAttribute('src');
+    const element = iframe;
+
+    rerender(<LivePreview />);
+    rerender(<LivePreview />);
+    vi.advanceTimersByTime(500);
+    rerender(<LivePreview />);
+
+    const after = container.querySelector('iframe')!;
+    expect(after).toBe(element);
+    expect(after.getAttribute('src')).toBe(src);
+    vi.useRealTimers();
+  });
+
   test('a pending sync is cancelled on unmount', () => {
     vi.useFakeTimers();
     const {unmount} = render(<LivePreview />);
