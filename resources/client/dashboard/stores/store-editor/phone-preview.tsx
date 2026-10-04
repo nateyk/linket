@@ -21,7 +21,16 @@ interface PhonePreviewProps {
 /**
  * An iPhone 14 Pro viewport: the page inside runs at the device's own logical
  * size (393 × 852) and only the transform shrinks it, so media queries, `dvh`
- * units and `position: fixed` resolve as they do on the phone.
+ * units and `position: fixed` resolve as they do on the phone. A transformed
+ * element reports the *editor's* width, which is why the page lives in an
+ * iframe of the real route rather than inline.
+ *
+ * Artwork: iphone-14-pro-back.svg and iphone-14-pro-front.svg, split from a
+ * public-domain iPhone 14 Pro vector. The back plate carries the body, bezel
+ * and side buttons; the front plate carries the Dynamic Island, the camera and
+ * the glass highlights, and is transparent over the screen area. Both are
+ * imported as URLs so the browser caches them as files instead of inlining
+ * them into the bundle.
  *
  * Layer order, bottom to top:
  *
@@ -32,6 +41,15 @@ interface PhonePreviewProps {
  *
  * The front plate is transparent to clicks, so the page underneath keeps its
  * scroll, its nav and its focus.
+ *
+ * Regenerating the geometry: the numbers all live in
+ * phone-preview.constants.ts. To refresh them after replacing the artwork,
+ * read `viewBox` off the SVG root, then take the largest solid-black rect --
+ * the screen glass -- and inset it by the drawn bezel, expressing the result
+ * as percentages of the viewBox. Do not hand-tune the radius: it is a
+ * percentage of the screen box and scales on its own. phone-preview.geometry.test.ts
+ * re-derives the screen box from the SVG and fails if the two drift apart, so
+ * run it rather than trusting the hand-edited numbers.
  */
 export function PhonePreview({children, className, style}: PhonePreviewProps) {
   const screenRef = useRef<HTMLDivElement>(null);

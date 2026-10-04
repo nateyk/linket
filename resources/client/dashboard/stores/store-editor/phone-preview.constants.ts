@@ -3,19 +3,14 @@
  *
  * Source artwork: `iphone-14-pro-back.svg` (body, bezel, side buttons) and
  * `iphone-14-pro-front.svg` (Dynamic Island, camera, glass highlights),
- * derived from the public-domain iPhone 14 Pro vector. Both share one
- * `viewBox`, and the screen box below is expressed as a percentage of that
- * viewBox so the page stays aligned with the drawn bezel at any frame width.
+ * split from a public-domain iPhone 14 Pro vector. Both share one `viewBox`,
+ * and the screen box below is expressed as a percentage of that viewBox so the
+ * page stays aligned with the drawn bezel at any frame width.
  *
  * Every number is either read out of the artwork or the device's own logical
  * viewport. `phone-preview.geometry.test.ts` re-derives the screen box from
- * the SVG and fails if the two drift apart.
- *
- * To regenerate after replacing the artwork: open the SVG, read `viewBox`
- * from the root element, then take the largest solid-black rect (the screen
- * glass) and inset it by the bezel until it lines up with the drawn edge.
- * Express the result as percentages of the viewBox. Do not hand-tune the
- * radius: it is a percentage of the screen box, so it scales on its own.
+ * the SVG and fails if the two drift apart; see the regeneration notes in
+ * phone-preview.tsx before changing anything here.
  */
 import type {CSSProperties} from 'react';
 
