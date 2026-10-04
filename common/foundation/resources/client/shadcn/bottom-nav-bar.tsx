@@ -43,7 +43,11 @@ type BottomNavBarProps = {
   activeButtonStyle?: CSSProperties;
 };
 
-export function BottomNavBar({
+/**
+ * The section switcher for the phone layout. Imported as the default export
+ * everywhere, so there is no named export to keep in sync.
+ */
+function BottomNavBar({
   className,
   defaultIndex = 0,
   stickyBottom = false,

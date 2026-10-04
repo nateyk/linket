@@ -95,55 +95,17 @@ export function CreatorProfileLayout({
   );
 }
 
-interface CreatorProfilePreviewProps {
-  biolink: Biolink;
-  appearance: BiolinkAppearanceConfig | null;
-  profileConfig?: CreatorProfileConfig;
-  content: NonNullable<Biolink['content']>;
-}
-
-export function CreatorProfilePreview({
-  biolink,
-  appearance,
-  profileConfig,
-  content,
-}: CreatorProfilePreviewProps) {
-  const profile = profileConfig || getCreatorProfileConfig(biolink);
-  const shopWidget = content
-    .filter(
-      item =>
-        item.active &&
-        item.model_type === 'biolinkWidget' &&
-        item.type === 'shop',
-    )
-    .at(-1) as BiolinkWidget | undefined;
-
-  return (
-    <main className="relative z-4 flex min-h-full flex-col px-2 pt-2 pb-2">
-      <MobileCreatorProfile
-        biolink={biolink}
-        appearance={appearance}
-        profile={profile}
-        shopWidget={shopWidget}
-        compact
-      />
-    </main>
-  );
-}
-
 function MobileCreatorProfile({
   biolink,
   appearance,
   profile,
   shopWidget,
-  compact = false,
   showAds = false,
 }: {
   biolink: Biolink;
   appearance: BiolinkAppearanceConfig | null;
   profile: CreatorProfileConfig;
   shopWidget?: BiolinkWidget;
-  compact?: boolean;
   showAds?: boolean;
 }) {
   const configuredProductIds = Array.isArray(shopWidget?.config?.product_ids)
@@ -181,26 +143,13 @@ function MobileCreatorProfile({
         : trans(message('Profile'));
 
   return (
-    <div
-      className={cn(
-        'relative min-w-0 gap-0',
-        compact && 'flex min-h-full flex-col justify-start',
-      )}
-    >
+    <div className="relative min-w-0 gap-0">
       {activeTab === 'profile' && (
         <section
           aria-label={trans(message('Profile'))}
-          className={cn(
-            'min-w-0 focus-visible:outline-2 focus-visible:outline-offset-2',
-            compact ? 'pb-0' : 'pb-20',
-          )}
+          className="min-w-0 pb-20 focus-visible:outline-2 focus-visible:outline-offset-2"
         >
-          <CreatorCard
-            biolink={biolink}
-            appearance={appearance}
-            profile={profile}
-            compact={compact}
-          />
+          <CreatorCard biolink={biolink} appearance={appearance} profile={profile} />
           {showAds && (
             <div className="mt-4">
               <AdHost slot="biolink_top" />
@@ -217,10 +166,7 @@ function MobileCreatorProfile({
       {hasProducts && activeTab === 'products' && (
         <section
           aria-label={trans(message('Products'))}
-          className={cn(
-            'min-w-0 focus-visible:outline-2 focus-visible:outline-offset-2',
-            compact ? 'pb-0' : 'pb-20',
-          )}
+          className="min-w-0 pb-20 focus-visible:outline-2 focus-visible:outline-offset-2"
         >
           <ShopSection widget={shopWidget} biolink={biolink} />
         </section>
@@ -229,16 +175,9 @@ function MobileCreatorProfile({
       {hasAbout && activeTab === 'about' && (
         <section
           aria-label={trans(message('About'))}
-          className={cn(
-            'min-w-0 focus-visible:outline-2 focus-visible:outline-offset-2',
-            compact ? 'pb-0' : 'pb-20',
-          )}
+          className="min-w-0 pb-20 focus-visible:outline-2 focus-visible:outline-offset-2"
         >
-          <AboutSection
-            profile={profile}
-            appearance={appearance}
-            compact={compact}
-          />
+          <AboutSection profile={profile} appearance={appearance} />
         </section>
       )}
       <span className="sr-only" role="status">
@@ -272,19 +211,17 @@ function CreatorCard({
   biolink,
   appearance,
   profile,
-  compact = false,
 }: {
   biolink: Biolink;
   appearance: BiolinkAppearanceConfig | null;
   profile: CreatorProfileConfig;
-  compact?: boolean;
 }) {
   const {trans} = useTrans();
   const socialLinks = Object.entries(profile.social_links).filter(
     ([, value]) => value,
   );
-  const visibleSkills = profile.skills.slice(0, compact ? 4 : 8);
-  const visibleSocialLinks = compact ? socialLinks.slice(0, 6) : socialLinks;
+  const visibleSkills = profile.skills.slice(0, 8);
+  const visibleSocialLinks = socialLinks;
   const showContactAction = !!profile.contact_url;
   const buttonAppearance = resolveBiolinkButtonAppearance(appearance);
   const buttonShadow = buttonAppearance.style.boxShadow;
@@ -303,7 +240,7 @@ function CreatorCard({
     <Card.Root
       className={cn(
         'gap-0 py-0 bg-[var(--biolink-surface)] text-[var(--biolink-text)] ring-1 ring-(color:--biolink-border) backdrop-blur-md',
-        !compact && '@4xl:sticky @4xl:top-8',
+        '@4xl:sticky @4xl:top-8',
         containerRadius.className,
       )}
       style={{boxShadow: buttonShadow}}
@@ -329,13 +266,7 @@ function CreatorCard({
         )}
       </div>
 
-      <Card.Content
-        className={cn(
-          'px-4 pb-4',
-          compact && 'flex flex-col',
-          !compact && 'sm:px-5 sm:pb-5',
-        )}
-      >
+      <Card.Content className="px-4 pb-4 sm:px-5 sm:pb-5">
         <div className="grid grid-cols-[auto_minmax(0,1fr)] items-end gap-4">
           <Avatar.Root
             className={cn(
@@ -386,12 +317,7 @@ function CreatorCard({
           </div>
         </div>
 
-        <div
-          className={cn(
-            'mt-4 flex flex-col gap-4',
-            compact && 'mt-3 gap-3',
-          )}
-        >
+        <div className="mt-4 flex flex-col gap-4">
           {showContactAction && (
             <div className="flex justify-start">
               <LinkButton
@@ -413,10 +339,7 @@ function CreatorCard({
 
           {profile.bio && (
             <p
-              className={cn(
-                'text-sm leading-relaxed break-words text-[var(--biolink-muted-text)]',
-                compact && 'line-clamp-2',
-              )}
+              className="text-sm leading-relaxed break-words text-[var(--biolink-muted-text)]"
             >
               {profile.bio}
             </p>
@@ -496,13 +419,11 @@ function CreatorProfileContent({
   shopWidget,
   biolink,
   appearance,
-  compact = false,
 }: {
   profile: CreatorProfileConfig;
   shopWidget?: BiolinkWidget;
   biolink: Biolink;
   appearance: BiolinkAppearanceConfig | null;
-  compact?: boolean;
 }) {
   const configuredProductIds = Array.isArray(shopWidget?.config?.product_ids)
     ? shopWidget.config.product_ids
@@ -545,7 +466,6 @@ function CreatorProfileContent({
               <AboutSection
                 profile={profile}
                 appearance={appearance}
-                compact={compact}
                 showHeading={false}
               />
             ),
@@ -559,20 +479,16 @@ function CreatorProfileContent({
     return <ShopSection widget={shopWidget} biolink={biolink} />;
   }
 
-  return (
-    <AboutSection profile={profile} appearance={appearance} compact={compact} />
-  );
+  return <AboutSection profile={profile} appearance={appearance} />;
 }
 
 function AboutSection({
   profile,
   appearance,
-  compact = false,
   showHeading = true,
 }: {
   profile: CreatorProfileConfig;
   appearance: BiolinkAppearanceConfig | null;
-  compact?: boolean;
   /** False inside the tab panel: the active tab already names the section. */
   showHeading?: boolean;
 }) {
@@ -585,14 +501,14 @@ function AboutSection({
       className={cn(
         'min-w-0 gap-0 bg-[var(--biolink-surface)] text-[var(--biolink-text)] ring-1 ring-(color:--biolink-border) backdrop-blur-md',
         containerRadius.className,
-        compact ? 'p-3.5' : 'p-5 pb-6',
+        'p-5 pb-6',
       )}
       style={{boxShadow: buttonShadow}}
     >
       {(showHeading || profile.profile_title) && (
-        <div className={cn('mb-4', compact && 'mb-3')}>
+        <div className="mb-4">
           {showHeading && (
-            <h2 className={cn('font-semibold', compact ? 'text-lg' : 'text-xl')}>
+            <h2 className="font-semibold text-xl">
               <Trans message="About" />
             </h2>
           )}
@@ -609,12 +525,9 @@ function AboutSection({
         </div>
       )}
       <div
-        className={cn(
-          // Spacing and type scale live in store-front.css (.about-prose);
-          // colors and decoration stay token utilities here.
-          'about-prose text-start break-words text-[var(--biolink-muted-text)] [&_a]:font-medium [&_a]:text-[var(--biolink-text)] [&_a]:underline [&_a]:underline-offset-4 [&_blockquote]:border-s-2 [&_blockquote]:border-[var(--biolink-border)] [&_blockquote]:ps-4 [&_h2]:font-semibold [&_h2]:text-balance [&_h2]:text-[var(--biolink-text)] [&_h3]:font-semibold [&_h3]:text-balance [&_h3]:text-[var(--biolink-text)] [&_h4]:font-semibold [&_h4]:text-[var(--biolink-text)] [&_hr]:border-[var(--biolink-border)] [&_li::marker]:text-[var(--biolink-muted-text)] [&_ol]:list-decimal [&_strong]:font-semibold [&_strong]:text-[var(--biolink-text)] [&_ul]:list-disc',
-          compact && 'line-clamp-6',
-        )}
+        // Spacing and type scale live in store-front.css (.about-prose);
+        // colors and decoration stay token utilities here.
+        className="about-prose text-start break-words text-[var(--biolink-muted-text)] [&_a]:font-medium [&_a]:text-[var(--biolink-text)] [&_a]:underline [&_a]:underline-offset-4 [&_blockquote]:border-s-2 [&_blockquote]:border-[var(--biolink-border)] [&_blockquote]:ps-4 [&_h2]:font-semibold [&_h2]:text-balance [&_h2]:text-[var(--biolink-text)] [&_h3]:font-semibold [&_h3]:text-balance [&_h3]:text-[var(--biolink-text)] [&_h4]:font-semibold [&_h4]:text-[var(--biolink-text)] [&_hr]:border-[var(--biolink-border)] [&_li::marker]:text-[var(--biolink-muted-text)] [&_ol]:list-decimal [&_strong]:font-semibold [&_strong]:text-[var(--biolink-text)] [&_ul]:list-disc"
         dangerouslySetInnerHTML={{
           __html: renderAboutHtml(profile.about_html),
         }}

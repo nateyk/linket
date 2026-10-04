@@ -3,10 +3,7 @@ import {
   CreatorProfileConfig,
   isCreatorProfileBiolink,
 } from '@app/dashboard/stores/store-editor/creator-profile-types';
-import {
-  CreatorProfileLayout,
-  CreatorProfilePreview,
-} from '@app/short-links/renderers/biolink-renderer/creator-profile-layout';
+import {CreatorProfileLayout} from '@app/short-links/renderers/biolink-renderer/creator-profile-layout';
 import {
   resolveBiolinkButtonAppearance,
   resolveBiolinkThemeVariables,
@@ -34,8 +31,6 @@ interface BiolinkLayoutProps {
   className?: string;
   enableLinkAnimations?: boolean;
   showAds?: boolean;
-  isPreview?: boolean;
-  creatorProfileOnly?: boolean;
   profileConfig?: CreatorProfileConfig;
 }
 export function BiolinkLayout({
@@ -45,8 +40,6 @@ export function BiolinkLayout({
   content,
   enableLinkAnimations,
   showAds,
-  isPreview,
-  creatorProfileOnly,
   profileConfig,
 }: BiolinkLayoutProps) {
   if (!appearance) {
@@ -75,69 +68,36 @@ export function BiolinkLayout({
     }
   }, [enableLinkAnimations, content]);
 
-  const isSidebar = true;
-
   return (
-    <div className={cn('@container', isPreview && 'h-full')}>
+    <div className="@container">
       <div
-        className={cn(
-          'isolate',
-          isPreview && 'relative h-full overflow-hidden',
-          !isPreview && !isSidebar && '@2xl:pt-10',
-          className,
-        )}
+        className={cn('isolate', className)}
         style={{
           fontFamily: appearance?.fontConfig?.family,
         }}
       >
-        {!isPreview && (
-          <div
-            className={cn(
-              'fixed inset-0 z-1',
-              !isSidebar && 'hidden @2xl:block',
-            )}
-          >
-            {/* Creator profiles paint the same background again inside the
-                sticky tab strip, so both copies anchor to the viewport
-                instead of their (differently sized) boxes. */}
-            <Background
-              appearance={appearance}
-              viewportFixed={isCreatorProfileBiolink(biolink)}
-            />
-          </div>
-        )}
+        <div className="fixed inset-0 z-1">
+          {/* Creator profiles paint the same background again inside the
+              sticky tab strip, so both copies anchor to the viewport
+              instead of their (differently sized) boxes. */}
+          <Background
+            appearance={appearance}
+            viewportFixed={isCreatorProfileBiolink(biolink)}
+          />
+        </div>
 
+        {/* overflow-x-clip (NOT overflow-x-hidden) keeps the background
+            from painting past the edges without creating a scroll container
+            — a hidden axis computes the other to `auto` and silently kills
+            the sticky CreatorCard inside. */}
         <div
-          className={cn(
-            isPreview
-              ? 'relative z-2 h-full min-h-full overflow-x-hidden'
-              : isSidebar
-                // overflow-x-clip (NOT overflow-x-hidden) keeps the background
-                // from painting past the edges without creating a scroll
-                // container — a hidden axis computes the other to `auto` and
-                // silently kills the sticky CreatorCard inside.
-                ? 'relative z-2 min-h-screen overflow-x-clip'
-                : 'relative z-2 mx-auto min-h-screen max-w-2xl overflow-hidden @2xl:min-h-[calc(100vh-2.5rem)] @2xl:rounded-t-card @2xl:shadow-2xl',
-          )}
+          className="relative z-2 min-h-screen overflow-x-clip"
           style={{
             ...resolveBiolinkThemeVariables(appearance),
             color: 'var(--biolink-text)',
           }}
         >
-          {/* Preview used to paint a second copy of the page background
-              here; the phone frame now paints it on its screen
-              (PhonePreview's background layer) so the gradient stays put
-              like the live fixed copy while content scrolls over it. A
-              copy inside the scrolled page would drift against it. */}
-
-          {isCreatorProfileBiolink(biolink) && creatorProfileOnly ? (
-            <CreatorProfilePreview
-              biolink={biolink}
-              appearance={appearance}
-              profileConfig={profileConfig}
-              content={content}
-            />
-          ) : isCreatorProfileBiolink(biolink) ? (
+          {isCreatorProfileBiolink(biolink) ? (
             <CreatorProfileLayout
               biolink={biolink}
               appearance={appearance}
@@ -145,15 +105,8 @@ export function BiolinkLayout({
               profileConfig={profileConfig}
               showAds={showAds}
             />
-          ) : isSidebar ? (
-            <SidebarLayout
-              biolink={biolink}
-              appearance={appearance}
-              content={content}
-              showAds={showAds}
-            />
           ) : (
-            <DefaultLayout
+            <SidebarLayout
               biolink={biolink}
               appearance={appearance}
               content={content}
@@ -267,51 +220,6 @@ function ShopColumn({
       variant="biolinkPage"
       biolink={biolink}
     />
-  );
-}
-
-interface DefaultLayoutProps {
-  biolink: Biolink;
-  appearance: BiolinkAppearanceConfig | null;
-  content: NonNullable<Biolink['content']>;
-  showAds: boolean | undefined;
-}
-
-function DefaultLayout({
-  biolink,
-  appearance,
-  content,
-  showAds,
-}: DefaultLayoutProps) {
-  return (
-    <div className="relative z-4 flex flex-col p-6">
-      <div className="flex-auto">
-        {showAds && <AdHost slot="biolink_top" className="mb-15" />}
-        {content.map(item => {
-          if (!item.active) {
-            return null;
-          }
-
-          const key = `${item.model_type}-${item.id}`;
-          let renderedItem: ReactElement;
-          if (item.model_type === 'link') {
-            renderedItem = <LinkButton appearance={appearance} link={item} />;
-          } else {
-            const Widget = WidgetRenderers[item.type];
-            renderedItem = (
-              <Widget widget={item} variant="biolinkPage" biolink={biolink} />
-            );
-          }
-
-          return (
-            <div className="mb-3.5 w-full" key={key}>
-              {renderedItem}
-            </div>
-          );
-        })}
-      </div>
-      <Branding appearance={appearance} />
-    </div>
   );
 }
 

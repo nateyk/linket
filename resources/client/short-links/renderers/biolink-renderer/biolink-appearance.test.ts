@@ -352,8 +352,10 @@ describe('creator card shadow wiring', () => {
     expect(source).toMatch(
       /function AboutSection[\s\S]*?resolveBiolinkButtonAppearance\(appearance\)/,
     );
+    // The panel takes its padding from the card scale and the creator's shadow
+    // as an inline style, so it stays in step with the profile card above it.
     expect(source).toMatch(
-      /compact \? 'p-3\.5' : 'p-5 pb-6',[\s\S]{0,80}?style=\{\{boxShadow: buttonShadow\}\}/,
+      /function AboutSection[\s\S]*?'p-5 pb-6',[\s\S]{0,120}?style=\{\{boxShadow: buttonShadow\}\}/,
     );
   });
 
