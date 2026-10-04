@@ -21,11 +21,17 @@ export function ColorField({
   hidePopoverFooter,
 }: ColorInputProps) {
   const id = useId();
+  const labelId = useId();
+  const valueId = useId();
   const [pickerOpen, setPickerOpen] = useState(false);
   return (
     <div className={cn(className, 'min-w-0 flex-1')}>
       {label ? (
-        <label className="mb-2 block text-sm font-medium" htmlFor={id}>
+        <label
+          id={labelId}
+          className="mb-2 block text-sm font-medium"
+          htmlFor={id}
+        >
           {label}
         </label>
       ) : null}
@@ -41,9 +47,14 @@ export function ColorField({
             render={
               <button
                 type="button"
-                className="size-9 shrink-0 rounded-s-input border border-e-0 bg-black"
+                aria-labelledby={label ? `${labelId} ${valueId}` : valueId}
+                className="size-9 shrink-0 rounded-s-input border border-e-0 bg-black focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2"
                 style={{backgroundColor: value}}
-              />
+              >
+                <span id={valueId} className="sr-only">
+                  {value}
+                </span>
+              </button>
             }
           />
         </ColorPickerPopover>

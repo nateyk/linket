@@ -1,12 +1,15 @@
 import {Button} from '@shadcn/button/button';
 import {Tooltip} from '@shadcn/tooltip/tooltip';
 import {useEditorState} from '@tiptap/react';
+import {message} from '@ui/i18n/message';
 import {Trans} from '@ui/i18n/trans';
+import {useTrans} from '@ui/i18n/use-trans';
 import {ListIcon, ListOrderedIcon} from 'lucide-react';
 import {useCurrentTextEditor} from '../tiptap-editor-context';
 
 export function ListButtons() {
   const editor = useCurrentTextEditor();
+  const {trans} = useTrans();
 
   const state = useEditorState({
     editor,
@@ -15,6 +18,10 @@ export function ListButtons() {
       isOrderedListActive: snapshot.editor?.isActive('orderedList'),
     }),
   });
+
+  // shared between the accessible name and the tooltip (A-03)
+  const bulletListLabel = message('Bulleted list');
+  const orderedListLabel = message('Numbered list');
 
   return (
     <>
@@ -26,6 +33,8 @@ export function ListButtons() {
               color={state?.isBulletListActive ? 'primary' : 'default'}
               size="icon-sm"
               disabled={!editor}
+              aria-label={trans(bulletListLabel)}
+              aria-pressed={state?.isBulletListActive ?? false}
             />
           }
           onClick={() => {
@@ -36,7 +45,7 @@ export function ListButtons() {
           <ListIcon />
         </Tooltip.Trigger>
         <Tooltip.Content>
-          <Trans message="Bulleted list" />
+          <Trans {...bulletListLabel} />
         </Tooltip.Content>
       </Tooltip.Root>
       <Tooltip.Root>
@@ -47,6 +56,8 @@ export function ListButtons() {
               color={state?.isOrderedListActive ? 'primary' : 'default'}
               size="icon-sm"
               disabled={!editor}
+              aria-label={trans(orderedListLabel)}
+              aria-pressed={state?.isOrderedListActive ?? false}
             />
           }
           onClick={() => {
@@ -57,7 +68,7 @@ export function ListButtons() {
           <ListOrderedIcon />
         </Tooltip.Trigger>
         <Tooltip.Content>
-          <Trans message="Numbered list" />
+          <Trans {...orderedListLabel} />
         </Tooltip.Content>
       </Tooltip.Root>
     </>

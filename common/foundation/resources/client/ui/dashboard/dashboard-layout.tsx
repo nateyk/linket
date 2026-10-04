@@ -2,7 +2,9 @@ import {mergeProps} from '@base-ui/react/merge-props';
 import {useRender} from '@base-ui/react/use-render';
 import {Button} from '@shadcn/button/button';
 import {Tooltip} from '@shadcn/tooltip/tooltip';
+import {message} from '@ui/i18n/message';
 import {Trans} from '@ui/i18n/trans';
+import {useTrans} from '@ui/i18n/use-trans';
 import {ToggleLeftSidebarIcon} from '@ui/icons/toggle-left-sidebar-icon';
 import {ToggleRightSidebarIcon} from '@ui/icons/toggle-right-sidebar-icon';
 import {cn} from '@ui/utils/cn';
@@ -216,6 +218,7 @@ function SidebarToggle({
   children?: ReactNode;
 }) {
   const ctx = use(DashboardLayoutContext);
+  const {trans} = useTrans();
   if (!ctx) return null;
   const sidebar = sidebarName === 'left' ? ctx.leftSidebar : ctx.rightSidebar;
 
@@ -226,21 +229,24 @@ function SidebarToggle({
       <ToggleRightSidebarIcon />
     );
 
+  // one descriptor feeds both the accessible name and the tooltip so the
+  // button can never be announced differently from what it shows (A-03)
+  const label =
+    sidebar.status === 'collapsed'
+      ? message('Expand sidebar')
+      : message('Collapse sidebar');
+
   return (
     <Tooltip.Root>
       <Tooltip.Trigger
         data-slot="sidebar-toggle-button"
-        render={<Button variant="ghost" size="icon-sm" />}
+        render={<Button variant="ghost" size="icon-sm" aria-label={trans(label)} />}
         onClick={() => sidebar.toggleStatus()}
       >
         {children || defaultIcon}
       </Tooltip.Trigger>
       <Tooltip.Content>
-        {sidebar.status === 'collapsed' ? (
-          <Trans message="Expand sidebar" />
-        ) : (
-          <Trans message="Collapse sidebar" />
-        )}
+        <Trans {...label} />
       </Tooltip.Content>
     </Tooltip.Root>
   );

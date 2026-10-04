@@ -10,6 +10,7 @@ import {TiptapEditorContent} from '@common/text-editor/tiptap-editor-content';
 import {TipTapEditorProvider} from '@common/text-editor/tiptap-editor-provider';
 import {useCurrentTextEditor} from '@common/text-editor/tiptap-editor-context';
 import {Trans} from '@ui/i18n/trans';
+import {useTrans} from '@ui/i18n/use-trans';
 import {ChevronDownIcon} from 'lucide-react';
 
 /**
@@ -27,6 +28,7 @@ export function CreatorAboutEditor({
   onChange: (value: string) => void;
   onEditorReady?: (canonicalHtml: string) => void;
 }) {
+  const {trans} = useTrans();
   return (
     <TipTapEditorProvider
       extensions={creatorAboutExtensions}
@@ -35,7 +37,11 @@ export function CreatorAboutEditor({
       onCreate={({editor}) => onEditorReady?.(editor.getHTML())}
     >
       <div className="overflow-hidden rounded-card-sm border bg-background focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/30">
-        <div className="no-scrollbar flex items-center gap-0.5 overflow-x-auto border-b px-1.5 py-1 text-muted-foreground">
+        <div
+          role="toolbar"
+          aria-label={trans({message: 'Text formatting'})}
+          className="no-scrollbar flex items-center gap-0.5 overflow-x-auto border-b px-1.5 py-1 text-muted-foreground"
+        >
           <AboutFormatDropdown />
           <Divider />
           <FontStyleButtons />

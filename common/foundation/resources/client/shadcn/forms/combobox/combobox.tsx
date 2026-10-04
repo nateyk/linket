@@ -84,11 +84,19 @@ function ComboboxInput({
   disabled = false,
   showTrigger = true,
   isLoading = false,
+  clearLabel,
   ...props
 }: ComboboxPrimitive.Input.Props & {
   showTrigger?: boolean;
   isLoading?: boolean;
+  /**
+   * Accessible name for the clear (x) button (A-21). It defaults to a generic
+   * "Clear"; pass the field-specific name ("Clear profile title") when the
+   * field is known so the name is never context-free.
+   */
+  clearLabel?: string;
 }) {
+  const {trans} = useTrans();
   const hookFieldCtx = use(HookForm.FieldContext);
   const mergedRef = hookFieldCtx ? mergeRefs([hookFieldCtx.ref, ref]) : ref;
   const mergedOnBlur: ComboboxPrimitive.Input.Props['onBlur'] = e => {
@@ -119,7 +127,15 @@ function ComboboxInput({
           >
             <ChevronDownIcon className="pointer-events-none size-4 text-muted-foreground" />
           </InputGroupButton>
-          <ComboboxClear disabled={disabled} />
+          <ComboboxClear
+            disabled={disabled}
+            // Base UI defaults the clear button to tabIndex -1 ("avoid
+            // stealing focus from the input"), which made it mouse-only.
+            // elementProps override that default, so a plain tab stop works
+            // and the button keeps moving focus back to the input (A-21).
+            tabIndex={0}
+            aria-label={clearLabel ?? trans({message: 'Clear'})}
+          />
         </InputGroupAddon>
       )}
       {isLoading && (

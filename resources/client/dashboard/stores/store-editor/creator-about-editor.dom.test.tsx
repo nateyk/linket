@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
-import {act, render, waitFor} from '@testing-library/react';
+import {act, render, screen, waitFor} from '@testing-library/react';
 import {expect, test, vi, beforeAll} from 'vitest';
 import {useForm, UseFormReturn} from 'react-hook-form';
 
@@ -142,4 +142,35 @@ test('identical round-trip is a no-op (no reset on byte-stable mounts)', async (
   rebaseAboutFormOnEditorReady(form, '<p>same</p>', '<p>canonical</p>');
   expect(resetSpy).toHaveBeenCalledTimes(1);
   expect(form.getValues('about_html')).toBe('<p>canonical</p>');
+});
+
+test('toolbar is labelled and every icon-only button exposes a name (A-03)', async () => {
+  const formRef: FormRef = {current: null};
+  render(<AboutHarness initialAbout="<p>hello</p>" formRef={formRef} />);
+  await act(() => new Promise<void>(resolve => setTimeout(resolve, 300)));
+
+  const toolbar = screen.getByRole('toolbar');
+  expect(toolbar.getAttribute('aria-label')).toBe('Text formatting');
+
+  // formatting toggles: named after their tooltip and expose pressed state
+  const toggles = [
+    'Bold',
+    'Italic',
+    'Underline',
+    'Bulleted list',
+    'Numbered list',
+  ];
+  for (const name of toggles) {
+    const button = screen.getByRole('button', {name});
+    expect(button.getAttribute('aria-pressed')).toBe('false');
+  }
+
+  // dialog/action buttons are named but are not pressed-state toggles
+  for (const name of ['Insert link', 'Clear formatting']) {
+    const button = screen.getByRole('button', {name});
+    expect(button.getAttribute('aria-pressed')).toBeNull();
+  }
+
+  // the Format menu button keeps its visible text as its name
+  expect(screen.getByRole('button', {name: 'Format'})).toBeTruthy();
 });

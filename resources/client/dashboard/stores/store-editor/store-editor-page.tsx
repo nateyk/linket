@@ -42,6 +42,7 @@ import {Tabs} from '@shadcn/tabs/tabs';
 import {toast} from '@shadcn/toast/toast';
 import {useMutation, useSuspenseQuery} from '@tanstack/react-query';
 import {Trans} from '@ui/i18n/trans';
+import {useTrans} from '@ui/i18n/use-trans';
 import {
   ChevronDownIcon,
   EllipsisVerticalIcon,
@@ -356,6 +357,7 @@ function MoreActionsButton() {
   const listQuery = useSuspenseQuery(listCurrentUserStoresOptions());
   const location = useLocation();
   const navigate = useNavigate();
+  const {trans} = useTrans();
   const isInsightsTab = location.pathname.endsWith('/insights');
   const baseUrl = `/${routeType}/stores/${storeId}`;
 
@@ -377,7 +379,12 @@ function MoreActionsButton() {
       <Dropdown.Root>
         <Dropdown.Trigger
           render={
-            <Button size="icon-sm" variant="outline" className="ml-auto" />
+            <Button
+              size="icon-sm"
+              variant="outline"
+              aria-label={trans({message: 'More actions'})}
+              className="ml-auto"
+            />
           }
         >
           <EllipsisVerticalIcon />

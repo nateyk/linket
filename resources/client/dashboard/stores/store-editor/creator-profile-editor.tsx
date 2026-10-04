@@ -347,6 +347,7 @@ export function CreatorProfileEditor({
                         )}
                         cropRadius={containerRadius.value}
                         value={values.cover_url || ''}
+                        label={trans(message('Cover image'))}
                         onChange={value =>
                           form.setValue('cover_url', value || '', {
                             shouldDirty: true,
@@ -370,6 +371,7 @@ export function CreatorProfileEditor({
                           previewClassName={containerRadius.avatarClassName}
                           cropRadius={containerRadius.avatarValue}
                           value={values.avatar_url || ''}
+                          label={trans(message('Profile photo'))}
                           onChange={value =>
                             form.setValue('avatar_url', value || '', {
                               shouldDirty: true,
@@ -411,6 +413,9 @@ export function CreatorProfileEditor({
                             }
                           >
                             <Combobox.Input
+                              clearLabel={trans(
+                                message('Clear profile title'),
+                              )}
                               placeholder={trans(
                                 message('Choose a profession'),
                               )}
@@ -846,6 +851,7 @@ function SelectedProduct({
   product: CreatorProduct;
   onRemove: () => void;
 }) {
+  const {trans} = useTrans();
   return (
     <div className="group flex min-w-0 items-center gap-3 px-1 py-2.5 transition-colors hover:bg-accent/50">
       <ProductThumbnail product={product} />
@@ -871,8 +877,11 @@ function SelectedProduct({
         type="button"
         size="icon-xs"
         variant="ghost"
+        aria-label={trans(
+          message('Remove :title', {values: {title: product.title}}),
+        )}
         onClick={onRemove}
-        className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100"
+        className="shrink-0 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
       >
         <XIcon />
       </Button>

@@ -11,11 +11,12 @@ export function ColorSwatch({onChange, isActive, className, color}: Props) {
   return (
     <button
       type="button"
+      aria-label={color}
       onClick={() => {
         onChange?.(color);
       }}
       className={cn(
-        'relative flex aspect-square shrink-0 items-center justify-center rounded-full border text-white outline-offset-2 outline-foreground',
+        'relative flex aspect-square shrink-0 items-center justify-center rounded-full border text-white outline-offset-2 outline-foreground focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-primary',
         isActive && 'outline-1',
         className,
       )}

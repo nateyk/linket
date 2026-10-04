@@ -37,7 +37,11 @@ export function GlobalSearchInput() {
     >
       <InputGroup className="h-11.5 rounded-input border-none bg-background in-data-[variant=default]:bg-accent in-data-[variant=inset]:shadow-sm *:data-[slot=input-group-control]:md:text-base dark:bg-card">
         <InputGroupAddon>
-          <InputGroupButton size="icon-sm" type="submit">
+          <InputGroupButton
+            size="icon-sm"
+            type="submit"
+            aria-label={trans({message: 'Search'})}
+          >
             <SearchIcon />
           </InputGroupButton>
         </InputGroupAddon>
@@ -51,6 +55,7 @@ export function GlobalSearchInput() {
           <InputGroupAddon align="inline-end">
             <InputGroupButton
               size="icon-sm"
+              aria-label={trans({message: 'Clear search'})}
               onClick={() => {
                 inputRef.current!.value = '';
                 // navigate so all other params (page, sort etc.) are cleared

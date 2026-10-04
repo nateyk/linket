@@ -7,7 +7,9 @@ import {Input} from '@shadcn/forms/input/input';
 import {Select} from '@shadcn/forms/select/select';
 import {Tooltip} from '@shadcn/tooltip/tooltip';
 import {useEditorState} from '@tiptap/react';
+import {message} from '@ui/i18n/message';
 import {Trans} from '@ui/i18n/trans';
+import {useTrans} from '@ui/i18n/use-trans';
 import {Link2Icon} from 'lucide-react';
 import {useState} from 'react';
 import {useForm} from 'react-hook-form';
@@ -26,6 +28,7 @@ const linkTargetItems = [
 
 export function LinkButton() {
   const editor = useCurrentTextEditor();
+  const {trans} = useTrans();
   const [open, setOpen] = useState(false);
 
   const state = useEditorState({
@@ -34,6 +37,9 @@ export function LinkButton() {
       href: snapshot.editor?.getAttributes('link').href || '',
     }),
   });
+
+  // shared between the accessible name and the tooltip (A-03)
+  const linkLabel = message('Insert link');
 
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
@@ -47,6 +53,7 @@ export function LinkButton() {
                   color={state?.href ? 'primary' : 'default'}
                   size="icon-sm"
                   disabled={!editor}
+                  aria-label={trans(linkLabel)}
                 />
               }
             />
@@ -55,7 +62,7 @@ export function LinkButton() {
           <Link2Icon />
         </Tooltip.Trigger>
         <Tooltip.Content>
-          <Trans message="Insert link" />
+          <Trans {...linkLabel} />
         </Tooltip.Content>
       </Tooltip.Root>
       <Dialog.Portal>

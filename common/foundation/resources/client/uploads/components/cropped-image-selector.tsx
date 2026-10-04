@@ -36,6 +36,13 @@ interface CroppedImageSelectorProps {
    * radius the image will actually render with instead of a sharp rectangle.
    */
   cropRadius?: string;
+  /**
+   * Accessible name for the sr-only file input and the image's replace/remove
+   * menu trigger (A-03/A-04). Pass the same text as the visible field label
+   * (e.g. "Cover image") so the control, its label and its menu read as one
+   * thing. Translated by the caller — this component never builds strings.
+   */
+  label?: string;
 }
 
 function useCroppedUpload({
@@ -74,6 +81,7 @@ export function CroppedImageSelector({
   shape = 'square',
   placeholderIcon,
   cropRadius,
+  label,
 }: CroppedImageSelectorProps) {
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [cropOpen, setCropOpen] = useState(false);
@@ -137,6 +145,7 @@ export function CroppedImageSelector({
         type="file"
         accept={FileInputType.image}
         className="sr-only"
+        aria-label={label}
         onChange={handleInputChange}
         disabled={isUploading}
       />
@@ -168,6 +177,7 @@ export function CroppedImageSelector({
                   <Button
                     size="icon-xs"
                     variant="outline"
+                    aria-label={label}
                     className="size-7 rounded-full bg-card shadow-sm hover:bg-card"
                   />
                 }
