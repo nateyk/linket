@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
-import {render} from '@testing-library/react';
+import {fireEvent, render, screen, waitFor} from '@testing-library/react';
 import {beforeEach, describe, expect, test, vi} from 'vitest';
 import {
   PHONE_FRAME_ASPECT_RATIO,
@@ -293,5 +293,129 @@ describe('LivePreview follows the editor tab (A-06)', () => {
       activeTab: 'about',
       section: 'about',
     });
+  });
+});
+
+describe('preview sheet below lg (A-19)', () => {
+  beforeEach(() => {
+    location.pathname = '/dashboard/stores/demo';
+    store.openSection = 'profile';
+    store.profileConfig = null;
+  });
+
+  test('the stacked panel hides below lg and a floating Preview button takes over', () => {
+    const {container} = render(<LivePreview />);
+
+    // The panel stays mounted (so its frame keeps its state) but is hidden
+    // below lg, where a fixed trigger opens the sheet instead.
+    expect(panelOf(container).className).toContain('max-lg:hidden');
+    const trigger = screen.getByRole('button', {name: 'Preview'});
+    expect(trigger.className).toContain('lg:hidden');
+  });
+
+  test('the sheet is a titled modal that lazily mounts its own frame', async () => {
+    render(<LivePreview />);
+
+    // One frame — the panel's — until the sheet has actually been opened.
+    expect(document.querySelectorAll('iframe').length).toBe(1);
+
+    fireEvent.click(screen.getByRole('button', {name: 'Preview'}));
+
+    const dialog = await screen.findByRole('dialog', {name: 'Live preview'});
+    expect(dialog.getAttribute('aria-modal')).toBe('true');
+    await waitFor(() =>
+      expect(document.querySelectorAll('iframe').length).toBe(2),
+    );
+  });
+
+  test('Esc closes the sheet and returns focus to the Preview button', async () => {
+    render(<LivePreview />);
+    const trigger = screen.getByRole('button', {name: 'Preview'});
+    // A pointer click focuses the button in a real browser; jsdom does not.
+    trigger.focus();
+    fireEvent.click(trigger);
+
+    const dialog = await screen.findByRole('dialog');
+    await waitFor(() =>
+      expect(dialog.contains(document.activeElement)).toBe(true),
+    );
+
+    fireEvent.keyDown(document.activeElement as Element, {key: 'Escape'});
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  test('after close the popup stays mounted but hidden, frame included', async () => {
+    render(<LivePreview />);
+    fireEvent.click(screen.getByRole('button', {name: 'Preview'}));
+    const dialog = await screen.findByRole('dialog');
+    await waitFor(() =>
+      expect(dialog.contains(document.activeElement)).toBe(true),
+    );
+    fireEvent.keyDown(document.activeElement as Element, {key: 'Escape'});
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+
+    const sheetContent = document.querySelector<HTMLElement>(
+      '[data-slot="sheet-content"]',
+    );
+    expect(sheetContent).toBeTruthy();
+    expect(sheetContent!.hidden).toBe(true);
+    // The lazily mounted frame is kept, not torn down and rebuilt on reopen.
+    expect(document.querySelectorAll('iframe').length).toBe(2);
+  });
+
+  test('the sheet frame receives debounced edits and the A-06 tab message', async () => {
+    const {rerender} = render(<LivePreview />);
+    fireEvent.click(screen.getByRole('button', {name: 'Preview'}));
+    await screen.findByRole('dialog');
+
+    const sheetFrame = document.querySelector<HTMLElement>(
+      '[data-slot="sheet-content"] iframe',
+    )!;
+    const send = vi.fn();
+    Object.defineProperty(sheetFrame, 'contentWindow', {
+      configurable: true,
+      value: {postMessage: send},
+    });
+    const messages = () => send.mock.calls.map(([message]) => message as {type: string});
+
+    // An edit streams into the sheet's frame after the debounce, carrying the
+    // edited snapshot (the mount snapshot carried the old one).
+    store.profileConfig = {bio: 'typed'};
+    rerender(<LivePreview />);
+    await waitFor(() => {
+      const snapshot = messages().find(m => m.type === 'linket:store-preview');
+      expect(snapshot).toBeTruthy();
+      expect((snapshot as any).payload.profileConfig.bio).toBe('typed');
+    });
+
+    // Switching editor tabs re-posts the section to the sheet's frame too.
+    location.pathname = '/dashboard/stores/demo/about';
+    rerender(<LivePreview />);
+    await waitFor(() =>
+      expect(messages().at(-1)).toEqual({
+        type: 'linket:store-preview-tab',
+        activeTab: 'about',
+        section: 'about',
+      }),
+    );
+  });
+
+  test('the sheet cannot outlive a switch to the insights tab', async () => {
+    const {rerender} = render(<LivePreview />);
+    fireEvent.click(screen.getByRole('button', {name: 'Preview'}));
+    await screen.findByRole('dialog');
+
+    location.pathname = '/dashboard/stores/demo/insights';
+    rerender(<LivePreview />);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.queryByRole('button', {name: 'Preview'})).toBeNull();
+
+    // Coming back must not resurrect the sheet: its trigger was unmounted,
+    // so a reopened modal would have nowhere to return focus.
+    location.pathname = '/dashboard/stores/demo';
+    rerender(<LivePreview />);
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 });

@@ -9,14 +9,24 @@ import {
   StorePreviewEditorTab,
   StorePreviewSection,
 } from '@app/dashboard/stores/store-editor/store-preview-protocol';
+import {Button} from '@shadcn/button/button';
+import {Dialog} from '@shadcn/dialog/dialog';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@shadcn/sheet/sheet';
 import {Trans} from '@ui/i18n/trans';
 import {cn} from '@ui/utils/cn';
+import {SmartphoneIcon, XIcon} from 'lucide-react';
 import {
   Activity,
   useCallback,
   useEffect,
   useMemo,
   useRef,
+  useState,
 } from 'react';
 import {useLocation} from 'react-router';
 
@@ -30,7 +40,12 @@ const PREVIEW_READY_MESSAGE = 'linket:store-preview-ready';
  */
 const SYNC_DEBOUNCE_MS = 150;
 
-export function LivePreview() {
+/**
+ * The phone frame and its postMessage protocol. The stacked panel and the
+ * sheet below lg each render their own instance; every instance streams the
+ * same store snapshot into its own frame, so two frames never disagree.
+ */
+function PreviewDevice() {
   const biolink = useBiolinkEditorStore(s => s.biolink);
   const appearance = useBiolinkEditorStore(s => s.appearance);
   const content = useBiolinkEditorStore(s => s.content);
@@ -130,13 +145,61 @@ export function LivePreview() {
   const backHalf = biolink.back_half;
 
   return (
+    // Fit the whole device inside whatever space is on offer.
+    // `container-type: size` on this wrapper makes its height available
+    // as `100cqh`, so the frame's width becomes whichever is smaller:
+    // the container's width, or the width that fits the height on offer.
+    // `aspect-ratio` then gives the height. Nothing scrolls and the
+    // device is never cropped — the same rules in the panel and the sheet.
+    <div className="flex min-h-0 w-full flex-1 items-center justify-center [container-type:size]">
+      <PhonePreview
+        style={{
+          width: `min(100cqw, calc(100cqh * ${PHONE_FRAME_ASPECT_RATIO}))`,
+        }}
+      >
+        {backHalf ? (
+          <iframe
+            ref={iframeRef}
+            key={backHalf}
+            src={`/${backHalf}?preview=1`}
+            title="Live preview of the store page on an iPhone 14 Pro"
+            width={PHONE_GEOMETRY.viewport.width}
+            height={PHONE_GEOMETRY.viewport.height}
+            scrolling="auto"
+            className="block h-full w-full border-0 bg-background"
+          />
+        ) : null}
+      </PhonePreview>
+    </div>
+  );
+}
+
+export function LivePreview() {
+  const {pathname} = useLocation();
+  const isInsightsTab = pathname.split('/').pop() === 'insights';
+  const [sheetOpen, setSheetOpen] = useState(false);
+  // True once the sheet has been opened: its frame then stays mounted
+  // behind the hidden popup instead of being torn down and rebuilt.
+  const [sheetVisited, setSheetVisited] = useState(false);
+
+  // Insights hides the panel and its trigger; an open sheet must go with
+  // them, or returning could resurrect a modal whose trigger never came back.
+  useEffect(() => {
+    if (isInsightsTab) setSheetOpen(false);
+  }, [isInsightsTab]);
+
+  return (
     <Activity>
-      {/* The panel is a fixed column on large screens and a stacked band on
-          small ones. `h-full` plus `overflow-hidden` is what lets the frame
-          below shrink to the space it has instead of running off the bottom. */}
+      {/* On large screens the panel is a fixed column. Below lg it is hidden
+          but stays mounted — frame and A-05/A-06 state intact — while the
+          floating trigger and sheet take over, so the preview never sits far
+          below a long scrolling form (A-19). `h-full` plus `overflow-hidden`
+          is what lets the frame shrink to the space it has instead of
+          running off the bottom. */}
       <div
         className={cn(
           'flex w-full min-w-0 shrink-0 flex-col items-center gap-2.5 overflow-hidden border-t bg-background px-4 py-5 lg:h-full lg:w-[min(36vw,28rem)] lg:min-w-88 lg:border-t-0 lg:border-l lg:px-6',
+          'max-lg:hidden',
           isInsightsTab && 'hidden',
         )}
       >
@@ -144,33 +207,56 @@ export function LivePreview() {
           <Trans message="Live preview" />
         </div>
 
-        {/* Fit the whole device inside whatever is left of the panel.
-            `container-type: size` on this wrapper makes its height available
-            as `100cqh`, so the frame's width becomes whichever is smaller:
-            the panel's width, or the width that fits the height on offer.
-            `aspect-ratio` then gives the height. Nothing scrolls and the
-            device is never cropped. */}
-        <div className="flex min-h-0 w-full flex-1 items-center justify-center [container-type:size]">
-          <PhonePreview
-            style={{
-              width: `min(100cqw, calc(100cqh * ${PHONE_FRAME_ASPECT_RATIO}))`,
+        <PreviewDevice />
+      </div>
+
+      {!isInsightsTab && (
+        <>
+          {/* The trigger floats above the compact layout's bottom nav
+              (4.5rem clears it) plus whatever safe area there is. */}
+          <Button
+            type="button"
+            size="sm"
+            className="fixed end-4 bottom-[calc(4.5rem+var(--safe-bottom,env(safe-area-inset-bottom,0px)))] z-30 shadow-lg motion-reduce:transition-none lg:hidden"
+            onClick={() => {
+              setSheetVisited(true);
+              setSheetOpen(true);
             }}
           >
-            {backHalf ? (
-              <iframe
-                ref={iframeRef}
-                key={backHalf}
-                src={`/${backHalf}?preview=1`}
-                title="Live preview of the store page on an iPhone 14 Pro"
-                width={PHONE_GEOMETRY.viewport.width}
-                height={PHONE_GEOMETRY.viewport.height}
-                scrolling="auto"
-                className="block h-full w-full border-0 bg-background"
-              />
-            ) : null}
-          </PhonePreview>
-        </div>
-      </div>
+            <SmartphoneIcon />
+            <Trans message="Preview" />
+          </Button>
+
+          {/* A modal bottom sheet: focus is trapped, Esc closes, focus
+              returns to the trigger. The frame mounts on first open and
+              then stays mounted (keepMounted) for cheap reopens. */}
+          <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+            <SheetContent
+              side="bottom"
+              keepMounted={sheetVisited}
+              aria-modal="true"
+              className="h-[min(88dvh,46rem)]"
+            >
+              <SheetHeader className="flex-row items-center justify-between gap-2 border-b px-4 py-3">
+                <SheetTitle>
+                  <Trans message="Live preview" />
+                </SheetTitle>
+                <Dialog.CloseButton
+                  render={<Button variant="ghost" size="icon-sm" />}
+                >
+                  <XIcon />
+                  <span className="sr-only">
+                    <Trans message="Close" />
+                  </span>
+                </Dialog.CloseButton>
+              </SheetHeader>
+              <div className="flex min-h-0 flex-1 flex-col p-4 pb-[calc(1rem+var(--safe-bottom,env(safe-area-inset-bottom,0px)))]">
+                <PreviewDevice />
+              </div>
+            </SheetContent>
+          </Sheet>
+        </>
+      )}
     </Activity>
   );
 }

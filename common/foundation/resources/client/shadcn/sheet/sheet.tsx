@@ -12,6 +12,14 @@ function Sheet({...props}: DialogPrimitive.Root.Props) {
   return <DialogPrimitive.Root data-slot="sheet" {...props} />;
 }
 
+/**
+ * Opt-in: keeps the panel (and any state inside it, like a loaded preview
+ * frame) mounted behind its `hidden` popup after close. Off by default, so
+ * existing sheets keep tearing down as before.
+ */
+type SheetContentProps = DialogPrimitive.Popup.Props &
+  VariantProps<typeof sheetContentVariants> & {keepMounted?: boolean};
+
 function SheetTrigger({...props}: DialogPrimitive.Trigger.Props) {
   return <DialogPrimitive.Trigger data-slot="sheet-trigger" {...props} />;
 }
@@ -40,10 +48,11 @@ function SheetContent({
   className,
   side = 'right',
   children,
+  keepMounted,
   ...props
-}: DialogPrimitive.Popup.Props & VariantProps<typeof sheetContentVariants>) {
+}: SheetContentProps) {
   return (
-    <DialogPrimitive.Portal>
+    <DialogPrimitive.Portal keepMounted={keepMounted}>
       <DialogPrimitive.Backdrop
         data-slot="sheet-backdrop"
         className={cn(

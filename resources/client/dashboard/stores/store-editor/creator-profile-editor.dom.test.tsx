@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
-import {fireEvent, render, screen, waitFor} from '@testing-library/react';
+import {fireEvent, render, screen, waitFor, within} from '@testing-library/react';
 import {expect, test, vi} from 'vitest';
 
 const {PRODUCTS} = vi.hoisted(() => ({
@@ -39,6 +39,17 @@ import {
 } from './biolink-editor-store';
 import {CreatorProfileEditor} from './creator-profile-editor';
 
+/** Store 3006's real skills, in the order they are saved. */
+const SKILLS_3006 = [
+  'Design',
+  'Photography',
+  'adobe',
+  'Figma',
+  'inDesign',
+  'Nextjs',
+  'JavaScript',
+];
+
 const BIOLINK = {
   id: 5,
   name: 'Nathanael Yitbarek',
@@ -46,13 +57,20 @@ const BIOLINK = {
   builder_mode: 'creator_profile',
   content: [],
   appearance: null,
+  profile_config: {skills: SKILLS_3006},
 } as any;
 
 /** The phone preview's data source: the profile config pushed by the form. */
 function PreviewProbe() {
   const bio = useBiolinkEditorStore(s => s.profileConfig.bio);
+  const skills = useBiolinkEditorStore(s => s.profileConfig.skills);
   const dirty = useBiolinkEditorStore(s => s.profileIsDirty);
-  return <output data-testid="preview">{`${bio}|${dirty ? 'dirty' : 'clean'}`}</output>;
+  return (
+    <>
+      <output data-testid="preview">{`${bio}|${dirty ? 'dirty' : 'clean'}`}</output>
+      <output data-testid="preview-skills">{skills.join(',')}</output>
+    </>
+  );
 }
 
 function renderProfileEditor() {
@@ -143,4 +161,61 @@ test('profile fields expose their form field name for error focus (A-07)', () =>
   expect(
     document.querySelector('[data-slot="field"][data-field-name="display_name"]'),
   ).toBeTruthy();
+});
+
+/** The skills field group, located the way the error summary does (A-07). */
+function skillsField(): HTMLElement {
+  const field = document.querySelector(
+    '[data-slot="field"][data-field-name="skills"]',
+  );
+  expect(field).toBeTruthy();
+  return field as HTMLElement;
+}
+
+/** Chip remove labels in DOM (= chip) order, `Remove :skill` per chip. */
+function skillRemoveLabels(): string[] {
+  return within(skillsField())
+    .queryAllByRole('button', {name: /^Remove /})
+    .map(button => button.getAttribute('aria-label') ?? '');
+}
+
+test("store 3006's seven skills load as ordered chips with an n/8 counter and stay clean (A-12)", () => {
+  renderProfileEditor();
+
+  expect(skillRemoveLabels()).toEqual(
+    SKILLS_3006.map(skill => `Remove ${skill}`),
+  );
+  expect(skillsField().textContent).toContain('7/8');
+  // Loading the editor must never mark the form as having unsaved changes.
+  expect(preview()).toContain('|clean');
+  // The preview is fed the same array, in the same order, as the chips.
+  expect(screen.getByTestId('preview-skills').textContent).toBe(
+    SKILLS_3006.join(','),
+  );
+});
+
+test('adding a skill marks the form dirty and reaches the preview; undoing restores both (A-12)', async () => {
+  renderProfileEditor();
+  const input = within(skillsField()).getByRole('textbox');
+
+  fireEvent.change(input, {target: {value: 'Rust'}});
+  fireEvent.keyDown(input, {key: 'Enter'});
+
+  expect(skillRemoveLabels()).toEqual(
+    [...SKILLS_3006, 'Rust'].map(skill => `Remove ${skill}`),
+  );
+  expect(skillsField().textContent).toContain('8/8');
+  await waitFor(() => expect(preview()).toContain('|dirty'));
+  expect(screen.getByTestId('preview-skills').textContent).toBe(
+    [...SKILLS_3006, 'Rust'].join(','),
+  );
+
+  // Undoing the exact edit returns to the saved array and a clean form.
+  fireEvent.click(
+    within(skillsField()).getByRole('button', {name: 'Remove Rust'}),
+  );
+  await waitFor(() => expect(preview()).toContain('|clean'));
+  expect(screen.getByTestId('preview-skills').textContent).toBe(
+    SKILLS_3006.join(','),
+  );
 });

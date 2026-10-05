@@ -1,5 +1,10 @@
 import {CharacterCounter} from '@app/dashboard/stores/store-editor/character-counter';
 import {CreatorAboutEditor} from '@app/dashboard/stores/store-editor/creator-about-editor';
+import {
+  parseSkills,
+  SkillsChipsField,
+  SKILLS_MAX,
+} from '@app/dashboard/stores/store-editor/skills-chips-field';
 import {useBiolinkEditorStore} from '@app/dashboard/stores/store-editor/biolink-editor-store';
 import {BuilderSectionHeader} from '@app/dashboard/stores/store-editor/builder-section-header';
 import {SectionAccordionTrigger} from '@app/dashboard/stores/store-editor/section-accordion-trigger';
@@ -473,13 +478,18 @@ export function CreatorProfileEditor({
                       <Field.Label>
                         <Trans message="Skills" />
                       </Field.Label>
-                      <Input
+                      <SkillsChipsField
                         placeholder={trans(
                           message('Design, Photography, Coaching'),
                         )}
                       />
-                      <Field.Description>
-                        <Trans message="Separate skills with commas. The first eight are shown." />
+                      <Field.Description className="flex items-start justify-between gap-3">
+                        <span>
+                          <Trans message="Separate skills with commas. The first eight are shown." />
+                        </span>
+                        <span className="shrink-0 tabular-nums text-sm text-muted-foreground">
+                          {parseSkills(values.skills).length}/{SKILLS_MAX}
+                        </span>
                       </Field.Description>
                       <Field.Error />
                     </HookForm.Field>
