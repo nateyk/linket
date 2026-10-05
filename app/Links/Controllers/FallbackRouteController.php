@@ -137,7 +137,11 @@ class FallbackRouteController extends Controller
         $data = $linkeable->getFrontendRenderData();
         return $this->clientSideOrPrerenderedResponse([
             'loader' => 'linkeablePage',
-            'noPrerender' => !!$linkeable->password,
+            // The editor frames this page with ?preview=1 — the crawler
+            // prerender is for search/social scrapers, never for that
+            // request, even when it arrives with a crawler user agent (A-20).
+            'noPrerender' =>
+                !!$linkeable->password || request()->boolean('preview'),
             ...$data,
         ]);
     }

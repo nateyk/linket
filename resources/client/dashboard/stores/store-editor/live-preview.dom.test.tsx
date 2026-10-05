@@ -13,18 +13,24 @@ import {
  * of which exist here. Stubbing the panel's own output is enough to assert the
  * fit rules, which are the part worth protecting.
  */
+const {location, store} = vi.hoisted(() => ({
+  location: {pathname: '/dashboard/stores/demo'},
+  store: {
+    biolink: {back_half: 'demo'},
+    appearance: null,
+    content: [],
+    profileConfig: null,
+    openSection: 'profile',
+  } as Record<string, unknown>,
+}));
+
 vi.mock('@app/dashboard/stores/store-editor/biolink-editor-store', () => ({
   useBiolinkEditorStore: (selector: (s: unknown) => unknown) =>
-    selector({
-      biolink: {back_half: 'demo'},
-      appearance: null,
-      content: [],
-      profileConfig: null,
-    }),
+    selector(store),
 }));
 
 vi.mock('react-router', () => ({
-  useLocation: () => ({pathname: '/dashboard/stores/demo/content'}),
+  useLocation: () => location,
 }));
 
 vi.mock('@ui/i18n/trans', () => ({
@@ -180,5 +186,112 @@ describe('LivePreview fit', () => {
     // No "update on an unmounted component" and no late postMessage.
     expect(() => vi.advanceTimersByTime(500)).not.toThrow();
     vi.useRealTimers();
+  });
+});
+
+describe('LivePreview follows the editor tab (A-06)', () => {
+  beforeEach(() => {
+    location.pathname = '/dashboard/stores/demo';
+    store.openSection = 'profile';
+  });
+
+  /** Renders the panel and wires the frame's contentWindow to a spy. */
+  function renderFrame() {
+    const {rerender, container} = render(<LivePreview />);
+    const iframe = container.querySelector('iframe')!;
+    const send = vi.fn();
+    Object.defineProperty(iframe, 'contentWindow', {
+      configurable: true,
+      value: {postMessage: send},
+    });
+    return {send, rerender};
+  }
+
+  function ready() {
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        origin: window.location.origin,
+        data: {type: 'linket:store-preview-ready'},
+      }),
+    );
+  }
+
+  /** Most recent message posted to the frame (undefined if none). */
+  function lastSent(send: {mock: {calls: unknown[][]}}) {
+    return send.mock.calls.at(-1)?.[0];
+  }
+
+  test('the ready handshake posts the draft and the current section', () => {
+    const {send} = renderFrame();
+    ready();
+
+    expect(send).toHaveBeenCalledTimes(2);
+    expect(send.mock.calls[0][0].type).toBe('linket:store-preview');
+    expect(lastSent(send)).toEqual({
+      type: 'linket:store-preview-tab',
+      activeTab: 'content',
+      section: 'profile',
+    });
+    expect(send.mock.calls[1][1]).toBe(window.location.origin);
+  });
+
+  test('tab changes post the mapped section; insights holds the last one', () => {
+    const {send, rerender} = renderFrame();
+    ready();
+    expect(send).toHaveBeenCalledTimes(2);
+
+    // Content -> About: the preview must land on its About section.
+    location.pathname = '/dashboard/stores/demo/about';
+    rerender(<LivePreview />);
+    expect(lastSent(send)).toEqual({
+      type: 'linket:store-preview-tab',
+      activeTab: 'about',
+      section: 'about',
+    });
+
+    // Insights: no mapping, no message — the frame keeps its section.
+    const count = send.mock.calls.length;
+    location.pathname = '/dashboard/stores/demo/insights';
+    rerender(<LivePreview />);
+    expect(send).toHaveBeenCalledTimes(count);
+
+    // Appearance maps to the Profile section.
+    location.pathname = '/dashboard/stores/demo/appearance';
+    rerender(<LivePreview />);
+    expect(lastSent(send)).toEqual({
+      type: 'linket:store-preview-tab',
+      activeTab: 'appearance',
+      section: 'profile',
+    });
+  });
+
+  test('the Products accordion maps Content to the Products section', () => {
+    store.openSection = 'products';
+    const {send, rerender} = renderFrame();
+    ready();
+    expect(lastSent(send)).toEqual({
+      type: 'linket:store-preview-tab',
+      activeTab: 'content',
+      section: 'products',
+    });
+
+    // Closing it back to Profile moves the preview too.
+    store.openSection = 'profile';
+    rerender(<LivePreview />);
+    expect(lastSent(send)).toEqual({
+      type: 'linket:store-preview-tab',
+      activeTab: 'content',
+      section: 'profile',
+    });
+
+    // On the About tab the accordion state is irrelevant: About = About.
+    store.openSection = 'products';
+    location.pathname = '/dashboard/stores/demo/about';
+    rerender(<LivePreview />);
+    expect(lastSent(send)).toEqual({
+      type: 'linket:store-preview-tab',
+      activeTab: 'about',
+      section: 'about',
+    });
   });
 });

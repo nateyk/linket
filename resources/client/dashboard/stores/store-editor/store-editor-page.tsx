@@ -24,6 +24,7 @@ import {ShareLinkButton} from '@app/dashboard/links/sharing/share-link-button';
 import {useDatatableRouteType} from '@app/dashboard/use-datatable-route-type';
 import {BiolinkWidget} from '@app/gen/schemas/biolink-widget';
 import {AdHost} from '@common/admin/ads/ad-host';
+import {parseApiError} from '@common/http/errors/parsed-api-error';
 import {showHttpErrorToast} from '@common/http/errors/show-http-error-toast';
 import {queryClient} from '@common/http/query-client';
 import {
@@ -51,6 +52,7 @@ import {
   ChartNoAxesCombinedIcon,
   LayoutGridIcon,
   LayoutPanelTop,
+  LoaderCircleIcon,
   PlusIcon,
   SaveIcon,
   SettingsIcon,
@@ -64,6 +66,7 @@ import {
   isWithinStoreEditorPath,
   UnsavedChangesGuard,
 } from './unsaved-changes-guard';
+import {SaveErrorSummary} from './save-error-summary';
 
 export function Component() {
   const {routeType} = useDatatableRouteType();
@@ -146,6 +149,13 @@ export function Component() {
                 }
               >
                 <AdHost slot="dashboard" className="mb-6" />
+                {!isInsightsTab && (
+                  <SaveErrorSummary
+                    activeTab={
+                      selectedTab === 'appearance' ? 'appearance' : 'profile'
+                    }
+                  />
+                )}
                 <Outlet />
               </div>
             </div>
@@ -160,6 +170,7 @@ export function Component() {
 function BiolinkEditorHeader({save}: {save: StoreEditorSave}) {
   const {routeType} = useDatatableRouteType();
   const biolink = useBiolinkEditorStore(s => s.biolink);
+  const saveStatus = useBiolinkEditorStore(s => s.saveStatus);
   const location = useLocation();
   const isAppearanceTab = location.pathname.endsWith('appearance');
   const isProfileTab =
@@ -172,6 +183,12 @@ function BiolinkEditorHeader({save}: {save: StoreEditorSave}) {
 
   return (
     <DashboardLayout.SectionHeader className="min-h-16 gap-2 border-none px-4 sm:px-6">
+      {/* Quiet success announcement alongside the toast: the region exists
+          up front and only its text changes, so screen readers catch it
+          without the announcement being tied to a toast's lifetime (A-07). */}
+      <span role="status" className="sr-only">
+        {saveStatus === 'saved' ? <Trans message="Changes saved" /> : ''}
+      </span>
       <DashboardLayout.SidebarToggle />
       {routeType === 'admin' ? <AdminBreadcrumb /> : <BiolinkSelector />}
       <MoreActionsButton />
@@ -188,16 +205,39 @@ function BiolinkEditorHeader({save}: {save: StoreEditorSave}) {
               <Button
                 onClick={save.saveCurrentTab}
                 disabled={!showSaveButton || save.isSaving}
+                aria-busy={save.isSaving || undefined}
                 aria-keyshortcuts="Control+S Meta+S"
+                // Clean = nothing to save: muted tokens, not just opacity .5,
+                // so it reads as intentionally off rather than hovered (A-07).
+                className={
+                  !showSaveButton
+                    ? 'disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100'
+                    : undefined
+                }
               />
             }
           >
-            <SaveIcon data-icon="inline-start" />
+            {save.isSaving ? (
+              <LoaderCircleIcon
+                data-icon="inline-start"
+                className="animate-spin"
+              />
+            ) : (
+              <SaveIcon data-icon="inline-start" />
+            )}
             <span className="hidden sm:inline">
-              <Trans message="Save changes" />
+              {save.isSaving ? (
+                <Trans message="Saving..." />
+              ) : (
+                <Trans message="Save changes" />
+              )}
             </span>
             <span className="sm:hidden">
-              <Trans message="Save" />
+              {save.isSaving ? (
+                <Trans message="Saving..." />
+              ) : (
+                <Trans message="Save" />
+              )}
             </span>
           </Tooltip.Trigger>
           <Tooltip.Content>
@@ -221,31 +261,53 @@ function useStoreEditorSave() {
     s => s.setAppearanceIsDirty,
   );
   const setProfileIsDirty = useBiolinkEditorStore(s => s.setProfileIsDirty);
+  const setSaveError = useBiolinkEditorStore(s => s.setSaveError);
+  const setSaveStatus = useBiolinkEditorStore(s => s.setSaveStatus);
   const location = useLocation();
   const isAppearanceTab = location.pathname.endsWith('appearance');
   const isProfileTab =
     !isAppearanceTab && !location.pathname.endsWith('insights');
 
+  // Every save clears the previous feedback first: the summary disappears
+  // while the request runs and reappears only if this attempt fails (A-07).
   const saveAppearance = useMutation({
     ...updateStoreAppearanceOptions(String(biolink.id)),
+    onMutate: () => {
+      setSaveError(null);
+      setSaveStatus(null);
+    },
     onSuccess: () => {
       setAppearanceIsDirty(false);
+      setSaveStatus('saved');
       toast.success(<Trans message="Changes saved" />);
     },
     onError: error => {
+      setSaveError({tab: 'appearance', parsed: parseApiError(error)});
+      setSaveStatus(null);
       showHttpErrorToast(error, <Trans message="Could not save appearance" />);
     },
   });
   const saveProfile = useMutation({
     mutationFn: (payload: Parameters<typeof updateStoreCreatorProfile>[1]) =>
       updateStoreCreatorProfile(String(biolink.id), payload),
+    onMutate: () => {
+      setSaveError(null);
+      setSaveStatus(null);
+    },
     onSuccess: () => {
       setProfileIsDirty(false);
       queryClient.invalidateQueries({queryKey: storesBaseKey});
       queryClient.invalidateQueries({queryKey: ['digital-products']});
+      setSaveStatus('saved');
       toast.success(<Trans message="Changes saved" />);
     },
-    onError: error => showHttpErrorToast(error),
+    onError: error => {
+      // Dirty state is deliberately untouched: nothing is lost, and the
+      // summary lists the server's field errors for a retry (A-07).
+      setSaveError({tab: 'profile', parsed: parseApiError(error)});
+      setSaveStatus(null);
+      showHttpErrorToast(error);
+    },
   });
 
   const saveProfilePayload = () => {

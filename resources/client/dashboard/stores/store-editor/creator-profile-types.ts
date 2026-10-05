@@ -2,6 +2,8 @@ import {Biolink} from '@app/gen/schemas/biolink';
 import {BiolinkBuilderMode} from '@app/gen/schemas/biolink-builder-mode';
 import {normalizeMediaUrl} from '@common/uploads/normalize-media-url';
 
+export type CreatorProfileSection = 'actions' | 'products' | 'profile' | 'socials';
+
 export interface CreatorProfileConfig {
   display_name: string;
   profile_title: string;

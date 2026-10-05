@@ -1,4 +1,12 @@
-import {CreatorProfileConfig} from '@app/dashboard/stores/store-editor/creator-profile-types';
+import {
+  CreatorProfileConfig,
+} from '@app/dashboard/stores/store-editor/creator-profile-types';
+import {
+  isStorePreviewEditorTab,
+  isStorePreviewSection,
+  PREVIEW_TAB_MESSAGE,
+  StorePreviewSection,
+} from '@app/dashboard/stores/store-editor/store-preview-protocol';
 import {Biolink} from '@app/gen/schemas/biolink';
 import {BiolinkAppearanceConfig} from '@app/gen/schemas/biolink-appearance-config';
 import {Folder} from '@app/gen/schemas/folder';
@@ -43,22 +51,27 @@ interface PreviewState {
   appearance?: BiolinkAppearanceConfig;
   content?: NonNullable<Biolink['content']>;
   profileConfig?: CreatorProfileConfig;
+  previewSection?: StorePreviewSection;
   isPreview: boolean;
 }
 
 /**
  * Preview mode only: publishes the device safe-area insets as CSS
  * variables and merges the editor's draft state as it changes. Outside
- * `?preview=1` this is a no-op and the page renders exactly as live.
+ * `?preview=1` this is a no-op and the page renders exactly as live —
+ * no listener attaches, so the public page ignores the protocol too (A-06).
  */
-function usePreviewSync(initial: Linkeable | undefined): PreviewState {
+export function usePreviewSync(initial: Linkeable | undefined): PreviewState {
   const isPreview =
     typeof window !== 'undefined' &&
     new URLSearchParams(window.location.search).has(PREVIEW_PARAM);
 
   const [biolink, setBiolink] = useState<Linkeable | undefined>(initial);
+  const [section, setSection] = useState<StorePreviewSection | undefined>(
+    undefined,
+  );
   const [overrides, setOverrides] = useState<
-    Omit<PreviewState, 'biolink' | 'isPreview'>
+    Omit<PreviewState, 'biolink' | 'isPreview' | 'previewSection'>
   >({});
 
   useEffect(() => {
@@ -69,10 +82,29 @@ function usePreviewSync(initial: Linkeable | undefined): PreviewState {
     root.style.setProperty('--safe-bottom', PREVIEW_SAFE_BOTTOM);
 
     const onMessage = (event: MessageEvent) => {
+      // Only the editor window, only this origin.
       if (event.origin !== window.location.origin) return;
+      if (event.source !== window.parent) return;
       const msg = event.data as
-        | {type?: string; payload?: PreviewSyncPayload}
+        | {
+            type?: string;
+            payload?: PreviewSyncPayload;
+            activeTab?: unknown;
+            section?: unknown;
+          }
         | undefined;
+      if (msg?.type === PREVIEW_TAB_MESSAGE) {
+        // Validate the shape before any state moves: a malformed message
+        // (or anything hand-crafted from another window) changes nothing.
+        if (
+          !isStorePreviewEditorTab(msg.activeTab) ||
+          !isStorePreviewSection(msg.section)
+        ) {
+          return;
+        }
+        setSection(msg.section);
+        return;
+      }
       if (msg?.type !== PREVIEW_MESSAGE || !msg.payload) return;
       const payload = msg.payload;
       setBiolink(prev =>
@@ -111,6 +143,7 @@ function usePreviewSync(initial: Linkeable | undefined): PreviewState {
   return {
     biolink: (biolink ?? initial) as Linkeable,
     ...overrides,
+    previewSection: section,
     isPreview,
   };
 }
@@ -143,6 +176,7 @@ export function Component() {
       content={preview.content}
       profileConfig={preview.profileConfig}
       preview={preview.isPreview}
+      previewSection={preview.previewSection}
     />
   );
 }
@@ -153,12 +187,14 @@ export function LinkeableRenderer({
   content,
   profileConfig,
   preview = false,
+  previewSection,
 }: {
   linkeable: Linkeable;
   appearance?: BiolinkAppearanceConfig;
   content?: NonNullable<Biolink['content']>;
   profileConfig?: CreatorProfileConfig;
   preview?: boolean;
+  previewSection?: StorePreviewSection;
 }) {
   const [passwordValid, setPasswordValid] = useState(!linkeable.password);
   if (linkeable.password && !passwordValid) {
@@ -183,6 +219,7 @@ export function LinkeableRenderer({
           content={content}
           profileConfig={profileConfig}
           preview={preview}
+          previewSection={previewSection}
         />
       );
     default:

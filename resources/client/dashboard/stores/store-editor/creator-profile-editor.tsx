@@ -9,7 +9,10 @@ import {
   CreatorProfileForm,
   rebaseAboutFormOnEditorReady,
 } from '@app/dashboard/stores/store-editor/creator-profile-form-values';
-import {CreatorProfileConfig} from '@app/dashboard/stores/store-editor/creator-profile-types';
+import {
+  CreatorProfileConfig,
+  CreatorProfileSection,
+} from '@app/dashboard/stores/store-editor/creator-profile-types';
 import {
   SocialsList,
   SocialsType,
@@ -61,8 +64,6 @@ import {
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {useForm, useWatch} from 'react-hook-form';
 import {Link} from 'react-router';
-
-type CreatorProfileSection = 'actions' | 'products' | 'profile' | 'socials';
 
 type CreatorProduct = {
   id: number;
@@ -155,9 +156,11 @@ export function CreatorProfileEditor({
   );
   const appearance = useBiolinkEditorStore(s => s.appearance);
   const containerRadius = resolveBiolinkContainerRadius(appearance);
-  const [openSection, setOpenSection] = useState<CreatorProfileSection | null>(
-    tab === 'content' ? 'profile' : null,
-  );
+  // The open accordion section lives in the store so the live preview can
+  // follow it (A-06): opening Products moves the phone to its Products
+  // section. It starts on Profile and keeps whatever the user last opened.
+  const openSection = useBiolinkEditorStore(s => s.openSection);
+  const setOpenSection = useBiolinkEditorStore(s => s.setOpenSection);
   const [showAllSocials, setShowAllSocials] = useState(false);
   const [selectedProductIds, setSelectedProductIds] = useState<number[]>([]);
   const visibleSocials = useMemo(
@@ -258,14 +261,17 @@ export function CreatorProfileEditor({
   }, [selectedProductIds, setFeaturedProductIds]);
 
   useEffect(() => {
-    if (form.formState.isDirty) {
-      updateProfileConfig(
-        normalizeProfileValues(
-          values as Partial<CreatorProfileForm>,
-          initialProfileConfig,
-        ),
-      );
-    }
+    // Push on every change, including when the form returns to clean: an
+    // undone edit or a discarded draft must leave the phone preview showing
+    // the saved values again (A-05). The dirty flag never comes from the
+    // push itself — only from the form/product state below — so a clean
+    // form can't be marked dirty by this sync.
+    updateProfileConfig(
+      normalizeProfileValues(
+        values as Partial<CreatorProfileForm>,
+        initialProfileConfig,
+      ),
+    );
     setProfileIsDirty(form.formState.isDirty || productsAreDirty);
   }, [
     form.formState.isDirty,

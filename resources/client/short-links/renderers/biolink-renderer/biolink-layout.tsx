@@ -3,6 +3,7 @@ import {
   CreatorProfileConfig,
   isCreatorProfileBiolink,
 } from '@app/dashboard/stores/store-editor/creator-profile-types';
+import {StorePreviewSection} from '@app/dashboard/stores/store-editor/store-preview-protocol';
 import {CreatorProfileLayout} from '@app/short-links/renderers/biolink-renderer/creator-profile-layout';
 import {
   resolveBiolinkButtonAppearance,
@@ -32,6 +33,8 @@ interface BiolinkLayoutProps {
   enableLinkAnimations?: boolean;
   showAds?: boolean;
   profileConfig?: CreatorProfileConfig;
+  /** Section the editor's current tab maps to; only set in preview mode. */
+  previewSection?: StorePreviewSection;
 }
 export function BiolinkLayout({
   biolink,
@@ -41,6 +44,7 @@ export function BiolinkLayout({
   enableLinkAnimations,
   showAds,
   profileConfig,
+  previewSection,
 }: BiolinkLayoutProps) {
   if (!appearance) {
     appearance = biolink.appearance?.config ?? null;
@@ -104,6 +108,7 @@ export function BiolinkLayout({
               content={content}
               profileConfig={profileConfig}
               showAds={showAds}
+              previewSection={previewSection}
             />
           ) : (
             <SidebarLayout

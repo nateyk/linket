@@ -2,14 +2,25 @@ import {Biolink} from '@app/gen/schemas/biolink';
 import {Store} from '@app/gen/schemas/store';
 import {
   CreatorProfileConfig,
+  CreatorProfileSection,
   getCreatorProfileConfig,
 } from '@app/dashboard/stores/store-editor/creator-profile-types';
+import {ParsedApiError} from '@common/http/errors/parsed-api-error';
 import {createContext, ReactNode, use, useState} from 'react';
 import {create} from 'zustand';
 import {useStoreWithEqualityFn} from 'zustand/traditional';
 
 type StoreBiolink = Biolink | Store;
 type Appearance = Required<StoreBiolink>['appearance']['config'];
+
+/**
+ * The failure of the last save attempt, tagged with the form it belongs to
+ * so the error summary only shows inside that tab (A-07).
+ */
+export type StoreSaveError = {
+  tab: 'profile' | 'appearance';
+  parsed: ParsedApiError;
+} | null;
 
 interface BiolinkEditorState {
   appearance: Appearance;
@@ -18,12 +29,21 @@ interface BiolinkEditorState {
   profileConfig: CreatorProfileConfig;
   profileIsDirty: boolean;
   featuredProductIds: number[];
+  /** Open accordion section of the Content tab; drives the preview (A-06). */
+  openSection: CreatorProfileSection | null;
+  /** Last save failure, cleared when a new save starts (A-07). */
+  saveError: StoreSaveError;
+  /** 'saved' right after a successful save — announced via role=status. */
+  saveStatus: 'saved' | null;
   setAppearanceIsDirty: (isDirty: boolean) => void;
   biolink: Omit<StoreBiolink, 'appearance' | 'content'>;
   updateAppearance: (payload: Appearance) => void;
   updateProfileConfig: (payload: CreatorProfileConfig) => void;
   setProfileIsDirty: (isDirty: boolean) => void;
   setFeaturedProductIds: (ids: number[]) => void;
+  setOpenSection: (section: CreatorProfileSection | null) => void;
+  setSaveError: (error: StoreSaveError) => void;
+  setSaveStatus: (status: 'saved' | null) => void;
   overrideContent: (content: StoreBiolink['content']) => void;
   getState: () => BiolinkEditorState;
   hasUnsavedChanges: () => boolean;
@@ -54,6 +74,9 @@ export const createBiolinkEditorStore = (biolink: StoreBiolink) => {
     profileConfig: getCreatorProfileConfig(biolink as any),
     profileIsDirty: false,
     featuredProductIds: [],
+    openSection: 'profile',
+    saveError: null,
+    saveStatus: null,
     setAppearanceIsDirty: (isDirty: boolean) => {
       set(() => ({appearanceIsDirty: isDirty}));
     },
@@ -62,6 +85,15 @@ export const createBiolinkEditorStore = (biolink: StoreBiolink) => {
     },
     setFeaturedProductIds: (ids: number[]) => {
       set(() => ({featuredProductIds: ids}));
+    },
+    setOpenSection: (section: CreatorProfileSection | null) => {
+      set(() => ({openSection: section}));
+    },
+    setSaveError: (error: StoreSaveError) => {
+      set(() => ({saveError: error}));
+    },
+    setSaveStatus: (status: 'saved' | null) => {
+      set(() => ({saveStatus: status}));
     },
     biolink: {
       ...biolink,
@@ -86,9 +118,11 @@ export const createBiolinkEditorStore = (biolink: StoreBiolink) => {
       }));
     },
     updateProfileConfig(payload: CreatorProfileConfig) {
+      // Only stores the payload. Dirtiness is owned by setProfileIsDirty,
+      // because the form sync pushes on every change — including pushes
+      // that carry a clean, reverted form back to the preview (A-05).
       set(() => ({
         profileConfig: payload,
-        profileIsDirty: true,
       }));
     },
   }));

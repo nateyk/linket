@@ -4,9 +4,20 @@ import {
   PHONE_FRAME_ASPECT_RATIO,
   PHONE_GEOMETRY,
 } from '@app/dashboard/stores/store-editor/phone-preview.constants';
+import {
+  PREVIEW_TAB_MESSAGE,
+  StorePreviewEditorTab,
+  StorePreviewSection,
+} from '@app/dashboard/stores/store-editor/store-preview-protocol';
 import {Trans} from '@ui/i18n/trans';
 import {cn} from '@ui/utils/cn';
-import {Activity, useCallback, useEffect, useRef} from 'react';
+import {
+  Activity,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+} from 'react';
 import {useLocation} from 'react-router';
 
 const PREVIEW_MESSAGE = 'linket:store-preview';
@@ -24,9 +35,30 @@ export function LivePreview() {
   const appearance = useBiolinkEditorStore(s => s.appearance);
   const content = useBiolinkEditorStore(s => s.content);
   const profileConfig = useBiolinkEditorStore(s => s.profileConfig);
+  const openSection = useBiolinkEditorStore(s => s.openSection);
 
   const {pathname} = useLocation();
   const isInsightsTab = pathname.split('/').pop() === 'insights';
+
+  // Which editor tab is mounted: the base path is Content, then /about and
+  // /appearance. Insights has no preview mapping and posts nothing, so the
+  // frame keeps whatever section it showed (A-06).
+  const editorTab: StorePreviewEditorTab | null = useMemo(() => {
+    if (isInsightsTab) return null;
+    const last = pathname.split('/').pop() ?? '';
+    if (last === 'about') return 'about';
+    if (last === 'appearance') return 'appearance';
+    return 'content';
+  }, [pathname, isInsightsTab]);
+
+  // Content = the preview's Profile section (unless the Products accordion
+  // is open), About = About, Appearance = Profile.
+  const previewSection: StorePreviewSection | null = useMemo(() => {
+    if (editorTab === null) return null;
+    if (editorTab === 'about') return 'about';
+    if (editorTab === 'appearance') return 'profile';
+    return openSection === 'products' ? 'products' : 'profile';
+  }, [editorTab, openSection]);
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -53,6 +85,28 @@ export function LivePreview() {
     return () => clearTimeout(debounceRef.current);
   }, [scheduleSync]);
 
+  // Posted whenever the tab mapping changes — never on data syncs, so a
+  // section tapped manually inside the preview survives edits (A-06).
+  const tabMessage = useMemo(
+    () =>
+      editorTab && previewSection
+        ? {
+            type: PREVIEW_TAB_MESSAGE,
+            activeTab: editorTab,
+            section: previewSection,
+          }
+        : null,
+    [editorTab, previewSection],
+  );
+
+  useEffect(() => {
+    if (!tabMessage) return;
+    iframeRef.current?.contentWindow?.postMessage(
+      tabMessage,
+      window.location.origin,
+    );
+  }, [tabMessage]);
+
   useEffect(() => {
     const onMessage = (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
@@ -60,11 +114,18 @@ export function LivePreview() {
         // The frame just (re)loaded and has no draft yet: this one goes
         // straight through, or the preview would sit empty for the debounce.
         syncPreview();
+        // Initial load must also land on the section of the current tab.
+        if (tabMessage) {
+          iframeRef.current?.contentWindow?.postMessage(
+            tabMessage,
+            window.location.origin,
+          );
+        }
       }
     };
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [syncPreview]);
+  }, [syncPreview, tabMessage]);
 
   const backHalf = biolink.back_half;
 

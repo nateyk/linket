@@ -2,6 +2,7 @@ import {
   CreatorProfileConfig,
   getCreatorProfileConfig,
 } from '@app/dashboard/stores/store-editor/creator-profile-types';
+import {StorePreviewSection} from '@app/dashboard/stores/store-editor/store-preview-protocol';
 import {Biolink} from '@app/gen/schemas/biolink';
 import {
   SocialsList,
@@ -39,7 +40,7 @@ import {
 import {renderAboutHtml} from './about-markdown';
 import {StoreFront} from './store-front';
 import {Link} from 'react-router';
-import {useState} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 
 interface CreatorProfileLayoutProps {
   biolink: Biolink;
@@ -47,6 +48,8 @@ interface CreatorProfileLayoutProps {
   content: NonNullable<Biolink['content']>;
   profileConfig?: CreatorProfileConfig;
   showAds?: boolean;
+  /** Section the editor's current tab maps to; only set in preview mode. */
+  previewSection?: StorePreviewSection;
 }
 
 export function CreatorProfileLayout({
@@ -55,6 +58,7 @@ export function CreatorProfileLayout({
   content,
   profileConfig,
   showAds,
+  previewSection,
 }: CreatorProfileLayoutProps) {
   const profile = profileConfig || getCreatorProfileConfig(biolink);
   const activeContent = content.filter(item => item.active);
@@ -71,6 +75,7 @@ export function CreatorProfileLayout({
           profile={profile}
           shopWidget={shopWidget}
           showAds={showAds}
+          previewSection={previewSection}
         />
       </div>
 
@@ -101,12 +106,14 @@ function MobileCreatorProfile({
   profile,
   shopWidget,
   showAds = false,
+  previewSection,
 }: {
   biolink: Biolink;
   appearance: BiolinkAppearanceConfig | null;
   profile: CreatorProfileConfig;
   shopWidget?: BiolinkWidget;
   showAds?: boolean;
+  previewSection?: StorePreviewSection;
 }) {
   const configuredProductIds = Array.isArray(shopWidget?.config?.product_ids)
     ? shopWidget.config.product_ids
@@ -130,6 +137,28 @@ function MobileCreatorProfile({
       : []),
   ];
   const buttonAppearance = resolveBiolinkButtonAppearance(appearance);
+
+  // Nav buttons and the editor's tab sync share this exact path: switch
+  // section, jump back to the top (instant — no smooth animation, so
+  // prefers-reduced-motion is honored by construction).
+  const selectSection = useCallback((value: string) => {
+    setActiveTab(value);
+    window.scrollTo({top: 0});
+  }, []);
+
+  // The editor posts its mapped section on tab changes only (A-06): the
+  // preview follows when the editor moves, and never fights a section the
+  // visitor tapped by hand — that only changes when this prop changes.
+  // Sections this page doesn't have fall back to Profile.
+  const navItemsRef = useRef(biolinkNavItems);
+  navItemsRef.current = biolinkNavItems;
+  useEffect(() => {
+    if (previewSection === undefined) return;
+    const target = navItemsRef.current.some(item => item.value === previewSection)
+      ? previewSection
+      : 'profile';
+    selectSection(target);
+  }, [previewSection, selectSection]);
 
   // Mobile is navigation, not tabs: the bottom bar is a real nav (buttons
   // with aria-pressed) switching plain sections — never a tablist without
@@ -192,8 +221,7 @@ function MobileCreatorProfile({
             onIndexChange={(idx: number) => {
               const item = biolinkNavItems[idx];
               if (item) {
-                setActiveTab(item.value);
-                window.scrollTo({top: 0});
+                selectSection(item.value);
               }
             }}
             radius={buttonAppearance.radius}

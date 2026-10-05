@@ -297,3 +297,78 @@ describe('creator profile on mobile', () => {
     expect(within(bottomNav()).queryByRole('button', {name: 'About'})).toBeNull();
   });
 });
+
+describe('the preview follows the editor tab (A-06)', () => {
+  function renderWithSection(
+    previewSection?: 'profile' | 'products' | 'about',
+  ) {
+    return render(
+      <CreatorProfileLayout
+        biolink={makeBiolink()}
+        appearance={null}
+        content={[shopWidget]}
+        previewSection={previewSection}
+      />,
+    );
+  }
+
+  test('an editor-driven section switches the nav and resets the scroll', () => {
+    renderWithSection('about');
+
+    expect(section('About')).toBeTruthy();
+    expect(section('Profile')).toBeNull();
+    // Same code path as the nav buttons: instant scroll (no smooth
+    // animation, so prefers-reduced-motion is honored by construction).
+    expect(window.scrollTo).toHaveBeenCalledWith({top: 0});
+  });
+
+  test('the public page (no previewSection) is untouched', () => {
+    renderWithSection(undefined);
+
+    expect(section('Profile')).toBeTruthy();
+    expect(section('About')).toBeNull();
+    expect(window.scrollTo).not.toHaveBeenCalled();
+  });
+
+  test('a manual tap is kept until the editor itself moves', async () => {
+    const user = userEvent.setup();
+    const {rerender} = renderWithSection('profile');
+
+    await user.click(navButton('About'));
+    expect(section('About')).toBeTruthy();
+
+    // Same editor tab, re-posted: the preview keeps the manual choice.
+    rerender(
+      <CreatorProfileLayout
+        biolink={makeBiolink()}
+        appearance={null}
+        content={[shopWidget]}
+        previewSection="profile"
+      />,
+    );
+    expect(section('About')).toBeTruthy();
+
+    // The editor moves to its About tab: the preview follows.
+    rerender(
+      <CreatorProfileLayout
+        biolink={makeBiolink()}
+        appearance={null}
+        content={[shopWidget]}
+        previewSection="about"
+      />,
+    );
+    expect(section('About')).toBeTruthy();
+
+    // Back to a Profile-section tab: the preview follows again.
+    rerender(
+      <CreatorProfileLayout
+        biolink={makeBiolink()}
+        appearance={null}
+        content={[shopWidget]}
+        previewSection="profile"
+      />,
+    );
+    expect(section('Profile')).toBeTruthy();
+    expect(section('About')).toBeNull();
+  });
+});

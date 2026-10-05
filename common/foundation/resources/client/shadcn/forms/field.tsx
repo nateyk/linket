@@ -86,14 +86,19 @@ const fieldVariants = cva(
 function FieldRoot({
   className,
   orientation = 'vertical',
+  name,
   ...props
 }: FieldPrimitive.Root.Props & VariantProps<typeof fieldVariants>) {
   return (
     <FieldPrimitive.Root
       role="group"
       data-slot="field"
+      // Base UI consumes `name` for registration but never renders it, so
+      // the group stays addressable for error-summary focus targets (A-07).
+      data-field-name={name}
       data-orientation={orientation}
       className={cn(fieldVariants({orientation}), className)}
+      name={name}
       {...props}
     />
   );
