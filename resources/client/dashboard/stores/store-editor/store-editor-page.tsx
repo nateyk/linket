@@ -40,6 +40,7 @@ import {Empty} from '@shadcn/empty/empty';
 import {Alert} from '@shadcn/alert/alert';
 import {Tabs} from '@shadcn/tabs/tabs';
 import {toast} from '@shadcn/toast/toast';
+import {Tooltip} from '@shadcn/tooltip/tooltip';
 import {useMutation, useSuspenseQuery} from '@tanstack/react-query';
 import {Trans} from '@ui/i18n/trans';
 import {useTrans} from '@ui/i18n/use-trans';
@@ -57,7 +58,7 @@ import {
   SparklesIcon,
   UserRoundPenIcon,
 } from 'lucide-react';
-import {useState} from 'react';
+import {useEffect, useState} from 'react';
 import {Outlet, useLocation, useNavigate} from 'react-router';
 import {
   isWithinStoreEditorPath,
@@ -72,6 +73,7 @@ export function Component() {
   const biolink = query.data.data;
 
   const {pathname} = useLocation();
+  const navigate = useNavigate();
   const selectedTab = pathname.endsWith('insights')
     ? 'insights'
     : pathname.endsWith('appearance')
@@ -81,6 +83,15 @@ export function Component() {
         : 'content';
   const isInsightsTab = selectedTab === 'insights';
 
+  // Arrow/Home/End/Space activation must switch tabs without stacking
+  // history entries, so the router move replaces instead of pushes (A-11).
+  const tabPaths: Record<string, string> = {
+    content: baseUrl,
+    about: `${baseUrl}/about`,
+    appearance: `${baseUrl}/appearance`,
+    insights: `${baseUrl}/insights`,
+  };
+
   // re-create store provider when biolink changes
   return (
     <BiolinkEditorStoreProvider
@@ -88,21 +99,31 @@ export function Component() {
       key={`${biolink.id}-${biolink.builder_mode}`}
     >
       <DashboardLayout.MainSection>
+        <h1 className="sr-only">{biolink.name}</h1>
         <EditorHeaderWithGuard baseUrl={baseUrl} />
         <section className="flex min-h-0 flex-auto flex-col overflow-x-hidden overflow-y-auto lg:flex-row lg:overflow-hidden">
           <div className="flex min-w-0 shrink-0 flex-col lg:min-h-0 lg:flex-auto lg:overflow-hidden">
             {!isInsightsTab && (
-              <Tabs.Root value={selectedTab} className="shrink-0 border-b">
+              <Tabs.Root
+                value={selectedTab}
+                className="shrink-0 border-b"
+                onValueChange={value => {
+                  const path = tabPaths[String(value)];
+                  if (path) {
+                    navigate(path, {replace: true});
+                  }
+                }}
+              >
                 <div className="w-full max-w-3xl px-4 sm:px-6 lg:px-8">
-                  <Tabs.List variant="line" className="w-full justify-start">
+                  <Tabs.List
+                    variant="line"
+                    className="w-full justify-start"
+                    activateOnFocus
+                  >
                     <Tabs.LinkTab value="content" to={baseUrl} replace>
                       <Trans message="Content" />
                     </Tabs.LinkTab>
-                    <Tabs.LinkTab
-                      value="about"
-                      to={`${baseUrl}/about`}
-                      replace
-                    >
+                    <Tabs.LinkTab value="about" to={`${baseUrl}/about`} replace>
                       <Trans message="About" />
                     </Tabs.LinkTab>
                     <Tabs.LinkTab
@@ -161,18 +182,28 @@ function BiolinkEditorHeader({save}: {save: StoreEditorSave}) {
         className="max-lg:hidden"
       />
       {(isProfileTab || isAppearanceTab) && (
-        <Button
-          onClick={save.saveCurrentTab}
-          disabled={!showSaveButton || save.isSaving}
-        >
-          <SaveIcon data-icon="inline-start" />
-          <span className="hidden sm:inline">
-            <Trans message="Save changes" />
-          </span>
-          <span className="sm:hidden">
-            <Trans message="Save" />
-          </span>
-        </Button>
+        <Tooltip.Root>
+          <Tooltip.Trigger
+            render={
+              <Button
+                onClick={save.saveCurrentTab}
+                disabled={!showSaveButton || save.isSaving}
+                aria-keyshortcuts="Control+S Meta+S"
+              />
+            }
+          >
+            <SaveIcon data-icon="inline-start" />
+            <span className="hidden sm:inline">
+              <Trans message="Save changes" />
+            </span>
+            <span className="sm:hidden">
+              <Trans message="Save" />
+            </span>
+          </Tooltip.Trigger>
+          <Tooltip.Content>
+            <Trans message="Save changes (Ctrl+S)" />
+          </Tooltip.Content>
+        </Tooltip.Root>
       )}
     </DashboardLayout.SectionHeader>
   );
@@ -239,7 +270,9 @@ function useStoreEditorSave() {
     const state = getState();
     const pending: Promise<unknown>[] = [];
     if (state.appearanceIsDirty) {
-      pending.push(saveAppearance.mutateAsync({config: state.appearance as any}));
+      pending.push(
+        saveAppearance.mutateAsync({config: state.appearance as any}),
+      );
     }
     if (state.profileIsDirty) {
       pending.push(saveProfile.mutateAsync(saveProfilePayload()));
@@ -267,6 +300,23 @@ function EditorHeaderWithGuard({baseUrl}: {baseUrl: string}) {
   const profileIsDirty = useBiolinkEditorStore(s => s.profileIsDirty);
   const appearanceIsDirty = useBiolinkEditorStore(s => s.appearanceIsDirty);
   const save = useStoreEditorSave();
+
+  // Ctrl/Cmd+S while the editor is mounted: suppress the browser's save
+  // dialog and save the dirty part of the editor (no-op when clean or
+  // already saving). Cleanup on unmount restores native behavior (A-16).
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
+        event.preventDefault();
+        if (save.isSaving) {
+          return;
+        }
+        save.saveCurrentTab();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [save]);
 
   return (
     <>
@@ -405,11 +455,7 @@ function MoreActionsButton() {
               navigate(isInsightsTab ? baseUrl : `${baseUrl}/insights`)
             }
           >
-            {isInsightsTab ? (
-              <UserRoundPenIcon />
-            ) : (
-              <ChartNoAxesCombinedIcon />
-            )}
+            {isInsightsTab ? <UserRoundPenIcon /> : <ChartNoAxesCombinedIcon />}
             <Trans message={isInsightsTab ? 'Edit profile' : 'Insights'} />
           </Dropdown.Item>
           <Dropdown.Separator />

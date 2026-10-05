@@ -2,6 +2,7 @@ import {CharacterCounter} from '@app/dashboard/stores/store-editor/character-cou
 import {CreatorAboutEditor} from '@app/dashboard/stores/store-editor/creator-about-editor';
 import {useBiolinkEditorStore} from '@app/dashboard/stores/store-editor/biolink-editor-store';
 import {BuilderSectionHeader} from '@app/dashboard/stores/store-editor/builder-section-header';
+import {SectionAccordionTrigger} from '@app/dashboard/stores/store-editor/section-accordion-trigger';
 import {
   BIO_MAX_LENGTH,
   buildInitialProfileFormValues,
@@ -279,6 +280,11 @@ export function CreatorProfileEditor({
     <FileUploadProvider>
       <HookForm.Root form={form} onSubmit={() => {}}>
         <div className="w-full max-w-3xl">
+          {tab === 'content' && (
+            <h2 className="mt-2 mb-4 text-lg font-semibold">
+              <Trans message="Content" />
+            </h2>
+          )}
           {tab === 'about' ? (
             <section className="flex max-w-2xl flex-col gap-4 py-2">
               <div>
@@ -325,7 +331,7 @@ export function CreatorProfileEditor({
               }
             >
               <Accordion.Item value="profile">
-                <Accordion.Trigger>
+                <SectionAccordionTrigger>
                   <BuilderSectionHeader
                     icon={UserRoundIcon}
                     title={<Trans message="Profile" />}
@@ -333,7 +339,7 @@ export function CreatorProfileEditor({
                       <Trans message="Name, photo, bio, and skills." />
                     }
                   />
-                </Accordion.Trigger>
+                </SectionAccordionTrigger>
                 <Accordion.Content className="border-t pt-4">
                   <Field.Group className="max-w-2xl gap-3">
                     <HookForm.Field name="cover_url">
@@ -413,9 +419,7 @@ export function CreatorProfileEditor({
                             }
                           >
                             <Combobox.Input
-                              clearLabel={trans(
-                                message('Clear profile title'),
-                              )}
+                              clearLabel={trans(message('Clear profile title'))}
                               placeholder={trans(
                                 message('Choose a profession'),
                               )}
@@ -445,7 +449,7 @@ export function CreatorProfileEditor({
                     </div>
                     <HookForm.Field name="bio">
                       <Field.Label>
-                        <Trans message="About" />
+                        <Trans message="Short bio" />
                       </Field.Label>
                       <Textarea rows={4} maxLength={BIO_MAX_LENGTH} />
                       <Field.Description className="flex items-start justify-between gap-3">
@@ -494,7 +498,7 @@ export function CreatorProfileEditor({
               </Accordion.Item>
 
               <Accordion.Item value="socials">
-                <Accordion.Trigger>
+                <SectionAccordionTrigger>
                   <BuilderSectionHeader
                     icon={AtSignIcon}
                     title={<Trans message="Social links" />}
@@ -502,7 +506,7 @@ export function CreatorProfileEditor({
                       <Trans message="Instagram, X, TikTok, and more." />
                     }
                   />
-                </Accordion.Trigger>
+                </SectionAccordionTrigger>
                 <Accordion.Content className="border-t pt-4">
                   <Field.Group className="max-w-2xl gap-3">
                     {visibleSocials.map(type => {
@@ -547,13 +551,13 @@ export function CreatorProfileEditor({
               </Accordion.Item>
 
               <Accordion.Item value="actions">
-                <Accordion.Trigger>
+                <SectionAccordionTrigger>
                   <BuilderSectionHeader
                     icon={LinkIcon}
                     title={<Trans message="Actions" />}
                     description={<Trans message="Message button settings." />}
                   />
-                </Accordion.Trigger>
+                </SectionAccordionTrigger>
                 <Accordion.Content className="border-t pt-4">
                   <Field.Group className="max-w-2xl gap-3">
                     <Field.Root
@@ -613,7 +617,16 @@ export function CreatorProfileEditor({
               </Accordion.Item>
 
               <Accordion.Item value="products">
-                <Accordion.Trigger>
+                <SectionAccordionTrigger
+                  descriptionPhrase={trans(
+                    message(':selected of :total products featured', {
+                      values: {
+                        selected: selectedProductIds.length,
+                        total: 6,
+                      },
+                    }),
+                  )}
+                >
                   <BuilderSectionHeader
                     icon={PackageCheckIcon}
                     title={<Trans message="Products" />}
@@ -629,7 +642,7 @@ export function CreatorProfileEditor({
                       </Badge>
                     }
                   />
-                </Accordion.Trigger>
+                </SectionAccordionTrigger>
                 <Accordion.Content className="border-t pt-4">
                   <div className="flex max-w-2xl flex-col gap-3">
                     <div className="flex items-center justify-between">

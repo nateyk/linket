@@ -1,3 +1,4 @@
+import {useSectionLabelIds} from '@app/dashboard/stores/store-editor/section-accordion-trigger';
 import {cn} from '@ui/utils/cn';
 import type {LucideIcon} from 'lucide-react';
 import type {ReactNode} from 'react';
@@ -17,6 +18,8 @@ export function BuilderSectionHeader({
   trailing,
   isComplete = false,
 }: BuilderSectionHeaderProps) {
+  const labelIds = useSectionLabelIds();
+
   return (
     <span className="flex min-w-0 flex-1 items-start gap-3 py-1">
       <span
@@ -29,11 +32,17 @@ export function BuilderSectionHeader({
         <Icon className="size-4" />
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-0.5 text-start">
-        <span className="truncate text-sm leading-snug font-medium">
+        <span
+          id={labelIds?.titleId}
+          className="truncate text-sm leading-snug font-medium"
+        >
           {title}
         </span>
         {description && (
-          <span className="line-clamp-2 text-xs leading-snug font-normal text-muted-foreground">
+          <span
+            id={labelIds?.descriptionId}
+            className="line-clamp-2 text-xs leading-snug font-normal text-muted-foreground"
+          >
             {description}
           </span>
         )}

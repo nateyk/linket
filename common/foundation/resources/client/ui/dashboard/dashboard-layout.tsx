@@ -73,7 +73,7 @@ function Navbar({
   className,
   variant: propsVariant,
   ...props
-}: ComponentProps<'div'> & {
+}: ComponentProps<'header'> & {
   variant?: Omit<DashboardSectionVariant, 'floating'>;
 }) {
   const {defaultSectionVariant} = use(DashboardLayoutContext);
@@ -81,7 +81,7 @@ function Navbar({
     propsVariant ??
     (defaultSectionVariant === 'floating' ? 'inset' : defaultSectionVariant);
   return (
-    <div
+    <header
       data-slot="navbar"
       data-variant={variant}
       className={cn(
@@ -240,7 +240,9 @@ function SidebarToggle({
     <Tooltip.Root>
       <Tooltip.Trigger
         data-slot="sidebar-toggle-button"
-        render={<Button variant="ghost" size="icon-sm" aria-label={trans(label)} />}
+        render={
+          <Button variant="ghost" size="icon-sm" aria-label={trans(label)} />
+        }
         onClick={() => sidebar.toggleStatus()}
       >
         {children || defaultIcon}

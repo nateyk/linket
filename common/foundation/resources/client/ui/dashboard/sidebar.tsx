@@ -13,7 +13,9 @@ import {Drawer} from '@shadcn/drawer/drawer';
 import {Separator} from '@shadcn/separator';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {Tooltip} from '@shadcn/tooltip/tooltip';
+import {message} from '@ui/i18n/message';
 import {Trans} from '@ui/i18n/trans';
+import {useTrans} from '@ui/i18n/use-trans';
 import {cn} from '@ui/utils/cn';
 import {ignoreEventsFromPortal} from '@ui/utils/dom/ignore-events-from-portal';
 import {cva, type VariantProps} from 'class-variance-authority';
@@ -42,7 +44,7 @@ function SidebarRoot({
   widthIcon = 'w-15',
   forceOverlayMode = false,
   ...props
-}: ComponentProps<'div'> & {
+}: ComponentProps<'nav'> & {
   side?: 'left' | 'right';
   variant?: DashboardSectionVariant;
   collapsible?: 'offcanvas' | 'icon' | 'none';
@@ -51,6 +53,8 @@ function SidebarRoot({
   forceOverlayMode?: boolean;
 }) {
   const ctx = use(DashboardLayoutContext);
+  const {trans} = useTrans();
+  const landmarkLabel = trans(message('Main navigation'));
   let variant = propsVariant ?? ctx.defaultSectionVariant;
   const status =
     side === 'left' ? ctx.leftSidebar.status : ctx.rightSidebar.status;
@@ -69,7 +73,8 @@ function SidebarRoot({
         <Drawer.Portal>
           <Drawer.Backdrop />
           <Drawer.Content popupClassName="p-0">
-            <div
+            <nav
+              aria-label={landmarkLabel}
               className="flex h-full w-full flex-col"
               onClick={ignoreEventsFromPortal(e => {
                 const target = e.target as HTMLElement;
@@ -84,7 +89,7 @@ function SidebarRoot({
               })}
             >
               {children}
-            </div>
+            </nav>
           </Drawer.Content>
         </Drawer.Portal>
       </Drawer.Root>
@@ -111,8 +116,9 @@ function SidebarRoot({
         collapsible,
       }}
     >
-      <div
+      <nav
         data-slot="sidebar"
+        aria-label={landmarkLabel}
         data-sidebar-status={status}
         data-variant={variant}
         data-collapsible={status === 'collapsed' ? collapsible : ''}
@@ -126,7 +132,7 @@ function SidebarRoot({
         {...props}
       >
         {children}
-      </div>
+      </nav>
     </SidebarContext.Provider>
   );
 }

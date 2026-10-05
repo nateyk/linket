@@ -113,3 +113,12 @@ export function frameWidthFor(availableHeight: number): number {
 export function scaleFor(screenWidth: number): number {
   return screenWidth / PHONE_GEOMETRY.viewport.width;
 }
+
+/**
+ * Status-bar clock size, in px. The preview draws a real iPhone 14 Pro
+ * status bar (59px tall, 9:41, tabular numerals), so the time keeps the
+ * device's own 15px — device chrome, not app typography. Recorded as an
+ * exemption to DESIGN.md's Two-Size Rule (which forbids 15px everywhere
+ * else); do not reuse this value for UI text.
+ */
+export const PHONE_STATUS_BAR_TIME_FONT_SIZE = 15;

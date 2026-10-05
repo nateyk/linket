@@ -84,9 +84,9 @@ test('opening the About editor on a pristine form keeps it pristine', async () =
   // rebase) mark the field dirty through onChange.
   await act(() => new Promise<void>(resolve => setTimeout(resolve, 300)));
   await waitFor(() =>
-    expect(
-      document.querySelector('output')?.getAttribute('data-dirty'),
-    ).toBe('false'),
+    expect(document.querySelector('output')?.getAttribute('data-dirty')).toBe(
+      'false',
+    ),
   );
 
   // ...and a real user edit afterwards still marks the form dirty.
@@ -105,7 +105,11 @@ test('opening the About editor on a pristine form keeps it pristine', async () =
 test('the rebase never wipes dirtiness that already exists', async () => {
   const formRef: FormRef = {current: null};
   render(
-    <AboutHarness initialAbout="<p>old</p>" formRef={formRef} withEditor={false} />,
+    <AboutHarness
+      initialAbout="<p>old</p>"
+      formRef={formRef}
+      withEditor={false}
+    />,
   );
 
   await act(async () => {
@@ -113,24 +117,32 @@ test('the rebase never wipes dirtiness that already exists', async () => {
       shouldDirty: true,
     });
   });
-  expect(
-    document.querySelector('output')?.getAttribute('data-dirty'),
-  ).toBe('true');
+  expect(document.querySelector('output')?.getAttribute('data-dirty')).toBe(
+    'true',
+  );
 
   act(() => {
-    rebaseAboutFormOnEditorReady(formRef.current!, '<p>old</p>', '<p>canonical</p>');
+    rebaseAboutFormOnEditorReady(
+      formRef.current!,
+      '<p>old</p>',
+      '<p>canonical</p>',
+    );
   });
 
-  expect(
-    document.querySelector('output')?.getAttribute('data-dirty'),
-  ).toBe('true');
+  expect(document.querySelector('output')?.getAttribute('data-dirty')).toBe(
+    'true',
+  );
   expect(formRef.current!.getValues('bio')).toBe('edited in another field');
 });
 
 test('identical round-trip is a no-op (no reset on byte-stable mounts)', async () => {
   const formRef: FormRef = {current: null};
   render(
-    <AboutHarness initialAbout="<p>same</p>" formRef={formRef} withEditor={false} />,
+    <AboutHarness
+      initialAbout="<p>same</p>"
+      formRef={formRef}
+      withEditor={false}
+    />,
   );
   const form = formRef.current!;
   const resetSpy = vi.spyOn(form, 'reset');
@@ -142,6 +154,27 @@ test('identical round-trip is a no-op (no reset on byte-stable mounts)', async (
   rebaseAboutFormOnEditorReady(form, '<p>same</p>', '<p>canonical</p>');
   expect(resetSpy).toHaveBeenCalledTimes(1);
   expect(form.getValues('about_html')).toBe('<p>canonical</p>');
+});
+
+test('mounting the About editor never steals focus (A-11)', async () => {
+  // TipTap focuses itself on a mount timeout when `autofocus` is left
+  // undefined — that would yank focus out of the tab strip right after an
+  // Arrow-key tab switch.
+  const focusSpy = vi.spyOn(HTMLElement.prototype, 'focus');
+  try {
+    const formRef: FormRef = {current: null};
+    render(<AboutHarness initialAbout="<p>hello</p>" formRef={formRef} />);
+    await act(() => new Promise<void>(resolve => setTimeout(resolve, 100)));
+
+    const tiptapStoleFocus = focusSpy.mock.instances.some(
+      el =>
+        el instanceof Element &&
+        (el.classList.contains('ProseMirror') || !!el.closest('.tiptap')),
+    );
+    expect(tiptapStoleFocus).toBe(false);
+  } finally {
+    focusSpy.mockRestore();
+  }
 });
 
 test('toolbar is labelled and every icon-only button exposes a name (A-03)', async () => {

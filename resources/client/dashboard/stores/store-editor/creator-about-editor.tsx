@@ -32,6 +32,10 @@ export function CreatorAboutEditor({
   return (
     <TipTapEditorProvider
       extensions={creatorAboutExtensions}
+      // Never steal focus on mount: arrow-key tab switches land on the About
+      // panel and TipTap's undefined `autofocus` would yank focus into the
+      // document mid-keystroke (A-11).
+      autoFocus={false}
       initialContent={value}
       onChange={onChange}
       onCreate={({editor}) => onEditorReady?.(editor.getHTML())}

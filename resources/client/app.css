@@ -37,3 +37,18 @@ body {
   overscroll-behavior-y: none;
   max-width: 100%;
 }
+
+/* Prefer reduced motion: collapse durations to ~0 instead of removing
+ * them, so elements still reach their end state and transitionend fires —
+ * nothing gets stuck half-animated. Iteration count 1 stops decorative
+ * animations on their first frame. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

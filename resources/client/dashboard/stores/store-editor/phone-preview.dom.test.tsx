@@ -4,7 +4,11 @@
 import {cleanup, render} from '@testing-library/react';
 import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest';
 import {PhonePreview} from './phone-preview';
-import {PHONE_GEOMETRY, scaleFor} from './phone-preview.constants';
+import {
+  PHONE_GEOMETRY,
+  PHONE_STATUS_BAR_TIME_FONT_SIZE,
+  scaleFor,
+} from './phone-preview.constants';
 
 /**
  * jsdom has no layout, so the screen's width is whatever the test says it is.
@@ -12,7 +16,8 @@ import {PHONE_GEOMETRY, scaleFor} from './phone-preview.constants';
  * keeps the assertions about the rendered output rather than about jsdom's
  * (absent) box model.
  */
-let observers: Array<{callback: ResizeObserverCallback; targets: Element[]}> = [];
+let observers: Array<{callback: ResizeObserverCallback; targets: Element[]}> =
+  [];
 let screenWidth = 320;
 
 function setScreenWidth(width: number) {
@@ -37,14 +42,16 @@ function fireResize() {
  * Restored automatically by the `restoreAllMocks` in the shared setup.
  */
 function runFramesInline() {
-  return vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation(cb => {
-    cb(0);
-    // The callback runs before the handle is assigned back to the hook, and it
-    // clears that handle itself. Returning a non-zero id here would leave the
-    // hook believing a frame is still pending and every later resize would be
-    // dropped.
-    return 0;
-  });
+  return vi
+    .spyOn(globalThis, 'requestAnimationFrame')
+    .mockImplementation(cb => {
+      cb(0);
+      // The callback runs before the handle is assigned back to the hook, and it
+      // clears that handle itself. Returning a non-zero id here would leave the
+      // hook believing a frame is still pending and every later resize would be
+      // dropped.
+      return 0;
+    });
 }
 
 beforeEach(() => {
@@ -149,7 +156,9 @@ describe('PhonePreview', () => {
   test('device chrome is inert', () => {
     const {container} = render(<PhonePreview>page</PhonePreview>);
 
-    const statusBar = container.querySelector<HTMLElement>('[aria-hidden="true"].z-\\[2\\]');
+    const statusBar = container.querySelector<HTMLElement>(
+      '[aria-hidden="true"].z-\\[2\\]',
+    );
     expect(statusBar).toBeTruthy();
     expect(statusBar!.className).toContain('pointer-events-none');
     // The status bar reserves the safe area so it never sits on the island.
@@ -169,6 +178,24 @@ describe('PhonePreview', () => {
     // Above the screen in stacking order, yet transparent to the pointer.
     expect(front.className).toContain('z-[3]');
     expect(front.className).toContain('pointer-events-none');
+  });
+
+  test('status bar time keeps the device-chrome 15px exemption (font advisory)', () => {
+    const {container} = render(<PhonePreview>page</PhonePreview>);
+
+    const statusBar = container.querySelector<HTMLElement>(
+      '[aria-hidden="true"].z-\\[2\\]',
+    );
+    expect(statusBar).toBeTruthy();
+    // Sourced from the shared constant so the exemption is documented in
+    // one place: real iPhone status-bar chrome, exempt from the type ramp.
+    expect(statusBar!.style.fontSize).toBe(
+      `${PHONE_STATUS_BAR_TIME_FONT_SIZE}px`,
+    );
+    expect(PHONE_STATUS_BAR_TIME_FONT_SIZE).toBe(15);
+    // The size must come from the shared constant, not an arbitrary
+    // utility class (keeps the DESIGN.md detector off this file).
+    expect(statusBar!.className).not.toContain('text-[');
   });
 });
 

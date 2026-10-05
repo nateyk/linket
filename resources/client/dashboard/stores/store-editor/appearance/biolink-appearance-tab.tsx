@@ -1,6 +1,10 @@
 import {BackgroundStyle} from '@app/dashboard/stores/store-editor/appearance/background-style';
 import {ButtonStyle} from '@app/dashboard/stores/store-editor/appearance/button-style';
 import {useBiolinkEditorStore} from '@app/dashboard/stores/store-editor/biolink-editor-store';
+import {
+  SectionAccordionTrigger,
+  useSectionLabelIds,
+} from '@app/dashboard/stores/store-editor/section-accordion-trigger';
 import {useAuth} from '@common/auth/use-auth';
 import {NoFeaturePermissionPopover} from '@common/billing/upgrade/no-permission-button';
 import {
@@ -43,7 +47,7 @@ export function Component() {
         defaultValue={['background', 'buttons']}
       >
         <Accordion.Item value="background">
-          <Accordion.Trigger>
+          <SectionAccordionTrigger>
             <AppearanceSectionLabel
               icon={<ImageIcon />}
               title={<Trans message="Background" />}
@@ -51,14 +55,14 @@ export function Component() {
                 <Trans message="Choose a color, gradient, pattern, or image." />
               }
             />
-          </Accordion.Trigger>
+          </SectionAccordionTrigger>
           <Accordion.Content className="border-t pt-4">
             <BackgroundStyle />
           </Accordion.Content>
         </Accordion.Item>
 
         <Accordion.Item value="buttons">
-          <Accordion.Trigger>
+          <SectionAccordionTrigger>
             <AppearanceSectionLabel
               icon={<MousePointerClickIcon />}
               title={<Trans message="Buttons" />}
@@ -66,14 +70,14 @@ export function Component() {
                 <Trans message="Style profile actions, social links, and link buttons." />
               }
             />
-          </Accordion.Trigger>
+          </SectionAccordionTrigger>
           <Accordion.Content className="border-t pt-4">
             <ButtonStyle />
           </Accordion.Content>
         </Accordion.Item>
 
         <Accordion.Item value="text">
-          <Accordion.Trigger>
+          <SectionAccordionTrigger>
             <AppearanceSectionLabel
               icon={<TypeIcon />}
               title={<Trans message="Text" />}
@@ -81,7 +85,7 @@ export function Component() {
                 <Trans message="Choose the typeface and foreground color." />
               }
             />
-          </Accordion.Trigger>
+          </SectionAccordionTrigger>
           <Accordion.Content className="border-t pt-4">
             <TextStyle />
           </Accordion.Content>
@@ -89,7 +93,7 @@ export function Component() {
 
         {biolink?.show_branding ? (
           <Accordion.Item value="branding">
-            <Accordion.Trigger>
+            <SectionAccordionTrigger>
               <AppearanceSectionLabel
                 icon={<BadgeIcon />}
                 title={<Trans message="Branding" />}
@@ -97,7 +101,7 @@ export function Component() {
                   <Trans message="Control whether the Linket logo is shown." />
                 }
               />
-            </Accordion.Trigger>
+            </SectionAccordionTrigger>
             <Accordion.Content className="border-t pt-4">
               <BrandingStyle />
             </Accordion.Content>
@@ -117,14 +121,19 @@ function AppearanceSectionLabel({
   title: ReactNode;
   description: ReactNode;
 }) {
+  const labelIds = useSectionLabelIds();
+
   return (
     <span className="flex min-w-0 flex-1 items-start gap-3 py-1">
       <span className="flex size-9 shrink-0 items-center justify-center rounded-card-sm bg-muted text-muted-foreground">
         {icon}
       </span>
       <span className="flex min-w-0 flex-col gap-0.5">
-        <span>{title}</span>
-        <span className="text-xs font-normal text-muted-foreground">
+        <span id={labelIds?.titleId}>{title}</span>
+        <span
+          id={labelIds?.descriptionId}
+          className="text-xs font-normal text-muted-foreground"
+        >
           {description}
         </span>
       </span>

@@ -2,123 +2,123 @@
 name: Linket
 description: Creator storefront and link-in-bio dashboard — quiet, neutral, token-driven, with one working blue accent.
 colors:
-  primary: "oklch(46% 0.214 259.815)"
-  primary-fg: "oklch(0.9911 0 190.05)"
-  primary-dark: "oklch(88.2% 0.059 254.128)"
-  primary-dark-fg: "oklch(0.2478 0 0)"
-  background: "oklch(1 0 0)"
-  foreground: "oklch(0.2478 0 0)"
-  card: "oklch(1 0 0)"
-  card-fg: "oklch(0.2478 0 0)"
-  secondary: "oklch(0.967 0.001 286.375)"
-  secondary-fg: "oklch(0.21 0.006 285.885)"
-  muted: "oklch(0.97 0 0)"
-  muted-fg: "oklch(0.556 0 0)"
-  accent: "oklch(0.97 0 0)"
-  accent-fg: "oklch(0.205 0 0)"
-  border: "oklch(0.922 0 0)"
-  input: "oklch(0.922 0 0)"
-  sidebar: "oklch(0.985 0 0)"
-  sidebar-fg: "oklch(0.145 0 0)"
-  positive: "oklch(0.49 0.192 149.58)"
-  warning: "oklch(0.53 0.152 70.88)"
-  note: "oklch(0.9619 0.058 95.62)"
-  destructive: "oklch(0.46 0.187 25.74)"
-  dark-background: "oklch(0.145 0 0)"
-  dark-foreground: "oklch(0.985 0 0)"
-  dark-card: "oklch(0.205 0 0)"
-  dark-border: "oklch(1 0 0 / 10%)"
-  dark-input: "oklch(1 0 0 / 15%)"
-  dark-positive: "oklch(0.7227 0.192 149.58)"
-  dark-warning: "oklch(0.7785 0.152 70.88)"
-  dark-destructive: "oklch(0.77 0.136 24.63)"
+  primary: 'oklch(46% 0.214 259.815)'
+  primary-fg: 'oklch(0.9911 0 190.05)'
+  primary-dark: 'oklch(88.2% 0.059 254.128)'
+  primary-dark-fg: 'oklch(0.2478 0 0)'
+  background: 'oklch(1 0 0)'
+  foreground: 'oklch(0.2478 0 0)'
+  card: 'oklch(1 0 0)'
+  card-fg: 'oklch(0.2478 0 0)'
+  secondary: 'oklch(0.967 0.001 286.375)'
+  secondary-fg: 'oklch(0.21 0.006 285.885)'
+  muted: 'oklch(0.97 0 0)'
+  muted-fg: 'oklch(0.556 0 0)'
+  accent: 'oklch(0.97 0 0)'
+  accent-fg: 'oklch(0.205 0 0)'
+  border: 'oklch(0.922 0 0)'
+  input: 'oklch(0.922 0 0)'
+  sidebar: 'oklch(0.985 0 0)'
+  sidebar-fg: 'oklch(0.145 0 0)'
+  positive: 'oklch(0.49 0.192 149.58)'
+  warning: 'oklch(0.53 0.152 70.88)'
+  note: 'oklch(0.9619 0.058 95.62)'
+  destructive: 'oklch(0.46 0.187 25.74)'
+  dark-background: 'oklch(0.145 0 0)'
+  dark-foreground: 'oklch(0.985 0 0)'
+  dark-card: 'oklch(0.205 0 0)'
+  dark-border: 'oklch(1 0 0 / 10%)'
+  dark-input: 'oklch(1 0 0 / 15%)'
+  dark-positive: 'oklch(0.7227 0.192 149.58)'
+  dark-warning: 'oklch(0.7785 0.152 70.88)'
+  dark-destructive: 'oklch(0.77 0.136 24.63)'
 typography:
   body:
     fontFamily: "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
-    fontSize: "16px"
+    fontSize: '16px'
     fontWeight: 400
-    lineHeight: "24px"
+    lineHeight: '24px'
   title:
-    fontFamily: "inherit"
-    fontSize: "16px"
+    fontFamily: 'inherit'
+    fontSize: '16px'
     fontWeight: 500
-    lineHeight: "24px"
+    lineHeight: '24px'
   label:
-    fontFamily: "inherit"
-    fontSize: "14px"
+    fontFamily: 'inherit'
+    fontSize: '14px'
     fontWeight: 400
-    lineHeight: "20px"
+    lineHeight: '20px'
   label-strong:
-    fontFamily: "inherit"
-    fontSize: "14px"
+    fontFamily: 'inherit'
+    fontSize: '14px'
     fontWeight: 500
-    lineHeight: "20px"
+    lineHeight: '20px'
   section-title:
-    fontFamily: "inherit"
-    fontSize: "20px"
+    fontFamily: 'inherit'
+    fontSize: '20px'
     fontWeight: 600
-    lineHeight: "28px"
+    lineHeight: '28px'
   page-title:
-    fontFamily: "inherit"
-    fontSize: "24px"
+    fontFamily: 'inherit'
+    fontSize: '24px'
     fontWeight: 600
-    lineHeight: "32px"
+    lineHeight: '32px'
   caption:
-    fontFamily: "inherit"
-    fontSize: "12px"
+    fontFamily: 'inherit'
+    fontSize: '12px'
     fontWeight: 500
-    lineHeight: "16px"
+    lineHeight: '16px'
 rounded:
-  input: "12px"
-  button: "24px"
-  card: "24px"
-  card-sm: "16px"
-  card-xs: "12px"
-  pill: "9999px"
+  input: '12px'
+  button: '24px'
+  card: '24px'
+  card-sm: '16px'
+  card-xs: '12px'
+  pill: '9999px'
 spacing:
-  1: "4px"
-  2: "8px"
-  3: "12px"
-  4: "16px"
-  5: "20px"
-  6: "24px"
+  1: '4px'
+  2: '8px'
+  3: '12px'
+  4: '16px'
+  5: '20px'
+  6: '24px'
 components:
   button-primary:
-    backgroundColor: "{colors.primary}"
-    textColor: "{colors.primary-fg}"
-    rounded: "{rounded.button}"
-    height: "36px"
-    padding: "0 12px"
-    typography: "{typography.label-strong}"
+    backgroundColor: '{colors.primary}'
+    textColor: '{colors.primary-fg}'
+    rounded: '{rounded.button}'
+    height: '36px'
+    padding: '0 12px'
+    typography: '{typography.label-strong}'
   button-primary-hover:
-    backgroundColor: "color-mix(in oklch, oklch(46% 0.214 259.815) 80%, transparent)"
-    textColor: "{colors.primary-fg}"
-    rounded: "{rounded.button}"
-    height: "36px"
-    padding: "0 12px"
+    backgroundColor: 'color-mix(in oklch, oklch(46% 0.214 259.815) 80%, transparent)'
+    textColor: '{colors.primary-fg}'
+    rounded: '{rounded.button}'
+    height: '36px'
+    padding: '0 12px'
   button-outline:
-    backgroundColor: "transparent"
-    textColor: "{colors.primary}"
-    rounded: "{rounded.button}"
-    height: "36px"
-    padding: "0 12px"
+    backgroundColor: 'transparent'
+    textColor: '{colors.primary}'
+    rounded: '{rounded.button}'
+    height: '36px'
+    padding: '0 12px'
   input:
-    backgroundColor: "transparent"
-    textColor: "{colors.foreground}"
-    rounded: "{rounded.input}"
-    height: "36px"
-    padding: "0 12px"
+    backgroundColor: 'transparent'
+    textColor: '{colors.foreground}'
+    rounded: '{rounded.input}'
+    height: '36px'
+    padding: '0 12px'
   card:
-    backgroundColor: "{colors.card}"
-    textColor: "{colors.card-fg}"
-    rounded: "{rounded.card}"
-    padding: "24px 24px"
+    backgroundColor: '{colors.card}'
+    textColor: '{colors.card-fg}'
+    rounded: '{rounded.card}'
+    padding: '24px 24px'
   badge:
-    backgroundColor: "{colors.primary}"
-    textColor: "{colors.primary-fg}"
-    rounded: "{rounded.card-sm}"
-    height: "20px"
-    padding: "0 8px"
+    backgroundColor: '{colors.primary}'
+    textColor: '{colors.primary-fg}'
+    rounded: '{rounded.card-sm}'
+    height: '20px'
+    padding: '0 8px'
 ---
 
 # Design System: Linket
@@ -156,8 +156,8 @@ the quieter surface.
 
 ## Colors
 
-A quiet, near-achromatic palette with one working accent: color means *action* or
-*state*, never decoration.
+A quiet, near-achromatic palette with one working accent: color means _action_ or
+_state_, never decoration.
 
 ### Primary
 
@@ -196,7 +196,7 @@ Chromatic color is spent only on meaning:
 - **Counter Slab** (`oklch(0.985 0 0)`): the sidebar ground — a half-step off page white
   so navigation reads as a separate plane without a heavy border.
 - **Sheet White** (`oklch(1 0 0)`): cards, popovers and the page background. Cards are
-  the *same* white as the page; they are distinguished by their ring, not by tone.
+  the _same_ white as the page; they are distinguished by their ring, not by tone.
 - **Soft Ink** (`oklch(0.2478 0 0)`): primary text. Never pure black — the system is
   tinted-neutral by construction, not `#000`.
 - **Counter Ink** (`oklch(0.145 0 0)`): sidebar text and the dark-mode page ground.
@@ -222,7 +222,7 @@ brand color to make a screen work, the screen's hierarchy is wrong, not its pale
 
 **Display Font:** no distinct display face — display sizes reuse the body family.
 Headings and marketing type run on the same stack as body copy, which is why the
-dashboard reads as instrumentation rather than branding. Display *sizes* (30–48px)
+dashboard reads as instrumentation rather than branding. Display _sizes_ (30–48px)
 exist only on public storefront and landing surfaces; see Hierarchy.
 
 **Body Font:** the theme-selected family, defaulting to the system UI stack
@@ -281,6 +281,13 @@ rescaled. Headings are exempt because they are named by role — a page title is
 title, not a size you picked. Between 12px and 16px there is no step: never reach for
 13px or 15px.
 
+**Device-Chrome Exemption.** The store editor's phone preview draws a real iPhone 14
+Pro — status bar, Dynamic Island, home indicator. That clock is a drawing of
+hardware, not UI type: it keeps the device's own 15px, is `aria-hidden` and purely
+decorative, and lives as `PHONE_STATUS_BAR_TIME_FONT_SIZE` in
+`phone-preview.constants.ts` next to the rest of the geometry. It is the only
+sanctioned 15px in the system; never copy that value into working UI.
+
 **The Weight-First Rule.** Establish hierarchy with weight before size. Titles and body
 are both 16px; they differ by 100 weight. Reserve size jumps for genuine section
 breaks.
@@ -331,7 +338,7 @@ system — the resting surface never moves.
 ### Shadow Vocabulary
 
 - **Ambient float** (default scale: `0 1px 3px 0 rgb(0 0 0 / 0.1),
-  0 1px 2px -1px rgb(0 0 0 / 0.1)`): dropdowns and popovers at rest; stepping up to
+0 1px 2px -1px rgb(0 0 0 / 0.1)`): dropdowns and popovers at rest; stepping up to
   `0 4px 6px -1px` for menus and `0 10px 15px -3px` for dialogs.
 - **Preset override — brutalist:** hard offset, no blur — `4px 4px 0 0` in solid black.
   An intentional reskin; permitted only under `data-theme-preset="brutalist"`.
@@ -360,7 +367,7 @@ One radius family, three members, remapped as a unit.
 - **Cards are generous.** `rounded-card` is 24px, stepping down to `card-sm` (16px) for
   badges and `card-xs` (12px) for nested elements.
 - **Radius is a theme dimension, not a component decision.** The `radius-none` /
-  `radius-sm` / `radius-md` / `radius-lg` utility classes remap *every* component radius
+  `radius-sm` / `radius-md` / `radius-lg` utility classes remap _every_ component radius
   at once. Choose one per theme; never override a radius inline on a single component.
 - **Borders are 1px, always.** `--default-outline-width: 1px`. There is no 2px border in
   the system; emphasis comes from color or ring, not thickness.
@@ -394,7 +401,7 @@ that confirms every click. Nothing bounces, nothing floats at rest.
 - **Link:** no box at all — `text-primary` with a 4px underline offset on hover.
 - **Colors:** `default` (secondary fill), `primary`, `danger`, `positive`, `white`.
   `positive` mirrors the primary recipe using its status token (`bg-positive
-  text-primary-foreground`). `danger` mirrors it too: a solid destructive fill
+text-primary-foreground`). `danger` mirrors it too: a solid destructive fill
   (`bg-destructive`) with a `text-primary-foreground` label. The token is AA-dark in
   light mode and AA-bright in dark mode, so the scheme-aware label clears 4.5:1 on
   the solid fill in both schemes — this reverses the earlier lighten-fill wording,

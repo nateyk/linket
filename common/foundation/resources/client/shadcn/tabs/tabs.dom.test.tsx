@@ -1,8 +1,9 @@
 /**
  * @vitest-environment jsdom
  */
-import {render, screen} from '@testing-library/react';
-import {expect, test} from 'vitest';
+import {act, fireEvent, render, screen} from '@testing-library/react';
+import {useState} from 'react';
+import {expect, test, vi} from 'vitest';
 import {Tabs} from './tabs';
 
 function renderTabs() {
@@ -33,4 +34,81 @@ test('tab triggers get the shared focus ring (A-14)', () => {
   expect(tab.className).toContain('focus-visible:outline-2');
   expect(tab.className).toContain('focus-visible:outline-solid');
   expect(tab.className).toContain('focus-visible:outline-offset-2');
+});
+
+function renderControlledTabs({activateOnFocus}: {activateOnFocus?: boolean}) {
+  const onValueChange = vi.fn();
+  /**
+   * Stateful value, the way the editor's router-driven value behaves:
+   * activation actually moves the selection, so focus/activation tests
+   * exercise the same transitions users see.
+   */
+  function Harness() {
+    const [value, setValue] = useState('a');
+    return (
+      <Tabs.Root
+        value={value}
+        onValueChange={(next, details) => {
+          setValue(next as string);
+          onValueChange(next, details);
+        }}
+      >
+        <Tabs.List activateOnFocus={activateOnFocus}>
+          <Tabs.Tab value="a">Alpha</Tabs.Tab>
+          <Tabs.Tab value="b">Beta</Tabs.Tab>
+          <Tabs.Tab value="c">Gamma</Tabs.Tab>
+        </Tabs.List>
+      </Tabs.Root>
+    );
+  }
+  const utils = render(<Harness />);
+  const first = screen.getByRole('tab', {name: 'Alpha'});
+  const middle = screen.getByRole('tab', {name: 'Beta'});
+  const last = screen.getByRole('tab', {name: 'Gamma'});
+  return {onValueChange, first, middle, last, ...utils};
+}
+
+test('arrow keys activate the next tab with activateOnFocus (A-11)', async () => {
+  const {onValueChange, first} = renderControlledTabs({
+    activateOnFocus: true,
+  });
+
+  // Composite focus moves happen in a microtask; async act flushes them.
+  await act(async () => {
+    first.focus();
+    fireEvent.keyDown(first, {key: 'ArrowRight'});
+  });
+
+  expect(onValueChange).toHaveBeenCalled();
+  expect(onValueChange.mock.calls.at(-1)?.[0]).toBe('b');
+});
+
+test('arrow keys jump to the first/last tab with Home/End (A-11)', async () => {
+  const {onValueChange, middle, last} = renderControlledTabs({
+    activateOnFocus: true,
+  });
+
+  await act(async () => {
+    middle.focus();
+    fireEvent.keyDown(middle, {key: 'End'});
+  });
+  expect(onValueChange.mock.calls.at(-1)?.[0]).toBe('c');
+
+  await act(async () => {
+    last.focus();
+    fireEvent.keyDown(last, {key: 'Home'});
+  });
+  expect(onValueChange.mock.calls.at(-1)?.[0]).toBe('a');
+});
+
+test('without activateOnFocus arrows move focus but never activate (A-11)', async () => {
+  const {onValueChange, first, middle} = renderControlledTabs({});
+
+  await act(async () => {
+    first.focus();
+    fireEvent.keyDown(first, {key: 'ArrowRight'});
+  });
+
+  expect(document.activeElement).toBe(middle);
+  expect(onValueChange).not.toHaveBeenCalled();
 });
