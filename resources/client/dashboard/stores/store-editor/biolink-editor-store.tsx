@@ -91,7 +91,10 @@ const createBiolinkEditorStore = (biolink: StoreBiolink) => {
     savedProfileConfig: getCreatorProfileConfig(biolink as any),
     profileIsDirty: false,
     featuredProductIds: [],
-    openSection: 'profile',
+    // Single-open, all closed on load — the shared section-accordion
+    // contract with the Appearance tab (the preview maps anything but
+    // products to its profile section, so null stays preview-safe).
+    openSection: null,
     saveError: null,
     saveStatus: null,
     setAppearanceIsDirty: (isDirty: boolean) => {

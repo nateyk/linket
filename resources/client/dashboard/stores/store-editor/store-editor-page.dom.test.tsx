@@ -310,6 +310,8 @@ test('Save button advertises the shortcut and shows it in a tooltip (A-16)', asy
 test('discarding via the unsaved-changes dialog restores the saved preview (A-05)', async () => {
   const {router} = await renderLoadedEditor({form: true});
 
+  // Sections start collapsed now — open Profile to edit its fields.
+  fireEvent.click(screen.getByRole('button', {name: 'Profile'}));
   // Edit the real form: the draft reaches the preview store.
   const bio = screen.getByLabelText('Short bio') as HTMLTextAreaElement;
   fireEvent.change(bio, {target: {value: 'XY'}});
@@ -333,6 +335,7 @@ test('discarding via the unsaved-changes dialog restores the saved preview (A-05
 
 test('after a successful save the preview equals the form (A-05)', async () => {
   await renderLoadedEditor({form: true});
+  fireEvent.click(screen.getByRole('button', {name: 'Profile'}));
 
   const bio = screen.getByLabelText('Short bio') as HTMLTextAreaElement;
   fireEvent.change(bio, {target: {value: 'XY'}});

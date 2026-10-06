@@ -1,10 +1,9 @@
 import {BackgroundStyle} from '@app/dashboard/stores/store-editor/appearance/background-style';
 import {ButtonStyle} from '@app/dashboard/stores/store-editor/appearance/button-style';
 import {useBiolinkEditorStore} from '@app/dashboard/stores/store-editor/biolink-editor-store';
-import {
-  SectionAccordionTrigger,
-  useSectionLabelIds,
-} from '@app/dashboard/stores/store-editor/section-accordion-trigger';
+import {BuilderSectionHeader} from '@app/dashboard/stores/store-editor/builder-section-header';
+import {SectionAccordionTrigger} from '@app/dashboard/stores/store-editor/section-accordion-trigger';
+import {SectionHeading} from '@app/dashboard/stores/store-editor/section-heading';
 import {useAuth} from '@common/auth/use-auth';
 import {NoFeaturePermissionPopover} from '@common/billing/upgrade/no-permission-button';
 import {
@@ -26,30 +25,29 @@ import {
   MousePointerClickIcon,
   TypeIcon,
 } from 'lucide-react';
-import type {ReactNode} from 'react';
+import {useState} from 'react';
 
 export function Component() {
   const {biolink} = useSettings();
+  // Single-open like the Content tab: one section at a time, all closed on
+  // load — the shared section-accordion contract.
+  const [openSection, setOpenSection] = useState<string | null>(null);
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-5">
-      <div className="flex flex-col gap-1">
-        <h2 className="text-lg font-semibold">
-          <Trans message="Appearance" />
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          <Trans message="Customize the look of your creator profile." />
-        </p>
-      </div>
+    <div className="mx-auto flex max-w-2xl flex-col gap-4">
+      <SectionHeading
+        title={<Trans message="Appearance" />}
+        description={<Trans message="Customize the look of your creator profile." />}
+      />
       <Accordion.Root
-        multiple
         variant="separated"
-        defaultValue={['background', 'buttons']}
+        value={openSection ? [openSection] : []}
+        onValueChange={value => setOpenSection((value[0] as string) ?? null)}
       >
         <Accordion.Item value="background">
           <SectionAccordionTrigger>
-            <AppearanceSectionLabel
-              icon={<ImageIcon />}
+            <BuilderSectionHeader
+              icon={ImageIcon}
               title={<Trans message="Background" />}
               description={
                 <Trans message="Choose a color, gradient, pattern, or image." />
@@ -63,8 +61,8 @@ export function Component() {
 
         <Accordion.Item value="buttons">
           <SectionAccordionTrigger>
-            <AppearanceSectionLabel
-              icon={<MousePointerClickIcon />}
+            <BuilderSectionHeader
+              icon={MousePointerClickIcon}
               title={<Trans message="Buttons" />}
               description={
                 <Trans message="Style profile actions, social links, and link buttons." />
@@ -78,8 +76,8 @@ export function Component() {
 
         <Accordion.Item value="text">
           <SectionAccordionTrigger>
-            <AppearanceSectionLabel
-              icon={<TypeIcon />}
+            <BuilderSectionHeader
+              icon={TypeIcon}
               title={<Trans message="Text" />}
               description={
                 <Trans message="Choose the typeface and foreground color." />
@@ -94,8 +92,8 @@ export function Component() {
         {biolink?.show_branding ? (
           <Accordion.Item value="branding">
             <SectionAccordionTrigger>
-              <AppearanceSectionLabel
-                icon={<BadgeIcon />}
+              <BuilderSectionHeader
+                icon={BadgeIcon}
                 title={<Trans message="Branding" />}
                 description={
                   <Trans message="Control whether the Linket logo is shown." />
@@ -109,35 +107,6 @@ export function Component() {
         ) : null}
       </Accordion.Root>
     </div>
-  );
-}
-
-function AppearanceSectionLabel({
-  icon,
-  title,
-  description,
-}: {
-  icon: ReactNode;
-  title: ReactNode;
-  description: ReactNode;
-}) {
-  const labelIds = useSectionLabelIds();
-
-  return (
-    <span className="flex min-w-0 flex-1 items-start gap-3 py-1">
-      <span className="flex size-9 shrink-0 items-center justify-center rounded-card-sm bg-muted text-muted-foreground">
-        {icon}
-      </span>
-      <span className="flex min-w-0 flex-col gap-0.5">
-        <span id={labelIds?.titleId}>{title}</span>
-        <span
-          id={labelIds?.descriptionId}
-          className="text-xs font-normal text-muted-foreground"
-        >
-          {description}
-        </span>
-      </span>
-    </span>
   );
 }
 

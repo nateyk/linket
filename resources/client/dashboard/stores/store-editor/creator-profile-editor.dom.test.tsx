@@ -118,6 +118,7 @@ function renderProfileEditor() {
 }
 
 const preview = () => screen.getByTestId('preview').textContent;
+const triggerByName = (name: string) => screen.getByRole('button', {name});
 
 /**
  * Keeps the editor store mounted (like the real route layout does) while the
@@ -171,6 +172,8 @@ test('content tab has an h2 panel title like the other tabs (A-09)', async () =>
 
 test('bio field is labelled Short bio, never a second About (A-15)', () => {
   renderProfileEditor();
+  // Sections start collapsed now — open Profile to reach its fields.
+  fireEvent.click(triggerByName('Profile'));
 
   expect(screen.getByLabelText('Short bio')).toBeTruthy();
   expect(screen.queryByLabelText('About')).toBeNull();
@@ -198,6 +201,7 @@ test('products trigger reads its count as a description phrase (A-09)', async ()
 
 test('reverting every edit pushes the saved value back to the preview (A-05)', async () => {
   renderProfileEditor();
+  fireEvent.click(triggerByName('Profile'));
 
   const bio = screen.getByLabelText('Short bio') as HTMLTextAreaElement;
   expect(preview()).toBe('|clean');
@@ -217,6 +221,7 @@ test('reverting every edit pushes the saved value back to the preview (A-05)', a
 
 test('profile fields expose their form field name for error focus (A-07)', () => {
   renderProfileEditor();
+  fireEvent.click(triggerByName('Profile'));
 
   // The save-failure summary locates a field by its name and focuses the
   // control inside it — so the name must reach the DOM on the field group.
@@ -246,6 +251,7 @@ function skillRemoveLabels(): string[] {
 
 test("store 3006's seven skills load as ordered chips with an n/8 counter and stay clean (A-12)", () => {
   renderProfileEditor();
+  fireEvent.click(triggerByName('Profile'));
 
   expect(skillRemoveLabels()).toEqual(
     SKILLS_3006.map(skill => `Remove ${skill}`),
@@ -261,6 +267,7 @@ test("store 3006's seven skills load as ordered chips with an n/8 counter and st
 
 test('adding a skill marks the form dirty and reaches the preview; undoing restores both (A-12)', async () => {
   renderProfileEditor();
+  fireEvent.click(triggerByName('Profile'));
   const input = within(skillsField()).getByRole('textbox');
 
   fireEvent.change(input, {target: {value: 'Rust'}});
@@ -287,6 +294,7 @@ test('adding a skill marks the form dirty and reaches the preview; undoing resto
 
 test('dirty edits survive the editor remounting (Content -> Appearance -> Content)', async () => {
   renderRemountableProfileEditor();
+  fireEvent.click(triggerByName('Profile'));
 
   const bio = screen.getByLabelText('Short bio') as HTMLTextAreaElement;
   fireEvent.change(bio, {target: {value: 'XY'}});
@@ -311,6 +319,7 @@ test('dirty edits survive the editor remounting (Content -> Appearance -> Conten
 
 test('remounting without edits keeps the form clean with real-shaped config', async () => {
   renderRemountableProfileEditor(REAL_BIOLINK);
+  fireEvent.click(triggerByName('Profile'));
 
   await waitFor(() => expect(preview()).toContain('|clean'));
 
@@ -359,4 +368,23 @@ test('opening the About tab on a pristine form keeps it clean (rebase vs mount r
     () => expect(preview()).toContain('|clean'),
     {timeout: 3000},
   );
+});
+
+test('content sections use the shared separated variant', () => {
+  renderProfileEditor();
+  const root = document.querySelector('[data-slot="accordion"]');
+  expect(root?.getAttribute('data-variant')).toBe('separated');
+});
+
+test('content sections start collapsed (nothing open by default)', () => {
+  renderProfileEditor();
+  for (const name of ['Profile', 'Social links', 'Actions', 'Products']) {
+    expect(triggerByName(name).getAttribute('aria-expanded')).toBe('false');
+  }
+});
+
+test('the Content heading carries a muted description', () => {
+  renderProfileEditor();
+  const description = screen.getByText('Manage what appears on your profile.');
+  expect(description.className).toContain('text-muted-foreground');
 });

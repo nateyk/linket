@@ -8,6 +8,7 @@ import {
 import {useBiolinkEditorStore} from '@app/dashboard/stores/store-editor/biolink-editor-store';
 import {BuilderSectionHeader} from '@app/dashboard/stores/store-editor/builder-section-header';
 import {SectionAccordionTrigger} from '@app/dashboard/stores/store-editor/section-accordion-trigger';
+import {SectionHeading} from '@app/dashboard/stores/store-editor/section-heading';
 import {
   BIO_MAX_LENGTH,
   buildInitialProfileFormValues,
@@ -350,22 +351,23 @@ export function CreatorProfileEditor({
   return (
     <FileUploadProvider>
       <HookForm.Root form={form} onSubmit={() => {}}>
-        <div className="w-full max-w-3xl">
+        <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
           {tab === 'content' && (
-            <h2 className="mt-2 mb-4 text-lg font-semibold">
-              <Trans message="Content" />
-            </h2>
+            <SectionHeading
+              title={<Trans message="Content" />}
+              description={
+                <Trans message="Manage what appears on your profile." />
+              }
+            />
           )}
           {tab === 'about' ? (
-            <section className="flex max-w-2xl flex-col gap-4 py-2">
-              <div>
-                <h2 className="text-lg font-semibold">
-                  <Trans message="About" />
-                </h2>
-                <p className="mt-1 text-sm text-muted-foreground">
+            <section className="flex flex-col gap-4 py-2">
+              <SectionHeading
+                title={<Trans message="About" />}
+                description={
                   <Trans message="Share the story, experience, and approach behind your work." />
-                </p>
-              </div>
+                }
+              />
               <Field.Root>
                 <Field.Label>
                   <Trans message="About content" />
@@ -396,7 +398,7 @@ export function CreatorProfileEditor({
             </section>
           ) : (
             <Accordion.Root
-              variant="bordered"
+              variant="separated"
               value={openSection ? [openSection] : []}
               onValueChange={value =>
                 setOpenSection(
