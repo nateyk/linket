@@ -4,6 +4,8 @@ import {Chart} from '@shadcn/chart/chart';
 import {Popover} from '@shadcn/popover/popover';
 import {FormattedCountryName} from '@ui/i18n/formatted-country-name';
 import {Trans} from '@ui/i18n/trans';
+import {message} from '@ui/i18n/message';
+import {useTrans} from '@ui/i18n/use-trans';
 import {ArrowBackIcon} from '@ui/icons/material/ArrowBack';
 import {cn} from '@ui/utils/cn';
 import clsx from 'clsx';
@@ -121,6 +123,7 @@ export function GeoChart({
 }
 
 function InfoTrigger() {
+  const {trans} = useTrans();
   return (
     <Popover.Root>
       <Popover.Trigger
@@ -130,6 +133,7 @@ function InfoTrigger() {
             variant="ghost"
             size="icon-sm"
             className="text-muted-foreground"
+            aria-label={trans(message('About this map'))}
           />
         }
       >

@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import {ReactElement, ReactNode} from 'react';
 
-export const usageLabels: Partial<
+const usageLabels: Partial<
   Record<
     keyof GetUsage200Data,
     {
@@ -163,7 +163,7 @@ function GridItem({label, usage}: GridItemProps) {
   );
 }
 
-export function getUsagePercentage(used: number, total: number | null): number {
+function getUsagePercentage(used: number, total: number | null): number {
   if (total === null || total <= 0) {
     return total === 0 && used > 0 ? 100 : 0;
   }

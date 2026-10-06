@@ -6,20 +6,30 @@ import {NavbarAuthMenu} from '@common/ui/navigation/navbar/navbar-auth-menu';
 import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {Badge} from '@ui/badge/badge';
 import {Trans} from '@ui/i18n/trans';
+import {message} from '@ui/i18n/message';
+import {useTrans} from '@ui/i18n/use-trans';
 import {PersonIcon} from '@ui/icons/material/Person';
 import {cn} from '@ui/utils/cn';
 
 export function MobileBottomNavbar() {
+  const {trans} = useTrans();
   const menu = useCustomMenu('dashboard-mobile');
   if (!menu) return null;
 
   return (
-    <div className="flex items-center justify-between gap-7.5 border-t px-6 py-3">
+    <nav
+      aria-label={trans(message('Mobile navigation'))}
+      className="flex items-center justify-between gap-7.5 border-t px-6 py-3"
+    >
       {menu.items.map(item => (
         <UnstyledCustomMenuItem
           key={item.id}
           item={item}
           defaultIcons={dashboardSidebarIcons}
+          // Mirror the sidebar: only the dashboard root matches exactly, so a
+          // nested route (/dashboard/stores/3006) marks one section current
+          // instead of also claiming the dashboard home link.
+          matchDescendants={action => action === '/dashboard'}
           className={({isActive}) =>
             cn(
               'flex flex-col items-center gap-1.5 overflow-hidden text-xs whitespace-nowrap',
@@ -29,7 +39,7 @@ export function MobileBottomNavbar() {
         />
       ))}
       <AccountButton />
-    </div>
+    </nav>
   );
 }
 

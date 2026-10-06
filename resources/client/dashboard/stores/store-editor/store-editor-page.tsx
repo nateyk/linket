@@ -260,7 +260,7 @@ function useStoreEditorSave() {
   const setAppearanceIsDirty = useBiolinkEditorStore(
     s => s.setAppearanceIsDirty,
   );
-  const setProfileIsDirty = useBiolinkEditorStore(s => s.setProfileIsDirty);
+  const markProfileSaved = useBiolinkEditorStore(s => s.markProfileSaved);
   const setSaveError = useBiolinkEditorStore(s => s.setSaveError);
   const setSaveStatus = useBiolinkEditorStore(s => s.setSaveStatus);
   const location = useLocation();
@@ -295,7 +295,9 @@ function useStoreEditorSave() {
       setSaveStatus(null);
     },
     onSuccess: () => {
-      setProfileIsDirty(false);
+      // The just-saved config becomes the baseline dirtiness is compared
+      // against — in the store, so it survives editor remounts.
+      markProfileSaved(getState().profileConfig);
       queryClient.invalidateQueries({queryKey: storesBaseKey});
       queryClient.invalidateQueries({queryKey: ['digital-products']});
       setSaveStatus('saved');

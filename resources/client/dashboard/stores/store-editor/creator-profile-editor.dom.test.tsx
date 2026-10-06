@@ -3,7 +3,10 @@
  */
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
 import {fireEvent, render, screen, waitFor, within} from '@testing-library/react';
+import {useState} from 'react';
 import {expect, test, vi} from 'vitest';
+
+import {STORE_3006_ABOUT_HTML} from '@app/short-links/renderers/biolink-renderer/store-3006-about.fixture';
 
 const {PRODUCTS} = vi.hoisted(() => ({
   PRODUCTS: [
@@ -60,6 +63,33 @@ const BIOLINK = {
   profile_config: {skills: SKILLS_3006},
 } as any;
 
+/**
+ * Store 3006's raw profile_config shape (every field populated, follow_url
+ * null the way the DB stores an absent link) — the fields where the pushed
+ * config and the saved baseline could diverge only exist with real data.
+ */
+const REAL_BIOLINK = {
+  ...BIOLINK,
+  profile_config: {
+    bio: 'Creative Director building the future of digital products.',
+    skills: SKILLS_3006,
+    cover_url: '/storage/link-images/8871de22-9cc1-4294-ab9f-cd98b1bc677c.jpg',
+    about_html: '<p>Real about content.</p>',
+    avatar_url: '/storage/link-images/be18c9cc-d1c1-46de-8ad2-fc944c5b5528.png',
+    follow_url: null,
+    contact_url: 'admin@admin.com',
+    display_name: 'Nathanael Yitbarek',
+    social_links: {
+      mail: 'natenaelny@gmail.com',
+      twitter: '@youtname',
+      instagram: '@instalgesam',
+    },
+    profile_title: 'Creative director',
+    source_widget_ids: [],
+    available_for_work: true,
+  },
+} as any;
+
 /** The phone preview's data source: the profile config pushed by the form. */
 function PreviewProbe() {
   const bio = useBiolinkEditorStore(s => s.profileConfig.bio);
@@ -88,6 +118,41 @@ function renderProfileEditor() {
 }
 
 const preview = () => screen.getByTestId('preview').textContent;
+
+/**
+ * Keeps the editor store mounted (like the real route layout does) while the
+ * editor itself can be unmounted and remounted — what happens when the user
+ * switches Content -> Appearance -> Content, since each tab is a route.
+ */
+function RemountableProfileEditor() {
+  const [instance, setInstance] = useState(0);
+  return (
+    <>
+      <button
+        type="button"
+        data-testid="remount-editor"
+        onClick={() => setInstance(value => value + 1)}
+      >
+        Remount
+      </button>
+      <CreatorProfileEditor key={instance} />
+    </>
+  );
+}
+
+function renderRemountableProfileEditor(biolink = BIOLINK) {
+  const queryClient = new QueryClient({
+    defaultOptions: {queries: {retry: false}},
+  });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <BiolinkEditorStoreProvider data={biolink}>
+        <PreviewProbe />
+        <RemountableProfileEditor />
+      </BiolinkEditorStoreProvider>
+    </QueryClientProvider>,
+  );
+}
 
 function describedTexts(trigger: HTMLElement): string {
   return (trigger.getAttribute('aria-describedby') || '')
@@ -217,5 +282,81 @@ test('adding a skill marks the form dirty and reaches the preview; undoing resto
   await waitFor(() => expect(preview()).toContain('|clean'));
   expect(screen.getByTestId('preview-skills').textContent).toBe(
     SKILLS_3006.join(','),
+  );
+});
+
+test('dirty edits survive the editor remounting (Content -> Appearance -> Content)', async () => {
+  renderRemountableProfileEditor();
+
+  const bio = screen.getByLabelText('Short bio') as HTMLTextAreaElement;
+  fireEvent.change(bio, {target: {value: 'XY'}});
+  await waitFor(() => expect(preview()).toBe('XY|dirty'));
+
+  // The tab switch unmounts the editor and builds a fresh form from the
+  // store. The draft's value must persist — and so must the dirty flag the
+  // Save button and the leave-warning read, because the values still differ
+  // from the last saved config.
+  fireEvent.click(screen.getByTestId('remount-editor'));
+
+  const remountedBio = (await screen.findByLabelText(
+    'Short bio',
+  )) as HTMLTextAreaElement;
+  expect(remountedBio.value).toBe('XY');
+  await waitFor(() => expect(preview()).toBe('XY|dirty'));
+
+  // Undoing back to the saved value after the remount is clean again.
+  fireEvent.change(remountedBio, {target: {value: ''}});
+  await waitFor(() => expect(preview()).toBe('|clean'));
+});
+
+test('remounting without edits keeps the form clean with real-shaped config', async () => {
+  renderRemountableProfileEditor(REAL_BIOLINK);
+
+  await waitFor(() => expect(preview()).toContain('|clean'));
+
+  // Tab switch with zero user edits: the pushed config from the first mount
+  // feeds the remounted form's values, and they must still compare clean
+  // against the saved baseline.
+  fireEvent.click(screen.getByTestId('remount-editor'));
+
+  await screen.findByLabelText('Short bio');
+  // Give the push effect and any query settling time to (wrongly) flip the
+  // flag, then assert the form never reported unsaved changes.
+  await new Promise(resolve => setTimeout(resolve, 50));
+  expect(preview()).toContain('|clean');
+});
+
+test('opening the About tab on a pristine form keeps it clean (rebase vs mount re-seed)', async () => {
+  const queryClient = new QueryClient({defaultOptions: {queries: {retry: false}}});
+  const biolink = {
+    ...REAL_BIOLINK,
+    profile_config: {
+      ...REAL_BIOLINK.profile_config,
+      // TipTap's canonical serialization of this content differs byte-wise
+      // from renderAboutHtml's output (attribute order), so the mount-time
+      // rebase has real work to do.
+      about_html: STORE_3006_ABOUT_HTML,
+    },
+  };
+  render(
+    <QueryClientProvider client={queryClient}>
+      <BiolinkEditorStoreProvider data={biolink}>
+        <PreviewProbe />
+        <CreatorProfileEditor tab="about" />
+      </BiolinkEditorStoreProvider>
+    </QueryClientProvider>,
+  );
+
+  await screen.findByRole('toolbar');
+  // Guard: a pristine form must stay clean after About mounts. jsdom creates
+  // TipTap asynchronously (after this mount's re-seed), so the Chrome-only
+  // ordering — child rebase during render, then the parent re-seed with
+  // keepDefaultValues clobbering its values, leaving about_html permanently
+  // dirty (Save glowed with zero edits) — does not reproduce here; the true
+  // repro and the RED/GREEN evidence live in the browser bisect probe
+  // (S2/S3/S5/S7 wrongly enabled on pre-fix code).
+  await waitFor(
+    () => expect(preview()).toContain('|clean'),
+    {timeout: 3000},
   );
 });

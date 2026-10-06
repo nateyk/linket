@@ -17,17 +17,19 @@ export const BIO_MAX_LENGTH = 600;
  * Rebasing a pristine form's default to it keeps the mount-time round-trip
  * from reading as an edit — otherwise a fresh editor would show Save as
  * enabled and the unsaved-changes guard would fire a false prompt (A-01/A-02).
- * Dirtiness from other fields is never touched.
+ * Dirtiness from other fields is never touched. Returns whether the rebase
+ * ran, so the caller can rebase the saved baseline alongside it.
  */
 export function rebaseAboutFormOnEditorReady(
   form: UseFormReturn<CreatorProfileForm>,
   currentAboutHtml: string | undefined,
   canonicalHtml: string,
-) {
+): boolean {
   if (form.formState.isDirty || canonicalHtml === currentAboutHtml) {
-    return;
+    return false;
   }
   form.reset({...form.getValues(), about_html: canonicalHtml});
+  return true;
 }
 
 /**

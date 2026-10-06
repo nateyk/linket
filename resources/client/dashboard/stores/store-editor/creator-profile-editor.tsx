@@ -66,7 +66,7 @@ import {
   UserRoundIcon,
   XIcon,
 } from 'lucide-react';
-import {useEffect, useMemo, useRef, useState} from 'react';
+import {useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import {useForm, useWatch} from 'react-hook-form';
 import {Link} from 'react-router';
 
@@ -153,6 +153,15 @@ export function CreatorProfileEditor({
   const biolink = useBiolinkEditorStore(s => s.biolink);
   const profileConfig = useBiolinkEditorStore(s => s.profileConfig);
   const initialProfileConfig = useRef(profileConfig).current;
+  // The last-saved baseline lives in the store so it outlives this
+  // component: the tab routes remount the editor, and Save's enabled state
+  // plus the leave-warning must still mean "differs from last saved" after
+  // a Content -> Appearance -> Content round trip.
+  const savedProfileConfig = useBiolinkEditorStore(s => s.savedProfileConfig);
+  const initialSavedProfileConfig = useRef(savedProfileConfig).current;
+  const rebaseSavedAboutHtml = useBiolinkEditorStore(
+    s => s.rebaseSavedAboutHtml,
+  );
   const initialSelectedProductIds = useRef<number[] | null>(null);
   const updateProfileConfig = useBiolinkEditorStore(s => s.updateProfileConfig);
   const setProfileIsDirty = useBiolinkEditorStore(s => s.setProfileIsDirty);
@@ -180,9 +189,56 @@ export function CreatorProfileEditor({
   );
 
   const form = useForm<CreatorProfileForm>({
-    defaultValues: buildInitialProfileFormValues(profileConfig),
+    defaultValues: buildInitialProfileFormValues(initialSavedProfileConfig),
   });
   const values = useWatch({control: form.control});
+  // Seed the live draft's values while keeping the saved baseline as the
+  // defaults: a remount (tab switch) re-seeds the form from the store's
+  // pushed config — unsaved edits included — and form.isDirty must still
+  // compare them against the last saved config, not against themselves.
+  // Declared after useWatch so its subscription exists before this reset
+  // emits — otherwise useWatch keeps its mount-time snapshot for the whole
+  // mount and the form's live values never reach the preview.
+  // Mirrors the pushed config so the re-seed below can read it without
+  // subscribing to every push (a re-seed per keystroke would truncate
+  // in-progress input through normalize).
+  const profileConfigRef = useRef(profileConfig);
+  profileConfigRef.current = profileConfig;
+  // Re-seed both sides of the dirty comparison: values from the pushed
+  // draft, defaults from the last-saved baseline (the saved baseline is the
+  // dep so a TipTap About rebase re-seeds instead of leaving a clobber
+  // behind — the rebase lands in a child layout effect, before this parent
+  // layout effect, and keepDefaultValues used to preserve its defaults
+  // while the seed overwrote its values, leaving about_html permanently
+  // dirty with zero edits). When the form already holds exactly the saved
+  // About HTML — the rebased canonical — keep it verbatim: translating it
+  // through renderAboutHtml again would produce a third serialization and
+  // make TipTap recreate itself in a loop.
+  // Re-seed both sides of the dirty comparison: values from the pushed
+  // draft, defaults from the last-saved baseline (the saved baseline is a
+  // dep so a TipTap About rebase re-seeds instead of leaving a clobber
+  // behind — the rebase lands in a child layout effect, before this parent
+  // layout effect, and keepDefaultValues used to preserve its defaults
+  // while the seed overwrote its values, leaving about_html permanently
+  // dirty with zero edits after visiting About). When the form already
+  // holds exactly the saved About HTML — the rebased canonical — keep it
+  // verbatim: translating it through renderAboutHtml again would produce a
+  // third serialization and make TipTap recreate itself in a loop.
+  useLayoutEffect(() => {
+    const currentAbout = (form.getValues('about_html') as string) || '';
+    const rebasedAbout =
+      currentAbout !== '' && currentAbout === savedProfileConfig.about_html
+        ? currentAbout
+        : null;
+    const savedSeed = buildInitialProfileFormValues(savedProfileConfig);
+    const pushedSeed = buildInitialProfileFormValues(profileConfigRef.current);
+    if (rebasedAbout) {
+      savedSeed.about_html = rebasedAbout;
+      pushedSeed.about_html = rebasedAbout;
+    }
+    form.reset(savedSeed);
+    form.reset(pushedSeed, {keepDefaultValues: true});
+  }, [form, savedProfileConfig]);
   const accountEmail = user?.email || '';
   const contactUrl = values.contact_url?.trim() || '';
   const usesAccountEmailForContact =
@@ -273,12 +329,16 @@ export function CreatorProfileEditor({
     // form can't be marked dirty by this sync.
     updateProfileConfig(
       normalizeProfileValues(
-        values as Partial<CreatorProfileForm>,
+        // getValues() reads the form's current state, so this push is
+        // correct even when the watched `values` snapshot from this render
+        // still predates the mount-time reset above.
+        form.getValues() as Partial<CreatorProfileForm>,
         initialProfileConfig,
       ),
     );
     setProfileIsDirty(form.formState.isDirty || productsAreDirty);
   }, [
+    form,
     form.formState.isDirty,
     initialProfileConfig,
     productsAreDirty,
@@ -318,13 +378,16 @@ export function CreatorProfileEditor({
                       shouldDirty: true,
                     })
                   }
-                  onEditorReady={canonicalHtml =>
-                    rebaseAboutFormOnEditorReady(
+                  onEditorReady={canonicalHtml => {
+                    const rebased = rebaseAboutFormOnEditorReady(
                       form,
                       values.about_html,
                       canonicalHtml,
-                    )
-                  }
+                    );
+                    if (rebased) {
+                      rebaseSavedAboutHtml(canonicalHtml);
+                    }
+                  }}
                 />
                 <Field.Description>
                   <Trans message="This appears in the About tab on your public profile." />
@@ -939,6 +1002,11 @@ function normalizeProfileValues(
   return {
     display_name: values.display_name?.trim() || fallback.display_name,
     profile_title: values.profile_title?.trim() || '',
+    // The config shape includes headline (getCreatorProfileConfig
+    // materializes it), so the push must carry it too — otherwise every
+    // push erases it and the next editor mount reads the lost field as an
+    // edit, leaving Save enabled with nothing changed.
+    headline: values.headline || '',
     bio: values.bio?.trim() || '',
     about_html: values.about_html || '',
     avatar_url: values.avatar_url || '',

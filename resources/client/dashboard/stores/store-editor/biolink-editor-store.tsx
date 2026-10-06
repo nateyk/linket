@@ -27,6 +27,14 @@ interface BiolinkEditorState {
   appearanceIsDirty: boolean;
   content: NonNullable<StoreBiolink['content']>;
   profileConfig: CreatorProfileConfig;
+  /**
+   * The profile config as last loaded from or saved to the server. It lives
+   * in the store — not in the editor component — because the editor remounts
+   * on every Content -> Appearance -> Content tab switch, and dirtiness
+   * (Save's enabled state, the leave-warning) must keep meaning "differs
+   * from last saved" across those remounts.
+   */
+  savedProfileConfig: CreatorProfileConfig;
   profileIsDirty: boolean;
   featuredProductIds: number[];
   /** Open accordion section of the Content tab; drives the preview (A-06). */
@@ -40,6 +48,14 @@ interface BiolinkEditorState {
   updateAppearance: (payload: Appearance) => void;
   updateProfileConfig: (payload: CreatorProfileConfig) => void;
   setProfileIsDirty: (isDirty: boolean) => void;
+  /** Save succeeded: the live config is now the saved baseline. */
+  markProfileSaved: (config: CreatorProfileConfig) => void;
+  /**
+   * A pristine form absorbed TipTap's canonical About HTML (A-01/A-02);
+   * the saved baseline absorbs it too, or the next remount would read the
+   * absorption as an edit.
+   */
+  rebaseSavedAboutHtml: (aboutHtml: string) => void;
   setFeaturedProductIds: (ids: number[]) => void;
   setOpenSection: (section: CreatorProfileSection | null) => void;
   setSaveError: (error: StoreSaveError) => void;
@@ -62,7 +78,7 @@ const defaultAppearance: Appearance = {
   layout: 'profile-sidebar',
 };
 
-export const createBiolinkEditorStore = (biolink: StoreBiolink) => {
+const createBiolinkEditorStore = (biolink: StoreBiolink) => {
   return create<BiolinkEditorState>()((set, get) => ({
     getState: () => get(),
     appearance: {
@@ -72,6 +88,7 @@ export const createBiolinkEditorStore = (biolink: StoreBiolink) => {
     },
     appearanceIsDirty: false,
     profileConfig: getCreatorProfileConfig(biolink as any),
+    savedProfileConfig: getCreatorProfileConfig(biolink as any),
     profileIsDirty: false,
     featuredProductIds: [],
     openSection: 'profile',
@@ -82,6 +99,24 @@ export const createBiolinkEditorStore = (biolink: StoreBiolink) => {
     },
     setProfileIsDirty: (isDirty: boolean) => {
       set(() => ({profileIsDirty: isDirty}));
+    },
+    markProfileSaved: (config: CreatorProfileConfig) => {
+      set(() => ({
+        savedProfileConfig: config,
+        // The live config is now the saved baseline — both sides, or the
+        // mount re-seed would compare values against a stale draft.
+        profileConfig: config,
+        profileIsDirty: false,
+      }));
+    },
+    rebaseSavedAboutHtml: (aboutHtml: string) => {
+      set(state => ({
+        savedProfileConfig: {...state.savedProfileConfig, about_html: aboutHtml},
+        // The pushed draft absorbs it in the same tick: the form re-seed
+        // re-runs whenever the saved baseline changes, and it would
+        // otherwise re-apply the pre-canonical draft over the rebased form.
+        profileConfig: {...state.profileConfig, about_html: aboutHtml},
+      }));
     },
     setFeaturedProductIds: (ids: number[]) => {
       set(() => ({featuredProductIds: ids}));
@@ -129,7 +164,7 @@ export const createBiolinkEditorStore = (biolink: StoreBiolink) => {
 };
 
 type BiolinkEditorStore = ReturnType<typeof createBiolinkEditorStore>;
-export const BiolinkEditorStoreContext = createContext<BiolinkEditorStore>(
+const BiolinkEditorStoreContext = createContext<BiolinkEditorStore>(
   null!,
 );
 
