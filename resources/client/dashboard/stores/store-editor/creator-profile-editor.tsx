@@ -369,9 +369,6 @@ export function CreatorProfileEditor({
                 }
               />
               <Field.Root>
-                <Field.Label>
-                  <Trans message="About content" />
-                </Field.Label>
                 <CreatorAboutEditor
                   key={biolink.id}
                   value={values.about_html || ''}

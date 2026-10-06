@@ -103,7 +103,7 @@ function PreviewProbe() {
   );
 }
 
-function renderProfileEditor() {
+function renderProfileEditor(tab?: 'content' | 'about') {
   const queryClient = new QueryClient({
     defaultOptions: {queries: {retry: false}},
   });
@@ -111,7 +111,7 @@ function renderProfileEditor() {
     <QueryClientProvider client={queryClient}>
       <BiolinkEditorStoreProvider data={BIOLINK}>
         <PreviewProbe />
-        <CreatorProfileEditor />
+        <CreatorProfileEditor tab={tab} />
       </BiolinkEditorStoreProvider>
     </QueryClientProvider>,
   );
@@ -387,4 +387,11 @@ test('the Content heading carries a muted description', () => {
   renderProfileEditor();
   const description = screen.getByText('Manage what appears on your profile.');
   expect(description.className).toContain('text-muted-foreground');
+});
+
+test('About tab drops the redundant About content field label (heading labels it)', () => {
+  renderProfileEditor('about');
+
+  expect(screen.queryByText('About content')).toBeNull();
+  expect(screen.getByRole('heading', {level: 2, name: 'About'})).toBeTruthy();
 });
