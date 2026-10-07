@@ -153,6 +153,7 @@ class AppServiceProvider extends ServiceProvider
             });
 
         $this->registerCourseRoutes();
+        $this->registerProductStatisticsRoutes();
     }
 
     private function registerCourseRoutes(): void
@@ -198,6 +199,7 @@ class AppServiceProvider extends ServiceProvider
             \Illuminate\Support\Facades\Route::get('my-courses', [\App\Courses\Controllers\StudentCoursesController::class, 'myCourses']);
             \Illuminate\Support\Facades\Route::get('courses/{course}/learn', [\App\Courses\Controllers\StudentCoursesController::class, 'show']);
             \Illuminate\Support\Facades\Route::get('courses/{course}/learn/lessons/{lesson}', [\App\Courses\Controllers\StudentCoursesController::class, 'lesson']);
+            \Illuminate\Support\Facades\Route::get('course-lessons/{lesson}/video', [\App\Courses\Controllers\StudentCoursesController::class, 'video'])->name('courses.lesson-video');
             \Illuminate\Support\Facades\Route::post('course-lessons/{lesson}/complete', [\App\Courses\Controllers\LessonProgressController::class, 'complete']);
             \Illuminate\Support\Facades\Route::post('course-lessons/{lesson}/uncomplete', [\App\Courses\Controllers\LessonProgressController::class, 'uncomplete']);
             \Illuminate\Support\Facades\Route::get('courses/{course}/progress', [\App\Courses\Controllers\LessonProgressController::class, 'progress']);
@@ -207,6 +209,14 @@ class AppServiceProvider extends ServiceProvider
         // SubstituteBindings runs and {course} resolves to a Course model.
         \Illuminate\Support\Facades\Route::prefix('api/v1/public')->middleware(['api'])->group(function () {
             \Illuminate\Support\Facades\Route::get('courses/{course}/curriculum', [\App\Courses\Controllers\StudentCoursesController::class, 'curriculum']);
+        });
+    }
+
+    private function registerProductStatisticsRoutes(): void
+    {
+        \Illuminate\Support\Facades\Route::prefix('api/v1')->middleware(['api', 'optionalAuth:sanctum', 'verified', 'verifyApiAccess'])->group(function () {
+            // Creator product statistics
+            \Illuminate\Support\Facades\Route::get('digital-products/{digitalProduct}/statistics', \App\Storefront\Controllers\DigitalProductStatisticsController::class);
         });
     }
 
