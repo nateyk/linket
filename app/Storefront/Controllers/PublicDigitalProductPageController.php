@@ -3,6 +3,7 @@
 namespace App\Storefront\Controllers;
 
 use App\Biolinks\Resources\BiolinkResource;
+use App\Storefront\Actions\RecordProductView;
 use App\Storefront\Models\DigitalProduct;
 use App\Storefront\Models\StorefrontOrder;
 use App\Storefront\PublicDigitalProducts;
@@ -20,6 +21,8 @@ class PublicDigitalProductPageController extends Controller
     {
         $biolink = app(PublicDigitalProducts::class)->findBiolink($storeSlug);
         $product = app(PublicDigitalProducts::class)->product($biolink, $digitalProduct);
+
+        app(RecordProductView::class)->execute($product);
 
         return $this->clientSideOrPrerenderedResponse([
             'loader' => 'digitalProductPage',
