@@ -7,7 +7,7 @@ import {cn} from '@ui/utils/cn';
 import type {LucideIcon} from 'lucide-react';
 import type {ReactNode} from 'react';
 
-export type ProductSetupSection = 'details' | 'files' | 'bio-pages';
+export type ProductSetupSection = string;
 
 interface ProductFormSectionProps {
   id: ProductSetupSection;

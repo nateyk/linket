@@ -54,14 +54,14 @@ export function ProductPreview() {
             <span className="flex items-center gap-2 text-xs text-muted-foreground">
               <FileIcon className="size-4" aria-hidden="true" />
               <Trans
-                message=":count download files"
+                message="[one :count download file|other :count download files]"
                 values={{count: files.length}}
               />
             </span>
             <span className="flex items-center gap-2 text-xs text-muted-foreground">
               <TypeIcon className="size-4" aria-hidden="true" />
               <Trans
-                message=":count characters"
+                message=":count characters in description"
                 values={{count: title.length + (description?.length ?? 0)}}
               />
             </span>
@@ -111,7 +111,7 @@ export function ProductStatus({status}: {status: string}) {
     },
     pending_approval: {
       icon: Clock3Icon,
-      tone: 'text-amber-600 bg-amber-500/10 dark:text-amber-400',
+      tone: 'text-warning bg-warning/10',
       label: 'In review',
     },
     approved: {

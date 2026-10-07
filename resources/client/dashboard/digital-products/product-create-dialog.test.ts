@@ -53,4 +53,16 @@ describe('wizard price prefill', () => {
     expect(course).toContain('parseWizardPrefill');
     expect(course).toContain("billing === 'free'");
   });
+
+  test('paid course setup preserves the paid choice without offering free pricing copy', () => {
+    const course = fs.readFileSync(
+      path.resolve(
+        'resources/client/dashboard/courses/create-course-page.tsx',
+      ),
+      'utf8',
+    );
+
+    expect(course).not.toContain('Set ETB 0 to offer this course for free.');
+    expect(course).toContain('This course is paid. Update the price if needed.');
+  });
 });

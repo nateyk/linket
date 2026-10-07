@@ -116,7 +116,7 @@ describe('digital product form submission', () => {
     expect(uploaderSource).toContain('showToastOnRestrictionFail: true');
   });
 
-  test('warns before an approved product is returned to draft', () => {
+  test('warns about draft reversion only after an approved product is edited', () => {
     const source = fs.readFileSync(
       path.resolve(
         'resources/client/dashboard/digital-products/digital-product-form-page.tsx',
@@ -124,7 +124,7 @@ describe('digital product form submission', () => {
       'utf8',
     );
 
-    expect(source).toContain("product?.status === 'approved'");
+    expect(source).toContain("product?.status === 'approved' && dirty");
     expect(source).toContain(
       'Saving changes will return this approved product to draft.',
     );

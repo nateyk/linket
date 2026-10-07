@@ -75,6 +75,17 @@ describe('R06 product type picker semantics', () => {
     fireEvent.click(document.activeElement!);
     expect(onValueChange).toHaveBeenCalledWith('audio');
   });
+
+  test('visually marks only the selected product type', () => {
+    const {container} = render(
+      <ProductTypePicker value="digital" onValueChange={() => {}} />,
+    );
+    const options = container.querySelectorAll('label');
+    expect(options[0].className).toContain('bg-primary/5');
+    expect(options[1].className).not.toContain('bg-primary/5');
+    expect(options[2].className).not.toContain('bg-primary/5');
+    expect(options[3].className).not.toContain('bg-primary/5');
+  });
 });
 
 describe('R06 billing mode picker semantics', () => {  test('renders a radiogroup with two radio options', () => {

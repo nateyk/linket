@@ -38,6 +38,7 @@ export interface ProductCreationActions {
   setFiles: (files: FileEntry[]) => void;
   setBiolinkIds: (ids: number[]) => void;
   setProductType: (type: ProductType) => void;
+  hydrate: (state: ProductFormState) => void;
   clear: () => void;
   setDirty: (dirty: boolean) => void;
   autoSave: () => void;
@@ -139,6 +140,10 @@ export function ProductCreationProvider({
     },
     [],
   );
+  const hydrate = useCallback((nextState: ProductFormState) => {
+    setState(nextState);
+    setDirty(false);
+  }, []);
   const clear = useCallback(() => {
     setState({...EMPTY_STATE});
     setDirty(false);
@@ -182,6 +187,7 @@ export function ProductCreationProvider({
         setFiles,
         setBiolinkIds,
         setProductType,
+        hydrate,
         clear,
         setDirty,
         autoSave,
@@ -198,6 +204,7 @@ export function ProductCreationProvider({
       setFiles,
       setBiolinkIds,
       setProductType,
+      hydrate,
       clear,
       setDirty,
       autoSave,

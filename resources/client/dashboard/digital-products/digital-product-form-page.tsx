@@ -243,22 +243,17 @@ function DigitalProductForm() {
             return;
           }
           setProduct(item);
-          actions.setTitle(item.title);
-          actions.setDescription(item.description ?? '');
-          actions.setPrice((item.price_cents / 100).toFixed(2));
-          {
-            const coverId =
-              item.cover_file_entry_id ?? item.cover?.id ?? null;
-            actions.setCover(
-              item.cover?.url ?? '',
-              coverId != null ? {id: coverId} : undefined,
-            );
-          }
-          actions.setFiles(item.files ?? []);
-          actions.setBiolinkIds(item.biolink_ids ?? []);
-          if (item.type) {
-            actions.setProductType(item.type as ProductType);
-          }
+          const coverId = item.cover_file_entry_id ?? item.cover?.id ?? null;
+          actions.hydrate({
+            title: item.title,
+            description: item.description ?? '',
+            price: (item.price_cents / 100).toFixed(2),
+            coverUrl: item.cover?.url ?? '',
+            coverFileId: coverId,
+            files: item.files ?? [],
+            biolinkIds: item.biolink_ids ?? [],
+            productType: (item.type ?? 'digital') as ProductType,
+          });
         }
 
         try {
@@ -526,7 +521,7 @@ function DigitalProductForm() {
             </Alert.Root>
           )}
 
-          {product?.status === 'approved' && (
+          {product?.status === 'approved' && dirty && (
             <Alert.Root variant="warning" fillStyle="subtleFill" className="mb-5">
               <TriangleAlertIcon />
               <Alert.Description>

@@ -3,6 +3,7 @@ import {
   RadioGroupItem,
 } from '@shadcn/forms/radio-group/radio-group';
 import {useTrans} from '@ui/i18n/use-trans';
+import {cn} from '@ui/utils/cn';
 import {GiftIcon, TagIcon, type LucideIcon} from 'lucide-react';
 import type {BillingMode} from './product-create-flow';
 import {OptionRowContent} from './option-row';
@@ -51,7 +52,11 @@ export function BillingModePicker({
       {BILLING_MODES.map(option => (
         <label
           key={option.id}
-          className="flex h-auto min-h-[76px] w-full shrink-0 cursor-pointer items-center justify-start gap-3 rounded-card-sm border border-border bg-card px-3.5 py-3 text-start whitespace-normal shadow-xs ring-1 ring-transparent outline-none hover:border-foreground/15 hover:bg-muted/30 focus-within:ring-2 focus-within:ring-ring/30 has-data-checked:border-primary/60 has-data-checked:bg-primary/5 has-data-checked:ring-primary/15"
+          className={cn(
+            'flex h-auto min-h-[76px] w-full shrink-0 cursor-pointer items-center justify-start gap-3 rounded-card-sm border border-border bg-card px-3.5 py-3 text-start whitespace-normal shadow-xs ring-1 ring-transparent outline-none hover:border-foreground/15 hover:bg-muted/30 focus-within:ring-2 focus-within:ring-ring/30',
+            value === option.id &&
+              'border-primary/60 bg-primary/5 ring-primary/15',
+          )}
         >
           <RadioGroupItem value={option.id} className="sr-only" />
           <OptionRowContent
