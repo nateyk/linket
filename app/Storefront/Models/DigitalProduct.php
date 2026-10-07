@@ -33,6 +33,7 @@ class DigitalProduct extends StorefrontModel
         'review_requested_by',
         'pending_review_snapshot',
         'type',
+        'views_count',
     ];
     protected $casts = ['price_cents' => 'integer', 'cover_file_entry_id' => 'integer', 'approved_at' => 'datetime', 'review_requested_at' => 'datetime', 'review_requested_by' => 'integer', 'workspace_id' => 'integer', 'user_id' => 'integer', 'learning_outcomes' => 'array', 'pending_review_snapshot' => 'array'];
 
@@ -51,6 +52,7 @@ class DigitalProduct extends StorefrontModel
 
     public function biolinks(): BelongsToMany { return $this->belongsToMany(Biolink::class, Store::isTableRenameDone() ? 'digital_product_store' : 'digital_product_biolinks', 'digital_product_id', 'biolink_id')->withTimestamps(); }
     public function orders(): HasMany { return $this->hasMany(StorefrontOrder::class); }
+    public function views(): HasMany { return $this->hasMany(ProductView::class); }
     public function isApproved(): bool { return $this->status === 'approved'; }
 
     public function reviewRequestedBy(): BelongsTo
