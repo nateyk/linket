@@ -6,6 +6,7 @@ import {Link, useNavigate} from 'react-router';
 import {hasNextStep} from './product-create-flow';
 import {
   STEP_META,
+  focusWizardStep,
   useProductCreateWizard,
   WizardStepBody,
   WizardStepDots,
@@ -77,7 +78,11 @@ export function Component() {
             </div>
           </div>
 
-          <div key={wizard.step} className="animate-in fade-in duration-200">
+          <div
+            key={wizard.step}
+            ref={focusWizardStep}
+            className="animate-in fade-in duration-200"
+          >
             <WizardStepBody wizard={wizard} />
           </div>
         </div>

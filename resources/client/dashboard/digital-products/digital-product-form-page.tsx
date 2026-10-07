@@ -587,7 +587,7 @@ function DigitalProductForm() {
               <div className="flex min-w-0 flex-col gap-4">
                 <ProductFormProgress
                   completed={completedSections}
-                  total={2}
+                  total={SECTION_ORDER.length}
                 />
 
                 <Accordion.Root

@@ -6,6 +6,7 @@ import {
   InputGroupText,
 } from '@shadcn/forms/input-group/input-group';
 import {Trans} from '@ui/i18n/trans';
+import {useTrans} from '@ui/i18n/use-trans';
 import {cn} from '@ui/utils/cn';
 import {
   PackagePlusIcon,
@@ -107,12 +108,16 @@ export function useProductCreateWizard() {
     localStorage.removeItem(STORAGE_KEY);
   };
 
+  const isDirty =
+    state.type !== null || state.billing !== null || state.price.trim() !== '';
+
   return {
     step,
     steps,
     type: state.type,
     billing: state.billing,
     price: state.price,
+    isDirty,
     setType,
     setBilling,
     setPrice,
@@ -126,26 +131,52 @@ export function useProductCreateWizard() {
 
 export type ProductCreateWizard = ReturnType<typeof useProductCreateWizard>;
 
+/**
+ * Focus management for step transitions: when a new step mounts, move focus
+ * to its first radio option so keyboard and screen-reader users land inside
+ * the new step. Steps with their own autofocused input (price) are left alone.
+ */
+export function focusWizardStep(node: HTMLDivElement | null) {
+  if (!node) return;
+  if (node.querySelector('[autofocus]')) return;
+  const firstOption = node.querySelector('[role="radio"]');
+  if (firstOption instanceof HTMLElement) {
+    firstOption.focus({preventScroll: true});
+  }
+}
+
 export function WizardStepDots({wizard}: {wizard: ProductCreateWizard}) {
   const current = wizard.steps.indexOf(wizard.step);
+  const {trans} = useTrans();
   return (
-    <span className="flex items-center gap-1.5" aria-hidden="true">
-      {wizard.steps.map(step => (
-        <span
-          key={step}
-          className={cn(
-            'size-1.5 rounded-full',
-            step === wizard.step ? 'bg-primary' : 'bg-border',
-          )}
-        />
-      ))}
-      <span className="sr-only">
+    <nav aria-label={trans({message: 'Product creation steps'})}>
+      <ol className="flex items-center gap-1.5">
+        {wizard.steps.map(step => (
+          <li
+            key={step}
+            aria-current={step === wizard.step ? 'step' : undefined}
+            className="flex items-center gap-1.5"
+          >
+            <span
+              aria-hidden="true"
+              className={cn(
+                'size-1.5 rounded-full',
+                step === wizard.step ? 'bg-primary' : 'bg-border',
+              )}
+            />
+            <span className="sr-only">
+              <Trans message={STEP_META[step].title} />
+            </span>
+          </li>
+        ))}
+      </ol>
+      <p className="mt-1.5 text-xs text-muted-foreground">
         <Trans
           message="Step :current of :total"
           values={{current: current + 1, total: wizard.steps.length}}
         />
-      </span>
-    </span>
+      </p>
+    </nav>
   );
 }
 
@@ -181,9 +212,9 @@ export function WizardStepBody({wizard}: {wizard: ProductCreateWizard}) {
           />
         </InputGroup>
         {showHint && (
-          <p className="text-sm text-destructive">
+          <Field.Error>
             <Trans message="Enter an amount greater than ETB 0." />
-          </p>
+          </Field.Error>
         )}
       </Field.Root>
     );

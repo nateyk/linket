@@ -9,9 +9,10 @@ function read(name: string): string {
 }
 
 describe('billing mode picker', () => {
-  test('offers Free and Paid as single-select toggle rows', () => {
+  test('offers Free and Paid as single-select radio rows', () => {
     const source = read('billing-mode-picker.tsx');
-    expect(source).toContain("aria-label=\"Billing mode\"");
+    expect(source).toContain('RadioGroup');
+    expect(source).toContain('RadioGroupItem');
     expect(source).toContain('onValueChange');
     expect(source).toContain("'free'");
     expect(source).toContain("'paid'");
