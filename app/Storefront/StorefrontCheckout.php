@@ -9,6 +9,7 @@ use App\Payments\Models\PaymentTransaction;
 use App\Stores\Models\Store;
 use App\Storefront\Models\DigitalProduct;
 use App\Storefront\Models\StorefrontOrder;
+use App\Storefront\VisitorAttributes;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -52,6 +53,8 @@ class StorefrontCheckout
             'platform_fee_percent' => $feePercent,
             'platform_fee_cents' => $fee,
             'creator_earnings_cents' => $gross - $fee,
+            'buyer_country' => VisitorAttributes::country(),
+            'buyer_referrer' => VisitorAttributes::normalizedReferrer(),
         ]);
         $order->items()->create([
             'digital_product_id' => $product->id,
