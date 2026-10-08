@@ -18,6 +18,8 @@ use App\Http\Controllers\LandingPageController;
 use App\Kyc\Controllers\AdminKycVerificationsController;
 use App\Kyc\Controllers\KycVerificationsController;
 use App\Links\Controllers\LinksController;
+use Common\Help\Http\Controllers\AdminHelpArticleController;
+use Common\Help\Http\Controllers\AdminHelpCategoryController;
 use Common\Help\Http\Controllers\HelpController;
 use App\Folders\Controllers\FolderLinksController;
 use App\QrCodes\Controllers\QrCodesController;
@@ -82,6 +84,11 @@ Route::group(['prefix' => 'v1'], function() {
         Route::post('admin/kyc-verifications/{kycVerification}/reject', [AdminKycVerificationsController::class, 'reject']);
         Route::get('admin/kyc-verifications/{kycVerification}/documents/{key}', [AdminKycVerificationsController::class, 'document']);
         Route::delete('admin/kyc-verifications/{kycVerification}', [AdminKycVerificationsController::class, 'destroy']);
+
+        // HELP CENTER (admin)
+        Route::post('admin/help/categories/sort', [AdminHelpCategoryController::class, 'sort'])->name('admin.help.categories.sort');
+        Route::apiResource('admin/help/categories', AdminHelpCategoryController::class)->names('admin.help.categories');
+        Route::apiResource('admin/help/articles', AdminHelpArticleController::class)->names('admin.help.articles');
 
         // LINK
         Route::get('links', [LinksController::class, 'index']);
