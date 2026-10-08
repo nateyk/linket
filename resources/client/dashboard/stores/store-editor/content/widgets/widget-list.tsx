@@ -102,7 +102,7 @@ export const WidgetList: Record<BiolinkWidget['type'], WidgetListItem> = {
     dialog: TiktokWidgetDialog,
   },
   shop: {
-    name: <Trans message="Digital Products" />,
+    name: <Trans message="Items" />,
     description: <Trans message="Display approved digital products selected from your product manager." />,
     dialog: ShopWidgetDialog,
   },

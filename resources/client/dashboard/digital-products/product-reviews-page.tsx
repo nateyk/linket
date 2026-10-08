@@ -40,7 +40,7 @@ export function Component() {
     setError(undefined);
     try {
       const response = await apiClient.get(
-        `/api/v1/digital-products/${productId}/reviews?per_page=100`,
+        `/api/v1/items/${productId}/reviews?per_page=100`,
       );
       setReviews(response.data.data ?? []);
     } catch {
@@ -64,7 +64,7 @@ export function Component() {
         <Button
           variant="outline"
           nativeButton={false}
-          render={<Link to="/dashboard/my-products" />}
+          render={<Link to="/dashboard/items" />}
         >
           <ArrowLeftIcon />
           <Trans message="Back to products" />

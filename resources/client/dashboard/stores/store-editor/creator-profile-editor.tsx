@@ -709,7 +709,7 @@ export function CreatorProfileEditor({
                     icon={PackageCheckIcon}
                     title={<Trans message="Products" />}
                     description={
-                      <Trans message="Feature up to six Digital Products." />
+                      <Trans message="Feature up to six items." />
                     }
                     trailing={
                       <Badge
@@ -809,7 +809,7 @@ export function CreatorProfileEditor({
                               type="button"
                               size="sm"
                               variant="outline"
-                              render={<Link to="/dashboard/my-products" />}
+                              render={<Link to="/dashboard/items" />}
                             >
                               <PackageIcon data-icon="inline-start" />
                               <Trans message="Manage products" />

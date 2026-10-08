@@ -96,13 +96,13 @@ describe('course product creation', () => {
   test('uses a dedicated course creation route', () => {
     const paths = dashboardRoutes[0].children!.map(route => route.path);
 
-    expect(paths).toContain('my-products/new/course');
+    expect(paths).toContain('items/new/course');
   });
 
   test('uses a dedicated course analytics route', () => {
     const paths = dashboardRoutes[0].children!.map(route => route.path);
 
-    expect(paths).toContain('my-products/:productId/course/analytics');
+    expect(paths).toContain('items/:productId/course/analytics');
   });
 
   test('loads course analytics only through the dashboard route tree', () => {
@@ -113,25 +113,25 @@ describe('course product creation', () => {
 
     expect(appRouterSource).not.toContain('CourseAnalyticsPage');
     expect(appRouterSource).not.toContain(
-      "path: 'dashboard/my-products/:productId/course/analytics'",
+      "path: 'dashboard/items/:productId/course/analytics'",
     );
   });
 
   test('course redirect forwards wizard params', async () => {
     const details = dashboardRoutes[0].children!.find(
-      (r: any) => r.path === 'my-products/new/details',
+      (r: any) => r.path === 'items/new/details',
     ) as any;
     const redirected = await details.loader({
       request: {
-        url: 'http://localhost/dashboard/my-products/new/details?type=course&price_cents=1999&billing=paid',
+        url: 'http://localhost/dashboard/items/new/details?type=course&price_cents=1999&billing=paid',
       },
     });
     expect(redirected.headers.get('Location')).toBe(
-      '/dashboard/my-products/new/course?price_cents=1999&billing=paid',
+      '/dashboard/items/new/course?price_cents=1999&billing=paid',
     );
     const passthrough = await details.loader({
       request: {
-        url: 'http://localhost/dashboard/my-products/new/details?type=ebook',
+        url: 'http://localhost/dashboard/items/new/details?type=ebook',
       },
     });
     expect(passthrough).toBeNull();

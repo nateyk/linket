@@ -29,7 +29,7 @@ describe('course creation page', () => {
   test('keeps spinner submit state and uncertain-creation recovery', () => {
     expect(source).toContain('<Spinner');
     expect(source).toContain('creationUncertain');
-    expect(source).toContain('Check My Products');
+    expect(source).toContain('Check My Items');
   });
 
   test('labels static copy through Trans', () => {
@@ -63,8 +63,8 @@ describe('uncertain creation recovery', () => {
     expect(source).not.toContain('disabled={creating || creationUncertain}');
   });
 
-  test('keeps the my-products escape hatch', () => {
+  test('keeps the items escape hatch', () => {
     expect(source).toContain('creationUncertain');
-    expect(source).toContain('Check My Products');
+    expect(source).toContain('Check My Items');
   });
 });

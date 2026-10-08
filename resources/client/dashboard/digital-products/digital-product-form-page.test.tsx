@@ -26,7 +26,7 @@ describe('digital product form submission', () => {
 
     expect(source).toContain('saved = response.data.data as Product;');
     expect(source).toContain(
-      'await apiClient.post(`/api/v1/digital-products/${saved.id}/submit`);',
+      'await apiClient.post(`/api/v1/items/${saved.id}/submit`);',
     );
   });
 
@@ -53,7 +53,7 @@ describe('digital product form submission', () => {
     expect(selectionPage).toContain('useProductCreateWizard');
     expect(selectionPage).toContain('finishUrl');
     expect(flow).toMatch(
-      /state\.type === 'course'[\s\S]*?\/dashboard\/my-products\/new\/course/,
+      /state\.type === 'course'[\s\S]*?\/dashboard\/items\/new\/course/,
     );
     expect(dialog).toContain('useProductCreateWizard');
     expect(dialog).toContain('finishUrl');
@@ -69,10 +69,10 @@ describe('digital product form submission', () => {
 
     expect(source).toContain("if (item.type === 'course')");
     expect(source).toMatch(
-      /navigate\(\s*`\/dashboard\/my-products\/\$\{item\.id\}\/course\?notice=moved-to-builder`,\s*\{\s*replace: true,?\s*\}\s*,?\s*\);/,
+      /navigate\(\s*`\/dashboard\/items\/\$\{item\.id\}\/course\?notice=moved-to-builder`,\s*\{\s*replace: true,?\s*\}\s*,?\s*\);/,
     );
     expect(
-      source.indexOf('/api/v1/digital-products/${productId}'),
+      source.indexOf('/api/v1/items/${productId}'),
     ).toBeLessThan(source.indexOf('/api/v1/biolinks?fields_preset=minimal'));
   });
 
@@ -85,7 +85,7 @@ describe('digital product form submission', () => {
     );
 
     expect(source).toMatch(
-      /await apiClient\.get\(\s*`\/api\/v1\/digital-products\/\$\{productId\}`\s*,?\s*\)/,
+      /await apiClient\.get\(\s*`\/api\/v1\/items\/\$\{productId\}`\s*,?\s*\)/,
     );
     expect(source).toMatch(
       /await apiClient\.get\(\s*'\/api\/v1\/biolinks\?fields_preset=minimal'\s*,?\s*\)/,
@@ -141,7 +141,7 @@ describe('digital product list submission', () => {
     );
 
     expect(source).toMatch(
-      /await apiClient\.get\(\s*'\/api\/v1\/digital-products\?per_page=100'\s*,?\s*\)/,
+      /await apiClient\.get\(\s*'\/api\/v1\/items\?per_page=100'\s*,?\s*\)/,
     );
   });
 

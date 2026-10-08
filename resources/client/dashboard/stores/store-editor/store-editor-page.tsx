@@ -627,7 +627,7 @@ function CreatorProfileUpgrade() {
         <Trans message="Turn this page into a creator profile" />
       </Alert.Title>
       <Alert.Description>
-        <Trans message="Use a focused profile, work showcase, and Digital Products layout. Your existing content will be preserved." />
+        <Trans message="Use a focused profile, work showcase, and Items layout. Your existing content will be preserved." />
       </Alert.Description>
       <Alert.Action>
         <Button

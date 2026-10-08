@@ -57,11 +57,11 @@ function renderPage() {
   const router = createMemoryRouter(
     [
       {
-        path: '/dashboard/my-products/:productId/statistics',
+        path: '/dashboard/items/:productId/statistics',
         element: <Component />,
       },
     ],
-    {initialEntries: ['/dashboard/my-products/7/statistics']},
+    {initialEntries: ['/dashboard/items/7/statistics']},
   );
   return render(
     <QueryClientProvider client={queryClient}>
@@ -80,7 +80,7 @@ test('creator statistics page requests the creator endpoint with current-month p
 
   expect(salesLabels.length).toBeGreaterThan(0);
   expect(apiClient.get).toHaveBeenCalledWith(
-    '/api/v1/digital-products/7/statistics',
+    '/api/v1/items/7/statistics',
     {params: currentMonthPeriod()},
   );
   expect(

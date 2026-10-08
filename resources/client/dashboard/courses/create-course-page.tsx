@@ -49,21 +49,21 @@ export function Component() {
     if (Object.keys(next).length) { setOpenSection('details'); document.getElementById(next.title ? 'course-title' : 'course-price')?.focus(); return; }
     setCreating(true); setError(undefined);
     try {
-      const response = await apiClient.post('/api/v1/digital-products', {title: title.trim(), description: null, price_cents: isFree ? 0 : Math.round(Number(price) * 100), currency: 'etb', type: 'course'});
-      navigate(`/dashboard/my-products/${(response.data.data as CreatedProduct).id}/course`, {replace: true});
+      const response = await apiClient.post('/api/v1/items', {title: title.trim(), description: null, price_cents: isFree ? 0 : Math.round(Number(price) * 100), currency: 'etb', type: 'course'});
+      navigate(`/dashboard/items/${(response.data.data as CreatedProduct).id}/course`, {replace: true});
     } catch (reason) {
       const requestUncertain = isAxiosError(reason) && !reason.response;
       setCreationUncertain(requestUncertain);
-      setError(requestUncertain ? 'We could not confirm whether the course was created. Check My Products before trying again.' : isAxiosError<{message?: string}>(reason) ? reason.response?.data?.message || 'Unable to create the course. Please try again.' : 'Unable to create the course. Please try again.');
+      setError(requestUncertain ? 'We could not confirm whether the course was created. Check My Items before trying again.' : isAxiosError<{message?: string}>(reason) ? reason.response?.data?.message || 'Unable to create the course. Please try again.' : 'Unable to create the course. Please try again.');
     } finally { setCreating(false); }
   };
   const previewPrice = isFree ? trans({message: 'Free'}) : `ETB ${(Number(price) || 0).toFixed(2)}`;
   return <DashboardLayout.MainSection>
     <DashboardLayout.SectionHeader>
       <DashboardLayout.SidebarToggle />
-      <Breadcrumb><Breadcrumb.Item><Breadcrumb.Link to="/dashboard/my-products"><Trans message="All products" /></Breadcrumb.Link></Breadcrumb.Item><Breadcrumb.Separator /><Breadcrumb.Item><Breadcrumb.Page><Trans message="Create course" /></Breadcrumb.Page></Breadcrumb.Item></Breadcrumb>
+      <Breadcrumb><Breadcrumb.Item><Breadcrumb.Link to="/dashboard/items"><Trans message="All products" /></Breadcrumb.Link></Breadcrumb.Item><Breadcrumb.Separator /><Breadcrumb.Item><Breadcrumb.Page><Trans message="Create course" /></Breadcrumb.Page></Breadcrumb.Item></Breadcrumb>
       <DashboardLayout.SectionTitle><Trans message="Create course" /></DashboardLayout.SectionTitle>
-      <div className="flex items-center gap-2">{creationUncertain && <Button variant="outline" size="sm" render={<Link to="/dashboard/my-products" />}><Trans message="Check My Products" /></Button>}<Button size="sm" type="submit" form="course-create-form" disabled={creating}>{creating ? <Spinner data-icon="inline-start" /> : <GraduationCapIcon data-icon="inline-start" />}<Trans message={creating ? 'Creating course...' : 'Create course'} /></Button></div>
+      <div className="flex items-center gap-2">{creationUncertain && <Button variant="outline" size="sm" render={<Link to="/dashboard/items" />}><Trans message="Check My Items" /></Button>}<Button size="sm" type="submit" form="course-create-form" disabled={creating}>{creating ? <Spinner data-icon="inline-start" /> : <GraduationCapIcon data-icon="inline-start" />}<Trans message={creating ? 'Creating course...' : 'Create course'} /></Button></div>
     </DashboardLayout.SectionHeader>
     <DashboardLayout.SectionContent className="overflow-y-auto"><form id="course-create-form" onSubmit={createCourse} className="mx-auto grid w-full max-w-6xl min-w-0 items-start gap-5 py-4 sm:py-5 xl:grid-cols-[minmax(0,1fr)_26rem] xl:gap-6">
       <div className="flex min-w-0 flex-col gap-4">

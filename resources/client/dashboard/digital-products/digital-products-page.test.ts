@@ -35,7 +35,7 @@ describe('creator product statistics menu item', () => {
   test('product menu links to the per-product statistics page', () => {
     expect(source).toContain('<Trans message="Statistics" />');
     expect(source).toContain(
-      '`/dashboard/my-products/${product.id}/statistics`',
+      '`/dashboard/items/${product.id}/statistics`',
     );
   });
 });

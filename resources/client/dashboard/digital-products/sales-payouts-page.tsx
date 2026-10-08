@@ -102,8 +102,8 @@ export function Component() {
     setError(undefined);
     try {
       const [salesResponse, payoutsResponse] = await Promise.all([
-        apiClient.get('/api/v1/digital-products/sales'),
-        apiClient.get(`/api/v1/digital-products/payout-requests?page=${page}`),
+        apiClient.get('/api/v1/items/sales'),
+        apiClient.get(`/api/v1/items/payout-requests?page=${page}`),
       ]);
       const sales = salesResponse.data;
       setSummary(sales.summary);
@@ -113,7 +113,7 @@ export function Component() {
       // payout-method may 404 if the creator hasn't set one up yet
       try {
         const methodResponse = await apiClient.get(
-          '/api/v1/digital-products/payout-method',
+          '/api/v1/items/payout-method',
         );
         setMethod(methodResponse.data.data ?? undefined);
       } catch {
@@ -137,7 +137,7 @@ export function Component() {
     setRequesting(true);
     setWithdrawError(undefined);
     try {
-      await apiClient.post('/api/v1/digital-products/payout-requests', {
+      await apiClient.post('/api/v1/items/payout-requests', {
         amount_cents: available,
       });
       setWithdrawOpen(false);
@@ -153,7 +153,7 @@ export function Component() {
     setError(undefined);
     try {
       await apiClient.post(
-        `/api/v1/digital-products/payout-requests/${payout.id}/cancel`,
+        `/api/v1/items/payout-requests/${payout.id}/cancel`,
       );
       await load();
     } catch (reason) {

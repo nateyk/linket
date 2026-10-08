@@ -41,7 +41,7 @@ describe('course builder analytics navigation', () => {
     );
 
     expect(source).toMatch(
-      /render=\{\s*<Link\s+to=\{`\/dashboard\/my-products\/\$\{productId\}\/course\/analytics`\}\s*\/>\s*\}/,
+      /render=\{\s*<Link\s+to=\{`\/dashboard\/items\/\$\{productId\}\/course\/analytics`\}\s*\/>\s*\}/,
     );
   });
 
@@ -69,7 +69,7 @@ describe('course builder data loading', () => {
     );
 
     expect(source).toMatch(
-      /await apiClient\.get\(\s*`\/api\/v1\/digital-products\/\$\{productId\}`\s*,?\s*\)/,
+      /await apiClient\.get\(\s*`\/api\/v1\/items\/\$\{productId\}`\s*,?\s*\)/,
     );
     expect(source).toMatch(
       /await apiClient\.get\(\s*`\/api\/v1\/courses\/\$\{courseId\}`\s*,?\s*\)/,
@@ -155,7 +155,7 @@ describe('course builder mobile navigation', () => {
     );
     expect(menu).toContain('<Trans message="Configure" />');
     expect(menu).toMatch(
-      /<Dropdown\.Item\s+render=\{[\s\S]*?<Link\s+to=\{`\/dashboard\/my-products\/\$\{productId\}\/course\/analytics`\}[\s\S]*?\}\s*>[\s\S]*?Analytics/,
+      /<Dropdown\.Item\s+render=\{[\s\S]*?<Link\s+to=\{`\/dashboard\/items\/\$\{productId\}\/course\/analytics`\}[\s\S]*?\}\s*>[\s\S]*?Analytics/,
     );
   });
 });
@@ -391,7 +391,7 @@ describe('course approval submission', () => {
     );
 
     expect(source).toContain(
-      '`/api/v1/digital-products/${course.digital_product_id}/submit`',
+      '`/api/v1/items/${course.digital_product_id}/submit`',
     );
     expect(source).toContain("toast.positive('Course submitted for review')");
     expect(source).toContain('const hasPublishedLesson =');
