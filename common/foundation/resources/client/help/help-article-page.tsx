@@ -5,11 +5,13 @@ import {Trans} from '@ui/i18n/trans';
 import {useSuspenseQuery} from '@tanstack/react-query';
 import {CalendarIcon} from 'lucide-react';
 import {Link, useParams, useSearchParams} from 'react-router';
+import {Helmet} from '../seo/helmet';
 import {StaticPageTitle} from '../seo/static-page-title';
 import {HelpSearch} from './components/help-search';
 import {ArticleFeedback} from './components/article-feedback';
 import {RelatedArticles} from './components/related-articles';
 import {HelpArticleBody} from './components/help-article-body';
+import {HelpArticleJsonLd} from './components/help-article-json-ld';
 import {helpArticleOptions} from './help-queries';
 
 export function Component() {
@@ -22,6 +24,18 @@ export function Component() {
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <StaticPageTitle>{article.title}</StaticPageTitle>
+      <Helmet>
+        <meta name="description" content={article.short_description} />
+      </Helmet>
+      <HelpArticleJsonLd
+        data={{
+          '@context': 'https://schema.org',
+          '@type': 'Article',
+          headline: article.title,
+          description: article.short_description,
+          datePublished: article.created_at,
+        }}
+      />
       <Header />
       <div className="mx-auto w-full max-w-6xl flex-1 px-6 py-10">
         <div className="grid gap-8 xl:grid-cols-[1fr_320px]">

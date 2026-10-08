@@ -72,7 +72,8 @@ function DialogContent({
     defaultValues: {
       title: article?.title ?? '',
       slug: article?.slug ?? '',
-      help_category_id: article?.help_category_id,
+      help_category_id:
+        article?.help_category_id ?? categories?.[0]?.id,
       body: article?.body ?? '',
       short_description: article?.short_description ?? '',
     },
@@ -164,7 +165,7 @@ function DialogContent({
               <Textarea required rows={2} maxLength={200} />
               <Field.Error />
             </HookForm.Field>
-            <div>
+            <HookForm.Field name="body">
               <Field.Label>
                 <Trans message="Body" />
               </Field.Label>
@@ -174,10 +175,8 @@ function DialogContent({
                   form.setValue('body', html, {shouldDirty: true})
                 }
               />
-              <HookForm.Field name="body">
-                <Field.Error />
-              </HookForm.Field>
-            </div>
+              <Field.Error />
+            </HookForm.Field>
           </Field.Group>
         </Dialog.Body>
         <Dialog.Footer>

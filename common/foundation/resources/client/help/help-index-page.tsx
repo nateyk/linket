@@ -5,6 +5,7 @@ import {Card} from '@shadcn/card/card';
 import {Trans} from '@ui/i18n/trans';
 import {useSuspenseQuery} from '@tanstack/react-query';
 import {Link} from 'react-router';
+import {Helmet} from '../seo/helmet';
 import {StaticPageTitle} from '../seo/static-page-title';
 import {HelpCategoryCard} from './components/help-category-card';
 import {HelpSearch} from './components/help-search';
@@ -21,6 +22,12 @@ export function Component() {
       <StaticPageTitle>
         <Trans message="Help Center" />
       </StaticPageTitle>
+      <Helmet>
+        <meta
+          name="description"
+          content="Browse help articles and guides to get the most out of Linket."
+        />
+      </Helmet>
       <Header />
       <div className="border-b bg-muted/50">
         <div className="mx-auto w-full max-w-3xl px-6 py-12 text-center md:py-16">

@@ -5,6 +5,7 @@ import {Trans} from '@ui/i18n/trans';
 import {useSuspenseQuery} from '@tanstack/react-query';
 import {FileTextIcon} from 'lucide-react';
 import {Link, useParams, useSearchParams} from 'react-router';
+import {Helmet} from '../seo/helmet';
 import {StaticPageTitle} from '../seo/static-page-title';
 import {HelpSearch} from './components/help-search';
 import {helpCategoryOptions} from './help-queries';
@@ -18,6 +19,12 @@ export function Component() {
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <StaticPageTitle>{data.category.name}</StaticPageTitle>
+      <Helmet>
+        <meta
+          name="description"
+          content={`Help articles about ${data.category.name}.`}
+        />
+      </Helmet>
       <Header />
       <div className="border-b bg-muted/50">
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-6 py-8 md:flex-row md:items-center md:justify-between">
