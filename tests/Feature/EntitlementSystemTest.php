@@ -104,7 +104,7 @@ class EntitlementSystemTest extends TestCase
         ]);
 
         $response = $this->stateful()->actingAs($creator)
-            ->post('/api/v1/digital-products', [
+            ->post('/api/v1/items', [
                 'title' => 'Over Limit Product',
                 'price_cents' => 1000,
                 'currency' => 'ETB',
@@ -156,7 +156,7 @@ class EntitlementSystemTest extends TestCase
         ]);
 
         $response = $this->stateful()->actingAs($creator)
-            ->put("/api/v1/digital-products/{$freeProduct->id}", [
+            ->put("/api/v1/items/{$freeProduct->id}", [
                 'title' => 'Existing Free',
                 'price_cents' => 1500,
                 'currency' => 'ETB',
@@ -171,7 +171,7 @@ class EntitlementSystemTest extends TestCase
         $creator->refresh();
 
         $response = $this->stateful()->actingAs($creator)
-            ->put("/api/v1/digital-products/{$freeProduct->id}", [
+            ->put("/api/v1/items/{$freeProduct->id}", [
                 'title' => 'Existing Free',
                 'price_cents' => 1500,
                 'currency' => 'ETB',
@@ -677,7 +677,7 @@ class EntitlementSystemTest extends TestCase
         }
 
         $response = $this->stateful()->actingAs($creator)
-            ->post('/api/v1/digital-products', [
+            ->post('/api/v1/items', [
                 'title' => 'Third Product',
                 'price_cents' => 3000,
                 'currency' => 'ETB',
@@ -691,7 +691,7 @@ class EntitlementSystemTest extends TestCase
         $creator->refresh();
 
         $response = $this->stateful()->actingAs($creator)
-            ->post('/api/v1/digital-products', [
+            ->post('/api/v1/items', [
                 'title' => 'Third Product',
                 'price_cents' => 3000,
                 'currency' => 'ETB',
@@ -700,7 +700,7 @@ class EntitlementSystemTest extends TestCase
         $response->assertStatus(201);
 
         $response = $this->stateful()->actingAs($creator)
-            ->post('/api/v1/digital-products', [
+            ->post('/api/v1/items', [
                 'title' => 'Fourth Product',
                 'price_cents' => 4000,
                 'currency' => 'ETB',
@@ -792,7 +792,7 @@ class EntitlementSystemTest extends TestCase
             'owner_id' => $creator->id,
         ]);
         $response = $this->stateful()->actingAs($creator)
-            ->post('/api/v1/digital-products', [
+            ->post('/api/v1/items', [
                 'title' => 'Downgrade Product',
                 'price_cents' => 5000,
                 'currency' => 'ETB',
@@ -804,7 +804,7 @@ class EntitlementSystemTest extends TestCase
         $subscription->update(['ends_at' => null]);
         $creator->refresh();
         $response = $this->stateful()->actingAs($creator)
-            ->post('/api/v1/digital-products', [
+            ->post('/api/v1/items', [
                 'title' => 'Upgraded Product',
                 'price_cents' => 5000,
                 'currency' => 'ETB',

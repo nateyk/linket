@@ -43,7 +43,7 @@ class ProductSettingsReviewPolicyTest extends TestCase
         settings()->save(['product.adding_requires_review' => 0]);
 
         $created = $this->stateful()->actingAs($creator)->post(
-            '/api/v1/digital-products',
+            '/api/v1/items',
             [
                 'title' => 'Direct Guide',
                 'price_cents' => 1000,
@@ -55,7 +55,7 @@ class ProductSettingsReviewPolicyTest extends TestCase
         $productId = $created->json('data.id');
 
         $submitted = $this->stateful()->actingAs($creator)->postJson(
-            "/api/v1/digital-products/{$productId}/submit",
+            "/api/v1/items/{$productId}/submit",
         );
         $submitted->assertOk();
 
@@ -71,7 +71,7 @@ class ProductSettingsReviewPolicyTest extends TestCase
         settings()->save(['product.adding_requires_review' => 1]);
 
         $created = $this->stateful()->actingAs($creator)->post(
-            '/api/v1/digital-products',
+            '/api/v1/items',
             [
                 'title' => 'Reviewed Guide',
                 'price_cents' => 1000,
@@ -83,7 +83,7 @@ class ProductSettingsReviewPolicyTest extends TestCase
         $productId = $created->json('data.id');
 
         $submitted = $this->stateful()->actingAs($creator)->postJson(
-            "/api/v1/digital-products/{$productId}/submit",
+            "/api/v1/items/{$productId}/submit",
         );
         $submitted->assertOk();
 
@@ -97,7 +97,7 @@ class ProductSettingsReviewPolicyTest extends TestCase
         [$creator, $product] = $this->createSubmittableCourse();
 
         $submitted = $this->stateful()->actingAs($creator)->postJson(
-            "/api/v1/digital-products/{$product->id}/submit",
+            "/api/v1/items/{$product->id}/submit",
         );
         $submitted->assertOk();
 
@@ -111,7 +111,7 @@ class ProductSettingsReviewPolicyTest extends TestCase
         [$creator, $product] = $this->createSubmittableCourse();
 
         $submitted = $this->stateful()->actingAs($creator)->postJson(
-            "/api/v1/digital-products/{$product->id}/submit",
+            "/api/v1/items/{$product->id}/submit",
         );
         $submitted->assertOk();
         $submitted->assertJsonStructure(['data' => ['course', 'cover']]);
@@ -126,7 +126,7 @@ class ProductSettingsReviewPolicyTest extends TestCase
         $file = $this->createFile($creator, $workspace);
 
         $created = $this->stateful()->actingAs($creator)->post(
-            '/api/v1/digital-products',
+            '/api/v1/items',
             [
                 'title' => 'Live Guide',
                 'price_cents' => 1000,
@@ -144,7 +144,7 @@ class ProductSettingsReviewPolicyTest extends TestCase
         settings()->save(['product.updating_requires_review' => 0]);
 
         $response = $this->stateful()->actingAs($creator)->put(
-            "/api/v1/digital-products/{$productId}",
+            "/api/v1/items/{$productId}",
             [
                 'title' => 'Live Guide v2',
                 'price_cents' => 1000,
@@ -164,7 +164,7 @@ class ProductSettingsReviewPolicyTest extends TestCase
         $file = $this->createFile($creator, $workspace);
 
         $created = $this->stateful()->actingAs($creator)->post(
-            '/api/v1/digital-products',
+            '/api/v1/items',
             [
                 'title' => 'Live Guide',
                 'price_cents' => 1000,
@@ -182,7 +182,7 @@ class ProductSettingsReviewPolicyTest extends TestCase
         settings()->save(['product.updating_requires_review' => 1]);
 
         $response = $this->stateful()->actingAs($creator)->put(
-            "/api/v1/digital-products/{$productId}",
+            "/api/v1/items/{$productId}",
             [
                 'title' => 'Live Guide v2',
                 'price_cents' => 1000,
@@ -219,7 +219,7 @@ class ProductSettingsReviewPolicyTest extends TestCase
         ActiveWorkspace::clearCache();
 
         $created = $this->stateful()->actingAs($creator)->postJson(
-            "/api/v1/digital-products?workspace_id={$workspace->id}",
+            "/api/v1/items?workspace_id={$workspace->id}",
             [
                 'title' => 'Course',
                 'price_cents' => 2000,
@@ -248,7 +248,7 @@ class ProductSettingsReviewPolicyTest extends TestCase
         $file = $this->createFile($creator, $workspace);
 
         $created = $this->stateful()->actingAs($creator)->post(
-            '/api/v1/digital-products',
+            '/api/v1/items',
             [
                 'title' => 'Default Policy Guide',
                 'price_cents' => 1000,
@@ -260,7 +260,7 @@ class ProductSettingsReviewPolicyTest extends TestCase
         $productId = $created->json('data.id');
 
         $this->stateful()->actingAs($creator)->postJson(
-            "/api/v1/digital-products/{$productId}/submit",
+            "/api/v1/items/{$productId}/submit",
         )->assertOk();
         $this->assertSame('pending_approval', DigitalProduct::find($productId)->status);
 
@@ -270,7 +270,7 @@ class ProductSettingsReviewPolicyTest extends TestCase
         ]);
 
         $this->stateful()->actingAs($creator)->put(
-            "/api/v1/digital-products/{$productId}",
+            "/api/v1/items/{$productId}",
             [
                 'title' => 'Default Policy Guide v2',
                 'price_cents' => 1000,

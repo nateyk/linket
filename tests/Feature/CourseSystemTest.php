@@ -66,7 +66,7 @@ class CourseSystemTest extends TestCase
         $response = $this->stateful()
             ->actingAs($creator)
             ->postJson(
-                "/api/v1/digital-products?workspace_id={$workspace->id}",
+                "/api/v1/items?workspace_id={$workspace->id}",
                 [
                     'title' => 'My Course',
                     'price_cents' => 2000,
@@ -107,7 +107,7 @@ class CourseSystemTest extends TestCase
         $this->stateful()
             ->actingAs($creator)
             ->postJson(
-                "/api/v1/digital-products?workspace_id={$workspace->id}",
+                "/api/v1/items?workspace_id={$workspace->id}",
                 [
                     'title' => 'My Course',
                     'price_cents' => 2000,
@@ -145,7 +145,7 @@ class CourseSystemTest extends TestCase
         $this->stateful()
             ->actingAs($creator)
             ->putJson(
-                "/api/v1/digital-products/{$product->id}?workspace_id={$workspace->id}",
+                "/api/v1/items/{$product->id}?workspace_id={$workspace->id}",
                 [
                     'title' => $product->title,
                     'price_cents' => $product->price_cents,
@@ -182,7 +182,7 @@ class CourseSystemTest extends TestCase
         $response = $this->stateful()
             ->actingAs($creator)
             ->postJson(
-                "/api/v1/digital-products?workspace_id={$workspace->id}",
+                "/api/v1/items?workspace_id={$workspace->id}",
                 [
                     'title' => 'My Guide',
                     'price_cents' => 1000,
@@ -306,7 +306,7 @@ class CourseSystemTest extends TestCase
 
         $this->stateful()
             ->actingAs($creator)
-            ->postJson("/api/v1/digital-products/{$product->id}/submit")
+            ->postJson("/api/v1/items/{$product->id}/submit")
             ->assertOk();
 
         $this->assertSame('pending_approval', $product->fresh()->status);
@@ -336,7 +336,7 @@ class CourseSystemTest extends TestCase
 
         $this->stateful()
             ->actingAs($creator)
-            ->postJson("/api/v1/digital-products/{$product->id}/submit")
+            ->postJson("/api/v1/items/{$product->id}/submit")
             ->assertStatus(422);
     }
 

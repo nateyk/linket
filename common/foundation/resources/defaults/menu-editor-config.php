@@ -97,7 +97,7 @@ return [
         '/admin/localizations',
         '/admin/ads',
         '/admin/logs',
-        '/admin/digital-products',
+        '/admin/items',
         '/admin/settings/general',
         '/admin/settings/authentication',
         '/admin/settings/branding',

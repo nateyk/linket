@@ -56,7 +56,7 @@ class ProductModerationSummaryNotification extends Notification implements Shoul
             $mail->line(__('Reason: :reason', ['reason' => $this->reason]));
         }
 
-        return $mail->action($this->actionLabel(), url('/dashboard/my-products'));
+        return $mail->action($this->actionLabel(), url('/dashboard/items'));
     }
 
     public function toDatabase(object $notifiable): array
@@ -75,7 +75,7 @@ class ProductModerationSummaryNotification extends Notification implements Shoul
         return [
             'mainAction' => [
                 'label' => $this->actionLabel(),
-                'action' => url('/dashboard/my-products'),
+                'action' => url('/dashboard/items'),
             ],
             'lines' => $lines,
         ];

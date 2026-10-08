@@ -38,7 +38,7 @@ class ProductSettingsPricePolicyTest extends TestCase
         $file = $this->createFile($creator, $creator->workspaces()->first());
 
         $response = $this->stateful()->actingAs($creator)->post(
-            '/api/v1/digital-products',
+            '/api/v1/items',
             [
                 'title' => 'Free Guide',
                 'price_cents' => 0,
@@ -58,7 +58,7 @@ class ProductSettingsPricePolicyTest extends TestCase
         settings()->save(['product.min_price_cents' => 5000]);
 
         $tooCheap = $this->stateful()->actingAs($creator)->post(
-            '/api/v1/digital-products',
+            '/api/v1/items',
             [
                 'title' => 'Too Cheap',
                 'price_cents' => 1000,
@@ -69,7 +69,7 @@ class ProductSettingsPricePolicyTest extends TestCase
         $tooCheap->assertStatus(422);
 
         $atFloor = $this->stateful()->actingAs($creator)->post(
-            '/api/v1/digital-products',
+            '/api/v1/items',
             [
                 'title' => 'At Floor',
                 'price_cents' => 5000,
@@ -88,7 +88,7 @@ class ProductSettingsPricePolicyTest extends TestCase
         settings()->save(['product.max_price_cents' => 10000]);
 
         $tooExpensive = $this->stateful()->actingAs($creator)->post(
-            '/api/v1/digital-products',
+            '/api/v1/items',
             [
                 'title' => 'Too Expensive',
                 'price_cents' => 20000,
@@ -99,7 +99,7 @@ class ProductSettingsPricePolicyTest extends TestCase
         $tooExpensive->assertStatus(422);
 
         $atCeiling = $this->stateful()->actingAs($creator)->post(
-            '/api/v1/digital-products',
+            '/api/v1/items',
             [
                 'title' => 'At Ceiling',
                 'price_cents' => 10000,
@@ -118,7 +118,7 @@ class ProductSettingsPricePolicyTest extends TestCase
         settings()->save(['product.allow_free_products' => 0]);
 
         $free = $this->stateful()->actingAs($creator)->post(
-            '/api/v1/digital-products',
+            '/api/v1/items',
             [
                 'title' => 'Free Guide',
                 'price_cents' => 0,
@@ -129,7 +129,7 @@ class ProductSettingsPricePolicyTest extends TestCase
         $free->assertStatus(422);
 
         $paid = $this->stateful()->actingAs($creator)->post(
-            '/api/v1/digital-products',
+            '/api/v1/items',
             [
                 'title' => 'Paid Guide',
                 'price_cents' => 1000,
@@ -147,7 +147,7 @@ class ProductSettingsPricePolicyTest extends TestCase
         $file = $this->createFile($creator, $workspace);
 
         $created = $this->stateful()->actingAs($creator)->post(
-            '/api/v1/digital-products',
+            '/api/v1/items',
             [
                 'title' => 'Paid Guide',
                 'price_cents' => 1000,
@@ -161,7 +161,7 @@ class ProductSettingsPricePolicyTest extends TestCase
         settings()->save(['product.allow_free_products' => 0]);
 
         $response = $this->stateful()->actingAs($creator)->put(
-            "/api/v1/digital-products/{$productId}",
+            "/api/v1/items/{$productId}",
             [
                 'title' => 'Paid Guide',
                 'price_cents' => 0,
@@ -179,7 +179,7 @@ class ProductSettingsPricePolicyTest extends TestCase
         $file = $this->createFile($creator, $workspace);
 
         $created = $this->stateful()->actingAs($creator)->post(
-            '/api/v1/digital-products',
+            '/api/v1/items',
             [
                 'title' => 'Free Guide',
                 'price_cents' => 0,
@@ -244,7 +244,7 @@ class ProductSettingsPricePolicyTest extends TestCase
         $file = $this->createFile($creator, $workspace);
 
         $created = $this->stateful()->actingAs($creator)->post(
-            '/api/v1/digital-products',
+            '/api/v1/items',
             [
                 'title' => 'Grandfathered Guide',
                 'price_cents' => 1000,
@@ -270,7 +270,7 @@ class ProductSettingsPricePolicyTest extends TestCase
         $file = $this->createFile($creator, $workspace);
 
         $created = $this->stateful()->actingAs($creator)->post(
-            '/api/v1/digital-products',
+            '/api/v1/items',
             [
                 'title' => 'Paid Guide',
                 'price_cents' => 1000,

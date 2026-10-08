@@ -109,7 +109,7 @@ class ProductSettingsWebpTest extends TestCase
         [$creator, $workspace] = $this->creatorContext();
         $cover = $this->createImageEntry($creator, $workspace, 'jpg');
 
-        $this->stateful()->actingAs($creator)->postJson('/api/v1/digital-products', [
+        $this->stateful()->actingAs($creator)->postJson('/api/v1/items', [
             'title' => 'With Cover',
             'price_cents' => 1000,
             'currency' => 'ETB',
@@ -133,7 +133,7 @@ class ProductSettingsWebpTest extends TestCase
         $product = $this->product($workspace, $creator);
         $product->files()->attach($file->id);
 
-        $this->stateful()->actingAs($creator)->putJson("/api/v1/digital-products/{$product->id}", [
+        $this->stateful()->actingAs($creator)->putJson("/api/v1/items/{$product->id}", [
             'title' => 'Renamed',
             'price_cents' => 1000,
             'currency' => 'ETB',
@@ -152,7 +152,7 @@ class ProductSettingsWebpTest extends TestCase
         $product = $this->product($workspace, $creator);
         $product->files()->attach($file->id);
 
-        $this->stateful()->actingAs($creator)->putJson("/api/v1/digital-products/{$product->id}", [
+        $this->stateful()->actingAs($creator)->putJson("/api/v1/items/{$product->id}", [
             'title' => $product->title,
             'price_cents' => 1000,
             'currency' => 'ETB',
@@ -176,7 +176,7 @@ class ProductSettingsWebpTest extends TestCase
         $product = $this->product($workspace, $creator);
         $product->files()->attach($file->id);
 
-        $this->stateful()->actingAs($creator)->putJson("/api/v1/digital-products/{$product->id}", [
+        $this->stateful()->actingAs($creator)->putJson("/api/v1/items/{$product->id}", [
             'title' => $product->title,
             'price_cents' => 1000,
             'currency' => 'ETB',

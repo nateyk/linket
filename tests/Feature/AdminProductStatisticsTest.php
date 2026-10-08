@@ -105,7 +105,7 @@ class AdminProductStatisticsTest extends TestCase
         $this->createOrder($product, $creator, 'paid');
 
         $response = $this->stateful()->actingAs($admin)
-            ->getJson("/api/v1/admin/digital-products/{$product->id}/statistics");
+            ->getJson("/api/v1/admin/items/{$product->id}/statistics");
 
         $response->assertOk();
         $response->assertJsonStructure([
@@ -127,7 +127,7 @@ class AdminProductStatisticsTest extends TestCase
         $product = $this->product($workspace, $creator);
 
         $this->stateful()->actingAs($creator)
-            ->getJson("/api/v1/admin/digital-products/{$product->id}/statistics")
+            ->getJson("/api/v1/admin/items/{$product->id}/statistics")
             ->assertForbidden();
     }
 }

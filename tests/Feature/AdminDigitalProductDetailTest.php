@@ -62,7 +62,7 @@ class AdminDigitalProductDetailTest extends TestCase
         ]);
 
         $response = $this->stateful()->actingAs($admin)
-            ->getJson("/api/v1/admin/digital-products/{$product->id}");
+            ->getJson("/api/v1/admin/items/{$product->id}");
 
         $response->assertOk();
         $response->assertJsonPath('data.id', $product->id);
@@ -85,7 +85,7 @@ class AdminDigitalProductDetailTest extends TestCase
         $product = $this->product($workspace, $creator);
 
         $this->stateful()->actingAs($creator)
-            ->getJson("/api/v1/admin/digital-products/{$product->id}")
+            ->getJson("/api/v1/admin/items/{$product->id}")
             ->assertForbidden();
     }
 
@@ -94,11 +94,11 @@ class AdminDigitalProductDetailTest extends TestCase
         $admin = $this->createAdmin();
 
         $this->stateful()->actingAs($admin)
-            ->getJson('/api/v1/admin/digital-products/order-recovery-deliveries')
+            ->getJson('/api/v1/admin/items/order-recovery-deliveries')
             ->assertOk();
 
         $this->stateful()->actingAs($admin)
-            ->getJson('/api/v1/admin/digital-products/withdrawal-methods')
+            ->getJson('/api/v1/admin/items/withdrawal-methods')
             ->assertOk();
     }
 
@@ -119,7 +119,7 @@ class AdminDigitalProductDetailTest extends TestCase
         }
 
         $response = $this->stateful()->actingAs($admin)
-            ->getJson("/api/v1/admin/digital-products/{$product->id}");
+            ->getJson("/api/v1/admin/items/{$product->id}");
 
         $response->assertOk();
         $response->assertJsonCount(50, 'data.history');
@@ -164,7 +164,7 @@ class AdminDigitalProductDetailTest extends TestCase
         ]);
 
         $response = $this->stateful()->actingAs($admin)
-            ->getJson("/api/v1/admin/digital-products/{$product->id}");
+            ->getJson("/api/v1/admin/items/{$product->id}");
 
         $response->assertOk();
         $response->assertJsonPath('data.course.chapters_count', 1);
@@ -187,7 +187,7 @@ class AdminDigitalProductDetailTest extends TestCase
         $this->assertStringContainsString('javascript:', $stored);
 
         $response = $this->stateful()->actingAs($admin)
-            ->getJson("/api/v1/admin/digital-products/{$product->id}");
+            ->getJson("/api/v1/admin/items/{$product->id}");
 
         $response->assertOk();
         $description = (string) $response->json('data.description');
@@ -210,7 +210,7 @@ class AdminDigitalProductDetailTest extends TestCase
         $this->assertSame($payload, $product->fresh()->description);
 
         $response = $this->stateful()->actingAs($admin)
-            ->getJson('/api/v1/admin/digital-products');
+            ->getJson('/api/v1/admin/items');
 
         $response->assertOk();
         $row = collect($response->json('data'))->firstWhere('id', $product->id);
@@ -241,7 +241,7 @@ class AdminDigitalProductDetailTest extends TestCase
         ]);
 
         $response = $this->stateful()->actingAs($admin)
-            ->getJson("/api/v1/admin/digital-products/{$product->id}");
+            ->getJson("/api/v1/admin/items/{$product->id}");
 
         $response->assertOk();
         $response->assertJsonPath('data.sales_count', 1);

@@ -94,7 +94,7 @@ class ProductSettingsFilePolicyTest extends TestCase
         settings()->save(['product.max_file_bytes' => 100]);
 
         $rejected = $this->stateful()->actingAs($creator)->post(
-            '/api/v1/digital-products',
+            '/api/v1/items',
             [
                 'title' => 'Heavy Guide',
                 'price_cents' => 1000,
@@ -108,7 +108,7 @@ class ProductSettingsFilePolicyTest extends TestCase
         settings()->loadSettings();
 
         $accepted = $this->stateful()->actingAs($creator)->post(
-            '/api/v1/digital-products',
+            '/api/v1/items',
             [
                 'title' => 'Heavy Guide',
                 'price_cents' => 1000,
@@ -154,7 +154,7 @@ class ProductSettingsFilePolicyTest extends TestCase
         settings()->save(['product.max_file_bytes' => 10485760]);
 
         $response = $this->stateful()->actingAs($creator)->post(
-            '/api/v1/digital-products',
+            '/api/v1/items',
             [
                 'title' => 'Light Guide',
                 'price_cents' => 1000,
@@ -188,7 +188,7 @@ class ProductSettingsFilePolicyTest extends TestCase
         $this->assertNotNull($entryId);
 
         $created = $this->stateful()->actingAs($creator)->post(
-            '/api/v1/digital-products',
+            '/api/v1/items',
             [
                 'title' => 'Guide',
                 'price_cents' => 1000,
