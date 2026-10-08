@@ -144,11 +144,6 @@ class CreatorProductStatisticsTest extends TestCase
         $workspace = (new CreateWorkspace())->createPersonalWorkspace($creator);
         ActiveWorkspace::clearCache();
         $product = $this->createProduct($creator, $workspace);
-        \Common\Roles\Models\Role::query()->create([
-            'name' => 'Guests',
-            'guests' => true,
-        ]);
-        app()->forgetInstance('guestRole');
 
         $this->getJson("/api/v1/digital-products/{$product->id}/statistics?workspace_id={$workspace->id}")
             ->assertUnauthorized();
