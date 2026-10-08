@@ -113,7 +113,7 @@ export function Component() {
 
   const approve = useMutation({
     mutationFn: () =>
-      apiClient.post(`/api/v1/admin/digital-products/${product?.id}/approve`),
+      apiClient.post(`/api/v1/admin/items/${product?.id}/approve`),
     onSuccess: () => {
       invalidate();
       toast.success(<Trans message="Product approved." />);
@@ -123,7 +123,7 @@ export function Component() {
 
   const reject = useMutation({
     mutationFn: () =>
-      apiClient.post(`/api/v1/admin/digital-products/${product?.id}/reject`, {
+      apiClient.post(`/api/v1/admin/items/${product?.id}/reject`, {
         reason: reason.trim() || null,
       }),
     onSuccess: () => {
@@ -165,7 +165,7 @@ export function Component() {
           <Button
             variant="outline"
             nativeButton={false}
-            render={<Link to="/admin/digital-products" />}
+            render={<Link to="/admin/items" />}
           >
             <ArrowLeftIcon />
             <Trans message="Back to products" />
@@ -226,7 +226,7 @@ export function Component() {
             <StatisticsPanel
               productId={String(product.id)}
               queryKey={['adminProductStatistics']}
-              endpoint={`/api/v1/admin/digital-products/${product.id}/statistics`}
+              endpoint={`/api/v1/admin/items/${product.id}/statistics`}
               currency={product.currency}
             />
           </Tabs.Panel>

@@ -250,7 +250,7 @@ export function ProductActionsButton({
 
   const approve = useMutation({
     mutationFn: () =>
-      apiClient.post(`/api/v1/admin/digital-products/${product.id}/approve`),
+      apiClient.post(`/api/v1/admin/items/${product.id}/approve`),
     onSuccess: () => {
       setDetailsOpen(false);
       queryClient.invalidateQueries({queryKey: adminDigitalProductsBaseKey});
@@ -261,7 +261,7 @@ export function ProductActionsButton({
 
   const reject = useMutation({
     mutationFn: () =>
-      apiClient.post(`/api/v1/admin/digital-products/${product.id}/reject`, {
+      apiClient.post(`/api/v1/admin/items/${product.id}/reject`, {
         reason: reason.trim() || null,
       }),
     onSuccess: () => {

@@ -124,20 +124,20 @@ export const adminRoutes: RouteObject[] = [
         loader: () => redirect('/admin/stores', 308),
       },
       {
-        path: 'digital-products',
+        path: 'items',
         lazy: () => import('@app/admin/digital-products/admin-digital-products-page'),
       },
       {
-        path: 'digital-products/payouts',
+        path: 'items/payouts',
         lazy: () => import('@app/admin/digital-products/admin-digital-product-payouts-page'),
       },
       {
-        path: 'digital-products/:productId/reviews',
+        path: 'items/:productId/reviews',
         lazy: () =>
           import('@app/admin/digital-products/admin-product-reviews-page'),
       },
       {
-        path: 'digital-products/:productId',
+        path: 'items/:productId',
         lazy: () =>
           import('@app/admin/digital-products/admin-digital-product-detail-page'),
       },
@@ -171,7 +171,7 @@ export const adminRoutes: RouteObject[] = [
         lazy: () => import('@app/admin/financial/admin-withdrawal-method-edit-page'),
       },
       {
-        path: 'digital-products/delivery-history',
+        path: 'items/delivery-history',
         lazy: () => import('@app/admin/digital-products/admin-order-recovery-deliveries-page'),
       },
     ],

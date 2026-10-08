@@ -54,7 +54,7 @@ export function Component() {
 
     try {
       const response = await apiClient.get(
-        `/api/v1/admin/digital-products/order-recovery-deliveries?${params.toString()}`,
+        `/api/v1/admin/items/order-recovery-deliveries?${params.toString()}`,
       );
       setDeliveries(response.data.data ?? []);
     } catch {

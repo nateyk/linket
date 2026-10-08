@@ -24,7 +24,7 @@ describe('admin product shared display', () => {
   });
 
   test('list title links to the detail page', () => {
-    expect(columns).toContain('/admin/digital-products/${product.id}');
+    expect(columns).toContain('/admin/items/${product.id}');
   });
 
   test('details menu navigates while quick review opens the dialog', () => {
@@ -43,12 +43,12 @@ const page = read(
 
 describe('admin product detail page', () => {
   test('registers the detail route', () => {
-    expect(routes).toContain("'digital-products/:productId'");
+    expect(routes).toContain("'items/:productId'");
     expect(routes).toContain('admin-digital-product-detail-page');
   });
 
   test('queries the admin show endpoint', () => {
-    expect(queries).toContain('/api/v1/admin/digital-products/${productId}');
+    expect(queries).toContain('/api/v1/admin/items/${productId}');
   });
 
   test('renders Details and History panels', () => {
@@ -88,7 +88,7 @@ describe('admin product statistics tab', () => {
     expect(page).toContain('<StatisticsPanel');
     expect(page).toContain("'adminProductStatistics'");
     expect(page).toContain(
-      '`/api/v1/admin/digital-products/${product.id}/statistics`',
+      '`/api/v1/admin/items/${product.id}/statistics`',
     );
   });
 });
