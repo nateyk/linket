@@ -452,6 +452,11 @@ export const dashboardRoutes: RouteObject[] = [
         },
       },
       {
+        path: 'my-products/:productId/statistics',
+        lazy: () =>
+          import('@app/dashboard/digital-products/product-statistics-page'),
+      },
+      {
         path: 'my-products/:productId/reviews',
         lazy: () =>
           import('@app/dashboard/digital-products/product-reviews-page'),

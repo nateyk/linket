@@ -17,6 +17,7 @@ import useClipboard from '@ui/utils/hooks/use-clipboard';
 import {
   ArchiveIcon,
   BarChart3Icon,
+  ChartNoAxesCombinedIcon,
   CheckCircle2Icon,
   CheckIcon,
   CircleAlertIcon,
@@ -440,6 +441,11 @@ function ProductActions({
               <Trans message="Analytics" />
             </Dropdown.LinkItem>
           )}
+
+          <Dropdown.LinkItem render={<Link to={`/dashboard/my-products/${product.id}/statistics`} />}>
+            <ChartNoAxesCombinedIcon />
+            <Trans message="Statistics" />
+          </Dropdown.LinkItem>
 
           {canSubmit && (
             <Dropdown.Item
