@@ -9,14 +9,14 @@ interface PeriodPickerProps {
   onChange: (period: {from: string; to: string}) => void;
 }
 
-function toDateInputValue(date: Date): string {
+export function toDateInputValue(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
 
-function currentMonth(): {from: string; to: string} {
+export function currentMonthPeriod(): {from: string; to: string} {
   const now = new Date();
   const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
   return {
@@ -48,7 +48,7 @@ export function PeriodPicker({from, to, onChange}: PeriodPickerProps) {
       <Button
         variant="outline"
         size="sm"
-        onClick={() => onChange(currentMonth())}
+        onClick={() => onChange(currentMonthPeriod())}
       >
         <CalendarRangeIcon className="size-4" />
         <Trans message="This month" />

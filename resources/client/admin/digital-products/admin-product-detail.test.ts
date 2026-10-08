@@ -73,3 +73,22 @@ describe('admin product pending changes', () => {
     expect(page).toContain('change.after');
   });
 });
+
+describe('admin product statistics tab', () => {
+  test('renders a Statistics tab alongside Details and History', () => {
+    expect(page).toContain('<Tabs.Tab value="statistics">');
+    expect(page).toContain('<Trans message="Statistics" />');
+    expect(page).toContain('<Tabs.Panel value="statistics">');
+  });
+
+  test('mounts the shared statistics panel hitting the admin endpoint', () => {
+    expect(page).toContain(
+      "import {StatisticsPanel} from '@app/digital-products/shared/product-statistics/statistics-panel'",
+    );
+    expect(page).toContain('<StatisticsPanel');
+    expect(page).toContain("'adminProductStatistics'");
+    expect(page).toContain(
+      '`/api/v1/admin/digital-products/${product.id}/statistics`',
+    );
+  });
+});
