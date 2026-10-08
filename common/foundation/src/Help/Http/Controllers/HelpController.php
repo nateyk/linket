@@ -47,8 +47,8 @@ class HelpController extends Controller
         }
 
         return response()->json([
-            'categories' => HelpCategoryResource::collection($categories),
-            'commonCategories' => HelpCategoryResource::collection($commonCategories),
+            'categories' => HelpCategoryResource::collection($categories)->resolve(),
+            'commonCategories' => HelpCategoryResource::collection($commonCategories)->resolve(),
         ]);
     }
 
@@ -61,8 +61,8 @@ class HelpController extends Controller
         $articles = HelpArticle::where('help_category_id', $category->id)->paginate(20);
 
         return response()->json([
-            'category' => new HelpCategoryResource($category),
-            'articles' => HelpArticleResource::collection($articles),
+            'category' => (new HelpCategoryResource($category))->resolve(),
+            'articles' => HelpArticleResource::collection($articles)->resolve(),
             'pagination' => [
                 'current_page' => $articles->currentPage(),
                 'last_page' => $articles->lastPage(),
@@ -85,8 +85,8 @@ class HelpController extends Controller
             ->get();
 
         return response()->json([
-            'article' => new HelpArticleResource($article),
-            'relatedArticles' => HelpArticleResource::collection($relatedArticles),
+            'article' => (new HelpArticleResource($article))->resolve(),
+            'relatedArticles' => HelpArticleResource::collection($relatedArticles)->resolve(),
         ]);
     }
 
