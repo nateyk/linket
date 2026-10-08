@@ -2,6 +2,7 @@ import {listStoresOptions} from '@app/dashboard/stores/stores-queries';
 import {sharedDashboardRoutes} from '@app/dashboard/dashboard-routes';
 import {adminCustomPagesRoutes} from '@common/admin/custom-pages/admin-custom-pages-routes';
 import {adminFileEntriesRoutes} from '@common/admin/file-entry/admin-file-entries-routes';
+import {listHelpCategoriesOptions} from '@common/admin/help/help-admin-queries';
 import {adminLogsRoutes} from '@common/admin/logging/admin-logs-routes';
 import {adminRolesRoutes} from '@common/admin/roles/admin-roles-routes';
 import {commonAdminSettingsRoutes} from '@common/admin/settings/common-admin-settings-routes';
@@ -83,6 +84,17 @@ export const adminRoutes: RouteObject[] = [
           {
             path: 'ads',
             lazy: () => import('@common/admin/settings/pages/ads-settings'),
+          },
+          {
+            path: 'help',
+            lazy: () => import('@common/admin/help/help-settings-page'),
+            loader: async () => {
+              const redirect = authGuard({permission: 'settings.update'});
+              if (redirect) return redirect;
+              await queryClient.ensureQueryData(
+                listHelpCategoriesOptions(),
+              );
+            },
           },
         ],
         {
