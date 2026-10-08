@@ -29,6 +29,7 @@ class FallbackRouteController extends Controller
         'billing',
         'workspace',
         'contact',
+        'help',
         'update',
         'pages',
         'login',

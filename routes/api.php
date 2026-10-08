@@ -18,6 +18,7 @@ use App\Http\Controllers\LandingPageController;
 use App\Kyc\Controllers\AdminKycVerificationsController;
 use App\Kyc\Controllers\KycVerificationsController;
 use App\Links\Controllers\LinksController;
+use Common\Help\Http\Controllers\HelpController;
 use App\Folders\Controllers\FolderLinksController;
 use App\QrCodes\Controllers\QrCodesController;
 use App\Folders\Controllers\FoldersController;
@@ -53,6 +54,14 @@ Route::group(['prefix' => 'v1'], function() {
 
     // LANDING
     Route::get('landing-page-data', [LandingPageController::class, 'show']);
+
+    // HELP CENTER (public)
+    Route::name('help.')->prefix('help')->group(function () {
+        Route::get('/', [HelpController::class, 'index'])->name('index');
+        Route::get('categories/{slug}', [HelpController::class, 'category'])->name('category');
+        Route::get('articles/{slug}', [HelpController::class, 'article'])->name('article');
+        Route::post('articles/{slug}/react', [HelpController::class, 'react'])->name('react');
+    });
 
     Route::group(['middleware' => ['optionalAuth:sanctum', 'verified', 'verifyApiAccess']], function () {
         Route::get('tracked-events/report', [TrackedEventsController::class, 'report']);
