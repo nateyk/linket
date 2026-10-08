@@ -36,6 +36,7 @@ import {
 } from './admin-digital-product-detail-queries';
 import {adminDigitalProductsBaseKey} from './admin-digital-products-queries';
 import {StatisticsPanel} from '@app/digital-products/shared/product-statistics/statistics-panel';
+import {AdminProductReviewsTable} from './admin-product-reviews-table';
 
 type HistoryEvent = {
   id: number;
@@ -211,6 +212,9 @@ export function Component() {
             <Tabs.Tab value="statistics">
               <Trans message="Statistics" />
             </Tabs.Tab>
+            <Tabs.Tab value="reviews">
+              <Trans message="Reviews" />
+            </Tabs.Tab>
           </Tabs.List>
           <Tabs.Panel value="details">
             <DetailsPanel product={product} />
@@ -225,6 +229,9 @@ export function Component() {
               endpoint={`/api/v1/admin/digital-products/${product.id}/statistics`}
               currency={product.currency}
             />
+          </Tabs.Panel>
+          <Tabs.Panel value="reviews">
+            <AdminProductReviewsTable productId={String(product.id)} />
           </Tabs.Panel>
         </Tabs.Root>
       </DashboardLayout.SectionContent>

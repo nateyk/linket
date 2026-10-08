@@ -92,3 +92,19 @@ describe('admin product statistics tab', () => {
     );
   });
 });
+
+describe('admin product reviews tab', () => {
+  test('renders a Reviews tab alongside Details, History and Statistics', () => {
+    expect(page).toContain('<Tabs.Tab value="reviews">');
+    expect(page).toContain('<Trans message="Reviews" />');
+    expect(page).toContain('<Tabs.Panel value="reviews">');
+  });
+
+  test('mounts the shared reviews table for the product', () => {
+    expect(page).toContain(
+      "import {AdminProductReviewsTable} from './admin-product-reviews-table'",
+    );
+    expect(page).toContain('<AdminProductReviewsTable');
+    expect(page).toContain('productId={String(product.id)}');
+  });
+});

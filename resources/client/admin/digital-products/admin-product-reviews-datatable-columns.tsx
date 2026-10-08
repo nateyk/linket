@@ -37,7 +37,10 @@ export type AdminProductReview = {
   product?: {id: number; title: string} | null;
 };
 
-export const adminProductReviewColumns: ColumnDef<AdminProductReview>[] = [
+export function adminProductReviewColumns(
+  productPublicUrl?: string | null,
+): ColumnDef<AdminProductReview>[] {
+  return [
   {
     id: 'id',
     accessorKey: 'id',
@@ -140,11 +143,23 @@ export const adminProductReviewColumns: ColumnDef<AdminProductReview>[] = [
         <Trans message="Actions" />
       </span>
     ),
-    cell: ({row}) => <ReviewActionsButton review={row.original} />,
+    cell: ({row}) => (
+      <ReviewActionsButton
+        review={row.original}
+        productPublicUrl={productPublicUrl}
+      />
+    ),
   },
-];
+  ];
+}
 
-export function ReviewActionsButton({review}: {review: AdminProductReview}) {
+export function ReviewActionsButton({
+  review,
+  productPublicUrl,
+}: {
+  review: AdminProductReview;
+  productPublicUrl?: string | null;
+}) {
   const queryClient = useQueryClient();
   const [hideDialogOpen, setHideDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -169,6 +184,20 @@ export function ReviewActionsButton({review}: {review: AdminProductReview}) {
             <EllipsisIcon />
           </Dropdown.Trigger>
           <Dropdown.Content align="end">
+            {productPublicUrl && (
+              <Dropdown.Item
+                render={
+                  <a
+                    href={`${productPublicUrl}#product-reviews-heading`}
+                    target="_blank"
+                    rel="noreferrer"
+                  />
+                }
+              >
+                <EyeIcon />
+                <Trans message="View" />
+              </Dropdown.Item>
+            )}
             {!review.hidden_at && (
               <Dropdown.Item onClick={() => setHideDialogOpen(true)}>
                 <EyeOffIcon />

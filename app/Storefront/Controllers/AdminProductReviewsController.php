@@ -8,11 +8,14 @@ use App\Storefront\Resources\AdminProductReviewResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Gate;
 
 class AdminProductReviewsController extends Controller
 {
     public function index(Request $request, DigitalProduct $digitalProduct): AnonymousResourceCollection
     {
+        Gate::authorize('admin.access');
+
         $perPage = min(max($request->integer('per_page', 15), 1), 100);
         $query = ProductReview::query()
             ->where('reviewable_type', DigitalProduct::class)
@@ -36,11 +39,23 @@ class AdminProductReviewsController extends Controller
             ->additional(['product' => [
                 'id' => $digitalProduct->id,
                 'title' => $digitalProduct->title,
+                'public_url' => $this->publicUrl($digitalProduct),
             ]]);
+    }
+
+    private function publicUrl(DigitalProduct $product): ?string
+    {
+        $primaryStore = $product->stores()->first();
+
+        return $primaryStore
+            ? rtrim((string) $primaryStore->short_url, '/').'/products/'.$product->id
+            : null;
     }
 
     public function hide(Request $request, ProductReview $productReview): AdminProductReviewResource
     {
+        Gate::authorize('admin.access');
+
         $productReview->update([
             'approved' => false,
             'hidden_by' => $request->user()->id,
@@ -53,6 +68,8 @@ class AdminProductReviewsController extends Controller
 
     public function unhide(Request $request, ProductReview $productReview): AdminProductReviewResource
     {
+        Gate::authorize('admin.access');
+
         $productReview->update([
             'approved' => true,
             'hidden_by' => null,
@@ -65,6 +82,8 @@ class AdminProductReviewsController extends Controller
 
     public function destroy(Request $request, ProductReview $productReview)
     {
+        Gate::authorize('admin.access');
+
         $productReview->delete();
 
         return response()->noContent();

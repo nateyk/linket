@@ -29,6 +29,23 @@ class ProductReviewTest extends TestCase
         ]);
     }
 
+    private function actingAsAdmin(): \App\Models\User
+    {
+        $admin = \App\Models\User::query()->forceCreate([
+            'name' => 'Admin ' . Str::random(6),
+            'username' => Str::lower(Str::random(10)),
+            'email' => Str::random(8) . '@example.test',
+            'password' => bcrypt('password'),
+            'email_verified_at' => now(),
+        ]);
+        $admin->permissions()->attach(
+            \Common\Permissions\Models\Permission::query()->firstOrCreate(['name' => 'admin']),
+        );
+        \Illuminate\Support\Facades\Auth::login($admin);
+
+        return $admin;
+    }
+
     private function makeWorkspace(int $userId): int
     {
         return \Common\Workspaces\Models\Workspace::query()->forceCreate([
@@ -319,6 +336,7 @@ class ProductReviewTest extends TestCase
 
     public function testAdminHideAndUnhideToggleApprovalAndAuditFields(): void
     {
+        $admin = $this->actingAsAdmin();
         [$product] = $this->makeProductOnBiolink();
         ProductReview::unguarded(fn() => $product->addReview([
             'review' => 'Fine',
@@ -329,17 +347,17 @@ class ProductReviewTest extends TestCase
 
         $controller = new \App\Storefront\Controllers\AdminProductReviewsController();
         $hideRequest = Request::create('http://127.0.0.1/api/v1/admin/digital-products/reviews/1/hide', 'POST', ['reason' => 'Spam']);
-        $hideRequest->setUserResolver(fn() => (object) ['id' => 7]);
+        $hideRequest->setUserResolver(fn() => $admin);
 
         $controller->hide($hideRequest, $review);
         $review->refresh();
         $this->assertFalse($review->approved);
-        $this->assertSame(7, $review->hidden_by);
+        $this->assertSame($admin->id, $review->hidden_by);
         $this->assertSame('Spam', $review->hidden_reason);
         $this->assertNotNull($review->hidden_at);
 
         $unhideRequest = Request::create('http://127.0.0.1/api/v1/admin/digital-products/reviews/1/unhide', 'POST');
-        $unhideRequest->setUserResolver(fn() => (object) ['id' => 7]);
+        $unhideRequest->setUserResolver(fn() => $admin);
         $controller->unhide($unhideRequest, $review);
         $review->refresh();
         $this->assertTrue($review->approved);
@@ -350,6 +368,7 @@ class ProductReviewTest extends TestCase
 
     public function testAdminDestroyDeletesReview(): void
     {
+        $this->actingAsAdmin();
         [$product] = $this->makeProductOnBiolink();
         ProductReview::unguarded(fn() => $product->addReview([
             'review' => 'Bye',
@@ -368,6 +387,7 @@ class ProductReviewTest extends TestCase
 
     public function testAdminIndexFiltersByStatusAndSearchScopedToProduct(): void
     {
+        $this->actingAsAdmin();
         [$product] = $this->makeProductOnBiolink();
         [$otherProduct] = $this->makeProductOnBiolink();
         ProductReview::unguarded(fn() => $product->addReview([
@@ -399,7 +419,9 @@ class ProductReviewTest extends TestCase
 
         $this->assertSame(15, $response->resource->perPage());
         $payload = $response->response()->getData(true);
-        $this->assertSame(['id' => $product->id, 'title' => 'Ebook'], $payload['product']);
+        $this->assertSame($product->id, $payload['product']['id']);
+        $this->assertSame('Ebook', $payload['product']['title']);
+        $this->assertArrayHasKey('public_url', $payload['product']);
         $reviews = collect($payload['data']);
         $this->assertCount(1, $reviews->where('review', 'Drop'));
         $this->assertEmpty($reviews->where('review', 'Keep'));
@@ -408,6 +430,7 @@ class ProductReviewTest extends TestCase
 
     public function testAdminIndexIsScopedToProduct(): void
     {
+        $this->actingAsAdmin();
         [$product] = $this->makeProductOnBiolink();
         [$otherProduct] = $this->makeProductOnBiolink();
         ProductReview::unguarded(fn() => $product->addReview([
