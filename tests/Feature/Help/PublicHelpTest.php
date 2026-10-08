@@ -24,6 +24,7 @@ class PublicHelpTest extends TestCase
         $response = $this->stateful()->getJson('/api/v1/help');
 
         $response->assertOk()->assertJsonStructure(['categories', 'commonCategories']);
+        $this->assertArrayNotHasKey('body', $response->json('categories.0.articles.0'));
     }
 
     public function test_help_index_search_filters_results(): void

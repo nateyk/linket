@@ -72,6 +72,26 @@ class AdminHelpTest extends TestCase
         $response->assertCreated()->assertJsonPath('data.slug', 'how-to-start');
     }
 
+    public function test_admin_article_responses_include_body(): void
+    {
+        $this->actingAs($this->createAdmin());
+        $category = HelpCategory::create(['name' => 'General']);
+        $article = HelpArticle::create([
+            'title' => 'How to start',
+            'body' => '<p>Body</p>',
+            'short_description' => 'Short',
+            'help_category_id' => $category->id,
+        ]);
+
+        $this->stateful()->getJson('/api/v1/admin/help/articles')
+            ->assertOk()
+            ->assertJsonPath('data.0.body', '<p>Body</p>');
+
+        $this->stateful()->getJson("/api/v1/admin/help/articles/{$article->id}")
+            ->assertOk()
+            ->assertJsonPath('data.body', '<p>Body</p>');
+    }
+
     public function test_admin_can_update_and_delete_article(): void
     {
         $this->actingAs($this->createAdmin());

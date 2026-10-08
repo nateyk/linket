@@ -17,7 +17,10 @@ class HelpArticleResource extends JsonResource
             'id' => $this->id,
             'title' => $this->title,
             'slug' => $this->slug,
-            'body' => $this->when($request->routeIs('help.article'), $this->body),
+            'body' => $this->when(
+                $request->routeIs('help.article') || str_starts_with((string) $request->route()?->getName(), 'admin.help.articles'),
+                $this->body,
+            ),
             'short_description' => $this->short_description,
             'views' => $this->views,
             'likes' => $this->likes,
