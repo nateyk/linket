@@ -94,7 +94,7 @@ export const adminDigitalProductColumns: ColumnDef<AdminDigitalProduct>[] = [
           </div>
           <div className="min-w-0 max-w-[180px] sm:max-w-[220px]">
             <Link
-              to={`/admin/digital-products/${product.id}`}
+              to={`/admin/items/${product.id}`}
               className="line-clamp-2 text-sm font-medium leading-tight break-words hover:underline hover:underline-offset-3"
               title={product.title}
             >
@@ -292,7 +292,7 @@ export function ProductActionsButton({
           <Dropdown.Content align="end">
             <Dropdown.Item
               render={
-                <Link to={`/admin/digital-products/${product.id}`} />
+                <Link to={`/admin/items/${product.id}`} />
               }
             >
               <EyeIcon className="size-4" />
@@ -304,7 +304,7 @@ export function ProductActionsButton({
             </Dropdown.Item>
             <Dropdown.Item
               render={
-                <Link to={`/admin/digital-products/${product.id}/reviews`} />
+                <Link to={`/admin/items/${product.id}/reviews`} />
               }
             >
               <StarIcon className="size-4" />

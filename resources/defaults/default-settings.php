@@ -301,8 +301,8 @@ return [
                     ],
                     [
                         'type' => 'route',
-                        'label' => 'My Products',
-                        'action' => '/dashboard/my-products',
+                        'label' => 'My Items',
+                        'action' => '/dashboard/items',
                         'id' => 'digital-products-dashboard',
                     ],
                     [
@@ -350,8 +350,8 @@ return [
                     ],
                     [
                         'type' => 'route',
-                        'label' => 'My Products',
-                        'action' => '/dashboard/my-products',
+                        'label' => 'My Items',
+                        'action' => '/dashboard/items',
                         'id' => 'digital-products-mobile',
                     ],
                     [
@@ -512,8 +512,8 @@ return [
                     ],
                     [
                         'type' => 'route',
-                        'label' => 'Digital Products',
-                        'action' => '/admin/digital-products',
+                        'label' => 'Items',
+                        'action' => '/admin/items',
                         'id' => 'digital-products-admin',
                     ],
                     [

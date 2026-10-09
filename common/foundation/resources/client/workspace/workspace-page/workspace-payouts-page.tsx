@@ -56,7 +56,7 @@ export function WorkspacePayoutsPage({workspaceId}: WorkspacePayoutsPageProps) {
     try {
       const [configRes, methodsRes] = await Promise.all([
         apiClient.get(`/api/v1/workspaces/${workspaceId}/payout-config`),
-        apiClient.get(`/api/v1/digital-products/withdrawal-methods`),
+        apiClient.get(`/api/v1/items/withdrawal-methods`),
       ]);
 
       const configData = configRes.data?.data ?? {};

@@ -24,7 +24,14 @@ describe('admin product shared display', () => {
   });
 
   test('list title links to the detail page', () => {
-    expect(columns).toContain('/admin/items/${product.id}');
+    expect(columns).toContain('to={`/admin/items/${product.id}`}');
+  });
+
+  test('row actions link to the detail and reviews pages', () => {
+    expect(columns).toContain('<Link to={`/admin/items/${product.id}`} />');
+    expect(columns).toContain(
+      '<Link to={`/admin/items/${product.id}/reviews`} />',
+    );
   });
 
   test('details menu navigates while quick review opens the dialog', () => {

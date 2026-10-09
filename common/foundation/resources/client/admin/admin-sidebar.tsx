@@ -23,7 +23,7 @@ import {BellIcon, ChevronRightIcon, ChevronUpIcon, ShieldCheckIcon, StoreIcon, W
 import {use, useState} from 'react';
 import {Link, NavLink, useLocation, useSearchParams} from 'react-router';
 
-const DIGITAL_PRODUCTS_PATH = '/admin/digital-products';
+const DIGITAL_PRODUCTS_PATH = '/admin/items';
 
 export function AdminSidebar() {
   const {isMobileMode, leftSidebar} = use(DashboardLayoutContext);
