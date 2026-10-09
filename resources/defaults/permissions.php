@@ -12,6 +12,10 @@ return [
                 'api.access',
                 'files.create',
 
+                // COMMENTS
+                'comments.create',
+                'comments.view',
+
                 // LINKS
                 [
                     'name' => 'links.create',
@@ -463,6 +467,32 @@ return [
                         ]),
                     ],
                 ],
+            ],
+        ],
+        'Comments' => [
+            [
+                'name' => 'comments.create',
+                'role_types' => ['users'],
+                'display_name' => 'Create comments',
+                'description' => 'Allow creating comments.',
+            ],
+            [
+                'name' => 'comments.view',
+                'role_types' => ['users'],
+                'display_name' => 'View all comments',
+                'description' => 'Allow viewing all comments, not just own.',
+            ],
+            [
+                'name' => 'comments.update',
+                'role_types' => ['users'],
+                'display_name' => 'Edit comments',
+                'description' => 'Allow editing all comments.',
+            ],
+            [
+                'name' => 'comments.delete',
+                'role_types' => ['users'],
+                'display_name' => 'Delete comments',
+                'description' => 'Allow deleting all comments.',
             ],
         ],
         'Admin area' => [
