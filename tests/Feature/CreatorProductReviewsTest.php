@@ -83,7 +83,7 @@ class CreatorProductReviewsTest extends TestCase
         $this->makeReview($product, ['title' => 'Great']);
 
         $response = $this->stateful()->actingAs($creator)
-            ->getJson("/api/v1/digital-products/{$product->id}/reviews?per_page=100");
+            ->getJson("/api/v1/items/{$product->id}/reviews?per_page=100");
 
         $response->assertOk();
         $response->assertJsonStructure([
@@ -107,7 +107,7 @@ class CreatorProductReviewsTest extends TestCase
         ActiveWorkspace::clearCache();
 
         $this->stateful()->actingAs($other)
-            ->getJson("/api/v1/digital-products/{$product->id}/reviews?workspace_id={$otherWorkspace->id}")
+            ->getJson("/api/v1/items/{$product->id}/reviews?workspace_id={$otherWorkspace->id}")
             ->assertForbidden();
     }
 
@@ -118,7 +118,7 @@ class CreatorProductReviewsTest extends TestCase
         ActiveWorkspace::clearCache();
         $product = $this->createProduct($creator, $workspace);
 
-        $this->getJson("/api/v1/digital-products/{$product->id}/reviews")
+        $this->getJson("/api/v1/items/{$product->id}/reviews")
             ->assertUnauthorized();
     }
 }

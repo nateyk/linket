@@ -216,9 +216,9 @@ class AppServiceProvider extends ServiceProvider
     {
         \Illuminate\Support\Facades\Route::prefix('api/v1')->middleware(['api', 'optionalAuth:sanctum', 'verified', 'verifyApiAccess'])->group(function () {
             // Creator product statistics
-            \Illuminate\Support\Facades\Route::get('digital-products/{digitalProduct}/statistics', \App\Storefront\Controllers\DigitalProductStatisticsController::class);
+            \Illuminate\Support\Facades\Route::get('items/{digitalProduct}/statistics', \App\Storefront\Controllers\DigitalProductStatisticsController::class);
             // Admin product statistics
-            \Illuminate\Support\Facades\Route::get('admin/digital-products/{digitalProduct}/statistics', \App\Storefront\Controllers\AdminDigitalProductStatisticsController::class);
+            \Illuminate\Support\Facades\Route::get('admin/items/{digitalProduct}/statistics', \App\Storefront\Controllers\AdminDigitalProductStatisticsController::class);
         });
     }
 

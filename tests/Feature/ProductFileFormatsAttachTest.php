@@ -231,7 +231,7 @@ class ProductFileFormatsAttachTest extends TestCase
         ActiveWorkspace::clearCache();
 
         $rejected = $this->stateful()->actingAs($creator)
-            ->postJson("/api/v1/digital-products?workspace_id={$workspace->id}", [
+            ->postJson("/api/v1/items?workspace_id={$workspace->id}", [
                 'title' => 'AAC Product',
                 'price_cents' => 1000,
                 'file_ids' => [$aac->id],
@@ -239,7 +239,7 @@ class ProductFileFormatsAttachTest extends TestCase
         $rejected->assertStatus(422);
 
         $accepted = $this->stateful()->actingAs($creator)
-            ->postJson("/api/v1/digital-products?workspace_id={$workspace->id}", [
+            ->postJson("/api/v1/items?workspace_id={$workspace->id}", [
                 'title' => 'PDF Product',
                 'price_cents' => 1000,
                 'file_ids' => [$pdf->id],

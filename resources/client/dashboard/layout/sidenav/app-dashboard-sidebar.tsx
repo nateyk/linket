@@ -29,7 +29,7 @@ export function AppDashboardSidebar() {
   const primaryMenu = useCustomMenu('dashboard-primary');
   const secondaryMenu = useCustomMenu('dashboard-secondary');
   const hasDigitalProducts = primaryMenu?.items.some(
-    item => item.action === '/dashboard/my-products',
+    item => item.action === '/dashboard/items',
   );
   const hasSecondaryItems = !!secondaryMenu?.items.length;
 
@@ -59,10 +59,10 @@ export function AppDashboardSidebar() {
               <Sidebar.Menu>
                 <Sidebar.MenuItem>
                   <Sidebar.MenuButton
-                    render={<NavLink to="/dashboard/my-products" />}
+                    render={<NavLink to="/dashboard/items" />}
                     icon={<StoreIcon />}
                   >
-                    <Trans message="Digital Products" />
+                    <Trans message="My Items" />
                   </Sidebar.MenuButton>
                 </Sidebar.MenuItem>
               </Sidebar.Menu>

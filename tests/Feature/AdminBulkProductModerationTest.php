@@ -40,7 +40,7 @@ class AdminBulkProductModerationTest extends TestCase
         ]);
 
         $response = $this->stateful()->actingAs($admin)->postJson(
-            '/api/v1/admin/digital-products/bulk-approve',
+            '/api/v1/admin/items/bulk-approve',
             ['ids' => [$pending->id, $updated->id, $clean->id]],
         );
 
@@ -77,7 +77,7 @@ class AdminBulkProductModerationTest extends TestCase
         $draft = $this->product($workspace, $creator, ['status' => 'draft']);
 
         $response = $this->stateful()->actingAs($admin)->postJson(
-            '/api/v1/admin/digital-products/bulk-reject',
+            '/api/v1/admin/items/bulk-reject',
             ['ids' => [$pending->id, $draft->id], 'reason' => 'Missing files'],
         );
 
@@ -102,12 +102,12 @@ class AdminBulkProductModerationTest extends TestCase
         $admin = $this->createAdmin();
 
         $this->stateful()->actingAs($admin)
-            ->postJson('/api/v1/admin/digital-products/bulk-approve', ['ids' => []])
+            ->postJson('/api/v1/admin/items/bulk-approve', ['ids' => []])
             ->assertStatus(422)
             ->assertJsonValidationErrors('ids');
 
         $this->stateful()->actingAs($admin)
-            ->postJson('/api/v1/admin/digital-products/bulk-approve', ['ids' => range(1, 101)])
+            ->postJson('/api/v1/admin/items/bulk-approve', ['ids' => range(1, 101)])
             ->assertStatus(422)
             ->assertJsonValidationErrors('ids');
     }
@@ -118,7 +118,7 @@ class AdminBulkProductModerationTest extends TestCase
         $product = $this->product($workspace, $creator, ['status' => 'pending_approval']);
 
         $this->stateful()->actingAs($creator)
-            ->postJson('/api/v1/admin/digital-products/bulk-approve', ['ids' => [$product->id]])
+            ->postJson('/api/v1/admin/items/bulk-approve', ['ids' => [$product->id]])
             ->assertForbidden();
 
         $this->assertSame('pending_approval', $product->fresh()->status);

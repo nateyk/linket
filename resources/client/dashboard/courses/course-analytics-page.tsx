@@ -65,7 +65,7 @@ export function CourseAnalyticsPage() {
     setLoading(true);
     setError(undefined);
     try {
-      const productRes = await apiClient.get(`/api/v1/digital-products/${productId}`);
+      const productRes = await apiClient.get(`/api/v1/items/${productId}`);
       const productData = (productRes.data as {data: {course?: {id: number}; course_id?: number}}).data;
       const courseId = productData.course?.id ?? productData.course_id;
       if (!courseId) {
@@ -168,7 +168,7 @@ export function CourseAnalyticsPage() {
         <DashboardLayout.SectionTitle>
           <Trans message="Course Analytics" />
         </DashboardLayout.SectionTitle>
-        <Button variant="outline" size="sm" data-icon onClick={() => navigate(`/dashboard/my-products/${productId}/course`)}>
+        <Button variant="outline" size="sm" data-icon onClick={() => navigate(`/dashboard/items/${productId}/course`)}>
           <PencilIcon className="size-4" />
           <Trans message="Back to builder" />
         </Button>
@@ -275,7 +275,7 @@ export function CourseAnalyticsPage() {
                                 </div>
                               </Table.Cell>
                               <Table.Cell className="px-5 py-2">
-                                <Button variant="ghost" size="icon-sm" className="size-7" onClick={() => navigate(`/dashboard/my-products/${productId}/course?lessonId=${l.id}`)} aria-label="Edit lesson">
+                                <Button variant="ghost" size="icon-sm" className="size-7" onClick={() => navigate(`/dashboard/items/${productId}/course?lessonId=${l.id}`)} aria-label="Edit lesson">
                                   <PencilIcon className="size-3.5" />
                                 </Button>
                               </Table.Cell>

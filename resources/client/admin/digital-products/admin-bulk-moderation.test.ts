@@ -16,8 +16,8 @@ describe('admin bulk product moderation', () => {
   });
 
   test('calls the bulk endpoints', () => {
-    expect(source).toContain('/api/v1/admin/digital-products/bulk-approve');
-    expect(source).toContain('/api/v1/admin/digital-products/bulk-reject');
+    expect(source).toContain('/api/v1/admin/items/bulk-approve');
+    expect(source).toContain('/api/v1/admin/items/bulk-reject');
     expect(source).toContain('bulkReason');
   });
 

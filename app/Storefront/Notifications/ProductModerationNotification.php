@@ -52,7 +52,7 @@ class ProductModerationNotification extends Notification implements ShouldQueue
                 ->subject(__('Product update'))
                 ->greeting(__('Hello, :name', ['name' => $notifiable->name]))
                 ->line(__('Your product catalog changed. Open your dashboard for the latest.'))
-                ->action(__('Open dashboard'), url('/dashboard/my-products'));
+                ->action(__('Open dashboard'), url('/dashboard/items'));
         }
 
         $mail = (new MailMessage())
@@ -73,7 +73,7 @@ class ProductModerationNotification extends Notification implements ShouldQueue
 
         if (!$product) {
             return [
-                'mainAction' => ['label' => __('Open dashboard'), 'action' => url('/dashboard/my-products')],
+                'mainAction' => ['label' => __('Open dashboard'), 'action' => url('/dashboard/items')],
                 'lines' => [[
                     'content' => e(__('Your product catalog changed. Open your dashboard for the latest.')),
                     'type' => 'primary',
@@ -145,7 +145,7 @@ class ProductModerationNotification extends Notification implements ShouldQueue
     private function actionPath(DigitalProduct $product): string
     {
         return $product->isCourse()
-            ? "/dashboard/my-products/{$product->id}/course"
-            : "/dashboard/my-products/{$product->id}/edit";
+            ? "/dashboard/items/{$product->id}/course"
+            : "/dashboard/items/{$product->id}/edit";
     }
 }

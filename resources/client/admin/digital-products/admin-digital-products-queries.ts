@@ -18,7 +18,7 @@ export const adminDigitalProductsOptions = (
     queryKey: [...adminDigitalProductsBaseKey, params],
     queryFn: () =>
       apiClient
-        .get('/api/v1/admin/digital-products', {params: mapped})
+        .get('/api/v1/admin/items', {params: mapped})
         .then(response => response.data),
   });
 };

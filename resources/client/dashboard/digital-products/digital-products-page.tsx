@@ -92,7 +92,7 @@ export function Component() {
 
     try {
       const response = await apiClient.get(
-        '/api/v1/digital-products?per_page=100',
+        '/api/v1/items?per_page=100',
       );
       const payload: ProductsResponse = response.data;
       setProducts(payload.data ?? []);
@@ -116,7 +116,7 @@ export function Component() {
     setError(undefined);
 
     try {
-      await apiClient.post(`/api/v1/digital-products/${product.id}/submit`);
+      await apiClient.post(`/api/v1/items/${product.id}/submit`);
       toast.positive(message('Product submitted for review'));
       await load();
     } catch (reason) {
@@ -135,7 +135,7 @@ export function Component() {
     setError(undefined);
 
     try {
-      await apiClient.delete(`/api/v1/digital-products/${product.id}`);
+      await apiClient.delete(`/api/v1/items/${product.id}`);
       setProducts(current => current.filter(item => item.id !== product.id));
       toast.positive(message('Product deleted'));
       return true;
@@ -156,7 +156,7 @@ export function Component() {
       <DashboardLayout.SectionHeader>
         <DashboardLayout.SidebarToggle />
         <DashboardLayout.SectionTitle>
-          <Trans message="Digital Products" />
+          <Trans message="My Items" />
         </DashboardLayout.SectionTitle>
         <Button onClick={() => setCreateDialogOpen(true)}>
           <PackagePlusIcon />
@@ -245,7 +245,7 @@ function ProductCard({
     toast.positive(message('Product link copied'));
   };
   const isCourse = product.type === 'course' || product.is_course;
-  const editPath = isCourse ? `/dashboard/my-products/${product.id}/course` : `/dashboard/my-products/${product.id}/edit`;
+  const editPath = isCourse ? `/dashboard/items/${product.id}/course` : `/dashboard/items/${product.id}/edit`;
 
   return (
     <Card.Root className="group flex h-full flex-col gap-0 overflow-hidden py-0 shadow-xs transition-shadow hover:shadow-md">
@@ -423,26 +423,26 @@ function ProductActions({
         </Dropdown.Trigger>
         <Dropdown.Content align="end" alignOffset={-4} sideOffset={8}>
           {!(product.type === 'course' || product.is_course) && (
-            <Dropdown.LinkItem render={<Link to={`/dashboard/my-products/${product.id}/edit`} />}>
+            <Dropdown.LinkItem render={<Link to={`/dashboard/items/${product.id}/edit`} />}>
               <PencilIcon />
               <Trans message="Edit product" />
             </Dropdown.LinkItem>
           )}
           {(product.type === 'course' || product.is_course) && (
-            <Dropdown.LinkItem render={<Link to={`/dashboard/my-products/${product.id}/course`} />}>
+            <Dropdown.LinkItem render={<Link to={`/dashboard/items/${product.id}/course`} />}>
               <GraduationCapIcon />
               <Trans message="Open course builder" />
             </Dropdown.LinkItem>
           )}
 
           {(product.type === 'course' || product.is_course) && (
-            <Dropdown.LinkItem render={<Link to={`/dashboard/my-products/${product.id}/course/analytics`} />}>
+            <Dropdown.LinkItem render={<Link to={`/dashboard/items/${product.id}/course/analytics`} />}>
               <BarChart3Icon />
               <Trans message="Analytics" />
             </Dropdown.LinkItem>
           )}
 
-          <Dropdown.LinkItem render={<Link to={`/dashboard/my-products/${product.id}/statistics`} />}>
+          <Dropdown.LinkItem render={<Link to={`/dashboard/items/${product.id}/statistics`} />}>
             <ChartNoAxesCombinedIcon />
             <Trans message="Statistics" />
           </Dropdown.LinkItem>
@@ -462,7 +462,7 @@ function ProductActions({
           )}
 
           <Dropdown.LinkItem
-            render={<Link to={`/dashboard/my-products/${product.id}/reviews`} />}
+            render={<Link to={`/dashboard/items/${product.id}/reviews`} />}
           >
             <StarIcon />
             <Trans message="Reviews" />

@@ -38,7 +38,7 @@ export function Component() {
         <div className="mx-auto flex w-full max-w-xl flex-col gap-5 py-4">
           <div className="flex items-center justify-between">
             {wizard.step === 'type' ? (
-              <Button variant="ghost" render={<Link to="/dashboard/my-products" />}>
+              <Button variant="ghost" render={<Link to="/dashboard/items" />}>
                 <ArrowLeftIcon />
                 <Trans message="All products" />
               </Button>

@@ -82,7 +82,7 @@ export const digitalProductsIndex = (
   options?: SecondParameter<typeof orvalApiFetch<DigitalProductsIndex200>>,
 ) => {
   return orvalApiFetch<DigitalProductsIndex200>(
-    {url: `/digital-products`, method: 'GET'},
+    {url: `/items`, method: 'GET'},
     options,
   );
 };
@@ -90,7 +90,7 @@ export const digitalProductsStore = (
   options?: SecondParameter<typeof orvalApiFetch<string>>,
 ) => {
   return orvalApiFetch<string>(
-    {url: `/digital-products`, method: 'POST'},
+    {url: `/items`, method: 'POST'},
     options,
   );
 };
@@ -99,7 +99,7 @@ export const digitalProductsShow = (
   options?: SecondParameter<typeof orvalApiFetch<DigitalProductsShow200>>,
 ) => {
   return orvalApiFetch<DigitalProductsShow200>(
-    {url: `/digital-products/${digitalProduct}`, method: 'GET'},
+    {url: `/items/${digitalProduct}`, method: 'GET'},
     options,
   );
 };
@@ -108,7 +108,7 @@ export const digitalProductsUpdate = (
   options?: SecondParameter<typeof orvalApiFetch<string>>,
 ) => {
   return orvalApiFetch<string>(
-    {url: `/digital-products/${digitalProduct}`, method: 'PUT'},
+    {url: `/items/${digitalProduct}`, method: 'PUT'},
     options,
   );
 };
@@ -117,7 +117,7 @@ export const digitalProductsDestroy = (
   options?: SecondParameter<typeof orvalApiFetch<void>>,
 ) => {
   return orvalApiFetch<void>(
-    {url: `/digital-products/${digitalProduct}`, method: 'DELETE'},
+    {url: `/items/${digitalProduct}`, method: 'DELETE'},
     options,
   );
 };
@@ -128,7 +128,7 @@ export const storefrontDigitalProductsSubmit01 = (
   >,
 ) => {
   return orvalApiFetch<StorefrontDigitalProductsSubmit01200>(
-    {url: `/digital-products/${digitalProduct}/submit`, method: 'POST'},
+    {url: `/items/${digitalProduct}/submit`, method: 'POST'},
     options,
   );
 };

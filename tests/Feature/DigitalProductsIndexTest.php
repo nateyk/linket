@@ -42,7 +42,7 @@ class DigitalProductsIndexTest extends TestCase
         ActiveWorkspace::clearCache();
 
         $this->stateful()->actingAs($creator)
-            ->getJson("/api/v1/digital-products?workspace_id={$workspace->id}")
+            ->getJson("/api/v1/items?workspace_id={$workspace->id}")
             ->assertOk()
             ->assertJsonPath('data.0.sales_count', 2)
             ->assertJsonPath('data.0.gross_revenue_cents', 12500)

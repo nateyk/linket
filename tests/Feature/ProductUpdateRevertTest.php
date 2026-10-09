@@ -84,7 +84,7 @@ class ProductUpdateRevertTest extends TestCase
         $this->assertSame('Edited', $product->fresh()->title);
 
         $this->stateful()->actingAs($admin)->postJson(
-            "/api/v1/admin/digital-products/{$product->id}/reject",
+            "/api/v1/admin/items/{$product->id}/reject",
             ['reason' => 'Not acceptable'],
         )->assertOk();
 
@@ -121,7 +121,7 @@ class ProductUpdateRevertTest extends TestCase
         $this->assertNull($product->pending_review_snapshot);
 
         $this->stateful()->actingAs($admin)->postJson(
-            "/api/v1/admin/digital-products/{$product->id}/reject",
+            "/api/v1/admin/items/{$product->id}/reject",
             ['reason' => 'No'],
         )->assertOk();
 
@@ -139,7 +139,7 @@ class ProductUpdateRevertTest extends TestCase
         $product = $this->product($workspace, $creator, ['status' => 'pending_approval']);
 
         $this->stateful()->actingAs($admin)->postJson(
-            "/api/v1/admin/digital-products/{$product->id}/reject",
+            "/api/v1/admin/items/{$product->id}/reject",
             ['reason' => 'Nope'],
         )->assertOk();
 
@@ -167,7 +167,7 @@ class ProductUpdateRevertTest extends TestCase
         $this->updateProduct($creator, $product, ['title' => 'Edited', 'price_cents' => 2000]);
 
         $response = $this->stateful()->actingAs($admin)
-            ->getJson("/api/v1/admin/digital-products/{$product->id}");
+            ->getJson("/api/v1/admin/items/{$product->id}");
 
         $response->assertOk();
         $changes = collect($response->json('data.pending_changes'));
@@ -220,7 +220,7 @@ class ProductUpdateRevertTest extends TestCase
         $this->assertSame('Original Course', $product->pending_review_snapshot['title']);
 
         $this->stateful()->actingAs($admin)->postJson(
-            "/api/v1/admin/digital-products/{$product->id}/reject",
+            "/api/v1/admin/items/{$product->id}/reject",
             ['reason' => 'No'],
         )->assertOk();
 
@@ -262,7 +262,7 @@ class ProductUpdateRevertTest extends TestCase
         $this->assertSame('Original Course', $product->pending_review_snapshot['title']);
 
         $this->stateful()->actingAs($admin)->postJson(
-            "/api/v1/admin/digital-products/{$product->id}/reject",
+            "/api/v1/admin/items/{$product->id}/reject",
             ['reason' => 'No'],
         )->assertOk();
 
@@ -299,7 +299,7 @@ class ProductUpdateRevertTest extends TestCase
         $product->files()->attach($file->id);
 
         $this->stateful()->actingAs($creator)->putJson(
-            "/api/v1/digital-products/{$product->id}",
+            "/api/v1/items/{$product->id}",
             [
                 'title' => 'Original',
                 'description' => 'Added description',
@@ -314,7 +314,7 @@ class ProductUpdateRevertTest extends TestCase
         $this->assertSame($image->id, $product->fresh()->cover_file_entry_id);
 
         $this->stateful()->actingAs($admin)->postJson(
-            "/api/v1/admin/digital-products/{$product->id}/reject",
+            "/api/v1/admin/items/{$product->id}/reject",
             ['reason' => 'No'],
         )->assertOk();
 
@@ -346,7 +346,7 @@ class ProductUpdateRevertTest extends TestCase
     private function updateProduct(User $creator, DigitalProduct $product, array $overrides = []): void
     {
         $this->stateful()->actingAs($creator)->putJson(
-            "/api/v1/digital-products/{$product->id}",
+            "/api/v1/items/{$product->id}",
             array_merge([
                 'title' => $product->title,
                 'price_cents' => $product->price_cents,

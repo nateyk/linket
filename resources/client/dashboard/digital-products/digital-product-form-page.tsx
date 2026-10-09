@@ -230,12 +230,12 @@ function DigitalProductForm() {
       try {
         if (productId) {
           const response = await apiClient.get(
-            `/api/v1/digital-products/${productId}`,
+            `/api/v1/items/${productId}`,
           );
           const item = response.data.data as Product;
           if (item.type === 'course') {
             navigate(
-              `/dashboard/my-products/${item.id}/course?notice=moved-to-builder`,
+              `/dashboard/items/${item.id}/course?notice=moved-to-builder`,
               {
                 replace: true,
               },
@@ -331,24 +331,24 @@ function DigitalProductForm() {
         };
         // For courses, file_ids is optional — send empty array as-is, backend allows it
         const response = product
-          ? await apiClient.put(`/api/v1/digital-products/${product.id}`, body)
-          : await apiClient.post('/api/v1/digital-products', body);
+          ? await apiClient.put(`/api/v1/items/${product.id}`, body)
+          : await apiClient.post('/api/v1/items', body);
         saved = response.data.data as Product;
         setProduct(saved);
 
         if (submitAfterSave) {
           setSubmitting(true);
-          await apiClient.post(`/api/v1/digital-products/${saved.id}/submit`);
+          await apiClient.post(`/api/v1/items/${saved.id}/submit`);
         }
 
         if (isCourse || saved.type === 'course') {
-          navigate(`/dashboard/my-products/${saved.id}/course`, {
+          navigate(`/dashboard/items/${saved.id}/course`, {
             replace: true,
           });
         } else {
-          navigate(`/dashboard/my-products/${saved.id}/edit`, {replace: true});
+          navigate(`/dashboard/items/${saved.id}/edit`, {replace: true});
         }
-        if (submitAfterSave) navigate('/dashboard/my-products');
+        if (submitAfterSave) navigate('/dashboard/items');
       } catch (reason) {
         const validationErrors = getValidationErrors(reason);
         if (Object.keys(validationErrors).length) {
@@ -418,8 +418,8 @@ function DigitalProductForm() {
 
     setSaving(true);
     try {
-      await apiClient.delete(`/api/v1/digital-products/${product.id}`);
-      navigate('/dashboard/my-products');
+      await apiClient.delete(`/api/v1/items/${product.id}`);
+      navigate('/dashboard/items');
       return true;
     } catch {
       setError('Unable to delete product.');
@@ -447,7 +447,7 @@ function DigitalProductForm() {
         <DashboardLayout.SidebarToggle />
         <Breadcrumb>
           <Breadcrumb.Item>
-            <Breadcrumb.Link to="/dashboard/my-products">
+            <Breadcrumb.Link to="/dashboard/items">
               <Trans message="All products" />
             </Breadcrumb.Link>
           </Breadcrumb.Item>
@@ -555,7 +555,7 @@ function DigitalProductForm() {
                     size="sm"
                     variant="outline"
                     onClick={() =>
-                      navigate(`/dashboard/my-products/${product.id}/course`)
+                      navigate(`/dashboard/items/${product.id}/course`)
                     }
                   >
                     <GraduationCapIcon />

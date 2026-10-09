@@ -55,7 +55,7 @@ export function Component() {
     }
 
     try {
-      const productResponse = await apiClient.get(`/api/v1/digital-products/${productId}`);
+      const productResponse = await apiClient.get(`/api/v1/items/${productId}`);
       const product = (productResponse.data as {data: {course?: {id: number}}}).data;
       const courseId = product.course?.id;
       if (!courseId) throw new Error('Course not found');
@@ -76,7 +76,7 @@ export function Component() {
         <DashboardLayout.SectionTitle>
           <EyeIcon className="size-5" /><Trans message="Course Preview" />
         </DashboardLayout.SectionTitle>
-        <Button variant="outline" size="sm" onClick={() => navigate(`/dashboard/my-products/${productId}/course`)}>
+        <Button variant="outline" size="sm" onClick={() => navigate(`/dashboard/items/${productId}/course`)}>
           <ArrowLeftIcon data-icon="inline-start" /><Trans message="Back to builder" />
         </Button>
       </DashboardLayout.SectionHeader>
@@ -190,7 +190,7 @@ export function Component() {
               <p className="text-sm text-muted-foreground">
                 <Trans message="This is a preview. Learners will see this layout when enrolled." />
               </p>
-              <Button size="sm" variant="outline" onClick={() => navigate(`/dashboard/my-products/${productId}/course`)}>
+              <Button size="sm" variant="outline" onClick={() => navigate(`/dashboard/items/${productId}/course`)}>
                 <ArrowLeftIcon data-icon="inline-start" /><Trans message="Back to builder" />
               </Button>
             </div>

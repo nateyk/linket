@@ -342,6 +342,15 @@ export const sharedDashboardRoutes = (routeType: DatatableRouteType) => {
   return routes;
 };
 
+/**
+ * Maps a stored dashboard-homepage setting value to its current key.
+ * 'digital-products' is the pre-rename value; both resolve to 'items'.
+ */
+export function normalizeHomepageValue(value: string | undefined): string {
+  if (value === 'digital-products') return 'items';
+  return value ?? '';
+}
+
 export const dashboardRoutes: RouteObject[] = [
   {
     path: 'dashboard',
@@ -371,11 +380,15 @@ export const dashboardRoutes: RouteObject[] = [
       {
         index: true,
         loader: () => {
-          const homepage = getBootstrapData().settings.dashboard?.homepage;
+          const homepage = normalizeHomepageValue(
+            getBootstrapData().settings.dashboard?.homepage,
+          );
           const homepageRoutes: Record<string, string> = {
             biolinks: '/dashboard/stores',
             stores: '/dashboard/stores',
-            'digital-products': '/dashboard/my-products',
+            items: '/dashboard/items',
+            // legacy stored value, normalized above; kept for clarity
+            'digital-products': '/dashboard/items',
             'sales-payouts': '/dashboard/sales-payouts',
             insights: '/dashboard/insights',
           };
@@ -402,17 +415,17 @@ export const dashboardRoutes: RouteObject[] = [
         ],
       },
       {
-        path: 'my-products',
+        path: 'items',
         lazy: () =>
           import('@app/dashboard/digital-products/digital-products-page'),
       },
       {
-        path: 'my-products/new',
+        path: 'items/new',
         lazy: () =>
           import('@app/dashboard/digital-products/product-type-selection-page'),
       },
       {
-        path: 'my-products/new/details',
+        path: 'items/new/details',
         loader: ({request}) => {
           const url = new URL(request.url);
           if (url.searchParams.get('type') !== 'course') return null;
@@ -422,42 +435,42 @@ export const dashboardRoutes: RouteObject[] = [
             if (value !== null && value !== '') forward.set(key, value);
           }
           const suffix = [...forward].length ? `?${forward}` : '';
-          return redirect(`/dashboard/my-products/new/course${suffix}`);
+          return redirect(`/dashboard/items/new/course${suffix}`);
         },
         lazy: () =>
           import('@app/dashboard/digital-products/digital-product-form-page'),
       },
       {
-        path: 'my-products/new/course',
+        path: 'items/new/course',
         lazy: () => import('@app/dashboard/courses/create-course-page'),
       },
       {
-        path: 'my-products/:productId/edit',
+        path: 'items/:productId/edit',
         lazy: () =>
           import('@app/dashboard/digital-products/digital-product-form-page'),
       },
       {
-        path: 'my-products/:productId/course',
+        path: 'items/:productId/course',
         lazy: () => import('@app/dashboard/courses/course-builder-page'),
       },
       {
-        path: 'my-products/:productId/course/preview',
+        path: 'items/:productId/course/preview',
         lazy: () => import('@app/dashboard/courses/course-preview-page'),
       },
       {
-        path: 'my-products/:productId/course/analytics',
+        path: 'items/:productId/course/analytics',
         lazy: async () => {
           const m = await import('@app/dashboard/courses/course-analytics-page');
           return {Component: m.CourseAnalyticsPage};
         },
       },
       {
-        path: 'my-products/:productId/statistics',
+        path: 'items/:productId/statistics',
         lazy: () =>
           import('@app/dashboard/digital-products/product-statistics-page'),
       },
       {
-        path: 'my-products/:productId/reviews',
+        path: 'items/:productId/reviews',
         lazy: () =>
           import('@app/dashboard/digital-products/product-reviews-page'),
       },

@@ -19,7 +19,7 @@ export function Component() {
           <StatisticsPanel
             productId={productId ?? ''}
             queryKey={['creatorProductStatistics']}
-            endpoint={`/api/v1/digital-products/${productId}/statistics`}
+            endpoint={`/api/v1/items/${productId}/statistics`}
           />
         </div>
       </DashboardLayout.SectionContent>

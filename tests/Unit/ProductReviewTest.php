@@ -304,7 +304,7 @@ class ProductReviewTest extends TestCase
             ->where('review', 'Hidden')
             ->update(['hidden_at' => now(), 'hidden_by' => 9, 'hidden_reason' => 'Spam']);
 
-        $request = Request::create('http://127.0.0.1/api/v1/digital-products/' . $product->id . '/reviews', 'GET');
+        $request = Request::create('http://127.0.0.1/api/v1/items/' . $product->id . '/reviews', 'GET');
         $request->setUserResolver(fn() => $user);
         $response = (new \App\Storefront\Controllers\CreatorProductReviewsController())->index($request, $product);
 
@@ -326,7 +326,7 @@ class ProductReviewTest extends TestCase
         \Common\Workspaces\ActiveWorkspace::clearCache();
         $product->update(['workspace_id' => $workspaceId]);
 
-        $request = Request::create('http://127.0.0.1/api/v1/digital-products/' . $product->id . '/reviews', 'GET');
+        $request = Request::create('http://127.0.0.1/api/v1/items/' . $product->id . '/reviews', 'GET');
         $request->setUserResolver(fn() => $user);
 
         $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
@@ -346,7 +346,7 @@ class ProductReviewTest extends TestCase
         $review = ProductReview::query()->where('reviewable_id', $product->id)->first();
 
         $controller = new \App\Storefront\Controllers\AdminProductReviewsController();
-        $hideRequest = Request::create('http://127.0.0.1/api/v1/admin/digital-products/reviews/1/hide', 'POST', ['reason' => 'Spam']);
+        $hideRequest = Request::create('http://127.0.0.1/api/v1/admin/items/reviews/1/hide', 'POST', ['reason' => 'Spam']);
         $hideRequest->setUserResolver(fn() => $admin);
 
         $controller->hide($hideRequest, $review);
@@ -356,7 +356,7 @@ class ProductReviewTest extends TestCase
         $this->assertSame('Spam', $review->hidden_reason);
         $this->assertNotNull($review->hidden_at);
 
-        $unhideRequest = Request::create('http://127.0.0.1/api/v1/admin/digital-products/reviews/1/unhide', 'POST');
+        $unhideRequest = Request::create('http://127.0.0.1/api/v1/admin/items/reviews/1/unhide', 'POST');
         $unhideRequest->setUserResolver(fn() => $admin);
         $controller->unhide($unhideRequest, $review);
         $review->refresh();
@@ -378,7 +378,7 @@ class ProductReviewTest extends TestCase
         $review = ProductReview::query()->where('reviewable_id', $product->id)->first();
 
         (new \App\Storefront\Controllers\AdminProductReviewsController())->destroy(
-            Request::create('http://127.0.0.1/api/v1/admin/digital-products/reviews/1', 'DELETE'),
+            Request::create('http://127.0.0.1/api/v1/admin/items/reviews/1', 'DELETE'),
             $review,
         );
 
@@ -413,7 +413,7 @@ class ProductReviewTest extends TestCase
         ]));
 
         $response = (new \App\Storefront\Controllers\AdminProductReviewsController())->index(
-            Request::create('http://127.0.0.1/api/v1/admin/digital-products/' . $product->id . '/reviews', 'GET', ['status' => 'hidden']),
+            Request::create('http://127.0.0.1/api/v1/admin/items/' . $product->id . '/reviews', 'GET', ['status' => 'hidden']),
             $product,
         );
 
@@ -445,7 +445,7 @@ class ProductReviewTest extends TestCase
         ]));
 
         $response = (new \App\Storefront\Controllers\AdminProductReviewsController())->index(
-            Request::create('http://127.0.0.1/api/v1/admin/digital-products/' . $product->id . '/reviews', 'GET'),
+            Request::create('http://127.0.0.1/api/v1/admin/items/' . $product->id . '/reviews', 'GET'),
             $product,
         );
         $reviews = collect($response->response()->getData(true)['data']);
@@ -596,7 +596,7 @@ class ProductReviewTest extends TestCase
             'review' => 'B', 'approved' => false, 'ratings' => ['overall' => 2],
         ]));
 
-        $request = Request::create('http://127.0.0.1/api/v1/admin/digital-products', 'GET');
+        $request = Request::create('http://127.0.0.1/api/v1/admin/items', 'GET');
         $request->setUserResolver(fn() => $admin);
         $response = (new \App\Storefront\Controllers\AdminDigitalProductsController())->index($request);
 

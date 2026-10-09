@@ -16,7 +16,7 @@ export const adminDigitalProductPayoutsOptions = (
     queryKey: [...adminDigitalProductPayoutsBaseKey, params],
     queryFn: () =>
       apiClient
-        .get('/api/v1/admin/digital-products/payout-requests', {
+        .get('/api/v1/admin/items/payout-requests', {
           params: mapped,
         })
         .then(response => response.data),

@@ -154,7 +154,7 @@ export function ProductCreationProvider({
       if (!productId || !dirty) return;
       try {
         const {apiClient} = await import('@common/http/query-client');
-        await apiClient.put(`/api/v1/digital-products/${productId}/draft`, {
+        await apiClient.put(`/api/v1/items/${productId}/draft`, {
           title: state.title,
           description: state.description,
           price_cents: Math.round(Number(state.price) * 100),

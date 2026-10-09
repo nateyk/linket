@@ -81,7 +81,7 @@ class CreatorProductStatisticsTest extends TestCase
         ]);
 
         $response = $this->stateful()->actingAs($creator)
-            ->getJson("/api/v1/digital-products/{$product->id}/statistics?workspace_id={$workspace->id}");
+            ->getJson("/api/v1/items/{$product->id}/statistics?workspace_id={$workspace->id}");
 
         $response->assertOk();
         $response->assertJsonStructure([
@@ -111,7 +111,7 @@ class CreatorProductStatisticsTest extends TestCase
         ActiveWorkspace::clearCache();
 
         $this->stateful()->actingAs($other)
-            ->getJson("/api/v1/digital-products/{$product->id}/statistics?workspace_id={$otherWorkspace->id}")
+            ->getJson("/api/v1/items/{$product->id}/statistics?workspace_id={$otherWorkspace->id}")
             ->assertForbidden();
     }
 
@@ -122,7 +122,7 @@ class CreatorProductStatisticsTest extends TestCase
         ActiveWorkspace::clearCache();
 
         $this->stateful()->actingAs($creator)
-            ->getJson("/api/v1/digital-products/999999999/statistics?workspace_id={$workspace->id}")
+            ->getJson("/api/v1/items/999999999/statistics?workspace_id={$workspace->id}")
             ->assertNotFound();
     }
 
@@ -134,7 +134,7 @@ class CreatorProductStatisticsTest extends TestCase
         $product = $this->createProduct($creator, $workspace);
 
         $this->stateful()->actingAs($creator)
-            ->getJson("/api/v1/digital-products/{$product->id}/statistics?workspace_id={$workspace->id}&from=2026-10-31&to=2026-09-01")
+            ->getJson("/api/v1/items/{$product->id}/statistics?workspace_id={$workspace->id}&from=2026-10-31&to=2026-09-01")
             ->assertStatus(422);
     }
 
@@ -145,7 +145,7 @@ class CreatorProductStatisticsTest extends TestCase
         ActiveWorkspace::clearCache();
         $product = $this->createProduct($creator, $workspace);
 
-        $this->getJson("/api/v1/digital-products/{$product->id}/statistics?workspace_id={$workspace->id}")
+        $this->getJson("/api/v1/items/{$product->id}/statistics?workspace_id={$workspace->id}")
             ->assertUnauthorized();
     }
 }

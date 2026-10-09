@@ -206,7 +206,7 @@ function CourseBuilder() {
     setLoading(true);
     try {
       const productRes = await apiClient.get(
-        `/api/v1/digital-products/${productId}`,
+        `/api/v1/items/${productId}`,
       );
       const productData = productRes.data.data;
       const courseId = productData.course?.id;
@@ -564,7 +564,7 @@ function CourseBuilder() {
     setPublishing(true);
     try {
       await apiClient.post(
-        `/api/v1/digital-products/${course.digital_product_id}/submit`,
+        `/api/v1/items/${course.digital_product_id}/submit`,
       );
       toast.positive('Course submitted for review');
       setCourse(c => (c ? {...c, product: {...c.product, status: 'pending_approval'}} : c));
@@ -651,7 +651,7 @@ function CourseBuilder() {
               size="sm"
               onClick={() =>
                 window.open(
-                  `/dashboard/my-products/${productId}/course/preview`,
+                  `/dashboard/items/${productId}/course/preview`,
                   '_blank',
                 )
               }
@@ -672,7 +672,7 @@ function CourseBuilder() {
               size="sm"
               render={
                 <Link
-                  to={`/dashboard/my-products/${productId}/course/analytics`}
+                  to={`/dashboard/items/${productId}/course/analytics`}
                 />
               }
             >
@@ -697,7 +697,7 @@ function CourseBuilder() {
               <Dropdown.Item
                 onClick={() =>
                   window.open(
-                    `/dashboard/my-products/${productId}/course/preview`,
+                    `/dashboard/items/${productId}/course/preview`,
                     '_blank',
                   )
                 }
@@ -712,7 +712,7 @@ function CourseBuilder() {
               <Dropdown.Item
                 render={
                   <Link
-                    to={`/dashboard/my-products/${productId}/course/analytics`}
+                    to={`/dashboard/items/${productId}/course/analytics`}
                   />
                 }
               >

@@ -93,18 +93,18 @@ describe('buildCreateUrl', () => {
   test('routes courses to the course page with price only when paid', () => {
     expect(
       buildCreateUrl({type: 'course', billing: 'paid', price: '19.99'}),
-    ).toBe('/dashboard/my-products/new/course?billing=paid&price_cents=1999');
+    ).toBe('/dashboard/items/new/course?billing=paid&price_cents=1999');
     expect(
       buildCreateUrl({type: 'course', billing: 'free', price: ''}),
-    ).toBe('/dashboard/my-products/new/course?billing=free');
+    ).toBe('/dashboard/items/new/course?billing=free');
   });
   test('routes other types to details with type and paid price', () => {
     expect(
       buildCreateUrl({type: 'ebook', billing: 'paid', price: '10'}),
-    ).toBe('/dashboard/my-products/new/details?type=ebook&billing=paid&price_cents=1000');
+    ).toBe('/dashboard/items/new/details?type=ebook&billing=paid&price_cents=1000');
     expect(
       buildCreateUrl({type: 'audio', billing: 'free', price: ''}),
-    ).toBe('/dashboard/my-products/new/details?type=audio&billing=free');
+    ).toBe('/dashboard/items/new/details?type=audio&billing=free');
   });
   test('returns null while incomplete', () => {
     expect(buildCreateUrl({type: null, billing: null, price: ''})).toBeNull();
@@ -119,19 +119,19 @@ describe('wizard prefill transport', () => {
     expect(
       buildCreateUrl({type: 'ebook', billing: 'paid', price: '10'}),
     ).toBe(
-      '/dashboard/my-products/new/details?type=ebook&billing=paid&price_cents=1000',
+      '/dashboard/items/new/details?type=ebook&billing=paid&price_cents=1000',
     );
     expect(
       buildCreateUrl({type: 'audio', billing: 'free', price: ''}),
-    ).toBe('/dashboard/my-products/new/details?type=audio&billing=free');
+    ).toBe('/dashboard/items/new/details?type=audio&billing=free');
   });
   test('course urls carry the billing mode', () => {
     expect(
       buildCreateUrl({type: 'course', billing: 'paid', price: '19.99'}),
-    ).toBe('/dashboard/my-products/new/course?billing=paid&price_cents=1999');
+    ).toBe('/dashboard/items/new/course?billing=paid&price_cents=1999');
     expect(
       buildCreateUrl({type: 'course', billing: 'free', price: ''}),
-    ).toBe('/dashboard/my-products/new/course?billing=free');
+    ).toBe('/dashboard/items/new/course?billing=free');
   });
   test('parseWizardPrefill validates type, billing, and price', () => {
     expect(

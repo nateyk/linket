@@ -8,6 +8,6 @@ export const adminDigitalProductDetailOptions = (productId: string) =>
     queryKey: [...adminDigitalProductDetailBaseKey, productId],
     queryFn: () =>
       apiClient
-        .get(`/api/v1/admin/digital-products/${productId}`)
+        .get(`/api/v1/admin/items/${productId}`)
         .then(response => response.data),
   });

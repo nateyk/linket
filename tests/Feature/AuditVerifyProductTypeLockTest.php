@@ -107,7 +107,7 @@ class AuditVerifyProductTypeLockTest extends TestCase
         ]);
 
         $this->stateful()->actingAs($this->creator)->putJson(
-            "/api/v1/digital-products/{$product->id}",
+            "/api/v1/items/{$product->id}",
             [
                 'title' => 'Audit Type Product',
                 'price_cents' => 1000,
@@ -158,7 +158,7 @@ class AuditVerifyProductTypeLockTest extends TestCase
         $file = $this->sellableFile();
 
         $this->stateful()->actingAs($this->creator)->putJson(
-            "/api/v1/digital-products/{$product->id}",
+            "/api/v1/items/{$product->id}",
             [
                 'title' => 'Audit Type Course',
                 'price_cents' => 1000,

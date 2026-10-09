@@ -192,7 +192,7 @@ test('products trigger reads its count as a description phrase (A-09)', async ()
 
   const products = await screen.findByRole('button', {name: 'Products'});
   expect(describedTexts(products)).toContain(
-    'Feature up to six Digital Products.',
+    'Feature up to six items.',
   );
   await waitFor(() => {
     expect(describedTexts(products)).toContain('2 of 6 products featured');

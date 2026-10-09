@@ -83,7 +83,7 @@ export function ShopWidgetRenderer({
   if (variant === 'editor') {
     return (
       <div className="text-sm text-muted-foreground">
-        <Trans message="Digital Products section" />
+        <Trans message="Items section" />
       </div>
     );
   }
@@ -100,7 +100,7 @@ export function ShopWidgetRenderer({
           <div className="min-w-0">
             <h2 className="truncate text-2xl leading-tight font-semibold">
               {titleOverride || config.title || (
-                <Trans message="Digital Products" />
+                <Trans message="Items" />
               )}
             </h2>
             <p className="text-sm text-[var(--biolink-muted-text)]">

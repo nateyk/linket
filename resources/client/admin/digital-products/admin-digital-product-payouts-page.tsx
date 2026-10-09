@@ -58,10 +58,10 @@ export function Component() {
         <Button
           variant="outline"
           nativeButton={false}
-          render={<Link to="/admin/digital-products" />}
+          render={<Link to="/admin/items" />}
         >
           <ArrowLeftIcon />
-          <Trans message="Digital Products" />
+          <Trans message="Items" />
         </Button>
       </DashboardLayout.SectionHeader>
       <DashboardLayout.SectionContent>

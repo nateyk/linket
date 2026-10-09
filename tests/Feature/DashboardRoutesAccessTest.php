@@ -69,3 +69,9 @@ it('global search and workspace navigation are storefront-first (hardening)', fu
     expect(substr_count($search, "return `/dashboard/links`"))->toBe(0);
     expect($search)->toContain("// storefront-first IA");
 });
+
+it('menu editor offers the renamed items route', function () {
+    $config = require resource_path('defaults/menu-editor-config.php');
+    expect($config['available_routes'])->toContain('/dashboard/items');
+    expect($config['available_routes'])->not->toContain('/dashboard/my-products');
+});
