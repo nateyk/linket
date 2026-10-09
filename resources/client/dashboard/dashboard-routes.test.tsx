@@ -1,9 +1,11 @@
 import {
   dashboardRoutes,
+  normalizeHomepageValue,
   sharedDashboardRoutes,
 } from '@app/dashboard/dashboard-routes';
+import {mergeBootstrapData} from '@ui/bootstrap-data/bootstrap-data-store';
 import fs from 'node:fs';
-import {describe, test, expect} from 'vitest';
+import {afterEach, describe, test, expect} from 'vitest';
 
 describe('storefront-first IA hardening — creator hides legacy link tools (Task 9)', () => {
   const legacyPaths = [
@@ -145,5 +147,33 @@ describe('buyer course routes', () => {
     expect(paths).not.toContain('my-courses');
     expect(paths).not.toContain('learn/:courseId');
     expect(paths).not.toContain('learn/:courseId/lessons/:lessonId');
+  });
+});
+
+describe('dashboard homepage setting', () => {
+  const indexRoute = () =>
+    dashboardRoutes[0].children!.find((r: any) => r.index) as any;
+
+  afterEach(() => {
+    mergeBootstrapData({settings: undefined} as any);
+  });
+
+  test('normalizeHomepageValue maps the legacy value to items', () => {
+    expect(normalizeHomepageValue('digital-products')).toBe('items');
+    expect(normalizeHomepageValue('items')).toBe('items');
+    expect(normalizeHomepageValue('stores')).toBe('stores');
+    expect(normalizeHomepageValue(undefined)).toBe('');
+  });
+
+  test('index loader redirects a legacy stored homepage to items', async () => {
+    mergeBootstrapData({settings: {dashboard: {homepage: 'digital-products'}}} as any);
+    const redirected = await indexRoute().loader();
+    expect(redirected.headers.get('Location')).toBe('/dashboard/items');
+  });
+
+  test('index loader redirects the renamed homepage to items', async () => {
+    mergeBootstrapData({settings: {dashboard: {homepage: 'items'}}} as any);
+    const redirected = await indexRoute().loader();
+    expect(redirected.headers.get('Location')).toBe('/dashboard/items');
   });
 });
