@@ -4,14 +4,15 @@ namespace Common\Blog\Models;
 
 use App\Models\User;
 use Common\Blog\Actions\SanitizeBlogHtml;
+use Common\Blog\Models\Concerns\GeneratesBlogSlugs;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Str;
 use Laravel\Scout\Searchable;
 
 class BlogArticle extends Model
 {
+    use GeneratesBlogSlugs;
     use Searchable;
 
     const MODEL_TYPE = 'blogArticle';
@@ -40,12 +41,14 @@ class BlogArticle extends Model
 
     protected static function booted(): void
     {
-        // Task 2 replaces this with transliterating, collision-safe
-        // generation. Deliberately no updating() hook: retitling an article
-        // must never change its URL.
+        // creating only — retitling an article must never change its URL, or
+        // every ranking and inbound link for that post is lost.
         static::creating(function (BlogArticle $article) {
             if (empty($article->slug)) {
-                $article->slug = Str::slug($article->title ?? '');
+                $article->slug = static::generateUniqueBlogSlug(
+                    $article->title ?? '',
+                    'slug',
+                );
             }
         });
 

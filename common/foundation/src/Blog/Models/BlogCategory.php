@@ -2,12 +2,14 @@
 
 namespace Common\Blog\Models;
 
+use Common\Blog\Models\Concerns\GeneratesBlogSlugs;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Str;
 
 class BlogCategory extends Model
 {
+    use GeneratesBlogSlugs;
+
     const MODEL_TYPE = 'blogCategory';
 
     protected $fillable = [
@@ -25,12 +27,13 @@ class BlogCategory extends Model
 
     protected static function booted(): void
     {
-        // Task 2 replaces this with transliterating, collision-safe
-        // generation. Kept minimal here because Task 1's tests create rows
-        // without a slug.
+        // creating only — renaming a category must not change its URL.
         static::creating(function (BlogCategory $category) {
             if (empty($category->slug)) {
-                $category->slug = Str::slug($category->name ?? '');
+                $category->slug = static::generateUniqueBlogSlug(
+                    $category->name ?? '',
+                    'slug',
+                );
             }
         });
     }
