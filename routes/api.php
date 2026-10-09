@@ -21,6 +21,8 @@ use App\Links\Controllers\LinksController;
 use Common\Help\Http\Controllers\AdminHelpArticleController;
 use Common\Help\Http\Controllers\AdminHelpCategoryController;
 use Common\Help\Http\Controllers\HelpController;
+use Common\Blog\Http\Controllers\AdminBlogArticleController;
+use Common\Blog\Http\Controllers\AdminBlogCategoryController;
 use App\Folders\Controllers\FolderLinksController;
 use App\QrCodes\Controllers\QrCodesController;
 use App\Folders\Controllers\FoldersController;
@@ -89,6 +91,12 @@ Route::group(['prefix' => 'v1'], function() {
         Route::post('admin/help/categories/sort', [AdminHelpCategoryController::class, 'sort'])->name('admin.help.categories.sort');
         Route::apiResource('admin/help/categories', AdminHelpCategoryController::class)->names('admin.help.categories');
         Route::apiResource('admin/help/articles', AdminHelpArticleController::class)->names('admin.help.articles');
+
+        // BLOG (admin)
+        Route::name('blog.')->prefix('blog')->group(function () {
+            Route::apiResource('admin/articles', AdminBlogArticleController::class)->names('admin.articles');
+            Route::apiResource('admin/categories', AdminBlogCategoryController::class)->names('admin.categories');
+        });
 
         // LINK
         Route::get('links', [LinksController::class, 'index']);
