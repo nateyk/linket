@@ -29,11 +29,6 @@ export function Component() {
           {logoSrc && (
             <img src={logoSrc} alt="" className="block h-10 w-auto" />
           )}
-          {/* The brand name is real text, not part of the logo image —
-              DESIGN.md's page title role (600, 24px, 32px). */}
-          <span className="text-2xl font-semibold tracking-tight">
-            {site_name}
-          </span>
         </div>
         <div className="text-center">
           <h1 className="mb-6 text-3xl">

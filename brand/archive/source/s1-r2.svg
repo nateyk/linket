@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Linket" viewBox="0 0 512 512" width="512" height="512">
+  <title>Linket symbol (s1-r2)</title>
+  <g transform="translate(2 0) scale(2)">
+    <path fill="#111111" d="M48 52 L48 204 L168.97 204 L204 168.97 L204 108 L180 108 L180 159.03 L159.03 180 L72 180 L72 52 L48 52 Z"/>
+    <path fill="#111111" d="M178 64 H206 V92 H178 Z"/>
+    <path fill="none" stroke="#111111" stroke-width="24" stroke-linecap="butt" stroke-linejoin="miter" d="M192 108 V204"/>
+  </g>
+</svg>

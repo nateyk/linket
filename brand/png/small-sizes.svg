@@ -1,0 +1,157 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1230" height="824" viewBox="0 0 1230 824">
+<rect x="0" y="0" width="1230" height="824" fill="#ffffff"/>
+<text x="40" y="44" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="24" font-weight="600" fill="#212121" text-anchor="start">Small sizes — the ≤24 px cut, blue dot at 16/24/32/48</text>
+<text x="40" y="74" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="400" fill="#737373" text-anchor="start">≤24 px uses dot_w 42 raised −8 (gap opens 16→20); 32/48 px keep the full joint (dot 38, gap 16).</text>
+<text x="40" y="94" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="400" fill="#737373" text-anchor="start">Zoom panels are the actual rendered tittle, nearest-neighbour, with the composited core colour measured.</text>
+<text x="40" y="134" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="14" font-weight="600" fill="#212121" text-anchor="start">on white ground · color-light</text>
+<rect x="40" y="146" width="1150" height="254" fill="#ffffff"/>
+<text x="255" y="172" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="600" fill="#737373" text-anchor="start">16 px · small cut</text>
+<svg x="230" y="202" width="44.4375" height="16" viewBox="0 0 711 256">
+  
+  <path fill="#0a0a0a" d="M44 52 L44 194 A10 10 0 0 0 54 204 L176.49 204 A10 10 0 0 0 183.56 201.07 L205.07 179.56 A10 10 0 0 0 208 172.49 L208 108 L176 108 L176 159.23 A10 10 0 0 1 173.07 166.3 L170.3 169.07 A10 10 0 0 1 163.23 172 L86 172 A10 10 0 0 1 76 162 L76 52 L44 52 Z"/>
+  <path fill="#0a0a0a" d="M176 108 L176 204 L208 204 L208 108 L176 108 Z"/>
+  <path fill="#0a0a0a" d="M360 52 L360 204 L392 204 L392 52 L360 52 Z"/>
+  <path fill="#0a0a0a" d="M605 76 L605 204 L637 204 L637 76 L605 76 Z"/>
+  <path fill="#0a0a0a" d="M258 204 L258 162 A26 26 0 0 1 310 162 L310 204 L342 204 L342 162 A58 58 0 0 0 226 162 L226 204 L258 204 Z"/>
+  <path fill="#0a0a0a" d="M423.37 108 L372.44 158.93 A10 10 0 0 0 372.44 173.07 L403.37 204 L426 181.37 L417.7 173.07 A10 10 0 0 1 417.7 158.93 L446 130.63 L423.37 108 Z"/>
+  <path fill="#0a0a0a" d="M528.64 172.21 A24 24 0 1 1 537 154 L537 131 A10 10 0 0 1 527 141 L476 141 L476 167 L553 167 A10 10 0 0 0 563 157 L563 154 A50 50 0 1 0 528.64 201.49 L528.64 172.21 Z"/>
+  <path fill="#0a0a0a" d="M583 135 L663 135 L663 108 L583 108 L583 135 Z"/>
+  <path fill="#0049cc" d="M192 46 H192 A21 21 0 0 1 213 67 V67 A21 21 0 0 1 192 88 H192 A21 21 0 0 1 171 67 V67 A21 21 0 0 1 192 46 Z"/>
+</svg>
+<rect x="230" y="260" width="84" height="84" fill="#ffffff" stroke="#e5e5e5" stroke-width="1"/>
+<image x="234" y="264" width="76" height="76" image-rendering="pixelated" xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEgAAABICAYAAABV7bNHAAAAzElEQVR4nO3QwQ0BYRhFUSGRaEEN2hAZsx496EI9CrHxs6MPBcjYyeze5luInJvcBs5sVtXwWJZ8Gucl/1yAQoBCgEKAQoBCgEKAQoBCgEKAQoBCgEKAQoBCgEKAQn8L1F83JXftVfSz5OGyKhkQIECAAAECBAgQIECAAAECBAgQIEBToP3tUHLXxqLfJW/v65IBAQIECBAgQIAAAQIECBAgQIAAAQI0BRrOi5K7dix51/qSywIECBAgQIAAAQIECBAgQIAAAQIECNC3D2MB34EnquhDAAAAAElFTkSuQmCC"/>
+<text x="326" y="284" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="11" font-weight="600" fill="#737373" text-anchor="start">dot core</text>
+<text x="326" y="304" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="500" fill="#212121" text-anchor="start">rgb(0,73,204)</text>
+<text x="326" y="324" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="500" fill="#212121" text-anchor="start">B−R = 204</text>
+<text x="505" y="172" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="600" fill="#737373" text-anchor="start">24 px · small cut</text>
+<svg x="480" y="202" width="66.6562" height="24" viewBox="0 0 711 256">
+  
+  <path fill="#0a0a0a" d="M44 52 L44 194 A10 10 0 0 0 54 204 L176.49 204 A10 10 0 0 0 183.56 201.07 L205.07 179.56 A10 10 0 0 0 208 172.49 L208 108 L176 108 L176 159.23 A10 10 0 0 1 173.07 166.3 L170.3 169.07 A10 10 0 0 1 163.23 172 L86 172 A10 10 0 0 1 76 162 L76 52 L44 52 Z"/>
+  <path fill="#0a0a0a" d="M176 108 L176 204 L208 204 L208 108 L176 108 Z"/>
+  <path fill="#0a0a0a" d="M360 52 L360 204 L392 204 L392 52 L360 52 Z"/>
+  <path fill="#0a0a0a" d="M605 76 L605 204 L637 204 L637 76 L605 76 Z"/>
+  <path fill="#0a0a0a" d="M258 204 L258 162 A26 26 0 0 1 310 162 L310 204 L342 204 L342 162 A58 58 0 0 0 226 162 L226 204 L258 204 Z"/>
+  <path fill="#0a0a0a" d="M423.37 108 L372.44 158.93 A10 10 0 0 0 372.44 173.07 L403.37 204 L426 181.37 L417.7 173.07 A10 10 0 0 1 417.7 158.93 L446 130.63 L423.37 108 Z"/>
+  <path fill="#0a0a0a" d="M528.64 172.21 A24 24 0 1 1 537 154 L537 131 A10 10 0 0 1 527 141 L476 141 L476 167 L553 167 A10 10 0 0 0 563 157 L563 154 A50 50 0 1 0 528.64 201.49 L528.64 172.21 Z"/>
+  <path fill="#0a0a0a" d="M583 135 L663 135 L663 108 L583 108 L583 135 Z"/>
+  <path fill="#0049cc" d="M192 46 H192 A21 21 0 0 1 213 67 V67 A21 21 0 0 1 192 88 H192 A21 21 0 0 1 171 67 V67 A21 21 0 0 1 192 46 Z"/>
+</svg>
+<rect x="480" y="260" width="84" height="84" fill="#ffffff" stroke="#e5e5e5" stroke-width="1"/>
+<image x="484" y="264" width="76" height="76" image-rendering="pixelated" xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEYAAABGCAYAAABxLuKEAAAAq0lEQVR4nO3QMRHCQABE0QhASkRQ3oUKTVigpMEHDu4oYyEeqMACs0NCivdnVsC+YZAkSZIkSf/qOB+ilX6JNvVbtFMbo4EBAwYMGDBgwIABAwYMGDDrw5R2jVb7e+Mt0cCAAQMGDBgwYMCAAQMGDJj1YWp7ZNscJhsYMGDAgAGzn4EBAwYMGDD7GZhfw5TnOVrtr3DpyXs0MGDAgAEDBgwYMGDAgAED5tt9AHNpBEsdTlu7AAAAAElFTkSuQmCC"/>
+<text x="576" y="284" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="11" font-weight="600" fill="#737373" text-anchor="start">dot core</text>
+<text x="576" y="304" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="500" fill="#212121" text-anchor="start">rgb(0,73,204)</text>
+<text x="576" y="324" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="500" fill="#212121" text-anchor="start">B−R = 204</text>
+<text x="755" y="172" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="600" fill="#737373" text-anchor="start">32 px · full joint</text>
+<svg x="730" y="202" width="88.875" height="32" viewBox="0 0 711 256">
+  
+  <path fill="#0a0a0a" d="M44 52 L44 194 A10 10 0 0 0 54 204 L176.49 204 A10 10 0 0 0 183.56 201.07 L205.07 179.56 A10 10 0 0 0 208 172.49 L208 108 L176 108 L176 159.23 A10 10 0 0 1 173.07 166.3 L170.3 169.07 A10 10 0 0 1 163.23 172 L86 172 A10 10 0 0 1 76 162 L76 52 L44 52 Z"/>
+  <path fill="#0a0a0a" d="M176 108 L176 204 L208 204 L208 108 L176 108 Z"/>
+  <path fill="#0a0a0a" d="M360 52 L360 204 L392 204 L392 52 L360 52 Z"/>
+  <path fill="#0a0a0a" d="M605 76 L605 204 L637 204 L637 76 L605 76 Z"/>
+  <path fill="#0a0a0a" d="M258 204 L258 162 A26 26 0 0 1 310 162 L310 204 L342 204 L342 162 A58 58 0 0 0 226 162 L226 204 L258 204 Z"/>
+  <path fill="#0a0a0a" d="M423.37 108 L372.44 158.93 A10 10 0 0 0 372.44 173.07 L403.37 204 L426 181.37 L417.7 173.07 A10 10 0 0 1 417.7 158.93 L446 130.63 L423.37 108 Z"/>
+  <path fill="#0a0a0a" d="M528.64 172.21 A24 24 0 1 1 537 154 L537 131 A10 10 0 0 1 527 141 L476 141 L476 167 L553 167 A10 10 0 0 0 563 157 L563 154 A50 50 0 1 0 528.64 201.49 L528.64 172.21 Z"/>
+  <path fill="#0a0a0a" d="M583 135 L663 135 L663 108 L583 108 L583 135 Z"/>
+  <path fill="#0049cc" d="M192 46 H192 A21 21 0 0 1 213 67 V67 A21 21 0 0 1 192 88 H192 A21 21 0 0 1 171 67 V67 A21 21 0 0 1 192 46 Z"/>
+</svg>
+<rect x="730" y="260" width="84" height="84" fill="#ffffff" stroke="#e5e5e5" stroke-width="1"/>
+<image x="734" y="264" width="76" height="76" image-rendering="pixelated" xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEYAAABGCAYAAABxLuKEAAAAvUlEQVR4nO3QoQ3CYACE0RIkS6FIi8cRPCugCJtgOwW+rWAFFFuUDeBEU37I+5Ib4F5V7dpltKZvw43TbrhF29xX0eLAgAEDBgwYMGDA/BlMPeyjTX54csBTNDBgwIABAwYMmOIGZiaYpr+EK+D8212jgQEDBgwYMGDAlDcw88DU3Tra949/WHeIBgYMGDBgwIABU9zAzAST1vTHcI9wz2jb7hytGhfZwIABAwYMGDBgwICRJEmSJEmSJP10L3MESPlFpvwaAAAAAElFTkSuQmCC"/>
+<text x="826" y="284" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="11" font-weight="600" fill="#737373" text-anchor="start">dot core</text>
+<text x="826" y="304" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="500" fill="#212121" text-anchor="start">rgb(0,73,204)</text>
+<text x="826" y="324" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="500" fill="#212121" text-anchor="start">B−R = 204</text>
+<text x="1005" y="172" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="600" fill="#737373" text-anchor="start">48 px · full joint</text>
+<svg x="980" y="202" width="133.312" height="48" viewBox="0 0 711 256">
+  
+  <path fill="#0a0a0a" d="M44 52 L44 194 A10 10 0 0 0 54 204 L176.49 204 A10 10 0 0 0 183.56 201.07 L205.07 179.56 A10 10 0 0 0 208 172.49 L208 108 L176 108 L176 159.23 A10 10 0 0 1 173.07 166.3 L170.3 169.07 A10 10 0 0 1 163.23 172 L86 172 A10 10 0 0 1 76 162 L76 52 L44 52 Z"/>
+  <path fill="#0a0a0a" d="M176 108 L176 204 L208 204 L208 108 L176 108 Z"/>
+  <path fill="#0a0a0a" d="M360 52 L360 204 L392 204 L392 52 L360 52 Z"/>
+  <path fill="#0a0a0a" d="M605 76 L605 204 L637 204 L637 76 L605 76 Z"/>
+  <path fill="#0a0a0a" d="M258 204 L258 162 A26 26 0 0 1 310 162 L310 204 L342 204 L342 162 A58 58 0 0 0 226 162 L226 204 L258 204 Z"/>
+  <path fill="#0a0a0a" d="M423.37 108 L372.44 158.93 A10 10 0 0 0 372.44 173.07 L403.37 204 L426 181.37 L417.7 173.07 A10 10 0 0 1 417.7 158.93 L446 130.63 L423.37 108 Z"/>
+  <path fill="#0a0a0a" d="M528.64 172.21 A24 24 0 1 1 537 154 L537 131 A10 10 0 0 1 527 141 L476 141 L476 167 L553 167 A10 10 0 0 0 563 157 L563 154 A50 50 0 1 0 528.64 201.49 L528.64 172.21 Z"/>
+  <path fill="#0a0a0a" d="M583 135 L663 135 L663 108 L583 108 L583 135 Z"/>
+  <path fill="#0049cc" d="M192 46 H192 A21 21 0 0 1 213 67 V67 A21 21 0 0 1 192 88 H192 A21 21 0 0 1 171 67 V67 A21 21 0 0 1 192 46 Z"/>
+</svg>
+<rect x="980" y="260" width="84" height="84" fill="#ffffff" stroke="#e5e5e5" stroke-width="1"/>
+<image x="984" y="264" width="76" height="76" image-rendering="pixelated" xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEYAAABGCAYAAABxLuKEAAAA+ElEQVR4nO3ZsQkCQRRF0cVmLMDEBoSZFcRKBMXIyDrswNwu5i8YmRvagIHCrrHBG5aB3dHhPrgF/JP+qkqds43M2zNSl9hD5sJKNvqAAQYYYIABZlwYb+tIqQcO0Uu2bGYyYIABBhhggCkC5hYpN0a/nJ1lwAADDDDAAFMEzDtS/qP7VNtVBgwwwAADDDBFwNwj5T+6H8xFBgwwwAADDDAFwLiwleU++LtWVoeFDBhggAEGGGAKgDl2E5m3U6QhjtePe2972SADBhhggAEGmN+BSZ1v5pEOstp2Mhemsr8ZMGLAiAEjBowYMGLAMMYYY4wxxhhjrPoAxeLcQ7Fg2eUAAAAASUVORK5CYII="/>
+<text x="1076" y="284" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="11" font-weight="600" fill="#737373" text-anchor="start">dot core</text>
+<text x="1076" y="304" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="500" fill="#212121" text-anchor="start">rgb(0,73,204)</text>
+<text x="1076" y="324" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="500" fill="#212121" text-anchor="start">B−R = 204</text>
+<text x="40" y="434" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="14" font-weight="600" fill="#212121" text-anchor="start">on #0a0a0a ground · color-dark</text>
+<rect x="40" y="446" width="1150" height="254" fill="#0a0a0a" stroke="#e5e5e5" stroke-width="1"/>
+<text x="255" y="472" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="600" fill="#737373" text-anchor="start">16 px · small cut</text>
+<svg x="230" y="502" width="44.4375" height="16" viewBox="0 0 711 256">
+  
+  <path fill="#ffffff" d="M44 52 L44 194 A10 10 0 0 0 54 204 L176.49 204 A10 10 0 0 0 183.56 201.07 L205.07 179.56 A10 10 0 0 0 208 172.49 L208 108 L176 108 L176 159.23 A10 10 0 0 1 173.07 166.3 L170.3 169.07 A10 10 0 0 1 163.23 172 L86 172 A10 10 0 0 1 76 162 L76 52 L44 52 Z"/>
+  <path fill="#ffffff" d="M176 108 L176 204 L208 204 L208 108 L176 108 Z"/>
+  <path fill="#ffffff" d="M360 52 L360 204 L392 204 L392 52 L360 52 Z"/>
+  <path fill="#ffffff" d="M605 76 L605 204 L637 204 L637 76 L605 76 Z"/>
+  <path fill="#ffffff" d="M258 204 L258 162 A26 26 0 0 1 310 162 L310 204 L342 204 L342 162 A58 58 0 0 0 226 162 L226 204 L258 204 Z"/>
+  <path fill="#ffffff" d="M423.37 108 L372.44 158.93 A10 10 0 0 0 372.44 173.07 L403.37 204 L426 181.37 L417.7 173.07 A10 10 0 0 1 417.7 158.93 L446 130.63 L423.37 108 Z"/>
+  <path fill="#ffffff" d="M528.64 172.21 A24 24 0 1 1 537 154 L537 131 A10 10 0 0 1 527 141 L476 141 L476 167 L553 167 A10 10 0 0 0 563 157 L563 154 A50 50 0 1 0 528.64 201.49 L528.64 172.21 Z"/>
+  <path fill="#ffffff" d="M583 135 L663 135 L663 108 L583 108 L583 135 Z"/>
+  <path fill="#0050de" d="M192 46 H192 A21 21 0 0 1 213 67 V67 A21 21 0 0 1 192 88 H192 A21 21 0 0 1 171 67 V67 A21 21 0 0 1 192 46 Z"/>
+</svg>
+<rect x="230" y="560" width="84" height="84" fill="#0a0a0a" stroke="#e5e5e5" stroke-width="1"/>
+<image x="234" y="564" width="76" height="76" image-rendering="pixelated" xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEgAAABICAYAAABV7bNHAAAAyUlEQVR4nO3QsQnCYBhF0aAguIIzuIkgv0LcwS1cUiuTQidwAImdpHvNV4icC3eB03VV9ddVyZdpUfLPBSgEKAQoBCgEKAQoBCgEKAQoBCgEKAQoBCgEKAQoBCj0t0CH+7bkNr6KvpXcP9clAwIECBAgQIAAAQIECBAgQIAAAQIEaA7UxlPRU9HvkvePTcmAAAECBAgQIECAAAECBAgQIECAAAGaA/XTsuQ2nEs+DruSywIECBAgQIAAAQIECBAgQIAAAQIECNC3D4ggjzNmokcNAAAAAElFTkSuQmCC"/>
+<text x="326" y="584" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="11" font-weight="600" fill="#a3a3a3" text-anchor="start">dot core</text>
+<text x="326" y="604" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="500" fill="#e5e5e5" text-anchor="start">rgb(0,80,222)</text>
+<text x="326" y="624" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="500" fill="#e5e5e5" text-anchor="start">B−R = 222</text>
+<text x="505" y="472" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="600" fill="#737373" text-anchor="start">24 px · small cut</text>
+<svg x="480" y="502" width="66.6562" height="24" viewBox="0 0 711 256">
+  
+  <path fill="#ffffff" d="M44 52 L44 194 A10 10 0 0 0 54 204 L176.49 204 A10 10 0 0 0 183.56 201.07 L205.07 179.56 A10 10 0 0 0 208 172.49 L208 108 L176 108 L176 159.23 A10 10 0 0 1 173.07 166.3 L170.3 169.07 A10 10 0 0 1 163.23 172 L86 172 A10 10 0 0 1 76 162 L76 52 L44 52 Z"/>
+  <path fill="#ffffff" d="M176 108 L176 204 L208 204 L208 108 L176 108 Z"/>
+  <path fill="#ffffff" d="M360 52 L360 204 L392 204 L392 52 L360 52 Z"/>
+  <path fill="#ffffff" d="M605 76 L605 204 L637 204 L637 76 L605 76 Z"/>
+  <path fill="#ffffff" d="M258 204 L258 162 A26 26 0 0 1 310 162 L310 204 L342 204 L342 162 A58 58 0 0 0 226 162 L226 204 L258 204 Z"/>
+  <path fill="#ffffff" d="M423.37 108 L372.44 158.93 A10 10 0 0 0 372.44 173.07 L403.37 204 L426 181.37 L417.7 173.07 A10 10 0 0 1 417.7 158.93 L446 130.63 L423.37 108 Z"/>
+  <path fill="#ffffff" d="M528.64 172.21 A24 24 0 1 1 537 154 L537 131 A10 10 0 0 1 527 141 L476 141 L476 167 L553 167 A10 10 0 0 0 563 157 L563 154 A50 50 0 1 0 528.64 201.49 L528.64 172.21 Z"/>
+  <path fill="#ffffff" d="M583 135 L663 135 L663 108 L583 108 L583 135 Z"/>
+  <path fill="#0050de" d="M192 46 H192 A21 21 0 0 1 213 67 V67 A21 21 0 0 1 192 88 H192 A21 21 0 0 1 171 67 V67 A21 21 0 0 1 192 46 Z"/>
+</svg>
+<rect x="480" y="560" width="84" height="84" fill="#0a0a0a" stroke="#e5e5e5" stroke-width="1"/>
+<image x="484" y="564" width="76" height="76" image-rendering="pixelated" xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEYAAABGCAYAAABxLuKEAAAAqUlEQVR4nO3QOw0CURiE0RWAFLzsvQWKsEC5DT7WBh35Q4UHKrBAJvsqzpeMgDnDIEmSJEmS9uryOEVrdQ03RevPczQwYMCAAQMGDBgwYMCAAQNmfZixbtFafTfeOxoYMGDAgAEDBgwYMGDAgAGzPkyrOdzWMNnAgAEDBgyY4wwMGDBgwIA5zsAsDTO+erRWn3DZwV73aGDAgAEDBgwYMGDAgAEDBsy/+wFUbDUSfa54PQAAAABJRU5ErkJggg=="/>
+<text x="576" y="584" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="11" font-weight="600" fill="#a3a3a3" text-anchor="start">dot core</text>
+<text x="576" y="604" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="500" fill="#e5e5e5" text-anchor="start">rgb(0,80,222)</text>
+<text x="576" y="624" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="500" fill="#e5e5e5" text-anchor="start">B−R = 222</text>
+<text x="755" y="472" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="600" fill="#737373" text-anchor="start">32 px · full joint</text>
+<svg x="730" y="502" width="88.875" height="32" viewBox="0 0 711 256">
+  
+  <path fill="#ffffff" d="M44 52 L44 194 A10 10 0 0 0 54 204 L176.49 204 A10 10 0 0 0 183.56 201.07 L205.07 179.56 A10 10 0 0 0 208 172.49 L208 108 L176 108 L176 159.23 A10 10 0 0 1 173.07 166.3 L170.3 169.07 A10 10 0 0 1 163.23 172 L86 172 A10 10 0 0 1 76 162 L76 52 L44 52 Z"/>
+  <path fill="#ffffff" d="M176 108 L176 204 L208 204 L208 108 L176 108 Z"/>
+  <path fill="#ffffff" d="M360 52 L360 204 L392 204 L392 52 L360 52 Z"/>
+  <path fill="#ffffff" d="M605 76 L605 204 L637 204 L637 76 L605 76 Z"/>
+  <path fill="#ffffff" d="M258 204 L258 162 A26 26 0 0 1 310 162 L310 204 L342 204 L342 162 A58 58 0 0 0 226 162 L226 204 L258 204 Z"/>
+  <path fill="#ffffff" d="M423.37 108 L372.44 158.93 A10 10 0 0 0 372.44 173.07 L403.37 204 L426 181.37 L417.7 173.07 A10 10 0 0 1 417.7 158.93 L446 130.63 L423.37 108 Z"/>
+  <path fill="#ffffff" d="M528.64 172.21 A24 24 0 1 1 537 154 L537 131 A10 10 0 0 1 527 141 L476 141 L476 167 L553 167 A10 10 0 0 0 563 157 L563 154 A50 50 0 1 0 528.64 201.49 L528.64 172.21 Z"/>
+  <path fill="#ffffff" d="M583 135 L663 135 L663 108 L583 108 L583 135 Z"/>
+  <path fill="#0050de" d="M192 54 H192 A19 19 0 0 1 211 73 V73 A19 19 0 0 1 192 92 H192 A19 19 0 0 1 173 73 V73 A19 19 0 0 1 192 54 Z"/>
+</svg>
+<rect x="730" y="560" width="84" height="84" fill="#0a0a0a" stroke="#e5e5e5" stroke-width="1"/>
+<image x="734" y="564" width="76" height="76" image-rendering="pixelated" xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEYAAABGCAYAAABxLuKEAAAA60lEQVR4nO3QsU3DUABFUYNEQYVYgTIFE7ABAseRUlHRIMZgBxZhDSRW8EdWBjETfPGKr8Tg86Q7wDtd13q76SaqnzZR3XyWtfSBqQxMZWAqA1MZmMrAVAamMjCVrQ5mW97D5sZ9RL3N51FgwIABAwYMGDBg1grzWG6j2h9uW18eosCAAQMGDBgwYJYWmGPBDONd1KmP/9YwPkWBAQMGDBgwYMAsLTDHgnn5uojals+w1qdL1H68igIDBgwYMGDAgAGzVph0+8NlVD8+Rw3fr1H303XUyQYGDBgwYMCAAQPmn8GYmZmZmf3l/QDofKJtaqBM4gAAAABJRU5ErkJggg=="/>
+<text x="826" y="584" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="11" font-weight="600" fill="#a3a3a3" text-anchor="start">dot core</text>
+<text x="826" y="604" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="500" fill="#e5e5e5" text-anchor="start">rgb(0,80,222)</text>
+<text x="826" y="624" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="500" fill="#e5e5e5" text-anchor="start">B−R = 222</text>
+<text x="1005" y="472" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="600" fill="#737373" text-anchor="start">48 px · full joint</text>
+<svg x="980" y="502" width="133.312" height="48" viewBox="0 0 711 256">
+  
+  <path fill="#ffffff" d="M44 52 L44 194 A10 10 0 0 0 54 204 L176.49 204 A10 10 0 0 0 183.56 201.07 L205.07 179.56 A10 10 0 0 0 208 172.49 L208 108 L176 108 L176 159.23 A10 10 0 0 1 173.07 166.3 L170.3 169.07 A10 10 0 0 1 163.23 172 L86 172 A10 10 0 0 1 76 162 L76 52 L44 52 Z"/>
+  <path fill="#ffffff" d="M176 108 L176 204 L208 204 L208 108 L176 108 Z"/>
+  <path fill="#ffffff" d="M360 52 L360 204 L392 204 L392 52 L360 52 Z"/>
+  <path fill="#ffffff" d="M605 76 L605 204 L637 204 L637 76 L605 76 Z"/>
+  <path fill="#ffffff" d="M258 204 L258 162 A26 26 0 0 1 310 162 L310 204 L342 204 L342 162 A58 58 0 0 0 226 162 L226 204 L258 204 Z"/>
+  <path fill="#ffffff" d="M423.37 108 L372.44 158.93 A10 10 0 0 0 372.44 173.07 L403.37 204 L426 181.37 L417.7 173.07 A10 10 0 0 1 417.7 158.93 L446 130.63 L423.37 108 Z"/>
+  <path fill="#ffffff" d="M528.64 172.21 A24 24 0 1 1 537 154 L537 131 A10 10 0 0 1 527 141 L476 141 L476 167 L553 167 A10 10 0 0 0 563 157 L563 154 A50 50 0 1 0 528.64 201.49 L528.64 172.21 Z"/>
+  <path fill="#ffffff" d="M583 135 L663 135 L663 108 L583 108 L583 135 Z"/>
+  <path fill="#0050de" d="M192 54 H192 A19 19 0 0 1 211 73 V73 A19 19 0 0 1 192 92 H192 A19 19 0 0 1 173 73 V73 A19 19 0 0 1 192 54 Z"/>
+</svg>
+<rect x="980" y="560" width="84" height="84" fill="#0a0a0a" stroke="#e5e5e5" stroke-width="1"/>
+<image x="984" y="564" width="76" height="76" image-rendering="pixelated" xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEYAAABGCAYAAABxLuKEAAABCElEQVR4nO3bMQ4BQRiG4ZUoJE6h0InGBTR01kwcgNIdFC6hdRCVaPT63X80Er0DcIJvIpsYTN4veQ/wP+VktygYY4wxlu1WoSNzYSvzdpI5O8h8WMuKZ0sHDDDAAAMMMHnDjI9tmbNzpGfawl4GDDDAAAMMMJnD+LCUJT++adVIBgwwwAADDDAZwMxtJ/v6wW8Wfa4ABhhggAEGmP+H8baRffvgdyutlAEDDDDAAANMBjCza0/m7BEpNUAtm967MmCAAQYYYIDJACY2bxOZs1ukZsd7u+iqgSz5gAEGGGCAAeZ3YGKLfbtX2lC2qPuyn/pfoOmAEQNGDBgxYMSAEQOGMcYYY5/fC4V3rHFfcEk2AAAAAElFTkSuQmCC"/>
+<text x="1076" y="584" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="11" font-weight="600" fill="#a3a3a3" text-anchor="start">dot core</text>
+<text x="1076" y="604" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="500" fill="#e5e5e5" text-anchor="start">rgb(0,80,222)</text>
+<text x="1076" y="624" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="500" fill="#e5e5e5" text-anchor="start">B−R = 222</text>
+<text x="40" y="750" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="500" fill="#212121" text-anchor="start">Verdict: the dot stays blue at 16 px after AA — its core is exactly the brand blue (B−R 204 on white, 222 on dark;</text>
+<text x="40" y="772" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="500" fill="#212121" text-anchor="start">never below 204 at any size — no AA dilution. It is a ~2 px dot at 16 px, so colour reads as an accent and form carries recognition.</text>
+<text x="40" y="794" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="400" fill="#737373" text-anchor="start">The wordmark must read with no colour at all: the mono rows prove the form carries it.</text>
+</svg>

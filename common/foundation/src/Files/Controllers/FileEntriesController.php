@@ -69,6 +69,7 @@ class FileEntriesController extends Controller
         $fileEntry = FileEntry::query()->findOrFail($id);
 
         Gate::authorize('show', $fileEntry);
+        $this->abortUnlessCourseVideoAccessible($fileEntry);
 
         try {
             return $response->create($fileEntry);
@@ -87,8 +88,29 @@ class FileEntriesController extends Controller
         $fileEntry = FileEntry::query()->findOrFail($id);
 
         Gate::authorize('show', $fileEntry);
+        $this->abortUnlessCourseVideoAccessible($fileEntry);
 
         return new FileEntryResource($fileEntry);
+    }
+
+    /**
+     * Uploaded lesson videos stream only through signed lesson-video URLs.
+     * Course managers keep raw access for builder preview; everyone else
+     * (including enrolled buyers) must use the signed path.
+     */
+    private function abortUnlessCourseVideoAccessible(FileEntry $fileEntry): void
+    {
+        if ($fileEntry->upload_type !== 'courseVideos') {
+            return;
+        }
+
+        $lesson = \App\Courses\Models\Lesson::query()->where('video_file_entry_id', $fileEntry->id)->first();
+        if ($lesson === null) {
+            return;
+        }
+
+        $user = request()->user('sanctum') ?? request()->user('web') ?? request()->user() ?? Auth::user();
+        abort_unless($user && app(\App\Courses\CourseAccess::class)->canPreviewCourse($user, $lesson->course), 403);
     }
 
     /**

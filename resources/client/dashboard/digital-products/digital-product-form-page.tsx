@@ -52,7 +52,7 @@ import {
   Trash2Icon,
   TriangleAlertIcon,
 } from 'lucide-react';
-import {useCallback, useEffect, useState} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import {useNavigate, useParams, useSearchParams} from 'react-router';
 import {parseWizardPrefill, firstInvalidFieldId} from './product-create-flow';
 import {
@@ -225,6 +225,17 @@ function DigitalProductForm() {
       ? `Create ${typeConfig.label}`
       : 'Create digital product';
 
+  // The product must be loaded exactly once per productId. `actions` is
+  // rebuilt by the creation-context memo on every state change, so listing it
+  // as a dependency re-fetched the product on every render and re-hydrated the
+  // form, wiping typed input within one round trip (the unbounded
+  // hydrate/refetch loop). Read the latest actions through a ref instead, so
+  // the effect only tracks the route values that actually identify the load.
+  const actionsRef = useRef(actions);
+  useEffect(() => {
+    actionsRef.current = actions;
+  });
+
   useEffect(() => {
     void (async () => {
       try {
@@ -244,7 +255,7 @@ function DigitalProductForm() {
           }
           setProduct(item);
           const coverId = item.cover_file_entry_id ?? item.cover?.id ?? null;
-          actions.hydrate({
+          actionsRef.current.hydrate({
             title: item.title,
             description: item.description ?? '',
             price: (item.price_cents / 100).toFixed(2),
@@ -275,7 +286,7 @@ function DigitalProductForm() {
         setLoading(false);
       }
     })();
-  }, [navigate, productId, actions]);
+  }, [navigate, productId]);
 
   const save = useCallback(
     async (submitAfterSave = false) => {

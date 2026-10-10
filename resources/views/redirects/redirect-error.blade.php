@@ -4,9 +4,11 @@
 <head>
     <title>Redirect failed</title>
     <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500" rel="stylesheet">
-    <link rel="icon" type="image/x-icon" href="client/favicon/icon-144x144.png">
-    <link rel="apple-touch-icon" href="client/favicon/icon-192x192.png">
-    <link rel="manifest" href="client/manifest.json">
+    <link rel="icon" type="image/svg+xml" href="{{ url('favicon.svg') }}" media="(prefers-color-scheme: light)">
+    <link rel="icon" type="image/svg+xml" href="{{ url('favicon-dark.svg') }}" media="(prefers-color-scheme: dark)">
+    <link rel="icon" type="image/x-icon" href="{{ url('favicon.ico') }}" sizes="any">
+    <link rel="apple-touch-icon" type="image/png" sizes="180x180" href="{{ url('favicon/apple-touch-icon.png') }}">
+    <link rel="manifest" href="{{ url('manifest.json') }}">
     <style>
         body {
             background: rgb(250, 250, 250);

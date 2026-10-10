@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Linket" viewBox="0 0 512 512" width="512" height="512">
+  <title>Linket</title>
+  <rect width="512" height="512" rx="7.6032" fill="#ffffff"/>
+  <g transform="translate(-6.7183 -52.9871) scale(2.112)">
+    <g fill="#0a0a0a"><path d="M48 52 L48 200.4 A3.6 3.6 0 0 0 51.6 204 L167.48 204 A3.6 3.6 0 0 0 170.02 202.95 L202.95 170.02 A3.6 3.6 0 0 0 204 167.48 L204 108 L180 108 L180 159.03 L159.03 180 L72 180 L72 52 L48 52 Z"/><path d="M180 108 L180 204 L204 204 L204 108 L180 108 Z"/></g>
+    <path fill="#0049cc" d="M179.6 56 H204.4 A3.6 3.6 0 0 1 208 59.6 V84.4 A3.6 3.6 0 0 1 204.4 88 H179.6 A3.6 3.6 0 0 1 176 84.4 V59.6 A3.6 3.6 0 0 1 179.6 56 Z"/>
+  </g>
+</svg>

@@ -2,6 +2,7 @@
 
 namespace App\Storefront;
 
+use App\Courses\Models\Lesson;
 use App\Courses\Services\CourseService;
 use App\Models\User;
 use App\Storefront\Models\DigitalProduct;
@@ -11,6 +12,7 @@ use Common\Files\FileEntry;
 use Common\Workspaces\ActiveWorkspace;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 final class DigitalProductMutationService
 {
@@ -58,6 +60,7 @@ final class DigitalProductMutationService
     public function update(DigitalProduct $product, array $data, ?int $maxUploadBytes, ?User $actor = null): DigitalProduct
     {
         $coverBefore = $product->cover_file_entry_id;
+        $this->abortUnlessTypeChangeIsSafe($product, $data);
 
         $updated = DB::transaction(function () use ($product, $data, $maxUploadBytes, $actor): DigitalProduct {
             $type = $data['type'] ?? $product->type ?? 'digital';
@@ -118,6 +121,44 @@ final class DigitalProductMutationService
         }
 
         return $updated;
+    }
+
+    /**
+     * Reject a product `type` change outright (never silently rewrite or
+     * migrate) when delivered history or built curriculum would be stranded.
+     * Switching to `course` while sellable files are attached needs no guard:
+     * course creation imposes no files incompatibility (file_ids are nullable
+     * for courses and sync keeps them), so there is no existing rule to mirror.
+     */
+    private function abortUnlessTypeChangeIsSafe(DigitalProduct $product, array $data): void
+    {
+        $type = $data['type'] ?? $product->type ?? 'digital';
+        if ($type === ($product->type ?? 'digital')) {
+            return;
+        }
+
+        $hasPaidSales = Models\StorefrontOrder::query()
+            ->where('digital_product_id', $product->id)
+            ->where('status', 'paid')
+            ->exists();
+        if ($hasPaidSales) {
+            throw ValidationException::withMessages([
+                'type' => __('The product type cannot be changed after sales have been made.'),
+            ]);
+        }
+
+        if (($product->type ?? 'digital') === 'course') {
+            $course = $product->course;
+            $hasCurriculum = $course !== null && (
+                $course->chapters()->exists() ||
+                Lesson::query()->where('course_id', $course->id)->exists()
+            );
+            if ($hasCurriculum) {
+                throw ValidationException::withMessages([
+                    'type' => __('The product type cannot be changed while course curriculum exists. Delete the chapters and lessons first.'),
+                ]);
+            }
+        }
     }
 
     private function queueUpdateReviewIfNeeded(DigitalProduct $product, ?User $actor, ?array $snapshot): bool

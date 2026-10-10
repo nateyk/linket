@@ -115,7 +115,7 @@ class AuditVerifyProductTypeLockTest extends TestCase
                 'type' => 'course',
                 'file_ids' => [$file->id],
             ]
-        )->assertUnprocessable();
+        )->assertUnprocessable()->assertJsonValidationErrors(['type']);
 
         $this->assertSame('digital', $product->fresh()->type);
     }
@@ -166,8 +166,38 @@ class AuditVerifyProductTypeLockTest extends TestCase
                 'type' => 'digital',
                 'file_ids' => [$file->id],
             ]
-        )->assertUnprocessable();
+        )->assertUnprocessable()->assertJsonValidationErrors(['type']);
 
         $this->assertSame('course', $product->fresh()->type);
+    }
+
+    public function test_update_can_change_type_with_no_sales_and_no_curriculum(): void
+    {
+        $file = $this->sellableFile();
+
+        $product = DigitalProduct::create([
+            'user_id' => $this->creator->id,
+            'workspace_id' => $this->workspace->id,
+            'title' => 'Audit Type Draft',
+            'description' => 'Pre-launch correction.',
+            'price_cents' => 1000,
+            'currency' => 'ETB',
+            'status' => 'draft',
+            'type' => 'digital',
+        ]);
+        $product->files()->attach($file->id);
+
+        $this->stateful()->actingAs($this->creator)->putJson(
+            "/api/v1/digital-products/{$product->id}",
+            [
+                'title' => 'Audit Type Draft',
+                'price_cents' => 1000,
+                'currency' => 'ETB',
+                'type' => 'ebook',
+                'file_ids' => [$file->id],
+            ]
+        )->assertOk();
+
+        $this->assertSame('ebook', $product->fresh()->type);
     }
 }

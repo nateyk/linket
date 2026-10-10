@@ -1,0 +1,254 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1238" height="576" viewBox="0 0 1238 576">
+<rect x="0" y="0" width="1238" height="576" fill="#0049cc"/>
+<text x="36" y="44" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="20" font-weight="600" fill="#ffffff" text-anchor="start">Cold read — white on brand blue #0049cc</text>
+<text x="36" y="70" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="400" fill="#bcd2f7" text-anchor="start">Sizes are logo HEIGHT in px. Judge the first two letters and the dot.</text>
+<text x="239" y="92" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="600" fill="#bcd2f7" text-anchor="middle">16 px</text>
+<text x="453" y="92" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="600" fill="#bcd2f7" text-anchor="middle">24 px</text>
+<text x="667" y="92" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="600" fill="#bcd2f7" text-anchor="middle">32 px</text>
+<text x="881" y="92" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="600" fill="#bcd2f7" text-anchor="middle">48 px</text>
+<text x="1095" y="92" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="600" fill="#bcd2f7" text-anchor="middle">64 px</text>
+<text x="36" y="160" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="14" font-weight="600" fill="#ffffff" text-anchor="start">A · R1</text>
+<svg x="216.781" y="148" width="44.4375" height="16" viewBox="0 0 711 256">
+  
+  <path fill="#ffffff" d="M48 52 L48 200.4 A3.6 3.6 0 0 0 51.6 204 L167.48 204 A3.6 3.6 0 0 0 170.02 202.95 L202.95 170.02 A3.6 3.6 0 0 0 204 167.48 L204 108 L180 108 L180 159.03 L159.03 180 L72 180 L72 52 L48 52 Z"/>
+  <path fill="#ffffff" d="M180 108 L180 204 L204 204 L204 108 L180 108 Z"/>
+  <path fill="#ffffff" d="M364 52 L364 204 L388 204 L388 52 L364 52 Z"/>
+  <path fill="#ffffff" d="M609 76 L609 204 L633 204 L633 76 L609 76 Z"/>
+  <path fill="#ffffff" d="M254 204 L254 162 A30 30 0 0 1 314 162 L314 204 L338 204 L338 162 A54 54 0 0 0 230 162 L230 204 L254 204 Z"/>
+  <path fill="#ffffff" d="M429.01 108.01 L373.58 163.45 A3.6 3.6 0 0 0 373.58 168.55 L409.01 203.99 L425.99 187.01 L404.97 166 L445.99 124.99 L429.01 108.01 Z"/>
+  <path fill="#ffffff" d="M518.84 179.24 A24 24 0 1 1 537 155.99 L537.01 144 L477 144 L477 168 L557.39 168 A3.6 3.6 0 0 0 560.99 164.4 L561 156.01 A48 48 0 1 0 537.09 197.49 L518.84 179.24 Z"/>
+  <path fill="#ffffff" d="M583 132 L663 132 L663 108 L583 108 L583 132 Z"/>
+  <path fill="#ffffff" d="M181.6 64 H202.4 A3.6 3.6 0 0 1 206 67.6 V88.4 A3.6 3.6 0 0 1 202.4 92 H181.6 A3.6 3.6 0 0 1 178 88.4 V67.6 A3.6 3.6 0 0 1 181.6 64 Z"/>
+</svg>
+<svg x="419.672" y="144" width="66.6562" height="24" viewBox="0 0 711 256">
+  
+  <path fill="#ffffff" d="M48 52 L48 200.4 A3.6 3.6 0 0 0 51.6 204 L167.48 204 A3.6 3.6 0 0 0 170.02 202.95 L202.95 170.02 A3.6 3.6 0 0 0 204 167.48 L204 108 L180 108 L180 159.03 L159.03 180 L72 180 L72 52 L48 52 Z"/>
+  <path fill="#ffffff" d="M180 108 L180 204 L204 204 L204 108 L180 108 Z"/>
+  <path fill="#ffffff" d="M364 52 L364 204 L388 204 L388 52 L364 52 Z"/>
+  <path fill="#ffffff" d="M609 76 L609 204 L633 204 L633 76 L609 76 Z"/>
+  <path fill="#ffffff" d="M254 204 L254 162 A30 30 0 0 1 314 162 L314 204 L338 204 L338 162 A54 54 0 0 0 230 162 L230 204 L254 204 Z"/>
+  <path fill="#ffffff" d="M429.01 108.01 L373.58 163.45 A3.6 3.6 0 0 0 373.58 168.55 L409.01 203.99 L425.99 187.01 L404.97 166 L445.99 124.99 L429.01 108.01 Z"/>
+  <path fill="#ffffff" d="M518.84 179.24 A24 24 0 1 1 537 155.99 L537.01 144 L477 144 L477 168 L557.39 168 A3.6 3.6 0 0 0 560.99 164.4 L561 156.01 A48 48 0 1 0 537.09 197.49 L518.84 179.24 Z"/>
+  <path fill="#ffffff" d="M583 132 L663 132 L663 108 L583 108 L583 132 Z"/>
+  <path fill="#ffffff" d="M181.6 64 H202.4 A3.6 3.6 0 0 1 206 67.6 V88.4 A3.6 3.6 0 0 1 202.4 92 H181.6 A3.6 3.6 0 0 1 178 88.4 V67.6 A3.6 3.6 0 0 1 181.6 64 Z"/>
+</svg>
+<svg x="622.562" y="140" width="88.875" height="32" viewBox="0 0 711 256">
+  
+  <path fill="#ffffff" d="M48 52 L48 200.4 A3.6 3.6 0 0 0 51.6 204 L167.48 204 A3.6 3.6 0 0 0 170.02 202.95 L202.95 170.02 A3.6 3.6 0 0 0 204 167.48 L204 108 L180 108 L180 159.03 L159.03 180 L72 180 L72 52 L48 52 Z"/>
+  <path fill="#ffffff" d="M180 108 L180 204 L204 204 L204 108 L180 108 Z"/>
+  <path fill="#ffffff" d="M364 52 L364 204 L388 204 L388 52 L364 52 Z"/>
+  <path fill="#ffffff" d="M609 76 L609 204 L633 204 L633 76 L609 76 Z"/>
+  <path fill="#ffffff" d="M254 204 L254 162 A30 30 0 0 1 314 162 L314 204 L338 204 L338 162 A54 54 0 0 0 230 162 L230 204 L254 204 Z"/>
+  <path fill="#ffffff" d="M429.01 108.01 L373.58 163.45 A3.6 3.6 0 0 0 373.58 168.55 L409.01 203.99 L425.99 187.01 L404.97 166 L445.99 124.99 L429.01 108.01 Z"/>
+  <path fill="#ffffff" d="M518.84 179.24 A24 24 0 1 1 537 155.99 L537.01 144 L477 144 L477 168 L557.39 168 A3.6 3.6 0 0 0 560.99 164.4 L561 156.01 A48 48 0 1 0 537.09 197.49 L518.84 179.24 Z"/>
+  <path fill="#ffffff" d="M583 132 L663 132 L663 108 L583 108 L583 132 Z"/>
+  <path fill="#ffffff" d="M181.6 64 H202.4 A3.6 3.6 0 0 1 206 67.6 V88.4 A3.6 3.6 0 0 1 202.4 92 H181.6 A3.6 3.6 0 0 1 178 88.4 V67.6 A3.6 3.6 0 0 1 181.6 64 Z"/>
+</svg>
+<svg x="814.344" y="132" width="133.312" height="48" viewBox="0 0 711 256">
+  
+  <path fill="#ffffff" d="M48 52 L48 200.4 A3.6 3.6 0 0 0 51.6 204 L167.48 204 A3.6 3.6 0 0 0 170.02 202.95 L202.95 170.02 A3.6 3.6 0 0 0 204 167.48 L204 108 L180 108 L180 159.03 L159.03 180 L72 180 L72 52 L48 52 Z"/>
+  <path fill="#ffffff" d="M180 108 L180 204 L204 204 L204 108 L180 108 Z"/>
+  <path fill="#ffffff" d="M364 52 L364 204 L388 204 L388 52 L364 52 Z"/>
+  <path fill="#ffffff" d="M609 76 L609 204 L633 204 L633 76 L609 76 Z"/>
+  <path fill="#ffffff" d="M254 204 L254 162 A30 30 0 0 1 314 162 L314 204 L338 204 L338 162 A54 54 0 0 0 230 162 L230 204 L254 204 Z"/>
+  <path fill="#ffffff" d="M429.01 108.01 L373.58 163.45 A3.6 3.6 0 0 0 373.58 168.55 L409.01 203.99 L425.99 187.01 L404.97 166 L445.99 124.99 L429.01 108.01 Z"/>
+  <path fill="#ffffff" d="M518.84 179.24 A24 24 0 1 1 537 155.99 L537.01 144 L477 144 L477 168 L557.39 168 A3.6 3.6 0 0 0 560.99 164.4 L561 156.01 A48 48 0 1 0 537.09 197.49 L518.84 179.24 Z"/>
+  <path fill="#ffffff" d="M583 132 L663 132 L663 108 L583 108 L583 132 Z"/>
+  <path fill="#ffffff" d="M181.6 64 H202.4 A3.6 3.6 0 0 1 206 67.6 V88.4 A3.6 3.6 0 0 1 202.4 92 H181.6 A3.6 3.6 0 0 1 178 88.4 V67.6 A3.6 3.6 0 0 1 181.6 64 Z"/>
+</svg>
+<svg x="1006.12" y="124" width="177.75" height="64" viewBox="0 0 711 256">
+  
+  <path fill="#ffffff" d="M48 52 L48 200.4 A3.6 3.6 0 0 0 51.6 204 L167.48 204 A3.6 3.6 0 0 0 170.02 202.95 L202.95 170.02 A3.6 3.6 0 0 0 204 167.48 L204 108 L180 108 L180 159.03 L159.03 180 L72 180 L72 52 L48 52 Z"/>
+  <path fill="#ffffff" d="M180 108 L180 204 L204 204 L204 108 L180 108 Z"/>
+  <path fill="#ffffff" d="M364 52 L364 204 L388 204 L388 52 L364 52 Z"/>
+  <path fill="#ffffff" d="M609 76 L609 204 L633 204 L633 76 L609 76 Z"/>
+  <path fill="#ffffff" d="M254 204 L254 162 A30 30 0 0 1 314 162 L314 204 L338 204 L338 162 A54 54 0 0 0 230 162 L230 204 L254 204 Z"/>
+  <path fill="#ffffff" d="M429.01 108.01 L373.58 163.45 A3.6 3.6 0 0 0 373.58 168.55 L409.01 203.99 L425.99 187.01 L404.97 166 L445.99 124.99 L429.01 108.01 Z"/>
+  <path fill="#ffffff" d="M518.84 179.24 A24 24 0 1 1 537 155.99 L537.01 144 L477 144 L477 168 L557.39 168 A3.6 3.6 0 0 0 560.99 164.4 L561 156.01 A48 48 0 1 0 537.09 197.49 L518.84 179.24 Z"/>
+  <path fill="#ffffff" d="M583 132 L663 132 L663 108 L583 108 L583 132 Z"/>
+  <path fill="#ffffff" d="M181.6 64 H202.4 A3.6 3.6 0 0 1 206 67.6 V88.4 A3.6 3.6 0 0 1 202.4 92 H181.6 A3.6 3.6 0 0 1 178 88.4 V67.6 A3.6 3.6 0 0 1 181.6 64 Z"/>
+</svg>
+<text x="36" y="264" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="14" font-weight="600" fill="#ffffff" text-anchor="start">A · R2</text>
+<svg x="216.781" y="252" width="44.4375" height="16" viewBox="0 0 711 256">
+  
+  <path fill="#ffffff" d="M48 52 L48 204 L168.97 204 L204 168.97 L204 108 L180 108 L180 159.03 L159.03 180 L72 180 L72 52 L48 52 Z"/>
+  <path fill="#ffffff" d="M180 108 L180 204 L204 204 L204 108 L180 108 Z"/>
+  <path fill="#ffffff" d="M364 52 L364 204 L388 204 L388 52 L364 52 Z"/>
+  <path fill="#ffffff" d="M609 76 L609 204 L633 204 L633 76 L609 76 Z"/>
+  <path fill="#ffffff" d="M254 204 L254 162 A30 30 0 0 1 314 162 L314 204 L338 204 L338 162 A54 54 0 0 0 230 162 L230 204 L254 204 Z"/>
+  <path fill="#ffffff" d="M429.01 108.01 L371.03 166 L409.01 203.99 L425.99 187.01 L404.97 166 L445.99 124.99 L429.01 108.01 Z"/>
+  <path fill="#ffffff" d="M518.84 179.24 A24 24 0 1 1 537 155.99 L537.01 144 L477 144 L477 168 L560.99 168 L561 156.01 A48 48 0 1 0 537.09 197.49 L518.84 179.24 Z"/>
+  <path fill="#ffffff" d="M583 132 L663 132 L663 108 L583 108 L583 132 Z"/>
+  <path fill="#ffffff" d="M178 64 H206 V92 H178 Z"/>
+</svg>
+<svg x="419.672" y="248" width="66.6562" height="24" viewBox="0 0 711 256">
+  
+  <path fill="#ffffff" d="M48 52 L48 204 L168.97 204 L204 168.97 L204 108 L180 108 L180 159.03 L159.03 180 L72 180 L72 52 L48 52 Z"/>
+  <path fill="#ffffff" d="M180 108 L180 204 L204 204 L204 108 L180 108 Z"/>
+  <path fill="#ffffff" d="M364 52 L364 204 L388 204 L388 52 L364 52 Z"/>
+  <path fill="#ffffff" d="M609 76 L609 204 L633 204 L633 76 L609 76 Z"/>
+  <path fill="#ffffff" d="M254 204 L254 162 A30 30 0 0 1 314 162 L314 204 L338 204 L338 162 A54 54 0 0 0 230 162 L230 204 L254 204 Z"/>
+  <path fill="#ffffff" d="M429.01 108.01 L371.03 166 L409.01 203.99 L425.99 187.01 L404.97 166 L445.99 124.99 L429.01 108.01 Z"/>
+  <path fill="#ffffff" d="M518.84 179.24 A24 24 0 1 1 537 155.99 L537.01 144 L477 144 L477 168 L560.99 168 L561 156.01 A48 48 0 1 0 537.09 197.49 L518.84 179.24 Z"/>
+  <path fill="#ffffff" d="M583 132 L663 132 L663 108 L583 108 L583 132 Z"/>
+  <path fill="#ffffff" d="M178 64 H206 V92 H178 Z"/>
+</svg>
+<svg x="622.562" y="244" width="88.875" height="32" viewBox="0 0 711 256">
+  
+  <path fill="#ffffff" d="M48 52 L48 204 L168.97 204 L204 168.97 L204 108 L180 108 L180 159.03 L159.03 180 L72 180 L72 52 L48 52 Z"/>
+  <path fill="#ffffff" d="M180 108 L180 204 L204 204 L204 108 L180 108 Z"/>
+  <path fill="#ffffff" d="M364 52 L364 204 L388 204 L388 52 L364 52 Z"/>
+  <path fill="#ffffff" d="M609 76 L609 204 L633 204 L633 76 L609 76 Z"/>
+  <path fill="#ffffff" d="M254 204 L254 162 A30 30 0 0 1 314 162 L314 204 L338 204 L338 162 A54 54 0 0 0 230 162 L230 204 L254 204 Z"/>
+  <path fill="#ffffff" d="M429.01 108.01 L371.03 166 L409.01 203.99 L425.99 187.01 L404.97 166 L445.99 124.99 L429.01 108.01 Z"/>
+  <path fill="#ffffff" d="M518.84 179.24 A24 24 0 1 1 537 155.99 L537.01 144 L477 144 L477 168 L560.99 168 L561 156.01 A48 48 0 1 0 537.09 197.49 L518.84 179.24 Z"/>
+  <path fill="#ffffff" d="M583 132 L663 132 L663 108 L583 108 L583 132 Z"/>
+  <path fill="#ffffff" d="M178 64 H206 V92 H178 Z"/>
+</svg>
+<svg x="814.344" y="236" width="133.312" height="48" viewBox="0 0 711 256">
+  
+  <path fill="#ffffff" d="M48 52 L48 204 L168.97 204 L204 168.97 L204 108 L180 108 L180 159.03 L159.03 180 L72 180 L72 52 L48 52 Z"/>
+  <path fill="#ffffff" d="M180 108 L180 204 L204 204 L204 108 L180 108 Z"/>
+  <path fill="#ffffff" d="M364 52 L364 204 L388 204 L388 52 L364 52 Z"/>
+  <path fill="#ffffff" d="M609 76 L609 204 L633 204 L633 76 L609 76 Z"/>
+  <path fill="#ffffff" d="M254 204 L254 162 A30 30 0 0 1 314 162 L314 204 L338 204 L338 162 A54 54 0 0 0 230 162 L230 204 L254 204 Z"/>
+  <path fill="#ffffff" d="M429.01 108.01 L371.03 166 L409.01 203.99 L425.99 187.01 L404.97 166 L445.99 124.99 L429.01 108.01 Z"/>
+  <path fill="#ffffff" d="M518.84 179.24 A24 24 0 1 1 537 155.99 L537.01 144 L477 144 L477 168 L560.99 168 L561 156.01 A48 48 0 1 0 537.09 197.49 L518.84 179.24 Z"/>
+  <path fill="#ffffff" d="M583 132 L663 132 L663 108 L583 108 L583 132 Z"/>
+  <path fill="#ffffff" d="M178 64 H206 V92 H178 Z"/>
+</svg>
+<svg x="1006.12" y="228" width="177.75" height="64" viewBox="0 0 711 256">
+  
+  <path fill="#ffffff" d="M48 52 L48 204 L168.97 204 L204 168.97 L204 108 L180 108 L180 159.03 L159.03 180 L72 180 L72 52 L48 52 Z"/>
+  <path fill="#ffffff" d="M180 108 L180 204 L204 204 L204 108 L180 108 Z"/>
+  <path fill="#ffffff" d="M364 52 L364 204 L388 204 L388 52 L364 52 Z"/>
+  <path fill="#ffffff" d="M609 76 L609 204 L633 204 L633 76 L609 76 Z"/>
+  <path fill="#ffffff" d="M254 204 L254 162 A30 30 0 0 1 314 162 L314 204 L338 204 L338 162 A54 54 0 0 0 230 162 L230 204 L254 204 Z"/>
+  <path fill="#ffffff" d="M429.01 108.01 L371.03 166 L409.01 203.99 L425.99 187.01 L404.97 166 L445.99 124.99 L429.01 108.01 Z"/>
+  <path fill="#ffffff" d="M518.84 179.24 A24 24 0 1 1 537 155.99 L537.01 144 L477 144 L477 168 L560.99 168 L561 156.01 A48 48 0 1 0 537.09 197.49 L518.84 179.24 Z"/>
+  <path fill="#ffffff" d="M583 132 L663 132 L663 108 L583 108 L583 132 Z"/>
+  <path fill="#ffffff" d="M178 64 H206 V92 H178 Z"/>
+</svg>
+<text x="36" y="368" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="14" font-weight="600" fill="#ffffff" text-anchor="start">B · R1</text>
+<svg x="216.781" y="356" width="44.4375" height="16" viewBox="0 0 711 256">
+  
+  <path fill="#ffffff" d="M48 27 L48 225.4 A3.6 3.6 0 0 0 51.6 229 L663 229 L663 205 L72 205 L72 27 L48 27 Z"/>
+  <path fill="#ffffff" d="M180 83 L180 179 L204 179 L204 83 L180 83 Z"/>
+  <path fill="#ffffff" d="M364 27 L364 179 L388 179 L388 27 L364 27 Z"/>
+  <path fill="#ffffff" d="M609 51 L609 179 L633 179 L633 51 L609 51 Z"/>
+  <path fill="#ffffff" d="M254 179 L254 137 A30 30 0 0 1 314 137 L314 179 L338 179 L338 137 A54 54 0 0 0 230 137 L230 179 L254 179 Z"/>
+  <path fill="#ffffff" d="M429.01 83.01 L373.58 138.45 A3.6 3.6 0 0 0 373.58 143.55 L409.01 178.99 L425.99 162.01 L404.97 141 L445.99 99.99 L429.01 83.01 Z"/>
+  <path fill="#ffffff" d="M518.84 154.24 A24 24 0 1 1 537 130.99 L537.01 119 L477 119 L477 143 L557.39 143 A3.6 3.6 0 0 0 560.99 139.4 L561 131.01 A48 48 0 1 0 537.09 172.49 L518.84 154.24 Z"/>
+  <path fill="#ffffff" d="M583 107 L663 107 L663 83 L583 83 L583 107 Z"/>
+  <path fill="#ffffff" d="M181.6 39 H202.4 A3.6 3.6 0 0 1 206 42.6 V63.4 A3.6 3.6 0 0 1 202.4 67 H181.6 A3.6 3.6 0 0 1 178 63.4 V42.6 A3.6 3.6 0 0 1 181.6 39 Z"/>
+</svg>
+<svg x="419.672" y="352" width="66.6562" height="24" viewBox="0 0 711 256">
+  
+  <path fill="#ffffff" d="M48 27 L48 225.4 A3.6 3.6 0 0 0 51.6 229 L663 229 L663 205 L72 205 L72 27 L48 27 Z"/>
+  <path fill="#ffffff" d="M180 83 L180 179 L204 179 L204 83 L180 83 Z"/>
+  <path fill="#ffffff" d="M364 27 L364 179 L388 179 L388 27 L364 27 Z"/>
+  <path fill="#ffffff" d="M609 51 L609 179 L633 179 L633 51 L609 51 Z"/>
+  <path fill="#ffffff" d="M254 179 L254 137 A30 30 0 0 1 314 137 L314 179 L338 179 L338 137 A54 54 0 0 0 230 137 L230 179 L254 179 Z"/>
+  <path fill="#ffffff" d="M429.01 83.01 L373.58 138.45 A3.6 3.6 0 0 0 373.58 143.55 L409.01 178.99 L425.99 162.01 L404.97 141 L445.99 99.99 L429.01 83.01 Z"/>
+  <path fill="#ffffff" d="M518.84 154.24 A24 24 0 1 1 537 130.99 L537.01 119 L477 119 L477 143 L557.39 143 A3.6 3.6 0 0 0 560.99 139.4 L561 131.01 A48 48 0 1 0 537.09 172.49 L518.84 154.24 Z"/>
+  <path fill="#ffffff" d="M583 107 L663 107 L663 83 L583 83 L583 107 Z"/>
+  <path fill="#ffffff" d="M181.6 39 H202.4 A3.6 3.6 0 0 1 206 42.6 V63.4 A3.6 3.6 0 0 1 202.4 67 H181.6 A3.6 3.6 0 0 1 178 63.4 V42.6 A3.6 3.6 0 0 1 181.6 39 Z"/>
+</svg>
+<svg x="622.562" y="348" width="88.875" height="32" viewBox="0 0 711 256">
+  
+  <path fill="#ffffff" d="M48 27 L48 225.4 A3.6 3.6 0 0 0 51.6 229 L663 229 L663 205 L72 205 L72 27 L48 27 Z"/>
+  <path fill="#ffffff" d="M180 83 L180 179 L204 179 L204 83 L180 83 Z"/>
+  <path fill="#ffffff" d="M364 27 L364 179 L388 179 L388 27 L364 27 Z"/>
+  <path fill="#ffffff" d="M609 51 L609 179 L633 179 L633 51 L609 51 Z"/>
+  <path fill="#ffffff" d="M254 179 L254 137 A30 30 0 0 1 314 137 L314 179 L338 179 L338 137 A54 54 0 0 0 230 137 L230 179 L254 179 Z"/>
+  <path fill="#ffffff" d="M429.01 83.01 L373.58 138.45 A3.6 3.6 0 0 0 373.58 143.55 L409.01 178.99 L425.99 162.01 L404.97 141 L445.99 99.99 L429.01 83.01 Z"/>
+  <path fill="#ffffff" d="M518.84 154.24 A24 24 0 1 1 537 130.99 L537.01 119 L477 119 L477 143 L557.39 143 A3.6 3.6 0 0 0 560.99 139.4 L561 131.01 A48 48 0 1 0 537.09 172.49 L518.84 154.24 Z"/>
+  <path fill="#ffffff" d="M583 107 L663 107 L663 83 L583 83 L583 107 Z"/>
+  <path fill="#ffffff" d="M181.6 39 H202.4 A3.6 3.6 0 0 1 206 42.6 V63.4 A3.6 3.6 0 0 1 202.4 67 H181.6 A3.6 3.6 0 0 1 178 63.4 V42.6 A3.6 3.6 0 0 1 181.6 39 Z"/>
+</svg>
+<svg x="814.344" y="340" width="133.312" height="48" viewBox="0 0 711 256">
+  
+  <path fill="#ffffff" d="M48 27 L48 225.4 A3.6 3.6 0 0 0 51.6 229 L663 229 L663 205 L72 205 L72 27 L48 27 Z"/>
+  <path fill="#ffffff" d="M180 83 L180 179 L204 179 L204 83 L180 83 Z"/>
+  <path fill="#ffffff" d="M364 27 L364 179 L388 179 L388 27 L364 27 Z"/>
+  <path fill="#ffffff" d="M609 51 L609 179 L633 179 L633 51 L609 51 Z"/>
+  <path fill="#ffffff" d="M254 179 L254 137 A30 30 0 0 1 314 137 L314 179 L338 179 L338 137 A54 54 0 0 0 230 137 L230 179 L254 179 Z"/>
+  <path fill="#ffffff" d="M429.01 83.01 L373.58 138.45 A3.6 3.6 0 0 0 373.58 143.55 L409.01 178.99 L425.99 162.01 L404.97 141 L445.99 99.99 L429.01 83.01 Z"/>
+  <path fill="#ffffff" d="M518.84 154.24 A24 24 0 1 1 537 130.99 L537.01 119 L477 119 L477 143 L557.39 143 A3.6 3.6 0 0 0 560.99 139.4 L561 131.01 A48 48 0 1 0 537.09 172.49 L518.84 154.24 Z"/>
+  <path fill="#ffffff" d="M583 107 L663 107 L663 83 L583 83 L583 107 Z"/>
+  <path fill="#ffffff" d="M181.6 39 H202.4 A3.6 3.6 0 0 1 206 42.6 V63.4 A3.6 3.6 0 0 1 202.4 67 H181.6 A3.6 3.6 0 0 1 178 63.4 V42.6 A3.6 3.6 0 0 1 181.6 39 Z"/>
+</svg>
+<svg x="1006.12" y="332" width="177.75" height="64" viewBox="0 0 711 256">
+  
+  <path fill="#ffffff" d="M48 27 L48 225.4 A3.6 3.6 0 0 0 51.6 229 L663 229 L663 205 L72 205 L72 27 L48 27 Z"/>
+  <path fill="#ffffff" d="M180 83 L180 179 L204 179 L204 83 L180 83 Z"/>
+  <path fill="#ffffff" d="M364 27 L364 179 L388 179 L388 27 L364 27 Z"/>
+  <path fill="#ffffff" d="M609 51 L609 179 L633 179 L633 51 L609 51 Z"/>
+  <path fill="#ffffff" d="M254 179 L254 137 A30 30 0 0 1 314 137 L314 179 L338 179 L338 137 A54 54 0 0 0 230 137 L230 179 L254 179 Z"/>
+  <path fill="#ffffff" d="M429.01 83.01 L373.58 138.45 A3.6 3.6 0 0 0 373.58 143.55 L409.01 178.99 L425.99 162.01 L404.97 141 L445.99 99.99 L429.01 83.01 Z"/>
+  <path fill="#ffffff" d="M518.84 154.24 A24 24 0 1 1 537 130.99 L537.01 119 L477 119 L477 143 L557.39 143 A3.6 3.6 0 0 0 560.99 139.4 L561 131.01 A48 48 0 1 0 537.09 172.49 L518.84 154.24 Z"/>
+  <path fill="#ffffff" d="M583 107 L663 107 L663 83 L583 83 L583 107 Z"/>
+  <path fill="#ffffff" d="M181.6 39 H202.4 A3.6 3.6 0 0 1 206 42.6 V63.4 A3.6 3.6 0 0 1 202.4 67 H181.6 A3.6 3.6 0 0 1 178 63.4 V42.6 A3.6 3.6 0 0 1 181.6 39 Z"/>
+</svg>
+<text x="36" y="472" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="14" font-weight="600" fill="#ffffff" text-anchor="start">B · R2</text>
+<svg x="216.781" y="460" width="44.4375" height="16" viewBox="0 0 711 256">
+  
+  <path fill="#ffffff" d="M48 27 L48 229 L663 229 L663 205 L72 205 L72 27 L48 27 Z"/>
+  <path fill="#ffffff" d="M180 83 L180 179 L204 179 L204 83 L180 83 Z"/>
+  <path fill="#ffffff" d="M364 27 L364 179 L388 179 L388 27 L364 27 Z"/>
+  <path fill="#ffffff" d="M609 51 L609 179 L633 179 L633 51 L609 51 Z"/>
+  <path fill="#ffffff" d="M254 179 L254 137 A30 30 0 0 1 314 137 L314 179 L338 179 L338 137 A54 54 0 0 0 230 137 L230 179 L254 179 Z"/>
+  <path fill="#ffffff" d="M429.01 83.01 L371.03 141 L409.01 178.99 L425.99 162.01 L404.97 141 L445.99 99.99 L429.01 83.01 Z"/>
+  <path fill="#ffffff" d="M518.84 154.24 A24 24 0 1 1 537 130.99 L537.01 119 L477 119 L477 143 L560.99 143 L561 131.01 A48 48 0 1 0 537.09 172.49 L518.84 154.24 Z"/>
+  <path fill="#ffffff" d="M583 107 L663 107 L663 83 L583 83 L583 107 Z"/>
+  <path fill="#ffffff" d="M178 39 H206 V67 H178 Z"/>
+</svg>
+<svg x="419.672" y="456" width="66.6562" height="24" viewBox="0 0 711 256">
+  
+  <path fill="#ffffff" d="M48 27 L48 229 L663 229 L663 205 L72 205 L72 27 L48 27 Z"/>
+  <path fill="#ffffff" d="M180 83 L180 179 L204 179 L204 83 L180 83 Z"/>
+  <path fill="#ffffff" d="M364 27 L364 179 L388 179 L388 27 L364 27 Z"/>
+  <path fill="#ffffff" d="M609 51 L609 179 L633 179 L633 51 L609 51 Z"/>
+  <path fill="#ffffff" d="M254 179 L254 137 A30 30 0 0 1 314 137 L314 179 L338 179 L338 137 A54 54 0 0 0 230 137 L230 179 L254 179 Z"/>
+  <path fill="#ffffff" d="M429.01 83.01 L371.03 141 L409.01 178.99 L425.99 162.01 L404.97 141 L445.99 99.99 L429.01 83.01 Z"/>
+  <path fill="#ffffff" d="M518.84 154.24 A24 24 0 1 1 537 130.99 L537.01 119 L477 119 L477 143 L560.99 143 L561 131.01 A48 48 0 1 0 537.09 172.49 L518.84 154.24 Z"/>
+  <path fill="#ffffff" d="M583 107 L663 107 L663 83 L583 83 L583 107 Z"/>
+  <path fill="#ffffff" d="M178 39 H206 V67 H178 Z"/>
+</svg>
+<svg x="622.562" y="452" width="88.875" height="32" viewBox="0 0 711 256">
+  
+  <path fill="#ffffff" d="M48 27 L48 229 L663 229 L663 205 L72 205 L72 27 L48 27 Z"/>
+  <path fill="#ffffff" d="M180 83 L180 179 L204 179 L204 83 L180 83 Z"/>
+  <path fill="#ffffff" d="M364 27 L364 179 L388 179 L388 27 L364 27 Z"/>
+  <path fill="#ffffff" d="M609 51 L609 179 L633 179 L633 51 L609 51 Z"/>
+  <path fill="#ffffff" d="M254 179 L254 137 A30 30 0 0 1 314 137 L314 179 L338 179 L338 137 A54 54 0 0 0 230 137 L230 179 L254 179 Z"/>
+  <path fill="#ffffff" d="M429.01 83.01 L371.03 141 L409.01 178.99 L425.99 162.01 L404.97 141 L445.99 99.99 L429.01 83.01 Z"/>
+  <path fill="#ffffff" d="M518.84 154.24 A24 24 0 1 1 537 130.99 L537.01 119 L477 119 L477 143 L560.99 143 L561 131.01 A48 48 0 1 0 537.09 172.49 L518.84 154.24 Z"/>
+  <path fill="#ffffff" d="M583 107 L663 107 L663 83 L583 83 L583 107 Z"/>
+  <path fill="#ffffff" d="M178 39 H206 V67 H178 Z"/>
+</svg>
+<svg x="814.344" y="444" width="133.312" height="48" viewBox="0 0 711 256">
+  
+  <path fill="#ffffff" d="M48 27 L48 229 L663 229 L663 205 L72 205 L72 27 L48 27 Z"/>
+  <path fill="#ffffff" d="M180 83 L180 179 L204 179 L204 83 L180 83 Z"/>
+  <path fill="#ffffff" d="M364 27 L364 179 L388 179 L388 27 L364 27 Z"/>
+  <path fill="#ffffff" d="M609 51 L609 179 L633 179 L633 51 L609 51 Z"/>
+  <path fill="#ffffff" d="M254 179 L254 137 A30 30 0 0 1 314 137 L314 179 L338 179 L338 137 A54 54 0 0 0 230 137 L230 179 L254 179 Z"/>
+  <path fill="#ffffff" d="M429.01 83.01 L371.03 141 L409.01 178.99 L425.99 162.01 L404.97 141 L445.99 99.99 L429.01 83.01 Z"/>
+  <path fill="#ffffff" d="M518.84 154.24 A24 24 0 1 1 537 130.99 L537.01 119 L477 119 L477 143 L560.99 143 L561 131.01 A48 48 0 1 0 537.09 172.49 L518.84 154.24 Z"/>
+  <path fill="#ffffff" d="M583 107 L663 107 L663 83 L583 83 L583 107 Z"/>
+  <path fill="#ffffff" d="M178 39 H206 V67 H178 Z"/>
+</svg>
+<svg x="1006.12" y="436" width="177.75" height="64" viewBox="0 0 711 256">
+  
+  <path fill="#ffffff" d="M48 27 L48 229 L663 229 L663 205 L72 205 L72 27 L48 27 Z"/>
+  <path fill="#ffffff" d="M180 83 L180 179 L204 179 L204 83 L180 83 Z"/>
+  <path fill="#ffffff" d="M364 27 L364 179 L388 179 L388 27 L364 27 Z"/>
+  <path fill="#ffffff" d="M609 51 L609 179 L633 179 L633 51 L609 51 Z"/>
+  <path fill="#ffffff" d="M254 179 L254 137 A30 30 0 0 1 314 137 L314 179 L338 179 L338 137 A54 54 0 0 0 230 137 L230 179 L254 179 Z"/>
+  <path fill="#ffffff" d="M429.01 83.01 L371.03 141 L409.01 178.99 L425.99 162.01 L404.97 141 L445.99 99.99 L429.01 83.01 Z"/>
+  <path fill="#ffffff" d="M518.84 154.24 A24 24 0 1 1 537 130.99 L537.01 119 L477 119 L477 143 L560.99 143 L561 131.01 A48 48 0 1 0 537.09 172.49 L518.84 154.24 Z"/>
+  <path fill="#ffffff" d="M583 107 L663 107 L663 83 L583 83 L583 107 Z"/>
+  <path fill="#ffffff" d="M178 39 H206 V67 H178 Z"/>
+</svg>
+</svg>

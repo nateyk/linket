@@ -16,18 +16,19 @@ export function MyOrderShell({
     <div className="min-h-screen bg-background px-2 py-2 sm:px-4 sm:py-4">
       <div className="mx-auto flex min-h-[calc(100vh-1rem)] w-full flex-col rounded-3xl bg-muted/30 shadow-sm ring-1 ring-border">
         <header className="flex items-center justify-between px-6 py-4 lg:px-8">
-          <Link to="/" className="flex items-center gap-2">
-            {branding.logo_dark ? (
-              <img src={branding.logo_dark} alt="" className="h-7 w-auto" />
-            ) : null}
-            {/* The brand name is real text, not part of the logo image —
-                DESIGN.md's page title role (600, 24px, 32px). It renders from
-                branding.site_name (config app.name, default "Linket"), the same
-                source the footer below uses. */}
-            <span className="text-2xl font-semibold tracking-tight">
-              {branding.site_name}
-            </span>
-          </Link>
+          {branding.logo_dark ? (
+            <Link
+              to="/"
+              aria-label={branding.site_name}
+              className="flex items-center gap-2"
+            >
+              <img
+                src={branding.logo_dark}
+                alt=""
+                className="h-7 w-auto"
+              />
+            </Link>
+          ) : null}
           <span className="hidden text-sm text-muted-foreground sm:block">
             <Trans message="Need help? Contact support." />
           </span>

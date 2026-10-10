@@ -7,6 +7,7 @@ use App\Courses\Models\Lesson;
 use App\Courses\Resources\CourseResource;
 use App\Courses\Resources\LessonResource;
 use App\Courses\Services\ProgressService;
+use Common\Files\Response\FileResponseFactory;
 use Common\Workspaces\ActiveWorkspace;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -94,6 +95,40 @@ class StudentCoursesController extends Controller
         // The LessonResource will expose file url via FileEntry->url (private returns api path requiring auth).
         // For better streaming we could generate temporary signed route, but FileEntry->url already handles private via api/v1/file-entries/{id}.
         return new LessonResource($lesson);
+    }
+
+    /**
+     * Stream an uploaded lesson video through a signed, expiring URL.
+     * Reuses the download-entitlement signing mechanism: the signature alone
+     * never grants access — enrollment (or creator preview) is still required.
+     */
+    public function video(Request $request, Lesson $lesson, FileResponseFactory $response)
+    {
+        abort_unless($request->hasValidSignature(), 403, __('This video link is invalid or has expired.'));
+
+        $user = $request->user('sanctum') ?? $request->user('web') ?? $request->user() ?? \Illuminate\Support\Facades\Auth::user();
+        abort_unless($user, 401);
+
+        $access = app(\App\Courses\CourseAccess::class);
+        if ($request->boolean('preview')) {
+            abort_unless($access->canPreviewCourse($user, $lesson->course), 403);
+        } else {
+            abort_unless($access->canAccessLesson($user, $lesson, false), 403, 'This lesson is locked. Complete prior lessons first.');
+        }
+
+        abort_unless($lesson->video_type === 'upload', 404);
+        $fileEntry = $lesson->videoFile;
+        abort_unless(
+            $fileEntry && $fileEntry->getDisk()->exists($fileEntry->getStoragePath()),
+            410,
+            __('This video is no longer available.'),
+        );
+
+        try {
+            return $response->create($fileEntry);
+        } catch (\Illuminate\Contracts\Filesystem\FileNotFoundException $e) {
+            abort(404);
+        }
     }
 
     public function myCourses(Request $request)

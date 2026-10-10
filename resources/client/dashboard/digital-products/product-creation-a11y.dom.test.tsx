@@ -3,6 +3,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import {useState} from 'react';
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
 import {fireEvent, render, screen} from '@testing-library/react';
 import {useBootstrapDataStore} from '@ui/bootstrap-data/bootstrap-data-store';
@@ -11,12 +12,12 @@ import {MemoryRouter} from 'react-router';
 import {beforeEach, describe, expect, test, vi} from 'vitest';
 import {BillingModePicker} from './billing-mode-picker';
 import {CreateProductDialog} from './create-product-dialog';
-import {visibleSteps} from './product-create-flow';
+import {type BillingMode, visibleSteps} from './product-create-flow';
 import {
   WizardStepDots,
   type ProductCreateWizard,
 } from './product-create-wizard';
-import {ProductTypePicker} from './product-type-picker';
+import {ProductTypePicker, type ProductType} from './product-type-picker';
 
 vi.mock('@app/dashboard/use-usage', () => ({
   useUsage: () => ({
@@ -288,6 +289,146 @@ describe('R18 limits visible in picker', () => {
   test('storage usage line is shown from entitlement data', () => {
     renderTypePicker();
     expect(screen.getByText(/storage/i)).not.toBeNull();
+  });
+});
+
+// T1: the picker cards must never read as "two active options". The focus
+// treatment lives on a focus-visible-only class that is only ever painted by
+// the card whose radio input is focused, while selection comes from `value`.
+const FOCUS_STYLING_CLASS = 'has-[:focus-visible]:outline-2';
+const SELECTION_CLASSES = ['bg-primary/5', 'border-primary/60'] as const;
+
+function labelsIn(container: HTMLElement): HTMLLabelElement[] {
+  return Array.from(container.querySelectorAll('label'));
+}
+
+function carriesSelectionStyling(label: HTMLLabelElement): boolean {
+  return SELECTION_CLASSES.every(c => label.className.includes(c));
+}
+
+// "Carries focus styling" = the focus-visible card classes are present AND the
+// card's radio input is the focused one (the classes only paint under
+// :focus-visible, so class presence alone is the mechanism, focus is the state).
+function carriesFocusStyling(label: HTMLLabelElement): boolean {
+  return (
+    label.className.includes(FOCUS_STYLING_CLASS) &&
+    label.matches(':has(:focus)')
+  );
+}
+
+function focusedLabel(): HTMLLabelElement | null {
+  const active = document.activeElement as HTMLElement | null;
+  return active?.closest('label') ?? null;
+}
+
+function ControlledTypePicker() {
+  const [value, setValue] = useState<ProductType | null>('digital');
+  return <ProductTypePicker value={value} onValueChange={setValue} />;
+}
+
+function ControlledBillingPicker() {
+  const [value, setValue] = useState<BillingMode | null>('free');
+  return <BillingModePicker value={value} onValueChange={setValue} />;
+}
+
+describe('T1 focus styling is distinct from selection styling', () => {
+  test('type picker: focused-but-unselected card gets focus styling only, selected card gets selection styling only', () => {
+    const {container} = render(
+      <ProductTypePicker value="ebook" onValueChange={() => {}} />,
+    );
+    const labels = labelsIn(container);
+    const radios = screen.getAllByRole('radio');
+
+    // Selection sits on option B (ebook).
+    expect(carriesSelectionStyling(labels[1])).toBe(true);
+
+    // Move focus to option A (digital) without changing the selection.
+    radios[0].focus();
+    expect(document.activeElement).toBe(radios[0]);
+    expect(focusedLabel()).toBe(labels[0]);
+
+    // (a) option A: carries focus styling, NOT selection styling.
+    expect(labels[0].className).toContain(FOCUS_STYLING_CLASS);
+    expect(carriesFocusStyling(labels[0])).toBe(true);
+    expect(carriesSelectionStyling(labels[0])).toBe(false);
+
+    // (a) vice versa: option B carries selection styling, NOT focus styling.
+    expect(carriesSelectionStyling(labels[1])).toBe(true);
+    expect(carriesFocusStyling(labels[1])).toBe(false);
+
+    // The dual-highlight class (focus-within ring on every card) is gone.
+    for (const label of labels) {
+      expect(label.className).not.toContain('focus-within:');
+    }
+    // Never both treatments on the same card in this scenario.
+    for (const label of labels) {
+      expect(carriesFocusStyling(label) && carriesSelectionStyling(label)).toBe(
+        false,
+      );
+    }
+  });
+
+  test('billing picker: focused-but-unselected card gets focus styling only, selected card gets selection styling only', () => {
+    const {container} = render(
+      <BillingModePicker value="paid" onValueChange={() => {}} />,
+    );
+    const labels = labelsIn(container);
+    const radios = screen.getAllByRole('radio');
+
+    // Selection sits on option B (paid).
+    expect(carriesSelectionStyling(labels[1])).toBe(true);
+
+    // Focus option A (free) without selecting it.
+    radios[0].focus();
+    expect(document.activeElement).toBe(radios[0]);
+    expect(focusedLabel()).toBe(labels[0]);
+
+    expect(labels[0].className).toContain(FOCUS_STYLING_CLASS);
+    expect(carriesFocusStyling(labels[0])).toBe(true);
+    expect(carriesSelectionStyling(labels[0])).toBe(false);
+
+    expect(carriesSelectionStyling(labels[1])).toBe(true);
+    expect(carriesFocusStyling(labels[1])).toBe(false);
+
+    for (const label of labels) {
+      expect(label.className).not.toContain('focus-within:');
+    }
+  });
+
+  test('type picker: arrow-key focus move keeps exactly one selected card', async () => {
+    const user = userEvent.setup();
+    const {container} = render(<ControlledTypePicker />);
+    expect(
+      labelsIn(container).filter(carriesSelectionStyling),
+    ).toHaveLength(1);
+
+    screen.getAllByRole('radio')[0].focus();
+    await user.keyboard('{ArrowDown}');
+
+    const labels = labelsIn(container);
+    const selected = labels.filter(carriesSelectionStyling);
+    expect(selected).toHaveLength(1);
+    expect(selected[0]).toBe(labels[1]);
+    expect(focusedLabel()).toBe(selected[0]);
+    expect(carriesFocusStyling(selected[0])).toBe(true);
+  });
+
+  test('billing picker: arrow-key focus move keeps exactly one selected card', async () => {
+    const user = userEvent.setup();
+    const {container} = render(<ControlledBillingPicker />);
+    expect(
+      labelsIn(container).filter(carriesSelectionStyling),
+    ).toHaveLength(1);
+
+    screen.getAllByRole('radio')[0].focus();
+    await user.keyboard('{ArrowDown}');
+
+    const labels = labelsIn(container);
+    const selected = labels.filter(carriesSelectionStyling);
+    expect(selected).toHaveLength(1);
+    expect(selected[0]).toBe(labels[1]);
+    expect(focusedLabel()).toBe(selected[0]);
+    expect(carriesFocusStyling(selected[0])).toBe(true);
   });
 });
 

@@ -69,7 +69,7 @@ export function Component() {
       <div className="flex min-w-0 flex-col gap-4">
         {error && <Alert.Root variant="destructive" fillStyle="subtleFill"><TriangleAlertIcon /><Alert.Description>{error}</Alert.Description></Alert.Root>}
         {prefill.billing !== null && <p className="text-sm text-muted-foreground">{isFree ? <Trans message="From previous step: Free." /> : <Trans message="From previous step: Paid · ETB :price — you can change it here." values={{price}} />}</p>}
-        <ProductFormProgress label="Course setup" completed={sections.filter(s => s.isComplete).length} total={sections.length} />
+        <ProductFormProgress completed={sections.filter(s => s.isComplete).length} total={sections.length} />
         <Accordion.Root variant="bordered" value={openSection ? [openSection] : []} onValueChange={value => setOpenSection(value[0] ?? null)}>
           {sections.map(section => <ProductFormSection key={section.id} {...section} hasError={section.id === 'details' && !!(errors.title || errors.price)}>{section.id === 'details' ? <div className="flex flex-col gap-4">
             <ProductFormField label="Course title" description="Choose a clear title learners can easily understand." error={errors.title} htmlFor="course-title" required><Input id="course-title" aria-invalid={!!errors.title} value={title} maxLength={160} onChange={event => { setTitle(event.target.value); setErrors(current => ({...current, title: undefined})); }} placeholder="Complete course title" autoFocus /></ProductFormField>

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 628 256" width="628" height="256" role="img" aria-labelledby="title">
+  <title id="title">Linket wordmark — concept B: Linkline</title>
+  <g transform="translate(0 -4.72) scale(0.86)">
+    <g fill="none" stroke="#111111" stroke-width="24" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M60 64 V247.4"/>
+      <path d="M192 120 V192"/>
+      <path d="M242 192 V162 A42 42 0 0 1 326 162 V192"/>
+      <path d="M376 64 V192"/>
+      <path d="M434 120 L388 166 L414 192"/>
+      <path d="M539.2 188.6 A36 36 0 1 1 560 156 H488"/>
+      <path d="M606 120 H662"/>
+      <path d="M632 88 V192"/>
+      <path d="M60 247.4 H663"/>
+    </g>
+    <path fill="#111111" d="M178 78 A14 14 0 0 1 206 78 A14 14 0 0 1 178 78 Z"/>
+  </g>
+</svg>

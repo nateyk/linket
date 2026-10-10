@@ -582,9 +582,12 @@ function CreatorBranding({
   const {trans} = useTrans();
   const isDarkMode = useIsDarkMode();
   const useLightLogo = shouldUseLightBiolinkLogo(appearance, isDarkMode);
+  // Small cut files: this lockup renders at h-4.5 (18px, <=24px rule).
   const src =
     biolink?.branding_img ||
-    (useLightLogo ? branding.logo_light : branding.logo_dark);
+    (useLightLogo
+      ? branding.logo_light_mobile || branding.logo_light
+      : branding.logo_dark_mobile || branding.logo_dark);
 
   if (!src || appearance?.hideBranding) return null;
 
@@ -599,7 +602,6 @@ function CreatorBranding({
         src={src}
         alt={trans(message(':site logo', {values: {site: branding.site_name}}))}
       />
-      <span className="text-xs text-[var(--biolink-text)]">{branding.site_name}</span>
     </Link>
   );
 }
