@@ -1,4 +1,4 @@
-import {BlogAdminQueries} from '@common/admin/blog/blog-admin-queries';
+import {blogAdminQueries} from '@common/admin/blog/blog-admin-queries';
 import {BlogCategoryFormDialog} from '@common/admin/blog/blog-category-form-dialog';
 import {showHttpErrorToast} from '@common/http/errors/show-http-error-toast';
 import {AlertDialog} from '@shadcn/alert-dialog/alert-dialog';
@@ -7,7 +7,7 @@ import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {Item} from '@shadcn/item/item';
 import {TableSearchInput} from '@shadcn/table/utils/table-search-input';
 import {toast} from '@shadcn/toast/toast';
-import {useMutation, useQueryClient} from '@tanstack/react-query';
+import {useMutation, useQueryClient, useSuspenseQuery} from '@tanstack/react-query';
 import {Trans} from '@ui/i18n/trans';
 import {useFilter} from '@ui/i18n/use-filter';
 import {FormattedDate} from '@ui/i18n/formatted-date';
@@ -16,12 +16,13 @@ import {useMemo, useState} from 'react';
 import {PlusIcon, TrashIcon, EditIcon, EllipsisIcon, NewspaperIcon} from 'lucide-react';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {StaticPageTitle} from '@common/seo/static-page-title';
+import {useTableQueryState} from '@shadcn/table/utils/use-table-query-state';
 
 export function BlogCategoriesTab() {
   const {searchParams} = useTableQueryState();
   const filter = useFilter({sensitivity: 'base'});
 
-  const query = useSuspenseQuery(BlogAdminQueries.categoriesList(searchParams));
+  const query = useSuspenseQuery(blogAdminQueries.categoriesList(searchParams));
   const items = query.data?.data ?? [];
 
   const filteredItems = useMemo(() => {
@@ -43,7 +44,12 @@ export function BlogCategoriesTab() {
         <DashboardLayout.SectionTitle>
           <h1><Trans message="Blog Categories" /></h1>
         </DashboardLayout.SectionTitle>
-        <NewCategoryButton />
+        <BlogCategoryFormDialog>
+          <Button variant="default" color="primary">
+            <PlusIcon />
+            <Trans message="New category" />
+          </Button>
+        </BlogCategoryFormDialog>
       </DashboardLayout.SectionHeader>
       <DashboardLayout.SectionContent>
         <DashboardLayout.SectionContentHeader>
@@ -58,18 +64,7 @@ export function BlogCategoriesTab() {
           )}
         </DashboardLayout.SectionScrollContainer>
       </DashboardLayout.SectionContent>
-
-      <BlogCategoryFormDialog />
     </DashboardLayout.MainSection>
-  );
-}
-
-function NewCategoryButton() {
-  return (
-    <Button variant="default" color="primary" onClick={() => BlogCategoryFormDialog.open({mode: 'create'})}>
-      <PlusIcon />
-      <Trans message="New category" />
-    </Button>
   );
 }
 
@@ -87,7 +82,14 @@ function BlogCategoriesEmptyState({isFiltering}: {isFiltering: boolean}) {
           ? <Trans message="Try another search query." />
           : <Trans message="Get started by adding your first blog category." />}
       </p>
-      {!isFiltering && <NewCategoryButton className="mt-4" />}
+      {!isFiltering && (
+        <BlogCategoryFormDialog>
+          <Button variant="default" color="primary" className="mt-4">
+            <PlusIcon />
+            <Trans message="New category" />
+          </Button>
+        </BlogCategoryFormDialog>
+      )}
     </div>
   );
 }
@@ -135,12 +137,12 @@ function BlogCategoryActionsButton({category}: {category: any}) {
           <EllipsisIcon />
         </Dropdown.Trigger>
         <Dropdown.Content align="end">
-          <Dropdown.Item
-            onClick={() => BlogCategoryFormDialog.open({mode: 'edit', category})}
-          >
-            <EditIcon />
-            <Trans message="Edit" />
-          </Dropdown.Item>
+          <BlogCategoryFormDialog category={category}>
+            <Dropdown.Item>
+              <EditIcon />
+              <Trans message="Edit" />
+            </Dropdown.Item>
+          </BlogCategoryFormDialog>
           <Dropdown.Item
             variant="destructive"
             onClick={() => setDeleteDialogOpen(true)}
@@ -169,7 +171,7 @@ function DeleteBlogCategoryDialog({
   open,
   onOpenChange,
 }: DeleteBlogCategoryDialogProps) {
-  const deleteCategory = useMutation(BlogAdminQueries.deleteCategory());
+  const deleteCategory = useMutation(blogAdminQueries.deleteCategory());
   const queryClient = useQueryClient();
 
   const handleDelete = () => {

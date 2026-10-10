@@ -1,4 +1,4 @@
-import {BlogAdminQueries} from '@common/admin/blog/blog-admin-queries';
+import {blogAdminQueries} from '@common/admin/blog/blog-admin-queries';
 import {BlogArticleFormDialog} from '@common/admin/blog/blog-article-form-dialog';
 import {showHttpErrorToast} from '@common/http/errors/show-http-error-toast';
 import {AlertDialog} from '@shadcn/alert-dialog/alert-dialog';
@@ -7,12 +7,9 @@ import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {Item} from '@shadcn/item/item';
 import {TableSearchInput} from '@shadcn/table/utils/table-search-input';
 import {toast} from '@shadcn/toast/toast';
-import {useMutation} from '@tanstack/react-query';
-import {useSuspenseQuery} from '@tanstack/react-query';
+import {useMutation, useSuspenseQuery} from '@tanstack/react-query';
 import {Trans} from '@ui/i18n/trans';
 import {useFilter} from '@ui/i18n/use-filter';
-import {useTableQueryState} from '@shadcn/table/utils/use-table-query-state';
-import {useState} from 'react';
 import {FormattedDate} from '@ui/i18n/formatted-date';
 import {useSettings} from '@ui/settings/use-settings';
 import {useMemo} from 'react';
@@ -20,14 +17,16 @@ import {Link} from 'react-router';
 import {DeleteIcon, EditIcon, EllipsisIcon, EyeIcon, NewspaperIcon, PlusIcon} from 'lucide-react';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {StaticPageTitle} from '@common/seo/static-page-title';
+import {useTableQueryState} from '@shadcn/table/utils/use-table-query-state';
+import {useState} from 'react';
 
 export function BlogArticlesDatatablePage() {
   const {base_url} = useSettings();
   const {searchParams} = useTableQueryState();
   const filter = useFilter({sensitivity: 'base'});
 
-  const query = useSuspenseQuery(BlogAdminQueries.articlesList(searchParams));
-  const items = query.data?.pagination?.data ?? [];
+  const query = useSuspenseQuery(blogAdminQueries.articlesList(searchParams));
+  const items = query.data?.data ?? [];
 
   const filteredItems = useMemo(() => {
     if (!searchParams.query) {
@@ -48,7 +47,12 @@ export function BlogArticlesDatatablePage() {
         <DashboardLayout.SectionTitle>
           <h1><Trans message="Blog Articles" /></h1>
         </DashboardLayout.SectionTitle>
-        <NewArticleButton />
+        <BlogArticleFormDialog>
+          <Button variant="default" color="primary" className="md:ml-auto">
+            <PlusIcon />
+            <Trans message="New article" />
+          </Button>
+        </BlogArticleFormDialog>
       </DashboardLayout.SectionHeader>
       <DashboardLayout.SectionContent>
         <DashboardLayout.SectionContentHeader>
@@ -63,18 +67,7 @@ export function BlogArticlesDatatablePage() {
           )}
         </DashboardLayout.SectionScrollContainer>
       </DashboardLayout.SectionContent>
-
-      <BlogArticleFormDialog />
     </DashboardLayout.MainSection>
-  );
-}
-
-function NewArticleButton() {
-  return (
-    <Button variant="default" color="primary" onClick={() => BlogArticleFormDialog.open({mode: 'create'})}>
-      <PlusIcon />
-      <Trans message="New article" />
-    </Button>
   );
 }
 
@@ -93,7 +86,12 @@ function BlogArticlesEmptyState({isFiltering}: {isFiltering: boolean}) {
           : <Trans message="Get started by adding your first blog article." />}
       </p>
       {!isFiltering && (
-        <NewArticleButton className="mt-4" />
+        <BlogArticleFormDialog>
+          <Button variant="default" color="primary" className="mt-4">
+            <PlusIcon />
+            <Trans message="New article" />
+          </Button>
+        </BlogArticleFormDialog>
       )}
     </div>
   );
@@ -164,12 +162,12 @@ function BlogArticleActionsButton({article, baseUrl}: {article: any; baseUrl: st
             <EyeIcon />
             <Trans message="Preview" />
           </Dropdown.LinkItem>
-          <Dropdown.Item
-            onClick={() => BlogArticleFormDialog.open({mode: 'edit', article})}
-          >
-            <EditIcon />
-            <Trans message="Edit" />
-          </Dropdown.Item>
+          <BlogArticleFormDialog article={article}>
+            <Dropdown.Item>
+              <EditIcon />
+              <Trans message="Edit" />
+            </Dropdown.Item>
+          </BlogArticleFormDialog>
           <Dropdown.Item
             variant="destructive"
             onClick={() => setDeleteDialogOpen(true)}
@@ -196,7 +194,7 @@ function DeleteBlogArticleDialog({
   open,
   onOpenChange,
 }: DeleteBlogArticleDialogProps) {
-  const deleteArticle = useMutation(BlogAdminQueries.deleteArticle());
+  const deleteArticle = useMutation(blogAdminQueries.deleteArticle());
 
   const handleDelete = () => {
     deleteArticle.mutate(articleId, {

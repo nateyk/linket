@@ -3,7 +3,7 @@ import {sharedDashboardRoutes} from '@app/dashboard/dashboard-routes';
 import {adminCustomPagesRoutes} from '@common/admin/custom-pages/admin-custom-pages-routes';
 import {adminFileEntriesRoutes} from '@common/admin/file-entry/admin-file-entries-routes';
 import {adminBlogRoutes} from '@common/admin/blog/admin-blog-routes';
-import {BlogAdminQueries} from '@common/admin/blog/blog-admin-queries';
+import {blogAdminQueries} from '@common/admin/blog/blog-admin-queries';
 import {listHelpCategoriesOptions} from '@common/admin/help/help-admin-queries';
 import {adminLogsRoutes} from '@common/admin/logging/admin-logs-routes';
 import {adminRolesRoutes} from '@common/admin/roles/admin-roles-routes';
@@ -105,7 +105,7 @@ export const adminRoutes: RouteObject[] = [
               const redirect = authGuard({permission: 'settings.update'});
               if (redirect) return redirect;
               await queryClient.ensureQueryData(
-                BlogAdminQueries.categoriesList(),
+                blogAdminQueries.categoriesList(),
               );
             },
           },

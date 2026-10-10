@@ -9,7 +9,7 @@ export const blogArticlesListOptions = (params?: Record<string, unknown>) =>
     queryKey: [...blogAdminBaseKey, 'articles', params ?? {}],
     queryFn: () =>
       apiClient
-        .get<{pagination: unknown}>('/api/v1/blog/admin/articles', {params: {perPage: 20, ...params}})
+        .get<{data: unknown[]}>('/api/v1/blog/admin/articles', {params: {perPage: 20, ...params}})
         .then(r => r.data),
   });
 

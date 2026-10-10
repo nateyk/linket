@@ -30,6 +30,7 @@ class FallbackRouteController extends Controller
         'workspace',
         'contact',
         'help',
+        'blog',
         'update',
         'pages',
         'login',

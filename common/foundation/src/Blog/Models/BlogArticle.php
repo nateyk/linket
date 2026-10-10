@@ -29,6 +29,7 @@ class BlogArticle extends Model
         'meta_description',
         'status',
         'published_at',
+        'views',
     ];
 
     protected $casts = [

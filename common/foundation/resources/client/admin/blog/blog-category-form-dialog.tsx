@@ -30,7 +30,7 @@ interface Props {
   category?: any;
 }
 
-export function BlogCategoryFormDialog({children, category}: Props) {
+function BlogCategoryFormDialog({children, category}: Props) {
   const [open, setOpen] = useState(false);
   const isEditing = !!category;
 
@@ -75,7 +75,7 @@ function DialogContent({
 
   const titleValue = useWatch({control: form.control, name: 'name'});
 
-  const createCategory = useMutation(createBlogCategoryOptions());
+  const createCategory = useMutation(blogAdminQueries.createCategory());
   const updateCategory = useMutation(
     updateBlogCategoryOptions(category?.id ?? 0),
   );
@@ -145,7 +145,7 @@ function DialogContent({
             <Trans message="Cancel" />
           </Dialog.CloseButton>
           <Button type="submit" disabled={mutation.isPending}>
-            <Trans message={submitLabel} />
+            {submitLabel}
           </Button>
         </Dialog.Footer>
       </Dialog.Content>

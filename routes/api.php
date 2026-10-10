@@ -18,6 +18,7 @@ use App\Http\Controllers\LandingPageController;
 use App\Kyc\Controllers\AdminKycVerificationsController;
 use App\Kyc\Controllers\KycVerificationsController;
 use App\Links\Controllers\LinksController;
+use Common\Blog\Http\Controllers\BlogController;
 use Common\Help\Http\Controllers\AdminHelpArticleController;
 use Common\Help\Http\Controllers\AdminHelpCategoryController;
 use Common\Help\Http\Controllers\HelpController;
@@ -65,6 +66,13 @@ Route::group(['prefix' => 'v1'], function() {
         Route::get('categories/{slug}', [HelpController::class, 'category'])->name('category');
         Route::get('articles/{slug}', [HelpController::class, 'article'])->name('article');
         Route::post('articles/{slug}/react', [HelpController::class, 'react'])->name('react');
+    });
+
+    // BLOG (public API)
+    Route::name('blog.')->prefix('blog')->group(function () {
+        Route::get('/', [BlogController::class, 'index'])->name('index');
+        Route::get('categories/{slug}', [BlogController::class, 'category'])->name('category');
+        Route::get('{slug}', [BlogController::class, 'article'])->name('article');
     });
 
     Route::group(['middleware' => ['optionalAuth:sanctum', 'verified', 'verifyApiAccess']], function () {

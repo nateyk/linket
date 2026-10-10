@@ -8,13 +8,16 @@ class BlogArticleResource extends JsonResource
 {
     public function toArray($request): array
     {
+        $isAdminRoute = $request->routeIs('blog.admin.articles.*');
+        $isArticleRoute = $request->routeIs('blog.article');
+        
         return [
             'id' => $this->id,
             'title' => $this->title,
             'slug' => $this->slug,
             'excerpt' => $this->excerpt,
             'body' => $this->when(
-                $request->routeIs('blog.admin.articles.*'),
+                $isAdminRoute || $isArticleRoute,
                 $this->body,
             ),
             'body_text' => $this->body_text,

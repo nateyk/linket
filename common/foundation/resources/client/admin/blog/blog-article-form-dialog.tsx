@@ -1,12 +1,20 @@
 import {
   blogAdminQueries,
-  blogArticlesListOptions,
-  blogArticleOptions,
-  createBlogArticleOptions,
   updateBlogArticleOptions,
 } from '@common/admin/blog/blog-admin-queries';
 import {onFormQueryError} from '@common/http/errors/on-form-query-error';
-import {ArticleEditor} from '@common/article-editor/article-editor-page';
+import {TipTapEditorProvider} from '@common/text-editor/tiptap-editor-provider';
+import {articleEditorTipTapExtensions} from '@common/article-editor/article-editor-tiptap-extensions';
+import {TiptapEditorContent} from '@common/text-editor/tiptap-editor-content';
+import {FormatDropdown} from '@common/text-editor/menubar/format-dropdown';
+import {Divider} from '@common/text-editor/menubar/divider';
+import {FontStyleButtons} from '@common/text-editor/menubar/font-style-buttons';
+import {AlignButtons} from '@common/text-editor/menubar/align-buttons';
+import {ListButtons} from '@common/text-editor/menubar/list-buttons';
+import {LinkButton} from '@common/text-editor/menubar/link-button';
+import {CodeBlockMenuTrigger} from '@common/text-editor/menubar/code-block-menu-trigger';
+import {ClearFormatButton} from '@common/text-editor/menubar/clear-format-button';
+import {HistoryButtons} from '@common/text-editor/history-buttons';
 import {Button} from '@shadcn/button/button';
 import {Dialog} from '@shadcn/dialog/dialog';
 import {Field} from '@shadcn/forms/field';
@@ -18,7 +26,7 @@ import {toast} from '@shadcn/toast/toast';
 import {useMutation, useSuspenseQuery} from '@tanstack/react-query';
 import {Trans} from '@ui/i18n/trans';
 import {slugifyString} from '@ui/utils/string/slugify-string';
-import {ReactElement, useState} from 'react';
+import {ReactElement, useState, useMemo} from 'react';
 import {useForm, useWatch} from 'react-hook-form';
 import {useSettings} from '@ui/settings/use-settings';
 
@@ -40,7 +48,7 @@ interface Props {
   article?: any;
 }
 
-export function BlogArticleFormDialog({children, article}: Props) {
+function BlogArticleFormDialog({children, article}: Props) {
   const [open, setOpen] = useState(false);
   const isEditing = !!article;
 
@@ -95,7 +103,7 @@ function DialogContent({
   const titleValue = useWatch({control: form.control, name: 'title'});
   const bodyValue = useWatch({control: form.control, name: 'body'});
 
-  const createArticle = useMutation(createBlogArticleOptions());
+  const createArticle = useMutation(blogAdminQueries.createArticle());
   const updateArticle = useMutation(
     updateBlogArticleOptions(article?.id ?? 0),
   );
@@ -151,7 +159,7 @@ function DialogContent({
                   <Trans message="Category" />
                 </Field.Label>
                 <Select.Root
-                  items={(categories ?? []).map(c => ({
+                  items={(categories ?? []).map((c: any) => ({
                     value: c.id,
                     label: c.name,
                   }))}
@@ -160,7 +168,7 @@ function DialogContent({
                     <Select.Value />
                   </Select.Trigger>
                   <Select.Content>
-                    {(categories ?? []).map(c => (
+                    {(categories ?? []).map((c: any) => (
                       <Select.Item key={c.id} value={c.id}>
                         {c.name}
                       </Select.Item>
@@ -183,10 +191,31 @@ function DialogContent({
               <Field.Label>
                 <Trans message="Body" />
               </Field.Label>
-              <ArticleEditor
-                value={bodyValue ?? ''}
+              <TipTapEditorProvider
+                extensions={articleEditorTipTapExtensions}
+                initialContent={bodyValue ?? ''}
                 onChange={html => form.setValue('body', html, {shouldDirty: true})}
-              />
+              >
+                <div className="overflow-hidden rounded-card border bg-background">
+                  <div className="no-scrollbar flex shrink-0 items-center overflow-x-auto border-b px-1 py-0.5 text-muted-foreground">
+                    <FormatDropdown />
+                    <Divider />
+                    <FontStyleButtons />
+                    <Divider />
+                    <AlignButtons />
+                    <Divider />
+                    <ListButtons />
+                    <Divider />
+                    <LinkButton />
+                    <Divider />
+                    <CodeBlockMenuTrigger />
+                    <ClearFormatButton />
+                    <Divider />
+                    <HistoryButtons />
+                  </div>
+                  <TiptapEditorContent className="prose max-w-none p-4 focus:outline-none dark:prose-invert [&_.tiptap]:min-h-60" />
+                </div>
+              </TipTapEditorProvider>
               <Field.Error />
             </HookForm.Field>
 
@@ -264,7 +293,7 @@ function DialogContent({
             <Trans message="Cancel" />
           </Dialog.CloseButton>
           <Button type="submit" disabled={mutation.isPending}>
-            <Trans message={submitLabel} />
+            {submitLabel}
           </Button>
         </Dialog.Footer>
       </Dialog.Content>
@@ -272,4 +301,4 @@ function DialogContent({
   );
 }
 
-export {BlogArticleFormDialog};
+export {BlogArticleFormDialog, DialogContent};
