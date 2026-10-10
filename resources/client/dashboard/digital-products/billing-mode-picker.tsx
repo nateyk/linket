@@ -63,6 +63,7 @@ export function BillingModePicker({
             icon={option.icon}
             title={option.title}
             description={option.description}
+            checked={value === option.id}
           />
         </label>
       ))}

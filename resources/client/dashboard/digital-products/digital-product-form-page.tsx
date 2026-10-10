@@ -36,6 +36,7 @@ import {
 import {Input} from '@shadcn/forms/input/input';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {Trans} from '@ui/i18n/trans';
+import {useTrans} from '@ui/i18n/use-trans';
 import {getBootstrapData} from '@ui/bootstrap-data/bootstrap-data-store';
 import {FormattedBytes} from '@ui/i18n/formatted-bytes';
 import {
@@ -139,6 +140,7 @@ export function Component() {
 function DigitalProductForm() {
   const {productId} = useParams();
   const navigate = useNavigate();
+  const {trans} = useTrans();
   const {state, actions, dirty} = useProductCreation();
   const title = state.title;
   const description = state.description;
@@ -237,12 +239,19 @@ function DigitalProductForm() {
   });
 
   useEffect(() => {
+    // P2 (T2 review): this effect re-runs when the route's productId changes
+    // (/items/1/edit → /items/2/edit). Without cancellation, product 1's
+    // response can resolve AFTER product 2's and overwrite the form (and the
+    // `product` record Save PUTs against). Only the latest request's response
+    // may apply; the cleanup cancels the previous run.
+    let cancelled = false;
     void (async () => {
       try {
         if (productId) {
           const response = await apiClient.get(
             `/api/v1/items/${productId}`,
           );
+          if (cancelled) return;
           const item = response.data.data as Product;
           if (item.type === 'course') {
             navigate(
@@ -271,21 +280,26 @@ function DigitalProductForm() {
           const pageResponse = await apiClient.get(
             '/api/v1/biolinks?fields_preset=minimal',
           );
+          if (cancelled) return;
           const payload = pageResponse.data;
           setBiolinks(payload.data ?? []);
         } catch {
           // Storefront placement is optional, so a failed list request is non-fatal.
         }
       } catch (reason) {
+        if (cancelled) return;
         setError(
           reason instanceof Error
             ? reason.message
             : 'Unable to load this digital product.',
         );
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     })();
+    return () => {
+      cancelled = true;
+    };
   }, [navigate, productId]);
 
   const save = useCallback(
@@ -456,29 +470,46 @@ function DigitalProductForm() {
     <DashboardLayout.MainSection>
       <DashboardLayout.SectionHeader>
         <DashboardLayout.SidebarToggle />
-        <Breadcrumb>
+        {/* P2 (crit3-A/3-B): the SectionTitle (page title + status badge)
+            measured width 0 at 1280/1440/1920. Root cause is the flex
+            chain in SectionHeader: the breadcrumb <nav> ships `w-full`,
+            i.e. a flex base size equal to the whole row, while the title
+            is `flex-1` (flex-basis 0%) — free space for it never exists,
+            so it collapses and `overflow:hidden` clips the badge behind
+            the action row. `w-auto` gives the slack to the title;
+            `max-sm:hidden` keeps the 360px row for title + icon actions
+            (navigation still lives in the drawer). The current-page crumb
+            is dropped on purpose: it repeated the exact string the title
+            now shows again (crit3-A, duplicate-title note). */}
+        <Breadcrumb className="w-auto max-sm:hidden">
           <Breadcrumb.Item>
             <Breadcrumb.Link to="/dashboard/items">
               <Trans message="All products" />
             </Breadcrumb.Link>
           </Breadcrumb.Item>
-          <Breadcrumb.Separator />
-          <Breadcrumb.Item>
-            <Breadcrumb.Page>
-              <Trans message={pageTitle} />
-            </Breadcrumb.Page>
-          </Breadcrumb.Item>
         </Breadcrumb>
-        <DashboardLayout.SectionTitle>
-          <Trans message={pageTitle} />
+        <DashboardLayout.SectionTitle render={<h1 />}>
+          {/* P2: in a tight row the TEXT is what truncates (min-w-0), so
+              the status badge — the one product-specific fact the chrome
+              carries — keeps its 36px at every width.
+              Final-fix item 2: `render={<h1 />}` makes this the page's one
+              and only heading (T7's mechanism on the selection page). */}
+          <span className="min-w-0 truncate">
+            <Trans message={pageTitle} />
+          </span>
           {product && <ProductStatus status={product.status} />}
         </DashboardLayout.SectionTitle>
         <div className="flex items-center gap-2">
+          {/* P2 (crit3-A): the text labels collapse below 640px
+              (max-sm:hidden), leaving icon-only buttons with no accessible
+              name. aria-labels match the visible text via trans() — the
+              same pattern the course setup page uses. */}
           {product && (
             <Button
               variant="ghost"
               size="sm"
               disabled={saving}
+              aria-label={trans({message: 'Delete'})}
               onClick={() => setDeleteDialogOpen(true)}
             >
               <Trash2Icon className="size-4" />
@@ -491,6 +522,11 @@ function DigitalProductForm() {
             variant="outline"
             size="sm"
             disabled={saving || submitting}
+            aria-label={
+              saving
+                ? trans({message: 'Saving...'})
+                : trans({message: 'Save draft'})
+            }
             onClick={() => void save(false)}
           >
             <SaveIcon className="size-4" />
@@ -505,6 +541,11 @@ function DigitalProductForm() {
           <Button
             size="sm"
             disabled={saving || submitting || !canSubmit}
+            aria-label={
+              submitting
+                ? trans({message: 'Submitting...'})
+                : trans({message: 'Submit for review'})
+            }
             onClick={() => void save(true)}
           >
             <SendIcon className="size-4" />
@@ -643,6 +684,7 @@ function DigitalProductForm() {
                             onDescriptionChange={actions.setDescription}
                             onPriceChange={actions.setPrice}
                             legacyCurrency={product?.currency}
+                            isApproved={product?.status === 'approved'}
                             convertToEtb={convertToEtb}
                             onConvertToEtbChange={setConvertToEtb}
                             onCoverChange={actions.setCover}
@@ -747,6 +789,7 @@ function DetailsPanel({
   onDescriptionChange,
   onPriceChange,
   legacyCurrency,
+  isApproved,
   convertToEtb,
   onConvertToEtbChange,
   onCoverChange,
@@ -760,6 +803,9 @@ function DetailsPanel({
   onDescriptionChange: (value: string) => void;
   onPriceChange: (value: string) => void;
   legacyCurrency?: string;
+  /** Approved products revert to draft on save, so the free-offer helper
+   * would promise something saving cannot do — only show it otherwise. */
+  isApproved?: boolean;
   convertToEtb: boolean;
   onConvertToEtbChange: (value: boolean) => void;
   onCoverChange: (url: string, entry?: {id: number}) => void;
@@ -789,7 +835,11 @@ function DetailsPanel({
 
       <ProductFormField
         label="Price"
-        description="Set ETB 0 to offer this product for free."
+        description={
+          isApproved
+            ? undefined
+            : 'Set ETB 0 to offer this product for free.'
+        }
         error={errors.price_cents}
         htmlFor="product-price"
         required
@@ -871,7 +921,15 @@ function DescriptionEditor({
       initialContent={value}
       onChange={onChange}
     >
-      <div className="overflow-hidden rounded-card-sm border border-border">
+      {/* P2 (crit3-B nested-cards): this box is the Description FIELD's
+          control — same role as the title/price inputs beside it — so it
+          wears the field tokens (`rounded-input` 12px + `border-input`),
+          not the card tokens (`rounded-card-sm` 16px + `border-border`)
+          that made it read as a third card nested in the section card.
+          The boundary stays because an editable surface with a toolbar
+          needs one (DESIGN.md field spec), it just stops being card
+          chrome. */}
+      <div className="overflow-hidden rounded-input border border-input">
         <div className="no-scrollbar flex shrink-0 items-center gap-0.5 overflow-x-auto border-b px-1.5 py-1 text-muted-foreground">
           <FormatDropdown />
           <Divider />

@@ -54,14 +54,14 @@ export function ProductPreview() {
             <span className="flex items-center gap-2 text-xs text-muted-foreground">
               <FileIcon className="size-4" aria-hidden="true" />
               <Trans
-                message=":count download files"
+                message="[one :count download file|other :count download files]"
                 values={{count: files.length}}
               />
             </span>
             <span className="flex items-center gap-2 text-xs text-muted-foreground">
               <TypeIcon className="size-4" aria-hidden="true" />
               <Trans
-                message=":count characters"
+                message=":count characters in description"
                 values={{count: title.length + (description?.length ?? 0)}}
               />
             </span>

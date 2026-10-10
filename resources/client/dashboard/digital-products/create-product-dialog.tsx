@@ -31,6 +31,12 @@ export function CreateProductDialog({
 
   const handleFinish = () => {
     if (wizard.finishUrl) {
+      // Success path: the wizard handed off to the create form. Clear the
+      // store (state + persisted localStorage copy) before leaving, so the
+      // next "New product" opens fresh at step 1 instead of resuming with a
+      // stale price. Bypasses handleOpenChange on purpose — the dirty guard
+      // must not fire on an intentional finish.
+      wizard.reset();
       onOpenChange(false);
       navigate(wizard.finishUrl);
     }
@@ -78,7 +84,13 @@ export function CreateProductDialog({
               <WizardStepBody wizard={wizard} />
             </div>
           </div>
-          <Dialog.Footer variant="muted" className="py-4 sm:justify-between">            {wizard.step === 'type' ? (
+          {/* P2 (crit1-B nested-cards): `variant="muted"` painted a
+              `border-t bg-muted/50` strip inside the dialog panel — a card
+              inside a card (DESIGN.md "Don't nest a card inside a card").
+              The footer is an action row, so it renders on the panel
+              itself, spaced by the same `py-4` every other dialog uses. */}
+          <Dialog.Footer className="py-4 sm:justify-between">
+            {wizard.step === 'type' ? (
               <Dialog.CloseButton render={<Button variant="outline" />}>
                 <Trans message="Cancel" />
               </Dialog.CloseButton>

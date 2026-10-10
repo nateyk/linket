@@ -7,7 +7,6 @@ import {
 } from '@shadcn/forms/input-group/input-group';
 import {Trans} from '@ui/i18n/trans';
 import {useTrans} from '@ui/i18n/use-trans';
-import {cn} from '@ui/utils/cn';
 import {
   PackagePlusIcon,
   TagIcon,
@@ -30,6 +29,7 @@ import {
 } from './product-create-flow';
 import type {ProductType} from './product-type-picker';
 import {ProductTypePicker} from './product-type-picker';
+import {ProductFormProgress} from './product-form-progress';
 
 export const STEP_META: Record<
   WizardStep,
@@ -145,38 +145,35 @@ export function focusWizardStep(node: HTMLDivElement | null) {
   }
 }
 
+/**
+ * T5: the wizard's indicator is the SAME ProductFormProgress bar the
+ * course-setup and edit pages use (one progress pattern across the flow).
+ * P2 (landmark hygiene): a progressbar is not navigation, so the visible bar
+ * renders OUTSIDE the nav; the named nav keeps only the sr-only ordered list
+ * with each step's accessible name + aria-current (the R07 guarantees).
+ * `completed` is the 1-based step the user is on, so the shared copy shows
+ * truthful position ("Step 2 of 3", never "2 of 3 complete").
+ */
 export function WizardStepDots({wizard}: {wizard: ProductCreateWizard}) {
   const current = wizard.steps.indexOf(wizard.step);
   const {trans} = useTrans();
   return (
-    <nav aria-label={trans({message: 'Product creation steps'})}>
-      <ol className="flex items-center gap-1.5">
-        {wizard.steps.map(step => (
-          <li
-            key={step}
-            aria-current={step === wizard.step ? 'step' : undefined}
-            className="flex items-center gap-1.5"
-          >
-            <span
-              aria-hidden="true"
-              className={cn(
-                'size-1.5 rounded-full',
-                step === wizard.step ? 'bg-primary' : 'bg-border',
-              )}
-            />
-            <span className="sr-only">
+    <>
+      <ProductFormProgress
+        completed={current + 1}
+        total={wizard.steps.length}
+        messageVariant="steps"
+      />
+      <nav aria-label={trans({message: 'Product creation steps'})}>
+        <ol className="sr-only">
+          {wizard.steps.map(step => (
+            <li key={step} aria-current={step === wizard.step ? 'step' : undefined}>
               <Trans message={STEP_META[step].title} />
-            </span>
-          </li>
-        ))}
-      </ol>
-      <p className="mt-1.5 text-xs text-muted-foreground">
-        <Trans
-          message="Step :current of :total"
-          values={{current: current + 1, total: wizard.steps.length}}
-        />
-      </p>
-    </nav>
+            </li>
+          ))}
+        </ol>
+      </nav>
+    </>
   );
 }
 
@@ -187,39 +184,59 @@ export function WizardStepBody({wizard}: {wizard: ProductCreateWizard}) {
     );
   }
   if (wizard.step === 'price') {
-    const showHint =
-      wizard.price.trim() !== '' &&
-      (parseEtbToCents(wizard.price) === null ||
-        (parseEtbToCents(wizard.price) ?? 0) <= 0);
-    return (
-      <Field.Root>
-        <Field.Label htmlFor="wizard-price">
-          <Trans message="Price" />
-        </Field.Label>
-        <InputGroup>
-          <InputGroupAddon align="inline-start">
-            <InputGroupText>ETB</InputGroupText>
-          </InputGroupAddon>
-          <InputGroupInput
-            id="wizard-price"
-            type="number"
-            min="0"
-            step="0.01"
-            value={wizard.price}
-            onChange={event => wizard.setPrice(event.target.value)}
-            placeholder="0.00"
-            autoFocus
-          />
-        </InputGroup>
-        {showHint && (
-          <Field.Error>
-            <Trans message="Enter an amount greater than ETB 0." />
-          </Field.Error>
-        )}
-      </Field.Root>
-    );
+    return <PriceField wizard={wizard} />;
   }
   return (
     <ProductTypePicker value={wizard.type} onValueChange={wizard.setType} />
+  );
+}
+
+/**
+ * T7 (crit1-A): `canContinue` keeps Continue disabled until the price is a
+ * real amount (> 0), but a greyed-out button with no reason was a silent
+ * dead end at the last gate of the funnel — so the same inline Field.Error
+ * the course setup page uses (T4) is shown. P2 (T7 review): mounting that
+ * error the instant the step opens (autofocused, empty field) announced a
+ * validation failure before the creator had typed anything. The error is
+ * deferred until the field has been interacted with (typed into or blurred);
+ * once interacted, it stays visible whenever the amount can't pass the gate.
+ * The price step only renders for paid billing, so free billing is untouched.
+ */
+function PriceField({wizard}: {wizard: ProductCreateWizard}) {
+  const [touched, setTouched] = useState(false);
+  const cents = parseEtbToCents(wizard.price);
+  const invalid = cents === null || cents <= 0;
+  const showError = touched && invalid;
+  return (
+    <Field.Root invalid={showError}>
+      <Field.Label htmlFor="wizard-price">
+        <Trans message="Price" />
+      </Field.Label>
+      <InputGroup>
+        <InputGroupAddon align="inline-start">
+          <InputGroupText>ETB</InputGroupText>
+        </InputGroupAddon>
+        <InputGroupInput
+          id="wizard-price"
+          type="number"
+          min="0"
+          step="0.01"
+          value={wizard.price}
+          onChange={event => {
+            setTouched(true);
+            wizard.setPrice(event.target.value);
+          }}
+          onBlur={() => setTouched(true)}
+          placeholder="0.00"
+          aria-invalid={showError}
+          autoFocus
+        />
+      </InputGroup>
+      {showError && (
+        <Field.Error>
+          <Trans message="Enter an amount greater than ETB 0." />
+        </Field.Error>
+      )}
+    </Field.Root>
   );
 }

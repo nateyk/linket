@@ -99,6 +99,7 @@ export function ProductTypePicker({
               icon={option.icon}
               title={option.title}
               description={option.description}
+              checked={value === option.id}
               hint={
                 option.id === 'course'
                   ? undefined

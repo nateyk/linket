@@ -1,4 +1,5 @@
 import {Trans} from '@ui/i18n/trans';
+import {cn} from '@ui/utils/cn';
 import {CheckIcon, type LucideIcon} from 'lucide-react';
 import type {ReactNode} from 'react';
 
@@ -7,6 +8,15 @@ interface OptionRowContentProps {
   title: string;
   description: string;
   hint?: ReactNode;
+  /**
+   * T7: selection is rendered from React state, not from a `peer-data-checked`
+   * CSS selector. The glyph used to be a *descendant* of the peer radio's
+   * sibling, so the peer variant never matched it and the check stayed at
+   * `opacity: 0` — the selected card read the same as an unselected one.
+   * Callers already know the selection (`value === option.id`), so they pass
+   * it in and the glyph/tints are painted here.
+   */
+  checked?: boolean;
 }
 
 export function OptionRowContent({
@@ -14,10 +24,16 @@ export function OptionRowContent({
   title,
   description,
   hint,
+  checked = false,
 }: OptionRowContentProps) {
   return (
     <>
-      <span className="flex size-10 shrink-0 items-center justify-center rounded-card-sm bg-muted text-muted-foreground ring-1 ring-foreground/5 peer-data-checked:bg-primary/10 peer-data-checked:text-primary peer-data-checked:ring-primary/15">
+      <span
+        className={cn(
+          'flex size-10 shrink-0 items-center justify-center rounded-card-sm bg-muted text-muted-foreground ring-1 ring-foreground/5',
+          checked && 'bg-primary/10 text-primary ring-primary/15',
+        )}
+      >
         <Icon />
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -33,8 +49,21 @@ export function OptionRowContent({
           </span>
         )}
       </span>
-      <span className="flex size-5 shrink-0 items-center justify-center rounded-full border border-border bg-background text-primary transition-colors peer-data-checked:border-primary peer-data-checked:bg-primary peer-data-checked:text-primary-foreground">
-        <CheckIcon className="size-3 opacity-0 transition-opacity peer-data-checked:opacity-100" />
+      {/* Selection indicator: filled primary circle + check on the selected
+          card, empty circle otherwise. aria-hidden because the radio's
+          accessible name comes from the label text, not from a decorative
+          glyph. */}
+      <span
+        className={cn(
+          'flex size-5 shrink-0 items-center justify-center rounded-full border bg-background transition-colors',
+          checked
+            ? 'border-primary bg-primary text-primary-foreground'
+            : 'border-border text-primary',
+        )}
+      >
+        {checked && (
+          <CheckIcon aria-hidden data-selection-glyph className="size-3" />
+        )}
       </span>
     </>
   );

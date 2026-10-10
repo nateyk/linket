@@ -84,6 +84,15 @@ const h = vi.hoisted(() => {
       });
       return inFlight.length;
     },
+    /** Resolve ONLY the pending request for this item URL (out-of-order
+     *  responses: the stale-response guard test). */
+    resolveItem(url: string, product: unknown) {
+      const idx = pending.findIndex(request => request.url === url);
+      if (idx === -1) return false;
+      const [request] = pending.splice(idx, 1);
+      request.resolve({data: {data: product}});
+      return true;
+    },
   };
 });
 
@@ -220,4 +229,86 @@ test('refetches when the productId changes', async () => {
   await waitFor(() =>
     expect(h.itemUrls).toContain('/api/v1/items/2'),
   );
+});
+
+test('a stale response for a previous product never hydrates the current one', async () => {
+  // P2 (T2 review): switching products while a request is still in flight —
+  // product 1 resolves LAST and must be dropped, or it silently overwrites
+  // the form (and the product record Save PUTs against).
+  const router = mount();
+
+  await waitFor(() => expect(h.itemGetCount).toBe(1));
+  await act(async () => {
+    await router.navigate('/dashboard/items/2/edit');
+  });
+  await waitFor(() => expect(h.itemGetCount).toBe(2));
+
+  const second = {...serverProduct, id: 2, title: 'Second Product Title'};
+  await act(async () => {
+    expect(h.resolveItem('/api/v1/items/2', second)).toBe(true);
+  });
+  const input = (await screen.findByRole('textbox', {
+    name: /product title/i,
+  })) as HTMLInputElement;
+  expect(input.value).toBe('Second Product Title');
+
+  // Stale response arrives after the current one was applied.
+  await act(async () => {
+    expect(h.resolveItem('/api/v1/items/1', serverProduct)).toBe(true);
+  });
+  await flushTasks();
+
+  expect(input.value).toBe('Second Product Title');
+  expect(h.itemUrls).toEqual([
+    '/api/v1/items/1',
+    '/api/v1/items/2',
+  ]);
+});
+
+test('ships exactly one h1, the page title', async () => {
+  // Final-fix item 2: the header used to render SectionTitle as a plain
+  // div, so the edit page shipped ZERO headings. It now renders the page
+  // title as the one h1 (T7's `render={<h1 />}` mechanism).
+  mount();
+  await loadProduct();
+
+  const h1s = Array.from(document.querySelectorAll('h1'));
+  expect(h1s).toHaveLength(1);
+  expect(h1s[0].textContent).toBe('Edit digital product');
+  // The status badge lives inside SectionTitle, so the heading's accessible
+  // name carries the title first ("Edit digital productApproved").
+  expect(screen.getAllByRole('heading', {level: 1})).toHaveLength(1);
+  expect(
+    screen.getAllByRole('heading', {level: 1, name: /^Edit digital product/}),
+  ).toHaveLength(1);
+});
+
+test('header action buttons carry an accessible name without their visible label', async () => {
+  // crit3-A: below 640px the button text is `max-sm:hidden`, leaving
+  // icon-only buttons — each still needs its own accessible name.
+  mount();
+  await loadProduct();
+
+  const del = screen.getByRole('button', {name: 'Delete'});
+  expect(del.getAttribute('aria-label')).toBe('Delete');
+  const save = screen.getByRole('button', {name: 'Save draft'});
+  expect(save.getAttribute('aria-label')).toBe('Save draft');
+  const submit = screen.getByRole('button', {name: 'Submit for review'});
+  expect(submit.getAttribute('aria-label')).toBe('Submit for review');
+});
+
+test('description editor is bordered as a field, not as a nested card', async () => {
+  // crit3-B confirmed-real nested-cards hit: the TipTap wrapper shipped
+  // `rounded-card-sm border border-border` (card tokens) inside the
+  // section card. It is the Description field's control, so it wears the
+  // same field tokens as the title/price inputs next to it.
+  mount();
+  await loadProduct();
+
+  const editor = document.querySelector('.overflow-hidden.rounded-input');
+  expect(editor).not.toBeNull();
+  const className = editor!.getAttribute('class') ?? '';
+  expect(className).toContain('border-input');
+  expect(className).not.toContain('border-border');
+  expect(className).not.toContain('rounded-card-sm');
 });

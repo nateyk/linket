@@ -193,6 +193,29 @@ describe('digital product file capability', () => {
   });
 });
 
+describe('price helper honesty', () => {
+  // crit3-A: `Set ETB 0 to offer this product for free.` rendered on approved
+  // products, where saving already reverts them to draft — a promise the form
+  // cannot keep. The helper is status-gated to non-approved products.
+  test('free-offer helper only renders for products that can still become free', () => {
+    const source = fs.readFileSync(
+      path.resolve(
+        'resources/client/dashboard/digital-products/digital-product-form-page.tsx',
+      ),
+      'utf8',
+    );
+
+    expect(source).toContain("isApproved={product?.status === 'approved'}");
+    expect(source).toMatch(
+      /description=\{\s*isApproved\s*\?\s*undefined\s*:\s*'Set ETB 0 to offer this product for free\.'\s*\}/,
+    );
+    // It never renders unconditionally any more.
+    expect(source).not.toContain(
+      'description="Set ETB 0 to offer this product for free."',
+    );
+  });
+});
+
 describe('product builder preview', () => {
   // The Customer preview must render through the shared ProductCard so
   // creators see exactly what storefront customers see.
@@ -342,5 +365,54 @@ describe('course edit redirect', () => {
     );
 
     expect(source).toContain('?notice=moved-to-builder');
+  });
+});
+
+describe('P2 header: the page title owns the row', () => {
+  // crit3-A/3-B: `DashboardLayout.SectionTitle` measured width 0 at
+  // 1280/1440/1920 (`[844,72,0,36]` @1280, overflow:hidden), so the page
+  // title AND the Approved badge never rendered. Root cause is the flex
+  // chain in SectionHeader: the breadcrumb <nav> ships `w-full`, i.e. a flex
+  // base size of the ENTIRE header row, while SectionTitle is
+  // `flex-1` (flex-basis 0%) — there is never positive free space left for
+  // the title, so it collapses to 0 and its overflow clips the badge behind
+  // the action row. The breadcrumb has to stop claiming the row, and the
+  // duplicated current-page crumb (same string as the title) goes with it.
+  const source = fs.readFileSync(
+    path.resolve(
+      'resources/client/dashboard/digital-products/digital-product-form-page.tsx',
+    ),
+    'utf8',
+  );
+
+  test('breadcrumb is width-constrained instead of claiming the whole header', () => {
+    expect(source).toMatch(
+      /<Breadcrumb[^>]*className="[^"]*\bw-auto\b[^"]*"/,
+    );
+    // below 640px the row can only hold the title and the icon actions, so
+    // the breadcrumb steps aside (navigation still lives in the drawer)
+    expect(source).toMatch(
+      /<Breadcrumb[^>]*className="[^"]*max-sm:hidden[^"]*"/,
+    );
+  });
+
+  test('the page title is not printed twice in the header', () => {
+    // Fixing the 0px title without this would put "Edit digital product" on
+    // screen twice (breadcrumb crumb + SectionTitle), per crit3-A note.
+    expect(source).not.toContain('<Breadcrumb.Page');
+    expect(source).not.toContain('<Breadcrumb.Separator');
+    // ...but the title itself (and its status badge) stays, and in a tight
+    // row the TEXT truncates (min-w-0) so the badge keeps its 36px.
+    expect(source).toMatch(
+      /<DashboardLayout\.SectionTitle[^>]*>[\s\S]*?<span className="min-w-0 truncate">\s*<Trans message=\{pageTitle\} \/>\s*<\/span>\s*\{product && <ProductStatus/,
+    );
+  });
+
+  test('the title is rendered as the page heading via SectionTitle', () => {
+    // Final-fix item 2: the same `render={<h1 />}` mechanism T7 used on the
+    // selection page, so the edit page ships exactly one h1 instead of none.
+    expect(source).toMatch(
+      /<DashboardLayout\.SectionTitle render=\{<h1 \/>\}>/,
+    );
   });
 });

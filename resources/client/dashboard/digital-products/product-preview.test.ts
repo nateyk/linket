@@ -41,4 +41,21 @@ describe('product preview wiring', () => {
     expect(source).toContain('Progress.Root');
     expect(source).toContain('Progress.Indicator');
   });
+  test('meta copy keeps the approved plural and referent-clear strings', () => {
+    const source = fs.readFileSync(
+      path.resolve(
+        'resources/client/dashboard/digital-products/product-preview.tsx',
+      ),
+      'utf8',
+    );
+    expect(source).toContain(
+      'message="[one :count download file|other :count download files]"',
+    );
+    expect(source).toContain('message=":count characters in description"');
+    // The pre-approval strings must not creep back (an in-flight edit once
+    // reverted them): the counter covers title + description, so the old
+    // bare ":count characters" is ambiguous.
+    expect(source).not.toContain('message=":count download files"');
+    expect(source).not.toContain('message=":count characters"');
+  });
 });
