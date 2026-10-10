@@ -84,6 +84,26 @@ class DigitalProductsController extends Controller
         return new DigitalProductResource($product);
     }
 
+    public function saveDraft(Request $request, DigitalProduct $digitalProduct)
+    {
+        $this->assertOwner($digitalProduct, $request);
+        $data = $this->validatedDraft($request, $digitalProduct);
+        $creator = $request->user();
+        $entitlements = app(Entitlements::class);
+        $effectiveType = $data['type'] ?? $digitalProduct->type ?? 'digital';
+        abort_unless($entitlements->enabled($creator, 'course_creation_enabled') || $effectiveType !== 'course', 403, __('Course creation is not enabled for your plan.'));
+        $this->enforceProductLimitForType($entitlements, $data['price_cents'] ?? (int) $digitalProduct->price_cents, $effectiveType, $creator, $digitalProduct->id);
+
+        $product = $this->mutations->update(
+            $digitalProduct,
+            $data,
+            $entitlements->limit($creator, 'max_upload_bytes'),
+            $creator,
+        );
+
+        return new DigitalProductResource($product);
+    }
+
     public function submit(Request $request, DigitalProduct $digitalProduct)
     {
         $this->assertOwner($digitalProduct, $request);
@@ -183,6 +203,28 @@ class DigitalProductsController extends Controller
 
         return $data;
     }
+
+    /** Draft autosave rules: relax exactly validated()'s two hard requirements
+     *  (title required, file_ids min:1) and skip ProductSettings::enforcePricePolicy —
+     *  price policy is enforced by update()/submit(), not by keystroke saves. */
+    private function validatedDraft(Request $request, DigitalProduct $existing): array
+    {
+        $data = $request->validate([
+            'title' => 'sometimes|nullable|string|max:160',
+            'description' => 'sometimes|nullable|string|max:20000',
+            'price_cents' => 'sometimes|nullable|integer|min:0',
+            'currency' => 'sometimes|nullable|in:etb,ETB',
+            'cover_file_entry_id' => 'sometimes|nullable|integer|exists:file_entries,id',
+            'type' => 'sometimes|nullable|in:digital,ebook,audio,course',
+            'file_ids' => 'sometimes|nullable|array',
+            'file_ids.*' => 'integer|distinct|exists:file_entries,id',
+            'biolink_ids' => 'sometimes|nullable|array',
+            'biolink_ids.*' => 'integer|distinct|exists:biolinks,id',
+        ]);
+        // Drop nulls so partial saves keep existing column values; KEEP 0 and [] (meaningful).
+        return array_filter($data, static fn ($v) => $v !== null);
+    }
+
     private function enforceProductLimitForType(Entitlements $entitlements, int $priceCents, string $type, \App\Models\User $creator, ?int $existingId): void
     {
         if ($type === 'course') {

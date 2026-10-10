@@ -239,6 +239,7 @@ Route::group(['prefix' => 'v1'], function () {
         Route::apiResource('items', DigitalProductsController::class)->parameters(['items' => 'digitalProduct']);
         Route::get('items/{digitalProduct}/reviews', [CreatorProductReviewsController::class, 'index']);
         Route::post('items/{digitalProduct}/submit', [DigitalProductsController::class, 'submit']);
+        Route::put('items/{digitalProduct}/draft', [DigitalProductsController::class, 'saveDraft']);
         Route::get('admin/items', [AdminDigitalProductsController::class, 'index']);
         Route::get('admin/items/{digitalProduct}', [AdminDigitalProductsController::class, 'show'])->whereNumber('digitalProduct');
         Route::post('admin/items/{digitalProduct}/approve', [AdminDigitalProductsController::class, 'approve']);
