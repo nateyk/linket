@@ -163,9 +163,13 @@ function DigitalProductForm() {
     'details',
   );
 
+  // Auto-save only runs for drafts: the approved→draft revert is promised to
+  // the user as an explicit Save action (the warning banner below), so
+  // auto-save must not perform it (Review Focus #1). `product` is null while
+  // the GET is in flight, which also keeps auto-save off during load.
   useEffect(() => {
-    if (dirty) actions.autoSave();
-  }, [dirty, actions]);
+    if (dirty && product?.status === 'draft') actions.autoSave();
+  }, [dirty, actions, product?.status]);
 
   const validateField = useCallback(
     (field: string, value: string) => {
