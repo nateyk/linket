@@ -35,7 +35,10 @@ export function ProductFormSection({
       value={id}
       className={cn(hasError && 'border-destructive/40')}
     >
-      <Accordion.Trigger>
+      {/* T4: this section trigger is top-level page content under the page
+          h1, so the accordion heading renders as h2 (Base UI's Header
+          defaults to h3, which skipped h2 entirely). */}
+      <Accordion.Trigger headingRender={<h2 />}>
         <BuilderSectionHeader
           icon={icon}
           isComplete={isComplete}

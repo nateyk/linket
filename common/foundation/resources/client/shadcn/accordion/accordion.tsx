@@ -2,6 +2,7 @@ import {Accordion as AccordionPrimitive} from '@base-ui/react/accordion';
 
 import {cn} from '@ui/utils/cn';
 import {ChevronDownIcon, ChevronUpIcon} from 'lucide-react';
+import type {ReactElement} from 'react';
 
 /**
  * A vertically stacked set of interactive headings that each reveal a section of content.
@@ -60,10 +61,22 @@ function AccordionItem({
 function AccordionTrigger({
   className,
   children,
+  headingRender,
   ...props
-}: AccordionPrimitive.Trigger.Props) {
+}: AccordionPrimitive.Trigger.Props & {
+  /**
+   * Replaces the heading element the Base UI Header renders (its default is
+   * `<h3>`). Pass e.g. `<h2 />` when the accordion sits directly under the
+   * page `<h1>`, so section triggers don't skip a heading level. Omitting it
+   * keeps the default `<h3>` — behavior is unchanged.
+   */
+  headingRender?: ReactElement;
+}) {
   return (
-    <AccordionPrimitive.Header className="flex flex-1">
+    <AccordionPrimitive.Header
+      className="flex flex-1"
+      render={headingRender}
+    >
       <AccordionPrimitive.Trigger
         data-slot="accordion-trigger"
         className={cn(

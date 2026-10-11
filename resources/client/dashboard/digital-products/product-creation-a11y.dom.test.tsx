@@ -15,10 +15,12 @@ import {
 import {useBootstrapDataStore} from '@ui/bootstrap-data/bootstrap-data-store';
 import userEvent from '@testing-library/user-event';
 import {createMemoryRouter, MemoryRouter, RouterProvider} from 'react-router';
-import {beforeEach, describe, expect, test, vi} from 'vitest';
+import {beforeAll, beforeEach, describe, expect, test, vi} from 'vitest';
 import {DashboardLayoutContextProvider} from '@common/ui/dashboard/dashboard-layout-context';
+import {Component as CreateCoursePage} from '../courses/create-course-page';
 import {BillingModePicker} from './billing-mode-picker';
 import {CreateProductDialog} from './create-product-dialog';
+import {Component as DigitalProductEditPage} from './digital-product-form-page';
 import {type BillingMode, visibleSteps} from './product-create-flow';
 import {
   WizardStepDots,
@@ -36,6 +38,73 @@ vi.mock('@app/dashboard/use-usage', () => ({
     },
   }),
 }));
+
+// T4: the edit-page heading test mounts the real DigitalProductForm, whose
+// product GET must resolve without a server (same approach as
+// digital-product-form-page.hydrate.dom.test.tsx). The wizard dialog never
+// calls the API (finish only navigates), so this mock is inert for the rest
+// of the file.
+const editPageApi = vi.hoisted(() => {
+  const draftProduct = {
+    id: 1,
+    title: 'Ethiopian Coffee Ritual Field Guide',
+    description: '',
+    price_cents: 1500,
+    currency: 'etb',
+    status: 'draft',
+    type: 'digital',
+    cover: null,
+    cover_file_entry_id: null,
+    files: [],
+    biolink_ids: [],
+  };
+  return {
+    get: async (url: string) => {
+      if (url.startsWith('/api/v1/items/')) {
+        return {data: {data: draftProduct}};
+      }
+      return {data: {data: []}};
+    },
+  };
+});
+
+vi.mock('@common/http/query-client', async () => {
+  const {QueryClient} = await import('@tanstack/react-query');
+  return {
+    queryClient: new QueryClient({defaultOptions: {queries: {retry: false}}}),
+    apiClient: {
+      get: (url: string) => editPageApi.get(url),
+      post: () => Promise.resolve({data: {data: {}}}),
+      put: () => Promise.resolve({data: {data: {}}}),
+      delete: () => Promise.resolve({data: {data: {}}}),
+      request: () => Promise.resolve({data: {data: {}}}),
+    },
+  };
+});
+
+// jsdom has no layout: the edit page's TipTap description editor queries
+// Range rects while it mounts (same stub as
+// digital-product-form-page.hydrate.dom.test.tsx).
+beforeAll(() => {
+  const emptyRect: DOMRect = {
+    x: 0,
+    y: 0,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: 0,
+    height: 0,
+    toJSON: () => ({}),
+  };
+  Range.prototype.getBoundingClientRect = () => emptyRect;
+  Range.prototype.getClientRects = () =>
+    ({
+      length: 0,
+      item: () => null,
+      [Symbol.iterator]: function* () {},
+    }) as unknown as DOMRectList;
+});
 
 const pickerDir = 'resources/client/dashboard/digital-products';
 
@@ -842,5 +911,107 @@ describe('T7 empty price shows a visible error', () => {
 
     expect(screen.queryByLabelText('Price')).toBeNull();
     expect(screen.queryByRole('alert')).toBeNull();
+  });
+});
+
+// T4 (heading hierarchy): every section header used to render as h3 — the
+// shared accordion's Base UI Header defaults to h3 — skipping h2 entirely
+// between the page h1 and its top-level section content. Both flow pages
+// share ProductFormSection, so one fix covers them; both are mounted here
+// because the Produces contract names both routes.
+describe('T4 heading hierarchy: sections are h2 under the page h1', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  /**
+   * The invariant both pages must satisfy: exactly one h1 (the page title),
+   * section triggers as the h2s right under it, and no skipped levels
+   * anywhere (h3+ only ever follows h2 — e.g. the shared ProductCard title
+   * in the edit page's preview aside, which keeps its app-wide h3 default).
+   */
+  function expectHeadingHierarchy() {
+    const headings = screen.getAllByRole('heading');
+
+    // Exactly one h1 — the page title — and it is the FIRST heading.
+    const h1s = headings.filter(h => h.tagName === 'H1');
+    expect(h1s).toHaveLength(1);
+    expect(headings[0]).toBe(h1s[0]);
+
+    // The first heading after h1 is an h2 (never h3 — that skipped h2).
+    expect(headings[1].tagName).toBe('H2');
+
+    const sections = headings.filter(h => h.tagName === 'H2');
+    expect(sections.length).toBeGreaterThan(0);
+
+    // No skipped levels anywhere on the page: a heading may only drop to the
+    // level directly below the previous one.
+    const levels = headings.map(h => Number(h.tagName.slice(1)));
+    levels.forEach((level, index) => {
+      if (index > 0) {
+        expect(level - levels[index - 1]).toBeLessThanOrEqual(1);
+      }
+    });
+
+    return {h1: h1s[0], sections};
+  }
+
+  test('course setup page (/dashboard/items/new/course) renders h1 → h2 sections', () => {
+    const router = createMemoryRouter(
+      [
+        {
+          path: '/dashboard/items/new/course',
+          element: <CreateCoursePage />,
+        },
+      ],
+      {initialEntries: ['/dashboard/items/new/course']},
+    );
+    render(
+      <DashboardLayoutContextProvider name="test">
+        {() => <RouterProvider router={router} />}
+      </DashboardLayoutContextProvider>,
+    );
+
+    const {h1, sections} = expectHeadingHierarchy();
+    expect(h1.textContent).toContain('Create course');
+    // The section triggers ARE the h2 headings, titled per section.
+    expect(sections.map(h => h.textContent)).toEqual([
+      expect.stringContaining('Course details'),
+      expect.stringContaining('Course settings'),
+    ]);
+  });
+
+  test('digital product edit page (/dashboard/items/:id/edit) renders h1 → h2 sections', async () => {
+    const router = createMemoryRouter(
+      [
+        {
+          path: '/dashboard/items/:productId/edit',
+          element: <DigitalProductEditPage />,
+        },
+      ],
+      {initialEntries: ['/dashboard/items/1/edit']},
+    );
+    const queryClient = new QueryClient({
+      defaultOptions: {queries: {retry: false}},
+    });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <DashboardLayoutContextProvider name="test">
+          {() => <RouterProvider router={router} />}
+        </DashboardLayoutContextProvider>
+      </QueryClientProvider>,
+    );
+
+    // The section list mounts after the product GET resolves.
+    const sections = await screen.findAllByRole('heading', {level: 2});
+    expect(sections).toHaveLength(3);
+
+    const {h1} = expectHeadingHierarchy();
+    expect(h1.textContent).toContain('Edit digital product');
+    expect(sections.map(h => h.textContent)).toEqual([
+      expect.stringContaining('Product details'),
+      expect.stringContaining('Product files'),
+      expect.stringContaining('Storefront placement'),
+    ]);
   });
 });
