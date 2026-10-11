@@ -812,6 +812,60 @@ describe('T7 page shell: single h1, question before the action row', () => {
   });
 });
 
+// T5: on the page shell the progress rule must span the whole content
+// column, so it reads as the flow's progress (not step 1's). It used to nest
+// inside the header's min-w-0 text block, which made the rule stop at the
+// text column edge and sit visually "under" the first step's title.
+describe('T5 page-shell progress bar placement', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  function renderSelectionPage() {
+    const router = createMemoryRouter(
+      [
+        {
+          path: '/dashboard/items/new',
+          element: <ProductTypeSelectionPage />,
+        },
+      ],
+      {initialEntries: ['/dashboard/items/new']},
+    );
+    return render(
+      <DashboardLayoutContextProvider name="test">
+        {() => <RouterProvider router={router} />}
+      </DashboardLayoutContextProvider>,
+    );
+  }
+
+  test('page-shell progress bar is outside the header text column', () => {
+    renderSelectionPage();
+
+    // Labeled as progress for the whole flow, not for a step.
+    const bar = screen.getByRole('progressbar', {
+      name: 'Product setup progress',
+    });
+    expect(screen.getByText('Step 1 of 2')).not.toBeNull();
+
+    const title = screen.getByRole('heading', {
+      level: 2,
+      name: 'Create a new product',
+    });
+    // The h2's text block (the min-w-0 column) must not contain the bar.
+    const textColumn = title.closest('.min-w-0');
+    expect(textColumn).not.toBeNull();
+    expect(textColumn!.contains(bar)).toBe(false);
+
+    // Instead, the bar renders as a sibling AFTER the whole header row
+    // (icon + text block), so its bottom rule spans the content column and
+    // aligns with the card column below.
+    const headerRow = title.closest('div.flex.items-start');
+    expect(headerRow).not.toBeNull();
+    expect(headerRow!.contains(bar)).toBe(false);
+    expect(headerRow!.nextElementSibling?.contains(bar)).toBe(true);
+  });
+});
+
 // T7 (crit1-A P1): an empty price greyed out Continue with zero feedback —
 // a silent dead end at the last gate of the funnel. The paid price step must
 // show the same inline Field.Error the course setup page uses.

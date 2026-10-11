@@ -52,10 +52,13 @@ export function Component() {
               <p className="mt-1 max-w-md text-sm leading-relaxed text-muted-foreground">
                 <Trans message={meta.description} />
               </p>
-              <div className="mt-3">
-                <WizardStepDots wizard={wizard} />
-              </div>
             </div>
+          </div>
+          {/* T5: page-shell progress is the FLOW's rule, not step 1's — it
+              sits after the whole header row (icon + text) so the bottom
+              rule spans the content column and aligns with the cards. */}
+          <div className="mt-4">
+            <WizardStepDots wizard={wizard} />
           </div>
 
           <div
