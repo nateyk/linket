@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -20,11 +21,18 @@ return new class extends Migration
     public function up(): void
     {
         $this->rewriteActions(self::FROM, self::TO);
+
+        // Menus are read through settings()->loadSettings(), which caches the
+        // whole settings table under "settings.public" for 24h. Purge it so the
+        // rewritten actions are served immediately instead of the stale blob.
+        Cache::forget('settings.public');
     }
 
     public function down(): void
     {
         $this->rewriteActions(self::TO, self::FROM);
+
+        Cache::forget('settings.public');
     }
 
     private function rewriteActions(string $from, string $to): void

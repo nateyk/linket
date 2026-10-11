@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 uses(DatabaseTransactions::class);
@@ -118,6 +119,26 @@ test('menu migration is a no-op when the menus setting row is absent', function 
     runItemsMenuActionMigration()->up();
 
     expect(DB::table('settings')->where('name', 'menus')->exists())->toBeFalse();
+});
+
+test('menu migration purges the stale settings.public cache', function () {
+    seedLegacyItemsMenuRows();
+
+    // Simulate a warm 24h cache holding the pre-migration menus blob
+    // (Settings::loadSettings caches the whole settings table under this key).
+    $stale = collect(
+        DB::table('settings')->pluck('value', 'name'),
+    );
+    $staleMenus = collect(
+        json_decode($stale->get('menus'), true),
+    )->flatMap(fn ($menu) => collect($menu['items'] ?? [])->pluck('action'));
+    expect($staleMenus->all())->toContain('/dashboard/my-products');
+    Cache::set('settings.public', $stale, now()->addDay());
+
+    runItemsMenuActionMigration()->up();
+
+    $fresh = Cache::get('settings.public');
+    expect($fresh)->toBeNull();
 });
 
 test('default menu seeding points desktop and mobile menus at /dashboard/items', function () {
