@@ -14,6 +14,12 @@
  * `dirty` and a draft product, exactly ONE PUT with the CURRENT state; no PUT
  * while the product has not loaded; no PUT after unmount (the pending
  * debounce is cancelled); no PUT for approved products.
+ *
+ * Tests 2 and 3 render the real `DigitalProductForm`, so the shipped
+ * `product?.status === 'draft'` gate (digital-product-form-page.tsx) is the
+ * condition they exercise — including the `product === null` branch (not yet
+ * loaded) that only the page can reach. Test 1 drives the context directly
+ * and pins only the debounce/current-state contract.
  */
 import {DashboardLayoutContextProvider} from '@common/ui/dashboard/dashboard-layout-context';
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
@@ -24,7 +30,7 @@ import {
   render,
   screen,
 } from '@testing-library/react';
-import {useEffect, useState} from 'react';
+import {useEffect} from 'react';
 import {createMemoryRouter, RouterProvider} from 'react-router';
 import {afterAll, afterEach, beforeAll, beforeEach, expect, test, vi} from 'vitest';
 import {Component} from './digital-product-form-page';
@@ -61,19 +67,42 @@ beforeAll(() => {
 const h = vi.hoisted(() => {
   const put = vi.fn();
   const item = {current: null as Record<string, unknown> | null};
+  const pending: {
+    url: string;
+    resolve: (value: unknown) => void;
+    reject: (reason: unknown) => void;
+  }[] = [];
   return {
     put,
     item,
+    pending,
     get(url: string): Promise<unknown> {
       if (url.startsWith('/api/v1/items/')) {
-        // Hang while the test has not "loaded" a product, exactly like an
-        // in-flight GET (the page-level gate is closed during that window).
-        if (!item.current) return new Promise(() => {});
+        // No product set → the GET is left hanging (an in-flight request);
+        // the test decides later whether it resolves or settles as a failure.
+        if (!item.current) {
+          return new Promise((resolve, reject) => {
+            pending.push({url, resolve, reject});
+          });
+        }
         return Promise.resolve({data: {data: item.current}});
       }
       return Promise.resolve({data: {data: []}});
     },
+    /** Settle every in-flight product GET with the given payload. */
+    resolvePendingItems(product: unknown) {
+      pending.splice(0, pending.length).forEach(request => {
+        request.resolve({data: {data: product}});
+      });
+    },
+    /** Settle every in-flight product GET as a failure (shipped error path). */
+    rejectPending(error: unknown) {
+      pending.splice(0, pending.length).forEach(request => {
+        request.reject(error);
+      });
+    },
     reset() {
+      pending.length = 0;
       item.current = null;
       put.mockReset();
       put.mockImplementation(async () => ({data: {data: {}}}));
@@ -123,35 +152,33 @@ async function advance(ms: number) {
   });
 }
 
-/* ── Provider-level harness (tests 1–2) ── */
+/* ── Context-level harness (test 1: the debounce contract only) ── */
 
 type Creation = ReturnType<typeof useProductCreation>;
 
-let probe: {actions: Creation['actions']; setStatus: (s: string | null) => void} | null =
-  null;
+let ctxActions: Creation['actions'] | null = null;
 
-function Probe() {
+/**
+ * Test 1 only needs the debounce to be TRIGGERED when the form becomes dirty.
+ * The draft-status gate itself lives in digital-product-form-page.tsx and is
+ * pinned against shipped code by tests 2 and 3, which render the real page —
+ * this harness deliberately does NOT re-implement that condition.
+ */
+function Trigger() {
   const {actions, dirty} = useProductCreation();
-  // Stand-in for the edit page's `product` record: null until the product has
-  // loaded — exactly what digital-product-form-page.tsx holds while its GET
-  // is in flight — then the loaded status.
-  const [status, setStatus] = useState<string | null>(null);
-  // Mirror of the edit page's trigger effect (the real one lives in
-  // digital-product-form-page.tsx and is pinned by the page-level test
-  // below): draft status only, nothing scheduled during load.
   useEffect(() => {
-    if (dirty && status === 'draft') actions.autoSave();
-  }, [dirty, actions, status]);
-  // Test probe: every render commits inside act(), so the test always reads
-  // the latest context (all actions are stable callbacks; `actions` is not).
-  probe = {actions, setStatus};
+    if (dirty) actions.autoSave();
+  }, [dirty, actions]);
+  // Every render commits inside act(), so the test always reads the latest
+  // context (all actions are stable callbacks; the `actions` object is not).
+  ctxActions = actions;
   return null;
 }
 
 function mountProvider() {
   return render(
     <ProductCreationProvider prefill={null} productId={1}>
-      <Probe />
+      <Trigger />
     </ProductCreationProvider>,
   );
 }
@@ -171,14 +198,13 @@ test('debounced auto-save sends CURRENT state, not first-render state', async ()
   vi.useFakeTimers();
   mountProvider();
 
-  // The edit page hydrates the form once the product GET resolves (draft),
-  // then the creator edits — only now does `dirty` flip and the trigger fire.
+  // The edit page hydrates the form once the product GET resolves, then the
+  // creator edits — only now does `dirty` flip and the trigger fire.
   act(() => {
-    probe!.setStatus('draft');
-    probe!.actions.hydrate({...DRAFT_FORM});
+    ctxActions!.hydrate({...DRAFT_FORM});
   });
   act(() => {
-    probe!.actions.setTitle('New');
+    ctxActions!.setTitle('New');
   });
 
   // Still idle: nothing goes out before the 1500ms window elapses.
@@ -213,39 +239,81 @@ test('debounced auto-save sends CURRENT state, not first-render state', async ()
   vi.useRealTimers();
 });
 
-test('no auto-save fires before hydrate (dirty=false) and none after unmount', async () => {
-  vi.useFakeTimers();
-  const {unmount} = mountProvider();
+test(
+  'no auto-save while product.status is not draft (null during load), and none after unmount',
+  {
+    // Two full page mounts (TipTap included): the default 5s test timeout is
+    // too tight under a fully parallel `vitest run`.
+    timeout: 30_000,
+  },
+  async () => {
+    // ── Part A: the shipped `product === null` branch of the gate ──
+    // No product is preset, so the page's item GET is left hanging. While it
+    // is in flight the page renders skeletons (there is not even an input to
+    // edit). It then settles WITHOUT hydrating — the shipped load-failure
+    // path (`setError` + `setLoading(false)`, `setProduct` never called), so
+    // `product` stays null while the form is editable and the route's
+    // productId = 1 exists: a PUT would be possible if the gate were missing.
+    renderEditPage();
+    expect(h.pending).toHaveLength(1);
+    expect(
+      screen.queryByRole('textbox', {name: /product title/i}),
+    ).toBeNull(); // still loading
 
-  // Before the product has loaded the page holds `product = null`, so its
-  // `product?.status === 'draft'` gate is closed: an edit made during load
-  // must never schedule a PUT (the probe drives the context actions directly
-  // because the real form is still a skeleton at that point).
-  act(() => {
-    probe!.actions.setTitle('X');
-  });
-  await advance(1600);
-  expect(h.put).not.toHaveBeenCalled();
+    vi.useFakeTimers();
+    await advance(1600);
+    expect(h.put).not.toHaveBeenCalled();
+    vi.useRealTimers();
 
-  // Product loads as a draft → hydrate → edit: the debounce is now pending…
-  act(() => {
-    probe!.setStatus('draft');
-    probe!.actions.hydrate({...DRAFT_FORM});
-  });
-  act(() => {
-    probe!.actions.setTitle('Edited');
-  });
+    await act(async () => {
+      h.rejectPending(new Error('Network error'));
+    });
+    const input = (await screen.findByRole(
+      'textbox',
+      {name: /product title/i},
+      {timeout: 10_000},
+    )) as HTMLInputElement;
+    // Never hydrated → `product === null` (not "a non-draft status"):
+    // empty form + the shipped load-error banner.
+    expect(input.value).toBe('');
+    expect(screen.getByText(/Network error/)).toBeTruthy();
 
-  // …and the provider unmounts before the window elapses. The pending PUT
-  // must be cancelled, not fired against an unmounted tree.
-  unmount();
-  await advance(1600);
-  expect(h.put).toHaveBeenCalledTimes(0);
+    // Edit with `product === null`: `product?.status === 'draft'` is false, so
+    // the shipped effect must not schedule the 1500ms PUT — even though the
+    // form is dirty and a PUT would be fully sendable. This assertion fails
+    // if digital-product-form-page.tsx's gate is weakened or removed.
+    vi.useFakeTimers();
+    fireEvent.change(input, {target: {value: 'Edited while product is null'}});
+    await advance(1600);
+    expect(h.put).not.toHaveBeenCalled();
+    vi.useRealTimers();
+    cleanup();
 
-  vi.useRealTimers();
-});
+    // ── Part B: a pending auto-save is cancelled on unmount ──
+    // The product now loads as a draft, so the shipped gate opens; the edit
+    // schedules the debounce, then the page unmounts before the window
+    // elapses — the pending PUT must be cancelled, not fired.
+    h.item.current = SERVER_PRODUCT('draft');
+    renderEditPage();
+    const loaded = (await screen.findByRole(
+      'textbox',
+      {name: /product title/i},
+      {timeout: 10_000},
+    )) as HTMLInputElement;
+    expect(loaded.value).toBe('Server title'); // hydrated → product is set
 
-/* ── Page-level trigger effect (test 3) ── */
+    vi.useFakeTimers();
+    fireEvent.change(loaded, {target: {value: 'Pending edit'}});
+    expect(h.put).not.toHaveBeenCalled(); // still inside the idle window
+    cleanup(); // unmount with the debounce pending
+    await advance(1600);
+    expect(h.put).toHaveBeenCalledTimes(0);
+
+    vi.useRealTimers();
+  },
+);
+
+/* ── Page-level helpers (tests 2–3 render the shipped DigitalProductForm) ── */
 
 const SERVER_PRODUCT = (status: string): Record<string, unknown> => ({
   id: 1,
@@ -261,8 +329,9 @@ const SERVER_PRODUCT = (status: string): Record<string, unknown> => ({
   biolink_ids: [],
 });
 
-async function mountPage(status: 'draft' | 'approved') {
-  h.item.current = SERVER_PRODUCT(status);
+/** Mount the real edit page. The item GET is pending iff `h.item.current`
+ *  is null, resolved with that payload otherwise. */
+function renderEditPage() {
   const router = createMemoryRouter(
     [{path: '/dashboard/items/:productId/edit', element: <Component />}],
     {initialEntries: ['/dashboard/items/1/edit']},
@@ -270,13 +339,19 @@ async function mountPage(status: 'draft' | 'approved') {
   const queryClient = new QueryClient({
     defaultOptions: {queries: {retry: false}},
   });
-  render(
+  return render(
     <QueryClientProvider client={queryClient}>
       <DashboardLayoutContextProvider name="test">
         {() => <RouterProvider router={router} />}
       </DashboardLayoutContextProvider>
     </QueryClientProvider>,
   );
+}
+
+/** Load a product with the given status and wait for the hydrated form. */
+async function mountPage(status: 'draft' | 'approved') {
+  h.item.current = SERVER_PRODUCT(status);
+  renderEditPage();
   const input = (await screen.findByRole(
     'textbox',
     {name: /product title/i},
@@ -330,5 +405,5 @@ test(
 );
 
 afterAll(() => {
-  probe = null;
+  ctxActions = null;
 });
