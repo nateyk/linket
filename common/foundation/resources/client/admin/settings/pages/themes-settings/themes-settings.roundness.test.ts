@@ -15,11 +15,15 @@ describe('admin theme roundness options', () => {
     ]);
   });
 
-  test('labels the middle step "Round"', () => {
+  test('labels the middle step "Round" and the default step "Default"', () => {
     const source = fs.readFileSync(
       'common/foundation/resources/client/admin/settings/pages/themes-settings/theme-constants.tsx',
       'utf8',
     );
     expect(source).toContain('message="Round"');
+    expect(source).toContain('message="Default"');
+    // "Full" was a mislabel: `default` remaps nothing, it is the standard
+    // three-radius system, not a full-round theme.
+    expect(source).not.toContain('message="Full"');
   });
 });

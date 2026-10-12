@@ -29,8 +29,8 @@ export const roundnessOptions = [
     value: 'default',
     label: (
       <>
-        <RoundnessPreview d="M4 20C4 11.1634 11.1634 4 20 4" />
-        <Trans message="Full" />
+        <RoundnessPreview d="M4 20V12C4 7.58172 7.58172 4 12 4H20" />
+        <Trans message="Default" />
       </>
     ),
   },
