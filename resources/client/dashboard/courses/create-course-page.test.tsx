@@ -3,7 +3,6 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
-import {FileUploadProvider} from '@common/uploads/uploader/file-upload-provider';
 import {DashboardLayoutContextProvider} from '@common/ui/dashboard/dashboard-layout-context';
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
 import {fireEvent, render, screen} from '@testing-library/react';
@@ -144,6 +143,27 @@ vi.mock('@ui/toast/toast', () => {
   return {toast};
 });
 
+// CroppedCover runs a crop + XHR-upload pipeline jsdom cannot drive (object
+// URLs, an upload strategy, a crop dialog). The branch the cover test guards
+// is the page wiring of the field's onChange(url, entry) contract — which
+// CourseSettingsCoverField maps to onChange(url, entry?.id ?? null) — so the
+// stub calls that same contract with a fake entry instead of uploading.
+vi.mock('@common/uploads/components/cropped-image-selector', () => ({
+  CroppedCover: ({
+    onChange,
+  }: {
+    value: string;
+    onChange: (url: string, entry?: {id: number}) => void;
+  }) => (
+    <button
+      type="button"
+      onClick={() => onChange('https://cdn.test/cover.png', {id: 456})}
+    >
+      Set cover
+    </button>
+  ),
+}));
+
 function mount(url = '/dashboard/items/new/course?billing=free') {
   const router = createMemoryRouter(
     [
@@ -161,13 +181,7 @@ function mount(url = '/dashboard/items/new/course?billing=free') {
       client={new QueryClient({defaultOptions: {queries: {retry: false}}})}
     >
       <DashboardLayoutContextProvider name="test">
-        {() => (
-          // The cover field mounts CroppedCover, whose upload hook reads the
-          // file-upload store from context.
-          <FileUploadProvider>
-            <RouterProvider router={router} />
-          </FileUploadProvider>
-        )}
+        {() => <RouterProvider router={router} />}
       </DashboardLayoutContextProvider>
     </QueryClientProvider>,
   );
@@ -180,11 +194,13 @@ function submitForm() {
   fireEvent.submit(form as HTMLFormElement);
 }
 
-async function typeTitle(user: ReturnType<typeof userEvent.setup>) {
-  await user.type(
-    screen.getByRole('textbox', {name: /course title/i}),
-    'Ethiopian coffee course',
-  );
+// Plain controlled inputs take one change event — per-keystroke user-event
+// typing is the expensive path under jsdom and buys nothing here (only the
+// TipTap editor needs real key events, see typeDescription below).
+function typeTitle(title = 'Cafe') {
+  fireEvent.change(screen.getByRole('textbox', {name: /course title/i}), {
+    target: {value: title},
+  });
 }
 
 async function openSettingsSection(
@@ -195,18 +211,19 @@ async function openSettingsSection(
   );
 }
 
-async function addOutcome(
-  user: ReturnType<typeof userEvent.setup>,
-  text: string,
-) {
-  await user.type(
-    screen.getByPlaceholderText(/build and launch/i),
-    text,
-  );
-  await user.click(screen.getByRole('button', {name: 'Add'}));
+function addOutcome(text: string) {
+  fireEvent.change(screen.getByPlaceholderText(/build and launch/i), {
+    target: {value: text},
+  });
+  fireEvent.click(screen.getByRole('button', {name: 'Add'}));
 }
 
-/** Type into the shared TipTap description editor (the section must be open). */
+/**
+ * One real keystroke into the shared TipTap description editor (the section
+ * must be open). ProseMirror only accepts DOM-driven key events, and every
+ * keystroke costs a full editor transaction — callers pass a single
+ * character, enough to give the editor non-empty content.
+ */
 async function typeDescription(
   user: ReturnType<typeof userEvent.setup>,
   text: string,
@@ -256,44 +273,53 @@ describe('inline course settings', () => {
   });
 
   test('submitting with untouched settings posts once and never PUTs', async () => {
-    const user = userEvent.setup();
     mount();
-    await typeTitle(user);
+    typeTitle();
 
     submitForm();
 
     expect(await screen.findByText('course builder')).toBeTruthy();
+    // The create request stays byte-identical to the pre-settings page —
+    // pinned here so a payload edit has to break a test, not just a diff.
     expect(mockPost).toHaveBeenCalledTimes(1);
+    expect(mockPost).toHaveBeenCalledWith('/api/v1/items', {
+      title: 'Cafe',
+      description: null,
+      price_cents: 0,
+      currency: 'etb',
+      type: 'course',
+    });
     expect(mockPut).not.toHaveBeenCalled();
   });
 
   test('settings content follows creation with one PUT of the subset payload', async () => {
     const user = userEvent.setup();
     mount();
-    await typeTitle(user);
+    typeTitle();
     await openSettingsSection(user);
-    await typeDescription(user, 'Learn the coffee ritual');
-    await addOutcome(user, 'Ship a working course');
+    // A single keystroke — enough to make the editor's HTML non-empty.
+    await typeDescription(user, 'X');
+    addOutcome('Ship a working course');
 
     submitForm();
 
     await vi.waitFor(() => expect(mockPut).toHaveBeenCalledTimes(1));
     expect(mockPut).toHaveBeenCalledWith('/api/v1/courses/77', {
-      description: '<p>Learn the coffee ritual</p>',
+      description: '<p>X</p>',
       learning_outcomes: ['Ship a working course'],
       cover_file_entry_id: null,
     });
     expect(mockPost).toHaveBeenCalledTimes(1);
     expect(await screen.findByText('course builder')).toBeTruthy();
-  });
+  }, 10_000);
 
   test('a rejected settings PUT still navigates, never re-creates, and warns once', async () => {
     mockPut.mockRejectedValue(new Error('validation failed'));
     const user = userEvent.setup();
     mount();
-    await typeTitle(user);
+    typeTitle();
     await openSettingsSection(user);
-    await addOutcome(user, 'Ship a working course');
+    addOutcome('Ship a working course');
 
     submitForm();
 
@@ -307,20 +333,43 @@ describe('inline course settings', () => {
     expect(mockToastDanger).toHaveBeenCalledWith(SETTINGS_FAILURE_COPY);
   });
 
-  test('settings completion feeds the progress display without gating create', async () => {
+  // Non-gating is proven by the untouched-settings test above (create still
+  // submits with settings empty); this one pins the progress flip itself.
+  test('a filled description flips the second required section to complete', async () => {
     const user = userEvent.setup();
     mount();
 
     // Title valid, settings still empty: only the details section counts.
-    await typeTitle(user);
+    typeTitle();
     expect(screen.getByText('1 of 2 required sections complete')).toBeTruthy();
 
     // A filled description completes the second section (any settings content
     // would — description is the one the spec pins down).
     await openSettingsSection(user);
-    await typeDescription(user, 'Learn the coffee ritual');
+    await typeDescription(user, 'X');
     expect(
       await screen.findByText('2 of 2 required sections complete'),
     ).toBeTruthy();
-  });
+  }, 10_000);
+
+  test('a cover alone follows creation with its numeric file id', async () => {
+    const user = userEvent.setup();
+    mount();
+    typeTitle();
+    await openSettingsSection(user);
+    await user.click(screen.getByRole('button', {name: 'Set cover'}));
+
+    submitForm();
+
+    // coverFileId alone makes settings worth sending — with the other two
+    // fields still empty in their spec-defined empty shapes.
+    await vi.waitFor(() => expect(mockPut).toHaveBeenCalledTimes(1));
+    expect(mockPut).toHaveBeenCalledWith('/api/v1/courses/77', {
+      description: null,
+      learning_outcomes: [],
+      cover_file_entry_id: 456,
+    });
+    expect(mockPost).toHaveBeenCalledTimes(1);
+    expect(await screen.findByText('course builder')).toBeTruthy();
+  }, 10_000);
 });
