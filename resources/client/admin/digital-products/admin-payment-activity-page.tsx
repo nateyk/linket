@@ -830,7 +830,7 @@ function TransactionDetails({
               </div>
             )}
           </Dialog.Body>
-          <Dialog.Footer variant="muted">
+          <Dialog.Footer className="py-4">
             <Dialog.CloseButton>
               <Trans message="Close" />
             </Dialog.CloseButton>
