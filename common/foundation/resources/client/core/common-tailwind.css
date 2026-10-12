@@ -184,7 +184,7 @@ html.dark {
 
   .radius-sm {
     --be-radius-button: var(--radius-md);
-    --be-radius-input: var(--radius-md);
+    --be-radius-input: var(--radius-sm);
     --be-radius-card: var(--radius-lg);
     --be-radius-card-sm: var(--radius-lg);
     --be-radius-card-xs: var(--radius-lg);

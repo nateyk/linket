@@ -5,7 +5,7 @@ import {SettingsWithPreview} from '@common/admin/settings/layout/settings-with-p
 import {CreateNewThemeButton} from '@common/admin/settings/pages/themes-settings/create-new-theme-button';
 import {SelectThemeButton} from '@common/admin/settings/pages/themes-settings/select-theme-button';
 import {ThemeColorButton} from '@common/admin/settings/pages/themes-settings/theme-color-button';
-import {themeColorList} from '@common/admin/settings/pages/themes-settings/theme-constants';
+import {themeColorList, roundnessOptions} from '@common/admin/settings/pages/themes-settings/theme-constants';
 import {ThemeOptionsButton} from '@common/admin/settings/pages/themes-settings/theme-options-button';
 import {useAdminSettings} from '@common/admin/settings/use-admin-settings';
 import {ColorSchemeContext} from '@common/core/color-scheme-provider';
@@ -220,47 +220,6 @@ function ThemeFontDialog({themeId, size = 'lg'}: ThemeFontDialogProps) {
         </Dialog.Portal>
       </Dialog.Root>
     </div>
-  );
-}
-
-const roundnessOptions = [
-  {
-    value: 'none',
-    label: (
-      <>
-        <RoundnessPreview d="M4 20V4H20" />
-        <Trans message="Square" />
-      </>
-    ),
-  },
-  {
-    value: 'default',
-    label: (
-      <>
-        <RoundnessPreview d="M4 20C4 11.1634 11.1634 4 20 4" />
-        <Trans message="Full" />
-      </>
-    ),
-  },
-] as const;
-
-function RoundnessPreview({d}: {d: string}) {
-  return (
-    <svg
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        d={d}
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
   );
 }
 
