@@ -42,6 +42,15 @@ function seedLegacyItemsMenuRows(): void
                 ['type' => 'route', 'label' => 'Products', 'action' => '/dashboard/my-products', 'id' => 'user-custom-products'],
             ],
         ],
+        [
+            'name' => 'Admin sidebar',
+            'id' => 'a07',
+            'positions' => ['admin-sidebar'],
+            'items' => [
+                ['type' => 'route', 'label' => 'Logs', 'action' => '/admin/logs', 'id' => 'admin-logs'],
+                ['type' => 'route', 'label' => 'Digital Products', 'action' => '/admin/digital-products', 'id' => 'admin-digital-products'],
+            ],
+        ],
     ];
 
     DB::table('settings')->updateOrInsert(
@@ -99,6 +108,12 @@ test('menu migration rewrites my-products actions to items across desktop, mobil
     $custom = collect(itemsMenuByPosition('custom-sidebar')['items'])->pluck('action');
     expect($custom)->toContain('/dashboard/items');
     expect($custom)->not->toContain('/dashboard/my-products');
+
+    // the admin sidebar row with the dead /admin/digital-products link is rewritten too
+    $admin = collect(itemsMenuByPosition('admin-sidebar')['items'])->pluck('action');
+    expect($actions)->not->toContain('/admin/digital-products');
+    expect($admin)->toContain('/admin/items');
+    expect($admin)->toContain('/admin/logs'); // untouched admin items survive
 });
 
 test('menu migration down restores my-products actions symmetrically', function () {
@@ -111,6 +126,12 @@ test('menu migration down restores my-products actions symmetrically', function 
     $actions = storedItemsMenuActions();
     expect($actions)->toContain('/dashboard/my-products');
     expect($actions)->not->toContain('/dashboard/items');
+
+    // the admin sidebar mapping is restored symmetrically too
+    expect($actions)->toContain('/admin/digital-products');
+    expect($actions)->not->toContain('/admin/items');
+    $admin = collect(itemsMenuByPosition('admin-sidebar')['items'])->pluck('action');
+    expect($admin)->toContain('/admin/digital-products');
 });
 
 test('menu migration is a no-op when the menus setting row is absent', function () {

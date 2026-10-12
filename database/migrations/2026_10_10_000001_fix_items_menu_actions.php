@@ -11,6 +11,10 @@ use Illuminate\Support\Facades\DB;
  * menu whose item action still points at the old path 404s. Rewrite the
  * action value everywhere, mirroring the JSON-walk pattern of
  * 2026_08_16_000001_rename_digital_products_menu_label.
+ *
+ * The same rename moved the admin SPA route /admin/digital-products to
+ * /admin/items, so old installs' admin-sidebar rows carry a dead link
+ * there too; those actions are rewritten in the same walk.
  */
 return new class extends Migration
 {
@@ -18,9 +22,14 @@ return new class extends Migration
 
     private const TO = '/dashboard/items';
 
+    private const ADMIN_FROM = '/admin/digital-products';
+
+    private const ADMIN_TO = '/admin/items';
+
     public function up(): void
     {
         $this->rewriteActions(self::FROM, self::TO);
+        $this->rewriteActions(self::ADMIN_FROM, self::ADMIN_TO);
 
         // Menus are read through settings()->loadSettings(), which caches the
         // whole settings table under "settings.public" for 24h. Purge it so the
@@ -31,6 +40,7 @@ return new class extends Migration
     public function down(): void
     {
         $this->rewriteActions(self::TO, self::FROM);
+        $this->rewriteActions(self::ADMIN_TO, self::ADMIN_FROM);
 
         Cache::forget('settings.public');
     }
