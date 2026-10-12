@@ -70,7 +70,7 @@ export function Component() {
   // form has no files or storefront-placement sections.
   const sections = [
     {id: 'details', title: 'Course details', description: 'Name your course and confirm its price.', icon: GraduationCapIcon, isComplete: !!title.trim() && (isFree || (parseEtbToCents(price) ?? 0) > 0)},
-    {id: 'settings', title: 'Course settings', description: 'Review what happens after creation.', icon: TagIcon, isComplete: hasSettingsContent},
+    {id: 'settings', title: 'Course settings', description: 'Add a description, learning outcomes, and a cover image.', icon: TagIcon, isComplete: hasSettingsContent},
   ];
   const createCourse = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -161,11 +161,12 @@ export function Component() {
               <ProductFormField label="Course title" description="Choose a clear title learners can easily understand." error={errors.title} htmlFor="course-title" required><Input id="course-title" aria-invalid={!!errors.title} value={title} maxLength={160} onChange={event => { setTitle(event.target.value); setErrors(current => ({...current, title: undefined})); }} placeholder="Complete course title" autoFocus /></ProductFormField>
               {!isFree && <ProductFormField label="Price (ETB)" description="This course is paid. Update the price if needed." error={errors.price} htmlFor="course-price" required><InputGroup><InputGroupAddon align="inline-start"><InputGroupText>ETB</InputGroupText></InputGroupAddon><InputGroupInput id="course-price" aria-invalid={!!errors.price} type="number" min="0" step="0.01" value={price} onChange={event => { setPrice(event.target.value); setErrors(current => ({...current, price: undefined})); }} placeholder="0.00" /></InputGroup></ProductFormField>}
             </div> : <div className="flex flex-col gap-4">
-              <div className="flex flex-col gap-1"><p className="text-sm font-medium"><Trans message="Next, add chapters and lessons in the course builder." /></p><p className="text-xs text-muted-foreground"><Trans message="Your course stays a draft until you submit it for review." /></p></div>
               {/* Same shared settings fields as the builder's CourseSettingsDialog; the two-step submit threads them into PUT /courses/{id}. */}
               <CourseSettingsDescriptionField inputId="course-create" value={description} onChange={setDescription} />
               <CourseSettingsOutcomesField outcomes={outcomes} onChange={setOutcomes} />
               <CourseSettingsCoverField value={coverUrl} onChange={(url, fileId) => { setCoverUrl(url); setCoverFileId(fileId); }} />
+              {/* What happens NEXT — below the fields now that the inline form is the section's focus. */}
+              <div className="flex flex-col gap-1"><p className="text-sm font-medium"><Trans message="After creating the course, add chapters and lessons in the course builder." /></p><p className="text-xs text-muted-foreground"><Trans message="Your course stays a draft until you submit it for review." /></p></div>
             </div>}</ProductFormSection>)}
           </Accordion.Root>
         </div>
@@ -173,7 +174,7 @@ export function Component() {
             ProductPreview: that component reads file/description metadata
             through ProductCreationProvider, which this one-shot create form
             does not use. Panel heading and placement mirror the edit page. */}
-        <aside className="min-w-0 lg:sticky lg:top-6"><div className="flex flex-col gap-3"><div className="flex items-center justify-between gap-3"><p className="text-sm font-medium"><Trans message="Customer preview" /></p><Badge variant="secondary"><Link2Icon aria-hidden="true" /><Trans message="Preview" /></Badge></div><Card.Root><Card.Content className="flex flex-col gap-4 p-4"><div className="flex size-24 items-center justify-center rounded-card bg-muted"><GraduationCapIcon className="size-10 text-muted-foreground" aria-hidden="true" /></div><div className="flex flex-col gap-2"><p className="truncate text-lg font-semibold">{title.trim() || trans({message: 'Your course title'})}</p><span className="text-lg font-semibold text-primary">{previewPrice}</span><p className="text-sm text-muted-foreground"><Trans message="Course description will appear here after creation. Add chapters and lessons in the builder." /></p></div></Card.Content></Card.Root></div></aside>
+        <aside className="min-w-0 lg:sticky lg:top-6"><div className="flex flex-col gap-3"><div className="flex items-center justify-between gap-3"><p className="text-sm font-medium"><Trans message="Customer preview" /></p><Badge variant="secondary"><Link2Icon aria-hidden="true" /><Trans message="Preview" /></Badge></div><Card.Root><Card.Content className="flex flex-col gap-4 p-4"><div className="flex size-24 items-center justify-center rounded-card bg-muted"><GraduationCapIcon className="size-10 text-muted-foreground" aria-hidden="true" /></div><div className="flex flex-col gap-2"><p className="truncate text-lg font-semibold">{title.trim() || trans({message: 'Your course title'})}</p><span className="text-lg font-semibold text-primary">{previewPrice}</span>{descriptionText ? <p className="line-clamp-3 text-sm text-muted-foreground">{descriptionText}</p> : <p className="text-sm text-muted-foreground"><Trans message="Add a short description to show learners what to expect." /></p>}</div></Card.Content></Card.Root></div></aside>
       </div>
     </form></DashboardLayout.SectionContent>
   </DashboardLayout.MainSection></FileUploadProvider>;

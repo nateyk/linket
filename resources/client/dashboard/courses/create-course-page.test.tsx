@@ -253,28 +253,64 @@ beforeEach(() => {
 });
 
 describe('inline course settings', () => {
-  test('settings section renders the three shared fields above the helper copy', async () => {
+  test('settings section renders the three shared fields with the helper copy below them', async () => {
     const user = userEvent.setup();
     mount();
     await openSettingsSection(user);
 
-    // The two catalog helper lines stay put — the fields are added below them.
+    // The section subtitle names the inline form (a plain array string the
+    // extractor cannot see — it reaches <Trans> through a variable).
     expect(
-      screen.getByText('Next, add chapters and lessons in the course builder.'),
-    ).toBeTruthy();
-    expect(
-      screen.getByText('Your course stays a draft until you submit it for review.'),
+      screen.getByText(
+        'Add a description, learning outcomes, and a cover image.',
+      ),
     ).toBeTruthy();
 
     // The three fields, by their visible labels.
-    expect(await screen.findByText('Description')).toBeTruthy();
+    const descriptionLabel = await screen.findByText('Description');
     expect(screen.getByText("What you'll learn")).toBeTruthy();
     expect(screen.getByText('Cover Image')).toBeTruthy();
     // ...and the description editor is the shared TipTap field.
     await vi.waitFor(() => {
       expect(document.querySelector('.ProseMirror')).toBeTruthy();
     });
+
+    // The "what happens next" helper lines moved BELOW the fields (the first
+    // one reworded; the draft-review line is unchanged).
+    const firstHelper = screen.getByText(
+      'After creating the course, add chapters and lessons in the course builder.',
+    );
+    expect(
+      screen.getByText('Your course stays a draft until you submit it for review.'),
+    ).toBeTruthy();
+    expect(
+      descriptionLabel.compareDocumentPosition(firstHelper) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
+
+  test('the customer preview reflects the typed description as plain text', async () => {
+    const user = userEvent.setup();
+    mount();
+
+    // Empty description: a placeholder that no longer promises post-create text.
+    expect(
+      screen.getByText(
+        'Add a short description to show learners what to expect.',
+      ),
+    ).toBeTruthy();
+
+    await openSettingsSection(user);
+    await typeDescription(user, 'Cafe basics');
+
+    // The preview shows the typed text — the TipTap value is tag-stripped and
+    // rendered as a plain text node (the editor itself also holds the text,
+    // so pick the match outside .ProseMirror).
+    const matches = await screen.findAllByText('Cafe basics');
+    const preview = matches.find(el => !el.closest('.ProseMirror'));
+    expect(preview).toBeTruthy();
+    expect(preview!.innerHTML).toBe('Cafe basics');
+  }, 10_000);
 
   test('submitting with untouched settings posts once and never PUTs', async () => {
     mount();
