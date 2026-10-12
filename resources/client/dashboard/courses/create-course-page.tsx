@@ -1,4 +1,5 @@
 import {apiClient} from '@common/http/query-client';
+import {FileUploadProvider} from '@common/uploads/uploader/file-upload-provider';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {Accordion} from '@shadcn/accordion/accordion';
 import {Alert} from '@shadcn/alert/alert';
@@ -26,7 +27,11 @@ import {
   CourseSettingsOutcomesField,
 } from './course-settings-fields';
 
-type CreatedProduct = {id: number};
+// POST /items returns the DIGITAL PRODUCT resource: the top-level id is the
+// product id, and the course id (what /courses/{id} binds) is nested at
+// data.course.id — they only coincide in databases where the two tables
+// share an auto-increment. See DigitalProductResource + CourseFreeE2ETest.
+type CreatedProduct = {id: number; course?: {id: number} | null};
 type Errors = {title?: string; price?: string};
 type CourseOutcome = {id: string; text: string};
 
@@ -49,10 +54,15 @@ export function Component() {
   const [outcomes, setOutcomes] = useState<CourseOutcome[]>([]);
   const [coverUrl, setCoverUrl] = useState('');
   const [coverFileId, setCoverFileId] = useState<number | null>(null);
+  // A focused-then-cleared TipTap editor can emit tag-only HTML (`<p></p>`
+  // or an empty paragraph with a trailing break) — meaningful description is
+  // the tag-stripped, trimmed text, and BOTH the gate and the PUT body use
+  // it so tag-only junk never counts as content or gets stored.
+  const descriptionText = description.replace(/<[^>]*>/g, '').trim();
   // Settings "content" gate: feeds the progress display AND the follow-up
   // PUT — any of the three fields being filled makes settings worth sending.
   const hasSettingsContent =
-    !!description.trim() ||
+    !!descriptionText ||
     outcomes.some(item => !!item.text.trim()) ||
     coverFileId != null;
   // Intentionally lighter than the digital-product edit page: chapters and
@@ -80,19 +90,28 @@ export function Component() {
     try {
       const response = await apiClient.post('/api/v1/items', {title: title.trim(), description: null, price_cents: isFree ? 0 : Math.round(Number(price) * 100), currency: 'etb', type: 'course'});
       const created = response.data.data as CreatedProduct;
+      // The settings PUT binds the COURSE id (courses.{course} route
+      // binding), never the product id from the response's top level.
+      const courseId = created.course?.id ?? null;
       // Second step: the course exists now, so settings go along as a
       // best-effort PUT of ONLY the settings subset. A rejected PUT must
       // never re-POST (that would duplicate the course) — the learner is
       // routed into the builder either way and can fix settings there.
       if (hasSettingsContent) {
-        try {
-          await apiClient.put(`/api/v1/courses/${created.id}`, {
-            description: description.trim() || null,
-            learning_outcomes: outcomes.map(item => item.text).filter(Boolean),
-            cover_file_entry_id: coverFileId,
-          });
-        } catch {
+        if (courseId == null) {
+          // Should not happen for type=course, but without a course id the
+          // settings cannot be saved: warn once, navigate, never re-create.
           toast.danger(trans({message: 'Course created, but some settings could not be saved. You can update them from the course builder.'}));
+        } else {
+          try {
+            await apiClient.put(`/api/v1/courses/${courseId}`, {
+              description: descriptionText ? description.trim() : null,
+              learning_outcomes: outcomes.map(item => item.text.trim()).filter(Boolean),
+              cover_file_entry_id: coverFileId,
+            });
+          } catch {
+            toast.danger(trans({message: 'Course created, but some settings could not be saved. You can update them from the course builder.'}));
+          }
         }
       }
       navigate(`/dashboard/items/${created.id}/course`, {replace: true});
@@ -103,7 +122,10 @@ export function Component() {
     } finally { setCreating(false); }
   };
   const previewPrice = isFree ? trans({message: 'Free'}) : `ETB ${(Number(price) || 0).toFixed(2)}`;
-  return <DashboardLayout.MainSection>
+  // The settings panel mounts CroppedCover, whose upload hook reads the
+  // FileUploadContext — same provider wrap as the builder and the
+  // digital-product form, or opening the section throws during render.
+  return <FileUploadProvider><DashboardLayout.MainSection>
     <DashboardLayout.SectionHeader>
       <DashboardLayout.SidebarToggle />
       {/* Final-fix item 1 (same root cause + fix as the edit page, see
@@ -154,5 +176,5 @@ export function Component() {
         <aside className="min-w-0 lg:sticky lg:top-6"><div className="flex flex-col gap-3"><div className="flex items-center justify-between gap-3"><p className="text-sm font-medium"><Trans message="Customer preview" /></p><Badge variant="secondary"><Link2Icon aria-hidden="true" /><Trans message="Preview" /></Badge></div><Card.Root><Card.Content className="flex flex-col gap-4 p-4"><div className="flex size-24 items-center justify-center rounded-card bg-muted"><GraduationCapIcon className="size-10 text-muted-foreground" aria-hidden="true" /></div><div className="flex flex-col gap-2"><p className="truncate text-lg font-semibold">{title.trim() || trans({message: 'Your course title'})}</p><span className="text-lg font-semibold text-primary">{previewPrice}</span><p className="text-sm text-muted-foreground"><Trans message="Course description will appear here after creation. Add chapters and lessons in the builder." /></p></div></Card.Content></Card.Root></div></aside>
       </div>
     </form></DashboardLayout.SectionContent>
-  </DashboardLayout.MainSection>;
+  </DashboardLayout.MainSection></FileUploadProvider>;
 }

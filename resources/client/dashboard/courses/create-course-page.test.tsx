@@ -242,7 +242,11 @@ const SETTINGS_FAILURE_COPY =
 
 beforeEach(() => {
   mockPost.mockReset();
-  mockPost.mockResolvedValue({data: {data: {id: 77}}});
+  // Product id ≠ course id on purpose: the dev DB often has them equal
+  // (same auto-increment), which is exactly how the wrong-id PUT bug hid.
+  // Every PUT-expecting case must target the COURSE id (77), never the
+  // product id (900).
+  mockPost.mockResolvedValue({data: {data: {id: 900, course: {id: 77}}}});
   mockPut.mockReset();
   mockPut.mockResolvedValue({data: {data: {}}});
   mockToastDanger.mockReset();
@@ -304,11 +308,17 @@ describe('inline course settings', () => {
     submitForm();
 
     await vi.waitFor(() => expect(mockPut).toHaveBeenCalledTimes(1));
+    // The settings PUT binds the COURSE id, not the product id the dev DB
+    // usually mirrors it with.
     expect(mockPut).toHaveBeenCalledWith('/api/v1/courses/77', {
       description: '<p>X</p>',
       learning_outcomes: ['Ship a working course'],
       cover_file_entry_id: null,
     });
+    expect(mockPut).not.toHaveBeenCalledWith(
+      '/api/v1/courses/900',
+      expect.anything(),
+    );
     expect(mockPost).toHaveBeenCalledTimes(1);
     expect(await screen.findByText('course builder')).toBeTruthy();
   }, 10_000);
@@ -328,6 +338,11 @@ describe('inline course settings', () => {
     // ...without a second create attempt...
     expect(mockPost).toHaveBeenCalledTimes(1);
     expect(mockPut).toHaveBeenCalledTimes(1);
+    expect(mockPut).toHaveBeenCalledWith('/api/v1/courses/77', expect.anything());
+    expect(mockPut).not.toHaveBeenCalledWith(
+      '/api/v1/courses/900',
+      expect.anything(),
+    );
     // ...and surface exactly one danger toast with the new copy.
     expect(mockToastDanger).toHaveBeenCalledTimes(1);
     expect(mockToastDanger).toHaveBeenCalledWith(SETTINGS_FAILURE_COPY);
@@ -369,7 +384,94 @@ describe('inline course settings', () => {
       learning_outcomes: [],
       cover_file_entry_id: 456,
     });
+    expect(mockPut).not.toHaveBeenCalledWith(
+      '/api/v1/courses/900',
+      expect.anything(),
+    );
     expect(mockPost).toHaveBeenCalledTimes(1);
+    expect(await screen.findByText('course builder')).toBeTruthy();
+  }, 10_000);
+
+  // Defense for the "should not happen for type=course" branch: if the POST
+  // response ever lacks the nested course id, settings cannot be saved —
+  // warn once and navigate, but NEVER re-POST (the course exists).
+  test('settings without a course id in the response warn and never re-create', async () => {
+    mockPost.mockResolvedValue({data: {data: {id: 900}}});
+    const user = userEvent.setup();
+    mount();
+    typeTitle();
+    await openSettingsSection(user);
+    addOutcome('Ship a working course');
+
+    submitForm();
+
+    expect(await screen.findByText('course builder')).toBeTruthy();
+    expect(mockPut).not.toHaveBeenCalled();
+    expect(mockPost).toHaveBeenCalledTimes(1);
+    expect(mockToastDanger).toHaveBeenCalledTimes(1);
+    expect(mockToastDanger).toHaveBeenCalledWith(SETTINGS_FAILURE_COPY);
+  });
+
+  // A focused-then-cleared TipTap editor can emit tag-only HTML — in this
+  // harness select-all + backspace leaves
+  // `<p ...><br class="ProseMirror-trailingBreak"></p>`, which the shared
+  // hook does NOT normalize to ''. That is not description content: it must
+  // not open the settings gate...
+  test('a cleared description editor does not count as settings content', async () => {
+    const user = userEvent.setup();
+    mount();
+    typeTitle();
+    await openSettingsSection(user);
+    await typeDescription(user, 'X');
+    // What clearing the field does: select all, then delete.
+    await user.keyboard('{Control>}a{/Control}');
+    await user.keyboard('{Backspace}');
+
+    submitForm();
+
+    expect(await screen.findByText('course builder')).toBeTruthy();
+    expect(mockPost).toHaveBeenCalledTimes(1);
+    expect(mockPut).not.toHaveBeenCalled();
+  }, 10_000);
+
+  // Whitespace-only content is a case the shared hook does NOT normalize
+  // (`<p> </p>` passes its exact-`<p></p>` check) — the page-level
+  // tag-strip is what keeps it from counting as settings.
+  test('a whitespace-only description does not count as settings content', async () => {
+    const user = userEvent.setup();
+    mount();
+    typeTitle();
+    await openSettingsSection(user);
+    await typeDescription(user, ' ');
+
+    submitForm();
+
+    expect(await screen.findByText('course builder')).toBeTruthy();
+    expect(mockPost).toHaveBeenCalledTimes(1);
+    expect(mockPut).not.toHaveBeenCalled();
+  }, 10_000);
+
+  // ...and when other settings exist, the PUT must send description: null
+  // instead of the tag-only junk.
+  test('an emptied description sends null alongside other settings', async () => {
+    const user = userEvent.setup();
+    mount();
+    typeTitle();
+    await openSettingsSection(user);
+    await typeDescription(user, 'X');
+    await user.keyboard('{Control>}a{/Control}');
+    await user.keyboard('{Backspace}');
+    addOutcome('Ship a working course');
+
+    submitForm();
+
+    await vi.waitFor(() => expect(mockPut).toHaveBeenCalledTimes(1));
+    expect(mockPut).toHaveBeenCalledWith('/api/v1/courses/77', {
+      description: null,
+      learning_outcomes: ['Ship a working course'],
+      cover_file_entry_id: null,
+    });
+    expect(mockToastDanger).not.toHaveBeenCalled();
     expect(await screen.findByText('course builder')).toBeTruthy();
   }, 10_000);
 });
