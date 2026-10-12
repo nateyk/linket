@@ -11,6 +11,7 @@ import {Input} from '@shadcn/forms/input/input';
 import {Spinner} from '@shadcn/spinner/spinner';
 import {Trans} from '@ui/i18n/trans';
 import {useTrans} from '@ui/i18n/use-trans';
+import {toast} from '@ui/toast/toast';
 import {isAxiosError} from 'axios';
 import {GraduationCapIcon, Link2Icon, TagIcon, TriangleAlertIcon} from 'lucide-react';
 import {FormEvent, useState} from 'react';
@@ -19,9 +20,15 @@ import {parseEtbToCents, parseWizardPrefill} from '../digital-products/product-c
 import {ProductFormField} from '../digital-products/product-form-field';
 import {ProductFormProgress} from '../digital-products/product-form-progress';
 import {ProductFormSection} from '../digital-products/product-form-section';
+import {
+  CourseSettingsCoverField,
+  CourseSettingsDescriptionField,
+  CourseSettingsOutcomesField,
+} from './course-settings-fields';
 
 type CreatedProduct = {id: number};
 type Errors = {title?: string; price?: string};
+type CourseOutcome = {id: string; text: string};
 
 export function Component() {
   const navigate = useNavigate();
@@ -36,12 +43,24 @@ export function Component() {
   const [creating, setCreating] = useState(false);
   const [creationUncertain, setCreationUncertain] = useState(false);
   const [openSection, setOpenSection] = useState<string | null>('details');
+  // Inline course settings (Task B): the same shared fields the builder's
+  // CourseSettingsDialog renders, filled in before the course exists.
+  const [description, setDescription] = useState('');
+  const [outcomes, setOutcomes] = useState<CourseOutcome[]>([]);
+  const [coverUrl, setCoverUrl] = useState('');
+  const [coverFileId, setCoverFileId] = useState<number | null>(null);
+  // Settings "content" gate: feeds the progress display AND the follow-up
+  // PUT — any of the three fields being filled makes settings worth sending.
+  const hasSettingsContent =
+    !!description.trim() ||
+    outcomes.some(item => !!item.text.trim()) ||
+    coverFileId != null;
   // Intentionally lighter than the digital-product edit page: chapters and
   // lessons are authored in the course builder after creation, so this setup
   // form has no files or storefront-placement sections.
   const sections = [
     {id: 'details', title: 'Course details', description: 'Name your course and confirm its price.', icon: GraduationCapIcon, isComplete: !!title.trim() && (isFree || (parseEtbToCents(price) ?? 0) > 0)},
-    {id: 'settings', title: 'Course settings', description: 'Review what happens after creation.', icon: TagIcon, isComplete: true},
+    {id: 'settings', title: 'Course settings', description: 'Review what happens after creation.', icon: TagIcon, isComplete: hasSettingsContent},
   ];
   const createCourse = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -60,7 +79,23 @@ export function Component() {
     setCreating(true); setError(undefined);
     try {
       const response = await apiClient.post('/api/v1/items', {title: title.trim(), description: null, price_cents: isFree ? 0 : Math.round(Number(price) * 100), currency: 'etb', type: 'course'});
-      navigate(`/dashboard/items/${(response.data.data as CreatedProduct).id}/course`, {replace: true});
+      const created = response.data.data as CreatedProduct;
+      // Second step: the course exists now, so settings go along as a
+      // best-effort PUT of ONLY the settings subset. A rejected PUT must
+      // never re-POST (that would duplicate the course) — the learner is
+      // routed into the builder either way and can fix settings there.
+      if (hasSettingsContent) {
+        try {
+          await apiClient.put(`/api/v1/courses/${created.id}`, {
+            description: description.trim() || null,
+            learning_outcomes: outcomes.map(item => item.text).filter(Boolean),
+            cover_file_entry_id: coverFileId,
+          });
+        } catch {
+          toast.danger(trans({message: 'Course created, but some settings could not be saved. You can update them from the course builder.'}));
+        }
+      }
+      navigate(`/dashboard/items/${created.id}/course`, {replace: true});
     } catch (reason) {
       const requestUncertain = isAxiosError(reason) && !reason.response;
       setCreationUncertain(requestUncertain);
@@ -103,7 +138,13 @@ export function Component() {
             {sections.map(section => <ProductFormSection key={section.id} {...section} hasError={section.id === 'details' && !!(errors.title || errors.price)}>{section.id === 'details' ? <div className="flex flex-col gap-4">
               <ProductFormField label="Course title" description="Choose a clear title learners can easily understand." error={errors.title} htmlFor="course-title" required><Input id="course-title" aria-invalid={!!errors.title} value={title} maxLength={160} onChange={event => { setTitle(event.target.value); setErrors(current => ({...current, title: undefined})); }} placeholder="Complete course title" autoFocus /></ProductFormField>
               {!isFree && <ProductFormField label="Price (ETB)" description="This course is paid. Update the price if needed." error={errors.price} htmlFor="course-price" required><InputGroup><InputGroupAddon align="inline-start"><InputGroupText>ETB</InputGroupText></InputGroupAddon><InputGroupInput id="course-price" aria-invalid={!!errors.price} type="number" min="0" step="0.01" value={price} onChange={event => { setPrice(event.target.value); setErrors(current => ({...current, price: undefined})); }} placeholder="0.00" /></InputGroup></ProductFormField>}
-            </div> : <div className="flex flex-col gap-1"><p className="text-sm font-medium"><Trans message="Next, add chapters and lessons in the course builder." /></p><p className="text-xs text-muted-foreground"><Trans message="Your course stays a draft until you submit it for review." /></p></div>}</ProductFormSection>)}
+            </div> : <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1"><p className="text-sm font-medium"><Trans message="Next, add chapters and lessons in the course builder." /></p><p className="text-xs text-muted-foreground"><Trans message="Your course stays a draft until you submit it for review." /></p></div>
+              {/* Same shared settings fields as the builder's CourseSettingsDialog; the two-step submit threads them into PUT /courses/{id}. */}
+              <CourseSettingsDescriptionField inputId="course-create" value={description} onChange={setDescription} />
+              <CourseSettingsOutcomesField outcomes={outcomes} onChange={setOutcomes} />
+              <CourseSettingsCoverField value={coverUrl} onChange={(url, fileId) => { setCoverUrl(url); setCoverFileId(fileId); }} />
+            </div>}</ProductFormSection>)}
           </Accordion.Root>
         </div>
         {/* Keeps its own lightweight preview card instead of the shared
