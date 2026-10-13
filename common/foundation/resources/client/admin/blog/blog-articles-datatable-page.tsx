@@ -15,7 +15,6 @@ import {useSettings} from '@ui/settings/use-settings';
 import {useMemo} from 'react';
 import {DeleteIcon, EditIcon, EllipsisIcon, EyeIcon, NewspaperIcon, PlusIcon} from 'lucide-react';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
-import {StaticPageTitle} from '@common/seo/static-page-title';
 import {useTableQueryState} from '@shadcn/table/utils/use-table-query-state';
 import {useState} from 'react';
 
@@ -37,26 +36,16 @@ export function BlogArticlesDatatablePage() {
   }, [items, searchParams.query, filter]);
 
   return (
-    <DashboardLayout.MainSection>
-      <StaticPageTitle>
-        <Trans message="Blog Articles" />
-      </StaticPageTitle>
-      <DashboardLayout.SectionHeader>
-        <DashboardLayout.SidebarToggle />
-        <DashboardLayout.SectionTitle>
-          <h1><Trans message="Blog Articles" /></h1>
-        </DashboardLayout.SectionTitle>
+    <DashboardLayout.SectionContent>
+      <DashboardLayout.SectionContentHeader>
+        <TableSearchInput className="mr-auto" debounce={false} />
         <BlogArticleFormDialog>
-          <Button variant="default" color="primary" className="md:ml-auto">
+          <Button variant="default" color="primary">
             <PlusIcon />
             <Trans message="New article" />
           </Button>
         </BlogArticleFormDialog>
-      </DashboardLayout.SectionHeader>
-      <DashboardLayout.SectionContent>
-        <DashboardLayout.SectionContentHeader>
-          <TableSearchInput className="mr-auto" debounce={false} />
-        </DashboardLayout.SectionContentHeader>
+      </DashboardLayout.SectionContentHeader>
         <DashboardLayout.SectionScrollContainer className="flex flex-col gap-4">
           {filteredItems.map((article: any) => (
             <BlogArticleCard key={article.id} article={article} baseUrl={base_url} />
@@ -65,8 +54,7 @@ export function BlogArticlesDatatablePage() {
             <BlogArticlesEmptyState isFiltering={!!searchParams.query} />
           )}
         </DashboardLayout.SectionScrollContainer>
-      </DashboardLayout.SectionContent>
-    </DashboardLayout.MainSection>
+    </DashboardLayout.SectionContent>
   );
 }
 

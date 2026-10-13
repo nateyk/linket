@@ -141,7 +141,9 @@ test('fresh installs ship the Help center admin sidebar entry', function () {
     $admin = collect($menus)->firstWhere('positions.0', 'admin-sidebar');
     $actions = collect($admin['items'])->pluck('action');
 
-    expect($actions)->toContain('/admin/settings/help');
-    expect(array_search('/admin/settings/help', $actions->all()))
+    // Help center is a top-level admin page, not a Settings tab.
+    expect($actions)->toContain('/admin/help');
+    expect($actions)->not->toContain('/admin/settings/help');
+    expect(array_search('/admin/help', $actions->all()))
         ->toBe(array_search('/admin/settings', $actions->all()) + 1);
 });

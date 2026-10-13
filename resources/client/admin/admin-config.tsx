@@ -19,6 +19,7 @@ import {
   LandmarkIcon,
   CoinsIcon,
   HelpCircleIcon,
+  NewspaperIcon,
 } from 'lucide-react';
 import {ComponentProps, ReactElement} from 'react';
 
@@ -38,8 +39,9 @@ export const AdminSidebarIcons: Record<
   '/admin/tags': <TagsIcon />,
   '/admin/files': <FilesIcon />,
   '/admin/localizations': <GlobeIcon />,
-  '/admin/settings/help': <HelpCircleIcon />,
   '/admin/logs': <ClipboardClockIcon />,
+  '/admin/help': <HelpCircleIcon />,
+  '/admin/blog': <NewspaperIcon />,
   '/admin/items': <StoreIcon />,
   '/admin/payment-activity': <CircleDollarSignIcon />,
   '/admin/kyc-verifications': <ShieldCheckIcon />,
@@ -59,8 +61,6 @@ export const AppSettingsNavConfig: SettingsNavItem[] = [
   {label: message('Verification'), to: 'kyc', position: 2},
   {label: message('Product'), to: 'product', position: 2},
   {label: message('Landing page'), to: 'landing-page', position: 2},
-  {label: message('Help center'), to: 'help', position: 2},
-  {label: message('Blog'), to: 'blog', position: 2},
   {label: message('Ads'), to: 'ads', position: 20},
 ];
 

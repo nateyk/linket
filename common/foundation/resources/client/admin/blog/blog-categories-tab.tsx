@@ -14,7 +14,6 @@ import {FormattedDate} from '@ui/i18n/formatted-date';
 import {useMemo, useState} from 'react';
 import {PlusIcon, TrashIcon, EditIcon, EllipsisIcon, NewspaperIcon} from 'lucide-react';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
-import {StaticPageTitle} from '@common/seo/static-page-title';
 import {useTableQueryState} from '@shadcn/table/utils/use-table-query-state';
 
 export function BlogCategoriesTab() {
@@ -34,36 +33,25 @@ export function BlogCategoriesTab() {
   }, [items, searchParams.query, filter]);
 
   return (
-    <DashboardLayout.MainSection>
-      <StaticPageTitle>
-        <Trans message="Blog Categories" />
-      </StaticPageTitle>
-      <DashboardLayout.SectionHeader>
-        <DashboardLayout.SidebarToggle />
-        <DashboardLayout.SectionTitle>
-          <h1><Trans message="Blog Categories" /></h1>
-        </DashboardLayout.SectionTitle>
+    <DashboardLayout.SectionContent>
+      <DashboardLayout.SectionContentHeader>
+        <TableSearchInput className="mr-auto" debounce={false} />
         <BlogCategoryFormDialog>
           <Button variant="default" color="primary">
             <PlusIcon />
             <Trans message="New category" />
           </Button>
         </BlogCategoryFormDialog>
-      </DashboardLayout.SectionHeader>
-      <DashboardLayout.SectionContent>
-        <DashboardLayout.SectionContentHeader>
-          <TableSearchInput className="mr-auto" debounce={false} />
-        </DashboardLayout.SectionContentHeader>
-        <DashboardLayout.SectionScrollContainer className="flex flex-col gap-4">
-          {filteredItems.map((category: any) => (
-            <BlogCategoryCard key={category.id} category={category} />
-          ))}
-          {filteredItems.length === 0 && (
-            <BlogCategoriesEmptyState isFiltering={!!searchParams.query} />
-          )}
-        </DashboardLayout.SectionScrollContainer>
-      </DashboardLayout.SectionContent>
-    </DashboardLayout.MainSection>
+      </DashboardLayout.SectionContentHeader>
+      <DashboardLayout.SectionScrollContainer className="flex flex-col gap-4">
+        {filteredItems.map((category: any) => (
+          <BlogCategoryCard key={category.id} category={category} />
+        ))}
+        {filteredItems.length === 0 && (
+          <BlogCategoriesEmptyState isFiltering={!!searchParams.query} />
+        )}
+      </DashboardLayout.SectionScrollContainer>
+    </DashboardLayout.SectionContent>
   );
 }
 

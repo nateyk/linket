@@ -484,14 +484,14 @@ return [
                     [
                         'label' => 'Help center',
                         'id' => 'admin-help-center',
-                        'action' => '/admin/settings/help',
+                        'action' => '/admin/help',
                         'type' => 'route',
                         'permissions' => ['settings.update'],
                     ],
                     [
                         'label' => 'Blog',
                         'id' => 'admin-blog',
-                        'action' => '/admin/settings/blog',
+                        'action' => '/admin/blog',
                         'type' => 'route',
                         'permissions' => ['settings.update'],
                     ],

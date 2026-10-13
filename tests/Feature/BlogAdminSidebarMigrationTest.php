@@ -103,7 +103,9 @@ test('fresh installs ship the Blog admin sidebar entry', function () {
     $admin = collect($menus)->firstWhere('positions.0', 'admin-sidebar');
     $actions = collect($admin['items'])->pluck('action')->all();
 
-    expect($actions)->toContain('/admin/settings/blog');
-    expect(array_search('/admin/settings/blog', $actions))
-        ->toBe(array_search('/admin/settings/help', $actions) + 1);
+    // Blog is a top-level admin page, not a Settings tab.
+    expect($actions)->toContain('/admin/blog');
+    expect($actions)->not->toContain('/admin/settings/blog');
+    expect(array_search('/admin/blog', $actions))
+        ->toBe(array_search('/admin/help', $actions) + 1);
 });

@@ -18,7 +18,7 @@ test.describe('Help Center', () => {
     await expect(page).toHaveURL(/.*dashboard/);
 
     // 2. Create a category
-    await page.goto('/admin/settings/help');
+    await page.goto('/admin/help');
     await page.click('button:has-text("New category")');
     await page.fill('input[name="name"]', categoryName);
     await page.click('button[type="submit"]:has-text("Create")');
