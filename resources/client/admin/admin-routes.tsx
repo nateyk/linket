@@ -54,18 +54,6 @@ export const adminRoutes: RouteObject[] = [
       ...Object.values(adminFileEntriesRoutes),
       ...Object.values(adminLogsRoutes),
 
-      {
-        path: 'help',
-        lazy: () => import('@common/admin/help/help-settings-page'),
-        loader: async () => {
-          const redirect = authGuard({permission: 'settings.update'});
-          if (redirect) return redirect;
-          await queryClient.ensureQueryData(
-            listHelpCategoriesOptions(),
-          );
-        },
-      },
-
       commonAdminSettingsRoutes(
         [
           {
