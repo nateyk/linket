@@ -27,7 +27,9 @@ export function HelpSearch({
 
   return (
     <form action="/help" method="GET" className={className}>
-      <InputGroup className={cn(isLarge && '[--radius:9999px] h-12')}>
+      <InputGroup
+        className={cn('bg-background', isLarge && 'h-12 [--radius:9999px]')}
+      >
         <InputGroupInput
           name="search"
           defaultValue={defaultValue}
