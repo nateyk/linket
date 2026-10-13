@@ -22,7 +22,7 @@ export function Component() {
         <Button
           variant="outline"
           nativeButton={false}
-          render={<Link to="/admin/digital-products" />}
+          render={<Link to="/admin/items" />}
         >
           <ArrowLeftIcon />
           <Trans message="Back to products" />

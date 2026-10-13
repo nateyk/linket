@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1512" height="802" viewBox="0 0 1512 802">
+<rect x="0" y="0" width="1512" height="802" fill="#ffffff"/>
+<text x="40" y="46" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="24" font-weight="600" fill="#212121" text-anchor="start">Spacing: before / after, side by side</text>
+<text x="40" y="74" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="14" font-weight="400" fill="#737373" text-anchor="start">Same wordmarks, only letter positions changed. Ticks mark the four measured white channels; both logos sit on one aligned baseline.</text>
+<text x="136" y="100" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="600" fill="#737373" text-anchor="start">BEFORE — R0 (current)</text>
+<text x="832" y="100" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="600" fill="#737373" text-anchor="start">AFTER — R2 (re-spaced)</text>
+<text x="40" y="156" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="36" font-weight="600" fill="#212121" text-anchor="start">A</text>
+<svg x="136" y="118.798" width="640" height="226.925" viewBox="0 0 722 256">
+  <title id="title">Linket wordmark — concept A: Linked Li</title>
+  <g fill="none" stroke="#111111" stroke-width="24" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M60 64 V192 H144 A48 48 0 0 0 192 144 V120"/>
+    <path d="M242 192 V162 A42 42 0 0 1 326 162 V192"/>
+    <path d="M376 64 V192"/>
+    <path d="M434 120 L388 166 L414 192"/>
+    <path d="M539.2 188.6 A36 36 0 1 1 560 156 H488"/>
+    <path d="M606 120 H662"/>
+    <path d="M632 88 V192"/>
+  </g>
+  <path fill="#111111" d="M178 78 A14 14 0 0 1 206 78 A14 14 0 0 1 178 78 Z"/>
+</svg>
+<line x1="327.025" y1="118.798" x2="327.025" y2="313.629" stroke="#e5e5e5" stroke-width="1" stroke-dasharray="3 3"/>
+<text x="327.025" y="333.629" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="500" fill="#737373" text-anchor="middle">27.3</text>
+<text x="327.025" y="351.629" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="10" font-weight="400" fill="#737373" text-anchor="middle">i·n</text>
+<line x1="448.022" y1="118.798" x2="448.022" y2="313.629" stroke="#e5e5e5" stroke-width="1" stroke-dasharray="3 3"/>
+<text x="448.022" y="333.629" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="500" fill="#737373" text-anchor="middle">27.0</text>
+<text x="448.022" y="351.629" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="10" font-weight="400" fill="#737373" text-anchor="middle">n·k</text>
+<line x1="542.427" y1="118.798" x2="542.427" y2="313.629" stroke="#e5e5e5" stroke-width="1" stroke-dasharray="3 3"/>
+<text x="542.427" y="333.629" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="700" fill="#212121" text-anchor="middle">37.1</text>
+<text x="542.427" y="351.629" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="10" font-weight="400" fill="#737373" text-anchor="middle">k·e</text>
+<line x1="655.446" y1="118.798" x2="655.446" y2="313.629" stroke="#e5e5e5" stroke-width="1" stroke-dasharray="3 3"/>
+<text x="655.446" y="333.629" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="700" fill="#212121" text-anchor="middle">30.0</text>
+<text x="655.446" y="351.629" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="10" font-weight="400" fill="#737373" text-anchor="middle">e·t</text>
+<text x="136" y="371.629" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="11" font-weight="500" fill="#737373" text-anchor="start">R0 · current  a-r0</text>
+<svg x="832" y="116" width="640" height="230.436" viewBox="0 0 711 256">
+  
+  <path fill="#111111" d="M48 52 L48 204 L168.97 204 L204 168.97 L204 108 L180 108 L180 159.03 L159.03 180 L72 180 L72 52 L48 52 Z"/>
+  <path fill="#111111" d="M180 108 L180 204 L204 204 L204 108 L180 108 Z"/>
+  <path fill="#111111" d="M364 52 L364 204 L388 204 L388 52 L364 52 Z"/>
+  <path fill="#111111" d="M609 76 L609 204 L633 204 L633 76 L609 76 Z"/>
+  <path fill="#111111" d="M254 204 L254 162 A30 30 0 0 1 314 162 L314 204 L338 204 L338 162 A54 54 0 0 0 230 162 L230 204 L254 204 Z"/>
+  <path fill="#111111" d="M429.01 108.01 L371.03 166 L409.01 203.99 L425.99 187.01 L404.97 166 L445.99 124.99 L429.01 108.01 Z"/>
+  <path fill="#111111" d="M518.84 179.24 A24 24 0 1 1 537 155.99 L537.01 144 L477 144 L477 168 L560.99 168 L561 156.01 A48 48 0 1 0 537.09 197.49 L518.84 179.24 Z"/>
+  <path fill="#111111" d="M583 132 L663 132 L663 108 L583 108 L583 132 Z"/>
+  <path fill="#111111" d="M178 64 H206 V92 H178 Z"/>
+</svg>
+<line x1="1027.33" y1="116" x2="1027.33" y2="313.629" stroke="#e5e5e5" stroke-width="1" stroke-dasharray="3 3"/>
+<text x="1027.33" y="333.629" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="500" fill="#737373" text-anchor="middle">27.0</text>
+<text x="1027.33" y="351.629" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="10" font-weight="400" fill="#737373" text-anchor="middle">i·n</text>
+<line x1="1148.85" y1="116" x2="1148.85" y2="313.629" stroke="#e5e5e5" stroke-width="1" stroke-dasharray="3 3"/>
+<text x="1148.85" y="333.629" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="500" fill="#737373" text-anchor="middle">27.0</text>
+<text x="1148.85" y="351.629" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="10" font-weight="400" fill="#737373" text-anchor="middle">n·k</text>
+<line x1="1238.86" y1="116" x2="1238.86" y2="313.629" stroke="#e5e5e5" stroke-width="1" stroke-dasharray="3 3"/>
+<text x="1238.86" y="333.629" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="500" fill="#737373" text-anchor="middle">26.4</text>
+<text x="1238.86" y="351.629" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="10" font-weight="400" fill="#737373" text-anchor="middle">k·e</text>
+<line x1="1350.03" y1="116" x2="1350.03" y2="313.629" stroke="#e5e5e5" stroke-width="1" stroke-dasharray="3 3"/>
+<text x="1350.03" y="333.629" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="500" fill="#737373" text-anchor="middle">26.9</text>
+<text x="1350.03" y="351.629" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="10" font-weight="400" fill="#737373" text-anchor="middle">e·t</text>
+<text x="832" y="371.629" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="11" font-weight="500" fill="#737373" text-anchor="start">R2 · re-spaced  a-r2</text>
+<text x="40" y="462" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="36" font-weight="600" fill="#212121" text-anchor="start">B</text>
+<svg x="136" y="422" width="640" height="260.892" viewBox="0 0 628 256">
+  <title id="title">Linket wordmark — concept B: Linkline</title>
+  <g transform="translate(0 -4.72) scale(0.86)">
+    <g fill="none" stroke="#111111" stroke-width="24" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M60 64 V247.4"/>
+      <path d="M192 120 V192"/>
+      <path d="M242 192 V162 A42 42 0 0 1 326 162 V192"/>
+      <path d="M376 64 V192"/>
+      <path d="M434 120 L388 166 L414 192"/>
+      <path d="M539.2 188.6 A36 36 0 1 1 560 156 H488"/>
+      <path d="M606 120 H662"/>
+      <path d="M632 88 V192"/>
+      <path d="M60 247.4 H663"/>
+    </g>
+    <path fill="#111111" d="M178 78 A14 14 0 0 1 206 78 A14 14 0 0 1 178 78 Z"/>
+  </g>
+</svg>
+<line x1="326.573" y1="422" x2="326.573" y2="614.792" stroke="#e5e5e5" stroke-width="1" stroke-dasharray="3 3"/>
+<text x="326.573" y="634.792" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="500" fill="#737373" text-anchor="middle">23.0</text>
+<text x="326.573" y="652.792" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="10" font-weight="400" fill="#737373" text-anchor="middle">i·n</text>
+<line x1="444.28" y1="422" x2="444.28" y2="614.792" stroke="#e5e5e5" stroke-width="1" stroke-dasharray="3 3"/>
+<text x="444.28" y="634.792" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="500" fill="#737373" text-anchor="middle">23.0</text>
+<text x="444.28" y="652.792" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="10" font-weight="400" fill="#737373" text-anchor="middle">n·k</text>
+<line x1="537.529" y1="422" x2="537.529" y2="614.792" stroke="#e5e5e5" stroke-width="1" stroke-dasharray="3 3"/>
+<text x="537.529" y="634.792" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="700" fill="#212121" text-anchor="middle">32.0</text>
+<text x="537.529" y="652.792" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="10" font-weight="400" fill="#737373" text-anchor="middle">k·e</text>
+<line x1="649.631" y1="422" x2="649.631" y2="614.792" stroke="#e5e5e5" stroke-width="1" stroke-dasharray="3 3"/>
+<text x="649.631" y="634.792" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="500" fill="#737373" text-anchor="middle">25.9</text>
+<text x="649.631" y="652.792" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="10" font-weight="400" fill="#737373" text-anchor="middle">e·t</text>
+<text x="136" y="672.792" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="11" font-weight="500" fill="#737373" text-anchor="start">R0 · current  b-r0</text>
+<svg x="832" y="439.667" width="640" height="230.436" viewBox="0 0 711 256">
+  
+  <path fill="#111111" d="M48 27 L48 229 L663 229 L663 205 L72 205 L72 27 L48 27 Z"/>
+  <path fill="#111111" d="M180 83 L180 179 L204 179 L204 83 L180 83 Z"/>
+  <path fill="#111111" d="M364 27 L364 179 L388 179 L388 27 L364 27 Z"/>
+  <path fill="#111111" d="M609 51 L609 179 L633 179 L633 51 L609 51 Z"/>
+  <path fill="#111111" d="M254 179 L254 137 A30 30 0 0 1 314 137 L314 179 L338 179 L338 137 A54 54 0 0 0 230 137 L230 179 L254 179 Z"/>
+  <path fill="#111111" d="M429.01 83.01 L371.03 141 L409.01 178.99 L425.99 162.01 L404.97 141 L445.99 99.99 L429.01 83.01 Z"/>
+  <path fill="#111111" d="M518.84 154.24 A24 24 0 1 1 537 130.99 L537.01 119 L477 119 L477 143 L560.99 143 L561 131.01 A48 48 0 1 0 537.09 172.49 L518.84 154.24 Z"/>
+  <path fill="#111111" d="M583 107 L663 107 L663 83 L583 83 L583 107 Z"/>
+  <path fill="#111111" d="M178 39 H206 V67 H178 Z"/>
+</svg>
+<line x1="1027.33" y1="439.667" x2="1027.33" y2="614.792" stroke="#e5e5e5" stroke-width="1" stroke-dasharray="3 3"/>
+<text x="1027.33" y="634.792" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="500" fill="#737373" text-anchor="middle">27.0</text>
+<text x="1027.33" y="652.792" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="10" font-weight="400" fill="#737373" text-anchor="middle">i·n</text>
+<line x1="1148.85" y1="439.667" x2="1148.85" y2="614.792" stroke="#e5e5e5" stroke-width="1" stroke-dasharray="3 3"/>
+<text x="1148.85" y="634.792" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="500" fill="#737373" text-anchor="middle">27.0</text>
+<text x="1148.85" y="652.792" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="10" font-weight="400" fill="#737373" text-anchor="middle">n·k</text>
+<line x1="1238.86" y1="439.667" x2="1238.86" y2="614.792" stroke="#e5e5e5" stroke-width="1" stroke-dasharray="3 3"/>
+<text x="1238.86" y="634.792" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="500" fill="#737373" text-anchor="middle">26.4</text>
+<text x="1238.86" y="652.792" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="10" font-weight="400" fill="#737373" text-anchor="middle">k·e</text>
+<line x1="1350.03" y1="439.667" x2="1350.03" y2="614.792" stroke="#e5e5e5" stroke-width="1" stroke-dasharray="3 3"/>
+<text x="1350.03" y="634.792" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="500" fill="#737373" text-anchor="middle">26.9</text>
+<text x="1350.03" y="652.792" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="10" font-weight="400" fill="#737373" text-anchor="middle">e·t</text>
+<text x="832" y="672.792" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="11" font-weight="500" fill="#737373" text-anchor="start">R2 · re-spaced  b-r2</text>
+</svg>

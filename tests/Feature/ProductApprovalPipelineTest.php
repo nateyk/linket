@@ -107,7 +107,7 @@ class ProductApprovalPipelineTest extends TestCase
         $product->files()->attach($file->id);
 
         $this->stateful()->actingAs($creator)
-            ->postJson("/api/v1/digital-products/{$product->id}/submit")
+            ->postJson("/api/v1/items/{$product->id}/submit")
             ->assertOk();
 
         $this->assertSame('pending_approval', $product->fresh()->status);
@@ -130,7 +130,7 @@ class ProductApprovalPipelineTest extends TestCase
         $product->files()->attach($file->id);
 
         $this->stateful()->actingAs($creator)
-            ->postJson("/api/v1/digital-products/{$product->id}/submit")
+            ->postJson("/api/v1/items/{$product->id}/submit")
             ->assertOk();
 
         $this->assertSame('approved', $product->fresh()->status);
@@ -147,7 +147,7 @@ class ProductApprovalPipelineTest extends TestCase
         [$creator, $workspace, $product, $file, $biolink] = $this->approvedProductWithStore();
 
         $this->stateful()->actingAs($creator)->putJson(
-            "/api/v1/digital-products/{$product->id}",
+            "/api/v1/items/{$product->id}",
             ['title' => 'Edited live', 'price_cents' => 1000, 'currency' => 'ETB', 'file_ids' => [$file->id]],
         )->assertOk();
 
@@ -175,7 +175,7 @@ class ProductApprovalPipelineTest extends TestCase
         [$creator, $workspace, $product, $file] = $this->approvedProductWithStore();
 
         $this->stateful()->actingAs($creator)->putJson(
-            "/api/v1/digital-products/{$product->id}",
+            "/api/v1/items/{$product->id}",
             ['title' => 'Edited live', 'price_cents' => 1000, 'currency' => 'ETB', 'file_ids' => [$file->id]],
         )->assertOk();
 
@@ -199,7 +199,7 @@ class ProductApprovalPipelineTest extends TestCase
         $product->files()->attach($file->id);
 
         $this->stateful()->actingAs($creator)->putJson(
-            "/api/v1/digital-products/{$product->id}",
+            "/api/v1/items/{$product->id}",
             ['title' => 'Second edit', 'price_cents' => 1000, 'currency' => 'ETB', 'file_ids' => [$file->id]],
         )->assertOk();
 
@@ -212,7 +212,7 @@ class ProductApprovalPipelineTest extends TestCase
         [$creator, $workspace, $product, $file] = $this->approvedProductWithStore();
 
         $this->stateful()->actingAs($creator)->putJson(
-            "/api/v1/digital-products/{$product->id}",
+            "/api/v1/items/{$product->id}",
             [
                 'title' => $product->title,
                 'price_cents' => $product->price_cents,
@@ -236,7 +236,7 @@ class ProductApprovalPipelineTest extends TestCase
         [$creator, $workspace] = $this->creatorContext();
         $file = $this->createFile($creator, $workspace);
 
-        $response = $this->stateful()->actingAs($creator)->postJson('/api/v1/digital-products', [
+        $response = $this->stateful()->actingAs($creator)->postJson('/api/v1/items', [
             'title' => 'New product',
             'price_cents' => 1000,
             'currency' => 'ETB',
@@ -272,7 +272,7 @@ class ProductApprovalPipelineTest extends TestCase
         ]);
 
         $this->stateful()->actingAs($creator)->putJson(
-            "/api/v1/digital-products/{$product->id}",
+            "/api/v1/items/{$product->id}",
             [
                 'title' => $product->title,
                 'price_cents' => $product->price_cents,
@@ -399,7 +399,7 @@ class ProductApprovalPipelineTest extends TestCase
             'review_requested_at' => now(),
         ]);
 
-        $response = $this->stateful()->actingAs($creator)->getJson('/api/v1/digital-products');
+        $response = $this->stateful()->actingAs($creator)->getJson('/api/v1/items');
 
         $response->assertOk();
         $row = collect($response->json('data'))->firstWhere('id', $product->id);

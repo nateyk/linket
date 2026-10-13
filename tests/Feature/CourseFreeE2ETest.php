@@ -47,7 +47,7 @@ class CourseFreeE2ETest extends TestCase
         ActiveWorkspace::clearCache();
 
         // 1. Creator creates free course product
-        $resp = $this->stateful()->actingAs($creator)->postJson("/api/v1/digital-products?workspace_id={$workspace->id}", [
+        $resp = $this->stateful()->actingAs($creator)->postJson("/api/v1/items?workspace_id={$workspace->id}", [
             'title' => 'Free Course ' . Str::random(5),
             'price_cents' => 0,
             'type' => 'course',

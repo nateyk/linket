@@ -5,6 +5,7 @@ namespace Common\Core\Install;
 use Carbon\Carbon;
 use Common\Settings\LoadDefaultSettings;
 use Common\Settings\Models\Setting;
+use Illuminate\Support\Facades\Cache;
 
 class InsertDefaultSettings
 {
@@ -51,5 +52,9 @@ class InsertDefaultSettings
             fn($setting) => !in_array($setting['name'], $existing),
         );
         Setting::insert($toInsert);
+
+        // "insert" bypasses model events, so the settings cache is not
+        // invalidated automatically here.
+        Cache::forget('settings.public');
     }
 }

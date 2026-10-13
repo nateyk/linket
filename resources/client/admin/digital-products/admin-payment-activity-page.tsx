@@ -206,15 +206,15 @@ export function Component() {
           <Button
             variant="outline"
             nativeButton={false}
-            render={<Link to="/admin/digital-products" />}
+            render={<Link to="/admin/items" />}
           >
             <ArrowLeftIcon />
-            <Trans message="Digital Products" />
+            <Trans message="Items" />
           </Button>
           <Button
             variant="outline"
             nativeButton={false}
-            render={<Link to="/admin/digital-products/delivery-history" />}
+            render={<Link to="/admin/items/delivery-history" />}
           >
             <MailCheckIcon />
             <Trans message="Delivery history" />
@@ -345,7 +345,7 @@ export function Component() {
                       <Trans message="All payment types" />
                     </Select.Item>
                     <Select.Item value="digital_product">
-                      <Trans message="Digital Products" />
+                      <Trans message="Items" />
                     </Select.Item>
                     <Select.Item value="subscription">
                       <Trans message="Subscriptions" />
@@ -830,7 +830,7 @@ function TransactionDetails({
               </div>
             )}
           </Dialog.Body>
-          <Dialog.Footer variant="muted">
+          <Dialog.Footer className="py-4">
             <Dialog.CloseButton>
               <Trans message="Close" />
             </Dialog.CloseButton>

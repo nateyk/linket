@@ -111,7 +111,7 @@ export function ProductStatus({status}: {status: string}) {
     },
     pending_approval: {
       icon: Clock3Icon,
-      tone: 'text-warning bg-warning/10',
+      tone: 'text-amber-600 bg-amber-500/10 dark:text-amber-400',
       label: 'In review',
     },
     approved: {

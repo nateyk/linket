@@ -105,7 +105,7 @@ class AdminProductReviewsTest extends TestCase
         $this->createReview($product, ['review' => 'Not for me', 'approved' => false]);
 
         $response = $this->stateful()->actingAs($admin)
-            ->getJson("/api/v1/admin/digital-products/{$product->id}/reviews");
+            ->getJson("/api/v1/admin/items/{$product->id}/reviews");
 
         $response->assertOk();
         $response->assertJsonStructure([
@@ -130,7 +130,7 @@ class AdminProductReviewsTest extends TestCase
         $this->createReview($product, ['buyer_email' => 'second@example.test']);
 
         $response = $this->stateful()->actingAs($admin)
-            ->getJson("/api/v1/admin/digital-products/{$product->id}/reviews?search=first%40example.test");
+            ->getJson("/api/v1/admin/items/{$product->id}/reviews?search=first%40example.test");
 
         $response->assertOk();
         $this->assertSame(1, count($response->json('data')));
@@ -146,7 +146,7 @@ class AdminProductReviewsTest extends TestCase
         $this->createReview($product, ['approved' => false]);
 
         $response = $this->stateful()->actingAs($admin)
-            ->getJson("/api/v1/admin/digital-products/{$product->id}/reviews?status=hidden");
+            ->getJson("/api/v1/admin/items/{$product->id}/reviews?status=hidden");
 
         $response->assertOk();
         $this->assertSame(1, count($response->json('data')));
@@ -161,7 +161,7 @@ class AdminProductReviewsTest extends TestCase
         $review = $this->createReview($product);
 
         $this->stateful()->actingAs($admin)
-            ->postJson("/api/v1/admin/digital-products/reviews/{$review->id}/hide", ['reason' => 'Spam'])
+            ->postJson("/api/v1/admin/items/reviews/{$review->id}/hide", ['reason' => 'Spam'])
             ->assertOk();
 
         $hidden = $review->fresh();
@@ -171,7 +171,7 @@ class AdminProductReviewsTest extends TestCase
         $this->assertSame('Spam', $hidden->hidden_reason);
 
         $this->stateful()->actingAs($admin)
-            ->postJson("/api/v1/admin/digital-products/reviews/{$review->id}/unhide")
+            ->postJson("/api/v1/admin/items/reviews/{$review->id}/unhide")
             ->assertOk();
 
         $restored = $review->fresh();
@@ -180,7 +180,7 @@ class AdminProductReviewsTest extends TestCase
         $this->assertNull($restored->hidden_reason);
 
         $this->stateful()->actingAs($admin)
-            ->deleteJson("/api/v1/admin/digital-products/reviews/{$review->id}")
+            ->deleteJson("/api/v1/admin/items/reviews/{$review->id}")
             ->assertNoContent();
 
         $this->assertDatabaseMissing('reviews', ['id' => $review->id]);
@@ -193,15 +193,15 @@ class AdminProductReviewsTest extends TestCase
         $review = $this->createReview($product);
 
         $this->stateful()->actingAs($creator)
-            ->getJson("/api/v1/admin/digital-products/{$product->id}/reviews")
+            ->getJson("/api/v1/admin/items/{$product->id}/reviews")
             ->assertForbidden();
 
         $this->stateful()->actingAs($creator)
-            ->postJson("/api/v1/admin/digital-products/reviews/{$review->id}/hide")
+            ->postJson("/api/v1/admin/items/reviews/{$review->id}/hide")
             ->assertForbidden();
 
         $this->stateful()->actingAs($creator)
-            ->deleteJson("/api/v1/admin/digital-products/reviews/{$review->id}")
+            ->deleteJson("/api/v1/admin/items/reviews/{$review->id}")
             ->assertForbidden();
     }
 
@@ -210,7 +210,7 @@ class AdminProductReviewsTest extends TestCase
         [$creator, $workspace] = $this->creatorContext();
         $product = $this->product($workspace, $creator);
 
-        $this->getJson("/api/v1/admin/digital-products/{$product->id}/reviews")
+        $this->getJson("/api/v1/admin/items/{$product->id}/reviews")
             ->assertUnauthorized();
     }
 
@@ -224,7 +224,7 @@ class AdminProductReviewsTest extends TestCase
         $this->createReview($product);
 
         $response = $this->stateful()->actingAs($admin)
-            ->getJson("/api/v1/admin/digital-products/{$product->id}/reviews");
+            ->getJson("/api/v1/admin/items/{$product->id}/reviews");
 
         $response->assertOk();
         $this->assertSame(

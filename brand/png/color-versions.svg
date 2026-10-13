@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1020" height="846" viewBox="0 0 1020 846">
+<rect x="0" y="0" width="1020" height="846" fill="#ffffff"/>
+<text x="40" y="44" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="24" font-weight="600" fill="#212121" text-anchor="start">Linket wordmark — colour versions</text>
+<text x="40" y="74" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="400" fill="#737373" text-anchor="start">Every ratio computed from WCAG 2.1 relative luminance in tools/build_round2.py — no hand math. WCAG exempts logos;</text>
+<text x="40" y="94" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="400" fill="#737373" text-anchor="start">the numbers are still the bar each version claims. Full joint shown; small cut lives at ≤24 px.</text>
+<text x="40" y="180" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="16" font-weight="600" fill="#212121" text-anchor="start">A · color-light</text>
+<text x="40" y="202" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="11" font-weight="400" fill="#737373" text-anchor="start">letters #0a0a0a + dot #0049cc</text>
+<text x="40" y="220" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="11" font-weight="400" fill="#737373" text-anchor="start">on white / #fafafa</text>
+<rect x="290" y="140" width="690" height="116" fill="#ffffff" stroke="#e5e5e5" stroke-width="1"/>
+<svg x="318" y="162" width="199.969" height="72" viewBox="0 0 711 256">
+  
+  <path fill="#0a0a0a" d="M44 52 L44 194 A10 10 0 0 0 54 204 L176.49 204 A10 10 0 0 0 183.56 201.07 L205.07 179.56 A10 10 0 0 0 208 172.49 L208 108 L176 108 L176 159.23 A10 10 0 0 1 173.07 166.3 L170.3 169.07 A10 10 0 0 1 163.23 172 L86 172 A10 10 0 0 1 76 162 L76 52 L44 52 Z"/>
+  <path fill="#0a0a0a" d="M176 108 L176 204 L208 204 L208 108 L176 108 Z"/>
+  <path fill="#0a0a0a" d="M360 52 L360 204 L392 204 L392 52 L360 52 Z"/>
+  <path fill="#0a0a0a" d="M605 76 L605 204 L637 204 L637 76 L605 76 Z"/>
+  <path fill="#0a0a0a" d="M258 204 L258 162 A26 26 0 0 1 310 162 L310 204 L342 204 L342 162 A58 58 0 0 0 226 162 L226 204 L258 204 Z"/>
+  <path fill="#0a0a0a" d="M423.37 108 L372.44 158.93 A10 10 0 0 0 372.44 173.07 L403.37 204 L426 181.37 L417.7 173.07 A10 10 0 0 1 417.7 158.93 L446 130.63 L423.37 108 Z"/>
+  <path fill="#0a0a0a" d="M528.64 172.21 A24 24 0 1 1 537 154 L537 131 A10 10 0 0 1 527 141 L476 141 L476 167 L553 167 A10 10 0 0 0 563 157 L563 154 A50 50 0 1 0 528.64 201.49 L528.64 172.21 Z"/>
+  <path fill="#0a0a0a" d="M583 135 L663 135 L663 108 L583 108 L583 135 Z"/>
+  <path fill="#0049cc" d="M192 54 H192 A19 19 0 0 1 211 73 V73 A19 19 0 0 1 192 92 H192 A19 19 0 0 1 173 73 V73 A19 19 0 0 1 192 54 Z"/>
+</svg>
+<text x="620" y="186" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="500" fill="#212121" text-anchor="start">letters 19.80:1</text>
+<text x="620" y="210" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="500" fill="#212121" text-anchor="start">dot 7.43:1</text>
+<text x="620" y="238" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="11" font-weight="400" fill="#212121" text-anchor="start">ground #ffffff</text>
+<text x="40" y="310" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="16" font-weight="600" fill="#212121" text-anchor="start">B · color-dark</text>
+<text x="40" y="332" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="11" font-weight="400" fill="#737373" text-anchor="start">white letters + lifted blue dot</text>
+<text x="40" y="350" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="11" font-weight="400" fill="#737373" text-anchor="start">dot #0050de on #0a0a0a</text>
+<rect x="290" y="270" width="690" height="116" fill="#0a0a0a"/>
+<svg x="318" y="292" width="199.969" height="72" viewBox="0 0 711 256">
+  
+  <path fill="#ffffff" d="M44 52 L44 194 A10 10 0 0 0 54 204 L176.49 204 A10 10 0 0 0 183.56 201.07 L205.07 179.56 A10 10 0 0 0 208 172.49 L208 108 L176 108 L176 159.23 A10 10 0 0 1 173.07 166.3 L170.3 169.07 A10 10 0 0 1 163.23 172 L86 172 A10 10 0 0 1 76 162 L76 52 L44 52 Z"/>
+  <path fill="#ffffff" d="M176 108 L176 204 L208 204 L208 108 L176 108 Z"/>
+  <path fill="#ffffff" d="M360 52 L360 204 L392 204 L392 52 L360 52 Z"/>
+  <path fill="#ffffff" d="M605 76 L605 204 L637 204 L637 76 L605 76 Z"/>
+  <path fill="#ffffff" d="M258 204 L258 162 A26 26 0 0 1 310 162 L310 204 L342 204 L342 162 A58 58 0 0 0 226 162 L226 204 L258 204 Z"/>
+  <path fill="#ffffff" d="M423.37 108 L372.44 158.93 A10 10 0 0 0 372.44 173.07 L403.37 204 L426 181.37 L417.7 173.07 A10 10 0 0 1 417.7 158.93 L446 130.63 L423.37 108 Z"/>
+  <path fill="#ffffff" d="M528.64 172.21 A24 24 0 1 1 537 154 L537 131 A10 10 0 0 1 527 141 L476 141 L476 167 L553 167 A10 10 0 0 0 563 157 L563 154 A50 50 0 1 0 528.64 201.49 L528.64 172.21 Z"/>
+  <path fill="#ffffff" d="M583 135 L663 135 L663 108 L583 108 L583 135 Z"/>
+  <path fill="#0050de" d="M192 54 H192 A19 19 0 0 1 211 73 V73 A19 19 0 0 1 192 92 H192 A19 19 0 0 1 173 73 V73 A19 19 0 0 1 192 54 Z"/>
+</svg>
+<text x="620" y="316" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="500" fill="#d4d4d4" text-anchor="start">letters 19.80:1</text>
+<text x="620" y="340" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="500" fill="#d4d4d4" text-anchor="start">dot 3.02:1</text>
+<text x="620" y="368" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="11" font-weight="400" fill="#d4d4d4" text-anchor="start">ground #0a0a0a</text>
+<text x="40" y="440" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="16" font-weight="600" fill="#212121" text-anchor="start">C · mono-black</text>
+<text x="40" y="462" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="11" font-weight="400" fill="#737373" text-anchor="start">letters + dot #0a0a0a</text>
+<text x="40" y="480" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="11" font-weight="400" fill="#737373" text-anchor="start">one-colour print on light</text>
+<rect x="290" y="400" width="690" height="116" fill="#ffffff" stroke="#e5e5e5" stroke-width="1"/>
+<svg x="318" y="422" width="199.969" height="72" viewBox="0 0 711 256">
+  
+  <path fill="#0a0a0a" d="M44 52 L44 194 A10 10 0 0 0 54 204 L176.49 204 A10 10 0 0 0 183.56 201.07 L205.07 179.56 A10 10 0 0 0 208 172.49 L208 108 L176 108 L176 159.23 A10 10 0 0 1 173.07 166.3 L170.3 169.07 A10 10 0 0 1 163.23 172 L86 172 A10 10 0 0 1 76 162 L76 52 L44 52 Z"/>
+  <path fill="#0a0a0a" d="M176 108 L176 204 L208 204 L208 108 L176 108 Z"/>
+  <path fill="#0a0a0a" d="M360 52 L360 204 L392 204 L392 52 L360 52 Z"/>
+  <path fill="#0a0a0a" d="M605 76 L605 204 L637 204 L637 76 L605 76 Z"/>
+  <path fill="#0a0a0a" d="M258 204 L258 162 A26 26 0 0 1 310 162 L310 204 L342 204 L342 162 A58 58 0 0 0 226 162 L226 204 L258 204 Z"/>
+  <path fill="#0a0a0a" d="M423.37 108 L372.44 158.93 A10 10 0 0 0 372.44 173.07 L403.37 204 L426 181.37 L417.7 173.07 A10 10 0 0 1 417.7 158.93 L446 130.63 L423.37 108 Z"/>
+  <path fill="#0a0a0a" d="M528.64 172.21 A24 24 0 1 1 537 154 L537 131 A10 10 0 0 1 527 141 L476 141 L476 167 L553 167 A10 10 0 0 0 563 157 L563 154 A50 50 0 1 0 528.64 201.49 L528.64 172.21 Z"/>
+  <path fill="#0a0a0a" d="M583 135 L663 135 L663 108 L583 108 L583 135 Z"/>
+  <path fill="#0a0a0a" d="M192 54 H192 A19 19 0 0 1 211 73 V73 A19 19 0 0 1 192 92 H192 A19 19 0 0 1 173 73 V73 A19 19 0 0 1 192 54 Z"/>
+</svg>
+<text x="620" y="446" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="500" fill="#212121" text-anchor="start">all 19.80:1</text>
+<text x="620" y="498" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="11" font-weight="400" fill="#212121" text-anchor="start">ground #ffffff</text>
+<text x="40" y="570" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="16" font-weight="600" fill="#212121" text-anchor="start">D · mono-white</text>
+<text x="40" y="592" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="11" font-weight="400" fill="#737373" text-anchor="start">letters + dot #ffffff</text>
+<text x="40" y="610" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="11" font-weight="400" fill="#737373" text-anchor="start">one-colour on dark / photo</text>
+<rect x="290" y="530" width="690" height="116" fill="#0a0a0a"/>
+<svg x="318" y="552" width="199.969" height="72" viewBox="0 0 711 256">
+  
+  <path fill="#ffffff" d="M44 52 L44 194 A10 10 0 0 0 54 204 L176.49 204 A10 10 0 0 0 183.56 201.07 L205.07 179.56 A10 10 0 0 0 208 172.49 L208 108 L176 108 L176 159.23 A10 10 0 0 1 173.07 166.3 L170.3 169.07 A10 10 0 0 1 163.23 172 L86 172 A10 10 0 0 1 76 162 L76 52 L44 52 Z"/>
+  <path fill="#ffffff" d="M176 108 L176 204 L208 204 L208 108 L176 108 Z"/>
+  <path fill="#ffffff" d="M360 52 L360 204 L392 204 L392 52 L360 52 Z"/>
+  <path fill="#ffffff" d="M605 76 L605 204 L637 204 L637 76 L605 76 Z"/>
+  <path fill="#ffffff" d="M258 204 L258 162 A26 26 0 0 1 310 162 L310 204 L342 204 L342 162 A58 58 0 0 0 226 162 L226 204 L258 204 Z"/>
+  <path fill="#ffffff" d="M423.37 108 L372.44 158.93 A10 10 0 0 0 372.44 173.07 L403.37 204 L426 181.37 L417.7 173.07 A10 10 0 0 1 417.7 158.93 L446 130.63 L423.37 108 Z"/>
+  <path fill="#ffffff" d="M528.64 172.21 A24 24 0 1 1 537 154 L537 131 A10 10 0 0 1 527 141 L476 141 L476 167 L553 167 A10 10 0 0 0 563 157 L563 154 A50 50 0 1 0 528.64 201.49 L528.64 172.21 Z"/>
+  <path fill="#ffffff" d="M583 135 L663 135 L663 108 L583 108 L583 135 Z"/>
+  <path fill="#ffffff" d="M192 54 H192 A19 19 0 0 1 211 73 V73 A19 19 0 0 1 192 92 H192 A19 19 0 0 1 173 73 V73 A19 19 0 0 1 192 54 Z"/>
+</svg>
+<text x="620" y="576" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="500" fill="#d4d4d4" text-anchor="start">all 19.80:1</text>
+<text x="620" y="628" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="11" font-weight="400" fill="#d4d4d4" text-anchor="start">ground #0a0a0a</text>
+<text x="40" y="700" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="16" font-weight="600" fill="#212121" text-anchor="start">E · on-blue</text>
+<text x="40" y="722" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="11" font-weight="400" fill="#737373" text-anchor="start">white letters + dot</text>
+<text x="40" y="740" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="11" font-weight="400" fill="#737373" text-anchor="start">on a #0049cc brand field</text>
+<rect x="290" y="660" width="690" height="116" fill="#0049cc"/>
+<svg x="318" y="682" width="199.969" height="72" viewBox="0 0 711 256">
+  
+  <path fill="#ffffff" d="M44 52 L44 194 A10 10 0 0 0 54 204 L176.49 204 A10 10 0 0 0 183.56 201.07 L205.07 179.56 A10 10 0 0 0 208 172.49 L208 108 L176 108 L176 159.23 A10 10 0 0 1 173.07 166.3 L170.3 169.07 A10 10 0 0 1 163.23 172 L86 172 A10 10 0 0 1 76 162 L76 52 L44 52 Z"/>
+  <path fill="#ffffff" d="M176 108 L176 204 L208 204 L208 108 L176 108 Z"/>
+  <path fill="#ffffff" d="M360 52 L360 204 L392 204 L392 52 L360 52 Z"/>
+  <path fill="#ffffff" d="M605 76 L605 204 L637 204 L637 76 L605 76 Z"/>
+  <path fill="#ffffff" d="M258 204 L258 162 A26 26 0 0 1 310 162 L310 204 L342 204 L342 162 A58 58 0 0 0 226 162 L226 204 L258 204 Z"/>
+  <path fill="#ffffff" d="M423.37 108 L372.44 158.93 A10 10 0 0 0 372.44 173.07 L403.37 204 L426 181.37 L417.7 173.07 A10 10 0 0 1 417.7 158.93 L446 130.63 L423.37 108 Z"/>
+  <path fill="#ffffff" d="M528.64 172.21 A24 24 0 1 1 537 154 L537 131 A10 10 0 0 1 527 141 L476 141 L476 167 L553 167 A10 10 0 0 0 563 157 L563 154 A50 50 0 1 0 528.64 201.49 L528.64 172.21 Z"/>
+  <path fill="#ffffff" d="M583 135 L663 135 L663 108 L583 108 L583 135 Z"/>
+  <path fill="#ffffff" d="M192 54 H192 A19 19 0 0 1 211 73 V73 A19 19 0 0 1 192 92 H192 A19 19 0 0 1 173 73 V73 A19 19 0 0 1 192 54 Z"/>
+</svg>
+<text x="620" y="706" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="500" fill="#cfe0ff" text-anchor="start">all 7.43:1</text>
+<text x="620" y="758" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="11" font-weight="400" fill="#cfe0ff" text-anchor="start">ground #0049cc</text>
+<text x="40" y="816" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="400" fill="#737373" text-anchor="start">The dark-ground dot keeps hue 218.6° and saturation 100% (brand blue) — only lightness lifts until it clears 3:1 on #0a0a0a.</text>
+</svg>

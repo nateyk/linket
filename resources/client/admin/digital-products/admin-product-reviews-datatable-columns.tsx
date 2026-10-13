@@ -167,7 +167,7 @@ export function ReviewActionsButton({
   const unhide = useMutation({
     mutationFn: () =>
       apiClient.post(
-        `/api/v1/admin/digital-products/reviews/${review.id}/unhide`,
+        `/api/v1/admin/items/reviews/${review.id}/unhide`,
       ),
     onSuccess: () => {
       queryClient.invalidateQueries({queryKey: adminProductReviewsBaseKey});
@@ -247,7 +247,7 @@ function HideReviewDialog({review, open, onOpenChange}: ReviewDialogProps) {
   const hide = useMutation({
     mutationFn: () =>
       apiClient.post(
-        `/api/v1/admin/digital-products/reviews/${review.id}/hide`,
+        `/api/v1/admin/items/reviews/${review.id}/hide`,
         {reason: reason.trim() || undefined},
       ),
     onSuccess: () => {
@@ -314,7 +314,7 @@ function DeleteReviewDialog({review, open, onOpenChange}: ReviewDialogProps) {
 
   const remove = useMutation({
     mutationFn: () =>
-      apiClient.delete(`/api/v1/admin/digital-products/reviews/${review.id}`),
+      apiClient.delete(`/api/v1/admin/items/reviews/${review.id}`),
     onSuccess: () => {
       onOpenChange(false);
       queryClient.invalidateQueries({queryKey: adminProductReviewsBaseKey});

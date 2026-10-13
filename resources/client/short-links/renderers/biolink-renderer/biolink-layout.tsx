@@ -278,7 +278,11 @@ function Branding({appearance}: {appearance?: BiolinkAppearanceConfig | null}) {
   }
 
   if (!src) {
-    src = useLightLogo ? branding.logo_light : branding.logo_dark;
+    // The branding lockup renders at 24px (h-6) — use the small cut files
+    // (<=24px rule), falling back to the full-size slot when unset.
+    src = useLightLogo
+      ? branding.logo_light_mobile || branding.logo_light
+      : branding.logo_dark_mobile || branding.logo_dark;
   }
 
   return (
@@ -291,7 +295,6 @@ function Branding({appearance}: {appearance?: BiolinkAppearanceConfig | null}) {
             message(':site logo', {values: {site: branding.site_name}}),
           )}
         />
-        <span className="text-xs text-[var(--biolink-text)]">{branding.site_name}</span>
       </Link>
     </div>
   );

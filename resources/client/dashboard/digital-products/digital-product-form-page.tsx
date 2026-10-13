@@ -36,6 +36,7 @@ import {
 import {Input} from '@shadcn/forms/input/input';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {Trans} from '@ui/i18n/trans';
+import {useTrans} from '@ui/i18n/use-trans';
 import {getBootstrapData} from '@ui/bootstrap-data/bootstrap-data-store';
 import {FormattedBytes} from '@ui/i18n/formatted-bytes';
 import {
@@ -52,7 +53,7 @@ import {
   Trash2Icon,
   TriangleAlertIcon,
 } from 'lucide-react';
-import {useCallback, useEffect, useState} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import {useNavigate, useParams, useSearchParams} from 'react-router';
 import {parseWizardPrefill, firstInvalidFieldId} from './product-create-flow';
 import {
@@ -139,6 +140,7 @@ export function Component() {
 function DigitalProductForm() {
   const {productId} = useParams();
   const navigate = useNavigate();
+  const {trans} = useTrans();
   const {state, actions, dirty} = useProductCreation();
   const title = state.title;
   const description = state.description;
@@ -161,9 +163,13 @@ function DigitalProductForm() {
     'details',
   );
 
+  // Auto-save only runs for drafts: the approved→draft revert is promised to
+  // the user as an explicit Save action (the warning banner below), so
+  // auto-save must not perform it (Review Focus #1). `product` is null while
+  // the GET is in flight, which also keeps auto-save off during load.
   useEffect(() => {
-    if (dirty) actions.autoSave();
-  }, [dirty, actions]);
+    if (dirty && product?.status === 'draft') actions.autoSave();
+  }, [dirty, actions, product?.status]);
 
   const validateField = useCallback(
     (field: string, value: string) => {
@@ -225,17 +231,35 @@ function DigitalProductForm() {
       ? `Create ${typeConfig.label}`
       : 'Create digital product';
 
+  // The product must be loaded exactly once per productId. `actions` is
+  // rebuilt by the creation-context memo on every state change, so listing it
+  // as a dependency re-fetched the product on every render and re-hydrated the
+  // form, wiping typed input within one round trip (the unbounded
+  // hydrate/refetch loop). Read the latest actions through a ref instead, so
+  // the effect only tracks the route values that actually identify the load.
+  const actionsRef = useRef(actions);
   useEffect(() => {
+    actionsRef.current = actions;
+  });
+
+  useEffect(() => {
+    // P2 (T2 review): this effect re-runs when the route's productId changes
+    // (/items/1/edit → /items/2/edit). Without cancellation, product 1's
+    // response can resolve AFTER product 2's and overwrite the form (and the
+    // `product` record Save PUTs against). Only the latest request's response
+    // may apply; the cleanup cancels the previous run.
+    let cancelled = false;
     void (async () => {
       try {
         if (productId) {
           const response = await apiClient.get(
-            `/api/v1/digital-products/${productId}`,
+            `/api/v1/items/${productId}`,
           );
+          if (cancelled) return;
           const item = response.data.data as Product;
           if (item.type === 'course') {
             navigate(
-              `/dashboard/my-products/${item.id}/course?notice=moved-to-builder`,
+              `/dashboard/items/${item.id}/course?notice=moved-to-builder`,
               {
                 replace: true,
               },
@@ -244,7 +268,7 @@ function DigitalProductForm() {
           }
           setProduct(item);
           const coverId = item.cover_file_entry_id ?? item.cover?.id ?? null;
-          actions.hydrate({
+          actionsRef.current.hydrate({
             title: item.title,
             description: item.description ?? '',
             price: (item.price_cents / 100).toFixed(2),
@@ -260,22 +284,27 @@ function DigitalProductForm() {
           const pageResponse = await apiClient.get(
             '/api/v1/biolinks?fields_preset=minimal',
           );
+          if (cancelled) return;
           const payload = pageResponse.data;
           setBiolinks(payload.data ?? []);
         } catch {
           // Storefront placement is optional, so a failed list request is non-fatal.
         }
       } catch (reason) {
+        if (cancelled) return;
         setError(
           reason instanceof Error
             ? reason.message
             : 'Unable to load this digital product.',
         );
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     })();
-  }, [navigate, productId, actions]);
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate, productId]);
 
   const save = useCallback(
     async (submitAfterSave = false) => {
@@ -331,24 +360,24 @@ function DigitalProductForm() {
         };
         // For courses, file_ids is optional — send empty array as-is, backend allows it
         const response = product
-          ? await apiClient.put(`/api/v1/digital-products/${product.id}`, body)
-          : await apiClient.post('/api/v1/digital-products', body);
+          ? await apiClient.put(`/api/v1/items/${product.id}`, body)
+          : await apiClient.post('/api/v1/items', body);
         saved = response.data.data as Product;
         setProduct(saved);
 
         if (submitAfterSave) {
           setSubmitting(true);
-          await apiClient.post(`/api/v1/digital-products/${saved.id}/submit`);
+          await apiClient.post(`/api/v1/items/${saved.id}/submit`);
         }
 
         if (isCourse || saved.type === 'course') {
-          navigate(`/dashboard/my-products/${saved.id}/course`, {
+          navigate(`/dashboard/items/${saved.id}/course`, {
             replace: true,
           });
         } else {
-          navigate(`/dashboard/my-products/${saved.id}/edit`, {replace: true});
+          navigate(`/dashboard/items/${saved.id}/edit`, {replace: true});
         }
-        if (submitAfterSave) navigate('/dashboard/my-products');
+        if (submitAfterSave) navigate('/dashboard/items');
       } catch (reason) {
         const validationErrors = getValidationErrors(reason);
         if (Object.keys(validationErrors).length) {
@@ -418,8 +447,8 @@ function DigitalProductForm() {
 
     setSaving(true);
     try {
-      await apiClient.delete(`/api/v1/digital-products/${product.id}`);
-      navigate('/dashboard/my-products');
+      await apiClient.delete(`/api/v1/items/${product.id}`);
+      navigate('/dashboard/items');
       return true;
     } catch {
       setError('Unable to delete product.');
@@ -445,29 +474,46 @@ function DigitalProductForm() {
     <DashboardLayout.MainSection>
       <DashboardLayout.SectionHeader>
         <DashboardLayout.SidebarToggle />
-        <Breadcrumb>
+        {/* P2 (crit3-A/3-B): the SectionTitle (page title + status badge)
+            measured width 0 at 1280/1440/1920. Root cause is the flex
+            chain in SectionHeader: the breadcrumb <nav> ships `w-full`,
+            i.e. a flex base size equal to the whole row, while the title
+            is `flex-1` (flex-basis 0%) — free space for it never exists,
+            so it collapses and `overflow:hidden` clips the badge behind
+            the action row. `w-auto` gives the slack to the title;
+            `max-sm:hidden` keeps the 360px row for title + icon actions
+            (navigation still lives in the drawer). The current-page crumb
+            is dropped on purpose: it repeated the exact string the title
+            now shows again (crit3-A, duplicate-title note). */}
+        <Breadcrumb className="w-auto max-sm:hidden">
           <Breadcrumb.Item>
-            <Breadcrumb.Link to="/dashboard/my-products">
+            <Breadcrumb.Link to="/dashboard/items">
               <Trans message="All products" />
             </Breadcrumb.Link>
           </Breadcrumb.Item>
-          <Breadcrumb.Separator />
-          <Breadcrumb.Item>
-            <Breadcrumb.Page>
-              <Trans message={pageTitle} />
-            </Breadcrumb.Page>
-          </Breadcrumb.Item>
         </Breadcrumb>
-        <DashboardLayout.SectionTitle>
-          <Trans message={pageTitle} />
+        <DashboardLayout.SectionTitle render={<h1 />}>
+          {/* P2: in a tight row the TEXT is what truncates (min-w-0), so
+              the status badge — the one product-specific fact the chrome
+              carries — keeps its 36px at every width.
+              Final-fix item 2: `render={<h1 />}` makes this the page's one
+              and only heading (T7's mechanism on the selection page). */}
+          <span className="min-w-0 truncate">
+            <Trans message={pageTitle} />
+          </span>
           {product && <ProductStatus status={product.status} />}
         </DashboardLayout.SectionTitle>
         <div className="flex items-center gap-2">
+          {/* P2 (crit3-A): the text labels collapse below 640px
+              (max-sm:hidden), leaving icon-only buttons with no accessible
+              name. aria-labels match the visible text via trans() — the
+              same pattern the course setup page uses. */}
           {product && (
             <Button
               variant="ghost"
               size="sm"
               disabled={saving}
+              aria-label={trans({message: 'Delete'})}
               onClick={() => setDeleteDialogOpen(true)}
             >
               <Trash2Icon className="size-4" />
@@ -480,6 +526,11 @@ function DigitalProductForm() {
             variant="outline"
             size="sm"
             disabled={saving || submitting}
+            aria-label={
+              saving
+                ? trans({message: 'Saving...'})
+                : trans({message: 'Save draft'})
+            }
             onClick={() => void save(false)}
           >
             <SaveIcon className="size-4" />
@@ -494,6 +545,11 @@ function DigitalProductForm() {
           <Button
             size="sm"
             disabled={saving || submitting || !canSubmit}
+            aria-label={
+              submitting
+                ? trans({message: 'Submitting...'})
+                : trans({message: 'Submit for review'})
+            }
             onClick={() => void save(true)}
           >
             <SendIcon className="size-4" />
@@ -555,7 +611,7 @@ function DigitalProductForm() {
                     size="sm"
                     variant="outline"
                     onClick={() =>
-                      navigate(`/dashboard/my-products/${product.id}/course`)
+                      navigate(`/dashboard/items/${product.id}/course`)
                     }
                   >
                     <GraduationCapIcon />
@@ -632,6 +688,7 @@ function DigitalProductForm() {
                             onDescriptionChange={actions.setDescription}
                             onPriceChange={actions.setPrice}
                             legacyCurrency={product?.currency}
+                            isApproved={product?.status === 'approved'}
                             convertToEtb={convertToEtb}
                             onConvertToEtbChange={setConvertToEtb}
                             onCoverChange={actions.setCover}
@@ -736,6 +793,7 @@ function DetailsPanel({
   onDescriptionChange,
   onPriceChange,
   legacyCurrency,
+  isApproved,
   convertToEtb,
   onConvertToEtbChange,
   onCoverChange,
@@ -749,6 +807,9 @@ function DetailsPanel({
   onDescriptionChange: (value: string) => void;
   onPriceChange: (value: string) => void;
   legacyCurrency?: string;
+  /** Approved products revert to draft on save, so the free-offer helper
+   * would promise something saving cannot do — only show it otherwise. */
+  isApproved?: boolean;
   convertToEtb: boolean;
   onConvertToEtbChange: (value: boolean) => void;
   onCoverChange: (url: string, entry?: {id: number}) => void;
@@ -778,7 +839,11 @@ function DetailsPanel({
 
       <ProductFormField
         label="Price"
-        description="Set ETB 0 to offer this product for free."
+        description={
+          isApproved
+            ? undefined
+            : 'Set ETB 0 to offer this product for free.'
+        }
         error={errors.price_cents}
         htmlFor="product-price"
         required
@@ -860,7 +925,15 @@ function DescriptionEditor({
       initialContent={value}
       onChange={onChange}
     >
-      <div className="overflow-hidden rounded-card-sm border border-border">
+      {/* P2 (crit3-B nested-cards): this box is the Description FIELD's
+          control — same role as the title/price inputs beside it — so it
+          wears the field tokens (`rounded-input` 12px + `border-input`),
+          not the card tokens (`rounded-card-sm` 16px + `border-border`)
+          that made it read as a third card nested in the section card.
+          The boundary stays because an editable surface with a toolbar
+          needs one (DESIGN.md field spec), it just stops being card
+          chrome. */}
+      <div className="overflow-hidden rounded-input border border-input">
         <div className="no-scrollbar flex shrink-0 items-center gap-0.5 overflow-x-auto border-b px-1.5 py-1 text-muted-foreground">
           <FormatDropdown />
           <Divider />

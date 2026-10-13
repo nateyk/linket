@@ -57,7 +57,7 @@ function renderPanel() {
       <StatisticsPanel
         productId="7"
         queryKey={['adminProductStatistics', '7']}
-        endpoint="/api/v1/admin/digital-products/7/statistics"
+        endpoint="/api/v1/admin/items/7/statistics"
       />
     </QueryClientProvider>,
   );
@@ -71,7 +71,7 @@ test('StatisticsPanel requests the admin endpoint with current-month params on m
 
   expect(salesLabels.length).toBeGreaterThan(0);
   expect(apiClient.get).toHaveBeenCalledWith(
-    '/api/v1/admin/digital-products/7/statistics',
+    '/api/v1/admin/items/7/statistics',
     {params: currentMonthPeriod()},
   );
 });

@@ -37,7 +37,7 @@ class SendStorefrontReviewNotification implements ShouldQueue
 
         $product = $review->reviewable;
         $stars = $review->ratings->firstWhere('key', 'overall')?->value ?? 0;
-        $dashboardUrl = URL::to('/dashboard/my-products/' . $product->id . '/reviews');
+        $dashboardUrl = URL::to('/dashboard/items/' . $product->id . '/reviews');
 
         Mail::raw(
             "Hello {$product->creator->name},\n\nYou received a new {$stars}-star review for \"{$product->title}\".\n\n{$review->review}\n\nView all reviews in your dashboard: {$dashboardUrl}",

@@ -3,20 +3,31 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import {useState} from 'react';
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
-import {fireEvent, render, screen} from '@testing-library/react';
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import {useBootstrapDataStore} from '@ui/bootstrap-data/bootstrap-data-store';
 import userEvent from '@testing-library/user-event';
-import {MemoryRouter} from 'react-router';
-import {beforeEach, describe, expect, test, vi} from 'vitest';
+import {createMemoryRouter, MemoryRouter, RouterProvider} from 'react-router';
+import {beforeAll, beforeEach, describe, expect, test, vi} from 'vitest';
+import {DashboardLayoutContextProvider} from '@common/ui/dashboard/dashboard-layout-context';
+import {Component as CreateCoursePage} from '../courses/create-course-page';
 import {BillingModePicker} from './billing-mode-picker';
 import {CreateProductDialog} from './create-product-dialog';
-import {visibleSteps} from './product-create-flow';
+import {Component as DigitalProductEditPage} from './digital-product-form-page';
+import {type BillingMode, visibleSteps} from './product-create-flow';
 import {
   WizardStepDots,
   type ProductCreateWizard,
 } from './product-create-wizard';
-import {ProductTypePicker} from './product-type-picker';
+import {ProductTypePicker, type ProductType} from './product-type-picker';
+import {Component as ProductTypeSelectionPage} from './product-type-selection-page';
 
 vi.mock('@app/dashboard/use-usage', () => ({
   useUsage: () => ({
@@ -27,6 +38,73 @@ vi.mock('@app/dashboard/use-usage', () => ({
     },
   }),
 }));
+
+// T4: the edit-page heading test mounts the real DigitalProductForm, whose
+// product GET must resolve without a server (same approach as
+// digital-product-form-page.hydrate.dom.test.tsx). The wizard dialog never
+// calls the API (finish only navigates), so this mock is inert for the rest
+// of the file.
+const editPageApi = vi.hoisted(() => {
+  const draftProduct = {
+    id: 1,
+    title: 'Ethiopian Coffee Ritual Field Guide',
+    description: '',
+    price_cents: 1500,
+    currency: 'etb',
+    status: 'draft',
+    type: 'digital',
+    cover: null,
+    cover_file_entry_id: null,
+    files: [],
+    biolink_ids: [],
+  };
+  return {
+    get: async (url: string) => {
+      if (url.startsWith('/api/v1/items/')) {
+        return {data: {data: draftProduct}};
+      }
+      return {data: {data: []}};
+    },
+  };
+});
+
+vi.mock('@common/http/query-client', async () => {
+  const {QueryClient} = await import('@tanstack/react-query');
+  return {
+    queryClient: new QueryClient({defaultOptions: {queries: {retry: false}}}),
+    apiClient: {
+      get: (url: string) => editPageApi.get(url),
+      post: () => Promise.resolve({data: {data: {}}}),
+      put: () => Promise.resolve({data: {data: {}}}),
+      delete: () => Promise.resolve({data: {data: {}}}),
+      request: () => Promise.resolve({data: {data: {}}}),
+    },
+  };
+});
+
+// jsdom has no layout: the edit page's TipTap description editor queries
+// Range rects while it mounts (same stub as
+// digital-product-form-page.hydrate.dom.test.tsx).
+beforeAll(() => {
+  const emptyRect: DOMRect = {
+    x: 0,
+    y: 0,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: 0,
+    height: 0,
+    toJSON: () => ({}),
+  };
+  Range.prototype.getBoundingClientRect = () => emptyRect;
+  Range.prototype.getClientRects = () =>
+    ({
+      length: 0,
+      item: () => null,
+      [Symbol.iterator]: function* () {},
+    }) as unknown as DOMRectList;
+});
 
 const pickerDir = 'resources/client/dashboard/digital-products';
 
@@ -105,19 +183,51 @@ describe('R06 billing mode picker semantics', () => {  test('renders a radiogrou
   });
 });
 
-describe('R07 wizard step indicators', () => {  test('renders an ordered step list with aria-current on the active step', () => {
+describe('R07 wizard step indicators (unified ProductFormProgress pattern)', () => {
+  test('renders the shared progress bar once, outside the nav; nav keeps aria-current steps list', () => {
     render(<WizardStepDots wizard={fakeWizard('billing')} />);
-    const list = screen.getByRole('list');
-    expect(list).not.toBeNull();
-    expect(list.querySelectorAll('li')).toHaveLength(2);
-    const current = list.querySelector('[aria-current="step"]');
-    expect(current).not.toBeNull();
+    const nav = screen.getByRole('navigation', {
+      name: 'Product creation steps',
+    });
+    expect(nav).not.toBeNull();
+    // Visible indicator is the same ProductFormProgress bar the
+    // course-setup and edit pages use — exactly once, and NOT inside the
+    // nav landmark (a progressbar is not navigation; P2 hygiene).
+    const bar = screen.getByRole('progressbar');
+    expect(nav.contains(bar)).toBe(false);
+    // Per-step semantics survive invisibly as an sr-only ordered list
+    // inside the named nav.
+    const items = within(nav).getAllByRole('listitem');
+    expect(items).toHaveLength(2);
+    expect(items[0].getAttribute('aria-current')).toBeNull();
+    expect(items[1].getAttribute('aria-current')).toBe('step');
   });
 
-  test('shows visible Step X of Y text and per-step names', () => {
-    render(<WizardStepDots wizard={fakeWizard('billing')} />);
-    expect(screen.getByText('Step 2 of 2')).not.toBeNull();
-    expect(screen.getByText('Free or paid?')).not.toBeNull();
+  test('derives the progress total from the steps and shows truthful position', () => {
+    // paid billing → 3 visible steps; the total must come from the step
+    // list (3), not be hardcoded.
+    render(<WizardStepDots wizard={fakeWizard('price')} />);
+    const nav = screen.getByRole('navigation', {
+      name: 'Product creation steps',
+    });
+    const items = within(nav).getAllByRole('listitem');
+    expect(items).toHaveLength(3);
+    // Accessible per-step names survive (R07).
+    expect(items.map(item => item.textContent)).toEqual([
+      'Create a new product',
+      'Free or paid?',
+      'Set your price',
+    ]);
+    expect(items[2].getAttribute('aria-current')).toBe('step');
+    // Position is visible in the unified bar copy — position wording
+    // ("Step 3 of 3"), never a completion claim about the active step.
+    expect(screen.getByText('Step 3 of 3')).not.toBeNull();
+    expect(screen.queryByText('3 of 3 steps complete')).toBeNull();
+  });
+
+  test('first step shows its position before later steps are reached', () => {
+    render(<WizardStepDots wizard={fakeWizard('type')} />);
+    expect(screen.getByText('Step 1 of 2')).not.toBeNull();
   });
 });
 
@@ -169,6 +279,28 @@ describe('R08 dialog close confirmation', () => {  beforeEach(() => {
   });
 });
 
+describe('P2 nested-cards: the wizard dialog has no card inside its panel', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  // crit1-B: `Dialog.Footer variant="muted"` paints `border-t bg-muted/50` on
+  // the footer strip — a second card sitting inside the dialog panel
+  // (DESIGN.md "Don't nest a card inside a card"). The footer is an action
+  // row, so it must render flat, exactly like the default Dialog.Footer.
+  test('footer renders as a plain action row, not a muted strip inside the panel', () => {
+    renderDialog();
+    const footer = document.querySelector(
+      '[data-slot="dialog-footer"]',
+    ) as HTMLElement;
+    expect(footer).not.toBeNull();
+    expect(footer.className).not.toContain('bg-muted');
+    expect(footer.className).not.toContain('border-t');
+    // The action row itself must survive (Cancel/Back left, Continue right).
+    expect(within(footer).getByRole('button', {name: /continue/i})).not.toBeNull();
+  });
+});
+
 describe('R09 picker strings are translatable', () => {
   test('every type option title, description and group label is an extractable Trans/trans literal', () => {
     const source = readSource('product-type-picker.tsx');
@@ -211,6 +343,18 @@ describe('R09 picker strings are translatable', () => {
     ]) {
       expectExtractable(dialog, literal);
     }
+  });
+
+  test('progress bar screen-reader label is an extractable trans literal', () => {
+    // Final-fix item 3: the progressbar's aria-label used to be a raw
+    // English string; it now goes through trans() like the neighbouring
+    // aria-labels (e.g. the wizard nav), so translators can reach it.
+    const progress = readSource('product-form-progress.tsx');
+    expect(progress).not.toContain('aria-label="Product setup progress"');
+    expectExtractable(progress, 'Product setup progress');
+    expect(progress).toMatch(
+      /aria-label=\{trans\(\{message: 'Product setup progress'\}\)\}/,
+    );
   });
 
   test('picker renders option copy through Trans', () => {
@@ -291,6 +435,238 @@ describe('R18 limits visible in picker', () => {
   });
 });
 
+// T1: the picker cards must never read as "two active options". The focus
+// treatment lives on a focus-visible-only class that is only ever painted by
+// the card whose radio input is focused, while selection comes from `value`.
+const FOCUS_STYLING_CLASS = 'has-[:focus-visible]:outline-2';
+const SELECTION_CLASSES = ['bg-primary/5', 'border-primary/60'] as const;
+
+function labelsIn(container: HTMLElement): HTMLLabelElement[] {
+  return Array.from(container.querySelectorAll('label'));
+}
+
+function carriesSelectionStyling(label: HTMLLabelElement): boolean {
+  return SELECTION_CLASSES.every(c => label.className.includes(c));
+}
+
+// "Carries focus styling" = the focus-visible card classes are present AND the
+// card's radio input is the focused one (the classes only paint under
+// :focus-visible, so class presence alone is the mechanism, focus is the state).
+function carriesFocusStyling(label: HTMLLabelElement): boolean {
+  return (
+    label.className.includes(FOCUS_STYLING_CLASS) &&
+    label.matches(':has(:focus)')
+  );
+}
+
+function focusedLabel(): HTMLLabelElement | null {
+  const active = document.activeElement as HTMLElement | null;
+  return active?.closest('label') ?? null;
+}
+
+function ControlledTypePicker() {
+  const [value, setValue] = useState<ProductType | null>('digital');
+  return <ProductTypePicker value={value} onValueChange={setValue} />;
+}
+
+function ControlledBillingPicker() {
+  const [value, setValue] = useState<BillingMode | null>('free');
+  return <BillingModePicker value={value} onValueChange={setValue} />;
+}
+
+describe('T1 focus styling is distinct from selection styling', () => {
+  test('type picker: focused-but-unselected card gets focus styling only, selected card gets selection styling only', () => {
+    const {container} = render(
+      <ProductTypePicker value="ebook" onValueChange={() => {}} />,
+    );
+    const labels = labelsIn(container);
+    const radios = screen.getAllByRole('radio');
+
+    // Selection sits on option B (ebook).
+    expect(carriesSelectionStyling(labels[1])).toBe(true);
+
+    // Move focus to option A (digital) without changing the selection.
+    radios[0].focus();
+    expect(document.activeElement).toBe(radios[0]);
+    expect(focusedLabel()).toBe(labels[0]);
+
+    // (a) option A: carries focus styling, NOT selection styling.
+    expect(labels[0].className).toContain(FOCUS_STYLING_CLASS);
+    expect(carriesFocusStyling(labels[0])).toBe(true);
+    expect(carriesSelectionStyling(labels[0])).toBe(false);
+
+    // (a) vice versa: option B carries selection styling, NOT focus styling.
+    expect(carriesSelectionStyling(labels[1])).toBe(true);
+    expect(carriesFocusStyling(labels[1])).toBe(false);
+
+    // The dual-highlight class (focus-within ring on every card) is gone.
+    for (const label of labels) {
+      expect(label.className).not.toContain('focus-within:');
+    }
+    // Never both treatments on the same card in this scenario.
+    for (const label of labels) {
+      expect(carriesFocusStyling(label) && carriesSelectionStyling(label)).toBe(
+        false,
+      );
+    }
+  });
+
+  test('billing picker: focused-but-unselected card gets focus styling only, selected card gets selection styling only', () => {
+    const {container} = render(
+      <BillingModePicker value="paid" onValueChange={() => {}} />,
+    );
+    const labels = labelsIn(container);
+    const radios = screen.getAllByRole('radio');
+
+    // Selection sits on option B (paid).
+    expect(carriesSelectionStyling(labels[1])).toBe(true);
+
+    // Focus option A (free) without selecting it.
+    radios[0].focus();
+    expect(document.activeElement).toBe(radios[0]);
+    expect(focusedLabel()).toBe(labels[0]);
+
+    expect(labels[0].className).toContain(FOCUS_STYLING_CLASS);
+    expect(carriesFocusStyling(labels[0])).toBe(true);
+    expect(carriesSelectionStyling(labels[0])).toBe(false);
+
+    expect(carriesSelectionStyling(labels[1])).toBe(true);
+    expect(carriesFocusStyling(labels[1])).toBe(false);
+
+    for (const label of labels) {
+      expect(label.className).not.toContain('focus-within:');
+    }
+  });
+
+  test('type picker: arrow-key focus move keeps exactly one selected card', async () => {
+    const user = userEvent.setup();
+    const {container} = render(<ControlledTypePicker />);
+    expect(
+      labelsIn(container).filter(carriesSelectionStyling),
+    ).toHaveLength(1);
+
+    screen.getAllByRole('radio')[0].focus();
+    await user.keyboard('{ArrowDown}');
+
+    const labels = labelsIn(container);
+    const selected = labels.filter(carriesSelectionStyling);
+    expect(selected).toHaveLength(1);
+    expect(selected[0]).toBe(labels[1]);
+    expect(focusedLabel()).toBe(selected[0]);
+    expect(carriesFocusStyling(selected[0])).toBe(true);
+  });
+
+  test('billing picker: arrow-key focus move keeps exactly one selected card', async () => {
+    const user = userEvent.setup();
+    const {container} = render(<ControlledBillingPicker />);
+    expect(
+      labelsIn(container).filter(carriesSelectionStyling),
+    ).toHaveLength(1);
+
+    screen.getAllByRole('radio')[0].focus();
+    await user.keyboard('{ArrowDown}');
+
+    const labels = labelsIn(container);
+    const selected = labels.filter(carriesSelectionStyling);
+    expect(selected).toHaveLength(1);
+    expect(selected[0]).toBe(labels[1]);
+    expect(focusedLabel()).toBe(selected[0]);
+    expect(carriesFocusStyling(selected[0])).toBe(true);
+  });
+});
+
+// T3: a successful finish must not leave the wizard resumable mid-flow.
+// Reopening "New product" has to start at step 1 with an empty store, and the
+// persisted copy in localStorage must not survive with a stale price.
+const WIZARD_STORAGE_KEY = 'productCreateWizard';
+
+type StoredWizard = {
+  step?: string;
+  state?: {type: string | null; billing: string | null; price: string};
+};
+
+function readStoredWizard(): StoredWizard | null {
+  const raw = localStorage.getItem(WIZARD_STORAGE_KEY);
+  return raw ? (JSON.parse(raw) as StoredWizard) : null;
+}
+
+/** Store is either fully cleared or rewritten with the initial (empty) state. */
+function expectWizardStoreEmpty() {
+  const stored = readStoredWizard();
+  if (stored === null) return;
+  expect(stored.step).toBe('type');
+  expect(stored.state?.type).toBeNull();
+  expect(stored.state?.billing).toBeNull();
+  expect(stored.state?.price).toBe('');
+}
+
+async function walkWizardToFinish(
+  user: ReturnType<typeof userEvent.setup>,
+) {
+  await user.click(screen.getByRole('radio', {name: /digital product/i}));
+  await user.click(screen.getByRole('button', {name: /continue/i}));
+  await user.click(screen.getByRole('radio', {name: /paid/i}));
+  await user.click(screen.getByRole('button', {name: /continue/i}));
+  await user.type(screen.getByLabelText('Price'), '25');
+  await user.click(screen.getByRole('button', {name: /continue/i}));
+}
+
+describe('T3 wizard resets after a successful create', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  test('next open starts at step 1 with empty state', async () => {
+    const user = userEvent.setup();
+    const onOpenChange = vi.fn();
+    const {unmount} = render(
+      <MemoryRouter>
+        <CreateProductDialog open onOpenChange={onOpenChange} />
+      </MemoryRouter>,
+    );
+
+    await walkWizardToFinish(user);
+
+    // finish closes the dialog (success path)…
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    // …and empties the wizard store.
+    expectWizardStoreEmpty();
+
+    // Simulate the next "New product" open: a fresh mount over the storage
+    // that survived the previous flow.
+    unmount();
+    render(
+      <MemoryRouter>
+        <CreateProductDialog open onOpenChange={vi.fn()} />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText('Step 1 of 2')).not.toBeNull();
+    expect(screen.queryByText('Step 3 of 3')).toBeNull();
+    expect(screen.getByRole('radio', {name: /digital product/i})).not.toBeNull();
+    expect(screen.queryByPlaceholderText('0.00')).toBeNull();
+  });
+
+  test('localStorage persistence key is cleared/reset on success', async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <CreateProductDialog open onOpenChange={vi.fn()} />
+      </MemoryRouter>,
+    );
+
+    await walkWizardToFinish(user);
+
+    expectWizardStoreEmpty();
+    // A stale mid-flow snapshot must never be readable from storage.
+    const stored = readStoredWizard();
+    if (stored) {
+      expect(stored.step).not.toBe('price');
+      expect(stored.state?.price).not.toBe('25');
+    }
+  });
+});
+
 describe('focus management', () => {
   beforeEach(() => {
     localStorage.clear();
@@ -307,5 +683,389 @@ describe('focus management', () => {
     await user.click(screen.getByRole('button', {name: /continue/i}));
     const active = document.activeElement as HTMLElement | null;
     expect(active?.getAttribute('role')).toBe('radio');
+  });
+});
+
+// T7 (crit1-A P1): the check glyph was driven by `peer-data-checked` from a
+// *descendant* of the peer's sibling, so the selector never matched and the
+// icon stayed at `opacity: 0` — selection was carried by a 1px ring alone.
+// The glyph must now be rendered from React state and be visibly present on
+// the selected card only.
+const GLYPH_SELECTOR = '[data-selection-glyph]';
+
+function expectVisibleSelectionGlyph(card: HTMLLabelElement) {
+  const glyph = card.querySelector(GLYPH_SELECTOR);
+  expect(glyph, 'selected card renders the selection glyph').not.toBeNull();
+  expect(glyph!.tagName.toLowerCase()).toBe('svg');
+  // Decorative: the radio's accessible name still comes from the label text.
+  expect(glyph!.getAttribute('aria-hidden')).toBe('true');
+  // Never screen-reader-only, hidden, or transparent — anywhere up the tree.
+  expect(glyph!.closest('.sr-only')).toBeNull();
+  expect(glyph!.closest('[hidden]')).toBeNull();
+  expect(glyph!.getAttribute('class') ?? '').not.toMatch(
+    /opacity-0|invisible|\bhidden\b/,
+  );
+  for (
+    let el = glyph!.parentElement;
+    el && el !== card.parentElement;
+    el = el.parentElement
+  ) {
+    expect(el.getAttribute('class') ?? '').not.toMatch(/sr-only|opacity-0/);
+    expect(el.hasAttribute('hidden')).toBe(false);
+    expect(el.getAttribute('aria-hidden')).not.toBe('true');
+  }
+  // The glyph sits on a primary-filled circle, louder than the focus ring.
+  expect(glyph!.parentElement?.className).toContain('bg-primary');
+}
+
+describe('T7 selection glyph is visible inside the selected card', () => {
+  test('type picker: selected card exposes a visible glyph, unselected cards do not', () => {
+    const {container} = render(
+      <ProductTypePicker value="ebook" onValueChange={() => {}} />,
+    );
+    const labels = labelsIn(container);
+    expectVisibleSelectionGlyph(labels[1]);
+    for (const index of [0, 2, 3]) {
+      expect(labels[index].querySelector(GLYPH_SELECTOR)).toBeNull();
+    }
+  });
+
+  test('billing picker: selected card exposes a visible glyph, unselected card does not', () => {
+    const {container} = render(
+      <BillingModePicker value="paid" onValueChange={() => {}} />,
+    );
+    const labels = labelsIn(container);
+    expectVisibleSelectionGlyph(labels[1]);
+    expect(labels[0].querySelector(GLYPH_SELECTOR)).toBeNull();
+  });
+
+  test('billing picker: no glyph before anything is selected', () => {
+    const {container} = render(
+      <BillingModePicker value={null} onValueChange={() => {}} />,
+    );
+    for (const label of labelsIn(container)) {
+      expect(label.querySelector(GLYPH_SELECTOR)).toBeNull();
+    }
+  });
+});
+
+// T7 (crit1-A P1): /dashboard/items/new put the Back/Continue row above the
+// question and repeated the heading (page SectionTitle + step title both read
+// "Create a new product"). The page must ship exactly one h1 and read
+// question → body → actions, like the dialog already does.
+describe('T7 page shell: single h1, question before the action row', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  function renderSelectionPage() {
+    const router = createMemoryRouter(
+      [
+        {
+          path: '/dashboard/items/new',
+          element: <ProductTypeSelectionPage />,
+        },
+      ],
+      {initialEntries: ['/dashboard/items/new']},
+    );
+    return render(
+      <DashboardLayoutContextProvider name="test">
+        {() => <RouterProvider router={router} />}
+      </DashboardLayoutContextProvider>,
+    );
+  }
+
+  test('renders exactly one h1 and does not repeat the step question as a second heading', () => {
+    const {container} = renderSelectionPage();
+
+    const h1s = Array.from(container.querySelectorAll('h1'));
+    expect(h1s).toHaveLength(1);
+    // The page heading names the flow; the step title stays the h2 question,
+    // so "Create a new product" is written once as a heading.
+    expect(h1s[0].textContent).toBe('Create product');
+    expect(
+      screen.getAllByRole('heading', {name: 'Create a new product'}),
+    ).toHaveLength(1);
+    expect(
+      screen.getByRole('heading', {level: 2, name: 'Create a new product'}),
+    ).toBeTruthy();
+  });
+
+  test('the question precedes the Back and Continue actions in DOM order', () => {
+    renderSelectionPage();
+
+    const question = screen.getByRole('heading', {
+      level: 2,
+      name: 'Create a new product',
+    });
+    const back = screen.getByRole('link', {name: /all products/i});
+    const next = screen.getByRole('button', {name: /continue/i});
+
+    const FOLLOWING = Node.DOCUMENT_POSITION_FOLLOWING;
+    expect(question.compareDocumentPosition(back) & FOLLOWING).toBeTruthy();
+    expect(question.compareDocumentPosition(next) & FOLLOWING).toBeTruthy();
+    // Continue sits after the option list too (footer of the column).
+    expect(
+      screen.getByRole('radiogroup').compareDocumentPosition(next) &
+        FOLLOWING,
+    ).toBeGreaterThan(0);
+  });
+});
+
+// T5: on the page shell the progress rule must span the whole content
+// column, so it reads as the flow's progress (not step 1's). It used to nest
+// inside the header's min-w-0 text block, which made the rule stop at the
+// text column edge and sit visually "under" the first step's title.
+describe('T5 page-shell progress bar placement', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  function renderSelectionPage() {
+    const router = createMemoryRouter(
+      [
+        {
+          path: '/dashboard/items/new',
+          element: <ProductTypeSelectionPage />,
+        },
+      ],
+      {initialEntries: ['/dashboard/items/new']},
+    );
+    return render(
+      <DashboardLayoutContextProvider name="test">
+        {() => <RouterProvider router={router} />}
+      </DashboardLayoutContextProvider>,
+    );
+  }
+
+  test('page-shell progress bar is outside the header text column', () => {
+    renderSelectionPage();
+
+    // Labeled as progress for the whole flow, not for a step.
+    const bar = screen.getByRole('progressbar', {
+      name: 'Product setup progress',
+    });
+    expect(screen.getByText('Step 1 of 2')).not.toBeNull();
+
+    const title = screen.getByRole('heading', {
+      level: 2,
+      name: 'Create a new product',
+    });
+    // The h2's text block (the min-w-0 column) must not contain the bar.
+    const textColumn = title.closest('.min-w-0');
+    expect(textColumn).not.toBeNull();
+    expect(textColumn!.contains(bar)).toBe(false);
+
+    // Instead, the bar renders as a sibling AFTER the whole header row
+    // (icon + text block), so its bottom rule spans the content column and
+    // aligns with the card column below.
+    const headerRow = title.closest('div.flex.items-start');
+    expect(headerRow).not.toBeNull();
+    expect(headerRow!.contains(bar)).toBe(false);
+    expect(headerRow!.nextElementSibling?.contains(bar)).toBe(true);
+  });
+});
+
+// T7 (crit1-A P1): an empty price greyed out Continue with zero feedback —
+// a silent dead end at the last gate of the funnel. The paid price step must
+// show the same inline Field.Error the course setup page uses.
+// P2 (T7 review): the Field.Error mounts on step entry over an autofocused
+// empty field, so screen readers announce a validation error before any
+// input. The error is deferred until the field has been interacted with
+// (typed into or blurred); once interacted, it stays visible whenever
+// Continue is blocked by an invalid amount.
+describe('T7 empty price shows a visible error', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  async function walkToPriceStep(user: ReturnType<typeof userEvent.setup>) {
+    render(
+      <MemoryRouter>
+        <CreateProductDialog open onOpenChange={vi.fn()} />
+      </MemoryRouter>,
+    );
+    await user.click(screen.getByRole('radio', {name: /digital product/i}));
+    await user.click(screen.getByRole('button', {name: /continue/i}));
+    await user.click(screen.getByRole('radio', {name: /paid/i}));
+    await user.click(screen.getByRole('button', {name: /continue/i}));
+  }
+
+  test('entering the price step does not announce an error before interaction', async () => {
+    const user = userEvent.setup();
+    await walkToPriceStep(user);
+
+    // The field is autofocused and empty — no error may mount yet.
+    expect(screen.queryByRole('alert')).toBeNull();
+    const priceInput = screen.getByLabelText('Price') as HTMLInputElement;
+    expect(priceInput.getAttribute('aria-invalid')).not.toBe('true');
+
+    // Continue is still blocked (the gate is unchanged).
+    const next = screen.getByRole('button', {
+      name: /continue/i,
+    }) as HTMLButtonElement;
+    expect(next.disabled).toBe(true);
+  });
+
+  test('empty price blocks Continue with a visible Field.Error after interaction', async () => {
+    const user = userEvent.setup();
+    await walkToPriceStep(user);
+
+    // Blur without entering a value: the field has been interacted with
+    // and Continue is blocked, so the error must be visible.
+    const priceInput = screen.getByLabelText('Price') as HTMLInputElement;
+    fireEvent.blur(priceInput);
+
+    const error = screen.getByRole('alert');
+    expect(error.textContent).toContain('Enter an amount greater than ETB 0.');
+
+    expect(priceInput.getAttribute('aria-invalid')).toBe('true');
+
+    const next = screen.getByRole('button', {
+      name: /continue/i,
+    }) as HTMLButtonElement;
+    expect(next.disabled).toBe(true);
+
+    // A valid price clears the error and re-enables Continue.
+    await user.type(priceInput, '25');
+    await waitFor(() => expect(screen.queryByRole('alert')).toBeNull());
+    expect(priceInput.getAttribute('aria-invalid')).not.toBe('true');
+    expect(
+      (screen.getByRole('button', {name: /continue/i}) as HTMLButtonElement)
+        .disabled,
+    ).toBe(false);
+  });
+
+  test('typing an invalid amount surfaces the error immediately', async () => {
+    const user = userEvent.setup();
+    await walkToPriceStep(user);
+
+    const priceInput = screen.getByLabelText('Price') as HTMLInputElement;
+    await user.type(priceInput, '0');
+
+    const error = screen.getByRole('alert');
+    expect(error.textContent).toContain('Enter an amount greater than ETB 0.');
+    expect(
+      (screen.getByRole('button', {name: /continue/i}) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+  });
+
+  test('free billing never reaches the price step or its error', async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <CreateProductDialog open onOpenChange={vi.fn()} />
+      </MemoryRouter>,
+    );
+    await user.click(screen.getByRole('radio', {name: /digital product/i}));
+    await user.click(screen.getByRole('button', {name: /continue/i}));
+    await user.click(screen.getByRole('radio', {name: /free/i}));
+    await user.click(screen.getByRole('button', {name: /continue/i}));
+
+    expect(screen.queryByLabelText('Price')).toBeNull();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+});
+
+// T4 (heading hierarchy): every section header used to render as h3 — the
+// shared accordion's Base UI Header defaults to h3 — skipping h2 entirely
+// between the page h1 and its top-level section content. Both flow pages
+// share ProductFormSection, so one fix covers them; both are mounted here
+// because the Produces contract names both routes.
+describe('T4 heading hierarchy: sections are h2 under the page h1', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  /**
+   * The invariant both pages must satisfy: exactly one h1 (the page title),
+   * section triggers as the h2s right under it, and no skipped levels
+   * anywhere (h3+ only ever follows h2 — e.g. the shared ProductCard title
+   * in the edit page's preview aside, which keeps its app-wide h3 default).
+   */
+  function expectHeadingHierarchy() {
+    const headings = screen.getAllByRole('heading');
+
+    // Exactly one h1 — the page title — and it is the FIRST heading.
+    const h1s = headings.filter(h => h.tagName === 'H1');
+    expect(h1s).toHaveLength(1);
+    expect(headings[0]).toBe(h1s[0]);
+
+    // The first heading after h1 is an h2 (never h3 — that skipped h2).
+    expect(headings[1].tagName).toBe('H2');
+
+    const sections = headings.filter(h => h.tagName === 'H2');
+    expect(sections.length).toBeGreaterThan(0);
+
+    // No skipped levels anywhere on the page: a heading may only drop to the
+    // level directly below the previous one.
+    const levels = headings.map(h => Number(h.tagName.slice(1)));
+    levels.forEach((level, index) => {
+      if (index > 0) {
+        expect(level - levels[index - 1]).toBeLessThanOrEqual(1);
+      }
+    });
+
+    return {h1: h1s[0], sections};
+  }
+
+  test('course setup page (/dashboard/items/new/course) renders h1 → h2 sections', () => {
+    const router = createMemoryRouter(
+      [
+        {
+          path: '/dashboard/items/new/course',
+          element: <CreateCoursePage />,
+        },
+      ],
+      {initialEntries: ['/dashboard/items/new/course']},
+    );
+    render(
+      <DashboardLayoutContextProvider name="test">
+        {() => <RouterProvider router={router} />}
+      </DashboardLayoutContextProvider>,
+    );
+
+    const {h1, sections} = expectHeadingHierarchy();
+    expect(h1.textContent).toContain('Create course');
+    // The section triggers ARE the h2 headings, titled per section.
+    expect(sections.map(h => h.textContent)).toEqual([
+      expect.stringContaining('Course details'),
+      expect.stringContaining('Course settings'),
+    ]);
+  });
+
+  test('digital product edit page (/dashboard/items/:id/edit) renders h1 → h2 sections', async () => {
+    const router = createMemoryRouter(
+      [
+        {
+          path: '/dashboard/items/:productId/edit',
+          element: <DigitalProductEditPage />,
+        },
+      ],
+      {initialEntries: ['/dashboard/items/1/edit']},
+    );
+    const queryClient = new QueryClient({
+      defaultOptions: {queries: {retry: false}},
+    });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <DashboardLayoutContextProvider name="test">
+          {() => <RouterProvider router={router} />}
+        </DashboardLayoutContextProvider>
+      </QueryClientProvider>,
+    );
+
+    // The section list mounts after the product GET resolves.
+    const sections = await screen.findAllByRole('heading', {level: 2});
+    expect(sections).toHaveLength(3);
+
+    const {h1} = expectHeadingHierarchy();
+    expect(h1.textContent).toContain('Edit digital product');
+    expect(sections.map(h => h.textContent)).toEqual([
+      expect.stringContaining('Product details'),
+      expect.stringContaining('Product files'),
+      expect.stringContaining('Storefront placement'),
+    ]);
   });
 });

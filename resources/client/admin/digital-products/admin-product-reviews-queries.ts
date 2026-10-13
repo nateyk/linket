@@ -17,7 +17,7 @@ export const adminProductReviewsOptions = (
     queryKey: [...adminProductReviewsBaseKey, productId, params],
     queryFn: () =>
       apiClient
-        .get(`/api/v1/admin/digital-products/${productId}/reviews`, {
+        .get(`/api/v1/admin/items/${productId}/reviews`, {
           params: mapped,
         })
         .then(response => response.data),

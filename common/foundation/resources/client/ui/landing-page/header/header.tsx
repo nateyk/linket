@@ -273,7 +273,7 @@ export function Header() {
                       <Logo logoType="compact" className="h-4" url="/" />
                     </span>
                   </div>
-                  <SheetTitle className="text-lg font-semibold">
+                  <SheetTitle className="sr-only">
                     {branding.site_name}
                   </SheetTitle>
                   <div className="ml-auto flex items-center gap-2">

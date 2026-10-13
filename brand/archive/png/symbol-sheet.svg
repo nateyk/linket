@@ -1,0 +1,190 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1142" height="794" viewBox="0 0 1142 794">
+<rect x="0" y="0" width="1142" height="794" fill="#ffffff"/>
+<text x="40" y="44" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="24" font-weight="600" fill="#212121" text-anchor="start">Linket symbol candidates — built from the wordmark system</text>
+<text x="40" y="74" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="14" font-weight="400" fill="#737373" text-anchor="start">Stroke 48 = 24/512 (the wordmark's own ratio), butt cuts, square tittle 56, corners r 7.2 = 0.15 × stroke (R1) / 0 (R2).</text>
+<text x="285" y="108" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="600" fill="#737373" text-anchor="middle">R1 · 160px</text>
+<text x="475" y="108" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="600" fill="#737373" text-anchor="middle">R2 · 160px</text>
+<text x="620" y="108" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="600" fill="#737373" text-anchor="middle">16px</text>
+<text x="720" y="108" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="600" fill="#737373" text-anchor="middle">32px</text>
+<text x="820" y="108" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="600" fill="#737373" text-anchor="middle">64px</text>
+<text x="928" y="108" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="600" fill="#737373" text-anchor="middle">white on #0049cc</text>
+<text x="1044" y="108" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="600" fill="#737373" text-anchor="middle">white on #0a0a0a</text>
+<text x="40" y="168" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="30" font-weight="600" fill="#212121" text-anchor="start">S1</text>
+<text x="40" y="190" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="14" font-weight="600" fill="#212121" text-anchor="start">Linked Li</text>
+<text x="40" y="210" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="11" font-weight="400" fill="#737373" text-anchor="start">concept A's fused L-i ligature, as a mark</text>
+<svg x="205" y="136" width="160" height="160" viewBox="0 0 512 512">
+  
+  <g transform="translate(2 0) scale(2)">
+    <path fill="#0049cc" d="M48 52 L48 200.4 A3.6 3.6 0 0 0 51.6 204 L167.48 204 A3.6 3.6 0 0 0 170.02 202.95 L202.95 170.02 A3.6 3.6 0 0 0 204 167.48 L204 108 L180 108 L180 159.03 L159.03 180 L72 180 L72 52 L48 52 Z"/>
+    <path fill="#0049cc" d="M181.6 64 H202.4 A3.6 3.6 0 0 1 206 67.6 V88.4 A3.6 3.6 0 0 1 202.4 92 H181.6 A3.6 3.6 0 0 1 178 88.4 V67.6 A3.6 3.6 0 0 1 181.6 64 Z"/>
+    <path fill="none" stroke="#0049cc" stroke-width="24" stroke-linecap="butt" stroke-linejoin="miter" d="M192 108 V204"/>
+  </g>
+</svg>
+<svg x="395" y="136" width="160" height="160" viewBox="0 0 512 512">
+  
+  <g transform="translate(2 0) scale(2)">
+    <path fill="#0049cc" d="M48 52 L48 204 L168.97 204 L204 168.97 L204 108 L180 108 L180 159.03 L159.03 180 L72 180 L72 52 L48 52 Z"/>
+    <path fill="#0049cc" d="M178 64 H206 V92 H178 Z"/>
+    <path fill="none" stroke="#0049cc" stroke-width="24" stroke-linecap="butt" stroke-linejoin="miter" d="M192 108 V204"/>
+  </g>
+</svg>
+<svg x="612" y="214" width="16" height="16" viewBox="0 0 512 512">
+  
+  <g transform="translate(2 0) scale(2)">
+    <path fill="#0049cc" d="M48 52 L48 200.4 A3.6 3.6 0 0 0 51.6 204 L167.48 204 A3.6 3.6 0 0 0 170.02 202.95 L202.95 170.02 A3.6 3.6 0 0 0 204 167.48 L204 108 L180 108 L180 159.03 L159.03 180 L72 180 L72 52 L48 52 Z"/>
+    <path fill="#0049cc" d="M181.6 64 H202.4 A3.6 3.6 0 0 1 206 67.6 V88.4 A3.6 3.6 0 0 1 202.4 92 H181.6 A3.6 3.6 0 0 1 178 88.4 V67.6 A3.6 3.6 0 0 1 181.6 64 Z"/>
+    <path fill="none" stroke="#0049cc" stroke-width="24" stroke-linecap="butt" stroke-linejoin="miter" d="M192 108 V204"/>
+  </g>
+</svg>
+<svg x="704" y="206" width="32" height="32" viewBox="0 0 512 512">
+  
+  <g transform="translate(2 0) scale(2)">
+    <path fill="#0049cc" d="M48 52 L48 200.4 A3.6 3.6 0 0 0 51.6 204 L167.48 204 A3.6 3.6 0 0 0 170.02 202.95 L202.95 170.02 A3.6 3.6 0 0 0 204 167.48 L204 108 L180 108 L180 159.03 L159.03 180 L72 180 L72 52 L48 52 Z"/>
+    <path fill="#0049cc" d="M181.6 64 H202.4 A3.6 3.6 0 0 1 206 67.6 V88.4 A3.6 3.6 0 0 1 202.4 92 H181.6 A3.6 3.6 0 0 1 178 88.4 V67.6 A3.6 3.6 0 0 1 181.6 64 Z"/>
+    <path fill="none" stroke="#0049cc" stroke-width="24" stroke-linecap="butt" stroke-linejoin="miter" d="M192 108 V204"/>
+  </g>
+</svg>
+<svg x="788" y="190" width="64" height="64" viewBox="0 0 512 512">
+  
+  <g transform="translate(2 0) scale(2)">
+    <path fill="#0049cc" d="M48 52 L48 200.4 A3.6 3.6 0 0 0 51.6 204 L167.48 204 A3.6 3.6 0 0 0 170.02 202.95 L202.95 170.02 A3.6 3.6 0 0 0 204 167.48 L204 108 L180 108 L180 159.03 L159.03 180 L72 180 L72 52 L48 52 Z"/>
+    <path fill="#0049cc" d="M181.6 64 H202.4 A3.6 3.6 0 0 1 206 67.6 V88.4 A3.6 3.6 0 0 1 202.4 92 H181.6 A3.6 3.6 0 0 1 178 88.4 V67.6 A3.6 3.6 0 0 1 181.6 64 Z"/>
+    <path fill="none" stroke="#0049cc" stroke-width="24" stroke-linecap="butt" stroke-linejoin="miter" d="M192 108 V204"/>
+  </g>
+</svg>
+<rect x="880" y="174" width="96" height="96" fill="#0049cc" rx="14"/>
+<svg x="896" y="190" width="64" height="64" viewBox="0 0 512 512">
+  
+  <g transform="translate(2 0) scale(2)">
+    <path fill="#ffffff" d="M48 52 L48 200.4 A3.6 3.6 0 0 0 51.6 204 L167.48 204 A3.6 3.6 0 0 0 170.02 202.95 L202.95 170.02 A3.6 3.6 0 0 0 204 167.48 L204 108 L180 108 L180 159.03 L159.03 180 L72 180 L72 52 L48 52 Z"/>
+    <path fill="#ffffff" d="M181.6 64 H202.4 A3.6 3.6 0 0 1 206 67.6 V88.4 A3.6 3.6 0 0 1 202.4 92 H181.6 A3.6 3.6 0 0 1 178 88.4 V67.6 A3.6 3.6 0 0 1 181.6 64 Z"/>
+    <path fill="none" stroke="#ffffff" stroke-width="24" stroke-linecap="butt" stroke-linejoin="miter" d="M192 108 V204"/>
+  </g>
+</svg>
+<rect x="996" y="174" width="96" height="96" fill="#0a0a0a" rx="14"/>
+<svg x="1012" y="190" width="64" height="64" viewBox="0 0 512 512">
+  
+  <g transform="translate(2 0) scale(2)">
+    <path fill="#ffffff" d="M48 52 L48 200.4 A3.6 3.6 0 0 0 51.6 204 L167.48 204 A3.6 3.6 0 0 0 170.02 202.95 L202.95 170.02 A3.6 3.6 0 0 0 204 167.48 L204 108 L180 108 L180 159.03 L159.03 180 L72 180 L72 52 L48 52 Z"/>
+    <path fill="#ffffff" d="M181.6 64 H202.4 A3.6 3.6 0 0 1 206 67.6 V88.4 A3.6 3.6 0 0 1 202.4 92 H181.6 A3.6 3.6 0 0 1 178 88.4 V67.6 A3.6 3.6 0 0 1 181.6 64 Z"/>
+    <path fill="none" stroke="#ffffff" stroke-width="24" stroke-linecap="butt" stroke-linejoin="miter" d="M192 108 V204"/>
+  </g>
+</svg>
+<text x="40" y="368" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="30" font-weight="600" fill="#212121" text-anchor="start">S2</text>
+<text x="40" y="390" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="14" font-weight="600" fill="#212121" text-anchor="start">Linkline</text>
+<text x="40" y="410" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="11" font-weight="400" fill="#737373" text-anchor="start">concept B: L + i standing on a cropped rule</text>
+<svg x="205" y="336" width="160" height="160" viewBox="0 0 512 512">
+  
+  <g transform="translate(-20 0) scale(2)">
+    <path fill="#0049cc" d="M48 27 L48 225.4 A3.6 3.6 0 0 0 51.6 229 L228 229 L228 205 L72 205 L72 27 L48 27 Z"/>
+    <path fill="#0049cc" d="M181.6 39 H202.4 A3.6 3.6 0 0 1 206 42.6 V63.4 A3.6 3.6 0 0 1 202.4 67 H181.6 A3.6 3.6 0 0 1 178 63.4 V42.6 A3.6 3.6 0 0 1 181.6 39 Z"/>
+    <path fill="none" stroke="#0049cc" stroke-width="24" stroke-linecap="butt" stroke-linejoin="miter" d="M192 83 V179"/>
+  </g>
+</svg>
+<svg x="395" y="336" width="160" height="160" viewBox="0 0 512 512">
+  
+  <g transform="translate(-20 0) scale(2)">
+    <path fill="#0049cc" d="M48 27 L48 229 L228 229 L228 205 L72 205 L72 27 L48 27 Z"/>
+    <path fill="#0049cc" d="M178 39 H206 V67 H178 Z"/>
+    <path fill="none" stroke="#0049cc" stroke-width="24" stroke-linecap="butt" stroke-linejoin="miter" d="M192 83 V179"/>
+  </g>
+</svg>
+<svg x="612" y="414" width="16" height="16" viewBox="0 0 512 512">
+  
+  <g transform="translate(-20 0) scale(2)">
+    <path fill="#0049cc" d="M48 27 L48 225.4 A3.6 3.6 0 0 0 51.6 229 L228 229 L228 205 L72 205 L72 27 L48 27 Z"/>
+    <path fill="#0049cc" d="M181.6 39 H202.4 A3.6 3.6 0 0 1 206 42.6 V63.4 A3.6 3.6 0 0 1 202.4 67 H181.6 A3.6 3.6 0 0 1 178 63.4 V42.6 A3.6 3.6 0 0 1 181.6 39 Z"/>
+    <path fill="none" stroke="#0049cc" stroke-width="24" stroke-linecap="butt" stroke-linejoin="miter" d="M192 83 V179"/>
+  </g>
+</svg>
+<svg x="704" y="406" width="32" height="32" viewBox="0 0 512 512">
+  
+  <g transform="translate(-20 0) scale(2)">
+    <path fill="#0049cc" d="M48 27 L48 225.4 A3.6 3.6 0 0 0 51.6 229 L228 229 L228 205 L72 205 L72 27 L48 27 Z"/>
+    <path fill="#0049cc" d="M181.6 39 H202.4 A3.6 3.6 0 0 1 206 42.6 V63.4 A3.6 3.6 0 0 1 202.4 67 H181.6 A3.6 3.6 0 0 1 178 63.4 V42.6 A3.6 3.6 0 0 1 181.6 39 Z"/>
+    <path fill="none" stroke="#0049cc" stroke-width="24" stroke-linecap="butt" stroke-linejoin="miter" d="M192 83 V179"/>
+  </g>
+</svg>
+<svg x="788" y="390" width="64" height="64" viewBox="0 0 512 512">
+  
+  <g transform="translate(-20 0) scale(2)">
+    <path fill="#0049cc" d="M48 27 L48 225.4 A3.6 3.6 0 0 0 51.6 229 L228 229 L228 205 L72 205 L72 27 L48 27 Z"/>
+    <path fill="#0049cc" d="M181.6 39 H202.4 A3.6 3.6 0 0 1 206 42.6 V63.4 A3.6 3.6 0 0 1 202.4 67 H181.6 A3.6 3.6 0 0 1 178 63.4 V42.6 A3.6 3.6 0 0 1 181.6 39 Z"/>
+    <path fill="none" stroke="#0049cc" stroke-width="24" stroke-linecap="butt" stroke-linejoin="miter" d="M192 83 V179"/>
+  </g>
+</svg>
+<rect x="880" y="374" width="96" height="96" fill="#0049cc" rx="14"/>
+<svg x="896" y="390" width="64" height="64" viewBox="0 0 512 512">
+  
+  <g transform="translate(-20 0) scale(2)">
+    <path fill="#ffffff" d="M48 27 L48 225.4 A3.6 3.6 0 0 0 51.6 229 L228 229 L228 205 L72 205 L72 27 L48 27 Z"/>
+    <path fill="#ffffff" d="M181.6 39 H202.4 A3.6 3.6 0 0 1 206 42.6 V63.4 A3.6 3.6 0 0 1 202.4 67 H181.6 A3.6 3.6 0 0 1 178 63.4 V42.6 A3.6 3.6 0 0 1 181.6 39 Z"/>
+    <path fill="none" stroke="#ffffff" stroke-width="24" stroke-linecap="butt" stroke-linejoin="miter" d="M192 83 V179"/>
+  </g>
+</svg>
+<rect x="996" y="374" width="96" height="96" fill="#0a0a0a" rx="14"/>
+<svg x="1012" y="390" width="64" height="64" viewBox="0 0 512 512">
+  
+  <g transform="translate(-20 0) scale(2)">
+    <path fill="#ffffff" d="M48 27 L48 225.4 A3.6 3.6 0 0 0 51.6 229 L228 229 L228 205 L72 205 L72 27 L48 27 Z"/>
+    <path fill="#ffffff" d="M181.6 39 H202.4 A3.6 3.6 0 0 1 206 42.6 V63.4 A3.6 3.6 0 0 1 202.4 67 H181.6 A3.6 3.6 0 0 1 178 63.4 V42.6 A3.6 3.6 0 0 1 181.6 39 Z"/>
+    <path fill="none" stroke="#ffffff" stroke-width="24" stroke-linecap="butt" stroke-linejoin="miter" d="M192 83 V179"/>
+  </g>
+</svg>
+<text x="40" y="568" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="30" font-weight="600" fill="#212121" text-anchor="start">S3</text>
+<text x="40" y="590" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="14" font-weight="600" fill="#212121" text-anchor="start">The Heel</text>
+<text x="40" y="610" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="11" font-weight="400" fill="#737373" text-anchor="start">A's chamfered joint + the tittle</text>
+<svg x="205" y="536" width="160" height="160" viewBox="0 0 512 512">
+  
+  <g transform="translate(2 0) scale(2)">
+    <path fill="#0049cc" d="M48 52 L48 200.4 A3.6 3.6 0 0 0 51.6 204 L167.48 204 A3.6 3.6 0 0 0 170.02 202.95 L200.49 172.49 L183.51 155.51 L159.03 180 L72 180 L72 52 L48 52 Z"/>
+    <path fill="#0049cc" d="M181.6 64 H202.4 A3.6 3.6 0 0 1 206 67.6 V88.4 A3.6 3.6 0 0 1 202.4 92 H181.6 A3.6 3.6 0 0 1 178 88.4 V67.6 A3.6 3.6 0 0 1 181.6 64 Z"/>
+  </g>
+</svg>
+<svg x="395" y="536" width="160" height="160" viewBox="0 0 512 512">
+  
+  <g transform="translate(2 0) scale(2)">
+    <path fill="#0049cc" d="M48 52 L48 204 L168.97 204 L200.49 172.49 L183.51 155.51 L159.03 180 L72 180 L72 52 L48 52 Z"/>
+    <path fill="#0049cc" d="M178 64 H206 V92 H178 Z"/>
+  </g>
+</svg>
+<svg x="612" y="614" width="16" height="16" viewBox="0 0 512 512">
+  
+  <g transform="translate(2 0) scale(2)">
+    <path fill="#0049cc" d="M48 52 L48 200.4 A3.6 3.6 0 0 0 51.6 204 L167.48 204 A3.6 3.6 0 0 0 170.02 202.95 L200.49 172.49 L183.51 155.51 L159.03 180 L72 180 L72 52 L48 52 Z"/>
+    <path fill="#0049cc" d="M181.6 64 H202.4 A3.6 3.6 0 0 1 206 67.6 V88.4 A3.6 3.6 0 0 1 202.4 92 H181.6 A3.6 3.6 0 0 1 178 88.4 V67.6 A3.6 3.6 0 0 1 181.6 64 Z"/>
+  </g>
+</svg>
+<svg x="704" y="606" width="32" height="32" viewBox="0 0 512 512">
+  
+  <g transform="translate(2 0) scale(2)">
+    <path fill="#0049cc" d="M48 52 L48 200.4 A3.6 3.6 0 0 0 51.6 204 L167.48 204 A3.6 3.6 0 0 0 170.02 202.95 L200.49 172.49 L183.51 155.51 L159.03 180 L72 180 L72 52 L48 52 Z"/>
+    <path fill="#0049cc" d="M181.6 64 H202.4 A3.6 3.6 0 0 1 206 67.6 V88.4 A3.6 3.6 0 0 1 202.4 92 H181.6 A3.6 3.6 0 0 1 178 88.4 V67.6 A3.6 3.6 0 0 1 181.6 64 Z"/>
+  </g>
+</svg>
+<svg x="788" y="590" width="64" height="64" viewBox="0 0 512 512">
+  
+  <g transform="translate(2 0) scale(2)">
+    <path fill="#0049cc" d="M48 52 L48 200.4 A3.6 3.6 0 0 0 51.6 204 L167.48 204 A3.6 3.6 0 0 0 170.02 202.95 L200.49 172.49 L183.51 155.51 L159.03 180 L72 180 L72 52 L48 52 Z"/>
+    <path fill="#0049cc" d="M181.6 64 H202.4 A3.6 3.6 0 0 1 206 67.6 V88.4 A3.6 3.6 0 0 1 202.4 92 H181.6 A3.6 3.6 0 0 1 178 88.4 V67.6 A3.6 3.6 0 0 1 181.6 64 Z"/>
+  </g>
+</svg>
+<rect x="880" y="574" width="96" height="96" fill="#0049cc" rx="14"/>
+<svg x="896" y="590" width="64" height="64" viewBox="0 0 512 512">
+  
+  <g transform="translate(2 0) scale(2)">
+    <path fill="#ffffff" d="M48 52 L48 200.4 A3.6 3.6 0 0 0 51.6 204 L167.48 204 A3.6 3.6 0 0 0 170.02 202.95 L200.49 172.49 L183.51 155.51 L159.03 180 L72 180 L72 52 L48 52 Z"/>
+    <path fill="#ffffff" d="M181.6 64 H202.4 A3.6 3.6 0 0 1 206 67.6 V88.4 A3.6 3.6 0 0 1 202.4 92 H181.6 A3.6 3.6 0 0 1 178 88.4 V67.6 A3.6 3.6 0 0 1 181.6 64 Z"/>
+  </g>
+</svg>
+<rect x="996" y="574" width="96" height="96" fill="#0a0a0a" rx="14"/>
+<svg x="1012" y="590" width="64" height="64" viewBox="0 0 512 512">
+  
+  <g transform="translate(2 0) scale(2)">
+    <path fill="#ffffff" d="M48 52 L48 200.4 A3.6 3.6 0 0 0 51.6 204 L167.48 204 A3.6 3.6 0 0 0 170.02 202.95 L200.49 172.49 L183.51 155.51 L159.03 180 L72 180 L72 52 L48 52 Z"/>
+    <path fill="#ffffff" d="M181.6 64 H202.4 A3.6 3.6 0 0 1 206 67.6 V88.4 A3.6 3.6 0 0 1 202.4 92 H181.6 A3.6 3.6 0 0 1 178 88.4 V67.6 A3.6 3.6 0 0 1 181.6 64 Z"/>
+  </g>
+</svg>
+<text x="40" y="752" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="500" fill="#212121" text-anchor="start">S1 = the wordmark's opening move (Li fused). S2 keeps the underline idea. S3 isolates the joint.</text>
+<text x="40" y="772" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="400" fill="#737373" text-anchor="start">All three share the wordmark's stroke ratio, butt cuts and square tittle — same system at 512.</text>
+</svg>

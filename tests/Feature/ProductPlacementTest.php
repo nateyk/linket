@@ -92,7 +92,7 @@ class ProductPlacementTest extends TestCase
         ActiveWorkspace::clearCache();
 
         $response = $this->stateful()->actingAs($creator)
-            ->getJson("/api/v1/digital-products/{$product->id}?workspace_id={$workspace->id}");
+            ->getJson("/api/v1/items/{$product->id}?workspace_id={$workspace->id}");
 
         $response->assertOk();
         $response->assertJsonPath('data.biolink_ids', [$biolink->id]);

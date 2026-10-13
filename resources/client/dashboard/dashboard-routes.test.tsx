@@ -1,9 +1,11 @@
 import {
   dashboardRoutes,
+  normalizeHomepageValue,
   sharedDashboardRoutes,
 } from '@app/dashboard/dashboard-routes';
+import {mergeBootstrapData} from '@ui/bootstrap-data/bootstrap-data-store';
 import fs from 'node:fs';
-import {describe, test, expect} from 'vitest';
+import {afterEach, describe, test, expect} from 'vitest';
 
 describe('storefront-first IA hardening — creator hides legacy link tools (Task 9)', () => {
   const legacyPaths = [
@@ -96,13 +98,13 @@ describe('course product creation', () => {
   test('uses a dedicated course creation route', () => {
     const paths = dashboardRoutes[0].children!.map(route => route.path);
 
-    expect(paths).toContain('my-products/new/course');
+    expect(paths).toContain('items/new/course');
   });
 
   test('uses a dedicated course analytics route', () => {
     const paths = dashboardRoutes[0].children!.map(route => route.path);
 
-    expect(paths).toContain('my-products/:productId/course/analytics');
+    expect(paths).toContain('items/:productId/course/analytics');
   });
 
   test('loads course analytics only through the dashboard route tree', () => {
@@ -113,25 +115,25 @@ describe('course product creation', () => {
 
     expect(appRouterSource).not.toContain('CourseAnalyticsPage');
     expect(appRouterSource).not.toContain(
-      "path: 'dashboard/my-products/:productId/course/analytics'",
+      "path: 'dashboard/items/:productId/course/analytics'",
     );
   });
 
   test('course redirect forwards wizard params', async () => {
     const details = dashboardRoutes[0].children!.find(
-      (r: any) => r.path === 'my-products/new/details',
+      (r: any) => r.path === 'items/new/details',
     ) as any;
     const redirected = await details.loader({
       request: {
-        url: 'http://localhost/dashboard/my-products/new/details?type=course&price_cents=1999&billing=paid',
+        url: 'http://localhost/dashboard/items/new/details?type=course&price_cents=1999&billing=paid',
       },
     });
     expect(redirected.headers.get('Location')).toBe(
-      '/dashboard/my-products/new/course?price_cents=1999&billing=paid',
+      '/dashboard/items/new/course?price_cents=1999&billing=paid',
     );
     const passthrough = await details.loader({
       request: {
-        url: 'http://localhost/dashboard/my-products/new/details?type=ebook',
+        url: 'http://localhost/dashboard/items/new/details?type=ebook',
       },
     });
     expect(passthrough).toBeNull();
@@ -145,5 +147,33 @@ describe('buyer course routes', () => {
     expect(paths).not.toContain('my-courses');
     expect(paths).not.toContain('learn/:courseId');
     expect(paths).not.toContain('learn/:courseId/lessons/:lessonId');
+  });
+});
+
+describe('dashboard homepage setting', () => {
+  const indexRoute = () =>
+    dashboardRoutes[0].children!.find((r: any) => r.index) as any;
+
+  afterEach(() => {
+    mergeBootstrapData({settings: undefined} as any);
+  });
+
+  test('normalizeHomepageValue maps the legacy value to items', () => {
+    expect(normalizeHomepageValue('digital-products')).toBe('items');
+    expect(normalizeHomepageValue('items')).toBe('items');
+    expect(normalizeHomepageValue('stores')).toBe('stores');
+    expect(normalizeHomepageValue(undefined)).toBe('');
+  });
+
+  test('index loader redirects a legacy stored homepage to items', async () => {
+    mergeBootstrapData({settings: {dashboard: {homepage: 'digital-products'}}} as any);
+    const redirected = await indexRoute().loader();
+    expect(redirected.headers.get('Location')).toBe('/dashboard/items');
+  });
+
+  test('index loader redirects the renamed homepage to items', async () => {
+    mergeBootstrapData({settings: {dashboard: {homepage: 'items'}}} as any);
+    const redirected = await indexRoute().loader();
+    expect(redirected.headers.get('Location')).toBe('/dashboard/items');
   });
 });

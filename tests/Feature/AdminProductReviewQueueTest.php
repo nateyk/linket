@@ -39,7 +39,7 @@ class AdminProductReviewQueueTest extends TestCase
         $clean = $this->product($workspace, $creator, ['status' => 'approved', 'approved_at' => now()]);
         $pending = $this->product($workspace, $creator, ['status' => 'pending_approval']);
 
-        $response = $this->stateful()->actingAs($admin)->getJson('/api/v1/admin/digital-products?scope=updated');
+        $response = $this->stateful()->actingAs($admin)->getJson('/api/v1/admin/items?scope=updated');
 
         $response->assertOk();
         $ids = collect($response->json('data'))->pluck('id')->all();
@@ -62,7 +62,7 @@ class AdminProductReviewQueueTest extends TestCase
         ]);
         $clean = $this->product($workspace, $creator, ['status' => 'approved', 'approved_at' => now()]);
 
-        $response = $this->stateful()->actingAs($admin)->getJson('/api/v1/admin/digital-products');
+        $response = $this->stateful()->actingAs($admin)->getJson('/api/v1/admin/items');
 
         $response->assertOk();
         $rows = collect($response->json('data'))->keyBy('id');
@@ -82,7 +82,7 @@ class AdminProductReviewQueueTest extends TestCase
         ]);
 
         $this->stateful()->actingAs($admin)
-            ->postJson("/api/v1/admin/digital-products/{$product->id}/approve")
+            ->postJson("/api/v1/admin/items/{$product->id}/approve")
             ->assertOk();
 
         $fresh = $product->fresh();
@@ -108,7 +108,7 @@ class AdminProductReviewQueueTest extends TestCase
         ]);
 
         $this->stateful()->actingAs($admin)
-            ->postJson("/api/v1/admin/digital-products/{$product->id}/reject", ['reason' => 'Not suitable'])
+            ->postJson("/api/v1/admin/items/{$product->id}/reject", ['reason' => 'Not suitable'])
             ->assertOk();
 
         $fresh = $product->fresh();

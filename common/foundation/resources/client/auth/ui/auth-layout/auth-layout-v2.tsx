@@ -61,22 +61,19 @@ export function AuthLayoutV2({children, topAction}: AuthLayoutV2Props) {
           {/* Centered form */}
           <div className="flex flex-1 items-center justify-center p-4 lg:p-8">
             <div className="mx-auto flex w-full max-w-[350px] flex-col justify-center space-y-8">
-              <Link to="/" className="flex w-fit shrink-0 items-center gap-2.5">
-                {(isDarkMode ? branding.logo_light : branding.logo_dark) && (
+              {(isDarkMode ? branding.logo_light : branding.logo_dark) && (
+                <Link
+                  to="/"
+                  aria-label={branding.site_name}
+                  className="flex w-fit shrink-0 items-center"
+                >
                   <img
                     src={isDarkMode ? branding.logo_light : branding.logo_dark}
                     alt=""
                     className="block h-10 w-auto"
                   />
-                )}
-                {/* The brand name is real text, not part of the logo image —
-                    DESIGN.md's page title role (600, 24px, 32px). It comes from
-                    branding.site_name, the same source as the footer below, so
-                    one configured name serves the whole screen. */}
-                <span className="text-2xl font-semibold tracking-tight">
-                  {branding.site_name}
-                </span>
-              </Link>
+                </Link>
+              )}
               {children}
             </div>
           </div>

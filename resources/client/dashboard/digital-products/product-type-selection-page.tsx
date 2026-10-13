@@ -30,15 +30,50 @@ export function Component() {
     <DashboardLayout.MainSection>
       <DashboardLayout.SectionHeader>
         <DashboardLayout.SidebarToggle />
-        <DashboardLayout.SectionTitle>
-          <Trans message="Create a new product" />
+        {/* T7: ONE page heading. It names the flow ("Create product"); the
+            step question below is the only other heading (h2), so the step
+            title is never duplicated on screen. */}
+        <DashboardLayout.SectionTitle render={<h1 />}>
+          <Trans message="Create product" />
         </DashboardLayout.SectionTitle>
       </DashboardLayout.SectionHeader>
       <DashboardLayout.SectionContent className="overflow-y-auto">
         <div className="mx-auto flex w-full max-w-xl flex-col gap-5 py-4">
-          <div className="flex items-center justify-between">
+          {/* T7: question first — the reader answers before they see the
+              actions, and Tab reaches the options before Continue. */}
+          <div className="flex items-start gap-3">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-card-sm bg-primary/8 text-primary ring-1 ring-primary/15">
+              <MetaIcon className="size-5" />
+            </span>
+            <div className="min-w-0">
+              <h2 className="text-lg leading-tight font-semibold">
+                <Trans message={meta.title} />
+              </h2>
+              <p className="mt-1 max-w-md text-sm leading-relaxed text-muted-foreground">
+                <Trans message={meta.description} />
+              </p>
+            </div>
+          </div>
+          {/* T5: page-shell progress is the FLOW's rule, not step 1's — it
+              sits after the whole header row (icon + text) so the bottom
+              rule spans the content column and aligns with the cards. */}
+          <div className="mt-4">
+            <WizardStepDots wizard={wizard} />
+          </div>
+
+          <div
+            key={wizard.step}
+            ref={focusWizardStep}
+            className="animate-in fade-in duration-200"
+          >
+            <WizardStepBody wizard={wizard} />
+          </div>
+
+          {/* T7: the action row closes the column (footer), mirroring the
+              dialog's footer instead of sitting above the question. */}
+          <div className="flex items-center justify-between border-t border-border pt-4">
             {wizard.step === 'type' ? (
-              <Button variant="ghost" render={<Link to="/dashboard/my-products" />}>
+              <Button variant="ghost" render={<Link to="/dashboard/items" />}>
                 <ArrowLeftIcon />
                 <Trans message="All products" />
               </Button>
@@ -59,31 +94,6 @@ export function Component() {
               <Trans message="Continue" />
               <ArrowRightIcon data-icon="inline-end" />
             </Button>
-          </div>
-
-          <div className="flex items-start gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-card-sm bg-primary/8 text-primary ring-1 ring-primary/15">
-              <MetaIcon className="size-5" />
-            </span>
-            <div className="min-w-0">
-              <h2 className="text-lg leading-tight font-semibold">
-                <Trans message={meta.title} />
-              </h2>
-              <p className="mt-1 max-w-md text-sm leading-relaxed text-muted-foreground">
-                <Trans message={meta.description} />
-              </p>
-              <div className="mt-3">
-                <WizardStepDots wizard={wizard} />
-              </div>
-            </div>
-          </div>
-
-          <div
-            key={wizard.step}
-            ref={focusWizardStep}
-            className="animate-in fade-in duration-200"
-          >
-            <WizardStepBody wizard={wizard} />
           </div>
         </div>
       </DashboardLayout.SectionContent>

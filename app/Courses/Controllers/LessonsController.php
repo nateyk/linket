@@ -178,25 +178,17 @@ class LessonsController extends Controller
 
     private function sanitizeContent(string $content): string
     {
-        // Use HTMLPurifier if available, else allowlist strip.
-        try {
-            if (class_exists(\HTMLPurifier::class)) {
-                $config = \HTMLPurifier_Config::createDefault();
-                $config->set('HTML.Allowed', 'p,br,strong,b,em,i,u,s,strike,a[href|target],ul,ol,li,h1,h2,h3,blockquote,code,pre,hr,span[class]');
-                $config->set('AutoFormat.Linkify', false);
-                $config->set('URI.AllowedSchemes', ['http' => true, 'https' => true, 'mailto' => true]);
-                $purifier = new \HTMLPurifier($config);
-                return $purifier->purify($content);
-            }
-        } catch (\Throwable $e) {
-            // fallback
-        }
+        // Single sanitization path: HTMLPurifier is a hard composer
+        // dependency (require, not require-dev), so the old regex fallback
+        // (script/style/iframe only) is gone — it left event handlers and
+        // javascript: URLs intact whenever the purifier was unreachable.
+        $config = \HTMLPurifier_Config::createDefault();
+        $config->set('HTML.Allowed', 'p,br,strong,b,em,i,u,s,strike,a[href|target],ul,ol,li,h1,h2,h3,blockquote,code,pre,hr,span[class]');
+        $config->set('AutoFormat.Linkify', false);
+        $config->set('URI.AllowedSchemes', ['http' => true, 'https' => true, 'mailto' => true]);
+        $purifier = new \HTMLPurifier($config);
 
-        // Fallback: strip script/style/iframe
-        $content = preg_replace('#<script.*?>.*?</script>#is', '', $content);
-        $content = preg_replace('#<style.*?>.*?</style>#is', '', $content);
-        $content = preg_replace('#<iframe.*?>.*?</iframe>#is', '', $content);
-        return $content;
+        return $purifier->purify($content);
     }
 
     private function workspaceCourseStorageBytes(int $workspaceId): int

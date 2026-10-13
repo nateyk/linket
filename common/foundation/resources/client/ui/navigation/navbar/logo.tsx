@@ -70,19 +70,16 @@ function AutoLogo({color, className, url}: Omit<Props, 'logoType'>) {
   }
 
   return (
-    <WrapperLink url={url}>
-      <span className="flex items-center gap-2">
-        <picture>
-          <source srcSet={compactLogo || wideLogo} media="(max-width: 768px)" />
-          <source srcSet={wideLogo} media="(min-width: 768px)" />
-          <img
-            src={wideLogo || compactLogo}
-            className={cn('block h-8 w-auto', className)}
-            alt=""
-          />
-        </picture>
-        <BrandName />
-      </span>
+    <WrapperLink url={url} ariaLabel={branding.site_name}>
+      <picture>
+        <source srcSet={compactLogo || wideLogo} media="(max-width: 768px)" />
+        <source srcSet={wideLogo} media="(min-width: 768px)" />
+        <img
+          src={wideLogo || compactLogo}
+          className={cn('block h-8 w-auto', className)}
+          alt=""
+        />
+      </picture>
     </WrapperLink>
   );
 }
@@ -98,26 +95,9 @@ function WideLogo({color, className, url}: Omit<Props, 'logoType'>) {
   if (!src) return null;
 
   return (
-    <WrapperLink url={url}>
-      <span className="flex items-center gap-2">
-        <img src={src} className={cn('block h-8 w-auto', className)} alt="" />
-        <BrandName />
-      </span>
+    <WrapperLink url={url} ariaLabel={branding.site_name}>
+      <img src={src} className={cn('block h-8 w-auto', className)} alt="" />
     </WrapperLink>
-  );
-}
-
-// The brand name is real text, not part of the logo image — DESIGN.md's page
-// title role (600, 24px, 32px) is the header lockup size. It renders from
-// branding.site_name (config app.name, default "Linket"), the same source the
-// footer and header use, so the admin-configurable site name stays in charge.
-function BrandName() {
-  const {branding} = useSettings();
-
-  return (
-    <span className="text-2xl font-semibold tracking-tight">
-      {branding.site_name}
-    </span>
   );
 }
 
@@ -125,9 +105,10 @@ type WrapperLinkProps = {
   className?: string;
   children: ReactNode;
   url?: string;
-  /** Only for lockups with no visible text (the compact icon) — a lockup that
-   * renders the site name must not carry an aria-label, or the accessible name
-   * stops containing the visible label (WCAG 2.5.3 "Label in Name"). */
+  /** The lockup is image-only (the wordmark svg carries the visible brand,
+   * its alt is empty), so the link itself must be named or it has no
+   * accessible name (WCAG 4.1.2). Using site_name also satisfies WCAG 2.5.3
+   * "Label in Name" for voice control ("click Linket"). */
   ariaLabel?: string;
 };
 function WrapperLink({className, children, url, ariaLabel}: WrapperLinkProps) {

@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="676" viewBox="0 0 960 676">
+<rect x="0" y="0" width="960" height="676" fill="#ffffff"/>
+<text x="40" y="44" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="24" font-weight="600" fill="#212121" text-anchor="start">Favicon in a browser tab — light and dark mode</text>
+<text x="40" y="74" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="400" fill="#737373" text-anchor="start">Recreated tab chrome (no browser on this machine): strip, 240px active tab, 16px favicon, URL well.</text>
+<text x="40" y="94" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="400" fill="#737373" text-anchor="start">favicon.svg / favicon.ico ship the small cut (dot 42, raised −8) per the ≤24 px rule.</text>
+<text x="40" y="130" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="600" fill="#212121" text-anchor="start">light chrome + white tile</text>
+<rect x="40" y="142" width="880" height="46" fill="#f1f3f4"/>
+<rect x="48" y="146" width="264" height="40" fill="#ffffff" rx="10"/>
+<svg x="60" y="158" width="16" height="16" viewBox="0 0 512 512">
+  
+  <rect width="512" height="512" rx="19.9953" fill="#ffffff"/>
+  <g transform="translate(8.16569 -30.6542) scale(1.99953)">
+    <g fill="#0a0a0a"><path d="M44 52 L44 194 A10 10 0 0 0 54 204 L176.49 204 A10 10 0 0 0 183.56 201.07 L205.07 179.56 A10 10 0 0 0 208 172.49 L208 108 L176 108 L176 159.23 A10 10 0 0 1 173.07 166.3 L170.3 169.07 A10 10 0 0 1 163.23 172 L86 172 A10 10 0 0 1 76 162 L76 52 L44 52 Z"/><path d="M176 108 L176 204 L208 204 L208 108 L176 108 Z"/></g>
+    <path fill="#0049cc" d="M192 46 H192 A21 21 0 0 1 213 67 V67 A21 21 0 0 1 192 88 H192 A21 21 0 0 1 171 67 V67 A21 21 0 0 1 192 46 Z"/>
+  </g>
+</svg>
+<text x="86" y="172" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="500" fill="#3c4043" text-anchor="start">Linket — Creator store</text>
+<rect x="324" y="146" width="150" height="40" fill="#f1f3f4" rx="10"/>
+<text x="340" y="172" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="400" fill="#9aa0a6" text-anchor="start">New tab</text>
+<rect x="48" y="192" width="864" height="34" fill="#ffffff" stroke="#e5e5e5" stroke-width="1" rx="17"/>
+<text x="66" y="214" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="400" fill="#5f6368" text-anchor="start">https://linket.app/dashboard</text>
+<text x="510" y="170" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="500" fill="#3c4043" text-anchor="start">tile vs tab 1.00:1</text>
+<text x="668" y="170" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="500" fill="#3c4043" text-anchor="start">tile vs strip 1.11:1</text>
+<text x="826" y="170" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="500" fill="#3c4043" text-anchor="start">dot vs tile 7.43:1</text>
+<text x="40" y="248" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="600" fill="#212121" text-anchor="start">light chrome + #0a0a0a tile</text>
+<rect x="40" y="260" width="880" height="46" fill="#f1f3f4"/>
+<rect x="48" y="264" width="264" height="40" fill="#ffffff" rx="10"/>
+<svg x="60" y="276" width="16" height="16" viewBox="0 0 512 512">
+  
+  <rect width="512" height="512" rx="19.9953" fill="#0a0a0a"/>
+  <g transform="translate(8.16569 -30.6542) scale(1.99953)">
+    <g fill="#ffffff"><path d="M44 52 L44 194 A10 10 0 0 0 54 204 L176.49 204 A10 10 0 0 0 183.56 201.07 L205.07 179.56 A10 10 0 0 0 208 172.49 L208 108 L176 108 L176 159.23 A10 10 0 0 1 173.07 166.3 L170.3 169.07 A10 10 0 0 1 163.23 172 L86 172 A10 10 0 0 1 76 162 L76 52 L44 52 Z"/><path d="M176 108 L176 204 L208 204 L208 108 L176 108 Z"/></g>
+    <path fill="#0050de" d="M192 46 H192 A21 21 0 0 1 213 67 V67 A21 21 0 0 1 192 88 H192 A21 21 0 0 1 171 67 V67 A21 21 0 0 1 192 46 Z"/>
+  </g>
+</svg>
+<text x="86" y="290" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="500" fill="#3c4043" text-anchor="start">Linket — Creator store</text>
+<rect x="324" y="264" width="150" height="40" fill="#f1f3f4" rx="10"/>
+<text x="340" y="290" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="400" fill="#9aa0a6" text-anchor="start">New tab</text>
+<rect x="48" y="310" width="864" height="34" fill="#ffffff" stroke="#e5e5e5" stroke-width="1" rx="17"/>
+<text x="66" y="332" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="400" fill="#5f6368" text-anchor="start">https://linket.app/dashboard</text>
+<text x="510" y="288" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="500" fill="#3c4043" text-anchor="start">tile vs tab 19.80:1</text>
+<text x="668" y="288" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="500" fill="#3c4043" text-anchor="start">tile vs strip 17.79:1</text>
+<text x="826" y="288" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="500" fill="#3c4043" text-anchor="start">dot vs tile 3.02:1</text>
+<text x="40" y="366" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="600" fill="#212121" text-anchor="start">dark chrome + white tile</text>
+<rect x="40" y="378" width="880" height="46" fill="#202124"/>
+<rect x="48" y="382" width="264" height="40" fill="#35363a" rx="10"/>
+<svg x="60" y="394" width="16" height="16" viewBox="0 0 512 512">
+  
+  <rect width="512" height="512" rx="19.9953" fill="#ffffff"/>
+  <g transform="translate(8.16569 -30.6542) scale(1.99953)">
+    <g fill="#0a0a0a"><path d="M44 52 L44 194 A10 10 0 0 0 54 204 L176.49 204 A10 10 0 0 0 183.56 201.07 L205.07 179.56 A10 10 0 0 0 208 172.49 L208 108 L176 108 L176 159.23 A10 10 0 0 1 173.07 166.3 L170.3 169.07 A10 10 0 0 1 163.23 172 L86 172 A10 10 0 0 1 76 162 L76 52 L44 52 Z"/><path d="M176 108 L176 204 L208 204 L208 108 L176 108 Z"/></g>
+    <path fill="#0049cc" d="M192 46 H192 A21 21 0 0 1 213 67 V67 A21 21 0 0 1 192 88 H192 A21 21 0 0 1 171 67 V67 A21 21 0 0 1 192 46 Z"/>
+  </g>
+</svg>
+<text x="86" y="408" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="500" fill="#e8eaed" text-anchor="start">Linket — Creator store</text>
+<rect x="324" y="382" width="150" height="40" fill="#202124" rx="10"/>
+<text x="340" y="408" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="400" fill="#9aa0a6" text-anchor="start">New tab</text>
+<rect x="48" y="428" width="864" height="34" fill="#202124" stroke="#3f3f46" stroke-width="1" rx="17"/>
+<text x="66" y="450" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="400" fill="#9aa0a6" text-anchor="start">https://linket.app/dashboard</text>
+<text x="510" y="406" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="500" fill="#e8eaed" text-anchor="start">tile vs tab 12.07:1</text>
+<text x="668" y="406" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="500" fill="#e8eaed" text-anchor="start">tile vs strip 16.10:1</text>
+<text x="826" y="406" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="500" fill="#e8eaed" text-anchor="start">dot vs tile 7.43:1</text>
+<text x="40" y="484" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="600" fill="#212121" text-anchor="start">dark chrome + #0a0a0a tile</text>
+<rect x="40" y="496" width="880" height="46" fill="#202124"/>
+<rect x="48" y="500" width="264" height="40" fill="#35363a" rx="10"/>
+<svg x="60" y="512" width="16" height="16" viewBox="0 0 512 512">
+  
+  <rect width="512" height="512" rx="19.9953" fill="#0a0a0a"/>
+  <g transform="translate(8.16569 -30.6542) scale(1.99953)">
+    <g fill="#ffffff"><path d="M44 52 L44 194 A10 10 0 0 0 54 204 L176.49 204 A10 10 0 0 0 183.56 201.07 L205.07 179.56 A10 10 0 0 0 208 172.49 L208 108 L176 108 L176 159.23 A10 10 0 0 1 173.07 166.3 L170.3 169.07 A10 10 0 0 1 163.23 172 L86 172 A10 10 0 0 1 76 162 L76 52 L44 52 Z"/><path d="M176 108 L176 204 L208 204 L208 108 L176 108 Z"/></g>
+    <path fill="#0050de" d="M192 46 H192 A21 21 0 0 1 213 67 V67 A21 21 0 0 1 192 88 H192 A21 21 0 0 1 171 67 V67 A21 21 0 0 1 192 46 Z"/>
+  </g>
+</svg>
+<text x="86" y="526" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="500" fill="#e8eaed" text-anchor="start">Linket — Creator store</text>
+<rect x="324" y="500" width="150" height="40" fill="#202124" rx="10"/>
+<text x="340" y="526" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="400" fill="#9aa0a6" text-anchor="start">New tab</text>
+<rect x="48" y="546" width="864" height="34" fill="#202124" stroke="#3f3f46" stroke-width="1" rx="17"/>
+<text x="66" y="568" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="400" fill="#9aa0a6" text-anchor="start">https://linket.app/dashboard</text>
+<text x="510" y="524" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="500" fill="#e8eaed" text-anchor="start">tile vs tab 1.64:1</text>
+<text x="668" y="524" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="500" fill="#e8eaed" text-anchor="start">tile vs strip 1.23:1</text>
+<text x="826" y="524" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="500" fill="#e8eaed" text-anchor="start">dot vs tile 3.02:1</text>
+<text x="40" y="630" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="500" fill="#212121" text-anchor="start">Pick: white tile (favicon.svg) — the dot holds full brand blue at 7.43:1 and the white chip pops on dark chrome (16.10:1).</text>
+<text x="40" y="650" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="400" fill="#737373" text-anchor="start">favicon-dark.svg ships alongside for prefers-color-scheme; on light chrome use theme-color to blend the strip.</text>
+</svg>

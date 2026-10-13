@@ -60,13 +60,30 @@
     />
     <link
         rel="icon"
+        type="image/svg+xml"
+        href="{{ url('favicon.svg') }}"
+        media="(prefers-color-scheme: light)"
+        data-keep="true"
+    />
+    <link
+        rel="icon"
+        type="image/svg+xml"
+        href="{{ url('favicon-dark.svg') }}"
+        media="(prefers-color-scheme: dark)"
+        data-keep="true"
+    />
+    <link
+        rel="icon"
         type="image/x-icon"
-        href="{{ url('favicon/icon-144x144.png') }}"
+        href="{{ url('favicon.ico') }}"
+        sizes="any"
         data-keep="true"
     />
     <link
         rel="apple-touch-icon"
-        href="{{ url('favicon/icon-192x192.png') }}"
+        type="image/png"
+        sizes="180x180"
+        href="{{ url('favicon/apple-touch-icon.png') }}"
         data-keep="true"
     />
     <link rel="manifest" href="{{ url('manifest.json') }}" data-keep="true" />

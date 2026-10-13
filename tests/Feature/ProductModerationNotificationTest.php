@@ -35,7 +35,7 @@ class ProductModerationNotificationTest extends TestCase
         $product = $this->product($workspace, $creator, ['status' => 'pending_approval']);
 
         $this->stateful()->actingAs($admin)
-            ->postJson("/api/v1/admin/digital-products/{$product->id}/approve")
+            ->postJson("/api/v1/admin/items/{$product->id}/approve")
             ->assertOk();
 
         Notification::assertSentTo(
@@ -61,16 +61,16 @@ class ProductModerationNotificationTest extends TestCase
         $toReject = $this->updatedProduct($workspace, $creator);
 
         $this->stateful()->actingAs($admin)->postJson(
-            "/api/v1/admin/digital-products/{$pending->id}/reject",
+            "/api/v1/admin/items/{$pending->id}/reject",
             ['reason' => 'Missing files'],
         )->assertOk();
 
         $this->stateful()->actingAs($admin)->postJson(
-            "/api/v1/admin/digital-products/{$toApprove->id}/approve",
+            "/api/v1/admin/items/{$toApprove->id}/approve",
         )->assertOk();
 
         $this->stateful()->actingAs($admin)->postJson(
-            "/api/v1/admin/digital-products/{$toReject->id}/reject",
+            "/api/v1/admin/items/{$toReject->id}/reject",
             ['reason' => 'Price too high'],
         )->assertOk();
 
@@ -108,7 +108,7 @@ class ProductModerationNotificationTest extends TestCase
         $draft = $this->product($workspaceB, $creatorB, ['status' => 'draft']);
 
         $this->stateful()->actingAs($admin)->postJson(
-            '/api/v1/admin/digital-products/bulk-approve',
+            '/api/v1/admin/items/bulk-approve',
             ['ids' => [$first->id, $second->id, $draft->id]],
         )->assertOk();
 
@@ -133,7 +133,7 @@ class ProductModerationNotificationTest extends TestCase
         $product = $this->product($workspace, $creator, ['status' => 'pending_approval']);
 
         $this->stateful()->actingAs($admin)->postJson(
-            '/api/v1/admin/digital-products/bulk-approve',
+            '/api/v1/admin/items/bulk-approve',
             ['ids' => [$product->id]],
         )->assertOk();
 
@@ -150,7 +150,7 @@ class ProductModerationNotificationTest extends TestCase
         $second = $this->product($workspace, $creator, ['status' => 'pending_approval']);
 
         $this->stateful()->actingAs($admin)->postJson(
-            '/api/v1/admin/digital-products/bulk-reject',
+            '/api/v1/admin/items/bulk-reject',
             ['ids' => [$first->id, $second->id], 'reason' => 'Not allowed'],
         )->assertOk();
 
@@ -187,7 +187,7 @@ class ProductModerationNotificationTest extends TestCase
         $product = $this->product($workspace, $creator, ['status' => 'pending_approval']);
 
         $this->stateful()->actingAs($admin)
-            ->postJson("/api/v1/admin/digital-products/{$product->id}/approve")
+            ->postJson("/api/v1/admin/items/{$product->id}/approve")
             ->assertOk();
 
         $this->assertSame(1, $creator->notifications()->count());
@@ -221,7 +221,7 @@ class ProductModerationNotificationTest extends TestCase
         $second = $this->editedProduct($workspace, $creator, 'Original B');
 
         $this->stateful()->actingAs($admin)->postJson(
-            '/api/v1/admin/digital-products/bulk-reject',
+            '/api/v1/admin/items/bulk-reject',
             ['ids' => [$first->id, $second->id], 'reason' => 'Nope'],
         )->assertOk();
 
@@ -266,7 +266,7 @@ class ProductModerationNotificationTest extends TestCase
         ]);
         $product->files()->attach($file->id);
 
-        $this->stateful()->actingAs($creator)->putJson("/api/v1/digital-products/{$product->id}", [
+        $this->stateful()->actingAs($creator)->putJson("/api/v1/items/{$product->id}", [
             'title' => $title . ' Edited',
             'price_cents' => 1000,
             'currency' => 'ETB',

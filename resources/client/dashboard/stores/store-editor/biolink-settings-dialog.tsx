@@ -90,7 +90,7 @@ function Content({onClose}: {onClose: () => void}) {
             />
           </Field.Group>
         </Dialog.Body>
-        <Dialog.Footer variant="muted" className="py-4 sm:justify-between">
+        <Dialog.Footer className="py-4 sm:justify-between">
           <LinkFormActionButtons form={form} />
           <Button
             size="sm"

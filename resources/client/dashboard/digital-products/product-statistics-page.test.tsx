@@ -12,7 +12,7 @@ const page = read(
 
 describe('creator product statistics page', () => {
   test('registers the per-product statistics route with a lazy import', () => {
-    expect(routes).toContain("path: 'my-products/:productId/statistics'");
+    expect(routes).toContain("path: 'items/:productId/statistics'");
     expect(routes).toContain(
       "import('@app/dashboard/digital-products/product-statistics-page')",
     );
@@ -31,7 +31,7 @@ describe('creator product statistics page', () => {
     );
     expect(page).toContain("'creatorProductStatistics'");
     expect(page).toContain(
-      '`/api/v1/digital-products/${productId}/statistics`',
+      '`/api/v1/items/${productId}/statistics`',
     );
   });
 

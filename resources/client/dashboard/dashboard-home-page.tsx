@@ -729,7 +729,7 @@ function useDashboardSales() {
     queryKey: ['dashboard-sales-summary'],
     queryFn: async () => {
       const response = await apiClient.get<SalesResponse>(
-        '/api/v1/digital-products/sales',
+        '/api/v1/items/sales',
       );
       return response.data;
     },

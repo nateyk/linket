@@ -301,8 +301,8 @@ return [
                     ],
                     [
                         'type' => 'route',
-                        'label' => 'My Products',
-                        'action' => '/dashboard/my-products',
+                        'label' => 'My Items',
+                        'action' => '/dashboard/items',
                         'id' => 'digital-products-dashboard',
                     ],
                     [
@@ -350,8 +350,8 @@ return [
                     ],
                     [
                         'type' => 'route',
-                        'label' => 'My Products',
-                        'action' => '/dashboard/my-products',
+                        'label' => 'My Items',
+                        'action' => '/dashboard/items',
                         'id' => 'digital-products-mobile',
                     ],
                     [
@@ -482,6 +482,13 @@ return [
                         'permissions' => ['settings.update'],
                     ],
                     [
+                        'label' => 'Help center',
+                        'id' => 'admin-help-center',
+                        'action' => '/admin/settings/help',
+                        'type' => 'route',
+                        'permissions' => ['settings.update'],
+                    ],
+                    [
                         'label' => 'Plans',
                         'id' => '7o42rt',
                         'action' => '/admin/plans',
@@ -512,8 +519,8 @@ return [
                     ],
                     [
                         'type' => 'route',
-                        'label' => 'Digital Products',
-                        'action' => '/admin/digital-products',
+                        'label' => 'Items',
+                        'action' => '/admin/items',
                         'id' => 'digital-products-admin',
                     ],
                     [

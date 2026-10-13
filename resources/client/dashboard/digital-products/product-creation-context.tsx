@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -149,17 +150,30 @@ export function ProductCreationProvider({
     setDirty(false);
   }, []);
 
+  // The debounced body is created exactly once (useRef keeps the first
+  // value), so it used to close over the FIRST render's `state`/`dirty` —
+  // `dirty` is false at first render, which is why auto-save never fired and
+  // a forced call would have sent the initial (empty) form. Read through a
+  // ref that is refreshed on every render instead: the body always sees the
+  // current state at the moment the idle window elapses.
+  const latest = useRef({state, dirty, productId});
+  latest.current = {state, dirty, productId};
+
   const autoSaveRef = useRef(
     debounce(async () => {
+      const {state, dirty, productId} = latest.current;
       if (!productId || !dirty) return;
       try {
         const {apiClient} = await import('@common/http/query-client');
-        await apiClient.put(`/api/v1/digital-products/${productId}/draft`, {
+        await apiClient.put(`/api/v1/items/${productId}/draft`, {
           title: state.title,
           description: state.description,
           price_cents: Math.round(Number(state.price) * 100),
           currency: 'etb',
           cover_file_entry_id: state.coverFileId,
+          // Always arrays: the draft endpoint allows `file_ids` to be absent,
+          // but its mutation service 500s on non-course products when the key
+          // is missing (EMPTY_STATE and hydrate both keep them arrays).
           file_ids: state.files.map(f => f.id),
           biolink_ids: state.biolinkIds,
           type: state.productType,
@@ -170,6 +184,10 @@ export function ProductCreationProvider({
       }
     }, 1500),
   );
+
+  // Leaving the page must cancel a pending draft PUT (just-debounce-it
+  // exposes .cancel()), otherwise it fires against an unmounted tree.
+  useEffect(() => () => autoSaveRef.current.cancel(), []);
 
   const autoSave = useCallback(() => {
     autoSaveRef.current();

@@ -17,12 +17,10 @@ use PHPUnit\Framework\Attributes\Group;
 use Tests\TestCase;
 
 /**
- * Batch 0 verification for R01 (paid lesson video served via generic
- * file-entries URL, gated by creator `files.view` instead of enrollment,
- * no signed/expiring URLs).
- *
- * Desired behavior asserted: an enrolled student streams the uploaded lesson
- * video (200, Range-supported, expiring URL); anonymous / non-buyers cannot.
+ * R01 acceptance: uploaded lesson video streams only via a signed,
+ * expiring URL (reusing the download-entitlement signing mechanism).
+ * The raw file-entries URL must reject everyone except course managers,
+ * and the signature alone must never substitute for enrollment.
  */
 #[Group('audit-verify')]
 class AuditVerifyVideoAccessTest extends TestCase
@@ -57,6 +55,20 @@ class AuditVerifyVideoAccessTest extends TestCase
         }
         ActiveWorkspace::clearCache();
         parent::tearDown();
+    }
+
+    private function resolveBackendId(): string
+    {
+        // Backend ids are random per seed (UploadBackendsSeeder); resolve the
+        // local backend at runtime like PublicMediaPersistenceTest does.
+        $backends = \Common\Files\Uploads\Uploads::getAllBackends();
+        foreach ($backends as $backend) {
+            if ($backend->type === 'local') {
+                return $backend->id;
+            }
+        }
+
+        return $backends[0]->id ?? 'local';
     }
 
     protected function setUp(): void
@@ -107,7 +119,7 @@ class AuditVerifyVideoAccessTest extends TestCase
             'file_size' => 16,
             'disk_prefix' => 'course-videos',
             'upload_type' => 'courseVideos',
-            'backend_id' => 'local',
+            'backend_id' => $this->resolveBackendId(),
             'type' => 'video',
             'public' => false,
         ]);
@@ -116,6 +128,7 @@ class AuditVerifyVideoAccessTest extends TestCase
         $storagePath = $this->videoFile->getStoragePath();
         $disk->put($storagePath, 'fake-video-bytes!');
         $this->fixturePaths[] = [$disk, $storagePath];
+
         $this->videoLesson = Lesson::create([
             'chapter_id' => $chapter->id,
             'course_id' => $this->course->id,
@@ -145,34 +158,7 @@ class AuditVerifyVideoAccessTest extends TestCase
             ->withHeader('X-CSRF-TOKEN', $csrfToken);
     }
 
-    public function test_enrolled_student_can_stream_uploaded_lesson_video(): void
-    {
-        // Lesson metadata is reachable for the enrolled buyer ...
-        $this->stateful()->actingAs($this->buyer)
-            ->getJson("/api/v1/courses/{$this->course->id}/learn/lessons/{$this->videoLesson->id}?workspace_id={$this->workspace->id}")
-            ->assertOk();
-
-        // ... so the video bytes the player URL points at must stream too.
-        $this->stateful()->actingAs($this->buyer)
-            ->get("/api/v1/file-entries/{$this->videoFile->id}")
-            ->assertOk();
-    }
-
-    public function test_non_buyer_and_anonymous_cannot_fetch_video_bytes(): void
-    {
-        $this->stateful()->actingAs($this->nonBuyer)
-            ->get("/api/v1/file-entries/{$this->videoFile->id}")
-            ->assertForbidden();
-
-        $this->stateful()->actingAs($this->otherSeller)
-            ->get("/api/v1/file-entries/{$this->videoFile->id}")
-            ->assertForbidden();
-
-        $this->get("/api/v1/file-entries/{$this->videoFile->id}")
-            ->assertForbidden();
-    }
-
-    public function test_student_video_url_is_signed_and_expiring(): void
+    private function buyerVideoUrl(): string
     {
         $data = $this->stateful()->actingAs($this->buyer)
             ->getJson("/api/v1/courses/{$this->course->id}/learn/lessons/{$this->videoLesson->id}?workspace_id={$this->workspace->id}")
@@ -181,6 +167,14 @@ class AuditVerifyVideoAccessTest extends TestCase
 
         $url = $data['video']['url'] ?? '';
         $this->assertNotSame('', $url, 'Lesson must expose a video URL.');
+
+        return $url;
+    }
+
+    public function test_enrolled_student_lesson_video_url_is_signed_and_expiring(): void
+    {
+        $url = $this->buyerVideoUrl();
+
         $this->assertStringNotContainsString(
             "file-entries/{$this->videoFile->id}",
             $url,
@@ -193,18 +187,57 @@ class AuditVerifyVideoAccessTest extends TestCase
         );
     }
 
-    public function test_video_stream_supports_range_seeking(): void
+    public function test_signed_video_url_streams_within_expiry_window(): void
     {
+        $url = $this->buyerVideoUrl();
+
+        // The file response streams bytes directly (same as the file-entries
+        // show path), so capture the printed output.
+        ob_start();
+        $response = $this->stateful()->actingAs($this->buyer)->get($url);
+        $printed = ob_get_clean();
+        $response->assertOk();
+        $this->assertSame('fake-video-bytes!', $printed);
+    }
+
+    public function test_signed_video_url_rejected_after_expiry(): void
+    {
+        $url = $this->buyerVideoUrl();
+        $this->assertStringContainsString('expires=', $url);
+
+        $this->travel((int) config('storefront.download_days', 7) + 1)->days();
+
+        $this->stateful()->actingAs($this->buyer)->get($url)->assertForbidden();
+    }
+
+    public function test_raw_file_entry_url_rejects_enrolled_buyer(): void
+    {
+        $this->stateful()->actingAs($this->buyer)
+            ->get("/api/v1/file-entries/{$this->videoFile->id}")
+            ->assertForbidden();
+    }
+
+    public function test_signed_url_does_not_substitute_for_enrollment(): void
+    {
+        $url = $this->buyerVideoUrl();
+        $this->assertStringContainsString('signature=', $url);
+
+        $this->stateful()->actingAs($this->nonBuyer)->get($url)->assertForbidden();
+        $this->stateful()->actingAs($this->otherSeller)->get($url)->assertForbidden();
+        $this->stateful()->get($url)->assertForbidden();
+    }
+
+    public function test_range_slicing_on_signed_url(): void
+    {
+        $url = $this->buyerVideoUrl();
+        $this->assertStringContainsString('signature=', $url);
+
         // RangeFileResponse reads $_SERVER['HTTP_RANGE'] (set by php-fpm in
         // production, absent in CLI) and prints only the requested slice.
-        // Simulate the SAPI variable and capture the streamed bytes.
-        $token = Str::random(15);
-        $this->videoFile->forceFill(['preview_token' => $token])->save();
-
         $_SERVER['HTTP_RANGE'] = 'bytes=0-4';
         try {
             ob_start();
-            $this->stateful()->get("/api/v1/file-entries/{$this->videoFile->id}?preview_token={$token}")->assertOk();
+            $this->stateful()->actingAs($this->buyer)->get($url)->assertOk();
             $printed = ob_get_clean();
         } finally {
             unset($_SERVER['HTTP_RANGE']);

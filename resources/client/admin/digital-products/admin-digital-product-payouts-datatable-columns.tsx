@@ -139,7 +139,7 @@ export function PayoutActionsButton({
   const startProcessing = useMutation({
     mutationFn: () =>
       apiClient.post(
-        `/api/v1/admin/digital-products/payout-requests/${payout.id}/processing`,
+        `/api/v1/admin/items/payout-requests/${payout.id}/processing`,
         {note: note.trim() || undefined},
       ),
     onSuccess: () => {
@@ -154,7 +154,7 @@ export function PayoutActionsButton({
   const markPaid = useMutation({
     mutationFn: () =>
       apiClient.post(
-        `/api/v1/admin/digital-products/payout-requests/${payout.id}/mark-paid`,
+        `/api/v1/admin/items/payout-requests/${payout.id}/mark-paid`,
         {
           transfer_reference: reference.trim(),
           note: note.trim() || undefined,
@@ -172,7 +172,7 @@ export function PayoutActionsButton({
   const reject = useMutation({
     mutationFn: () =>
       apiClient.post(
-        `/api/v1/admin/digital-products/payout-requests/${payout.id}/reject`,
+        `/api/v1/admin/items/payout-requests/${payout.id}/reject`,
         {reason: note.trim()},
       ),
     onSuccess: () => {
@@ -188,7 +188,7 @@ export function PayoutActionsButton({
     mutationFn: () =>
       apiClient
         .post(
-          `/api/v1/admin/digital-products/payout-requests/${payout.id}/reveal-destination`,
+          `/api/v1/admin/items/payout-requests/${payout.id}/reveal-destination`,
         )
         .then(response => response.data.destination as string),
     onSuccess: destination => setDestination(destination),

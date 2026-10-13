@@ -5,6 +5,7 @@ namespace App\Courses\Resources;
 use App\Courses\Models\Lesson;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 
 /** @mixin Lesson */
@@ -32,7 +33,16 @@ class LessonResource extends JsonResource
             'video' => $this->whenLoaded('videoFile', fn() => $this->videoFile ? [
                 'id' => $this->videoFile->id,
                 'name' => $this->videoFile->name,
-                'url' => $this->videoFile->url,
+                // Uploaded lesson video streams only via a signed, expiring URL
+                // (same window as download entitlements). The raw file-entry
+                // URL rejects non-managers, so it is never exposed here.
+                'url' => $this->video_type === 'upload'
+                    ? URL::temporarySignedRoute(
+                        'courses.lesson-video',
+                        now()->addDays(config('storefront.download_days')),
+                        ['lesson' => $this->id],
+                    )
+                    : $this->videoFile->url,
                 'mime' => $this->videoFile->mime,
             ] : null),
             'duration_seconds' => $this->duration_seconds,

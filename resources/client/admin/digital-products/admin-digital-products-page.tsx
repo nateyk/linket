@@ -77,7 +77,7 @@ export function Component() {
 
   const bulkApprove = useMutation({
     mutationFn: () =>
-      apiClient.post('/api/v1/admin/digital-products/bulk-approve', {
+      apiClient.post('/api/v1/admin/items/bulk-approve', {
         ids: selectedIds,
       }),
     onSuccess: response => {
@@ -97,7 +97,7 @@ export function Component() {
 
   const bulkReject = useMutation({
     mutationFn: () =>
-      apiClient.post('/api/v1/admin/digital-products/bulk-reject', {
+      apiClient.post('/api/v1/admin/items/bulk-reject', {
         ids: selectedIds,
         reason: bulkReason.trim() || null,
       }),
@@ -141,13 +141,13 @@ export function Component() {
   return (
     <DashboardLayout.MainSection>
       <StaticPageTitle>
-        <Trans message="Digital Products" />
+        <Trans message="Items" />
       </StaticPageTitle>
 
       <DashboardLayout.SectionHeader>
         <DashboardLayout.SidebarToggle />
         <DashboardLayout.SectionTitle>
-          <Trans message="Digital Products" />
+          <Trans message="Items" />
           <Tooltip.Provider>
             <Tooltip.Root>
               <Tooltip.Trigger
@@ -172,7 +172,7 @@ export function Component() {
           <Button
             variant="outline"
             nativeButton={false}
-            render={<Link to="/admin/digital-products/payouts" />}
+            render={<Link to="/admin/items/payouts" />}
           >
             <LandmarkIcon />
             <Trans message="Payout requests" />

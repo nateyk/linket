@@ -38,7 +38,7 @@ export const AdminSidebarIcons: Record<
   '/admin/files': <FilesIcon />,
   '/admin/localizations': <GlobeIcon />,
   '/admin/logs': <ClipboardClockIcon />,
-  '/admin/digital-products': <StoreIcon />,
+  '/admin/items': <StoreIcon />,
   '/admin/payment-activity': <CircleDollarSignIcon />,
   '/admin/kyc-verifications': <ShieldCheckIcon />,
   '/admin/withdrawals': <CreditCardIcon />,

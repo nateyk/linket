@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="512" viewBox="0 0 1100 512">
+<rect x="0" y="0" width="1100" height="512" fill="#ffffff"/>
+<text x="40" y="44" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="24" font-weight="600" fill="#212121" text-anchor="start">Context test — header</text>
+<text x="40" y="74" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="14" font-weight="400" fill="#737373" text-anchor="start">Recreated from navbar.tsx: mark h-8 (32px), gap-2 (8px), site name 24/600 tracking-tight, Login / Register pills h-9 r24 14/500.</text>
+<text x="40" y="132" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="600" fill="#737373" text-anchor="start">H1 · fixed-name surface — wordmark alone (recommended lockup)</text>
+<rect x="40" y="142" width="1020" height="64" fill="#ffffff" stroke="#e5e5e5" stroke-width="1"/>
+<svg x="64" y="157" width="94.4297" height="34" viewBox="0 0 711 256">
+  
+  <path fill="#0a0a0a" d="M44 52 L44 194 A10 10 0 0 0 54 204 L176.49 204 A10 10 0 0 0 183.56 201.07 L205.07 179.56 A10 10 0 0 0 208 172.49 L208 108 L176 108 L176 159.23 A10 10 0 0 1 173.07 166.3 L170.3 169.07 A10 10 0 0 1 163.23 172 L86 172 A10 10 0 0 1 76 162 L76 52 L44 52 Z"/>
+  <path fill="#0a0a0a" d="M176 108 L176 204 L208 204 L208 108 L176 108 Z"/>
+  <path fill="#0a0a0a" d="M360 52 L360 204 L392 204 L392 52 L360 52 Z"/>
+  <path fill="#0a0a0a" d="M605 76 L605 204 L637 204 L637 76 L605 76 Z"/>
+  <path fill="#0a0a0a" d="M258 204 L258 162 A26 26 0 0 1 310 162 L310 204 L342 204 L342 162 A58 58 0 0 0 226 162 L226 204 L258 204 Z"/>
+  <path fill="#0a0a0a" d="M423.37 108 L372.44 158.93 A10 10 0 0 0 372.44 173.07 L403.37 204 L426 181.37 L417.7 173.07 A10 10 0 0 1 417.7 158.93 L446 130.63 L423.37 108 Z"/>
+  <path fill="#0a0a0a" d="M528.64 172.21 A24 24 0 1 1 537 154 L537 131 A10 10 0 0 1 527 141 L476 141 L476 167 L553 167 A10 10 0 0 0 563 157 L563 154 A50 50 0 1 0 528.64 201.49 L528.64 172.21 Z"/>
+  <path fill="#0a0a0a" d="M583 135 L663 135 L663 108 L583 108 L583 135 Z"/>
+  <path fill="#0049cc" d="M192 54 H192 A19 19 0 0 1 211 73 V73 A19 19 0 0 1 192 92 H192 A19 19 0 0 1 173 73 V73 A19 19 0 0 1 192 54 Z"/>
+</svg>
+<rect x="926" y="156" width="110" height="36" fill="#0049cc" rx="18"/>
+<text x="981" y="179" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="14" font-weight="500" fill="#fcfcfc" text-anchor="middle">Register</text>
+<rect x="818" y="156" width="96" height="36" fill="#ffffff" stroke="#e5e5e5" stroke-width="1" rx="18"/>
+<text x="866" y="179" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="14" font-weight="500" fill="#212121" text-anchor="middle">Login</text>
+<text x="40" y="244" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="600" fill="#737373" text-anchor="start">H2 · dark navbar — color-dark version on #0a0a0a</text>
+<rect x="40" y="254" width="1020" height="64" fill="#0a0a0a" stroke="#e5e5e5" stroke-width="1"/>
+<svg x="64" y="269" width="94.4297" height="34" viewBox="0 0 711 256">
+  
+  <path fill="#ffffff" d="M44 52 L44 194 A10 10 0 0 0 54 204 L176.49 204 A10 10 0 0 0 183.56 201.07 L205.07 179.56 A10 10 0 0 0 208 172.49 L208 108 L176 108 L176 159.23 A10 10 0 0 1 173.07 166.3 L170.3 169.07 A10 10 0 0 1 163.23 172 L86 172 A10 10 0 0 1 76 162 L76 52 L44 52 Z"/>
+  <path fill="#ffffff" d="M176 108 L176 204 L208 204 L208 108 L176 108 Z"/>
+  <path fill="#ffffff" d="M360 52 L360 204 L392 204 L392 52 L360 52 Z"/>
+  <path fill="#ffffff" d="M605 76 L605 204 L637 204 L637 76 L605 76 Z"/>
+  <path fill="#ffffff" d="M258 204 L258 162 A26 26 0 0 1 310 162 L310 204 L342 204 L342 162 A58 58 0 0 0 226 162 L226 204 L258 204 Z"/>
+  <path fill="#ffffff" d="M423.37 108 L372.44 158.93 A10 10 0 0 0 372.44 173.07 L403.37 204 L426 181.37 L417.7 173.07 A10 10 0 0 1 417.7 158.93 L446 130.63 L423.37 108 Z"/>
+  <path fill="#ffffff" d="M528.64 172.21 A24 24 0 1 1 537 154 L537 131 A10 10 0 0 1 527 141 L476 141 L476 167 L553 167 A10 10 0 0 0 563 157 L563 154 A50 50 0 1 0 528.64 201.49 L528.64 172.21 Z"/>
+  <path fill="#ffffff" d="M583 135 L663 135 L663 108 L583 108 L583 135 Z"/>
+  <path fill="#0050de" d="M192 54 H192 A19 19 0 0 1 211 73 V73 A19 19 0 0 1 192 92 H192 A19 19 0 0 1 173 73 V73 A19 19 0 0 1 192 54 Z"/>
+</svg>
+<rect x="926" y="268" width="110" height="36" fill="#0049cc" rx="18"/>
+<text x="981" y="291" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="14" font-weight="500" fill="#fcfcfc" text-anchor="middle">Register</text>
+<rect x="818" y="268" width="96" height="36" fill="none" stroke="#3f3f46" stroke-width="1" rx="18"/>
+<text x="866" y="291" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="14" font-weight="500" fill="#fafafa" text-anchor="middle">Login</text>
+<text x="40" y="356" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="600" fill="#737373" text-anchor="start">H3 · configurable surface — logo image + site_name text (wordmark never replaces the name)</text>
+<rect x="40" y="366" width="1020" height="64" fill="#ffffff" stroke="#e5e5e5" stroke-width="1"/>
+<rect x="64" y="382" width="32" height="32" fill="none" stroke="#737373" stroke-width="2" rx="8"/>
+<rect x="74" y="392" width="12" height="12" fill="#737373" rx="2"/>
+<text x="108" y="406" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="24" font-weight="600" fill="#212121" text-anchor="start" letter-spacing="-0.6">Linket</text>
+<rect x="926" y="380" width="110" height="36" fill="#0049cc" rx="18"/>
+<text x="981" y="403" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="14" font-weight="500" fill="#fcfcfc" text-anchor="middle">Register</text>
+<rect x="818" y="380" width="96" height="36" fill="#ffffff" stroke="#e5e5e5" stroke-width="1" rx="18"/>
+<text x="866" y="403" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="14" font-weight="500" fill="#212121" text-anchor="middle">Login</text>
+<text x="40" y="482" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="400" fill="#737373" text-anchor="start">Type renders in this machine's DejaVu Sans — the app uses the system UI stack (documented disclosure).</text>
+</svg>

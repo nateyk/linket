@@ -37,7 +37,7 @@ export const dashboardSidebarIcons: Record<
   '/dashboard': <HomeIcon />,
   '/dashboard/insights': <ChartColumnBigIcon />,
   '/dashboard/search': <SearchIcon />,
-  '/dashboard/my-products': <PackageIcon />,
+  '/dashboard/items': <PackageIcon />,
   '/dashboard/sales-payouts': <WalletCardsIcon />,
 };
 

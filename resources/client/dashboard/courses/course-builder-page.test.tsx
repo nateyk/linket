@@ -41,7 +41,7 @@ describe('course builder analytics navigation', () => {
     );
 
     expect(source).toMatch(
-      /render=\{\s*<Link\s+to=\{`\/dashboard\/my-products\/\$\{productId\}\/course\/analytics`\}\s*\/>\s*\}/,
+      /render=\{\s*<Link\s+to=\{`\/dashboard\/items\/\$\{productId\}\/course\/analytics`\}\s*\/>\s*\}/,
     );
   });
 
@@ -69,7 +69,7 @@ describe('course builder data loading', () => {
     );
 
     expect(source).toMatch(
-      /await apiClient\.get\(\s*`\/api\/v1\/digital-products\/\$\{productId\}`\s*,?\s*\)/,
+      /await apiClient\.get\(\s*`\/api\/v1\/items\/\$\{productId\}`\s*,?\s*\)/,
     );
     expect(source).toMatch(
       /await apiClient\.get\(\s*`\/api\/v1\/courses\/\$\{courseId\}`\s*,?\s*\)/,
@@ -155,7 +155,7 @@ describe('course builder mobile navigation', () => {
     );
     expect(menu).toContain('<Trans message="Configure" />');
     expect(menu).toMatch(
-      /<Dropdown\.Item\s+render=\{[\s\S]*?<Link\s+to=\{`\/dashboard\/my-products\/\$\{productId\}\/course\/analytics`\}[\s\S]*?\}\s*>[\s\S]*?Analytics/,
+      /<Dropdown\.Item\s+render=\{[\s\S]*?<Link\s+to=\{`\/dashboard\/items\/\$\{productId\}\/course\/analytics`\}[\s\S]*?\}\s*>[\s\S]*?Analytics/,
     );
   });
 });
@@ -238,8 +238,17 @@ describe('course settings and builder polish', () => {
       ),
       'utf8',
     );
+    const settingsFields = fs.readFileSync(
+      path.resolve(
+        'resources/client/dashboard/courses/course-settings-fields.tsx',
+      ),
+      'utf8',
+    );
 
-    expect(source).toContain('Cover Image');
+    // The cover field itself now lives in the shared settings-fields module;
+    // the builder wires it in from there.
+    expect(settingsFields).toContain('Cover Image');
+    expect(source).toContain('<CourseSettingsCoverField');
     expect(source).toContain('Course Name');
     expect(source).toContain('Collapsible');
     expect(source).toContain('max-w-2xl');
@@ -391,7 +400,7 @@ describe('course approval submission', () => {
     );
 
     expect(source).toContain(
-      '`/api/v1/digital-products/${course.digital_product_id}/submit`',
+      '`/api/v1/items/${course.digital_product_id}/submit`',
     );
     expect(source).toContain("toast.positive('Course submitted for review')");
     expect(source).toContain('const hasPublishedLesson =');
@@ -525,7 +534,15 @@ describe('course settings price', () => {
   });
 });
 describe('course settings description', () => {
+  // The description field moved into the shared settings-fields module, which
+  // the builder dialog (and the create page) render.
   const source = fs.readFileSync(
+    path.resolve(
+      'resources/client/dashboard/courses/course-settings-fields.tsx',
+    ),
+    'utf8',
+  );
+  const builder = fs.readFileSync(
     path.resolve('resources/client/dashboard/courses/course-builder-page.tsx'),
     'utf8',
   );
@@ -535,10 +552,17 @@ describe('course settings description', () => {
     expect(source).toContain('TipTapEditorProvider');
     expect(source).toContain('TiptapEditorContent');
     expect(source).not.toContain('maxLength={20000}');
+    expect(builder).toContain('<CourseSettingsDescriptionField');
   });
 });
 describe('course settings cover', () => {
   const source = fs.readFileSync(
+    path.resolve(
+      'resources/client/dashboard/courses/course-settings-fields.tsx',
+    ),
+    'utf8',
+  );
+  const builder = fs.readFileSync(
     path.resolve('resources/client/dashboard/courses/course-builder-page.tsx'),
     'utf8',
   );
@@ -550,8 +574,11 @@ describe('course settings cover', () => {
     expect(source).toContain('<CroppedCover');
     expect(source).toContain('uploadType="linkImages"');
     expect(source).toContain('aspect={16 / 9}');
+    expect(builder).toContain('<CourseSettingsCoverField');
     expect(source).not.toContain('CoverImageDropzone');
     expect(source).not.toContain('FileDropzone');
+    expect(builder).not.toContain('CoverImageDropzone');
+    expect(builder).not.toContain('FileDropzone');
   });
 });
 describe('course settings outcomes dirty tracking', () => {

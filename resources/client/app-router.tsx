@@ -79,7 +79,7 @@ export const appRouter = createBrowserRouter(
             if (!linkeableData && !publicDigitalProductPage) {
               if (
                 !isLoggedIn &&
-                getBootstrapData().settings.homepage.type === 'loginPage' &&
+                getBootstrapData().settings.homepage?.type === 'loginPage' &&
                 !getSettingsPreviewMode().isInsideSettingsPreview
               ) {
                 return redirect('/login');

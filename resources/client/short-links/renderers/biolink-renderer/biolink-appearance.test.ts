@@ -808,9 +808,10 @@ describe('gradient preset contrast data', () => {
 });
 
 describe('storefront contrast wiring', () => {
-  test('P1-6 both branding wordmarks read the resolved page text token', () => {
-    const wordmark =
-      '<span className="text-xs text-[var(--biolink-text)]">{branding.site_name}</span>';
+  test('P1-6 branding lockups are image-only (wordmark carries the name)', () => {
+    // Round-2 wiring decision: the logo slots render the full wordmark and
+    // no site_name text span sits next to the image (the name is in the
+    // wordmark). The lockup must still expose an accessible name.
     for (const file of ['biolink-layout.tsx', 'creator-profile-layout.tsx']) {
       const source = fs.readFileSync(
         path.resolve(
@@ -819,10 +820,11 @@ describe('storefront contrast wiring', () => {
         ),
         'utf8',
       );
-      expect(source).toContain(wordmark);
-      expect(source).not.toContain(
-        '<span className="text-xs text-foreground">{branding.site_name}</span>',
-      );
+      expect(source).not.toContain('>{branding.site_name}</span>');
+      expect(source).not.toContain('{site_name}</span>');
+      // accessible name survives: profile keeps its aria-label, both keep
+      // the img alt (:site logo).
+      expect(source).toContain(':site logo');
     }
   });
 

@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="744" viewBox="0 0 640 744">
+<rect x="0" y="0" width="640" height="744" fill="#ffffff"/>
+<text x="40" y="44" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="24" font-weight="600" fill="#212121" text-anchor="start">Context test — sidebar</text>
+<text x="40" y="74" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="14" font-weight="400" fill="#737373" text-anchor="start">Recreated from the app: 256px, bg #fafafa, items h-9 pill (24), 14px, icon 16,</text>
+<text x="40" y="94" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="14" font-weight="400" fill="#737373" text-anchor="start">gap-2; active = accent fill + font-medium.</text>
+<text x="40" y="116" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="600" fill="#737373" text-anchor="start">A · wordmark in the logo slot (max-w-40)</text>
+<rect x="40" y="130" width="256" height="548" fill="#fafafa"/>
+<line x1="296" y1="130" x2="296" y2="678" stroke="#e5e5e5" stroke-width="1"/>
+<svg x="64" y="156" width="140" height="50.4079" viewBox="0 0 711 256">
+  
+  <path fill="#0a0a0a" d="M44 52 L44 194 A10 10 0 0 0 54 204 L176.49 204 A10 10 0 0 0 183.56 201.07 L205.07 179.56 A10 10 0 0 0 208 172.49 L208 108 L176 108 L176 159.23 A10 10 0 0 1 173.07 166.3 L170.3 169.07 A10 10 0 0 1 163.23 172 L86 172 A10 10 0 0 1 76 162 L76 52 L44 52 Z"/>
+  <path fill="#0a0a0a" d="M176 108 L176 204 L208 204 L208 108 L176 108 Z"/>
+  <path fill="#0a0a0a" d="M360 52 L360 204 L392 204 L392 52 L360 52 Z"/>
+  <path fill="#0a0a0a" d="M605 76 L605 204 L637 204 L637 76 L605 76 Z"/>
+  <path fill="#0a0a0a" d="M258 204 L258 162 A26 26 0 0 1 310 162 L310 204 L342 204 L342 162 A58 58 0 0 0 226 162 L226 204 L258 204 Z"/>
+  <path fill="#0a0a0a" d="M423.37 108 L372.44 158.93 A10 10 0 0 0 372.44 173.07 L403.37 204 L426 181.37 L417.7 173.07 A10 10 0 0 1 417.7 158.93 L446 130.63 L423.37 108 Z"/>
+  <path fill="#0a0a0a" d="M528.64 172.21 A24 24 0 1 1 537 154 L537 131 A10 10 0 0 1 527 141 L476 141 L476 167 L553 167 A10 10 0 0 0 563 157 L563 154 A50 50 0 1 0 528.64 201.49 L528.64 172.21 Z"/>
+  <path fill="#0a0a0a" d="M583 135 L663 135 L663 108 L583 108 L583 135 Z"/>
+  <path fill="#0049cc" d="M192 54 H192 A19 19 0 0 1 211 73 V73 A19 19 0 0 1 192 92 H192 A19 19 0 0 1 173 73 V73 A19 19 0 0 1 192 54 Z"/>
+</svg>
+<rect x="52" y="242" width="232" height="36" fill="#ebebec" rx="18"/>
+<g transform="translate(64 252)" fill="none" stroke="#212121" stroke-width="1.5" stroke-linecap="butt" stroke-linejoin="miter"><path d="M2.5 7.5 L8 2.5 L13.5 7.5 V13.5 H2.5 Z"/></g>
+<text x="88" y="265" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="14" font-weight="600" fill="#212121" text-anchor="start">Home</text>
+<g transform="translate(64 296)" fill="none" stroke="#737373" stroke-width="1.5" stroke-linecap="butt" stroke-linejoin="miter"><path d="M3 6.5 H13 V13.5 H3 Z"/><path d="M2.5 6.5 L4 3 H12 L13.5 6.5"/></g>
+<text x="88" y="309" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="14" font-weight="400" fill="#212121" text-anchor="start">My Store</text>
+<g transform="translate(64 340)" fill="none" stroke="#737373" stroke-width="1.5" stroke-linecap="butt" stroke-linejoin="miter"><path d="M8 2.5 L13.5 5.5 V11 L8 14 L2.5 11 V5.5 Z"/><path d="M2.5 5.5 L8 8.5 L13.5 5.5"/><path d="M8 8.5 V14"/></g>
+<text x="88" y="353" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="14" font-weight="400" fill="#212121" text-anchor="start">My Products</text>
+<g transform="translate(64 384)" fill="none" stroke="#737373" stroke-width="1.5" stroke-linecap="butt" stroke-linejoin="miter"><path d="M8 2.5 V13.5"/><path d="M10.6 5 H6.9 A1.9 1.9 0 0 0 6.9 8.8 H9.1 A1.9 1.9 0 0 1 9.1 12.6 H5.4"/></g>
+<text x="88" y="397" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="14" font-weight="400" fill="#212121" text-anchor="start">Sales &amp; Payouts</text>
+<g transform="translate(64 428)" fill="none" stroke="#737373" stroke-width="1.5" stroke-linecap="butt" stroke-linejoin="miter"><path d="M3 13.5 V9.5"/><path d="M6.3 13.5 V6"/><path d="M9.6 13.5 V8"/><path d="M12.9 13.5 V4"/></g>
+<text x="88" y="441" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="14" font-weight="400" fill="#212121" text-anchor="start">Insights</text>
+<text x="64" y="478" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="500" fill="#737373" text-anchor="start">Resources</text>
+<g transform="translate(64 502)" fill="none" stroke="#737373" stroke-width="1.5" stroke-linecap="butt" stroke-linejoin="miter"><circle cx="8" cy="8" r="5.5" fill="none"/><circle cx="8" cy="8" r="1.8" fill="#737373" stroke="none"/></g>
+<text x="88" y="515" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="14" font-weight="400" fill="#212121" text-anchor="start">Tracking pixels</text>
+<text x="344" y="144" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="14" font-weight="600" fill="#212121" text-anchor="start">Logo slot rules</text>
+<text x="344" y="172" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="600" fill="#212121" text-anchor="start">The slot is an image</text>
+<text x="344" y="194" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="400" fill="#737373" text-anchor="start">(branding.logo_light):</text>
+<text x="344" y="216" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="400" fill="#737373" text-anchor="start">the wordmark is the</text>
+<text x="344" y="238" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="400" fill="#737373" text-anchor="start">default asset there.</text>
+<text x="344" y="260" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="400" fill="#737373" text-anchor="start"></text>
+<text x="344" y="282" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="400" fill="#737373" text-anchor="start">The site name beside it</text>
+<text x="344" y="304" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="400" fill="#737373" text-anchor="start">is branding.site_name —</text>
+<text x="344" y="326" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="400" fill="#737373" text-anchor="start">admin-configurable.</text>
+<text x="344" y="348" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="400" fill="#737373" text-anchor="start">The wordmark never</text>
+<text x="344" y="370" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="400" fill="#737373" text-anchor="start">replaces that text.</text>
+<text x="344" y="392" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="600" fill="#212121" text-anchor="start"></text>
+<text x="344" y="414" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="400" fill="#737373" text-anchor="start">Wordmark-only lockup:</text>
+<text x="344" y="436" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="400" fill="#737373" text-anchor="start">carry alt="Linket".</text>
+<text x="344" y="458" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="400" fill="#737373" text-anchor="start">min 24px, clear space</text>
+<text x="344" y="480" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="400" fill="#737373" text-anchor="start">= 1x stroke (24).</text>
+<text x="40" y="716" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="400" fill="#737373" text-anchor="start">Logo slot = max-w-40 (160px wide) per the app's `&lt;Logo className="max-w-40"&gt;`.</text>
+</svg>

@@ -95,7 +95,7 @@ function DialogContent({
           </Field.Group>
           <Sidebar />
         </Dialog.Body>
-        <Dialog.Footer variant="muted" className="py-4 sm:justify-between">
+        <Dialog.Footer className="py-4 sm:justify-between">
           <LinkFormActionButtons form={form} className="mt-4 md:mt-0" />
           <Button
             size="sm"

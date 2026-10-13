@@ -160,7 +160,7 @@ test('TopReferrers renders ranked referrer rows', () => {
 function QueryHarness() {
   const {data, isLoading} = useProductStatistics(
     ['digital-products', 1],
-    '/api/v1/digital-products/1/statistics',
+    '/api/v1/items/1/statistics',
     {from: '2026-10-01', to: '2026-10-31'},
   );
   return (
@@ -187,7 +187,7 @@ test('useProductStatistics fetches from the endpoint with period params', async 
   });
 
   expect(apiClient.get).toHaveBeenCalledWith(
-    '/api/v1/digital-products/1/statistics',
+    '/api/v1/items/1/statistics',
     {params: {from: '2026-10-01', to: '2026-10-31'}},
   );
 });
@@ -195,7 +195,7 @@ test('useProductStatistics fetches from the endpoint with period params', async 
 test('productStatisticsOptions derives its query key from the base key plus dates', () => {
   const options = productStatisticsOptions(
     ['digital-products', 99],
-    '/api/v1/digital-products/99/statistics',
+    '/api/v1/items/99/statistics',
     {from: '2026-10-01', to: '2026-10-31'},
   );
 

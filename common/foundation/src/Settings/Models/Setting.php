@@ -4,6 +4,7 @@ namespace Common\Settings\Models;
 
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
 
 class Setting extends Model
 {
@@ -16,6 +17,16 @@ class Setting extends Model
     protected $fillable = ['name', 'value'];
 
     protected $casts = ['private' => 'bool'];
+
+    protected static function booted(): void
+    {
+        // The settings manager serves every setting from the "settings.public"
+        // cache blob. Any write through the model (seeders, installers, ad hoc
+        // code) must invalidate that blob too, otherwise the new setting never
+        // reaches the client until the cache expires.
+        static::saved(fn() => Cache::forget('settings.public'));
+        static::deleted(fn() => Cache::forget('settings.public'));
+    }
 
     protected function value(): Attribute
     {

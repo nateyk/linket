@@ -17,7 +17,7 @@ describe('course preview page', () => {
       'utf8',
     );
 
-    expect(routes).toContain("path: 'my-products/:productId/course/preview'");
+    expect(routes).toContain("path: 'items/:productId/course/preview'");
     expect(builder).toContain('course/preview');
     expect(builder).not.toContain('/preview?preview=1');
     expect(preview).toContain('/api/v1/courses/${courseId}/preview');

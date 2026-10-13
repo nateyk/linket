@@ -3,33 +3,57 @@ import {Progress} from '@shadcn/progress/progress';
 import {Trans} from '@ui/i18n/trans';
 import {useTrans} from '@ui/i18n/use-trans';
 
+/**
+ * Shared progress pattern for product setup: rendered by the create wizard,
+ * the course setup page and the product edit page so all three show one
+ * indicator with one vocabulary. Copy variants are literal <Trans> messages
+ * here (not free-form props) so the translation extractor keeps every string
+ * in the catalog.
+ */
 export function ProductFormProgress({
   completed,
   total,
-  label = 'Product setup',
+  messageVariant = 'sections',
 }: {
   completed: number;
   total: number;
-  label?: string;
+  /**
+   * Which ratio line to show. Pages omit it and get the default
+   * required-sections wording; the create wizard asks for steps.
+   */
+  messageVariant?: 'sections' | 'steps';
 }) {
+  // Final-fix item 3: the SR-only label goes through trans() like the
+  // neighbouring aria-labels (e.g. the wizard nav in product-create-wizard).
   const {trans} = useTrans();
   return (
     <div className="flex flex-col gap-3 border-b pb-4 lg:flex-row lg:items-end lg:justify-between">
       <div className="min-w-0">
         <p className="text-sm font-medium">
-          <Trans message={label} />
+          <Trans message="Product setup" />
         </p>
         <p className="mt-1 text-sm text-muted-foreground">
-          <Trans
-            message=":completed of :total sections complete"
-            values={{completed, total}}
-          />
+          {messageVariant === 'steps' ? (
+            // P2 (T5 review): the wizard's ratio used to read ":completed of
+            // :total steps complete" while `completed` was the ACTIVE step —
+            // "3 of 3 complete" before pressing Continue was a false claim.
+            // Position wording is truthful AND keeps position visible.
+            <Trans
+              message="Step :current of :total"
+              values={{current: completed, total}}
+            />
+          ) : (
+            <Trans
+              message=":completed of :total required sections complete"
+              values={{completed, total}}
+            />
+          )}
         </p>
       </div>
       <Progress.Root
         value={(completed / total) * 100}
         className="w-full lg:w-48"
-        aria-label={trans({message: ':label progress', values: {label}})}
+        aria-label={trans({message: 'Product setup progress'})}
       >
         <Progress.Track className="h-2">
           <Progress.Indicator />

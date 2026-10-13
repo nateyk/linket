@@ -141,25 +141,33 @@ class AuditVerifyLessonXssTest extends TestCase
 
     public function test_fallback_path_strips_active_payloads(): void
     {
-        // The regex fallback in LessonsController::sanitizeContent only strips
-        // script/style/iframe tags. If HTMLPurifier is ever missing, event
-        // handlers and javascript: URLs survive. This pins the requirement.
+        // The weak regex fallback (script/style/iframe only) is eliminated:
+        // sanitizeContent is a single HTMLPurifier path. This pins both the
+        // absence of the second path and the battery through the sanitizer.
         $src = file_get_contents(app_path('Courses/Controllers/LessonsController.php'));
         $this->assertNotFalse($src);
 
-        $fallbackPos = strpos($src, '// Fallback');
-        $this->assertNotFalse($fallbackPos, 'Expected a marked fallback block.');
-        $fallback = substr($src, $fallbackPos);
+        $methodPos = strpos($src, 'function sanitizeContent');
+        $this->assertNotFalse($methodPos, 'Expected sanitizeContent to exist.');
+        $method = substr($src, $methodPos, 1500);
+        $this->assertStringNotContainsString(
+            'preg_replace',
+            $method,
+            'No regex fallback may remain inside sanitizeContent.'
+        );
 
-        $this->assertMatchesRegularExpression(
-            '/on\w+\s*=/i',
-            $fallback,
-            'Fallback sanitizer must strip event-handler attributes (on*).'
-        );
-        $this->assertMatchesRegularExpression(
-            '/javascript:/i',
-            $fallback,
-            'Fallback sanitizer must strip javascript: URLs.'
-        );
+        $controller = new \App\Courses\Controllers\LessonsController();
+        $fn = new \ReflectionMethod($controller, 'sanitizeContent');
+
+        foreach (self::$payloads as $payload) {
+            $clean = $fn->invoke($controller, "<p>Before.</p>{$payload}<p>After.</p>");
+            foreach (self::$mustBeAbsent as $needle) {
+                $this->assertStringNotContainsStringIgnoringCase(
+                    $needle,
+                    $clean,
+                    "Sanitizer leaked '{$needle}' from payload: {$payload}"
+                );
+            }
+        }
     }
 }

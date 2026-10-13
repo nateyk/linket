@@ -12,7 +12,7 @@ test.describe('Course Builder full flow', () => {
     await expect(page).toHaveURL(/.*dashboard/);
 
     // 2. Create a new course product
-    await page.goto('/dashboard/my-products/create');
+    await page.goto('/dashboard/items/create');
     await expect(page.locator('h1')).toContainText('Create product');
 
     // Fill product form
@@ -22,7 +22,7 @@ test.describe('Course Builder full flow', () => {
     await page.click('button:has-text("Create course")');
 
     // Wait for redirect to course builder
-    await expect(page).toHaveURL(/\/dashboard\/my-products\/\d+\/course/);
+    await expect(page).toHaveURL(/\/dashboard\/items\/\d+\/course/);
 
     // 3. Add a chapter
     await page.click('button:has-text("New chapter")');

@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="732" viewBox="0 0 960 732">
+<rect x="0" y="0" width="960" height="732" fill="#ffffff"/>
+<text x="40" y="44" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="24" font-weight="600" fill="#212121" text-anchor="start">Icon set — Li crop, optically centred</text>
+<text x="40" y="74" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="400" fill="#737373" text-anchor="start">Centred by coverage centroid, not bbox: the L foot pulls weight down, so bbox centring would sit the mark low.</text>
+<text x="40" y="94" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="400" fill="#737373" text-anchor="start">Measured offset centroid−bbox = (-4.9, +17.5) viewBox units at stroke 32.</text>
+<text x="40" y="134" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="600" fill="#737373" text-anchor="start">favicon — white tile (chosen) + dark alternate</text>
+<svg x="40" y="166" width="64" height="64" viewBox="0 0 512 512">
+  
+  <rect width="512" height="512" rx="19.9953" fill="#ffffff"/>
+  <g transform="translate(8.16569 -30.6542) scale(1.99953)">
+    <g fill="#0a0a0a"><path d="M44 52 L44 194 A10 10 0 0 0 54 204 L176.49 204 A10 10 0 0 0 183.56 201.07 L205.07 179.56 A10 10 0 0 0 208 172.49 L208 108 L176 108 L176 159.23 A10 10 0 0 1 173.07 166.3 L170.3 169.07 A10 10 0 0 1 163.23 172 L86 172 A10 10 0 0 1 76 162 L76 52 L44 52 Z"/><path d="M176 108 L176 204 L208 204 L208 108 L176 108 Z"/></g>
+    <path fill="#0049cc" d="M192 46 H192 A21 21 0 0 1 213 67 V67 A21 21 0 0 1 192 88 H192 A21 21 0 0 1 171 67 V67 A21 21 0 0 1 192 46 Z"/>
+  </g>
+</svg>
+<svg x="134" y="166" width="48" height="48" viewBox="0 0 512 512">
+  
+  <rect width="512" height="512" rx="19.9953" fill="#ffffff"/>
+  <g transform="translate(8.16569 -30.6542) scale(1.99953)">
+    <g fill="#0a0a0a"><path d="M44 52 L44 194 A10 10 0 0 0 54 204 L176.49 204 A10 10 0 0 0 183.56 201.07 L205.07 179.56 A10 10 0 0 0 208 172.49 L208 108 L176 108 L176 159.23 A10 10 0 0 1 173.07 166.3 L170.3 169.07 A10 10 0 0 1 163.23 172 L86 172 A10 10 0 0 1 76 162 L76 52 L44 52 Z"/><path d="M176 108 L176 204 L208 204 L208 108 L176 108 Z"/></g>
+    <path fill="#0049cc" d="M192 46 H192 A21 21 0 0 1 213 67 V67 A21 21 0 0 1 192 88 H192 A21 21 0 0 1 171 67 V67 A21 21 0 0 1 192 46 Z"/>
+  </g>
+</svg>
+<svg x="212" y="166" width="32" height="32" viewBox="0 0 512 512">
+  
+  <rect width="512" height="512" rx="19.9953" fill="#ffffff"/>
+  <g transform="translate(8.16569 -30.6542) scale(1.99953)">
+    <g fill="#0a0a0a"><path d="M44 52 L44 194 A10 10 0 0 0 54 204 L176.49 204 A10 10 0 0 0 183.56 201.07 L205.07 179.56 A10 10 0 0 0 208 172.49 L208 108 L176 108 L176 159.23 A10 10 0 0 1 173.07 166.3 L170.3 169.07 A10 10 0 0 1 163.23 172 L86 172 A10 10 0 0 1 76 162 L76 52 L44 52 Z"/><path d="M176 108 L176 204 L208 204 L208 108 L176 108 Z"/></g>
+    <path fill="#0049cc" d="M192 46 H192 A21 21 0 0 1 213 67 V67 A21 21 0 0 1 192 88 H192 A21 21 0 0 1 171 67 V67 A21 21 0 0 1 192 46 Z"/>
+  </g>
+</svg>
+<svg x="274" y="166" width="16" height="16" viewBox="0 0 512 512">
+  
+  <rect width="512" height="512" rx="19.9953" fill="#ffffff"/>
+  <g transform="translate(8.16569 -30.6542) scale(1.99953)">
+    <g fill="#0a0a0a"><path d="M44 52 L44 194 A10 10 0 0 0 54 204 L176.49 204 A10 10 0 0 0 183.56 201.07 L205.07 179.56 A10 10 0 0 0 208 172.49 L208 108 L176 108 L176 159.23 A10 10 0 0 1 173.07 166.3 L170.3 169.07 A10 10 0 0 1 163.23 172 L86 172 A10 10 0 0 1 76 162 L76 52 L44 52 Z"/><path d="M176 108 L176 204 L208 204 L208 108 L176 108 Z"/></g>
+    <path fill="#0049cc" d="M192 46 H192 A21 21 0 0 1 213 67 V67 A21 21 0 0 1 192 88 H192 A21 21 0 0 1 171 67 V67 A21 21 0 0 1 192 46 Z"/>
+  </g>
+</svg>
+<text x="40" y="248" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="11" font-weight="400" fill="#737373" text-anchor="start">64 · 48 · 32 · 16</text>
+<svg x="328" y="166" width="48" height="48" viewBox="0 0 512 512">
+  
+  <rect width="512" height="512" rx="19.9953" fill="#0a0a0a"/>
+  <g transform="translate(8.16569 -30.6542) scale(1.99953)">
+    <g fill="#ffffff"><path d="M44 52 L44 194 A10 10 0 0 0 54 204 L176.49 204 A10 10 0 0 0 183.56 201.07 L205.07 179.56 A10 10 0 0 0 208 172.49 L208 108 L176 108 L176 159.23 A10 10 0 0 1 173.07 166.3 L170.3 169.07 A10 10 0 0 1 163.23 172 L86 172 A10 10 0 0 1 76 162 L76 52 L44 52 Z"/><path d="M176 108 L176 204 L208 204 L208 108 L176 108 Z"/></g>
+    <path fill="#0050de" d="M192 46 H192 A21 21 0 0 1 213 67 V67 A21 21 0 0 1 192 88 H192 A21 21 0 0 1 171 67 V67 A21 21 0 0 1 192 46 Z"/>
+  </g>
+</svg>
+<text x="328" y="228" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="11" font-weight="400" fill="#737373" text-anchor="start">dark tile</text>
+<text x="410" y="182" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="400" fill="#212121" text-anchor="start">favicon.svg · favicon.ico (16/32/48) ·</text>
+<text x="410" y="202" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="400" fill="#212121" text-anchor="start">small cut, tile radius 19.9953/512 = 0.312 ×</text>
+<text x="410" y="222" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="400" fill="#212121" text-anchor="start">icon stroke (the mark's r10 ratio, not bubbly).</text>
+<text x="40" y="266" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="600" fill="#737373" text-anchor="start">app icons — full joint, full-bleed (platform masks the corners)</text>
+<svg x="40" y="294" width="84" height="84" viewBox="0 0 512 512">
+  
+  <rect width="512" height="512" rx="0" fill="#ffffff"/>
+  <g transform="translate(8.00378 -38.365) scale(2.02347)">
+    <g fill="#0a0a0a"><path d="M44 52 L44 194 A10 10 0 0 0 54 204 L176.49 204 A10 10 0 0 0 183.56 201.07 L205.07 179.56 A10 10 0 0 0 208 172.49 L208 108 L176 108 L176 159.23 A10 10 0 0 1 173.07 166.3 L170.3 169.07 A10 10 0 0 1 163.23 172 L86 172 A10 10 0 0 1 76 162 L76 52 L44 52 Z"/><path d="M176 108 L176 204 L208 204 L208 108 L176 108 Z"/></g>
+    <path fill="#0049cc" d="M192 54 H192 A19 19 0 0 1 211 73 V73 A19 19 0 0 1 192 92 H192 A19 19 0 0 1 173 73 V73 A19 19 0 0 1 192 54 Z"/>
+  </g>
+</svg>
+<svg x="146" y="294" width="56" height="56" viewBox="0 0 512 512">
+  
+  <rect width="512" height="512" rx="0" fill="#ffffff"/>
+  <g transform="translate(8.00378 -38.365) scale(2.02347)">
+    <g fill="#0a0a0a"><path d="M44 52 L44 194 A10 10 0 0 0 54 204 L176.49 204 A10 10 0 0 0 183.56 201.07 L205.07 179.56 A10 10 0 0 0 208 172.49 L208 108 L176 108 L176 159.23 A10 10 0 0 1 173.07 166.3 L170.3 169.07 A10 10 0 0 1 163.23 172 L86 172 A10 10 0 0 1 76 162 L76 52 L44 52 Z"/><path d="M176 108 L176 204 L208 204 L208 108 L176 108 Z"/></g>
+    <path fill="#0049cc" d="M192 54 H192 A19 19 0 0 1 211 73 V73 A19 19 0 0 1 192 92 H192 A19 19 0 0 1 173 73 V73 A19 19 0 0 1 192 54 Z"/>
+  </g>
+</svg>
+<svg x="224" y="294" width="44" height="44" viewBox="0 0 512 512">
+  
+  <rect width="512" height="512" rx="0" fill="#ffffff"/>
+  <g transform="translate(8.00378 -38.365) scale(2.02347)">
+    <g fill="#0a0a0a"><path d="M44 52 L44 194 A10 10 0 0 0 54 204 L176.49 204 A10 10 0 0 0 183.56 201.07 L205.07 179.56 A10 10 0 0 0 208 172.49 L208 108 L176 108 L176 159.23 A10 10 0 0 1 173.07 166.3 L170.3 169.07 A10 10 0 0 1 163.23 172 L86 172 A10 10 0 0 1 76 162 L76 52 L44 52 Z"/><path d="M176 108 L176 204 L208 204 L208 108 L176 108 Z"/></g>
+    <path fill="#0049cc" d="M192 54 H192 A19 19 0 0 1 211 73 V73 A19 19 0 0 1 192 92 H192 A19 19 0 0 1 173 73 V73 A19 19 0 0 1 192 54 Z"/>
+  </g>
+</svg>
+<text x="294" y="316" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="400" fill="#212121" text-anchor="start">icon-512.png · icon-192.png · apple-touch-icon.png (180)</text>
+<text x="294" y="336" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="400" fill="#737373" text-anchor="start">Same art, no radius baked in — iOS/Android/Windows mask it themselves.</text>
+<text x="40" y="398" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="600" fill="#737373" text-anchor="start">maskable — content inside the 80% safe circle</text>
+<svg x="40" y="426" width="84" height="84" viewBox="0 0 512 512">
+  
+  <rect width="512" height="512" rx="0" fill="#ffffff"/>
+  <g transform="translate(60.9451 24.475) scale(1.59151)">
+    <g fill="#0a0a0a"><path d="M44 52 L44 194 A10 10 0 0 0 54 204 L176.49 204 A10 10 0 0 0 183.56 201.07 L205.07 179.56 A10 10 0 0 0 208 172.49 L208 108 L176 108 L176 159.23 A10 10 0 0 1 173.07 166.3 L170.3 169.07 A10 10 0 0 1 163.23 172 L86 172 A10 10 0 0 1 76 162 L76 52 L44 52 Z"/><path d="M176 108 L176 204 L208 204 L208 108 L176 108 Z"/></g>
+    <path fill="#0049cc" d="M192 54 H192 A19 19 0 0 1 211 73 V73 A19 19 0 0 1 192 92 H192 A19 19 0 0 1 173 73 V73 A19 19 0 0 1 192 54 Z"/>
+  </g>
+</svg>
+<circle cx="82" cy="468" r="33.6" fill="none" stroke="#0049cc" stroke-width="1.5" stroke-dasharray="4 3"/>
+<text x="148" y="452" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="400" fill="#212121" text-anchor="start">r = 0.4 × 512 (safe zone);</text>
+<text x="148" y="472" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="400" fill="#212121" text-anchor="start">measured content radius 0.757 of half-size ≤ 0.8.</text>
+<text x="40" y="530" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="13" font-weight="600" fill="#737373" text-anchor="start">og / social — 1200 × 630, wordmark centred</text>
+<svg x="40" y="554" width="300" height="157.5" viewBox="0 0 1200 630">
+  
+  <rect width="1200" height="630" fill="#ffffff"/>
+  <g transform="translate(188.821 166.115) scale(1.16317)">
+      
+      <path fill="#0a0a0a" d="M44 52 L44 194 A10 10 0 0 0 54 204 L176.49 204 A10 10 0 0 0 183.56 201.07 L205.07 179.56 A10 10 0 0 0 208 172.49 L208 108 L176 108 L176 159.23 A10 10 0 0 1 173.07 166.3 L170.3 169.07 A10 10 0 0 1 163.23 172 L86 172 A10 10 0 0 1 76 162 L76 52 L44 52 Z"/>
+      <path fill="#0a0a0a" d="M176 108 L176 204 L208 204 L208 108 L176 108 Z"/>
+      <path fill="#0a0a0a" d="M360 52 L360 204 L392 204 L392 52 L360 52 Z"/>
+      <path fill="#0a0a0a" d="M605 76 L605 204 L637 204 L637 76 L605 76 Z"/>
+      <path fill="#0a0a0a" d="M258 204 L258 162 A26 26 0 0 1 310 162 L310 204 L342 204 L342 162 A58 58 0 0 0 226 162 L226 204 L258 204 Z"/>
+      <path fill="#0a0a0a" d="M423.37 108 L372.44 158.93 A10 10 0 0 0 372.44 173.07 L403.37 204 L426 181.37 L417.7 173.07 A10 10 0 0 1 417.7 158.93 L446 130.63 L423.37 108 Z"/>
+      <path fill="#0a0a0a" d="M528.64 172.21 A24 24 0 1 1 537 154 L537 131 A10 10 0 0 1 527 141 L476 141 L476 167 L553 167 A10 10 0 0 0 563 157 L563 154 A50 50 0 1 0 528.64 201.49 L528.64 172.21 Z"/>
+      <path fill="#0a0a0a" d="M583 135 L663 135 L663 108 L583 108 L583 135 Z"/>
+      <path fill="#0049cc" d="M192 54 H192 A19 19 0 0 1 211 73 V73 A19 19 0 0 1 192 92 H192 A19 19 0 0 1 173 73 V73 A19 19 0 0 1 192 54 Z"/>
+  </g>
+</svg>
+<text x="370" y="584" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="400" fill="#212121" text-anchor="start">og-image.png — ink bbox centred at (600, 315), width 720.</text>
+<text x="370" y="608" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="400" fill="#737373" text-anchor="start">All PNGs are rendered from the shipped SVG sources;</text>
+<text x="370" y="628" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="400" fill="#737373" text-anchor="start">sizes and centring are re-measured from the files by</text>
+<text x="370" y="648" font-family="ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" font-size="12" font-weight="400" fill="#737373" text-anchor="start">tools/verify_round2.py.</text>
+</svg>

@@ -331,7 +331,7 @@ class PayoutSystemTest extends TestCase
         $payout = app(PayoutRequestService::class)->create($creator->id, $workspaceId, 1000);
 
         $this->stateful()->actingAs($creator);
-        $response = $this->getJson('/api/v1/digital-products/payout-requests');
+        $response = $this->getJson('/api/v1/items/payout-requests');
         $response->assertOk()->assertJsonPath('data.0.id', $payout->id);
     }
 
@@ -344,7 +344,7 @@ class PayoutSystemTest extends TestCase
         [$creator, $workspaceId, $payout, $admin] = $this->seedPendingPayout();
 
         $this->stateful()->actingAs($admin);
-        $response = $this->getJson('/api/v1/admin/digital-products/payout-requests');
+        $response = $this->getJson('/api/v1/admin/items/payout-requests');
         $response->assertOk()->assertJsonPath('data.0.id', $payout->id);
     }
 
@@ -355,11 +355,11 @@ class PayoutSystemTest extends TestCase
 
         $this->stateful()->actingAs($admin);
         // Processing must happen before marking paid (state machine order).
-        $this->postJson("/api/v1/admin/digital-products/payout-requests/{$payout->id}/processing", [
+        $this->postJson("/api/v1/admin/items/payout-requests/{$payout->id}/processing", [
             'note' => 'Processing',
         ])->assertOk();
 
-        $response = $this->postJson("/api/v1/admin/digital-products/payout-requests/{$payout->id}/mark-paid", [
+        $response = $this->postJson("/api/v1/admin/items/payout-requests/{$payout->id}/mark-paid", [
             'transfer_reference' => 'CHAPA-REF-999',
         ])->assertOk()->assertJsonPath('data.status', 'paid');
         $this->assertSame('CHAPA-REF-999', $response->json('data.transfer_reference'));
@@ -375,8 +375,8 @@ class PayoutSystemTest extends TestCase
         $payout = app(PayoutRequestService::class)->create($creator->id, $workspaceId, 1000);
 
         $this->stateful()->actingAs($creator);
-        $this->getJson('/api/v1/admin/digital-products/payout-requests')->assertForbidden();
-        $this->postJson("/api/v1/admin/digital-products/payout-requests/{$payout->id}/mark-paid", [
+        $this->getJson('/api/v1/admin/items/payout-requests')->assertForbidden();
+        $this->postJson("/api/v1/admin/items/payout-requests/{$payout->id}/mark-paid", [
             'transfer_reference' => 'ref',
         ])->assertForbidden();
     }
@@ -394,7 +394,7 @@ class PayoutSystemTest extends TestCase
         $payout = app(PayoutRequestService::class)->create($creator->id, $workspaceId, 1000);
 
         $this->stateful()->actingAs($creator);
-        $this->postJson("/api/v1/admin/digital-products/payout-requests/{$payout->id}/mark-paid", [
+        $this->postJson("/api/v1/admin/items/payout-requests/{$payout->id}/mark-paid", [
             'transfer_reference' => 'ref',
         ])->assertForbidden();
     }
@@ -407,7 +407,7 @@ class PayoutSystemTest extends TestCase
         [$creator, $workspaceId, $payout, $admin] = $this->seedPendingPayout();
 
         $this->stateful()->actingAs($admin);
-        $this->postJson("/api/v1/admin/digital-products/payout-requests/{$payout->id}/mark-paid", [])
+        $this->postJson("/api/v1/admin/items/payout-requests/{$payout->id}/mark-paid", [])
             ->assertJsonValidationErrorFor('transfer_reference');
     }
 
@@ -420,7 +420,7 @@ class PayoutSystemTest extends TestCase
         $this->createPayoutMethod($creator, $workspaceId);
 
         $this->stateful()->actingAs($creator);
-        $this->postJson('/api/v1/digital-products/payout-requests', ['amount_cents' => 1000])
+        $this->postJson('/api/v1/items/payout-requests', ['amount_cents' => 1000])
             ->assertStatus(422);
     }
 
@@ -433,7 +433,7 @@ class PayoutSystemTest extends TestCase
         $this->createPayoutMethod($creator, $workspaceId);
 
         $this->stateful()->actingAs($creator);
-        $this->postJson('/api/v1/digital-products/payout-requests', ['amount_cents' => 1000])
+        $this->postJson('/api/v1/items/payout-requests', ['amount_cents' => 1000])
             ->assertCreated()
             ->assertJsonPath('data.status', 'requested');
     }
@@ -480,14 +480,14 @@ class PayoutSystemTest extends TestCase
         ]);
 
         $this->stateful()->actingAs($admin);
-        $this->postJson("/api/v1/admin/digital-products/payout-requests/{$payout->id}/processing", [
+        $this->postJson("/api/v1/admin/items/payout-requests/{$payout->id}/processing", [
             'note' => 'Processing',
         ])->assertOk();
 
         // Mock Chapa createTransfer to avoid external API call
         $this->mockChapaTransfer();
 
-        $response = $this->postJson("/api/v1/admin/digital-products/payout-requests/{$payout->id}/mark-paid", [
+        $response = $this->postJson("/api/v1/admin/items/payout-requests/{$payout->id}/mark-paid", [
             'auto_transfer' => true,
         ])->assertOk()->assertJsonPath('data.status', 'paid');
 
@@ -516,13 +516,13 @@ class PayoutSystemTest extends TestCase
         ]);
 
         $this->stateful()->actingAs($admin);
-        $this->postJson("/api/v1/admin/digital-products/payout-requests/{$payout->id}/processing", [
+        $this->postJson("/api/v1/admin/items/payout-requests/{$payout->id}/processing", [
             'note' => 'Processing',
         ])->assertOk();
 
         $this->mockChapaTransfer();
 
-        $response = $this->postJson("/api/v1/admin/digital-products/payout-requests/{$payout->id}/mark-paid", [
+        $response = $this->postJson("/api/v1/admin/items/payout-requests/{$payout->id}/mark-paid", [
             'auto_transfer' => true,
         ])->assertOk()->assertJsonPath('data.status', 'paid');
 
@@ -631,11 +631,11 @@ class PayoutSystemTest extends TestCase
         ]);
 
         $this->stateful()->actingAs($admin);
-        $this->postJson("/api/v1/admin/digital-products/payout-requests/{$payout->id}/processing", [
+        $this->postJson("/api/v1/admin/items/payout-requests/{$payout->id}/processing", [
             'note' => 'Processing',
         ])->assertOk();
 
-        $response = $this->postJson("/api/v1/admin/digital-products/payout-requests/{$payout->id}/mark-paid", [
+        $response = $this->postJson("/api/v1/admin/items/payout-requests/{$payout->id}/mark-paid", [
             'auto_transfer' => true,
         ])->assertOk()->assertJsonPath('data.status', 'paid');
 
@@ -652,7 +652,7 @@ class PayoutSystemTest extends TestCase
 
         // Do NOT process first, try to mark paid directly with auto_transfer
         $this->stateful()->actingAs($admin);
-        $this->postJson("/api/v1/admin/digital-products/payout-requests/{$payout->id}/mark-paid", [
+        $this->postJson("/api/v1/admin/items/payout-requests/{$payout->id}/mark-paid", [
             'auto_transfer' => true,
         ])->assertStatus(422); // State machine blocks requested -> paid
     }
@@ -922,13 +922,13 @@ public function testChapaServiceCanValidateBankCodes(): void
         ]);
 
         $this->stateful()->actingAs($admin);
-        $this->postJson("/api/v1/admin/digital-products/payout-requests/{$payout->id}/processing", [
+        $this->postJson("/api/v1/admin/items/payout-requests/{$payout->id}/processing", [
             'note' => 'Processing',
         ])->assertOk();
 
         $this->mockChapaTransfer();
 
-        $response = $this->postJson("/api/v1/admin/digital-products/payout-requests/{$payout->id}/mark-paid", [
+        $response = $this->postJson("/api/v1/admin/items/payout-requests/{$payout->id}/mark-paid", [
             'auto_transfer' => true,
         ]);
 
