@@ -18,6 +18,7 @@ import {
   CreditCardIcon,
   LandmarkIcon,
   CoinsIcon,
+  HelpCircleIcon,
 } from 'lucide-react';
 import {ComponentProps, ReactElement} from 'react';
 
@@ -38,6 +39,7 @@ export const AdminSidebarIcons: Record<
   '/admin/files': <FilesIcon />,
   '/admin/localizations': <GlobeIcon />,
   '/admin/logs': <ClipboardClockIcon />,
+  '/admin/help': <HelpCircleIcon />,
   '/admin/items': <StoreIcon />,
   '/admin/payment-activity': <CircleDollarSignIcon />,
   '/admin/kyc-verifications': <ShieldCheckIcon />,
