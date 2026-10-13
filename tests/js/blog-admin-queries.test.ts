@@ -1,13 +1,25 @@
-import {blogAdminQueries} from '@common/admin/blog/blog-admin-queries';
-import {queryFactoryHelpers} from '@common/http/queries-file-helpers';
-import {describe, test, expect, vi} from 'vitest';
+import {
+  blogAdminQueries,
+  createBlogArticleOptions,
+  updateBlogArticleOptions,
+  deleteBlogArticleOptions,
+  createBlogCategoryOptions,
+  updateBlogCategoryOptions,
+  deleteBlogCategoryOptions,
+} from '@common/admin/blog/blog-admin-queries';
+import {apiClient, queryClient} from '@common/http/query-client';
+import {describe, test, expect, vi, beforeEach} from 'vitest';
 
-vi.mock('@common/http/queries-file-helpers', () => ({
-  queryFactoryHelpers: {
+vi.mock('@common/http/query-client', () => ({
+  apiClient: {
     get: vi.fn(),
     post: vi.fn(),
     put: vi.fn(),
-    del: vi.fn(),
+    patch: vi.fn(),
+    delete: vi.fn(),
+  },
+  queryClient: {
+    invalidateQueries: vi.fn(),
   },
 }));
 
@@ -16,129 +28,147 @@ describe('blogAdminQueries', () => {
     vi.clearAllMocks();
   });
 
-  test('articlesList produces correct query key and fetches with params', () => {
+  test('articlesList produces correct query key and fetches with params', async () => {
     const queryOptions = blogAdminQueries.articlesList({page: 2, search: 'test'});
 
     expect(queryOptions.queryKey).toEqual(['blog', 'articles', {page: 2, search: 'test'}]);
 
-    const mockResponse = {pagination: {data: [], total: 0}};
-    (queryFactoryHelpers.get as ReturnType<typeof vi.fn>).mockResolvedValue(mockResponse);
+    const mockResponse = {data: [], total: 0};
+    (apiClient.get as ReturnType<typeof vi.fn>).mockResolvedValue({data: mockResponse});
 
-    return queryOptions.queryFn({pageParam: 2}).then(result => {
-      expect(queryFactoryHelpers.get).toHaveBeenCalledWith(
-        '/api/v1/blog/admin/articles',
-        expect.objectContaining({page: 2, search: 'test', perPage: 20}),
-      );
-      expect(result).toEqual({pagination: mockResponse});
-    });
+    const result = await queryOptions.queryFn();
+    expect(apiClient.get).toHaveBeenCalledWith(
+      '/api/v1/blog/admin/articles',
+      {params: {perPage: 20, page: 2, search: 'test'}},
+    );
+    expect(result).toEqual(mockResponse);
   });
 
-  test('article(id) produces correct query key and fetches', () => {
+  test('article(id) produces correct query key and fetches', async () => {
     const queryOptions = blogAdminQueries.article(42);
 
     expect(queryOptions.queryKey).toEqual(['blog', 'article', 42]);
 
     const mockArticle = {id: 42, title: 'Test'};
-    (queryFactoryHelpers.get as ReturnType<typeof vi.fn>).mockResolvedValue(mockArticle);
+    (apiClient.get as ReturnType<typeof vi.fn>).mockResolvedValue({data: {article: mockArticle}});
 
-    return queryOptions.queryFn().then(result => {
-      expect(queryFactoryHelpers.get).toHaveBeenCalledWith('/api/v1/blog/admin/articles/42');
-      expect(result).toEqual({article: mockArticle});
-    });
+    const result = await queryOptions.queryFn();
+    expect(apiClient.get).toHaveBeenCalledWith('/api/v1/blog/admin/articles/42');
+    expect(result).toEqual({article: mockArticle});
   });
 
-  test('createArticle posts to the correct endpoint', () => {
+  test('createArticle posts to the correct endpoint and invalidates', async () => {
+    const options = createBlogArticleOptions();
     const payload = {title: 'New', body: '<p>Body</p>', blog_category_id: 1};
     const mockResponse = {article: {id: 1, ...payload}};
-    (queryFactoryHelpers.post as ReturnType<typeof vi.fn>).mockResolvedValue(mockResponse);
+    (apiClient.post as ReturnType<typeof vi.fn>).mockResolvedValue({data: mockResponse});
 
-    return blogAdminQueries.createArticle(payload).then(result => {
-      expect(queryFactoryHelpers.post).toHaveBeenCalledWith(
-        '/api/v1/blog/admin/articles',
-        payload,
-      );
-      expect(result).toEqual(mockResponse);
+    const {mutationFn, onSuccess} = options;
+    const result = await mutationFn(payload);
+
+    expect(apiClient.post).toHaveBeenCalledWith('/api/v1/blog/admin/articles', payload);
+    expect(result).toEqual(mockResponse);
+    expect(typeof onSuccess).toBe('function');
+    onSuccess();
+    expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['blog'],
     });
   });
 
-  test('updateArticle puts to the correct endpoint', () => {
+  test('updateArticle puts to the correct endpoint', async () => {
+    const options = updateBlogArticleOptions(3);
     const payload = {title: 'Updated'};
     const mockResponse = {article: {id: 3, ...payload}};
-    (queryFactoryHelpers.put as ReturnType<typeof vi.fn>).mockResolvedValue(mockResponse);
+    (apiClient.put as ReturnType<typeof vi.fn>).mockResolvedValue({data: mockResponse});
 
-    return blogAdminQueries.updateArticle(3, payload).then(result => {
-      expect(queryFactoryHelpers.put).toHaveBeenCalledWith(
-        '/api/v1/blog/admin/articles/3',
-        payload,
-      );
-      expect(result).toEqual(mockResponse);
+    const {mutationFn, onSuccess} = options;
+    const result = await mutationFn(payload);
+
+    expect(apiClient.put).toHaveBeenCalledWith('/api/v1/blog/admin/articles/3', payload);
+    expect(result).toEqual(mockResponse);
+    onSuccess();
+    expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['blog'],
     });
   });
 
-  test('deleteArticle deletes at the correct endpoint', () => {
-    (queryFactoryHelpers.del as ReturnType<typeof vi.fn>).mockResolvedValue({});
+  test('deleteArticle deletes at the correct endpoint', async () => {
+    const options = deleteBlogArticleOptions();
+    (apiClient.delete as ReturnType<typeof vi.fn>).mockResolvedValue({data: {}});
 
-    return blogAdminQueries.deleteArticle(5).then(result => {
-      expect(queryFactoryHelpers.del).toHaveBeenCalledWith('/api/v1/blog/admin/articles/5');
-      expect(result).toEqual({});
+    const {mutationFn, onSuccess} = options;
+    const result = await mutationFn(5);
+
+    expect(apiClient.delete).toHaveBeenCalledWith('/api/v1/blog/admin/articles/5');
+    expect(result).toEqual({});
+    onSuccess();
+    expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['blog'],
     });
   });
 
-  test('categoriesList produces correct query key and fetches', () => {
+  test('categoriesList produces correct query key and fetches', async () => {
     const queryOptions = blogAdminQueries.categoriesList({search: 'guides'});
 
     expect(queryOptions.queryKey).toEqual(['blog', 'categories', {search: 'guides'}]);
 
     const mockResponse = {data: []};
-    (queryFactoryHelpers.get as ReturnType<typeof vi.fn>).mockResolvedValue(mockResponse);
+    (apiClient.get as ReturnType<typeof vi.fn>).mockResolvedValue({data: mockResponse});
 
-    return queryOptions.queryFn().then(result => {
-      expect(queryFactoryHelpers.get).toHaveBeenCalledWith(
-        '/api/v1/blog/admin/categories',
-        {search: 'guides', perPage: 50},
-      );
-      expect(result).toEqual(mockResponse);
-    });
+    const result = await queryOptions.queryFn();
+    expect(apiClient.get).toHaveBeenCalledWith(
+      '/api/v1/blog/admin/categories',
+      {params: {perPage: 50, search: 'guides'}},
+    );
+    expect(result).toEqual(mockResponse);
   });
 
-  test('createCategory posts to the correct endpoint', () => {
+  test('createCategory posts and invalidates', async () => {
+    const options = createBlogCategoryOptions();
     const payload = {name: 'New Category'};
     const mockResponse = {category: {id: 2, ...payload}};
-    (queryFactoryHelpers.post as ReturnType<typeof vi.fn>).mockResolvedValue(mockResponse);
+    (apiClient.post as ReturnType<typeof vi.fn>).mockResolvedValue({data: mockResponse});
 
-    return blogAdminQueries.createCategory(payload).then(result => {
-      expect(queryFactoryHelpers.post).toHaveBeenCalledWith(
-        '/api/v1/blog/admin/categories',
-        payload,
-      );
-      expect(result).toEqual(mockResponse);
+    const {mutationFn, onSuccess} = options;
+    const result = await mutationFn(payload);
+
+    expect(apiClient.post).toHaveBeenCalledWith('/api/v1/blog/admin/categories', payload);
+    expect(result).toEqual(mockResponse);
+    onSuccess();
+    expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['blog'],
     });
   });
 
-  test('updateCategory puts to the correct endpoint', () => {
+  test('updateCategory patches and invalidates', async () => {
+    const options = updateBlogCategoryOptions(4);
     const payload = {name: 'Updated'};
     const mockResponse = {category: {id: 4, ...payload}};
-    (queryFactoryHelpers.put as ReturnType<typeof vi.fn>).mockResolvedValue(mockResponse);
+    (apiClient.patch as ReturnType<typeof vi.fn>).mockResolvedValue({data: mockResponse});
 
-    return blogAdminQueries.updateCategory(4, payload).then(result => {
-      expect(queryFactoryHelpers.put).toHaveBeenCalledWith(
-        '/api/v1/blog/admin/categories/4',
-        payload,
-      );
-      expect(result).toEqual(mockResponse);
+    const {mutationFn, onSuccess} = options;
+    const result = await mutationFn(payload);
+
+    expect(apiClient.patch).toHaveBeenCalledWith('/api/v1/blog/admin/categories/4', payload);
+    expect(result).toEqual(mockResponse);
+    onSuccess();
+    expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['blog'],
     });
   });
 
-  test('deleteCategory deletes at the correct endpoint', () => {
-    (queryFactoryHelpers.del as ReturnType<typeof vi.fn>).mockResolvedValue({});
+  test('deleteCategory deletes and invalidates', async () => {
+    const options = deleteBlogCategoryOptions();
+    (apiClient.delete as ReturnType<typeof vi.fn>).mockResolvedValue({data: {}});
 
-    return blogAdminQueries.deleteCategory(6).then(result => {
-      expect(queryFactoryHelpers.del).toHaveBeenCalledWith('/api/v1/blog/admin/categories/6');
-      expect(result).toEqual({});
+    const {mutationFn, onSuccess} = options;
+    const result = await mutationFn(6);
+
+    expect(apiClient.delete).toHaveBeenCalledWith('/api/v1/blog/admin/categories/6');
+    expect(result).toEqual({});
+    onSuccess();
+    expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['blog'],
     });
-  });
-
-  test('invalidateKey is correct', () => {
-    expect(blogAdminQueries.invalidateKey).toEqual(['blog']);
   });
 });

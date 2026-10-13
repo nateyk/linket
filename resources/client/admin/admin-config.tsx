@@ -58,6 +58,7 @@ export const AppSettingsNavConfig: SettingsNavItem[] = [
   {label: message('Product'), to: 'product', position: 2},
   {label: message('Landing page'), to: 'landing-page', position: 2},
   {label: message('Help center'), to: 'help', position: 2},
+  {label: message('Blog'), to: 'blog', position: 2},
   {label: message('Ads'), to: 'ads', position: 20},
 ];
 

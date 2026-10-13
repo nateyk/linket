@@ -38,6 +38,21 @@ class BaseUrlGenerator implements AppUrlGenerator
         return $this->$method($model);
     }
 
+    public function blogIndex(): string
+    {
+        return url('blog');
+    }
+
+    public function blogCategory($category): string
+    {
+        return url("blog/categories/{$category->slug}");
+    }
+
+    public function blogArticle($article): string
+    {
+        return url("blog/{$article->slug}");
+    }
+
     public function __call(string $name, array $arguments): string
     {
         return url(Str::kebab($name));

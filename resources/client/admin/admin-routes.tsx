@@ -2,6 +2,7 @@ import {listStoresOptions} from '@app/dashboard/stores/stores-queries';
 import {sharedDashboardRoutes} from '@app/dashboard/dashboard-routes';
 import {adminCustomPagesRoutes} from '@common/admin/custom-pages/admin-custom-pages-routes';
 import {adminFileEntriesRoutes} from '@common/admin/file-entry/admin-file-entries-routes';
+import {adminBlogRoutes} from '@common/admin/blog/admin-blog-routes';
 import {listHelpCategoriesOptions} from '@common/admin/help/help-admin-queries';
 import {adminLogsRoutes} from '@common/admin/logging/admin-logs-routes';
 import {adminRolesRoutes} from '@common/admin/roles/admin-roles-routes';
@@ -96,6 +97,7 @@ export const adminRoutes: RouteObject[] = [
               );
             },
           },
+          ...adminBlogRoutes,
         ],
         {
           general: {

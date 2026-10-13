@@ -6,6 +6,7 @@ use App\Links\Controllers\LinkImageController;
 use App\QrCodes\Controllers\QrCodesController;
 use App\Registry\Controllers\RegistryController;
 use App\Storefront\Controllers\PublicDigitalProductPageController;
+use Common\Blog\Http\Controllers\BlogController;
 use Common\Core\Controllers\HomeController;
 use Common\Pages\CustomPageController;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -37,6 +38,14 @@ Route::get('{storeSlug}/products/{digitalProduct}', [PublicDigitalProductPageCon
 Route::get('{storeSlug}/products/{digitalProduct}/orders/{order}/success', [PublicDigitalProductPageController::class, 'success'])
     ->whereNumber('digitalProduct')
     ->name('digital-products.public.order.success');
+
+// BLOG (public)
+Route::name('blog.')->prefix('blog')->group(function () {
+    Route::get('/', [BlogController::class, 'index'])->name('index');
+    Route::get('categories', fn () => redirect()->route('blog.index'));
+    Route::get('categories/{slug}', [BlogController::class, 'category'])->name('category');
+    Route::get('{slug}', [BlogController::class, 'article'])->name('article');
+});
 
 // CATCH ALL ROUTES AND REDIRECT TO HOME
 Route::fallback(FallbackRouteController::class);

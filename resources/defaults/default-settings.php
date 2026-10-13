@@ -489,6 +489,13 @@ return [
                         'permissions' => ['settings.update'],
                     ],
                     [
+                        'label' => 'Blog',
+                        'id' => 'admin-blog',
+                        'action' => '/admin/settings/blog',
+                        'type' => 'route',
+                        'permissions' => ['settings.update'],
+                    ],
+                    [
                         'label' => 'Plans',
                         'id' => '7o42rt',
                         'action' => '/admin/plans',
