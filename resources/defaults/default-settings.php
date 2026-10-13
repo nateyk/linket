@@ -482,6 +482,13 @@ return [
                         'permissions' => ['settings.update'],
                     ],
                     [
+                        'label' => 'Help center',
+                        'id' => 'admin-help-center',
+                        'action' => '/admin/settings/help',
+                        'type' => 'route',
+                        'permissions' => ['settings.update'],
+                    ],
+                    [
                         'label' => 'Plans',
                         'id' => '7o42rt',
                         'action' => '/admin/plans',
