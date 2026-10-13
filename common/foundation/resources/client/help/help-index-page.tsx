@@ -4,13 +4,13 @@ import {Button} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
 import {Trans} from '@ui/i18n/trans';
 import {useSuspenseQuery} from '@tanstack/react-query';
-import {Link} from 'react-router';
+import {Link, useSearchParams} from 'react-router';
 import {Helmet} from '../seo/helmet';
 import {StaticPageTitle} from '../seo/static-page-title';
 import {HelpCategoryCard} from './components/help-category-card';
+import {HelpFaq} from './components/help-faq';
 import {HelpSearch} from './components/help-search';
 import {helpIndexOptions} from './help-queries';
-import {useSearchParams} from 'react-router';
 
 export function Component() {
   const [searchParams] = useSearchParams();
@@ -30,13 +30,16 @@ export function Component() {
       </Helmet>
       <Header />
       <div className="border-b bg-muted/50">
-        <div className="mx-auto w-full max-w-3xl px-6 py-12 text-center md:py-16">
-          <h1 className="mb-6 text-3xl font-bold md:text-4xl">
-            <Trans message="Hi, how can we help?" />
+        <div className="mx-auto w-full max-w-3xl px-6 py-16 text-center md:py-24">
+          <h1 className="mb-4 text-4xl font-bold tracking-tight text-balance md:text-5xl">
+            <Trans message="How can we help you today?" />
           </h1>
-          <HelpSearch defaultValue={search} autoFocus={!!search} />
+          <p className="mx-auto mb-8 max-w-2xl text-lg leading-relaxed text-muted-foreground text-balance">
+            <Trans message="Search for a topic or question, or browse our guides below" />
+          </p>
+          <HelpSearch defaultValue={search} autoFocus={!!search} size="lg" />
           {data.commonCategories.length > 0 && (
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
               <span className="text-sm text-muted-foreground">
                 <Trans message="Common topics:" />
               </span>
@@ -51,13 +54,21 @@ export function Component() {
           )}
         </div>
       </div>
-      <div className="mx-auto w-full max-w-6xl flex-1 px-6 py-10">
+
+      {!search && <HelpFaq categories={data.categories} />}
+
+      <div className="mx-auto w-full max-w-6xl flex-1 px-6 pb-14">
         {data.categories.length > 0 ? (
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
-            {data.categories.map(category => (
-              <HelpCategoryCard key={category.id} category={category} />
-            ))}
-          </div>
+          <>
+            <h2 className="mb-6 text-center text-2xl font-bold tracking-tight text-foreground md:text-3xl">
+              <Trans message="Browse by category" />
+            </h2>
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
+              {data.categories.map(category => (
+                <HelpCategoryCard key={category.id} category={category} />
+              ))}
+            </div>
+          </>
         ) : (
           <Card.Root className="p-10 text-center">
             <span className="text-muted-foreground">
