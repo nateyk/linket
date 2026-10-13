@@ -1,7 +1,11 @@
-import {Button} from '@shadcn/button/button';
-import {Input} from '@shadcn/forms/input/input';
-import {cn} from '@ui/utils/cn';
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from '@shadcn/forms/input-group/input-group';
 import {Trans} from '@ui/i18n/trans';
+import {cn} from '@ui/utils/cn';
 import {SearchIcon} from 'lucide-react';
 
 interface Props {
@@ -23,31 +27,26 @@ export function HelpSearch({
 
   return (
     <form action="/help" method="GET" className={className}>
-      <div className="relative">
-        <SearchIcon
-          className={cn(
-            'pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground',
-            isLarge ? 'size-5' : 'size-4',
-          )}
-        />
-        <Input
+      <InputGroup className={cn(isLarge && '[--radius:9999px] h-12')}>
+        <InputGroupInput
           name="search"
           defaultValue={defaultValue}
           autoFocus={autoFocus}
           placeholder={placeholder ?? 'Ask us a question...'}
-          className={cn(
-            'rounded-full bg-background pl-11 pr-24 shadow-sm',
-            isLarge ? 'h-14 text-base' : 'h-12 text-base',
-          )}
         />
-        <Button
-          type="submit"
-          size="sm"
-          className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full"
-        >
-          <Trans message="Search" />
-        </Button>
-      </div>
+        <InputGroupAddon>
+          <SearchIcon className="text-muted-foreground" />
+        </InputGroupAddon>
+        <InputGroupAddon align="inline-end">
+          <InputGroupButton
+            type="submit"
+            variant="ghost"
+            size={isLarge ? 'sm' : undefined}
+          >
+            <Trans message="Search" />
+          </InputGroupButton>
+        </InputGroupAddon>
+      </InputGroup>
     </form>
   );
 }
