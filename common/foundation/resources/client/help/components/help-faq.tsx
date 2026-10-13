@@ -52,7 +52,7 @@ export function HelpFaq({categories, limit = 6}: Props) {
   }
 
   return (
-    <section className="mx-auto w-full max-w-4xl px-6 py-14">
+    <section className="mx-auto w-full max-w-4xl px-6 pt-14">
       <div className="mx-auto mb-10 max-w-2xl text-center">
         <h2 className="text-2xl font-bold tracking-tight text-foreground md:text-3xl">
           <Trans message="Most frequently asked questions" />

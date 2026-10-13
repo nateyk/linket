@@ -1,9 +1,10 @@
 import {Footer} from '@common/ui/footer/footer';
 import {Header} from '@common/ui/landing-page/header/header';
 import {Button} from '@shadcn/button/button';
-import {Card} from '@shadcn/card/card';
+import {Empty} from '@shadcn/empty/empty';
 import {Trans} from '@ui/i18n/trans';
 import {useSuspenseQuery} from '@tanstack/react-query';
+import {SearchIcon} from 'lucide-react';
 import {Link, useSearchParams} from 'react-router';
 import {Helmet} from '../seo/helmet';
 import {StaticPageTitle} from '../seo/static-page-title';
@@ -57,7 +58,7 @@ export function Component() {
 
       {!search && <HelpFaq categories={data.categories} />}
 
-      <div className="mx-auto w-full max-w-6xl flex-1 px-6 pb-14">
+      <div className="mx-auto w-full max-w-6xl flex-1 px-6 pt-14 pb-14">
         {data.categories.length > 0 ? (
           <>
             <h2 className="mb-6 text-center text-2xl font-bold tracking-tight text-foreground md:text-3xl">
@@ -70,14 +71,22 @@ export function Component() {
             </div>
           </>
         ) : (
-          <Card.Root className="p-10 text-center">
-            <span className="text-muted-foreground">
-              <Trans message="No data found" />
-            </span>
-          </Card.Root>
+          <Empty.Root>
+            <Empty.Header>
+              <Empty.Media variant="icon">
+                <SearchIcon />
+              </Empty.Media>
+              <Empty.Title>
+                <Trans message="No help articles yet" />
+              </Empty.Title>
+              <Empty.Description>
+                <Trans message="We couldn't find any help content. Please check back soon." />
+              </Empty.Description>
+            </Empty.Header>
+          </Empty.Root>
         )}
       </div>
-      <Footer />
+      <Footer className="mx-auto w-full max-w-6xl px-6" />
     </div>
   );
 }

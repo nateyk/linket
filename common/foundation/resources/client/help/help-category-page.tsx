@@ -63,7 +63,7 @@ export function Component() {
           </Card.Root>
         )}
       </div>
-      <Footer />
+      <Footer className="mx-auto w-full max-w-6xl px-6" />
     </div>
   );
 }

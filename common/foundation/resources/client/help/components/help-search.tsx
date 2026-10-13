@@ -42,8 +42,9 @@ export function HelpSearch({
         <InputGroupAddon align="inline-end">
           <InputGroupButton
             type="submit"
-            variant="ghost"
+            variant="default"
             size={isLarge ? 'sm' : undefined}
+            className={cn(isLarge && 'rounded-full')}
           >
             <Trans message="Search" />
           </InputGroupButton>
