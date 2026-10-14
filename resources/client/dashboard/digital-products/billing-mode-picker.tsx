@@ -58,12 +58,18 @@ export function BillingModePicker({
               'border-primary/60 bg-primary/5 ring-primary/15',
           )}
         >
-          <RadioGroupItem value={option.id} className="sr-only" />
           <OptionRowContent
             icon={option.icon}
             title={option.title}
             description={option.description}
             checked={value === option.id}
+          />
+          {/* The real radio is the row's single visible indicator (no drawn
+              twin). Its own focus ring is suppressed — the card outline is
+              the one focus treatment (T1). */}
+          <RadioGroupItem
+            value={option.id}
+            className="focus-visible:ring-0 focus-visible:ring-offset-0"
           />
         </label>
       ))}

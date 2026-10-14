@@ -1,6 +1,6 @@
 import {Trans} from '@ui/i18n/trans';
 import {cn} from '@ui/utils/cn';
-import {CheckIcon, type LucideIcon} from 'lucide-react';
+import type {LucideIcon} from 'lucide-react';
 import type {ReactNode} from 'react';
 
 interface OptionRowContentProps {
@@ -10,11 +10,12 @@ interface OptionRowContentProps {
   hint?: ReactNode;
   /**
    * T7: selection is rendered from React state, not from a `peer-data-checked`
-   * CSS selector. The glyph used to be a *descendant* of the peer radio's
-   * sibling, so the peer variant never matched it and the check stayed at
-   * `opacity: 0` — the selected card read the same as an unselected one.
-   * Callers already know the selection (`value === option.id`), so they pass
-   * it in and the glyph/tints are painted here.
+   * CSS selector (the peer variant never matched a descendant of the sibling,
+   * so the old check stayed at `opacity: 0`). Callers already know the
+   * selection (`value === option.id`), so they pass it in and the icon tint
+   * is painted here. The card's selection indicator is the real
+   * RadioGroupItem the picker renders at the row's end — one visible
+   * control, no drawn twin.
    */
   checked?: boolean;
 }
@@ -56,22 +57,6 @@ export function OptionRowContent({
             </>
           )}
         </span>
-      </span>
-      {/* Selection indicator: filled primary circle + check on the selected
-          card, empty circle otherwise. aria-hidden because the radio's
-          accessible name comes from the label text, not from a decorative
-          glyph. */}
-      <span
-        className={cn(
-          'flex size-4.5 shrink-0 items-center justify-center rounded-full border bg-background transition-colors',
-          checked
-            ? 'border-primary bg-primary text-primary-foreground'
-            : 'border-border text-primary',
-        )}
-      >
-        {checked && (
-          <CheckIcon aria-hidden data-selection-glyph className="size-3" />
-        )}
       </span>
     </>
   );

@@ -29,16 +29,6 @@ import {
 import {ProductTypePicker, type ProductType} from './product-type-picker';
 import {Component as ProductTypeSelectionPage} from './product-type-selection-page';
 
-vi.mock('@app/dashboard/use-usage', () => ({
-  useUsage: () => ({
-    data: {
-      data: {
-        storage: {used: 12582912, total: 1073741824},
-      },
-    },
-  }),
-}));
-
 // T4: the edit-page heading test mounts the real DigitalProductForm, whose
 // product GET must resolve without a server (same approach as
 // digital-product-form-page.hydrate.dom.test.tsx). The wizard dialog never
@@ -306,13 +296,13 @@ describe('R09 picker strings are translatable', () => {
     const source = readSource('product-type-picker.tsx');
     for (const literal of [
       'Digital product',
-      'Any set of files to download or stream.',
+      'Files to download or stream.',
       'E-book',
-      'Offer a book or comic in PDF and EPUB formats.',
+      'A book or comic in PDF and EPUB.',
       'Audio',
-      'Sell music, podcasts, or any audio content.',
+      'Music, podcasts, or other audio.',
       'Course',
-      'Sell a structured curriculum with chapters, lessons, video and resources.',
+      'A curriculum with chapters, lessons, and video.',
       'Product type',
     ]) {
       expectExtractable(source, literal);
@@ -360,7 +350,7 @@ describe('R09 picker strings are translatable', () => {
   test('picker renders option copy through Trans', () => {
     render(<ProductTypePicker value={null} onValueChange={() => {}} />);
     expect(
-      screen.getByText('Offer a book or comic in PDF and EPUB formats.'),
+      screen.getByText('A book or comic in PDF and EPUB.'),
     ).not.toBeNull();
   });
 });
@@ -400,14 +390,7 @@ function renderTypePicker() {
       },
     },
   } as never);
-  const queryClient = new QueryClient({
-    defaultOptions: {queries: {retry: false}},
-  });
-  render(
-    <QueryClientProvider client={queryClient}>
-      <ProductTypePicker value={null} onValueChange={() => {}} />
-    </QueryClientProvider>,
-  );
+  render(<ProductTypePicker value={null} onValueChange={() => {}} />);
 }
 
 describe('R18 limits visible in picker', () => {
@@ -415,23 +398,23 @@ describe('R18 limits visible in picker', () => {
     useBootstrapDataStore.setState({data: null} as never);
   });
 
-  test('each non-course option shows its server-provided format hint', () => {
+  test('digital and audio options show their server-provided format hint', () => {
     renderTypePicker();
     expect(screen.getByText('PDF, EPUB, ZIP, or TXT')).not.toBeNull();
-    expect(screen.getByText('PDF or EPUB')).not.toBeNull();
     expect(screen.getByText('MP3, M4A, or WAV')).not.toBeNull();
   });
 
-  test('digital and ebook hints differ', () => {
+  test('e-book does not repeat its format hint — the description already states it', () => {
     renderTypePicker();
-    const digitalHint = screen.getByText('PDF, EPUB, ZIP, or TXT');
-    const ebookHint = screen.getByText('PDF or EPUB');
-    expect(digitalHint.textContent).not.toBe(ebookHint.textContent);
+    expect(screen.queryByText('PDF or EPUB')).toBeNull();
+    expect(
+      screen.getByText('A book or comic in PDF and EPUB.'),
+    ).not.toBeNull();
   });
 
-  test('storage usage line is shown from entitlement data', () => {
+  test('storage usage line is not part of the wizard picker', () => {
     renderTypePicker();
-    expect(screen.getByText(/storage/i)).not.toBeNull();
+    expect(screen.queryByText(/storage/i)).toBeNull();
   });
 });
 
@@ -686,27 +669,28 @@ describe('focus management', () => {
   });
 });
 
-// T7 (crit1-A P1): the check glyph was driven by `peer-data-checked` from a
-// *descendant* of the peer's sibling, so the selector never matched and the
-// icon stayed at `opacity: 0` — selection was carried by a 1px ring alone.
-// The glyph must now be rendered from React state and be visibly present on
-// the selected card only.
-const GLYPH_SELECTOR = '[data-selection-glyph]';
+// T7 (crit1-A P1): the card used to draw a fake check-circle at the row's end
+// while the *real* radio was `sr-only` — two indicators, one of them invisible
+// to everyone. The real RadioGroupItem is now the single visible indicator:
+// the selected card's radio carries Base UI's `data-checked` state and is
+// never sr-only, hidden, or transparent anywhere up the tree; unselected
+// radios carry `data-unchecked` instead.
+const RADIO_SELECTOR = '[role="radio"]';
 
-function expectVisibleSelectionGlyph(card: HTMLLabelElement) {
-  const glyph = card.querySelector(GLYPH_SELECTOR);
-  expect(glyph, 'selected card renders the selection glyph').not.toBeNull();
-  expect(glyph!.tagName.toLowerCase()).toBe('svg');
-  // Decorative: the radio's accessible name still comes from the label text.
-  expect(glyph!.getAttribute('aria-hidden')).toBe('true');
-  // Never screen-reader-only, hidden, or transparent — anywhere up the tree.
-  expect(glyph!.closest('.sr-only')).toBeNull();
-  expect(glyph!.closest('[hidden]')).toBeNull();
-  expect(glyph!.getAttribute('class') ?? '').not.toMatch(
+function expectVisibleCheckedRadio(card: HTMLLabelElement) {
+  const radio = card.querySelector(RADIO_SELECTOR);
+  expect(radio, 'selected card renders the real radio').not.toBeNull();
+  // Base UI paints the checked state from the data-checked attribute.
+  expect(radio!.hasAttribute('data-checked')).toBe(true);
+  // Visible: never screen-reader-only, hidden, or transparent — anywhere up
+  // the tree (this is the ghost the old sr-only radio was hiding behind).
+  expect(radio!.closest('.sr-only')).toBeNull();
+  expect(radio!.closest('[hidden]')).toBeNull();
+  expect(radio!.getAttribute('class') ?? '').not.toMatch(
     /opacity-0|invisible|\bhidden\b/,
   );
   for (
-    let el = glyph!.parentElement;
+    let el = radio!.parentElement;
     el && el !== card.parentElement;
     el = el.parentElement
   ) {
@@ -714,37 +698,48 @@ function expectVisibleSelectionGlyph(card: HTMLLabelElement) {
     expect(el.hasAttribute('hidden')).toBe(false);
     expect(el.getAttribute('aria-hidden')).not.toBe('true');
   }
-  // The glyph sits on a primary-filled circle, louder than the focus ring.
-  expect(glyph!.parentElement?.className).toContain('bg-primary');
+  // The checked radio paints the primary fill (data-checked:bg-primary).
+  expect(radio!.className).toContain('data-checked:bg-primary');
 }
 
-describe('T7 selection glyph is visible inside the selected card', () => {
-  test('type picker: selected card exposes a visible glyph, unselected cards do not', () => {
+describe('T7 the real radio is the visible selection indicator', () => {
+  test('type picker: selected card exposes a visible checked radio, unselected cards do not', () => {
     const {container} = render(
       <ProductTypePicker value="ebook" onValueChange={() => {}} />,
     );
     const labels = labelsIn(container);
-    expectVisibleSelectionGlyph(labels[1]);
+    expectVisibleCheckedRadio(labels[1]);
     for (const index of [0, 2, 3]) {
-      expect(labels[index].querySelector(GLYPH_SELECTOR)).toBeNull();
+      const radio = labels[index].querySelector(RADIO_SELECTOR);
+      expect(radio, 'unselected card still exposes its radio').not.toBeNull();
+      expect(radio!.hasAttribute('data-checked')).toBe(false);
+    }
+    // No decorative twin: exactly one radio per card, no leftover glyph.
+    for (const label of labels) {
+      expect(label.querySelectorAll(RADIO_SELECTOR)).toHaveLength(1);
+      expect(label.querySelector('[data-selection-glyph]')).toBeNull();
     }
   });
 
-  test('billing picker: selected card exposes a visible glyph, unselected card does not', () => {
+  test('billing picker: selected card exposes a visible checked radio, unselected card does not', () => {
     const {container} = render(
       <BillingModePicker value="paid" onValueChange={() => {}} />,
     );
     const labels = labelsIn(container);
-    expectVisibleSelectionGlyph(labels[1]);
-    expect(labels[0].querySelector(GLYPH_SELECTOR)).toBeNull();
+    expectVisibleCheckedRadio(labels[1]);
+    const unchecked = labels[0].querySelector(RADIO_SELECTOR);
+    expect(unchecked).not.toBeNull();
+    expect(unchecked!.hasAttribute('data-checked')).toBe(false);
   });
 
-  test('billing picker: no glyph before anything is selected', () => {
+  test('billing picker: no radio is checked before anything is selected', () => {
     const {container} = render(
       <BillingModePicker value={null} onValueChange={() => {}} />,
     );
     for (const label of labelsIn(container)) {
-      expect(label.querySelector(GLYPH_SELECTOR)).toBeNull();
+      const radio = label.querySelector(RADIO_SELECTOR);
+      expect(radio).not.toBeNull();
+      expect(radio!.hasAttribute('data-checked')).toBe(false);
     }
   });
 });
