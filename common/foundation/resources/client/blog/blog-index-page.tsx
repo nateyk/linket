@@ -1,23 +1,32 @@
 import {Footer} from '@common/ui/footer/footer';
 import {Header} from '@common/ui/landing-page/header/header';
+import {PaginationControls} from '@common/ui/navigation/pagination-controls';
+import {Button} from '@shadcn/button/button';
+import {Card} from '@shadcn/card/card';
 import {Empty} from '@shadcn/empty/empty';
 import {Trans} from '@ui/i18n/trans';
-import {MixedImage} from '@ui/images/mixed-image';
-import {PaginationControls} from '@common/ui/navigation/pagination-controls';
 import {useSuspenseQuery} from '@tanstack/react-query';
-import {ArrowRightIcon, ClockIcon, SearchIcon} from 'lucide-react';
+import {ArrowRightIcon, SearchIcon} from 'lucide-react';
 import {Link, useSearchParams} from 'react-router';
 import {Helmet} from '../seo/helmet';
 import {StaticPageTitle} from '../seo/static-page-title';
 import {BlogArticleCard} from './components/blog-article-card';
-import {BlogArticleListItem, blogIndexOptions, blogPaginationResponse} from './blog-queries';
+import {BlogFeaturedSidebarItem} from './components/blog-featured-sidebar-item';
+import {BlogHeroPost} from './components/blog-hero-post';
+import {blogIndexOptions, blogPaginationResponse} from './blog-queries';
 
 export function Component() {
   const [searchParams] = useSearchParams();
   const search = searchParams.get('search') ?? undefined;
   const page = Number(searchParams.get('page')) || undefined;
   const {data} = useSuspenseQuery(blogIndexOptions(search, page));
-  const [latest, ...rest] = data.data;
+
+  // Page 1 (no filters) gets the editorial layout: newest post as hero,
+  // the next few as a featured sidebar, the rest in the recent grid.
+  const showEditorial = !search && !page && data.data.length > 0;
+  const [heroPost, ...rest] = data.data;
+  const sidebarPosts = showEditorial ? rest.slice(0, 3) : [];
+  const recentPosts = showEditorial ? rest.slice(sidebarPosts.length) : data.data;
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -31,33 +40,61 @@ export function Component() {
         />
       </Helmet>
       <Header />
-      <div className="border-b bg-muted/50">
-        <div className="mx-auto w-full max-w-3xl px-6 py-14 text-center md:py-20">
-          <h1 className="mb-4 text-4xl font-bold tracking-tight text-balance md:text-5xl">
+      <div className="mx-auto w-full max-w-7xl flex-1 px-6 pt-10 md:pt-14">
+        <div className="mb-8 flex flex-col gap-1">
+          <h1 className="text-3xl font-bold tracking-tight text-balance md:text-4xl">
             <Trans message="Blog" />
           </h1>
-          <p className="mx-auto max-w-2xl text-lg leading-relaxed text-muted-foreground text-balance">
+          <p className="text-muted-foreground text-balance">
             <Trans message="Insights, guides, and product updates to help you get the most out of Linket" />
           </p>
         </div>
-      </div>
 
-      <div className="mx-auto w-full max-w-6xl flex-1 px-6 pt-14">
         {data.data.length > 0 ? (
           <div className="flex flex-col gap-14">
-            {!search && !page && latest && (
-              <FeaturedArticle article={latest} />
+            {showEditorial && heroPost && (
+              <section className="grid gap-6 lg:grid-cols-3">
+                <BlogHeroPost
+                  article={heroPost}
+                  className={sidebarPosts.length ? 'lg:col-span-2' : undefined}
+                />
+                {sidebarPosts.length > 0 && (
+                  <Card.Root className="h-fit">
+                    <Card.Header>
+                      <Card.Title>
+                        <Trans message="Featured posts" />
+                      </Card.Title>
+                    </Card.Header>
+                    <Card.Content className="flex flex-col gap-4">
+                      {sidebarPosts.map(article => (
+                        <BlogFeaturedSidebarItem
+                          key={article.id}
+                          article={article}
+                        />
+                      ))}
+                    </Card.Content>
+                  </Card.Root>
+                )}
+              </section>
             )}
 
-            {(search || page ? data.data.length > 0 : rest.length > 0) && (
+            {recentPosts.length > 0 && (
               <section>
-                {!search && !page && (
-                  <h2 className="mb-6 text-center text-2xl font-bold tracking-tight text-foreground md:text-3xl">
-                    <Trans message="Latest articles" />
+                <div className="mb-6 flex items-center justify-between gap-4">
+                  <h2 className="text-2xl font-bold tracking-tight">
+                    <Trans message="Recent Posts" />
                   </h2>
-                )}
+                  <Button
+                    render={<Link to="/blog" />}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <Trans message="All Posts" />
+                    <ArrowRightIcon />
+                  </Button>
+                </div>
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                  {(search || page ? data.data : rest).map(article => (
+                  {recentPosts.map(article => (
                     <BlogArticleCard key={article.id} article={article} />
                   ))}
                 </div>
@@ -91,58 +128,5 @@ export function Component() {
         padding="px-6 lg:px-8 pb-7 pt-24 md:pb-13.5"
       />
     </div>
-  );
-}
-
-function FeaturedArticle({article}: {article: BlogArticleListItem}) {
-  return (
-    <section>
-      <Link
-        to={`/blog/${article.slug}`}
-        className="group grid gap-6 md:grid-cols-2 md:items-center"
-      >
-        {article.cover_image ? (
-          <div className="relative aspect-video w-full overflow-hidden rounded-card bg-muted ring-1 ring-foreground/10">
-            <MixedImage
-              src={article.cover_image}
-              className="size-full object-cover"
-            />
-          </div>
-        ) : (
-          <div className="relative aspect-video w-full rounded-card bg-muted ring-1 ring-foreground/10" />
-        )}
-        <div className="flex flex-col">
-          {article.category && (
-            <span className="mb-3 text-sm font-medium text-primary">
-              {article.category.name}
-            </span>
-          )}
-          <h2 className="mb-3 text-2xl font-bold tracking-tight text-foreground group-hover:underline md:text-3xl">
-            {article.title}
-          </h2>
-          {article.excerpt && (
-            <p className="mb-4 text-muted-foreground">{article.excerpt}</p>
-          )}
-          <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-            {article.published_at && (
-              <span>
-                {new Date(article.published_at).toLocaleDateString()}
-              </span>
-            )}
-            <span className="flex items-center gap-1.5">
-              <ClockIcon className="size-4" />
-              <Trans
-                message=":count min read"
-                values={{count: article.reading_time_minutes}}
-              />
-            </span>
-          </div>
-          <div className="mt-5 inline-flex items-center gap-1 text-sm font-medium text-primary">
-            <Trans message="Read article" />
-            <ArrowRightIcon className="size-4 transition-transform group-hover:translate-x-0.5 motion-reduce:group-hover:translate-x-0" />
-          </div>
-        </div>
-      </Link>
-    </section>
   );
 }
