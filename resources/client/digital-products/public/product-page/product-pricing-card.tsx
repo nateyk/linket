@@ -180,13 +180,13 @@ export function ProductPricingCard({
             )
           )}
           <IncludesItem icon={ShoppingBagIcon}>
-            <Trans message="Access your purchase anytime from My Orders" />
+            <Trans message="Access anytime from My Orders" />
           </IncludesItem>
           <IncludesItem icon={TimerIcon}>
             <Trans message="One-time payment, no subscription" />
           </IncludesItem>
           <IncludesItem icon={ReceiptIcon}>
-            <Trans message="We email your receipt and protected download links as soon as payment is confirmed." />
+            <Trans message="Receipt and download links by email" />
           </IncludesItem>
         </ul>
 

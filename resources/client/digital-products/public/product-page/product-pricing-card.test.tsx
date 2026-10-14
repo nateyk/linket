@@ -34,10 +34,9 @@ describe('product pricing card', () => {
   test('keeps the risk reversal to facts this repo can prove', () => {
     const source = readSource();
 
-    // Receipt + download links, same string the payment dialog ships.
-    expect(source).toContain(
-      'We email your receipt and protected download links as soon as payment is confirmed.',
-    );
+    // Compressed facts for the scannable card list; the checkout dialog
+    // still carries the full "as soon as payment is confirmed" sentence.
+    expect(source).toContain('Receipt and download links by email');
     expect(source).toContain('One-time payment, no subscription');
     // No refund window, money-back guarantee or support promise exists here.
     expect(source).not.toMatch(/refund|money-back|money back|guarantee/i);
