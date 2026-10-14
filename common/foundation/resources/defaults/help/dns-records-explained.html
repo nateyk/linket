@@ -1,0 +1,11 @@
+<p>DNS sounds intimidating, but the records involved in connecting a domain are few and simple. Here is what each one does.</p>
+<h2>CNAME record</h2>
+<p>A CNAME maps one domain name to another. Yours points your subdomain (like <code>go.yourbrand.com</code>) at our servers, so every short link lives on your brand's domain while we handle the redirects.</p>
+<h2>A record</h2>
+<p>An A record points a hostname directly at an IPv4 address. You only need one if your registrar asks for it instead of a CNAME — we show the correct value in that case.</p>
+<h2>TXT record</h2>
+<p>A TXT record holds arbitrary text — we use it to confirm you control the domain. It has no effect on visitors; it exists purely for verification.</p>
+<h2>Nameservers vs records</h2>
+<p>Nameservers decide <em>where</em> your DNS is managed; records decide <em>what</em> each hostname resolves to. If you have ever switched registrars, you may have moved nameservers — make sure you add these records wherever your nameservers currently point.</p>
+<h2>Propagation</h2>
+<p>After any change, resolvers around the world need time to pick it up — usually minutes, occasionally up to 24 hours. This is normal and not a sign that something is wrong.</p>

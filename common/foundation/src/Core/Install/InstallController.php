@@ -127,6 +127,7 @@ class InstallController
             (new InsertDefaultSettings())->execute();
             (new CreateDefaultMenus())->execute();
             (new CreateDefaultCustomPages())->execute();
+            (new CreateDefaultHelpCenter())->execute();
 
             // create admin account and login
             $credentials = session('adminCredentials');

@@ -1,0 +1,11 @@
+<p>If your domain has been sitting on "pending" or "unverified" for a while, one of the causes below is almost certainly the reason.</p>
+<h2>The records are wrong</h2>
+<p>Compare what is in your registrar's DNS panel with the values we gave you, character by character. The most common mistakes are a trailing dot, a typo in the subdomain, or pasting the verification value into the CNAME field.</p>
+<h2>Records point at the wrong place</h2>
+<p>The CNAME must point at the exact host we provided. If you already had a CNAME on that subdomain — for example from a previous service — remove it or the new one will never take effect.</p>
+<h2>DNS hasn't propagated yet</h2>
+<p>New records can take up to 24 hours to be visible everywhere. If you added the records less than a day ago, wait and try again.</p>
+<h2>You are editing the wrong DNS</h2>
+<p>Records must be added where your nameservers point. If your domain uses a service like Cloudflare for DNS, adding records at the registrar will have no effect.</p>
+<h2>Still stuck?</h2>
+<p>Open a support ticket with a screenshot of your DNS panel and the domain name — we can usually pinpoint the mismatch from there.</p>

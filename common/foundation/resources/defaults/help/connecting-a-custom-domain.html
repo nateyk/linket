@@ -1,0 +1,18 @@
+<p>Connecting a custom domain takes a few minutes of setup plus a short wait for DNS to propagate. Here is the whole process end to end.</p>
+<h2>1. Add the domain</h2>
+<p>In <strong>Settings → Custom domains</strong>, click <strong>Add domain</strong> and enter the domain (or subdomain) you want to use, for example <code>go.yourbrand.com</code>.</p>
+<h2>2. Point your DNS</h2>
+<p>Your registrar gets two values from us:</p>
+<ul>
+  <li>A <strong>CNAME record</strong> pointing your subdomain at our servers.</li>
+  <li>A <strong>TXT record</strong> used to verify that you own the domain.</li>
+</ul>
+<p>Every registrar labels these slightly differently, but the values we show you are always the same — copy them exactly.</p>
+<h2>3. Verify</h2>
+<p>Once the records are in place, click <strong>Verify</strong>. Most domains verify within minutes; some registrars take up to an hour.</p>
+<h2>Troubleshooting</h2>
+<ul>
+  <li>Records not picked up yet? DNS changes can take up to 24 hours to propagate worldwide.</li>
+  <li>Double-check there is no conflicting CNAME on the same subdomain.</li>
+  <li>See <a href="/help/articles/dns-records-explained">DNS records explained</a> for a deeper dive.</li>
+</ul>
