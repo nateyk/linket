@@ -79,7 +79,7 @@ export function Component() {
         </div>
       </div>
       <Footer
-        className="mx-auto max-w-7xl"
+        className="mx-auto w-full max-w-7xl"
         padding="px-6 lg:px-8 pb-7 pt-24 md:pb-13.5"
       />
     </div>
