@@ -4,7 +4,7 @@ import {
 } from '@shadcn/forms/radio-group/radio-group';
 import {useTrans} from '@ui/i18n/use-trans';
 import {cn} from '@ui/utils/cn';
-import {GiftIcon, TagIcon, type LucideIcon} from 'lucide-react';
+import {GiftIcon, CreditCardIcon, type LucideIcon} from 'lucide-react';
 import type {BillingMode} from './product-create-flow';
 import {OptionRowContent} from './option-row';
 
@@ -35,7 +35,7 @@ export function BillingModePicker({
     },
     {
       id: 'paid',
-      icon: TagIcon,
+      icon: CreditCardIcon,
       title: trans({message: 'Paid'}),
       description: trans({message: 'Charge a one-time price in ETB.'}),
     },
@@ -53,7 +53,7 @@ export function BillingModePicker({
         <label
           key={option.id}
           className={cn(
-            'flex h-auto min-h-[76px] w-full shrink-0 cursor-pointer items-center justify-start gap-3 rounded-card-sm border border-border bg-card px-3.5 py-3 text-start whitespace-normal shadow-xs ring-1 ring-transparent outline-none hover:border-foreground/15 hover:bg-muted/30 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-solid has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-foreground',
+            'flex w-full shrink-0 cursor-pointer items-center justify-start gap-3 rounded-card-sm border border-border bg-card px-3 py-2.5 text-start whitespace-normal shadow-xs ring-1 ring-transparent outline-none hover:border-foreground/15 hover:bg-muted/30 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-solid has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-foreground',
             value === option.id &&
               'border-primary/60 bg-primary/5 ring-primary/15',
           )}

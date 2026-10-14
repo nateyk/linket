@@ -74,7 +74,11 @@ export function CreateProductDialog({
               <Trans message={meta.description} />
             </Dialog.Description>
           </Dialog.Header>
-          <div className="flex flex-col gap-4 pt-2">
+          {/* Dialog.Body gives the step area `min-h-0 flex-1 overflow-y-auto`,
+              so on short viewports the option cards scroll INSIDE the panel
+              instead of pushing the storage line out below the dialog edge
+              (it used to render outside the popover, clipped by the viewport). */}
+          <Dialog.Body className="flex flex-col gap-4 pt-2">
             <WizardStepDots wizard={wizard} />
             <div
               key={wizard.step}
@@ -83,7 +87,7 @@ export function CreateProductDialog({
             >
               <WizardStepBody wizard={wizard} />
             </div>
-          </div>
+          </Dialog.Body>
           {/* P2 (crit1-B nested-cards): `variant="muted"` painted a
               `border-t bg-muted/50` strip inside the dialog panel — a card
               inside a card (DESIGN.md "Don't nest a card inside a card").

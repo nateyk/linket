@@ -151,8 +151,10 @@ export function focusWizardStep(node: HTMLDivElement | null) {
  * P2 (landmark hygiene): a progressbar is not navigation, so the visible bar
  * renders OUTSIDE the nav; the named nav keeps only the sr-only ordered list
  * with each step's accessible name + aria-current (the R07 guarantees).
- * `completed` is the 1-based step the user is on, so the shared copy shows
- * truthful position ("Step 2 of 3", never "2 of 3 complete").
+ * `completed` is the number of PASSED steps (0-based index), so the bar
+ * fill never claims the active step is done — before this, step 2 of 2
+ * (the billing step with "Free" selected) rendered a full bar, and picking
+ * "Paid" dropped it to 2/3 when the step count grew.
  */
 export function WizardStepDots({wizard}: {wizard: ProductCreateWizard}) {
   const current = wizard.steps.indexOf(wizard.step);
@@ -160,7 +162,7 @@ export function WizardStepDots({wizard}: {wizard: ProductCreateWizard}) {
   return (
     <>
       <ProductFormProgress
-        completed={current + 1}
+        completed={current}
         total={wizard.steps.length}
         messageVariant="steps"
       />

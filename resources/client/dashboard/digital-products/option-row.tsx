@@ -30,24 +30,32 @@ export function OptionRowContent({
     <>
       <span
         className={cn(
-          'flex size-10 shrink-0 items-center justify-center rounded-card-sm bg-muted text-muted-foreground ring-1 ring-foreground/5',
+          'flex size-9 shrink-0 items-center justify-center rounded-card-sm bg-muted text-muted-foreground ring-1 ring-foreground/5',
           checked && 'bg-primary/10 text-primary ring-primary/15',
         )}
       >
-        <Icon />
+        <Icon aria-hidden className="size-4.5" />
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="font-semibold text-foreground">
+        <span className="text-sm leading-tight font-semibold text-foreground">
           <Trans message={title} />
         </span>
-        <span className="text-xs leading-relaxed font-normal text-muted-foreground">
-          <Trans message={description} />
-        </span>
-        {hint && (
-          <span className="text-xs leading-relaxed font-normal text-muted-foreground">
-            {hint}
+        {/* Description and format hint share one compact line: the hint is
+            still its own element (a11y tests + screen readers read it as a
+            separate token), but the card no longer needs a third row. */}
+        <span className="flex flex-wrap items-center gap-x-1.5 text-xs leading-snug font-normal text-muted-foreground">
+          <span>
+            <Trans message={description} />
           </span>
-        )}
+          {hint && (
+            <>
+              <span aria-hidden="true" className="text-foreground/30">
+                •
+              </span>
+              <span>{hint}</span>
+            </>
+          )}
+        </span>
       </span>
       {/* Selection indicator: filled primary circle + check on the selected
           card, empty circle otherwise. aria-hidden because the radio's
@@ -55,7 +63,7 @@ export function OptionRowContent({
           glyph. */}
       <span
         className={cn(
-          'flex size-5 shrink-0 items-center justify-center rounded-full border bg-background transition-colors',
+          'flex size-4.5 shrink-0 items-center justify-center rounded-full border bg-background transition-colors',
           checked
             ? 'border-primary bg-primary text-primary-foreground'
             : 'border-border text-primary',

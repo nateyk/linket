@@ -15,6 +15,11 @@ export function ProductFormProgress({
   total,
   messageVariant = 'sections',
 }: {
+  /**
+   * How much is actually done: completed sections (edit/course pages) or
+   * fully-passed wizard steps (the create wizard). It drives the bar fill,
+   * so an unfinished current step never counts toward it.
+   */
   completed: number;
   total: number;
   /**
@@ -34,13 +39,14 @@ export function ProductFormProgress({
         </p>
         <p className="mt-1 text-sm text-muted-foreground">
           {messageVariant === 'steps' ? (
-            // P2 (T5 review): the wizard's ratio used to read ":completed of
-            // :total steps complete" while `completed` was the ACTIVE step —
-            // "3 of 3 complete" before pressing Continue was a false claim.
-            // Position wording is truthful AND keeps position visible.
+            // `completed` counts passed steps (0-based), so the reader's
+            // POSITION is completed + 1: "Step 1 of 2" with an empty bar is
+            // honest — nothing is finished yet — and the bar never snaps to
+            // 100% (or jumps when the billing choice changes the step count)
+            // before the creator actually continues.
             <Trans
               message="Step :current of :total"
-              values={{current: completed, total}}
+              values={{current: completed + 1, total}}
             />
           ) : (
             <Trans
