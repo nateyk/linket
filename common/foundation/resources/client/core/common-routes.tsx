@@ -1,5 +1,6 @@
 import {NotFoundPage} from '@common/ui/not-found-page/not-found-page';
 import {RouteObject} from 'react-router';
+import {blogArticleOptions, blogCategoryOptions, blogIndexOptions} from '@common/blog/blog-queries';
 import {helpArticleOptions, helpCategoryOptions, helpIndexOptions} from '@common/help/help-queries';
 import {queryClient} from '@common/http/query-client';
 import {searchParamsFromUrl} from '@ui/utils/urls/search-params-from-url';
@@ -28,6 +29,35 @@ export const commonRoutes: RouteObject[] = [
     lazy: () => import('@common/help/help-article-page'),
     loader: ({params}) =>
       queryClient.ensureQueryData(helpArticleOptions(params.slug!)),
+  },
+  {
+    path: 'blog',
+    lazy: () => import('@common/blog/blog-index-page'),
+    loader: ({request}) => {
+      const params = searchParamsFromUrl(request.url);
+      return queryClient.ensureQueryData(
+        blogIndexOptions(
+          params.search as string | undefined,
+          params.page ? Number(params.page) : undefined,
+        ),
+      );
+    },
+  },
+  {
+    path: 'blog/categories/:slug',
+    lazy: () => import('@common/blog/blog-category-page'),
+    loader: ({params, request}) => {
+      const page = searchParamsFromUrl(request.url).page;
+      return queryClient.ensureQueryData(
+        blogCategoryOptions(params.slug!, page ? Number(page) : undefined),
+      );
+    },
+  },
+  {
+    path: 'blog/:slug',
+    lazy: () => import('@common/blog/blog-article-page'),
+    loader: ({params}) =>
+      queryClient.ensureQueryData(blogArticleOptions(params.slug!)),
   },
   {
     path: 'pages/:pageSlug',

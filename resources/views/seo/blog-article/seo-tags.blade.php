@@ -59,5 +59,5 @@
     ],
     'wordCount' => $article['reading_time_minutes'] ? $article['reading_time_minutes'] * 200 : null,
     'commentCount' => $article['comments_count'] ?? 0,
-], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}
+]), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}
 </script>
