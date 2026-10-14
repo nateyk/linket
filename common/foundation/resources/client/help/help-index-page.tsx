@@ -58,7 +58,7 @@ export function Component() {
 
       {!search && <HelpFaq categories={data.categories} />}
 
-      <div className="mx-auto w-full max-w-6xl flex-1 px-6 pt-14 pb-14">
+      <div className="mx-auto w-full max-w-6xl flex-1 px-6 pt-14">
         {data.categories.length > 0 ? (
           <>
             <h2 className="mb-6 text-center text-2xl font-bold tracking-tight text-foreground md:text-3xl">
@@ -86,7 +86,10 @@ export function Component() {
           </Empty.Root>
         )}
       </div>
-      <Footer className="mx-auto w-full max-w-6xl px-6" />
+      <Footer
+        className="mx-auto max-w-7xl"
+        padding="px-6 lg:px-8 pb-7 pt-24 md:pb-13.5"
+      />
     </div>
   );
 }

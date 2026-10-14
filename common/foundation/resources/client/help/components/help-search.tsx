@@ -44,7 +44,6 @@ export function HelpSearch({
             type="submit"
             variant="default"
             size={isLarge ? 'sm' : undefined}
-            className={cn(isLarge && 'rounded-full')}
           >
             <Trans message="Search" />
           </InputGroupButton>

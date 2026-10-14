@@ -41,7 +41,7 @@ export function Component() {
           <HelpSearch defaultValue={search} className="w-full md:w-80" />
         </div>
       </div>
-      <div className="mx-auto w-full max-w-6xl flex-1 px-6 py-10">
+      <div className="mx-auto w-full max-w-6xl flex-1 px-6 pt-10">
         {data.articles.length > 0 ? (
           <div className="flex flex-col gap-2">
             {data.articles.map(article => (
@@ -63,7 +63,10 @@ export function Component() {
           </Card.Root>
         )}
       </div>
-      <Footer className="mx-auto w-full max-w-6xl px-6" />
+      <Footer
+        className="mx-auto max-w-7xl"
+        padding="px-6 lg:px-8 pb-7 pt-24 md:pb-13.5"
+      />
     </div>
   );
 }

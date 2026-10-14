@@ -37,7 +37,7 @@ export function Component() {
         }}
       />
       <Header />
-      <div className="mx-auto w-full max-w-6xl flex-1 px-6 py-10">
+      <div className="mx-auto w-full max-w-6xl flex-1 px-6 pt-10">
         <div className="grid gap-8 xl:grid-cols-[1fr_320px]">
           <div>
             <nav className="mb-3 text-sm text-muted-foreground">
@@ -78,7 +78,10 @@ export function Component() {
           </aside>
         </div>
       </div>
-      <Footer className="mx-auto w-full max-w-6xl px-6" />
+      <Footer
+        className="mx-auto max-w-7xl"
+        padding="px-6 lg:px-8 pb-7 pt-24 md:pb-13.5"
+      />
     </div>
   );
 }
