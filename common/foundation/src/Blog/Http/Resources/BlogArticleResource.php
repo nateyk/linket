@@ -9,7 +9,9 @@ class BlogArticleResource extends JsonResource
     public function toArray($request): array
     {
         $isAdminRoute = $request->routeIs('blog.admin.articles.*');
-        $isArticleRoute = $request->routeIs('blog.article');
+        // Single-article responses: the HTML page (blog.article) and the JSON
+        // API (blog.api.article) both expose the body.
+        $isArticleRoute = $request->routeIs('blog.article', 'blog.api.article');
         
         return [
             'id' => $this->id,

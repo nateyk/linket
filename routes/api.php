@@ -69,7 +69,9 @@ Route::group(['prefix' => 'v1'], function() {
     });
 
     // BLOG (public API)
-    Route::name('blog.')->prefix('blog')->group(function () {
+    // Named `blog.api.*` because routes/web.php already owns `blog.*` for the
+    // public HTML pages — duplicate route names break `route:cache`.
+    Route::name('blog.api.')->prefix('blog')->group(function () {
         Route::get('/', [BlogController::class, 'index'])->name('index');
         Route::get('categories/{slug}', [BlogController::class, 'category'])->name('category');
         Route::get('{slug}', [BlogController::class, 'article'])->name('article');
