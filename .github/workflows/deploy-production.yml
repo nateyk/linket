@@ -327,17 +327,23 @@ jobs:
           ls -lh artifact/ 2>&1 | head -n 50
           echo "--- RELEASE_SHA ---"; cat artifact/RELEASE_SHA 2>&1 | head -1 || true
           echo "--- RELEASE_ID ---"; cat artifact/RELEASE_ID 2>&1 | head -1 || true
-          echo "--- sha256 ---"; cat "artifact/${{ steps.eff.outputs.artifact_name }}.tar.gz.sha256" 2>&1 | head -1 || true
+          # The release filename embeds a build timestamp, so it cannot be
+          # derived here — require exactly one tarball instead. A glob both
+          # breaks `test -f` and can silently pick a stale build.
+          mapfile -t TARBALLS < <(find artifact -maxdepth 1 -type f -name '*.tar.gz' | sort)
+          if [[ ${#TARBALLS[@]} -ne 1 ]]; then
+            echo "expected exactly 1 release tarball in artifact/, found ${#TARBALLS[@]}: ${TARBALLS[*]:-none}" >&2
+            exit 1
+          fi
+          ARTIFACT_FILE="${TARBALLS[0]}"
+          echo "ARTIFACT_FILE=${ARTIFACT_FILE}" >> "$GITHUB_ENV"
+          echo "--- sha256 ---"; cat "${ARTIFACT_FILE%.tar.gz}.sha256" 2>&1 | head -1 || true
           # Verify artifact SHA matches resolved SHA (exact tested commit)
           RESOLVED_SHA="${{ steps.eff.outputs.sha }}"
           FILE_SHA="$(tr -d '\r\n ' < artifact/RELEASE_SHA 2>&1 | head -c 40 || true)"
           if [[ -n "$RESOLVED_SHA" && -n "$FILE_SHA" && "$RESOLVED_SHA" != "$FILE_SHA" ]]; then
             echo "Artifact SHA mismatch: resolved $RESOLVED_SHA vs file $FILE_SHA" >&2; exit 1
           fi
-          # Select by exact name — a glob breaks (and can silently ship the wrong
-          # build) whenever anything else matching *.tar.gz is in artifact/.
-          ARTIFACT_FILE="artifact/${{ steps.eff.outputs.artifact_name }}.tar.gz"
-          test -f "$ARTIFACT_FILE" || { echo "expected tarball missing: $ARTIFACT_FILE"; exit 1; }
 
       - name: Provision SSH (known_hosts pinned, single multiplexed connection)
         run: |
@@ -391,8 +397,10 @@ jobs:
       - name: Copy artifact to server
         run: |
           set -euo pipefail
-          ARTIFACT_FILE="artifact/${{ steps.eff.outputs.artifact_name }}.tar.gz"
-          test -f "$ARTIFACT_FILE" || { echo "expected tarball missing: $ARTIFACT_FILE"; exit 1; }
+          ARTIFACT_FILE="${ARTIFACT_FILE:-}"
+          if [[ -z "$ARTIFACT_FILE" || ! -f "$ARTIFACT_FILE" ]]; then
+            echo "release tarball not resolved (ARTIFACT_FILE='${ARTIFACT_FILE}')" >&2; exit 1
+          fi
           RELEASE_ID="${{ steps.eff.outputs.release_id }}"
           SHA="${{ steps.eff.outputs.sha }}"
           echo "Uploading $(basename "$ARTIFACT_FILE") as releases/${RELEASE_ID}.tar.gz for SHA $SHA"
