@@ -91,10 +91,10 @@ jobs:
       - name: Ensure a valid APP_KEY
         run: php artisan key:generate --force
 
-      - name: Setup Node 20
+      - name: Setup Node 24
         uses: actions/setup-node@v4
         with:
-          node-version: "20.19.0"
+          node-version: "24.19.0"
           cache: npm
 
       - name: Setup npm 11

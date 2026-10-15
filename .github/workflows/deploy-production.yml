@@ -114,10 +114,10 @@ jobs:
           coverage: none
           tools: composer:v2
 
-      - name: Setup Node 20
+      - name: Setup Node 24
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24.19.0"
           cache: npm
 
       - name: Composer install (production)
@@ -266,11 +266,11 @@ jobs:
           coverage: none
           tools: composer:v2
 
-      - name: Setup Node 20 (fallback)
+      - name: Setup Node 24 (fallback)
         if: always() && needs.resolve.outputs.source == 'ci_artifact'
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "24.19.0"
           cache: npm
           cache-dependency-path: build-fallback/package-lock.json
 
