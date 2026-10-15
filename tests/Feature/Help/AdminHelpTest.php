@@ -18,11 +18,15 @@ class AdminHelpTest extends TestCase
     {
         $this->actingAs($this->createAdmin());
 
+        // Unique per run so the slug assertion holds even when the help center
+        // already has seeded categories.
+        $name = 'Getting Started '.Str::random(8);
+
         $response = $this->stateful()->postJson('/api/v1/admin/help/categories', [
-            'name' => 'Getting Started',
+            'name' => $name,
         ]);
 
-        $response->assertCreated()->assertJsonPath('data.slug', 'getting-started');
+        $response->assertCreated()->assertJsonPath('data.slug', Str::slug($name));
     }
 
     public function test_admin_can_sort_categories(): void

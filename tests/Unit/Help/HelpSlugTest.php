@@ -5,6 +5,7 @@ namespace Tests\Unit\Help;
 use Common\Help\Models\HelpArticle;
 use Common\Help\Models\HelpCategory;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class HelpSlugTest extends TestCase
@@ -13,10 +14,14 @@ class HelpSlugTest extends TestCase
 
     public function test_duplicate_names_produce_unique_slugs(): void
     {
-        $a = HelpCategory::create(['name' => 'Getting Started']);
-        $b = HelpCategory::create(['name' => 'Getting Started']);
+        // The name is unique per run so the slug assertion holds even when the
+        // help center already has seeded categories.
+        $name = 'Getting Started '.Str::random(8);
 
-        $this->assertSame('getting-started', $a->slug);
+        $a = HelpCategory::create(['name' => $name]);
+        $b = HelpCategory::create(['name' => $name]);
+
+        $this->assertSame(Str::slug($name), $a->slug);
         $this->assertNotEquals($a->slug, $b->slug);
     }
 
@@ -43,10 +48,11 @@ class HelpSlugTest extends TestCase
 
     public function test_categories_order_by_sort_id(): void
     {
-        $second = HelpCategory::create(['name' => 'Second', 'sort_id' => 2]);
-        $first = HelpCategory::create(['name' => 'First', 'sort_id' => 1]);
+        $second = HelpCategory::create(['name' => 'Second '.Str::random(8), 'sort_id' => 2]);
+        $first = HelpCategory::create(['name' => 'First '.Str::random(8), 'sort_id' => 1]);
 
-        $ordered = HelpCategory::all();
+        // Scoped to the two rows under test so seeded categories cannot skew it.
+        $ordered = HelpCategory::whereIn('id', [$first->id, $second->id])->get();
 
         $this->assertTrue($ordered->first()->is($first));
         $this->assertTrue($ordered->last()->is($second));
