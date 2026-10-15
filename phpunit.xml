@@ -19,8 +19,12 @@
     <env name="CACHE_STORE" value="array" force="true"/>
     <env name="SESSION_DRIVER" value="array"/>
     <env name="QUEUE_DRIVER" value="sync"/>
-    <env name="DB_DATABASE" value="db_test" force="true"/>
-    <env name="DB_HOST" value="db" force="true"/>
+    <!--
+      DB_* is intentionally absent. PHPUnit writes <env> into putenv/$_ENV before
+      Laravel boots, and phpdotenv will not overwrite externally defined values,
+      so any DB_* here silently overrides .env/.env.testing — including CI. The
+      test database comes from the environment: .env.testing locally, .env on CI.
+    -->
   </php>
   <source>
     <include>
