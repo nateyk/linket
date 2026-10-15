@@ -5,7 +5,9 @@ php_version: "8.4"
 database:
   type: mysql
   version: "8.0"
-nodejs_version: "20"
+# jsdom 30 (vitest DOM environment) requires Node >=22.22.2 — Node 20 makes
+# every DOM test worker die with "webidl.util.markAsUncloneable is not a function".
+nodejs_version: "24"
 hooks:
   post-start:
     - exec: composer install --no-interaction --prefer-dist
