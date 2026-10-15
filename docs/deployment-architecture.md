@@ -14,7 +14,7 @@
 |---|---|---|
 | PHP | `composer.json:11` `php >=8.2` ; `.ddev/config.yaml` php_version 8.4 ; `ddev exec php -v` 8.4.22 | **Require >=8.2, CI pins 8.4** |
 | Laravel | `composer.json:34` `laravel/framework ^12.0`; `php artisan --version` 12.67.0 | **12.x** |
-| Node | `.ddev/config.yaml` nodejs_version 20; `package.json` vite 8 | **Node 20, Vite 8, `npm ci` + `vite build`** |
+| Node | `.ddev/config.yaml` nodejs_version 24; `package.json` engines `^22.22.2 \|\| ^24.15.0 \|\| >=26.0.0`, vite 8 | **Node 24, Vite 8, `npm ci` + `vite build`** (jsdom 30 requires >=22.22.2) |
 | DB | `common/foundation/config/database.php` mysql/mariadb, migrations 81 files under `database/migrations` | MySQL 8.0, `DB_PREFIX` empty by default |
 | Cache / Queue | `env.example:32-42` `CACHE_STORE=file`, `QUEUE_CONNECTION=sync` locally ; `docs/production-operations.md:25-37` production `redis` + `HORIZON_PREFIX=linket_horizon:` ; `config/horizon.php:5-48` | Production must be `redis`; local sync is dev-only |
 | Session | `env.example:34` file | Production `redis` or `database` recommended; file not safe across atomic releases |
@@ -147,7 +147,7 @@ Developer
   ▼
 GitHub Pull Request
   │  CI workflow (.github/workflows/ci.yml)  ──► zero failures gate,
-  │   PHP 8.4 + Node 20 + MySQL 8.0               composer audit, npm audit (prod),
+  │   PHP 8.4 + Node 24 + MySQL 8.0               composer audit, npm audit (prod),
   ▼   build public/build, cache checks            route/config/view/event cache
 Merge to main
   │  CI (ci.yml) must be green for that SHA + uploads exact artifact `linket-ci-<sha>` (see §8.2 artifact step)
@@ -329,7 +329,7 @@ concurrency:
 | Config cache | `php artisan config:cache && php artisan config:clear` | `docs/production-operations.md:99-122` gate; proves prod config caching works (TrustProxies etc.) |
 | Route / view / event cache | `php artisan route:cache` + `php artisan event:cache` + `php artisan view:cache` | Verified working in hardening; failure here blocks deploy |
 | Security | `composer audit --no-interaction` (prod advisories) | Gate: must be 0; network failures are **not** ignored — workflow retries with `COMPOSER_DISABLE_NETWORK=0` |
-| Node 20 | `actions/setup-node@v4` node 20, `cache: npm` | Lockfile present |
+| Node 24 | `actions/setup-node@v4` node 24.19.0, `cache: npm` | Lockfile present; `package.json` engines enforces the floor |
 | npm ci | `npm ci` | Deterministic, uses `package-lock.json` |
 | Lint | `npm run lint` (`oxlint`) — **allowed to warn, not fail** unless project enforces zero warnings | Repo has `oxlint` script, no `typecheck` — do not invent `tsc --noEmit` as gate |
 | Build | `npm run build` (vite) — validates `public/build/manifest.json` generation | Must succeed for artifact |
