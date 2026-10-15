@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   verify:
-    name: Verify (PHP 8.4 + Node 20 + MySQL 8.0)
+    name: Verify (PHP 8.4 + Node 24 + MySQL 8.0)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
@@ -221,6 +221,10 @@ jobs:
             --exclude='.ddev' \
             --exclude='.agents' \
             --exclude='.superpowers' \
+            --exclude='.cursor' \
+            --exclude='.bootstrap-admin.json' \
+            --exclude='linket codex.md' \
+            --exclude='NUL' \
             --exclude='linket-*.tar.gz' \
             --exclude='*.tar.gz' \
             --exclude='public/storage/*' \

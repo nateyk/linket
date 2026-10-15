@@ -184,6 +184,7 @@ jobs:
             --exclude='.env' --exclude='.env.*' \
             --exclude='public/hot' --exclude='.phpunit.cache' --exclude='coverage' \
             --exclude='*.sql' --exclude='*.sql.gz' --exclude='.ddev' --exclude='.agents' --exclude='.superpowers' \
+            --exclude='.cursor' --exclude='.bootstrap-admin.json' --exclude='linket codex.md' --exclude='NUL' \
             --exclude='linket-*.tar.gz' --exclude='*.tar.gz' \
             --exclude='public/storage/*' \
             .
@@ -305,6 +306,7 @@ jobs:
             --exclude='.env' --exclude='.env.*' \
             --exclude='public/hot' --exclude='.phpunit.cache' --exclude='coverage' \
             --exclude='*.sql' --exclude='*.sql.gz' --exclude='.ddev' --exclude='.agents' --exclude='.superpowers' \
+            --exclude='.cursor' --exclude='.bootstrap-admin.json' --exclude='linket codex.md' --exclude='NUL' \
             --exclude='linket-*.tar.gz' --exclude='*.tar.gz' \
             --exclude='public/storage/*' \
             .
