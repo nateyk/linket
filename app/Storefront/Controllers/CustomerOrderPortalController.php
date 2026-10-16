@@ -2,6 +2,14 @@
 
 namespace App\Storefront\Controllers;
 
+use App\Courses\Models\Course;
+use App\Courses\Models\Enrollment;
+use App\Courses\Models\Lesson;
+use App\Courses\Resources\CourseResource;
+use App\Courses\Resources\LessonResource;
+use App\Courses\Services\EnrollmentService;
+use App\Courses\Services\PortalCourseAccess;
+use App\Courses\Services\ProgressService;
 use App\Storefront\Models\DownloadEntitlement;
 use App\Storefront\Models\DigitalProductOrderRecoveryDelivery;
 use App\Storefront\Models\ProductReview;
@@ -60,6 +68,140 @@ class CustomerOrderPortalController extends Controller
 
         return [
             'orders' => $orders->map(fn (StorefrontOrder $order) => $this->orderData($order))->values(),
+        ];
+    }
+
+    public function library(Request $request): array
+    {
+        $recovery = $this->recovery($request);
+        $orders = app(OrderRecoveryService::class)->paidOrders($recovery)->get();
+        $portalAccess = app(PortalCourseAccess::class);
+        $progress = app(ProgressService::class);
+        $hash = $portalAccess->emailHash($recovery);
+
+        foreach ($orders as $order) {
+            if (($order->product?->type ?? null) === 'course') {
+                app(EnrollmentService::class)->grantFromPortalOrder($order);
+            }
+        }
+
+        $enrollments = Enrollment::query()
+            ->where('portal_email_hash', $hash)
+            ->where('status', 'active')
+            ->with(['course.product.cover'])
+            ->get();
+
+        $courses = $enrollments->map(function (Enrollment $enrollment) use ($progress, $hash) {
+            $course = $enrollment->course;
+            $product = $course?->product;
+            if (!$course || !$product) {
+                return null;
+            }
+
+            return [
+                'enrollment_id' => $enrollment->id,
+                'course_id' => $course->id,
+                'product_id' => $product->id,
+                'title' => $product->title,
+                'cover' => $product->cover ? ['url' => $product->cover->url] : null,
+                'total_lessons' => $progress->totalPublished($course),
+                'percent' => $progress->progressPercentForPortal($course, $hash),
+                'completed' => $progress->completedCountForPortal($course, $hash),
+                'next_lesson_id' => $progress->nextIncompleteLessonForPortal($course, $hash)?->id,
+                'enrolled_at' => $enrollment->enrolled_at,
+                'completed_at' => $enrollment->completed_at,
+            ];
+        })->filter()->values();
+
+        return [
+            'courses' => $courses,
+            'orders' => $orders->map(fn (StorefrontOrder $order) => $this->orderData($order))->values(),
+        ];
+    }
+
+    public function course(Request $request, Course $course)
+    {
+        $recovery = $this->recovery($request);
+        $portalAccess = app(PortalCourseAccess::class);
+        abort_unless($portalAccess->canAccessCourse($recovery, $course), 403, __('You do not have access to this course.'));
+        $portalAccess->ensureEnrollment($recovery, $course);
+
+        $hash = $portalAccess->emailHash($recovery);
+        $course->load([
+            'product.cover',
+            'product.creator',
+            'instructor',
+            'chapters' => fn ($q) => $q->orderBy('sort_order'),
+            'chapters.lessons' => function ($q) {
+                $q->where('status', 'published')->orderBy('sort_order')->with(['resources.file', 'videoFile']);
+            },
+        ]);
+
+        $progress = app(ProgressService::class);
+        $completedIds = $progress->completedLessonIdsForPortal($hash, $course);
+        $total = $progress->totalPublished($course);
+        $completedCount = count(array_intersect($completedIds, $course->chapters->flatMap->lessons->pluck('id')->all()));
+        $unlockedLessonIds = [];
+        foreach ($course->chapters->flatMap->lessons as $lesson) {
+            $unlocked = ! $course->require_sequential_completion
+                || $portalAccess->isLessonUnlocked($recovery, $course, $lesson);
+            $lesson->setAttribute('locked', ! $unlocked);
+            if ($unlocked) {
+                $unlockedLessonIds[] = $lesson->id;
+            }
+        }
+
+        $instructorUser = $course->instructor ?? $course->product?->creator;
+        $data = (new CourseResource($course))->toArray($request);
+        $data['progress'] = [
+            'total' => $total,
+            'completed' => $completedCount,
+            'percent' => $progress->progressPercentForPortal($course, $hash),
+            'completed_lesson_ids' => $completedIds,
+        ];
+        $data['next_lesson_id'] = $progress->nextIncompleteLessonForPortal($course, $hash)?->id;
+        $data['unlocked_lesson_ids'] = $unlockedLessonIds;
+        $data['instructor'] = $instructorUser
+            ? [
+                'name' => $instructorUser->name,
+                'avatar_url' => $instructorUser->image,
+            ]
+            : null;
+
+        return ['data' => $data];
+    }
+
+    public function lesson(Request $request, Course $course, Lesson $lesson)
+    {
+        $recovery = $this->recovery($request);
+        abort_unless((int) $lesson->course_id === (int) $course->id, 404);
+        abort_unless(
+            app(PortalCourseAccess::class)->canAccessLesson($recovery, $lesson),
+            403,
+            __('This lesson is locked. Complete prior lessons first.'),
+        );
+
+        $lesson->load(['resources.file', 'videoFile', 'chapter']);
+
+        return new LessonResource($lesson);
+    }
+
+    public function completeLesson(Request $request, Course $course, Lesson $lesson)
+    {
+        $recovery = $this->recovery($request);
+        abort_unless((int) $lesson->course_id === (int) $course->id, 404);
+        $portalAccess = app(PortalCourseAccess::class);
+        abort_unless($portalAccess->canAccessLesson($recovery, $lesson), 403, __('This lesson is locked.'));
+
+        $hash = $portalAccess->emailHash($recovery);
+        $progress = app(ProgressService::class)->completeForPortal($hash, $lesson);
+
+        return [
+            'data' => [
+                'lesson_id' => $lesson->id,
+                'completed_at' => $progress->completed_at?->toIso8601String(),
+                'next_lesson_id' => app(ProgressService::class)->nextIncompleteLessonForPortal($course, $hash)?->id,
+            ],
         ];
     }
 
@@ -168,10 +310,16 @@ class CustomerOrderPortalController extends Controller
 
     private function orderData(StorefrontOrder $order): array
     {
+        $product = $order->product;
+        $productType = $product?->type;
+        $courseId = $productType === 'course' ? $product?->course?->id : null;
+
         return [
             'id' => $order->uuid,
-            'product_title' => $order->product?->title,
-            'product_cover' => $order->product?->cover?->url,
+            'product_title' => $product?->title,
+            'product_cover' => $product?->cover?->url,
+            'product_type' => $productType,
+            'course_id' => $courseId,
             'currency' => $order->currency,
             'gross_amount_cents' => $order->gross_amount_cents,
             'paid_at' => $order->paid_at?->toIso8601String(),

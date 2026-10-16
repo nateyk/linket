@@ -17,23 +17,42 @@ import {message} from '@ui/i18n/message';
 import {FormattedDate} from '@ui/i18n/formatted-date';
 import {toast} from '@ui/toast/toast';
 import {
-  ArrowLeftIcon,
   DownloadIcon,
   FileDownIcon,
   GraduationCapIcon,
   MailCheckIcon,
   MailIcon,
   PackageOpenIcon,
+  PlayIcon,
   ShieldCheckIcon,
   StarIcon,
 } from 'lucide-react';
 import {auth} from '@common/auth/use-auth';
 import {apiClient} from '@common/http/query-client';
 import {getApiErrorMessage} from '@common/http/errors/parsed-api-error';
-import {useCallback, useEffect, useState} from 'react';
+import {useCallback, useEffect, useMemo, useState} from 'react';
 import {Link, useLocation, useNavigate} from 'react-router';
 import {AuthLayoutV2} from '@common/auth/ui/auth-layout/auth-layout-v2';
-import {MyOrderShell} from './my-order-shell';
+import {
+  DEMO_DOWNLOAD_ORDERS,
+  DEMO_PORTAL_COURSES,
+} from './my-portal-demo-data';
+import {
+  continueCourses,
+  filterCourses,
+  PortalContinueStrip,
+  PortalCourseFilters,
+  PortalCourseGrid,
+  type CourseFilter,
+  type PortalCourse,
+} from './my-portal-library-ui';
+import {MyPortalShell} from './my-portal-shell';
+import {
+  PortalAccountLayout,
+  type PortalNavSection,
+} from './my-portal-sidebar';
+
+const PORTAL_EMAIL_KEY = 'my-portal-email';
 
 type OrderDownload = {
   id: number;
@@ -46,6 +65,9 @@ type OrderDownload = {
 type Order = {
   id: string;
   product_title: string | null;
+  product_cover?: string | null;
+  product_type?: string | null;
+  course_id?: number | null;
   currency: string;
   gross_amount_cents: number;
   paid_at: string | null;
@@ -56,141 +78,351 @@ type Order = {
     review: string | null;
   } | null;
   downloads: OrderDownload[];
+  is_demo?: boolean;
 };
+
+type EnrolledCourse = PortalCourse;
 
 export function Component() {
   const location = useLocation();
   const isAuth = auth.isLoggedIn;
-  if (location.pathname.endsWith('/purchases')) return <PurchaseOrders />;
-  if (isAuth) return <AuthenticatedMyOrder />;
+  const forceRecovery =
+    (location.state as {forceRecovery?: boolean} | null)?.forceRecovery === true;
+
+  if (isAuth && !forceRecovery) {
+    return <MyPortalLibrary mode="auth" />;
+  }
+  if (
+    !forceRecovery &&
+    (location.pathname.endsWith('/purchases') ||
+      location.pathname === '/my-portal' ||
+      location.pathname === '/my-portal/')
+  ) {
+    return <MyPortalLibrary mode="guest" />;
+  }
   return <RecoveryRequest />;
 }
 
-function AuthenticatedMyOrder() {
-  const [courses, setCourses] = useState<
-    {
-      course_id: number;
-      title: string;
-      cover?: {url: string} | null;
-      total_lessons: number;
-      percent: number;
-    }[]
-  >([]);
+function MyPortalLibrary({mode}: {mode: 'auth' | 'guest'}) {
+  const [filter, setFilter] = useState<CourseFilter>('all');
+  const [activeSection, setActiveSection] =
+    useState<PortalNavSection>('courses');
+  const [courses, setCourses] = useState<EnrolledCourse[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [courseFailed, setCourseFailed] = useState(false);
-  useEffect(() => {
-    void (async () => {
-      try {
-        const response = await apiClient.get('/api/v1/my-courses');
-        setCourses(response.data.data ?? []);
-      } catch {
-        setCourseFailed(true);
-      } finally {
-        setLoading(false);
+  const [purchasesError, setPurchasesError] = useState<string>();
+  const [busy, setBusy] = useState<string>();
+  const portalEmail = (() => {
+    try {
+      return sessionStorage.getItem(PORTAL_EMAIL_KEY) ?? undefined;
+    } catch {
+      return undefined;
+    }
+  })();
+  const enrolledCourseIds = useMemo(
+    () => new Set(courses.map(course => course.course_id)),
+    [courses],
+  );
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setCourseFailed(false);
+    setPurchasesError(undefined);
+    try {
+      if (mode === 'guest') {
+        const response = await apiClient.get('/api/v1/public/my-portal/library');
+        const payload = response.data;
+        setCourses(payload?.courses ?? payload?.data?.courses ?? []);
+        setOrders(payload?.orders ?? payload?.data?.orders ?? []);
+      } else {
+        const [coursesResult, purchasesResult] = await Promise.allSettled([
+          apiClient.get('/api/v1/my-courses'),
+          apiClient.get('/api/v1/public/my-portal/library'),
+        ]);
+        if (coursesResult.status === 'fulfilled') {
+          setCourses(coursesResult.value.data.data ?? []);
+        } else {
+          setCourseFailed(true);
+        }
+        if (purchasesResult.status === 'fulfilled') {
+          const payload = purchasesResult.value.data;
+          setOrders(payload?.orders ?? payload?.data?.orders ?? []);
+          const libraryCourses =
+            payload?.courses ?? payload?.data?.courses ?? [];
+          if (coursesResult.status !== 'fulfilled' && libraryCourses.length) {
+            setCourses(libraryCourses);
+            setCourseFailed(false);
+          }
+        } else {
+          const apiMessage = getApiErrorMessage(purchasesResult.reason);
+          setPurchasesError(
+            apiMessage !== 'An error occurred.'
+              ? apiMessage
+              : 'Your portal session has expired.',
+          );
+        }
       }
-    })();
-  }, []);
+    } catch (reason) {
+      const apiMessage = getApiErrorMessage(reason);
+      if (mode === 'guest') {
+        setPurchasesError(
+          apiMessage !== 'An error occurred.'
+            ? apiMessage
+            : 'Your portal session has expired.',
+        );
+      } else {
+        setCourseFailed(true);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [mode]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const withCsrf = async (): Promise<Record<string, string>> => {
+    await fetch('/sanctum/csrf-cookie', {credentials: 'same-origin'});
+    const token = document.cookie
+      .split('; ')
+      .find(value => value.startsWith('XSRF-TOKEN='))
+      ?.split('=')[1];
+    const headers: Record<string, string> = {Accept: 'application/json'};
+    if (token) headers['X-XSRF-TOKEN'] = decodeURIComponent(token);
+    return headers;
+  };
+
+  const download = async (order: Order, entitlement: OrderDownload) => {
+    if (order.is_demo) {
+      toast(message('Sample download — real files appear after purchase.'));
+      return;
+    }
+    setBusy(`download-${entitlement.id}`);
+    try {
+      const headers = await withCsrf();
+      const response = await apiClient.post(
+        `/api/v1/public/my-portal/purchases/${order.id}/downloads/${entitlement.id}`,
+        {},
+        {headers},
+      );
+      const payload = response.data;
+      if (!payload?.url)
+        throw new Error(
+          payload?.message || 'This protected download is no longer available.',
+        );
+      window.location.assign(payload.url);
+    } catch (reason) {
+      const apiMessage = getApiErrorMessage(reason);
+      toast.danger(
+        apiMessage !== 'An error occurred.'
+          ? apiMessage
+          : reason instanceof Error
+            ? reason.message
+            : 'Unable to prepare your download.',
+      );
+    } finally {
+      setBusy(undefined);
+    }
+  };
+
+  const resend = async (order: Order) => {
+    if (order.is_demo) {
+      toast(message('Sample receipt — real receipts appear after purchase.'));
+      return;
+    }
+    setBusy(`receipt-${order.id}`);
+    try {
+      const headers = await withCsrf();
+      const response = await apiClient.post(
+        `/api/v1/public/my-portal/purchases/${order.id}/resend-receipt`,
+        {},
+        {headers},
+      );
+      const payload = response.data;
+      if (!payload && response.status >= 400)
+        throw new Error('Unable to resend the receipt.');
+      toast(message('Your receipt is being sent.'));
+      void load();
+    } catch (reason) {
+      const apiMessage = getApiErrorMessage(reason);
+      toast.danger(
+        apiMessage !== 'An error occurred.'
+          ? apiMessage
+          : reason instanceof Error
+            ? reason.message
+            : 'Unable to resend the receipt.',
+      );
+    } finally {
+      setBusy(undefined);
+    }
+  };
+
+  const realDownloadOrders = orders.filter(
+    order => order.product_type !== 'course' && !order.course_id,
+  );
+  // Full empty library → sample layout; any real purchase replaces demos.
+  const usingDemoLibrary =
+    !loading &&
+    !courses.length &&
+    !realDownloadOrders.length &&
+    !courseFailed &&
+    !(purchasesError && mode === 'auth');
+  const displayCourses = usingDemoLibrary ? DEMO_PORTAL_COURSES : courses;
+  const filteredCourses = filterCourses(displayCourses, filter);
+  const continueList = continueCourses(
+    usingDemoLibrary ? [] : displayCourses,
+  );
+  const downloadOrders = usingDemoLibrary
+    ? (DEMO_DOWNLOAD_ORDERS as Order[])
+    : realDownloadOrders;
+  const authQuery = portalEmail
+    ? `?email=${encodeURIComponent(portalEmail)}`
+    : '';
+
   return (
-    <MyOrderShell wide>
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            <Trans message="My orders & courses" />
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            <Trans message="Your purchases and enrolled courses in one place." />
-          </p>
-        </div>
-      </div>
+    <MyPortalShell wide>
       {loading ? (
         <div className="flex min-h-40 items-center justify-center">
           <Spinner />
         </div>
-      ) : courseFailed ? (
+      ) : purchasesError && mode === 'guest' && !courses.length ? (
         <Alert variant="warning" fillStyle="subtleFill">
-          <GraduationCapIcon />
+          <ShieldCheckIcon />
           <Alert.Title>
-            <Trans message="Courses unavailable" />
+            <Trans message="Session unavailable" />
           </Alert.Title>
           <Alert.Description>
-            <Trans message="Unable to load your courses." />
+            <p>{purchasesError}</p>
+            <Button
+              className="mt-3"
+              size="sm"
+              variant="outline"
+              render={<Link to="/my-portal" state={{forceRecovery: true}} />}
+            >
+              <Trans message="Request a new code" />
+            </Button>
           </Alert.Description>
         </Alert>
-      ) : courses.length ? (
-        <div className="flex flex-col gap-3">
-          <h2 className="text-sm font-semibold">
-            <Trans message="My courses" />
-          </h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {courses.map(c => (
-              <Card.Root
-                key={c.course_id}
-                className="gap-0 overflow-hidden py-0"
-              >
-                <div className="aspect-video bg-muted">
-                  {c.cover?.url ? (
-                    <img
-                      src={c.cover.url}
-                      alt={c.title}
-                      className="size-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex size-full items-center justify-center text-muted-foreground">
-                      <GraduationCapIcon className="size-8" />
-                    </div>
-                  )}
-                </div>
-                <Card.Content className="flex flex-col gap-2 p-3">
-                  <p className="text-sm font-medium">{c.title}</p>
-                  <p className="text-xs text-muted-foreground">
-                    <Trans
-                      message=":percent% complete · :count lessons"
-                      values={{
-                        percent: c.percent,
-                        count: c.total_lessons,
-                      }}
-                    />
-                  </p>
-                  <Button
-                    size="sm"
-                    className="w-full"
-                    render={<Link to={`/my-order/courses/${c.course_id}`} />}
-                  >
-                    <Trans message="Continue" />
-                  </Button>
-                </Card.Content>
-              </Card.Root>
-            ))}
-          </div>
-        </div>
       ) : (
-        <Alert fillStyle="subtleFill">
-          <GraduationCapIcon />
-          <Alert.Title>
-            <Trans message="No courses yet" />
-          </Alert.Title>
-          <Alert.Description>
-            <Trans message="Courses you purchase will appear here." />
-          </Alert.Description>
-        </Alert>
+        <PortalAccountLayout
+          mode={mode}
+          email={portalEmail || auth.user?.email || undefined}
+          activeSection={activeSection}
+          onSectionChange={setActiveSection}
+        >
+          <div className="space-y-6">
+            {usingDemoLibrary && (
+              <Alert fillStyle="subtleFill">
+                <PackageOpenIcon />
+                <Alert.Title>
+                  <Trans message="Sample library layout" />
+                </Alert.Title>
+                <Alert.Description>
+                  <Trans message="Showing demo courses and downloads so you can preview the portal. Your real purchases replace this automatically." />
+                </Alert.Description>
+              </Alert>
+            )}
+
+            <PortalContinueStrip courses={continueList} />
+
+            <section
+              id="portal-courses"
+              className="space-y-4 scroll-mt-32"
+            >
+              <div className="space-y-4">
+                <h1 className="mb-2 text-2xl font-medium">
+                  <Trans message="My purchased courses" />
+                </h1>
+                <PortalCourseFilters value={filter} onChange={setFilter} />
+              </div>
+              {courseFailed && !courses.length ? (
+                <Alert variant="warning" fillStyle="subtleFill">
+                  <GraduationCapIcon />
+                  <Alert.Title>
+                    <Trans message="Courses unavailable" />
+                  </Alert.Title>
+                  <Alert.Description>
+                    <Trans message="Unable to load your courses." />
+                  </Alert.Description>
+                </Alert>
+              ) : filteredCourses.length ? (
+                <PortalCourseGrid courses={filteredCourses} />
+              ) : (
+                <Alert fillStyle="subtleFill">
+                  <GraduationCapIcon />
+                  <Alert.Title>
+                    <Trans message="No courses in this filter" />
+                  </Alert.Title>
+                  <Alert.Description>
+                    <Trans message="Try another filter to see more of your courses." />
+                  </Alert.Description>
+                </Alert>
+              )}
+              {mode === 'guest' && courses.length ? (
+                <p className="text-xs text-muted-foreground">
+                  <Trans message="Optional: create an account with this email to keep progress on all devices." />{' '}
+                  <Link className="underline" to={`/register${authQuery}`}>
+                    <Trans message="Create account" />
+                  </Link>
+                </p>
+              ) : null}
+            </section>
+
+            <section
+              id="portal-downloads"
+              className="flex flex-col gap-4 scroll-mt-32"
+            >
+              <h2 className="text-2xl font-medium">
+                <Trans message="Downloads" />
+              </h2>
+              {purchasesError && mode === 'auth' ? (
+                <Alert variant="warning" fillStyle="subtleFill">
+                  <ShieldCheckIcon />
+                  <Alert.Title>
+                    <Trans message="Purchases locked" />
+                  </Alert.Title>
+                  <Alert.Description>
+                    <p>
+                      <Trans message="Verify the email you used at checkout to unlock downloads and receipts in this browser." />
+                    </p>
+                    <Button
+                      className="mt-3"
+                      size="sm"
+                      variant="outline"
+                      render={
+                        <Link to="/my-portal" state={{forceRecovery: true}} />
+                      }
+                    >
+                      <Trans message="Verify purchase email" />
+                    </Button>
+                  </Alert.Description>
+                </Alert>
+              ) : downloadOrders.length ? (
+                <div className="flex flex-col gap-4">
+                  {downloadOrders.map(order => (
+                    <ReviewableOrderCard
+                      key={order.id}
+                      order={order}
+                      busy={busy}
+                      enrolledCourseIds={enrolledCourseIds}
+                      onDownload={download}
+                      onResend={resend}
+                      onSaved={load}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  <Trans message="File downloads from your purchases will show up here." />
+                </p>
+              )}
+            </section>
+          </div>
+        </PortalAccountLayout>
       )}
-      <Card.Root className="gap-0 overflow-hidden">
-        <Card.Header>
-          <Card.Title>
-            <Trans message="Need your downloads?" />
-          </Card.Title>
-          <Card.Description>
-            <Trans message="Verify your purchase email to unlock protected downloads when you bought as guest." />
-          </Card.Description>
-        </Card.Header>
-        <Card.Content>
-          <Button variant="outline" render={<Link to="/my-order/purchases" />}>
-            <MailIcon />
-            <Trans message="Go to purchases" />
-          </Button>
-        </Card.Content>
-      </Card.Root>
-    </MyOrderShell>
+    </MyPortalShell>
   );
 }
 
@@ -213,7 +445,7 @@ function RecoveryRequest() {
     setSubmitting(true);
     setError(undefined);
     try {
-      await apiClient.post('/api/v1/public/my-order/request-code', {
+      await apiClient.post('/api/v1/public/my-portal/request-code', {
         email: email.trim(),
       });
       setSent(true);
@@ -233,11 +465,16 @@ function RecoveryRequest() {
     setSubmitting(true);
     setError(undefined);
     try {
-      await apiClient.post('/api/v1/public/my-order/verify-code', {
+      await apiClient.post('/api/v1/public/my-portal/verify-code', {
         email: email.trim(),
         code,
       });
-      navigate('/my-order/purchases');
+      try {
+        sessionStorage.setItem(PORTAL_EMAIL_KEY, email.trim());
+      } catch {
+        // ignore storage failures
+      }
+      navigate('/my-portal');
     } catch (reason) {
       const apiMessage = getApiErrorMessage(reason);
       setError(
@@ -386,178 +623,23 @@ function RecoveryProblem({error}: {error?: RecoveryError}) {
   );
 }
 
-function PurchaseOrders() {
-  const [orders, setOrders] = useState<Order[]>();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string>();
-  const [busy, setBusy] = useState<string>();
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await apiClient.get('/api/v1/public/my-order/purchases');
-      const payload = response.data;
-      setOrders(payload?.orders ?? payload?.data?.orders ?? []);
-    } catch (reason) {
-      const apiMessage = getApiErrorMessage(reason);
-      setError(
-        apiMessage !== 'An error occurred.'
-          ? apiMessage
-          : 'Your portal session has expired.',
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  const withCsrf = async (): Promise<Record<string, string>> => {
-    await fetch('/sanctum/csrf-cookie', {credentials: 'same-origin'});
-    const token = document.cookie
-      .split('; ')
-      .find(value => value.startsWith('XSRF-TOKEN='))
-      ?.split('=')[1];
-    const headers: Record<string, string> = {Accept: 'application/json'};
-    if (token) headers['X-XSRF-TOKEN'] = decodeURIComponent(token);
-    return headers;
-  };
-
-  const download = async (order: Order, entitlement: OrderDownload) => {
-    setBusy(`download-${entitlement.id}`);
-    try {
-      const headers = await withCsrf();
-      const response = await apiClient.post(
-        `/api/v1/public/my-order/purchases/${order.id}/downloads/${entitlement.id}`,
-        {},
-        {headers},
-      );
-      const payload = response.data;
-      if (!payload?.url)
-        throw new Error(
-          payload?.message || 'This protected download is no longer available.',
-        );
-      window.location.assign(payload.url);
-    } catch (reason) {
-      const apiMessage = getApiErrorMessage(reason);
-      toast.danger(
-        apiMessage !== 'An error occurred.'
-          ? apiMessage
-          : reason instanceof Error
-            ? reason.message
-            : 'Unable to prepare your download.',
-      );
-    } finally {
-      setBusy(undefined);
-    }
-  };
-
-  const resend = async (order: Order) => {
-    setBusy(`receipt-${order.id}`);
-    try {
-      const headers = await withCsrf();
-      const response = await apiClient.post(
-        `/api/v1/public/my-order/purchases/${order.id}/resend-receipt`,
-        {},
-        {headers},
-      );
-      const payload = response.data;
-      if (!payload && response.status >= 400)
-        throw new Error('Unable to resend the receipt.');
-      toast(message('Your receipt is being sent.'));
-      void load();
-    } catch (reason) {
-      const apiMessage = getApiErrorMessage(reason);
-      toast.danger(
-        apiMessage !== 'An error occurred.'
-          ? apiMessage
-          : reason instanceof Error
-            ? reason.message
-            : 'Unable to resend the receipt.',
-      );
-    } finally {
-      setBusy(undefined);
-    }
-  };
-
-  return (
-    <MyOrderShell>
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            <Trans message="Your purchases" />
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            <Trans message="Your private portal session is active for 30 days." />
-          </p>
-        </div>
-        <Button variant="outline" size="sm" render={<Link to="/my-order" />}>
-          <ArrowLeftIcon />
-          <Trans message="Done" />
-        </Button>
-      </div>
-      {loading ? (
-        <div className="flex min-h-40 items-center justify-center">
-          <Spinner />
-        </div>
-      ) : error ? (
-        <Alert variant="warning" fillStyle="subtleFill">
-          <ShieldCheckIcon />
-          <Alert.Title>
-            <Trans message="Session unavailable" />
-          </Alert.Title>
-          <Alert.Description>
-            <p>{error ? <Trans message={error} /> : null}</p>
-            <Button
-              className="mt-3"
-              size="sm"
-              variant="outline"
-              render={<Link to="/my-order" />}
-            >
-              <Trans message="Request a new code" />
-            </Button>
-          </Alert.Description>
-        </Alert>
-      ) : orders?.length ? (
-        <div className="flex flex-col gap-4">
-          {orders.map(order => (
-            <ReviewableOrderCard
-              key={order.id}
-              order={order}
-              busy={busy}
-              onDownload={download}
-              onResend={resend}
-              onSaved={load}
-            />
-          ))}
-        </div>
-      ) : (
-        <Alert fillStyle="subtleFill">
-          <PackageOpenIcon />
-          <Alert.Title>
-            <Trans message="No paid purchases found" />
-          </Alert.Title>
-          <Alert.Description>
-            <Trans message="This verified email does not have any paid digital product purchases to show." />
-          </Alert.Description>
-        </Alert>
-      )}
-    </MyOrderShell>
-  );
-}
 
 function ReviewableOrderCard({
   onSaved,
+  enrolledCourseIds,
   ...props
 }: Parameters<typeof OrderCard>[0] & {onSaved: () => Promise<void>}) {
   const [open, setOpen] = useState(false);
+  const isDemo = !!props.order.is_demo;
 
   return (
     <>
-      <OrderCard {...props} onReview={() => setOpen(true)} />
-      {open && (
+      <OrderCard
+        {...props}
+        enrolledCourseIds={enrolledCourseIds}
+        onReview={isDemo ? undefined : () => setOpen(true)}
+      />
+      {open && !isDemo && (
         <PortalReviewDialog
           order={props.order}
           onClose={() => setOpen(false)}
@@ -599,7 +681,7 @@ function PortalReviewDialog({
         .find(value => value.startsWith('XSRF-TOKEN='))
         ?.split('=')[1];
       await apiClient.post(
-        `/api/v1/public/my-order/purchases/${order.id}/review`,
+        `/api/v1/public/my-portal/purchases/${order.id}/review`,
         {
           stars,
           title: title.trim() || undefined,
@@ -729,24 +811,40 @@ function PortalReviewDialog({
 function OrderCard({
   order,
   busy,
+  enrolledCourseIds,
   onDownload,
   onResend,
   onReview,
 }: {
   order: Order;
   busy?: string;
+  enrolledCourseIds?: Set<number>;
   onDownload: (order: Order, download: OrderDownload) => Promise<void>;
   onResend: (order: Order) => Promise<void>;
   onReview?: () => void;
 }) {
   const downloads = order.downloads.filter(download => download.available);
+  const isCourse = order.product_type === 'course' || !!order.course_id;
+  const canOpenCourse =
+    !!order.course_id &&
+    (!enrolledCourseIds || enrolledCourseIds.has(order.course_id));
+
   return (
     <Card.Root className="gap-0 overflow-hidden">
       <Card.Header>
         <Card.Title className="flex flex-wrap items-center justify-between gap-2">
           <span className="flex items-center gap-2">
-            <PackageOpenIcon className="size-4 text-primary" />
+            {isCourse ? (
+              <GraduationCapIcon className="size-4 text-primary" />
+            ) : (
+              <PackageOpenIcon className="size-4 text-primary" />
+            )}
             {order.product_title ?? <Trans message="Digital product" />}
+            {order.is_demo ? (
+              <span className="rounded-sm bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                <Trans message="Sample" />
+              </span>
+            ) : null}
           </span>
           <span className="text-base tabular-nums">
             {formatPrice(order.gross_amount_cents, order.currency)}
@@ -764,7 +862,30 @@ function OrderCard({
         </Card.Description>
       </Card.Header>
       <Card.Content className="flex flex-col gap-4">
-        {downloads.length ? (
+        {isCourse ? (
+          <div className="flex flex-col gap-3 rounded-card border p-3">
+            <p className="text-sm text-muted-foreground">
+              <Trans message="This purchase is a course. Open it to watch lessons and track your progress." />
+            </p>
+            {order.course_id ? (
+              <Button
+                size="sm"
+                className="w-fit"
+                disabled={!canOpenCourse}
+                render={
+                  <Link to={`/my-portal/courses/${order.course_id}`} />
+                }
+              >
+                <PlayIcon />
+                <Trans message="Open course" />
+              </Button>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                <Trans message="Course access will appear here after payment is confirmed." />
+              </p>
+            )}
+          </div>
+        ) : downloads.length ? (
           <div className="divide-y rounded-card border">
             {downloads.map(download => (
               <div

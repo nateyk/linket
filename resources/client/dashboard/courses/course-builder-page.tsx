@@ -1930,7 +1930,9 @@ function LessonEditor({
               <VideoIcon className="size-4 text-muted-foreground" aria-hidden="true" />
               <Card.Title className="text-sm"><Trans message="Video" /></Card.Title>
             </div>
-            <Card.Description><Trans message="Upload a video or paste a YouTube/Vimeo URL." /></Card.Description>
+            <Card.Description>
+              <Trans message="Upload a video for playback inside Linket, or paste a YouTube/Vimeo URL." />
+            </Card.Description>
           </Card.Header>
           <Card.Content className="flex flex-col gap-4 p-4 pt-0">
             <SharedFileUploader
@@ -1950,6 +1952,11 @@ function LessonEditor({
               </div>
               <div className="relative flex justify-center text-xs text-muted-foreground bg-card px-2"><Trans message="or" /></div>
             </div>
+            <Alert fillStyle="subtleFill">
+              <Alert.Description>
+                <Trans message="YouTube and Vimeo embeds can be opened or shared outside Linket. Upload a video file for playback that stays inside your store." />
+              </Alert.Description>
+            </Alert>
             <Field.Root>
               <Field.Label><Trans message="Video URL" /></Field.Label>
               <Input value={videoUrl} onChange={e => setVideoUrl(e.target.value)} placeholder="https://www.youtube.com/watch?v=..." />

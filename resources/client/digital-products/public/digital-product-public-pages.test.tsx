@@ -109,7 +109,7 @@ describe('painted-panel colors and locale safety', () => {
     expect(page).toContain('text-[var(--biolink-accent,var(--color-primary))]');
     expect(page).toContain('message="Your course is ready"');
     expect(page).toContain('message="Your download is ready"');
-    expect(page).toContain('message="Open My Orders"');
+    expect(page).toContain('message="Open My Portal"');
     expect(page).not.toContain('backdrop-blur');
     expect(page).not.toContain('shadow-xs');
     // The phone bar tracks the buy button, not the whole rail, so the

@@ -48,6 +48,7 @@ class LessonResource extends JsonResource
             'duration_seconds' => $this->duration_seconds,
             'status' => $this->status,
             'content_type' => $this->content_type,
+            'locked' => (bool) ($this->resource->getAttribute('locked') ?? false),
             'sort_order' => $this->sort_order,
             'resources' => LessonResourceFileResource::collection($this->whenLoaded('resources')),
             'created_at' => $this->created_at,

@@ -10,7 +10,7 @@ class LessonProgress extends Model
 {
     protected $table = 'course_lesson_progress';
 
-    protected $fillable = ['user_id', 'course_id', 'lesson_id', 'completed_at'];
+    protected $fillable = ['user_id', 'portal_email_hash', 'course_id', 'lesson_id', 'completed_at'];
 
     protected $casts = [
         'user_id' => 'integer',

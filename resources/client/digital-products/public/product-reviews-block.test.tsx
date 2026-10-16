@@ -38,21 +38,40 @@ describe('public product reviews', () => {
     expect(source).not.toContain('function formatDate');
   });
 
-  test('one ringed container per card: inner groups are plain bordered groups', () => {
+  test('Reviews1 layout: Separator between items, not divide-y rings', () => {
     const source = readSource();
 
-    // The reviews Card.Root is the only ring; the histogram and the review
-    // list are flattened to border/divide sections inside it.
+    expect(source).toContain("import {Separator} from '@shadcn/separator';");
+    expect(source).toContain(
+      '<Separator className="my-6 bg-[var(--biolink-border)]" />',
+    );
+    expect(source).not.toContain('divide-y');
     expect(source).not.toContain('ring-1');
-    expect(source).toContain(
-      'divide-y divide-[var(--biolink-border)] rounded-card border border-[var(--biolink-border)]',
-    );
-    expect(source).toContain(
-      'rounded-card border border-[var(--biolink-border)] p-5',
-    );
   });
 
-  test('the My Orders link paints from the biolink accent, never bare text-primary', () => {
+  test('maps API reviews onto a CustomerReview display shape', () => {
+    const source = readSource();
+
+    expect(source).toContain('export type CustomerReview');
+    expect(source).toContain('function toCustomerReview');
+    expect(source).toMatch(/rating:\s*review\.stars/);
+    expect(source).toMatch(/content:\s*review\.review/);
+    expect(source).toMatch(/author:\s*\{/);
+    expect(source).toContain('<ReviewRow review={toCustomerReview(review)} />');
+  });
+
+  test('header shows average RatingStars plus the out-of-5 copy', () => {
+    const source = readSource();
+
+    expect(source).toContain('<Trans message="Customer Reviews" />');
+    expect(source).toContain(
+      '<Trans\n                  message=":average out of 5 · :count reviews"',
+    );
+    expect(source).toContain('Verified Purchase');
+    expect(source).toContain('variant="positive"');
+  });
+
+  test('the My Portal link paints from the biolink accent, never bare text-primary', () => {
     const source = readSource();
 
     expect(source).toContain(

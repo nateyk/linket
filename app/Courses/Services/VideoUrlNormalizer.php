@@ -19,12 +19,14 @@ class VideoUrlNormalizer
         // Use get-video-id equivalent logic — lightweight regex allowlist.
         $youtube = self::parseYoutube($url);
         if ($youtube) {
-            return 'https://www.youtube.com/embed/' . $youtube;
+            return 'https://www.youtube-nocookie.com/embed/' . $youtube
+                . '?modestbranding=1&rel=0&playsinline=1';
         }
 
         $vimeo = self::parseVimeo($url);
         if ($vimeo) {
-            return 'https://player.vimeo.com/video/' . $vimeo;
+            return 'https://player.vimeo.com/video/' . $vimeo
+                . '?title=0&byline=0&portrait=0';
         }
 
         abort(422, 'Video URL must be a YouTube or Vimeo link.');

@@ -12,7 +12,15 @@ class Enrollment extends Model
 {
     protected $table = 'course_enrollments';
 
-    protected $fillable = ['course_id', 'user_id', 'storefront_order_id', 'status', 'enrolled_at', 'completed_at'];
+    protected $fillable = [
+        'course_id',
+        'user_id',
+        'portal_email_hash',
+        'storefront_order_id',
+        'status',
+        'enrolled_at',
+        'completed_at',
+    ];
 
     protected $casts = [
         'course_id' => 'integer',

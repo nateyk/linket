@@ -240,6 +240,7 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Event::listen(Login::class, AttachWorkspaceToUser::class);
+        Event::listen(Login::class, \App\Courses\Listeners\ClaimCourseEnrollmentsOnLogin::class);
         Event::listen(Registered::class, AttachWorkspaceToUser::class);
         Event::listen(\Illuminate\Auth\Events\Verified::class, \App\Courses\Listeners\ClaimCourseEnrollmentsOnVerified::class);
 

@@ -1,4 +1,4 @@
-import {MyOrderShell} from '@app/digital-products/public/my-order-shell';
+import {MyPortalShell} from '@app/digital-products/public/my-portal-shell';
 import {Alert} from '@shadcn/alert/alert';
 import {Badge} from '@shadcn/badge/badge';
 import {Button} from '@shadcn/button/button';
@@ -8,10 +8,23 @@ import {
   RadioGroup,
   RadioGroupItem,
 } from '@shadcn/forms/radio-group/radio-group';
+import {Progress} from '@shadcn/progress/progress';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@shadcn/sheet/sheet';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {Spinner} from '@shadcn/spinner/spinner';
 import {Tabs} from '@shadcn/tabs/tabs';
 import {Trans} from '@ui/i18n/trans';
+import {
+  completePortalLesson,
+  fetchPortalCourseLearn,
+  fetchPortalLesson,
+} from '@app/digital-products/public/my-portal-api';
 import {apiClient} from '@common/http/query-client';
 import {isAxiosError} from 'axios';
 import {
@@ -21,10 +34,14 @@ import {
   CircleCheckBigIcon,
   CircleXIcon,
   DownloadIcon,
+  ListIcon,
   LockIcon,
+  PlayIcon,
 } from 'lucide-react';
 import {useCallback, useEffect, useState} from 'react';
 import {Link, useParams, useNavigate} from 'react-router';
+import {CourseCurriculumList} from './course-curriculum-list';
+import {LessonVideo} from './lesson-video';
 
 type LessonData = {
   id: number;
@@ -122,9 +139,10 @@ export function Component() {
   const load = useCallback(
     async (signal?: AbortSignal) => {
       try {
-        const response = await apiClient.get(
-          `/api/v1/courses/${courseId}/learn/lessons/${lessonId}`,
-          {signal},
+        const response = await fetchPortalLesson(
+          String(courseId),
+          String(lessonId),
+          signal,
         );
         setLesson(response.data.data);
       } catch (reason) {
@@ -135,9 +153,9 @@ export function Component() {
         throw reason;
       }
 
-      const response = await apiClient.get(
-        `/api/v1/courses/${courseId}/learn`,
-        {signal},
+      const response = await fetchPortalCourseLearn(
+        String(courseId),
+        signal,
       );
       setCourse(response.data.data);
     },
@@ -208,14 +226,14 @@ export function Component() {
     setCompleting(true);
     setProgressError(undefined);
     try {
-      await apiClient.post(`/api/v1/course-lessons/${lessonId}/complete`);
+      await completePortalLesson(String(courseId), String(lessonId));
       if (course) {
         const flat = course.chapters.flatMap((ch: any) => ch.lessons);
         const idx = flat.findIndex((l: any) => l.id === Number(lessonId));
         const next = flat[idx + 1];
         if (next)
-          navigate(`/my-order/courses/${courseId}/lessons/${next.id}`);
-        else navigate(`/my-order/courses/${courseId}`);
+          navigate(`/my-portal/courses/${courseId}/lessons/${next.id}`);
+        else navigate(`/my-portal/courses/${courseId}`);
       }
     } catch (reason) {
       if (isAxiosError(reason) && reason.response?.status === 422) {
@@ -261,7 +279,7 @@ export function Component() {
 
   if (trial) {
     return (
-      <MyOrderShell wide>
+      <MyPortalShell wide>
         <Alert.Root variant="warning" fillStyle="subtleFill">
           <LockIcon className="size-8 text-muted-foreground" />
           <Alert.Title>
@@ -273,37 +291,37 @@ export function Component() {
         </Alert.Root>
         <Button
           className="w-fit"
-          render={<Link to={`/my-order/courses/${courseId}`} />}
+          render={<Link to={`/my-portal/courses/${courseId}`} />}
         >
           <Trans message="Back to course" />
         </Button>
-      </MyOrderShell>
+      </MyPortalShell>
     );
   }
 
   if (error) {
     return (
-      <MyOrderShell wide>
+      <MyPortalShell wide>
         <Alert.Root variant="warning" fillStyle="subtleFill">
           <Alert.Title>
             <Trans message="Lesson unavailable" />
           </Alert.Title>
           <Alert.Description>{error}</Alert.Description>
         </Alert.Root>
-        <Button className="w-fit" render={<Link to="/my-order" />}>
-          <Trans message="Back to my orders" />
+        <Button className="w-fit" render={<Link to="/my-portal" />}>
+          <Trans message="Back to My Portal" />
         </Button>
-      </MyOrderShell>
+      </MyPortalShell>
     );
   }
 
   if (!lesson) {
     return (
-      <MyOrderShell wide>
+      <MyPortalShell wide>
         <div className="flex min-h-64 items-center justify-center">
           <Spinner />
         </div>
-      </MyOrderShell>
+      </MyPortalShell>
     );
   }
 
@@ -321,73 +339,189 @@ export function Component() {
     />
   ) : null;
 
-  return (
-    <MyOrderShell wide>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-sm text-muted-foreground">
-            <Trans message="Course lesson" />
-          </p>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {lesson.title}
-          </h1>
+  const unlockedLessonIds: number[] =
+    course?.unlocked_lesson_ids ??
+    course?.progress?.unlocked_lesson_ids ??
+    [];
+  const completedLessonIds: number[] =
+    course?.progress?.completed_lesson_ids ?? [];
+  const progressPercent: number = course?.progress?.percent ?? 0;
+
+  const curriculumPanel = course ? (
+    <Card.Root className="gap-0 overflow-hidden py-0 shadow-none">
+      <Card.Header className="border-b py-4">
+        <Card.Title className="flex items-center justify-between text-base">
+          <span className="flex items-center gap-2">
+            <PlayIcon className="size-4 text-primary" />
+            <Trans message="Course curriculum" />
+          </span>
+          <span className="text-xs font-normal text-muted-foreground">
+            {course.progress?.completed ?? 0}/{course.progress?.total ?? 0}
+          </span>
+        </Card.Title>
+        <div className="mt-3 flex flex-col gap-1.5">
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <Trans
+              message=":percent% complete"
+              values={{percent: progressPercent}}
+            />
+          </div>
+          <Progress.Root value={progressPercent}>
+            <Progress.Track className="h-1.5">
+              <Progress.Indicator />
+            </Progress.Track>
+          </Progress.Root>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          render={<Link to={`/my-order/courses/${courseId}`} />}
-        >
-          <Trans message="Course" />
-        </Button>
-      </div>
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
-        {lesson.content_type === 'video' ? (
-          <>
-            {lesson.video_url && (
-              <div className="aspect-video overflow-hidden rounded-card border bg-muted">
-                <iframe
-                  src={lesson.video_url}
-                  className="size-full"
-                  allowFullScreen
+      </Card.Header>
+      <Card.Content className="p-0">
+        <div className="max-h-[480px] overflow-y-auto lg:max-h-[calc(100vh-14rem)]">
+          <CourseCurriculumList
+            courseId={Number(courseId)}
+            chapters={course.chapters ?? []}
+            completedLessonIds={completedLessonIds}
+            unlockedLessonIds={unlockedLessonIds}
+            activeLessonId={Number(lessonId)}
+            requireSequential={course.require_sequential_completion}
+          />
+        </div>
+      </Card.Content>
+    </Card.Root>
+  ) : null;
+
+  return (
+    <div className="min-h-screen bg-background">
+      <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur-sm">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <Button
+              size="sm"
+              variant="outline"
+              className="shrink-0"
+              render={<Link to={`/my-portal/courses/${courseId}`} />}
+            >
+              <ChevronLeftIcon />
+              <span className="hidden sm:inline">
+                <Trans message="Course" />
+              </span>
+            </Button>
+            <div className="hidden h-5 w-px bg-border sm:block" />
+            <h1 className="truncate text-sm font-medium sm:text-base">
+              {lesson.title}
+            </h1>
+          </div>
+          {course ? (
+            <Sheet>
+              <SheetTrigger
+                render={
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="shrink-0 lg:hidden"
+                  />
+                }
+              >
+                <ListIcon />
+                <span className="hidden sm:inline">
+                  <Trans message="Curriculum" />
+                </span>
+              </SheetTrigger>
+              <SheetContent
+                side="right"
+                className="w-full max-w-md overflow-y-auto p-0 sm:max-w-md"
+              >
+                <SheetHeader className="border-b p-4">
+                  <SheetTitle>
+                    <Trans message="Course curriculum" />
+                  </SheetTitle>
+                </SheetHeader>
+                {curriculumPanel}
+              </SheetContent>
+            </Sheet>
+          ) : null}
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-7xl px-4 py-8">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+          <div className="flex flex-col gap-6 lg:col-span-2">
+            {lesson.content_type === 'video' ? (
+              <>
+                <LessonVideo
                   title={lesson.title}
+                  videoUrl={lesson.video_url}
+                  fileUrl={lesson.video?.url}
                 />
-              </div>
-            )}
-            {lesson.video?.url && !lesson.video_url && (
-              <div className="aspect-video overflow-hidden rounded-card border bg-muted">
-                <video src={lesson.video.url} controls className="size-full" />
-              </div>
-            )}
-            <Tabs.Root defaultValue="summary" className="w-full">
-              <Tabs.List variant="line" className="w-full">
-                <Tabs.Tab value="summary">
-                  <Trans message="Summary" />
-                </Tabs.Tab>
-                <Tabs.Tab value="attachments">
-                  <Trans message="Attachments" />
-                </Tabs.Tab>
-                {quiz && (
-                  <Tabs.Tab value="quiz">
-                    <Trans message="Quiz" />
-                  </Tabs.Tab>
-                )}
-              </Tabs.List>
-              <Tabs.Panel value="summary">
-                {lesson.summary ? (
+                <Tabs.Root defaultValue="summary" className="w-full">
+                  <Tabs.List variant="line" className="w-full">
+                    <Tabs.Tab value="summary">
+                      <Trans message="Summary" />
+                    </Tabs.Tab>
+                    <Tabs.Tab value="attachments">
+                      <Trans message="Attachments" />
+                    </Tabs.Tab>
+                    {quiz && (
+                      <Tabs.Tab value="quiz">
+                        <Trans message="Quiz" />
+                      </Tabs.Tab>
+                    )}
+                  </Tabs.List>
+                  <Tabs.Panel value="summary">
+                    {lesson.summary ? (
+                      <Card.Root>
+                        <Card.Content
+                          className="prose prose-sm max-w-none p-6"
+                          dangerouslySetInnerHTML={{__html: lesson.summary}}
+                        />
+                      </Card.Root>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        <Trans message="No summary added yet." />
+                      </p>
+                    )}
+                  </Tabs.Panel>
+                  <Tabs.Panel value="attachments">
+                    {lesson.resources.length > 0 ? (
+                      <Card.Root>
+                        <Card.Header className="p-4">
+                          <Card.Title className="text-sm">
+                            <Trans message="Resources" />
+                          </Card.Title>
+                        </Card.Header>
+                        <Card.Content className="flex flex-col gap-2 p-4 pt-0">
+                          {lesson.resources.map(r => (
+                            <a
+                              key={r.id}
+                              href={`/api/v1/course-lesson-resources/${r.id}/download`}
+                              className="flex items-center gap-2 rounded-card border p-3 text-sm hover:bg-muted/30"
+                            >
+                              <DownloadIcon className="size-4" />
+                              <span className="flex-1">{r.display_name}</span>
+                            </a>
+                          ))}
+                        </Card.Content>
+                      </Card.Root>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        <Trans message="No attachments added yet." />
+                      </p>
+                    )}
+                  </Tabs.Panel>
+                  {quiz && (
+                    <Tabs.Panel value="quiz">{quizSection}</Tabs.Panel>
+                  )}
+                </Tabs.Root>
+              </>
+            ) : (
+              <>
+                {lesson.content && (
                   <Card.Root>
                     <Card.Content
                       className="prose prose-sm max-w-none p-6"
-                      dangerouslySetInnerHTML={{__html: lesson.summary}}
+                      dangerouslySetInnerHTML={{__html: lesson.content}}
                     />
                   </Card.Root>
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    <Trans message="No summary added yet." />
-                  </p>
                 )}
-              </Tabs.Panel>
-              <Tabs.Panel value="attachments">
-                {lesson.resources.length > 0 ? (
+                {!!lesson.resources.length && (
                   <Card.Root>
                     <Card.Header className="p-4">
                       <Card.Title className="text-sm">
@@ -407,109 +541,82 @@ export function Component() {
                       ))}
                     </Card.Content>
                   </Card.Root>
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    <Trans message="No attachments added yet." />
-                  </p>
                 )}
-              </Tabs.Panel>
-              {quiz && (
-                <Tabs.Panel value="quiz">{quizSection}</Tabs.Panel>
-              )}
-            </Tabs.Root>
-          </>
-        ) : (
-          <>
-            {lesson.content && (
-              <Card.Root>
-                <Card.Content
-                  className="prose prose-sm max-w-none p-6"
-                  dangerouslySetInnerHTML={{__html: lesson.content}}
-                />
-              </Card.Root>
+                {quizSection && (
+                  <section className="flex flex-col gap-3">
+                    <h2 className="text-lg font-semibold">
+                      <Trans message="Quiz" />
+                    </h2>
+                    {quizSection}
+                  </section>
+                )}
+              </>
             )}
-            {!!lesson.resources.length && (
-              <Card.Root>
-                <Card.Header className="p-4">
-                  <Card.Title className="text-sm">
-                    <Trans message="Resources" />
-                  </Card.Title>
-                </Card.Header>
-                <Card.Content className="flex flex-col gap-2 p-4 pt-0">
-                  {lesson.resources.map(r => (
-                    <a
-                      key={r.id}
-                      href={`/api/v1/course-lesson-resources/${r.id}/download`}
-                      className="flex items-center gap-2 rounded-card border p-3 text-sm hover:bg-muted/30"
-                    >
-                      <DownloadIcon className="size-4" />
-                      <span className="flex-1">{r.display_name}</span>
-                    </a>
-                  ))}
-                </Card.Content>
-              </Card.Root>
-            )}
-            {quizSection && (
-              <section className="flex flex-col gap-3">
-                <h2 className="text-lg font-semibold">
-                  <Trans message="Quiz" />
-                </h2>
-                {quizSection}
-              </section>
-            )}
-          </>
-        )}
 
-        {progressError && (
-          <Alert.Root variant="warning" fillStyle="subtleFill">
-            <Alert.Description>{progressError}</Alert.Description>
-          </Alert.Root>
-        )}
+            {progressError && (
+              <Alert.Root variant="warning" fillStyle="subtleFill">
+                <Alert.Description>{progressError}</Alert.Description>
+              </Alert.Root>
+            )}
 
-        <div className="flex items-center justify-between gap-3">
-          <Button
-            variant="outline"
-            disabled={completing}
-            onClick={() => {
-              if (course) {
-                const flat = course.chapters.flatMap((ch: any) => ch.lessons);
-                const idx = flat.findIndex(
-                  (l: any) => l.id === Number(lessonId),
-                );
-                const prev = flat[idx - 1];
-                if (prev)
-                  navigate(`/my-order/courses/${courseId}/lessons/${prev.id}`);
-              }
-            }}
-          >
-            <ChevronLeftIcon />
-            <Trans message="Previous" />
-          </Button>
-          <Button disabled={completing} onClick={() => void complete()}>
-            {completing ? <Spinner /> : <CheckIcon />}
-            <Trans message="Complete & Next" />
-          </Button>
-          <Button
-            variant="outline"
-            disabled={completing}
-            onClick={() => {
-              if (course) {
-                const flat = course.chapters.flatMap((ch: any) => ch.lessons);
-                const idx = flat.findIndex(
-                  (l: any) => l.id === Number(lessonId),
-                );
-                const next = flat[idx + 1];
-                if (next)
-                  navigate(`/my-order/courses/${courseId}/lessons/${next.id}`);
-              }
-            }}
-          >
-            <Trans message="Next" />
-            <ChevronRightIcon />
-          </Button>
+            <div className="flex items-center justify-between gap-3">
+              <Button
+                variant="outline"
+                disabled={completing}
+                onClick={() => {
+                  if (course) {
+                    const flat = course.chapters.flatMap(
+                      (ch: any) => ch.lessons,
+                    );
+                    const idx = flat.findIndex(
+                      (l: any) => l.id === Number(lessonId),
+                    );
+                    const prev = flat[idx - 1];
+                    if (prev)
+                      navigate(
+                        `/my-portal/courses/${courseId}/lessons/${prev.id}`,
+                      );
+                  }
+                }}
+              >
+                <ChevronLeftIcon />
+                <Trans message="Previous" />
+              </Button>
+              <Button disabled={completing} onClick={() => void complete()}>
+                {completing ? <Spinner /> : <CheckIcon />}
+                <Trans message="Complete & Next" />
+              </Button>
+              <Button
+                variant="outline"
+                disabled={completing}
+                onClick={() => {
+                  if (course) {
+                    const flat = course.chapters.flatMap(
+                      (ch: any) => ch.lessons,
+                    );
+                    const idx = flat.findIndex(
+                      (l: any) => l.id === Number(lessonId),
+                    );
+                    const next = flat[idx + 1];
+                    if (next)
+                      navigate(
+                        `/my-portal/courses/${courseId}/lessons/${next.id}`,
+                      );
+                  }
+                }}
+              >
+                <Trans message="Next" />
+                <ChevronRightIcon />
+              </Button>
+            </div>
+          </div>
+
+          <div className="hidden lg:col-span-1 lg:block">
+            <div className="sticky top-20">{curriculumPanel}</div>
+          </div>
         </div>
-      </div>
-    </MyOrderShell>
+      </main>
+    </div>
   );
 }
 

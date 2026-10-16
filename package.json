@@ -79,6 +79,7 @@
     "lucide-react": "^0.577.0",
     "lucide-react-picker": "npm:lucide-react@^0.577.0",
     "markdown-it": "^14.1.0",
+    "media-chrome": "^4.19.3",
     "media-icons": "^0.10.0",
     "mime-match": "^1.0.2",
     "nano-memoize": "^3.0.16",

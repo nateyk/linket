@@ -9,9 +9,11 @@ import {cn} from '@ui/utils/cn';
 export function RatingStars({
   value,
   className,
+  starClassName,
 }: {
   value: number;
   className?: string;
+  starClassName?: string;
 }) {
   return (
     <div
@@ -23,10 +25,11 @@ export function RatingStars({
         <StarIcon
           key={star}
           className={cn(
-            'size-4',
+            'size-4 shrink-0',
             star <= value
               ? 'fill-current text-warning'
               : 'text-[var(--biolink-muted-text)]',
+            starClassName,
           )}
         />
       ))}

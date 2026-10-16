@@ -14,7 +14,7 @@ class OrderRecoveryTest extends TestCase
 {
     public function testItReturnsTheSameGenericResponseForAnInvalidRecoveryRequest(): void
     {
-        $response = (new CustomerOrderPortalController())->requestCode(Request::create('/api/v1/public/my-order/request-code', 'POST', ['email' => 'not-an-email']));
+        $response = (new CustomerOrderPortalController())->requestCode(Request::create('/api/v1/public/my-portal/request-code', 'POST', ['email' => 'not-an-email']));
 
         $this->assertSame(
             'If paid purchases match that email address, we will send a sign-in code shortly.',

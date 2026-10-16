@@ -32,7 +32,7 @@ class OrderRecoveryService
         RateLimiter::hit("digital-product-recovery:email:{$emailHash}", 900);
         RateLimiter::hit("digital-product-recovery:ip:{$ip}", 900);
 
-        if (!StorefrontOrder::query()->where('buyer_email', $email)->where('status', 'paid')->exists()) {
+        if (!StorefrontOrder::query()->whereRaw('LOWER(buyer_email) = ?', [$email])->where('status', 'paid')->exists()) {
             return;
         }
 
@@ -129,9 +129,9 @@ class OrderRecoveryService
     public function paidOrders(DigitalProductOrderRecovery $recovery)
     {
         return StorefrontOrder::query()
-            ->where('buyer_email', $recovery->email)
+            ->whereRaw('LOWER(buyer_email) = ?', [strtolower(trim((string) $recovery->email))])
             ->where('status', 'paid')
-            ->with(['product.cover', 'entitlements.file', 'review.ratings'])
+            ->with(['product.cover', 'product.course', 'entitlements.file', 'review.ratings'])
             ->latest('paid_at');
     }
 

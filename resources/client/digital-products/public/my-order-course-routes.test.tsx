@@ -2,8 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {describe, expect, test} from 'vitest';
 
-describe('my order course access', () => {
-  test('mounts course learning under my-order only', () => {
+describe('my portal course access', () => {
+  test('mounts course learning under my-portal with guest portal APIs', () => {
     const router = fs.readFileSync(
       path.resolve('resources/client/app-router.tsx'),
       'utf8',
@@ -33,9 +33,9 @@ describe('my order course access', () => {
       'utf8',
     );
 
-    expect(router).toContain("path: 'my-order/courses/:courseId'");
+    expect(router).toContain("path: 'my-portal/courses/:courseId'");
     expect(router).toContain(
-      "path: 'my-order/courses/:courseId/lessons/:lessonId'",
+      "path: 'my-portal/courses/:courseId/lessons/:lessonId'",
     );
     expect(orderPage).not.toContain('/dashboard/my-courses');
     expect(orderPage).not.toContain('/dashboard/learn/');
@@ -44,7 +44,7 @@ describe('my order course access', () => {
     expect(lessonPage).toContain('setTrial(false);');
     expect(lessonPage).not.toContain('else await load();');
     expect(lessonPage).toContain(
-      'else navigate(`/my-order/courses/${courseId}`);',
+      'else navigate(`/my-portal/courses/${courseId}`);',
     );
     expect(coursePage).toContain("setError('Unable to load this course.')");
     expect(coursePage).toContain('const controller = new AbortController();');
@@ -52,21 +52,30 @@ describe('my order course access', () => {
     expect(coursePage).toContain('setLoading(true);');
     expect(coursePage).toContain('setError(undefined);');
     expect(coursePage).toContain('return () => controller.abort();');
-    expect(coursePage).toMatch(
-      /await apiClient\.get\(\s*`\/api\/v1\/courses\/\$\{courseId\}\/learn`\s*,\s*\{signal: controller\.signal\}\s*,?\s*\)/,
+    const portalApi = fs.readFileSync(
+      path.resolve(
+        'resources/client/digital-products/public/my-portal-api.ts',
+      ),
+      'utf8',
     );
-    expect(lessonPage).toMatch(
-      /await apiClient\.get\(\s*`\/api\/v1\/courses\/\$\{courseId\}\/learn\/lessons\/\$\{lessonId\}`\s*,\s*\{signal\}\s*,?\s*\)/,
-    );
+    expect(portalApi).toContain('/api/v1/public/my-portal/courses/');
+    expect(coursePage).toContain('fetchPortalCourseLearn');
+    expect(lessonPage).toContain('fetchPortalLesson');
+    expect(lessonPage).toContain('completePortalLesson');
     expect(lessonPage).toContain(
       'isAxiosError(reason) && reason.response?.status === 403',
     );
-    expect(orderPage).toMatch(
-      /await apiClient\.get\(\s*'\/api\/v1\/my-courses'\s*,?\s*\)/,
-    );
+    expect(orderPage).toContain("apiClient.get('/api/v1/my-courses')");
     expect(orderPage).toContain(
       '<Trans message="Unable to load your courses." />',
     );
+    expect(orderPage).toContain('PortalCourseGrid');
+    expect(orderPage).toContain('MyPortalLibrary');
+    expect(coursePage).toContain('Continue learning');
+    expect(coursePage).toContain('CourseCurriculumList');
+    expect(coursePage).toContain('next_lesson_id');
+    expect(lessonPage).toContain('CourseCurriculumList');
+    expect(lessonPage).toContain('Course curriculum');
     expect(sidebar).toContain(
       "filter={item => item.action !== '/dashboard/my-courses'}",
     );

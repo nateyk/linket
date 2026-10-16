@@ -109,10 +109,10 @@ export function ProductFaq({product}: {product: PublicDigitalProduct}) {
 function MyOrdersLink() {
   return (
     <a
-      href="/my-order"
+      href="/my-portal"
       className="font-medium text-[var(--biolink-text)] underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4"
     >
-      <Trans message="My Orders" />
+      <Trans message="My Portal" />
     </a>
   );
 }

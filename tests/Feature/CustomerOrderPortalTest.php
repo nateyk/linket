@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Courses\Models\Course;
 use App\Models\User;
 use App\Storefront\Models\DigitalProduct;
 use App\Storefront\Models\DigitalProductOrderRecovery;
@@ -23,7 +24,7 @@ class CustomerOrderPortalTest extends TestCase
 
     public function testCodeRequestAlwaysReturnsTheGenericResponse(): void
     {
-        $this->postJson('/api/v1/public/my-order/request-code', ['email' => 'not-an-email'])
+        $this->postJson('/api/v1/public/my-portal/request-code', ['email' => 'not-an-email'])
             ->assertOk()
             ->assertJson([
                 'message' => 'If paid purchases match that email address, we will send a sign-in code shortly.',
@@ -36,7 +37,7 @@ class CustomerOrderPortalTest extends TestCase
         RateLimiter::clear('digital-product-recovery:ip:127.0.0.1');
         $this->createPaidOrder('buyer@example.test');
 
-        $this->postJson('/api/v1/public/my-order/request-code', ['email' => 'BUYER@example.test'])
+        $this->postJson('/api/v1/public/my-portal/request-code', ['email' => 'BUYER@example.test'])
             ->assertOk();
 
         $challenge = DigitalProductOrderRecovery::query()
@@ -60,7 +61,7 @@ class CustomerOrderPortalTest extends TestCase
             'expires_at' => now()->addMinutes(10),
         ]);
 
-        $this->postJson('/api/v1/public/my-order/verify-code', [
+        $this->postJson('/api/v1/public/my-portal/verify-code', [
             'email' => $email,
             'code' => '123456',
         ])->assertOk()
@@ -80,7 +81,7 @@ class CustomerOrderPortalTest extends TestCase
             'expires_at' => now()->addMinutes(10),
         ]);
 
-        $verification = $this->stateful()->postJson('/api/v1/public/my-order/verify-code', [
+        $verification = $this->stateful()->postJson('/api/v1/public/my-portal/verify-code', [
             'email' => $email,
             'code' => '123456',
         ])->assertOk();
@@ -88,9 +89,26 @@ class CustomerOrderPortalTest extends TestCase
 
         $this->assertNotNull($cookie);
         $this->stateful()->withUnencryptedCookies([OrderRecoveryService::COOKIE => $cookie->getValue()])
-            ->getJson('/api/v1/public/my-order/purchases')
+            ->getJson('/api/v1/public/my-portal/purchases')
             ->assertOk()
-            ->assertJsonPath('orders.0.id', $order->uuid);
+            ->assertJsonPath('orders.0.id', $order->uuid)
+            ->assertJsonPath('orders.0.product_type', 'digital')
+            ->assertJsonPath('orders.0.course_id', null);
+    }
+
+    public function testPortalPurchasesIncludeCourseMetadata(): void
+    {
+        $email = 'course-buyer@example.test';
+        $order = $this->createPaidCourseOrder($email);
+        $session = $this->portalSessionFor($email);
+
+        $this->stateful()
+            ->withUnencryptedCookies([OrderRecoveryService::COOKIE => $session['cookie']])
+            ->getJson('/api/v1/public/my-portal/purchases')
+            ->assertOk()
+            ->assertJsonPath('orders.0.id', $order->uuid)
+            ->assertJsonPath('orders.0.product_type', 'course')
+            ->assertJsonPath('orders.0.course_id', $order->product->course->id);
     }
 
     public function testExpiredBrowserSessionCannotLoadPurchases(): void
@@ -105,7 +123,7 @@ class CustomerOrderPortalTest extends TestCase
             'token_hash' => hash('sha256', "{$emailHash}.123456"),
             'expires_at' => now()->addMinutes(10),
         ]);
-        $verification = $this->stateful()->postJson('/api/v1/public/my-order/verify-code', [
+        $verification = $this->stateful()->postJson('/api/v1/public/my-portal/verify-code', [
             'email' => $email,
             'code' => '123456',
         ])->assertOk();
@@ -113,7 +131,7 @@ class CustomerOrderPortalTest extends TestCase
         $recovery->update(['session_expires_at' => now()->subSecond()]);
 
         $this->stateful()->withUnencryptedCookies([OrderRecoveryService::COOKIE => $cookie->getValue()])
-            ->getJson('/api/v1/public/my-order/purchases')
+            ->getJson('/api/v1/public/my-portal/purchases')
             ->assertForbidden();
     }
 
@@ -130,11 +148,11 @@ class CustomerOrderPortalTest extends TestCase
         ]);
 
         for ($attempt = 0; $attempt < 5; $attempt++) {
-            $this->postJson('/api/v1/public/my-order/verify-code', ['email' => $email, 'code' => '000000'])
+            $this->postJson('/api/v1/public/my-portal/verify-code', ['email' => $email, 'code' => '000000'])
                 ->assertUnprocessable();
         }
 
-        $this->postJson('/api/v1/public/my-order/verify-code', ['email' => $email, 'code' => '123456'])
+        $this->postJson('/api/v1/public/my-portal/verify-code', ['email' => $email, 'code' => '123456'])
             ->assertUnprocessable();
     }
 
@@ -163,7 +181,7 @@ class CustomerOrderPortalTest extends TestCase
         $session = $this->portalSessionFor('buyer@example.test');
 
         (new \App\Storefront\Controllers\CustomerOrderPortalController())->review(
-            Request::create('/api/v1/public/my-order/purchases/' . $order->uuid . '/review', 'POST', [
+            Request::create('/api/v1/public/my-portal/purchases/' . $order->uuid . '/review', 'POST', [
                 'stars' => 5,
                 'title' => 'Excellent guide',
                 'review' => 'Exactly what I needed.',
@@ -209,6 +227,7 @@ class CustomerOrderPortalTest extends TestCase
             'price_cents' => 2500,
             'currency' => 'ETB',
             'status' => 'approved',
+            'type' => 'digital',
         ]);
 
         return StorefrontOrder::query()->create([
@@ -224,6 +243,46 @@ class CustomerOrderPortalTest extends TestCase
             'status' => 'paid',
             'paid_at' => now(),
         ]);
+    }
+
+    private function createPaidCourseOrder(string $buyerEmail): StorefrontOrder
+    {
+        $creator = User::query()->forceCreate([
+            'name' => 'Course Creator',
+            'username' => 'course-creator-' . Str::random(8),
+            'email' => Str::random(8) . '@example.test',
+            'password' => bcrypt('password'),
+            'email_verified_at' => now(),
+        ]);
+        $workspace = (new CreateWorkspace())->createPersonalWorkspace($creator);
+        $product = DigitalProduct::query()->create([
+            'workspace_id' => $workspace->id,
+            'user_id' => $creator->id,
+            'title' => 'Purchased course',
+            'price_cents' => 4900,
+            'currency' => 'ETB',
+            'status' => 'approved',
+            'type' => 'course',
+        ]);
+        Course::query()->create([
+            'digital_product_id' => $product->id,
+            'instructor_user_id' => $creator->id,
+            'published_at' => now(),
+        ]);
+
+        return StorefrontOrder::query()->create([
+            'uuid' => (string) Str::uuid(),
+            'digital_product_id' => $product->id,
+            'creator_id' => $creator->id,
+            'buyer_email' => $buyerEmail,
+            'currency' => 'ETB',
+            'gross_amount_cents' => 4900,
+            'commission_bps' => 1000,
+            'platform_fee_cents' => 490,
+            'creator_earnings_cents' => 4410,
+            'status' => 'paid',
+            'paid_at' => now(),
+        ])->fresh('product.course');
     }
 
     /** @return array{cookie: string} */

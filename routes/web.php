@@ -21,10 +21,17 @@ Route::get('qr/{hashOrAlias}', [QrCodesController::class, 'redirectToDestination
 Route::get('contact', [HomeController::class, 'render']);
 Route::get('pages/{slugOrId}', [CustomPageController::class, 'show']);
 Route::get('forgot-password', [HomeController::class, 'render']);
-Route::get('my-order', [HomeController::class, 'render']);
-Route::get('my-order/purchases', [HomeController::class, 'render']);
-Route::get('my-order/courses/{courseId}', [HomeController::class, 'render'])->whereNumber('courseId');
-Route::get('my-order/courses/{courseId}/lessons/{lessonId}', [HomeController::class, 'render'])
+Route::get('my-portal', [HomeController::class, 'render']);
+Route::get('my-portal/purchases', [HomeController::class, 'render']);
+Route::get('my-portal/courses/{courseId}', [HomeController::class, 'render'])->whereNumber('courseId');
+Route::get('my-portal/courses/{courseId}/lessons/{lessonId}', [HomeController::class, 'render'])
+    ->whereNumber('courseId')
+    ->whereNumber('lessonId');
+Route::redirect('my-order', '/my-portal', 302);
+Route::redirect('my-order/purchases', '/my-portal/purchases', 302);
+Route::get('my-order/courses/{courseId}', fn (string $courseId) => redirect("/my-portal/courses/{$courseId}", 302))
+    ->whereNumber('courseId');
+Route::get('my-order/courses/{courseId}/lessons/{lessonId}', fn (string $courseId, string $lessonId) => redirect("/my-portal/courses/{$courseId}/lessons/{$lessonId}", 302))
     ->whereNumber('courseId')
     ->whereNumber('lessonId');
 

@@ -345,19 +345,27 @@ Route::group(['prefix' => 'v1'], function () {
     Route::get('public/stores/{biolink}/digital-products/{digitalProduct}/orders/{order}', [PublicDigitalProductsController::class, 'order'])->middleware('throttle:60,1');
     Route::get('public/stores/{biolink}/digital-products/{digitalProduct}/reviews', [ProductReviewsController::class, 'index']);
     Route::get('public/stores/{biolink}/digital-products/{digitalProduct}/reviews/{order}', [ProductReviewsController::class, 'show']);
-    Route::post('public/my-order/request-code', [CustomerOrderPortalController::class, 'requestCode'])->middleware('throttle:20,1')->withoutMiddleware([
-        VerifyCsrfToken::class,
-        VerifyApiAccessMiddleware::class,
-    ]);
-    Route::post('public/my-order/verify-code', [CustomerOrderPortalController::class, 'verifyCode'])->middleware('throttle:20,1')->withoutMiddleware([
-        EnsureFrontendRequestsAreStateful::class,
-        VerifyCsrfToken::class,
-        VerifyApiAccessMiddleware::class,
-    ]);
-    Route::get('public/my-order/purchases', [CustomerOrderPortalController::class, 'purchases'])->middleware('throttle:60,1')->withoutMiddleware(VerifyApiAccessMiddleware::class);
-    Route::post('public/my-order/purchases/{order}/downloads/{entitlement}', [CustomerOrderPortalController::class, 'download'])->middleware('throttle:30,1')->withoutMiddleware(VerifyApiAccessMiddleware::class);
-    Route::post('public/my-order/purchases/{order}/resend-receipt', [CustomerOrderPortalController::class, 'resendReceipt'])->middleware('throttle:10,1')->withoutMiddleware(VerifyApiAccessMiddleware::class);
-    Route::post('public/my-order/purchases/{order}/review', [CustomerOrderPortalController::class, 'review'])->middleware('throttle:10,1')->withoutMiddleware(VerifyApiAccessMiddleware::class);
+    $registerCustomerPortal = function (string $prefix): void {
+        Route::post("public/{$prefix}/request-code", [CustomerOrderPortalController::class, 'requestCode'])->middleware('throttle:20,1')->withoutMiddleware([
+            VerifyCsrfToken::class,
+            VerifyApiAccessMiddleware::class,
+        ]);
+        Route::post("public/{$prefix}/verify-code", [CustomerOrderPortalController::class, 'verifyCode'])->middleware('throttle:20,1')->withoutMiddleware([
+            EnsureFrontendRequestsAreStateful::class,
+            VerifyCsrfToken::class,
+            VerifyApiAccessMiddleware::class,
+        ]);
+        Route::get("public/{$prefix}/library", [CustomerOrderPortalController::class, 'library'])->middleware('throttle:60,1')->withoutMiddleware(VerifyApiAccessMiddleware::class);
+        Route::get("public/{$prefix}/purchases", [CustomerOrderPortalController::class, 'purchases'])->middleware('throttle:60,1')->withoutMiddleware(VerifyApiAccessMiddleware::class);
+        Route::get("public/{$prefix}/courses/{course}", [CustomerOrderPortalController::class, 'course'])->middleware('throttle:60,1')->withoutMiddleware(VerifyApiAccessMiddleware::class);
+        Route::get("public/{$prefix}/courses/{course}/lessons/{lesson}", [CustomerOrderPortalController::class, 'lesson'])->middleware('throttle:60,1')->withoutMiddleware(VerifyApiAccessMiddleware::class);
+        Route::post("public/{$prefix}/courses/{course}/lessons/{lesson}/complete", [CustomerOrderPortalController::class, 'completeLesson'])->middleware('throttle:60,1')->withoutMiddleware(VerifyApiAccessMiddleware::class);
+        Route::post("public/{$prefix}/purchases/{order}/downloads/{entitlement}", [CustomerOrderPortalController::class, 'download'])->middleware('throttle:30,1')->withoutMiddleware(VerifyApiAccessMiddleware::class);
+        Route::post("public/{$prefix}/purchases/{order}/resend-receipt", [CustomerOrderPortalController::class, 'resendReceipt'])->middleware('throttle:10,1')->withoutMiddleware(VerifyApiAccessMiddleware::class);
+        Route::post("public/{$prefix}/purchases/{order}/review", [CustomerOrderPortalController::class, 'review'])->middleware('throttle:10,1')->withoutMiddleware(VerifyApiAccessMiddleware::class);
+    };
+    $registerCustomerPortal('my-portal');
+    $registerCustomerPortal('my-order');
     Route::get('storefront/products/{digitalProduct}/public', [StorefrontCheckoutController::class, 'show']);
     Route::post('storefront/products/{digitalProduct}/checkout', [StorefrontCheckoutController::class, 'store'])->middleware('throttle:20,1');
     Route::get('digital-products/{digitalProduct}/public', [StorefrontCheckoutController::class, 'show']);

@@ -12,12 +12,13 @@ class MyOrderCourseRoutesTest extends TestCase
         $uris = collect(Route::getRoutes()->getRoutesByMethod()['GET'])
             ->map(fn ($route) => $route->uri());
 
-        $this->assertContains('my-order/courses/{courseId}', $uris);
-        $this->assertContains('my-order/courses/{courseId}/lessons/{lessonId}', $uris);
+        $this->assertContains('my-portal/courses/{courseId}', $uris);
+        $this->assertContains('my-portal/courses/{courseId}/lessons/{lessonId}', $uris);
         $this->assertNotContains('dashboard/my-courses', $uris);
         $this->assertNotContains('dashboard/learn/{courseId}', $uris);
 
-        $this->get('/my-order/courses/1')->assertOk();
-        $this->get('/my-order/courses/1/lessons/2')->assertOk();
+        $this->get('/my-portal/courses/1')->assertOk();
+        $this->get('/my-portal/courses/1/lessons/2')->assertOk();
+        $this->get('/my-order')->assertRedirect('/my-portal');
     }
 }

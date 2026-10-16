@@ -498,6 +498,129 @@ class CourseSystemTest extends TestCase
         );
     }
 
+    public function testMyCoursesIncludesCompletedAtAndNextLesson(): void
+    {
+        $creator = $this->createCreator();
+        $student = $this->createCreator();
+        $workspace = (new CreateWorkspace())->createPersonalWorkspace($creator);
+        ActiveWorkspace::clearCache();
+        $product = $this->createCourseProduct($creator, $workspace);
+        $course = $product->course;
+        $course->update(['published_at' => now()]);
+        $product->update(['status' => 'approved', 'approved_at' => now()]);
+        $chapter = \App\Courses\Models\Chapter::create([
+            'course_id' => $course->id,
+            'title' => 'Ch 1',
+            'sort_order' => 0,
+        ]);
+        $lesson = Lesson::create([
+            'chapter_id' => $chapter->id,
+            'course_id' => $course->id,
+            'title' => 'L1',
+            'status' => 'published',
+            'sort_order' => 0,
+        ]);
+        $order = StorefrontOrder::create([
+            'uuid' => (string) Str::uuid(),
+            'digital_product_id' => $product->id,
+            'creator_id' => $creator->id,
+            'buyer_user_id' => $student->id,
+            'buyer_email' => $student->email,
+            'currency' => 'ETB',
+            'gross_amount_cents' => 1000,
+            'commission_bps' => 500,
+            'platform_fee_cents' => 50,
+            'creator_earnings_cents' => 950,
+            'status' => 'paid',
+            'paid_at' => now(),
+        ]);
+        app(\App\Courses\Services\EnrollmentService::class)->grantFromOrder(
+            $order->fresh('product.course'),
+        );
+
+        $this->stateful()
+            ->actingAs($student)
+            ->getJson('/api/v1/my-courses')
+            ->assertOk()
+            ->assertJsonPath('data.0.course_id', $course->id)
+            ->assertJsonPath('data.0.next_lesson_id', $lesson->id)
+            ->assertJsonPath('data.0.completed_at', null);
+    }
+
+    public function testLearnPayloadIncludesNextLessonLocksAndInstructor(): void
+    {
+        $creator = $this->createCreator();
+        $student = $this->createCreator();
+        $workspace = (new CreateWorkspace())->createPersonalWorkspace($creator);
+        ActiveWorkspace::clearCache();
+        $product = $this->createCourseProduct($creator, $workspace);
+        $course = $product->course;
+        $course->update([
+            'require_sequential_completion' => true,
+            'published_at' => now(),
+            'instructor_user_id' => $creator->id,
+        ]);
+        $product->update([
+            'status' => 'approved',
+            'approved_at' => now(),
+            'description' => 'Learn UX fundamentals',
+            'learning_outcomes' => ['Plan tests', 'Apply heuristics'],
+        ]);
+        $chapter = \App\Courses\Models\Chapter::create([
+            'course_id' => $course->id,
+            'title' => 'Ch 1',
+            'sort_order' => 0,
+        ]);
+        $l1 = Lesson::create([
+            'chapter_id' => $chapter->id,
+            'course_id' => $course->id,
+            'title' => 'L1',
+            'status' => 'published',
+            'sort_order' => 0,
+        ]);
+        $l2 = Lesson::create([
+            'chapter_id' => $chapter->id,
+            'course_id' => $course->id,
+            'title' => 'L2',
+            'status' => 'published',
+            'sort_order' => 1,
+        ]);
+        $order = StorefrontOrder::create([
+            'uuid' => (string) Str::uuid(),
+            'digital_product_id' => $product->id,
+            'creator_id' => $creator->id,
+            'buyer_user_id' => $student->id,
+            'buyer_email' => $student->email,
+            'currency' => 'ETB',
+            'gross_amount_cents' => 1000,
+            'commission_bps' => 500,
+            'platform_fee_cents' => 50,
+            'creator_earnings_cents' => 950,
+            'status' => 'paid',
+            'paid_at' => now(),
+        ]);
+        app(\App\Courses\Services\EnrollmentService::class)->grantFromOrder(
+            $order->fresh('product.course'),
+        );
+
+        $response = $this->stateful()
+            ->actingAs($student)
+            ->getJson("/api/v1/courses/{$course->id}/learn")
+            ->assertOk();
+
+        $response
+            ->assertJsonPath('data.next_lesson_id', $l1->id)
+            ->assertJsonPath('data.instructor.name', $creator->name)
+            ->assertJsonPath('data.unlocked_lesson_ids.0', $l1->id)
+            ->assertJsonPath('data.chapters.0.lessons.0.locked', false)
+            ->assertJsonPath('data.chapters.0.lessons.1.locked', true);
+
+        $this->assertNotContains(
+            $l2->id,
+            $response->json('data.unlocked_lesson_ids'),
+        );
+    }
+
     public function testDuplicateWebhookDoesNotDuplicateEnrollment(): void
     {
         $creator = $this->createCreator();

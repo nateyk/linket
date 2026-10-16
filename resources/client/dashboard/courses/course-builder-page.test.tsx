@@ -688,3 +688,18 @@ describe('quiz option correctness', () => {
     expect(source).not.toContain('size="icon"');
   });
 });
+
+describe('course builder video embed policy', () => {
+  test('warns that YouTube and Vimeo embeds can leave Linket', () => {
+    const builderSource = fs.readFileSync(
+      path.resolve(
+        'resources/client/dashboard/courses/course-builder-page.tsx',
+      ),
+      'utf8',
+    );
+
+    expect(builderSource).toContain(
+      'YouTube and Vimeo embeds can be opened or shared outside Linket',
+    );
+  });
+});

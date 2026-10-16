@@ -34,6 +34,8 @@ class StudentCoursesController extends Controller
         // Published lessons only for students
         $course->load([
             'product.cover',
+            'product.creator',
+            'instructor',
             'chapters' => fn($q) => $q->orderBy('sort_order'),
             'chapters.lessons' => function ($q) {
                 $q->where('status', 'published')->orderBy('sort_order')->with(['resources.file', 'videoFile']);
@@ -46,6 +48,19 @@ class StudentCoursesController extends Controller
         $total = $progress->totalPublished($course);
         $completedCount = count(array_intersect($completedIds, $course->chapters->flatMap->lessons->pluck('id')->all()));
         $percent = $progress->progressPercent($course, $user->id);
+        $next = $progress->nextIncompleteLesson($course, $user->id);
+
+        $unlockedLessonIds = [];
+        foreach ($course->chapters->flatMap->lessons as $lesson) {
+            $unlocked = !$course->require_sequential_completion
+                || $access->isLessonUnlocked($user->id, $course, $lesson);
+            $lesson->setAttribute('locked', !$unlocked);
+            if ($unlocked) {
+                $unlockedLessonIds[] = $lesson->id;
+            }
+        }
+
+        $instructorUser = $course->instructor ?? $course->product?->creator;
 
         $resource = new CourseResource($course);
         $data = $resource->toArray($request);
@@ -55,6 +70,14 @@ class StudentCoursesController extends Controller
             'percent' => $percent,
             'completed_lesson_ids' => $completedIds,
         ];
+        $data['next_lesson_id'] = $next?->id;
+        $data['unlocked_lesson_ids'] = $unlockedLessonIds;
+        $data['instructor'] = $instructorUser
+            ? [
+                'name' => $instructorUser->name,
+                'avatar_url' => $instructorUser->image,
+            ]
+            : null;
 
         return response()->json(['data' => $data]);
     }
@@ -107,13 +130,20 @@ class StudentCoursesController extends Controller
         abort_unless($request->hasValidSignature(), 403, __('This video link is invalid or has expired.'));
 
         $user = $request->user('sanctum') ?? $request->user('web') ?? $request->user() ?? \Illuminate\Support\Facades\Auth::user();
-        abort_unless($user, 401);
-
         $access = app(\App\Courses\CourseAccess::class);
+        $portalRecovery = app(\App\Storefront\OrderRecoveryService::class)->current($request);
+
         if ($request->boolean('preview')) {
-            abort_unless($access->canPreviewCourse($user, $lesson->course), 403);
+            abort_unless($user && $access->canPreviewCourse($user, $lesson->course), 403);
+        } elseif ($user && $access->canAccessLesson($user, $lesson, false)) {
+            // Logged-in enrolled student (or preview path above).
+        } elseif (
+            $portalRecovery
+            && app(\App\Courses\Services\PortalCourseAccess::class)->canAccessLesson($portalRecovery, $lesson)
+        ) {
+            // Guest portal cookie unlocks the same signed stream.
         } else {
-            abort_unless($access->canAccessLesson($user, $lesson, false), 403, 'This lesson is locked. Complete prior lessons first.');
+            abort($user || $portalRecovery ? 403 : 401, __('This lesson is locked. Complete prior lessons first.'));
         }
 
         abort_unless($lesson->video_type === 'upload', 404);
@@ -157,6 +187,7 @@ class StudentCoursesController extends Controller
                 'completed' => $progressService->completedCount($course, $user->id),
                 'next_lesson_id' => $next?->id,
                 'enrolled_at' => $enrollment->enrolled_at,
+                'completed_at' => $enrollment->completed_at,
             ];
         });
 

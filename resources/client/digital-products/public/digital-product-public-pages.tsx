@@ -472,9 +472,9 @@ export function PublicDigitalProductOrderSuccessPage({
                   variant="ghost"
                   className={cn('w-fit', buttonAppearance.className)}
                   style={buttonAppearance.style}
-                  render={<a href="/my-order" />}
+                  render={<a href="/my-portal" />}
                 >
-                  <Trans message="Open My Orders" />
+                  <Trans message="Open My Portal" />
                 </Button>
               ) : (
                 <p className="text-sm text-[var(--biolink-muted-text)]">
@@ -483,10 +483,10 @@ export function PublicDigitalProductOrderSuccessPage({
                     values={{
                       link: (
                         <a
-                          href="/my-order"
+                          href="/my-portal"
                           className="font-medium text-[var(--biolink-text)] underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4"
                         >
-                          <Trans message="My Orders" />
+                          <Trans message="My Portal" />
                         </a>
                       ),
                     }}

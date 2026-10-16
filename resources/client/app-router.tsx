@@ -301,19 +301,19 @@ export const appRouter = createBrowserRouter(
         },
 
         {
-          path: 'my-order',
+          path: 'my-portal',
           lazy: () => import('@app/digital-products/public/order-lookup-page'),
         },
         {
-          path: 'my-order/purchases',
+          path: 'my-portal/purchases',
           lazy: () => import('@app/digital-products/public/order-lookup-page'),
         },
         {
-          path: 'my-order/courses/:courseId',
+          path: 'my-portal/courses/:courseId',
           lazy: () => import('@app/dashboard/my-learning/course-learn-page'),
         },
         {
-          path: 'my-order/courses/:courseId/lessons/:lessonId',
+          path: 'my-portal/courses/:courseId/lessons/:lessonId',
           lazy: () => import('@app/dashboard/my-learning/lesson-player-page'),
         },
         ...commonRoutes,

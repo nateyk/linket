@@ -4,7 +4,7 @@ import {useSettings} from '@ui/settings/use-settings';
 import {ReactNode} from 'react';
 import {Link} from 'react-router';
 
-export function MyOrderShell({
+export function MyPortalShell({
   children,
   wide = false,
 }: {
@@ -33,7 +33,7 @@ export function MyOrderShell({
         <main
           className={cn(
             'mx-auto flex w-full flex-1 flex-col gap-6 px-4 py-6 sm:px-6 lg:py-8',
-            wide ? 'max-w-5xl' : 'max-w-2xl',
+            wide ? 'max-w-7xl' : 'max-w-2xl',
           )}
         >
           {children}

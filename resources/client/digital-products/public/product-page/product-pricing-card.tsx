@@ -157,7 +157,7 @@ export function ProductPricingCard({
             )
           )}
           <IncludesItem icon={ShoppingBagIcon}>
-            <Trans message="Access anytime from My Orders" />
+            <Trans message="Access anytime from My Portal" />
           </IncludesItem>
           <IncludesItem icon={TimerIcon}>
             <Trans message="One-time payment, no subscription" />
