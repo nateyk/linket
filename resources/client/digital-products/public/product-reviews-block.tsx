@@ -4,6 +4,7 @@ import {Button} from '@shadcn/button/button';
 import {apiClient} from '@common/http/query-client';
 import {FormattedDate} from '@ui/i18n/formatted-date';
 import {Trans} from '@ui/i18n/trans';
+import {cn} from '@ui/utils/cn';
 import {
   BadgeCheckIcon,
   CircleAlertIcon,
@@ -168,22 +169,26 @@ function SummaryCard({
 
   return (
     <div className="flex flex-col rounded-card border border-[var(--biolink-border)] p-5">
-      <div className="flex items-center gap-3">
-        <p className="text-4xl leading-none font-semibold tracking-tight">
-          {loading ? '—' : average.toFixed(1)}
-        </p>
-        <div className="flex flex-col gap-1">
-          <RatingStars value={Math.round(average)} />
-          <p className="text-xs text-[var(--biolink-muted-text)]">
-            <Trans
-              message=":average out of 5 · :count reviews"
-              values={{average: average.toFixed(1), count: total}}
-            />
+      {(loading || total > 0) && (
+        <div className="flex items-center gap-3">
+          <p className="text-4xl leading-none font-semibold tracking-tight tabular-nums">
+            {loading ? '—' : average.toFixed(1)}
           </p>
+          {!loading && (
+            <div className="flex flex-col gap-1">
+              <RatingStars value={Math.round(average)} />
+              <p className="text-xs text-[var(--biolink-muted-text)]">
+                <Trans
+                  message=":average out of 5 · :count reviews"
+                  values={{average: average.toFixed(1), count: total}}
+                />
+              </p>
+            </div>
+          )}
         </div>
-      </div>
+      )}
 
-      {!loading && (
+      {!loading && total > 0 && (
         <div className="mt-4 flex flex-col gap-1.5 border-t border-[var(--biolink-border)] pt-4">
           {[5, 4, 3, 2, 1].map(star => (
             <div key={star} className="flex items-center gap-2 text-xs">
@@ -197,7 +202,7 @@ function SummaryCard({
                   style={{width: `${percentages[star] ?? 0}%`}}
                 />
               </div>
-              <span className="w-4 text-end text-[var(--biolink-muted-text)]">
+              <span className="w-4 text-end text-[var(--biolink-muted-text)] tabular-nums">
                 {counts[star] ?? 0}
               </span>
             </div>
@@ -205,7 +210,13 @@ function SummaryCard({
         </div>
       )}
 
-      <div className="mt-4 border-t border-[var(--biolink-border)] pt-4">
+      <div
+        className={cn(
+          loading || total > 0
+            ? 'mt-4 border-t border-[var(--biolink-border)] pt-4'
+            : undefined,
+        )}
+      >
         <p className="text-center text-sm text-[var(--biolink-muted-text)]">
           <Trans message="Verified buyers can leave a review from" />{' '}
           <Link
@@ -234,7 +245,9 @@ function ReviewRow({review}: {review: PublicReview}) {
           </time>
         )}
       </div>
-      {review.title && <h3 className="text-sm font-semibold">{review.title}</h3>}
+      {review.title && (
+        <h3 className="text-sm font-semibold">{review.title}</h3>
+      )}
       {review.review && (
         <p className="text-sm leading-6 whitespace-pre-line text-[var(--biolink-muted-text)]">
           {review.review}
@@ -242,9 +255,7 @@ function ReviewRow({review}: {review: PublicReview}) {
       )}
       <div className="mt-1 flex items-center gap-2">
         <Avatar.Root size="sm">
-          <Avatar.ColorFallback>
-            {review.buyer_name}
-          </Avatar.ColorFallback>
+          <Avatar.ColorFallback>{review.buyer_name}</Avatar.ColorFallback>
         </Avatar.Root>
         <span className="text-sm font-medium">
           {review.buyer_name ?? <Trans message="Verified buyer" />}

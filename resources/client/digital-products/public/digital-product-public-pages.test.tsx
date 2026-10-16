@@ -107,6 +107,14 @@ describe('painted-panel colors and locale safety', () => {
       'text-[var(--biolink-muted-text,var(--color-muted-foreground))]!',
     );
     expect(page).toContain('text-[var(--biolink-accent,var(--color-primary))]');
+    expect(page).toContain('message="Your course is ready"');
+    expect(page).toContain('message="Your download is ready"');
+    expect(page).toContain('message="Open My Orders"');
+    expect(page).not.toContain('backdrop-blur');
+    expect(page).not.toContain('shadow-xs');
+    // The phone bar tracks the buy button, not the whole rail, so the
+    // action returns as soon as the button scrolls away.
+    expect(page).toContain('observer.observe(action)');
   });
 
   test('uses the shared locale-aware formatters', () => {

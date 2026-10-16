@@ -42,15 +42,16 @@ describe('product pricing card', () => {
     expect(source).not.toMatch(/refund|money-back|money back|guarantee/i);
   });
 
-  test('sentences sit at 16px; 12px is reserved for the badge label', () => {
+  test('the price stands alone and the trust note stays prose', () => {
     const source = readSource();
 
     // The trust note is prose, not metadata.
-    expect(source).toContain(
-      'p-3 text-base text-[var(--biolink-muted-text)]',
-    );
+    expect(source).toContain('p-3 text-base text-[var(--biolink-muted-text)]');
     expect(source).not.toContain('p-3 text-xs');
-    // "One-time purchase" stays a 12px uppercase badge label.
-    expect(source).toContain('text-xs font-medium tracking-wide');
+    // The one-time fact lives in the includes list. An uppercase label
+    // above the price would be a second copy of the same sentence.
+    expect(source).not.toContain('text-xs font-medium tracking-wide');
+    expect(source).not.toContain('uppercase');
+    expect(source).toContain('One-time payment, no subscription');
   });
 });

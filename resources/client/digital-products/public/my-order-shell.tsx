@@ -14,7 +14,7 @@ export function MyOrderShell({
   const {branding} = useSettings();
   return (
     <div className="min-h-screen bg-background px-2 py-2 sm:px-4 sm:py-4">
-      <div className="mx-auto flex min-h-[calc(100vh-1rem)] w-full flex-col rounded-3xl bg-muted/30 shadow-sm ring-1 ring-border">
+      <div className="mx-auto flex min-h-[calc(100vh-1rem)] w-full flex-col rounded-card bg-muted ring-1 ring-border">
         <header className="flex items-center justify-between px-6 py-4 lg:px-8">
           {branding.logo_dark ? (
             <Link
@@ -22,11 +22,7 @@ export function MyOrderShell({
               aria-label={branding.site_name}
               className="flex items-center gap-2"
             >
-              <img
-                src={branding.logo_dark}
-                alt=""
-                className="h-7 w-auto"
-              />
+              <img src={branding.logo_dark} alt="" className="h-7 w-auto" />
             </Link>
           ) : null}
           <span className="hidden text-sm text-muted-foreground sm:block">
@@ -44,9 +40,11 @@ export function MyOrderShell({
         </main>
 
         <footer className="flex items-center justify-between px-6 py-4 text-xs text-muted-foreground lg:px-8">
-          <span>© {new Date().getFullYear()}, {branding.site_name}.</span>
+          <span>
+            © {new Date().getFullYear()}, {branding.site_name}.
+          </span>
           <span className="hidden sm:inline">
-            <Trans message="Secure checkout • Privacy respected" />
+            <Trans message="Purchases stay tied to your verified email." />
           </span>
         </footer>
       </div>

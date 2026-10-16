@@ -4,6 +4,10 @@ import {Card} from '@shadcn/card/card';
 import {Dialog} from '@shadcn/dialog/dialog';
 import {Field} from '@shadcn/forms/field';
 import {Input} from '@shadcn/forms/input/input';
+import {
+  RadioGroup,
+  RadioGroupItem,
+} from '@shadcn/forms/radio-group/radio-group';
 import {Textarea} from '@shadcn/forms/textarea/textarea';
 import {Spinner} from '@shadcn/spinner/spinner';
 import {Trans} from '@ui/i18n/trans';
@@ -21,7 +25,6 @@ import {
   MailIcon,
   PackageOpenIcon,
   ShieldCheckIcon,
-  SparklesIcon,
   StarIcon,
 } from 'lucide-react';
 import {auth} from '@common/auth/use-auth';
@@ -74,14 +77,14 @@ function AuthenticatedMyOrder() {
     }[]
   >([]);
   const [loading, setLoading] = useState(true);
-  const [courseError, setCourseError] = useState<string>();
+  const [courseFailed, setCourseFailed] = useState(false);
   useEffect(() => {
     void (async () => {
       try {
         const response = await apiClient.get('/api/v1/my-courses');
         setCourses(response.data.data ?? []);
       } catch {
-        setCourseError('Unable to load your courses.');
+        setCourseFailed(true);
       } finally {
         setLoading(false);
       }
@@ -89,7 +92,6 @@ function AuthenticatedMyOrder() {
   }, []);
   return (
     <MyOrderShell wide>
-      <PromotionBanner />
       <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">
@@ -104,16 +106,18 @@ function AuthenticatedMyOrder() {
         <div className="flex min-h-40 items-center justify-center">
           <Spinner />
         </div>
-      ) : courseError ? (
+      ) : courseFailed ? (
         <Alert variant="warning" fillStyle="subtleFill">
           <GraduationCapIcon />
           <Alert.Title>
             <Trans message="Courses unavailable" />
           </Alert.Title>
-          <Alert.Description>{courseError}</Alert.Description>
+          <Alert.Description>
+            <Trans message="Unable to load your courses." />
+          </Alert.Description>
         </Alert>
       ) : courses.length ? (
-        <div className="space-y-3">
+        <div className="flex flex-col gap-3">
           <h2 className="text-sm font-semibold">
             <Trans message="My courses" />
           </h2>
@@ -136,14 +140,20 @@ function AuthenticatedMyOrder() {
                     </div>
                   )}
                 </div>
-                <Card.Content className="p-3">
+                <Card.Content className="flex flex-col gap-2 p-3">
                   <p className="text-sm font-medium">{c.title}</p>
                   <p className="text-xs text-muted-foreground">
-                    {c.percent}% • {c.total_lessons} lessons
+                    <Trans
+                      message=":percent% complete · :count lessons"
+                      values={{
+                        percent: c.percent,
+                        count: c.total_lessons,
+                      }}
+                    />
                   </p>
                   <Button
                     size="sm"
-                    className="mt-2 w-full"
+                    className="w-full"
                     render={<Link to={`/my-order/courses/${c.course_id}`} />}
                   >
                     <Trans message="Continue" />
@@ -160,7 +170,7 @@ function AuthenticatedMyOrder() {
             <Trans message="No courses yet" />
           </Alert.Title>
           <Alert.Description>
-            <Trans message="Courses you purchase will appear here. Explore promoted courses below." />
+            <Trans message="Courses you purchase will appear here." />
           </Alert.Description>
         </Alert>
       )}
@@ -173,14 +183,10 @@ function AuthenticatedMyOrder() {
             <Trans message="Verify your purchase email to unlock protected downloads when you bought as guest." />
           </Card.Description>
         </Card.Header>
-        <Card.Content className="flex flex-col gap-3 sm:flex-row">
+        <Card.Content>
           <Button variant="outline" render={<Link to="/my-order/purchases" />}>
             <MailIcon />
             <Trans message="Go to purchases" />
-          </Button>
-          <Button variant="outline" render={<Link to="/my-order" />}>
-            <GraduationCapIcon />
-            <Trans message="My courses" />
           </Button>
         </Card.Content>
       </Card.Root>
@@ -188,38 +194,19 @@ function AuthenticatedMyOrder() {
   );
 }
 
-function PromotionBanner() {
-  return (
-    <Card.Root className="overflow-hidden border-primary/20 bg-primary/5 py-0">
-      <Card.Content className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex gap-3">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <SparklesIcon className="size-5" />
-          </span>
-          <div>
-            <p className="text-sm font-semibold">
-              <Trans message="Level up with featured courses" />
-            </p>
-            <p className="text-xs text-muted-foreground">
-              <Trans message="New creator courses are live on Linket — keep learning and unlock your next certificate." />
-            </p>
-          </div>
-        </div>
-      </Card.Content>
-    </Card.Root>
-  );
-}
+type RecoveryError = 'email' | 'code' | 'request' | 'expired' | {api: string};
 
 function RecoveryRequest() {
   const navigate = useNavigate();
+  const {trans} = useTrans();
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
-  const [error, setError] = useState<string>();
+  const [error, setError] = useState<RecoveryError>();
   const requestCode = async () => {
     if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
-      setError('Enter a valid email address.');
+      setError('email');
       return;
     }
 
@@ -231,7 +218,7 @@ function RecoveryRequest() {
       });
       setSent(true);
     } catch {
-      setError('We could not submit your request. Please try again.');
+      setError('request');
     } finally {
       setSubmitting(false);
     }
@@ -239,7 +226,7 @@ function RecoveryRequest() {
 
   const verifyCode = async () => {
     if (!/^\d{6}$/.test(code)) {
-      setError('Enter the 6-digit code from your email.');
+      setError('code');
       return;
     }
 
@@ -254,9 +241,7 @@ function RecoveryRequest() {
     } catch (reason) {
       const apiMessage = getApiErrorMessage(reason);
       setError(
-        apiMessage !== 'An error occurred.'
-          ? apiMessage
-          : 'That sign-in code is invalid or has expired.',
+        apiMessage !== 'An error occurred.' ? {api: apiMessage} : 'expired',
       );
     } finally {
       setSubmitting(false);
@@ -265,7 +250,7 @@ function RecoveryRequest() {
 
   return (
     <AuthLayoutV2>
-      <div className="space-y-2 text-center">
+      <div className="flex flex-col gap-2 text-center">
         <div className="mx-auto flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary">
           <PackageOpenIcon className="size-5" />
         </div>
@@ -277,7 +262,7 @@ function RecoveryRequest() {
         </p>
       </div>
 
-      <div className="space-y-4">
+      <div className="flex flex-col gap-4">
         {sent ? (
           <>
             <Alert fillStyle="subtleFill">
@@ -289,24 +274,32 @@ function RecoveryRequest() {
                 <Trans message="Enter the 6-digit code we sent if paid purchases match this email address." />
               </Alert.Description>
             </Alert>
-            <div className="flex flex-col gap-2">
-              <label htmlFor="purchase-code" className="text-sm font-medium">
+            <Field.Root invalid={error === 'code' ? true : undefined}>
+              <Field.Label>
                 <Trans message="Sign-in code" />
-              </label>
+              </Field.Label>
               <Input
                 id="purchase-code"
                 inputMode="numeric"
                 autoComplete="one-time-code"
                 maxLength={6}
                 value={code}
-                onChange={event =>
-                  setCode(event.target.value.replace(/\D/g, ''))
-                }
+                onChange={event => {
+                  setCode(event.target.value.replace(/\D/g, ''));
+                  if (error === 'code') setError(undefined);
+                }}
                 disabled={submitting}
                 bindToHookForm={false}
-                className="text-center font-mono text-xl tracking-[0.45em]"
+                aria-invalid={error === 'code' ? true : undefined}
+                className="text-center font-mono text-xl tracking-widest tabular-nums"
               />
-            </div>
+              {error === 'code' && (
+                <Field.Error>
+                  <Trans message="Enter the 6-digit code from your email." />
+                </Field.Error>
+              )}
+            </Field.Root>
+            <RecoveryProblem error={error} />
             <Button
               className="w-full"
               size="lg"
@@ -327,35 +320,31 @@ function RecoveryRequest() {
           </>
         ) : (
           <>
-            <div className="space-y-2">
-              <label
-                htmlFor="purchase-recovery-email"
-                className="text-sm font-medium"
-              >
+            <Field.Root invalid={error === 'email' ? true : undefined}>
+              <Field.Label>
                 <Trans message="Email address" />
-              </label>
+              </Field.Label>
               <Input
                 id="purchase-recovery-email"
                 type="email"
                 autoComplete="email"
-                placeholder="you@example.com"
+                placeholder={trans({message: 'you@example.com'})}
                 value={email}
-                onChange={event => setEmail(event.target.value)}
+                onChange={event => {
+                  setEmail(event.target.value);
+                  if (error === 'email') setError(undefined);
+                }}
                 disabled={submitting}
                 bindToHookForm={false}
+                aria-invalid={error === 'email' ? true : undefined}
               />
-            </div>
-            {error && (
-              <Alert variant="destructive" fillStyle="subtleFill">
-                <MailIcon />
-                <Alert.Title>
-                  <Trans message="Unable to continue" />
-                </Alert.Title>
-                <Alert.Description>
-                  {error ? <Trans message={error} /> : null}
-                </Alert.Description>
-              </Alert>
-            )}
+              {error === 'email' && (
+                <Field.Error>
+                  <Trans message="Enter a valid email address." />
+                </Field.Error>
+              )}
+            </Field.Root>
+            <RecoveryProblem error={error} />
             <Button
               className="w-full"
               size="lg"
@@ -372,6 +361,28 @@ function RecoveryRequest() {
         )}
       </div>
     </AuthLayoutV2>
+  );
+}
+
+function RecoveryProblem({error}: {error?: RecoveryError}) {
+  if (!error || error === 'email' || error === 'code') return null;
+
+  return (
+    <Alert variant="destructive" fillStyle="subtleFill">
+      <MailIcon />
+      <Alert.Title>
+        <Trans message="Unable to continue" />
+      </Alert.Title>
+      <Alert.Description>
+        {error === 'request' && (
+          <Trans message="We could not submit your request. Please try again." />
+        )}
+        {error === 'expired' && (
+          <Trans message="That sign-in code is invalid or has expired." />
+        )}
+        {typeof error === 'object' ? error.api : null}
+      </Alert.Description>
+    </Alert>
   );
 }
 
@@ -510,7 +521,7 @@ function PurchaseOrders() {
           </Alert.Description>
         </Alert>
       ) : orders?.length ? (
-        <div className="space-y-4">
+        <div className="flex flex-col gap-4">
           {orders.map(order => (
             <ReviewableOrderCard
               key={order.id}
@@ -545,17 +556,7 @@ function ReviewableOrderCard({
 
   return (
     <>
-      <OrderCard {...props} />
-      <div className="-mt-2 flex justify-end">
-        <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
-          <StarIcon />
-          {props.order.review ? (
-            <Trans message="Edit review" />
-          ) : (
-            <Trans message="Write a review" />
-          )}
-        </Button>
-      </div>
+      <OrderCard {...props} onReview={() => setOpen(true)} />
       {open && (
         <PortalReviewDialog
           order={props.order}
@@ -580,12 +581,12 @@ function PortalReviewDialog({
   const [title, setTitle] = useState(order.review?.title ?? '');
   const [review, setReview] = useState(order.review?.review ?? '');
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string>();
+  const [error, setError] = useState<'stars' | 'save' | {api: string}>();
   const {trans} = useTrans();
 
   const submit = async () => {
     if (!stars) {
-      setError('Choose a star rating to continue.');
+      setError('stars');
       return;
     }
 
@@ -616,11 +617,7 @@ function PortalReviewDialog({
     } catch (reason) {
       const apiMessage = getApiErrorMessage(reason);
       setError(
-        apiMessage !== 'An error occurred.'
-          ? apiMessage
-          : reason instanceof Error
-            ? reason.message
-            : 'We could not save your review.',
+        apiMessage !== 'An error occurred.' ? {api: apiMessage} : 'save',
       );
     } finally {
       setSubmitting(false);
@@ -646,34 +643,36 @@ function PortalReviewDialog({
             </Dialog.Title>
           </Dialog.Header>
           <Dialog.Body>
-            <div className="space-y-4">
-              <div
-                className="flex gap-1"
+            <div className="flex flex-col gap-4">
+              <RadioGroup
+                orientation="horizontal"
+                value={stars ? String(stars) : null}
+                onValueChange={next => setStars(Number(next))}
                 aria-label={trans({message: 'Star rating'})}
+                aria-invalid={error === 'stars' ? true : undefined}
+                disabled={submitting}
+                className="w-auto gap-1"
               >
                 {[1, 2, 3, 4, 5].map(value => (
-                  <Button
+                  <RadioGroupItem
                     key={value}
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    className="size-9"
-                    onClick={() => setStars(value)}
+                    value={String(value)}
                     aria-label={trans({
                       message: '[one :value star|other :value stars]',
                       values: {value},
                     })}
+                    className="size-9 rounded-button border-0 bg-transparent after:hidden focus-visible:ring-2 data-checked:border-transparent data-checked:bg-transparent [&_[data-slot=radio-group-indicator]]:hidden"
                   >
                     <StarIcon
                       className={
                         value <= stars
-                          ? 'fill-amber-400 text-amber-400'
+                          ? 'fill-current text-warning'
                           : 'text-muted-foreground'
                       }
                     />
-                  </Button>
+                  </RadioGroupItem>
                 ))}
-              </div>
+              </RadioGroup>
               <Field.Root>
                 <Field.Label>
                   <Trans message="Headline (optional)" />
@@ -700,7 +699,13 @@ function PortalReviewDialog({
               {error && (
                 <Alert variant="destructive" fillStyle="subtleFill">
                   <Alert.Description>
-                    {error ? <Trans message={error} /> : null}
+                    {error === 'stars' && (
+                      <Trans message="Choose a star rating to continue." />
+                    )}
+                    {error === 'save' && (
+                      <Trans message="We could not save your review." />
+                    )}
+                    {typeof error === 'object' ? error.api : null}
                   </Alert.Description>
                 </Alert>
               )}
@@ -726,22 +731,24 @@ function OrderCard({
   busy,
   onDownload,
   onResend,
+  onReview,
 }: {
   order: Order;
   busy?: string;
   onDownload: (order: Order, download: OrderDownload) => Promise<void>;
   onResend: (order: Order) => Promise<void>;
+  onReview?: () => void;
 }) {
   const downloads = order.downloads.filter(download => download.available);
   return (
-    <Card.Root className="gap-0 overflow-hidden shadow-sm ring-1 ring-foreground/10">
+    <Card.Root className="gap-0 overflow-hidden">
       <Card.Header>
         <Card.Title className="flex flex-wrap items-center justify-between gap-2">
           <span className="flex items-center gap-2">
             <PackageOpenIcon className="size-4 text-primary" />
             {order.product_title ?? <Trans message="Digital product" />}
           </span>
-          <span className="text-base">
+          <span className="text-base tabular-nums">
             {formatPrice(order.gross_amount_cents, order.currency)}
           </span>
         </Card.Title>
@@ -756,7 +763,7 @@ function OrderCard({
           )}
         </Card.Description>
       </Card.Header>
-      <Card.Content className="space-y-4">
+      <Card.Content className="flex flex-col gap-4">
         {downloads.length ? (
           <div className="divide-y rounded-card border">
             {downloads.map(download => (
@@ -765,14 +772,16 @@ function OrderCard({
                 className="flex items-center gap-3 px-3 py-3"
               >
                 <FileDownIcon className="size-4 shrink-0 text-muted-foreground" />
-                <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                  {download.name ?? <Trans message="Download file" />}
-                </span>
-                <span className="hidden text-xs text-muted-foreground sm:inline">
-                  <Trans
-                    message=":count left"
-                    values={{count: download.remaining_downloads}}
-                  />
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate text-sm font-medium">
+                    {download.name ?? <Trans message="Download file" />}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    <Trans
+                      message=":count left"
+                      values={{count: download.remaining_downloads}}
+                    />
+                  </span>
                 </span>
                 <Button
                   size="sm"
@@ -811,15 +820,27 @@ function OrderCard({
               <Trans message="Receipt available" />
             )}
           </span>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={busy === `receipt-${order.id}`}
-            onClick={() => void onResend(order)}
-          >
-            {busy === `receipt-${order.id}` ? <Spinner /> : <MailIcon />}
-            <Trans message="Resend receipt" />
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {onReview && (
+              <Button variant="outline" size="sm" onClick={onReview}>
+                <StarIcon />
+                {order.review ? (
+                  <Trans message="Edit review" />
+                ) : (
+                  <Trans message="Write a review" />
+                )}
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={busy === `receipt-${order.id}`}
+              onClick={() => void onResend(order)}
+            >
+              {busy === `receipt-${order.id}` ? <Spinner /> : <MailIcon />}
+              <Trans message="Resend receipt" />
+            </Button>
+          </div>
         </div>
       </Card.Content>
     </Card.Root>

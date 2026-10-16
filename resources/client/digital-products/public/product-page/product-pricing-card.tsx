@@ -7,6 +7,7 @@ import {resolveBiolinkButtonAppearance} from '@app/short-links/renderers/biolink
 import {formatMoney as formatPrice} from '@ui/i18n/format-money';
 import {Trans} from '@ui/i18n/trans';
 import {cn} from '@ui/utils/cn';
+import type {Ref} from 'react';
 import {
   BookOpenIcon,
   GraduationCapIcon,
@@ -19,63 +20,37 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type {PublicDigitalProduct} from '../digital-product-public-pages';
-import type {ProductReviewsSummary} from '../product-reviews-block';
-import {RatingStars} from '../product-rating-stars';
 import {productTypeIcon} from './product-type';
 import {biolinkSurfaceCard, biolinkSurfaceContent} from './surface';
 
 export function ProductPricingCard({
   product,
-  reviews,
   appearance,
   checkoutCancelled,
   checkoutFailed,
   submitting,
   onBuy,
+  actionRef,
 }: {
   product: PublicDigitalProduct;
-  reviews?: ProductReviewsSummary;
   appearance?: BiolinkAppearanceConfig | null;
   checkoutCancelled: boolean;
   checkoutFailed: boolean;
   submitting: boolean;
   onBuy: () => void;
+  actionRef?: Ref<HTMLDivElement>;
 }) {
   const buttonAppearance = resolveBiolinkButtonAppearance(appearance);
   const TypeIcon = productTypeIcon(product.type);
   const isCourse = !!product.is_course;
-  const average = reviews?.average;
-  const reviewCount = reviews?.rating_stats?.total ?? 0;
-  const showRating = typeof average === 'number' && reviewCount > 0;
 
   return (
     <Card.Root className={biolinkSurfaceCard}>
       <Card.Content className={biolinkSurfaceContent}>
         <div className="flex items-start justify-between gap-4">
-          <div className="flex min-w-0 flex-col gap-1.5">
-            <span className="text-xs font-medium tracking-wide text-[var(--biolink-muted-text)] uppercase">
-              <Trans message="One-time purchase" />
-            </span>
-            <p className="text-4xl leading-none font-semibold tracking-tight">
-              {formatPrice(product.price_cents, product.currency)}
-            </p>
-            {showRating && (
-              <div className="mt-0.5 flex flex-wrap items-center gap-2 text-sm">
-                <RatingStars value={Math.round(average)} />
-                <span className="font-medium text-[var(--biolink-text)] tabular-nums">
-                  {average.toFixed(1)}
-                </span>
-                <span className="text-[var(--biolink-muted-text)]">
-                  (
-                  <Trans
-                    message=":count reviews"
-                    values={{count: reviewCount}}
-                  />
-                  )
-                </span>
-              </div>
-            )}
-          </div>
+          <p className="text-4xl leading-none font-semibold tracking-tight tabular-nums">
+            {formatPrice(product.price_cents, product.currency)}
+          </p>
           <span className="grid size-10 shrink-0 place-items-center rounded-card-sm bg-[var(--biolink-surface)] text-[var(--biolink-muted-text)] ring-1 ring-(color:--biolink-border)">
             <TypeIcon className="size-5" aria-hidden="true" />
           </span>
@@ -84,17 +59,19 @@ export function ProductPricingCard({
         {/* The Buy action stays pinned directly under the price so a
             cancelled/failed return never pushes the only recovery CTA below
             the fold — the alerts below it carry their own Try again. */}
-        <Button
-          variant="ghost"
-          className={cn('w-full', buttonAppearance.className)}
-          style={buttonAppearance.style}
-          size="lg"
-          disabled={submitting}
-          onClick={onBuy}
-        >
-          <LockKeyholeIcon />
-          <Trans message="Buy now" />
-        </Button>
+        <div ref={actionRef}>
+          <Button
+            variant="ghost"
+            className={cn('w-full', buttonAppearance.className)}
+            style={buttonAppearance.style}
+            size="lg"
+            disabled={submitting}
+            onClick={onBuy}
+          >
+            <LockKeyholeIcon />
+            <Trans message="Buy now" />
+          </Button>
+        </div>
 
         {checkoutCancelled && (
           <Alert

@@ -146,24 +146,22 @@ export function PublicDigitalProductPage({
   const checkoutCancelled =
     new URLSearchParams(window.location.search).get('checkout') === 'cancelled';
   const buttonAppearance = resolveBiolinkButtonAppearance(data.appearance);
-  const railRef = useRef<HTMLElement | null>(null);
+  const buyActionRef = useRef<HTMLDivElement | null>(null);
   const [railInView, setRailInView] = useState(true);
 
-  // The pricing rail is only sticky from lg up, so on phones the buy action
-  // scrolls out of reach. A compact bottom bar takes over whenever the rail
-  // is off screen. A cancelled/failed return always keeps the bar up too:
-  // the rail can still intersect the viewport while its CTA sits below the
-  // fold (alert above it), which is exactly the moment of hesitation that
-  // must keep an action above the fold. The bar steps aside while the buyer
+  // The pricing rail is only sticky from lg up, so on phones the buy
+  // action scrolls away while the rest of the rail (includes, trust note)
+  // is still on screen. Watch the button itself. A cancelled or failed
+  // return also keeps the bar up. The bar steps aside while the buyer
   // dialog is open.
   useEffect(() => {
-    const rail = railRef.current;
-    if (!rail || typeof IntersectionObserver === 'undefined') return;
+    const action = buyActionRef.current;
+    if (!action || typeof IntersectionObserver === 'undefined') return;
     const observer = new IntersectionObserver(
       ([entry]) => setRailInView(entry.isIntersecting),
       {threshold: 0},
     );
-    observer.observe(rail);
+    observer.observe(action);
     return () => observer.disconnect();
   }, []);
 
@@ -291,18 +289,15 @@ export function PublicDigitalProductPage({
             </Card.Root>
           </div>
 
-          <aside
-            ref={railRef}
-            className="min-w-0 lg:sticky lg:top-6 lg:col-start-2 lg:row-span-2 lg:row-start-1"
-          >
+          <aside className="min-w-0 lg:sticky lg:top-6 lg:col-start-2 lg:row-span-2 lg:row-start-1">
             <ProductPricingCard
               product={data.product}
-              reviews={reviewsSummary}
               appearance={data.appearance}
               checkoutCancelled={checkoutCancelled}
               checkoutFailed={checkoutFailed}
               submitting={submitting}
               onBuy={() => setBuyerDialogOpen(true)}
+              actionRef={buyActionRef}
             />
           </aside>
 
@@ -313,7 +308,7 @@ export function PublicDigitalProductPage({
 
         <div
           className={cn(
-            'fixed inset-x-0 bottom-0 z-30 border-t border-[var(--biolink-border)] bg-[var(--biolink-surface-strong)] px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] transition-[transform,visibility] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none lg:hidden',
+            'fixed inset-x-0 bottom-0 z-30 border-t border-[var(--biolink-border)] bg-[var(--biolink-surface-strong)] px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] transition-[transform,visibility] duration-150 ease-in-out motion-reduce:transition-none lg:hidden',
             !railInView || checkoutCancelled || checkoutFailed
               ? buyerDialogOpen
                 ? 'invisible translate-y-full'
@@ -368,6 +363,8 @@ export function PublicDigitalProductOrderSuccessPage({
   const [order, setOrder] = useState(data.order);
   const [refreshError, setRefreshError] = useState(false);
   const paid = isPaid(order);
+  const isCourse = !!data.product.is_course;
+  const buttonAppearance = resolveBiolinkButtonAppearance(data.appearance);
 
   const refreshOrder = useCallback(async () => {
     setRefreshError(false);
@@ -400,11 +397,11 @@ export function PublicDigitalProductOrderSuccessPage({
       backUrl={data.back_url}
       backLabel={<Trans message="Back to bio" />}
     >
-      <Card.Root className="w-full max-w-xl gap-0 overflow-hidden bg-[var(--biolink-surface-strong)] py-0 text-[var(--biolink-text)] ring-1 ring-(color:--biolink-border) backdrop-blur-xl">
+      <Card.Root className={cn('w-full', biolinkSurfaceCard)}>
         <div
           className={cn(
-            'border-b px-5 py-5 sm:px-6',
-            paid ? 'bg-positive/8' : 'bg-primary/6',
+            'border-b border-[var(--biolink-border)] px-5 py-5 sm:px-6',
+            paid ? 'bg-positive/10' : 'bg-primary/10',
           )}
         >
           {paid ? (
@@ -412,11 +409,15 @@ export function PublicDigitalProductOrderSuccessPage({
               <span className="grid size-9 shrink-0 place-items-center rounded-full bg-positive/10 text-positive">
                 <CheckCircle2Icon className="size-5" />
               </span>
-              <div>
+              <div className="flex min-w-0 flex-col gap-1">
                 <h1 className="text-xl font-semibold tracking-tight">
-                  <Trans message="Your download is ready" />
+                  {isCourse ? (
+                    <Trans message="Your course is ready" />
+                  ) : (
+                    <Trans message="Your download is ready" />
+                  )}
                 </h1>
-                <p className="mt-1 text-sm text-[var(--biolink-muted-text)]">
+                <p className="text-sm text-[var(--biolink-muted-text)]">
                   <Trans
                     message="Thanks for your purchase of :product."
                     values={{product: data.product.title}}
@@ -429,11 +430,11 @@ export function PublicDigitalProductOrderSuccessPage({
               <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary/10 text-[var(--biolink-accent,var(--color-primary))]">
                 <Spinner className="size-5" />
               </span>
-              <div>
+              <div className="flex min-w-0 flex-col gap-1">
                 <h1 className="text-xl font-semibold tracking-tight">
                   <Trans message="Finalizing your payment" />
                 </h1>
-                <p className="mt-1 text-sm text-[var(--biolink-muted-text)]">
+                <p className="text-sm text-[var(--biolink-muted-text)]">
                   <Trans message="This usually takes just a few seconds. Keep this page open." />
                 </p>
               </div>
@@ -441,7 +442,7 @@ export function PublicDigitalProductOrderSuccessPage({
           )}
         </div>
 
-        <div className="space-y-5 p-5 sm:p-6">
+        <div className="flex flex-col gap-5 p-5 sm:p-6">
           {order.buyer_email && (
             <p className="text-sm text-[var(--biolink-muted-text)]">
               <Trans
@@ -451,13 +452,47 @@ export function PublicDigitalProductOrderSuccessPage({
             </p>
           )}
 
+          <OrderSummary order={order} product={data.product} paid={paid} />
+
           {paid ? (
             <>
-              <OrderSummary order={order} product={data.product} />
-              <DownloadList
-                appearance={data.appearance}
-                downloads={order.downloads ?? []}
-              />
+              {isCourse && (
+                <p className="text-sm leading-6 text-[var(--biolink-muted-text)]">
+                  <Trans message="Sign in with the email you used at checkout. The course is listed under My courses." />
+                </p>
+              )}
+              {(!isCourse || (order.downloads?.length ?? 0) > 0) && (
+                <DownloadList
+                  appearance={data.appearance}
+                  downloads={order.downloads ?? []}
+                />
+              )}
+              {isCourse ? (
+                <Button
+                  variant="ghost"
+                  className={cn('w-fit', buttonAppearance.className)}
+                  style={buttonAppearance.style}
+                  render={<a href="/my-order" />}
+                >
+                  <Trans message="Open My Orders" />
+                </Button>
+              ) : (
+                <p className="text-sm text-[var(--biolink-muted-text)]">
+                  <Trans
+                    message="Find this purchase later in :link."
+                    values={{
+                      link: (
+                        <a
+                          href="/my-order"
+                          className="font-medium text-[var(--biolink-text)] underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4"
+                        >
+                          <Trans message="My Orders" />
+                        </a>
+                      ),
+                    }}
+                  />
+                </p>
+              )}
             </>
           ) : (
             <PendingOrderState
@@ -594,18 +629,17 @@ function BuyerDetailsDialog({
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{product.title}</p>
                 <p className="truncate text-xs font-medium text-[var(--biolink-muted-text)]">
-                  <Trans
-                    message="Sold by :store"
-                    values={{store: storeName}}
-                  />
+                  <Trans message="Sold by :store" values={{store: storeName}} />
                 </p>
+              </div>
+              <div className="shrink-0 text-end">
                 <p className="text-xs font-medium text-[var(--biolink-muted-text)]">
                   <Trans message="Total" />
                 </p>
+                <p className="text-sm font-semibold tabular-nums">
+                  {formatPrice(product.price_cents, product.currency)}
+                </p>
               </div>
-              <span className="shrink-0 text-sm font-semibold tabular-nums">
-                {formatPrice(product.price_cents, product.currency)}
-              </span>
             </div>
             <Dialog.Description className="text-[var(--biolink-muted-text)]">
               <Trans message="You'll continue to Chapa's secure checkout to pay, then return to this page." />
@@ -614,7 +648,7 @@ function BuyerDetailsDialog({
           <Dialog.Body>
             <form
               id="digital-product-buyer-details"
-              className="space-y-4 px-0.5 py-1"
+              className="flex flex-col gap-4 px-0.5 py-1"
               onSubmit={event => {
                 event.preventDefault();
                 onSubmit();
@@ -747,9 +781,11 @@ function BuyerDetailsDialog({
 function OrderSummary({
   order,
   product,
+  paid,
 }: {
   order: DigitalProductOrder;
   product: PublicDigitalProduct;
+  paid: boolean;
 }) {
   const {trans} = useTrans();
   const total =
@@ -775,7 +811,7 @@ function OrderSummary({
       </div>
       <div className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
         <span className="text-[var(--biolink-muted-text)]">
-          <Trans message="Total paid" />
+          {paid ? <Trans message="Total paid" /> : <Trans message="Total" />}
         </span>
         <span className="font-medium">{total}</span>
       </div>
@@ -863,7 +899,7 @@ function BackToBio({
   children: React.ReactNode;
 }) {
   const className =
-    'inline-flex h-9 w-fit items-center gap-2 self-start rounded-button bg-[var(--biolink-surface-strong)] px-3 text-sm font-medium text-[var(--biolink-text)] shadow-xs ring-1 ring-(color:--biolink-border) backdrop-blur-sm transition-colors hover:bg-[var(--biolink-surface)] focus-visible:outline-2 focus-visible:outline-offset-4';
+    'inline-flex h-9 w-fit items-center gap-2 self-start rounded-button bg-[var(--biolink-surface-strong)] px-3 text-sm font-medium text-[var(--biolink-text)] ring-1 ring-(color:--biolink-border) transition-colors hover:bg-[var(--biolink-surface)] focus-visible:outline-2 focus-visible:outline-offset-4';
 
   if (backUrl) {
     return (
@@ -973,17 +1009,19 @@ function DownloadList({
             className="flex items-center gap-3 px-4 py-3 first:rounded-t-card last:rounded-b-card"
           >
             <FileDownIcon className="size-4 shrink-0 text-[var(--biolink-muted-text)]" />
-            <span className="min-w-0 flex-1 truncate text-sm font-medium">
-              {download.name}
-            </span>
-            {typeof download.remaining_downloads === 'number' && (
-              <span className="hidden text-xs text-[var(--biolink-muted-text)] sm:inline">
-                <Trans
-                  message=":count left"
-                  values={{count: download.remaining_downloads}}
-                />
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="truncate text-sm font-medium">
+                {download.name}
               </span>
-            )}
+              {typeof download.remaining_downloads === 'number' && (
+                <span className="text-xs text-[var(--biolink-muted-text)]">
+                  <Trans
+                    message=":count left"
+                    values={{count: download.remaining_downloads}}
+                  />
+                </span>
+              )}
+            </span>
             <Button
               className={buttonAppearance.className}
               size="sm"

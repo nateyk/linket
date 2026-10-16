@@ -65,7 +65,7 @@ describe('my order course access', () => {
       /await apiClient\.get\(\s*'\/api\/v1\/my-courses'\s*,?\s*\)/,
     );
     expect(orderPage).toContain(
-      "setCourseError('Unable to load your courses.')",
+      '<Trans message="Unable to load your courses." />',
     );
     expect(sidebar).toContain(
       "filter={item => item.action !== '/dashboard/my-courses'}",
