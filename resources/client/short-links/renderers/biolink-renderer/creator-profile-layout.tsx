@@ -197,7 +197,11 @@ function MobileCreatorProfile({
           aria-label={trans(message('Products'))}
           className="min-w-0 pb-20 focus-visible:outline-2 focus-visible:outline-offset-2"
         >
-          <ShopSection widget={shopWidget} biolink={biolink} />
+          <ShopSection
+            widget={shopWidget}
+            biolink={biolink}
+            appearance={appearance}
+          />
         </section>
       )}
 
@@ -224,7 +228,7 @@ function MobileCreatorProfile({
                 selectSection(item.value);
               }
             }}
-            radius={buttonAppearance.radius}
+            radius="rounded-button"
             activeButtonClassName={buttonAppearance.className}
             activeButtonStyle={buttonAppearance.style}
             stickyBottom
@@ -425,10 +429,12 @@ function CreatorCard({
 function ShopSection({
   widget,
   biolink,
+  appearance,
   showHeading = true,
 }: {
   widget: BiolinkWidget;
   biolink: Biolink;
+  appearance: BiolinkAppearanceConfig | null;
   showHeading?: boolean;
 }) {
   return (
@@ -436,6 +442,7 @@ function ShopSection({
       widget={widget}
       variant="biolinkPage"
       biolink={biolink}
+      appearance={appearance}
       titleOverride={<Trans message="Products" />}
       showHeading={showHeading}
     />
@@ -483,6 +490,7 @@ function CreatorProfileContent({
               <ShopSection
                 widget={shopWidget}
                 biolink={biolink}
+                appearance={appearance}
                 showHeading={false}
               />
             ),
@@ -504,7 +512,13 @@ function CreatorProfileContent({
   }
 
   if (shopWidget) {
-    return <ShopSection widget={shopWidget} biolink={biolink} />;
+    return (
+      <ShopSection
+        widget={shopWidget}
+        biolink={biolink}
+        appearance={appearance}
+      />
+    );
   }
 
   return <AboutSection profile={profile} appearance={appearance} />;

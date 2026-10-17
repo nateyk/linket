@@ -156,6 +156,45 @@ describe('corner roundness radius variables', () => {
       }),
     ).toMatchObject({'--be-radius-card': '24px'});
   });
+
+  test('button chrome rounds through --be-radius-button, not the setting utility class', () => {
+    for (const setting of radiusSettings) {
+      const resolved = resolveBiolinkButtonAppearance({
+        btnConfig: {radius: setting},
+      });
+      expect(resolved.radius).toBe(setting);
+      expect(resolved.className).toContain('rounded-button');
+      expect(resolved.className.split(/\s+/)).not.toContain(setting);
+    }
+  });
+});
+
+describe('storefront appearance token wiring', () => {
+  test('sticky Products/About strip does not leak dashboard bg-background', () => {
+    const source = readSource('store-front.tsx');
+    expect(source).toContain('border-[var(--biolink-border)]');
+    expect(source).not.toMatch(
+      /sticky[\s\S]{0,200}?bg-background/,
+    );
+    expect(source).toMatch(
+      /sticky[\s\S]{0,200}?bg-transparent/,
+    );
+  });
+
+  test('sidebar biolink shell paints from --biolink tokens', () => {
+    const source = readSource('biolink-layout.tsx');
+    expect(source).toContain('bg-[var(--biolink-surface)]');
+    expect(source).toContain('text-[var(--biolink-text)]');
+    expect(source).not.toContain('bg-background/45');
+    expect(source).not.toContain('text-foreground shadow-lg');
+  });
+
+  test('sidebar shop column forwards live appearance into the shop widget', () => {
+    const source = readSource('biolink-layout.tsx');
+    expect(source).toMatch(
+      /function ShopColumn[\s\S]*?appearance[\s\S]*?appearance=\{appearance\}/,
+    );
+  });
 });
 
 describe('container corner roundness', () => {
@@ -264,8 +303,17 @@ describe('creator profile card wiring', () => {
     expect(source).not.toContain('rounded-card-sm');
   });
 
-  test('passes the button radius to the bottom navigation bar', () => {
-    expect(source).toContain('radius={buttonAppearance.radius}');
+  test('passes the remapped button radius token to the bottom navigation bar', () => {
+    // Setting names (rounded-sm|lg|…) bypass --be-radius-button; rounded-button
+    // is what the Appearance radius scale remaps on the page root.
+    expect(source).toContain('radius="rounded-button"');
+    expect(source).not.toContain('radius={buttonAppearance.radius}');
+  });
+
+  test('shop View actions receive the same live appearance as the rest of the card', () => {
+    expect(source).toMatch(
+      /function ShopSection[\s\S]*?appearance[\s\S]*?<ShopWidgetRenderer[\s\S]*?appearance=\{appearance\}/,
+    );
   });
 
   test('passes the resolved button appearance to the bottom navigation bar', () => {
@@ -451,7 +499,10 @@ describe('creator profile editor wiring', () => {
     expect(source).toContain(
       'previewClassName={containerRadius.avatarClassName}',
     );
-    expect(source).toContain('size-22 bg-background p-1');
+    expect(source).toContain(
+      'size-22 bg-[var(--biolink-surface-strong)] p-1',
+    );
+    expect(source).not.toContain('size-22 bg-background p-1');
   });
 
   test('crops the cover at the same 3:1 box the card renders', () => {

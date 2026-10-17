@@ -23,6 +23,7 @@ export function ShopWidgetRenderer({
   widget,
   variant,
   biolink,
+  appearance,
   titleOverride,
   showHeading = true,
 }: WidgetRendererProps & {
@@ -90,7 +91,7 @@ export function ShopWidgetRenderer({
   if (!products.length || !biolink) return null;
 
   const buttonAppearance = resolveBiolinkButtonAppearance(
-    biolink.appearance?.config ?? null,
+    appearance ?? biolink.appearance?.config ?? null,
   );
 
   return (

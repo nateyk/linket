@@ -16,6 +16,19 @@ describe('formatPreviewPrice', () => {
 });
 
 describe('product preview wiring', () => {
+  test('exports a presentational shell the course setup page can reuse', () => {
+    const source = fs.readFileSync(
+      path.resolve(
+        'resources/client/dashboard/digital-products/product-preview.tsx',
+      ),
+      'utf8',
+    );
+    expect(source).toContain('export function ProductFormCustomerPreview');
+    expect(source).toContain(
+      "import {ProductCard} from '@app/digital-products/shared/product-card'",
+    );
+  });
+
   test('preview reuses the shared product card and live context', () => {
     const source = fs.readFileSync(
       path.resolve(
@@ -23,12 +36,11 @@ describe('product preview wiring', () => {
       ),
       'utf8',
     );
-    expect(source).toContain(
-      "import {ProductCard} from '@app/digital-products/shared/product-card'",
-    );
     expect(source).toContain('useProductCreation');
     expect(source).toContain('<ProductCard');
     expect(source).toContain('Tooltip.Content');
+    // Context-backed ProductPreview is a thin wrapper over the shared shell.
+    expect(source).toContain('<ProductFormCustomerPreview');
   });
   test('progress shows completed ratio through shadcn progress', () => {
     const source = fs.readFileSync(
@@ -57,5 +69,17 @@ describe('product preview wiring', () => {
     // bare ":count characters" is ambiguous.
     expect(source).not.toContain('message=":count download files"');
     expect(source).not.toContain('message=":count characters"');
+  });
+
+  test('status tones use semantic warning tokens, not raw amber', () => {
+    const source = fs.readFileSync(
+      path.resolve(
+        'resources/client/dashboard/digital-products/product-preview.tsx',
+      ),
+      'utf8',
+    );
+    expect(source).toContain('text-warning bg-warning/10');
+    expect(source).not.toContain('text-amber-');
+    expect(source).not.toContain('bg-amber-');
   });
 });

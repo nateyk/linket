@@ -11,7 +11,9 @@ import {CroppedCover} from '@common/uploads/components/cropped-image-selector';
 import {Button} from '@shadcn/button/button';
 import {Field} from '@shadcn/forms/field';
 import {Input} from '@shadcn/forms/input/input';
+import {message} from '@ui/i18n/message';
 import {Trans} from '@ui/i18n/trans';
+import {useTrans} from '@ui/i18n/use-trans';
 import {useSortable} from '@ui/interactions/dnd/sortable/use-sortable';
 import {GripVerticalIcon, XIcon} from 'lucide-react';
 import {useRef, useState} from 'react';
@@ -213,10 +215,11 @@ export function CourseSettingsCoverField({
   value: string;
   onChange: (url: string, fileId: number | null) => void;
 }) {
+  const {trans} = useTrans();
   return (
     <Field.Root>
       <Field.Label>
-        <Trans message="Cover Image" />
+        <Trans message="Cover image" />
       </Field.Label>
       <CroppedCover
         value={value}
@@ -225,9 +228,10 @@ export function CourseSettingsCoverField({
         }}
         uploadType="linkImages"
         aspect={16 / 9}
+        label={trans(message('Cover image'))}
       />
       <Field.Description>
-        <Trans message="Recommended size: 1200x514px • Max size: 5MB" />
+        <Trans message="Recommended size: 1200×675 (16:9) · Max 5MB" />
       </Field.Description>
     </Field.Root>
   );

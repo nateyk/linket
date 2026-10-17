@@ -70,9 +70,11 @@ export function CreateProductDialog({
               <MetaIcon className="size-5" />
               <Trans message={meta.title} />
             </Dialog.Title>
-            <Dialog.Description>
-              <Trans message={meta.description} />
-            </Dialog.Description>
+            {meta.description ? (
+              <Dialog.Description>
+                <Trans message={meta.description} />
+              </Dialog.Description>
+            ) : null}
           </Dialog.Header>
           {/* Dialog.Body gives the step area `min-h-0 flex-1 overflow-y-auto`,
               so on short viewports the option cards scroll INSIDE the panel

@@ -1,8 +1,11 @@
 'use client';
 
-import {cn} from '@ui/utils/cn';
+import {Button} from '@shadcn/button/button';
 import {Slider} from '@shadcn/forms/slider/slider';
+import {message} from '@ui/i18n/message';
 import {Trans} from '@ui/i18n/trans';
+import {useTrans} from '@ui/i18n/use-trans';
+import {cn} from '@ui/utils/cn';
 import * as React from 'react';
 import Cropper, {type Area} from 'react-easy-crop';
 import 'react-easy-crop/react-easy-crop.css';
@@ -26,18 +29,51 @@ type ImageCropContextValue = {
   isApplying: boolean;
 };
 
+/** Tight inset so the crop window fills the stage without kissing the edges. */
+export const CROP_STAGE_INSET = 12;
+
 export function aspectFitCropSize(
   containerWidth: number,
   containerHeight: number,
   aspect: number,
+  inset: number = CROP_STAGE_INSET,
 ): {width: number; height: number} {
-  let width = containerWidth;
+  const availW = Math.max(0, containerWidth - inset * 2);
+  const availH = Math.max(0, containerHeight - inset * 2);
+  let width = availW;
   let height = width / aspect;
-  if (height > containerHeight) {
-    height = containerHeight;
+  if (height > availH) {
+    height = availH;
     width = height * aspect;
   }
   return {width, height};
+}
+
+/**
+ * Stage box sized to the crop aspect so wide covers stay short and avatars
+ * stay near-square — never a tall gray letterbox around a thin strip.
+ */
+export function cropStageBoxStyle(
+  aspect: number,
+  radius?: string,
+): React.CSSProperties {
+  const wide = aspect >= 2.5;
+  const landscape = aspect >= 1.45;
+  const maxHeight = wide
+    ? 'min(26dvh, 200px)'
+    : landscape
+      ? 'min(34dvh, 280px)'
+      : 'min(46dvh, 360px)';
+
+  return {
+    aspectRatio: `${aspect}`,
+    width: '100%',
+    maxHeight,
+    // Square/near-square: cap width to the same length as maxHeight so the
+    // stage stays a compact tile instead of stretching full dialog width.
+    maxWidth: aspect <= 1.15 ? 'min(100%, min(46dvh, 360px))' : '100%',
+    ...(radius ? ({'--crop-radius': radius} as React.CSSProperties) : {}),
+  };
 }
 
 export function coverZoomForCrop(
@@ -192,7 +228,7 @@ export function ImageCrop({
 
   return (
     <ImageCropContext.Provider value={value}>
-      <div className={cn('flex min-h-0 w-full flex-col gap-3', className)}>
+      <div className={cn('flex min-h-0 w-full flex-col gap-2', className)}>
         {children}
       </div>
     </ImageCropContext.Provider>
@@ -204,6 +240,7 @@ export interface ImageCropContentProps extends React.ComponentProps<'div'> {
 }
 
 export function ImageCropContent({className, ...props}: ImageCropContentProps) {
+  const {trans} = useTrans();
   const {
     imageUrl,
     radius,
@@ -301,30 +338,29 @@ export function ImageCropContent({className, ...props}: ImageCropContentProps) {
   }
 
   return (
-    <div className={cn('flex flex-col gap-3', className)} {...props}>
-      <div
-        ref={stageRef}
-        data-crop-radius={radius ? '' : undefined}
-        style={
-          radius
-            ? ({'--crop-radius': radius} as React.CSSProperties)
-            : undefined
-        }
-        className="relative h-[min(30dvh,360px)] w-full overflow-hidden rounded-card bg-muted sm:h-[min(44dvh,440px)]"
-      >
-        <Cropper
-          key={cropperKey}
-          image={imageUrl}
-          crop={crop}
-          zoom={zoom}
-          minZoom={minZoom}
-          aspect={lockedAspect}
-          cropSize={cropSize}
-          onCropChange={setCrop}
-          onZoomChange={setZoom}
-          onCropComplete={onCropComplete}
-          onMediaLoaded={onMediaLoaded}
-        />
+    <div className={cn('flex flex-col gap-2', className)} {...props}>
+      <div className="flex w-full justify-center">
+        <div
+          ref={stageRef}
+          data-crop-radius={radius ? '' : undefined}
+          style={cropStageBoxStyle(lockedAspect, radius)}
+          className="image-crop-stage relative overflow-hidden rounded-card bg-muted"
+        >
+          <Cropper
+            key={cropperKey}
+            image={imageUrl}
+            crop={crop}
+            zoom={zoom}
+            minZoom={minZoom}
+            aspect={lockedAspect}
+            cropSize={cropSize}
+            showGrid={false}
+            onCropChange={setCrop}
+            onZoomChange={setZoom}
+            onCropComplete={onCropComplete}
+            onMediaLoaded={onMediaLoaded}
+          />
+        </div>
       </div>
       <Slider
         min={minZoom}
@@ -332,15 +368,19 @@ export function ImageCropContent({className, ...props}: ImageCropContentProps) {
         step={0.1}
         value={zoom}
         onValueChange={v => setZoom((v as number) ?? minZoom)}
+        className="gap-y-1"
       >
         <Slider.Label>
           <Trans message="Zoom" />
         </Slider.Label>
-        <Slider.Control>
-          <Slider.Track>
+        <Slider.Control className="py-2">
+          <Slider.Track className="data-horizontal:h-2.5">
             <Slider.Indicator />
           </Slider.Track>
-          <Slider.Thumb className="bg-primary ring-primary/30" />
+          <Slider.Thumb
+            aria-label={trans(message('Zoom'))}
+            className="size-4 border-2 border-background bg-primary shadow-none ring-1 ring-primary/25"
+          />
         </Slider.Control>
       </Slider>
     </div>
@@ -381,17 +421,15 @@ export function ImageCropApply({
   }
 
   return (
-    <button
+    <Button
       type="button"
-      className={cn(
-        'inline-flex h-9 items-center justify-center rounded-button bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50',
-        className,
-      )}
+      size="sm"
+      className={className}
       onClick={() => void handleApply()}
       disabled={disabled}
     >
       {children ?? <Trans message="Apply crop" />}
-    </button>
+    </Button>
   );
 }
 
@@ -425,16 +463,15 @@ export function ImageCropReset({
   }
 
   return (
-    <button
+    <Button
       type="button"
-      className={cn(
-        'inline-flex h-9 items-center justify-center rounded-button border bg-background px-4 text-sm font-medium hover:bg-accent disabled:opacity-50',
-        className,
-      )}
+      variant="ghost"
+      size="sm"
+      className={className}
       onClick={handleReset}
     >
       {children ?? <Trans message="Reset" />}
-    </button>
+    </Button>
   );
 }
 

@@ -204,7 +204,7 @@ describe('R07 wizard step indicators (unified ProductFormProgress pattern)', () 
     expect(items).toHaveLength(3);
     // Accessible per-step names survive (R07).
     expect(items.map(item => item.textContent)).toEqual([
-      'Create a new product',
+      'What are you selling?',
       'Free or paid?',
       'Set your price',
     ]);
@@ -311,15 +311,20 @@ describe('R09 picker strings are translatable', () => {
 
   test('every billing option title, description and group label is an extractable Trans/trans literal', () => {
     const source = readSource('billing-mode-picker.tsx');
+    // "Free access" / "Buyers pay nothing." — never bare "Free", which
+    // collides with the Free plan (10% commission) name.
     for (const literal of [
-      'Free',
-      'Anyone can access it for free.',
+      'Free access',
+      'Buyers pay nothing.',
       'Paid',
-      'Charge a one-time price in ETB.',
+      'One-time price in ETB.',
       'Billing mode',
     ]) {
       expectExtractable(source, literal);
     }
+    expect(source).not.toContain('message="Free"');
+    expect(source).not.toContain("message: 'Free'");
+    expect(source).not.toContain('Anyone can access it for free.');
   });
 
   test('step navigation label and discard confirmation are extractable literals', () => {
@@ -335,15 +340,28 @@ describe('R09 picker strings are translatable', () => {
     }
   });
 
-  test('progress bar screen-reader label is an extractable trans literal', () => {
-    // Final-fix item 3: the progressbar's aria-label used to be a raw
-    // English string; it now goes through trans() like the neighbouring
-    // aria-labels (e.g. the wizard nav), so translators can reach it.
+  test('progress bar screen-reader labels are extractable and phase-correct', () => {
+    // Sections (edit/course) keep "Product setup"; wizard steps use
+    // "Product creation" so the modal never claims setup has started.
     const progress = readSource('product-form-progress.tsx');
     expect(progress).not.toContain('aria-label="Product setup progress"');
+    expect(progress).not.toContain('aria-label="Product creation progress"');
     expectExtractable(progress, 'Product setup progress');
+    expectExtractable(progress, 'Product creation progress');
+    expect(progress).toContain("message: 'Product setup progress'");
+    expect(progress).toContain("message: 'Product creation progress'");
+  });
+
+  test('wizard steps progress omits the Product setup heading', () => {
+    const progress = readSource('product-form-progress.tsx');
+    // Distill: steps variant shows only "Step X of Y" — "Product setup"
+    // belongs to the form phase (sections variant), not the decision modal.
+    expect(progress).toContain('isSteps');
+    expect(progress).toContain('Step :current of :total');
+    expect(progress).toContain('message="Product setup"');
+    // Product setup heading only renders in the non-steps branch.
     expect(progress).toMatch(
-      /aria-label=\{trans\(\{message: 'Product setup progress'\}\)\}/,
+      /isSteps \? \([\s\S]*?Step :current of :total[\s\S]*?\) : \([\s\S]*?message="Product setup"/,
     );
   });
 
@@ -745,8 +763,8 @@ describe('T7 the real radio is the visible selection indicator', () => {
 });
 
 // T7 (crit1-A P1): /dashboard/items/new put the Back/Continue row above the
-// question and repeated the heading (page SectionTitle + step title both read
-// "Create a new product"). The page must ship exactly one h1 and read
+// question and repeated the heading. The page must ship exactly one h1 that
+// names the flow ("Create product"), an h2 step question, and read
 // question → body → actions, like the dialog already does.
 describe('T7 page shell: single h1, question before the action row', () => {
   beforeEach(() => {
@@ -775,14 +793,14 @@ describe('T7 page shell: single h1, question before the action row', () => {
 
     const h1s = Array.from(container.querySelectorAll('h1'));
     expect(h1s).toHaveLength(1);
-    // The page heading names the flow; the step title stays the h2 question,
-    // so "Create a new product" is written once as a heading.
+    // The page heading names the flow; the step title is the h2 question
+    // (same vocabulary as billing/price steps), written once.
     expect(h1s[0].textContent).toBe('Create product');
     expect(
-      screen.getAllByRole('heading', {name: 'Create a new product'}),
+      screen.getAllByRole('heading', {name: 'What are you selling?'}),
     ).toHaveLength(1);
     expect(
-      screen.getByRole('heading', {level: 2, name: 'Create a new product'}),
+      screen.getByRole('heading', {level: 2, name: 'What are you selling?'}),
     ).toBeTruthy();
   });
 
@@ -791,7 +809,7 @@ describe('T7 page shell: single h1, question before the action row', () => {
 
     const question = screen.getByRole('heading', {
       level: 2,
-      name: 'Create a new product',
+      name: 'What are you selling?',
     });
     const back = screen.getByRole('link', {name: /all products/i});
     const next = screen.getByRole('button', {name: /continue/i});
@@ -838,13 +856,15 @@ describe('T5 page-shell progress bar placement', () => {
 
     // Labeled as progress for the whole flow, not for a step.
     const bar = screen.getByRole('progressbar', {
-      name: 'Product setup progress',
+      name: 'Product creation progress',
     });
     expect(screen.getByText('Step 1 of 2')).not.toBeNull();
+    // Wizard must not claim "Product setup" — that label is the form phase.
+    expect(screen.queryByText('Product setup')).toBeNull();
 
     const title = screen.getByRole('heading', {
       level: 2,
-      name: 'Create a new product',
+      name: 'What are you selling?',
     });
     // The h2's text block (the min-w-0 column) must not contain the bar.
     const textColumn = title.closest('.min-w-0');

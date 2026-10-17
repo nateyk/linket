@@ -247,7 +247,7 @@ describe('course settings and builder polish', () => {
 
     // The cover field itself now lives in the shared settings-fields module;
     // the builder wires it in from there.
-    expect(settingsFields).toContain('Cover Image');
+    expect(settingsFields).toContain('Cover image');
     expect(source).toContain('<CourseSettingsCoverField');
     expect(source).toContain('Course Name');
     expect(source).toContain('Collapsible');

@@ -163,7 +163,7 @@ function SidebarLayout({
         )}
       >
         <section
-          className="min-w-0 overflow-hidden rounded-card bg-background/45 p-4 text-foreground shadow-lg ring-1 shadow-black/10 ring-white/15 backdrop-blur-sm sm:p-5"
+          className="min-w-0 overflow-hidden rounded-card bg-[var(--biolink-surface)] p-4 text-[var(--biolink-text)] ring-1 ring-(color:--biolink-border) backdrop-blur-sm sm:p-5"
           aria-label="Biolink profile and links"
         >
           {showAds && <AdHost slot="biolink_top" className="mb-6" />}
@@ -201,7 +201,11 @@ function SidebarLayout({
 
         {shopWidget && (
           <section className="min-w-0 @2xl:pt-1" aria-label="Digital products">
-            <ShopColumn widget={shopWidget} biolink={biolink} />
+            <ShopColumn
+              widget={shopWidget}
+              biolink={biolink}
+              appearance={appearance}
+            />
           </section>
         )}
       </div>
@@ -212,9 +216,11 @@ function SidebarLayout({
 function ShopColumn({
   widget,
   biolink,
+  appearance,
 }: {
   widget: BiolinkWidget;
   biolink: Biolink;
+  appearance: BiolinkAppearanceConfig | null;
 }) {
   const Widget = WidgetRenderers[widget.type];
 
@@ -224,6 +230,7 @@ function ShopColumn({
       widget={widget}
       variant="biolinkPage"
       biolink={biolink}
+      appearance={appearance}
     />
   );
 }
@@ -251,10 +258,7 @@ function LinkButton({link, appearance}: LinkButtonProps) {
     >
       {link.image ? (
         <img
-          className={cn(
-            'absolute top-1/2 left-2.5 aspect-square h-[calc(100%-18px)] -translate-y-1/2 object-cover',
-            buttonAppearance.radius,
-          )}
+          className="absolute top-1/2 left-2.5 aspect-square h-[calc(100%-18px)] -translate-y-1/2 rounded-button object-cover"
           src={link.image}
           alt=""
           loading="lazy"

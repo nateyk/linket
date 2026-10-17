@@ -30,12 +30,13 @@ describe('ShopWidgetRenderer product action appearance', () => {
     'utf8',
   );
 
-  test('paints the View action from the appearance button design', () => {
+  test('paints the View action from the live appearance prop, not only saved biolink config', () => {
     expect(source).toContain(
       "import {resolveBiolinkButtonAppearance} from '@app/short-links/renderers/biolink-renderer/biolink-appearance';",
     );
+    // Preview posts a flat draft appearance; saved config alone misses live edits.
     expect(source).toMatch(
-      /resolveBiolinkButtonAppearance\(\s*biolink\.appearance\?\.config \?\? null,?\s*\)/,
+      /resolveBiolinkButtonAppearance\(\s*appearance \?\? biolink\.appearance\?\.config \?\? null,?\s*\)/,
     );
     expect(source).toContain('className={buttonAppearance.className}');
     expect(source).toContain('style={buttonAppearance.style}');

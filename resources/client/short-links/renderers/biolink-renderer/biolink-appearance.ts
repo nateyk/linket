@@ -260,9 +260,11 @@ export function resolveBiolinkButtonAppearance(
 
   return {
     radius,
+    // Round through --be-radius-button (remapped on the page root from the
+    // Appearance knob). Applying the setting utility class (rounded-sm|lg|…)
+    // would bypass that remap and disagree with every other surface.
     className: cn(
-      'border-[var(--biolink-button-border)]! text-[var(--biolink-button-text)]! transition-button duration-200 [background:var(--biolink-button-background)]! hover:[background:var(--biolink-button-hover)]! focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--biolink-button-focus)]! active:[background:var(--biolink-button-pressed)]! data-pressed:[background:var(--biolink-button-pressed)]!',
-      radius,
+      'rounded-button border-[var(--biolink-button-border)]! text-[var(--biolink-button-text)]! transition-button duration-200 [background:var(--biolink-button-background)]! hover:[background:var(--biolink-button-hover)]! focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--biolink-button-focus)]! active:[background:var(--biolink-button-pressed)]! data-pressed:[background:var(--biolink-button-pressed)]!',
     ),
     style,
   };

@@ -88,7 +88,7 @@ function StoreTabs({
   return (
     <div
       ref={stripRef}
-      className="sticky top-[var(--safe-top,env(safe-area-inset-top,0px))] z-10 flex-none border-b border-[var(--biolink-border)] bg-background"
+      className="sticky top-[var(--safe-top,env(safe-area-inset-top,0px))] z-10 flex-none border-b border-[var(--biolink-border)] bg-transparent"
     >
       <Background appearance={appearance} viewportFixed omitNoiseDef />
       <Tabs.List

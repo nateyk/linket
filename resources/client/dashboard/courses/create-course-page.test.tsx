@@ -31,8 +31,12 @@ describe('course creation page', () => {
   });
 
   test('shows a Free badge instead of a price field for free billing', () => {
-    expect(source).toContain('<Badge');
-    expect(source).toContain("billing === 'free'");
+    expect(source).toContain('const isFree = prefill.billing === \'free\'');
+    expect(source).toContain('<Trans message="Free" />');
+    expect(source).toContain('Badge');
+    // Price field only for paid — free renders the badge, not the ETB input.
+    expect(source).toContain('isFree ? (');
+    expect(source).toContain('label="Price (ETB)"');
   });
 
   test('keeps spinner submit state and uncertain-creation recovery', () => {
@@ -49,16 +53,26 @@ describe('course creation page', () => {
   });
 });
 
-describe('wizard handoff provenance', () => {
+describe('wizard handoff continuity', () => {
   const source = fs.readFileSync(
     path.resolve('resources/client/dashboard/courses/create-course-page.tsx'),
     'utf8',
   );
 
-  test('states where the billing and price came from', () => {
-    expect(source).toContain('prefill.billing !== null');
-    expect(source).toContain('From previous step: Free.');
-    expect(source).toContain('From previous step: Paid');
+  test('prefills silently like the digital form — no "previous step" seam copy', () => {
+    expect(source).toContain('parseWizardPrefill');
+    expect(source).not.toContain('From previous step');
+  });
+
+  test('customer preview reuses the shared product-form preview shell', () => {
+    expect(source).toContain('ProductFormCustomerPreview');
+    expect(source).not.toContain('<Card.Root>');
+    expect(source).not.toContain('<Trans message="Preview" />');
+  });
+
+  test('course settings uses a non-price icon', () => {
+    expect(source).toContain('ListChecksIcon');
+    expect(source).not.toMatch(/settings.*TagIcon|icon: TagIcon/);
   });
 });
 describe('uncertain creation recovery', () => {
@@ -269,7 +283,7 @@ describe('inline course settings', () => {
     // The three fields, by their visible labels.
     const descriptionLabel = await screen.findByText('Description');
     expect(screen.getByText("What you'll learn")).toBeTruthy();
-    expect(screen.getByText('Cover Image')).toBeTruthy();
+    expect(screen.getByText('Cover image')).toBeTruthy();
     // ...and the description editor is the shared TipTap field.
     await vi.waitFor(() => {
       expect(document.querySelector('.ProseMirror')).toBeTruthy();
@@ -293,12 +307,14 @@ describe('inline course settings', () => {
     const user = userEvent.setup();
     mount();
 
-    // Empty description: a placeholder that no longer promises post-create text.
+    // Empty description: shared ProductCard omits the description block
+    // (same as the digital-product edit preview) until there is real copy.
     expect(
-      screen.getByText(
+      screen.queryByText(
         'Add a short description to show learners what to expect.',
       ),
-    ).toBeTruthy();
+    ).toBeNull();
+    expect(screen.getByText('Your course title')).toBeTruthy();
 
     await openSettingsSection(user);
     await typeDescription(user, 'Cafe basics');
@@ -309,7 +325,7 @@ describe('inline course settings', () => {
     const matches = await screen.findAllByText('Cafe basics');
     const preview = matches.find(el => !el.closest('.ProseMirror'));
     expect(preview).toBeTruthy();
-    expect(preview!.innerHTML).toBe('Cafe basics');
+    expect(preview!.textContent).toBe('Cafe basics');
   }, 10_000);
 
   test('submitting with untouched settings posts once and never PUTs', async () => {

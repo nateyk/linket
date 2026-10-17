@@ -6,7 +6,6 @@ import {Alert} from '@shadcn/alert/alert';
 import {Badge} from '@shadcn/badge/badge';
 import {Breadcrumb} from '@shadcn/breadcrumb/breadcrumb';
 import {Button} from '@shadcn/button/button';
-import {Card} from '@shadcn/card/card';
 import {InputGroup, InputGroupAddon, InputGroupInput, InputGroupText} from '@shadcn/forms/input-group/input-group';
 import {Input} from '@shadcn/forms/input/input';
 import {Spinner} from '@shadcn/spinner/spinner';
@@ -14,13 +13,14 @@ import {Trans} from '@ui/i18n/trans';
 import {useTrans} from '@ui/i18n/use-trans';
 import {toast} from '@ui/toast/toast';
 import {isAxiosError} from 'axios';
-import {GraduationCapIcon, Link2Icon, TagIcon, TriangleAlertIcon} from 'lucide-react';
+import {GraduationCapIcon, ListChecksIcon, TriangleAlertIcon} from 'lucide-react';
 import {FormEvent, useState} from 'react';
 import {Link, useNavigate, useSearchParams} from 'react-router';
 import {parseEtbToCents, parseWizardPrefill} from '../digital-products/product-create-flow';
 import {ProductFormField} from '../digital-products/product-form-field';
 import {ProductFormProgress} from '../digital-products/product-form-progress';
 import {ProductFormSection} from '../digital-products/product-form-section';
+import {ProductFormCustomerPreview} from '../digital-products/product-preview';
 import {
   CourseSettingsCoverField,
   CourseSettingsDescriptionField,
@@ -70,7 +70,7 @@ export function Component() {
   // form has no files or storefront-placement sections.
   const sections = [
     {id: 'details', title: 'Course details', description: 'Name your course and confirm its price.', icon: GraduationCapIcon, isComplete: !!title.trim() && (isFree || (parseEtbToCents(price) ?? 0) > 0)},
-    {id: 'settings', title: 'Course settings', description: 'Add a description, learning outcomes, and a cover image.', icon: TagIcon, isComplete: hasSettingsContent},
+    {id: 'settings', title: 'Course settings', description: 'Add a description, learning outcomes, and a cover image.', icon: ListChecksIcon, isComplete: hasSettingsContent},
   ];
   const createCourse = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -143,8 +143,7 @@ export function Component() {
       <DashboardLayout.SectionTitle render={<h1 />}><span className="min-w-0 truncate"><Trans message="Create course" /></span></DashboardLayout.SectionTitle>
       {/* Header actions mirror the digital-product edit page: icon + label
           that collapses to icon-only below 640px. aria-labels keep the
-          collapsed buttons named (the edit page's unlabeled icons are tracked
-          as P2 polish). */}
+          collapsed buttons named. */}
       <div className="flex items-center gap-2">{creationUncertain && <Button variant="outline" size="sm" aria-label={trans({message: 'Check My Items'})} render={<Link to="/dashboard/items" />}><span className="max-sm:hidden"><Trans message="Check My Items" /></span></Button>}<Button size="sm" type="submit" form="course-create-form" aria-label={creating ? trans({message: 'Creating course...'}) : trans({message: 'Create course'})} disabled={creating}>{creating ? <Spinner data-icon="inline-start" /> : <GraduationCapIcon className="size-4" data-icon="inline-start" />}<span className="max-sm:hidden">{creating ? <Trans message="Creating course..." /> : <Trans message="Create course" />}</span></Button></div>
     </DashboardLayout.SectionHeader>
     <DashboardLayout.SectionContent className="overflow-y-auto"><form id="course-create-form" onSubmit={createCourse} className="mx-auto w-full max-w-6xl py-4 sm:py-5">
@@ -154,12 +153,20 @@ export function Component() {
           xl (1280px), preview stacking below the form on smaller screens. */}
       <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_26rem] xl:gap-6">
         <div className="flex min-w-0 flex-col gap-4">
-          {prefill.billing !== null && <p className="text-sm text-muted-foreground">{isFree ? <Trans message="From previous step: Free." /> : <Trans message="From previous step: Paid · ETB :price — you can change it here." values={{price}} />}</p>}
+          {/* Wizard billing/price arrive via URL prefill — same silent handoff
+              the digital form uses. No "previous step" seam copy. */}
           <ProductFormProgress completed={sections.filter(s => s.isComplete).length} total={sections.length} />
           <Accordion.Root variant="bordered" value={openSection ? [openSection] : []} onValueChange={value => setOpenSection(value[0] ?? null)}>
             {sections.map(section => <ProductFormSection key={section.id} {...section} hasError={section.id === 'details' && !!(errors.title || errors.price)}>{section.id === 'details' ? <div className="flex flex-col gap-4">
               <ProductFormField label="Course title" description="Choose a clear title learners can easily understand." error={errors.title} htmlFor="course-title" required><Input id="course-title" aria-invalid={!!errors.title} value={title} maxLength={160} onChange={event => { setTitle(event.target.value); setErrors(current => ({...current, title: undefined})); }} placeholder="Complete course title" autoFocus /></ProductFormField>
-              {!isFree && <ProductFormField label="Price (ETB)" description="This course is paid. Update the price if needed." error={errors.price} htmlFor="course-price" required><InputGroup><InputGroupAddon align="inline-start"><InputGroupText>ETB</InputGroupText></InputGroupAddon><InputGroupInput id="course-price" aria-invalid={!!errors.price} type="number" min="0" step="0.01" value={price} onChange={event => { setPrice(event.target.value); setErrors(current => ({...current, price: undefined})); }} placeholder="0.00" /></InputGroup></ProductFormField>}
+              {isFree ? (
+                <div className="flex flex-col gap-1.5">
+                  <p className="text-sm font-medium"><Trans message="Price" /></p>
+                  <Badge variant="secondary"><Trans message="Free" /></Badge>
+                </div>
+              ) : (
+                <ProductFormField label="Price (ETB)" description="This course is paid. Update the price if needed." error={errors.price} htmlFor="course-price" required><InputGroup><InputGroupAddon align="inline-start"><InputGroupText>ETB</InputGroupText></InputGroupAddon><InputGroupInput id="course-price" aria-invalid={!!errors.price} type="number" min="0" step="0.01" value={price} onChange={event => { setPrice(event.target.value); setErrors(current => ({...current, price: undefined})); }} placeholder="0.00" /></InputGroup></ProductFormField>
+              )}
             </div> : <div className="flex flex-col gap-4">
               {/* Same shared settings fields as the builder's CourseSettingsDialog; the two-step submit threads them into PUT /courses/{id}. */}
               <CourseSettingsDescriptionField inputId="course-create" value={description} onChange={setDescription} />
@@ -170,11 +177,27 @@ export function Component() {
             </div>}</ProductFormSection>)}
           </Accordion.Root>
         </div>
-        {/* Keeps its own lightweight preview card instead of the shared
-            ProductPreview: that component reads file/description metadata
-            through ProductCreationProvider, which this one-shot create form
-            does not use. Panel heading and placement mirror the edit page. */}
-        <aside className="min-w-0 lg:sticky lg:top-6"><div className="flex flex-col gap-3"><div className="flex items-center justify-between gap-3"><p className="text-sm font-medium"><Trans message="Customer preview" /></p><Badge variant="secondary"><Link2Icon aria-hidden="true" /><Trans message="Preview" /></Badge></div><Card.Root><Card.Content className="flex flex-col gap-4 p-4"><div className="flex size-24 items-center justify-center rounded-card bg-muted"><GraduationCapIcon className="size-10 text-muted-foreground" aria-hidden="true" /></div><div className="flex flex-col gap-2"><p className="truncate text-lg font-semibold">{title.trim() || trans({message: 'Your course title'})}</p><span className="text-lg font-semibold text-primary">{previewPrice}</span>{descriptionText ? <p className="line-clamp-3 text-sm text-muted-foreground">{descriptionText}</p> : <p className="text-sm text-muted-foreground"><Trans message="Add a short description to show learners what to expect." /></p>}</div></Card.Content></Card.Root></div></aside>
+        {/* Same ProductFormCustomerPreview shell as the digital-product edit
+            page (ProductCard + Buy now / Preview only). Course skips the
+            download-file meta row; cover fallback keeps the graduation mark. */}
+        <aside className="min-w-0 lg:sticky lg:top-6">
+          <ProductFormCustomerPreview
+            title={title}
+            emptyTitle="Your course title"
+            price={previewPrice}
+            productType="course"
+            coverUrl={coverUrl || undefined}
+            description={descriptionText || undefined}
+            imageFallback={
+              <div className="flex size-full flex-col items-center justify-center gap-2 text-muted-foreground">
+                <GraduationCapIcon className="size-8" aria-hidden="true" />
+                <span className="text-xs">
+                  <Trans message="Add a cover image" />
+                </span>
+              </div>
+            }
+          />
+        </aside>
       </div>
     </form></DashboardLayout.SectionContent>
   </DashboardLayout.MainSection></FileUploadProvider>;

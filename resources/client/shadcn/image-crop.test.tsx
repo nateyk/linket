@@ -7,16 +7,23 @@ import {
 } from '@shadcn/image-crop/image-crop';
 
 describe('crop window math', () => {
-  test('aspectFitCropSize fills stage width for landscape ratios', () => {
+  test('aspectFitCropSize fills the inset stage for landscape ratios', () => {
+    // 12px inset on each side → 716×436 available inside 740×460
     expect(aspectFitCropSize(740, 460, 16 / 9)).toEqual({
-      width: 740,
-      height: 740 / (16 / 9),
+      width: 716,
+      height: 716 / (16 / 9),
     });
   });
   test('aspectFitCropSize fits height when the ratio is taller than the stage', () => {
     expect(aspectFitCropSize(740, 200, 16 / 9)).toEqual({
-      width: 200 * (16 / 9),
-      height: 200,
+      width: 176 * (16 / 9),
+      height: 176,
+    });
+  });
+  test('aspectFitCropSize can skip the inset when callers pass 0', () => {
+    expect(aspectFitCropSize(740, 460, 16 / 9, 0)).toEqual({
+      width: 740,
+      height: 740 / (16 / 9),
     });
   });
   test('coverZoomForCrop pre-zooms portrait media to fill the window', () => {
@@ -86,8 +93,12 @@ describe('reusable image crop composer', () => {
       'utf8',
     );
 
-    expect(cropSource).toContain('h-[min(30dvh,360px)]');
-    expect(cropSource).toContain('sm:h-[min(44dvh,440px)]');
+    // Stage height follows the crop aspect — not a fixed tall gray box
+    expect(cropSource).toContain('cropStageBoxStyle');
+    expect(cropSource).toContain('aspectRatio');
+    expect(cropSource).toContain('image-crop-stage');
+    expect(cropSource).not.toContain('h-[min(36dvh,360px)]');
+    expect(cropSource).not.toContain('sm:h-[min(44dvh,440px)]');
     expect(selectorSource).toContain('sm:max-w-2xl');
     expect(cropSource).not.toContain('sm:h-[460px]');
     expect(cropSource).not.toContain('min-h-[320px]');
@@ -101,15 +112,16 @@ describe('reusable image crop composer', () => {
     expect(cropSource).toContain('coverZoomForCrop');
     expect(cropSource).toContain('aspectFitCropSize');
     expect(cropSource).toContain('minZoom={minZoom}');
+    expect(cropSource).toContain('showGrid={false}');
     // observer re-attaches when the stage mounts (imageUrl), never stuck on null ref
     expect(cropSource).toContain('stageSizeRef');
     expect(cropSource).toContain('}, [imageUrl]);');
-    // provider wrapper allows shrinking so the dialog cap holds and the
-    // body scrolls instead of pushing the footer out of the card
-    expect(cropSource).toContain('flex min-h-0 w-full flex-col gap-3');
+    // Tight stack: stage → zoom; footer stays outside in the dialog
+    expect(cropSource).toContain('flex min-h-0 w-full flex-col gap-2');
     // slider-driven zoom with themed thumb, clamped minZoom-3
     expect(cropSource).toContain('<Slider');
-    expect(cropSource).toContain('bg-primary ring-primary/30');
+    expect(cropSource).toContain('size-4');
+    expect(cropSource).toContain('bg-primary');
     expect(cropSource).toContain('Math.min(3');
     expect(cropSource).not.toContain('zoomIn');
     expect(cropSource).not.toContain('zoomOut');
@@ -121,6 +133,20 @@ describe('reusable image crop composer', () => {
     expect(cropSource).toContain('cropperKey');
     expect(cropSource).not.toContain("'free'");
     expect(selectorSource.match(/<Dialog\.Root/g)).toHaveLength(1);
-    expect(selectorSource).toContain('flex items-center justify-end');
+    expect(selectorSource).toContain('<Dialog.Footer variant="muted">');
+    expect(selectorSource).not.toContain('flex items-center justify-end');
+  });
+});
+
+describe('crop stage box style', () => {
+  test('wide covers stay short; avatars stay near-square', async () => {
+    const {cropStageBoxStyle} = await import('@shadcn/image-crop/image-crop');
+    const cover = cropStageBoxStyle(3);
+    expect(cover.aspectRatio).toBe('3');
+    expect(String(cover.maxHeight)).toContain('200px');
+
+    const avatar = cropStageBoxStyle(1);
+    expect(avatar.aspectRatio).toBe('1');
+    expect(String(avatar.maxWidth)).toContain('360px');
   });
 });

@@ -81,8 +81,8 @@ test('opening Course settings renders the real cover field without a provider er
 
   // The real CroppedCover dropzone mounts (it reads the upload store the
   // page provides) instead of throwing out of render.
-  expect(await screen.findByText('Cover Image')).toBeTruthy();
+  expect(await screen.findByText('Cover image')).toBeTruthy();
   expect(
-    await screen.findByText('Select file to upload or drag-and-drop'),
+    await screen.findByText('Select file to upload or drag-and-drop file'),
   ).toBeTruthy();
 });

@@ -85,7 +85,7 @@ describe('cropper measured window (wiring)', () => {
       cropImg!.dispatchEvent(new Event('load'));
     });
 
-    // 5. the rendered crop window fills the measured stage width
+    // 5. the rendered crop window fills the inset stage (12px pad each side)
     const cropArea = container.querySelector(
       '[data-testid="cropper"]',
     ) as HTMLElement | null;
@@ -93,8 +93,8 @@ describe('cropper measured window (wiring)', () => {
     const renderedWidth = Number.parseFloat(cropArea!.style.width);
     expect(
       renderedWidth,
-      `window width fills 640px stage (got ${cropArea!.style.width})`,
-    ).toBeGreaterThan(600);
+      `window fills inset stage inside 640px (got ${cropArea!.style.width})`,
+    ).toBeGreaterThan(580);
 
     await act(async () => {
       root.unmount();

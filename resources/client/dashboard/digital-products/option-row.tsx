@@ -1,12 +1,13 @@
-import {Trans} from '@ui/i18n/trans';
 import {cn} from '@ui/utils/cn';
 import type {LucideIcon} from 'lucide-react';
 import type {ReactNode} from 'react';
 
 interface OptionRowContentProps {
   icon: LucideIcon;
-  title: string;
-  description: string;
+  /** Already wrapped in <Trans message="..." /> at the call site. */
+  title: ReactNode;
+  /** Already wrapped in <Trans message="..." /> at the call site. */
+  description: ReactNode;
   hint?: ReactNode;
   /**
    * T7: selection is rendered from React state, not from a `peer-data-checked`
@@ -39,15 +40,13 @@ export function OptionRowContent({
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="text-sm leading-tight font-semibold text-foreground">
-          <Trans message={title} />
+          {title}
         </span>
         {/* Description and format hint share one compact line: the hint is
             still its own element (a11y tests + screen readers read it as a
             separate token), but the card no longer needs a third row. */}
         <span className="flex flex-wrap items-center gap-x-1.5 text-xs leading-snug font-normal text-muted-foreground">
-          <span>
-            <Trans message={description} />
-          </span>
+          <span>{description}</span>
           {hint && (
             <>
               <span aria-hidden="true" className="text-foreground/30">

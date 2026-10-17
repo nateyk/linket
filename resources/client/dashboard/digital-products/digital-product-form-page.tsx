@@ -35,6 +35,7 @@ import {
 } from '@shadcn/forms/input-group/input-group';
 import {Input} from '@shadcn/forms/input/input';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
+import {message} from '@ui/i18n/message';
 import {Trans} from '@ui/i18n/trans';
 import {useTrans} from '@ui/i18n/use-trans';
 import {getBootstrapData} from '@ui/bootstrap-data/bootstrap-data-store';
@@ -603,8 +604,7 @@ function DigitalProductForm() {
               </Alert.Title>
               <Alert.Description className="flex flex-wrap items-center gap-2">
                 <span>
-                  After saving, you’ll build your curriculum in the course
-                  builder.
+                  <Trans message="After saving, you'll build your curriculum in the course builder." />
                 </span>
                 {product && (
                   <Button
@@ -615,7 +615,7 @@ function DigitalProductForm() {
                     }
                   >
                     <GraduationCapIcon />
-                    Open course builder
+                    <Trans message="Open course builder" />
                   </Button>
                 )}
               </Alert.Description>
@@ -817,6 +817,7 @@ function DetailsPanel({
   validateField: (field: string, value: string) => void;
 }) {
   const {validateField} = arguments[0] as {validateField: (field: string, value: string) => void};
+  const {trans} = useTrans();
   return (
     <div className="flex flex-col gap-4">
       <ProductFormField
@@ -903,6 +904,7 @@ function DetailsPanel({
           onChange={onCoverChange}
           uploadType="linkImages"
           aspect={16 / 9}
+          label={trans(message('Cover image'))}
           className="aspect-video h-auto w-full"
         />
       </ProductFormField>

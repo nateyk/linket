@@ -1,11 +1,23 @@
 /*
- * Rounds the crop frame to the radius the cropped image will render with, so
- * the dialog previews the result instead of a sharp rectangle.
+ * Crop stage chrome for Linket Operate surfaces.
  *
- * Deliberately unlayered: react-easy-crop's own stylesheet is unlayered, and an
- * unlayered rule outranks Tailwind's layered utilities. Scoped to the stage so
- * callers that pass no radius never match and keep the stock frame.
+ * react-easy-crop ships unlayered sample styles (white rim + black vignette).
+ * Our rules stay unlayered too so they outrank that stylesheet. Scoped to
+ * `.image-crop-stage` so nothing else inherits the wash.
+ *
+ * When `[data-crop-radius]` is set, the frame also previews the radius the
+ * cropped image will render with on the storefront.
  */
+
+.image-crop-stage .reactEasyCrop_CropArea {
+  border: 1px solid
+    color-mix(in srgb, var(--color-foreground) 28%, transparent);
+  /* Quieter wash than the stock sample — enough to separate the window,
+     not a theatrical vignette. */
+  box-shadow: 0 0 0 9999px
+    color-mix(in srgb, var(--color-background) 55%, transparent);
+}
+
 [data-crop-radius] .reactEasyCrop_CropArea {
   border-radius: var(--crop-radius, 0px);
 }

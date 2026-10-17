@@ -6,6 +6,7 @@ import {restrictionsFromConfig} from '@common/uploads/uploader/create-file-uploa
 import {useActiveUpload} from '@common/uploads/uploader/use-active-upload';
 import {Button} from '@shadcn/button/button';
 import {Dialog} from '@shadcn/dialog/dialog';
+import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {
   ImageCrop,
   ImageCropApply,
@@ -17,8 +18,7 @@ import {toast} from '@ui/toast/toast';
 import {cn} from '@ui/utils/cn';
 import {FileInputType} from '@ui/utils/files/file-input-config';
 import {MoreVerticalIcon, UploadIcon} from 'lucide-react';
-import {useCallback, useRef, useState} from 'react';
-import {Dropdown} from '@shadcn/dropdown/dropdown';
+import {useCallback, useRef, useState, type CSSProperties} from 'react';
 
 interface CroppedImageSelectorProps {
   value: string | null | undefined;
@@ -41,6 +41,7 @@ interface CroppedImageSelectorProps {
    * menu trigger (A-03/A-04). Pass the same text as the visible field label
    * (e.g. "Cover image") so the control, its label and its menu read as one
    * thing. Translated by the caller — this component never builds strings.
+   * When set, the crop dialog title reuses this name.
    */
   label?: string;
 }
@@ -138,6 +139,20 @@ export function CroppedImageSelector({
           ? 'object-cover'
           : 'object-contain';
 
+  const shellRadius =
+    shape === 'circle'
+      ? 'rounded-full'
+      : shape === 'cover'
+        ? 'rounded-input'
+        : 'rounded-card';
+
+  // Cover (and non-circle square) previews share the crop aspect so the
+  // empty dropzone and filled tile match the dialog window.
+  const aspectBoxStyle: CSSProperties | undefined =
+    shape === 'cover' || shape === 'square'
+      ? {aspectRatio: String(aspect)}
+      : undefined;
+
   return (
     <>
       <input
@@ -154,9 +169,10 @@ export function CroppedImageSelector({
         <div
           className={cn(
             'group relative overflow-hidden',
-            shape === 'circle' ? 'rounded-full' : 'rounded-card',
+            shellRadius,
             className,
           )}
+          style={aspectBoxStyle}
         >
           <img
             src={value}
@@ -165,10 +181,8 @@ export function CroppedImageSelector({
           />
           <div
             className={cn(
-              'absolute transition-opacity',
-              shape === 'circle'
-                ? 'right-1 bottom-1 opacity-0 group-focus-within:opacity-100 group-hover:opacity-100'
-                : 'top-2 right-2 opacity-0 group-focus-within:opacity-100 group-hover:opacity-100',
+              'absolute opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 pointer-coarse:opacity-100',
+              shape === 'circle' ? 'right-1 bottom-1' : 'top-2 right-2',
             )}
           >
             <Dropdown.Root>
@@ -198,7 +212,7 @@ export function CroppedImageSelector({
             </Dropdown.Root>
           </div>
           {isUploading && (
-            <div className="absolute inset-x-2 bottom-2 h-1 overflow-hidden rounded-full bg-white/30">
+            <div className="absolute inset-x-2 bottom-2 h-1 overflow-hidden rounded-full bg-muted">
               <div
                 className="h-full bg-primary transition-all"
                 style={{width: `${Math.min(100, Math.round(percentage))}%`}}
@@ -211,11 +225,12 @@ export function CroppedImageSelector({
           type="button"
           onClick={openPicker}
           disabled={isUploading}
+          style={aspectBoxStyle}
           className={cn(
-            'relative flex items-center justify-center overflow-hidden border border-dashed transition-colors hover:bg-muted/30 disabled:opacity-50',
+            'relative flex items-center justify-center overflow-hidden border border-dashed border-input transition-colors hover:bg-muted/40 disabled:opacity-50',
             shape === 'circle'
               ? 'aspect-square size-32 rounded-full'
-              : 'w-full rounded-card p-6',
+              : 'w-full rounded-input p-3',
             className,
           )}
         >
@@ -236,20 +251,21 @@ export function CroppedImageSelector({
             setIsDragging(false);
           }}
           onDrop={handleDrop}
+          style={aspectBoxStyle}
           className={cn(
-            'relative flex flex-col items-center justify-center gap-2 rounded-card border border-dashed p-6 text-center transition-colors hover:bg-muted/30 disabled:opacity-50',
+            'relative flex flex-col items-center justify-center gap-1 border border-dashed border-input bg-muted/20 px-3 py-3 text-center transition-colors hover:bg-muted/40 disabled:opacity-50',
             shape === 'circle'
               ? 'aspect-square size-32 rounded-full'
-              : 'w-full',
+              : 'w-full rounded-input',
             isDragging && 'border-primary bg-primary/5',
             className,
           )}
         >
-          <div className="flex size-10 items-center justify-center rounded-full bg-muted">
-            <UploadIcon className="size-5 text-muted-foreground" />
+          <div className="flex size-7 items-center justify-center rounded-full bg-muted">
+            <UploadIcon className="size-3.5 text-muted-foreground" />
           </div>
-          <span className="text-sm font-medium">
-            <Trans message="Select file to upload or drag-and-drop" />
+          <span className="text-sm font-medium text-foreground">
+            <Trans message="Select file to upload or drag-and-drop file" />
           </span>
           <span className="text-xs text-muted-foreground">
             <Trans message="JPG, PNG, GIF, SVG" />
@@ -262,7 +278,15 @@ export function CroppedImageSelector({
         </button>
       )}
 
-      <Dialog.Root open={cropOpen} onOpenChange={setCropOpen}>
+      <Dialog.Root
+        open={cropOpen}
+        onOpenChange={open => {
+          setCropOpen(open);
+          if (!open) {
+            setPendingFile(null);
+          }
+        }}
+      >
         <Dialog.Portal>
           <Dialog.Backdrop />
           <Dialog.Content className="max-w-[calc(100vw-2rem)] sm:max-w-2xl">
@@ -275,35 +299,31 @@ export function CroppedImageSelector({
               >
                 <Dialog.Header>
                   <Dialog.Title>
-                    <Trans message="Crop image" />
+                    {label ? label : <Trans message="Crop image" />}
                   </Dialog.Title>
                   <Dialog.Description>
                     <Trans message="Adjust the preferred region, then apply." />
                   </Dialog.Description>
                 </Dialog.Header>
-                <Dialog.Body>
+                <Dialog.Body className="pt-2 pb-3">
                   <ImageCropContent />
                 </Dialog.Body>
-                <Dialog.Footer className="flex items-center justify-end gap-2 px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <ImageCropReset asChild>
-                      <Button type="button" variant="ghost" size="sm">
-                        <Trans message="Reset" />
-                      </Button>
-                    </ImageCropReset>
-                    <Dialog.CloseButton variant="outline" size="sm">
-                      <Trans message="Cancel" />
-                    </Dialog.CloseButton>
-                  </div>
-                  <div className="ml-4">
-                    <ImageCropApply asChild>
-                      <Button type="button" size="sm">
-                        <Trans message="Apply crop" />
-                      </Button>
-                    </ImageCropApply>
-                  </div>
+                <Dialog.Footer variant="muted">
+                  <ImageCropReset asChild>
+                    <Button type="button" variant="ghost" size="sm">
+                      <Trans message="Reset" />
+                    </Button>
+                  </ImageCropReset>
+                  <Dialog.CloseButton variant="outline" size="sm">
+                    <Trans message="Cancel" />
+                  </Dialog.CloseButton>
+                  <ImageCropApply asChild>
+                    <Button type="button" size="sm">
+                      <Trans message="Apply crop" />
+                    </Button>
+                  </ImageCropApply>
                 </Dialog.Footer>
-                </ImageCrop>
+              </ImageCrop>
             ) : (
               <p className="text-sm text-muted-foreground">
                 <Trans message="No image selected." />
@@ -321,11 +341,15 @@ export function CroppedAvatar(
     aspect?: number;
   },
 ) {
+  // When the caller passes storefront radius (previewClassName / cropRadius),
+  // do not force a circle — public avatars follow container radius, not full.
+  const storefrontShape = Boolean(props.previewClassName || props.cropRadius);
+
   return (
     <CroppedImageSelector
       {...props}
       aspect={props.aspect ?? 1}
-      shape="circle"
+      shape={storefrontShape ? 'square' : 'circle'}
     />
   );
 }
@@ -340,7 +364,7 @@ export function CroppedCover(
       {...props}
       aspect={props.aspect ?? 16 / 9}
       shape="cover"
-      className={cn('h-32 w-full sm:h-40', props.className)}
+      className={cn('w-full', props.className)}
     />
   );
 }

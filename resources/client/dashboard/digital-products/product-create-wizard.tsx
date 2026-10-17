@@ -33,22 +33,24 @@ import {ProductFormProgress} from './product-form-progress';
 
 export const STEP_META: Record<
   WizardStep,
-  {icon: LucideIcon; title: string; description: string}
+  {icon: LucideIcon; title: string; description?: string}
 > = {
   type: {
     icon: PackagePlusIcon,
-    title: 'Create a new product',
-    description: 'Choose the best format for what you want to sell.',
+    // One decision: pick a type. Options carry the meaning — no restating
+    // description under the question.
+    title: 'What are you selling?',
   },
   billing: {
     icon: WalletIcon,
+    // One decision: free access vs paid. Options carry the meaning.
     title: 'Free or paid?',
-    description: 'How will people access this product?',
   },
   price: {
     icon: TagIcon,
     title: 'Set your price',
-    description: 'One-time price in ETB. You can change it later.',
+    // The one fact the field alone does not say.
+    description: 'You can change it later.',
   },
 };
 

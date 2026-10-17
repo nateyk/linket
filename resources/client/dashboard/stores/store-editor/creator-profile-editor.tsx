@@ -444,7 +444,7 @@ export function CreatorProfileEditor({
                         </Field.Label>
                         <CroppedAvatar
                           className={cn(
-                            'size-22 bg-background p-1',
+                            'size-22 bg-[var(--biolink-surface-strong)] p-1',
                             containerRadius.avatarClassName,
                           )}
                           previewClassName={containerRadius.avatarClassName}
