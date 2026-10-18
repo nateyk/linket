@@ -432,6 +432,11 @@ export const dashboardRoutes: RouteObject[] = [
         lazy: () => import('@app/dashboard/services/service-form-page'),
       },
       {
+        path: 'services/inquiries',
+        lazy: () =>
+          import('@app/dashboard/services/services-inquiries-page'),
+      },
+      {
         path: 'items/new',
         lazy: () =>
           import('@app/dashboard/digital-products/product-type-selection-page'),
