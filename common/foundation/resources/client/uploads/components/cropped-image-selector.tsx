@@ -4,6 +4,10 @@ import {FileEntry} from '@app/gen/schemas/file-entry';
 import {UploadType} from '@app/site-config';
 import {restrictionsFromConfig} from '@common/uploads/uploader/create-file-upload';
 import {useActiveUpload} from '@common/uploads/uploader/use-active-upload';
+import {
+  uploadMaxFileSize,
+  validateEncodedImage,
+} from '@common/uploads/utils/encode-cropped-image';
 import {Button} from '@shadcn/button/button';
 import {Dialog} from '@shadcn/dialog/dialog';
 import {Dropdown} from '@shadcn/dropdown/dropdown';
@@ -16,6 +20,8 @@ import {
 import {Trans} from '@ui/i18n/trans';
 import {toast} from '@ui/toast/toast';
 import {cn} from '@ui/utils/cn';
+import {prettyBytes} from '@ui/utils/files/pretty-bytes';
+import {UploadedFile} from '@ui/utils/files/uploaded-file';
 import {FileInputType} from '@ui/utils/files/file-input-config';
 import {MoreVerticalIcon, UploadIcon} from 'lucide-react';
 import {useCallback, useRef, useState, type CSSProperties} from 'react';
@@ -55,11 +61,18 @@ function useCroppedUpload({
 
   const uploadCroppedFile = useCallback(
     (file: File) => {
+      const restrictions = restrictionsFromConfig({uploadType});
+      const error = validateEncodedImage(new UploadedFile(file), restrictions);
+      if (error) {
+        toast.danger(error);
+        return;
+      }
+
       uploadFile(file, {
         uploadType,
         showToastOnRestrictionFail: true,
         showToastOnBackendError: true,
-        restrictions: restrictionsFromConfig({uploadType}),
+        restrictions,
         onSuccess: entry => onChange(entry.url, entry),
         onError: m => m && toast.danger(m),
       });
@@ -267,9 +280,6 @@ export function CroppedImageSelector({
           <span className="text-sm font-medium text-foreground">
             <Trans message="Select file to upload or drag-and-drop file" />
           </span>
-          <span className="text-xs text-muted-foreground">
-            <Trans message="JPG, PNG, GIF, SVG" />
-          </span>
           {placeholderVariant === 'dropzone' && (
             <span className="text-xs text-muted-foreground">
               <Trans message="Preferred region will be cropped" />
@@ -277,6 +287,13 @@ export function CroppedImageSelector({
           )}
         </button>
       )}
+
+      <p className="text-xs text-muted-foreground">
+        <Trans
+          message="JPG, PNG, or WebP up to :size. Large images are compressed to WebP automatically."
+          values={{size: prettyBytes(uploadMaxFileSize(uploadType))}}
+        />
+      </p>
 
       <Dialog.Root
         open={cropOpen}
@@ -289,7 +306,18 @@ export function CroppedImageSelector({
       >
         <Dialog.Portal>
           <Dialog.Backdrop />
-          <Dialog.Content className="max-w-[calc(100vw-2rem)] sm:max-w-2xl">
+          <Dialog.Content
+            className={cn(
+              'gap-3',
+              // Dialog.Content ships sm:max-w-md — unprefixed max-w-* does NOT
+              // replace it (tw-merge keeps both variants). Override sm: too.
+              (aspect ?? 1) <= 1.15
+                ? 'max-w-[min(calc(100vw-2rem),24rem)] sm:max-w-sm'
+                : (aspect ?? 1) >= 2.5
+                  ? 'max-w-[min(calc(100vw-2rem),42rem)] sm:max-w-2xl'
+                  : 'max-w-[min(calc(100vw-2rem),36rem)] sm:max-w-xl',
+            )}
+          >
             {pendingFile ? (
               <ImageCrop
                 aspect={aspect}
@@ -297,18 +325,20 @@ export function CroppedImageSelector({
                 onCrop={handleCrop}
                 radius={cropRadius}
               >
-                <Dialog.Header>
+                <Dialog.Header className="gap-1">
                   <Dialog.Title>
                     {label ? label : <Trans message="Crop image" />}
                   </Dialog.Title>
                   <Dialog.Description>
-                    <Trans message="Adjust the preferred region, then apply." />
+                    <Trans message="Adjust the preferred region, then apply. Large images are compressed to WebP automatically." />
                   </Dialog.Description>
                 </Dialog.Header>
-                <Dialog.Body className="pt-2 pb-3">
+                {/* flex-none: Dialog.Body defaults to flex-1 and leaves a tall
+                    empty band between Zoom and the footer. */}
+                <Dialog.Body className="flex-none grow-0 py-1">
                   <ImageCropContent />
                 </Dialog.Body>
-                <Dialog.Footer variant="muted">
+                <Dialog.Footer variant="muted" className="gap-2 pt-3">
                   <ImageCropReset asChild>
                     <Button type="button" variant="ghost" size="sm">
                       <Trans message="Reset" />

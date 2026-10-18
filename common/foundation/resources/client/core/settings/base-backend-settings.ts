@@ -154,6 +154,7 @@ export interface BaseBackendSettings {
     chunk_size?: number;
     backends?: UploadingBackendSettings[];
     disable_tus?: boolean;
+    convert_images_to_webp?: boolean;
     types?: Record<string, UploadingTypeSettings>;
   };
   require_email_confirmation: boolean;

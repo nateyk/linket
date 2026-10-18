@@ -2,6 +2,11 @@ import {FileEntry} from '@app/gen/schemas/file-entry';
 import {UploadType} from '@app/site-config';
 import {restrictionsFromConfig} from '@common/uploads/uploader/create-file-upload';
 import {FileUploadProvider} from '@common/uploads/uploader/file-upload-provider';
+import {
+  encodeCanvasToImageFile,
+  uploadMaxFileSize,
+  validateEncodedImage,
+} from '@common/uploads/utils/encode-cropped-image';
 import {UploadStrategyConfig} from '@common/uploads/uploader/strategy/upload-strategy';
 import {useActiveUpload} from '@common/uploads/uploader/use-active-upload';
 import {useControlledState} from '@react-stately/utils';
@@ -12,10 +17,12 @@ import {Slider} from '@shadcn/forms/slider/slider';
 import {Progress} from '@shadcn/progress/progress';
 import {toast} from '@shadcn/toast/toast';
 import {Trans} from '@ui/i18n/trans';
+import {toast as restrictionToast} from '@ui/toast/toast';
 import {cn} from '@ui/utils/cn';
+import {prettyBytes} from '@ui/utils/files/pretty-bytes';
+import {UploadedFile} from '@ui/utils/files/uploaded-file';
 import {FileInputType} from '@ui/utils/files/file-input-config';
 import {UploadIcon} from 'lucide-react';
-import {nanoid} from 'nanoid';
 import {
   type ChangeEvent,
   useCallback,
@@ -158,6 +165,14 @@ function ImageSelectorDialogContent({
         file: selectedFile,
         imageUrl: selectedImageUrl,
       });
+      const error = validateEncodedImage(
+        new UploadedFile(croppedFile),
+        restrictionsFromConfig({uploadType}),
+      );
+      if (error) {
+        restrictionToast.danger(error);
+        return;
+      }
       uploadFile(croppedFile, uploadOptions);
     } catch {
       toast.error(<Trans message="Could not crop image" />);
@@ -215,7 +230,11 @@ function ImageSelectorDialogContent({
             </Slider>
           </>
         ) : (
-          <Dropzone disabled={isBusy} onFileChange={handleFileChange} />
+          <Dropzone
+            disabled={isBusy}
+            uploadType={uploadType}
+            onFileChange={handleFileChange}
+          />
         )}
       </Dialog.Body>
 
@@ -237,9 +256,11 @@ function ImageSelectorDialogContent({
 
 function Dropzone({
   disabled,
+  uploadType,
   onFileChange,
 }: {
   disabled?: boolean;
+  uploadType: keyof typeof UploadType;
   onFileChange: (e: ChangeEvent<HTMLInputElement>) => void;
 }) {
   return (
@@ -267,7 +288,10 @@ function Dropzone({
             <Trans message="Select file to upload or drag-and-drop file" />
           </Empty.Title>
           <Empty.Description className="text-xs text-foreground">
-            <Trans message="Accepted file types: JPG, PNG, GIF, SVG" />
+            <Trans
+              message="JPG, PNG, or WebP up to :size. Large images are compressed to WebP automatically."
+              values={{size: prettyBytes(uploadMaxFileSize(uploadType))}}
+            />
           </Empty.Description>
         </Empty.Header>
       </Empty.Root>
@@ -321,11 +345,7 @@ async function cropImageFile({
     dimensions.height,
   );
 
-  const blob = await canvasToBlob(canvas, getOutputMimeType(file));
-  return new File([blob], getCroppedFileName(blob.type), {
-    type: blob.type,
-    lastModified: Date.now(),
-  });
+  return encodeCanvasToImageFile(canvas, file.name);
 }
 
 function loadImage(src: string) {
@@ -337,26 +357,3 @@ function loadImage(src: string) {
   });
 }
 
-function canvasToBlob(canvas: HTMLCanvasElement, type: string) {
-  return new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob(blob => {
-      if (blob) {
-        resolve(blob);
-      } else {
-        reject(new Error('Could not create cropped image'));
-      }
-    }, type);
-  });
-}
-
-function getOutputMimeType(file: File) {
-  if (file.type === 'image/jpeg' || file.type === 'image/webp') {
-    return file.type;
-  }
-  return 'image/png';
-}
-
-function getCroppedFileName(mimeType: string) {
-  const extension = mimeType === 'image/jpeg' ? 'jpg' : mimeType.split('/')[1];
-  return `${nanoid(12)}.${extension}`;
-}

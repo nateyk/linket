@@ -10,7 +10,9 @@ return [
             'defaults' => [
                 'prefix' => 'link-images',
                 'accept' => ['image'],
-                'max_file_size' => '2097152', //2mb
+                // 2 MiB (2097152). prettyBytes shows this as "2 MB".
+                // Cropped images are encoded to WebP before this check.
+                'max_file_size' => '2097152',
             ],
         ],
         'digitalProductFiles' => [

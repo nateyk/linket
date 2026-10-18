@@ -2,6 +2,7 @@
 
 namespace App\Storefront\Jobs;
 
+use App\Files\WebpImage;
 use App\Storefront\Models\DigitalProduct;
 use App\Storefront\ProductSettings;
 use Common\Files\Actions\CreateFileEntry;
@@ -12,7 +13,6 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\SerializesModels;
-use Intervention\Image\ImageManager;
 
 class ConvertProductCoverToWebp implements ShouldQueue
 {
@@ -71,13 +71,7 @@ class ConvertProductCoverToWebp implements ShouldQueue
             return null;
         }
 
-        try {
-            return (string) ImageManager::gd()
-                ->read($contents)
-                ->toWebp(quality: 82);
-        } catch (\Throwable) {
-            return null;
-        }
+        return WebpImage::encode($contents);
     }
 
     private function store(FileEntry $entry, string $webp): FileEntry

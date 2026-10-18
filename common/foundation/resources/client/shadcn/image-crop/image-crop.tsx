@@ -1,6 +1,8 @@
 'use client';
 
+import {encodeCanvasToImageFile} from '@common/uploads/utils/encode-cropped-image';
 import {Button} from '@shadcn/button/button';
+import {HookForm} from '@shadcn/forms/form/hook-form';
 import {Slider} from '@shadcn/forms/slider/slider';
 import {message} from '@ui/i18n/message';
 import {Trans} from '@ui/i18n/trans';
@@ -29,8 +31,8 @@ type ImageCropContextValue = {
   isApplying: boolean;
 };
 
-/** Tight inset so the crop window fills the stage without kissing the edges. */
-export const CROP_STAGE_INSET = 12;
+/** Tight inset — 12px stole ~72px width on 3:1 covers (fillRatio ~0.82). */
+export const CROP_STAGE_INSET = 4;
 
 export function aspectFitCropSize(
   containerWidth: number,
@@ -69,9 +71,9 @@ export function cropStageBoxStyle(
     aspectRatio: `${aspect}`,
     width: '100%',
     maxHeight,
-    // Square/near-square: cap width to the same length as maxHeight so the
-    // stage stays a compact tile instead of stretching full dialog width.
-    maxWidth: aspect <= 1.15 ? 'min(100%, min(46dvh, 360px))' : '100%',
+    // Dialog width is already aspect-aware; stage fills that content box
+    // instead of capping at 360px and leaving L/R gutters inside the dialog.
+    maxWidth: '100%',
     ...(radius ? ({'--crop-radius': radius} as React.CSSProperties) : {}),
   };
 }
@@ -362,27 +364,37 @@ export function ImageCropContent({className, ...props}: ImageCropContentProps) {
           />
         </div>
       </div>
-      <Slider
-        min={minZoom}
-        max={3}
-        step={0.1}
-        value={zoom}
-        onValueChange={v => setZoom((v as number) ?? minZoom)}
-        className="gap-y-1"
-      >
-        <Slider.Label>
-          <Trans message="Zoom" />
-        </Slider.Label>
-        <Slider.Control className="py-2">
-          <Slider.Track className="data-horizontal:h-2.5">
-            <Slider.Indicator />
-          </Slider.Track>
-          <Slider.Thumb
-            aria-label={trans(message('Zoom'))}
-            className="size-4 border-2 border-background bg-primary shadow-none ring-1 ring-primary/25"
-          />
-        </Slider.Control>
-      </Slider>
+      {/* Isolate from HookForm.Field: CroppedAvatar/Cover nest inside
+          avatar_url / cover_url fields, and Slider would otherwise bind
+          the URL string → NaN → visibility:hidden thumb. */}
+      <HookForm.FieldContext.Provider value={undefined}>
+        <Slider
+          min={minZoom}
+          max={3}
+          step={0.1}
+          value={Number.isFinite(zoom) ? zoom : minZoom}
+          onValueChange={next => {
+            const raw = Array.isArray(next) ? next[0] : next;
+            setZoom(
+              typeof raw === 'number' && Number.isFinite(raw) ? raw : minZoom,
+            );
+          }}
+          className="gap-y-1"
+        >
+          <Slider.Label>
+            <Trans message="Zoom" />
+          </Slider.Label>
+          <Slider.Control className="py-1.5">
+            <Slider.Track className="data-horizontal:h-2.5">
+              <Slider.Indicator />
+            </Slider.Track>
+            <Slider.Thumb
+              aria-label={trans(message('Zoom'))}
+              className="size-4 border-2 border-background bg-primary shadow-none ring-1 ring-primary/25"
+            />
+          </Slider.Control>
+        </Slider>
+      </HookForm.FieldContext.Provider>
     </div>
   );
 }
@@ -505,18 +517,8 @@ async function getCroppedImage({
     crop.height,
   );
 
-  const blob = await new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob(
-      b => (b ? resolve(b) : reject(new Error('Could not create blob'))),
-      getOutputMimeType(file),
-    );
-  });
-
-  const previewUrl = URL.createObjectURL(blob);
-  const croppedFile = new File([blob], file.name, {
-    type: blob.type,
-    lastModified: Date.now(),
-  });
+  const croppedFile = await encodeCanvasToImageFile(canvas, file.name);
+  const previewUrl = URL.createObjectURL(croppedFile);
 
   return {previewUrl, croppedFile};
 }
@@ -530,9 +532,4 @@ function createImage(url: string): Promise<HTMLImageElement> {
   });
 }
 
-function getOutputMimeType(file: File): string {
-  if (file.type === 'image/jpeg' || file.type === 'image/webp')
-    return file.type;
-  return 'image/png';
-}
 

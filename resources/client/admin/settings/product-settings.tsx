@@ -161,7 +161,7 @@ export function Component() {
               <Trans message="Convert cover images to WebP" />
             </Field.Label>
             <Field.Description>
-              <Trans message="When a product cover is attached, convert it to WebP for smaller images. The original file is kept." />
+              <Trans message="After a product is saved, a JPEG or PNG cover that was not already converted is turned into WebP. That previous file entry is kept. New link images are converted when they are uploaded." />
             </Field.Description>
           </HookForm.Field>
         </Field.Group>

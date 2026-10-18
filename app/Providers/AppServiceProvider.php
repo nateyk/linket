@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Actions\AppBootstrapData;
+use App\Files\Listeners\ConvertUploadedLinkImageToWebp;
 use App\Demo\Console\ResetDemoSite;
 use App\Demo\Console\SeedDemoData;
 use App\Biolinks\Actions\CrupdateBiolink;
@@ -22,6 +23,7 @@ use App\Webhooks\Models\Webhook;
 use App\Tags\Models\Tag;
 use App\Webhooks\Console\DeleteOldWebhookDeliveries;
 use Common\Auth\Events\UserCreated;
+use Common\Files\Events\FileUploaded;
 use Common\Auth\Models\BaseUser;
 use Common\Core\Bootstrap\BootstrapData;
 use Common\Domains\CustomDomain;
@@ -65,6 +67,8 @@ class AppServiceProvider extends ServiceProvider
 {
     public function boot()
     {
+        Event::listen(FileUploaded::class, ConvertUploadedLinkImageToWebp::class);
+
         EncryptCookies::except(OrderRecoveryService::COOKIE);
 
         $this->app->bind(BootstrapData::class, AppBootstrapData::class);

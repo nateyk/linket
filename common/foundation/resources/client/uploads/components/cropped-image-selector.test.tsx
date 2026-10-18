@@ -65,6 +65,13 @@ describe('cropped image selector', () => {
     );
   });
 
+  test('explains the size limit and that large images are compressed before upload', () => {
+    expect(selectorSource).toContain(
+      'JPG, PNG, or WebP up to :size. Large images are compressed to WebP automatically.',
+    );
+    expect(selectorSource).toContain('validateEncodedImage');
+  });
+
   test('filled-state menu stays visible on coarse pointers', () => {
     expect(selectorSource).toContain('pointer-coarse:opacity-100');
   });
@@ -75,6 +82,20 @@ describe('cropped image selector', () => {
       /export function CroppedCover[\s\S]*?className=\{cn\('w-full', props\.className\)\}/,
     );
     expect(selectorSource).not.toContain("'h-32 w-full sm:h-40'");
+  });
+
+  test('crop dialog body does not grow into empty whitespace', () => {
+    expect(selectorSource).toContain('flex-none grow-0');
+    expect(selectorSource).toContain('gap-3');
+  });
+
+  test('crop dialog width follows crop aspect (square tight, cover wide)', () => {
+    expect(selectorSource).toContain('sm:max-w-sm');
+    expect(selectorSource).toContain('sm:max-w-2xl');
+    expect(selectorSource).toContain('sm:max-w-xl');
+    expect(selectorSource).toContain(
+      "'max-w-[min(calc(100vw-2rem),24rem)] sm:max-w-sm'",
+    );
   });
 });
 

@@ -85,7 +85,7 @@ describe('cropper measured window (wiring)', () => {
       cropImg!.dispatchEvent(new Event('load'));
     });
 
-    // 5. the rendered crop window fills the inset stage (12px pad each side)
+    // 5. the rendered crop window fills the inset stage (4px pad each side)
     const cropArea = container.querySelector(
       '[data-testid="cropper"]',
     ) as HTMLElement | null;

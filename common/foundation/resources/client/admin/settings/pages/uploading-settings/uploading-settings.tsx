@@ -20,6 +20,7 @@ import {
   NumberFieldInput,
 } from '@shadcn/forms/number-field/number-field';
 import {Select} from '@shadcn/forms/select/select';
+import {Switch} from '@shadcn/forms/switch/switch';
 import {useSuspenseQuery} from '@tanstack/react-query';
 import {Trans} from '@ui/i18n/trans';
 import {useForm} from 'react-hook-form';
@@ -34,10 +35,14 @@ const fileDeliveryOptions = [
 
 export function Component() {
   const {data} = useAdminSettings();
+  const uploading = data.client.uploading ?? {};
   const form = useForm<AdminSettings>({
     defaultValues: {
       client: {
-        uploading: data.client.uploading ?? {},
+        uploading: {
+          ...uploading,
+          convert_images_to_webp: uploading.convert_images_to_webp ?? true,
+        },
       },
       server: {
         static_file_delivery: data.server.static_file_delivery ?? '',
@@ -69,6 +74,7 @@ function GlobalSettingsPanel() {
       </SettingsSectionHeader>
       <div className="flex flex-col gap-6">
         <FileDeliveryPanel />
+        <WebpPanel />
         <ChunkSizePanel />
       </div>
     </section>
@@ -109,6 +115,27 @@ function FileDeliveryPanel() {
           </HookForm.Field>
         )}
       </SettingsErrorGroup>
+    </SettingsPanel>
+  );
+}
+
+function WebpPanel() {
+  return (
+    <SettingsPanel
+      title={<Trans message="Image compression" />}
+      description={
+        <Trans message="JPEG, PNG, and BMP link images are stored as WebP. The original file is not kept." />
+      }
+    >
+      <HookForm.Field name="client.uploading.convert_images_to_webp">
+        <Field.Label>
+          <Switch />
+          <Trans message="Convert uploaded images to WebP" />
+        </Field.Label>
+        <Field.Description>
+          <Trans message="Covers product images, store photos, and course covers. Downloadable product files and course videos stay as uploaded." />
+        </Field.Description>
+      </HookForm.Field>
     </SettingsPanel>
   );
 }

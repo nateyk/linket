@@ -8,16 +8,16 @@ import {
 
 describe('crop window math', () => {
   test('aspectFitCropSize fills the inset stage for landscape ratios', () => {
-    // 12px inset on each side → 716×436 available inside 740×460
+    // 4px inset on each side → 732×452 available inside 740×460
     expect(aspectFitCropSize(740, 460, 16 / 9)).toEqual({
-      width: 716,
-      height: 716 / (16 / 9),
+      width: 732,
+      height: 732 / (16 / 9),
     });
   });
   test('aspectFitCropSize fits height when the ratio is taller than the stage', () => {
     expect(aspectFitCropSize(740, 200, 16 / 9)).toEqual({
-      width: 176 * (16 / 9),
-      height: 176,
+      width: 192 * (16 / 9),
+      height: 192,
     });
   });
   test('aspectFitCropSize can skip the inset when callers pass 0', () => {
@@ -56,6 +56,7 @@ describe('reusable image crop composer', () => {
     expect(source).toContain('onCrop');
     expect(source).toContain('react-easy-crop');
     expect(source).toContain('getCroppedImage');
+    expect(source).toContain('encodeCanvasToImageFile');
   });
 
   test('supports avatar, course cover and product card ratios', () => {
@@ -133,7 +134,7 @@ describe('reusable image crop composer', () => {
     expect(cropSource).toContain('cropperKey');
     expect(cropSource).not.toContain("'free'");
     expect(selectorSource.match(/<Dialog\.Root/g)).toHaveLength(1);
-    expect(selectorSource).toContain('<Dialog.Footer variant="muted">');
+    expect(selectorSource).toContain('Dialog.Footer variant="muted"');
     expect(selectorSource).not.toContain('flex items-center justify-end');
   });
 });
@@ -147,6 +148,21 @@ describe('crop stage box style', () => {
 
     const avatar = cropStageBoxStyle(1);
     expect(avatar.aspectRatio).toBe('1');
-    expect(String(avatar.maxWidth)).toContain('360px');
+    expect(avatar.maxWidth).toBe('100%');
+    expect(String(avatar.maxHeight)).toContain('360px');
+  });
+});
+
+describe('zoom slider isolation', () => {
+  test('Zoom slider clears HookForm field context so it never binds the image URL', () => {
+    const cropSource = fs.readFileSync(
+      path.resolve(
+        'common/foundation/resources/client/shadcn/image-crop/image-crop.tsx',
+      ),
+      'utf8',
+    );
+    expect(cropSource).toContain('HookForm.FieldContext.Provider');
+    expect(cropSource).toContain('value={undefined}');
+    expect(cropSource).toContain('Number.isFinite(zoom)');
   });
 });

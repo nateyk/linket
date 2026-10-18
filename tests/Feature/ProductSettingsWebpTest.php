@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Files\ReplaceLinkImageWithWebp;
+use App\Files\WebpImage;
 use App\Storefront\Jobs\ConvertProductCoverToWebp;
 use App\Storefront\Models\DigitalProduct;
 use App\Storefront\ProductSettings;
@@ -187,6 +189,82 @@ class ProductSettingsWebpTest extends TestCase
         Queue::assertNotPushed(ConvertProductCoverToWebp::class);
     }
 
+    public function testLinkImagePngUploadIsStoredAsWebpAndOriginalIsRemoved(): void
+    {
+        [$creator, $workspace] = $this->creatorContext();
+
+        $cover = $this->createImageEntry($creator, $workspace, 'png', true);
+
+        $this->assertSame('image/webp', $cover->mime);
+        $this->assertSame('webp', $cover->extension);
+        $this->assertStringEndsWith('.webp', $cover->name);
+        $this->assertStringEndsWith('.webp', $cover->file_name);
+        $this->assertSame(
+            1,
+            FileEntry::query()
+                ->where('owner_id', $creator->id)
+                ->where('upload_type', 'linkImages')
+                ->count(),
+        );
+
+        $bytes = $cover->getDisk()->get($cover->getStoragePath());
+        $this->assertIsString($bytes);
+        $this->assertStringStartsWith('RIFF', $bytes);
+        $this->assertSame('WEBP', substr($bytes, 8, 4));
+    }
+
+    public function testAdminFlagKeepsTheOriginalLinkImage(): void
+    {
+        [$creator, $workspace] = $this->creatorContext();
+        $current = settings('uploading');
+        $next = is_array($current) ? $current : [];
+        $next['convert_images_to_webp'] = false;
+        settings()->set('uploading', $next);
+
+        try {
+            $cover = $this->createImageEntry($creator, $workspace, 'png', true);
+        } finally {
+            settings()->set('uploading', $current);
+        }
+
+        $this->assertSame('png', $cover->extension);
+        $this->assertNotSame('image/webp', $cover->mime);
+    }
+
+    public function testUploadConversionLeavesDigitalProductFilesAlone(): void
+    {
+        [$creator, $workspace] = $this->creatorContext();
+        $pdf = $this->createPdfEntry($creator, $workspace);
+
+        $this->assertFalse((new ReplaceLinkImageWithWebp())->execute($pdf));
+        $this->assertSame('pdf', $pdf->fresh()->extension);
+    }
+
+    public function testDoesNotStoreWebpThatWouldExceedTheLinkImageLimit(): void
+    {
+        [$creator, $workspace] = $this->creatorContext();
+        $cover = $this->createImageEntry($creator, $workspace, 'png');
+        $current = settings('uploading');
+        $next = is_array($current) ? $current : [];
+        $next['convert_images_to_webp'] = true;
+        $next['types']['linkImages']['max_file_size'] = 1;
+        settings()->set('uploading', $next);
+
+        try {
+            $replaced = (new ReplaceLinkImageWithWebp())->execute($cover);
+        } finally {
+            settings()->set('uploading', $current);
+        }
+
+        $this->assertFalse($replaced);
+        $this->assertSame('png', $cover->fresh()->extension);
+    }
+
+    public function testUploadConversionDefaultsOn(): void
+    {
+        $this->assertTrue(WebpImage::uploadsShouldConvert());
+    }
+
     private function createPdfEntry(User $creator, Workspace $workspace): FileEntry
     {
         return FileEntry::query()->create([
@@ -213,8 +291,12 @@ class ProductSettingsWebpTest extends TestCase
         ], $attributes));
     }
 
-    private function createImageEntry(User $creator, Workspace $workspace, string $extension): FileEntry
-    {
+    private function createImageEntry(
+        User $creator,
+        Workspace $workspace,
+        string $extension,
+        bool $convertOnUpload = false,
+    ): FileEntry {
         $image = imagecreatetruecolor(12, 12);
         imagefilledrectangle($image, 0, 0, 12, 12, imagecolorallocate($image, 200, 20, 20));
 
@@ -223,14 +305,32 @@ class ProductSettingsWebpTest extends TestCase
         $bytes = ob_get_clean();
         imagedestroy($image);
 
-        $response = $this->stateful()->actingAs($creator)->post('/api/v1/file-entries', [
-            'file' => UploadedFile::fake()->createWithContent("cover.{$extension}", $bytes),
-            'workspaceId' => $workspace->id,
-            'uploadType' => 'linkImages',
-        ]);
-        $response->assertOk();
+        $upload = function () use ($creator, $workspace, $extension, $bytes): FileEntry {
+            $response = $this->stateful()->actingAs($creator)->post('/api/v1/file-entries', [
+                'file' => UploadedFile::fake()->createWithContent("cover.{$extension}", $bytes),
+                'workspaceId' => $workspace->id,
+                'uploadType' => 'linkImages',
+            ]);
+            $response->assertOk();
 
-        return FileEntry::query()->findOrFail($response->json('fileEntry.id'));
+            return FileEntry::query()->findOrFail($response->json('fileEntry.id'));
+        };
+
+        if ($convertOnUpload) {
+            return $upload();
+        }
+
+        // Legacy cover-job tests need the original JPEG/PNG on disk.
+        $current = settings('uploading');
+        $next = is_array($current) ? $current : [];
+        $next['convert_images_to_webp'] = false;
+        settings()->set('uploading', $next);
+
+        try {
+            return $upload();
+        } finally {
+            settings()->set('uploading', $current);
+        }
     }
 
     private function creatorContext(): array
