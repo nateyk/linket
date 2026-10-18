@@ -358,6 +358,8 @@ Route::group(['prefix' => 'v1'], function () {
     Route::get('public/stores/{biolink}/digital-products/{digitalProduct}/orders/{order}', [PublicDigitalProductsController::class, 'order'])->middleware('throttle:60,1');
     Route::get('public/stores/{biolink}/digital-products/{digitalProduct}/reviews', [ProductReviewsController::class, 'index']);
     Route::get('public/stores/{biolink}/digital-products/{digitalProduct}/reviews/{order}', [ProductReviewsController::class, 'show']);
+    Route::get('public/stores/{biolink}/services', [PublicServicesController::class, 'index']);
+    Route::get('public/stores/{biolink}/services/{service}', [PublicServicesController::class, 'show']);
     Route::post('public/stores/{biolink}/services/{service}/inquiries', [PublicServicesController::class, 'inquiry'])
         ->middleware('throttle:10,1')
         ->withoutMiddleware([

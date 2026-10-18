@@ -4,6 +4,9 @@ namespace App\CreatorServices\Controllers;
 
 use App\CreatorServices\Actions\CreateServiceInquiry;
 use App\CreatorServices\Models\CreatorService;
+use App\CreatorServices\PublicCreatorServices;
+use App\CreatorServices\Resources\PublicServiceDetailResource;
+use App\CreatorServices\Resources\PublicServiceResource;
 use App\Links\Actions\LinkeablePublicPolicy;
 use App\Stores\Models\Store;
 use Illuminate\Http\Request;
@@ -11,6 +14,20 @@ use Illuminate\Routing\Controller;
 
 class PublicServicesController extends Controller
 {
+    public function index(Store $biolink)
+    {
+        return PublicServiceResource::collection(
+            app(PublicCreatorServices::class)->services($biolink),
+        );
+    }
+
+    public function show(Store $biolink, string $service): PublicServiceDetailResource
+    {
+        return new PublicServiceDetailResource(
+            app(PublicCreatorServices::class)->service($biolink, $service),
+        );
+    }
+
     public function inquiry(Request $request, Store $biolink, string $service)
     {
         $store = $biolink;

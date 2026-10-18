@@ -1,5 +1,7 @@
 <?php
 
+use App\CreatorServices\Controllers\PublicServicePageController;
+use App\CreatorServices\Controllers\PublicServicesPageController;
 use App\Demo\Controllers\DemoLoginController;
 use App\Links\Controllers\FallbackRouteController;
 use App\Links\Controllers\LinkImageController;
@@ -36,6 +38,16 @@ Route::get('my-order/courses/{courseId}/lessons/{lessonId}', fn (string $courseI
     ->whereNumber('lessonId');
 
 Route::get('dashboard/my-products/{product}/course/analytics', [HomeController::class, 'render'])->middleware(['auth', 'verified']);
+
+// Keep client-side dashboard/admin URLs from being captured by the public
+// `{storeSlug}/services` routes below.
+Route::get('dashboard/{any?}', [HomeController::class, 'render'])->where('any', '.*');
+Route::get('admin/{any?}', [HomeController::class, 'render'])->where('any', '.*');
+
+Route::get('{storeSlug}/services', [PublicServicesPageController::class, 'show'])
+    ->name('services.public.index');
+Route::get('{storeSlug}/services/{service}', [PublicServicePageController::class, 'show'])
+    ->name('services.public.show');
 
 Route::get('{linkHash}/img', [LinkImageController::class, 'show']);
 
