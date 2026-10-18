@@ -53,6 +53,7 @@ return [
         '/dashboard/link-pages',
         '/dashboard/pixels',
         '/dashboard/items',
+        '/dashboard/services',
         '/dashboard/sales-payouts',
     ],
 ];

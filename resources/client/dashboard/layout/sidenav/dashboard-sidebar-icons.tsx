@@ -1,4 +1,5 @@
 import {
+  BriefcaseBusinessIcon,
   ChartColumnBigIcon,
   FolderIcon,
   FormIcon,
@@ -38,6 +39,7 @@ export const dashboardSidebarIcons: Record<
   '/dashboard/insights': <ChartColumnBigIcon />,
   '/dashboard/search': <SearchIcon />,
   '/dashboard/items': <PackageIcon />,
+  '/dashboard/services': <BriefcaseBusinessIcon />,
   '/dashboard/sales-payouts': <WalletCardsIcon />,
 };
 

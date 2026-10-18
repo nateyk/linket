@@ -307,6 +307,12 @@ return [
                     ],
                     [
                         'type' => 'route',
+                        'label' => 'My Services',
+                        'action' => '/dashboard/services',
+                        'id' => 'creator-services-dashboard',
+                    ],
+                    [
+                        'type' => 'route',
                         'label' => 'Sales & Payouts',
                         'action' => '/dashboard/sales-payouts',
                         'id' => 'sales-payouts-dashboard',
@@ -353,6 +359,12 @@ return [
                         'label' => 'My Items',
                         'action' => '/dashboard/items',
                         'id' => 'digital-products-mobile',
+                    ],
+                    [
+                        'type' => 'route',
+                        'label' => 'My Services',
+                        'action' => '/dashboard/services',
+                        'id' => 'creator-services-mobile',
                     ],
                     [
                         'type' => 'route',

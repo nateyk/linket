@@ -420,6 +420,10 @@ export const dashboardRoutes: RouteObject[] = [
           import('@app/dashboard/digital-products/digital-products-page'),
       },
       {
+        path: 'services',
+        lazy: () => import('@app/dashboard/services/services-page'),
+      },
+      {
         path: 'items/new',
         lazy: () =>
           import('@app/dashboard/digital-products/product-type-selection-page'),
