@@ -52,6 +52,12 @@ vi.mock('@app/dashboard/stores/store-editor/content/widgets/shop-widget/shop-wid
   ),
 }));
 
+vi.mock('@common/http/query-client', () => ({
+  apiClient: {
+    get: vi.fn().mockResolvedValue({data: {data: []}}),
+  },
+}));
+
 // The shop card and the tab strip live in StoreFront; a marker is enough to
 // tell whether the mobile branch rendered either.
 vi.mock('./store-front', () => ({
@@ -162,33 +168,31 @@ afterEach(() => {
 });
 
 describe('creator profile on mobile', () => {
-  test('(a) Profile shows the card and no tab strip', () => {
+  test('(a) Products is the default home when the shop has items', () => {
     renderProfile();
 
+    // Bio page IS the store — match desktop defaultTab="products".
+    expect(section('Products')).toBeTruthy();
+    expect(within(mobileBranch()).getByTestId('shop-widget')).toBeTruthy();
+    // The Products | About strip belongs to the desktop grid.
+    expect(within(mobileBranch()).queryByTestId('storefront')).toBeNull();
+    expect(section('Profile')).toBeNull();
+    expect(section('About')).toBeNull();
+  });
+
+  test('(b) tapping Profile shows only the card', async () => {
+    const user = userEvent.setup();
+    renderProfile();
+
+    await user.click(navButton('Profile'));
+
     expect(section('Profile')).toBeTruthy();
-    // Scoped to the section: the desktop grid renders the same card.
     expect(within(section('Profile')!).getByText('Nathanael')).toBeTruthy();
     expect(
       within(section('Profile')!).getByText('Creative director'),
     ).toBeTruthy();
-    // The Products | About strip belongs to the desktop grid.
-    expect(within(mobileBranch()).queryByTestId('storefront')).toBeNull();
-    // Neither of the other sections is mounted alongside it.
     expect(section('Products')).toBeNull();
     expect(section('About')).toBeNull();
-  });
-
-  test('(b) tapping Products shows only the products', async () => {
-    const user = userEvent.setup();
-    renderProfile();
-
-    await user.click(navButton('Products'));
-
-    expect(section('Products')).toBeTruthy();
-    expect(within(mobileBranch()).getByTestId('shop-widget')).toBeTruthy();
-    expect(section('Profile')).toBeNull();
-    expect(section('About')).toBeNull();
-    // Still no tab strip on mobile.
     expect(within(mobileBranch()).queryByTestId('storefront')).toBeNull();
   });
 
@@ -205,6 +209,26 @@ describe('creator profile on mobile', () => {
     expect(within(mobileBranch()).queryByTestId('storefront')).toBeNull();
   });
 
+  test('(d) Services appears when the creator has published services', async () => {
+    const user = userEvent.setup();
+    render(
+      <CreatorProfileLayout
+        biolink={{...makeBiolink(), public_service_count: 1} as never}
+        appearance={null}
+        content={[shopWidget]}
+      />,
+    );
+
+    expect(navButton('Services')).toBeTruthy();
+    await user.click(navButton('Services'));
+
+    expect(section('Services')).toBeTruthy();
+    expect(
+      await within(section('Services')!).findByText('No services yet'),
+    ).toBeTruthy();
+    expect(section('Products')).toBeNull();
+  });
+
   test('the nav is the only way between sections, and marks the current one', async () => {
     const user = userEvent.setup();
     renderProfile();
@@ -212,13 +236,13 @@ describe('creator profile on mobile', () => {
     // A nav, not a tablist: buttons with aria-pressed, never tabs without
     // tabpanels.
     expect(within(mobileBranch()).queryByRole('tablist')).toBeNull();
-    expect(navButton('Profile').getAttribute('aria-pressed')).toBe('true');
-    expect(navButton('Products').getAttribute('aria-pressed')).toBe('false');
+    expect(navButton('Products').getAttribute('aria-pressed')).toBe('true');
+    expect(navButton('Profile').getAttribute('aria-pressed')).toBe('false');
 
     await user.click(navButton('About'));
 
     expect(navButton('About').getAttribute('aria-pressed')).toBe('true');
-    expect(navButton('Profile').getAttribute('aria-pressed')).toBe('false');
+    expect(navButton('Products').getAttribute('aria-pressed')).toBe('false');
   });
 
   test('(d) switching resets the scroll to the top', async () => {
@@ -226,7 +250,7 @@ describe('creator profile on mobile', () => {
     renderProfile();
     (window.scrollTo as ReturnType<typeof vi.fn>).mockClear();
 
-    await user.click(navButton('Products'));
+    await user.click(navButton('Profile'));
     expect(window.scrollTo).toHaveBeenCalledWith({top: 0});
 
     (window.scrollTo as ReturnType<typeof vi.fn>).mockClear();
@@ -325,7 +349,8 @@ describe('the preview follows the editor tab (A-06)', () => {
   test('the public page (no previewSection) is untouched', () => {
     renderWithSection(undefined);
 
-    expect(section('Profile')).toBeTruthy();
+    // Public load with a shop opens Products; About stays off until tapped.
+    expect(section('Products')).toBeTruthy();
     expect(section('About')).toBeNull();
     expect(window.scrollTo).not.toHaveBeenCalled();
   });

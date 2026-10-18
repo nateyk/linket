@@ -57,6 +57,10 @@ class BiolinkResource extends LinkeableResource
                     $this->relationLoaded('digitalProducts'),
                 fn(): int => $this->publicItemCount(),
             ),
+            'public_service_count' => $this->when(
+                $this->relationLoaded('creatorServices'),
+                fn(): int => $this->publicServiceCount(),
+            ),
             'is_verified' => $this->when(
                 $this->relationLoaded('user'),
                 fn(): bool => settings('kyc.enabled', false)

@@ -4,6 +4,7 @@ import {Card} from '@shadcn/card/card';
 import {Tabs} from '@shadcn/tabs/tabs';
 import {Trans} from '@ui/i18n/trans';
 import {formatMoney} from '@ui/i18n/format-money';
+import {useTrans} from '@ui/i18n/use-trans';
 import {CheckIcon, ClockIcon, RefreshCwIcon} from 'lucide-react';
 import type {PublicServicePackage} from './service-types';
 
@@ -14,6 +15,8 @@ export function ServicePackagePanel({
   packages: PublicServicePackage[];
   onRequest: (packageId?: number) => void;
 }) {
+  const {trans} = useTrans();
+
   if (!packages.length) {
     return (
       <Card.Root>
@@ -43,7 +46,10 @@ export function ServicePackagePanel({
 
   return (
     <Tabs.Root defaultValue={String(packages[0].id)} className="gap-3">
-      <Tabs.List aria-label="Packages" className="w-full">
+      <Tabs.List
+        aria-label={trans({message: 'Packages'})}
+        className="w-full"
+      >
         {packages.map(packageItem => (
           <Tabs.Tab
             key={packageItem.id}

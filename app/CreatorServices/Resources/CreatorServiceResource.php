@@ -56,11 +56,24 @@ class CreatorServiceResource extends JsonResource
                 'name' => $this->store->name,
                 'short_url' => $this->store->short_url,
             ] : null),
+            'starting_price_cents' => $this->startingPriceCents(),
             'inquiries_count' => (int) ($this->inquiries_count ?? 0),
             'new_inquiries_count' => (int) ($this->new_inquiries_count ?? 0),
             'public_url' => $this->publicUrl(),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];
+    }
+
+    private function startingPriceCents(): ?int
+    {
+        $packages = $this->resource->relationLoaded('packages')
+            ? $this->resource->packages
+            : $this->resource->packages()->get();
+        $prices = $packages
+            ->pluck('price_cents')
+            ->filter(fn ($price): bool => $price !== null);
+
+        return $prices->isEmpty() ? null : (int) $prices->min();
     }
 }

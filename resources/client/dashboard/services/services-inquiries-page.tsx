@@ -225,8 +225,10 @@ export function Component() {
 
           <div className="flex flex-wrap items-center gap-3">
             <Select.Root
-              value={serviceId}
-              onValueChange={value => applyServiceFilter(String(value))}
+              value={serviceId || 'all'}
+              onValueChange={value =>
+                applyServiceFilter(value === 'all' ? '' : String(value))
+              }
             >
               <Select.Trigger className="min-w-44">
                 <Select.Value>
@@ -238,7 +240,9 @@ export function Component() {
                 </Select.Value>
               </Select.Trigger>
               <Select.Content>
-                <Select.Item value="">{trans(message('All services'))}</Select.Item>
+                <Select.Item value="all">
+                  {trans(message('All services'))}
+                </Select.Item>
                 {services.map(service => (
                   <Select.Item key={service.id} value={String(service.id)}>
                     {service.title}
@@ -248,9 +252,9 @@ export function Component() {
             </Select.Root>
 
             <Select.Root
-              value={status}
+              value={status || 'all'}
               onValueChange={value => {
-                setStatus(String(value));
+                setStatus(value === 'all' ? '' : String(value));
                 setPage(1);
               }}
             >
@@ -262,7 +266,7 @@ export function Component() {
                 </Select.Value>
               </Select.Trigger>
               <Select.Content>
-                <Select.Item value="">
+                <Select.Item value="all">
                   {trans(message('All statuses'))}
                 </Select.Item>
                 {STATUSES.map(item => (

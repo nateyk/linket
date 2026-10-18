@@ -4,6 +4,7 @@ namespace App\Stores\Models;
 
 use App\Analytics\Models\TrackedEvent;
 use App\Biolinks\Resources\BiolinkResource;
+use App\CreatorServices\Models\CreatorService;
 use App\Links\Models\Concerns\HasShortUrlAttribute;
 use App\Links\Models\Link;
 use App\Links\Models\Linkeable;
@@ -191,6 +192,11 @@ class Store extends Linkeable
         return $this->hasMany(\App\Biolinks\Models\BiolinkWidget::class, 'biolink_id');
     }
 
+    public function creatorServices(): HasMany
+    {
+        return $this->hasMany(CreatorService::class, 'store_id');
+    }
+
     public function digitalProducts(): BelongsToMany
     {
         $pivot = static::isTableRenameDone() ? 'digital_product_store' : 'digital_product_biolinks';
@@ -272,6 +278,7 @@ class Store extends Linkeable
             'digitalProducts' => fn(BelongsToMany $query) => $query
                 ->where('status', 'approved')
                 ->whereNull('digital_products.deleted_at'),
+            'creatorServices' => fn(HasMany $query) => $query->where('status', 'published'),
         ]);
 
         return $this;
@@ -333,6 +340,13 @@ class Store extends Linkeable
             })
             ->take(self::CREATOR_WORK_ITEM_LIMIT)
             ->values();
+    }
+
+    public function publicServiceCount(): int
+    {
+        return $this->relationLoaded('creatorServices')
+            ? $this->creatorServices->count()
+            : 0;
     }
 
     public function publicItemCount(): int

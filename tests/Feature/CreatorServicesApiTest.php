@@ -72,6 +72,7 @@ class CreatorServicesApiTest extends TestCase
             ->assertJsonPath('data.status', 'draft')
             ->assertJsonPath('data.packages.0.name', 'Starter')
             ->assertJsonPath('data.packages.1.price_cents', null)
+            ->assertJsonPath('data.starting_price_cents', 29900)
             ->assertJsonPath('data.faqs.0.question', 'How long?')
             ->assertJsonCount(2, 'data.gallery')
             ->assertJsonPath('data.contact_channels.0.value', '+251911234567')

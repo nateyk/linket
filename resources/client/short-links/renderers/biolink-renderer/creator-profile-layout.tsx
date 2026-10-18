@@ -2,6 +2,7 @@ import {
   CreatorProfileConfig,
   getCreatorProfileConfig,
 } from '@app/dashboard/stores/store-editor/creator-profile-types';
+import {formatSkillLabel} from '@app/dashboard/stores/store-editor/skills-chips-field';
 import {StorePreviewSection} from '@app/dashboard/stores/store-editor/store-preview-protocol';
 import {Biolink} from '@app/gen/schemas/biolink';
 import {
@@ -9,7 +10,9 @@ import {
   SocialsType,
 } from '@app/dashboard/stores/store-editor/content/widgets/socials-widget/socials-list';
 import {ShopWidgetRenderer} from '@app/dashboard/stores/store-editor/content/widgets/shop-widget/shop-widget-renderer';
+import {ServicesSection} from '@app/services/public/services-section';
 import {
+  biolinkSurfaceEdgeClassName,
   resolveBiolinkButtonAppearance,
   resolveBiolinkContainerRadius,
   shouldUseLightBiolinkLogo,
@@ -40,7 +43,7 @@ import {
 import {renderAboutHtml} from './about-markdown';
 import {StoreFront} from './store-front';
 import {Link} from 'react-router';
-import {useCallback, useEffect, useRef, useState} from 'react';
+import {useCallback, useEffect, useRef, useState, type ReactNode} from 'react';
 
 interface CreatorProfileLayoutProps {
   biolink: Biolink;
@@ -124,13 +127,27 @@ function MobileCreatorProfile({
       ? biolink.public_item_count > 0
       : configuredProductIds.length > 0);
   const hasAbout = hasVisibleAbout(profile.about_html);
-  const showNavigation = hasProducts || hasAbout;
-  const [activeTab, setActiveTab] = useState("profile");
+  const hasServices = serviceCount(biolink) > 0;
+  const showNavigation = hasProducts || hasServices || hasAbout;
+  // Bio page IS the store: open on Products when the shop has items, matching
+  // desktop StoreFront defaultTab="products". Profile-only pages stay on Profile.
+  const [activeTab, setActiveTab] = useState(() =>
+    hasProducts ? 'products' : hasServices ? 'services' : 'profile',
+  );
   const {trans} = useTrans();
   const biolinkNavItems = [
     {label: trans(message('Profile')), icon: UserIcon, value: 'profile'},
     ...(hasProducts
       ? [{label: trans(message('Products')), icon: PackageIcon, value: 'products'}]
+      : []),
+    ...(hasServices
+      ? [
+          {
+            label: trans(message('Services')),
+            icon: BriefcaseBusinessIcon,
+            value: 'services',
+          },
+        ]
       : []),
     ...(hasAbout
       ? [{label: trans(message('About')), icon: InfoIcon, value: 'about'}]
@@ -149,14 +166,19 @@ function MobileCreatorProfile({
   // The editor posts its mapped section on tab changes only (A-06): the
   // preview follows when the editor moves, and never fights a section the
   // visitor tapped by hand — that only changes when this prop changes.
-  // Sections this page doesn't have fall back to Profile.
+  // Missing sections fall back to Products when the shop exists, else Profile.
   const navItemsRef = useRef(biolinkNavItems);
   navItemsRef.current = biolinkNavItems;
   useEffect(() => {
     if (previewSection === undefined) return;
-    const target = navItemsRef.current.some(item => item.value === previewSection)
+    const items = navItemsRef.current;
+    const target = items.some(item => item.value === previewSection)
       ? previewSection
-      : 'profile';
+      : items.some(item => item.value === 'products')
+        ? 'products'
+        : items.some(item => item.value === 'services')
+          ? 'services'
+          : 'profile';
     selectSection(target);
   }, [previewSection, selectSection]);
 
@@ -167,9 +189,11 @@ function MobileCreatorProfile({
   const sectionLabel =
     activeTab === 'products'
       ? trans(message('Products'))
-      : activeTab === 'about'
-        ? trans(message('About'))
-        : trans(message('Profile'));
+      : activeTab === 'services'
+        ? trans(message('Services'))
+        : activeTab === 'about'
+          ? trans(message('About'))
+          : trans(message('Profile'));
 
   return (
     <div className="relative min-w-0 gap-0">
@@ -184,11 +208,8 @@ function MobileCreatorProfile({
               <AdHost slot="biolink_top" />
             </div>
           )}
-          {/* Profile is the card and nothing else on mobile. The storefront
-              (tabs + panels) is the desktop arrangement, where both live
-              side by side; here the bottom nav is the only way to reach
-              Products and About, so putting them here too would repeat the
-              same content under a second set of controls. */}
+          {/* Profile is identity only on mobile. Products/About switch via
+              bottom nav so content is not duplicated under a second control. */}
         </section>
       )}
 
@@ -202,6 +223,15 @@ function MobileCreatorProfile({
             biolink={biolink}
             appearance={appearance}
           />
+        </section>
+      )}
+
+      {hasServices && activeTab === 'services' && (
+        <section
+          aria-label={trans(message('Services'))}
+          className="min-w-0 pb-20 focus-visible:outline-2 focus-visible:outline-offset-2"
+        >
+          <ServicesSection biolink={biolink} />
         </section>
       )}
 
@@ -229,6 +259,13 @@ function MobileCreatorProfile({
               }
             }}
             radius="rounded-button"
+            // Shell + idle items use --biolink-* so the bar stays in the buyer
+            // world (dashboard bg-card/muted leaked a dark pill on light pages).
+            className={cn(
+              biolinkSurfaceEdgeClassName,
+              'bg-[var(--biolink-surface)]/95 shadow-lg shadow-black/5 backdrop-blur-xl supports-[backdrop-filter]:bg-[var(--biolink-surface)]/80',
+            )}
+            inactiveButtonClassName="text-[var(--biolink-muted-text)] hover:bg-[var(--biolink-surface-muted)] hover:text-[var(--biolink-text)]"
             activeButtonClassName={buttonAppearance.className}
             activeButtonStyle={buttonAppearance.style}
             stickyBottom
@@ -256,22 +293,16 @@ function CreatorCard({
   const visibleSocialLinks = socialLinks;
   const showContactAction = !!profile.contact_url;
   const buttonAppearance = resolveBiolinkButtonAppearance(appearance);
+  // Appearance → Buttons → Shadow soft-pops the profile shell the same way
+  // it lifts Message / social / View actions. Empty string = flat (None).
   const buttonShadow = buttonAppearance.style.boxShadow;
   const containerRadius = resolveBiolinkContainerRadius(appearance);
-  // The avatar frame is a 4px (`p-1`) pad nested inside the outer radius, so
-  // the media inside rounds a step tighter and the pad reads even all round.
-  // Full keeps its true circle via the class alone; Square needs no inset.
-  const avatarInnerStyle =
-    containerRadius.avatarClassName === 'rounded-full' ||
-    containerRadius.avatarValue === '0px' ||
-    containerRadius.avatarValue === '0'
-      ? undefined
-      : {borderRadius: `calc(${containerRadius.avatarValue} - 4px)`};
 
   return (
     <Card.Root
       className={cn(
-        'gap-0 py-0 bg-[var(--biolink-surface)] text-[var(--biolink-text)] ring-1 ring-(color:--biolink-border) backdrop-blur-md',
+        'gap-0 py-0 bg-[var(--biolink-surface)] text-[var(--biolink-text)] backdrop-blur-md',
+        biolinkSurfaceEdgeClassName,
         '@4xl:sticky @4xl:top-8',
         containerRadius.className,
       )}
@@ -289,8 +320,9 @@ function CreatorCard({
           <Badge
             variant="secondary"
             className={cn(
-              'absolute end-4 bottom-4 border-[var(--biolink-border)] bg-[var(--biolink-surface-strong)] text-[var(--biolink-text)] shadow-sm backdrop-blur-sm',
+              'absolute end-4 bottom-4 border-[var(--biolink-border)] bg-[var(--biolink-surface-strong)] text-[var(--biolink-text)] backdrop-blur-sm',
             )}
+            style={{boxShadow: buttonShadow}}
           >
             <BriefcaseBusinessIcon />
             <Trans message="Available for work" />
@@ -299,40 +331,40 @@ function CreatorCard({
       </div>
 
       <Card.Content className="px-4 pb-4 sm:px-5 sm:pb-5">
-        <div className="grid grid-cols-[auto_minmax(0,1fr)] items-end gap-4">
+        <div className="grid grid-cols-[auto_minmax(0,1fr)] items-end gap-3 sm:gap-4">
+          {/* Edge-to-edge photo: no p-1 surface pad (that read as a heavy white
+              frame). Lift with a surface ring + thin biolink border so radius
+              follows appearance without nesting a second radius calc. */}
           <Avatar.Root
             className={cn(
-              '-mt-10 aspect-square size-22 overflow-hidden bg-[var(--biolink-surface-strong)] p-1 after:rounded-[inherit] after:border-[var(--biolink-border)]',
+              '-mt-10 aspect-square size-22 overflow-hidden bg-[var(--biolink-surface-muted)] ring-2 ring-[var(--biolink-surface)] after:rounded-[inherit] after:border-[var(--biolink-border)]',
               containerRadius.avatarClassName,
             )}
-            style={{boxShadow: buttonShadow}}
           >
             <Avatar.Image
               className={cn(
                 'size-full object-cover',
                 containerRadius.avatarClassName,
               )}
-              style={avatarInnerStyle}
               src={profile.avatar_url}
               alt={profile.display_name}
             />
-            <Avatar.ColorFallback
-              className={containerRadius.avatarClassName}
-              style={avatarInnerStyle}
-            >
+            <Avatar.ColorFallback className={containerRadius.avatarClassName}>
               {profile.display_name}
             </Avatar.ColorFallback>
           </Avatar.Root>
 
-          <div className="min-w-0 pb-1">
-            <div className="flex items-center gap-1.5">
-              <h1 className="min-w-0 truncate text-lg leading-tight font-semibold sm:text-xl">
-                {profile.display_name}
+          {/* Name + title baseline with the avatar foot; wrap instead of
+              truncating mid-word so titles like "Architect" stay readable. */}
+          <div className="flex min-w-0 flex-col justify-end gap-1 pb-0.5">
+            <div className="flex min-w-0 items-start gap-1.5">
+              <h1 className="min-w-0 text-xl leading-snug font-semibold tracking-tight text-pretty text-[var(--biolink-text)] sm:text-2xl">
+                <span className="line-clamp-2">{profile.display_name}</span>
               </h1>
               {biolink.is_verified && (
                 <>
                   <BadgeCheckIcon
-                    className="size-5 shrink-0 fill-current text-[var(--biolink-text)]"
+                    className="mt-0.5 size-5 shrink-0 fill-current text-[var(--biolink-text)]"
                     aria-hidden="true"
                   />
                   <span className="sr-only">
@@ -342,7 +374,7 @@ function CreatorCard({
               )}
             </div>
             {(profile.profile_title || profile.headline) && (
-              <p className="mt-0.5 truncate text-sm text-[var(--biolink-muted-text)]">
+              <p className="line-clamp-2 text-sm leading-snug text-pretty text-[var(--biolink-muted-text)]">
                 {profile.profile_title || profile.headline}
               </p>
             )}
@@ -379,17 +411,24 @@ function CreatorCard({
 
           {visibleSkills.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
-              {visibleSkills.map(skill => (
-                <Badge
-                  key={skill}
-                  variant="outline"
-                  className={cn(
-                    'h-auto max-w-full border-[var(--biolink-border)] bg-[var(--biolink-surface-muted)] break-words whitespace-normal text-[var(--biolink-text)]',
-                  )}
-                >
-                  {skill}
-                </Badge>
-              ))}
+              {visibleSkills.map(skill => {
+                const label = formatSkillLabel(skill);
+                if (!label) return null;
+                return (
+                  <Badge
+                    key={skill}
+                    variant="secondary"
+                    className={cn(
+                      // Tinted fill + thin ring so chips read on the white
+                      // card face (surface-muted alone washed out to white).
+                      // Radius follows Appearance → Corner roundness.
+                      'h-auto max-w-full min-w-0 rounded-button border-transparent bg-[color-mix(in_srgb,var(--biolink-text)_8%,var(--biolink-surface))]! px-2.5 py-1 text-xs font-medium leading-snug break-words whitespace-normal text-[var(--biolink-text)]! ring-1 ring-(color:--biolink-border)',
+                    )}
+                  >
+                    {label}
+                  </Badge>
+                );
+              })}
             </div>
           )}
 
@@ -468,11 +507,51 @@ function CreatorProfileContent({
     (typeof biolink.public_item_count === 'number'
       ? biolink.public_item_count > 0
       : configuredProductIds.length > 0);
+  const hasServices = serviceCount(biolink) > 0;
   const hasAbout = hasVisibleAbout(profile.about_html);
 
-  if (!hasProducts && !hasAbout) return null;
+  if (!hasProducts && !hasServices && !hasAbout) return null;
 
-  if (hasProducts && hasAbout) {
+  const sections: {id: string; label: ReactNode; content: ReactNode}[] = [];
+
+  if (hasProducts && shopWidget) {
+    sections.push({
+      id: 'products',
+      label: <Trans message="Products" />,
+      content: (
+        <ShopSection
+          widget={shopWidget}
+          biolink={biolink}
+          appearance={appearance}
+          showHeading={false}
+        />
+      ),
+    });
+  }
+
+  if (hasServices) {
+    sections.push({
+      id: 'services',
+      label: <Trans message="Services" />,
+      content: <ServicesSection biolink={biolink} showHeading={false} />,
+    });
+  }
+
+  if (hasAbout) {
+    sections.push({
+      id: 'about',
+      label: <Trans message="About" />,
+      content: (
+        <AboutSection
+          profile={profile}
+          appearance={appearance}
+          showHeading={false}
+        />
+      ),
+    });
+  }
+
+  if (sections.length > 1) {
     return (
       // The strip, panels and card frame live in StoreFront: the strip
       // sticks to the top of the viewport (opaque, repainting the page
@@ -481,37 +560,13 @@ function CreatorProfileContent({
       // scroll to top on tab switches).
       <StoreFront
         appearance={appearance}
-        defaultTab="products"
-        tabs={[
-          {
-            id: 'products',
-            label: <Trans message="Products" />,
-            content: (
-              <ShopSection
-                widget={shopWidget}
-                biolink={biolink}
-                appearance={appearance}
-                showHeading={false}
-              />
-            ),
-          },
-          {
-            id: 'about',
-            label: <Trans message="About" />,
-            content: (
-              <AboutSection
-                profile={profile}
-                appearance={appearance}
-                showHeading={false}
-              />
-            ),
-          },
-        ]}
+        defaultTab={sections[0].id}
+        tabs={sections}
       />
     );
   }
 
-  if (shopWidget) {
+  if (hasProducts && shopWidget) {
     return (
       <ShopSection
         widget={shopWidget}
@@ -519,6 +574,10 @@ function CreatorProfileContent({
         appearance={appearance}
       />
     );
+  }
+
+  if (hasServices) {
+    return <ServicesSection biolink={biolink} />;
   }
 
   return <AboutSection profile={profile} appearance={appearance} />;
@@ -541,7 +600,8 @@ function AboutSection({
   return (
     <Card.Root
       className={cn(
-        'min-w-0 gap-0 bg-[var(--biolink-surface)] text-[var(--biolink-text)] ring-1 ring-(color:--biolink-border) backdrop-blur-md',
+        'min-w-0 gap-0 bg-[var(--biolink-surface)] text-[var(--biolink-text)] backdrop-blur-md',
+        biolinkSurfaceEdgeClassName,
         containerRadius.className,
         'p-5 pb-6',
       )}
@@ -575,6 +635,17 @@ function AboutSection({
         }}
       />
     </Card.Root>
+  );
+}
+
+/**
+ * The public storefront resource exposes this count, but the generated
+ * Biolink schema is refreshed separately from backend-only fields.
+ */
+function serviceCount(biolink: Biolink): number {
+  return (
+    (biolink as Biolink & {public_service_count?: number})
+      .public_service_count ?? 0
   );
 }
 

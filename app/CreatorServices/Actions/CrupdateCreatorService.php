@@ -27,7 +27,9 @@ class CrupdateCreatorService
                 'description' => app(SanitizeProductDescription::class)->execute($data['description'] ?? null),
                 'category' => $data['category'] ?? null,
                 'skills' => array_values(array_filter($data['skills'] ?? [], fn ($skill): bool => trim((string) $skill) !== '')),
-                'cover_file_entry_id' => $data['cover_file_entry_id'] ?? $service?->cover_file_entry_id,
+                'cover_file_entry_id' => array_key_exists('cover_file_entry_id', $data)
+                    ? $data['cover_file_entry_id']
+                    : $service?->cover_file_entry_id,
                 'video_url' => $data['video_url'] ?? null,
                 'live_demo_url' => $data['live_demo_url'] ?? null,
                 'contact_channels' => $channels,

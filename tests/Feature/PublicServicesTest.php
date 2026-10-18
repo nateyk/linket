@@ -84,6 +84,16 @@ class PublicServicesTest extends TestCase
             ->assertNotFound();
     }
 
+    public function test_detail_is_scoped_to_the_requested_storefront(): void
+    {
+        [, , $storeA] = $this->context();
+        $service = $this->publishedService($storeA, 'Logo design');
+        [, , $storeB] = $this->context();
+
+        $this->stateful()->getJson("/api/v1/public/stores/{$storeB->id}/services/{$service->slug}")
+            ->assertNotFound();
+    }
+
     public function test_public_services_web_page_returns_ok(): void
     {
         [, , $store] = $this->context();
