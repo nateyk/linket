@@ -57,6 +57,7 @@ use Common\Votes\VoteController;
 use Common\Workspaces\Controllers\WorkspacesController;
 use Common\Workspaces\Controllers\WorkspaceInvitesController;
 use Common\Workspaces\Controllers\WorkspaceMembersController;
+use App\CreatorServices\Controllers\CreatorServicesController;
 use App\Storefront\Controllers\AdminDigitalProductsController;
 use App\Storefront\Controllers\DigitalProductsController;
 use App\Storefront\Controllers\PayoutRequestsController;
@@ -65,6 +66,7 @@ use App\Storefront\Controllers\StorefrontCheckoutController;
 use App\Storefront\Controllers\DigitalProductPayoutMethodController;
 use App\Storefront\Controllers\DigitalProductWithdrawalMethodsController;
 use App\Storefront\Controllers\AdminDigitalProductRefundsController;
+use App\Storefront\Controllers\PublicDigitalProductSampleController;
 use App\Storefront\Controllers\PublicDigitalProductsController;
 use App\Payments\Controllers\AdminPaymentTransactionsController;
 use App\Payments\Controllers\AdminPaymentHealthController;
@@ -240,6 +242,9 @@ Route::group(['prefix' => 'v1'], function () {
         Route::get('items/{digitalProduct}/reviews', [CreatorProductReviewsController::class, 'index']);
         Route::post('items/{digitalProduct}/submit', [DigitalProductsController::class, 'submit']);
         Route::put('items/{digitalProduct}/draft', [DigitalProductsController::class, 'saveDraft']);
+
+        // CREATOR SERVICES
+        Route::apiResource('services', CreatorServicesController::class)->parameters(['services' => 'service']);
         Route::get('admin/items', [AdminDigitalProductsController::class, 'index']);
         Route::get('admin/items/{digitalProduct}', [AdminDigitalProductsController::class, 'show'])->whereNumber('digitalProduct');
         Route::post('admin/items/{digitalProduct}/approve', [AdminDigitalProductsController::class, 'approve']);
@@ -335,6 +340,8 @@ Route::group(['prefix' => 'v1'], function () {
     Route::get('public/biolinks/{biolink}/digital-products/{digitalProduct}/reviews/{order}', [ProductReviewsController::class, 'show']);
     Route::get('public/stores/{biolink}/digital-products', [PublicDigitalProductsController::class, 'index']);
     Route::get('public/stores/{biolink}/digital-products/{digitalProduct}', [PublicDigitalProductsController::class, 'show']);
+    Route::get('public/stores/{biolink}/digital-products/{digitalProduct}/samples/{sample}', [PublicDigitalProductSampleController::class, 'stream'])
+        ->name('digital-products.samples.stream');
     Route::post('public/stores/{biolink}/digital-products/{digitalProduct}/checkout', [PublicDigitalProductsController::class, 'checkout'])
         ->middleware('throttle:20,1')
         ->withoutMiddleware([

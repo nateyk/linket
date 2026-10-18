@@ -1,0 +1,234 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Biolinks\Models\Biolink;
+use App\CreatorServices\Models\CreatorService;
+use App\CreatorServices\Models\ServiceInquiry;
+use App\CreatorServices\Models\ServicePackage;
+use App\Models\User;
+use Common\Files\FileEntry;
+use Common\Workspaces\Actions\CreateWorkspace;
+use Common\Workspaces\ActiveWorkspace;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Str;
+use Tests\TestCase;
+
+class CreatorServicesApiTest extends TestCase
+{
+    use DatabaseTransactions;
+
+    protected function tearDown(): void
+    {
+        ActiveWorkspace::clearCache();
+
+        parent::tearDown();
+    }
+
+    public function test_creator_can_create_service_with_packages_faqs_and_gallery(): void
+    {
+        [$creator, $workspace, $store] = $this->context();
+        $firstFile = $this->file($workspace, $creator);
+        $secondFile = $this->file($workspace, $creator);
+
+        $response = $this->stateful()->actingAs($creator)->postJson('/api/v1/services', [
+            'store_id' => $store->id,
+            'title' => 'Logo design',
+            'short_description' => 'A logo that fits your brand.',
+            'description' => '<p>Hello <script>alert(1)</script></p>',
+            'category' => 'Design',
+            'skills' => ['Logo', 'Branding'],
+            'gallery_file_entry_ids' => [$firstFile->id, $secondFile->id],
+            'contact_channels' => [
+                ['type' => 'whatsapp', 'label' => 'WhatsApp', 'value' => '+251 911 234 567'],
+                ['type' => 'telegram', 'label' => 'Telegram', 'value' => '@studio'],
+            ],
+            'packages' => [
+                [
+                    'name' => 'Starter',
+                    'description' => 'One concept',
+                    'price_cents' => 29900,
+                    'delivery_days' => 6,
+                    'revisions' => 2,
+                    'features' => ['One concept', 'PNG files'],
+                ],
+                [
+                    'name' => 'Premium',
+                    'price_cents' => null,
+                    'delivery_days' => 3,
+                    'revisions' => 6,
+                    'features' => ['Three concepts'],
+                ],
+            ],
+            'faqs' => [
+                ['question' => 'How long?', 'answer' => 'Five days'],
+            ],
+            'status' => 'draft',
+        ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('data.title', 'Logo design')
+            ->assertJsonPath('data.slug', 'logo-design')
+            ->assertJsonPath('data.status', 'draft')
+            ->assertJsonPath('data.packages.0.name', 'Starter')
+            ->assertJsonPath('data.packages.1.price_cents', null)
+            ->assertJsonPath('data.faqs.0.question', 'How long?')
+            ->assertJsonCount(2, 'data.gallery')
+            ->assertJsonPath('data.contact_channels.0.value', '+251911234567')
+            ->assertJsonPath('data.contact_channels.1.value', 'studio');
+
+        $this->assertStringNotContainsString('<script>', $response->json('data.description'));
+        $this->assertDatabaseHas('creator_services', [
+            'id' => $response->json('data.id'),
+            'user_id' => $creator->id,
+            'workspace_id' => $workspace->id,
+            'store_id' => $store->id,
+        ]);
+    }
+
+    public function test_index_is_scoped_to_the_active_workspace_and_user(): void
+    {
+        [$creator, $workspace, $store] = $this->context();
+        $own = CreatorService::factory()->forStore($store)->create();
+
+        $otherCreator = $this->context()[0];
+        CreatorService::factory()->create(['user_id' => $otherCreator->id]);
+
+        $this->stateful()->actingAs($creator)
+            ->getJson('/api/v1/services')
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $own->id)
+            ->assertJsonCount(1, 'data');
+    }
+
+    public function test_update_syncs_packages_and_removes_deleted_packages(): void
+    {
+        [$creator, $workspace, $store] = $this->context();
+        $service = CreatorService::factory()->forStore($store)->create();
+        $kept = ServicePackage::query()->create([
+            'creator_service_id' => $service->id,
+            'name' => 'Starter',
+            'price_cents' => 1000,
+            'currency' => 'ETB',
+            'position' => 0,
+        ]);
+        $removed = ServicePackage::query()->create([
+            'creator_service_id' => $service->id,
+            'name' => 'Legacy',
+            'price_cents' => 2000,
+            'currency' => 'ETB',
+            'position' => 1,
+        ]);
+        $inquiry = ServiceInquiry::query()->create([
+            'creator_service_id' => $service->id,
+            'creator_service_package_id' => $removed->id,
+            'name' => 'Buyer',
+            'email' => 'buyer@example.test',
+            'message' => 'Hello',
+        ]);
+
+        $this->stateful()->actingAs($creator)->putJson("/api/v1/services/{$service->id}", [
+            'store_id' => $store->id,
+            'title' => 'Updated service',
+            'packages' => [
+                ['id' => $kept->id, 'name' => 'Starter plus', 'price_cents' => 1500, 'features' => ['More']],
+                ['name' => 'Premium', 'price_cents' => 5000, 'features' => []],
+            ],
+            'faqs' => [],
+        ])->assertOk()
+            ->assertJsonPath('data.title', 'Updated service')
+            ->assertJsonPath('data.packages.0.name', 'Starter plus')
+            ->assertJsonPath('data.packages.1.name', 'Premium');
+
+        $this->assertDatabaseMissing('creator_service_packages', ['id' => $removed->id]);
+        $this->assertDatabaseHas('creator_service_packages', ['id' => $kept->id, 'name' => 'Starter plus']);
+        $this->assertDatabaseHas('creator_service_inquiries', ['id' => $inquiry->id, 'creator_service_package_id' => null]);
+    }
+
+    public function test_other_creator_cannot_view_update_or_delete(): void
+    {
+        [$creator, $workspace, $store] = $this->context();
+        $service = CreatorService::factory()->forStore($store)->create();
+        $otherCreator = $this->context()[0];
+
+        $this->stateful()->actingAs($otherCreator)
+            ->getJson("/api/v1/services/{$service->id}")->assertNotFound();
+        $this->stateful()->actingAs($otherCreator)
+            ->putJson("/api/v1/services/{$service->id}", ['store_id' => $store->id, 'title' => 'Hijack'])->assertNotFound();
+        $this->stateful()->actingAs($otherCreator)
+            ->deleteJson("/api/v1/services/{$service->id}")->assertNotFound();
+    }
+
+    public function test_create_rejects_store_from_another_workspace(): void
+    {
+        [$creator] = $this->context();
+        [, , $otherStore] = $this->context();
+
+        $this->stateful()->actingAs($creator)->postJson('/api/v1/services', [
+            'store_id' => $otherStore->id,
+            'title' => 'Logo design',
+        ])->assertUnprocessable();
+    }
+
+    public function test_service_can_be_published_and_exposes_public_url(): void
+    {
+        [$creator, $workspace, $store] = $this->context();
+
+        $response = $this->stateful()->actingAs($creator)->postJson('/api/v1/services', [
+            'store_id' => $store->id,
+            'title' => 'Brand strategy',
+            'status' => 'published',
+        ])->assertCreated();
+
+        $this->assertSame('published', $response->json('data.status'));
+        $this->assertStringEndsWith('/services/'.$response->json('data.slug'), $response->json('data.public_url'));
+    }
+
+    /**
+     * @return array{User, \Common\Workspaces\Models\Workspace, Biolink}
+     */
+    private function context(): array
+    {
+        $token = Str::lower(Str::random(12));
+
+        $creator = User::query()->forceCreate([
+            'name' => 'Creator '.$token,
+            'username' => $token,
+            'email' => "{$token}@example.test",
+            'password' => bcrypt('password'),
+            'email_verified_at' => now(),
+        ]);
+
+        $workspace = (new CreateWorkspace())->createPersonalWorkspace($creator);
+
+        $store = Biolink::query()->create([
+            'back_half' => Str::random(8),
+            'name' => 'Test Storefront',
+            'user_id' => $creator->id,
+            'workspace_id' => $workspace->id,
+        ]);
+
+        ActiveWorkspace::clearCache();
+
+        return [$creator, $workspace, $store];
+    }
+
+    private function file($workspace, $creator): FileEntry
+    {
+        return FileEntry::query()->create([
+            'name' => 'image.png',
+            'file_name' => Str::random(20).'.png',
+            'file_size' => 1024,
+            'mime' => 'image/png',
+            'extension' => 'png',
+            'type' => 'image',
+            'workspace_id' => $workspace->id,
+            'owner_id' => $creator->id,
+        ]);
+    }
+
+    private function stateful(): static
+    {
+        return $this->withHeader('Referer', 'http://localhost');
+    }
+}
