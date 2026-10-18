@@ -10,6 +10,10 @@ import type {
   DigitalProductOrderSuccessPageData,
   DigitalProductPageData,
 } from '@app/digital-products/public/digital-product-public-pages';
+import type {
+  PublicServicePageData,
+  PublicServicesPageData,
+} from '@app/services/public/service-types';
 import {BaseBackendBootstrapData} from '@common/core/base-backend-bootstrap-data';
 import {CommonProvider} from '@common/core/common-provider';
 import {BaseBackendSettings} from '@common/core/settings/base-backend-settings';
@@ -55,6 +59,12 @@ declare module '@ui/bootstrap-data/bootstrap-data' {
       };
       digitalProductOrderSuccessPage?: {
         data: DigitalProductOrderSuccessPageData;
+      };
+      servicesPage?: {
+        data: PublicServicesPageData;
+      };
+      servicePage?: {
+        data: PublicServicePageData;
       };
     };
   }

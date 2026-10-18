@@ -75,8 +75,13 @@ export const appRouter = createBrowserRouter(
             const publicDigitalProductPage =
               loaders?.digitalProductPage ||
               loaders?.digitalProductOrderSuccessPage;
+            const publicServicePage = loaders?.servicesPage;
 
-            if (!linkeableData && !publicDigitalProductPage) {
+            if (
+              !linkeableData &&
+              !publicDigitalProductPage &&
+              !publicServicePage
+            ) {
               if (
                 !isLoggedIn &&
                 getBootstrapData().settings.homepage?.type === 'loginPage' &&
@@ -102,7 +107,8 @@ export const appRouter = createBrowserRouter(
             if (
               loaders?.linkeablePage ||
               loaders?.digitalProductPage ||
-              loaders?.digitalProductOrderSuccessPage
+              loaders?.digitalProductOrderSuccessPage ||
+              loaders?.servicesPage
             ) {
               return import('@app/short-links/linkeable-renderer');
             }
