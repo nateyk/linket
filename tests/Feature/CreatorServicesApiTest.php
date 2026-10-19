@@ -229,6 +229,97 @@ class CreatorServicesApiTest extends TestCase
         $this->assertStringEndsWith('/services/'.$response->json('data.slug'), $response->json('data.public_url'));
     }
 
+    public function test_creator_can_delete_their_own_service_and_keeps_inquiries(): void
+    {
+        [$creator, $workspace, $store] = $this->context();
+        $cover = $this->file($workspace, $creator);
+
+        $service = $this->stateful()->actingAs($creator)->postJson('/api/v1/services', [
+            'store_id' => $store->id,
+            'title' => 'Retired offer',
+            'cover_file_entry_id' => $cover->id,
+        ])->assertCreated()->json('data');
+
+        ServiceInquiry::query()->create([
+            'creator_service_id' => $service['id'],
+            'name' => 'Sara Buyer',
+            'email' => 'sara@example.test',
+            'message' => 'Is this still available?',
+        ]);
+
+        $this->stateful()->actingAs($creator)
+            ->deleteJson("/api/v1/services/{$service['id']}")
+            ->assertNoContent();
+
+        $this->assertSoftDeleted('creator_services', ['id' => $service['id']]);
+
+        // A prospect's inquiry outlives the offer it was about.
+        $this->assertDatabaseHas('creator_service_inquiries', [
+            'creator_service_id' => $service['id'],
+        ]);
+
+        $this->stateful()->actingAs($creator)
+            ->getJson("/api/v1/services/{$service['id']}")
+            ->assertNotFound();
+    }
+
+    public function test_guest_is_unauthorized_not_a_server_error(): void
+    {
+        // A browser-origin guest must get a 401. Falling through to the
+        // controller used to dereference a null user and return a 500.
+        $this->stateful()->getJson('/api/v1/services')->assertUnauthorized();
+        $this->stateful()->getJson('/api/v1/services/inquiries')->assertUnauthorized();
+    }
+
+    public function test_create_rejects_a_cover_from_another_workspace(): void
+    {
+        [$creator, $workspace, $store] = $this->context();
+        [, $otherWorkspace, $otherCreator] = $this->context();
+        $foreignFile = $this->file($otherWorkspace, $otherCreator);
+
+        $this->stateful()->actingAs($creator)->postJson('/api/v1/services', [
+            'store_id' => $store->id,
+            'title' => 'Borrowed cover',
+            'cover_file_entry_id' => $foreignFile->id,
+        ])->assertJsonValidationErrors('cover_file_entry_id');
+
+        $this->assertDatabaseMissing('creator_services', ['title' => 'Borrowed cover']);
+    }
+
+    public function test_create_rejects_a_gallery_image_from_another_workspace(): void
+    {
+        [$creator, $workspace, $store] = $this->context();
+        [, $otherWorkspace, $otherCreator] = $this->context();
+        $foreignFile = $this->file($otherWorkspace, $otherCreator);
+
+        $this->stateful()->actingAs($creator)->postJson('/api/v1/services', [
+            'store_id' => $store->id,
+            'title' => 'Borrowed gallery',
+            'gallery_file_entry_ids' => [$foreignFile->id],
+        ])->assertJsonValidationErrors('gallery_file_entry_ids.0');
+    }
+
+    public function test_create_rejects_a_non_image_cover(): void
+    {
+        [$creator, $workspace, $store] = $this->context();
+        $document = FileEntry::query()->create([
+            'name' => 'brief.pdf',
+            'file_name' => Str::random(20).'.pdf',
+            'file_size' => 2048,
+            'mime' => 'application/pdf',
+            'extension' => 'pdf',
+            'type' => 'document',
+            'workspace_id' => $workspace->id,
+            'owner_id' => $creator->id,
+        ]);
+
+        $this->stateful()->actingAs($creator)->postJson('/api/v1/services', [
+            'store_id' => $store->id,
+            'title' => 'Document cover',
+            'cover_file_entry_id' => $document->id,
+        ])->assertJsonValidationErrors('cover_file_entry_id');
+    }
+
     /**
      * @return array{User, \Common\Workspaces\Models\Workspace, Biolink}
      */

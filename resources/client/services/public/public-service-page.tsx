@@ -95,6 +95,7 @@ export function PublicServicePage({data}: {data: PublicServicePageData}) {
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
           <div className="flex min-w-0 flex-col gap-5">
             <ServiceGallery
+              cover={service.cover}
               images={service.gallery ?? []}
               title={service.title}
             />

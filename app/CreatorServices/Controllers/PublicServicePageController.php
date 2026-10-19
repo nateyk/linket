@@ -19,6 +19,7 @@ class PublicServicePageController extends Controller
 
         return $this->clientSideOrPrerenderedResponse([
             'loader' => 'servicePage',
+            'pageName' => 'service-page',
             'data' => [
                 'data' => [
                     'store' => (new BiolinkResource($store))->resolve(),

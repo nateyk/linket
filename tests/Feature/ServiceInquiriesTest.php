@@ -106,6 +106,39 @@ class ServiceInquiriesTest extends TestCase
         )->assertNotFound();
     }
 
+    public function test_inquiry_endpoint_is_rate_limited(): void
+    {
+        Notification::fake();
+        [, , $store, $service] = $this->context();
+        $url = "/api/v1/public/stores/{$store->id}/services/{$service->slug}/inquiries";
+        $payload = [
+            'name' => 'Sara',
+            'email' => 'sara@example.test',
+            'message' => 'Hello',
+        ];
+
+        for ($attempt = 0; $attempt < 10; $attempt++) {
+            $this->stateful()->postJson($url, $payload)->assertCreated();
+        }
+
+        $this->stateful()->postJson($url, $payload)->assertStatus(429);
+    }
+
+    public function test_creator_cannot_open_or_update_another_creators_inquiry(): void
+    {
+        [$creator] = $this->context();
+        [, , , $otherService] = $this->context();
+        $foreign = $this->inquiry($otherService, 'Foreign inquiry');
+
+        $this->stateful()->actingAs($creator)
+            ->getJson("/api/v1/services/inquiries/{$foreign->id}")
+            ->assertNotFound();
+
+        $this->stateful()->actingAs($creator)
+            ->patchJson("/api/v1/services/inquiries/{$foreign->id}", ['status' => 'won'])
+            ->assertNotFound();
+    }
+
     public function test_creator_lists_only_own_inquiries_and_filters_by_service(): void
     {
         [$creator, , $store, $service] = $this->context();
@@ -165,6 +198,82 @@ class ServiceInquiriesTest extends TestCase
     /**
      * @return array{User, \Common\Workspaces\Models\Workspace, Biolink, CreatorService, ServicePackage}
      */
+    public function test_inquiry_notification_renders_a_readable_mail(): void
+    {
+        [$creator, , $store, $service, $package] = $this->context();
+
+        $inquiry = ServiceInquiry::query()->create([
+            'creator_service_id' => $service->id,
+            'creator_service_package_id' => $package->id,
+            'name' => 'Sara Buyer',
+            'email' => 'sara@example.test',
+            'phone' => '+251 900 000 000',
+            'message' => 'I need a logo for my bakery.',
+        ]);
+
+        $mail = (new NewServiceInquiryNotification($inquiry->id))->toMail($creator);
+
+        // The creator must be able to answer from the mail alone: who it is,
+        // what they want, how to reach them, and which package.
+        $this->assertStringContainsString($service->title, $mail->subject);
+        $rendered = implode("\n", array_merge([$mail->subject, $mail->greeting], $mail->introLines, $mail->outroLines));
+        $this->assertStringContainsString('Sara Buyer', $rendered);
+        $this->assertStringContainsString('sara@example.test', $rendered);
+        $this->assertStringContainsString('+251 900 000 000', $rendered);
+        $this->assertStringContainsString('I need a logo for my bakery.', $rendered);
+        $this->assertStringContainsString('Starter', $rendered);
+        $this->assertStringContainsString(url('/dashboard/services/inquiries'), $mail->actionUrl);
+    }
+
+    public function test_inquiry_notification_renders_the_in_app_payload(): void
+    {
+        [$creator, , , $service, $package] = $this->context();
+
+        $inquiry = ServiceInquiry::query()->create([
+            'creator_service_id' => $service->id,
+            'creator_service_package_id' => $package->id,
+            'name' => 'Sara Buyer',
+            'email' => 'sara@example.test',
+            'message' => 'I need a logo for my bakery.',
+        ]);
+
+        $payload = (new NewServiceInquiryNotification($inquiry->id))->toDatabase($creator);
+
+        $this->assertSame('View inquiry', $payload['mainAction']['label']);
+        $this->assertSame(url('/dashboard/services/inquiries'), $payload['mainAction']['action']);
+        $this->assertStringContainsString('Sara Buyer', $payload['lines'][0]['content']);
+        $this->assertStringContainsString('sara@example.test', $payload['lines'][1]['content']);
+        $this->assertStringContainsString('Starter', $payload['lines'][2]['content']);
+    }
+
+    public function test_inquiry_notification_stays_quiet_once_the_inquiry_is_deleted(): void
+    {
+        [$creator, , , $service, $package] = $this->context();
+
+        $inquiry = ServiceInquiry::query()->create([
+            'creator_service_id' => $service->id,
+            'creator_service_package_id' => $package->id,
+            'name' => 'Sara Buyer',
+            'email' => 'sara@example.test',
+            'message' => 'I need a logo for my bakery.',
+        ]);
+
+        $notification = new NewServiceInquiryNotification($inquiry->id);
+        $this->assertTrue($notification->shouldSend($creator, 'mail'));
+
+        $inquiry->delete();
+
+        // A queued notification must not fatal on an inquiry the creator
+        // deleted before the worker picked it up.
+        $this->assertFalse($notification->shouldSend($creator, 'mail'));
+        $mail = $notification->toMail($creator);
+        $this->assertSame(__('New service inquiry'), $mail->subject);
+        $this->assertSame(
+            [['content' => e(__('Open your dashboard to view the latest inquiries.')), 'type' => 'primary']],
+            $notification->toDatabase($creator)['lines'],
+        );
+    }
+
     private function context(string $status = 'published'): array
     {
         $token = Str::lower(Str::random(12));

@@ -246,11 +246,16 @@ Route::group(['prefix' => 'v1'], function () {
         Route::put('items/{digitalProduct}/draft', [DigitalProductsController::class, 'saveDraft']);
 
         // CREATOR SERVICES
-        Route::get('services/inquiries', [ServiceInquiriesController::class, 'index']);
-        Route::get('services/inquiries/{serviceInquiry}', [ServiceInquiriesController::class, 'show'])->whereNumber('serviceInquiry');
-        Route::patch('services/inquiries/{serviceInquiry}', [ServiceInquiriesController::class, 'update'])->whereNumber('serviceInquiry');
-        Route::delete('services/inquiries/{serviceInquiry}', [ServiceInquiriesController::class, 'destroy'])->whereNumber('serviceInquiry');
-        Route::apiResource('services', CreatorServicesController::class)->parameters(['services' => 'service']);
+        // This group also serves public storefront reads, so creator-only
+        // service endpoints must reject guests themselves: without this a
+        // browser-origin guest reaches the controller and gets a 500.
+        Route::middleware('auth:sanctum')->group(function () {
+            Route::get('services/inquiries', [ServiceInquiriesController::class, 'index']);
+            Route::get('services/inquiries/{serviceInquiry}', [ServiceInquiriesController::class, 'show'])->whereNumber('serviceInquiry');
+            Route::patch('services/inquiries/{serviceInquiry}', [ServiceInquiriesController::class, 'update'])->whereNumber('serviceInquiry');
+            Route::delete('services/inquiries/{serviceInquiry}', [ServiceInquiriesController::class, 'destroy'])->whereNumber('serviceInquiry');
+            Route::apiResource('services', CreatorServicesController::class)->parameters(['services' => 'service']);
+        });
         Route::get('admin/items', [AdminDigitalProductsController::class, 'index']);
         Route::get('admin/items/{digitalProduct}', [AdminDigitalProductsController::class, 'show'])->whereNumber('digitalProduct');
         Route::post('admin/items/{digitalProduct}/approve', [AdminDigitalProductsController::class, 'approve']);

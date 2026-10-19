@@ -9,8 +9,8 @@ import {XIcon} from 'lucide-react';
 export const SERVICE_GALLERY_MAX = 8;
 
 /**
- * Cover plus gallery. The first gallery image doubles as the cover fallback so
- * a creator who only adds one image never sees an empty service card.
+ * Cover plus gallery. On the public page the cover is the lead image and the
+ * gallery follows it as thumbnails, so a cover-only service still renders.
  */
 export function ServiceGalleryField({
   coverUrl,

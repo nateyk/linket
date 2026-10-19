@@ -4,16 +4,25 @@ import {cn} from '@ui/utils/cn';
 import {Trans} from '@ui/i18n/trans';
 
 export function ServiceGallery({
+  cover,
   images,
   title,
 }: {
+  cover?: {url: string} | null;
   images: {id: number; url: string}[];
   title: string;
 }) {
   const [activeIndex, setActiveIndex] = useState(0);
-  const active = images[activeIndex];
+  // The cover leads. It is the image the creator picked to represent the
+  // service, and a service with a cover but no gallery must still show one.
+  // A cover that is also in the gallery is not repeated.
+  const media = [
+    ...(cover?.url ? [{id: -1, url: cover.url}] : []),
+    ...images.filter(image => image.url !== cover?.url),
+  ];
+  const active = media[activeIndex];
 
-  if (!images.length) {
+  if (!media.length) {
     return (
       <div className="flex aspect-video w-full items-center justify-center rounded-card bg-[var(--biolink-surface-muted)] text-[var(--biolink-muted-text)]">
         <BriefcaseBusinessIcon className="size-10 opacity-65" />
@@ -30,9 +39,9 @@ export function ServiceGallery({
           className="size-full object-cover"
         />
       </div>
-      {images.length > 1 && (
+      {media.length > 1 && (
         <div className="flex gap-2 overflow-x-auto pb-1">
-          {images.map((image, index) => (
+          {media.map((image, index) => (
             <button
               key={image.id}
               type="button"

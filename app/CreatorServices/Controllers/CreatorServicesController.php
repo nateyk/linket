@@ -8,9 +8,12 @@ use App\CreatorServices\Resources\CreatorServiceResource;
 use App\Stores\Models\Store;
 use Common\Workspaces\ActiveWorkspace;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Routing\Controller;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Exists;
 
 class CreatorServicesController extends Controller
 {
@@ -105,9 +108,9 @@ class CreatorServicesController extends Controller
             'category' => 'nullable|string|max:80',
             'skills' => 'nullable|array|max:20',
             'skills.*' => 'string|max:40',
-            'cover_file_entry_id' => 'nullable|integer|exists:file_entries,id',
+            'cover_file_entry_id' => ['nullable', 'integer', $this->imageFileRule($workspaceId)],
             'gallery_file_entry_ids' => 'nullable|array|max:8',
-            'gallery_file_entry_ids.*' => 'integer|distinct|exists:file_entries,id',
+            'gallery_file_entry_ids.*' => ['integer', 'distinct', $this->imageFileRule($workspaceId)],
             'video_url' => 'nullable|url|max:500',
             'live_demo_url' => 'nullable|url|max:500',
             'status' => 'nullable|in:draft,published',
@@ -128,5 +131,18 @@ class CreatorServicesController extends Controller
             'faqs.*.question' => 'required|string|max:240',
             'faqs.*.answer' => 'required|string|max:3000',
         ]);
+    }
+
+    /**
+     * File entry ids are sequential, so "exists" alone would let a creator
+     * point their service at another tenant's upload. Cover and gallery
+     * entries must live in the active workspace and actually be images.
+     */
+    private function imageFileRule(int $workspaceId): Exists
+    {
+        return Rule::exists('file_entries', 'id')
+            ->where(fn (QueryBuilder $query) => $query
+                ->where('workspace_id', $workspaceId)
+                ->where('mime', 'like', 'image/%'));
     }
 }
