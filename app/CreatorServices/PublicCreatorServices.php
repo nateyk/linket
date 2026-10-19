@@ -32,10 +32,14 @@ class PublicCreatorServices
     {
         $this->assertStore($store);
 
+        // The index renders cards: a cover, a category, a package count and
+        // the public URL (built from the storefront). Loading galleries, FAQs
+        // and packages for every listed service is work the index never uses —
+        // the client shows a handful of cards.
         return CreatorService::query()
             ->where('store_id', $store->id)
             ->where('status', 'published')
-            ->with(['store.domain', 'cover', 'images.file', 'packages', 'faqs'])
+            ->with(['store.domain', 'cover'])
             ->withCount('packages')
             ->latest('id')
             ->get();
@@ -43,7 +47,17 @@ class PublicCreatorServices
 
     public function service(Biolink|Store $store, string $slug): CreatorService
     {
-        $service = $this->services($store)->firstWhere('slug', $slug);
+        $this->assertStore($store);
+
+        // The detail page renders everything, so it loads everything.
+        $service = CreatorService::query()
+            ->where('store_id', $store->id)
+            ->where('status', 'published')
+            ->where('slug', $slug)
+            ->with(['store.domain', 'cover', 'images.file', 'packages', 'faqs'])
+            ->latest('id')
+            ->first();
+
         abort_unless($service, 404);
 
         return $service;

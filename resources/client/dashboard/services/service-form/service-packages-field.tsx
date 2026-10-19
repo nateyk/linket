@@ -8,13 +8,18 @@ import {
 import {Textarea} from '@shadcn/forms/textarea/textarea';
 import {Button} from '@shadcn/button/button';
 import {Trans} from '@ui/i18n/trans';
+import {message} from '@ui/i18n/message';
 import {useTrans} from '@ui/i18n/use-trans';
 import {cn} from '@ui/utils/cn';
 import {PlusIcon, SparklesIcon, Trash2Icon} from 'lucide-react';
 import {ServiceFormField} from './service-form-field';
 import type {ServiceFormPackage} from '../service-form-state';
 
-const PACKAGE_PRESETS = ['Starter', 'Standard', 'Premium'] as const;
+const PACKAGE_PRESETS = [
+  message('Starter'),
+  message('Standard'),
+  message('Premium'),
+] as const;
 
 function blankPackage(): ServiceFormPackage {
   return {
@@ -224,13 +229,13 @@ export function ServicePackagesField({
                 </span>
                 {PACKAGE_PRESETS.map(preset => (
                   <Button
-                    key={preset}
+                    key={preset.message}
                     type="button"
                     variant="ghost"
                     size="xs"
-                    onClick={() => update(index, {name: preset})}
+                    onClick={() => update(index, {name: preset.message})}
                   >
-                    {preset}
+                    <Trans message={preset.message} />
                   </Button>
                 ))}
               </div>

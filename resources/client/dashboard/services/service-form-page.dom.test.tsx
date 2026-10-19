@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  *
  * The service form is one page serving two routes — `/dashboard/services/new`
- * and `/dashboard/services/:serviceId` — so the create/edit split lives in
+ * and `/dashboard/services/:serviceId/edit` — so the create/edit split lives in
  * `useParams`, not in the component tree. These tests mount the real route
  * paths through a memory router and drive the page the way a creator does:
  * read the shell (breadcrumb, progress, the five sections, the live preview),
@@ -102,7 +102,7 @@ const serverService: CreatorServiceResource = {
   ],
   faqs: [],
   store: {id: 7, name: 'My Store', short_url: 'mystore'},
-  public_url: 'https://linket.test/mystore/s/brand-identity-sprint',
+  public_url: 'https://linket.test/mystore/services/brand-identity-sprint',
 };
 
 const SECTION_TITLES = [
@@ -135,11 +135,14 @@ afterEach(() => {
 });
 
 /** Mounts the real route shape so `useParams` supplies (or omits) serviceId. */
-function mountPage(path: '/dashboard/services/new' | '/dashboard/services/3') {
+function mountPage(path: '/dashboard/services/new' | '/dashboard/services/3/edit') {
   const router = createMemoryRouter(
     [
       {path: '/dashboard/services/new', element: <Component />},
-      {path: '/dashboard/services/:serviceId', element: <Component />},
+      {
+        path: '/dashboard/services/:serviceId/edit',
+        element: <Component />,
+      },
       {path: '/dashboard/services', element: <div>Services index</div>},
       {path: '*', element: <div>Not found</div>},
     ],
@@ -215,7 +218,7 @@ describe('the service form shell', () => {
   });
 
   test('edit mode loads the service and hydrates the form from it', async () => {
-    mountPage('/dashboard/services/3');
+    mountPage('/dashboard/services/3/edit');
     await waitForForm();
 
     expect(api.get).toHaveBeenCalledWith('/api/v1/services/3');
@@ -250,7 +253,7 @@ describe('the service form shell', () => {
   });
 
   test('edit mode offers delete alongside the two save actions', async () => {
-    mountPage('/dashboard/services/3');
+    mountPage('/dashboard/services/3/edit');
     await waitForForm();
 
     const remove = screen.getByRole('button', {name: 'Delete'});
@@ -278,7 +281,7 @@ describe('the preview is live', () => {
 
 describe('saving', () => {
   test('Cmd+S PUTs the loaded service in edit mode', async () => {
-    mountPage('/dashboard/services/3');
+    mountPage('/dashboard/services/3/edit');
     await waitForForm();
 
     await pressSaveShortcut();

@@ -405,18 +405,22 @@ function ServiceCard({
               <PencilIcon />
               <Trans message="Edit" />
             </Dropdown.LinkItem>
-            <Dropdown.LinkItem
-              render={
-                <a
-                  href={service.public_url}
-                  target="_blank"
-                  rel="noreferrer"
-                />
-              }
-            >
-              <ExternalLinkIcon />
-              <Trans message="View public page" />
-            </Dropdown.LinkItem>
+            {/* A draft's public URL 404s until it is published, so offering the link
+                would be a promise the page cannot keep. */}
+            {service.status === 'published' && (
+              <Dropdown.LinkItem
+                render={
+                  <a
+                    href={service.public_url}
+                    target="_blank"
+                    rel="noreferrer"
+                  />
+                }
+              >
+                <ExternalLinkIcon />
+                <Trans message="View public page" />
+              </Dropdown.LinkItem>
+            )}
             <Dropdown.Item disabled={busy} onClick={onToggleStatus}>
               {service.status === 'published' ? (
                 <Trans message="Move to drafts" />

@@ -17,6 +17,8 @@ use Illuminate\Validation\Rules\Exists;
 
 class CreatorServicesController extends Controller
 {
+    /** TEXT holds 65,535 bytes; stay clear of the boundary. */
+    private const DESCRIPTION_MAX_BYTES = 65000;
     public function index(Request $request): AnonymousResourceCollection
     {
         $perPage = min(max($request->integer('per_page', 50), 1), 100);
@@ -104,7 +106,18 @@ class CreatorServicesController extends Controller
                 },
             ],
             'short_description' => 'nullable|string|max:240',
-            'description' => 'nullable|string|max:50000',
+            'description' => [
+                'nullable',
+                'string',
+                'max:20000',
+                // A char limit cannot protect a TEXT column: 20k emoji is
+                // 80k bytes and would overflow it on write.
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (is_string($value) && strlen($value) > self::DESCRIPTION_MAX_BYTES) {
+                        $fail(__('This description is too long.'));
+                    }
+                },
+            ],
             'category' => 'nullable|string|max:80',
             'skills' => 'nullable|array|max:20',
             'skills.*' => 'string|max:40',

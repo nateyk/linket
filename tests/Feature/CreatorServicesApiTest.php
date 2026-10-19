@@ -263,6 +263,19 @@ class CreatorServicesApiTest extends TestCase
             ->assertNotFound();
     }
 
+    public function test_create_rejects_a_description_that_overflows_the_text_column(): void
+    {
+        [$creator, , $store] = $this->context();
+
+        // 18k emoji is 18,000 characters but 72,000 bytes: inside a char
+        // limit, outside what a TEXT column (65,535 bytes) can hold.
+        $this->stateful()->actingAs($creator)->postJson('/api/v1/services', [
+            'store_id' => $store->id,
+            'title' => 'Overflowing description',
+            'description' => str_repeat('🎨', 18000),
+        ])->assertJsonValidationErrors('description');
+    }
+
     public function test_guest_is_unauthorized_not_a_server_error(): void
     {
         // A browser-origin guest must get a 401. Falling through to the

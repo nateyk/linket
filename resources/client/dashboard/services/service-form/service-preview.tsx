@@ -3,6 +3,8 @@ import {Card} from '@shadcn/card/card';
 import {parseEtbToCents} from '@app/dashboard/digital-products/product-create-flow';
 import {formatMoney} from '@ui/i18n/format-money';
 import {Trans} from '@ui/i18n/trans';
+import {message} from '@ui/i18n/message';
+import {useTrans} from '@ui/i18n/use-trans';
 import {cn} from '@ui/utils/cn';
 import {
   BriefcaseBusinessIcon,
@@ -30,12 +32,24 @@ function contactIcon(type: ServiceContactChannelType) {
   }
 }
 
+/** Unlabelled channels fall back to the channel's name, never its enum key. */
+const CONTACT_CHANNEL_LABELS: Partial<
+  Record<ServiceContactChannelType, ReturnType<typeof message>>
+> = {
+  whatsapp: message('WhatsApp'),
+  telegram: message('Telegram'),
+  email: message('Email'),
+  phone: message('Phone'),
+  link: message('Website'),
+};
+
 /**
  * What a visitor gets. It reads the same state the form writes, so it is
  * live by construction — no second source of truth to drift. In a draft it
  * says so, because a preview that looks published teaches the wrong thing.
  */
 export function ServicePreview({state}: {state: ServiceFormState}) {
+  const {trans} = useTrans();
   const namedPackages = state.packages.filter(item => item.name.trim());
   const prices = namedPackages
     .map(item => parseEtbToCents(item.price))
@@ -134,14 +148,8 @@ export function ServicePreview({state}: {state: ServiceFormState}) {
           >
             {namedPackages.slice(0, 4).map((item, index) => {
               const price = parseEtbToCents(item.price);
-              const meta = [
-                item.delivery_days.trim()
-                  ? `${item.delivery_days.trim()}d delivery`
-                  : '',
-                item.revisions.trim()
-                  ? `${item.revisions.trim()} revisions`
-                  : '',
-              ].filter(Boolean);
+              const delivery = item.delivery_days.trim();
+              const revisions = item.revisions.trim();
 
               return (
                 <li
@@ -152,9 +160,21 @@ export function ServicePreview({state}: {state: ServiceFormState}) {
                     <span className="block truncate text-sm font-medium">
                       {item.name.trim()}
                     </span>
-                    {!!meta.length && (
+                    {!!(delivery || revisions) && (
                       <span className="text-xs text-muted-foreground">
-                        {meta.join(' · ')}
+                        {delivery && (
+                          <Trans
+                            message=":count days delivery"
+                            values={{count: delivery}}
+                          />
+                        )}
+                        {delivery && revisions ? ' · ' : null}
+                        {revisions && (
+                          <Trans
+                            message=":count revisions"
+                            values={{count: revisions}}
+                          />
+                        )}
                       </span>
                     )}
                   </span>
@@ -186,7 +206,11 @@ export function ServicePreview({state}: {state: ServiceFormState}) {
                   )}
                 >
                   <Icon className="size-3.5" />
-                  {channel.label.trim() || channel.type}
+                  {channel.label.trim() ||
+                    trans(
+                      CONTACT_CHANNEL_LABELS[channel.type] ??
+                        message('Link'),
+                    )}
                 </span>
               );
             })}

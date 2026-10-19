@@ -98,13 +98,15 @@ describe('a filled draft previews what the visitor gets', () => {
   test('lists each named package with its delivery and revision meta', () => {
     render(<ServicePreview state={draftWith()} />);
 
+    // Wording matches the public package panel, and both strings go through
+    // the translator rather than being built in the component.
     const starter = packageRow('Starter');
-    expect(within(starter).getByText('7d delivery · 2 revisions')).toBeTruthy();
+    expect(within(starter).getByText('7 days delivery · 2 revisions')).toBeTruthy();
     expect(starter.textContent).toContain(formatMoney(150000, 'ETB'));
 
     const premium = packageRow('Premium');
     expect(
-      within(premium).getByText('14d delivery · 4 revisions'),
+      within(premium).getByText('14 days delivery · 4 revisions'),
     ).toBeTruthy();
     expect(premium.textContent).toContain(formatMoney(250000, 'ETB'));
   });
@@ -116,6 +118,17 @@ describe('a filled draft previews what the visitor gets', () => {
     expect(screen.getByText('Email me')).toBeTruthy();
     // The chip carries the label, never the raw handle or address.
     expect(screen.queryByText('+251911234567')).toBeNull();
+  });
+
+  test('falls back to the channel name, not the raw enum key', () => {
+    const state = draftWith();
+    state.contact_channels = [{type: 'telegram', label: '', value: '@studio'}];
+
+    render(<ServicePreview state={state} />);
+
+    // A creator who leaves the label blank must never see "telegram".
+    expect(screen.getByText('Telegram')).toBeTruthy();
+    expect(screen.queryByText('telegram')).toBeNull();
   });
 
   test('says it is a draft, because a published-looking preview lies', () => {
