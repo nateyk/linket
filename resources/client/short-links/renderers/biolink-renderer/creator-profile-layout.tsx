@@ -254,7 +254,7 @@ function MobileCreatorProfile({
           aria-label={trans(message('Services'))}
           className="min-w-0 pb-20 focus-visible:outline-2 focus-visible:outline-offset-2"
         >
-          <ServicesSection biolink={biolink} />
+          <ServicesSection biolink={biolink} appearance={appearance} />
         </section>
       )}
 
@@ -556,7 +556,13 @@ function CreatorProfileContent({
     sections.push({
       id: 'services',
       label: <Trans message="Services" />,
-      content: <ServicesSection biolink={biolink} showHeading={false} />,
+      content: (
+        <ServicesSection
+          biolink={biolink}
+          appearance={appearance}
+          showHeading={false}
+        />
+      ),
     });
   }
 
@@ -605,7 +611,7 @@ function CreatorProfileContent({
   }
 
   if (hasServices) {
-    return <ServicesSection biolink={biolink} />;
+    return <ServicesSection biolink={biolink} appearance={appearance} />;
   }
 
   return <AboutSection profile={profile} appearance={appearance} />;
