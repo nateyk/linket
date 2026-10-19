@@ -26,7 +26,9 @@ class PublicServicesPageController extends Controller
                     'appearance' => $store->appearance?->config,
                     'password' => $store->password ? \App\Links\Models\Link::PLACEHOLDER_PASSWORD : null,
                     'services' => PublicServiceResource::collection($services)->resolve(),
-                    'back_url' => $store->short_url,
+                    // Return to the storefront's Services section, not its
+                    // default tab: this store may open on Products.
+                    'back_url' => rtrim((string) $store->short_url, '/').'?section=services',
                 ],
             ],
         ]);

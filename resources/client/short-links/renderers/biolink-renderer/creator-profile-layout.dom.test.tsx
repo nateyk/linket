@@ -168,6 +168,41 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+describe('addressing a storefront section from the URL', () => {
+  afterEach(() => {
+    window.history.replaceState({}, '', '/');
+  });
+
+  test('opens Services when the link names that section', () => {
+    window.history.replaceState({}, '', '/natee?section=services');
+
+    // The store also has products, so without the parameter the page would
+    // open on Products — which is what a "back to profile" link used to do.
+    render(
+      <CreatorProfileLayout
+        biolink={makeBiolink({public_service_count: 1})}
+        appearance={null}
+        content={[shopWidget]}
+      />,
+    );
+
+    expect(navButton('Services').getAttribute('aria-pressed')).toBe('true');
+    expect(section('Services')).toBeTruthy();
+    expect(section('Products')).toBeNull();
+  });
+
+  test('ignores a section that does not exist', () => {
+    window.history.replaceState({}, '', '/natee?section=services');
+
+    // This store has no services, so the parameter must not strand the
+    // visitor on an empty section.
+    renderProfile();
+
+    expect(section('Products')).toBeTruthy();
+    expect(section('Services')).toBeNull();
+  });
+});
+
 describe('creator profile on mobile', () => {
   test('(a) Products is the default home when the shop has items', () => {
     renderProfile();

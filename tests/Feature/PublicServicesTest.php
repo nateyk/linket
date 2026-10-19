@@ -26,6 +26,18 @@ class PublicServicesTest extends TestCase
         parent::tearDown();
     }
 
+    public function test_services_index_sends_the_visitor_back_to_the_services_tab(): void
+    {
+        [, , $store] = $this->context();
+        $this->publishedService($store, 'Logo design');
+
+        // A store with products opens on Products by default, so "back"
+        // without the section would strand the visitor on the wrong tab.
+        $this->get("/{$store->back_half}/services")
+            ->assertOk()
+            ->assertSee('?section=services', false);
+    }
+
     public function test_public_lists_only_published_services_for_the_requested_store(): void
     {
         [, , $store] = $this->context();

@@ -103,6 +103,22 @@ export function CreatorProfileLayout({
   );
 }
 
+/**
+ * A storefront section can be addressed directly, so a link can return a
+ * visitor to the section they were browsing instead of the default tab.
+ * Read-only on purpose: nothing writes the query string, so dashboard editor
+ * previews (which render this layout too) are never touched.
+ */
+function requestedSection(): string | null {
+  if (typeof window === 'undefined') return null;
+
+  const value = new URLSearchParams(window.location.search).get('section');
+
+  return value && ['profile', 'products', 'services', 'about'].includes(value)
+    ? value
+    : null;
+}
+
 function MobileCreatorProfile({
   biolink,
   appearance,
@@ -131,9 +147,16 @@ function MobileCreatorProfile({
   const showNavigation = hasProducts || hasServices || hasAbout;
   // Bio page IS the store: open on Products when the shop has items, matching
   // desktop StoreFront defaultTab="products". Profile-only pages stay on Profile.
-  const [activeTab, setActiveTab] = useState(() =>
-    hasProducts ? 'products' : hasServices ? 'services' : 'profile',
-  );
+  const [activeTab, setActiveTab] = useState(() => {
+    const requested = requestedSection();
+
+    if (requested === 'services' && hasServices) return 'services';
+    if (requested === 'products' && hasProducts) return 'products';
+    if (requested === 'about' && hasAbout) return 'about';
+    if (requested === 'profile') return 'profile';
+
+    return hasProducts ? 'products' : hasServices ? 'services' : 'profile';
+  });
   const {trans} = useTrans();
   const biolinkNavItems = [
     {label: trans(message('Profile')), icon: UserIcon, value: 'profile'},
@@ -552,6 +575,11 @@ function CreatorProfileContent({
   }
 
   if (sections.length > 1) {
+    const requested = requestedSection();
+    const defaultTab = sections.some(section => section.id === requested)
+      ? requested!
+      : sections[0].id;
+
     return (
       // The strip, panels and card frame live in StoreFront: the strip
       // sticks to the top of the viewport (opaque, repainting the page
@@ -560,7 +588,7 @@ function CreatorProfileContent({
       // scroll to top on tab switches).
       <StoreFront
         appearance={appearance}
-        defaultTab={sections[0].id}
+        defaultTab={defaultTab}
         tabs={sections}
       />
     );
