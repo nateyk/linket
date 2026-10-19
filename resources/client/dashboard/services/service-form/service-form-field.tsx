@@ -11,6 +11,8 @@ interface ServiceFormFieldProps {
   required?: boolean;
   /** One character counter per field keeps long-copy limits visible. */
   counter?: {current: number; max: number};
+  /** Sits at the end of the label row: counts, hints, inline state. */
+  trailing?: ReactNode;
   children: ReactNode;
 }
 
@@ -26,6 +28,7 @@ export function ServiceFormField({
   error,
   required = false,
   counter,
+  trailing,
   children,
 }: ServiceFormFieldProps) {
   return (
@@ -34,15 +37,18 @@ export function ServiceFormField({
       invalid={!!error}
       className="min-w-0 gap-2"
     >
-      <Field.Label htmlFor={name} className="text-sm font-medium">
-        {label}
-        {required && (
-          <span aria-hidden="true" className="text-destructive">
-            {' '}
-            *
-          </span>
-        )}
-      </Field.Label>
+      <div className="flex items-baseline justify-between gap-3">
+        <Field.Label htmlFor={name} className="text-sm font-medium">
+          {label}
+          {required && (
+            <span aria-hidden="true" className="text-destructive">
+              {' '}
+              *
+            </span>
+          )}
+        </Field.Label>
+        {trailing && <span className="shrink-0">{trailing}</span>}
+      </div>
       {children}
       {(description || counter) && !error && (
         <Field.Description

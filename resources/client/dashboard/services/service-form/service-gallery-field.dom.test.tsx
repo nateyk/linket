@@ -4,10 +4,27 @@ import userEvent from '@testing-library/user-event';
 import {describe, expect, it, vi} from 'vitest';
 
 // CroppedCover keeps its own control and exposes the field label through an
-// sr-only element, so the mock stays invisible and owns no visible text.
+// sr-only element, so the mock stays invisible. Props are mirrored onto data
+// attributes so a test can assert how the control was configured.
 vi.mock('@common/uploads/components/cropped-image-selector', () => ({
-  CroppedCover: ({label}: {label?: string}) => (
-    <div data-testid="cropped-cover" aria-label={label} />
+  CroppedCover: ({
+    label,
+    className,
+    showHint,
+    placeholderVariant,
+  }: {
+    label?: string;
+    className?: string;
+    showHint?: boolean;
+    placeholderVariant?: string;
+  }) => (
+    <div
+      data-testid="cropped-cover"
+      aria-label={label}
+      data-class={className}
+      data-show-hint={String(showHint)}
+      data-placeholder={placeholderVariant}
+    />
   ),
 }));
 
@@ -45,6 +62,42 @@ describe('service gallery field', () => {
     expect(
       screen.queryByText('Drag & drop files or click to browse'),
     ).toBeNull();
+  });
+
+  it('gives the cover the full width of the field', () => {
+    render(
+      <ServiceGalleryField
+        coverUrl=""
+        gallery={[]}
+        onCoverChange={vi.fn()}
+        onGalleryChange={vi.fn()}
+      />,
+    );
+
+    const cover = screen.getByTestId('cropped-cover');
+    expect(cover.dataset.class).not.toContain('max-w-');
+  });
+
+  it('keeps the media section quiet rather than explaining it', () => {
+    render(
+      <ServiceGalleryField
+        coverUrl=""
+        gallery={galleryOf(2)}
+        onCoverChange={vi.fn()}
+        onGalleryChange={vi.fn()}
+      />,
+    );
+
+    // A control that says what it does does not also need a paragraph about
+    // it: the placeholder copy and the file rules are noise once the field
+    // is labelled.
+    const cover = screen.getByTestId('cropped-cover');
+    expect(cover.dataset.showHint).toBe('false');
+    expect(cover.dataset.placeholder).not.toBe('dropzone');
+
+    expect(screen.queryByText(/Shown on your storefront/)).toBeNull();
+    expect(screen.queryByText(/Extra images shown under/)).toBeNull();
+    expect(screen.queryByText(/Preferred region will be cropped/)).toBeNull();
   });
 
   it('shows how many images are used against the limit', () => {

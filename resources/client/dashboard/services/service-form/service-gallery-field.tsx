@@ -46,10 +46,6 @@ export function ServiceGalleryField({
       <ServiceFormField
         name="cover_file_entry_id"
         label={trans({message: 'Cover image'})}
-        description={trans({
-          message:
-            'Shown on your storefront, on service cards and at the top of the public page.',
-        })}
       >
         <CroppedCover
           value={coverUrl}
@@ -57,59 +53,58 @@ export function ServiceGalleryField({
           uploadType="linkImages"
           aspect={16 / 9}
           label={trans({message: 'Cover image'})}
-          className="aspect-video w-full max-w-sm"
+          placeholderVariant="text"
+          showHint={false}
+          className="aspect-video w-full"
         />
       </ServiceFormField>
 
       <ServiceFormField
         name="gallery"
         label={trans({message: 'Gallery images'})}
-        description={trans({
-          message: 'Extra images shown under the cover on the public page.',
-        })}
+        trailing={
+          <span className="text-xs tabular-nums text-muted-foreground">
+            <Trans
+              message=":used of :max"
+              values={{used: gallery.length, max: SERVICE_GALLERY_MAX}}
+            />
+          </span>
+        }
       >
         <div className="flex flex-col gap-3">
           {!!gallery.length && (
-            <>
-              <p className="text-xs tabular-nums text-muted-foreground">
-                <Trans
-                  message=":used of :max"
-                  values={{used: gallery.length, max: SERVICE_GALLERY_MAX}}
-                />
-              </p>
-              <ul className="grid grid-cols-4 gap-2 sm:grid-cols-6">
-                {gallery.map((item, index) => (
-                  <li key={item.file_entry_id} className="group relative">
-                    <div className="aspect-square overflow-hidden rounded-card-xs bg-muted">
-                      <img
-                        src={item.url}
-                        alt=""
-                        className="size-full object-cover"
-                      />
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon-xs"
-                      className="absolute end-1 top-1 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-                      aria-label={trans({
-                        message: 'Remove image :number',
-                        values: {number: index + 1},
-                      })}
-                      onClick={() =>
-                        onGalleryChange(
-                          gallery.filter(
-                            image => image.file_entry_id !== item.file_entry_id,
-                          ),
-                        )
-                      }
-                    >
-                      <XIcon />
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            </>
+            <ul className="grid grid-cols-4 gap-2 sm:grid-cols-6">
+              {gallery.map((item, index) => (
+                <li key={item.file_entry_id} className="group relative">
+                  <div className="aspect-square overflow-hidden rounded-card-xs bg-muted">
+                    <img
+                      src={item.url}
+                      alt=""
+                      className="size-full object-cover"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon-xs"
+                    className="absolute end-1 top-1 bg-background/90 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                    aria-label={trans({
+                      message: 'Remove image :number',
+                      values: {number: index + 1},
+                    })}
+                    onClick={() =>
+                      onGalleryChange(
+                        gallery.filter(
+                          image => image.file_entry_id !== item.file_entry_id,
+                        ),
+                      )
+                    }
+                  >
+                    <XIcon />
+                  </Button>
+                </li>
+              ))}
+            </ul>
           )}
 
           {isFull ? (
