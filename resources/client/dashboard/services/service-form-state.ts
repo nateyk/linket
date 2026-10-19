@@ -132,7 +132,7 @@ export function emptyServiceForm(): ServiceFormState {
     video_url: '',
     live_demo_url: '',
     status: 'draft',
-    packages: [blankPackage()],
+    packages: [],
     faqs: [],
     contact_channels: [],
   };

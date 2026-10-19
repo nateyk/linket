@@ -28,12 +28,13 @@ function validationError(
 }
 
 describe('service form state', () => {
-  test('empty form starts with one blank package and no FAQs', () => {
+  test('empty form starts with no packages so the section can onboard', () => {
     const form = emptyServiceForm();
 
     expect(form.title).toBe('');
-    expect(form.packages).toHaveLength(1);
-    expect(form.packages[0].name).toBe('');
+    // Starting with one blank row denied the packages section its empty state,
+    // which is where the Starter/Standard/Premium presets live.
+    expect(form.packages).toHaveLength(0);
     expect(form.faqs).toHaveLength(0);
     expect(form.contact_channels).toHaveLength(0);
   });
