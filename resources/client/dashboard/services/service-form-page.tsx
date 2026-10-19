@@ -640,24 +640,18 @@ function ServiceFormPage() {
                   hasError={sectionError('media')}
                 >
                   <div className="flex flex-col gap-5">
-                    <ServiceFormField
-                      name="cover_file_entry_id"
-                      label={trans({message: 'Cover and gallery'})}
-                      error={fieldErrors.cover_file_entry_id}
-                    >
-                      <ServiceGalleryField
-                        coverUrl={form.cover_url}
-                        gallery={form.gallery}
-                        onCoverChange={(url, entryId) =>
-                          setForm(current => ({
-                            ...current,
-                            cover_url: url,
-                            cover_file_entry_id: entryId,
-                          }))
-                        }
-                        onGalleryChange={gallery => update('gallery', gallery)}
-                      />
-                    </ServiceFormField>
+                    <ServiceGalleryField
+                      coverUrl={form.cover_url}
+                      gallery={form.gallery}
+                      onCoverChange={(url, entryId) =>
+                        setForm(current => ({
+                          ...current,
+                          cover_url: url,
+                          cover_file_entry_id: entryId,
+                        }))
+                      }
+                      onGalleryChange={gallery => update('gallery', gallery)}
+                    />
 
                     <div className="grid gap-4 sm:grid-cols-2">
                       <ServiceFormField

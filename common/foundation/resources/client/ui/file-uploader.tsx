@@ -170,6 +170,14 @@ interface SharedFileUploaderProps {
   initialItems?: UploadItem[];
   className?: string;
   bare?: boolean;
+  /**
+   * One compact row instead of the full drop zone. Same input, same drag and
+   * drop, same validation — for a picker that sits beside content instead of
+   * above it, like an image gallery next to an existing cover.
+   */
+  compact?: boolean;
+  /** Accessible name for the compact trigger; defaults to "Add images". */
+  ariaLabel?: string;
 }
 
 export function SharedFileUploader({
@@ -185,6 +193,8 @@ export function SharedFileUploader({
   initialItems = [],
   className,
   bare = false,
+  compact = false,
+  ariaLabel,
 }: SharedFileUploaderProps) {
   const [items, setItems] = useState<UploadItem[]>(initialItems);
   const [isDragging, setIsDragging] = useState(false);
@@ -334,6 +344,80 @@ export function SharedFileUploader({
     [uploadStore],
   );
 
+  // Both the full drop zone and the compact row are drop targets, so the
+  // handlers live in one place rather than being written twice.
+  const dropHandlers = {
+    onDragOver: (event: React.DragEvent) => {
+      event.preventDefault();
+    },
+    onDragEnter: (event: React.DragEvent) => {
+      event.preventDefault();
+      dragDepth.current += 1;
+      setIsDragging(true);
+    },
+    onDragLeave: (event: React.DragEvent) => {
+      event.preventDefault();
+      dragDepth.current -= 1;
+      if (dragDepth.current <= 0) {
+        dragDepth.current = 0;
+        setIsDragging(false);
+      }
+    },
+    onDrop: (event: React.DragEvent) => {
+      event.preventDefault();
+      dragDepth.current = 0;
+      setIsDragging(false);
+      addFiles(event.dataTransfer.files);
+    },
+  };
+
+  const fileInput = (
+    <input
+      ref={inputRef}
+      type="file"
+      multiple={multiple}
+      accept={acceptAttr(uploadType, accept)}
+      className="sr-only"
+      onChange={event => {
+        addFiles(event.target.files);
+        event.target.value = '';
+      }}
+    />
+  );
+
+  if (compact) {
+    return (
+      <div className={cn('w-full', className)}>
+        <Button
+          type="button"
+          variant="outline"
+          aria-label={ariaLabel ?? 'Add images'}
+          onClick={() => inputRef.current?.click()}
+          {...dropHandlers}
+          className={cn(
+            'h-auto w-full justify-start gap-3 border-dashed px-4 py-3 text-left',
+            isDragging ? 'border-primary bg-primary/5' : 'bg-muted/40',
+          )}
+        >
+          {fileInput}
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-card-sm bg-primary/10 text-primary">
+            <UploadIcon className="size-4" aria-hidden="true" />
+          </span>
+          <span className="flex min-w-0 flex-col">
+            <span className="text-sm font-medium text-foreground">
+              {title ?? <Trans message="Add images" />}
+            </span>
+            {hint && (
+              <span className="text-xs font-normal text-muted-foreground">
+                {hint}
+              </span>
+            )}
+          </span>
+        </Button>
+      </div>
+    );
+  }
+
   const content = (
     <>
         <div
@@ -346,28 +430,7 @@ export function SharedFileUploader({
               inputRef.current?.click();
             }
           }}
-          onDragOver={event => {
-            event.preventDefault();
-          }}
-          onDragEnter={event => {
-            event.preventDefault();
-            dragDepth.current += 1;
-            setIsDragging(true);
-          }}
-          onDragLeave={event => {
-            event.preventDefault();
-            dragDepth.current -= 1;
-            if (dragDepth.current <= 0) {
-              dragDepth.current = 0;
-              setIsDragging(false);
-            }
-          }}
-          onDrop={event => {
-            event.preventDefault();
-            dragDepth.current = 0;
-            setIsDragging(false);
-            addFiles(event.dataTransfer.files);
-          }}
+          {...dropHandlers}
           className={cn(
             'flex cursor-pointer flex-col items-center justify-center gap-2 rounded-card border border-dashed p-6 text-center transition-colors outline-none hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring/20',
             isDragging
@@ -375,17 +438,7 @@ export function SharedFileUploader({
               : 'border-border bg-muted/40 hover:bg-muted/60',
           )}
         >
-          <input
-            ref={inputRef}
-            type="file"
-            multiple={multiple}
-            accept={acceptAttr(uploadType, accept)}
-            className="sr-only"
-            onChange={event => {
-              addFiles(event.target.files);
-              event.target.value = '';
-            }}
-          />
+          {fileInput}
           <div className="flex size-9 items-center justify-center rounded-card-sm bg-primary/10 text-primary">
             <UploadIcon className="size-4" aria-hidden="true" />
           </div>
