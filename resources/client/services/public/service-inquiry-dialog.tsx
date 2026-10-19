@@ -1,4 +1,6 @@
 import {apiClient} from '@common/http/query-client';
+import type {BiolinkAppearanceConfig} from '@app/gen/schemas/biolink-appearance-config';
+import {resolveBiolinkButtonAppearance, resolveBiolinkThemeVariables} from '@app/short-links/renderers/biolink-renderer/biolink-appearance';
 import {Alert} from '@shadcn/alert/alert';
 import {Button} from '@shadcn/button/button';
 import {Dialog} from '@shadcn/dialog/dialog';
@@ -8,8 +10,9 @@ import {Spinner} from '@shadcn/spinner/spinner';
 import {message} from '@ui/i18n/message';
 import {Trans} from '@ui/i18n/trans';
 import {useTrans} from '@ui/i18n/use-trans';
+import {cn} from '@ui/utils/cn';
 import {CheckCircle2Icon, CircleAlertIcon} from 'lucide-react';
-import {useEffect, useState, type ReactNode} from 'react';
+import {useEffect, useRef, useState, type CSSProperties, type ReactNode} from 'react';
 import {
   buildInquiryPayload,
   emptyInquiryForm,
@@ -24,14 +27,27 @@ export function ServiceInquiryDialog({
   endpoint,
   packageId,
   packageName,
+  appearance,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   endpoint: string;
   packageId?: number;
   packageName?: string;
+  appearance?: BiolinkAppearanceConfig | null;
 }) {
   const {trans} = useTrans();
+  const buttonAppearance = resolveBiolinkButtonAppearance(appearance);
+  const themeVariables = resolveBiolinkThemeVariables(appearance);
+  const nameInputRef = useRef<HTMLInputElement | null>(null);
+
+  // The dialog is portaled outside the page, so it has to carry the store's
+  // theme itself; and the conversion moment starts with a focused first field.
+  useEffect(() => {
+    if (!open) return;
+    const timer = window.setTimeout(() => nameInputRef.current?.focus(), 0);
+    return () => window.clearTimeout(timer);
+  }, [open]);
   const [form, setForm] = useState<InquiryFormState>(() =>
     emptyInquiryForm(packageId),
   );
@@ -85,7 +101,17 @@ export function ServiceInquiryDialog({
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Backdrop />
-        <Dialog.Content>
+        <Dialog.Content
+          className="bg-[var(--biolink-surface-strong)] text-[var(--biolink-text)] sm:max-w-md"
+          style={
+            {
+              ...themeVariables,
+              fontFamily: appearance?.fontConfig?.family,
+              '--biolink-surface-shadow':
+                buttonAppearance.style.boxShadow || 'none',
+            } as CSSProperties
+          }
+        >
           <Dialog.Header>
             <Dialog.Title>
               <Trans message="Request a quote" />
@@ -111,7 +137,12 @@ export function ServiceInquiryDialog({
               <p className="max-w-sm text-sm text-muted-foreground">
                 <Trans message="The creator will contact you soon." />
               </p>
-              <Button onClick={() => onOpenChange(false)}>
+              <Button
+                variant="ghost"
+                className={cn('w-full', buttonAppearance.className)}
+                style={buttonAppearance.style}
+                onClick={() => onOpenChange(false)}
+              >
                 <Trans message="Done" />
               </Button>
             </div>
@@ -130,6 +161,7 @@ export function ServiceInquiryDialog({
                 error={errors.name}
               >
                 <Input
+                  ref={nameInputRef}
                   id="inquiry-name"
                   value={form.name}
                   onChange={event => update('name', event.target.value)}
@@ -183,7 +215,14 @@ export function ServiceInquiryDialog({
                 />
               </InquiryField>
 
-              <Button disabled={submitting} onClick={() => void submit()}>
+              <Button
+                variant="ghost"
+                className={cn('w-full', buttonAppearance.className)}
+                style={buttonAppearance.style}
+                size="lg"
+                disabled={submitting}
+                onClick={() => void submit()}
+              >
                 {submitting && <Spinner />}
                 <Trans message="Send inquiry" />
               </Button>

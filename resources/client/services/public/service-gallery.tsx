@@ -24,8 +24,13 @@ export function ServiceGallery({
 
   if (!media.length) {
     return (
-      <div className="flex aspect-video w-full items-center justify-center rounded-card bg-[var(--biolink-surface-muted)] text-[var(--biolink-muted-text)]">
-        <BriefcaseBusinessIcon className="size-10 opacity-65" />
+      <div className="flex aspect-video w-full flex-col items-center justify-center gap-3 bg-[var(--biolink-surface-muted)] px-6 text-center text-[var(--biolink-muted-text)]">
+        <span className="grid size-14 place-items-center rounded-card bg-[var(--biolink-surface-strong)] ring-1 ring-(color:--biolink-border)">
+          <BriefcaseBusinessIcon className="size-5" aria-hidden="true" />
+        </span>
+        <span className="text-xs">
+          <Trans message="Image not available" />
+        </span>
       </div>
     );
   }
@@ -40,7 +45,7 @@ export function ServiceGallery({
         />
       </div>
       {media.length > 1 && (
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        <div className="flex gap-2 overflow-x-auto px-5 pb-1 sm:px-6">
           {media.map((image, index) => (
             <button
               key={image.id}
@@ -48,8 +53,8 @@ export function ServiceGallery({
               onClick={() => setActiveIndex(index)}
               aria-label={`${title} ${index + 1}`}
               className={cn(
-                'size-16 shrink-0 overflow-hidden rounded-card-xs outline-none ring-2 ring-transparent focus-visible:ring-ring',
-                index === activeIndex && 'ring-primary',
+                'size-16 shrink-0 overflow-hidden rounded-card-xs outline-none ring-2 ring-transparent focus-visible:ring-[var(--biolink-text)]',
+                index === activeIndex && 'ring-[var(--biolink-text)]',
               )}
             >
               <img

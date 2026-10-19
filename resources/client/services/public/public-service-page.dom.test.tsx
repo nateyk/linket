@@ -1,5 +1,6 @@
 /** @vitest-environment jsdom */
-import {render, screen} from '@testing-library/react';
+import {render, screen, within} from '@testing-library/react';
+import {formatMoney} from '@ui/i18n/format-money';
 import {describe, expect, it} from 'vitest';
 import {PublicServicePage} from './public-service-page';
 import type {PublicServicePageData} from './service-types';
@@ -125,5 +126,39 @@ describe('public service page', () => {
     await userEvent.click(screen.getByRole('tab', {name: 'FAQ'}));
 
     expect(screen.getByText('How long does it take?')).toBeTruthy();
+  });
+
+  it('shows what a tier includes in the offer rail', () => {
+    render(<PublicServicePage data={data} />);
+
+    // Delivery, revisions and the feature list all live beside the price,
+    // the same way the product page's pricing card carries what is included.
+    expect(screen.getByText('6 days delivery')).toBeTruthy();
+    expect(screen.getByText('2 revisions')).toBeTruthy();
+    expect(screen.getByText('One concept')).toBeTruthy();
+    expect(screen.getByText('PNG files')).toBeTruthy();
+    expect(
+      screen.getByText('You agree the details and payment directly with the creator.'),
+    ).toBeTruthy();
+  });
+
+  it('gives phones a quote action that opens the inquiry form', async () => {
+    const {default: userEvent} = await import('@testing-library/user-event');
+    render(<PublicServicePage data={data} />);
+
+    // The same action as the rail, reachable without scrolling back up.
+    const bar = screen.getByTestId('service-mobile-action');
+    expect(
+      within(bar).getByText(`From ${formatMoney(29900, 'ETB')}`),
+    ).toBeTruthy();
+
+    await userEvent.click(
+      within(bar).getByRole('button', {name: 'Request a quote'}),
+    );
+
+    expect(await screen.findByRole('dialog')).toBeTruthy();
+    expect(
+      within(await screen.findByRole('dialog')).getByText('Request a quote'),
+    ).toBeTruthy();
   });
 });

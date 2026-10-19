@@ -1,33 +1,63 @@
-import {Badge} from '@shadcn/badge/badge';
+import {biolinkSurfaceCard, biolinkSurfaceContent} from '@app/digital-products/public/product-page/surface';
+import type {BiolinkAppearanceConfig} from '@app/gen/schemas/biolink-appearance-config';
+import {resolveBiolinkButtonAppearance, resolveBiolinkSegmentedTabsAppearance} from '@app/short-links/renderers/biolink-renderer/biolink-appearance';
 import {Button} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
+import {Separator} from '@shadcn/separator';
 import {Tabs} from '@shadcn/tabs/tabs';
-import {Trans} from '@ui/i18n/trans';
 import {formatMoney} from '@ui/i18n/format-money';
+import {Trans} from '@ui/i18n/trans';
 import {useTrans} from '@ui/i18n/use-trans';
-import {CheckIcon, ClockIcon, RefreshCwIcon} from 'lucide-react';
+import {cn} from '@ui/utils/cn';
+import {
+  CheckIcon,
+  ClockIcon,
+  InfoIcon,
+  PackageIcon,
+  RefreshCwIcon,
+  type LucideIcon,
+} from 'lucide-react';
 import type {PublicServicePackage} from './service-types';
 
+/**
+ * The offer rail. It mirrors the product page's pricing card so the two shop
+ * pages read as one shop: price first, one full-width action directly under
+ * it, then what the tier includes. Every action wears the store's own button
+ * appearance.
+ */
 export function ServicePackagePanel({
   packages,
+  appearance,
   onRequest,
 }: {
   packages: PublicServicePackage[];
+  appearance?: BiolinkAppearanceConfig | null;
   onRequest: (packageId?: number) => void;
 }) {
   const {trans} = useTrans();
+  const buttonAppearance = resolveBiolinkButtonAppearance(appearance);
+  // The storefront's own segmented control — appearance track, radius and
+  // active pill with the offset shadow — so the tier switcher is not
+  // dashboard chrome pasted onto the shop.
+  const segmented = resolveBiolinkSegmentedTabsAppearance(appearance);
 
   if (!packages.length) {
     return (
-      <Card.Root>
-        <Card.Content className="flex flex-col gap-3 p-4">
-          <Card.Title className="text-base">
+      <Card.Root className={biolinkSurfaceCard}>
+        <Card.Content className={biolinkSurfaceContent}>
+          <p className="text-4xl leading-none font-semibold tracking-tight">
             <Trans message="Request a quote" />
-          </Card.Title>
-          <p className="text-sm text-[var(--biolink-muted-text)]">
+          </p>
+          <p className="text-base text-[var(--biolink-muted-text)]">
             <Trans message="Tell the creator what you need and they will send you a quote." />
           </p>
-          <Button onClick={() => onRequest()}>
+          <Button
+            variant="ghost"
+            className={cn('w-full', buttonAppearance.className)}
+            style={buttonAppearance.style}
+            size="lg"
+            onClick={() => onRequest()}
+          >
             <Trans message="Send inquiry" />
           </Button>
         </Card.Content>
@@ -39,6 +69,7 @@ export function ServicePackagePanel({
     return (
       <PackageCard
         packageItem={packages[0]}
+        buttonAppearance={buttonAppearance}
         onRequest={() => onRequest(packages[0].id)}
       />
     );
@@ -48,13 +79,15 @@ export function ServicePackagePanel({
     <Tabs.Root defaultValue={String(packages[0].id)} className="gap-3">
       <Tabs.List
         aria-label={trans({message: 'Packages'})}
-        className="w-full"
+        style={segmented.style}
+        indicatorClass={segmented.indicatorClassName}
+        className={cn('w-full', segmented.listClassName)}
       >
         {packages.map(packageItem => (
           <Tabs.Tab
             key={packageItem.id}
             value={String(packageItem.id)}
-            className="flex-1"
+            className={cn(segmented.tabClassName, 'flex-1')}
           >
             {packageItem.name}
           </Tabs.Tab>
@@ -64,6 +97,7 @@ export function ServicePackagePanel({
         <Tabs.Panel key={packageItem.id} value={String(packageItem.id)}>
           <PackageCard
             packageItem={packageItem}
+            buttonAppearance={buttonAppearance}
             onRequest={() => onRequest(packageItem.id)}
           />
         </Tabs.Panel>
@@ -74,69 +108,114 @@ export function ServicePackagePanel({
 
 function PackageCard({
   packageItem,
+  buttonAppearance,
   onRequest,
 }: {
   packageItem: PublicServicePackage;
+  buttonAppearance: ReturnType<typeof resolveBiolinkButtonAppearance>;
   onRequest: () => void;
 }) {
   return (
-    <Card.Root>
-      <Card.Content className="flex flex-col gap-4 p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-base font-semibold">{packageItem.name}</h3>
-          {packageItem.price_cents === null ? (
-            <Badge variant="secondary">
-              <Trans message="Quote only" />
-            </Badge>
-          ) : (
-            <span className="text-lg font-semibold">
-              {formatMoney(packageItem.price_cents, packageItem.currency)}
-            </span>
-          )}
+    <Card.Root className={biolinkSurfaceCard}>
+      <Card.Content className={biolinkSurfaceContent}>
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex min-w-0 flex-col gap-1">
+            <h2 className="truncate text-sm font-medium text-[var(--biolink-muted-text)]">
+              {packageItem.name}
+            </h2>
+            <p className="text-4xl leading-none font-semibold tracking-tight tabular-nums">
+              {packageItem.price_cents === null ? (
+                <Trans message="Quote only" />
+              ) : (
+                formatMoney(packageItem.price_cents, packageItem.currency)
+              )}
+            </p>
+          </div>
+          <span className="grid size-10 shrink-0 place-items-center rounded-card-sm bg-[var(--biolink-surface)] text-[var(--biolink-muted-text)] ring-1 ring-(color:--biolink-border)">
+            <PackageIcon className="size-5" aria-hidden="true" />
+          </span>
         </div>
 
+        {/* The action sits directly under the price, the same place the
+            product page puts its buy button. */}
+        <Button
+          variant="ghost"
+          className={cn('w-full', buttonAppearance.className)}
+          style={buttonAppearance.style}
+          size="lg"
+          onClick={onRequest}
+        >
+          <Trans message="Request this package" />
+        </Button>
+
         {packageItem.description && (
-          <p className="text-sm leading-relaxed text-[var(--biolink-muted-text)]">
+          <p className="text-base leading-6 text-[var(--biolink-muted-text)]">
             {packageItem.description}
           </p>
         )}
 
-        <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--biolink-muted-text)]">
-          {packageItem.delivery_days !== null && (
-            <span className="inline-flex items-center gap-1">
-              <ClockIcon className="size-3.5" />
-              <Trans
-                message=":count days delivery"
-                values={{count: packageItem.delivery_days}}
-              />
-            </span>
-          )}
-          {packageItem.revisions !== null && (
-            <span className="inline-flex items-center gap-1">
-              <RefreshCwIcon className="size-3.5" />
-              <Trans
-                message=":count revisions"
-                values={{count: packageItem.revisions}}
-              />
-            </span>
-          )}
-        </div>
-
-        {!!packageItem.features.length && (
-          <ul className="flex flex-col gap-1.5 text-sm">
-            {packageItem.features.map((feature, index) => (
-              <li key={index} className="flex items-start gap-2">
-                <CheckIcon className="mt-0.5 size-4 shrink-0 text-primary" />
-                <span>{feature}</span>
-              </li>
-            ))}
-          </ul>
+        {(packageItem.delivery_days !== null ||
+          packageItem.revisions !== null) && (
+          <div className="flex flex-wrap items-center gap-3 text-sm text-[var(--biolink-muted-text)]">
+            {packageItem.delivery_days !== null && (
+              <span className="inline-flex items-center gap-1.5">
+                <ClockIcon className="size-4 shrink-0" aria-hidden="true" />
+                <Trans
+                  message=":count days delivery"
+                  values={{count: packageItem.delivery_days}}
+                />
+              </span>
+            )}
+            {packageItem.revisions !== null && (
+              <span className="inline-flex items-center gap-1.5">
+                <RefreshCwIcon
+                  className="size-4 shrink-0"
+                  aria-hidden="true"
+                />
+                <Trans
+                  message=":count revisions"
+                  values={{count: packageItem.revisions}}
+                />
+              </span>
+            )}
+          </div>
         )}
 
-        <Button onClick={onRequest}>
-          <Trans message="Request this package" />
-        </Button>
+        {!!packageItem.features.length && (
+          <>
+            <Separator className="bg-[var(--biolink-border)]" />
+            <ul className="flex flex-col gap-3 text-base text-[var(--biolink-muted-text)]">
+              {packageItem.features.map((feature, index) => (
+                <IncludeItem key={index} icon={CheckIcon}>
+                  {feature}
+                </IncludeItem>
+              ))}
+            </ul>
+          </>
+        )}
+
+        <div className="flex items-start gap-2 rounded-card bg-[var(--biolink-surface)] p-3 text-sm text-[var(--biolink-muted-text)]">
+          <InfoIcon className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+          <Trans message="You agree the details and payment directly with the creator." />
+        </div>
       </Card.Content>
     </Card.Root>
+  );
+}
+
+function IncludeItem({
+  icon: Icon,
+  children,
+}: {
+  icon: LucideIcon;
+  children: React.ReactNode;
+}) {
+  return (
+    <li className="flex items-start gap-3">
+      <span className="grid size-7 shrink-0 place-items-center rounded-card-xs bg-[var(--biolink-surface)] text-[var(--biolink-muted-text)] ring-1 ring-(color:--biolink-border)">
+        <Icon className="size-4" aria-hidden="true" />
+      </span>
+      <span className="min-w-0 flex-1 pt-1 leading-5">{children}</span>
+    </li>
   );
 }
