@@ -173,7 +173,7 @@ export function ServicePackagesField({
                   {index + 1}
                 </span>
 
-                <span className="flex min-w-0 flex-col gap-0.5">
+                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <span
                     className={cn(
                       'truncate text-sm font-medium',
@@ -225,15 +225,17 @@ export function ServicePackagesField({
                     )}
                   </span>
                 </span>
-              </button>
 
-              <ChevronDownIcon
-                className={cn(
-                  'size-4 shrink-0 text-muted-foreground transition-transform',
-                  isOpen && 'rotate-180',
-                )}
-                aria-hidden="true"
-              />
+                {/* The arrow sits inside the trigger: it is the affordance
+                    people aim for, so it must open the row too. */}
+                <ChevronDownIcon
+                  className={cn(
+                    'size-4 shrink-0 text-muted-foreground transition-transform',
+                    isOpen && 'rotate-180',
+                  )}
+                  aria-hidden="true"
+                />
+              </button>
 
               <Button
                 type="button"

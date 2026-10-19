@@ -116,6 +116,23 @@ describe('service packages field', () => {
     ).toBe('true');
   });
 
+  it('lets the arrow itself open the package', async () => {
+    renderField([pkg({name: 'Starter'})]);
+
+    const trigger = screen.getByRole('button', {
+      name: /Edit package Starter/,
+    });
+
+    // The arrow is where people click to open a disclosure, so it has to be
+    // part of the trigger's hit area rather than a decorative sibling.
+    const chevron = trigger.querySelector('svg');
+    expect(chevron).toBeTruthy();
+
+    await userEvent.click(chevron as Element);
+
+    expect(trigger.getAttribute('aria-expanded')).toBe('true');
+  });
+
   it('keeps one package open at a time', async () => {
     renderField([pkg({name: 'Starter'}), pkg({name: 'Premium'})]);
 
