@@ -48,13 +48,6 @@ export type PublicStore = Biolink & {
   password?: string | null;
 };
 
-export type PublicServicesPageData = {
-  store: PublicStore;
-  appearance: BiolinkAppearanceConfig | null;
-  services: PublicService[];
-  back_url: string;
-};
-
 export type PublicServicePageData = {
   store: PublicStore;
   appearance: BiolinkAppearanceConfig | null;

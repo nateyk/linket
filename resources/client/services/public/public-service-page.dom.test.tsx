@@ -59,7 +59,7 @@ const data: PublicServicePageData = {
     ],
   },
   inquiry_endpoint: '/api/v1/public/stores/7/services/logo-design/inquiries',
-  back_url: 'https://nate.test/services',
+  back_url: 'https://nate.test?section=services',
 };
 
 describe('public service page', () => {

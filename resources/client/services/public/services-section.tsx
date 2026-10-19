@@ -2,7 +2,7 @@ import type {Biolink} from '@app/gen/schemas/biolink';
 import {apiClient} from '@common/http/query-client';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {Trans} from '@ui/i18n/trans';
-import {ArrowRightIcon, BriefcaseBusinessIcon} from 'lucide-react';
+import {BriefcaseBusinessIcon} from 'lucide-react';
 import {useEffect, useState} from 'react';
 import {ServiceCard} from './service-card';
 import type {PublicService} from './service-types';
@@ -41,8 +41,6 @@ export function ServicesSection({
     };
   }, [biolink.id]);
 
-  const servicesUrl = `${biolink.short_url}/services`;
-
   return (
     <section className="flex min-w-0 flex-col gap-4">
       {showHeading && (
@@ -70,16 +68,6 @@ export function ServicesSection({
             <Trans message="No services yet" />
           </p>
         </div>
-      )}
-
-      {services.length > 0 && (
-        <a
-          href={servicesUrl}
-          className="inline-flex items-center gap-1 text-sm font-medium text-[var(--biolink-muted-text)] underline-offset-4 hover:text-[var(--biolink-text)] hover:underline"
-        >
-          <Trans message="View all services" />
-          <ArrowRightIcon className="size-4" />
-        </a>
       )}
     </section>
   );

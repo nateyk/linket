@@ -60,16 +60,16 @@ class ServicePublicSeoTest extends TestCase
         $response->assertDontSee('&lt;p&gt;', false);
     }
 
-    public function test_crawler_gets_prerendered_services_index(): void
+    public function test_the_old_services_list_url_redirects_for_crawlers_too(): void
     {
         [$store, $service] = $this->visibleService();
         ActiveWorkspace::clearCache();
 
-        $response = $this->get("/{$store->back_half}/services?_escaped_fragment_=");
-
-        $response->assertOk();
-        $response->assertSee('Brand identity sprint', false);
-        $response->assertSee('rel="canonical"', false);
+        // The list is a storefront tab, not an indexable page of its own, so
+        // crawlers are sent to that tab instead of a page that no longer
+        // exists.
+        $this->get("/{$store->back_half}/services?_escaped_fragment_=")
+            ->assertRedirect("/{$store->back_half}?section=services");
     }
 
     public function test_non_crawler_gets_spa_shell_not_prerender(): void

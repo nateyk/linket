@@ -23,7 +23,6 @@ import {
   PublicDigitalProductPage,
 } from '@app/digital-products/public/digital-product-public-pages';
 import {PublicServicePage} from '@app/services/public/public-service-page';
-import {PublicServicesPage} from '@app/services/public/public-services-page';
 import {NotFoundPage} from '@common/ui/not-found-page/not-found-page';
 import {getBootstrapData} from '@ui/bootstrap-data/bootstrap-data-store';
 import {useEffect, useState} from 'react';
@@ -154,10 +153,6 @@ export function Component() {
   const loaders = getBootstrapData().loaders;
   const linkeablePage = loaders?.linkeablePage;
   const preview = usePreviewSync(linkeablePage?.data);
-
-  if (loaders?.servicesPage) {
-    return <PublicServicesPage data={loaders.servicesPage.data} />;
-  }
 
   if (loaders?.servicePage) {
     return <PublicServicePage data={loaders.servicePage.data} />;

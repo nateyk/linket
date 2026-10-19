@@ -1,7 +1,7 @@
 <?php
 
 use App\CreatorServices\Controllers\PublicServicePageController;
-use App\CreatorServices\Controllers\PublicServicesPageController;
+use App\CreatorServices\PublicCreatorServices;
 use App\Demo\Controllers\DemoLoginController;
 use App\Links\Controllers\FallbackRouteController;
 use App\Links\Controllers\LinkImageController;
@@ -61,10 +61,17 @@ Route::name('blog.')->prefix('blog')->group(function () {
     Route::get('{slug}', [BlogController::class, 'article'])->name('article');
 });
 
-// Public creator services. These are registered after the blog group so a
-// blog article slugged "services" is not swallowed by `{storeSlug}/services`.
-Route::get('{storeSlug}/services', [PublicServicesPageController::class, 'show'])
-    ->name('services.public.index');
+// Public creator services. Registered after the blog group so a blog article
+// slugged "services" is not swallowed by `{storeSlug}/services`.
+//
+// Services are a tab on the storefront, like Products and About — there is no
+// separate list page. The old list URL still resolves, but sends the visitor
+// to that tab so inbound links and search results keep working.
+Route::get('{storeSlug}/services', function (string $storeSlug) {
+    app(PublicCreatorServices::class)->findStore($storeSlug);
+
+    return redirect("/{$storeSlug}?section=services", 301);
+})->name('services.public.index');
 Route::get('{storeSlug}/services/{service}', [PublicServicePageController::class, 'show'])
     ->name('services.public.show');
 

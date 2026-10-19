@@ -26,16 +26,15 @@ class PublicServicesTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_services_index_sends_the_visitor_back_to_the_services_tab(): void
+    public function test_services_list_url_redirects_to_the_services_tab(): void
     {
         [, , $store] = $this->context();
         $this->publishedService($store, 'Logo design');
 
-        // A store with products opens on Products by default, so "back"
-        // without the section would strand the visitor on the wrong tab.
+        // Services are a tab on the storefront, like Products and About, so
+        // the old standalone URL keeps working by sending visitors there.
         $this->get("/{$store->back_half}/services")
-            ->assertOk()
-            ->assertSee('?section=services', false);
+            ->assertRedirect("/{$store->back_half}?section=services");
     }
 
     public function test_public_lists_only_published_services_for_the_requested_store(): void
@@ -113,9 +112,10 @@ class PublicServicesTest extends TestCase
         [, , $store] = $this->context();
         $this->publishedService($store, 'Logo design');
 
+        // There is no standalone list page to render: it redirects to the
+        // storefront's Services tab.
         $this->get("/{$store->back_half}/services")
-            ->assertOk()
-            ->assertSee('servicesPage', false);
+            ->assertRedirect("/{$store->back_half}?section=services");
     }
 
     public function test_blog_article_slugged_services_is_not_shadowed(): void
@@ -137,9 +137,10 @@ class PublicServicesTest extends TestCase
     {
         [, , $store] = $this->context();
         $store->update(['password' => bcrypt('secret')]);
-        $this->publishedService($store, 'Logo design');
+        $service = $this->publishedService($store, 'Logo design');
 
-        $this->get("/{$store->back_half}/services")
+        // The gate belongs to the detail page now that the list is a tab.
+        $this->get("/{$store->back_half}/services/{$service->slug}")
             ->assertOk()
             ->assertSee('********', false);
     }
