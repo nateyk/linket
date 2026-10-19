@@ -7,6 +7,7 @@ import {Button} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
 import {Dialog} from '@shadcn/dialog/dialog';
 import {Select} from '@shadcn/forms/select/select';
+import {Field} from '@shadcn/forms/field';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {FormattedDate} from '@ui/i18n/formatted-date';
 import {message} from '@ui/i18n/message';
@@ -223,59 +224,72 @@ export function Component() {
             </Alert>
           )}
 
-          <div className="flex flex-wrap items-center gap-3">
-            <Select.Root
-              value={serviceId || 'all'}
-              onValueChange={value =>
-                applyServiceFilter(value === 'all' ? '' : String(value))
-              }
-            >
-              <Select.Trigger className="min-w-44">
-                <Select.Value>
-                  {serviceId
-                    ? (services.find(
-                        service => String(service.id) === serviceId,
-                      )?.title ?? trans(message('All services')))
-                    : trans(message('All services'))}
-                </Select.Value>
-              </Select.Trigger>
-              <Select.Content>
-                <Select.Item value="all">
-                  {trans(message('All services'))}
-                </Select.Item>
-                {services.map(service => (
-                  <Select.Item key={service.id} value={String(service.id)}>
-                    {service.title}
+          <div className="flex flex-wrap items-end gap-3">
+            <Field.Root className="min-w-44 gap-1.5">
+              <Field.Label htmlFor="inquiry-service-filter" className="text-xs text-muted-foreground">
+                <Trans message="Service" />
+              </Field.Label>
+              <Select.Root
+                value={serviceId || 'all'}
+                onValueChange={value =>
+                  applyServiceFilter(value === 'all' ? '' : String(value))
+                }
+              >
+                <Select.Trigger
+                  id="inquiry-service-filter"
+                  className="w-full"
+                >
+                  <Select.Value>
+                    {serviceId
+                      ? (services.find(
+                          service => String(service.id) === serviceId,
+                        )?.title ?? trans(message('All services')))
+                      : trans(message('All services'))}
+                  </Select.Value>
+                </Select.Trigger>
+                <Select.Content>
+                  <Select.Item value="all">
+                    {trans(message('All services'))}
                   </Select.Item>
-                ))}
-              </Select.Content>
-            </Select.Root>
+                  {services.map(service => (
+                    <Select.Item key={service.id} value={String(service.id)}>
+                      {service.title}
+                    </Select.Item>
+                  ))}
+                </Select.Content>
+              </Select.Root>
+            </Field.Root>
 
-            <Select.Root
-              value={status || 'all'}
-              onValueChange={value => {
-                setStatus(value === 'all' ? '' : String(value));
-                setPage(1);
-              }}
-            >
-              <Select.Trigger className="min-w-40">
-                <Select.Value>
-                  {status
-                    ? inquiryStatusMessage(status).message
-                    : trans(message('All statuses'))}
-                </Select.Value>
-              </Select.Trigger>
-              <Select.Content>
-                <Select.Item value="all">
-                  {trans(message('All statuses'))}
-                </Select.Item>
-                {STATUSES.map(item => (
-                  <Select.Item key={item} value={item}>
-                    {inquiryStatusMessage(item).message}
+            <Field.Root className="min-w-40 gap-1.5">
+              <Field.Label htmlFor="inquiry-status-filter" className="text-xs text-muted-foreground">
+                <Trans message="Status" />
+              </Field.Label>
+              <Select.Root
+                value={status || 'all'}
+                onValueChange={value => {
+                  setStatus(value === 'all' ? '' : String(value));
+                  setPage(1);
+                }}
+              >
+                <Select.Trigger id="inquiry-status-filter" className="w-full">
+                  <Select.Value>
+                    {status
+                      ? inquiryStatusMessage(status).message
+                      : trans(message('All statuses'))}
+                  </Select.Value>
+                </Select.Trigger>
+                <Select.Content>
+                  <Select.Item value="all">
+                    {trans(message('All statuses'))}
                   </Select.Item>
-                ))}
-              </Select.Content>
-            </Select.Root>
+                  {STATUSES.map(item => (
+                    <Select.Item key={item} value={item}>
+                      {inquiryStatusMessage(item).message}
+                    </Select.Item>
+                  ))}
+                </Select.Content>
+              </Select.Root>
+            </Field.Root>
           </div>
 
           {loading ? (

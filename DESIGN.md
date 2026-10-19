@@ -323,6 +323,14 @@ than on the page. This is why panels, tables and the sidebar never fight the win
 needs more width is a page that needs a table with horizontal scroll, not a wider
 container.
 
+**The Editor Container.** A creation form that benefits from a live preview is the
+one exception to the rule above: it centers on `max-w-6xl` and splits into
+`xl:grid-cols-[minmax(0,1fr)_26rem]`, form on the left, a sticky preview rail on the
+right. The narrower measure keeps the field column readable while the rail holds a
+real preview bound to form state. The rail sticks at the same `xl` breakpoint the
+grid splits at (`xl:sticky xl:top-6`) — a sticky that begins earlier than the grid
+column is a promise the layout does not keep.
+
 ## Elevation & Depth
 
 The system is flat by default and separates surfaces with a hairline ring, not with

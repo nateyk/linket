@@ -62,6 +62,9 @@ export function Component() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
   const [busyId, setBusyId] = useState<number>();
+  const publishedCount = services.filter(
+    service => service.status === 'published',
+  ).length;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -148,19 +151,27 @@ export function Component() {
     <DashboardLayout.MainSection>
       <DashboardLayout.SectionHeader>
         <DashboardLayout.SidebarToggle />
-        <DashboardLayout.SectionTitle>
+        <DashboardLayout.SectionTitle render={<h1 />}>
           <Trans message="My Services" />
         </DashboardLayout.SectionTitle>
         <Button
           variant="outline"
+          size="sm"
           render={<Link to="/dashboard/services/inquiries" />}
         >
-          <InboxIcon data-icon="inline-start" />
-          <Trans message="Inquiries" />
+          <InboxIcon className="size-4" />
+          <span className="max-sm:hidden">
+            <Trans message="Inquiries" />
+          </span>
         </Button>
-        <Button render={<Link to="/dashboard/services/new" />}>
-          <PlusIcon data-icon="inline-start" />
-          <Trans message="New service" />
+        <Button
+          size="sm"
+          render={<Link to="/dashboard/services/new" />}
+        >
+          <PlusIcon className="size-4" />
+          <span className="max-sm:hidden">
+            <Trans message="New service" />
+          </span>
         </Button>
       </DashboardLayout.SectionHeader>
 
@@ -190,21 +201,36 @@ export function Component() {
               </Empty.Content>
             </Empty.Root>
           ) : services.length ? (
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {services.map(service => (
-                <ServiceCard
-                  key={service.id}
-                  service={service}
-                  busy={busyId === service.id}
-                  onToggleStatus={() =>
-                    void changeStatus(
-                      service,
-                      service.status === 'published' ? 'draft' : 'published',
-                    )
-                  }
-                  onDelete={() => remove(service)}
+            <div className="flex flex-col gap-4">
+              <p className="text-sm text-muted-foreground">
+                <Trans
+                  message=":published published · :drafts drafts · :inquiries inquiries"
+                  values={{
+                    published: publishedCount,
+                    drafts: services.length - publishedCount,
+                    inquiries: services.reduce(
+                      (total, service) => total + service.inquiries_count,
+                      0,
+                    ),
+                  }}
                 />
-              ))}
+              </p>
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {services.map(service => (
+                  <ServiceCard
+                    key={service.id}
+                    service={service}
+                    busy={busyId === service.id}
+                    onToggleStatus={() =>
+                      void changeStatus(
+                        service,
+                        service.status === 'published' ? 'draft' : 'published',
+                      )
+                    }
+                    onDelete={() => remove(service)}
+                  />
+                ))}
+              </div>
             </div>
           ) : (
             <Empty.Root className="rounded-card border border-dashed py-20">
@@ -271,7 +297,7 @@ function ServiceCard({
   const editPath = `/dashboard/services/${service.id}/edit`;
 
   return (
-    <Card.Root className="group flex h-full flex-col gap-0 overflow-hidden py-0 shadow-xs transition-shadow hover:shadow-md">
+    <Card.Root className="group flex h-full flex-col gap-0 overflow-hidden py-0 ring-1 ring-foreground/10 transition-shadow hover:shadow-sm">
       <Card.Header className="relative block p-0">
         <Link
           to={editPath}
