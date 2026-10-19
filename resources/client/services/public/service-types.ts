@@ -43,7 +43,10 @@ export type PublicServiceDetail = PublicService & {
   faqs: PublicServiceFaq[];
 };
 
-export type PublicStore = Biolink & {public_service_count?: number};
+export type PublicStore = Biolink & {
+  public_service_count?: number;
+  password?: string | null;
+};
 
 export type PublicServicesPageData = {
   store: PublicStore;

@@ -23,6 +23,7 @@ class PublicServicesPageController extends Controller
                 'data' => [
                     'store' => (new BiolinkResource($store))->resolve(),
                     'appearance' => $store->appearance?->config,
+                    'password' => $store->password ? \App\Links\Models\Link::PLACEHOLDER_PASSWORD : null,
                     'services' => PublicServiceResource::collection($services)->resolve(),
                     'back_url' => $store->short_url,
                 ],

@@ -3,10 +3,11 @@ import {
 } from '@app/short-links/renderers/biolink-renderer/biolink-appearance';
 import {Background} from '@app/short-links/renderers/biolink-renderer/biolink-background';
 import {Avatar} from '@shadcn/avatar/avatar';
+import {PasswordPage} from '@app/short-links/password-page';
 import {Trans} from '@ui/i18n/trans';
 import {loadFonts} from '@ui/fonts/font-picker/load-fonts';
 import {ArrowLeftIcon, BriefcaseBusinessIcon} from 'lucide-react';
-import {useEffect, type CSSProperties} from 'react';
+import {useEffect, useState, type CSSProperties} from 'react';
 import {ServiceCard} from './service-card';
 import type {PublicServicesPageData} from './service-types';
 
@@ -15,6 +16,7 @@ export function PublicServicesPage({data}: {data: PublicServicesPageData}) {
   const profile = store.profile_config ?? {};
   const displayName = profile.display_name || store.name;
   const avatarUrl = profile.avatar_url || store.user?.image;
+  const [passwordValid, setPasswordValid] = useState(!store.password);
 
   useEffect(() => {
     if (!appearance?.fontConfig) return;
@@ -23,6 +25,15 @@ export function PublicServicesPage({data}: {data: PublicServicesPageData}) {
       weights: [400, 500, 600, 700],
     });
   }, [appearance?.fontConfig]);
+
+  if (store.password && !passwordValid) {
+    return (
+      <PasswordPage
+        linkeable={store}
+        onPasswordValid={() => setPasswordValid(true)}
+      />
+    );
+  }
 
   return (
     <div

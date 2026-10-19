@@ -23,6 +23,7 @@ class PublicServicePageController extends Controller
                 'data' => [
                     'store' => (new BiolinkResource($store))->resolve(),
                     'appearance' => $store->appearance?->config,
+                    'password' => $store->password ? \App\Links\Models\Link::PLACEHOLDER_PASSWORD : null,
                     'service' => (new PublicServiceDetailResource($creatorService))->resolve(),
                     'inquiry_endpoint' => "/api/v1/public/stores/{$store->id}/services/{$creatorService->slug}/inquiries",
                     'back_url' => rtrim((string) $store->short_url, '/').'/services',

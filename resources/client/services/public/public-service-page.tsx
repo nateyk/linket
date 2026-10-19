@@ -1,3 +1,4 @@
+import {PasswordPage} from '@app/short-links/password-page';
 import {resolveBiolinkThemeVariables} from '@app/short-links/renderers/biolink-renderer/biolink-appearance';
 import {Background} from '@app/short-links/renderers/biolink-renderer/biolink-background';
 import {Accordion} from '@shadcn/accordion/accordion';
@@ -44,6 +45,8 @@ export function PublicServicePage({data}: {data: PublicServicePageData}) {
         !!item.href,
     );
 
+  const [passwordValid, setPasswordValid] = useState(!store.password);
+
   useEffect(() => {
     if (!appearance?.fontConfig) return;
     loadFonts([appearance.fontConfig], {
@@ -51,6 +54,15 @@ export function PublicServicePage({data}: {data: PublicServicePageData}) {
       weights: [400, 500, 600, 700],
     });
   }, [appearance?.fontConfig]);
+
+  if (store.password && !passwordValid) {
+    return (
+      <PasswordPage
+        linkeable={store}
+        onPasswordValid={() => setPasswordValid(true)}
+      />
+    );
+  }
 
   const requestQuote = (nextPackageId?: number) => {
     setPackageId(nextPackageId);

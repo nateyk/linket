@@ -73,8 +73,9 @@ vi.mock('./store-front', () => ({
 
 const ABOUT_HTML = '<p>About this creator</p>';
 
-function makeBiolink() {
+function makeBiolink(overrides: Record<string, unknown> = {}) {
   return {
+    ...overrides,
     id: 1,
     builder_mode: 'creator_profile',
     public_item_count: 2,
@@ -213,7 +214,7 @@ describe('creator profile on mobile', () => {
     const user = userEvent.setup();
     render(
       <CreatorProfileLayout
-        biolink={{...makeBiolink(), public_service_count: 1} as never}
+        biolink={makeBiolink({public_service_count: 1})}
         appearance={null}
         content={[shopWidget]}
       />,

@@ -73,6 +73,7 @@ class CreatorServicesApiTest extends TestCase
             ->assertJsonPath('data.packages.0.name', 'Starter')
             ->assertJsonPath('data.packages.1.price_cents', null)
             ->assertJsonPath('data.starting_price_cents', 29900)
+            ->assertJsonPath('data.currency', 'ETB')
             ->assertJsonPath('data.faqs.0.question', 'How long?')
             ->assertJsonCount(2, 'data.gallery')
             ->assertJsonPath('data.contact_channels.0.value', '+251911234567')
@@ -146,6 +147,38 @@ class CreatorServicesApiTest extends TestCase
         $this->assertDatabaseHas('creator_service_inquiries', ['id' => $inquiry->id, 'creator_service_package_id' => null]);
     }
 
+    public function test_partial_status_update_keeps_existing_content(): void
+    {
+        [$creator, , $store] = $this->context();
+        $service = CreatorService::factory()->forStore($store)->create([
+            'short_description' => 'A short pitch',
+            'description' => '<p>Full description</p>',
+            'category' => 'Design',
+            'skills' => ['Logo'],
+            'video_url' => 'https://example.com/video',
+            'live_demo_url' => 'https://example.com/demo',
+            'contact_channels' => [
+                ['type' => 'email', 'label' => 'Email', 'value' => 'hi@example.com'],
+            ],
+        ]);
+
+        $this->stateful()->actingAs($creator)->putJson("/api/v1/services/{$service->id}", [
+            'store_id' => $store->id,
+            'title' => $service->title,
+            'status' => 'published',
+        ])->assertOk();
+
+        $fresh = $service->fresh();
+        $this->assertSame('A short pitch', $fresh->short_description);
+        $this->assertSame('<p>Full description</p>', $fresh->description);
+        $this->assertSame('Design', $fresh->category);
+        $this->assertSame(['Logo'], $fresh->skills);
+        $this->assertSame('https://example.com/video', $fresh->video_url);
+        $this->assertSame('https://example.com/demo', $fresh->live_demo_url);
+        $this->assertSame('email', $fresh->contact_channels[0]['type']);
+        $this->assertSame('published', $fresh->status);
+    }
+
     public function test_other_creator_cannot_view_update_or_delete(): void
     {
         [$creator, $workspace, $store] = $this->context();
@@ -167,6 +200,17 @@ class CreatorServicesApiTest extends TestCase
 
         $this->stateful()->actingAs($creator)->postJson('/api/v1/services', [
             'store_id' => $otherStore->id,
+            'title' => 'Logo design',
+        ])->assertUnprocessable();
+    }
+
+    public function test_create_rejects_a_deleted_storefront(): void
+    {
+        [$creator, , $store] = $this->context();
+        $store->delete();
+
+        $this->stateful()->actingAs($creator)->postJson('/api/v1/services', [
+            'store_id' => $store->id,
             'title' => 'Logo design',
         ])->assertUnprocessable();
     }

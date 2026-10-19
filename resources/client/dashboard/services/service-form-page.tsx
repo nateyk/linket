@@ -139,7 +139,15 @@ function ServiceFormPage() {
 
     try {
       if (isEditing) {
-        await apiClient.put(`/api/v1/services/${serviceId}`, payload);
+        const response = await apiClient.put(
+          `/api/v1/services/${serviceId}`,
+          payload,
+        );
+        setForm(
+          fromServiceResource(
+            (response.data as {data: CreatorServiceResource}).data,
+          ),
+        );
       } else {
         await apiClient.post('/api/v1/services', payload);
       }
@@ -150,9 +158,7 @@ function ServiceFormPage() {
           : message('Service saved'),
       );
 
-      if (isEditing) {
-        setForm(current => ({...current, status: payload.status}));
-      } else {
+      if (!isEditing) {
         navigate('/dashboard/services');
       }
     } catch (reason) {

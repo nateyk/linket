@@ -15,7 +15,9 @@ class CrupdateCreatorService
     public function execute(array $data, User $creator, ?CreatorService $service = null): CreatorService
     {
         $workspaceId = ActiveWorkspace::get()->id;
-        $channels = $this->normalizeContactChannels($data['contact_channels'] ?? []);
+        $channels = array_key_exists('contact_channels', $data)
+            ? $this->normalizeContactChannels($data['contact_channels'] ?? [])
+            : null;
 
         return DB::transaction(function () use ($data, $creator, $service, $workspaceId, $channels): CreatorService {
             $attributes = [
@@ -23,18 +25,30 @@ class CrupdateCreatorService
                 'user_id' => $creator->id,
                 'store_id' => $data['store_id'],
                 'title' => $data['title'],
-                'short_description' => $data['short_description'] ?? null,
-                'description' => app(SanitizeProductDescription::class)->execute($data['description'] ?? null),
-                'category' => $data['category'] ?? null,
-                'skills' => array_values(array_filter($data['skills'] ?? [], fn ($skill): bool => trim((string) $skill) !== '')),
+                'short_description' => array_key_exists('short_description', $data)
+                    ? $data['short_description']
+                    : $service?->short_description,
+                'description' => array_key_exists('description', $data)
+                    ? app(SanitizeProductDescription::class)->execute($data['description'])
+                    : $service?->description,
+                'category' => array_key_exists('category', $data)
+                    ? $data['category']
+                    : $service?->category,
+                'skills' => array_key_exists('skills', $data)
+                    ? array_values(array_filter($data['skills'] ?? [], fn ($skill): bool => trim((string) $skill) !== ''))
+                    : ($service?->skills ?? []),
                 'cover_file_entry_id' => array_key_exists('cover_file_entry_id', $data)
                     ? $data['cover_file_entry_id']
                     : $service?->cover_file_entry_id,
-                'video_url' => $data['video_url'] ?? null,
-                'live_demo_url' => $data['live_demo_url'] ?? null,
-                'contact_channels' => $channels,
+                'video_url' => array_key_exists('video_url', $data)
+                    ? $data['video_url']
+                    : $service?->video_url,
+                'live_demo_url' => array_key_exists('live_demo_url', $data)
+                    ? $data['live_demo_url']
+                    : $service?->live_demo_url,
+                'contact_channels' => $channels ?? $service?->contact_channels ?? [],
                 'status' => $data['status'] ?? $service?->status ?? 'draft',
-                'currency' => 'ETB',
+                'currency' => $service?->currency ?? 'ETB',
             ];
 
             if ($service) {
@@ -54,7 +68,7 @@ class CrupdateCreatorService
                 $this->syncImages($service, $data['gallery_file_entry_ids'] ?? []);
             }
 
-            return $service->fresh()->load(['store', 'cover', 'images.file', 'packages', 'faqs']);
+            return $service->fresh()->load(['store.domain', 'cover', 'images.file', 'packages', 'faqs']);
         });
     }
 

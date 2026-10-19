@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Biolinks\Models\Biolink;
 use App\CreatorServices\Models\CreatorService;
+use Common\Blog\Models\BlogArticle;
+use Common\Blog\Models\BlogCategory;
 use App\CreatorServices\Models\ServiceFaq;
 use App\CreatorServices\Models\ServicePackage;
 use App\Models\User;
@@ -102,6 +104,32 @@ class PublicServicesTest extends TestCase
         $this->get("/{$store->back_half}/services")
             ->assertOk()
             ->assertSee('servicesPage', false);
+    }
+
+    public function test_blog_article_slugged_services_is_not_shadowed(): void
+    {
+        $category = BlogCategory::create(['name' => 'Guides']);
+        BlogArticle::create([
+            'blog_category_id' => $category->id,
+            'title' => 'Services',
+            'slug' => 'services',
+            'body' => '<p>Body</p>',
+            'status' => 'published',
+            'published_at' => now(),
+        ]);
+
+        $this->get('/blog/services')->assertOk();
+    }
+
+    public function test_password_protected_service_page_exposes_password_gate(): void
+    {
+        [, , $store] = $this->context();
+        $store->update(['password' => bcrypt('secret')]);
+        $this->publishedService($store, 'Logo design');
+
+        $this->get("/{$store->back_half}/services")
+            ->assertOk()
+            ->assertSee('********', false);
     }
 
     public function test_public_service_web_page_returns_ok_and_draft_404(): void

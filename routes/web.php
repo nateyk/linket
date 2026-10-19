@@ -44,11 +44,6 @@ Route::get('dashboard/my-products/{product}/course/analytics', [HomeController::
 Route::get('dashboard/{any?}', [HomeController::class, 'render'])->where('any', '.*');
 Route::get('admin/{any?}', [HomeController::class, 'render'])->where('any', '.*');
 
-Route::get('{storeSlug}/services', [PublicServicesPageController::class, 'show'])
-    ->name('services.public.index');
-Route::get('{storeSlug}/services/{service}', [PublicServicePageController::class, 'show'])
-    ->name('services.public.show');
-
 Route::get('{linkHash}/img', [LinkImageController::class, 'show']);
 
 Route::get('{storeSlug}/products/{digitalProduct}', [PublicDigitalProductPageController::class, 'show'])
@@ -65,6 +60,13 @@ Route::name('blog.')->prefix('blog')->group(function () {
     Route::get('categories/{slug}', [BlogController::class, 'category'])->name('category');
     Route::get('{slug}', [BlogController::class, 'article'])->name('article');
 });
+
+// Public creator services. These are registered after the blog group so a
+// blog article slugged "services" is not swallowed by `{storeSlug}/services`.
+Route::get('{storeSlug}/services', [PublicServicesPageController::class, 'show'])
+    ->name('services.public.index');
+Route::get('{storeSlug}/services/{service}', [PublicServicePageController::class, 'show'])
+    ->name('services.public.show');
 
 // CATCH ALL ROUTES AND REDIRECT TO HOME
 Route::fallback(FallbackRouteController::class);

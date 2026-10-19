@@ -18,6 +18,7 @@ class CreatorServiceResource extends JsonResource
             'title' => $this->title,
             'slug' => $this->slug,
             'status' => $this->status,
+            'currency' => $this->currency,
             'category' => $this->category,
             'skills' => $this->skills ?? [],
             'short_description' => $this->short_description,

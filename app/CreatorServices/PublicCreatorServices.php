@@ -35,7 +35,7 @@ class PublicCreatorServices
         return CreatorService::query()
             ->where('store_id', $store->id)
             ->where('status', 'published')
-            ->with(['store', 'cover', 'images.file', 'packages', 'faqs'])
+            ->with(['store.domain', 'cover', 'images.file', 'packages', 'faqs'])
             ->withCount('packages')
             ->latest('id')
             ->get();

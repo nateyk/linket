@@ -11,7 +11,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Facades\DB;
 
 class CreatorServicesController extends Controller
 {
@@ -23,7 +22,7 @@ class CreatorServicesController extends Controller
             CreatorService::query()
                 ->where('workspace_id', ActiveWorkspace::get()->id)
                 ->where('user_id', $request->user()->id)
-                ->with(['store', 'cover', 'images.file', 'packages', 'faqs'])
+                ->with(['store.domain', 'cover', 'images.file', 'packages', 'faqs'])
                 ->withCount([
                     'inquiries',
                     'inquiries as new_inquiries_count' => fn (Builder $query): Builder => $query->where('status', 'new'),
@@ -38,7 +37,7 @@ class CreatorServicesController extends Controller
         $this->assertOwner($service, $request);
 
         return new CreatorServiceResource(
-            $service->load(['store', 'cover', 'images.file', 'packages', 'faqs'])
+            $service->load(['store.domain', 'cover', 'images.file', 'packages', 'faqs'])
                 ->loadCount([
                     'inquiries',
                     'inquiries as new_inquiries_count' => fn (Builder $query): Builder => $query->where('status', 'new'),
@@ -91,8 +90,8 @@ class CreatorServicesController extends Controller
                 'required',
                 'integer',
                 function (string $attribute, mixed $value, \Closure $fail) use ($workspaceId): void {
-                    $exists = DB::table((new Store())->getTable())
-                        ->where('id', $value)
+                    $exists = Store::query()
+                        ->whereKey($value)
                         ->where('workspace_id', $workspaceId)
                         ->exists();
 
