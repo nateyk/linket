@@ -33,15 +33,20 @@ class ServiceRelationLoadingTest extends TestCase
 
         $this->assertNotNull($listed);
 
-        // A card shows the cover, a package count and the public URL, which
-        // is built from the storefront. Loading galleries, FAQs and packages
-        // for every listed service is work the index never uses — the client
-        // shows a handful of cards.
+        // A card shows the cover, a package count, the lowest package price
+        // and the public URL, which is built from the storefront. Packages
+        // load for that price, but only the columns it needs — galleries and
+        // FAQs stay on the detail page.
         $this->assertTrue($listed->relationLoaded('cover'));
         $this->assertTrue($listed->relationLoaded('store'));
+        $this->assertTrue($listed->relationLoaded('packages'));
         $this->assertFalse($listed->relationLoaded('images'));
         $this->assertFalse($listed->relationLoaded('faqs'));
-        $this->assertFalse($listed->relationLoaded('packages'));
+        $this->assertSame(29900, $listed->packages->first()->price_cents);
+
+        $priceColumns = array_keys($listed->packages->first()->getAttributes());
+        sort($priceColumns);
+        $this->assertSame(['creator_service_id', 'id', 'price_cents'], $priceColumns);
         $this->assertStringContainsString('/services/', $listed->publicUrl());
     }
 

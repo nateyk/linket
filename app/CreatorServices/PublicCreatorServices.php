@@ -32,14 +32,18 @@ class PublicCreatorServices
     {
         $this->assertStore($store);
 
-        // The index renders cards: a cover, a category, a package count and
-        // the public URL (built from the storefront). Loading galleries, FAQs
-        // and packages for every listed service is work the index never uses —
-        // the client shows a handful of cards.
+        // The index renders cards: a cover, a category, a package count, the
+        // lowest package price and the public URL (built from the storefront).
+        // Only the columns a card needs are loaded — descriptions and features
+        // belong to the detail page.
         return CreatorService::query()
             ->where('store_id', $store->id)
             ->where('status', 'published')
-            ->with(['store.domain', 'cover'])
+            ->with([
+                'store.domain',
+                'cover',
+                'packages' => fn ($query) => $query->select(['id', 'creator_service_id', 'price_cents']),
+            ])
             ->withCount('packages')
             ->latest('id')
             ->get();

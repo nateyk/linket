@@ -40,9 +40,31 @@ class PublicServicesTest extends TestCase
     public function test_public_lists_only_published_services_for_the_requested_store(): void
     {
         [, , $store] = $this->context();
-        $this->publishedService($store, 'Logo design');
-        $this->publishedService($store, 'Brand strategy');
+        $logo = $this->publishedService($store, 'Logo design');
+        $brand = $this->publishedService($store, 'Brand strategy');
         $this->service($store, 'Draft service', 'draft');
+
+        ServicePackage::query()->create([
+            'creator_service_id' => $brand->id,
+            'name' => 'Starter',
+            'price_cents' => 29900,
+            'currency' => 'ETB',
+            'position' => 0,
+        ]);
+        ServicePackage::query()->create([
+            'creator_service_id' => $brand->id,
+            'name' => 'Standard',
+            'price_cents' => 19900,
+            'currency' => 'ETB',
+            'position' => 1,
+        ]);
+        ServicePackage::query()->create([
+            'creator_service_id' => $logo->id,
+            'name' => 'Starter',
+            'price_cents' => 49900,
+            'currency' => 'ETB',
+            'position' => 0,
+        ]);
 
         [, , $otherStore] = $this->context();
         $this->publishedService($otherStore, 'Other store service');
@@ -51,7 +73,28 @@ class PublicServicesTest extends TestCase
             ->assertOk()
             ->assertJsonCount(2, 'data')
             ->assertJsonPath('data.0.title', 'Brand strategy')
-            ->assertJsonPath('data.1.title', 'Logo design');
+            // Cards show the lowest set package price; 19,900 is the cheapest
+            // way into the Brand strategy service even though it is second.
+            ->assertJsonPath('data.0.starting_price_cents', 19900)
+            ->assertJsonPath('data.1.title', 'Logo design')
+            ->assertJsonPath('data.1.starting_price_cents', 49900);
+    }
+
+    public function test_a_service_without_package_prices_has_no_starting_price(): void
+    {
+        [, , $store] = $this->context();
+        $service = $this->publishedService($store, 'Custom build');
+        ServicePackage::query()->create([
+            'creator_service_id' => $service->id,
+            'name' => 'Scoped',
+            'price_cents' => null,
+            'currency' => 'ETB',
+            'position' => 0,
+        ]);
+
+        $this->stateful()->getJson("/api/v1/public/stores/{$store->id}/services")
+            ->assertOk()
+            ->assertJsonPath('data.0.starting_price_cents', null);
     }
 
     public function test_public_detail_includes_packages_faqs_and_contact_channels(): void

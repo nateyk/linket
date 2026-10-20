@@ -17,9 +17,10 @@ import type {PublicService} from './service-types';
 /**
  * The storefront's service card. It uses the same rhythm as the product card
  * beside it in the shop: cover with the category as an overlay, title,
- * two-line summary, the package count, then price and one Appearance-styled
- * action on the bottom row. Surfaces and shadow come from the store, so the
- * two card kinds sit in one grid without a seam.
+ * two-line summary, the package count, then the starting price (or a quote
+ * request when no package has a price) and one Appearance-styled action on
+ * the bottom row. Surfaces and shadow come from the store, so the two card
+ * kinds sit in one grid without a seam.
  */
 export function ServiceCard({
   service,
@@ -88,14 +89,21 @@ export function ServiceCard({
           />
         </span>
 
-        <div className="mt-auto flex items-center justify-between gap-3 pt-1">
-          <span className="text-base leading-none font-semibold tracking-tight tabular-nums sm:text-lg">
-            {price ? (
-              <Trans message="From :price" values={{price}} />
-            ) : (
+        <div className="mt-auto flex items-end justify-between gap-3 pt-1">
+          {price ? (
+            <span className="flex min-w-0 flex-col gap-0.5">
+              <span className="text-xs font-medium text-[var(--biolink-muted-text)]">
+                <Trans message="Starting at" />
+              </span>
+              <span className="text-base leading-none font-semibold tracking-tight tabular-nums sm:text-lg">
+                {price}
+              </span>
+            </span>
+          ) : (
+            <span className="text-base leading-none font-semibold tracking-tight sm:text-lg">
               <Trans message="Request a quote" />
-            )}
-          </span>
+            </span>
+          )}
 
           <Button
             size="sm"

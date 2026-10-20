@@ -4,7 +4,7 @@
  * The customer preview is the only place a creator sees what a visitor gets
  * before publishing, and it reads the same state the form writes — no second
  * source of truth to drift. These tests drive that state directly and assert
- * what the card says: the title, the lowest price ("From"), every named
+ * what the card says: the title, the lowest price ("Starting at"), every named
  * package with its delivery/revision meta, and the contact chips.
  *
  * Two rules matter as much as the content: a draft says it is a draft (a
@@ -56,9 +56,9 @@ function draftWith(
   };
 }
 
-/** The "From <money>" price line under the title. */
+/** The "Starting at <money>" price line under the title. */
 function priceRow(): HTMLElement {
-  return screen.getByText('From').closest('span')!;
+  return screen.getByText('Starting at').closest('span')!;
 }
 
 /** One package row of the preview's option list. */
@@ -89,7 +89,7 @@ describe('a filled draft previews what the visitor gets', () => {
   test('leads with the lowest package price, not the highest', () => {
     render(<ServicePreview state={draftWith()} />);
 
-    // 1500 ETB, not 2500: "From" is the cheapest way in.
+    // 1500 ETB, not 2500: "Starting at" is the cheapest way in.
     expect(priceRow().textContent).toContain(formatMoney(150000, 'ETB'));
     expect(priceRow().textContent).not.toContain(formatMoney(250000, 'ETB'));
     expect(screen.queryByText('Request a quote')).toBeNull();
@@ -169,7 +169,7 @@ describe('an empty form previews as an empty, honest card', () => {
     const {container} = render(<ServicePreview state={emptyServiceForm()} />);
 
     expect(container.querySelector('li')).toBeNull();
-    expect(screen.queryByText('From')).toBeNull();
+    expect(screen.queryByText('Starting at')).toBeNull();
     expect(screen.queryByText('Quote')).toBeNull();
   });
 });
@@ -196,7 +196,7 @@ describe('a package with no price is a quote, not zero', () => {
     expect(screen.getByText('Request a quote')).toBeTruthy();
   });
 
-  test('a priced sibling keeps the "From" line while the blank one says Quote', () => {
+  test('a priced sibling keeps the "Starting at" line while the blank one says Quote', () => {
     render(
       <ServicePreview
         state={draftWith({

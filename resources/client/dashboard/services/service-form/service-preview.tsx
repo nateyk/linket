@@ -135,7 +135,7 @@ export function ServicePreview({state}: {state: ServiceFormState}) {
             <Trans message="Request a quote" />
           ) : (
             <span className="inline-flex items-baseline gap-1.5">
-              <Trans message="From" />
+              <Trans message="Starting at" />
               <span>{formatMoney(startingPrice, 'ETB')}</span>
             </span>
           )}

@@ -31,7 +31,8 @@ describe('service card', () => {
       screen.getByText('A complete identity for your business.'),
     ).toBeTruthy();
     expect(screen.getByText('Design')).toBeTruthy();
-    expect(screen.getByText(`From ${formatMoney(29900, 'ETB')}`)).toBeTruthy();
+    expect(screen.getByText('Starting at')).toBeTruthy();
+    expect(screen.getByText(formatMoney(29900, 'ETB'))).toBeTruthy();
     expect(screen.getByText('3 packages')).toBeTruthy();
   });
 
@@ -55,6 +56,7 @@ describe('service card', () => {
     );
 
     expect(screen.getByText('Request a quote')).toBeTruthy();
+    expect(screen.queryByText('Starting at')).toBeNull();
   });
 
   it('shows the same placeholder as a product without a cover', () => {
