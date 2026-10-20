@@ -415,6 +415,30 @@ export function resolveBiolinkThemeVariables(
     '--biolink-accent': accent.accent,
     '--biolink-accent-foreground': accent.accentForeground,
     '--biolink-focus': accent.focus,
+    // Claim the whole site token set for the painted store: primitives that
+    // still paint with dashboard tokens (outline buttons, accordion
+    // chevrons, badges, hover washes) would otherwise flip under a dark OS
+    // scheme while the store keeps its painted surface, ghosting their
+    // labels out on the seller card. Everything inside resolves in-world
+    // instead. Destructive stays site-owned (visibility is scheme-safe),
+    // and the unpainted branch above needs no remap — its storefront sits
+    // directly on the site theme, so the tokens stay coherent there.
+    '--be-foreground': 'var(--biolink-text)',
+    '--be-muted-foreground': 'var(--biolink-muted-text)',
+    '--be-background': 'var(--biolink-surface-strong)',
+    '--be-card': 'var(--biolink-surface-strong)',
+    '--be-card-foreground': 'var(--biolink-text)',
+    '--be-popover': 'var(--biolink-surface-strong)',
+    '--be-popover-foreground': 'var(--biolink-text)',
+    '--be-muted': 'var(--biolink-surface-muted)',
+    '--be-secondary': 'var(--biolink-surface-muted)',
+    '--be-secondary-foreground': 'var(--biolink-text)',
+    '--be-accent': 'var(--biolink-surface-muted)',
+    '--be-accent-foreground': 'var(--biolink-text)',
+    '--be-border': 'var(--biolink-border)',
+    '--be-input': 'var(--biolink-border)',
+    '--be-primary': 'var(--biolink-accent)',
+    '--be-primary-foreground': 'var(--biolink-accent-foreground)',
   };
 }
 

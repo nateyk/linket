@@ -157,6 +157,31 @@ describe('corner roundness radius variables', () => {
     ).toMatchObject({'--be-radius-card': '24px'});
   });
 
+  test('painted stores claim the site token set; unpainted ones need nothing', () => {
+    // Inside a painted store every dashboard-token primitive (outline
+    // buttons, accordion chevrons, hover washes) must resolve from the
+    // store's own surface, or it flips under a dark OS scheme and ghosts
+    // out on the painted card faces.
+    const painted = resolveBiolinkThemeVariables({
+      bgConfig: {backgroundImage: DARK_GRADIENT, color: '#ffffff'},
+    });
+    expect(painted['--be-foreground']).toBe('var(--biolink-text)');
+    expect(painted['--be-muted-foreground']).toBe('var(--biolink-muted-text)');
+    expect(painted['--be-border']).toBe('var(--biolink-border)');
+    expect(painted['--be-accent']).toBe('var(--biolink-surface-muted)');
+    expect(painted['--be-background']).toBe('var(--biolink-surface-strong)');
+    expect(painted['--be-card']).toBe('var(--biolink-surface-strong)');
+    expect(painted['--be-popover']).toBe('var(--biolink-surface-strong)');
+    expect(painted['--be-primary']).toBe('var(--biolink-accent)');
+
+    // An unpainted storefront sits directly on the site theme — the
+    // dashboard tokens stay coherent there, so nothing is claimed.
+    const unpainted = resolveBiolinkThemeVariables(null);
+    expect(unpainted['--be-foreground']).toBeUndefined();
+    expect(unpainted['--be-border']).toBeUndefined();
+    expect(unpainted['--be-accent']).toBeUndefined();
+  });
+
   test('button chrome rounds through --be-radius-button, not the setting utility class', () => {
     for (const setting of radiusSettings) {
       const resolved = resolveBiolinkButtonAppearance({

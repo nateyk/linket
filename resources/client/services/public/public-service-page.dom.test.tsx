@@ -54,9 +54,7 @@ const data: PublicServicePageData = {
         features: ['Three concepts'],
       },
     ],
-    faqs: [
-      {id: 20, question: 'How long does it take?', answer: 'Three days.'},
-    ],
+    faqs: [{id: 20, question: 'How long does it take?', answer: 'Three days.'}],
   },
   inquiry_endpoint: '/api/v1/public/stores/7/services/logo-design/inquiries',
   back_url: 'https://nate.test?section=services',
@@ -79,7 +77,9 @@ describe('public service page', () => {
 
     expect(screen.getAllByText('Logo design').length).toBeGreaterThan(0);
     expect(screen.getByText('Design')).toBeTruthy();
-    expect(screen.getByText('A custom logo built for your brand.')).toBeTruthy();
+    expect(
+      screen.getByText('A custom logo built for your brand.'),
+    ).toBeTruthy();
     expect(screen.getByText('Logo')).toBeTruthy();
     expect(screen.getByText('Branding')).toBeTruthy();
   });
@@ -116,6 +116,40 @@ describe('public service page', () => {
     ).toBe('mailto:hello@example.test');
   });
 
+  it('paints unthemed primitives with the store theme, not OS-scheme tokens', () => {
+    // The painted root claims the whole `--be-*` token set for its
+    // subtree: outline buttons, accordion chevrons and every other
+    // dashboard-token primitive would otherwise flip under a dark OS
+    // scheme and ghost out on the painted surfaces.
+    const {container} = render(
+      <PublicServicePage
+        data={{
+          ...data,
+          appearance: {
+            bgConfig: {backgroundColor: '#111111', color: '#ffffff'},
+          },
+        }}
+      />,
+    );
+    const root = container.firstElementChild as HTMLElement;
+
+    expect(root.style.getPropertyValue('--be-foreground')).toBe(
+      'var(--biolink-text)',
+    );
+    expect(root.style.getPropertyValue('--be-muted-foreground')).toBe(
+      'var(--biolink-muted-text)',
+    );
+    expect(root.style.getPropertyValue('--be-border')).toBe(
+      'var(--biolink-border)',
+    );
+    expect(root.style.getPropertyValue('--be-accent')).toBe(
+      'var(--biolink-surface-muted)',
+    );
+    expect(root.style.getPropertyValue('--be-background')).toBe(
+      'var(--biolink-surface-strong)',
+    );
+  });
+
   it('keeps the FAQ reachable behind its tab', async () => {
     const {default: userEvent} = await import('@testing-library/user-event');
     render(<PublicServicePage data={data} />);
@@ -138,7 +172,9 @@ describe('public service page', () => {
     expect(screen.getByText('One concept')).toBeTruthy();
     expect(screen.getByText('PNG files')).toBeTruthy();
     expect(
-      screen.getByText('You agree the details and payment directly with the creator.'),
+      screen.getByText(
+        'You agree the details and payment directly with the creator.',
+      ),
     ).toBeTruthy();
   });
 
