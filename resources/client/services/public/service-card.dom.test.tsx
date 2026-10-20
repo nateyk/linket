@@ -66,6 +66,18 @@ describe('service card', () => {
     expect(container.querySelector('svg')).toBeTruthy();
   });
 
+  it('contains its cover badge in a stacking context below the sticky section strip', () => {
+    const {container} = render(
+      <ServiceCard service={service} appearance={null} />,
+    );
+    const card = container.firstElementChild as HTMLElement;
+
+    // The badge is positioned z-10; without an isolated card it competes with
+    // the sticky Products/Services/About strip and floats over it on scroll.
+    expect(card.className).toContain('isolate');
+    expect(card.querySelector('.z-10')).toBeTruthy();
+  });
+
   it('names the action for screen readers without repeating the title', () => {
     render(<ServiceCard service={service} appearance={null} />);
 

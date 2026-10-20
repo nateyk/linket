@@ -41,7 +41,7 @@ export function ServiceCard({
   return (
     <div
       className={cn(
-        'group flex h-full w-full flex-col overflow-hidden rounded-card bg-[var(--biolink-surface)] text-[var(--biolink-text)]',
+        'group flex h-full w-full flex-col overflow-hidden isolate rounded-card bg-[var(--biolink-surface)] text-[var(--biolink-text)]',
         biolinkSurfaceEdgeClassName,
       )}
       // The store's own Appearance → Shadow, exactly as the product and
