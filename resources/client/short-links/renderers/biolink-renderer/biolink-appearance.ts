@@ -108,6 +108,74 @@ const systemRadiusScale: BiolinkRadiusScale = {
   cardXs: 'var(--radius-xl)',
 };
 
+/**
+ * Shared edge for storefront surface chrome (creator card, about panel,
+ * product cards, bottom nav). One `--biolink-border` ring — never a CSS
+ * border stacked on a ring (that made the nav read heavier than the cards).
+ * `border-0` clears BottomNavBar's default `border` so all surfaces match.
+ *
+ * Depth from Appearance → Buttons → Shadow is applied separately via the
+ * resolved button `boxShadow` inline style on creator, about, and product
+ * surfaces (and on actions). Shared ring keeps every surface edge matched.
+ */
+export const biolinkSurfaceEdgeClassName =
+  'border-0 ring-1 ring-(color:--biolink-border)';
+
+/**
+ * Segmented Tabs chrome for the public store (Products/About + product-page
+ * sections). Roundness follows Appearance → Corner roundness via
+ * `rounded-button`; active fill/label/shadow follow Buttons tokens so the
+ * strip stays in step with View / Buy / bottom-nav actions.
+ *
+ * Soft / Strong / Hard shadows need inset room inside the track — the same
+ * soft-pop offset the Appearance button preview uses — otherwise the cast
+ * bleeds past a 4px pad and reads clipped against the page. The inset stays
+ * symmetric so the active pill sits centred rather than hugging the top-left.
+ */
+export function resolveBiolinkSegmentedTabsAppearance(
+  appearance?: BiolinkAppearanceConfig | null,
+): {
+  listClassName: string;
+  indicatorClassName: string;
+  tabClassName: string;
+  style: CSSProperties;
+} {
+  const button = resolveBiolinkButtonAppearance(appearance);
+  const {
+    boxShadow = '',
+    backdropFilter: _backdrop,
+    ...buttonVars
+  } = button.style as CSSProperties & {
+    boxShadow?: string;
+    backdropFilter?: string;
+  };
+  const hasPopShadow = Boolean(boxShadow);
+
+  return {
+    listClassName: cn(
+      // Solid track (not washed muted) so the active pill + soft-pop cast
+      // read like the dashboard Appearance preview / soft-pop segmented control.
+      // Must beat Tabs.List's `group-data-horizontal/tabs:h-9` — plain `h-auto`
+      // does not conflict with that variant in twMerge, and a fixed 36px height
+      // crushes the soft-pop inset padding below.
+      'h-auto max-w-full justify-start gap-1 overflow-visible rounded-button bg-[var(--biolink-surface-strong)] text-[var(--biolink-muted-text)] group-data-horizontal/tabs:h-auto',
+      // p-2 (8px) contains the Strong/Hard cast (≤7px) on every side — the
+      // previous pe-3/pb-3 inset the pill toward the top-left. No-shadow keeps
+      // the tighter p-1.
+      hasPopShadow ? 'p-2' : 'p-1',
+      biolinkSurfaceEdgeClassName,
+    ),
+    indicatorClassName:
+      'rounded-button [background:var(--biolink-button-background)]! [box-shadow:var(--biolink-tab-active-shadow,none)]',
+    tabClassName:
+      'flex-none rounded-button px-4 py-2 text-sm font-medium text-[var(--biolink-text)]/75 not-data-active:hover:text-[var(--biolink-text)] data-active:text-[var(--biolink-button-text)]! pointer-coarse:min-h-11',
+    style: {
+      ...buttonVars,
+      '--biolink-tab-active-shadow': boxShadow || 'none',
+    } as CSSProperties,
+  };
+}
+
 export function resolveBiolinkRadiusVariables(
   appearance?: BiolinkAppearanceConfig | null,
 ): BiolinkRadiusVariables {

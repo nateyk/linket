@@ -1,4 +1,5 @@
 import {BiolinkAppearanceConfig} from '@app/gen/schemas/biolink-appearance-config';
+import {resolveBiolinkSegmentedTabsAppearance} from '@app/short-links/renderers/biolink-renderer/biolink-appearance';
 import {Tabs} from '@shadcn/tabs/tabs';
 import {message} from '@ui/i18n/message';
 import {useTrans} from '@ui/i18n/use-trans';
@@ -49,7 +50,9 @@ export function StoreFront({
           return;
         }
         const inset =
-          parseFloat(getComputedStyle(strip.closest('main') ?? document.body).paddingTop) || 0;
+          parseFloat(
+            getComputedStyle(strip.closest('main') ?? document.body).paddingTop,
+          ) || 0;
         const top = strip.getBoundingClientRect().top + window.scrollY - inset;
         window.scrollTo({top: Math.max(top, 0)});
       }}
@@ -76,49 +79,50 @@ function StoreTabs({
   stripRef: RefObject<HTMLDivElement | null>;
 }) {
   const {trans} = useTrans();
+  const segmented = resolveBiolinkSegmentedTabsAppearance(appearance);
 
-  // The strip sticks to the top of the viewport; the card below it is a
-  // plain block, so the card grows to full content height and the page
-  // carries the one scrollbar. The strip is opaque: it repaints the page
-  // background with both copies viewport-anchored (see Background's
-  // viewportFixed), so the card is hidden exactly at the tab line as it
-  // scrolls behind instead of showing through. It sticks below the
-  // safe-area inset (`--safe-top` in the phone preview) so the strip
-  // never slides under the status bar or Dynamic Island.
+  // Sticky strip keeps the section switcher reachable while product cards
+  // scroll. Default (segmented) Tabs — roundness + active paint follow
+  // Appearance Buttons so the strip matches View / Buy / bottom nav.
   return (
     <div
       ref={stripRef}
-      className="sticky top-[var(--safe-top,env(safe-area-inset-top,0px))] z-10 flex-none border-b border-[var(--biolink-border)] bg-transparent"
+      className="sticky top-[var(--safe-top,env(safe-area-inset-top,0px))] z-10 flex-none bg-transparent"
     >
       <Background appearance={appearance} viewportFixed omitNoiseDef />
-      <Tabs.List
-        variant="line"
-        aria-label={trans(message('Creator profile sections'))}
-        indicatorClass="bg-[var(--biolink-accent)]!"
-        className="w-fit gap-2 bg-transparent px-2 py-0 text-[var(--biolink-muted-text)]"
-      >
-        {tabs.map(tab => (
-          <Tabs.Tab
-            key={tab.id}
-            value={tab.id}
-            className="flex-none px-3 py-2.5 text-[var(--biolink-muted-text)] not-data-active:hover:text-[var(--biolink-text)]! data-active:text-[var(--biolink-accent)]! pointer-coarse:min-h-11"
-          >
-            {tab.label}
-          </Tabs.Tab>
-        ))}
-      </Tabs.List>
+      {/* Extra bottom pad keeps Appearance hard/strong soft-pop casts
+          inside the sticky strip when the track itself grows for shadow. */}
+      <div className="flex justify-start overflow-visible px-4 pt-2 pb-3 sm:px-4">
+        <Tabs.List
+          aria-label={trans(message('Creator profile sections'))}
+          style={segmented.style}
+          indicatorClass={segmented.indicatorClassName}
+          className={cn('w-fit', segmented.listClassName)}
+        >
+          {tabs.map(tab => (
+            <Tabs.Tab
+              key={tab.id}
+              value={tab.id}
+              className={segmented.tabClassName}
+            >
+              {tab.label}
+            </Tabs.Tab>
+          ))}
+        </Tabs.List>
+      </div>
     </div>
   );
 }
 
 /**
- * The frame the tab cards live in: 16px below the tab line (the design's
- * gap), 16px sides, and 32px below so the card's bottom corners and shadow
- * stay fully visible above the page's safe-area padding. The cards
- * themselves are rendered by each tab's content.
+ * The frame the tab cards live in: 16px below the tab strip, 16px sides,
+ * and 32px below so the card's bottom corners and shadow stay fully visible
+ * above the page's safe-area padding. The cards themselves are rendered by
+ * each tab's content.
  */
 function StoreCard({children}: {children: ReactNode}) {
+  // Comfortable pad under the tab strip so enlarged product cards breathe.
   return (
-    <div className="min-w-0 max-w-full px-4 pt-4 pb-8">{children}</div>
+    <div className="min-w-0 max-w-full px-4 pt-4 pb-8 sm:px-5">{children}</div>
   );
 }

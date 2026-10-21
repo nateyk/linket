@@ -16,6 +16,7 @@ import {
   resolveBiolinkButtonAppearance,
   resolveBiolinkContainerRadius,
   resolveBiolinkRadiusVariables,
+  resolveBiolinkSegmentedTabsAppearance,
   resolveBiolinkThemeVariables,
 } from './biolink-appearance';
 
@@ -197,13 +198,55 @@ describe('corner roundness radius variables', () => {
 describe('storefront appearance token wiring', () => {
   test('sticky Products/About strip does not leak dashboard bg-background', () => {
     const source = readSource('store-front.tsx');
-    expect(source).toContain('border-[var(--biolink-border)]');
-    expect(source).not.toMatch(
-      /sticky[\s\S]{0,200}?bg-background/,
+    expect(source).not.toMatch(/sticky[\s\S]{0,200}?bg-background/);
+    expect(source).toMatch(/sticky[\s\S]{0,200}?bg-transparent/);
+  });
+
+  test('Products/About segmented Tabs follow Appearance button color + roundness', () => {
+    const source = readSource('store-front.tsx');
+    expect(source).toContain('resolveBiolinkSegmentedTabsAppearance');
+    expect(source).toContain('style={segmented.style}');
+    expect(source).toContain('indicatorClass={segmented.indicatorClassName}');
+    expect(source).toContain('className={segmented.tabClassName}');
+    expect(source).not.toContain('variant="line"');
+    expect(source).not.toContain('rounded-full');
+
+    const segmented = resolveBiolinkSegmentedTabsAppearance({
+      btnConfig: {radius: 'rounded-sm', shadow: 'strong', color: '#000000'},
+    });
+    expect(segmented.listClassName).toContain('rounded-button');
+    expect(segmented.listClassName).toContain(
+      'bg-[var(--biolink-surface-strong)]',
     );
-    expect(source).toMatch(
-      /sticky[\s\S]{0,200}?bg-transparent/,
+    expect(segmented.listClassName).toContain(
+      'group-data-horizontal/tabs:h-auto',
     );
+    // Soft-pop Strong/Hard need inset room so the cast sits inside the
+    // track — symmetric, so the active pill stays centred instead of
+    // hugging the top-left corner.
+    expect(segmented.listClassName).toContain('p-2');
+    expect(segmented.listClassName).not.toContain('pe-3');
+    expect(segmented.listClassName).not.toContain('pb-3');
+    expect(segmented.indicatorClassName).toContain(
+      '[background:var(--biolink-button-background)]!',
+    );
+    // The pill wears the creator's roundness token, same as the track.
+    expect(segmented.indicatorClassName).toContain('rounded-button');
+    expect(segmented.tabClassName).toContain(
+      'data-active:text-[var(--biolink-button-text)]!',
+    );
+    expect(segmented.style).toMatchObject({
+      '--biolink-button-background': '#000000',
+      '--biolink-tab-active-shadow':
+        'rgb(0 0 0 / 30%) 0.3rem 0.3rem 0.4rem 0px',
+    });
+
+    const flat = resolveBiolinkSegmentedTabsAppearance({
+      btnConfig: {radius: 'rounded-sm', shadow: 'none', color: '#000000'},
+    });
+    expect(flat.listClassName).toContain('p-1');
+    expect(flat.listClassName).not.toContain('pe-3');
+    expect(flat.indicatorClassName).toContain('rounded-button');
   });
 
   test('sidebar biolink shell paints from --biolink tokens', () => {
