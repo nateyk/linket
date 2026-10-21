@@ -22,6 +22,24 @@ type BiolinkThemeVariables = CSSProperties & {
   '--biolink-accent': string;
   '--biolink-accent-foreground': string;
   '--biolink-focus': string;
+  // Site token remap for painted stores. Primitives that still paint with
+  // dashboard tokens read these so they resolve inside the buyer world.
+  '--be-foreground'?: string;
+  '--be-muted-foreground'?: string;
+  '--be-background'?: string;
+  '--be-card'?: string;
+  '--be-card-foreground'?: string;
+  '--be-popover'?: string;
+  '--be-popover-foreground'?: string;
+  '--be-muted'?: string;
+  '--be-secondary'?: string;
+  '--be-secondary-foreground'?: string;
+  '--be-accent'?: string;
+  '--be-accent-foreground'?: string;
+  '--be-border'?: string;
+  '--be-input'?: string;
+  '--be-primary'?: string;
+  '--be-primary-foreground'?: string;
 } & BiolinkRadiusVariables;
 
 type BiolinkRadiusVariables = CSSProperties & {
