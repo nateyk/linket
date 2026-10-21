@@ -117,4 +117,18 @@ describe('BottomNavBar', () => {
       'motion-reduce:transition-none',
     );
   });
+
+  test('applies inactive biolink chrome when provided', () => {
+    render(
+      <BottomNavBar
+        items={items}
+        activeIndex={0}
+        inactiveButtonClassName="text-[var(--biolink-muted-text)]"
+      />,
+    );
+
+    expect(
+      screen.getByRole('button', {name: 'Products'}).className,
+    ).toContain('text-[var(--biolink-muted-text)]');
+  });
 });

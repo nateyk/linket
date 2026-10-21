@@ -41,6 +41,11 @@ type BottomNavBarProps = {
    */
   activeButtonClassName?: string;
   activeButtonStyle?: CSSProperties;
+  /**
+   * Inactive item chrome. Storefronts pass `--biolink-*` muted text so the bar
+   * does not leak dashboard `text-muted-foreground` onto the buyer page.
+   */
+  inactiveButtonClassName?: string;
 };
 
 /**
@@ -57,6 +62,7 @@ function BottomNavBar({
   radius = "rounded-button",
   activeButtonClassName,
   activeButtonStyle,
+  inactiveButtonClassName,
 }: BottomNavBarProps) {
   const [internalIndex, setInternalIndex] = useState(defaultIndex);
   const activeIndex = controlledIndex ?? internalIndex;
@@ -69,20 +75,21 @@ function BottomNavBar({
 
   return (
     <motion.nav
-      initial={{scale: 0.9, opacity: 0}}
-      animate={{scale: 1, opacity: 1}}
+      initial={{opacity: 0, y: 6}}
+      animate={{opacity: 1, y: 0}}
       transition={
         reduceMotion
           ? {duration: 0}
-          : {type: "spring", stiffness: 300, damping: 26}
+          : {duration: 0.2, ease: [0.16, 1, 0.3, 1]}
       }
       role="navigation"
       aria-label={trans(message("Bottom Navigation"))}
       className={cn(
-        "bg-card/95 backdrop-blur-xl supports-[backdrop-filter]:bg-card/80 border border-border/40 dark:border-border/50 flex items-center p-1.5 shadow-lg shadow-black/5 ring-1 ring-foreground/5 gap-1 max-w-[95vw] h-[52px] w-fit min-w-0",
+        // p-2 leaves room for Appearance Hard/Strong soft-pop casts on the
+        // active pill (same inset idea as segmented storefront tabs).
+        "bg-card/95 backdrop-blur-xl supports-[backdrop-filter]:bg-card/80 border border-border/40 dark:border-border/50 flex items-center gap-1 p-2 shadow-lg shadow-black/5 ring-1 ring-foreground/5 max-w-[95vw] h-[52px] w-fit min-w-0",
         radius,
-        // The bar springs in on mount and the label slides open on switch.
-        // Both are decorative, so they stand down when motion is reduced.
+        // Fade/slide in on mount; label width eases on switch — no bounce.
         reduceMotion && "motion-reduce:transition-none",
         stickyBottom &&
           "fixed inset-x-0 mx-auto z-20 bottom-[max(1rem,var(--safe-bottom,env(safe-area-inset-bottom,0px)))]",
@@ -96,18 +103,24 @@ function BottomNavBar({
         return (
           <motion.button
             key={item.label}
-            whileTap={reduceMotion ? undefined : {scale: 0.97}}
+            whileTap={reduceMotion ? undefined : {scale: 0.98}}
             className={cn(
-              "flex items-center gap-0 px-3 py-2 transition-all duration-200 relative h-10 min-w-[44px] min-h-[40px] max-h-[44px] font-medium",
+              "flex items-center gap-0 px-3 py-2 transition-colors duration-200 relative h-10 min-w-[44px] min-h-[40px] max-h-[44px] font-medium",
               radius,
               reduceMotion && "motion-reduce:transition-none",
               isActive
                 ? cn(
-                    "shadow-sm gap-2",
+                    "gap-2",
+                    // Appearance drives soft-pop via activeButtonStyle.boxShadow —
+                    // do not stack theme shadow-sm on top of Hard/Strong.
                     activeButtonClassName ??
-                      "bg-primary text-primary-foreground",
+                      "bg-primary text-primary-foreground shadow-sm",
                   )
-                : "bg-transparent text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                : cn(
+                    "bg-transparent",
+                    inactiveButtonClassName ??
+                      "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                  ),
               "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
             )}
             style={isActive ? activeButtonStyle : undefined}
@@ -133,11 +146,7 @@ function BottomNavBar({
               transition={
                 reduceMotion
                   ? {duration: 0}
-                  : {
-                      width: {type: "spring", stiffness: 350, damping: 32},
-                      opacity: {duration: 0.19},
-                      marginLeft: {duration: 0.19},
-                    }
+                  : {duration: 0.2, ease: [0.16, 1, 0.3, 1]}
               }
               className="overflow-hidden flex items-center max-w-[72px]"
             >
