@@ -21,11 +21,16 @@ import {mergeRefs} from 'react-merge-refs';
  */
 export const SKILLS_MAX = 8;
 
+/** Strip pasted list bullets so chips stay clean labels. */
+export function formatSkillLabel(skill: string): string {
+  return skill.replace(/^[\s•·●▪◦*-]+/u, '').trim();
+}
+
 /** The stored comma-separated value as the chips the editor shows. */
 export function parseSkills(value: string | undefined): string[] {
   return (value ?? '')
     .split(',')
-    .map(skill => skill.trim())
+    .map(skill => formatSkillLabel(skill))
     .filter(Boolean);
 }
 

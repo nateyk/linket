@@ -7,7 +7,7 @@ import {fireEvent, render, screen} from '@testing-library/react';
 import {useForm, UseFormReturn} from 'react-hook-form';
 import {expect, test} from 'vitest';
 import {CreatorProfileForm} from './creator-profile-form-values';
-import {SkillsChipsField} from './skills-chips-field';
+import {formatSkillLabel, parseSkills, SkillsChipsField} from './skills-chips-field';
 
 type FormRef = {current: UseFormReturn<CreatorProfileForm> | null};
 
@@ -171,4 +171,17 @@ test('removing a chip returns focus to the draft input', () => {
   fireEvent.click(remove);
 
   expect(document.activeElement).toBe(input());
+});
+
+test('formatSkillLabel strips pasted list bullets', () => {
+  expect(formatSkillLabel('• Architecture')).toBe('Architecture');
+  expect(formatSkillLabel('- Design')).toBe('Design');
+  expect(formatSkillLabel('  Photography')).toBe('Photography');
+});
+
+test('parseSkills cleans bullets when splitting the stored string', () => {
+  expect(parseSkills('• Architecture, Interior Design')).toEqual([
+    'Architecture',
+    'Interior Design',
+  ]);
 });
