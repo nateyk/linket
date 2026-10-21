@@ -804,6 +804,33 @@ describe('T7 page shell: single h1, question before the action row', () => {
     ).toBeTruthy();
   });
 
+  test('omits the step description when there is none, and shows it when present', () => {
+    const {unmount} = renderSelectionPage();
+    const question = screen.getByRole('heading', {
+      level: 2,
+      name: 'What are you selling?',
+    });
+    // The type step deliberately has no description; options carry the meaning.
+    expect(question.parentElement?.querySelector('p')).toBeNull();
+    unmount();
+
+    localStorage.setItem(
+      'productCreateWizard',
+      JSON.stringify({
+        step: 'price',
+        state: {type: 'digital', billing: 'paid', price: ''},
+      }),
+    );
+    renderSelectionPage();
+    const priceQuestion = screen.getByRole('heading', {
+      level: 2,
+      name: 'Set your price',
+    });
+    expect(priceQuestion.parentElement?.querySelector('p')?.textContent).toBe(
+      'You can change it later.',
+    );
+  });
+
   test('the question precedes the Back and Continue actions in DOM order', () => {
     renderSelectionPage();
 

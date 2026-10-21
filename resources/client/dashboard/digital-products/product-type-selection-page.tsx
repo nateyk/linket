@@ -49,9 +49,11 @@ export function Component() {
               <h2 className="text-lg leading-tight font-semibold">
                 <Trans message={meta.title} />
               </h2>
-              <p className="mt-1 max-w-md text-sm leading-relaxed text-muted-foreground">
-                <Trans message={meta.description} />
-              </p>
+              {meta.description && (
+                <p className="mt-1 max-w-md text-sm leading-relaxed text-muted-foreground">
+                  <Trans message={meta.description} />
+                </p>
+              )}
             </div>
           </div>
           {/* T5: page-shell progress is the FLOW's rule, not step 1's — it
