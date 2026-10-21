@@ -509,6 +509,12 @@ describe('storefront surface edge chrome', () => {
     ),
     'utf8',
   );
+  const shopSource = fs.readFileSync(
+    path.resolve(
+      'resources/client/dashboard/stores/store-editor/content/widgets/shop-widget/shop-widget-renderer.tsx',
+    ),
+    'utf8',
+  );
 
   test('exports one shared edge token for creator, product, and nav', () => {
     expect(appearanceSource).toContain(
@@ -546,6 +552,15 @@ describe('storefront surface edge chrome', () => {
       resolveBiolinkButtonAppearance({btnConfig: {shadow: 'none'}}).style
         .boxShadow,
     ).toBe('');
+  });
+
+  test('product cards share surface edge and Appearance shadow with creator', () => {
+    expect(shopSource).toContain('biolinkSurfaceEdgeClassName');
+    expect(shopSource).toContain('style={{boxShadow: buttonShadow}}');
+    expect(shopSource).not.toContain('shadow-none');
+    expect(shopSource).toContain('text-[var(--biolink-text)]');
+    expect(shopSource).toContain('variant="ghost"');
+    expect(shopSource).not.toContain('titleHref=');
   });
 
   test('bottom nav no longer stacks a CSS border on top of a second ring', () => {
