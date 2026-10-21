@@ -15,7 +15,7 @@ import {
   ShoppingBagIcon,
   StarIcon,
 } from 'lucide-react';
-import {useState, type ReactNode} from 'react';
+import {useState, type CSSProperties, type ReactNode} from 'react';
 
 export interface ProductCardClassNames {
   root?: string;
@@ -42,6 +42,14 @@ export interface ProductCardProps {
   imageFallback?: ReactNode;
   classNames?: ProductCardClassNames;
   className?: string;
+  /** Inline styles on the root (e.g. Appearance soft-pop boxShadow). */
+  style?: CSSProperties;
+  /**
+   * Storefront / quiet surfaces: no hover shadow lift, no cover zoom, and
+   * no carousel motion wrapper when there is only one image.
+   * Marketplace listings keep the default interactive chrome.
+   */
+  quiet?: boolean;
 }
 
 const carouselVariants: Variants = {
@@ -76,6 +84,8 @@ export function ProductCard({
   imageFallback,
   classNames,
   className,
+  style,
+  quiet = false,
 }: ProductCardProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState(0);
@@ -105,10 +115,12 @@ export function ProductCard({
   return (
     <div
       className={cn(
-        'group flex h-full w-full flex-col overflow-hidden isolate rounded-card bg-card text-card-foreground ring-1 ring-foreground/10 transition-shadow duration-200 hover:shadow-md',
+        'group flex h-full w-full flex-col overflow-hidden isolate rounded-card bg-card text-card-foreground ring-1 ring-foreground/10',
+        !quiet && 'transition-shadow duration-200 hover:shadow-md',
         classNames?.root,
         className,
       )}
+      style={style}
     >
       <div
         className={cn(
@@ -118,6 +130,15 @@ export function ProductCard({
       >
         {images.length === 0 ? (
           fallbackBlock
+        ) : quiet && !showCarouselUI ? (
+          // Storefront single cover: skip AnimatePresence/spring chrome.
+          <ProductCover
+            cover={{url: images[0]}}
+            alt={title}
+            aspect=""
+            className="h-full w-full"
+            fallback={fallbackBlock}
+          />
         ) : (
           <>
             <AnimatePresence initial={false} custom={direction}>
@@ -142,7 +163,11 @@ export function ProductCard({
                   cover={{url: images[safeIndex]}}
                   alt={title}
                   aspect=""
-                  className="h-full w-full transition-transform duration-300 motion-safe:group-hover:scale-[1.025]"
+                  className={cn(
+                    'h-full w-full',
+                    !quiet &&
+                      'transition-transform duration-300 motion-safe:group-hover:scale-[1.025]',
+                  )}
                   fallback={fallbackBlock}
                 />
               </motion.div>

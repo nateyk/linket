@@ -14,7 +14,7 @@ describe('shared product card integration', () => {
   });
 
   test('uses project aliases, not foreign registry paths', () => {
-    expect(source).toContain("@shadcn/badge/badge");
+    expect(source).toContain('@shadcn/badge/badge');
     expect(source).toContain('@ui/i18n/trans');
     expect(source).toContain('@ui/utils/cn');
     expect(source).not.toContain('@/lib/utils');
@@ -108,9 +108,7 @@ describe('shared product card consistency', () => {
     expect(source).not.toContain('aria-label={`Go to image');
     expect(source).toContain('<Trans message="Top rated" />');
     expect(source).toContain('AnimatePresence');
-    expect(source).toContain(
-      "import {ProductCover} from '@ui/product-cover'",
-    );
+    expect(source).toContain("import {ProductCover} from '@ui/product-cover'");
     expect(source).not.toContain('const [imageError, setImageError]');
   });
 
@@ -121,6 +119,16 @@ describe('shared product card consistency', () => {
     expect(source).not.toContain('staggerChildren');
     expect(source).not.toContain('itemVariants');
     expect(source).not.toContain('hover:underline');
+  });
+
+  test('quiet single-cover path skips the carousel motion wrapper', () => {
+    expect(source).toContain('quiet && !showCarouselUI');
+    expect(source).toContain('Storefront single cover: skip AnimatePresence');
+  });
+
+  test('forwards an optional root style for Appearance soft-pop', () => {
+    expect(source).toContain('style?: CSSProperties');
+    expect(source).toContain('style={style}');
   });
 
   test('shares the dashboard hover language: group zoom on cover', () => {
