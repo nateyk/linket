@@ -36,6 +36,16 @@ describe('shared product card consistency', () => {
     expect(source).not.toContain('ml-2');
   });
 
+  test('isolates cover overlays so they stay under the sticky storefront tabs', () => {
+    // The media overlay is positioned z-10. Without a card-level stacking
+    // context it paints over the sticky Products/Services/About strip while
+    // the grid scrolls beneath it.
+    const root = source.match(
+      /className=\{cn\(\s*'([^']*rounded-card[^']*)'/,
+    );
+    expect(root?.[1]).toContain('isolate');
+  });
+
   test('paints carousel scrims and dots with theme tokens only', () => {
     // Scrim: theme-derived ink/white pair instead of raw black/white, so it
     // reads on light and dark grounds and over arbitrary cover art.

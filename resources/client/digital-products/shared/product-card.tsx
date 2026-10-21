@@ -105,7 +105,7 @@ export function ProductCard({
   return (
     <div
       className={cn(
-        'group flex h-full w-full flex-col overflow-hidden rounded-card bg-card text-card-foreground ring-1 ring-foreground/10 transition-shadow duration-200 hover:shadow-md',
+        'group flex h-full w-full flex-col overflow-hidden isolate rounded-card bg-card text-card-foreground ring-1 ring-foreground/10 transition-shadow duration-200 hover:shadow-md',
         classNames?.root,
         className,
       )}
