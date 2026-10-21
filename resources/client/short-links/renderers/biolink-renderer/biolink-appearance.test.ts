@@ -195,6 +195,52 @@ describe('corner roundness radius variables', () => {
   });
 });
 
+describe('Appearance editor → storefront contract', () => {
+  const layout = readSource('biolink-layout.tsx');
+  const creator = readSource('creator-profile-layout.tsx');
+  const background = fs.readFileSync(
+    path.resolve(
+      'resources/client/short-links/renderers/biolink-renderer/biolink-background.tsx',
+    ),
+    'utf8',
+  );
+  const shop = fs.readFileSync(
+    path.resolve(
+      'resources/client/dashboard/stores/store-editor/content/widgets/shop-widget/shop-widget-renderer.tsx',
+    ),
+    'utf8',
+  );
+
+  test('Background paints through biolink Background + theme tokens', () => {
+    expect(layout).toContain('<Background');
+    expect(layout).toContain('resolveBiolinkThemeVariables(appearance)');
+    expect(background).toContain('cssPropsFromBgConfig(appearance?.bgConfig)');
+  });
+
+  test('Buttons style Message, socials, nav active, and product View', () => {
+    expect(creator).toContain('style={buttonAppearance.style}');
+    expect(creator).toContain('activeButtonStyle={buttonAppearance.style}');
+    expect(creator).toContain('className={buttonAppearance.className}');
+    // The shop may wrap the action classes in cn(); assert the resolved
+    // appearance values reach it rather than one exact JSX shape.
+    expect(shop).toContain('buttonAppearance.className');
+    expect(shop).toContain('style={buttonAppearance.style}');
+  });
+
+  test('Text typeface and foreground flow from fontConfig + bgConfig.color', () => {
+    expect(layout).toContain('appearance?.fontConfig');
+    expect(layout).toContain('loadFonts([');
+    expect(layout).toContain('fontFamily: appearance?.fontConfig?.family');
+    expect(layout).toContain("color: 'var(--biolink-text)'");
+  });
+
+  test('Branding hideBranding is honored on creator and sidebar lockups', () => {
+    expect(creator).toContain('appearance?.hideBranding');
+    expect(layout).toContain('appearance?.hideBranding');
+  });
+
+});
+
 describe('storefront appearance token wiring', () => {
   test('sticky Products/About strip does not leak dashboard bg-background', () => {
     const source = readSource('store-front.tsx');
@@ -364,7 +410,7 @@ describe('creator profile card wiring', () => {
     expect(source).toMatch(
       /<Avatar\.ColorFallback[\s\S]{0,200}?containerRadius\.avatarClassName/,
     );
-    expect(source).toContain('style={avatarInnerStyle}');
+    expect(source).not.toContain('style={avatarInnerStyle}');
     expect(source).toMatch(
       /function AboutSection[\s\S]*?containerRadius\.className/,
     );
@@ -391,14 +437,16 @@ describe('creator profile card wiring', () => {
     expect(source).toContain('activeButtonStyle={buttonAppearance.style}');
   });
 
-  test('keeps the card flat: depth comes from the ring alone', () => {
-    const shell = source.match(
-      /'gap-0 py-0 bg-\[var\(--biolink-surface\)\][^']*'/,
-    )?.[0];
-    expect(shell).toContain('ring-1');
-    expect(shell).not.toMatch(/shadow/);
+  test('shares the surface ring edge and Appearance shadow soft-pop on the shell', () => {
+    // Edge chrome = shared --biolink-border ring. Depth = Buttons → Shadow.
+    expect(source).toMatch(
+      /'gap-0 py-0 bg-\[var\(--biolink-surface\)\][\s\S]{0,120}?biolinkSurfaceEdgeClassName/,
+    );
+    expect(source).toMatch(
+      /const buttonShadow = buttonAppearance\.style\.boxShadow;[\s\S]{0,400}?style=\{\{boxShadow: buttonShadow\}\}/,
+    );
 
-    // The shell is a Card, so the card primitive has to be flat too.
+    // The Card primitive itself stays flat; soft-pop is the inline style.
     const cardPrimitive = fs.readFileSync(
       path.resolve('common/foundation/resources/client/shadcn/card/card.tsx'),
       'utf8',
@@ -410,7 +458,21 @@ describe('creator profile card wiring', () => {
 
   test('frames the avatar at the size the editor previews', () => {
     expect(source).toContain('-mt-10 aspect-square size-22');
-    expect(source).toContain('p-1 after:rounded-[inherit]');
+    // Edge-to-edge photo — no heavy p-1 surface pad frame.
+    expect(source).not.toContain('bg-[var(--biolink-surface-strong)] p-1');
+    expect(source).toContain('ring-2 ring-[var(--biolink-surface)]');
+    expect(source).toContain('after:rounded-[inherit]');
+  });
+
+  test('sizes name and title beside the avatar without single-line truncate', () => {
+    expect(source).toContain('grid-cols-[auto_minmax(0,1fr)] items-end');
+    expect(source).toContain('text-xl leading-snug font-semibold');
+    expect(source).toContain('sm:text-2xl');
+    expect(source).toContain('line-clamp-2 text-sm leading-snug');
+    // Truncating the title to one ellipsis line hid roles like Architect.
+    expect(source).not.toContain(
+      'mt-0.5 truncate text-sm text-[var(--biolink-muted-text)]',
+    );
   });
 
   test('rings the avatar with the wrapper radius at every setting', () => {
@@ -423,11 +485,9 @@ describe('creator profile card wiring', () => {
     expect(source).not.toContain('after:rounded-full');
   });
 
-  test('nests the avatar media inside the frame pad', () => {
-    // The `p-1` frame is 4px, so the image/fallback inside rounds 4px tighter
-    // than the wrapper and the pad reads even all round.
-    expect(source).toContain('avatarInnerStyle');
-    expect(source).toContain('calc(${containerRadius.avatarValue} - 4px)');
+  test('does not nest a tighter inner radius under a pad frame', () => {
+    expect(source).not.toContain('avatarInnerStyle');
+    expect(source).not.toContain('calc(${containerRadius.avatarValue} - 4px)');
   });
 
   test('draws the cover at the 3:1 box the editor crops to', () => {
@@ -441,55 +501,81 @@ describe('creator profile card wiring', () => {
   });
 });
 
-describe('creator card shadow wiring', () => {
-  const source = readSource('creator-profile-layout.tsx');
+describe('storefront surface edge chrome', () => {
+  const layoutSource = readSource('creator-profile-layout.tsx');
+  const appearanceSource = fs.readFileSync(
+    path.resolve(
+      'resources/client/short-links/renderers/biolink-renderer/biolink-appearance.ts',
+    ),
+    'utf8',
+  );
 
-  test('derives one shadow local from the already-resolved button appearance', () => {
-    // No resolver change: both card components reuse
-    // `buttonAppearance.style.boxShadow` computed from `btnConfig.shadow`.
+  test('exports one shared edge token for creator, product, and nav', () => {
+    expect(appearanceSource).toContain(
+      "export const biolinkSurfaceEdgeClassName =\n  'border-0 ring-1 ring-(color:--biolink-border)'",
+    );
+  });
+
+  test('creator card, about panel, and bottom nav share biolinkSurfaceEdgeClassName', () => {
+    expect(layoutSource).toContain('biolinkSurfaceEdgeClassName');
+    // Creator + About + BottomNavBar className — three call sites.
     expect(
-      source.match(/const buttonShadow = buttonAppearance\.style\.boxShadow;/g),
+      layoutSource.match(/biolinkSurfaceEdgeClassName/g)?.length,
+    ).toBeGreaterThanOrEqual(3);
+  });
+
+  test('Appearance Buttons → Shadow soft-pops creator and About shells', () => {
+    // Storefront must honor the Appearance Shadow control on profile surfaces
+    // (Message/social/View already get boxShadow via buttonAppearance.style).
+    expect(
+      layoutSource.match(
+        /const buttonShadow = buttonAppearance\.style\.boxShadow;/g,
+      ),
     ).toHaveLength(2);
-  });
-
-  test('spreads the button shadow onto the creator card shell', () => {
-    expect(source).toMatch(
-      /'gap-0 py-0 bg-\[var\(--biolink-surface\)\][\s\S]{0,400}?containerRadius\.className[\s\S]{0,80}?style=\{\{boxShadow: buttonShadow\}\}/,
+    expect(layoutSource).toMatch(
+      /'gap-0 py-0 bg-\[var\(--biolink-surface\)\][\s\S]{0,400}?style=\{\{boxShadow: buttonShadow\}\}/,
     );
-  });
-
-  test('spreads the button shadow onto the avatar wrapper', () => {
-    expect(source).toMatch(
-      /<Avatar\.Root\s+className=\{cn\([\s\S]{0,400}?containerRadius\.avatarClassName[\s\S]{0,80}?style=\{\{boxShadow: buttonShadow\}\}/,
-    );
-  });
-
-  test('spreads the button shadow onto the About panel', () => {
-    expect(source).toMatch(
-      /function AboutSection[\s\S]*?resolveBiolinkButtonAppearance\(appearance\)/,
-    );
-    // The panel takes its padding from the card scale and the creator's shadow
-    // as an inline style, so it stays in step with the profile card above it.
-    expect(source).toMatch(
+    expect(layoutSource).toMatch(
       /function AboutSection[\s\S]*?'p-5 pb-6',[\s\S]{0,120}?style=\{\{boxShadow: buttonShadow\}\}/,
     );
-  });
-
-  test('the none setting yields no shadow: an empty boxShadow renders nothing', () => {
-    // `availableShadows.none` is `''` — falsy, and `style={{boxShadow: ''}}`
-    // is valid React that paints nothing, so the default page stays flat.
-    const boxShadow = resolveBiolinkButtonAppearance({
-      btnConfig: {shadow: 'none'},
-    }).style.boxShadow;
-    expect(boxShadow).toBe('');
-    expect(boxShadow).toBeFalsy();
-  });
-
-  test('the hard setting resolves a concrete shadow for the card family', () => {
     expect(
-      resolveBiolinkButtonAppearance({btnConfig: {shadow: 'hard'}}).style
+      resolveBiolinkButtonAppearance({btnConfig: {shadow: 'strong'}}).style
         .boxShadow,
-    ).toBe('rgb(0 0 0 / 75%) 0.3rem 0.4rem 0px');
+    ).toBe('rgb(0 0 0 / 30%) 0.3rem 0.3rem 0.4rem 0px');
+    expect(
+      resolveBiolinkButtonAppearance({btnConfig: {shadow: 'none'}}).style
+        .boxShadow,
+    ).toBe('');
+  });
+
+  test('bottom nav no longer stacks a CSS border on top of a second ring', () => {
+    expect(layoutSource).not.toContain(
+      'border-[var(--biolink-border)] bg-[var(--biolink-surface)]/95',
+    );
+    expect(layoutSource).not.toContain(
+      'ring-[color-mix(in_srgb,var(--biolink-text)_8%,transparent)]',
+    );
+  });
+
+  test('avatar still lifts with a surface ring, not a button shadow', () => {
+    expect(layoutSource).toMatch(
+      /<Avatar\.Root\s+className=\{cn\([\s\S]{0,400}?containerRadius\.avatarClassName/,
+    );
+    expect(layoutSource).not.toMatch(
+      /<Avatar\.Root[\s\S]{0,500}?style=\{\{boxShadow:/,
+    );
+  });
+
+  test('skill chips are soft filled pills that follow Appearance roundness', () => {
+    expect(layoutSource).toContain('formatSkillLabel');
+    expect(layoutSource).toContain('variant="secondary"');
+    expect(layoutSource).toContain('rounded-button');
+    // Ink-tinted fill + ring — readable on the white card face.
+    expect(layoutSource).toContain(
+      'bg-[color-mix(in_srgb,var(--biolink-text)_8%,var(--biolink-surface))]!',
+    );
+    expect(layoutSource).toContain('ring-1 ring-(color:--biolink-border)');
+    expect(layoutSource).toContain('border-transparent');
   });
 });
 
@@ -521,12 +607,27 @@ describe('storefront bottom nav appearance wiring', () => {
     // The old strings survive only as the fallback for callers that pass no
     // appearance, so the component default is unchanged.
     expect(navSource).toMatch(
-      /activeButtonClassName \?\?\s*"bg-primary text-primary-foreground"/,
+      /activeButtonClassName \?\?\s*"bg-primary text-primary-foreground shadow-sm"/,
     );
     expect(navSource).toContain(
-      '"bg-transparent text-muted-foreground hover:bg-accent hover:text-accent-foreground"',
+      '"text-muted-foreground hover:bg-accent hover:text-accent-foreground"',
     );
     expect(navSource).toContain('bg-card/95');
+  });
+
+  test('storefront bottom nav shells with --biolink-* instead of dashboard card chrome', () => {
+    const layout = fs.readFileSync(
+      path.resolve(
+        'resources/client/short-links/renderers/biolink-renderer/creator-profile-layout.tsx',
+      ),
+      'utf8',
+    );
+    expect(layout).toContain('bg-[var(--biolink-surface)]/95');
+    expect(layout).toContain('inactiveButtonClassName');
+    expect(layout).toContain('text-[var(--biolink-muted-text)]');
+    expect(layout).toContain(
+      "return hasProducts ? 'products' : hasServices ? 'services' : 'profile';",
+    );
   });
 
   test('follows the appearance label color on the active label span', () => {
@@ -567,9 +668,7 @@ describe('creator profile editor wiring', () => {
     expect(source).toContain(
       'previewClassName={containerRadius.avatarClassName}',
     );
-    expect(source).toContain(
-      'size-22 bg-[var(--biolink-surface-strong)] p-1',
-    );
+    expect(source).toContain('size-22 bg-[var(--biolink-surface-strong)] p-1');
     expect(source).not.toContain('size-22 bg-background p-1');
   });
 
