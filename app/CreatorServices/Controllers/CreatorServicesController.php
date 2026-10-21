@@ -4,6 +4,7 @@ namespace App\CreatorServices\Controllers;
 
 use App\CreatorServices\Actions\CrupdateCreatorService;
 use App\CreatorServices\Models\CreatorService;
+use App\CreatorServices\Models\ServiceSubcategory;
 use App\CreatorServices\Resources\CreatorServiceResource;
 use App\Stores\Models\Store;
 use Common\Workspaces\ActiveWorkspace;
@@ -119,6 +120,26 @@ class CreatorServicesController extends Controller
                 },
             ],
             'category' => 'nullable|string|max:80',
+            'service_category_id' => ['nullable', 'integer', Rule::exists('service_categories', 'id')],
+            'service_subcategory_id' => [
+                'nullable',
+                'integer',
+                function (string $attribute, mixed $value, \Closure $fail) use ($request): void {
+                    $query = ServiceSubcategory::query()
+                        ->whereKey($value);
+
+                    if ($request->filled('service_category_id')) {
+                        $query->where(
+                            'service_category_id',
+                            $request->integer('service_category_id'),
+                        );
+                    }
+
+                    if (!$query->exists()) {
+                        $fail(__('Select a valid subcategory.'));
+                    }
+                },
+            ],
             'skills' => 'nullable|array|max:20',
             'skills.*' => 'string|max:40',
             'cover_file_entry_id' => ['nullable', 'integer', $this->imageFileRule($workspaceId)],

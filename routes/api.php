@@ -14,6 +14,9 @@
 
 use App\Analytics\Controllers\AdminAnalyticsController;
 use App\Analytics\Controllers\AdminCommerceInsightsController;
+use App\CreatorServices\Controllers\Admin\AdminServiceCategoryController;
+use App\CreatorServices\Controllers\Admin\AdminServiceSubcategoryController;
+use App\CreatorServices\Controllers\PublicServiceCategoriesController;
 use App\Http\Controllers\LandingPageController;
 use App\Kyc\Controllers\AdminKycVerificationsController;
 use App\Kyc\Controllers\KycVerificationsController;
@@ -77,6 +80,10 @@ Route::group(['prefix' => 'v1'], function() {
         Route::get('{slug}', [BlogController::class, 'article'])->name('article');
     });
 
+    // SERVICE CATEGORIES (public)
+    Route::get('public/service-categories', PublicServiceCategoriesController::class)
+        ->name('service-categories.index');
+
     Route::group(['middleware' => ['optionalAuth:sanctum', 'verified', 'verifyApiAccess']], function () {
         Route::get('tracked-events/report', [TrackedEventsController::class, 'report']);
         Route::get('admin/analytics/cards-data', [AdminAnalyticsController::class, 'cardsData']);
@@ -107,6 +114,14 @@ Route::group(['prefix' => 'v1'], function() {
             Route::apiResource('admin/articles', AdminBlogArticleController::class)->names('admin.articles');
             Route::apiResource('admin/categories', AdminBlogCategoryController::class)->names('admin.categories');
         });
+
+        // SERVICE CATEGORIES (admin)
+        Route::apiResource('admin/service-categories', AdminServiceCategoryController::class)
+            ->parameters(['service-categories' => 'category'])
+            ->names('admin.service-categories');
+        Route::apiResource('admin/service-subcategories', AdminServiceSubcategoryController::class)
+            ->parameters(['service-subcategories' => 'subcategory'])
+            ->names('admin.service-subcategories');
 
         // LINK
         Route::get('links', [LinksController::class, 'index']);

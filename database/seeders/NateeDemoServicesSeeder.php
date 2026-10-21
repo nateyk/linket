@@ -4,9 +4,12 @@ namespace Database\Seeders;
 
 use App\Biolinks\Models\Biolink;
 use App\CreatorServices\Models\CreatorService;
+use App\CreatorServices\Models\ServiceCategory;
+use App\CreatorServices\Models\ServiceSubcategory;
 use Common\Files\FileEntry;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * Demo content for the local "natee" storefront. It is safe to run more than
@@ -48,7 +51,8 @@ class NateeDemoServicesSeeder extends Seeder
             [
                 'slug' => 'website-design-development',
                 'title' => 'Website Design & Development',
-                'category' => 'Development',
+                'category' => 'Programming & Tech',
+                'subcategory' => 'Website Development',
                 'short_description' => 'Fast, responsive websites that turn visitors into customers.',
                 'description' => '<p>Your website should look sharp and do the selling for you. I design and build fast, responsive sites that make it easy for visitors to understand what you offer and take the next step.</p><p><strong>What is included:</strong></p><ul><li>Design tailored to your brand</li><li>Responsive build for phone, tablet and desktop</li><li>On-page SEO and analytics setup</li><li>Contact forms and booking links</li><li>A walkthrough so you can update the site yourself</li></ul><p>Tell me what you need and I will recommend the package that fits.</p>',
                 'skills' => ['Web Design', 'Laravel', 'React', 'SEO'],
@@ -97,7 +101,8 @@ class NateeDemoServicesSeeder extends Seeder
             [
                 'slug' => 'social-media-management',
                 'title' => 'Social Media Management',
-                'category' => 'Marketing',
+                'category' => 'Digital Marketing',
+                'subcategory' => 'Social Media Management',
                 'short_description' => 'Consistent content and community management for growing brands.',
                 'description' => '<p>Showing up consistently is the hardest part of social media. I plan, design and publish content for your brand so your feed stays active while you focus on the work.</p><p><strong>Every plan includes:</strong></p><ul><li>A monthly content calendar</li><li>Graphics and short-form video</li><li>Captions, hashtags and scheduling</li><li>Community management</li><li>A monthly performance report</li></ul><p>Pick the plan that matches your posting rhythm; we can adjust it as you grow.</p>',
                 'skills' => ['Social Media', 'Content Strategy', 'Copywriting', 'Analytics'],
@@ -146,7 +151,8 @@ class NateeDemoServicesSeeder extends Seeder
             [
                 'slug' => 'custom-illustration-pack',
                 'title' => 'Custom Illustration Pack',
-                'category' => 'Illustration',
+                'category' => 'Graphics & Design',
+                'subcategory' => 'Illustration',
                 'short_description' => 'Hand-drawn illustrations tailored to your brand and story.',
                 'description' => '<p>Original illustrations make a brand feel unmistakably yours. I draw custom artwork for packaging, editorial, social media and product interfaces, matching the style and palette you already use.</p><p><strong>What you get:</strong></p><ul><li>A sketch before the final artwork</li><li>Clean, layered illustrations</li><li>PNG, JPG and SVG exports</li><li>Commercial usage rights</li></ul><p>Because every illustration is scoped by hand, packages are quoted after we talk through the brief.</p>',
                 'skills' => ['Illustration', 'Character Design', 'Procreate', 'Brand Art'],
@@ -212,6 +218,16 @@ class NateeDemoServicesSeeder extends Seeder
             return;
         }
 
+        $category = ServiceCategory::query()
+            ->where('slug', Str::slug($definition['category']))
+            ->first();
+        $subcategory = $category
+            ? ServiceSubcategory::query()
+                ->where('service_category_id', $category->id)
+                ->where('slug', Str::slug($definition['subcategory'] ?? ''))
+                ->first()
+            : null;
+
         $service->fill([
             'workspace_id' => $store->workspace_id,
             'user_id' => $store->user_id,
@@ -219,7 +235,9 @@ class NateeDemoServicesSeeder extends Seeder
             'title' => $definition['title'],
             'short_description' => $definition['short_description'],
             'description' => $definition['description'],
-            'category' => $definition['category'],
+            'category' => $category?->name ?? $definition['category'],
+            'service_category_id' => $category?->id,
+            'service_subcategory_id' => $subcategory?->id,
             'skills' => $definition['skills'],
             'cover_file_entry_id' => $this->fileEntryId($definition['cover_file_entry_id']),
             'contact_channels' => $this->contactChannels(),

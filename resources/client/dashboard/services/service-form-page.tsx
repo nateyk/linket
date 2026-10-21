@@ -52,6 +52,14 @@ type StoreOption = {id: number; name: string};
 
 type StoresResponse = {data?: StoreOption[]};
 
+type CategoryOption = {
+  id: number;
+  name: string;
+  subcategories: {id: number; name: string}[];
+};
+
+type CategoriesResponse = {data?: CategoryOption[]};
+
 const SECTION_ORDER: ServiceFormSectionId[] = [
   'basics',
   'media',
@@ -69,9 +77,15 @@ function sectionForField(field: string): ServiceFormSectionId | null {
   }
   if (
     field === 'store_id' ||
-    ['title', 'short_description', 'description', 'category', 'skills'].includes(
-      field,
-    )
+    [
+      'title',
+      'short_description',
+      'description',
+      'category',
+      'service_category_id',
+      'service_subcategory_id',
+      'skills',
+    ].includes(field)
   ) {
     return 'basics';
   }
@@ -97,6 +111,7 @@ function ServiceFormPage() {
     emptyServiceForm(),
   );
   const [stores, setStores] = useState<StoreOption[]>([]);
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -118,6 +133,13 @@ function ServiceFormPage() {
       const storeOptions =
         (storesResponse.data as StoresResponse).data ?? [];
       setStores(storeOptions);
+
+      const categoriesResponse = await apiClient.get(
+        '/api/v1/public/service-categories',
+      );
+      setCategories(
+        (categoriesResponse.data as CategoriesResponse).data ?? [],
+      );
 
       if (serviceId) {
         const serviceResponse = await apiClient.get(
@@ -164,6 +186,13 @@ function ServiceFormPage() {
   const namedPackages = useMemo(
     () => form.packages.filter(item => item.name.trim()),
     [form.packages],
+  );
+
+  const selectedCategory = categories.find(
+    category => category.id === form.service_category_id,
+  );
+  const selectedSubcategory = selectedCategory?.subcategories.find(
+    subcategory => subcategory.id === form.service_subcategory_id,
   );
 
   const requiredSections = useMemo(
@@ -572,43 +601,123 @@ function ServiceFormPage() {
 
                     <div className="grid gap-4 sm:grid-cols-2">
                       <ServiceFormField
-                        name="category"
+                        name="service_category_id"
                         label={trans({message: 'Category'})}
-                        error={fieldErrors.category}
+                        error={
+                          fieldErrors.service_category_id ??
+                          fieldErrors.category
+                        }
                       >
-                        <Input
-                          id="category"
-                          value={form.category}
-                          maxLength={80}
-                          onChange={event =>
-                            update('category', event.target.value)
+                        <Select.Root
+                          value={
+                            form.service_category_id
+                              ? String(form.service_category_id)
+                              : null
                           }
-                          placeholder={trans({message: 'Design'})}
-                          aria-invalid={!!fieldErrors.category}
-                        />
+                          onValueChange={value => {
+                            const category = categories.find(
+                              item => String(item.id) === value,
+                            );
+                            update(
+                              'service_category_id',
+                              category?.id ?? null,
+                            );
+                            update('category', category?.name ?? '');
+                            update('service_subcategory_id', null);
+                          }}
+                        >
+                          <Select.Trigger
+                            id="service_category_id"
+                            className="w-full"
+                          >
+                            <Select.Value
+                              placeholder={
+                                <Trans message="Select a category" />
+                              }
+                            >
+                              {selectedCategory?.name}
+                            </Select.Value>
+                          </Select.Trigger>
+                          <Select.Content>
+                            {categories.map(category => (
+                              <Select.Item
+                                key={category.id}
+                                value={String(category.id)}
+                              >
+                                {category.name}
+                              </Select.Item>
+                            ))}
+                          </Select.Content>
+                        </Select.Root>
                       </ServiceFormField>
 
                       <ServiceFormField
-                        name="skills"
-                        label={trans({message: 'Skills'})}
-                        description={trans({
-                          message: 'Separate skills with commas.',
-                        })}
-                        error={fieldErrors.skills}
+                        name="service_subcategory_id"
+                        label={trans({message: 'Subcategory'})}
+                        error={fieldErrors.service_subcategory_id}
                       >
-                        <Input
-                          id="skills"
-                          value={form.skills}
-                          onChange={event =>
-                            update('skills', event.target.value)
+                        <Select.Root
+                          value={
+                            form.service_subcategory_id
+                              ? String(form.service_subcategory_id)
+                              : null
                           }
-                          placeholder={trans({
-                            message: 'Logo, Branding',
-                          })}
-                          aria-invalid={!!fieldErrors.skills}
-                        />
+                          onValueChange={value =>
+                            update(
+                              'service_subcategory_id',
+                              value ? Number(value) : null,
+                            )
+                          }
+                        >
+                          <Select.Trigger
+                            id="service_subcategory_id"
+                            className="w-full"
+                            disabled={!selectedCategory}
+                          >
+                            <Select.Value
+                              placeholder={
+                                <Trans message="Select a subcategory" />
+                              }
+                            >
+                              {selectedSubcategory?.name}
+                            </Select.Value>
+                          </Select.Trigger>
+                          <Select.Content>
+                            {selectedCategory?.subcategories.map(
+                              subcategory => (
+                                <Select.Item
+                                  key={subcategory.id}
+                                  value={String(subcategory.id)}
+                                >
+                                  {subcategory.name}
+                                </Select.Item>
+                              ),
+                            )}
+                          </Select.Content>
+                        </Select.Root>
                       </ServiceFormField>
                     </div>
+
+                    <ServiceFormField
+                      name="skills"
+                      label={trans({message: 'Skills'})}
+                      description={trans({
+                        message: 'Separate skills with commas.',
+                      })}
+                      error={fieldErrors.skills}
+                    >
+                      <Input
+                        id="skills"
+                        value={form.skills}
+                        onChange={event =>
+                          update('skills', event.target.value)
+                        }
+                        placeholder={trans({
+                          message: 'Logo, Branding',
+                        })}
+                        aria-invalid={!!fieldErrors.skills}
+                      />
+                    </ServiceFormField>
 
                     <ServiceFormField
                       name="description"

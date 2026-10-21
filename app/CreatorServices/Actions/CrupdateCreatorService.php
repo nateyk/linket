@@ -3,6 +3,7 @@
 namespace App\CreatorServices\Actions;
 
 use App\CreatorServices\Models\CreatorService;
+use App\CreatorServices\Models\ServiceCategory;
 use App\Models\User;
 use App\Storefront\Actions\SanitizeProductDescription;
 use Common\Workspaces\ActiveWorkspace;
@@ -31,9 +32,13 @@ class CrupdateCreatorService
                 'description' => array_key_exists('description', $data)
                     ? app(SanitizeProductDescription::class)->execute($data['description'])
                     : $service?->description,
-                'category' => array_key_exists('category', $data)
-                    ? $data['category']
-                    : $service?->category,
+                'category' => $this->categoryName($data, $service),
+                'service_category_id' => array_key_exists('service_category_id', $data)
+                    ? $data['service_category_id']
+                    : $service?->service_category_id,
+                'service_subcategory_id' => array_key_exists('service_subcategory_id', $data)
+                    ? $data['service_subcategory_id']
+                    : $service?->service_subcategory_id,
                 'skills' => array_key_exists('skills', $data)
                     ? array_values(array_filter($data['skills'] ?? [], fn ($skill): bool => trim((string) $skill) !== ''))
                     : ($service?->skills ?? []),
@@ -70,6 +75,19 @@ class CrupdateCreatorService
 
             return $service->fresh()->load(['store.domain', 'cover', 'images.file', 'packages', 'faqs']);
         });
+    }
+
+    private function categoryName(array $data, ?CreatorService $service): ?string
+    {
+        if (!empty($data['service_category_id'])) {
+            return ServiceCategory::query()
+                ->whereKey($data['service_category_id'])
+                ->value('name');
+        }
+
+        return array_key_exists('category', $data)
+            ? $data['category']
+            : $service?->category;
     }
 
     private function uniqueSlug(string $title): string

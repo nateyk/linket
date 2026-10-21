@@ -24,6 +24,8 @@ class CreatorService extends Model
         'workspace_id' => 'integer',
         'user_id' => 'integer',
         'store_id' => 'integer',
+        'service_category_id' => 'integer',
+        'service_subcategory_id' => 'integer',
         'cover_file_entry_id' => 'integer',
         'skills' => 'array',
         'contact_channels' => 'array',
@@ -37,6 +39,16 @@ class CreatorService extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function serviceCategory(): BelongsTo
+    {
+        return $this->belongsTo(ServiceCategory::class);
+    }
+
+    public function serviceSubcategory(): BelongsTo
+    {
+        return $this->belongsTo(ServiceSubcategory::class);
     }
 
     public function cover(): BelongsTo

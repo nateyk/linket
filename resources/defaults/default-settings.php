@@ -508,6 +508,13 @@ return [
                         'permissions' => ['settings.update'],
                     ],
                     [
+                        'label' => 'Service categories',
+                        'id' => 'admin-service-categories',
+                        'action' => '/admin/service-categories',
+                        'type' => 'route',
+                        'permissions' => ['settings.update'],
+                    ],
+                    [
                         'label' => 'Plans',
                         'id' => '7o42rt',
                         'action' => '/admin/plans',

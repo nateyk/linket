@@ -4,12 +4,15 @@ namespace Tests\Feature;
 
 use App\Biolinks\Models\Biolink;
 use App\CreatorServices\Models\CreatorService;
+use App\CreatorServices\Models\ServiceCategory;
+use App\CreatorServices\Models\ServiceSubcategory;
 use App\CreatorServices\Models\ServiceInquiry;
 use App\CreatorServices\Models\ServicePackage;
 use App\Models\User;
 use Common\Files\FileEntry;
 use Common\Workspaces\Actions\CreateWorkspace;
 use Common\Workspaces\ActiveWorkspace;
+use Database\Seeders\ServiceCategoriesSeeder;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -86,6 +89,61 @@ class CreatorServicesApiTest extends TestCase
             'workspace_id' => $workspace->id,
             'store_id' => $store->id,
         ]);
+    }
+
+    public function test_creator_can_attach_an_admin_managed_category_and_subcategory(): void
+    {
+        $this->seed(ServiceCategoriesSeeder::class);
+        [$creator, , $store] = $this->context();
+
+        $category = ServiceCategory::query()
+            ->where('slug', 'programming-tech')
+            ->firstOrFail();
+        $subcategory = ServiceSubcategory::query()
+            ->where('service_category_id', $category->id)
+            ->where('slug', 'website-development')
+            ->firstOrFail();
+
+        $response = $this->stateful()->actingAs($creator)->postJson('/api/v1/services', [
+            'store_id' => $store->id,
+            'title' => 'Business website',
+            'category' => 'Ignored free text',
+            'service_category_id' => $category->id,
+            'service_subcategory_id' => $subcategory->id,
+            'status' => 'draft',
+        ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('data.service_category_id', $category->id)
+            ->assertJsonPath('data.service_subcategory_id', $subcategory->id)
+            ->assertJsonPath('data.category', 'Programming & Tech');
+
+        $this->assertDatabaseHas('creator_services', [
+            'id' => $response->json('data.id'),
+            'service_category_id' => $category->id,
+            'service_subcategory_id' => $subcategory->id,
+            'category' => 'Programming & Tech',
+        ]);
+    }
+
+    public function test_a_subcategory_must_belong_to_the_selected_category(): void
+    {
+        $this->seed(ServiceCategoriesSeeder::class);
+        [$creator, , $store] = $this->context();
+
+        $design = ServiceCategory::query()
+            ->where('slug', 'graphics-design')
+            ->firstOrFail();
+        $websiteDevelopment = ServiceSubcategory::query()
+            ->where('slug', 'website-development')
+            ->firstOrFail();
+
+        $this->stateful()->actingAs($creator)->postJson('/api/v1/services', [
+            'store_id' => $store->id,
+            'title' => 'Mismatched category',
+            'service_category_id' => $design->id,
+            'service_subcategory_id' => $websiteDevelopment->id,
+        ])->assertJsonValidationErrors('service_subcategory_id');
     }
 
     public function test_index_is_scoped_to_the_active_workspace_and_user(): void

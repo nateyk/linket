@@ -23,6 +23,8 @@ class PublicServiceResource extends JsonResource
             'slug' => $this->slug,
             'title' => $this->title,
             'category' => $this->category,
+            'service_category_id' => $this->service_category_id,
+            'service_subcategory_id' => $this->service_subcategory_id,
             'short_description' => $this->short_description,
             'skills' => $this->skills ?? [],
             'cover' => $this->whenLoaded('cover', fn () => $this->cover ? [

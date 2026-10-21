@@ -35,6 +35,8 @@ export type ServiceFormState = {
   short_description: string;
   description: string;
   category: string;
+  service_category_id: number | null;
+  service_subcategory_id: number | null;
   skills: string;
   cover_url: string;
   cover_file_entry_id: number | null;
@@ -53,6 +55,8 @@ export type CreatorServiceResource = {
   slug: string;
   status: 'draft' | 'published';
   category?: string | null;
+  service_category_id?: number | null;
+  service_subcategory_id?: number | null;
   skills?: string[];
   short_description?: string | null;
   description?: string | null;
@@ -88,6 +92,8 @@ export type ServicePayload = {
   short_description: string | null;
   description: string;
   category: string | null;
+  service_category_id: number | null;
+  service_subcategory_id: number | null;
   skills: string[];
   cover_file_entry_id: number | null;
   gallery_file_entry_ids: number[];
@@ -125,6 +131,8 @@ export function emptyServiceForm(): ServiceFormState {
     short_description: '',
     description: '',
     category: '',
+    service_category_id: null,
+    service_subcategory_id: null,
     skills: '',
     cover_url: '',
     cover_file_entry_id: null,
@@ -147,6 +155,8 @@ export function fromServiceResource(
     short_description: service.short_description ?? '',
     description: service.description ?? '',
     category: service.category ?? '',
+    service_category_id: service.service_category_id ?? null,
+    service_subcategory_id: service.service_subcategory_id ?? null,
     skills: (service.skills ?? []).join(', '),
     cover_url: service.cover?.url ?? '',
     cover_file_entry_id: service.cover?.id ?? null,
@@ -196,6 +206,8 @@ export function toServicePayload(form: ServiceFormState): ServicePayload {
     short_description: form.short_description.trim() || null,
     description: form.description,
     category: form.category.trim() || null,
+    service_category_id: form.service_category_id,
+    service_subcategory_id: form.service_subcategory_id,
     skills: form.skills
       .split(',')
       .map(skill => skill.trim())

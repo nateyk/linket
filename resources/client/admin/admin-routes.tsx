@@ -1,5 +1,6 @@
 import {listStoresOptions} from '@app/dashboard/stores/stores-queries';
 import {sharedDashboardRoutes} from '@app/dashboard/dashboard-routes';
+import {serviceCategoriesAdminOptions} from '@app/admin/service-categories/service-categories-admin-queries';
 import {adminCustomPagesRoutes} from '@common/admin/custom-pages/admin-custom-pages-routes';
 import {adminFileEntriesRoutes} from '@common/admin/file-entry/admin-file-entries-routes';
 import {adminBlogRoutes} from '@common/admin/blog/admin-blog-routes';
@@ -66,6 +67,16 @@ export const adminRoutes: RouteObject[] = [
         },
       },
       ...adminBlogRoutes,
+      {
+        path: 'service-categories',
+        lazy: () =>
+          import('@app/admin/service-categories/admin-service-categories-page'),
+        loader: async () => {
+          const redirect = authGuard({permission: 'settings.update'});
+          if (redirect) return redirect;
+          await queryClient.ensureQueryData(serviceCategoriesAdminOptions());
+        },
+      },
 
       commonAdminSettingsRoutes(
         [

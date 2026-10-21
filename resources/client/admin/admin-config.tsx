@@ -20,6 +20,7 @@ import {
   CoinsIcon,
   HelpCircleIcon,
   NewspaperIcon,
+  ListTreeIcon,
 } from 'lucide-react';
 import {ComponentProps, ReactElement} from 'react';
 
@@ -42,6 +43,7 @@ export const AdminSidebarIcons: Record<
   '/admin/logs': <ClipboardClockIcon />,
   '/admin/help': <HelpCircleIcon />,
   '/admin/blog': <NewspaperIcon />,
+  '/admin/service-categories': <ListTreeIcon />,
   '/admin/items': <StoreIcon />,
   '/admin/payment-activity': <CircleDollarSignIcon />,
   '/admin/kyc-verifications': <ShieldCheckIcon />,
