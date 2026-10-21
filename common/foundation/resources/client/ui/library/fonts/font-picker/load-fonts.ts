@@ -1,3 +1,4 @@
+import {isBrowserSafeFont} from './browser-safe-fonts';
 import {FontConfig, FontFaceConfig} from './font-config';
 import lazyLoader from '@ui/utils/loaders/lazy-loader';
 
@@ -22,7 +23,9 @@ export function loadFonts(
   let promises = [];
 
   fonts.forEach(font => {
-    if ('google' in font && font.google) {
+    // Stored appearance data can carry a stale `google` flag after switching
+    // to a browser-safe family; never send the system stack to Google.
+    if ('google' in font && font.google && !isBrowserSafeFont(font)) {
       googleFonts.push(font);
     } else if ('src' in font) {
       customFonts.push(font);
@@ -32,7 +35,7 @@ export function loadFonts(
 
   if (googleFonts?.length) {
     const weights = options.weights || [400];
-    const families = fonts
+    const families = googleFonts
       .map(f => `${f.family}:${weights.join(',')}`)
       .join('|');
     const googlePromise = lazyLoader.loadAsset(

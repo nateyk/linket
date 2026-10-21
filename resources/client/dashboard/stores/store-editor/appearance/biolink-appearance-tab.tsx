@@ -14,7 +14,10 @@ import {Accordion} from '@shadcn/accordion/accordion';
 import {Button} from '@shadcn/button/button';
 import {Dialog} from '@shadcn/dialog/dialog';
 import {ColorField} from '@ui/color-picker/color-field';
-import {BrowserSafeFonts} from '@ui/fonts/font-picker/browser-safe-fonts';
+import {
+  BrowserSafeFonts,
+  normalizeFontConfig,
+} from '@ui/fonts/font-picker/browser-safe-fonts';
 import {Switch} from '@ui/forms/toggle/switch';
 import {Trans} from '@ui/i18n/trans';
 import {useSettings} from '@ui/settings/use-settings';
@@ -151,10 +154,7 @@ function TextStyle() {
                   value={currentValue}
                   onChange={newValue => {
                     updateAppearance({
-                      fontConfig: {
-                        ...currentValue,
-                        ...newValue,
-                      },
+                      fontConfig: normalizeFontConfig(newValue),
                     });
                   }}
                 />
