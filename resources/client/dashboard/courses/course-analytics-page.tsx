@@ -184,8 +184,8 @@ export function CourseAnalyticsPage() {
         </div>
 
         <div className="overflow-hidden rounded-card border bg-card">
-          <div className="flex items-center justify-between border-b bg-muted/20 px-5 py-3">
-            <h2 className="text-sm font-semibold">
+          <div className="flex items-center justify-between border-b px-5 py-3">
+            <h2 className="text-xl font-semibold">
               <Trans message="Detailed performance" />
             </h2>
             <Badge variant="secondary" className="text-xs">

@@ -2,7 +2,18 @@ import {Accordion as AccordionPrimitive} from '@base-ui/react/accordion';
 
 import {cn} from '@ui/utils/cn';
 import {ChevronDownIcon, ChevronUpIcon} from 'lucide-react';
-import type {ReactElement} from 'react';
+import {createContext, useContext, type ReactElement} from 'react';
+
+/**
+ * The root's variant decides whether its items read as standalone cards.
+ * Items take it from context so rounded-card/border tokens only appear in
+ * the class list of separated variants — inert group-data-[variant=…]
+ * selectors would sit in every item and read as cards nested inside the
+ * bordered shell.
+ */
+const AccordionVariantContext = createContext<
+  'separated' | 'bordered' | 'default'
+>('default');
 
 /**
  * A vertically stacked set of interactive headings that each reveal a section of content.
@@ -15,15 +26,22 @@ function AccordionRoot({
   variant?: 'separated' | 'bordered' | 'default';
 }) {
   return (
-    <AccordionPrimitive.Root
-      data-slot="accordion"
-      data-variant={variant}
-      className={cn(
-        'group/accordion flex w-full flex-col overflow-hidden data-[variant=bordered]:rounded-card data-[variant=bordered]:border data-[variant=separated]:gap-3',
-        className,
-      )}
-      {...props}
-    />
+    <AccordionVariantContext.Provider value={variant}>
+      <AccordionPrimitive.Root
+        data-slot="accordion"
+        data-variant={variant}
+        className={cn(
+          'group/accordion flex w-full flex-col overflow-hidden',
+          // Applied from the prop, not data-[variant=…] selectors: the inert
+          // selector tokens would sit in the class list of every variant and
+          // read as a card shell around the separated items.
+          variant === 'bordered' && 'rounded-card border',
+          variant === 'separated' && 'gap-3',
+          className,
+        )}
+        {...props}
+      />
+    </AccordionVariantContext.Provider>
   );
 }
 
@@ -34,13 +52,23 @@ function AccordionItem({
   ...rest
 }: AccordionPrimitive.Item.Props & {variant?: 'separated' | 'bordered' | 'default'}) {
   const isBordered = variant === 'bordered';
+  const rootVariant = useContext(AccordionVariantContext);
 
   return (
     <AccordionPrimitive.Item
       data-slot="accordion-item"
       data-variant={variant}
       className={cn(
-        'overflow-hidden not-last:border-b group-data-[variant=separated]/accordion:rounded-card-sm group-data-[variant=separated]/accordion:border group-data-[variant=separated]/accordion:data-open:border-foreground/15 group-data-[variant=separated]/accordion:data-open:shadow',
+        'overflow-hidden not-last:border-b',
+        // Card styling only for separated items; taking it from the root via
+        // context keeps rounded-card/border tokens out of every other
+        // variant's class list, where they read as cards inside the shell.
+        // The same padding insets the card's children: an overflow-hidden
+        // card whose child boxes sit flush against the frame reads as
+        // cramped padding (no inset), while the trigger's own padding keeps
+        // setting the text inset on top of it.
+        rootVariant === 'separated' &&
+          'rounded-card-sm border p-2 data-open:border-foreground/15 data-open:shadow',
         isBordered && 'relative',
         className,
       )}
@@ -72,6 +100,8 @@ function AccordionTrigger({
    */
   headingRender?: ReactElement;
 }) {
+  const rootVariant = useContext(AccordionVariantContext);
+
   return (
     <AccordionPrimitive.Header
       className="flex flex-1"
@@ -81,6 +111,10 @@ function AccordionTrigger({
         data-slot="accordion-trigger"
         className={cn(
           'group/accordion-trigger relative flex flex-1 items-center justify-between gap-4 p-3 text-start text-sm font-medium transition-all outline-none group-data-[variant=bordered]/accordion:hover:text-primary group-data-[variant=default]/accordion:hover:underline group-data-[variant=separated]/accordion:hover:bg-accent/80 focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-[-2px] aria-disabled:pointer-events-none aria-disabled:opacity-50 **:data-[slot=accordion-trigger-icon]:ms-auto **:data-[slot=accordion-trigger-icon]:text-muted-foreground [&_svg:not([class*="size-"])]:size-4',
+          // Separated items pad their children off the card frame, so the
+          // trigger's hover fill sits inset; round it to follow the card
+          // corners instead of ending in square edges.
+          rootVariant === 'separated' && 'rounded-card-sm',
           className,
         )}
         {...props}

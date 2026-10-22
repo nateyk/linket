@@ -9,7 +9,7 @@ export function HelpArticleBody({html}: Props) {
   const sanitized = useMemo(() => sanitizeHelpHtml(html), [html]);
   return (
     <div
-      className="prose max-w-none dark:prose-invert wrap-break-word"
+      className="prose dark:prose-invert wrap-break-word"
       dangerouslySetInnerHTML={{__html: sanitized}}
     />
   );

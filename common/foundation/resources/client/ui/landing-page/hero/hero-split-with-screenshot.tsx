@@ -45,7 +45,7 @@ export function HeroSplitWithScreenshot({config}: Props) {
             url="/"
           />
           {config.badge ? (
-            <div className="mt-24 w-max rounded-full bg-primary/10 px-3 py-1 text-sm/6 font-semibold text-primary ring-1 ring-primary/10 ring-inset sm:mt-32 lg:mt-16">
+            <div className="mt-24 w-max rounded-full bg-primary/10 px-3 py-1.5 text-sm/6 font-semibold text-primary ring-1 ring-primary/10 ring-inset sm:mt-32 lg:mt-16">
               <Trans message={config.badge} />
             </div>
           ) : null}
@@ -128,13 +128,7 @@ function ColorSplash() {
       aria-hidden="true"
       className="absolute top-2.5 left-[calc(50%-4rem)] -z-10 transform-gpu blur-3xl sm:left-[calc(50%-18rem)] lg:top-[calc(50%-30rem)] lg:left-12 xl:left-[calc(50%-24rem)]"
     >
-      <div
-        className="aspect-1108/632 w-277 bg-linear-to-r from-primary/25 to-primary opacity-40"
-        style={{
-          clipPath:
-            'polygon(73.6% 51.7%, 91.7% 11.8%, 100% 46.4%, 97.4% 82.2%, 92.5% 84.9%, 75.7% 64%, 55.3% 47.5%, 46.5% 49.4%, 45% 62.9%, 50.3% 87.2%, 21.3% 64.1%, 0.1% 100%, 5.4% 51.1%, 21.4% 63.9%, 58.9% 0.2%, 73.6% 51.7%)',
-        }}
-      ></div>
+      <div className="aspect-1108/632 w-277 rounded-[42%_58%_46%_54%] bg-linear-to-r from-primary/25 to-primary opacity-40" />
     </div>
   );
 }

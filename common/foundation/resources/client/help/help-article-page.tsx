@@ -61,14 +61,6 @@ export function Component() {
               <CalendarIcon className="size-4" />
               {new Date(article.created_at).toLocaleDateString()}
             </div>
-            <HelpArticleBody html={article.body ?? ''} />
-            <Card.Root className="mt-8 p-6">
-              <ArticleFeedback
-                slug={article.slug}
-                likes={article.likes}
-                dislikes={article.dislikes}
-              />
-            </Card.Root>
           </div>
           <aside className="hidden xl:block">
             <div className="mb-3">
@@ -77,6 +69,18 @@ export function Component() {
             <RelatedArticles articles={relatedArticles} />
           </aside>
         </div>
+        {/* The article body flows below the opening row instead of inside the
+            grid's left column: a long article in a 1fr column would stretch
+            one column far past the fold while the aside floats in dead
+            space. */}
+        <HelpArticleBody html={article.body ?? ''} />
+        <Card.Root className="mt-8 p-6">
+          <ArticleFeedback
+            slug={article.slug}
+            likes={article.likes}
+            dislikes={article.dislikes}
+          />
+        </Card.Root>
       </div>
       <Footer
         className="mx-auto w-full max-w-7xl"

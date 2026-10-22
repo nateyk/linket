@@ -1,5 +1,6 @@
 import {BackgroundStyle} from '@app/dashboard/stores/store-editor/appearance/background-style';
 import {ButtonStyle} from '@app/dashboard/stores/store-editor/appearance/button-style';
+import {appearanceHeaderClassnames} from '@app/dashboard/stores/store-editor/appearance/header-classnames';
 import {useBiolinkEditorStore} from '@app/dashboard/stores/store-editor/biolink-editor-store';
 import {BuilderSectionHeader} from '@app/dashboard/stores/store-editor/builder-section-header';
 import {SectionAccordionTrigger} from '@app/dashboard/stores/store-editor/section-accordion-trigger';
@@ -42,8 +43,10 @@ export function Component() {
         title={<Trans message="Appearance" />}
         description={<Trans message="Customize the look of your creator profile." />}
       />
+      {/* Default (divider list), not separated: this accordion sits inside
+          the section's card pane, and separated items would be cards inside
+          a card. */}
       <Accordion.Root
-        variant="separated"
         value={openSection ? [openSection] : []}
         onValueChange={value => setOpenSection((value[0] as string) ?? null)}
       >
@@ -122,7 +125,7 @@ function TextStyle() {
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       <div className="w-full">
-        <div className="mb-2 text-sm font-medium">
+        <div className={appearanceHeaderClassnames.h3}>
           <Trans message="Font" />
         </div>
         <Dialog.Root>

@@ -37,3 +37,13 @@ test('keeps safe formatting tags', () => {
   expect(screen.getByText('item')).toBeTruthy();
   expect(screen.getByText('code')).toBeTruthy();
 });
+
+test('caps prose at the typography measure instead of stretching line length', () => {
+  const {container} = render(<HelpArticleBody html="<p>hi</p>" />);
+
+  // max-w-none stretched body lines to ~94ch; without it the prose default
+  // (max-width: 65ch) keeps lines under the 80ch craft floor.
+  expect(container.querySelector('.prose')?.className).not.toContain(
+    'max-w-none',
+  );
+});

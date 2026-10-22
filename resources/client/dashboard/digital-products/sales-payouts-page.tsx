@@ -547,7 +547,9 @@ function TableEmptyState({
   description: string;
 }) {
   return (
-    <Empty.Root className="border-none py-8">
+    // Plain centered message inside the table's card: the default empty
+    // shell (rounded-card) would be a card inside a card.
+    <Empty.Root className="rounded-none border-none py-8">
       <Empty.Header>
         <Empty.Media variant="icon">
           <Icon />

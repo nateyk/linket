@@ -370,10 +370,13 @@ test('opening the About tab on a pristine form keeps it clean (rebase vs mount r
   );
 });
 
-test('content sections use the shared separated variant', () => {
+test('content sections use the divider-list variant, not separated cards', () => {
   renderProfileEditor();
   const root = document.querySelector('[data-slot="accordion"]');
-  expect(root?.getAttribute('data-variant')).toBe('separated');
+  // The accordion sits inside the section's card pane: separated items would
+  // be rounded bordered cards inside that card (nested cards). The default
+  // variant renders divider rows instead.
+  expect(root?.getAttribute('data-variant')).toBe('default');
 });
 
 test('content sections start collapsed (nothing open by default)', () => {

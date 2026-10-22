@@ -31,7 +31,7 @@ function CourseSettingsDescriptionEditor({
       initialContent={value}
       onChange={onChange}
     >
-      <div className="overflow-hidden rounded-card-sm border border-border">
+      <div className="flex flex-col">
         <div className="no-scrollbar flex shrink-0 items-center gap-0.5 overflow-x-auto border-b px-1.5 py-1 text-muted-foreground">
           <FormatDropdown />
           <Divider />
@@ -43,7 +43,7 @@ function CourseSettingsDescriptionEditor({
           <Divider />
           <ClearFormatButton />
         </div>
-        <TiptapEditorContent className="prose prose-sm min-h-[180px] max-w-none px-3 py-2.5 dark:prose-invert" />
+        <TiptapEditorContent className="prose prose-sm min-h-[180px] max-w-[60ch] px-3 py-2.5 dark:prose-invert" />
       </div>
     </TipTapEditorProvider>
   );

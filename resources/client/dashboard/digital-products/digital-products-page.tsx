@@ -256,7 +256,7 @@ function ProductCard({
         >
           {product.cover?.url ? (
             <img
-              className="size-full object-cover transition-transform duration-300 group-hover:scale-[1.025]"
+              className="size-full object-cover"
               src={product.cover.url}
               loading="lazy"
               decoding="async"

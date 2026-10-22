@@ -59,3 +59,18 @@ describe('analytics copy is translatable', () => {
     expect(source).not.toContain('hint={`${');
   });
 });
+
+describe('analytics hierarchy', () => {
+  const source = fs.readFileSync(
+    'resources/client/dashboard/courses/course-analytics-page.tsx',
+    'utf8',
+  );
+
+  test('the panel heading steps above body copy', () => {
+    expect(source).toContain('<h2 className="text-xl font-semibold">');
+  });
+
+  test('the panel header is a flat strip, not a nested surface', () => {
+    expect(source).not.toContain('border-b bg-muted/20 px-5 py-3');
+  });
+});

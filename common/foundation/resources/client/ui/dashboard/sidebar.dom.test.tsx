@@ -36,3 +36,17 @@ test('consumers can override the sidebar landmark label (A-10)', () => {
   expect(nav!.tagName).toBe('NAV');
   expect(nav!.getAttribute('aria-label')).toBe('Settings navigation');
 });
+
+test('layout shell does not clip positioned children (no overflow-hidden)', () => {
+  renderSidebar();
+
+  // The h-screen shell intentionally leaves overflow visible so sr-only
+  // anchors and other positioned children inside it are never cut off;
+  // the inner scroll regions own their own overflow.
+  const root = document.querySelector<HTMLElement>(
+    '[class*="group/dashboard-layout"]',
+  );
+  expect(root).toBeTruthy();
+  expect(root!.className).toContain('h-screen');
+  expect(root!.className).not.toContain('overflow-hidden');
+});

@@ -123,7 +123,7 @@ function SidebarRoot({
         data-variant={variant}
         data-collapsible={status === 'collapsed' ? collapsible : ''}
         className={cn(
-          'group flex h-full flex-col pt-1.5 text-foreground transition-width duration-100 ease-linear',
+          'group flex h-full flex-col pt-1.5 text-foreground',
           variant === 'floating' && 'rounded-card bg-background shadow-sm',
           variant === 'default' && (side === 'left' ? 'border-e' : 'border-s'),
           activeWidth,
@@ -222,7 +222,7 @@ function SidebarGroupLabel({
     props: mergeProps<'div'>(
       {
         className: cn(
-          'flex h-8 shrink-0 items-center justify-start gap-0.5 rounded-button px-3 text-sm font-normal text-muted-foreground transition-[margin,opacity] duration-100 ease-linear group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0 [&>svg]:size-4 [&>svg]:shrink-0',
+          'flex h-8 shrink-0 items-center justify-start gap-0.5 rounded-button px-3 text-sm font-normal text-muted-foreground transition-opacity duration-100 ease-linear group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0 [&>svg]:size-4 [&>svg]:shrink-0',
           className,
         ),
       },
@@ -324,7 +324,7 @@ function SidebarMenuItem({className, ...props}: ComponentProps<'li'>) {
 }
 
 const sidebarMenuButtonVariants = cva(
-  "peer/menu-button group/menu-button flex w-full cursor-pointer items-center gap-2 truncate overflow-hidden rounded-button px-3 py-2 text-start text-sm transition-[width,height,padding] group-has-data-[sidebar=menu-action]/menu-item:pe-8 group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2 hover:bg-sidebar-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 aria-[current=page]:bg-sidebar-accent aria-[current=page]:font-medium aria-[current=page]:text-accent-foreground data-open:hover:bg-sidebar-accent data-open:hover:text-accent-foreground [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "peer/menu-button group/menu-button flex w-full cursor-pointer items-center gap-2 truncate overflow-hidden rounded-button px-3 py-2 text-start text-sm transition-colors duration-150 group-has-data-[sidebar=menu-action]/menu-item:pe-8 group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-2 hover:bg-sidebar-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 aria-[current=page]:bg-sidebar-accent aria-[current=page]:font-medium aria-[current=page]:text-accent-foreground data-open:hover:bg-sidebar-accent data-open:hover:text-accent-foreground [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {

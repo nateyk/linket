@@ -65,7 +65,7 @@ export function ProgressBarBase(props: ProgressBarBaseProps) {
 
   const barStyle: CSSProperties = {};
   if (!isIndeterminate) {
-    barStyle.width = `${Math.round(percentage * 100)}%`;
+    barStyle.transform = `scaleX(${percentage})`;
   }
 
   const labelEl = (label || valueLabel) && (
@@ -106,7 +106,7 @@ export function ProgressBarBase(props: ProgressBarBaseProps) {
         <div
           className={clsx(
             progressColor,
-            'fill h-full rounded-l transition-width duration-200',
+            'fill h-full w-full origin-left rounded-l transition-transform duration-200',
             isIndeterminate && 'progress-bar-indeterminate-animate',
           )}
           style={barStyle}

@@ -39,3 +39,13 @@ describe('creator product statistics menu item', () => {
     );
   });
 });
+
+describe('cover imagery', () => {
+  test('covers sit still on hover — no zooming <img>', () => {
+    // image-hover-transform: scaling an image on hover is a generated-UI
+    // signature; the card keeps its shadow lift as the hover affordance.
+    expect(source).not.toContain('group-hover:scale');
+    expect(source).not.toContain('hover:scale-');
+    expect(source).toContain('hover:shadow-md');
+  });
+});

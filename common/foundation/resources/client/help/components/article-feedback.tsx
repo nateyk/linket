@@ -28,9 +28,9 @@ export function ArticleFeedback({slug, likes, dislikes}: Props) {
 
   return (
     <div className="text-center">
-      <h5 className="mb-3 font-medium">
+      <h3 className="mb-3 font-medium">
         <Trans message="Was this article helpful?" />
-      </h5>
+      </h3>
       <div className="mb-3 flex items-center justify-center gap-3">
         <Button
           variant="outline"

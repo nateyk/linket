@@ -48,7 +48,7 @@ return [
                     'badge' => 'Short links · Storefront · QR codes',
                     'title' => 'Every link you share, built to convert',
                     'description' =>
-                        'Shorten URLs, launch beautiful link-in-bio pages, and track every click — all from one dashboard. Branded domains, deep analytics, and tools your whole team can use.',
+                        'Shorten URLs, launch beautiful link-in-bio pages, and track every click, all from one dashboard. Branded domains, deep analytics, and tools your whole team can use.',
                     'showSearchBarSlot' => true,
                     'image' => [
                         'src' => 'images/landing/links.webp',
@@ -71,7 +71,7 @@ return [
                             'icon' => 'links',
                             'title' => 'Branded short links',
                             'description' =>
-                                'Create memorable short URLs with custom back-halves, folders, and your own domain — so every link looks like you.',
+                                'Create memorable short URLs with custom back-halves, folders, and your own domain, so every link looks like you.',
                         ],
                         [
                             'icon' => 'stores',
@@ -93,7 +93,7 @@ return [
                     'badge' => 'Short links',
                     'title' => 'Short URLs with serious control',
                     'description' =>
-                        'Go beyond basic shortening. Customize every link, organize campaigns in folders, and route visitors with smart rules — without leaving your dashboard.',
+                        'Go beyond basic shortening. Customize every link, organize campaigns in folders, and route visitors with smart rules, without leaving your dashboard.',
                     'alignLeft' => false,
                     'wrapIconsInBg' => true,
                     'imageSize' => 'lg',
@@ -129,7 +129,7 @@ return [
                     'badge' => 'Storefront',
                     'title' => 'One link for everything you share',
                     'description' =>
-                        'Replace a messy list of links with a polished page that reflects your brand. Add buttons, images, embeds, and more — then update it anytime.',
+                        'Replace a messy list of links with a polished page that reflects your brand. Add buttons, images, embeds, and more, then update it anytime.',
                     'alignLeft' => true,
                     'wrapIconsInBg' => true,
                     'imageSize' => 'lg',
@@ -149,7 +149,7 @@ return [
                             'icon' => 'brand',
                             'title' => 'Fully on-brand',
                             'description' =>
-                                'Custom colors, fonts, and layouts — plus optional custom domains so your bio link matches your website.',
+                                'Custom colors, fonts, and layouts, plus optional custom domains so your bio link matches your website.',
                         ],
                         [
                             'icon' => 'insights',
@@ -179,7 +179,7 @@ return [
                             'icon' => 'fast',
                             'title' => 'Instant generation',
                             'description' =>
-                                'Create a QR code for any short link or biolink the moment you need it — no extra tools or exports required.',
+                                'Create a QR code for any short link or biolink the moment you need it: no extra tools or exports required.',
                         ],
                         [
                             'icon' => 'date',
@@ -209,7 +209,7 @@ return [
                             'icon' => 'custom-domains',
                             'title' => 'Custom domains',
                             'description' =>
-                                'Connect your own domain and serve short links from your brand — not ours.',
+                                'Connect your own domain and serve short links from your brand, not ours.',
                         ],
                         [
                             'icon' => 'folders',
@@ -239,7 +239,7 @@ return [
                             'icon' => 'api',
                             'title' => 'API & webhooks',
                             'description' =>
-                                'Automate link creation and get notified when links are clicked — integrate Linket into your stack.',
+                                'Automate link creation and get notified when links are clicked. Integrate Linket into your stack.',
                         ],
                     ],
                 ],

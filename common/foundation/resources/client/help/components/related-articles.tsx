@@ -14,9 +14,9 @@ export function RelatedArticles({articles}: Props) {
   }
   return (
     <Card.Root className="sticky top-6 p-2">
-      <h5 className="mb-3 px-3 pt-2 font-medium">
+      <h2 className="mb-3 px-3 pt-2 font-medium">
         <Trans message="Related articles" />
-      </h5>
+      </h2>
       <nav className="flex flex-col">
         {articles.map(article => (
           <Link

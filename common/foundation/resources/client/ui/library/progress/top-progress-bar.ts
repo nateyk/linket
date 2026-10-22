@@ -38,7 +38,6 @@ export class TopProgressBar {
   }
 
   private installProgressElement() {
-    this.el.style.width = '0';
     this.el.style.opacity = '1';
     document.documentElement.insertBefore(this.el, document.body);
     requestAnimationFrame(() => {
@@ -78,7 +77,7 @@ export class TopProgressBar {
 
   private refresh() {
     requestAnimationFrame(() => {
-      this.el.style.width = `${10 + this.value * 90}%`;
+      this.el.style.transform = `translate3d(0, 0, 0) scaleX(${0.1 + this.value * 0.9})`;
     });
   }
 

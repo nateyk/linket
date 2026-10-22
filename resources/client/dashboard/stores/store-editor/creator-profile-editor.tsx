@@ -394,8 +394,10 @@ export function CreatorProfileEditor({
               </Field.Root>
             </section>
           ) : (
+            // Default (divider list), not separated: this accordion sits
+            // inside the section's card pane, and separated items would be
+            // cards inside a card.
             <Accordion.Root
-              variant="separated"
               value={openSection ? [openSection] : []}
               onValueChange={value =>
                 setOpenSection(
@@ -640,7 +642,7 @@ export function CreatorProfileEditor({
                   <Field.Group className="max-w-2xl gap-3">
                     <Field.Root
                       orientation="horizontal"
-                      className="items-start rounded-card-sm border bg-muted/20 p-4"
+                      className="items-start rounded-card-sm border border-border/70 bg-transparent p-4"
                     >
                       <div
                         data-slot="field-content"

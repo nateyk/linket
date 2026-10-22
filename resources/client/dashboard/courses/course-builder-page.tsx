@@ -955,9 +955,9 @@ function CourseBuilder() {
                                       {dragHandleRef => (
                                         <div
                                           className={cn(
-                                            'flex items-center gap-2 rounded-card border p-2 text-sm',
+                                            'flex items-center gap-2 rounded-card-sm p-2 text-sm',
                                             selectedLesson?.id === lesson.id
-                                              ? 'bg-primary/5 ring-1 ring-primary/20'
+                                              ? 'bg-primary/10'
                                               : 'bg-card hover:bg-muted/30',
                                           )}
                                         >
@@ -1924,17 +1924,17 @@ function LessonEditor({
       </Field.Root>
 
       {contentType === 'video' && (
-        <Card.Root className="gap-0 overflow-hidden border py-0 ring-0">
-          <Card.Header className="p-4">
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
               <VideoIcon className="size-4 text-muted-foreground" aria-hidden="true" />
-              <Card.Title className="text-sm"><Trans message="Video" /></Card.Title>
+              <p className="text-sm font-medium"><Trans message="Video" /></p>
             </div>
-            <Card.Description>
+            <p className="text-xs text-muted-foreground">
               <Trans message="Upload a video for playback inside Linket, or paste a YouTube/Vimeo URL." />
-            </Card.Description>
-          </Card.Header>
-          <Card.Content className="flex flex-col gap-4 p-4 pt-0">
+            </p>
+          </div>
+          <div className="flex flex-col gap-4">
             <SharedFileUploader
               uploadType="courseVideos"
               onUploaded={attachVideoEntry}
@@ -1974,8 +1974,8 @@ function LessonEditor({
                 )}
               </div>
             )}
-          </Card.Content>
-        </Card.Root>
+          </div>
+        </div>
       )}
 
       <Tabs.Root value={activeTab} onValueChange={setActiveTab} defaultValue={contentType === 'video' ? 'summary' : 'content'} className="w-full">
@@ -2010,7 +2010,7 @@ function LessonEditor({
                 onChange={setContent}
               >
                 <EditorContentSync content={content} />
-                <div className="overflow-hidden rounded-card-xs border">
+                <div>
                   <div className="flex flex-wrap items-center gap-0.5 border-b bg-muted/30 p-2">
                     <FormatDropdown />
                     <Divider />
@@ -2022,7 +2022,7 @@ function LessonEditor({
                     <Divider />
                     <ClearFormatButton />
                   </div>
-                  <TiptapEditorContent className="prose prose-sm min-h-[180px] max-w-none p-3" />
+                  <TiptapEditorContent className="prose prose-sm min-h-[180px] max-w-[60ch] p-3 dark:prose-invert" />
                 </div>
               </TipTapEditorProvider>
             </Field.Root>
@@ -2042,7 +2042,7 @@ function LessonEditor({
                 onChange={setContent}
               >
                 <EditorContentSync content={content} />
-                <div className="overflow-hidden rounded-card-xs border">
+                <div>
                   <div className="flex flex-wrap items-center gap-0.5 border-b bg-muted/30 p-2">
                     <FormatDropdown />
                     <Divider />
@@ -2054,7 +2054,7 @@ function LessonEditor({
                     <Divider />
                     <ClearFormatButton />
                   </div>
-                  <TiptapEditorContent className="prose prose-sm min-h-[180px] max-w-none p-3" />
+                  <TiptapEditorContent className="prose prose-sm min-h-[180px] max-w-[60ch] p-3 dark:prose-invert" />
                 </div>
               </TipTapEditorProvider>
             </Field.Root>
@@ -2597,7 +2597,7 @@ function CourseSettingsContent({
             <Trans message="You can sell this course directly. Create a Storefront later if you want to display it there." />
           </Field.Description>
         ) : (
-          <div className="divide-y rounded-lg border px-3">
+          <div className="divide-y">
             {biolinks.map(biolink => (
               <label
                 key={biolink.id}
@@ -2634,7 +2634,7 @@ function CourseSettingsContent({
         <Field.Label htmlFor={`${inputId}-require-lesson-completion`}>
           <Trans message="Learning Settings" />
         </Field.Label>
-        <div className="flex items-center justify-between gap-6 rounded-lg border p-4">
+        <div className="flex items-center justify-between gap-6">
           <div className="flex flex-col gap-1">
             <p className="text-sm font-medium">
               <Trans message="Require students to complete lessons in order" />

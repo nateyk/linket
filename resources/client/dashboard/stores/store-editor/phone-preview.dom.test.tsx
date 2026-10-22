@@ -163,6 +163,14 @@ describe('PhonePreview', () => {
     expect(statusBar!.className).toContain('pointer-events-none');
     // The status bar reserves the safe area so it never sits on the island.
     expect(statusBar!.style.height).toBe(`${PHONE_GEOMETRY.safeArea.top}px`);
+    // Its own glyphs stay hit-testable, like a real status bar: the strip
+    // passes taps through to the preview, but the clock and indicators
+    // swallow touches instead of letting them fall into the page beneath.
+    const glyphs = statusBar!.querySelectorAll('span');
+    expect(glyphs.length).toBeGreaterThan(0);
+    for (const glyph of glyphs) {
+      expect(glyph.className).toContain('pointer-events-auto');
+    }
 
     const home = container.querySelector<HTMLElement>('.bg-black\\/70');
     expect(home).toBeTruthy();

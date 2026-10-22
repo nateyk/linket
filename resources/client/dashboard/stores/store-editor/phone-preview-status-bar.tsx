@@ -6,8 +6,10 @@ import {
 } from './phone-preview.constants';
 
 /**
- * Device chrome, not part of the page: it sits above the content, ignores
- * pointer events and stays out of the accessibility tree. Memoised because it
+ * Device chrome, not part of the page: it sits above the content, stays out
+ * of the accessibility tree and lets taps pass through everywhere except its
+ * own glyphs — like a real status bar, whose clock and indicators swallow
+ * touches instead of forwarding them to the page below. Memoised because it
  * never changes and must not re-render with the frame around it.
  */
 export const PhoneStatusBar = memo(function PhoneStatusBar() {
@@ -20,8 +22,8 @@ export const PhoneStatusBar = memo(function PhoneStatusBar() {
       }}
       className="pointer-events-none absolute inset-x-0 top-0 z-[2] flex items-center justify-between px-7 font-medium text-black/65"
     >
-      <span className="tabular-nums">9:41</span>
-      <span className="flex items-center gap-1.5">
+      <span className="pointer-events-auto tabular-nums">9:41</span>
+      <span className="pointer-events-auto flex items-center gap-1.5">
         <Signal className="size-4" strokeWidth={2.5} />
         <Wifi className="size-4" strokeWidth={2.5} />
         <BatteryFull className="size-5" strokeWidth={2} />

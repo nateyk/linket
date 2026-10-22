@@ -71,7 +71,7 @@ function AvatarColorFallback({
     <AvatarFallback
       className={cn('text-primary-foreground', className)}
       style={{
-        backgroundColor: `oklch(50% 0.16 ${hue})`,
+        backgroundColor: `light-dark(oklch(50% 0.16 ${hue}), oklch(80% 0.12 ${hue}))`,
         ...style,
       }}
       {...props}

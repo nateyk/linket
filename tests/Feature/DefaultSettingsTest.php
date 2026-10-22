@@ -20,3 +20,11 @@ it('default menus point product entries at the renamed items paths', function(){
  expect($allLabels)->not->toContain('My Products');
  expect($allLabels)->not->toContain('Digital Products');
 });
+
+it('default settings copy stays under the em-dash saturation threshold', function(){
+ // mirrors the detector's em-dash-overuse rule: it fires at 8 em-dashes in body copy
+ $emDashes = collect(require 'resources/defaults/default-settings.php')
+     ->pluck('value')
+     ->sum(fn($value) => substr_count((string) $value, '—'));
+ expect($emDashes)->toBeLessThan(8);
+});

@@ -43,7 +43,10 @@ function Root({
         <div
           {...domProps}
           className={cn(
-            'group/dashboard-layout relative isolate flex h-screen flex-col overflow-hidden bg-background',
+            // No overflow-hidden: the shell must not clip positioned children
+          // inside it (sr-only anchors, meter helpers). The scroll regions
+          // below own their own overflow.
+          'group/dashboard-layout relative isolate flex h-screen flex-col bg-background',
             !isMobileMode &&
               'has-data-[variant=floating]:gap-2 has-data-[variant=floating]:p-2 light:has-data-[variant=floating]:bg-muted light:has-data-[variant=inset]:bg-muted',
             className,
@@ -113,7 +116,7 @@ function Section({
           'flex h-full min-h-0 min-w-0 flex-col bg-background [--section-spacing:--spacing(4)] md:[--section-spacing:--spacing(6)]',
           variant === 'floating' &&
             !isMobileMode &&
-            'rounded-card bg-card shadow-sm dark:bg-card',
+            'rounded-card bg-card dark:bg-card',
           className,
         ),
       },
@@ -154,7 +157,8 @@ function SectionTitle({
     props: mergeProps<'div'>(
       {
         className: cn(
-          'flex flex-1 items-center gap-1 truncate text-xl font-semibold',
+          // DESIGN.md page title (24/600/32) for the dashboard chrome heading.
+          'flex flex-1 items-center gap-1 truncate text-2xl leading-8 font-semibold tracking-tight',
           className,
         ),
       },

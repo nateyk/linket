@@ -703,3 +703,46 @@ describe('course builder video embed policy', () => {
     );
   });
 });
+
+describe('builder surfaces avoid nested cards', () => {
+  const source = fs.readFileSync(
+    path.resolve('resources/client/dashboard/courses/course-builder-page.tsx'),
+    'utf8',
+  );
+  const settingsFields = fs.readFileSync(
+    path.resolve('resources/client/dashboard/courses/course-settings-fields.tsx'),
+    'utf8',
+  );
+
+  test('curriculum lesson rows are flat rows, not cards inside the chapter', () => {
+    expect(source).toContain(
+      "'flex items-center gap-2 rounded-card-sm p-2 text-sm'",
+    );
+    expect(source).not.toContain('rounded-card border p-2 text-sm');
+    expect(source).not.toContain('bg-primary/5 ring-1 ring-primary/20');
+  });
+
+  test('the video block is a section in the form, not a card', () => {
+    expect(source).not.toContain(
+      '<Card.Root className="gap-0 overflow-hidden border py-0 ring-0">',
+    );
+    expect(source).toContain(
+      '<p className="text-sm font-medium"><Trans message="Video" /></p>',
+    );
+  });
+
+  test('placement and learning rows carry no card frame', () => {
+    expect(source).toContain('<div className="divide-y">');
+    expect(source).not.toContain('divide-y rounded-lg border px-3');
+    expect(source).not.toMatch(/justify-between gap-6 rounded-lg border/);
+  });
+
+  test('editor prose keeps a readable measure and inverts in dark mode', () => {
+    expect(source).not.toContain('max-w-none');
+    expect(source).toContain(
+      'prose prose-sm min-h-[180px] max-w-[60ch] p-3 dark:prose-invert',
+    );
+    expect(settingsFields).not.toContain('overflow-hidden rounded-card-sm border');
+    expect(settingsFields).not.toContain('max-w-none');
+  });
+});
