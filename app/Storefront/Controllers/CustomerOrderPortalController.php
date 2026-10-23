@@ -88,7 +88,11 @@ class CustomerOrderPortalController extends Controller
         $enrollments = Enrollment::query()
             ->where('portal_email_hash', $hash)
             ->where('status', 'active')
-            ->with(['course.product.cover'])
+            ->with([
+                'course.product.cover',
+                'course.product.creator',
+                'course.instructor',
+            ])
             ->get();
 
         $courses = $enrollments->map(function (Enrollment $enrollment) use ($progress, $hash) {
@@ -98,16 +102,23 @@ class CustomerOrderPortalController extends Controller
                 return null;
             }
 
+            $completed = $progress->completedCountForPortal($course, $hash);
+            $next = $progress->nextIncompleteLessonForPortal($course, $hash);
+            $creator = $course->instructor ?? $product->creator;
+
             return [
                 'enrollment_id' => $enrollment->id,
                 'course_id' => $course->id,
                 'product_id' => $product->id,
                 'title' => $product->title,
                 'cover' => $product->cover ? ['url' => $product->cover->url] : null,
+                'creator_name' => $creator?->name,
                 'total_lessons' => $progress->totalPublished($course),
                 'percent' => $progress->progressPercentForPortal($course, $hash),
-                'completed' => $progress->completedCountForPortal($course, $hash),
-                'next_lesson_id' => $progress->nextIncompleteLessonForPortal($course, $hash)?->id,
+                'completed' => $completed,
+                'lessons_done' => $completed,
+                'next_lesson_id' => $next?->id,
+                'next_lesson_title' => $next?->title,
                 'enrolled_at' => $enrollment->enrolled_at,
                 'completed_at' => $enrollment->completed_at,
             ];

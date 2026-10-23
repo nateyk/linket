@@ -2,17 +2,16 @@ import {fetchPortalCourseLearn} from '@app/digital-products/public/my-portal-api
 import {MyPortalShell} from '@app/digital-products/public/my-portal-shell';
 import {Alert} from '@shadcn/alert/alert';
 import {Avatar} from '@shadcn/avatar/avatar';
-import {Badge} from '@shadcn/badge/badge';
 import {Button} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
 import {Progress} from '@shadcn/progress/progress';
-import {Separator} from '@shadcn/separator';
 import {Spinner} from '@shadcn/spinner/spinner';
 import {Trans} from '@ui/i18n/trans';
 import {
   ArrowLeftIcon,
   BookOpenIcon,
   CheckIcon,
+  GraduationCapIcon,
   PlayIcon,
 } from 'lucide-react';
 import {useEffect, useState} from 'react';
@@ -100,8 +99,11 @@ export function Component() {
             )}
           </Alert.Description>
         </Alert.Root>
-        <Button className="w-fit" render={<Link to="/my-portal" />}>
-          <Trans message="Back to My Portal" />
+        <Button
+          className="w-fit"
+          render={<Link to="/my-portal?section=courses" />}
+        >
+          <Trans message="Back to My courses" />
         </Button>
       </MyPortalShell>
     );
@@ -128,227 +130,193 @@ export function Component() {
     (course.progress.total > 0 &&
       course.progress.completed >= course.progress.total);
 
-  return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3">
-          <Button
-            size="sm"
-            variant="outline"
-            className="shrink-0"
-            render={<Link to="/my-portal" />}
-          >
-            <ArrowLeftIcon />
-            <span className="hidden sm:inline">
-              <Trans message="My Portal" />
-            </span>
-          </Button>
-          <div className="hidden h-5 w-px bg-border sm:block" />
-          <h1 className="truncate text-sm font-medium sm:text-base">
-            {course.product.title}
-          </h1>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-7xl px-4 py-8">
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-          <div className="flex flex-col gap-6 lg:col-span-2">
-            {course.product.cover?.url ? (
-              <Card.Root className="gap-0 overflow-hidden py-0 shadow-none">
-                <div className="relative aspect-video bg-muted">
-                  <img
-                    src={course.product.cover.url}
-                    alt={course.product.title}
-                    className="size-full object-cover"
-                  />
-                </div>
-              </Card.Root>
-            ) : null}
-
-            <Card.Root className="shadow-none">
-              <Card.Header>
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <Card.Title className="text-xl font-bold sm:text-2xl">
-                    {course.product.title}
-                  </Card.Title>
-                  <Badge variant="secondary">
-                    <BookOpenIcon />
-                    <Trans
-                      message=":count lessons"
-                      values={{count: course.progress.total}}
-                    />
-                  </Badge>
-                </div>
-              </Card.Header>
-              <Card.Content className="flex flex-col gap-5">
-                {course.product.description ? (
-                  <p className="text-sm leading-relaxed text-muted-foreground">
-                    {course.product.description}
-                  </p>
-                ) : null}
-
-                {outcomes.length ? (
-                  <>
-                    <Separator />
-                    <div className="flex flex-col gap-3">
-                      <h3 className="font-semibold">
-                        <Trans message="What you'll learn" />
-                      </h3>
-                      <ul className="flex flex-col gap-2">
-                        {outcomes.map(outcome => (
-                          <li
-                            key={outcome}
-                            className="flex items-start gap-2.5 text-sm"
-                          >
-                            <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                              <CheckIcon className="size-2.5" />
-                            </span>
-                            <span className="text-muted-foreground">
-                              {outcome}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </>
-                ) : null}
-              </Card.Content>
-            </Card.Root>
-
-            {course.instructor ? (
-              <Card.Root className="shadow-none">
-                <Card.Header>
-                  <Card.Title className="text-base">
-                    <Trans message="Instructor" />
-                  </Card.Title>
-                </Card.Header>
-                <Card.Content>
-                  <div className="flex gap-4">
-                    <Avatar.Root className="size-14 shrink-0 rounded-xl">
-                      {course.instructor.avatar_url ? (
-                        <Avatar.Image
-                          src={course.instructor.avatar_url}
-                          alt={course.instructor.name}
-                        />
-                      ) : null}
-                      <Avatar.Fallback className="rounded-xl text-sm font-semibold">
-                        {course.instructor.name
-                          .split(/\s+/)
-                          .map(part => part[0])
-                          .join('')
-                          .slice(0, 2)
-                          .toUpperCase()}
-                      </Avatar.Fallback>
-                    </Avatar.Root>
-                    <div className="flex flex-col gap-1">
-                      <h3 className="font-semibold">{course.instructor.name}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        <Trans message="Course instructor" />
-                      </p>
-                    </div>
-                  </div>
-                </Card.Content>
-              </Card.Root>
-            ) : null}
-
-            <div className="lg:hidden">
-              <CurriculumCard
-                course={course}
-                unlockedLessonIds={unlockedLessonIds}
-                continueTo={continueTo}
-                isComplete={isComplete}
-              />
-            </div>
-          </div>
-
-          <div className="hidden lg:col-span-1 lg:block">
-            <div className="sticky top-20">
-              <CurriculumCard
-                course={course}
-                unlockedLessonIds={unlockedLessonIds}
-                continueTo={continueTo}
-                isComplete={isComplete}
-              />
-            </div>
-          </div>
-        </div>
-      </main>
-    </div>
-  );
-}
-
-function CurriculumCard({
-  course,
-  unlockedLessonIds,
-  continueTo,
-  isComplete,
-}: {
-  course: CourseData;
-  unlockedLessonIds: number[];
-  continueTo: string;
-  isComplete: boolean;
-}) {
-  return (
-    <div className="flex flex-col gap-4">
-      <Card.Root className="shadow-none">
-        <Card.Content className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <Trans
-                message=":completed of :total completed"
-                values={{
-                  completed: course.progress.completed,
-                  total: course.progress.total,
-                }}
-              />
-              <span>{course.progress.percent}%</span>
-            </div>
-            <Progress.Root value={course.progress.percent}>
-              <Progress.Track className="h-1.5">
-                <Progress.Indicator />
-              </Progress.Track>
-            </Progress.Root>
-          </div>
-          <Button
-            size="lg"
-            className="w-full"
-            render={<Link to={continueTo} />}
-          >
-            <PlayIcon />
-            {isComplete ? (
-              <Trans message="Review course" />
-            ) : (
-              <Trans message="Continue learning" />
-            )}
-          </Button>
-        </Card.Content>
-      </Card.Root>
-
-      <Card.Root className="gap-0 overflow-hidden py-0 shadow-none">
-        <Card.Header className="border-b py-4">
-          <Card.Title className="flex items-center justify-between text-base">
-            <span className="flex items-center gap-2">
-              <PlayIcon className="size-4 text-primary" />
-              <Trans message="Course curriculum" />
-            </span>
-            <span className="text-xs font-normal text-muted-foreground">
-              {course.progress.completed}/{course.progress.total}
-            </span>
-          </Card.Title>
-        </Card.Header>
-        <Card.Content className="p-0">
-          <div className="max-h-[420px] overflow-y-auto">
-            <CourseCurriculumList
-              courseId={course.id}
-              chapters={course.chapters}
-              completedLessonIds={course.progress.completed_lesson_ids}
-              unlockedLessonIds={unlockedLessonIds}
-              activeLessonId={course.next_lesson_id ?? undefined}
-              requireSequential={course.require_sequential_completion}
+  const curriculumPanel = (
+    <Card.Root className="gap-0 overflow-hidden py-0 shadow-none">
+      <Card.Header className="border-b py-4">
+        <Card.Title className="flex items-center justify-between text-base">
+          <span className="flex items-center gap-2">
+            <PlayIcon className="size-4 text-primary" />
+            <Trans message="Course curriculum" />
+          </span>
+          <span className="text-xs font-normal text-muted-foreground">
+            {course.progress.completed}/{course.progress.total}
+          </span>
+        </Card.Title>
+        <div className="mt-3 flex flex-col gap-1.5">
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <Trans
+              message=":percent% complete"
+              values={{percent: course.progress.percent}}
             />
           </div>
-        </Card.Content>
-      </Card.Root>
-    </div>
+          <Progress.Root
+            value={course.progress.percent}
+            aria-label={course.product.title}
+          >
+            <Progress.Track className="h-1.5">
+              <Progress.Indicator />
+            </Progress.Track>
+          </Progress.Root>
+        </div>
+      </Card.Header>
+      <Card.Content className="p-0">
+        <div className="max-h-[480px] overflow-y-auto lg:max-h-[calc(100vh-14rem)]">
+          <CourseCurriculumList
+            courseId={course.id}
+            chapters={course.chapters}
+            completedLessonIds={course.progress.completed_lesson_ids}
+            unlockedLessonIds={unlockedLessonIds}
+            activeLessonId={course.next_lesson_id ?? undefined}
+            requireSequential={course.require_sequential_completion}
+          />
+        </div>
+      </Card.Content>
+    </Card.Root>
+  );
+
+  return (
+    <MyPortalShell wide>
+      <div className="flex flex-col gap-8">
+        <div className="flex flex-col gap-4">
+          <Link
+            to="/my-portal?section=courses"
+            className="inline-flex w-fit items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ArrowLeftIcon className="size-4" aria-hidden="true" />
+            <Trans message="My courses" />
+          </Link>
+          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+            <div className="flex min-w-0 flex-col gap-1">
+              <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                <Trans message="Course" />
+                {course.instructor?.name
+                  ? ` · ${course.instructor.name}`
+                  : null}
+              </p>
+              <h1 className="text-balance text-2xl font-semibold tracking-tight sm:text-3xl">
+                {course.product.title}
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                <Trans
+                  message=":count lessons"
+                  values={{count: course.progress.total}}
+                />
+              </p>
+            </div>
+            <Button className="w-fit shrink-0" render={<Link to={continueTo} />}>
+              <PlayIcon data-icon="inline-start" />
+              {isComplete ? (
+                <Trans message="Review course" />
+              ) : (
+                <Trans message="Continue learning" />
+              )}
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-8">
+          <div className="flex min-w-0 flex-col gap-6">
+            <div className="relative aspect-video overflow-hidden rounded-card border border-border bg-muted">
+              {course.product.cover?.url ? (
+                <img
+                  src={course.product.cover.url}
+                  alt=""
+                  className="size-full object-cover"
+                />
+              ) : (
+                <div className="flex size-full items-center justify-center text-muted-foreground">
+                  <GraduationCapIcon className="size-10" aria-hidden="true" />
+                </div>
+              )}
+            </div>
+
+            {course.product.description ? (
+              <div className="rounded-card border border-border bg-card p-5">
+                <h2 className="mb-2 font-semibold">
+                  <Trans message="Overview" />
+                </h2>
+                <p className="text-pretty text-sm leading-relaxed text-muted-foreground">
+                  {course.product.description}
+                </p>
+              </div>
+            ) : null}
+
+            {outcomes.length ? (
+              <div className="rounded-card border border-border bg-card p-5">
+                <h2 className="mb-3 flex items-center gap-2 font-semibold">
+                  <BookOpenIcon className="size-4" aria-hidden="true" />
+                  <Trans message="What you'll learn" />
+                </h2>
+                <ul className="flex flex-col gap-2">
+                  {outcomes.map(outcome => (
+                    <li
+                      key={outcome}
+                      className="flex items-start gap-2.5 text-sm"
+                    >
+                      <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <CheckIcon className="size-2.5" />
+                      </span>
+                      <span className="text-muted-foreground">{outcome}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            {course.instructor ? (
+              <div className="rounded-card border border-border bg-card p-5">
+                <h2 className="mb-3 font-semibold">
+                  <Trans message="Instructor" />
+                </h2>
+                <div className="flex gap-4">
+                  <Avatar.Root className="size-14 shrink-0 rounded-xl">
+                    {course.instructor.avatar_url ? (
+                      <Avatar.Image
+                        src={course.instructor.avatar_url}
+                        alt={course.instructor.name}
+                      />
+                    ) : null}
+                    <Avatar.Fallback className="rounded-xl text-sm font-semibold">
+                      {course.instructor.name
+                        .split(/\s+/)
+                        .map(part => part[0])
+                        .join('')
+                        .slice(0, 2)
+                        .toUpperCase()}
+                    </Avatar.Fallback>
+                  </Avatar.Root>
+                  <div className="flex flex-col gap-1">
+                    <p className="font-semibold">{course.instructor.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      <Trans message="Course instructor" />
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            <div className="lg:hidden">{curriculumPanel}</div>
+          </div>
+
+          <div className="hidden lg:block">
+            <div className="sticky top-6 flex flex-col gap-4">
+              <Button
+                size="lg"
+                className="w-full"
+                render={<Link to={continueTo} />}
+              >
+                <PlayIcon data-icon="inline-start" />
+                {isComplete ? (
+                  <Trans message="Review course" />
+                ) : (
+                  <Trans message="Continue learning" />
+                )}
+              </Button>
+              {curriculumPanel}
+            </div>
+          </div>
+        </div>
+      </div>
+    </MyPortalShell>
   );
 }

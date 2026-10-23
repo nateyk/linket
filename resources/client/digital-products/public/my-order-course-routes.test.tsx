@@ -10,6 +10,12 @@ describe('my portal course access', () => {
     );
     const orderPage = fs.readFileSync(
       path.resolve(
+        'resources/client/digital-products/public/my-portal-library.tsx',
+      ),
+      'utf8',
+    );
+    const orderEntry = fs.readFileSync(
+      path.resolve(
         'resources/client/digital-products/public/order-lookup-page.tsx',
       ),
       'utf8',
@@ -70,12 +76,21 @@ describe('my portal course access', () => {
       '<Trans message="Unable to load your courses." />',
     );
     expect(orderPage).toContain('PortalCourseGrid');
-    expect(orderPage).toContain('MyPortalLibrary');
+    expect(orderEntry).toContain('MyPortalLibrary');
     expect(coursePage).toContain('Continue learning');
     expect(coursePage).toContain('CourseCurriculumList');
     expect(coursePage).toContain('next_lesson_id');
+    expect(coursePage).toContain('/my-portal?section=courses');
+    expect(coursePage).toContain('lg:grid-cols-[minmax(0,1fr)_340px]');
+    expect(coursePage).toContain('MyPortalShell');
     expect(lessonPage).toContain('CourseCurriculumList');
     expect(lessonPage).toContain('Course curriculum');
+    expect(lessonPage).toContain('/my-portal?section=courses');
+    expect(lessonPage).toContain('lg:grid-cols-[minmax(0,1fr)_340px]');
+    expect(lessonPage).toContain('<Trans message="Overview" />');
+    expect(lessonPage).toContain('<Trans message="Resources" />');
+    expect(lessonPage).not.toContain('<Trans message="Notes" />');
+    expect(lessonPage).not.toContain('@app/account-settings');
     expect(sidebar).toContain(
       "filter={item => item.action !== '/dashboard/my-courses'}",
     );

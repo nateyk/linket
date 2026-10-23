@@ -1,349 +1,256 @@
 import {useLogout} from '@common/auth/requests/use-logout';
 import {auth} from '@common/auth/use-auth';
+import {DashboardLayoutContext} from '@common/ui/dashboard/dashboard-layout-context';
+import {Sidebar} from '@common/ui/dashboard/sidebar';
+import {Logo} from '@common/ui/navigation/navbar/logo';
 import {Avatar} from '@shadcn/avatar/avatar';
-import {Button} from '@shadcn/button/button';
-import {Card} from '@shadcn/card/card';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '@shadcn/sheet/sheet';
 import {Trans} from '@ui/i18n/trans';
-import {cn} from '@ui/utils/cn';
 import {
   DownloadIcon,
+  GraduationCapIcon,
+  HeadphonesIcon,
+  LayoutGridIcon,
   LogInIcon,
   LogOutIcon,
   MailIcon,
-  MenuIcon,
-  NotepadTextIcon,
+  ReceiptIcon,
   SettingsIcon,
   UserPlusIcon,
 } from 'lucide-react';
-import type {ReactNode} from 'react';
-import {useEffect, useRef, useState} from 'react';
+import {use, type ReactElement, type ReactNode} from 'react';
 import {Link} from 'react-router';
+import type {PortalSection} from './portal-section';
 
-export type PortalNavSection = 'courses' | 'downloads';
+/** @deprecated Use PortalSection — kept for older imports. */
+export type PortalNavSection = PortalSection;
 
-type NavItem = {
-  id: string;
-  label: string;
-  icon: ReactNode;
-  href?: string;
-  section?: PortalNavSection;
-  onClick?: () => void;
-  state?: {forceRecovery?: boolean};
+export type PortalNavCounts = {
+  courses?: number;
+  downloads?: number;
+  audio?: number;
 };
 
-function scrollToSection(section: PortalNavSection) {
-  document
-    .getElementById(`portal-${section}`)
-    ?.scrollIntoView({behavior: 'smooth', block: 'start'});
-}
+type LibraryNavItem = {
+  section: PortalSection;
+  label: string;
+  icon: ReactElement;
+  count?: number;
+};
 
-function PortalNavLink({
-  item,
-  active,
-  onNavigate,
-  onSectionChange,
-}: {
-  item: NavItem;
-  active: boolean;
-  onNavigate?: () => void;
-  onSectionChange?: (section: PortalNavSection) => void;
-}) {
-  const className = cn(
-    'mb-0 flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-left text-sm font-medium transition-colors sm:px-4 sm:py-2.5',
-    active
-      ? 'bg-accent text-accent-foreground'
-      : 'text-card-foreground hover:bg-muted',
-  );
-
-  if (item.section) {
-    return (
-      <a
-        href={`#portal-${item.section}`}
-        className={className}
-        onClick={event => {
-          event.preventDefault();
-          onSectionChange?.(item.section!);
-          scrollToSection(item.section!);
-          onNavigate?.();
-        }}
-      >
-        {item.icon}
-        <Trans message={item.label} />
-      </a>
-    );
-  }
-
-  if (item.onClick) {
-    return (
-      <button
-        type="button"
-        className={className}
-        onClick={() => {
-          item.onClick?.();
-          onNavigate?.();
-        }}
-      >
-        {item.icon}
-        <Trans message={item.label} />
-      </button>
-    );
-  }
-
-  return (
-    <Link
-      to={item.href ?? '#'}
-      state={item.state}
-      className={className}
-      onClick={() => onNavigate?.()}
-    >
-      {item.icon}
-      <Trans message={item.label} />
-    </Link>
-  );
-}
-
-function PortalSidebarCard({
-  activeSection,
-  email,
-  displayName,
-  avatarUrl,
+/**
+ * Buyer-library sidebar. Uses the same Sidebar primitives as Account Settings
+ * for chrome only — does not import or share account-settings modules/routes.
+ */
+export function PortalSidebar({
   mode,
-  registerHref,
-  onNavigate,
+  email,
+  activeSection,
   onSectionChange,
+  counts,
 }: {
-  activeSection: PortalNavSection;
-  email?: string;
-  displayName?: string;
-  avatarUrl?: string | null;
   mode: 'auth' | 'guest';
-  registerHref: string;
-  onNavigate?: () => void;
-  onSectionChange?: (section: PortalNavSection) => void;
+  email?: string;
+  activeSection: PortalSection;
+  onSectionChange: (section: PortalSection) => void;
+  counts?: PortalNavCounts;
 }) {
+  const {isMobileMode} = use(DashboardLayoutContext);
   const logout = useLogout();
-  const name = displayName || email || 'Guest';
+  const user = auth.user;
+  const displayEmail = email || user?.email || undefined;
+  const displayName = user?.name || displayEmail?.split('@')[0] || 'Guest';
+  const avatarUrl = user?.image ?? null;
+  const registerHref = displayEmail
+    ? `/register?email=${encodeURIComponent(displayEmail)}`
+    : '/register';
 
-  const libraryItems: NavItem[] = [
+  const libraryItems: LibraryNavItem[] = [
     {
-      id: 'courses',
-      label: 'Purchased courses',
-      section: 'courses',
-      icon: <NotepadTextIcon className="size-4" aria-hidden />,
+      section: 'overview',
+      label: 'Overview',
+      icon: <LayoutGridIcon aria-hidden />,
     },
     {
-      id: 'downloads',
-      label: 'Downloads',
+      section: 'courses',
+      label: 'My courses',
+      count: counts?.courses,
+      icon: <GraduationCapIcon aria-hidden />,
+    },
+    {
       section: 'downloads',
-      icon: <DownloadIcon className="size-4" aria-hidden />,
+      label: 'Downloads',
+      count: counts?.downloads,
+      icon: <DownloadIcon aria-hidden />,
+    },
+    {
+      section: 'audio',
+      label: 'Audio library',
+      count: counts?.audio,
+      icon: <HeadphonesIcon aria-hidden />,
+    },
+    {
+      section: 'orders',
+      label: 'Orders',
+      icon: <ReceiptIcon aria-hidden />,
     },
   ];
 
-  const accountItems: NavItem[] =
-    mode === 'auth'
-      ? [
-          {
-            id: 'account',
-            label: 'Account settings',
-            href: '/account-settings',
-            icon: <SettingsIcon className="size-4" aria-hidden />,
-          },
-          {
-            id: 'logout',
-            label: 'Logout',
-            icon: <LogOutIcon className="size-4" aria-hidden />,
-            onClick: () => logout.mutate(),
-          },
-        ]
-      : [
-          {
-            id: 'register',
-            label: 'Create account',
-            href: registerHref,
-            icon: <UserPlusIcon className="size-4" aria-hidden />,
-          },
-          {
-            id: 'login',
-            label: 'Login',
-            href: '/login',
-            icon: <LogInIcon className="size-4" aria-hidden />,
-          },
-          {
-            id: 'switch',
-            label: 'Switch email',
-            href: '/my-portal',
-            state: {forceRecovery: true},
-            icon: <MailIcon className="size-4" aria-hidden />,
-          },
-        ];
-
   return (
-    <Card.Root className="gap-0 overflow-hidden bg-background py-0">
-      <div className="flex min-w-0 flex-col items-center border-b px-4 py-3 text-center">
-        <Avatar.Root className="mt-3 size-12 rounded-lg after:rounded-lg">
-          {avatarUrl ? (
-            <Avatar.Image
-              src={avatarUrl}
-              alt={name}
-              className="rounded-lg object-cover"
-            />
-          ) : null}
-          <Avatar.ColorFallback className="rounded-lg text-sm font-semibold">
-            {name}
-          </Avatar.ColorFallback>
-        </Avatar.Root>
-        <p className="mt-3 w-full truncate text-base font-medium" title={name}>
-          {name}
-        </p>
-        {email ? (
-          <p
-            className="w-full truncate text-sm text-muted-foreground"
-            title={email}
-          >
-            {email}
-          </p>
+    <Sidebar.Root
+      collapsible="icon"
+      width="w-54"
+      className="data-[variant=floating]:bg-background/60 dark:data-[variant=floating]:bg-card/60"
+    >
+      <Sidebar.Header>
+        {isMobileMode ? (
+          <Sidebar.Item>
+            <Logo color="auto" className="max-w-40" />
+          </Sidebar.Item>
         ) : null}
-      </div>
+        <div className="flex flex-col items-center gap-2 px-2 py-3 group-data-[collapsible=icon]:hidden">
+          <Avatar.Root className="size-14">
+            {avatarUrl ? (
+              <Avatar.Image src={avatarUrl} alt={displayName} />
+            ) : null}
+            <Avatar.ColorFallback className="text-base font-semibold">
+              {displayName}
+            </Avatar.ColorFallback>
+          </Avatar.Root>
+          <div className="w-full min-w-0 text-center">
+            <p className="truncate text-sm font-medium" title={displayName}>
+              {displayName}
+            </p>
+            {displayEmail ? (
+              <p
+                className="truncate text-xs text-muted-foreground"
+                title={displayEmail}
+              >
+                {displayEmail}
+              </p>
+            ) : null}
+          </div>
+        </div>
+      </Sidebar.Header>
 
-      <nav aria-label="Portal navigation">
-        <div className="flex flex-col gap-3 border-b border-border px-4 py-4">
-          {libraryItems.map(item => (
-            <PortalNavLink
-              key={item.id}
-              item={item}
-              active={item.section === activeSection}
-              onNavigate={onNavigate}
-              onSectionChange={onSectionChange}
-            />
-          ))}
-        </div>
-        <div className="flex flex-col gap-3 px-4 py-4">
-          {accountItems.map(item => (
-            <PortalNavLink
-              key={item.id}
-              item={item}
-              active={false}
-              onNavigate={onNavigate}
-            />
-          ))}
-        </div>
-      </nav>
-    </Card.Root>
+      <Sidebar.Content>
+        <Sidebar.Group>
+          <Sidebar.GroupLabel>
+            <Trans message="Library" />
+          </Sidebar.GroupLabel>
+          <Sidebar.GroupContent>
+            <Sidebar.Menu>
+              {libraryItems.map(item => (
+                <Sidebar.MenuItem key={item.section}>
+                  <Sidebar.MenuButton
+                    icon={item.icon}
+                    aria-current={
+                      activeSection === item.section ? 'page' : undefined
+                    }
+                    rightIcon={
+                      item.count != null ? (
+                        <Sidebar.MenuBadge>{item.count}</Sidebar.MenuBadge>
+                      ) : undefined
+                    }
+                    onClick={() => onSectionChange(item.section)}
+                  >
+                    <Trans message={item.label} />
+                  </Sidebar.MenuButton>
+                </Sidebar.MenuItem>
+              ))}
+            </Sidebar.Menu>
+          </Sidebar.GroupContent>
+        </Sidebar.Group>
+
+        <Sidebar.Group>
+          <Sidebar.GroupLabel>
+            <Trans message="Account" />
+          </Sidebar.GroupLabel>
+          <Sidebar.GroupContent>
+            <Sidebar.Menu>
+              <Sidebar.MenuItem>
+                <Sidebar.MenuButton
+                  icon={<SettingsIcon aria-hidden />}
+                  aria-current={
+                    activeSection === 'settings' ? 'page' : undefined
+                  }
+                  onClick={() => onSectionChange('settings')}
+                >
+                  <Trans message="Account settings" />
+                </Sidebar.MenuButton>
+              </Sidebar.MenuItem>
+              {mode === 'auth' ? (
+                <Sidebar.MenuItem>
+                  <Sidebar.MenuButton
+                    icon={<LogOutIcon aria-hidden />}
+                    onClick={() => logout.mutate()}
+                  >
+                    <Trans message="Log out" />
+                  </Sidebar.MenuButton>
+                </Sidebar.MenuItem>
+              ) : (
+                <>
+                  <Sidebar.MenuItem>
+                    <Sidebar.MenuButton
+                      render={<Link to={registerHref} />}
+                      icon={<UserPlusIcon aria-hidden />}
+                    >
+                      <Trans message="Create account" />
+                    </Sidebar.MenuButton>
+                  </Sidebar.MenuItem>
+                  <Sidebar.MenuItem>
+                    <Sidebar.MenuButton
+                      render={<Link to="/login" />}
+                      icon={<LogInIcon aria-hidden />}
+                    >
+                      <Trans message="Login" />
+                    </Sidebar.MenuButton>
+                  </Sidebar.MenuItem>
+                  <Sidebar.MenuItem>
+                    <Sidebar.MenuButton
+                      render={
+                        <Link to="/my-portal" state={{forceRecovery: true}} />
+                      }
+                      icon={<MailIcon aria-hidden />}
+                    >
+                      <Trans message="Switch email" />
+                    </Sidebar.MenuButton>
+                  </Sidebar.MenuItem>
+                </>
+              )}
+            </Sidebar.Menu>
+          </Sidebar.GroupContent>
+        </Sidebar.Group>
+      </Sidebar.Content>
+    </Sidebar.Root>
   );
 }
 
+/** @deprecated Use PortalSidebar + PortalSectionLayout inside PortalLibraryLayout. */
 export function PortalAccountLayout({
   mode,
   email,
   activeSection,
   onSectionChange,
+  counts,
   children,
 }: {
   mode: 'auth' | 'guest';
   email?: string;
-  activeSection: PortalNavSection;
-  onSectionChange: (section: PortalNavSection) => void;
+  activeSection: PortalSection;
+  onSectionChange: (section: PortalSection) => void;
+  counts?: PortalNavCounts;
   children: ReactNode;
 }) {
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const mainRef = useRef<HTMLElement>(null);
-  const user = auth.user;
-  const displayName = user?.name || undefined;
-  const avatarUrl = user?.image ?? null;
-  const registerHref = email
-    ? `/register?email=${encodeURIComponent(email)}`
-    : '/register';
-
-  useEffect(() => {
-    const root = mainRef.current;
-    if (!root || typeof IntersectionObserver === 'undefined') {
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      entries => {
-        const visible = entries
-          .filter(entry => entry.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-        if (!visible?.target.id) {
-          return;
-        }
-        if (visible.target.id === 'portal-courses') {
-          onSectionChange('courses');
-        } else if (visible.target.id === 'portal-downloads') {
-          onSectionChange('downloads');
-        }
-      },
-      {rootMargin: '-20% 0px -55% 0px', threshold: [0.15, 0.4]},
-    );
-
-    const courses = root.querySelector('#portal-courses');
-    const downloads = root.querySelector('#portal-downloads');
-    if (courses) {
-      observer.observe(courses);
-    }
-    if (downloads) {
-      observer.observe(downloads);
-    }
-
-    return () => observer.disconnect();
-  }, [onSectionChange]);
-
-  const sidebarProps = {
-    activeSection,
-    email: email || user?.email || undefined,
-    displayName,
-    avatarUrl,
-    mode,
-    registerHref,
-    onSectionChange,
-  };
-
   return (
-    <div className="grid items-start gap-8 md:grid-cols-[220px_minmax(0,1fr)] md:gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
-      <div className="md:hidden">
-        <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-          <SheetTrigger
-            render={
-              <Button
-                variant="outline"
-                size="sm"
-                aria-label="Open account menu"
-                className="gap-2"
-              />
-            }
-          >
-            <MenuIcon className="size-4" />
-            <Trans message="Account Menu" />
-          </SheetTrigger>
-          <SheetContent side="left" className="w-[min(100%,320px)] p-4">
-            <SheetHeader className="sr-only">
-              <SheetTitle>
-                <Trans message="Account Menu" />
-              </SheetTitle>
-            </SheetHeader>
-            <PortalSidebarCard
-              {...sidebarProps}
-              onNavigate={() => setSheetOpen(false)}
-            />
-          </SheetContent>
-        </Sheet>
-      </div>
-
-      <aside className="hidden md:sticky md:top-24 md:block">
-        <PortalSidebarCard {...sidebarProps} />
-      </aside>
-
-      <main ref={mainRef} className="min-w-0 *:scroll-mt-32">
-        {children}
-      </main>
-    </div>
+    <>
+      <PortalSidebar
+        mode={mode}
+        email={email}
+        activeSection={activeSection}
+        onSectionChange={onSectionChange}
+        counts={counts}
+      />
+      {children}
+    </>
   );
 }

@@ -322,6 +322,18 @@ export const appRouter = createBrowserRouter(
           path: 'my-portal/courses/:courseId/lessons/:lessonId',
           lazy: () => import('@app/dashboard/my-learning/lesson-player-page'),
         },
+        {
+          path: 'my-portal/downloads/:orderId',
+          lazy: () =>
+            import(
+              '@app/digital-products/public/portal-download-detail-page'
+            ),
+        },
+        {
+          path: 'my-portal/audio/:orderId',
+          lazy: () =>
+            import('@app/digital-products/public/portal-audio-player-page'),
+        },
         ...commonRoutes,
         {
           path: '/link-pages/:pageId/preview',

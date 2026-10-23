@@ -111,7 +111,7 @@ it('grantFromOrder creates portal enrollment when buyer has no user', function (
 
 it('lists paid courses in my-portal library for portal session', function () {
     $email = 'library-'.Str::lower(Str::random(8)).'@example.test';
-    [, , $course, $order] = portalCourseFixture($email);
+    [$creator, , $course, $order] = portalCourseFixture($email);
     app(EnrollmentService::class)->grantFromPortalOrder($order);
 
     $sessionToken = Str::random(80);
@@ -137,6 +137,8 @@ it('lists paid courses in my-portal library for portal session', function () {
         ->getJson('/api/v1/public/my-portal/library')
         ->assertOk()
         ->assertJsonPath('courses.0.course_id', $course->id)
+        ->assertJsonPath('courses.0.lessons_done', 0)
+        ->assertJsonPath('courses.0.creator_name', $creator->name)
         ->assertJsonPath('orders.0.id', $order->uuid)
         ->assertJsonPath('orders.0.product_type', 'course');
 });

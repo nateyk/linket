@@ -166,7 +166,15 @@ class StudentCoursesController extends Controller
         $user = $request->user('sanctum') ?? $request->user('web') ?? $request->user() ?? \Illuminate\Support\Facades\Auth::user() ?? \Illuminate\Support\Facades\Auth::guard('web')->user();
         abort_unless($user, 401);
 
-        $enrollments = \App\Courses\Models\Enrollment::where('user_id', $user->id)->where('status', 'active')->with(['course.product.cover', 'course.chapters'])->get();
+        $enrollments = \App\Courses\Models\Enrollment::where('user_id', $user->id)
+            ->where('status', 'active')
+            ->with([
+                'course.product.cover',
+                'course.product.creator',
+                'course.instructor',
+                'course.chapters',
+            ])
+            ->get();
 
         $progressService = app(ProgressService::class);
 
@@ -175,17 +183,23 @@ class StudentCoursesController extends Controller
             $product = $course->product;
             $total = $progressService->totalPublished($course);
             $percent = $progressService->progressPercent($course, $user->id);
+            $completed = $progressService->completedCount($course, $user->id);
             $next = $progressService->nextIncompleteLesson($course, $user->id);
+            $creator = $course->instructor ?? $product?->creator;
+
             return [
                 'enrollment_id' => $enrollment->id,
                 'course_id' => $course->id,
                 'product_id' => $product->id,
                 'title' => $product->title,
                 'cover' => $product->cover ? ['url' => $product->cover->url] : null,
+                'creator_name' => $creator?->name,
                 'total_lessons' => $total,
                 'percent' => $percent,
-                'completed' => $progressService->completedCount($course, $user->id),
+                'completed' => $completed,
+                'lessons_done' => $completed,
                 'next_lesson_id' => $next?->id,
+                'next_lesson_title' => $next?->title,
                 'enrolled_at' => $enrollment->enrolled_at,
                 'completed_at' => $enrollment->completed_at,
             ];

@@ -28,12 +28,14 @@ import {
 import {apiClient} from '@common/http/query-client';
 import {isAxiosError} from 'axios';
 import {
+  ArrowLeftIcon,
   CheckIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   CircleCheckBigIcon,
   CircleXIcon,
   DownloadIcon,
+  FileTextIcon,
   ListIcon,
   LockIcon,
   PlayIcon,
@@ -388,235 +390,260 @@ export function Component() {
     </Card.Root>
   ) : null;
 
-  return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <Button
-              size="sm"
-              variant="outline"
-              className="shrink-0"
-              render={<Link to={`/my-portal/courses/${courseId}`} />}
-            >
-              <ChevronLeftIcon />
-              <span className="hidden sm:inline">
-                <Trans message="Course" />
-              </span>
-            </Button>
-            <div className="hidden h-5 w-px bg-border sm:block" />
-            <h1 className="truncate text-sm font-medium sm:text-base">
-              {lesson.title}
-            </h1>
-          </div>
-          {course ? (
-            <Sheet>
-              <SheetTrigger
-                render={
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="shrink-0 lg:hidden"
-                  />
-                }
-              >
-                <ListIcon />
-                <span className="hidden sm:inline">
-                  <Trans message="Curriculum" />
-                </span>
-              </SheetTrigger>
-              <SheetContent
-                side="right"
-                className="w-full max-w-md overflow-y-auto p-0 sm:max-w-md"
-              >
-                <SheetHeader className="border-b p-4">
-                  <SheetTitle>
-                    <Trans message="Course curriculum" />
-                  </SheetTitle>
-                </SheetHeader>
-                {curriculumPanel}
-              </SheetContent>
-            </Sheet>
-          ) : null}
-        </div>
-      </header>
+  const flatLessons = course
+    ? course.chapters.flatMap((ch: any) =>
+        (ch.lessons ?? []).map((l: any) => ({...l, chapterTitle: ch.title})),
+      )
+    : [];
+  const lessonIndex = flatLessons.findIndex(
+    (l: any) => l.id === Number(lessonId),
+  );
+  const prevLesson = lessonIndex > 0 ? flatLessons[lessonIndex - 1] : null;
+  const nextLesson =
+    lessonIndex >= 0 && lessonIndex < flatLessons.length - 1
+      ? flatLessons[lessonIndex + 1]
+      : null;
+  const chapterTitle =
+    flatLessons[lessonIndex]?.chapterTitle ??
+    course?.title ??
+    null;
+  const isLessonComplete = completedLessonIds.includes(Number(lessonId));
 
-      <main className="mx-auto max-w-7xl px-4 py-8">
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-          <div className="flex flex-col gap-6 lg:col-span-2">
+  const resourcesList =
+    lesson.resources.length > 0 ? (
+      <ul className="divide-y divide-border overflow-hidden rounded-card border border-border bg-card">
+        {lesson.resources.map(r => (
+          <li key={r.id} className="flex items-center gap-3 px-4 py-3">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-button bg-secondary">
+              <FileTextIcon className="size-4" aria-hidden="true" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium">{r.display_name}</p>
+            </div>
+            <Button
+              size="icon"
+              variant="ghost"
+              aria-label={`Download ${r.display_name}`}
+              render={
+                <a href={`/api/v1/course-lesson-resources/${r.id}/download`} />
+              }
+            >
+              <DownloadIcon />
+            </Button>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <p className="text-sm text-muted-foreground">
+        <Trans message="No attachments added yet." />
+      </p>
+    );
+
+  const overviewBody =
+    lesson.content_type === 'video' ? (
+      lesson.summary ? (
+        <div
+          className="prose prose-sm max-w-none text-pretty leading-relaxed"
+          dangerouslySetInnerHTML={{__html: lesson.summary}}
+        />
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          <Trans message="No summary added yet." />
+        </p>
+      )
+    ) : lesson.content ? (
+      <div
+        className="prose prose-sm max-w-none"
+        dangerouslySetInnerHTML={{__html: lesson.content}}
+      />
+    ) : (
+      <p className="text-sm text-muted-foreground">
+        <Trans message="No content added yet." />
+      </p>
+    );
+
+  return (
+    <MyPortalShell wide>
+      <div className="flex flex-col gap-8">
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <Link
+              to="/my-portal?section=courses"
+              className="inline-flex w-fit items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <ArrowLeftIcon className="size-4" aria-hidden="true" />
+              <Trans message="My courses" />
+            </Link>
+            {course ? (
+              <Sheet>
+                <SheetTrigger
+                  render={
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="shrink-0 lg:hidden"
+                    />
+                  }
+                >
+                  <ListIcon data-icon="inline-start" />
+                  <Trans message="Curriculum" />
+                </SheetTrigger>
+                <SheetContent
+                  side="right"
+                  className="w-full max-w-md overflow-y-auto p-0 sm:max-w-md"
+                >
+                  <SheetHeader className="border-b p-4">
+                    <SheetTitle>
+                      <Trans message="Course curriculum" />
+                    </SheetTitle>
+                  </SheetHeader>
+                  {curriculumPanel}
+                </SheetContent>
+              </Sheet>
+            ) : null}
+          </div>
+          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+            <div className="flex min-w-0 flex-col gap-1">
+              <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                <Trans message="Course" />
+                {course?.title ? ` · ${course.title}` : null}
+              </p>
+              <h1 className="text-balance text-2xl font-semibold tracking-tight sm:text-3xl">
+                {course?.title ?? lesson.title}
+              </h1>
+              {course ? (
+                <div className="mt-2 flex max-w-md flex-col gap-1.5">
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <Trans
+                      message=":percent% complete"
+                      values={{percent: progressPercent}}
+                    />
+                    <span className="tabular-nums">
+                      {course.progress?.completed ?? 0}/
+                      {course.progress?.total ?? 0}
+                    </span>
+                  </div>
+                  <Progress.Root
+                    value={progressPercent}
+                    aria-label={course.title ?? 'Course progress'}
+                  >
+                    <Progress.Track className="h-1.5">
+                      <Progress.Indicator />
+                    </Progress.Track>
+                  </Progress.Root>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-8">
+          <div className="flex min-w-0 flex-col gap-6">
             {lesson.content_type === 'video' ? (
-              <>
+              <div className="overflow-hidden rounded-card border border-border bg-secondary">
                 <LessonVideo
                   title={lesson.title}
                   videoUrl={lesson.video_url}
                   fileUrl={lesson.video?.url}
                 />
-                <Tabs.Root defaultValue="summary" className="w-full">
-                  <Tabs.List variant="line" className="w-full">
-                    <Tabs.Tab value="summary">
-                      <Trans message="Summary" />
-                    </Tabs.Tab>
-                    <Tabs.Tab value="attachments">
-                      <Trans message="Attachments" />
-                    </Tabs.Tab>
-                    {quiz && (
-                      <Tabs.Tab value="quiz">
-                        <Trans message="Quiz" />
-                      </Tabs.Tab>
-                    )}
-                  </Tabs.List>
-                  <Tabs.Panel value="summary">
-                    {lesson.summary ? (
-                      <Card.Root>
-                        <Card.Content
-                          className="prose prose-sm max-w-none p-6"
-                          dangerouslySetInnerHTML={{__html: lesson.summary}}
-                        />
-                      </Card.Root>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">
-                        <Trans message="No summary added yet." />
-                      </p>
-                    )}
-                  </Tabs.Panel>
-                  <Tabs.Panel value="attachments">
-                    {lesson.resources.length > 0 ? (
-                      <Card.Root>
-                        <Card.Header className="p-4">
-                          <Card.Title className="text-sm">
-                            <Trans message="Resources" />
-                          </Card.Title>
-                        </Card.Header>
-                        <Card.Content className="flex flex-col gap-2 p-4 pt-0">
-                          {lesson.resources.map(r => (
-                            <a
-                              key={r.id}
-                              href={`/api/v1/course-lesson-resources/${r.id}/download`}
-                              className="flex items-center gap-2 rounded-card border p-3 text-sm hover:bg-muted/30"
-                            >
-                              <DownloadIcon className="size-4" />
-                              <span className="flex-1">{r.display_name}</span>
-                            </a>
-                          ))}
-                        </Card.Content>
-                      </Card.Root>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">
-                        <Trans message="No attachments added yet." />
-                      </p>
-                    )}
-                  </Tabs.Panel>
-                  {quiz && (
-                    <Tabs.Panel value="quiz">{quizSection}</Tabs.Panel>
-                  )}
-                </Tabs.Root>
-              </>
-            ) : (
-              <>
-                {lesson.content && (
-                  <Card.Root>
-                    <Card.Content
-                      className="prose prose-sm max-w-none p-6"
-                      dangerouslySetInnerHTML={{__html: lesson.content}}
-                    />
-                  </Card.Root>
-                )}
-                {!!lesson.resources.length && (
-                  <Card.Root>
-                    <Card.Header className="p-4">
-                      <Card.Title className="text-sm">
-                        <Trans message="Resources" />
-                      </Card.Title>
-                    </Card.Header>
-                    <Card.Content className="flex flex-col gap-2 p-4 pt-0">
-                      {lesson.resources.map(r => (
-                        <a
-                          key={r.id}
-                          href={`/api/v1/course-lesson-resources/${r.id}/download`}
-                          className="flex items-center gap-2 rounded-card border p-3 text-sm hover:bg-muted/30"
-                        >
-                          <DownloadIcon className="size-4" />
-                          <span className="flex-1">{r.display_name}</span>
-                        </a>
-                      ))}
-                    </Card.Content>
-                  </Card.Root>
-                )}
-                {quizSection && (
-                  <section className="flex flex-col gap-3">
-                    <h2 className="text-lg font-semibold">
-                      <Trans message="Quiz" />
-                    </h2>
-                    {quizSection}
-                  </section>
-                )}
-              </>
-            )}
+              </div>
+            ) : null}
 
-            {progressError && (
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 flex-col gap-1">
+                {chapterTitle ? (
+                  <p className="text-xs font-medium text-muted-foreground">
+                    {chapterTitle}
+                  </p>
+                ) : null}
+                <h2 className="text-pretty text-xl font-semibold tracking-tight">
+                  {lesson.title}
+                </h2>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  disabled={!prevLesson || completing}
+                  aria-label="Previous lesson"
+                  onClick={() => {
+                    if (prevLesson) {
+                      navigate(
+                        `/my-portal/courses/${courseId}/lessons/${prevLesson.id}`,
+                      );
+                    }
+                  }}
+                >
+                  <ChevronLeftIcon />
+                </Button>
+                <Button
+                  variant={isLessonComplete ? 'outline' : 'default'}
+                  disabled={completing}
+                  onClick={() => void complete()}
+                >
+                  {completing ? <Spinner /> : <CheckIcon data-icon="inline-start" />}
+                  {isLessonComplete ? (
+                    <Trans message="Completed" />
+                  ) : (
+                    <Trans message="Mark complete" />
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  disabled={!nextLesson || completing}
+                  aria-label="Next lesson"
+                  onClick={() => {
+                    if (nextLesson) {
+                      navigate(
+                        `/my-portal/courses/${courseId}/lessons/${nextLesson.id}`,
+                      );
+                    }
+                  }}
+                >
+                  <ChevronRightIcon />
+                </Button>
+              </div>
+            </div>
+
+            {progressError ? (
               <Alert.Root variant="warning" fillStyle="subtleFill">
                 <Alert.Description>{progressError}</Alert.Description>
               </Alert.Root>
-            )}
+            ) : null}
 
-            <div className="flex items-center justify-between gap-3">
-              <Button
-                variant="outline"
-                disabled={completing}
-                onClick={() => {
-                  if (course) {
-                    const flat = course.chapters.flatMap(
-                      (ch: any) => ch.lessons,
-                    );
-                    const idx = flat.findIndex(
-                      (l: any) => l.id === Number(lessonId),
-                    );
-                    const prev = flat[idx - 1];
-                    if (prev)
-                      navigate(
-                        `/my-portal/courses/${courseId}/lessons/${prev.id}`,
-                      );
-                  }
-                }}
-              >
-                <ChevronLeftIcon />
-                <Trans message="Previous" />
-              </Button>
-              <Button disabled={completing} onClick={() => void complete()}>
-                {completing ? <Spinner /> : <CheckIcon />}
-                <Trans message="Complete & Next" />
-              </Button>
-              <Button
-                variant="outline"
-                disabled={completing}
-                onClick={() => {
-                  if (course) {
-                    const flat = course.chapters.flatMap(
-                      (ch: any) => ch.lessons,
-                    );
-                    const idx = flat.findIndex(
-                      (l: any) => l.id === Number(lessonId),
-                    );
-                    const next = flat[idx + 1];
-                    if (next)
-                      navigate(
-                        `/my-portal/courses/${courseId}/lessons/${next.id}`,
-                      );
-                  }
-                }}
-              >
-                <Trans message="Next" />
-                <ChevronRightIcon />
-              </Button>
-            </div>
+            <Tabs.Root defaultValue="overview" className="w-full gap-4">
+              <Tabs.List variant="line" className="w-full">
+                <Tabs.Tab value="overview">
+                  <Trans message="Overview" />
+                </Tabs.Tab>
+                <Tabs.Tab value="resources">
+                  <Trans message="Resources" />
+                </Tabs.Tab>
+                {quiz ? (
+                  <Tabs.Tab value="quiz">
+                    <Trans message="Quiz" />
+                  </Tabs.Tab>
+                ) : null}
+              </Tabs.List>
+              <Tabs.Panel value="overview">
+                <div className="rounded-card border border-border bg-card p-5">
+                  {overviewBody}
+                </div>
+              </Tabs.Panel>
+              <Tabs.Panel value="resources">{resourcesList}</Tabs.Panel>
+              {quiz ? (
+                <Tabs.Panel value="quiz">{quizSection}</Tabs.Panel>
+              ) : null}
+            </Tabs.Root>
           </div>
 
-          <div className="hidden lg:col-span-1 lg:block">
-            <div className="sticky top-20">{curriculumPanel}</div>
+          <div className="hidden lg:block">
+            <div className="sticky top-6">{curriculumPanel}</div>
           </div>
         </div>
-      </main>
-    </div>
+      </div>
+    </MyPortalShell>
   );
 }
 
