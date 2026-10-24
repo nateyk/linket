@@ -31,7 +31,7 @@ function FieldSetLegend({
       data-slot="field-legend"
       data-variant={variant}
       className={cn(
-        "flex items-center gap-1.5 font-medium data-[variant=label]:text-sm data-[variant=legend]:text-base [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        'flex items-center gap-1.5 font-medium data-[variant=label]:text-sm data-[variant=label]:leading-5 data-[variant=legend]:text-base data-[variant=legend]:leading-6 [&_svg]:shrink-0 [&_svg:not([class*=\'size-\'])]:size-4',
         className,
       )}
       {...props}
@@ -44,7 +44,7 @@ function FieldSetDescription({className, ...props}: React.ComponentProps<'p'>) {
     <div
       data-slot="field-set-description"
       className={cn(
-        '-mt-5 text-start text-sm text-muted-foreground',
+        '-mt-5 text-start text-sm leading-5 font-normal text-muted-foreground',
         className,
       )}
       {...props}
@@ -139,7 +139,7 @@ function FieldTitle({className, ...props}: React.ComponentProps<'div'>) {
     <div
       data-slot="field-label"
       className={cn(
-        'flex w-fit items-center gap-2 text-sm leading-snug font-medium group-data-[disabled=true]/field:opacity-50',
+        'flex w-fit items-center gap-2 text-sm leading-5 font-medium group-data-[disabled=true]/field:opacity-50',
         className,
       )}
       {...props}
@@ -152,7 +152,8 @@ function FieldDescription({className, ...props}: React.ComponentProps<'p'>) {
     <FieldPrimitive.Description
       data-slot="field-description"
       className={cn(
-        'text-start text-sm leading-normal font-normal text-muted-foreground group-has-data-horizontal/field:text-balance',
+        // DESIGN.md Label (14/400/20) for helper / description copy.
+        'text-start text-sm leading-5 font-normal text-muted-foreground group-has-data-horizontal/field:text-balance',
         'last:mt-0 nth-last-2:-mt-1',
         '[&>a]:underline [&>a]:underline-offset-4 [&>a:hover]:text-primary',
         className,

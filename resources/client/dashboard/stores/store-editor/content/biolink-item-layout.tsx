@@ -34,7 +34,8 @@ function Root({item, className, children}: RootProps) {
   return (
     <div
       className={cn(
-        'flex h-43 items-stretch rounded-card border shadow-xs dark:bg-card',
+        // Flat counter chrome: hairline ring, no soft shadow lift (Operate quieter).
+        'flex h-43 items-stretch rounded-card border-0 bg-card ring-1 ring-foreground/10',
         className,
       )}
       ref={itemRef}

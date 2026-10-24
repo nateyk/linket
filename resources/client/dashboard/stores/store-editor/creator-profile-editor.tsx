@@ -23,13 +23,13 @@ import {
   SocialsList,
   SocialsType,
 } from '@app/dashboard/stores/store-editor/content/widgets/socials-widget/socials-list';
-import {resolveBiolinkContainerRadius} from '@app/short-links/renderers/biolink-renderer/biolink-appearance';
 import {digitalProductsIndex} from '@app/gen/digital-products';
 import {useAuth} from '@common/auth/use-auth';
 import {
   CroppedAvatar,
   CroppedCover,
 } from '@common/uploads/components/cropped-image-selector';
+import {uploadMaxFileSize} from '@common/uploads/utils/encode-cropped-image';
 import {FileUploadProvider} from '@common/uploads/uploader/file-upload-provider';
 import {Badge} from '@shadcn/badge/badge';
 import {Accordion} from '@shadcn/accordion/accordion';
@@ -48,6 +48,7 @@ import {
 } from '@shadcn/forms/input-group/input-group';
 import {Switch} from '@shadcn/forms/switch/switch';
 import {Textarea} from '@shadcn/forms/textarea/textarea';
+import {Popover} from '@shadcn/popover/popover';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {toast} from '@shadcn/toast/toast';
 import {useQuery} from '@tanstack/react-query';
@@ -55,9 +56,12 @@ import {message} from '@ui/i18n/message';
 import {FormattedCurrency} from '@ui/i18n/formatted-currency';
 import {Trans} from '@ui/i18n/trans';
 import {useTrans} from '@ui/i18n/use-trans';
-import {cn} from '@ui/utils/cn';
+import {prettyBytes} from '@ui/utils/files/pretty-bytes';
 import {
   AtSignIcon,
+  CameraIcon,
+  CircleQuestionMarkIcon,
+  ImagePlusIcon,
   LinkIcon,
   MailIcon,
   PackageCheckIcon,
@@ -67,7 +71,7 @@ import {
   UserRoundIcon,
   XIcon,
 } from 'lucide-react';
-import {useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
+import {type ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import {useForm, useWatch} from 'react-hook-form';
 import {Link} from 'react-router';
 
@@ -169,8 +173,6 @@ export function CreatorProfileEditor({
   const setFeaturedProductIds = useBiolinkEditorStore(
     s => s.setFeaturedProductIds,
   );
-  const appearance = useBiolinkEditorStore(s => s.appearance);
-  const containerRadius = resolveBiolinkContainerRadius(appearance);
   // The open accordion section lives in the store so the live preview can
   // follow it (A-06): opening Products moves the phone to its Products
   // section. It starts on Profile and keeps whatever the user last opened.
@@ -416,17 +418,41 @@ export function CreatorProfileEditor({
                   />
                 </SectionAccordionTrigger>
                 <Accordion.Content className="border-t pt-4">
-                  <Field.Group className="max-w-2xl gap-3">
+                  <Field.Group className="max-w-2xl gap-4">
                     <HookForm.Field name="cover_url">
-                      <Field.Label>
-                        <Trans message="Cover image" />
-                      </Field.Label>
+                      <FieldHelpLabel
+                        label={<Trans message="Cover image" />}
+                        help={
+                          <Trans
+                            message="JPG, PNG, or WebP up to :size. Large images are compressed to WebP automatically."
+                            values={{
+                              size: prettyBytes(uploadMaxFileSize('linkImages')),
+                            }}
+                          />
+                        }
+                      />
+                      {/* Dashboard chrome, not storefront preview: the tiles
+                          keep the dashboard's own radii, and the storefront's
+                          Corner roundness is left to the phone live preview.
+                          Driving them from the appearance config re-skinned
+                          form controls whenever the creator changed a
+                          storefront setting. */}
+                      {/* Full-width banner: the tile's inline 3:1
+                          aspect-ratio drives the height off the column
+                          width, so the editor shows exactly the box the
+                          storefront card renders — proportional at every
+                          breakpoint (~110px at 360, 224px at max-w-2xl). */}
                       <CroppedCover
-                        className={cn(
-                          'h-28 w-full max-w-[22.5rem] sm:h-30',
-                          containerRadius.className,
-                        )}
-                        cropRadius={containerRadius.value}
+                        className="w-full"
+                        showHint={false}
+                        placeholderIcon={
+                          <span className="flex size-full flex-col items-center justify-center gap-2 text-muted-foreground">
+                            <ImagePlusIcon className="size-5" />
+                            <span className="text-sm font-medium">
+                              <Trans message="Add a cover image" />
+                            </span>
+                          </span>
+                        }
                         value={values.cover_url || ''}
                         label={trans(message('Cover image'))}
                         onChange={value =>
@@ -440,17 +466,38 @@ export function CreatorProfileEditor({
                     </HookForm.Field>
 
                     <div className="grid gap-4 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-start sm:gap-5">
-                      <HookForm.Field name="avatar_url">
-                        <Field.Label>
-                          <Trans message="Profile photo" />
-                        </Field.Label>
+                      {/* max-w-56: the field is the grid's auto track, and the
+                          upload hint's max-content (one long line) would
+                          otherwise size that track to ~508px — a pill-shaped
+                          avatar tile and a name/title column squeezed to
+                          ~190px. Capping the field keeps the avatar column
+                          at the tile plus a two-line hint. */}
+                      <HookForm.Field name="avatar_url" className="max-w-56">
+                        <FieldHelpLabel
+                          label={<Trans message="Profile photo" />}
+                          help={
+                            <Trans
+                              message="JPG, PNG, or WebP up to :size. Large images are compressed to WebP automatically."
+                              values={{
+                                size: prettyBytes(
+                                  uploadMaxFileSize('linkImages'),
+                                ),
+                              }}
+                            />
+                          }
+                        />
+                        {/* max-w-22: the field gives every child width:100%,
+                            which beats size-22 at equal specificity — the
+                            clamp is what keeps the tile a circle instead of
+                            a full-width pill. */}
                         <CroppedAvatar
-                          className={cn(
-                            'size-22 bg-[var(--biolink-surface-strong)] p-1',
-                            containerRadius.avatarClassName,
-                          )}
-                          previewClassName={containerRadius.avatarClassName}
-                          cropRadius={containerRadius.avatarValue}
+                          className="size-22 max-w-22"
+                          showHint={false}
+                          placeholderIcon={
+                            <span className="flex size-full items-center justify-center">
+                              <CameraIcon className="size-4 text-muted-foreground" />
+                            </span>
+                          }
                           value={values.avatar_url || ''}
                           label={trans(message('Profile photo'))}
                           onChange={value =>
@@ -472,9 +519,12 @@ export function CreatorProfileEditor({
                           <Field.Error />
                         </HookForm.Field>
                         <HookForm.Field name="profile_title">
-                          <Field.Label>
-                            <Trans message="Profile title" />
-                          </Field.Label>
+                          <FieldHelpLabel
+                            label={<Trans message="Profile title" />}
+                            help={
+                              <Trans message="Choose the professional title shown below your name." />
+                            }
+                          />
                           <Combobox.Root<ProfessionOption>
                             bindToHookForm={false}
                             items={professionItems}
@@ -515,22 +565,19 @@ export function CreatorProfileEditor({
                               </Combobox.List>
                             </Combobox.Content>
                           </Combobox.Root>
-                          <Field.Description>
-                            <Trans message="Choose the professional title shown below your name." />
-                          </Field.Description>
                           <Field.Error />
                         </HookForm.Field>
                       </Field.Group>
                     </div>
                     <HookForm.Field name="bio">
-                      <Field.Label>
-                        <Trans message="Short bio" />
-                      </Field.Label>
+                      <FieldHelpLabel
+                        label={<Trans message="Short bio" />}
+                        help={
+                          <Trans message="A short introduction to your work and audience." />
+                        }
+                      />
                       <Textarea rows={4} maxLength={BIO_MAX_LENGTH} />
                       <Field.Description className="flex items-start justify-between gap-3">
-                        <span>
-                          <Trans message="A short introduction to your work and audience." />
-                        </span>
                         <CharacterCounter
                           current={values.bio?.length ?? 0}
                           max={BIO_MAX_LENGTH}
@@ -539,18 +586,18 @@ export function CreatorProfileEditor({
                       <Field.Error />
                     </HookForm.Field>
                     <HookForm.Field name="skills">
-                      <Field.Label>
-                        <Trans message="Skills" />
-                      </Field.Label>
+                      <FieldHelpLabel
+                        label={<Trans message="Skills" />}
+                        help={
+                          <Trans message="Separate skills with commas. The first eight are shown." />
+                        }
+                      />
                       <SkillsChipsField
                         placeholder={trans(
                           message('Design, Photography, Coaching'),
                         )}
                       />
                       <Field.Description className="flex items-start justify-between gap-3">
-                        <span>
-                          <Trans message="Separate skills with commas. The first eight are shown." />
-                        </span>
                         <span className="shrink-0 tabular-nums text-sm text-muted-foreground">
                           {parseSkills(values.skills).length}/{SKILLS_MAX}
                         </span>
@@ -563,12 +610,12 @@ export function CreatorProfileEditor({
                           data-slot="field-content"
                           className="flex min-w-0 flex-1 flex-col gap-1"
                         >
-                          <Field.Label>
-                            <Trans message="Available for work" />
-                          </Field.Label>
-                          <Field.Description>
-                            <Trans message="Show a small availability badge on your profile." />
-                          </Field.Description>
+                          <FieldHelpLabel
+                            label={<Trans message="Available for work" />}
+                            help={
+                              <Trans message="Show a small availability badge on your profile." />
+                            }
+                          />
                         </div>
                         <Switch />
                       </Field.Root>
@@ -1033,4 +1080,43 @@ function sameProductSelection(first: number[], second: number[]): boolean {
   const sortedFirst = [...first].sort((a, b) => a - b);
   const sortedSecond = [...second].sort((a, b) => a - b);
   return sortedFirst.every((id, index) => id === sortedSecond[index]);
+}
+
+/**
+ * A field label with a hover/focus help popover. The section's explanations
+ * live at the label instead of as long muted description lines, which kept
+ * the form visually noisy. Popover pattern matches the admin InfoTrigger.
+ */
+function FieldHelpLabel({
+  label,
+  help,
+}: {
+  label: ReactNode;
+  help: ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-1">
+      <Field.Label>{label}</Field.Label>
+      <InfoTrigger>{help}</InfoTrigger>
+    </div>
+  );
+}
+
+function InfoTrigger({children}: {children: ReactNode}) {
+  const {trans} = useTrans();
+  return (
+    <Popover.Root>
+      <Popover.Trigger
+        render={<Button variant="ghost" size="icon-sm" />}
+        className="text-muted-foreground"
+        aria-label={trans(message('Help'))}
+        openOnHover
+      >
+        <CircleQuestionMarkIcon />
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content>{children}</Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  );
 }

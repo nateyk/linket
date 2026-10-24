@@ -307,6 +307,20 @@ test('Save button advertises the shortcut and shows it in a tooltip (A-16)', asy
   expect(await screen.findByText('Save changes (Ctrl+S)')).toBeTruthy();
 });
 
+test('store selector is the header row\'s flexible element (fits 360px)', async () => {
+  await renderLoadedEditor();
+
+  // The shared Button style ships flex-shrink-0; if the selector keeps it,
+  // a long name forces the whole SectionHeader wider than a 360px viewport
+  // and pushes Save past the right edge. twMerge drops flex-shrink-0 in
+  // favor of the later shrink, and min-w-0 defeats the content-based floor
+  // so the inner truncate span can ellipsize.
+  const trigger = screen.getByRole('button', {name: /Nathanael Yitbarek/});
+  expect(trigger.className).toContain('shrink');
+  expect(trigger.className).not.toContain('flex-shrink-0');
+  expect(trigger.className).toContain('min-w-0');
+});
+
 test('discarding via the unsaved-changes dialog restores the saved preview (A-05)', async () => {
   const {router} = await renderLoadedEditor({form: true});
 

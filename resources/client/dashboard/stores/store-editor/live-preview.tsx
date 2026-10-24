@@ -203,7 +203,7 @@ export function LivePreview() {
           isInsightsTab && 'hidden',
         )}
       >
-        <div className="inline-flex h-6 shrink-0 items-center rounded-full border border-border bg-card px-2.5 text-xs font-medium text-muted-foreground shadow-xs select-none">
+        <div className="inline-flex h-6 shrink-0 items-center rounded-full border border-border/60 bg-background px-2.5 text-xs font-medium text-muted-foreground select-none">
           <Trans message="Live preview" />
         </div>
 
@@ -217,7 +217,7 @@ export function LivePreview() {
           <Button
             type="button"
             size="sm"
-            className="fixed end-4 bottom-[calc(4.5rem+var(--safe-bottom,env(safe-area-inset-bottom,0px)))] z-30 shadow-lg motion-reduce:transition-none lg:hidden"
+            className="fixed end-4 bottom-[calc(4.5rem+var(--safe-bottom,env(safe-area-inset-bottom,0px)))] z-30 shadow-sm motion-reduce:transition-none lg:hidden"
             onClick={() => {
               setSheetVisited(true);
               setSheetOpen(true);

@@ -11,7 +11,7 @@ export function Component() {
     <DashboardLayout.MainSection>
       <DashboardLayout.SectionHeader>
         <DashboardLayout.SidebarToggle />
-        <h1 className="text-xl font-semibold">
+        <h1 className="text-2xl leading-8 font-semibold tracking-tight">
           <Trans message="Stores" />
         </h1>
       </DashboardLayout.SectionHeader>

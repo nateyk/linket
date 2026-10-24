@@ -103,13 +103,16 @@ function PreviewProbe() {
   );
 }
 
-function renderProfileEditor(tab?: 'content' | 'about') {
+function renderProfileEditor(
+  tab?: 'content' | 'about',
+  biolink: any = BIOLINK,
+) {
   const queryClient = new QueryClient({
     defaultOptions: {queries: {retry: false}},
   });
   return render(
     <QueryClientProvider client={queryClient}>
-      <BiolinkEditorStoreProvider data={BIOLINK}>
+      <BiolinkEditorStoreProvider data={biolink}>
         <PreviewProbe />
         <CreatorProfileEditor tab={tab} />
       </BiolinkEditorStoreProvider>
@@ -384,6 +387,115 @@ test('content sections start collapsed (nothing open by default)', () => {
   for (const name of ['Profile', 'Social links', 'Actions', 'Products']) {
     expect(triggerByName(name).getAttribute('aria-expanded')).toBe('false');
   }
+});
+
+test('filled cover and avatar tiles stay on dashboard chrome', () => {
+  // REAL_BIOLINK has both images, so the filled shells render. The avatar
+  // field is the grid's auto track: without the max-w clamp the "size-22"
+  // tile stretched to the upload hint's text width — a full-width pill —
+  // and that wide auto track squeezed the Display name / Profile title
+  // column to ~190px. The cover is the banner: full column width, with
+  // the tile's inline 3:1 aspect-ratio driving its height.
+  renderProfileEditor('content', REAL_BIOLINK);
+  fireEvent.click(triggerByName('Profile'));
+
+  const coverField = document.querySelector('[data-field-name="cover_url"]')!;
+  const coverTile = coverField.querySelector('div.group.relative')!;
+  expect(coverTile.classList.contains('rounded-input')).toBe(true);
+  expect(coverTile.classList.contains('rounded-4xl')).toBe(false);
+  expect(coverTile.classList.contains('w-full')).toBe(true);
+  expect(coverTile.classList.contains('h-28')).toBe(false);
+  expect(coverTile.classList.contains('max-w-[22.5rem]')).toBe(false);
+  expect(coverTile.style.aspectRatio).toBe('3 / 1');
+
+  const avatarField = document.querySelector('[data-field-name="avatar_url"]')!;
+  expect(avatarField.classList.contains('max-w-56')).toBe(true);
+  const avatarTile = avatarField.querySelector('div.group.relative')!;
+  expect(avatarTile.classList.contains('size-22')).toBe(true);
+  expect(avatarTile.classList.contains('max-w-22')).toBe(true);
+
+  // Dashboard chrome: no storefront surface token anywhere in the tiles.
+  expect(coverField.innerHTML).not.toContain('--biolink-');
+  expect(avatarField.innerHTML).not.toContain('--biolink-');
+});
+
+test('empty profile photo shows an icon dropzone sized to the tile', () => {
+  // BIOLINK has no avatar: the circle placeholder must not render the long
+  // dropzone sentence inside an 88px tile (it overflowed the circle).
+  renderProfileEditor();
+  fireEvent.click(triggerByName('Profile'));
+
+  const avatarField = document.querySelector('[data-field-name="avatar_url"]')!;
+  const button = avatarField.querySelector(
+    'button:not([data-slot="popover-trigger"])',
+  )!;
+  expect(button.classList.contains('rounded-full')).toBe(true);
+  expect(button.classList.contains('size-22')).toBe(true);
+  expect(button.classList.contains('max-w-22')).toBe(true);
+  expect(button.textContent ?? '').not.toContain('Select file to upload');
+  expect(button.querySelector('svg')).not.toBeNull();
+});
+
+test('empty cover shows a rectangular banner placeholder', () => {
+  // BIOLINK has no cover: the placeholder is the banner's own 3:1 box
+  // with a compact icon affordance — the generic dropzone sentence reads
+  // wrong at banner scale.
+  renderProfileEditor();
+  fireEvent.click(triggerByName('Profile'));
+
+  const coverField = document.querySelector('[data-field-name="cover_url"]')!;
+  const button = coverField.querySelector(
+    'button:not([data-slot="popover-trigger"])',
+  )!;
+  expect(button.classList.contains('rounded-input')).toBe(true);
+  expect(button.classList.contains('w-full')).toBe(true);
+  expect(button.style.aspectRatio).toBe('3 / 1');
+  expect(button.textContent ?? '').toContain('Add a cover image');
+  expect(button.textContent ?? '').not.toContain('Select file to upload');
+  expect(button.querySelector('svg')).not.toBeNull();
+});
+
+test('long descriptions become label help popovers', async () => {
+  // The upload rules and field explanations live behind hover/focus help
+  // popovers at the label instead of muted description lines, which kept
+  // the form visually noisy.
+  renderProfileEditor('content', REAL_BIOLINK);
+  fireEvent.click(triggerByName('Profile'));
+
+  expect(screen.queryByText(/JPG, PNG, or WebP/)).toBeNull();
+  expect(
+    screen.queryByText('Choose the professional title shown below your name.'),
+  ).toBeNull();
+  expect(
+    screen.queryByText('A short introduction to your work and audience.'),
+  ).toBeNull();
+  expect(
+    screen.queryByText('Separate skills with commas. The first eight are shown.'),
+  ).toBeNull();
+
+  // Exactly one help trigger beside every label that used to carry one.
+  for (const fieldName of [
+    'cover_url',
+    'avatar_url',
+    'profile_title',
+    'bio',
+    'skills',
+    'available_for_work',
+  ]) {
+    const field = document.querySelector(`[data-field-name="${fieldName}"]`)!;
+    expect(field.querySelectorAll('[data-slot="popover-trigger"]').length).toBe(
+      1,
+    );
+  }
+
+  // The trigger opens the rules in a popover.
+  const coverTrigger = document.querySelector(
+    '[data-field-name="cover_url"] [data-slot="popover-trigger"]',
+  )!;
+  fireEvent.click(coverTrigger);
+  await waitFor(() => {
+    expect(screen.getByText(/JPG, PNG, or WebP/)).toBeTruthy();
+  });
 });
 
 test('the Content heading carries a muted description', () => {

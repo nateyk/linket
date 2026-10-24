@@ -27,10 +27,10 @@ export function Component() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-xl font-semibold">
+        <h1 className="text-2xl leading-8 font-semibold tracking-tight">
           <Trans message="Bio Link insights" />
         </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="mt-1 text-sm leading-5 font-normal text-muted-foreground">
           <Trans message="Understand how visitors engage with this Bio Link page." />
         </p>
       </div>

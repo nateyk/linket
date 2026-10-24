@@ -24,9 +24,11 @@ export function BuilderSectionHeader({
     <span className="flex min-w-0 flex-1 items-start gap-3 py-1">
       <span
         className={cn(
-          'flex size-9 shrink-0 items-center justify-center rounded-card-sm bg-card',
-          isComplete && 'bg-primary/10 text-primary',
-          !isComplete && 'bg-muted text-muted-foreground',
+          'flex size-9 shrink-0 items-center justify-center rounded-card-sm',
+          // Complete stays muted + primary ink — no loud primary wash.
+          isComplete
+            ? 'bg-muted text-foreground'
+            : 'bg-muted/70 text-muted-foreground',
         )}
       >
         <Icon className="size-4" />
@@ -34,14 +36,14 @@ export function BuilderSectionHeader({
       <span className="flex min-w-0 flex-1 flex-col gap-0.5 text-start">
         <span
           id={labelIds?.titleId}
-          className="truncate text-sm leading-snug font-medium"
+          className="truncate text-sm leading-5 font-medium"
         >
           {title}
         </span>
         {description && (
           <span
             id={labelIds?.descriptionId}
-            className="line-clamp-2 text-xs leading-snug font-normal text-muted-foreground"
+            className="line-clamp-2 text-xs leading-4 font-medium text-muted-foreground"
           >
             {description}
           </span>

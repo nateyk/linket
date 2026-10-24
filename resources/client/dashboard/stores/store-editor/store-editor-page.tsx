@@ -57,7 +57,6 @@ import {
   SaveIcon,
   SettingsIcon,
   TrashIcon,
-  SparklesIcon,
   UserRoundPenIcon,
 } from 'lucide-react';
 import {useEffect, useState} from 'react';
@@ -414,9 +413,14 @@ function BiolinkSelector() {
       <Dropdown.Root>
         <Dropdown.Trigger
           render={
+            // The row's one flexible element: the shared button style ships
+            // flex-shrink-0, which at 360px pushed Save past the viewport
+            // (document 2px wider than the screen). min-w-0 + shrink let the
+            // name ellipsize via its truncate span instead of forcing the
+            // header wider.
             <Button
               variant="outline"
-              className="mr-auto max-w-64 justify-between"
+              className="mr-auto min-w-0 max-w-64 shrink justify-between"
             />
           }
         >
@@ -551,10 +555,10 @@ export function BiolinkContentTab() {
     <div className="mx-auto max-w-2xl">
       <div className="flex flex-col gap-4">
         <div className="min-w-0">
-          <h2 className="text-lg font-semibold">
+          <h2 className="text-xl leading-7 font-semibold tracking-tight">
             <Trans message="Content" />
           </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-1 text-sm leading-5 font-normal text-muted-foreground">
             <Trans message="Add links and widgets to build your page." />
           </p>
         </div>
@@ -597,10 +601,10 @@ export function BiolinkAboutTab() {
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-4 py-2">
       <div>
-        <h2 className="text-lg font-semibold">
+        <h2 className="text-xl leading-7 font-semibold tracking-tight">
           <Trans message="About" />
         </h2>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="mt-1 text-sm leading-5 font-normal text-muted-foreground">
           <Trans message="Add a fuller introduction after converting this page into a creator profile." />
         </p>
       </div>
@@ -622,7 +626,7 @@ function CreatorProfileUpgrade() {
 
   return (
     <Alert.Root>
-      <SparklesIcon />
+      <UserRoundPenIcon />
       <Alert.Title>
         <Trans message="Turn this page into a creator profile" />
       </Alert.Title>
