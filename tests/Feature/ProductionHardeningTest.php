@@ -96,6 +96,61 @@ class ProductionHardeningTest extends TestCase
         $this->assertSame('pending', $order->fresh()->status);
     }
 
+    public function testPendingOrderSyncVerifiesChapaOnSuccessPoll(): void
+    {
+        [$creator, $product] = $this->createProductFixture();
+        $txRef = 'sync_pending_' . Str::lower(Str::random(8));
+        $order = StorefrontOrder::query()->create([
+            'uuid' => (string) Str::uuid(),
+            'digital_product_id' => $product->id,
+            'creator_id' => $creator->id,
+            'buyer_email' => 'buyer@example.test',
+            'currency' => $product->currency,
+            'gross_amount_cents' => 5000,
+            'commission_bps' => 1000,
+            'platform_fee_cents' => 500,
+            'creator_earnings_cents' => 4500,
+            'status' => 'pending',
+            'payment_gateway' => 'chapa',
+            'chapa_tx_ref' => $txRef,
+        ]);
+        $transaction = PaymentTransaction::query()->create([
+            'uuid' => (string) Str::uuid(),
+            'gateway' => 'chapa',
+            'payable_type' => StorefrontOrder::class,
+            'payable_id' => $order->id,
+            'purpose' => 'digital_product',
+            'tx_ref' => $txRef,
+            'amount' => '50.00',
+            'currency' => 'ETB',
+            'status' => 'pending',
+            'buyer_email' => 'buyer@example.test',
+        ]);
+
+        $gateway = $this->getMockBuilder(ChapaGateway::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['verify', 'verifiedData', 'isSuccessful'])
+            ->getMock();
+        $gateway->method('verify')->willReturn(['data' => [
+            'status' => 'success',
+            'tx_ref' => $txRef,
+            'amount' => '50.00',
+            'currency' => 'ETB',
+            'email' => 'buyer@example.test',
+        ]]);
+        $gateway->method('verifiedData')->willReturnCallback(
+            fn (array $response) => (array) ($response['data'] ?? $response),
+        );
+        $gateway->method('isSuccessful')->willReturn(true);
+        app()->instance(ChapaGateway::class, $gateway);
+
+        app(ChapaPaymentFulfillment::class)->syncPendingStorefrontOrder($order);
+
+        $this->assertSame('paid', $order->fresh()->status);
+        $this->assertSame('paid', $transaction->fresh()->status);
+        $this->assertNotNull($order->fresh()->paid_at);
+    }
+
     public function testMissingProtectedFileDoesNotConsumeDownloadAttempt(): void
     {
         [$creator, $product, $file] = $this->createProductFixture();

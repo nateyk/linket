@@ -49,6 +49,16 @@ class S3SimpleUploadController extends Controller
             abort(422, $errors->first());
         }
 
+        $sampleError = \App\Storefront\ProductSamplePolicy::uploadError(
+            $uploadType->name,
+            $data['clientExtension'],
+            $data['clientMime'],
+            (int) $data['clientSize'],
+        );
+        if ($sampleError !== null) {
+            abort(422, $sampleError);
+        }
+
         $command = $this->getClient()->getCommand('PutObject', [
             'Bucket' => $this->getBucket(),
             'ContentType' => $data['clientMime'],

@@ -68,6 +68,7 @@ class FileEntriesController extends Controller
     {
         $fileEntry = FileEntry::query()->findOrFail($id);
 
+        $this->abortUnlessSampleUsesSignedStream($fileEntry);
         Gate::authorize('show', $fileEntry);
         $this->abortUnlessCourseVideoAccessible($fileEntry);
 
@@ -91,6 +92,19 @@ class FileEntriesController extends Controller
         $this->abortUnlessCourseVideoAccessible($fileEntry);
 
         return new FileEntryResource($fileEntry);
+    }
+
+    /**
+     * Preview bytes are only available from the signed product-page stream.
+     * The long-lived file-entry URL must not play them, including for the owner.
+     */
+    private function abortUnlessSampleUsesSignedStream(FileEntry $fileEntry): void
+    {
+        if ($fileEntry->upload_type !== 'digitalProductSamples') {
+            return;
+        }
+
+        abort(403, __('This preview is only available on the public product page.'));
     }
 
     /**
@@ -130,7 +144,7 @@ class FileEntriesController extends Controller
         $detectedMime = $file instanceof UploadedFile
             ? ($file->getMimeType() ?: $payload->clientMime)
             : $payload->clientMime;
-        $validationMime = $payload->uploadType->name === 'digitalProductFiles'
+        $validationMime = in_array($payload->uploadType->name, ['digitalProductFiles', 'digitalProductSamples'], true)
             ? $detectedMime
             : $payload->clientMime;
 
@@ -156,6 +170,18 @@ class FileEntriesController extends Controller
             'parentId' => 'nullable|exists:file_entries,id',
             'relativePath' => 'nullable|string',
         ]);
+
+        $sampleError = \App\Storefront\ProductSamplePolicy::uploadError(
+            $payload->uploadType->name,
+            $payload->clientExtension,
+            (string) $validationMime,
+            (int) $payload->size,
+        );
+        if ($sampleError !== null) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'file' => $sampleError,
+            ]);
+        }
 
         if (
             $payload->uploadType->name === 'digitalProductFiles' &&

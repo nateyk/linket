@@ -63,6 +63,14 @@ class TusFileEntryController extends Controller
             );
             abort_if($errors, 422, $errors?->first());
 
+            $sampleError = \App\Storefront\ProductSamplePolicy::uploadError(
+                $payload->uploadType->name,
+                $payload->clientExtension,
+                $detectedMime,
+                (int) $payload->size,
+            );
+            abort_if($sampleError !== null, 422, $sampleError);
+
             $payload->clientMime = $detectedMime;
             app(\App\Entitlements\AssertDigitalProductUploadAllowed::class)
                 ->execute($payload->size, $payload->workspaceId);

@@ -143,6 +143,19 @@ class TusServer
             );
         }
 
+        $sampleError = \App\Storefront\ProductSamplePolicy::uploadError(
+            (string) Arr::get($meta, 'uploadType'),
+            (string) Arr::get($meta, 'clientExtension'),
+            (string) Arr::get($meta, 'clientMime'),
+            (int) Arr::get($meta, 'clientSize'),
+        );
+        if ($sampleError !== null) {
+            return $this->response(
+                json_encode(['message' => $sampleError]),
+                Response::HTTP_UNPROCESSABLE_ENTITY,
+            );
+        }
+
         $uploadKey = $this->getOrCreateUploadKey();
         $filePath = storage_path("tus/$uploadKey");
 

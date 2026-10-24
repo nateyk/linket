@@ -47,6 +47,16 @@ class S3MultipartUploadController extends Controller
             abort(422, $errors->first());
         }
 
+        $sampleError = \App\Storefront\ProductSamplePolicy::uploadError(
+            $uploadType->name,
+            $data['clientExtension'],
+            $data['clientMime'],
+            (int) $data['clientSize'],
+        );
+        if ($sampleError !== null) {
+            abort(422, $sampleError);
+        }
+
         $result = $this->getClient()->createMultipartUpload([
             'Key' => $this->buildFileKey(),
             'Bucket' => $this->getBucket(),

@@ -15,6 +15,18 @@ return [
                 'max_file_size' => '2097152',
             ],
         ],
+        'digitalProductSamples' => [
+            'visibility' => 'private',
+            'dont_clean' => true,
+            'label' => 'Digital product previews',
+            'description' => 'Buyer-facing audio clips and sample PDFs. Streamed only through short-lived signed URLs while the product is public. Caps: 8 audio clips at 20MB, or 1 PDF at 15MB. See App\Storefront\ProductSamplePolicy.',
+            'defaults' => [
+                'prefix' => 'digital-product-samples',
+                'accept' => \App\Storefront\ProductSamplePolicy::uploadMimes(),
+                // 20MB. PDF samples are tightened to 15MB in ProductSamplePolicy.
+                'max_file_size' => '20971520',
+            ],
+        ],
         'digitalProductFiles' => [
             'visibility' => 'private',
             'dont_clean' => true,
