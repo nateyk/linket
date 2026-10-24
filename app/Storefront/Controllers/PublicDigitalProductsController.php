@@ -3,6 +3,7 @@
 namespace App\Storefront\Controllers;
 
 use App\Biolinks\Models\Biolink;
+use App\Payments\ChapaPaymentFulfillment;
 use App\Stores\Models\Store;
 use App\Storefront\Models\DigitalProduct;
 use App\Storefront\Models\StorefrontOrder;
@@ -65,6 +66,9 @@ class PublicDigitalProductsController extends Controller
         $expectedReference = $storefrontOrder->chapa_tx_ref
             ?: $storefrontOrder->stripe_checkout_session_id;
         abort_unless(hash_equals((string) $expectedReference, (string) $paymentReference), 403);
+
+        app(ChapaPaymentFulfillment::class)->syncPendingStorefrontOrder($storefrontOrder);
+        $storefrontOrder->refresh()->load(['product', 'entitlements.file']);
 
         return new PublicStorefrontOrderResource($storefrontOrder);
     }

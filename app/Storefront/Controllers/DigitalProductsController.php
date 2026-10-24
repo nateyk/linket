@@ -34,12 +34,12 @@ class DigitalProductsController extends Controller
                 ->withSum([
                     'orders as gross_revenue_cents' => fn (Builder $query): Builder => $query->where('status', 'paid'),
                 ], 'gross_amount_cents')
-                ->with(['files', 'cover', 'biolinks'])
+                ->with(['files', 'cover', 'biolinks', 'samples.file'])
                 ->latest()
                 ->paginate($perPage),
         );
     }
-    public function show(Request $request, DigitalProduct $digitalProduct) { $this->assertOwner($digitalProduct, $request); return new DigitalProductResource($digitalProduct->load(['files', 'cover', 'biolinks', 'course'])); }
+    public function show(Request $request, DigitalProduct $digitalProduct) { $this->assertOwner($digitalProduct, $request); return new DigitalProductResource($digitalProduct->load(['files', 'cover', 'biolinks', 'course', 'samples.file'])); }
 
     public function store(Request $request)
     {
@@ -190,6 +190,12 @@ class DigitalProductsController extends Controller
             'currency' => 'nullable|in:etb,ETB', 'cover_file_entry_id' => 'nullable|integer|exists:file_entries,id',
             'type' => 'nullable|in:digital,ebook,audio,course',
             'biolink_ids' => 'nullable|array', 'biolink_ids.*' => 'integer|distinct|exists:biolinks,id',
+            'sample_file_ids' => 'sometimes|array',
+            'sample_file_ids.*' => 'integer|distinct|exists:file_entries,id',
+            'sample_titles' => 'sometimes|array',
+            'sample_titles.*' => 'nullable|string|max:160',
+            'sample_durations' => 'sometimes|array',
+            'sample_durations.*' => 'nullable|integer|min:0|max:86400000',
         ];
         if ($isCourse) {
             $rules['file_ids'] = 'nullable|array';
@@ -220,6 +226,12 @@ class DigitalProductsController extends Controller
             'file_ids.*' => 'integer|distinct|exists:file_entries,id',
             'biolink_ids' => 'sometimes|nullable|array',
             'biolink_ids.*' => 'integer|distinct|exists:biolinks,id',
+            'sample_file_ids' => 'sometimes|array',
+            'sample_file_ids.*' => 'integer|distinct|exists:file_entries,id',
+            'sample_titles' => 'sometimes|array',
+            'sample_titles.*' => 'nullable|string|max:160',
+            'sample_durations' => 'sometimes|array',
+            'sample_durations.*' => 'nullable|integer|min:0|max:86400000',
         ]);
         // Drop nulls so partial saves keep existing column values; KEEP 0 and [] (meaningful).
         return array_filter($data, static fn ($v) => $v !== null);

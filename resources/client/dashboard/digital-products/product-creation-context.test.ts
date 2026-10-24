@@ -19,6 +19,7 @@ describe('resolveInitialFormState', () => {
       coverUrl: '',
       coverFileId: null,
       files: [],
+      samples: [],
       biolinkIds: [],
       productType: 'ebook',
     });

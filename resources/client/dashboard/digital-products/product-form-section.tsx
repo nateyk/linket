@@ -11,8 +11,8 @@ export type ProductSetupSection = string;
 
 interface ProductFormSectionProps {
   id: ProductSetupSection;
-  title: string;
-  description: string;
+  title: ReactNode;
+  description: ReactNode;
   icon: LucideIcon;
   isComplete: boolean;
   count?: number | null;
@@ -42,8 +42,14 @@ export function ProductFormSection({
         <BuilderSectionHeader
           icon={icon}
           isComplete={isComplete}
-          title={<Trans message={title} />}
-          description={<Trans message={description} />}
+          title={typeof title === 'string' ? <Trans message={title} /> : title}
+          description={
+            typeof description === 'string' ? (
+              <Trans message={description} />
+            ) : (
+              description
+            )
+          }
           trailing={
             count !== null && count !== undefined && count > 0 ? (
               <Badge

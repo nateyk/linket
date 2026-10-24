@@ -3,6 +3,7 @@
 namespace App\Storefront\Resources;
 
 use App\Storefront\Models\DigitalProduct;
+use App\Storefront\ProductSampleUrl;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -49,6 +50,34 @@ class PublicDigitalProductResource extends JsonResource
                     ? $this->creator->isKycVerified()
                     : $this->creator->email_verified_at !== null,
             ]),
+            'samples' => $this->publicSamples(),
         ];
+    }
+
+    /**
+     * Playable preview metadata only. Paid file ids, names, and paths are
+     * never included. URLs are short-lived and checked again at stream time.
+     *
+     * @return list<array{id: int, title: ?string, kind: string, position: int, duration_ms: ?int, url: string}>
+     */
+    private function publicSamples(): array
+    {
+        $store = request()->attributes->get('publicStore') ?? request()->route('biolink');
+        if (!$store) {
+            return [];
+        }
+
+        $samples = $this->resource->relationLoaded('samples')
+            ? $this->samples
+            : $this->samples()->orderBy('position')->get();
+
+        return $samples->map(fn ($sample): array => [
+            'id' => $sample->id,
+            'title' => $sample->title,
+            'kind' => $sample->kind,
+            'position' => (int) $sample->position,
+            'duration_ms' => $sample->duration_ms === null ? null : (int) $sample->duration_ms,
+            'url' => ProductSampleUrl::temporary($store, $this->resource, $sample),
+        ])->values()->all();
     }
 }

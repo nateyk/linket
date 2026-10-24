@@ -108,6 +108,10 @@ describe('digital product form submission', () => {
     expect(source).toContain('fieldErrors.file_ids');
     expect(source).toContain('<SharedFileUploader');
     expect(source).toContain('uploadType="digitalProductFiles"');
+    expect(source).toContain('sampleSectionKind');
+    expect(source).toContain('Files buyers get after purchase');
+    expect(source).toContain('Preview tracks');
+    expect(source).toContain('Sample PDF');
     const uploaderSource = fs.readFileSync(
       path.resolve('common/foundation/resources/client/ui/file-uploader.tsx'),
       'utf8',

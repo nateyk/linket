@@ -26,7 +26,7 @@ final class DigitalProductMutationService
         $product = DB::transaction(function () use ($data, $creator, $maxUploadBytes): DigitalProduct {
             $type = $data['type'] ?? 'digital';
             $product = DigitalProduct::create([
-                ...Arr::except($data, ['file_ids', 'biolink_ids', 'type']),
+                ...Arr::except($data, ['file_ids', 'biolink_ids', 'type', 'sample_file_ids', 'sample_titles', 'sample_durations']),
                 'type' => $type,
                 'user_id' => $creator->id,
                 'workspace_id' => ActiveWorkspace::get()->id,
@@ -38,6 +38,7 @@ final class DigitalProductMutationService
                 $this->courses->ensureForProduct($product);
             }
             $this->syncProductFiles($product, $data, $type, $maxUploadBytes);
+            $this->syncProductSamples($product, $data, $type);
             $this->visibility->sync($product, $data['biolink_ids'] ?? []);
 
             app(ProductReviewHistory::class)->record(
@@ -49,7 +50,7 @@ final class DigitalProductMutationService
                 'creator',
             );
 
-            return $product->fresh()->load(['files', 'cover', 'biolinks', 'course']);
+            return $product->fresh()->load(['files', 'cover', 'biolinks', 'course', 'samples.file']);
         });
 
         app(ProductCoverWebp::class)->dispatchFor($product);
@@ -68,7 +69,7 @@ final class DigitalProductMutationService
                 ? app(\App\Storefront\ApprovedContentSnapshot::class)->capture($product)
                 : null;
             $product->update([
-                ...Arr::except($data, ['file_ids', 'biolink_ids', 'type']),
+                ...Arr::except($data, ['file_ids', 'biolink_ids', 'type', 'sample_file_ids', 'sample_titles', 'sample_durations']),
                 'type' => $type,
                 'currency' => $data['currency'] ?? $product->currency,
             ]);
@@ -77,8 +78,10 @@ final class DigitalProductMutationService
 
             $this->assertCoverBelongsToWorkspace($product);
             $fileIdsBefore = $product->files()->pluck('file_entries.id')->sort()->values()->all();
+            $samplesBefore = $this->sampleSignature($product);
             $biolinkIdsBefore = $product->biolinks()->pluck('biolinks.id')->sort()->values()->all();
             $this->syncProductFiles($product, $data, $type, $maxUploadBytes);
+            $this->syncProductSamples($product, $data, $type);
             if ($type === 'course') {
                 $this->courses->ensureForProduct($product->fresh());
             }
@@ -89,6 +92,9 @@ final class DigitalProductMutationService
 
             if ($product->files()->pluck('file_entries.id')->sort()->values()->all() !== $fileIdsBefore) {
                 $changed[] = 'file_ids';
+            }
+            if ($this->sampleSignature($product) !== $samplesBefore) {
+                $changed[] = 'sample_file_ids';
             }
             if ($product->biolinks()->pluck('biolinks.id')->sort()->values()->all() !== $biolinkIdsBefore) {
                 $changed[] = 'biolink_ids';
@@ -113,7 +119,7 @@ final class DigitalProductMutationService
                 );
             }
 
-            return $product->fresh()->load(['files', 'cover', 'biolinks', 'course']);
+            return $product->fresh()->load(['files', 'cover', 'biolinks', 'course', 'samples.file']);
         });
 
         if ($updated->cover_file_entry_id && $updated->cover_file_entry_id !== $coverBefore) {
@@ -245,6 +251,161 @@ final class DigitalProductMutationService
         }
 
         $product->files()->sync($ids);
+    }
+
+    public function restoreSamples(DigitalProduct $product, array $snapshot): void
+    {
+        $ids = array_map('intval', $snapshot['sample_file_ids'] ?? []);
+        $existing = FileEntry::query()
+            ->whereIn('id', $ids)
+            ->where('workspace_id', $product->workspace_id)
+            ->pluck('id')
+            ->all();
+        $ids = array_values(array_filter(
+            $ids,
+            fn (int $id): bool => in_array($id, $existing, true),
+        ));
+
+        $this->syncProductSamples($product, [
+            'sample_file_ids' => $ids,
+            'sample_titles' => $snapshot['sample_titles'] ?? [],
+            'sample_durations' => $snapshot['sample_durations'] ?? [],
+        ], $product->type ?? 'digital');
+    }
+
+    /**
+     * @return list<array{0: int, 1: ?string, 2: ?int, 3: int}>
+     */
+    private function sampleSignature(DigitalProduct $product): array
+    {
+        return $product->samples()
+            ->orderBy('position')
+            ->get(['file_entry_id', 'title', 'duration_ms', 'position'])
+            ->map(fn (Models\DigitalProductSample $sample): array => [
+                (int) $sample->file_entry_id,
+                $sample->title,
+                $sample->duration_ms === null ? null : (int) $sample->duration_ms,
+                (int) $sample->position,
+            ])
+            ->all();
+    }
+
+    private function syncProductSamples(DigitalProduct $product, array $data, string $type): void
+    {
+        if (!array_key_exists('sample_file_ids', $data)) {
+            $this->assertExistingSamplesMatchType($product, $type);
+
+            return;
+        }
+
+        $ids = array_values(array_map(fn ($id): int => (int) $id, $data['sample_file_ids'] ?? []));
+        $kind = ProductSamplePolicy::allowedKind($type);
+
+        if ($kind === null) {
+            if ($ids !== []) {
+                throw ValidationException::withMessages([
+                    'sample_file_ids' => __('Courses cannot include preview files.'),
+                ]);
+            }
+
+            $product->samples()->delete();
+
+            return;
+        }
+
+        if (count($ids) > ProductSamplePolicy::maxCount($kind)) {
+            throw ValidationException::withMessages([
+                'sample_file_ids' => $kind === 'audio'
+                    ? __('You can add up to :count preview tracks.', ['count' => ProductSamplePolicy::MAX_AUDIO_SAMPLES])
+                    : __('You can add one sample PDF.'),
+            ]);
+        }
+
+        $files = FileEntry::query()
+            ->whereIn('id', $ids)
+            ->where('workspace_id', $product->workspace_id)
+            ->get()
+            ->keyBy('id');
+        if ($files->count() !== count(array_unique($ids))) {
+            throw ValidationException::withMessages([
+                'sample_file_ids' => __('Every preview file must belong to the active workspace.'),
+            ]);
+        }
+
+        foreach ($ids as $id) {
+            $error = ProductSamplePolicy::attachError($files->get($id), $kind);
+            if ($error !== null) {
+                throw ValidationException::withMessages([
+                    'sample_file_ids' => $error,
+                ]);
+            }
+        }
+
+        $titlesProvided = array_key_exists('sample_titles', $data);
+        $durationsProvided = array_key_exists('sample_durations', $data);
+        $titles = $data['sample_titles'] ?? [];
+        $durations = $data['sample_durations'] ?? [];
+        $existing = $product->samples()->get()->keyBy('file_entry_id');
+
+        $keep = [];
+        foreach ($ids as $position => $id) {
+            $file = $files->get($id);
+            $title = $titlesProvided
+                ? ($titles[$id] ?? $titles[(string) $id] ?? null)
+                : $existing->get($id)?->title;
+            $title = is_string($title) ? trim($title) : null;
+            if ($title === '') {
+                $title = null;
+            }
+            if ($title !== null && mb_strlen($title) > 160) {
+                throw ValidationException::withMessages([
+                    'sample_titles' => __('Preview titles may not be greater than 160 characters.'),
+                ]);
+            }
+
+            $duration = $durationsProvided
+                ? ($durations[$id] ?? $durations[(string) $id] ?? null)
+                : $existing->get($id)?->duration_ms;
+            $duration = $duration === null || $duration === '' ? null : (int) $duration;
+
+            $payload = [
+                'file_entry_id' => $id,
+                'kind' => ProductSamplePolicy::kindForExtension($file->extension),
+                'title' => $title,
+                'position' => $position,
+                'duration_ms' => $duration,
+                'is_free_preview' => true,
+            ];
+
+            $row = $existing->get($id);
+            if ($row) {
+                $row->update($payload);
+            } else {
+                $product->samples()->create($payload);
+            }
+            $keep[] = $id;
+        }
+
+        if ($keep === []) {
+            $product->samples()->delete();
+        } else {
+            $product->samples()->whereNotIn('file_entry_id', $keep)->delete();
+        }
+    }
+
+    private function assertExistingSamplesMatchType(DigitalProduct $product, string $type): void
+    {
+        $kind = ProductSamplePolicy::allowedKind($type);
+        $samples = $product->samples()->get();
+        if ($samples->isEmpty()) {
+            return;
+        }
+
+        if ($kind === null || $samples->contains(fn (Models\DigitalProductSample $sample): bool => $sample->kind !== $kind)) {
+            throw ValidationException::withMessages([
+                'sample_file_ids' => __('Remove preview files before changing the product type.'),
+            ]);
+        }
     }
 
     private function assertCoverBelongsToWorkspace(DigitalProduct $product): void

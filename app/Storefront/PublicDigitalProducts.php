@@ -32,6 +32,7 @@ class PublicDigitalProducts
     public function products(Biolink|Store $biolink)
     {
         $this->assertBiolink($biolink);
+        request()->attributes->set('publicStore', $biolink);
 
         return $biolink->digitalProducts()
             ->where('digital_products.status', 'approved')
@@ -42,6 +43,7 @@ class PublicDigitalProducts
             ->with([
                 'cover',
                 'creator',
+                'samples',
                 // Aggregates ride along here so the resource never issues
                 // per-product count queries (see PublicDigitalProductResource).
                 'course' => fn($query) => $query->withCount([
@@ -63,11 +65,12 @@ class PublicDigitalProducts
     public function productForOrder(Biolink|Store $biolink, int $digitalProductId): DigitalProduct
     {
         $this->assertBiolink($biolink);
+        request()->attributes->set('publicStore', $biolink);
 
         return DigitalProduct::query()
             ->withTrashed()
             ->whereKey($digitalProductId)
-            ->with(['cover', 'creator'])
+            ->with(['cover', 'creator', 'samples'])
             ->withCount('files')
             ->firstOrFail();
     }

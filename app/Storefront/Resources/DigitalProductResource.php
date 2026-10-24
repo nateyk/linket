@@ -40,6 +40,7 @@ class DigitalProductResource extends JsonResource
                 'file_size' => $file->file_size,
                 'extension' => $file->extension,
             ])),
+            'samples' => $this->creatorSamples(),
             // Always present (never whenLoaded): the product form treats a
             // missing key as "no placement" and would wipe it on the next
             // save. Falls back to an explicit query when the relation was
@@ -65,5 +66,34 @@ class DigitalProductResource extends JsonResource
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];
+    }
+
+    /**
+     * Creator form hydration. Includes the file entry id so the form can
+     * send it back. Public payloads must not use this shape.
+     *
+     * @return list<array{id: int, file_entry_id: int, title: ?string, kind: string, position: int, duration_ms: ?int, name: ?string, file_size: ?int, extension: ?string}>
+     */
+    private function creatorSamples(): array
+    {
+        $samples = $this->resource->relationLoaded('samples')
+            ? $this->samples
+            : $this->samples()->with('file')->orderBy('position')->get();
+
+        if ($this->resource->relationLoaded('samples')) {
+            $samples->loadMissing('file');
+        }
+
+        return $samples->map(fn ($sample): array => [
+            'id' => $sample->id,
+            'file_entry_id' => $sample->file_entry_id,
+            'title' => $sample->title,
+            'kind' => $sample->kind,
+            'position' => $sample->position,
+            'duration_ms' => $sample->duration_ms,
+            'name' => $sample->file?->name,
+            'file_size' => $sample->file?->file_size,
+            'extension' => $sample->file?->extension,
+        ])->values()->all();
     }
 }

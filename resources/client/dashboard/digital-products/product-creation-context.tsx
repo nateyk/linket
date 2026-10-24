@@ -20,6 +20,15 @@ export interface FileEntry {
   extension?: string;
 }
 
+export interface ProductSampleDraft {
+  fileEntryId: number;
+  name: string;
+  fileSize?: number;
+  extension?: string;
+  title: string;
+  durationMs: number | null;
+}
+
 export interface ProductFormState {
   title: string;
   description: string;
@@ -27,8 +36,21 @@ export interface ProductFormState {
   coverUrl: string;
   coverFileId: number | null;
   files: FileEntry[];
+  samples: ProductSampleDraft[];
   biolinkIds: number[];
   productType: ProductType;
+}
+
+export function sampleRequestPayload(samples: ProductSampleDraft[]) {
+  return {
+    sample_file_ids: samples.map(sample => sample.fileEntryId),
+    sample_titles: Object.fromEntries(
+      samples.map(sample => [sample.fileEntryId, sample.title]),
+    ),
+    sample_durations: Object.fromEntries(
+      samples.map(sample => [sample.fileEntryId, sample.durationMs]),
+    ),
+  };
 }
 
 export interface ProductCreationActions {
@@ -37,6 +59,7 @@ export interface ProductCreationActions {
   setPrice: (value: string) => void;
   setCover: (url: string, entry?: {id: number}) => void;
   setFiles: (files: FileEntry[]) => void;
+  setSamples: (samples: ProductSampleDraft[]) => void;
   setBiolinkIds: (ids: number[]) => void;
   setProductType: (type: ProductType) => void;
   hydrate: (state: ProductFormState) => void;
@@ -52,6 +75,7 @@ const EMPTY_STATE: ProductFormState = {
   coverUrl: '',
   coverFileId: null,
   files: [],
+  samples: [],
   biolinkIds: [],
   productType: 'digital',
 };
@@ -127,6 +151,13 @@ export function ProductCreationProvider({
     },
     [],
   );
+  const setSamples = useCallback(
+    (samples: ProductSampleDraft[]) => {
+      setState(current => ({...current, samples}));
+      setDirty(true);
+    },
+    [],
+  );
   const setBiolinkIds = useCallback(
     (biolinkIds: number[]) => {
       setState(current => ({...current, biolinkIds}));
@@ -175,6 +206,7 @@ export function ProductCreationProvider({
           // but its mutation service 500s on non-course products when the key
           // is missing (EMPTY_STATE and hydrate both keep them arrays).
           file_ids: state.files.map(f => f.id),
+          ...sampleRequestPayload(state.samples),
           biolink_ids: state.biolinkIds,
           type: state.productType,
         });
@@ -203,6 +235,7 @@ export function ProductCreationProvider({
         setPrice,
         setCover,
         setFiles,
+        setSamples,
         setBiolinkIds,
         setProductType,
         hydrate,
@@ -220,6 +253,7 @@ export function ProductCreationProvider({
       setPrice,
       setCover,
       setFiles,
+      setSamples,
       setBiolinkIds,
       setProductType,
       hydrate,

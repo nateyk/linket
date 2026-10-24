@@ -44,6 +44,11 @@ class DigitalProduct extends StorefrontModel
     public function creator(): BelongsTo { return $this->belongsTo(User::class, 'user_id'); }
     public function cover(): BelongsTo { return $this->belongsTo(FileEntry::class, 'cover_file_entry_id'); }
     public function files(): BelongsToMany { return $this->belongsToMany(FileEntry::class, 'digital_product_files')->withTimestamps(); }
+
+    public function samples(): HasMany
+    {
+        return $this->hasMany(DigitalProductSample::class)->orderBy('position');
+    }
     public function stores(): BelongsToMany
     {
         $pivot = Store::isTableRenameDone() ? 'digital_product_store' : 'digital_product_biolinks';

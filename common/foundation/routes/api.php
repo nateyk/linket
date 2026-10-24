@@ -57,9 +57,6 @@ use Common\Votes\VoteController;
 use Common\Workspaces\Controllers\WorkspacesController;
 use Common\Workspaces\Controllers\WorkspaceInvitesController;
 use Common\Workspaces\Controllers\WorkspaceMembersController;
-use App\CreatorServices\Controllers\CreatorServicesController;
-use App\CreatorServices\Controllers\PublicServicesController;
-use App\CreatorServices\Controllers\ServiceInquiriesController;
 use App\Storefront\Controllers\AdminDigitalProductsController;
 use App\Storefront\Controllers\DigitalProductsController;
 use App\Storefront\Controllers\PayoutRequestsController;
@@ -244,18 +241,6 @@ Route::group(['prefix' => 'v1'], function () {
         Route::get('items/{digitalProduct}/reviews', [CreatorProductReviewsController::class, 'index']);
         Route::post('items/{digitalProduct}/submit', [DigitalProductsController::class, 'submit']);
         Route::put('items/{digitalProduct}/draft', [DigitalProductsController::class, 'saveDraft']);
-
-        // CREATOR SERVICES
-        // This group also serves public storefront reads, so creator-only
-        // service endpoints must reject guests themselves: without this a
-        // browser-origin guest reaches the controller and gets a 500.
-        Route::middleware('auth:sanctum')->group(function () {
-            Route::get('services/inquiries', [ServiceInquiriesController::class, 'index']);
-            Route::get('services/inquiries/{serviceInquiry}', [ServiceInquiriesController::class, 'show'])->whereNumber('serviceInquiry');
-            Route::patch('services/inquiries/{serviceInquiry}', [ServiceInquiriesController::class, 'update'])->whereNumber('serviceInquiry');
-            Route::delete('services/inquiries/{serviceInquiry}', [ServiceInquiriesController::class, 'destroy'])->whereNumber('serviceInquiry');
-            Route::apiResource('services', CreatorServicesController::class)->parameters(['services' => 'service']);
-        });
         Route::get('admin/items', [AdminDigitalProductsController::class, 'index']);
         Route::get('admin/items/{digitalProduct}', [AdminDigitalProductsController::class, 'show'])->whereNumber('digitalProduct');
         Route::post('admin/items/{digitalProduct}/approve', [AdminDigitalProductsController::class, 'approve']);
@@ -363,15 +348,6 @@ Route::group(['prefix' => 'v1'], function () {
     Route::get('public/stores/{biolink}/digital-products/{digitalProduct}/orders/{order}', [PublicDigitalProductsController::class, 'order'])->middleware('throttle:60,1');
     Route::get('public/stores/{biolink}/digital-products/{digitalProduct}/reviews', [ProductReviewsController::class, 'index']);
     Route::get('public/stores/{biolink}/digital-products/{digitalProduct}/reviews/{order}', [ProductReviewsController::class, 'show']);
-    Route::get('public/stores/{biolink}/services', [PublicServicesController::class, 'index']);
-    Route::get('public/stores/{biolink}/services/{service}', [PublicServicesController::class, 'show']);
-    Route::post('public/stores/{biolink}/services/{service}/inquiries', [PublicServicesController::class, 'inquiry'])
-        ->middleware('throttle:10,1')
-        ->withoutMiddleware([
-            EnsureFrontendRequestsAreStateful::class,
-            VerifyCsrfToken::class,
-            VerifyApiAccessMiddleware::class,
-        ]);
     $registerCustomerPortal = function (string $prefix): void {
         Route::post("public/{$prefix}/request-code", [CustomerOrderPortalController::class, 'requestCode'])->middleware('throttle:20,1')->withoutMiddleware([
             VerifyCsrfToken::class,

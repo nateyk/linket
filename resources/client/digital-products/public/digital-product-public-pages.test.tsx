@@ -110,11 +110,31 @@ describe('painted-panel colors and locale safety', () => {
     expect(page).toContain('message="Your course is ready"');
     expect(page).toContain('message="Your download is ready"');
     expect(page).toContain('message="Open My Portal"');
-    expect(page).not.toContain('backdrop-blur');
     expect(page).not.toContain('shadow-xs');
+    expect(page).not.toContain('bg-primary/10');
+    // Soft-pop for every surface card is one CSS var from Appearance Shadow.
+    expect(page).toContain("'--biolink-surface-shadow': surfaceShadow");
+    expect(page).toContain('biolinkSurfaceEdgeClassName');
+    expect(page).toContain(
+      '[box-shadow:var(--biolink-surface-shadow,none)]',
+    );
     // The phone bar tracks the buy button, not the whole rail, so the
     // action returns as soon as the button scrolls away.
     expect(page).toContain('observer.observe(action)');
+  });
+
+  test('forwards appearance into creator card, reviews, and branding lockup', () => {
+    const page = readPage();
+
+    expect(page).toMatch(
+      /<ProductCreatorCard[\s\S]*?appearance=\{data\.appearance\}/,
+    );
+    expect(page).toMatch(
+      /<ProductReviewsBlock[\s\S]*?appearance=\{data\.appearance\}/,
+    );
+    expect(page).toContain('function ProductBranding');
+    expect(page).toContain('appearance?.hideBranding');
+    expect(page).toContain('<ProductBranding appearance={appearance} />');
   });
 
   test('uses the shared locale-aware formatters', () => {

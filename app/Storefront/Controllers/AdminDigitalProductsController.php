@@ -4,6 +4,7 @@ namespace App\Storefront\Controllers;
 
 use App\Models\User;
 use App\Storefront\Actions\SanitizeProductDescription;
+use App\Storefront\DigitalProductMutationService;
 use App\Storefront\Models\DigitalProduct;
 use App\Storefront\Notifications\ProductModerationNotification;
 use App\Storefront\Notifications\ProductModerationSummaryNotification;
@@ -354,6 +355,10 @@ class AdminDigitalProductsController extends Controller
                         ->pluck('id')
                         ->all();
                     $product->files()->sync($fileIds);
+
+                    if (array_key_exists('sample_file_ids', $snapshot)) {
+                        app(DigitalProductMutationService::class)->restoreSamples($product, $snapshot);
+                    }
 
                     app(ProductReviewHistory::class)->record(
                         $product,

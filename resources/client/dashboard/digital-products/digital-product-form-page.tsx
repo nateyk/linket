@@ -1,5 +1,6 @@
 import {articleEditorTipTapExtensions} from '@common/article-editor/article-editor-tiptap-extensions';
 import {apiClient} from '@common/http/query-client';
+import {productSaveErrorMessage} from './product-save-error';
 import {ClearFormatButton} from '@common/text-editor/menubar/clear-format-button';
 import {Divider} from '@common/text-editor/menubar/divider';
 import {FontStyleButtons} from '@common/text-editor/menubar/font-style-buttons';
@@ -54,14 +55,19 @@ import {
   Trash2Icon,
   TriangleAlertIcon,
 } from 'lucide-react';
-import {useCallback, useEffect, useRef, useState} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {useNavigate, useParams, useSearchParams} from 'react-router';
 import {parseWizardPrefill, firstInvalidFieldId} from './product-create-flow';
 import {
   ProductCreationProvider,
+  sampleRequestPayload,
   useProductCreation,
 } from './product-creation-context';
 import type {FileEntry} from './product-creation-context';
+import {
+  ProductSampleFields,
+  sampleSectionKind,
+} from './product-sample-fields';
 import {ProductFormField} from './product-form-field';
 import {ProductFormProgress} from './product-form-progress';
 import {
@@ -82,6 +88,17 @@ type Product = {
   cover?: {id: number; url: string} | null;
   cover_file_entry_id?: number | null;
   files?: FileEntry[];
+  samples?: Array<{
+    id: number;
+    file_entry_id: number;
+    title?: string | null;
+    kind: 'audio' | 'pdf';
+    position: number;
+    duration_ms?: number | null;
+    name?: string | null;
+    file_size?: number | null;
+    extension?: string | null;
+  }>;
   biolink_ids?: number[];
   status: string;
   type?: string;
@@ -98,8 +115,6 @@ const PRODUCT_TYPE_CONFIG: Record<
   audio: {label: 'Audio', icon: HeadphonesIcon},
   course: {label: 'Course', icon: GraduationCapIcon},
 };
-
-const SECTION_ORDER: ProductSetupSection[] = ['details', 'files', 'bio-pages'];
 
 const SECTION_META: Record<
   ProductSetupSection,
@@ -149,6 +164,7 @@ function DigitalProductForm() {
   const coverUrl = state.coverUrl;
   const coverFileId = state.coverFileId;
   const files = state.files;
+  const samples = state.samples;
   const biolinkIds = state.biolinkIds;
   const productType = state.productType as ProductType | null;
   const [product, setProduct] = useState<Product | null>(null);
@@ -276,6 +292,14 @@ function DigitalProductForm() {
             coverUrl: item.cover?.url ?? '',
             coverFileId: coverId,
             files: item.files ?? [],
+            samples: (item.samples ?? []).map(sample => ({
+              fileEntryId: sample.file_entry_id,
+              name: sample.name ?? sample.title ?? 'Preview',
+              fileSize: sample.file_size ?? undefined,
+              extension: sample.extension ?? undefined,
+              title: sample.title ?? '',
+              durationMs: sample.duration_ms ?? null,
+            })),
             biolinkIds: item.biolink_ids ?? [],
             productType: (item.type ?? 'digital') as ProductType,
           });
@@ -356,6 +380,7 @@ function DigitalProductForm() {
           currency: 'etb',
           cover_file_entry_id: coverFileId,
           file_ids: files.map(file => file.id),
+          ...sampleRequestPayload(samples),
           biolink_ids: biolinkIds,
           type: effectiveType,
         };
@@ -383,7 +408,13 @@ function DigitalProductForm() {
         const validationErrors = getValidationErrors(reason);
         if (Object.keys(validationErrors).length) {
           setFieldErrors(validationErrors);
-          setOpenSection(validationErrors.file_ids ? 'files' : 'details');
+          setOpenSection(
+            validationErrors.sample_file_ids || validationErrors.sample_titles
+              ? 'previews'
+              : validationErrors.file_ids
+                ? 'files'
+                : 'details',
+          );
           const focusId = firstInvalidFieldId(validationErrors);
           if (focusId) {
             requestAnimationFrame(() => {
@@ -391,13 +422,7 @@ function DigitalProductForm() {
             });
           }
         } else {
-          setError(
-            saved && submitAfterSave
-              ? 'Draft saved, but submission failed. Fix the issue and try again.'
-              : reason instanceof Error
-                ? reason.message
-                : 'Unable to save product.',
-          );
+          setError(productSaveErrorMessage(reason, Boolean(saved && submitAfterSave)));
         }
       } finally {
         setSaving(false);
@@ -410,12 +435,24 @@ function DigitalProductForm() {
       coverFileId,
       description,
       files,
+      samples,
       navigate,
       price,
       product,
       productType,
       title,
     ],
+  );
+
+  const previewKind = sampleSectionKind(effectiveFileType);
+  const sectionOrder = useMemo<ProductSetupSection[]>(
+    () => [
+      'details',
+      'files',
+      ...(previewKind ? ['previews'] : []),
+      'bio-pages',
+    ],
+    [previewKind],
   );
 
   useEffect(() => {
@@ -427,21 +464,21 @@ function DigitalProductForm() {
       if (e.key === 'ArrowDown' && e.altKey) {
         e.preventDefault();
         setOpenSection(current => {
-          const idx = SECTION_ORDER.indexOf(current ?? 'details');
-          return SECTION_ORDER[Math.min(idx + 1, SECTION_ORDER.length - 1)];
+          const idx = sectionOrder.indexOf(current ?? 'details');
+          return sectionOrder[Math.min(idx + 1, sectionOrder.length - 1)];
         });
       }
       if (e.key === 'ArrowUp' && e.altKey) {
         e.preventDefault();
         setOpenSection(current => {
-          const idx = SECTION_ORDER.indexOf(current ?? 'details');
-          return SECTION_ORDER[Math.max(idx - 1, 0)];
+          const idx = sectionOrder.indexOf(current ?? 'details');
+          return sectionOrder[Math.max(idx - 1, 0)];
         });
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [save]);
+  }, [save, sectionOrder]);
 
   const remove = async (): Promise<boolean> => {
     if (!product) return false;
@@ -467,7 +504,8 @@ function DigitalProductForm() {
     return true;
   };
 
-  const completedSections = SECTION_ORDER.filter(isSectionComplete).length;
+  const progressSections = sectionOrder.filter(section => section !== 'previews');
+  const completedSections = progressSections.filter(isSectionComplete).length;
   const canSubmit =
     !product || product.status === 'draft' || product.status === 'rejected';
 
@@ -638,7 +676,7 @@ function DigitalProductForm() {
               <div className="flex min-w-0 flex-col gap-4">
                 <ProductFormProgress
                   completed={completedSections}
-                  total={SECTION_ORDER.length}
+                  total={progressSections.length}
                 />
 
                 <Accordion.Root
@@ -650,15 +688,69 @@ function DigitalProductForm() {
                     )
                   }
                 >
-                  {SECTION_ORDER.map(section => {
-                    const meta = SECTION_META[section];
+                  {sectionOrder.map(section => {
+                    if (section === 'previews' && previewKind) {
+                      return (
+                        <ProductFormSection
+                          key={section}
+                          id={section}
+                          title={
+                            previewKind === 'audio' ? (
+                              <Trans message="Preview tracks" />
+                            ) : (
+                              <Trans message="Sample PDF" />
+                            )
+                          }
+                          description={
+                            previewKind === 'audio' ? (
+                              <Trans message="Free preview audio" />
+                            ) : (
+                              <Trans message="Buyers can read this sample before they buy." />
+                            )
+                          }
+                          icon={previewKind === 'audio' ? HeadphonesIcon : FileTextIcon}
+                          isComplete
+                          count={samples.length}
+                          hasError={
+                            !!(
+                              fieldErrors.sample_file_ids ||
+                              fieldErrors.sample_titles
+                            )
+                          }
+                        >
+                          <ProductSampleFields
+                            kind={previewKind}
+                            samples={samples}
+                            onChange={actions.setSamples}
+                            error={
+                              fieldErrors.sample_file_ids ||
+                              fieldErrors.sample_titles
+                            }
+                          />
+                        </ProductFormSection>
+                      );
+                    }
+
+                    const meta = SECTION_META[section as keyof typeof SECTION_META];
 
                     return (
                       <ProductFormSection
                         key={section}
                         id={section}
-                        title={meta.label}
-                        description={meta.description}
+                        title={
+                          section === 'files' && previewKind === 'audio' ? (
+                            <Trans message="Files buyers get after purchase" />
+                          ) : (
+                            meta.label
+                          )
+                        }
+                        description={
+                          section === 'files' && previewKind === 'audio' ? (
+                            <Trans message="These files stay private until someone buys." />
+                          ) : (
+                            meta.description
+                          )
+                        }
                         icon={meta.icon}
                         isComplete={isSectionComplete(section)}
                         count={

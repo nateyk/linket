@@ -104,9 +104,12 @@ export function buildCreateUrl(state: WizardState): string | null {
 
 export function firstInvalidFieldId(
   fieldErrors: Record<string, string>,
-): 'product-title' | 'product-price' | 'product-files' | null {
+): 'product-title' | 'product-price' | 'product-files' | 'product-samples' | null {
   if (fieldErrors.title) return 'product-title';
   if (fieldErrors.price_cents) return 'product-price';
+  if (fieldErrors.sample_file_ids || fieldErrors.sample_titles) {
+    return 'product-samples';
+  }
   if (fieldErrors.file_ids) return 'product-files';
   if (fieldErrors.cover_file_entry_id || fieldErrors.description)
     return 'product-title';

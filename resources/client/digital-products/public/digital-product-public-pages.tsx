@@ -1,9 +1,17 @@
 import {BiolinkAppearanceConfig} from '@app/gen/schemas/biolink-appearance-config';
 import {
+  biolinkSurfaceEdgeClassName,
   resolveBiolinkButtonAppearance,
   resolveBiolinkThemeVariables,
+  shouldUseLightBiolinkLogo,
 } from '@app/short-links/renderers/biolink-renderer/biolink-appearance';
 import {ProductGallery} from '@app/digital-products/public/product-page/product-gallery';
+import {ProductSamplePdf} from '@app/digital-products/public/product-page/product-sample-pdf';
+import {
+  ProductSamplePlayer,
+  ProductSampleStage,
+  ProductSampleTracklist,
+} from '@app/digital-products/public/product-page/product-sample-player';
 import {ProductCreatorCard} from '@app/digital-products/public/product-page/product-creator-card';
 import {ProductOverview} from '@app/digital-products/public/product-page/product-overview';
 import {ProductPricingCard} from '@app/digital-products/public/product-page/product-pricing-card';
@@ -37,8 +45,11 @@ import {apiClient} from '@common/http/query-client';
 import {loadFonts} from '@ui/fonts/font-picker/load-fonts';
 import {FormattedDate} from '@ui/i18n/formatted-date';
 import {formatMoney as formatPrice} from '@ui/i18n/format-money';
+import {message} from '@ui/i18n/message';
 import {Trans} from '@ui/i18n/trans';
 import {useTrans} from '@ui/i18n/use-trans';
+import {useSettings} from '@ui/settings/use-settings';
+import {useIsDarkMode} from '@ui/themes/use-is-dark-mode';
 import {cn} from '@ui/utils/cn';
 import {MotionConfig} from 'framer-motion';
 import {
@@ -54,7 +65,15 @@ import {
   RefreshCwIcon,
   XIcon,
 } from 'lucide-react';
-import {useCallback, useEffect, useRef, useState} from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from 'react';
+import {Link} from 'react-router';
 import {productTypeIcon} from './product-page/product-type';
 import {
   ProductReviewsBlock,
@@ -75,6 +94,16 @@ export type PublicDigitalProduct = {
   chapters_count?: number | null;
   cover?: {url: string} | null;
   files_count?: number;
+  samples?: PublicProductSample[];
+};
+
+export type PublicProductSample = {
+  id: number;
+  title?: string | null;
+  kind: 'audio' | 'pdf';
+  position: number;
+  duration_ms?: number | null;
+  url: string;
 };
 
 export type PublicBiolink = {
@@ -203,6 +232,12 @@ export function PublicDigitalProductPage({
     }
   };
 
+  const audioSamples = (data.product.samples ?? []).filter(
+    sample => sample.kind === 'audio' && sample.url,
+  );
+  const pdfSample = (data.product.samples ?? []).find(
+    sample => sample.kind === 'pdf' && sample.url,
+  );
   const reviewsEnabled = data.reviews_enabled !== false;
   const tabSections: ProductTabSection[] = [];
 
@@ -238,6 +273,7 @@ export function PublicDigitalProductPage({
             <ProductReviewsBlock
               product={data.product}
               biolinkId={data.biolink.id}
+              appearance={data.appearance}
               onSummary={setReviewsSummary}
             />
           </Card.Content>
@@ -254,6 +290,7 @@ export function PublicDigitalProductPage({
         creator={data.creator}
         biolink={data.biolink}
         storeUrl={data.back_url}
+        appearance={data.appearance}
       />
     ),
   });
@@ -274,10 +311,15 @@ export function PublicDigitalProductPage({
         // very Buy button the dialog sits on.
         inert={buyerDialogOpen || undefined}
       >
+        <ProductSamplePlayer samples={audioSamples}>
         <div className="grid min-w-0 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-6">
           <div className="flex min-w-0 flex-col gap-5 lg:col-start-1 lg:row-start-1">
             <Card.Root className={biolinkSurfaceCard}>
-              <ProductGallery product={data.product} />
+              {audioSamples.length > 0 ? (
+                <ProductSampleStage product={data.product} />
+              ) : (
+                <ProductGallery product={data.product} />
+              )}
               <Card.Content className="flex min-w-0 flex-col gap-6 p-5 sm:p-7">
                 <ProductSummary
                   product={data.product}
@@ -286,6 +328,7 @@ export function PublicDigitalProductPage({
                   reviews={reviewsSummary}
                 />
               </Card.Content>
+              {audioSamples.length > 0 && <ProductSampleTracklist />}
             </Card.Root>
           </div>
 
@@ -302,13 +345,18 @@ export function PublicDigitalProductPage({
           </aside>
 
           <div className="flex min-w-0 flex-col gap-5 lg:col-start-1 lg:row-start-2">
-            <ProductTabs sections={tabSections} />
+            {pdfSample && <ProductSamplePdf sample={pdfSample} />}
+            <ProductTabs
+              sections={tabSections}
+              appearance={data.appearance}
+            />
           </div>
         </div>
+        </ProductSamplePlayer>
 
         <div
           className={cn(
-            'fixed inset-x-0 bottom-0 z-30 border-t border-[var(--biolink-border)] bg-[var(--biolink-surface-strong)] px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] transition-[transform,visibility] duration-150 ease-in-out motion-reduce:transition-none lg:hidden',
+            'fixed inset-x-0 bottom-0 z-30 border-t border-[var(--biolink-border)] bg-[var(--biolink-surface-strong)] px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] [box-shadow:var(--biolink-surface-shadow,none)] transition-[transform,visibility] duration-150 ease-in-out motion-reduce:transition-none lg:hidden',
             !railInView || checkoutCancelled || checkoutFailed
               ? buyerDialogOpen
                 ? 'invisible translate-y-full'
@@ -401,12 +449,14 @@ export function PublicDigitalProductOrderSuccessPage({
         <div
           className={cn(
             'border-b border-[var(--biolink-border)] px-5 py-5 sm:px-6',
-            paid ? 'bg-positive/10' : 'bg-primary/10',
+            paid
+              ? 'bg-positive/10'
+              : 'bg-[color-mix(in_srgb,var(--biolink-accent,var(--color-primary))_12%,transparent)]',
           )}
         >
           {paid ? (
             <div className="flex items-start gap-3">
-              <span className="grid size-9 shrink-0 place-items-center rounded-full bg-positive/10 text-positive">
+              <span className="grid size-9 shrink-0 place-items-center rounded-button bg-positive/10 text-positive">
                 <CheckCircle2Icon className="size-5" />
               </span>
               <div className="flex min-w-0 flex-col gap-1">
@@ -427,7 +477,7 @@ export function PublicDigitalProductOrderSuccessPage({
             </div>
           ) : (
             <div className="flex items-start gap-3">
-              <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary/10 text-[var(--biolink-accent,var(--color-primary))]">
+              <span className="grid size-9 shrink-0 place-items-center rounded-button bg-[color-mix(in_srgb,var(--biolink-accent,var(--color-primary))_12%,transparent)] text-[var(--biolink-accent,var(--color-primary))]">
                 <Spinner className="size-5" />
               </span>
               <div className="flex min-w-0 flex-col gap-1">
@@ -591,10 +641,14 @@ function BuyerDetailsDialog({
         <Dialog.Content
           showCloseButton={false}
           className="bg-[var(--biolink-surface-strong)] text-[var(--biolink-text)] sm:max-w-md"
-          style={{
-            ...themeVariables,
-            fontFamily: appearance?.fontConfig?.family,
-          }}
+          style={
+            {
+              ...themeVariables,
+              fontFamily: appearance?.fontConfig?.family,
+              '--biolink-surface-shadow':
+                buttonAppearance.style.boxShadow || 'none',
+            } as CSSProperties
+          }
         >
           <Dialog.CloseButton
             render={
@@ -614,7 +668,12 @@ function BuyerDetailsDialog({
               <LockKeyholeIcon />
               <Trans message="Complete your purchase" />
             </Dialog.Title>
-            <div className="flex items-center gap-3 rounded-card-xs border border-[var(--biolink-border)] bg-[var(--biolink-surface)] px-3 py-2.5">
+            <div
+              className={cn(
+                'flex items-center gap-3 rounded-card-xs bg-[var(--biolink-surface)] px-3 py-2.5',
+                biolinkSurfaceEdgeClassName,
+              )}
+            >
               {product.cover?.url ? (
                 <img
                   src={product.cover.url}
@@ -798,7 +857,10 @@ function OrderSummary({
 
   return (
     <section
-      className="divide-y divide-[var(--biolink-border)] rounded-card border border-[var(--biolink-border)]"
+      className={cn(
+        'divide-y divide-[var(--biolink-border)] rounded-card',
+        biolinkSurfaceEdgeClassName,
+      )}
       aria-label={trans({message: 'Order summary'})}
     >
       <div className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
@@ -852,9 +914,9 @@ function PublicProductShell({
 }: {
   appearance?: BiolinkAppearanceConfig | null;
   backUrl?: string | null;
-  backLabel: React.ReactNode;
+  backLabel: ReactNode;
   wide?: boolean;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   useEffect(() => {
     if (!appearance?.fontConfig) return;
@@ -867,14 +929,22 @@ function PublicProductShell({
     });
   }, [appearance?.fontConfig]);
 
+  // One soft-pop for every product-page surface (gallery card, pricing rail,
+  // overview, creator…) — same Appearance → Shadow as the storefront cards.
+  const surfaceShadow =
+    resolveBiolinkButtonAppearance(appearance).style.boxShadow || 'none';
+
   return (
     <MotionConfig reducedMotion="user">
       <div
         className="relative isolate min-h-screen px-4 py-5 text-[var(--biolink-text)] sm:px-6 sm:py-10"
-        style={{
-          ...resolveBiolinkThemeVariables(appearance),
-          fontFamily: appearance?.fontConfig?.family,
-        }}
+        style={
+          {
+            ...resolveBiolinkThemeVariables(appearance),
+            fontFamily: appearance?.fontConfig?.family,
+            '--biolink-surface-shadow': surfaceShadow,
+          } as CSSProperties
+        }
       >
         <ProductBackground appearance={appearance ?? null} />
         <main
@@ -885,9 +955,46 @@ function PublicProductShell({
         >
           <BackToBio backUrl={backUrl}>{backLabel}</BackToBio>
           {children}
+          <ProductBranding appearance={appearance} />
         </main>
       </div>
     </MotionConfig>
+  );
+}
+
+function ProductBranding({
+  appearance,
+}: {
+  appearance?: BiolinkAppearanceConfig | null;
+}) {
+  const {branding, biolink} = useSettings();
+  const {trans} = useTrans();
+  const isDarkMode = useIsDarkMode();
+  const useLightLogo = shouldUseLightBiolinkLogo(appearance, isDarkMode);
+  const src =
+    biolink?.branding_img ||
+    (useLightLogo
+      ? branding.logo_light_mobile || branding.logo_light
+      : branding.logo_dark_mobile || branding.logo_dark);
+
+  if (!src || appearance?.hideBranding) {
+    return null;
+  }
+
+  return (
+    <div className="flex justify-center pt-2 pb-1">
+      <Link
+        to="/"
+        aria-label={branding.site_name}
+        className="inline-flex items-center justify-center gap-1.5"
+      >
+        <img
+          className="h-4.5 w-auto"
+          src={src}
+          alt={trans(message(':site logo', {values: {site: branding.site_name}}))}
+        />
+      </Link>
+    </div>
   );
 }
 
@@ -896,10 +1003,12 @@ function BackToBio({
   children,
 }: {
   backUrl?: string | null;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
-  const className =
-    'inline-flex h-9 w-fit items-center gap-2 self-start rounded-button bg-[var(--biolink-surface-strong)] px-3 text-sm font-medium text-[var(--biolink-text)] ring-1 ring-(color:--biolink-border) transition-colors hover:bg-[var(--biolink-surface)] focus-visible:outline-2 focus-visible:outline-offset-4';
+  const className = cn(
+    'inline-flex h-9 w-fit items-center gap-2 self-start rounded-button bg-[var(--biolink-surface-strong)] px-3 text-sm font-medium text-[var(--biolink-text)] [box-shadow:var(--biolink-surface-shadow,none)] transition-colors hover:bg-[var(--biolink-surface)] focus-visible:outline-2 focus-visible:outline-offset-4',
+    biolinkSurfaceEdgeClassName,
+  );
 
   if (backUrl) {
     return (
@@ -1002,7 +1111,12 @@ function DownloadList({
           <Trans message="Your downloads" />
         </h2>
       </div>
-      <div className="divide-y divide-[var(--biolink-border)] rounded-card border border-[var(--biolink-border)]">
+      <div
+        className={cn(
+          'divide-y divide-[var(--biolink-border)] rounded-card',
+          biolinkSurfaceEdgeClassName,
+        )}
+      >
         {downloads.map(download => (
           <div
             key={download.id}
@@ -1229,7 +1343,10 @@ function CourseCurriculum({
               <Accordion.Item
                 key={chapter.id}
                 value={String(chapter.id)}
-                className="rounded-card border border-[var(--biolink-border)] bg-[var(--biolink-surface)]"
+                className={cn(
+                  'rounded-card bg-[var(--biolink-surface)]',
+                  biolinkSurfaceEdgeClassName,
+                )}
               >
                 <Accordion.Trigger>
                   <span className="flex min-w-0 flex-1 items-center gap-3">
@@ -1295,7 +1412,7 @@ function CourseCurriculum({
   );
 }
 
-function CurriculumStateCard({children}: {children: React.ReactNode}) {
+function CurriculumStateCard({children}: {children: ReactNode}) {
   return (
     <Card.Root className={biolinkSurfaceCard}>
       <Card.Content className="flex min-w-0 flex-col gap-4 p-5 sm:p-6">

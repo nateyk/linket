@@ -144,6 +144,19 @@ class AdminDigitalProductResource extends JsonResource
             ];
         }
 
+        if (array_key_exists('sample_file_ids', $snapshot)) {
+            $beforeSamples = array_map('intval', $snapshot['sample_file_ids'] ?? []);
+            $afterSamples = $this->resource->samples()->orderBy('position')->pluck('file_entry_id')->map(fn ($id): int => (int) $id)->all();
+            if ($beforeSamples !== $afterSamples) {
+                $changes[] = [
+                    'field' => 'samples',
+                    'label' => __('Previews'),
+                    'before' => (string) count($beforeSamples),
+                    'after' => (string) count($afterSamples),
+                ];
+            }
+        }
+
         return $changes === [] ? null : $changes;
     }
 
