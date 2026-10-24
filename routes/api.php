@@ -16,7 +16,13 @@ use App\Analytics\Controllers\AdminAnalyticsController;
 use App\Analytics\Controllers\AdminCommerceInsightsController;
 use App\CreatorServices\Controllers\Admin\AdminServiceCategoryController;
 use App\CreatorServices\Controllers\Admin\AdminServiceSubcategoryController;
+use App\CreatorServices\Controllers\CreatorServicesController;
 use App\CreatorServices\Controllers\PublicServiceCategoriesController;
+use App\CreatorServices\Controllers\PublicServicesController;
+use App\CreatorServices\Controllers\ServiceInquiriesController;
+use Common\Auth\Middleware\VerifyApiAccessMiddleware;
+use Common\Core\Middleware\EnsureFrontendRequestsAreStateful;
+use Common\Core\Middleware\VerifyCsrfToken;
 use App\Http\Controllers\LandingPageController;
 use App\Kyc\Controllers\AdminKycVerificationsController;
 use App\Kyc\Controllers\KycVerificationsController;
@@ -84,6 +90,17 @@ Route::group(['prefix' => 'v1'], function() {
     Route::get('public/service-categories', PublicServiceCategoriesController::class)
         ->name('service-categories.index');
 
+    // Public creator services. Inquiry posts are anonymous, same as checkout.
+    Route::get('public/stores/{biolink}/services', [PublicServicesController::class, 'index']);
+    Route::get('public/stores/{biolink}/services/{service}', [PublicServicesController::class, 'show']);
+    Route::post('public/stores/{biolink}/services/{service}/inquiries', [PublicServicesController::class, 'inquiry'])
+        ->middleware('throttle:10,1')
+        ->withoutMiddleware([
+            EnsureFrontendRequestsAreStateful::class,
+            VerifyCsrfToken::class,
+            VerifyApiAccessMiddleware::class,
+        ]);
+
     Route::group(['middleware' => ['optionalAuth:sanctum', 'verified', 'verifyApiAccess']], function () {
         Route::get('tracked-events/report', [TrackedEventsController::class, 'report']);
         Route::get('admin/analytics/cards-data', [AdminAnalyticsController::class, 'cardsData']);
@@ -121,7 +138,20 @@ Route::group(['prefix' => 'v1'], function() {
             ->names('admin.service-categories');
         Route::apiResource('admin/service-subcategories', AdminServiceSubcategoryController::class)
             ->parameters(['service-subcategories' => 'subcategory'])
+            ->except(['show'])
             ->names('admin.service-subcategories');
+
+        // CREATOR SERVICES
+        // Auth is required: optionalAuth would let a guest through and the
+        // controller would crash on a null user. Inquiry paths stay ahead of
+        // the {service} resource so "inquiries" is not captured as an id.
+        Route::middleware('auth')->group(function () {
+            Route::get('services/inquiries', [ServiceInquiriesController::class, 'index']);
+            Route::get('services/inquiries/{serviceInquiry}', [ServiceInquiriesController::class, 'show'])->whereNumber('serviceInquiry');
+            Route::patch('services/inquiries/{serviceInquiry}', [ServiceInquiriesController::class, 'update'])->whereNumber('serviceInquiry');
+            Route::delete('services/inquiries/{serviceInquiry}', [ServiceInquiriesController::class, 'destroy'])->whereNumber('serviceInquiry');
+            Route::apiResource('services', CreatorServicesController::class)->parameters(['services' => 'service']);
+        });
 
         // LINK
         Route::get('links', [LinksController::class, 'index']);
