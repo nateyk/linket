@@ -1,0 +1,13 @@
+{
+  "files": [
+    "common/foundation/resources/views/framework.blade.php"
+  ],
+  "exclude": [
+    "resources/views/seo/**",
+    "resources/views/pixels/**",
+    "resources/views/redirects/**"
+  ],
+  "insertBefore": "</body>",
+  "commentSyntax": "html",
+  "cspChecked": true
+}
