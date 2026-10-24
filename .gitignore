@@ -95,3 +95,6 @@ C:\Users\*
 # Project-authored files in .opencode/ stay tracked (mcp-laravel-boost.sh).
 .opencode/skills/impeccable/
 .opencode/commands/impeccable.md
+
+# Local-only helpers
+storage/seed-my-order-test.php
