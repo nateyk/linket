@@ -1,0 +1,71 @@
+{
+  "php.validate.enable": false,
+  "php.suggest.basic": false,
+  "Laravel.phpEnvironment": "ddev",
+  "Laravel.memoryLimit": "1G",
+  "intelephense.environment.phpVersion": "8.4.0",
+  "intelephense.files.maxSize": 5000000,
+  "intelephense.files.exclude": [
+    "**/.git/**",
+    "**/node_modules/**",
+    "**/bower_components/**",
+    "**/vendor/**/{Tests,tests}/**",
+    "**/storage/**",
+    "**/public/build/**",
+    "**/.ddev/**"
+  ],
+  "phpstan.enabled": true,
+  "phpstan.binPath": "vendor/bin/phpstan",
+  "phpstan.configFile": "phpstan.neon",
+  "phpstan.memoryLimit": "2G",
+  "tailwindCSS.experimental.configFile": "resources/client/app.css",
+  "tailwindCSS.classFunctions": ["cn", "clsx", "cva"],
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.oxc": "explicit"
+  },
+  "files.associations": {
+    "*.blade.php": "blade",
+    ".env.example": "dotenv"
+  },
+  "[php]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.tabSize": 4
+  },
+  "[blade]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[javascriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[css]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "search.exclude": {
+    "**/vendor": true,
+    "**/node_modules": true,
+    "**/public/build": true,
+    "**/storage/logs": true,
+    "**/storage/framework": true
+  },
+  "files.watcherExclude": {
+    "**/vendor/**": true,
+    "**/node_modules/**": true,
+    "**/public/build/**": true,
+    "**/storage/framework/**": true
+  }
+}

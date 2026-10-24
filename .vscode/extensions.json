@@ -1,0 +1,19 @@
+{
+  "recommendations": [
+    "bmewburn.vscode-intelephense-client",
+    "laravel.vscode-laravel",
+    "bradlc.vscode-tailwindcss",
+    "esbenp.prettier-vscode",
+    "oxc.oxc-vscode",
+    "SanderRonde.phpstan-vscode",
+    "vitest.explorer",
+    "ms-playwright.playwright",
+    "mikestead.dotenv",
+    "EditorConfig.EditorConfig"
+  ],
+  "unwantedRecommendations": [
+    "felixfbecker.php-debug",
+    "felixfbecker.php-intellisense",
+    "bmewburn.vscode-intelephense-client-next"
+  ]
+}
