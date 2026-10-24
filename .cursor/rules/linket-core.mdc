@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Linket
 
-Laravel 12 + PHP 8.4 (DDEV) backend. React 19 + Vite + react-router frontend. Tailwind CSS 4 tokens in `common/foundation/resources/client/core/common-tailwind.css`. UI from `@shadcn/*` then `@ui/*`. Icons from lucide.
+Laravel 13 + PHP 8.4 (DDEV) backend. React 19 + Vite + react-router frontend. Tailwind CSS 4 tokens in `common/foundation/resources/client/core/common-tailwind.css`. UI from `@shadcn/*` then `@ui/*`. Icons from lucide.
 
 ## Agent tools
 
@@ -26,5 +26,5 @@ Laravel 12 + PHP 8.4 (DDEV) backend. React 19 + Vite + react-router frontend. Ta
 
 - Tests: `ddev artisan test --compact` with a file or `--filter`
 - Frontend: `npm run test`, `npm run lint`, `npm run extract`
-- Activate the matching project skill: Superpowers (brainstorm/TDD/debug), `laravel-best-practices`, `core-ui-design-system`, `shadcn`, `tailwindcss-development`, Fortify/Horizon/Pulse/Scout/Socialite/Echo/Livewire, `impeccable`, `migrate-radix-to-base`, `context7-mcp`
+- Activate the matching project skill: Superpowers (brainstorm/TDD/debug), `laravel-best-practices`, `ai-sdk-development`, `mcp-development`, `core-ui-design-system`, `shadcn`, `tailwindcss-development`, Fortify/Horizon/Pulse/Scout/Socialite/Echo/Livewire, `impeccable`, `migrate-radix-to-base`, `context7-mcp`
 - UI work goes through `/impeccable` (`init`, `document`, `polish`, `audit`, `live`, `hooks`). PRODUCT.md is product truth; DESIGN.md is the visual system. The Cursor pre-edit hook blocks slop before it lands.

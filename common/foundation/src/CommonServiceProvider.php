@@ -111,6 +111,7 @@ use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Foundation\AliasLoader;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken as LaravelValidateCsrfToken;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -268,6 +269,7 @@ class CommonServiceProvider extends ServiceProvider
             ExceptionHandler::class => BaseExceptionHandler::class,
             SanctumEnsureFrontendRequestsAreStateful::class =>
                 EnsureFrontendRequestsAreStateful::class,
+            PreventRequestForgery::class => VerifyCsrfToken::class,
             LaravelValidateCsrfToken::class => VerifyCsrfToken::class,
         ];
 

@@ -8,14 +8,14 @@
   "license": "MIT",
   "type": "project",
   "require": {
-    "php": ">=8.2",
+    "php": ">=8.3",
     "ably/ably-php": "^1.1",
     "adbario/php-dot-notation": "^3.3",
     "axisofstevil/stop-words": "^1.0",
     "bacon/bacon-qr-code": "^3.0",
     "chapa/chapa-laravel": "dev-main",
     "cocur/slugify": "^4.5",
-    "codebyray/laravel-review-rateable": "2.1",
+    "codebyray/laravel-review-rateable": "2.1.4",
     "dedoc/scramble": "^0.13.22",
     "ezyang/htmlpurifier": "^4.18",
     "fivefilters/readability.php": "^3.3",
@@ -29,9 +29,11 @@
     "itsgoingd/clockwork": "^5.1",
     "james-heinrich/getid3": "^1.9",
     "jenssegers/agent": "^2.6",
+    "laravel/ai": "^1.0",
     "laravel/fortify": "^1.25",
-    "laravel/framework": "^12.0",
+    "laravel/framework": "^13.0",
     "laravel/horizon": "^5.3",
+    "laravel/mcp": "^1.0",
     "laravel/pulse": "^1.4",
     "laravel/reverb": "^1.4",
     "laravel/sanctum": "^4.0",
@@ -69,7 +71,7 @@
     "symfony/mailgun-mailer": "^7.2",
     "symfony/postmark-mailer": "^7.2",
     "symfony/stopwatch": "^7.2",
-    "teamtnt/laravel-scout-tntsearch-driver": "^15.0",
+    "teamtnt/laravel-scout-tntsearch-driver": "^16.0",
     "torann/geoip": "^3.0",
     "webd/language": "^0.3.0",
     "webklex/php-imap": "^6.1",
@@ -81,15 +83,52 @@
     "barryvdh/laravel-ide-helper": "^3.1",
     "fakerphp/faker": "^1.24",
     "larastan/larastan": "^3.0",
-    "laravel/boost": "^2.4",
+    "laravel/boost": "^2.10",
     "laravel/pail": "^1.2",
     "mockery/mockery": "^1.6",
     "nunomaduro/collision": "^8.1",
-    "pestphp/pest": "^3.0",
-    "pestphp/pest-plugin-laravel": "^3.0",
+    "pestphp/pest": "^4.0",
+    "pestphp/pest-plugin-laravel": "^4.0",
     "phpstan/phpstan": "2.1.44",
-    "phpunit/phpunit": "11.5.50"
+    "phpunit/phpunit": "^12.0"
   },
+  "repositories": [
+    {
+      "type": "package",
+      "package": {
+        "name": "chapa/chapa-laravel",
+        "version": "dev-main",
+        "source": {
+          "type": "git",
+          "url": "https://github.com/Chapa-Et/chapa-laravel.git",
+          "reference": "0fca70b1edbf15aa89c9de41b86a821fbf2bec3d"
+        },
+        "require": {
+          "php": "^8.3",
+          "guzzlehttp/guzzle": "^7.0",
+          "illuminate/support": "^12.0|^13.0"
+        },
+        "autoload": {
+          "classmap": [
+            "src/Chapa.php"
+          ],
+          "psr-4": {
+            "Chapa\\Chapa\\": "src/"
+          }
+        },
+        "extra": {
+          "laravel": {
+            "providers": [
+              "Chapa\\Chapa\\ChapaServiceProvider"
+            ],
+            "aliases": {
+              "Chapa": "Chapa\\Chapa\\Facades\\Chapa"
+            }
+          }
+        }
+      }
+    }
+  ],
   "config": {
     "optimize-autoloader": true,
     "preferred-install": "dist",

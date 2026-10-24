@@ -12,15 +12,19 @@
     "nightwatch": false,
     "sail": false,
     "skills": [
+        "infer-conventions",
+        "ai-sdk-development",
         "fortify-development",
         "laravel-best-practices",
+        "testing-best-practices",
         "configuring-horizon",
+        "mcp-development",
         "pulse-development",
         "scout-development",
         "socialite-development",
         "livewire-development",
-        "pest-testing",
         "echo-development",
-        "tailwindcss-development"
+        "tailwindcss-development",
+        "laravel-specialist"
     ]
 }

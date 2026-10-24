@@ -19,6 +19,8 @@ use App\Entitlements\Entitlements;
 use App\QrCodes\Models\QrCode;
 use App\TrackingPixels\Models\TrackingPixel;
 use App\Models\User;
+use App\Storefront\Models\DigitalProduct;
+use App\Storefront\Models\StorefrontOrder;
 use App\Webhooks\Models\Webhook;
 use App\Tags\Models\Tag;
 use App\Webhooks\Console\DeleteOldWebhookDeliveries;
@@ -87,6 +89,8 @@ class AppServiceProvider extends ServiceProvider
             QrCode::MODEL_TYPE => QrCode::class,
             BaseUser::MODEL_TYPE => User::class,
             Tag::MODEL_TYPE => Tag::class,
+            DigitalProduct::class => DigitalProduct::class,
+            StorefrontOrder::class => StorefrontOrder::class,
         ]);
 
         Gate::policy(Store::class, \App\Biolinks\Policies\BiolinkPolicy::class);

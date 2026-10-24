@@ -10,6 +10,7 @@ use Common\Workspaces\Actions\CreateWorkspace;
 use Common\Workspaces\Models\Workspace;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Str;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\TestCase;
 
@@ -34,11 +35,8 @@ class ProductFileFormatsAttachTest extends TestCase
 
     /**
      * Every sellable format from App\Storefront\ProductFileFormats attaches.
-     *
-     * @test
-     *
-     * @dataProvider sellableFormatProvider
      */
+    #[DataProvider('sellableFormatProvider')]
     public function testSellableFormatAttaches(string $extension, string $mime): void
     {
         $creator = $this->createCreator();
@@ -73,11 +71,7 @@ class ProductFileFormatsAttachTest extends TestCase
         ];
     }
 
-    /**
-     * @test
-     *
-     * @dataProvider rejectedFormatProvider
-     */
+    #[DataProvider('rejectedFormatProvider')]
     public function testNonSellableFormatIsRejected(string $extension, string $mime): void
     {
         $creator = $this->createCreator();
@@ -113,7 +107,6 @@ class ProductFileFormatsAttachTest extends TestCase
         ];
     }
 
-    /** @test */
     public function testLegacyAttachedFilesKeepWorkingOnUpdate(): void
     {
         $creator = $this->createCreator();
@@ -151,7 +144,6 @@ class ProductFileFormatsAttachTest extends TestCase
         );
     }
 
-    /** @test */
     public function testNewLegacyFileCannotBeAttached(): void
     {
         $creator = $this->createCreator();
@@ -184,7 +176,6 @@ class ProductFileFormatsAttachTest extends TestCase
         }
     }
 
-    /** @test */
     public function testTypedProductsAttachTheirKindFormats(): void
     {
         $creator = $this->createCreator();
@@ -221,7 +212,6 @@ class ProductFileFormatsAttachTest extends TestCase
         $this->assertSame('audio', $audio->type);
     }
 
-    /** @test */
     public function testEndpointRejectsAacButAcceptsPdf(): void
     {
         $creator = $this->createCreator();

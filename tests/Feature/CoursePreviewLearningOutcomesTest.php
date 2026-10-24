@@ -9,6 +9,7 @@ use App\Storefront\Models\DigitalProduct;
 use Common\Workspaces\ActiveWorkspace;
 use Common\Workspaces\Actions\CreateWorkspace;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 class CoursePreviewLearningOutcomesTest extends TestCase
@@ -30,7 +31,7 @@ class CoursePreviewLearningOutcomesTest extends TestCase
             ->withHeader('X-CSRF-TOKEN', $csrfToken);
     }
 
-    /** @test */
+    #[Test]
     public function course_preview_returns_learning_outcomes()
     {
         $creator = User::factory()->create();

@@ -9,6 +9,7 @@ use App\Storefront\Models\DigitalProduct;
 use Common\Workspaces\Actions\CreateWorkspace;
 use Common\Workspaces\ActiveWorkspace;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 class QuizSecurityTest extends TestCase
@@ -77,7 +78,7 @@ class QuizSecurityTest extends TestCase
         ], $over);
     }
 
-    /** @test */
+    #[Test]
     public function non_enrolled_cannot_view_quiz()
     {
         $creator = User::factory()->create();
@@ -90,7 +91,7 @@ class QuizSecurityTest extends TestCase
         $this->stateful()->actingAs($other)->getJson("/api/v1/course-lessons/{$lesson->id}/quiz?workspace_id={$ws->id}")->assertForbidden();
     }
 
-    /** @test */
+    #[Test]
     public function non_enrolled_cannot_submit_quiz_attempt()
     {
         $creator = User::factory()->create();
@@ -102,7 +103,7 @@ class QuizSecurityTest extends TestCase
         $this->stateful()->actingAs($other)->postJson("/api/v1/quizzes/{$quiz->id}/attempts?workspace_id={$ws->id}", ['answers' => [$quiz->questions()->first()->id => '4']])->assertForbidden();
     }
 
-    /** @test */
+    #[Test]
     public function student_cannot_fetch_correct_answer()
     {
         $creator = User::factory()->create();
@@ -123,7 +124,7 @@ class QuizSecurityTest extends TestCase
         }
     }
 
-    /** @test */
+    #[Test]
     public function instructor_can_see_correct_answer()
     {
         $creator = User::factory()->create();
@@ -134,7 +135,7 @@ class QuizSecurityTest extends TestCase
         $this->assertArrayHasKey('correct_answer', $res->json('data.questions.0'));
     }
 
-    /** @test */
+    #[Test]
     public function student_cannot_view_another_students_attempts()
     {
         $creator = User::factory()->create();
@@ -160,7 +161,7 @@ class QuizSecurityTest extends TestCase
         $this->assertCount(1, $res2->json('data'));
     }
 
-    /** @test */
+    #[Test]
     public function non_owner_cannot_create_update_delete_quiz()
     {
         $creator = User::factory()->create();
@@ -177,7 +178,7 @@ class QuizSecurityTest extends TestCase
         $this->stateful()->actingAs($other)->deleteJson("/api/v1/quizzes/{$quiz->id}?workspace_id={$ws->id}")->assertForbidden();
     }
 
-    /** @test */
+    #[Test]
     public function quiz_create_queues_review_on_approved_course()
     {
         $creator = User::factory()->create();
@@ -196,7 +197,7 @@ class QuizSecurityTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function quiz_update_queues_review()
     {
         $creator = User::factory()->create();

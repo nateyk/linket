@@ -15,6 +15,7 @@ use Common\Workspaces\ActiveWorkspace;
 use Common\Workspaces\Actions\CreateWorkspace;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Str;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 class CourseAccessSecurityTest extends TestCase
@@ -129,7 +130,7 @@ class CourseAccessSecurityTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function non_enrolled_user_cannot_access_lesson_content_via_student_lesson_endpoint()
     {
         // otherStudent is NOT enrolled in the course
@@ -141,7 +142,7 @@ class CourseAccessSecurityTest extends TestCase
         $response->assertForbidden();
     }
 
-    /** @test */
+    #[Test]
     public function enrolled_user_can_access_their_lesson_content()
     {
         $response = $this->stateful()
@@ -153,7 +154,7 @@ class CourseAccessSecurityTest extends TestCase
             ->assertJsonPath('data.video_type', 'external');
     }
 
-    /** @test */
+    #[Test]
     public function non_enrolled_user_cannot_download_resource_even_with_valid_resource_id()
     {
         // otherStudent is NOT enrolled, but tries to download a resource from the course
@@ -165,7 +166,7 @@ class CourseAccessSecurityTest extends TestCase
         $response->assertForbidden();
     }
 
-    /** @test */
+    #[Test]
     public function enrolled_user_can_download_resource_from_their_course()
     {
         $response = $this->stateful()
@@ -178,7 +179,7 @@ class CourseAccessSecurityTest extends TestCase
         $this->assertNotEquals(403, $response->getStatusCode());
     }
 
-    /** @test */
+    #[Test]
     public function user_enrolled_in_course_a_cannot_access_resource_from_course_b_via_idor()
     {
         // Create a second course and resource
@@ -247,7 +248,7 @@ class CourseAccessSecurityTest extends TestCase
         $response->assertForbidden();
     }
 
-    /** @test */
+    #[Test]
     public function lesson_content_edit_on_approved_course_queues_review_and_stays_live()
     {
         $productId = $this->course->product->id;
@@ -282,7 +283,7 @@ class CourseAccessSecurityTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function lesson_sort_order_only_edit_does_not_queue_review()
     {
         // Verify course is approved
@@ -307,7 +308,7 @@ class CourseAccessSecurityTest extends TestCase
             'Pure sort_order edits should NOT queue a review');
     }
 
-    /** @test */
+    #[Test]
     public function course_edit_on_approved_course_queues_review_and_stays_published()
     {
         $productId = $this->course->product->id;
@@ -340,7 +341,7 @@ class CourseAccessSecurityTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function lesson_resource_add_queues_review_and_stays_published()
     {
         $productId = $this->course->product->id;
@@ -382,7 +383,7 @@ class CourseAccessSecurityTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function lesson_resource_remove_queues_review_and_stays_published()
     {
         $productId = $this->course->product->id;
@@ -409,7 +410,7 @@ class CourseAccessSecurityTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function lesson_delete_queues_review_and_stays_published()
     {
         $productId = $this->course->product->id;
@@ -436,7 +437,7 @@ class CourseAccessSecurityTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function lesson_duplicate_queues_review_and_stays_published()
     {
         $productId = $this->course->product->id;
@@ -463,7 +464,7 @@ class CourseAccessSecurityTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function chapter_delete_queues_review_and_stays_published()
     {
         $productId = $this->course->product->id;

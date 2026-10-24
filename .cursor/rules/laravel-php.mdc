@@ -6,7 +6,7 @@ alwaysApply: false
 
 # Backend
 
-- PHP 8.4 / Laravel 12. Prefer facades and helpers (`request()`, `auth()`) over constructor DI unless the surrounding file already injects.
+- PHP 8.4 / Laravel 13. Prefer facades and helpers (`request()`, `auth()`) over constructor DI unless the surrounding file already injects.
 - Reference classes with `User::class`, never `'App\\Models\\User'`.
 - Explicit parameter and return types. Constructor property promotion. `casts(): array` on models.
 - Create files with `ddev artisan make:... --no-interaction`. Do not add dependencies without approval.

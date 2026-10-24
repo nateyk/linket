@@ -2,7 +2,7 @@
 
 namespace Common\Core\Middleware;
 
-use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken as LaravelVerifyCsrfToken;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery as LaravelVerifyCsrfToken;
 use Illuminate\Http\Request;
 
 class VerifyCsrfToken extends LaravelVerifyCsrfToken

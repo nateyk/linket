@@ -16,7 +16,7 @@ use Common\Settings\Mail\ConnectGmailAccountController;
 use Common\Workspaces\Controllers\WorkspaceMembersController;
 use Dedoc\Scramble\Http\Middleware\RestrictedDocsAccess;
 use Dedoc\Scramble\Scramble;
-use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Support\Facades\Route;
 
 Route::group(['middleware' => 'web'], function () {
@@ -77,15 +77,15 @@ Route::group(['middleware' => 'web'], function () {
             Route::post('custom-domains/validate-host', [
                 CustomDomainsController::class,
                 'validateHost',
-            ])->where('method', 'store|update')->withoutMiddleware(ValidateCsrfToken::class);
+            ])->where('method', 'store|update')->withoutMiddleware(PreventRequestForgery::class);
             Route::post('custom-domains/validate-dns/2BrM45vvfS', [
                 CustomDomainsController::class,
                 'validateDomainDns',
-            ])->withoutMiddleware(ValidateCsrfToken::class);
+            ])->withoutMiddleware(PreventRequestForgery::class);
             Route::get('custom-domains/validate-dns/2BrM45vvfS/response', [
                 CustomDomainsController::class,
                 'validateDomainDnsResponse',
-            ])->withoutMiddleware(ValidateCsrfToken::class);
+            ])->withoutMiddleware(PreventRequestForgery::class);
         },
     );
 
@@ -112,12 +112,12 @@ if (!config('app.installed')) {
     Route::post('install/database/validate', [
         InstallController::class,
         'insertAndValidateDatabaseCredentials',
-    ])->withoutMiddleware(ValidateCsrfToken::class);
+    ])->withoutMiddleware(PreventRequestForgery::class);
     Route::get('install/admin', [InstallController::class, 'adminStep']);
     Route::post('install/admin/validate', [
         InstallController::class,
         'validateAdminCredentials',
-    ])->withoutMiddleware(ValidateCsrfToken::class);
+    ])->withoutMiddleware(PreventRequestForgery::class);
     Route::get('install/finalize', [InstallController::class, 'finalizeStep']);
 }
 

@@ -11,11 +11,11 @@ use App\Storefront\Controllers\PublicDigitalProductPageController;
 use Common\Blog\Http\Controllers\BlogController;
 use Common\Core\Controllers\HomeController;
 use Common\Pages\CustomPageController;
-use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Support\Facades\Route;
 
 if (config('app.demo')) {
-  Route::post('demo-login', DemoLoginController::class)->withoutMiddleware(VerifyCsrfToken::class);
+  Route::post('demo-login', DemoLoginController::class)->withoutMiddleware(PreventRequestForgery::class);
 }
 
 Route::get('qr/{hashOrAlias}', [QrCodesController::class, 'redirectToDestination']);
