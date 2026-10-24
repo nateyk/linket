@@ -2,8 +2,13 @@ import {Tooltip} from '@shadcn/tooltip/tooltip';
 import addonA11y from '@storybook/addon-a11y';
 import addonDocs from '@storybook/addon-docs';
 import {definePreview} from '@storybook/react-vite';
+import addonMsw from 'msw-storybook-addon';
+import {setupWorker} from 'msw/browser';
 import {useLayoutEffect} from 'react';
+import {mswHandlers} from './msw-handlers';
 import './storybook.css';
+
+const initialHandlers = Object.values(mswHandlers).flat();
 
 let isModifyingDocument = false;
 
@@ -90,5 +95,13 @@ export default definePreview({
     },
   ],
 
-  addons: [addonDocs(), addonA11y()],
+  addons: [
+    addonDocs(),
+    addonA11y(),
+    addonMsw(async () => {
+      const worker = setupWorker(...initialHandlers);
+      await worker.start({onUnhandledRequest: 'bypass'});
+      return worker;
+    }),
+  ],
 });

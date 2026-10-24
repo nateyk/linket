@@ -1,8 +1,75 @@
+import {createRequire} from 'node:module';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
 import replace from '@rollup/plugin-replace';
 import react from '@vitejs/plugin-react';
 import laravel from 'laravel-vite-plugin';
 import {Plugin} from 'vite';
 import {defineConfig} from 'vitest/config';
+
+const require = createRequire(import.meta.url);
+const dirname = path.dirname(fileURLToPath(import.meta.url));
+const storybookConfigDir = path.join(
+  dirname,
+  'common/foundation/resources/client/.storybook',
+);
+
+const unitTestProject = {
+  extends: true,
+  test: {
+    name: 'unit',
+    include: [
+      'resources/client/**/*.test.ts',
+      'resources/client/**/*.test.tsx',
+      'tests/js/**/*.test.ts',
+      'tests/js/**/*.test.tsx',
+      'common/foundation/resources/client/**/*.test.ts',
+      'common/foundation/resources/client/**/*.test.tsx',
+    ],
+    environment: 'node',
+    globals: true,
+    // Vitest 4 dropped environmentMatchGlobs: a test that renders opts
+    // into jsdom with a `@vitest-environment` docblock, and picks up the
+    // stubs in test-dom-setup.ts. Everything else stays on node.
+    setupFiles: ['resources/client/test-dom-setup.ts'],
+  },
+};
+
+function storybookBrowserTestProject():
+  | typeof unitTestProject
+  | undefined {
+  try {
+    const {storybookTest} = require(
+      '@storybook/addon-vitest/vitest-plugin',
+    );
+    const {playwright} = require('@vitest/browser-playwright');
+
+    return {
+      extends: true,
+      plugins: [
+        storybookTest({
+          configDir: storybookConfigDir,
+          storybookScript: 'npm run storybook -- --ci',
+          tags: {
+            include: ['ai-generated'],
+          },
+        }),
+      ],
+      test: {
+        name: 'storybook',
+        browser: {
+          enabled: true,
+          provider: playwright({}),
+          headless: true,
+          instances: [{browser: 'chromium'}],
+        },
+        setupFiles: [path.join(storybookConfigDir, 'vitest.setup.ts')],
+      },
+    };
+  } catch {
+    return undefined;
+  }
+}
 
 // override laravel plugin base option (from absolute to relative to html base tag)
 function basePath(): Plugin {
@@ -37,20 +104,13 @@ export default defineConfig({
     tsconfigPaths: true,
   },
   test: {
-    include: [
-      'resources/client/**/*.test.ts',
-      'resources/client/**/*.test.tsx',
-      'tests/js/**/*.test.ts',
-      'tests/js/**/*.test.tsx',
-      'common/foundation/resources/client/**/*.test.ts',
-      'common/foundation/resources/client/**/*.test.tsx',
-    ],
-    environment: 'node',
-    globals: true,
-    // Vitest 4 dropped environmentMatchGlobs: a test that renders opts into
-    // jsdom with a `@vitest-environment` docblock, and picks up the stubs in
-    // test-dom-setup.ts. Everything else stays on node, which is faster.
-    setupFiles: ['resources/client/test-dom-setup.ts'],
+    projects: (() => {
+      const storybookProject = storybookBrowserTestProject();
+
+      return storybookProject
+        ? [unitTestProject, storybookProject]
+        : [unitTestProject];
+    })(),
   },
   build: {
     sourcemap: true,
