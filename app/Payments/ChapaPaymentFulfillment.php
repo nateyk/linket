@@ -16,6 +16,39 @@ use RuntimeException;
 
 class ChapaPaymentFulfillment
 {
+    /**
+     * When buyers return from Chapa before the webhook arrives (common on
+     * local DDEV), verify the tx_ref against Chapa and fulfill if paid.
+     */
+    public function syncPendingStorefrontOrder(StorefrontOrder $order): void
+    {
+        if ($order->status === 'paid' || blank($order->chapa_tx_ref)) {
+            return;
+        }
+
+        $transaction = PaymentTransaction::query()
+            ->where('tx_ref', $order->chapa_tx_ref)
+            ->where('payable_type', StorefrontOrder::class)
+            ->where('payable_id', $order->id)
+            ->where('status', '!=', 'paid')
+            ->first();
+
+        if (!$transaction) {
+            return;
+        }
+
+        try {
+            $this->fulfill(
+                $transaction,
+                app(ChapaGateway::class)->verify($transaction),
+            );
+        } catch (PaymentVerificationException $e) {
+            $this->recordVerificationFailure($transaction, $e);
+        } catch (\Throwable) {
+            // Still pending — success page will poll again.
+        }
+    }
+
     public function fulfill(PaymentTransaction $transaction, array $verification): void
     {
         DB::transaction(function () use ($transaction, $verification): void {
