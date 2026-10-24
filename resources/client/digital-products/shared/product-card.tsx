@@ -45,9 +45,9 @@ export interface ProductCardProps {
   /** Inline styles on the root (e.g. Appearance soft-pop boxShadow). */
   style?: CSSProperties;
   /**
-   * Storefront / quiet surfaces: no hover shadow lift, no cover zoom, and
-   * no carousel motion wrapper when there is only one image.
-   * Marketplace listings keep the default interactive chrome.
+   * Storefront / quiet surfaces: no hover shadow lift and no carousel motion
+   * wrapper when there is only one image. Cover imagery sits still on hover
+   * on every surface — a zooming cover reads as a generated-UI tell.
    */
   quiet?: boolean;
 }
@@ -163,11 +163,7 @@ export function ProductCard({
                   cover={{url: images[safeIndex]}}
                   alt={title}
                   aspect=""
-                  className={cn(
-                    'h-full w-full',
-                    !quiet &&
-                      'transition-transform duration-300 motion-safe:group-hover:scale-[1.025]',
-                  )}
+                  className="h-full w-full"
                   fallback={fallbackBlock}
                 />
               </motion.div>

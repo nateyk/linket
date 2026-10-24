@@ -81,4 +81,14 @@ describe('public product reviews', () => {
     // The helper sentence sits at the 14px control size, not 12px metadata.
     expect(source).toContain('text-center text-sm text-[var(--biolink-muted-text)]');
   });
+
+  test('Retry follows Appearance Buttons tokens instead of dashboard outline danger', () => {
+    const source = readSource();
+
+    expect(source).toContain('resolveBiolinkButtonAppearance(appearance)');
+    expect(source).toContain('className={buttonAppearance.className}');
+    expect(source).toContain('style={buttonAppearance.style}');
+    expect(source).not.toContain('color="danger"');
+    expect(source).not.toContain('variant="outline"');
+  });
 });

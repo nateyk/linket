@@ -1,3 +1,4 @@
+import {biolinkSurfaceEdgeClassName} from '@app/short-links/renderers/biolink-renderer/biolink-appearance';
 import {PackageOpenIcon} from 'lucide-react';
 import {ProductCover} from '@ui/product-cover';
 import {Trans} from '@ui/i18n/trans';
@@ -38,7 +39,12 @@ export function ProductGallery({product}: {product: PublicDigitalProduct}) {
         fallback
       )}
 
-      <span className="absolute start-4 top-4 inline-flex h-5 items-center gap-1.5 rounded-card-sm border border-[var(--biolink-border)] bg-[var(--biolink-surface-strong)] px-2 text-xs font-medium text-[var(--biolink-text)]">
+      <span
+        className={cn(
+          'absolute start-4 top-4 inline-flex h-5 items-center gap-1.5 rounded-card-sm bg-[var(--biolink-surface-strong)] px-2 text-xs font-medium text-[var(--biolink-text)]',
+          biolinkSurfaceEdgeClassName,
+        )}
+      >
         <TypeIcon className="size-3.5 shrink-0" aria-hidden="true" />
         <ProductTypeLabel type={product.type} />
       </span>

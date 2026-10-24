@@ -6,6 +6,7 @@ import {
 import {StorePreviewSection} from '@app/dashboard/stores/store-editor/store-preview-protocol';
 import {CreatorProfileLayout} from '@app/short-links/renderers/biolink-renderer/creator-profile-layout';
 import {
+  biolinkSurfaceEdgeClassName,
   resolveBiolinkButtonAppearance,
   resolveBiolinkThemeVariables,
   shouldUseLightBiolinkLogo,
@@ -163,7 +164,10 @@ function SidebarLayout({
         )}
       >
         <section
-          className="min-w-0 overflow-hidden rounded-card bg-[var(--biolink-surface)] p-4 text-[var(--biolink-text)] ring-1 ring-(color:--biolink-border) backdrop-blur-sm sm:p-5"
+          className={cn(
+            'min-w-0 overflow-hidden rounded-card bg-[var(--biolink-surface)] p-4 text-[var(--biolink-text)] backdrop-blur-sm sm:p-5',
+            biolinkSurfaceEdgeClassName,
+          )}
           aria-label="Biolink profile and links"
         >
           {showAds && <AdHost slot="biolink_top" className="mb-6" />}

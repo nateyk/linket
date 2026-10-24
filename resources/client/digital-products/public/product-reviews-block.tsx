@@ -1,3 +1,5 @@
+import type {BiolinkAppearanceConfig} from '@app/gen/schemas/biolink-appearance-config';
+import {resolveBiolinkButtonAppearance} from '@app/short-links/renderers/biolink-renderer/biolink-appearance';
 import {Avatar} from '@shadcn/avatar/avatar';
 import {Badge} from '@shadcn/badge/badge';
 import {Button} from '@shadcn/button/button';
@@ -78,10 +80,12 @@ function toCustomerReview(review: PublicReview): CustomerReview {
 export function ProductReviewsBlock({
   product,
   biolinkId,
+  appearance,
   onSummary,
 }: {
   product: PublicDigitalProduct;
   biolinkId: number;
+  appearance?: BiolinkAppearanceConfig | null;
   onSummary?: (summary: ProductReviewsSummary) => void;
 }) {
   const [reviews, setReviews] = useState<PublicReview[]>([]);
@@ -89,6 +93,7 @@ export function ProductReviewsBlock({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [showAllReviews, setShowAllReviews] = useState(false);
+  const buttonAppearance = resolveBiolinkButtonAppearance(appearance);
 
   const baseUrl = `/api/v1/public/biolinks/${biolinkId}/digital-products/${product.id}/reviews`;
   const visibleReviews = showAllReviews
@@ -225,8 +230,9 @@ export function ProductReviewsBlock({
           </span>
           <Button
             size="sm"
-            variant="outline"
-            color="danger"
+            variant="ghost"
+            className={buttonAppearance.className}
+            style={buttonAppearance.style}
             onClick={() => void load()}
           >
             <Trans message="Retry" />

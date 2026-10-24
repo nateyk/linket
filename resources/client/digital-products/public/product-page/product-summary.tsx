@@ -1,3 +1,4 @@
+import {biolinkSurfaceEdgeClassName} from '@app/short-links/renderers/biolink-renderer/biolink-appearance';
 import {Trans} from '@ui/i18n/trans';
 import {cn} from '@ui/utils/cn';
 import type {ReactNode} from 'react';
@@ -127,7 +128,10 @@ export function ProductSummary({
           {stats.map(stat => (
             <div
               key={stat.id}
-              className="rounded-card border border-[var(--biolink-border)] bg-[var(--biolink-surface)] p-4"
+              className={cn(
+                'rounded-card bg-[var(--biolink-surface)] p-4',
+                biolinkSurfaceEdgeClassName,
+              )}
             >
               <stat.icon
                 className="size-4 text-[var(--biolink-muted-text)]"

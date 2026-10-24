@@ -87,9 +87,10 @@ export function ProductPricingCard({
               <Trans message="Your product is still available when you are ready." />
             </Alert.Description>
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
-              className="mt-3 w-fit"
+              className={cn('mt-3 w-fit', buttonAppearance.className)}
+              style={buttonAppearance.style}
               disabled={submitting}
               onClick={onBuy}
             >
@@ -112,9 +113,10 @@ export function ProductPricingCard({
               <Trans message="Please try again in a moment." />
             </Alert.Description>
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
-              className="mt-3 w-fit"
+              className={cn('mt-3 w-fit', buttonAppearance.className)}
+              style={buttonAppearance.style}
               disabled={submitting}
               onClick={onBuy}
             >

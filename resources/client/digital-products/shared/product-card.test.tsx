@@ -82,11 +82,12 @@ describe('shared product card consistency', () => {
     expect(source).toMatch(/focus-visible:outline-2/);
   });
 
-  test('respects prefers-reduced-motion for the slide and the cover zoom', () => {
+  test('respects prefers-reduced-motion for the slide', () => {
     expect(source).toContain('useReducedMotion');
     expect(source).toContain('{duration: 0}');
-    expect(source).toContain('motion-safe:group-hover:scale-[1.025]');
     expect(source).toContain('motion-reduce:transition-none');
+    // The cover never zooms, so there is no transform needing a motion guard.
+    expect(source).not.toContain('group-hover:scale');
   });
 
   test('has no travel-domain leftovers', () => {
@@ -131,9 +132,10 @@ describe('shared product card consistency', () => {
     expect(source).toContain('style={style}');
   });
 
-  test('shares the dashboard hover language: group zoom on cover', () => {
+  test('cover imagery sits still on hover; chrome stays on the card', () => {
     expect(source).toContain("'group flex h-full");
-    expect(source).toContain('group-hover:scale-[1.025]');
+    expect(source).not.toContain('group-hover:scale');
+    expect(source).toContain('hover:shadow-md');
     expect(source).not.toContain('group-hover/card');
   });
 });

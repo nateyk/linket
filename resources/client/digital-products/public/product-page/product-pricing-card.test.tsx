@@ -54,4 +54,18 @@ describe('product pricing card', () => {
     expect(source).not.toContain('uppercase');
     expect(source).toContain('One-time payment, no subscription');
   });
+
+  test('checkout rescue Try again buttons follow Appearance Buttons tokens', () => {
+    const source = readSource();
+
+    expect(source).toContain('resolveBiolinkButtonAppearance');
+    expect(
+      source.match(
+        /className=\{cn\('mt-3 w-fit', buttonAppearance\.className\)\}/g,
+      ),
+    ).toHaveLength(2);
+    expect(source).not.toMatch(
+      /Try again[\s\S]{0,80}?variant="outline"|variant="outline"[\s\S]{0,120}?Try again/,
+    );
+  });
 });

@@ -48,7 +48,7 @@ export function ProductOverview({product}: {product: PublicDigitalProduct}) {
             <ul className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
               {outcomes.map((outcome, index) => (
                 <li key={index} className="flex items-start gap-2.5 text-sm">
-                  <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-[var(--biolink-surface)] ring-1 ring-(color:--biolink-border)">
+                  <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-button bg-[var(--biolink-surface)] ring-1 ring-(color:--biolink-border)">
                     <CheckIcon
                       className="size-3 text-[var(--biolink-text)]"
                       aria-hidden="true"

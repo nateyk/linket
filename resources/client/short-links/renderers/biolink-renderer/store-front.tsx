@@ -61,6 +61,11 @@ export function StoreFront({
       <StoreCard>
         {tabs.map(tab => (
           <Tabs.Panel key={tab.id} value={tab.id}>
+            {/* The tab label is this section's visible heading, but a tab
+                trigger is not one: the sr-only h2 keeps the document outline
+                intact (profile h1 → section h2 → card h3) for screen readers
+                and heading-hierarchy checks. */}
+            <h2 className="sr-only">{tab.label}</h2>
             {tab.content}
           </Tabs.Panel>
         ))}

@@ -239,6 +239,17 @@ describe('Appearance editor → storefront contract', () => {
     expect(layout).toContain('appearance?.hideBranding');
   });
 
+  test('product page shell also honors hideBranding', () => {
+    const productPage = fs.readFileSync(
+      path.resolve(
+        'resources/client/digital-products/public/digital-product-public-pages.tsx',
+      ),
+      'utf8',
+    );
+    expect(productPage).toContain('function ProductBranding');
+    expect(productPage).toContain('appearance?.hideBranding');
+    expect(productPage).toContain('shouldUseLightBiolinkLogo');
+  });
 });
 
 describe('storefront appearance token wiring', () => {
@@ -677,19 +688,29 @@ describe('creator profile editor wiring', () => {
     'utf8',
   );
 
-  test('previews the cover and the avatar with the radius they render at', () => {
-    expect(source).toContain('cropRadius={containerRadius.value}');
-    expect(source).toContain('cropRadius={containerRadius.avatarValue}');
-    expect(source).toContain(
-      'previewClassName={containerRadius.avatarClassName}',
-    );
-    expect(source).toContain('size-22 bg-[var(--biolink-surface-strong)] p-1');
-    expect(source).not.toContain('size-22 bg-background p-1');
+  test('keeps the editor cover and avatar on dashboard chrome', () => {
+    // Corner roundness is a storefront choice, previewed by the phone live
+    // preview. The Profile form tiles must not mutate with it — a creator
+    // changing a storefront setting should never re-skin the dashboard
+    // controls (or the crop dialog frames portalled into it).
+    expect(source).not.toContain('resolveBiolinkContainerRadius');
+    expect(source).not.toContain('containerRadius');
+    expect(source).not.toContain('cropRadius=');
+    expect(source).not.toContain('previewClassName=');
+    expect(source).not.toContain('--biolink-');
+    // The avatar is a plain dashboard avatar tile: no storefront surface
+    // token behind it, just the image — and the max-w clamps keep the
+    // field's width:100% from turning it into a full-width pill.
+    expect(source).toContain('className="size-22 max-w-22"');
+    expect(source).toContain('className="max-w-56"');
+    expect(source).not.toContain('bg-[var(--biolink-surface-strong)]');
   });
 
   test('crops the cover at the same 3:1 box the card renders', () => {
     expect(source).toContain('aspect={3}');
-    expect(source).toMatch(/'h-28 w-full max-w-\[22\.5rem\] sm:h-30'/);
+    // Full-width banner: the tile's inline aspect-ratio drives the height
+    // off the column width, so the editor previews the storefront box.
+    expect(source).toMatch(/<CroppedCover\s+className="w-full"/);
   });
 });
 
