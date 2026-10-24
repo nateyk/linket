@@ -38,12 +38,12 @@ import {
   FileTextIcon,
   ListIcon,
   LockIcon,
-  PlayIcon,
 } from 'lucide-react';
 import {useCallback, useEffect, useState} from 'react';
 import {Link, useParams, useNavigate} from 'react-router';
 import {CourseCurriculumList} from './course-curriculum-list';
 import {LessonVideo} from './lesson-video';
+import {cn} from '@ui/utils/cn';
 
 type LessonData = {
   id: number;
@@ -180,10 +180,10 @@ export function Component() {
 
   useEffect(() => {
     const controller = new AbortController();
-    setLesson(null);
-    setCourse(null);
+    // Keep prior lesson/course mounted while switching so the shell does not flash.
     setTrial(false);
     setError(undefined);
+    setProgressError(undefined);
     void load(controller.signal).catch(reason => {
       if (!(reason instanceof DOMException && reason.name === 'AbortError')) {
         setError('Unable to load this lesson.');
@@ -317,12 +317,30 @@ export function Component() {
     );
   }
 
-  if (!lesson) {
+  if (!lesson && !error && !trial) {
     return (
       <MyPortalShell wide>
         <div className="flex min-h-64 items-center justify-center">
           <Spinner />
         </div>
+      </MyPortalShell>
+    );
+  }
+
+  if (!lesson) {
+    return (
+      <MyPortalShell wide>
+        <Alert.Root variant="warning" fillStyle="subtleFill">
+          <Alert.Title>
+            <Trans message="Lesson unavailable" />
+          </Alert.Title>
+          <Alert.Description>
+            {error ?? <Trans message="This lesson could not be loaded." />}
+          </Alert.Description>
+        </Alert.Root>
+        <Button className="w-fit" render={<Link to="/my-portal" />}>
+          <Trans message="Back to My Portal" />
+        </Button>
       </MyPortalShell>
     );
   }
@@ -349,34 +367,32 @@ export function Component() {
     course?.progress?.completed_lesson_ids ?? [];
   const progressPercent: number = course?.progress?.percent ?? 0;
 
-  const curriculumPanel = course ? (
+  const courseTitle: string | null = course?.product?.title ?? null;
+  const progressCompleted = course?.progress?.completed ?? 0;
+  const progressTotal = course?.progress?.total ?? 0;
+
+  const progressCard = course ? (
+    <Card.Root className="gap-3 p-4 shadow-none">
+      <div className="flex items-center justify-between text-sm">
+        <span className="font-medium">
+          <Trans message="Your progress" />
+        </span>
+        <span className="tabular-nums text-muted-foreground">
+          {progressCompleted}/{progressTotal}
+        </span>
+      </div>
+      <Progress.Root value={progressPercent} aria-label="Course progress">
+        <Progress.Track className="h-1.5">
+          <Progress.Indicator />
+        </Progress.Track>
+      </Progress.Root>
+    </Card.Root>
+  ) : null;
+
+  const curriculumCard = course ? (
     <Card.Root className="gap-0 overflow-hidden py-0 shadow-none">
-      <Card.Header className="border-b py-4">
-        <Card.Title className="flex items-center justify-between text-base">
-          <span className="flex items-center gap-2">
-            <PlayIcon className="size-4 text-primary" />
-            <Trans message="Course curriculum" />
-          </span>
-          <span className="text-xs font-normal text-muted-foreground">
-            {course.progress?.completed ?? 0}/{course.progress?.total ?? 0}
-          </span>
-        </Card.Title>
-        <div className="mt-3 flex flex-col gap-1.5">
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <Trans
-              message=":percent% complete"
-              values={{percent: progressPercent}}
-            />
-          </div>
-          <Progress.Root value={progressPercent}>
-            <Progress.Track className="h-1.5">
-              <Progress.Indicator />
-            </Progress.Track>
-          </Progress.Root>
-        </div>
-      </Card.Header>
       <Card.Content className="p-0">
-        <div className="max-h-[480px] overflow-y-auto lg:max-h-[calc(100vh-14rem)]">
+        <div className="max-h-[60vh] overflow-y-auto lg:max-h-[calc(100vh-14rem)]">
           <CourseCurriculumList
             courseId={Number(courseId)}
             chapters={course.chapters ?? []}
@@ -384,10 +400,18 @@ export function Component() {
             unlockedLessonIds={unlockedLessonIds}
             activeLessonId={Number(lessonId)}
             requireSequential={course.require_sequential_completion}
+            courseTitle={courseTitle}
           />
         </div>
       </Card.Content>
     </Card.Root>
+  ) : null;
+
+  const curriculumAside = course ? (
+    <aside className="flex flex-col gap-4" aria-label="Course contents">
+      {progressCard}
+      {curriculumCard}
+    </aside>
   ) : null;
 
   const flatLessons = course
@@ -403,11 +427,9 @@ export function Component() {
     lessonIndex >= 0 && lessonIndex < flatLessons.length - 1
       ? flatLessons[lessonIndex + 1]
       : null;
-  const chapterTitle =
-    flatLessons[lessonIndex]?.chapterTitle ??
-    course?.title ??
-    null;
+  const chapterTitle = flatLessons[lessonIndex]?.chapterTitle ?? null;
   const isLessonComplete = completedLessonIds.includes(Number(lessonId));
+  const isStaleLesson = lesson.id !== Number(lessonId);
 
   const resourcesList =
     lesson.resources.length > 0 ? (
@@ -439,25 +461,51 @@ export function Component() {
       </p>
     );
 
+  const informativeChapter =
+    chapterTitle &&
+    !/^course curriculum$/i.test(chapterTitle) &&
+    (!courseTitle ||
+      chapterTitle.trim().toLowerCase() !== courseTitle.trim().toLowerCase())
+      ? chapterTitle
+      : null;
+
+  const lessonPositionLabel =
+    lessonIndex >= 0 && flatLessons.length > 0 ? (
+      <Trans
+        message="Lesson :current of :total"
+        values={{current: lessonIndex + 1, total: flatLessons.length}}
+      />
+    ) : null;
+
+  const overviewEmpty = (
+    <p className="text-pretty leading-relaxed text-muted-foreground">
+      <Trans message="No summary added for this lesson yet." />
+      {lesson.resources.length > 0 ? (
+        <>
+          {' '}
+          <Trans message="Check the Resources tab for attachments." />
+        </>
+      ) : null}
+    </p>
+  );
+
   const overviewBody =
     lesson.content_type === 'video' ? (
       lesson.summary ? (
         <div
-          className="prose prose-sm max-w-none text-pretty leading-relaxed"
+          className="prose prose-sm max-w-none text-pretty leading-relaxed text-muted-foreground"
           dangerouslySetInnerHTML={{__html: lesson.summary}}
         />
       ) : (
-        <p className="text-sm text-muted-foreground">
-          <Trans message="No summary added yet." />
-        </p>
+        overviewEmpty
       )
     ) : lesson.content ? (
       <div
-        className="prose prose-sm max-w-none"
+        className="prose prose-sm max-w-none text-pretty leading-relaxed"
         dangerouslySetInnerHTML={{__html: lesson.content}}
       />
     ) : (
-      <p className="text-sm text-muted-foreground">
+      <p className="text-pretty leading-relaxed text-muted-foreground">
         <Trans message="No content added yet." />
       </p>
     );
@@ -490,72 +538,51 @@ export function Component() {
                 </SheetTrigger>
                 <SheetContent
                   side="right"
-                  className="w-full max-w-md overflow-y-auto p-0 sm:max-w-md"
+                  className="w-full max-w-md overflow-y-auto p-4 sm:max-w-md"
                 >
-                  <SheetHeader className="border-b p-4">
+                  <SheetHeader className="mb-4 p-0">
                     <SheetTitle>
                       <Trans message="Course curriculum" />
                     </SheetTitle>
                   </SheetHeader>
-                  {curriculumPanel}
+                  {curriculumAside}
                 </SheetContent>
               </Sheet>
             ) : null}
           </div>
-          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-            <div className="flex min-w-0 flex-col gap-1">
-              <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                <Trans message="Course" />
-                {course?.title ? ` · ${course.title}` : null}
-              </p>
-              <h1 className="text-balance text-2xl font-semibold tracking-tight sm:text-3xl">
-                {course?.title ?? lesson.title}
-              </h1>
-              {course ? (
-                <div className="mt-2 flex max-w-md flex-col gap-1.5">
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <Trans
-                      message=":percent% complete"
-                      values={{percent: progressPercent}}
-                    />
-                    <span className="tabular-nums">
-                      {course.progress?.completed ?? 0}/
-                      {course.progress?.total ?? 0}
-                    </span>
-                  </div>
-                  <Progress.Root
-                    value={progressPercent}
-                    aria-label={course.title ?? 'Course progress'}
-                  >
-                    <Progress.Track className="h-1.5">
-                      <Progress.Indicator />
-                    </Progress.Track>
-                  </Progress.Root>
-                </div>
-              ) : null}
-            </div>
+          <div className="flex min-w-0 flex-col gap-1">
+            <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+              <Trans message="Course" />
+              {course?.instructor?.name
+                ? ` · ${course.instructor.name}`
+                : null}
+            </p>
+            <h1 className="text-balance text-2xl font-semibold tracking-tight sm:text-3xl">
+              {courseTitle ?? <Trans message="Course" />}
+            </h1>
           </div>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-8">
-          <div className="flex min-w-0 flex-col gap-6">
+          <div
+            className={cn(
+              'flex min-w-0 flex-col gap-6 transition-opacity duration-150',
+              isStaleLesson && 'opacity-60',
+            )}
+          >
             {lesson.content_type === 'video' ? (
-              <div className="overflow-hidden rounded-card border border-border bg-secondary">
-                <LessonVideo
-                  title={lesson.title}
-                  videoUrl={lesson.video_url}
-                  fileUrl={lesson.video?.url}
-                />
-              </div>
+              <LessonVideo
+                title={lesson.title}
+                videoUrl={lesson.video_url}
+                fileUrl={lesson.video?.url}
+              />
             ) : null}
 
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex min-w-0 flex-col gap-1">
-                {chapterTitle ? (
-                  <p className="text-xs font-medium text-muted-foreground">
-                    {chapterTitle}
-                  </p>
-                ) : null}
+                <p className="text-xs font-medium text-muted-foreground">
+                  {informativeChapter ?? lessonPositionLabel}
+                </p>
                 <h2 className="text-pretty text-xl font-semibold tracking-tight">
                   {lesson.title}
                 </h2>
@@ -581,7 +608,11 @@ export function Component() {
                   disabled={completing}
                   onClick={() => void complete()}
                 >
-                  {completing ? <Spinner /> : <CheckIcon data-icon="inline-start" />}
+                  {completing ? (
+                    <Spinner />
+                  ) : (
+                    <CheckIcon data-icon="inline-start" />
+                  )}
                   {isLessonComplete ? (
                     <Trans message="Completed" />
                   ) : (
@@ -639,7 +670,7 @@ export function Component() {
           </div>
 
           <div className="hidden lg:block">
-            <div className="sticky top-6">{curriculumPanel}</div>
+            <div className="sticky top-6 self-start">{curriculumAside}</div>
           </div>
         </div>
       </div>

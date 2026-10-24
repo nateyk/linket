@@ -1,12 +1,6 @@
 import {Trans} from '@ui/i18n/trans';
 import {cn} from '@ui/utils/cn';
-import {
-  CheckCircle2Icon,
-  CircleIcon,
-  ClockIcon,
-  LockIcon,
-  PlayIcon,
-} from 'lucide-react';
+import {CheckIcon, CircleIcon, ClockIcon, LockIcon, PlayIcon} from 'lucide-react';
 import {Link} from 'react-router';
 
 export type CurriculumLesson = {
@@ -30,6 +24,27 @@ function formatDuration(seconds?: number | null): string | null {
   return `${mins}:${String(secs).padStart(2, '0')}`;
 }
 
+function shouldShowChapterHeader(
+  chapters: CurriculumChapter[],
+  chapter: CurriculumChapter,
+  courseTitle?: string | null,
+): boolean {
+  const title = chapter.title.trim();
+  if (!title) {
+    return false;
+  }
+  if (chapters.length === 1) {
+    return false;
+  }
+  if (/^course curriculum$/i.test(title)) {
+    return false;
+  }
+  if (courseTitle && title.toLowerCase() === courseTitle.trim().toLowerCase()) {
+    return false;
+  }
+  return true;
+}
+
 export function CourseCurriculumList({
   courseId,
   chapters,
@@ -37,6 +52,7 @@ export function CourseCurriculumList({
   unlockedLessonIds,
   activeLessonId,
   requireSequential,
+  courseTitle,
 }: {
   courseId: number;
   chapters: CurriculumChapter[];
@@ -44,14 +60,17 @@ export function CourseCurriculumList({
   unlockedLessonIds?: number[];
   activeLessonId?: number;
   requireSequential?: boolean;
+  courseTitle?: string | null;
 }) {
   return (
     <div className="flex flex-col">
       {chapters.map(chapter => (
         <div key={chapter.id} className="border-b last:border-b-0">
-          <p className="bg-muted/40 px-4 py-2 text-xs font-medium text-muted-foreground">
-            {chapter.title}
-          </p>
+          {shouldShowChapterHeader(chapters, chapter, courseTitle) ? (
+            <p className="bg-secondary/50 px-4 py-2 text-xs font-medium text-muted-foreground">
+              {chapter.title}
+            </p>
+          ) : null}
           <div className="flex flex-col">
             {chapter.lessons.map(lesson => {
               const completed = completedLessonIds.includes(lesson.id);
@@ -64,39 +83,43 @@ export function CourseCurriculumList({
 
               const content = (
                 <>
-                  <div className="mt-0.5 shrink-0">
+                  <div className="shrink-0">
                     {completed ? (
-                      <CheckCircle2Icon className="size-4 text-positive" />
+                      <span className="flex size-4 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                        <CheckIcon className="size-2.5" aria-hidden="true" />
+                      </span>
                     ) : isActive ? (
-                      <div className="flex size-4 items-center justify-center rounded-full bg-primary">
-                        <PlayIcon className="size-2.5 fill-current text-primary-foreground" />
-                      </div>
+                      <PlayIcon className="size-4 text-foreground" aria-hidden="true" />
                     ) : !unlocked ? (
-                      <LockIcon className="size-4 text-muted-foreground/50" />
+                      <LockIcon
+                        className="size-4 text-muted-foreground/50"
+                        aria-hidden="true"
+                      />
                     ) : (
-                      <CircleIcon className="size-4 text-muted-foreground/40" />
+                      <CircleIcon
+                        className="size-4 text-muted-foreground"
+                        aria-hidden="true"
+                      />
                     )}
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p
-                      className={cn(
-                        'truncate text-sm',
-                        isActive
-                          ? 'font-medium text-primary'
-                          : completed
-                            ? 'text-muted-foreground'
-                            : 'text-foreground',
-                      )}
-                    >
-                      {lesson.title}
-                    </p>
-                    {duration ? (
-                      <div className="mt-0.5 flex items-center gap-1 text-muted-foreground">
-                        <ClockIcon className="size-3" />
-                        <span className="text-xs">{duration}</span>
-                      </div>
-                    ) : null}
-                  </div>
+                  <span
+                    className={cn(
+                      'min-w-0 flex-1 truncate',
+                      isActive ? 'font-medium text-foreground' : 'text-foreground',
+                      completed && !isActive ? 'text-muted-foreground' : null,
+                    )}
+                  >
+                    {lesson.title}
+                  </span>
+                  {duration ? (
+                    <span className="ml-auto flex shrink-0 items-center gap-1 text-xs tabular-nums text-muted-foreground">
+                      <ClockIcon className="size-3" aria-hidden="true" />
+                      {duration}
+                    </span>
+                  ) : null}
+                  <span className="sr-only">
+                    {completed ? <Trans message="(completed)" /> : null}
+                  </span>
                 </>
               );
 
@@ -104,7 +127,7 @@ export function CourseCurriculumList({
                 return (
                   <div
                     key={lesson.id}
-                    className="flex w-full items-start gap-3 border-l-2 border-l-transparent px-4 py-3 text-left opacity-70"
+                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm opacity-70"
                   >
                     {content}
                   </div>
@@ -115,11 +138,10 @@ export function CourseCurriculumList({
                 <Link
                   key={lesson.id}
                   to={`/my-portal/courses/${courseId}/lessons/${lesson.id}`}
+                  aria-current={isActive ? 'page' : undefined}
                   className={cn(
-                    'flex w-full items-start gap-3 border-l-2 px-4 py-3 text-left transition-colors hover:bg-muted/40',
-                    isActive
-                      ? 'border-l-primary bg-primary/5'
-                      : 'border-l-transparent',
+                    'flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
+                    isActive ? 'bg-secondary font-medium' : 'hover:bg-secondary/50',
                   )}
                 >
                   {content}

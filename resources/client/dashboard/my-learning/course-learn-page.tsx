@@ -168,6 +168,7 @@ export function Component() {
             unlockedLessonIds={unlockedLessonIds}
             activeLessonId={course.next_lesson_id ?? undefined}
             requireSequential={course.require_sequential_completion}
+            courseTitle={course.product.title}
           />
         </div>
       </Card.Content>

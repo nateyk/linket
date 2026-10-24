@@ -1,68 +1,58 @@
 # My Portal — Lesson Player Composition — Design
 
 Date: 2026-10-24  
-Status: approved in chat (Approach 1 — restructure composition)  
+Status: approved in chat; refined against v0 `CoursePlayer` + screenshot  
 Mode: **Operate** (buyer learning)  
 Builds on: `2026-10-23-my-portal-lesson-player-chrome-design.md`  
+Visual reference: `digital-product-page-design` `CoursePlayer` / `DetailHeader`  
 Primary surface: `resources/client/dashboard/my-learning/lesson-player-page.tsx`  
 Shared list: `resources/client/dashboard/my-learning/course-curriculum-list.tsx`
 
 ## 1. Intent
 
-The lesson player still reads as a generated template: wrong title hierarchy when course title is missing, progress shown twice, redundant “Course curriculum” labels, double-bordered video stage, and a hollow Overview empty state. Restructure the page so a buyer always knows **which course**, **which lesson**, and **where they are in the syllabus**, without inventing badges or actions.
+Match the inspiration course-detail composition so lesson switching feels continuous and the page no longer reads as a sparse template. Real video, mark-complete, prev/next, quiz, and downloads stay; fake player chrome and Notes stay out.
 
 ## 2. Scope
 
 **In**
 
-- Page-level information architecture on `/my-portal/courses/:courseId/lessons/:lessonId`
-- Curriculum rail / mobile sheet presentation (same panel content)
-- Overview empty state and video stage chrome
-- Small shared polish in `CourseCurriculumList` that both hub and player inherit (redundant chapter chrome, denser rows)
+- Detail header: back → `?section=courses`; eyebrow `Course` + optional ` · {instructor}`; H1 = `course.product.title` (never lesson title)
+- Main column: single-border video/readable stage; under-stage lesson meta (chapter when informative) + lesson H2 + prev / Mark complete / next; Tabs Overview / Resources / Quiz when present
+- Aside (desktop sticky): **separate** “Your progress” card (`completed/total` + Progress) + curriculum card (scrollable list only — no progress inside the list card)
+- Mobile: Curriculum sheet embeds the same aside stack
+- `CourseCurriculumList`: denser rows (duration right-aligned when present); completed = primary filled check circle; active = play icon; quieter chapter bands; hide redundant single-chapter / “Course curriculum” bands
+- Soft Overview empty (muted prose / Empty), not a hollow void card
+- Lesson-switch UX: do **not** null course/lesson and flash a full-page Spinner on every `lessonId` change; keep shell + curriculum mounted; swap stage content; soft-refresh course progress in background
 
 **Out**
 
-- Fake metadata badges (Advanced, Live Class, etc.)
-- Save for Later / Continue Learning CTAs that are not backed by current player flows
-- Notes tab, quiz behavior changes, API/schema changes
-- Seller dashboard or storefront course UI
-- Full redesign of `course-learn-page.tsx` layout (only inherited list polish)
-- Invented lesson durations when `duration_seconds` is absent
+- Notes tab, local notes UI
+- Fake play/pause overlay, elapsed scrubber, mock duration meter on the video stage (YouTube/file player stays as today)
+- Access-expires badge without learn-payload fields
+- Download certificate CTA
+- Save for Later / Advanced / Live Class badges
+- API/schema changes
+- Seller dashboard
 
 ## 3. Approach
 
-Refactor presentational structure in `lesson-player-page.tsx`; tighten `CourseCurriculumList` for single-chapter / duplicate-title noise. Keep `LessonVideo`, mark-complete, prev/next, tabs, quiz, resource downloads, and portal fetch helpers unchanged in behavior.
+Refactor `lesson-player-page.tsx` layout to the CoursePlayer grid; split progress vs curriculum in the aside; tighten `CourseCurriculumList`; fix load effect so only the first visit (or hard error) uses the centered Spinner.
 
-## 4. Information architecture
+## 4. Layout
 
-| Region | Current problem | Target |
-| --- | --- | --- |
-| Top meta | Eyebrow “Course”; H1 uses `course.title` (often unset) and falls back to **lesson** title; progress duplicated with rail | Back link → page H1 = **`course.product.title`** (same source as course hub). If that is missing, translated “Course” — **never** `lesson.title`. No top-of-page progress bar. Progress lives **only** in the curriculum rail (and the same panel inside the mobile sheet). |
-| Under video | Second title block repeats lesson; chapter eyebrow often equals “Course curriculum” | **Lesson title** as H2; meta line “Lesson N of M” from flat syllabus order; show chapter name only when it adds information (not empty, not identical to “Course curriculum”, not identical to the course title). |
-| Controls | Prev / Mark complete / Next | Same actions; keep completed vs incomplete button states; compact cluster aligned with lesson title row. |
-| Overview | Bordered empty card: “No summary added yet.” | Soft empty: muted prose, no heavy card void; if resources exist, one-line cue that files are under Resources. Video lessons with summary (or readable content) unchanged. |
-| Curriculum rail | Progress + percent already in header and again in card; chapter band repeats card title | Card header: title + `completed/total` + single progress bar. List: hide chapter section header when there is only one chapter **or** chapter title equals a redundant label (“Course curriculum” / course title). Active / complete / locked row affordances stay. |
-| Video stage | Wrapper + inner stage both bordered/rounded | Single stage surface (one border / radius stack). |
-| Mobile | Sheet wraps full card including duplicate sheet title + card title | Sheet title remains; avoid stacking an identical second title inside the panel when opened from the sheet (prefer list + progress without repeating the sheet heading as Card.Title, or use a compact panel variant). |
+| Region | Content |
+| --- | --- |
+| Header | Back “My courses”; eyebrow; course product title H1; no page-level progress |
+| Left | Stage → lesson title row + controls → tabs |
+| Right | Progress card, then curriculum list card; sticky `top-6` |
+| Mobile | Curriculum trigger → Sheet with progress + list |
 
-## 5. Components / data
+## 5. Testing
 
-- **Sources of truth:** existing `fetchPortalLesson` + `fetchPortalCourseLearn` payloads (`course.product.title`, `progress`, `chapters`, lesson `summary` / `content` / `resources`).
-- **Course title fallback order:** `course.product?.title` → translated “Course”. Never `lesson.title` for the page H1. Align with `course-learn-page.tsx`, which already headings off `course.product.title`.
-- **Lesson index:** `N of M` from flattened published syllabus order already used for prev/next.
-- **Shared list:** Prefer extracting a small `hideChapterHeaders` (or equivalent) prop / heuristic inside `CourseCurriculumList` rather than duplicating row markup.
-- **i18n:** All new visible strings via `<Trans message="..." />` with static `message` props.
-- **Tokens:** semantic Tailwind tokens only; no raw palette colors.
+- Source tests: H1 uses `product.title`; no top-of-page progress; “Your progress” present; no Notes tab; back href `section=courses`; load effect does not `setLesson(null)` / `setCourse(null)` on every lesson change when shell already has data
+- Curriculum list heuristic for redundant chapter headers
+- Existing lesson/video tests stay green
 
-## 6. Testing
+## 6. Non-goals
 
-- Component/source tests: page H1 uses course title (or non-lesson fallback), not lesson title when both exist; progress not rendered in the top meta region; Overview empty state copy; no Notes tab regression; back link still `?section=courses`.
-- Curriculum list: single-chapter / redundant chapter title does not render the muted chapter band.
-- Keep existing lesson/video/completion tests green where applicable.
-- Run focused frontend tests for touched files; no new backend tests unless API touched (it should not be).
-
-## 7. Non-goals / non-regressions
-
-- Do not paste v0 `components/ui/*` or invent portal library Continue/Save controls on this page.
-- Do not nest the player under account-settings or force full `PortalLibraryLayout` sidebar.
-- Access, sequential unlock, and quiz-gating behavior unchanged.
+No paste of v0 `@/components/ui/*`. No Superdesign-generated HTML commit (CLI unauthenticated this session; inspiration used as visual truth).
