@@ -38,12 +38,6 @@ interface CroppedImageSelectorProps {
   shape?: 'circle' | 'square' | 'cover';
   placeholderIcon?: React.ReactNode;
   /**
-   * The file-rules line under the control ("JPG, PNG, or WebP up to 2 MB…").
-   * Hosts whose uploader already states the rules elsewhere can turn it off
-   * to keep the control quiet.
-   */
-  showHint?: boolean;
-  /**
    * Raw CSS length for the crop frame corners, so the dialog previews the
    * radius the image will actually render with instead of a sharp rectangle.
    */
@@ -100,7 +94,6 @@ export function CroppedImageSelector({
   fit = 'cover',
   shape = 'square',
   placeholderIcon,
-  showHint = true,
   cropRadius,
   label,
 }: CroppedImageSelectorProps) {
@@ -295,14 +288,12 @@ export function CroppedImageSelector({
         </button>
       )}
 
-      {showHint && (
-        <p className="text-xs text-muted-foreground">
-          <Trans
-            message="JPG, PNG, or WebP up to :size. Large images are compressed to WebP automatically."
-            values={{size: prettyBytes(uploadMaxFileSize(uploadType))}}
-          />
-        </p>
-      )}
+      <p className="text-xs text-muted-foreground">
+        <Trans
+          message="JPG, PNG, or WebP up to :size. Large images are compressed to WebP automatically."
+          values={{size: prettyBytes(uploadMaxFileSize(uploadType))}}
+        />
+      </p>
 
       <Dialog.Root
         open={cropOpen}

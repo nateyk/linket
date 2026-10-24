@@ -96,3 +96,26 @@ test('dashboard link is the only aria-current on the home route', async () => {
     '/dashboard',
   ]);
 });
+
+test('labels wrap to two lines instead of shrinking to clipped stubs', async () => {
+  // Six menu labels (~367px) can't fit one line in a 360px bar at any
+  // padding: nowrap + shrink-0 let flex squeeze each item below its text
+  // width and overflow-hidden center-clipped it ("My Store" -> "Sto",
+  // "Home" -> "om"). Wrapping floors each item at its longest word, so
+  // nothing is ever cut mid-word; text-center keeps wrapped lines under
+  // the icon; items-start keeps the icon row aligned across items whose
+  // labels wrapped or didn't.
+  renderNavbar('/dashboard');
+  const nav = await screen.findByRole('navigation', {
+    name: 'Mobile navigation',
+  });
+
+  expect(nav.className).not.toContain('gap-7.5');
+  expect(nav.className).toContain('px-4');
+  expect(nav.className).toContain('items-start');
+  for (const item of nav.querySelectorAll('a, button')) {
+    expect(item.className).not.toContain('whitespace-nowrap');
+    expect(item.className).not.toContain('shrink-0');
+    expect(item.className).toContain('text-center');
+  }
+});

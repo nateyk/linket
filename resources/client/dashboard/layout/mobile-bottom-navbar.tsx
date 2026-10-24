@@ -19,7 +19,15 @@ export function MobileBottomNavbar() {
   return (
     <nav
       aria-label={trans(message('Mobile navigation'))}
-      className="flex items-center justify-between gap-7.5 border-t px-6 py-3"
+      // Six DB menu labels (~367px of text) can't fit one line in a 360px
+      // bar at any padding, so items let labels wrap instead of clipping:
+      // without nowrap + shrink-0, flex floors each item at its
+      // min-content (its longest word), turning the old center-clipped
+      // stubs ("My Store" -> "Sto", "Home" -> "om") into two readable
+      // lines. gap-1 is a floor while justify-between distributes the
+      // remainder; items-start keeps the icon row aligned when only some
+      // labels take a second line.
+      className="flex items-start justify-between gap-1 border-t px-4 py-3"
     >
       {menu.items.map(item => (
         <UnstyledCustomMenuItem
@@ -32,7 +40,10 @@ export function MobileBottomNavbar() {
           matchDescendants={action => action === '/dashboard'}
           className={({isActive}) =>
             cn(
-              'flex flex-col items-center gap-1.5 overflow-hidden text-xs whitespace-nowrap',
+              // text-center: once a label wraps, the anonymous text box
+              // fills the item, so centered lines are what keeps the copy
+              // under its icon instead of hanging left.
+              'flex flex-col items-center gap-1.5 overflow-hidden text-center text-xs',
               isActive && 'font-bold',
             )
           }
@@ -49,7 +60,7 @@ function AccountButton() {
 
   return (
     <NavbarAuthMenu>
-      <Dropdown.Trigger className="relative flex flex-col items-center gap-1.5 overflow-hidden text-xs whitespace-nowrap">
+      <Dropdown.Trigger className="relative flex flex-col items-center gap-1.5 overflow-hidden text-center text-xs">
         <PersonIcon size="md" />
         {hasUnreadNotif ? (
           <Badge className="-top-1.5" right="right-1">

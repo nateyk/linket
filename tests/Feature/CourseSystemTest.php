@@ -544,6 +544,9 @@ class CourseSystemTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.0.course_id', $course->id)
             ->assertJsonPath('data.0.next_lesson_id', $lesson->id)
+            ->assertJsonPath('data.0.next_lesson_title', 'L1')
+            ->assertJsonPath('data.0.lessons_done', 0)
+            ->assertJsonPath('data.0.creator_name', $creator->name)
             ->assertJsonPath('data.0.completed_at', null);
     }
 
