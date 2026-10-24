@@ -1,5 +1,11 @@
 {
   "detector": {
+    "extensions": [
+      {
+        "ext": ".blade.php",
+        "engine": "html"
+      }
+    ],
     "ignoreRules": [],
     "ignoreFiles": [],
     "ignoreValues": [
@@ -31,5 +37,12 @@
         "reason": "False positive after fix: height_0.15s was removed from the toast's transition, which is now transform+opacity only, so height changes are not animated. The rule still fires because the element carries a variable-driven h-(--height) alongside any transition (verified: transition+h-8 is clean, transition+h-(--height) is not). The height var is required for stack positioning and cannot be removed."
       }
     ]
+  },
+  "hook": {
+    "enabled": true,
+    "limits": {
+      "maxFindings": 5,
+      "maxChars": 8000
+    }
   }
 }

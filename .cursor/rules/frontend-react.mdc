@@ -1,0 +1,27 @@
+---
+description: React and TypeScript UI conventions for Linket
+globs: **/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Frontend
+
+- Prefer `@shadcn/*` from `common/foundation/resources/client/shadcn`. Fall back to `@ui/*` only when the shadcn component does not exist.
+- Import aliases: `@app/*`, `@common/*`, `@shadcn/*`, `@ui/*`. Check `tsconfig.json` before inventing paths.
+- Every visible string: `<Trans message="Publish product" />`. Dynamic messages cannot be extracted.
+- Icons: `lucide-react`. Styling: tokens + `cn()` from `@ui/utils/cn`. Use `gap-*`, not `space-x-*` / `space-y-*`. Use `size-*` when width equals height.
+- Stack is Base UI (`@base-ui/react`), not Radix. Read `migrate-radix-to-base` if you see `@radix-ui/*`.
+- Do not introduce a new UI kit, raw hex/`bg-blue-500`, or untranslated copy.
+
+```tsx
+// ❌ BAD
+<button className="bg-blue-500">Save</button>
+
+// ✅ GOOD
+import {Button} from '@shadcn/ui/button';
+import {Trans} from '@ui/i18n/trans';
+
+<Button type="submit">
+  <Trans message="Save" />
+</Button>
+```

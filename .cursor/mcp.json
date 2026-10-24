@@ -1,14 +1,35 @@
 {
-    "mcpServers": {
-        "belink-storybook": {
-            "url": "http://localhost:6006/mcp"
-        },
-        "laravel-boost": {
-            "command": "php",
-            "args": [
-                "artisan",
-                "boost:mcp"
-            ]
-        }
+  "mcpServers": {
+    "laravel-boost": {
+      "command": "bash",
+      "args": [
+        "${workspaceFolder}/.cursor/mcp-laravel-boost.sh"
+      ]
+    },
+    "shadcn": {
+      "command": "npx",
+      "args": [
+        "--prefix",
+        ".",
+        "shadcn",
+        "mcp"
+      ]
+    },
+    "linket-storybook": {
+      "url": "http://localhost:6006/mcp"
+    },
+    "github": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-github"
+      ],
+      "env": {
+        "GITHUB_TOKEN": "${env:GITHUB_TOKEN}"
+      }
+    },
+    "context7": {
+      "url": "https://mcp.context7.com/mcp/oauth"
     }
+  }
 }

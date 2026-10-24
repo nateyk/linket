@@ -1,0 +1,30 @@
+---
+description: Linket stack, commands, and agent-tool conventions for every session
+alwaysApply: true
+---
+
+# Linket
+
+Laravel 12 + PHP 8.4 (DDEV) backend. React 19 + Vite + react-router frontend. Tailwind CSS 4 tokens in `common/foundation/resources/client/core/common-tailwind.css`. UI from `@shadcn/*` then `@ui/*`. Icons from lucide.
+
+## Agent tools
+
+- Prefer Laravel Boost MCP (`search-docs`, `database-schema`, `database-query`, `get-absolute-url`, `browser-logs`) over guessing Laravel APIs or writing tinker scripts.
+- Prefer Context7 MCP (`resolve-library-id`, `query-docs`) for non-Laravel library/framework docs (React, Vite, MSW, etc.).
+- Prefer shadcn MCP for registry search/view/install. Do not add a second component system.
+- Storybook MCP is `http://localhost:6006/mcp` only while `npm run storybook` is running (disable `linket-storybook` in MCP Settings when Storybook is off).
+- Superpowers workflow skills live in `.cursor/skills` (`using-superpowers`, `brainstorming`, `systematic-debugging`, `test-driven-development`, `writing-plans`, `verification-before-completion`). Use them before implementing features or fixing bugs.
+- Run PHP/Artisan through DDEV (`ddev artisan`, `ddev exec`). Host `php` is a Windows shim.
+
+## Product
+
+- The bio page is the store. Plans are Free (10% commission) and Pro (5%) only.
+- Visible copy uses `<Trans message="..." />` with a static `message` string.
+- Style with semantic tokens (`text-muted-foreground`, `bg-card`), never raw colors.
+
+## Commands
+
+- Tests: `ddev artisan test --compact` with a file or `--filter`
+- Frontend: `npm run test`, `npm run lint`, `npm run extract`
+- Activate the matching project skill: Superpowers (brainstorm/TDD/debug), `laravel-best-practices`, `core-ui-design-system`, `shadcn`, `tailwindcss-development`, Fortify/Horizon/Pulse/Scout/Socialite/Echo/Livewire, `impeccable`, `migrate-radix-to-base`, `context7-mcp`
+- UI work goes through `/impeccable` (`init`, `document`, `polish`, `audit`, `live`, `hooks`). PRODUCT.md is product truth; DESIGN.md is the visual system. The Cursor pre-edit hook blocks slop before it lands.

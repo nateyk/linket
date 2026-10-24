@@ -1,0 +1,30 @@
+---
+description: PHP and Laravel conventions for Linket
+globs: "**/*.php"
+alwaysApply: false
+---
+
+# Backend
+
+- PHP 8.4 / Laravel 12. Prefer facades and helpers (`request()`, `auth()`) over constructor DI unless the surrounding file already injects.
+- Reference classes with `User::class`, never `'App\\Models\\User'`.
+- Explicit parameter and return types. Constructor property promotion. `casts(): array` on models.
+- Create files with `ddev artisan make:... --no-interaction`. Do not add dependencies without approval.
+- Tests are PHPUnit feature tests (`ddev artisan make:test --phpunit`). Do not add Pest tests. Run `ddev artisan test --compact` on the changed file.
+- Before migrations or models, inspect schema with Boost `database-schema`. Before Laravel API changes, use `search-docs`.
+
+```php
+// ❌ BAD
+public function store()
+{
+    $user = User::where('email', request('email'))->first();
+}
+
+// ✅ GOOD
+public function store(): RedirectResponse
+{
+    $user = User::query()->where('email', request('email'))->first();
+
+    return redirect()->route('dashboard');
+}
+```
