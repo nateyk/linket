@@ -1,4 +1,8 @@
 import {FilterSelectControl} from '@common/datatable/filters/backend-filter';
+import {
+  isMessageDescriptor,
+  renderFilterLabel,
+} from '@common/datatable/filters/filter-trans';
 import {FilterPanelProps} from '@common/datatable/filters/panels/filter-panel-props';
 import {Avatar} from '@ui/avatar/avatar';
 import {InputSize} from '@ui/forms/input-field/input-size';
@@ -52,19 +56,17 @@ export function SelectFilterValueField({
                 size="sm"
                 src={option.image}
                 label={
-                  typeof option.label === 'object'
-                    ? option.label.message
-                    : option.label
+                  typeof option.label === 'string'
+                    ? option.label
+                    : isMessageDescriptor(option.label)
+                      ? option.label.message
+                      : undefined
                 }
               />
             ) : null
           }
         >
-          {typeof option.label === 'string' ? (
-            option.label
-          ) : (
-            <Trans {...option.label} />
-          )}
+          {renderFilterLabel(option.label)}
         </Item>
       ))}
     </FormSelect>

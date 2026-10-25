@@ -33,7 +33,7 @@ export function MobileBottomNavbar() {
         <UnstyledCustomMenuItem
           key={item.id}
           item={item}
-          defaultIcons={dashboardSidebarIcons}
+          defaultIcons={dashboardSidebarIcons as any}
           // Mirror the sidebar: only the dashboard root matches exactly, so a
           // nested route (/dashboard/stores/3006) marks one section current
           // instead of also claiming the dashboard home link.

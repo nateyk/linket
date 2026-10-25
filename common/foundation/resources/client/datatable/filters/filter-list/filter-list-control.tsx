@@ -13,6 +13,7 @@ import {Fragment, Key, ReactNode} from 'react';
 import {FilterItemFormValue} from '../add-filter-dialog';
 import {
   BackendFilter,
+  ControlledBackendFilter,
   CustomFilterControl,
   DatePickerFilterControl,
   FilterBooleanToggleControl,
@@ -26,6 +27,7 @@ import {
   FilterTextInputControl,
 } from '../backend-filter';
 import {FilterOperatorNames} from '../filter-operator-names';
+import {isMessageDescriptor, renderFilterLabel} from '../filter-trans';
 import {DateRangeFilterPanel} from '../panels/date-range-filter-panel';
 import {InputFilterPanel} from '../panels/input-filter-panel';
 import {NormalizedModelFilterPanel} from '../panels/normalized-model-filter-panel';
@@ -33,8 +35,11 @@ import {SelectFilterPanel} from '../panels/select-filter-panel';
 import {FilterListItemDialogTrigger} from './filter-list-item-dialog-trigger';
 import {FilterListTriggerButton} from './filter-list-trigger-button';
 
-export interface FilterListControlProps<T = unknown, E = FilterControl> {
-  filter: BackendFilter<E>;
+export interface FilterListControlProps<
+  T = unknown,
+  E extends FilterControl = FilterControl,
+> {
+  filter: ControlledBackendFilter<E>;
   onValueChange: (value: FilterItemFormValue<T>) => void;
   value: T;
   operator?: FilterOperator;
@@ -55,7 +60,8 @@ export function FilterListControl(props: FilterListControlProps<any, any>) {
     case FilterControlType.SelectModel:
       return <SelectModelControl {...props} />;
     case FilterControlType.Custom:
-      const Control = (props.filter.control as CustomFilterControl).listItem;
+      const Control = (props.filter.control as CustomFilterControl)
+        .listItem as any;
       return <Control {...props} />;
     default:
       return null;
@@ -119,15 +125,7 @@ function SelectControl(
   return (
     <FilterListItemDialogTrigger
       {...props}
-      label={
-        option ? (
-          typeof option.label === 'string' ? (
-            option.label
-          ) : (
-            <Trans {...option.label} />
-          )
-        ) : null
-      }
+      label={option ? renderFilterLabel(option.label) : null}
       panel={<SelectFilterPanel filter={filter} />}
     />
   );
@@ -173,7 +171,12 @@ function MultipleValues(
           if (i !== 0) {
             name += ', ';
           }
-          name += typeof o!.label === 'string' ? o!.label : trans(o!.label);
+          name +=
+            typeof o!.label === 'string'
+              ? o!.label
+              : isMessageDescriptor(o!.label)
+                ? trans(o!.label)
+                : '';
           return name;
         })}
     </Fragment>

@@ -93,7 +93,7 @@ export function SetAttributesPanel({
           onUpdate={value =>
             update(index, {
               ...form.getValues(`${name as 'attributes'}.${index}`),
-              ...value,
+              ...(value as any),
             })
           }
           onRemove={() => remove(index)}
@@ -184,7 +184,9 @@ function AttributeSelectorField({
   const selectedAttribute = useWatch<SetAttributeNodeData, typeof path>({
     name: path,
   });
-  const itemConfig = getItem(selectedAttribute);
+  const itemConfig = selectedAttribute
+    ? getItem(selectedAttribute)
+    : undefined;
 
   const {input} = getInputFieldClassNames({
     inputDisplay: 'flex items-center justify-between',

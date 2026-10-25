@@ -30,13 +30,14 @@ type TabName = keyof typeof TabMap;
 interface BackgroundSelectorProps {
   className?: string;
   tabClassName?: string;
-  value: BackgroundSelectorConfig | undefined;
+  value: BackgroundSelectorConfig | null | undefined;
   onChange: (newValue: BackgroundSelectorConfig | null) => void;
   centerTabs?: boolean;
   underTabs?: ReactNode;
   isInsideDialog?: boolean;
   positionSelector?: 'simple' | 'advanced';
-  uploadType: keyof typeof UploadType;
+  uploadType?: keyof typeof UploadType;
+  diskPrefix?: string;
 }
 export function BackgroundSelector({
   className,
@@ -45,7 +46,8 @@ export function BackgroundSelector({
   tabClassName,
   centerTabs,
   underTabs,
-  uploadType,
+  uploadType = 'linkImages',
+  diskPrefix: _diskPrefix,
 }: BackgroundSelectorProps) {
   const activeType: TabName = value?.activeType ?? 'color';
 
@@ -57,11 +59,11 @@ export function BackgroundSelector({
         activeType={activeType}
         onSelected={nextValue => onChange?.(nextValue)}
         className={cn(centerTabs && 'justify-center')}
-        value={value}
+        value={value ?? undefined}
       />
       {underTabs}
       <Tab
-        value={value}
+        value={value ?? undefined}
         onChange={onChange}
         uploadType={uploadType}
         className={tabClassName}

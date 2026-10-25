@@ -42,7 +42,8 @@ export function CampaignReportCharts({
         onCountrySelected={setCountry}
         country={country}
         isLoading={isLoading}
-        data={country ? data?.cities : data?.countries}
+        datasetLabel="Campaigns"
+        data={(country ? data?.cities : data?.countries) as any}
       />
       <PolarAreaChart
         colSpan="col-span-5"

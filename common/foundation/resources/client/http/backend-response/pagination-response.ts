@@ -83,6 +83,28 @@ export function getPreviousPageParam(
   return response.meta.current_page - 1;
 }
 
+/** Next-page resolver for `{pagination: ...}` (BeDesk) responses. */
+export function getNextPageParamFromBackend(
+  response: PaginatedBackendResponse<unknown>,
+): number | string | null {
+  const pagination = response.pagination as Record<string, unknown>;
+
+  if ('next_cursor' in pagination) {
+    return pagination.next_cursor as string | null;
+  }
+
+  if (
+    typeof pagination.current_page === 'number' &&
+    typeof pagination.last_page === 'number'
+  ) {
+    return pagination.current_page < pagination.last_page
+      ? pagination.current_page + 1
+      : null;
+  }
+
+  return null;
+}
+
 export function getNextPageParam(
   response: PaginatedResource,
 ): number | string | null {

@@ -1,8 +1,6 @@
-import {
-  listNormalizedModels,
-  ListNormalizedModelsResult,
-} from '@app/gen/normalized-models';
+import {listNormalizedModels} from '@app/gen/normalized-models';
 import {ListNormalizedModels200} from '@app/gen/schemas/list-normalized-models200';
+import {ListNormalizedModels200DataItem} from '@app/gen/schemas/list-normalized-models200-data-item';
 import {
   keepPreviousData,
   useQuery,
@@ -18,14 +16,19 @@ interface Params {
   modelIds?: string;
 }
 
+/** Linket returns `{data}`, BeDesk-era UI reads `{results}`; expose both. */
+export type NormalizedModelsResult = ListNormalizedModels200 & {
+  results: ListNormalizedModels200DataItem[];
+};
+
 export function useNormalizedModels(
   endpoint: string,
   queryParams?: SecondParam<typeof listNormalizedModels>,
   queryOptions?: Omit<
     UseQueryOptions<
-      ListNormalizedModelsResult,
+      NormalizedModelsResult,
       unknown,
-      ListNormalizedModelsResult,
+      NormalizedModelsResult,
       any[]
     >,
     'queryKey' | 'queryFn'
@@ -39,7 +42,10 @@ export function useNormalizedModels(
         url: endpoint,
         method: 'GET',
         params,
-      }).then(response => response.data),
+      }).then(response => ({
+        ...response.data,
+        results: response.data.data,
+      })),
     placeholderData: keepPreviousData,
     ...queryOptions,
   });
@@ -57,7 +63,10 @@ export function prefetchNormalizedModels(
         url: endpoint,
         method: 'GET',
         params,
-      }).then(response => response.data),
+      }).then(response => ({
+        ...response.data,
+        results: response.data.data,
+      })),
   });
 }
 

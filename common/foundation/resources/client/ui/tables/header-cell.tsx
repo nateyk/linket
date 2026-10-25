@@ -39,7 +39,7 @@ export function HeaderCell({index}: HeaderCellProps) {
   const toggleSorting = () => {
     if (!allowSorting) return;
 
-    let newSort: SortDescriptor | null;
+    let newSort: Partial<SortDescriptor>;
 
     // if this col was sorted desc, go to asc
     if (sortActive && orderDir === 'desc') {
@@ -47,7 +47,7 @@ export function HeaderCell({index}: HeaderCellProps) {
 
       // if this col was sorted asc, clear sort
     } else if (sortActive && orderDir === 'asc') {
-      newSort = null;
+      newSort = {};
 
       // if sort was on another col, or no sort was applied yet, start from desc
     } else {

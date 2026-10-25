@@ -142,7 +142,7 @@ async function markdownToFormattedHtmlItem(
   };
 }
 
-let md: MarkdownIt;
+let md: ReturnType<typeof MarkdownIt>;
 async function getMdRenderer() {
   if (!md) {
     md = (await import('markdown-it')).default();

@@ -135,7 +135,7 @@ function DialogContent({settingsLink}: DialogContentProps) {
   }
   return (
     <div>
-      <NotificationList notifications={data.pagination.data} />
+      <NotificationList notifications={data.pagination.data as any} />
     </div>
   );
 }

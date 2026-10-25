@@ -7,8 +7,8 @@ interface Props {
   data: ConversationListItemType[] | undefined;
   selectedTickets?: number[];
   onSelectionChange?: (conversationIds: number[]) => void;
-  sortDescriptor?: SortDescriptor;
-  onSortChange?: (sortDescriptor: SortDescriptor) => void;
+  sortDescriptor?: Partial<SortDescriptor>;
+  onSortChange?: (sortDescriptor: Partial<SortDescriptor>) => void;
   className?: string;
   onRowAction: (item: ConversationListItemType) => void;
   activeColumns: string[];

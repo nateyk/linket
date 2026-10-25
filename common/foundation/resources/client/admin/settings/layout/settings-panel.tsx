@@ -4,11 +4,14 @@ import {Children, ReactElement, ReactNode} from 'react';
 interface SettingsSectionHeaderProps {
   children: ReactNode;
   size?: 'sm' | 'md' | 'lg';
+  /** Tailwind margin classes, e.g. "mb-4". */
+  margin?: string;
   className?: string;
 }
 export function SettingsSectionHeader({
   children,
   size = 'md',
+  margin,
   className,
 }: SettingsSectionHeaderProps) {
   const [title, description] = Children.toArray(children);
@@ -21,7 +24,7 @@ export function SettingsSectionHeader({
   }
 
   return (
-    <div className={cn('mb-6', className)}>
+    <div className={cn('mb-6', margin, className)}>
       <div className={cn(textStyle, description && 'mb-0.5')}>{title}</div>
       {description && (
         <div className="text-sm text-muted-foreground">{description}</div>

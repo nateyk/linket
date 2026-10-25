@@ -49,25 +49,19 @@ export function MoreOptionsButton({data: {user, conversation}}: Props) {
       >
         <TransferConversationDialog conversationIds={[conversation.id]} />
       </DialogTrigger>
-      <DialogTrigger
-        type="modal"
-        isOpen={suspendUserIsOpen}
+      <BanUsersDialog
+        userIds={[user.id]}
+        open={suspendUserIsOpen}
         onOpenChange={setSuspendUserIsOpen}
-        onClose={async isSuspended => {
-          if (isSuspended) {
-            await queryClient.invalidateQueries({
-              queryKey: ['conversations', `${conversation.id}`],
-            });
-          }
+        onSuccess={async () => {
+          await queryClient.invalidateQueries({
+            queryKey: ['conversations', `${conversation.id}`],
+          });
         }}
-      >
-        <BanUsersDialog
-          userIds={[user.id]}
-          description={
-            <Trans message="Suspended users will not be able to start conversations, appear in the traffic list or receive campaigns." />
-          }
-        />
-      </DialogTrigger>
+        description={
+          <Trans message="Suspended users will not be able to start conversations, appear in the traffic list or receive campaigns." />
+        }
+      />
       <MenuTrigger>
         <IconButton size="xs" iconSize="sm" className="ml-auto">
           <MoreVertIcon />

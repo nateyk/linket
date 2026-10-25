@@ -1,9 +1,9 @@
 import {Button} from '@ui/buttons/button';
-import {Trans} from '@ui/i18n/trans';
 import {KeyboardArrowDownIcon} from '@ui/icons/material/KeyboardArrowDown';
 import clsx from 'clsx';
 import {ComponentPropsWithRef, forwardRef, ReactNode} from 'react';
 import {BackendFilter, FilterControlType} from '../backend-filter';
+import {FilterTrans} from '../filter-trans';
 
 interface TriggerButtonProps
   extends Omit<ComponentPropsWithRef<'button'>, 'color'> {
@@ -43,7 +43,7 @@ export const InactiveFilterButton = forwardRef<
       endIcon={<KeyboardArrowDownIcon />}
       {...domProps}
     >
-      <Trans {...filter.label} />
+      <FilterTrans label={filter.label} />
     </Button>
   );
 });
@@ -52,7 +52,7 @@ export const ActiveFilterButton = forwardRef<
   HTMLButtonElement,
   InactiveFilterButtonProps
 >(({filter, children, ...domProps}, ref) => {
-  const isBoolean = filter.control.type === FilterControlType.BooleanToggle;
+  const isBoolean = filter.control?.type === FilterControlType.BooleanToggle;
   return (
     <Button
       variant="outline"
@@ -69,7 +69,7 @@ export const ActiveFilterButton = forwardRef<
           !isBoolean && 'mr-8 border-r border-r-primary-light pr-8',
         )}
       >
-        <Trans {...filter.label} />
+        <FilterTrans label={filter.label} />
       </span>
       {children}
     </Button>

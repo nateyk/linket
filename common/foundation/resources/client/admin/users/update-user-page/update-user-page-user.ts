@@ -1,5 +1,16 @@
 import {User} from '@ui/types/user';
 
+/** Minimal shape shared by admin users, agents and customer profiles. */
+export interface UserPageHeaderData {
+  id: number;
+  name: string | null;
+  email: string;
+  image?: string | null;
+  banned_at?: string | null;
+  ban_reason?: string | null;
+  roles?: {id: number; name: string}[];
+}
+
 export interface UpdateUserPageUser {
   id: User['id'];
   name: User['name'];

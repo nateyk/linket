@@ -423,7 +423,7 @@ export function MyPortalLibrary({mode}: {mode: 'auth' | 'guest'}) {
                       order={order}
                       busy={busy}
                       variant="files"
-                      onDownload={download}
+                      onDownload={download as any}
                     />
                   ))}
                 </div>
@@ -448,7 +448,7 @@ export function MyPortalLibrary({mode}: {mode: 'auth' | 'guest'}) {
                       order={order}
                       busy={busy}
                       variant="audio"
-                      onDownload={download}
+                      onDownload={download as any}
                     />
                   ))}
                 </div>
@@ -478,7 +478,7 @@ export function MyPortalLibrary({mode}: {mode: 'auth' | 'guest'}) {
               <PortalOrdersTable
                 orders={orders}
                 busy={busy}
-                onResend={resend}
+                onResend={resend as any}
                 onReview={order => setReviewOrderId(order.id)}
               />
             </section>

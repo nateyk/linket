@@ -4,6 +4,7 @@ import {Tooltip} from '@shadcn/tooltip/tooltip';
 import {Trans} from '@ui/i18n/trans';
 import {getImageSize} from '@ui/utils/files/get-image-size';
 import {ImageUpIcon} from 'lucide-react';
+import {ComponentProps} from 'react';
 import {useActiveUpload} from '../../uploads/uploader/use-active-upload';
 import {useCurrentTextEditor} from '../tiptap-editor-context';
 
@@ -11,9 +12,15 @@ export const TwoMB = 2 * 1024 * 1024;
 
 type Props = {
   uploadType: keyof typeof UploadType;
+  size?: ComponentProps<typeof Button>['size'];
+  iconSize?: 'sm' | 'md' | 'lg';
 };
 
-export function ImageButton({uploadType}: Props) {
+export function ImageButton({
+  uploadType,
+  size = 'icon-sm',
+  iconSize = 'sm',
+}: Props) {
   const editor = useCurrentTextEditor();
   const {selectAndUploadFile} = useActiveUpload();
 
@@ -41,13 +48,17 @@ export function ImageButton({uploadType}: Props) {
           <Button
             variant="ghost"
             color="default"
-            size="icon-sm"
+            size={size}
             disabled={!editor}
           />
         }
         onClick={handleUpload}
       >
-        <ImageUpIcon />
+        <ImageUpIcon
+          className={
+            iconSize === 'lg' ? 'size-5' : iconSize === 'md' ? 'size-4.5' : 'size-4'
+          }
+        />
       </Tooltip.Trigger>
       <Tooltip.Content>
         <Trans message="Insert image" />

@@ -3,7 +3,7 @@ import {Fragment, useState} from 'react';
 import {TextField} from '@ui/forms/input-field/text-field/text-field';
 import {useTrans} from '@ui/i18n/use-trans';
 import {message} from '@ui/i18n/message';
-import {ImageSelector} from '@common/uploads/components/image-selector';
+import {ImageSelectorCompat} from '@common/uploads/components/image-selector';
 import {CampaignImageContentItem} from '@livechat/dashboard/campaigns/campaign-editor/content-items/campaign-content-item';
 import {FileUploadProvider} from '@common/uploads/uploader/file-upload-provider';
 import {Select} from '@ui/forms/select/select';
@@ -24,7 +24,7 @@ export function CampaignImageDialog({defaultValue}: Props) {
       <Trans message="Image" />
       <Fragment>
         <FileUploadProvider>
-          <ImageSelector
+          <ImageSelectorCompat
             diskPrefix="campaigns"
             onChange={url => setValue(prev => ({...prev, url}))}
             value={value.url}

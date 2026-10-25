@@ -6,6 +6,7 @@ export interface CustomerProfile {
   id: number;
   name: string;
   email: string;
+  email_verified_at: string;
   image: string | null;
   created_at: string;
   updated_at: string;
@@ -13,6 +14,7 @@ export interface CustomerProfile {
   was_active_recently: boolean;
   banned_at: string | null;
   ban_reason: string | null;
+  roles?: {id: number; name: string}[];
   timezone: string;
   country: string | null;
   city: string | null;

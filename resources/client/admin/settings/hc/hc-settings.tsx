@@ -141,7 +141,7 @@ export function Component() {
           newTicket: {appearance: s.hc?.newTicket?.appearance ?? {}},
           showLivechat: s.hc?.showLivechat ?? false,
         },
-      } as AdminSettings['client'],
+      } as unknown as AdminSettings['client'],
     },
   });
 
@@ -232,12 +232,9 @@ function ArticlePageSettings() {
 }
 
 function NewTicketPageSettings() {
-  const selectedAttributeIds = useWatch<
-    AdminSettings,
-    'client.hc.newTicket.appearance.attributeIds'
-  >({
-    name: 'client.hc.newTicket.appearance.attributeIds' as any,
-  });
+  const selectedAttributeIds = useWatch({
+    name: 'client.hc.newTicket.appearance.attributeIds',
+  } as any) as number[];
   const {setValue} = useFormContext<AdminSettings>();
   return (
     <Fragment>

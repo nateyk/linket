@@ -58,7 +58,7 @@ export function FeedAttachments({
               className="transition:button flex h-20 w-25 cursor-pointer items-center justify-center overflow-hidden rounded-panel border p-6 hover:bg-hover"
               onClick={() => onSelected?.(image)}
             >
-              <FileThumbnail file={image} className="rounded-panel" />
+              <FileThumbnail file={image as any} className="rounded-panel" />
             </div>
           ))}
         </div>

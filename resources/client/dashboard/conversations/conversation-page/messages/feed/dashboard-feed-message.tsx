@@ -212,7 +212,7 @@ function AttachmentPreviewDialog({
       className="flex flex-col"
     >
       <FilePreviewContainer
-        entries={attachments}
+        entries={attachments as any}
         defaultActiveIndex={activeIndex}
         onClose={() => close()}
         headerActionsLeft={

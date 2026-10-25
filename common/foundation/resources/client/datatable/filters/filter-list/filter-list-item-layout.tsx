@@ -4,10 +4,11 @@ import {Trans} from '@ui/i18n/trans';
 import {CloseIcon} from '@ui/icons/material/Close';
 import {KeyboardArrowDownIcon} from '@ui/icons/material/KeyboardArrowDown';
 import {ReactNode} from 'react';
+import {FilterTrans, TranslatableLabel} from '../filter-trans';
 
 type Props = {
   valueLabel: ReactNode;
-  label: ReactNode;
+  label: TranslatableLabel;
   popoverContent: ReactNode;
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
@@ -41,7 +42,7 @@ export function FilterListItemLayout({
       )}
       <Popover.Root open={isOpen} onOpenChange={setIsOpen}>
         <Popover.Trigger className="flex h-full items-center pr-2 pl-3 transition-colors hover:bg-accent">
-          {label}
+          <FilterTrans label={label} />
           <span className="mx-2 h-[calc(100%-0.8rem)] w-px bg-border" />
           <span className="mr-1">{valueLabel}</span>
           <KeyboardArrowDownIcon />

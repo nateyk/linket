@@ -18,6 +18,7 @@ import {DialogTrigger} from '@ui/overlays/dialog/dialog-trigger';
 import {Tooltip} from '@ui/tooltip/tooltip';
 import {User} from '@ui/types/user';
 import clsx from 'clsx';
+import {useState} from 'react';
 import {Link} from 'react-router';
 
 export const userDatatableColumns: ColumnConfig<User>[] = [
@@ -119,14 +120,7 @@ export const userDatatableColumns: ColumnConfig<User>[] = [
         {user.banned_at ? (
           <UnbanButton user={user} />
         ) : (
-          <DialogTrigger type="modal">
-            <Tooltip label={<Trans message="Suspend user" />}>
-              <IconButton size="md">
-                <PersonOffIcon />
-              </IconButton>
-            </Tooltip>
-            <BanUsersDialog userIds={[user.id]} />
-          </DialogTrigger>
+          <BanUserButton user={user} />
         )}
         <ImpersonateButton user={user} />
       </div>
@@ -162,6 +156,24 @@ function UnbanButton({user}: UnbanButtonProps) {
         confirm={<Trans message="Unsuspend" />}
       />
     </DialogTrigger>
+  );
+}
+
+function BanUserButton({user}: {user: User}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Tooltip label={<Trans message="Suspend user" />}>
+        <IconButton size="md" onClick={() => setOpen(true)}>
+          <PersonOffIcon />
+        </IconButton>
+      </Tooltip>
+      <BanUsersDialog
+        userIds={[user.id]}
+        open={open}
+        onOpenChange={setOpen}
+      />
+    </>
   );
 }
 

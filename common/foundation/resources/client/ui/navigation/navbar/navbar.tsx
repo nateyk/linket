@@ -15,18 +15,45 @@ import {useSettings} from '@ui/settings/use-settings';
 import {cn} from '@ui/utils/cn';
 import {useIsMobileMediaQuery} from '@ui/utils/hooks/is-mobile-media-query';
 import {MenuIcon} from 'lucide-react';
-import {ComponentProps} from 'react';
+import {ComponentProps, ReactNode} from 'react';
 import {Link} from 'react-router';
 
-function Root({children, className, ...props}: ComponentProps<'div'>) {
+export interface NavbarProps extends ComponentProps<'div'> {
+  color?: string;
+  darkModeColor?: string;
+  menuPosition?: string;
+  logoColor?: string;
+  wrapInContainer?: boolean;
+  size?: 'sm' | 'md' | 'lg' | string;
+  border?: string;
+  toggleButton?: ReactNode;
+}
+
+function Root({
+  children,
+  className,
+  color,
+  darkModeColor: _darkModeColor,
+  menuPosition: _menuPosition,
+  logoColor: _logoColor,
+  wrapInContainer: _wrapInContainer,
+  size,
+  border,
+  toggleButton,
+  ...props
+}: NavbarProps) {
   return (
     <div
       className={cn(
         'flex h-16 items-center gap-2 bg-background px-3 py-2 md:gap-5 md:px-5 dark:bg-transparent',
+        color,
+        size === 'sm' && 'h-14',
+        border,
         className,
       )}
       {...props}
     >
+      {toggleButton}
       {children}
     </div>
   );

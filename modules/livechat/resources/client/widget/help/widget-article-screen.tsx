@@ -39,7 +39,7 @@ export function WidgetArticleScreen() {
   const navigate = useNavigate();
   const [articleSize, setArticleSize] = useLocalStorage<
     'maximized' | 'minimized'
-  >('articleSize');
+  >('articleSize', 'minimized');
 
   useEffect(() => {
     widgetStore().setWidgetState(
@@ -125,7 +125,11 @@ function Article({article}: ArticleProps) {
           />
         </div>
       </article>
-      <ArticleAttachments attachments={article.attachments} key="attachments" />
+      <ArticleAttachments
+        attachments={article.attachments}
+        articleId={article.id}
+        key="attachments"
+      />
       <div className="mt-20 flex justify-center border-t pt-20" key="feedback">
         <ArticlePageFeedback articleId={article.id} />
       </div>

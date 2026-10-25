@@ -1,6 +1,7 @@
 import {View} from '@app/dashboard/views/view';
 import {
   BackendFilter,
+  ControlledBackendFilter,
   DatePickerFilterControl,
   FilterChipFieldControl,
   FilterControl,
@@ -11,6 +12,7 @@ import {
   FilterTextInputControl,
 } from '@common/datatable/filters/backend-filter';
 import {FilterOperatorNames} from '@common/datatable/filters/filter-operator-names';
+import {FilterTrans} from '@common/datatable/filters/filter-trans';
 import {ChipFieldFilterValueField} from '@common/datatable/filters/panels/chip-field-filter-panel';
 import {DateRangeFilterValueField} from '@common/datatable/filters/panels/date-range-filter-panel';
 import {InputFilterValueField} from '@common/datatable/filters/panels/input-filter-panel';
@@ -35,13 +37,13 @@ export function ConditionsEditor({filters}: ConditionsEditorProps) {
   });
 
   const getFormValueFromFilter = (filter: BackendFilter) => {
+    const control = filter.control;
     return {
       key: filter.key,
-      operator: filter.defaultOperator,
-      value:
-        filter.control.type === FilterControlType.Select
-          ? filter.control.options[0].value
-          : '',
+      operator: filter.defaultOperator ?? FilterOperator.eq,
+      value: (control?.type === FilterControlType.Select
+        ? control.options[0]?.value
+        : '') as string | number,
     };
   };
 
@@ -157,7 +159,7 @@ function ConditionRow({
       >
         {filters.map(filter => (
           <Item key={filter.key} value={filter.key}>
-            <Trans {...filter.label} />
+            <FilterTrans label={filter.label} />
           </Item>
         ))}
       </Select>
@@ -186,16 +188,19 @@ function ConditionRow({
   );
 }
 
-interface ValueFieldProps<T = FilterControl> {
+interface ValueFieldProps<T extends FilterControl = FilterControl> {
   filter: BackendFilter<T>;
   index: number;
 }
 function ValueField({filter, index}: ValueFieldProps) {
-  switch (filter.control.type) {
+  const control = filter.control;
+  if (!control) return null;
+
+  switch (control.type) {
     case FilterControlType.DateRangePicker:
       return (
         <DateRangeFilterValueField
-          filter={filter as BackendFilter<DatePickerFilterControl>}
+          filter={filter as ControlledBackendFilter<DatePickerFilterControl>}
           size="md"
           name={`conditions.${index}.value`}
         />
@@ -218,7 +223,7 @@ function ValueField({filter, index}: ValueFieldProps) {
     case FilterControlType.Select:
       return (
         <SelectFilterValueField
-          filter={filter as BackendFilter<FilterSelectControl>}
+          filter={filter as ControlledBackendFilter<FilterSelectControl>}
           size="md"
           name={`conditions.${index}.value`}
         />
@@ -226,7 +231,7 @@ function ValueField({filter, index}: ValueFieldProps) {
     case FilterControlType.ChipField:
       return (
         <ChipFieldFilterValueField
-          filter={filter as BackendFilter<FilterChipFieldControl>}
+          filter={filter as ControlledBackendFilter<FilterChipFieldControl>}
           size="md"
           name={`conditions.${index}.value`}
         />
@@ -234,7 +239,7 @@ function ValueField({filter, index}: ValueFieldProps) {
     case FilterControlType.Input:
       return (
         <InputFilterValueField
-          filter={filter as BackendFilter<FilterTextInputControl>}
+          filter={filter as ControlledBackendFilter<FilterTextInputControl>}
           size="md"
           name={`conditions.${index}.value`}
         />
@@ -242,7 +247,7 @@ function ValueField({filter, index}: ValueFieldProps) {
     case FilterControlType.SelectModel:
       return (
         <NormalizedModelFilterValueField
-          filter={filter as BackendFilter<FilterSelectModelControl>}
+          filter={filter as ControlledBackendFilter<FilterSelectModelControl>}
           size="md"
           name={`conditions.${index}.value`}
         />

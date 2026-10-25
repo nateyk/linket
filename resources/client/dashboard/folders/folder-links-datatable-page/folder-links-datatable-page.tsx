@@ -14,7 +14,7 @@ import {PermissionAwareButton} from '@app/dashboard/upgrade/permission-aware-but
 import {useDatatableRouteType} from '@app/dashboard/use-datatable-route-type';
 import {Link} from '@app/gen/schemas/link';
 import {useShowGlobalLoadingBar} from '@common/core/use-show-global-loading-bar';
-import {AddFilterPopover} from '@common/datatable/filters/add-filter-popover';
+import {AddFilterButton} from '@common/datatable/filters/add-filter-button';
 import {FilterList} from '@common/datatable/filters/filter-list/filter-list';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {DashboardLayoutContext} from '@common/ui/dashboard/dashboard-layout-context';
@@ -98,7 +98,7 @@ export function Component() {
       ) : null}
 
       <DashboardLayout.SectionContentHeader>
-        <AddFilterPopover filters={filters} color={null} />
+        <AddFilterButton filters={filters} color={null} />
         <TableSortButton
           className="mr-auto"
           sortDescriptor={queryState.sort}

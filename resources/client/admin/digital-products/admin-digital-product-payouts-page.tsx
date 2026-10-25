@@ -1,6 +1,6 @@
 import {StaticPageTitle} from '@common/seo/static-page-title';
 import {useShowGlobalLoadingBar} from '@common/core/use-show-global-loading-bar';
-import {AddFilterPopover} from '@common/datatable/filters/add-filter-popover';
+import {AddFilterButton} from '@common/datatable/filters/add-filter-button';
 import {FilterList} from '@common/datatable/filters/filter-list/filter-list';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {Button} from '@shadcn/button/button';
@@ -67,7 +67,7 @@ export function Component() {
       <DashboardLayout.SectionContent>
         <DashboardLayout.SectionContentHeader>
           <TableSearchInput />
-          <AddFilterPopover
+          <AddFilterButton
             filters={AdminDigitalProductPayoutsDatatableFilters}
             className="mr-auto"
           />

@@ -14,6 +14,10 @@ type Props = {
   diskPrefix?: string;
   uploadType?: keyof typeof UploadType;
   required?: boolean;
+  variant?: 'input' | 'avatar' | 'square';
+  middleware?: string;
+  uploadMetadata?: Record<string, string>;
+  defaultValue?: string;
 };
 
 /**
@@ -27,9 +31,15 @@ export function FormImageSelector({
   descriptionPosition = 'bottom',
   uploadType = 'brandingImages',
   required,
+  variant = 'input',
+  diskPrefix,
+  middleware,
+  uploadMetadata,
+  defaultValue,
+  showRemoveButton: _showRemoveButton,
 }: Props) {
   const {
-    field: {onChange, value = null},
+    field: {onChange, value = defaultValue ?? null},
     fieldState: {error},
   } = useController({name});
 
@@ -44,6 +54,11 @@ export function FormImageSelector({
         value={value}
         onChange={onChange}
         required={required}
+        uploadMetadata={{
+          ...uploadMetadata,
+          ...(diskPrefix ? {diskPrefix} : {}),
+          ...(middleware ? {middleware} : {}),
+        }}
       />
       {description && descriptionPosition === 'bottom' ? (
         <Field.Description>{description}</Field.Description>

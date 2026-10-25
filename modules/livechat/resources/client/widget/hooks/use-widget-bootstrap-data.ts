@@ -10,6 +10,12 @@ export interface WidgetBootstrapData {
   activeConversationData?: FullWidgetConversationResponse;
   user: WidgetCustomer;
   scopedHcCategoryId?: number;
+  knowledgeScopeTag?: string;
+  aiAgent?: {
+    id?: number | string;
+    name?: string;
+    image?: string;
+  };
   newChatGreeting?: {
     parts: ConversationContentItem[];
     flow_id?: number;

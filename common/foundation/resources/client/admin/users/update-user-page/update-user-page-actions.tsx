@@ -1,5 +1,5 @@
-import {User} from '@app/gen/schemas/user';
 import {BanUsersDialog} from '@common/admin/users/ban-users-dialog';
+import type {UserPageHeaderData} from '@common/admin/users/update-user-page/update-user-page-user';
 import {
   deleteUsersOptions,
   unbanUsersOptions,
@@ -18,7 +18,7 @@ import {ChevronDownIcon} from 'lucide-react';
 import {Fragment, ReactNode, useState} from 'react';
 
 interface Props {
-  user: User;
+  user: UserPageHeaderData;
   children?: ReactNode;
 }
 
@@ -87,7 +87,7 @@ export function UpdateUserPageActions({user, children}: Props) {
 type DeleteUserAlertDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  user: User;
+  user: UserPageHeaderData;
 };
 
 export function DeleteUserAlertDialog({

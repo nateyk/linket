@@ -5,6 +5,7 @@ import {CrupdateButtonFields} from '@ai/ai-agent/flows/flow-editor/node-editor/f
 import {FormTipTapTextField} from '@ai/ai-agent/flows/flow-editor/node-editor/fields/tiptap-text-field/tiptap-text-field';
 import {useFlowEditorStore} from '@ai/ai-agent/flows/flow-editor/store/flow-editor-store-provider';
 import {MessageButton} from '@app/dashboard/conversations/conversation-page/messages/conversation-message';
+import {UploadType} from '@app/site-config';
 import {queryClient} from '@common/http/query-client';
 import {TwoMB} from '@common/text-editor/menubar/image-button';
 import {useRequiredParams} from '@common/ui/navigation/use-required-params';
@@ -105,6 +106,7 @@ function useUploadAttachment(restrictions: Restrictions = {}) {
       multiple: true,
     });
     uploadMultiple(files, {
+      uploadType: UploadType.aiAgentFlowAttachments,
       showToastOnRestrictionFail: true,
       restrictions,
       metadata: {
@@ -119,7 +121,7 @@ function useUploadAttachment(restrictions: Restrictions = {}) {
         queryClient.setQueriesData<{attachments: FlowAttachment[]}>(
           aiAgentQueries.flows.indexAttachments(flowId),
           prev => ({
-            attachments: [...(prev?.attachments ?? []), entry],
+            attachments: [...(prev?.attachments ?? []), entry as any],
           }),
         );
         setValue('attachmentIds', [...getValues('attachmentIds'), entry.id]);

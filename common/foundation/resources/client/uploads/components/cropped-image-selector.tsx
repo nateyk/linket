@@ -37,6 +37,8 @@ interface CroppedImageSelectorProps {
   fit?: 'cover' | 'contain';
   shape?: 'circle' | 'square' | 'cover';
   placeholderIcon?: React.ReactNode;
+  /** Show the helper text under the control. */
+  showHint?: boolean;
   /**
    * Raw CSS length for the crop frame corners, so the dialog previews the
    * radius the image will actually render with instead of a sharp rectangle.

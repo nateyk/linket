@@ -50,6 +50,7 @@ export interface BaseBackendSettings {
     sentry_public?: string;
   };
   themes?: {
+    default_id?: number;
     default_scheme?: 'dark' | 'light' | 'system';
     user_change: boolean;
   };

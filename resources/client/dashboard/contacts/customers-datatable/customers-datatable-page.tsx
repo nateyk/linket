@@ -29,6 +29,7 @@ import {StaticPageTitle} from '@common/seo/static-page-title';
 import {Table} from '@common/ui/tables/table';
 import {Button} from '@ui/buttons/button';
 import {Trans} from '@ui/i18n/trans';
+import {Dialog} from '@shadcn/dialog/dialog';
 import {DialogTrigger} from '@ui/overlays/dialog/dialog-trigger';
 import {Tab} from '@ui/tabs/tab';
 import {TabList} from '@ui/tabs/tab-list';
@@ -73,12 +74,11 @@ export function Component() {
   const actions = (
     <Fragment>
       <DataTableExportCsvButton endpoint="users/csv/export" />
-      <DialogTrigger type="modal">
-        <DataTableAddItemButton>
+      <CreateUserDialog>
+        <Dialog.Trigger render={<DataTableAddItemButton />}>
           <Trans message="Add new user" />
-        </DataTableAddItemButton>
-        <CreateUserDialog />
-      </DialogTrigger>
+        </Dialog.Trigger>
+      </CreateUserDialog>
     </Fragment>
   );
 
@@ -172,21 +172,28 @@ function SelectedActions({
   setSelectedIds,
   customers,
 }: SelectedActionsProps) {
+  const [suspendOpen, setSuspendOpen] = useState(false);
   const allSuspended = customers
     .filter(customer => selectedIds.includes(customer.id))
     .every(customer => customer.banned_at);
   const unsuspend = useUnbanUsers(selectedIds);
 
   const suspendButton = (
-    <DialogTrigger type="modal">
-      <Button variant="outline" color="danger">
+    <>
+      <Button
+        variant="outline"
+        color="danger"
+        onClick={() => setSuspendOpen(true)}
+      >
         <Trans message="Suspend" />
       </Button>
       <BanUsersDialog
         userIds={selectedIds}
+        open={suspendOpen}
+        onOpenChange={setSuspendOpen}
         onSuccess={() => setSelectedIds([])}
       />
-    </DialogTrigger>
+    </>
   );
   const unsuspendButton = (
     <Button

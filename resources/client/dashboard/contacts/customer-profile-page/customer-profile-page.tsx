@@ -16,7 +16,7 @@ import {useUpdateAccountDetails} from '@common/auth/ui/account-settings/basic-in
 import {StaticPageTitle} from '@common/seo/static-page-title';
 import {DashboardSidenav} from '@common/ui/dashboard-layout/dashboard-sidenav';
 import {useRequiredParams} from '@common/ui/navigation/use-required-params';
-import {ImageSelector} from '@common/uploads/components/image-selector';
+import {ImageSelectorCompat} from '@common/uploads/components/image-selector';
 import {FileUploadProvider} from '@common/uploads/uploader/file-upload-provider';
 import {useSuspenseQuery} from '@tanstack/react-query';
 import {Avatar} from '@ui/avatar/avatar';
@@ -185,7 +185,7 @@ function AvatarSelector({user}: AvatarSelectorProps) {
   const updateCustomer = useUpdateAccountDetails(user.id);
   return (
     <FileUploadProvider>
-      <ImageSelector
+      <ImageSelectorCompat
         value={value}
         uploadType={UploadType.avatars}
         variant="avatar"

@@ -11,7 +11,7 @@ import {
 } from '@common/admin/file-entry/file-entries-queries';
 import {DocsLink} from '@common/admin/settings/layout/settings-links';
 import {useShowGlobalLoadingBar} from '@common/core/use-show-global-loading-bar';
-import {AddFilterPopover} from '@common/datatable/filters/add-filter-popover';
+import {AddFilterButton} from '@common/datatable/filters/add-filter-button';
 import {FilterList} from '@common/datatable/filters/filter-list/filter-list';
 import {showHttpErrorToast} from '@common/http/errors/show-http-error-toast';
 import {StaticPageTitle} from '@common/seo/static-page-title';
@@ -83,7 +83,7 @@ export function Component() {
       <DashboardLayout.SectionContent>
         <DashboardLayout.SectionContentHeader>
           <TableSearchInput />
-          <AddFilterPopover
+          <AddFilterButton
             filters={FileEntriesDatatableFilters}
             className="mr-auto"
           />

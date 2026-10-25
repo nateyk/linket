@@ -21,6 +21,10 @@ export interface AdminServerSettings {
   chapa_secret_key?: string;
   chapa_webhook_secret?: string;
 
+  // AI / LiveChat addons
+  ai_agent_document_parser?: string;
+  widget_hmac_secret?: string;
+
   // social login
   envato_id?: string;
   envato_secret?: string;

@@ -6,7 +6,7 @@ import {useTrans} from '@ui/i18n/use-trans';
 import {SearchIcon} from '@ui/icons/material/Search';
 import {AnimatePresence} from 'framer-motion';
 import {ComponentPropsWithoutRef, ReactNode} from 'react';
-import {AddFilterPopover} from './filters/add-filter-popover';
+import {AddFilterButton} from './filters/add-filter-button';
 import {BackendFilter} from './filters/backend-filter';
 
 interface Props {
@@ -57,7 +57,7 @@ function DefaultDatatableHeader({
         }}
       />
       {filters && (
-        <AddFilterPopover filters={filters} disabled={filtersLoading} />
+        <AddFilterButton filters={filters} disabled={filtersLoading} />
       )}
       <div className="ml-auto w-0" />
       {actions}

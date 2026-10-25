@@ -16,11 +16,16 @@ import {
 } from '../http/backend-response/pagination-response';
 
 type DataTablePaginationFooterProps = {
-  data:
+  data?:
     | PaginatedResource<unknown>
     | PaginationResponse<unknown>
     | undefined
     | null;
+  /** @deprecated pass `data` directly; kept for BeDesk-era call sites. */
+  query?: {
+    data?: any;
+    isLoading?: boolean;
+  };
   isLoading?: boolean;
   onPerPageChange?: (perPage: number) => void;
   onPageChange?: (page: number) => void;
@@ -28,24 +33,29 @@ type DataTablePaginationFooterProps = {
   className?: string;
 };
 export function DataTablePaginationFooter({
-  data,
-  isLoading,
+  data: rawData,
+  query,
+  isLoading: rawIsLoading,
   onPerPageChange,
   onPageChange,
   hideIfOnlyOnePage,
   className,
 }: DataTablePaginationFooterProps) {
+  const data = rawData ?? query?.data;
+  const isLoading = rawIsLoading ?? query?.isLoading;
   const isMobile = useIsMobileMediaQuery();
   const numberFormatter = useNumberFormatter();
-  const meta = (data && 'meta' in data ? data.meta : data) as
-    | SimplePaginationMeta
-    | LengthAwarePaginationMeta;
+  const meta = (data && 'pagination' in data
+    ? data.pagination
+    : data && 'meta' in data
+      ? data.meta
+      : data) as SimplePaginationMeta | LengthAwarePaginationMeta;
   const currentPage = meta?.current_page ? +meta.current_page : 1;
   const perPage = meta?.per_page ? +meta.per_page : defaultPerPage;
 
   if (
     !data ||
-    (hideIfOnlyOnePage && currentPage == 1 && !hasNextPage(data as any))
+    (hideIfOnlyOnePage && currentPage == 1 && !hasNextPage(meta as any))
   ) {
     return null;
   }
@@ -110,7 +120,7 @@ export function DataTablePaginationFooter({
         <Button
           variant="outline"
           size="sm"
-          disabled={isLoading || !hasNextPage(data as any)}
+          disabled={isLoading || !hasNextPage(meta as any)}
           onClick={() => {
             onPageChange?.(currentPage + 1);
           }}

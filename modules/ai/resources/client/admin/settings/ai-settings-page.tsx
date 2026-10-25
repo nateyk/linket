@@ -24,7 +24,7 @@ import {Link} from 'react-router';
 export function Component() {
   const {modules} = useSettings();
 
-  if (!modules.ai.installed) {
+  if (!modules?.ai?.installed) {
     return <NotInstalledCard />;
   }
 

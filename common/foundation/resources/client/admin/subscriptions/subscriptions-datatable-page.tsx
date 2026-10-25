@@ -4,7 +4,7 @@ import {subscriptionDatatableColumns} from '@common/admin/subscriptions/subscrip
 import {SubscriptionDatatableFilters} from '@common/admin/subscriptions/subscriptions-datatable-filters';
 import {listSubscriptionsOptions} from '@common/admin/subscriptions/subscriptions-queries';
 import {useShowGlobalLoadingBar} from '@common/core/use-show-global-loading-bar';
-import {AddFilterPopover} from '@common/datatable/filters/add-filter-popover';
+import {AddFilterButton} from '@common/datatable/filters/add-filter-button';
 import {FilterList} from '@common/datatable/filters/filter-list/filter-list';
 import {StaticPageTitle} from '@common/seo/static-page-title';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
@@ -75,7 +75,7 @@ export function Component() {
       <DashboardLayout.SectionContent>
         <DashboardLayout.SectionContentHeader>
           <TableSearchInput />
-          <AddFilterPopover
+          <AddFilterButton
             filters={SubscriptionDatatableFilters}
             className="mr-auto"
           />

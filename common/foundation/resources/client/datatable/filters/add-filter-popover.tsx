@@ -3,6 +3,7 @@ import {Popover} from '@shadcn/popover/popover';
 import {useTableQueryState} from '@shadcn/table/utils/use-table-query-state';
 import {Trans} from '@ui/i18n/trans';
 import {ListFilterIcon, PlusIcon} from 'lucide-react';
+import {FilterTrans} from './filter-trans';
 import {ComponentProps, ReactElement, useState} from 'react';
 import {BackendFilter} from './backend-filter';
 
@@ -72,7 +73,7 @@ function Content({
           disabled={activeFilters.includes(filter.key)}
         >
           <PlusIcon />
-          {filter.label}
+          <FilterTrans label={filter.label} />
         </Button>
       ))}
     </div>
@@ -81,7 +82,7 @@ function Content({
   return (
     // w-74 allows date ranger picker to fully fit
     <Popover.Content className="w-74 overflow-hidden p-1.5">
-      {selectedFilter
+      {selectedFilter?.popoverContent
         ? selectedFilter.popoverContent({
             filter: selectedFilter,
             onApply: values => {

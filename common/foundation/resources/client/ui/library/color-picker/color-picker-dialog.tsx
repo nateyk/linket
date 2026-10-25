@@ -23,7 +23,7 @@ export function ColorPickerDialog({
     <Dialog size="2xs">
       <ColorPicker
         showInput={showInput}
-        defaultValue={initialValue ? initialValue : ''}
+        value={initialValue ?? ''}
         onChange={newValue => setValue(newValue)}
       />
       {!hideFooter && (

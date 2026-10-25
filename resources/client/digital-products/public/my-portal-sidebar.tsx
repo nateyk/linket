@@ -18,7 +18,13 @@ import {
   SettingsIcon,
   UserPlusIcon,
 } from 'lucide-react';
-import {Fragment, use, type ReactElement, type ReactNode} from 'react';
+import {
+  Fragment,
+  use,
+  type ReactElement,
+  type ReactNode,
+  type SVGProps,
+} from 'react';
 import {Link, useLocation} from 'react-router';
 import type {PortalSection} from './portal-section';
 
@@ -34,7 +40,7 @@ export type PortalNavCounts = {
 type LibraryNavItem = {
   section: PortalSection;
   label: string;
-  icon: ReactElement;
+  icon: ReactElement<SVGProps<SVGSVGElement>>;
   count?: number;
 };
 

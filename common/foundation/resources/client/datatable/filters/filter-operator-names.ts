@@ -18,4 +18,5 @@ export const FilterOperatorNames: {[op in FilterOperator]: MessageDescriptor} =
     [FilterOperator.hasAll]: message('Include all'),
     [FilterOperator.doesntHave]: message('Do not include'),
     [FilterOperator.between]: message('Is between'),
+    [FilterOperator.notNull]: message('is not empty'),
   };

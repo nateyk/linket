@@ -112,7 +112,13 @@ function AgentHelpdeskSidebarFooter() {
     return null;
   }
 
-  const avatar = <AgentSidebarAvatar userId={user.id} name={user.name} image={user.image} />;
+  const avatar = (
+    <AgentSidebarAvatar
+      userId={user.id}
+      name={user.name ?? ''}
+      image={user.image}
+    />
+  );
 
   return (
     <Sidebar.Footer>

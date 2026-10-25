@@ -18,7 +18,8 @@ interface Props {
   onChange?: (value: string) => void;
   title?: ReactNode;
   saveButton?: ReactNode;
-  imageUploadType: keyof typeof UploadType;
+  imageUploadType?: keyof typeof UploadType;
+  imageDiskPrefix?: string;
   aside?: ReactNode;
 }
 export default function ArticleEditorPage({
@@ -26,7 +27,8 @@ export default function ArticleEditorPage({
   onChange,
   title,
   saveButton,
-  imageUploadType,
+  imageUploadType = 'articleImages',
+  imageDiskPrefix: _imageDiskPrefix,
   aside,
 }: Props) {
   const {rightSidenavStatus} = useContext(DashboardLayoutContext);

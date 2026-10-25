@@ -13,7 +13,7 @@ import {FormDatePicker} from '@ui/forms/input-field/date/date-picker/date-picker
 import {message} from '@ui/i18n/message';
 import {Trans} from '@ui/i18n/trans';
 import {useTrans} from '@ui/i18n/use-trans';
-import {ReactNode} from 'react';
+import {ReactNode, useState} from 'react';
 import {useForm} from 'react-hook-form';
 
 interface Props {
@@ -21,8 +21,8 @@ interface Props {
   description?: ReactNode;
   onSuccess?: () => void;
   children?: Dialog.TriggerElement;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 export function BanUsersDialog({
   userIds,
@@ -32,8 +32,12 @@ export function BanUsersDialog({
   open,
   onOpenChange,
 }: Props) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isOpen = open ?? internalOpen;
+  const setIsOpen = onOpenChange ?? setInternalOpen;
+
   return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+    <Dialog.Root open={isOpen} onOpenChange={setIsOpen}>
       {children}
       <Dialog.Portal>
         <Dialog.Backdrop />
@@ -41,7 +45,7 @@ export function BanUsersDialog({
           userIds={userIds}
           description={description}
           onSuccess={onSuccess}
-          onClose={() => onOpenChange(false)}
+          onClose={() => setIsOpen(false)}
         />
       </Dialog.Portal>
     </Dialog.Root>

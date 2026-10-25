@@ -1,5 +1,5 @@
 import {useShowGlobalLoadingBar} from '@common/core/use-show-global-loading-bar';
-import {AddFilterPopover} from '@common/datatable/filters/add-filter-popover';
+import {AddFilterButton} from '@common/datatable/filters/add-filter-button';
 import {FilterList} from '@common/datatable/filters/filter-list/filter-list';
 import {Empty} from '@shadcn/empty/empty';
 import {GenericTable} from '@shadcn/table/generic-table';
@@ -60,7 +60,7 @@ export function AdminProductReviewsTable({
     <div className="flex min-h-0 flex-col gap-3">
       <div className="flex shrink-0 flex-wrap items-center gap-3">
         <TableSearchInput />
-        <AddFilterPopover
+        <AddFilterButton
           filters={AdminProductReviewsDatatableFilters}
           className="mr-auto"
         />

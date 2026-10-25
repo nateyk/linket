@@ -42,7 +42,7 @@ export function WidgetChatTextEditor({isPending, onSubmit}: Props) {
     if (!isInsideSettingsPreview) {
       onSubmit({
         body: value,
-        attachments: getCompletedUploads(),
+        attachments: getCompletedUploads() as any,
       });
 
       setValue('');

@@ -400,7 +400,7 @@ test('filled cover and avatar tiles stay on dashboard chrome', () => {
   fireEvent.click(triggerByName('Profile'));
 
   const coverField = document.querySelector('[data-field-name="cover_url"]')!;
-  const coverTile = coverField.querySelector('div.group.relative')!;
+  const coverTile = coverField.querySelector<HTMLElement>('div.group.relative')!;
   expect(coverTile.classList.contains('rounded-input')).toBe(true);
   expect(coverTile.classList.contains('rounded-4xl')).toBe(false);
   expect(coverTile.classList.contains('w-full')).toBe(true);
@@ -444,7 +444,7 @@ test('empty cover shows a rectangular banner placeholder', () => {
   fireEvent.click(triggerByName('Profile'));
 
   const coverField = document.querySelector('[data-field-name="cover_url"]')!;
-  const button = coverField.querySelector(
+  const button = coverField.querySelector<HTMLElement>(
     'button:not([data-slot="popover-trigger"])',
   )!;
   expect(button.classList.contains('rounded-input')).toBe(true);

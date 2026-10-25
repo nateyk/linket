@@ -37,7 +37,7 @@ export function InputFilterItem({
 }: InputFilterItemProps) {
   const [isOpen, setIsOpen] = useState(false);
 
-  const popover = filter.popoverContent({
+  const popover = filter.popoverContent!({
     filter,
     value,
     onApply: next => {

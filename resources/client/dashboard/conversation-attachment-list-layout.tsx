@@ -101,7 +101,7 @@ export function FileEntryAttachmentLayout({
         size={attachment.file_size}
         onRemove={onRemove}
       />
-      <FilePreviewDialog entries={attachments} defaultActiveIndex={index} />
+      <FilePreviewDialog entries={attachments as any} defaultActiveIndex={index} />
     </DialogTrigger>
   );
 }

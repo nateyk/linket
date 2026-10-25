@@ -2,7 +2,7 @@ import {useTrackedEventsFilters} from '@app/dashboard/reports/tracked-events-fil
 import {getAnalyticsCardsData} from '@app/gen/analytics';
 import {AdminReportCardRow} from '@common/admin/analytics/admin-report-card-row';
 import {ReportDateSelector} from '@common/admin/analytics/report-date-selector';
-import {AddFilterPopover} from '@common/datatable/filters/add-filter-popover';
+import {AddFilterButton} from '@common/datatable/filters/add-filter-button';
 import {FilterList} from '@common/datatable/filters/filter-list/filter-list';
 import {StaticPageTitle} from '@common/seo/static-page-title';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
@@ -65,7 +65,7 @@ export function Component() {
           </Toggle>
         </ToggleGroup>
         <ReportDateSelector value={dateRange} onChange={setDateRange} />
-        {channel === 'events' && <AddFilterPopover filters={filters} />}
+        {channel === 'events' && <AddFilterButton filters={filters} />}
       </DashboardLayout.SectionHeader>
       <div className="flex min-w-0 flex-auto flex-col gap-5 overflow-auto p-3 md:p-6">
         {channel !== 'overview' && <Header dateRange={dateRange} />}

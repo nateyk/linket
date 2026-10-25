@@ -10,8 +10,8 @@ export interface TableContextValue<T extends TableDataItem = TableDataItem> {
   isCollapsedMode: boolean;
   selectedRows: (string | number)[];
   onSelectionChange: (keys: (string | number)[]) => void;
-  sortDescriptor?: Partial<SortDescriptor> | null;
-  onSortChange?: (descriptor: Partial<SortDescriptor> | null) => any;
+  sortDescriptor?: Partial<SortDescriptor>;
+  onSortChange?: (descriptor: Partial<SortDescriptor>) => any;
   enableSelection?: boolean;
   enableSorting?: boolean;
   selectionStyle: TableSelectionStyle;

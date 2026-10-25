@@ -18,7 +18,7 @@ export function useUploadAttachments({onSuccess}: Props) {
         showToastOnRestrictionFail: true,
         uploadType: UploadType.conversationAttachments,
         onSuccess: entry => {
-          onSuccessRef.current(entry);
+          onSuccessRef.current(entry as any);
         },
         onError: message => {
           if (message) {

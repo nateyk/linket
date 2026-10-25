@@ -56,7 +56,7 @@ function AttachmentGridItems() {
             key={id}
             thumbnail={
               attachment ? (
-                <FileThumbnail file={attachment} className="rounded-panel" />
+                <FileThumbnail file={attachment as any} className="rounded-panel" />
               ) : (
                 <FilePresentIcon />
               )

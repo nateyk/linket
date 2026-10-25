@@ -7,6 +7,7 @@ import clsx from 'clsx';
 import {AnimatePresence, m} from 'framer-motion';
 import {ComponentProps} from 'react';
 import {BackendFilter} from '../backend-filter';
+import {FilterListControl} from './filter-list-control';
 
 type ButtonSize = ComponentProps<typeof Button>['size'];
 
@@ -47,13 +48,23 @@ export function FilterList({
 
         return (
           <li key={key}>
-            {filter.item?.({
-              filter,
-              value: queryState[key],
-              onApply: value => setQueryState({[key]: value}),
-              onRemove: () => setQueryState({[key]: null}),
-              isInactive,
-            })}
+            {filter.item
+              ? filter.item({
+                  filter,
+                  value: queryState[key],
+                  onApply: value => setQueryState({[key]: value}),
+                  onRemove: () => setQueryState({[key]: null}),
+                  isInactive,
+                })
+              : filter.control ? (
+                  <FilterListControl
+                    filter={{...filter, control: filter.control}}
+                    value={queryState[key]?.value}
+                    operator={queryState[key]?.operator}
+                    onValueChange={value => setQueryState({[key]: value})}
+                    isInactive={isInactive}
+                  />
+                ) : null}
           </li>
         );
       })}

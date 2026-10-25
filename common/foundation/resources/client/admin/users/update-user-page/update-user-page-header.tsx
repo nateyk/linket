@@ -1,4 +1,4 @@
-import {User} from '@app/gen/schemas/user';
+import type {UserPageHeaderData} from '@common/admin/users/update-user-page/update-user-page-user';
 import {UploadType} from '@app/site-config';
 import {showHttpErrorToast} from '@common/http/errors/show-http-error-toast';
 import {apiClient} from '@common/http/query-client';
@@ -12,7 +12,7 @@ import {ErrorOutlineIcon} from '@ui/icons/material/ErrorOutline';
 import {ReactElement, useState} from 'react';
 
 interface Props {
-  user: User;
+  user: UserPageHeaderData;
   badge?: ReactElement;
 }
 export function UpdateUserPageHeader({user, badge}: Props) {
@@ -52,7 +52,7 @@ export function UpdateUserPageHeader({user, badge}: Props) {
 }
 
 interface AvatarManagerProps {
-  user: User;
+  user: UserPageHeaderData;
 }
 
 function AvatarSelector({user}: AvatarManagerProps) {

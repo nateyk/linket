@@ -11,8 +11,7 @@ export function useSortableTableData<T extends TableDataItem>(
   sortDescriptor: TableProps<T>['sortDescriptor'];
   onSortChange: TableProps<T>['onSortChange'];
 } {
-  const [sortDescriptor, onSortChange] =
-    useState<Partial<SortDescriptor> | null>({});
+  const [sortDescriptor, onSortChange] = useState<Partial<SortDescriptor>>({});
   const sortedData: T[] = useMemo(() => {
     if (!data) {
       return [];

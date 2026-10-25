@@ -457,4 +457,66 @@ export const ImageSelector = {
   Square: ImageSelectorSquare,
 };
 
+type ImageSelectorCompatProps = Omit<
+  ImageSelectorProps,
+  'uploadType' | 'value'
+> & {
+  value?: string | null;
+  uploadType?: keyof typeof UploadType;
+  variant?: 'avatar' | 'square' | 'input';
+  stretchPreview?: boolean;
+  previewSize?: string;
+  placeholderIcon?: ReactElement;
+  showRemoveButton?: boolean;
+  diskPrefix?: string;
+  required?: boolean;
+};
+
+/**
+ * BeDesk-era `<ImageSelector />` used a single component with a `variant`
+ * prop. Linket exposes composed `ImageSelector.Avatar/Input/Square`; this
+ * wrapper keeps the ported addon/pages working without duplicating upload UI.
+ */
+export function ImageSelectorCompat({
+  variant = 'input',
+  value,
+  uploadType = UploadType.linkImages,
+  previewSize,
+  placeholderIcon,
+  diskPrefix,
+  uploadMetadata,
+  stretchPreview: _stretchPreview,
+  showRemoveButton: _showRemoveButton,
+  required,
+  ...props
+}: ImageSelectorCompatProps) {
+  const metadata = diskPrefix
+    ? {...uploadMetadata, diskPrefix}
+    : uploadMetadata;
+
+  if (variant === 'avatar') {
+    return (
+      <ImageSelectorAvatar
+        {...props}
+        value={value}
+        uploadType={uploadType}
+        previewClassName={previewSize}
+        placeholderIcon={placeholderIcon}
+        uploadMetadata={metadata}
+      />
+    );
+  }
+
+  return (
+    <ImageSelectorInput
+      {...props}
+      value={value}
+      uploadType={uploadType}
+      previewClassName={previewSize}
+      uploadMetadata={metadata}
+      required={required}
+    />
+  );
+}
+
 export {FormImageSelector} from '@common/uploads/components/form-image-selector';

@@ -12,7 +12,7 @@ import {Folder} from '@app/gen/schemas/folder';
 import {AdHost} from '@common/admin/ads/ad-host';
 import {useShowGlobalLoadingBar} from '@common/core/use-show-global-loading-bar';
 import {CsvExportInfoDialog} from '@common/datatable/csv-export/csv-export-info-dialog';
-import {AddFilterPopover} from '@common/datatable/filters/add-filter-popover';
+import {AddFilterButton} from '@common/datatable/filters/add-filter-button';
 import {FilterList} from '@common/datatable/filters/filter-list/filter-list';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {Footer} from '@common/ui/footer/footer';
@@ -90,7 +90,7 @@ export function Component() {
       <DashboardLayout.SectionContent>
         <AdHost slot="dashboard" className="mb-6" />
         <DashboardLayout.SectionContentHeader>
-          <AddFilterPopover filters={filters} />
+          <AddFilterButton filters={filters} />
           <TableSortButton
             className="mr-auto"
             sortDescriptor={queryState.sort}

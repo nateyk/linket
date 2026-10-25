@@ -28,7 +28,7 @@ export function Component() {
       <div className="chart-grid">
         <VisitorsReportCharts
           isLoading={query.isLoading || query.isPlaceholderData}
-          report={query.data?.visitorsReport}
+          report={query.data?.visitorsReport as any}
         />
       </div>
     </ReportLayout>

@@ -4,6 +4,7 @@ import { Button } from '@ui/buttons/button';
 import { Form } from '@ui/forms/form';
 import { Checkbox } from '@ui/forms/toggle/checkbox';
 import { Trans } from '@ui/i18n/trans';
+import { FilterTrans } from './filter-trans';
 import { Dialog } from '@ui/overlays/dialog/dialog';
 import { DialogBody } from '@ui/overlays/dialog/dialog-body';
 import { useDialogContext } from '@ui/overlays/dialog/dialog-context';
@@ -13,6 +14,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import {
   BackendFilter,
+  ControlledBackendFilter,
   CustomFilterControl,
   DatePickerFilterControl,
   FilterBooleanToggleControl,
@@ -115,9 +117,9 @@ function FilterList({
       appliedFilter?.value !== undefined
         ? // there might be some extra keys set on filter besides
           // "value" and "operator", so add the whole object to form
-          appliedFilter
+          (appliedFilter as FilterItemFormValue)
         : {
-            value: filter.control.defaultValue,
+            value: (filter.control as {defaultValue?: unknown})?.defaultValue,
             operator: filter.defaultOperator,
           };
   });
@@ -157,7 +159,7 @@ function FilterList({
             }
             key={filter.key}
             value={filter.key}
-            label={<Trans {...filter.label} />}
+            label={<FilterTrans label={filter.label} />}
             bodyClassName="max-h-288 overflow-y-auto compact-scrollbar"
           >
             {filter.description && (
@@ -165,11 +167,11 @@ function FilterList({
                 className={clsx(
                   'text-xs text-muted',
                   // boolean filter will have nothing in the panel, no need to add margin
-                  filter.control.type !== FilterControlType.BooleanToggle &&
+                  filter.control?.type !== FilterControlType.BooleanToggle &&
                     'mb-14',
                 )}
               >
-                <Trans {...filter.description} />
+                <FilterTrans label={filter.description} />
               </div>
             )}
             <AddFilterDialogPanel filter={filter} />
@@ -184,48 +186,57 @@ interface ActiveFilterPanelProps {
   filter: BackendFilter;
 }
 export function AddFilterDialogPanel({filter}: ActiveFilterPanelProps) {
-  switch (filter.control.type) {
+  const control = filter.control;
+  if (!control) return null;
+
+  switch (control.type) {
     case FilterControlType.Select:
       return (
         <SelectFilterPanel
-          filter={filter as BackendFilter<FilterSelectControl>}
+          filter={filter as ControlledBackendFilter<FilterSelectControl>}
         />
       );
     case FilterControlType.ChipField:
       return (
         <ChipFieldFilterPanel
-          filter={filter as BackendFilter<FilterChipFieldControl>}
+          filter={filter as ControlledBackendFilter<FilterChipFieldControl>}
         />
       );
     case FilterControlType.DateRangePicker:
       return (
         <DateRangeFilterPanel
-          filter={filter as BackendFilter<DatePickerFilterControl>}
+          filter={filter as ControlledBackendFilter<DatePickerFilterControl>}
         />
       );
     case FilterControlType.SelectModel:
       return (
         <NormalizedModelFilterPanel
-          filter={filter as BackendFilter<FilterSelectModelControl>}
+          filter={
+            filter as ControlledBackendFilter<FilterSelectModelControl>
+          }
         />
       );
     case FilterControlType.Input:
       return (
         <InputFilterPanel
-          filter={filter as BackendFilter<FilterTextInputControl>}
+          filter={filter as ControlledBackendFilter<FilterTextInputControl>}
         />
       );
     case FilterControlType.BooleanToggle:
       return (
         <BooleanFilterPanel
-          filter={filter as BackendFilter<FilterBooleanToggleControl>}
+          filter={
+            filter as ControlledBackendFilter<FilterBooleanToggleControl>
+          }
         />
       );
-    case 'custom':
-      const CustomComponent = filter.control.panel;
+    case FilterControlType.Custom:
+      const CustomComponent = control.panel;
       return (
         <CustomComponent
-          filter={filter as BackendFilter<CustomFilterControl>}
+          filter={filter as ControlledBackendFilter<CustomFilterControl>}
+          onApply={() => {}}
+          onDismiss={() => {}}
         />
       );
     default:

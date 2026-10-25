@@ -2,7 +2,7 @@ import {useTrackedEventsFilters} from '@app/dashboard/reports/tracked-events-fil
 import {useDatatableRouteType} from '@app/dashboard/use-datatable-route-type';
 import {AdHost} from '@common/admin/ads/ad-host';
 import {ReportDateSelector} from '@common/admin/analytics/report-date-selector';
-import {AddFilterPopover} from '@common/datatable/filters/add-filter-popover';
+import {AddFilterButton} from '@common/datatable/filters/add-filter-button';
 import {FilterList} from '@common/datatable/filters/filter-list/filter-list';
 import {StaticPageTitle} from '@common/seo/static-page-title';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
@@ -41,7 +41,7 @@ export function Component() {
               onChange={setDateRange}
               compactOnMobile={false}
             />
-            <AddFilterPopover
+            <AddFilterButton
               filters={trackedEventsFilters}
               color={null}
               variant="outline"

@@ -12,7 +12,7 @@ import {useDatatableRouteType} from '@app/dashboard/use-datatable-route-type';
 import {useUsage} from '@app/dashboard/use-usage';
 import {AdHost} from '@common/admin/ads/ad-host';
 import {useShowGlobalLoadingBar} from '@common/core/use-show-global-loading-bar';
-import {AddFilterPopover} from '@common/datatable/filters/add-filter-popover';
+import {AddFilterButton} from '@common/datatable/filters/add-filter-button';
 import {FilterList} from '@common/datatable/filters/filter-list/filter-list';
 import {showHttpErrorToast} from '@common/http/errors/show-http-error-toast';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
@@ -114,7 +114,7 @@ export function Component() {
         <AdHost slot="dashboard" className="mb-6" />
 
         <DashboardLayout.SectionContentHeader>
-          <AddFilterPopover filters={filters} />
+          <AddFilterButton filters={filters} />
           <TableSortButton
             className="mr-auto"
             sortDescriptor={queryState.sort}

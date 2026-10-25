@@ -2,6 +2,7 @@ import { Button } from '@ui/buttons/button';
 import { Form } from '@ui/forms/form';
 import { Trans } from '@ui/i18n/trans';
 import { Dialog } from '@ui/overlays/dialog/dialog';
+import { FilterTrans } from '../filter-trans';
 import { DialogBody } from '@ui/overlays/dialog/dialog-body';
 import { useDialogContext } from '@ui/overlays/dialog/dialog-context';
 import { DialogFooter } from '@ui/overlays/dialog/dialog-footer';
@@ -54,7 +55,7 @@ export function FilterListControlDialog({
   return (
     <Dialog size="xs">
       <DialogHeader>
-        <Trans {...filter.label} />
+        <FilterTrans label={filter.label} />
       </DialogHeader>
       <DialogBody className="max-h-288">
         <Form
@@ -66,7 +67,7 @@ export function FilterListControlDialog({
         >
           {filter.description && (
             <div className="mb-14 text-xs text-muted">
-              <Trans {...filter.description} />
+              <FilterTrans label={filter.description} />
             </div>
           )}
           {panel}

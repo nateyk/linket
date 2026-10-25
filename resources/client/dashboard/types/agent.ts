@@ -27,6 +27,8 @@ export interface FullAgent extends UpdateUserPageUser {
   roles: User['roles'];
   banned_at: User['banned_at'];
   bans: User['bans'];
+  created_at: User['created_at'];
+  updated_at: User['updated_at'];
   agent_settings: AgentSettings;
   groups: NormalizedModel[];
 }

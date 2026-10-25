@@ -10,6 +10,11 @@ import type {
   DigitalProductOrderSuccessPageData,
   DigitalProductPageData,
 } from '@app/digital-products/public/digital-product-public-pages';
+import type {HcLandingPageData} from '@app/help-center/homepage/hc-landing-page-data';
+import type {CategoryPageData} from '@app/help-center/categories/category-page-data';
+import type {ArticlePageData} from '@app/help-center/articles/article-page/article-page-data';
+import type {UpdateArticlePageData} from '@app/help-center/articles/article-editor/update-article-page-data';
+import type {SearchArticlesResponse} from '@app/help-center/search/search-articles-response';
 import type {PublicServicePageData} from '@app/services/public/service-types';
 import {BaseBackendBootstrapData} from '@common/core/base-backend-bootstrap-data';
 import {CommonProvider} from '@common/core/common-provider';
@@ -60,6 +65,11 @@ declare module '@ui/bootstrap-data/bootstrap-data' {
       servicePage?: {
         data: PublicServicePageData;
       };
+      hcLandingPage?: HcLandingPageData;
+      categoryPage?: CategoryPageData;
+      articlePage?: ArticlePageData;
+      updateArticle?: UpdateArticlePageData;
+      searchArticles?: SearchArticlesResponse;
     };
   }
 }
@@ -112,6 +122,23 @@ declare module '@ui/settings/settings' {
     storefront?: {
       reviews_enabled?: boolean;
     };
+    modules?: Record<
+      'ai' | 'envato' | 'livechat',
+      {installed?: boolean; setup?: boolean}
+    >;
+    websockets_setup?: boolean;
+    // Help center + support surfaces (BeDesk-native).
+    hcLanding?: Record<string, any>;
+    hc?: Record<string, any>;
+    articles?: Record<string, any>;
+    article?: {hide_new_ticket_link?: boolean; [key: string]: any};
+    tickets?: Record<string, any>;
+    chatPage?: Record<string, any>;
+    // Optional LiveChat / AI addons.
+    chatWidget?: Record<string, any>;
+    lc?: Record<string, any>;
+    aiAgent?: Record<string, any>;
+    envato?: Record<string, any>;
     ads?: {
       biolink_top?: string;
       splash_top?: string;
@@ -124,7 +151,7 @@ declare module '@ui/settings/settings' {
     };
     captcha?: BaseBackendSettings['captcha'] & {
       enable?: PartialRecord<
-        'landing_new_link' | 'register' | 'contact',
+        'landing_new_link' | 'register' | 'contact' | 'new_ticket',
         boolean
       >;
     };

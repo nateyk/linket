@@ -14,11 +14,11 @@ import {
   SearchIcon,
   WalletCardsIcon,
 } from 'lucide-react';
-import {ComponentProps, ReactElement} from 'react';
+import {ReactElement, SVGProps} from 'react';
 
 export const sharedDashboardIcons: Record<
   string,
-  ReactElement<ComponentProps<'svg'>>
+  ReactElement<SVGProps<SVGSVGElement>>
 > = {
   links: <LinkIcon />,
   'qr-codes': <QrCodeIcon />,
@@ -33,7 +33,7 @@ export const sharedDashboardIcons: Record<
 
 export const dashboardSidebarIcons: Record<
   string,
-  ReactElement<ComponentProps<'svg'>>
+  ReactElement<SVGProps<SVGSVGElement>>
 > = {
   '/dashboard': <HomeIcon />,
   '/dashboard/insights': <ChartColumnBigIcon />,

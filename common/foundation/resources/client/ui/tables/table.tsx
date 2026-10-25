@@ -42,8 +42,8 @@ export interface TableProps<
   selectedRows?: (number | string)[];
   defaultSelectedRows?: (number | string)[];
   onSelectionChange?: (keys: (number | string)[]) => void;
-  sortDescriptor?: Partial<SortDescriptor> | null;
-  onSortChange?: (descriptor: Partial<SortDescriptor> | null) => any;
+  sortDescriptor?: Partial<SortDescriptor>;
+  onSortChange?: (descriptor: Partial<SortDescriptor>) => any;
   enableSorting?: boolean;
   onDelete?: (items: T[]) => void;
   enableSelection?: boolean;

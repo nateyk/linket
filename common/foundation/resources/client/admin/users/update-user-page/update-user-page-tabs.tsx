@@ -1,4 +1,4 @@
-import {User} from '@app/gen/schemas/user';
+import type {UserPageHeaderData} from '@common/admin/users/update-user-page/update-user-page-user';
 import {useAuth} from '@common/auth/use-auth';
 import {
   UrlBackedTabConfig,
@@ -23,7 +23,7 @@ export const updateUserPageTabs: UrlBackedTabConfig[] = [
 
 interface Props {
   tabs: UrlBackedTabConfig[];
-  user: User;
+  user: UserPageHeaderData;
 }
 export function UpdateUserPageTabs({user, tabs}: Props) {
   const {user: authUser, hasPermission} = useAuth();

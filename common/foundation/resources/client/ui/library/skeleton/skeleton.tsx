@@ -3,12 +3,18 @@ import {cn} from '@ui/utils/cn';
 interface SkeletonProps {
   variant?: 'avatar' | 'text' | 'rect' | 'icon';
   animation?: 'pulsate' | 'wave' | null; // disable animation completely with null
+  /** Tailwind width/height classes, e.g. "w-45" or "h-24 w-full". */
+  size?: string;
+  /** Tailwind radius classes, e.g. "rounded-full". */
+  radius?: string;
   className?: string;
   style?: React.CSSProperties;
 }
 export function Skeleton({
   variant = 'text',
   animation = 'wave',
+  size,
+  radius,
   className,
   style,
 }: SkeletonProps) {
@@ -18,6 +24,8 @@ export function Skeleton({
       className={cn(
         'skeleton relative block overflow-hidden rounded-sm bg-muted bg-no-repeat will-change-transform',
         skeletonSize(variant),
+        size,
+        radius,
         variant === 'text' && 'origin-[0_55%] scale-y-[0.6]',
         variant === 'avatar' && 'shrink-0',
         variant === 'icon' && 'mx-2 shrink-0',

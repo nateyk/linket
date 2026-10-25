@@ -17,16 +17,19 @@ interface Props {
   justify?: string;
   hideInsertButton?: boolean;
   imageUploadType: keyof typeof UploadType;
+  size?: 'sm' | 'md' | 'lg';
 }
 export function ArticleEditorMenubar({
   justify = 'justify-center-safe',
   hideInsertButton = false,
   imageUploadType,
+  size,
 }: Props) {
   return (
     <div
       className={clsx(
         'no-scrollbar flex shrink-0 items-center overflow-x-auto border-b px-1 py-0.5 text-muted-foreground',
+        size === 'sm' && 'px-0.5 py-0',
         justify,
       )}
     >

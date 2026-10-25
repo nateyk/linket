@@ -18,6 +18,8 @@ export interface User {
   created_at: string;
   updated_at: string;
   subscription?: Omit<Subscription, 'user'>[];
+  subscriptions?: Omit<Subscription, 'user'>[];
+  tokens?: {id: number; name?: string; created_at?: string}[];
   roles?: {id: number; name: string}[];
   social_profiles: SocialProfile[];
   has_password: boolean;

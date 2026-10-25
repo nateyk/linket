@@ -2,7 +2,7 @@ import {trackedEventsReportOptions} from '@app/dashboard/reports/tracked-events-
 import {GenerateTrackedEventsReport200Data} from '@app/gen/schemas/generate-tracked-events-report200-data';
 import {GeoChart} from '@common/admin/analytics/geo-chart/geo-chart';
 import {ReportDateSelector} from '@common/admin/analytics/report-date-selector';
-import {AddFilterPopover} from '@common/datatable/filters/add-filter-popover';
+import {AddFilterButton} from '@common/datatable/filters/add-filter-button';
 import {BackendFilter} from '@common/datatable/filters/backend-filter';
 import {FilterList} from '@common/datatable/filters/filter-list/filter-list';
 import {RemoteFavicon} from '@common/ui/other/remote-favicon';
@@ -386,7 +386,7 @@ export function TrackedEventsInsightsDateAndFilterButtons({
         compactOnMobile={false}
       />
       <FilterList filters={filters} />
-      <AddFilterPopover filters={filters} />
+      <AddFilterButton filters={filters} />
     </div>
   );
 }

@@ -187,7 +187,7 @@ function CustomLinksList() {
   const {chatWidget} = useSettings();
   return (
     <div className="space-y-16 text-sm">
-      {chatWidget?.homeLinks?.map(link => (
+      {chatWidget?.homeLinks?.map((link: any) => (
         <HomeScreenCardLayout
           key={link.id}
           className="flex cursor-pointer items-center justify-between gap-8 px-20 py-16 hover:bg-hover"

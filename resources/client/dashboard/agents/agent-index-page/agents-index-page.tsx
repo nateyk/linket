@@ -170,13 +170,11 @@ function AgentOptionsTrigger({agent}: AgentOptionsTriggerProps) {
       >
         <DeleteUserDialog userId={agent.id} />
       </DialogTrigger>
-      <DialogTrigger
-        type="modal"
-        isOpen={banDialogOpen}
+      <BanUsersDialog
+        userIds={[agent.id]}
+        open={banDialogOpen}
         onOpenChange={setBanDialogOpen}
-      >
-        <BanUsersDialog userIds={[agent.id]} />
-      </DialogTrigger>
+      />
       <MenuTrigger>
         <IconButton size="md" className="text-muted">
           <MoreHorizIcon />

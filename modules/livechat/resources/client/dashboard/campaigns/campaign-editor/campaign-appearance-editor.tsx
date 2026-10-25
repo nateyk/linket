@@ -142,7 +142,7 @@ export function CampaignBackgroundSelector() {
       <BackgroundSelector
         value={value}
         onChange={newValue => {
-          setAppearance({bgConfig: newValue});
+          setAppearance({bgConfig: newValue ?? undefined});
         }}
       />
     </div>

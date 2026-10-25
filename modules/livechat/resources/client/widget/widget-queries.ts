@@ -36,7 +36,7 @@ export const widgetQueries = {
             pageParam ? {cursor: pageParam} : undefined,
           ),
         initialPageParam: null,
-        getNextPageParam: getNextPageParam,
+        getNextPageParam: getNextPageParam as any,
       }),
     get: (conversationId: string | number | undefined) =>
       queryOptions({
@@ -62,7 +62,7 @@ export const widgetQueries = {
           );
         },
         initialPageParam: null,
-        getNextPageParam: getNextPageParam,
+        getNextPageParam: getNextPageParam as any,
       }),
   },
   articles: {

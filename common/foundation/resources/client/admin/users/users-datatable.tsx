@@ -12,7 +12,7 @@ import {
 } from '@common/admin/users/users-queries';
 import {useShowGlobalLoadingBar} from '@common/core/use-show-global-loading-bar';
 import {CsvExportInfoDialog} from '@common/datatable/csv-export/csv-export-info-dialog';
-import {AddFilterPopover} from '@common/datatable/filters/add-filter-popover';
+import {AddFilterButton} from '@common/datatable/filters/add-filter-button';
 import {FilterList} from '@common/datatable/filters/filter-list/filter-list';
 import {showHttpErrorToast} from '@common/http/errors/show-http-error-toast';
 import {apiClient, queryClient} from '@common/http/query-client';
@@ -110,7 +110,7 @@ export function Component() {
       <DashboardLayout.SectionContent>
         <DashboardLayout.SectionContentHeader>
           <TableSearchInput />
-          <AddFilterPopover
+          <AddFilterButton
             filters={UserDatatableFilters}
             className="mr-auto"
           />

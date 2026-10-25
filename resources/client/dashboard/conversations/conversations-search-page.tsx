@@ -121,8 +121,8 @@ export function Component() {
 }
 
 interface DesktopTableProps {
-  sortDescriptor: SortDescriptor;
-  onSortChange: (sortDescriptor: SortDescriptor) => void;
+  sortDescriptor: Partial<SortDescriptor>;
+  onSortChange: (sortDescriptor: Partial<SortDescriptor>) => void;
   items: ConversationListItemType[];
   onNavigate: (conversation: ConversationListItemType) => void;
 }

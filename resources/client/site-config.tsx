@@ -74,7 +74,13 @@ export const UploadType = {
   ...CommonUploadType,
   linkImages: 'linkImages',
   digitalProductFiles: 'digitalProductFiles',
+  digitalProductSamples: 'digitalProductSamples',
   courseVideos: 'courseVideos',
   courseResources: 'courseResources',
   conversationAttachments: 'conversationAttachments',
+  conversationImages: 'conversationImages',
+  articleAttachments: 'articleAttachments',
+  aiAgentFlowAttachments: 'aiAgentFlowAttachments',
+  aiAgentDocuments: 'aiAgentDocuments',
+  chatWidgetUploads: 'chatWidgetUploads',
 } as const;

@@ -169,11 +169,11 @@ function OperatorSelector({index, attribute}: OperatorSelectorProps) {
   const selectedCondition = CampaignConditionsConfig[value.name];
 
   const operators =
-    'operators' in selectedCondition
+    ('operators' in selectedCondition
       ? selectedCondition.operators
       : attribute
         ? getOperatorsForAttribute(attribute)
-        : [];
+        : []) ?? [];
 
   if (operators.length < 2) {
     return null;
@@ -217,7 +217,8 @@ function AttributeSelector({index}: AttributeSelectorProps) {
         const attribute = attributes.find(f => f.key === val);
         if (attribute) {
           const defaults = getDefaultValuesForFormWithAttributes([attribute]);
-          const operator = getOperatorsForAttribute(attribute)[0];
+          const operator =
+            getOperatorsForAttribute(attribute)?.[0] ?? FilterOperator.eq;
           updateCondition(index, {
             valueKey: val as string,
             value: defaults[attribute.key],

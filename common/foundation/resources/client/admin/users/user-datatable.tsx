@@ -1,4 +1,3 @@
-import {commonAdminQueries} from '@common/admin/common-admin-queries';
 import teamSvg from '@common/admin/roles/team.svg';
 import {CreateUserDialog} from '@common/admin/users/create-user-dialog';
 import {userDatatableColumns} from '@common/admin/users/user-datatable-columns';
@@ -22,6 +21,7 @@ import {useDatatableQuery} from '@common/datatable/requests/use-datatable-query'
 import {apiClient, queryClient} from '@common/http/query-client';
 import {showHttpErrorToast} from '@common/http/errors/show-http-error-toast';
 import {StaticPageTitle} from '@common/seo/static-page-title';
+import {Dialog} from '@shadcn/dialog/dialog';
 import {Table} from '@common/ui/tables/table';
 import {useMutation} from '@tanstack/react-query';
 import {Button} from '@ui/buttons/button';
@@ -30,6 +30,11 @@ import {Trans} from '@ui/i18n/trans';
 import {ConfirmationDialog} from '@ui/overlays/dialog/confirmation-dialog';
 import {useDialogContext} from '@ui/overlays/dialog/dialog-context';
 import {DialogTrigger} from '@ui/overlays/dialog/dialog-trigger';
+import {
+  listUsersForDatatableOptions,
+  usersBaseKey,
+} from '@common/admin/users/users-queries';
+import {User} from '@ui/types/user';
 import {useSettings} from '@ui/settings/use-settings';
 import {toast} from '@ui/toast/toast';
 import {Fragment, useState} from 'react';
@@ -45,11 +50,13 @@ export function Component() {
     isFiltering,
   } = useDatatableSearchParams(validateDatatableSearch);
 
-  const filteredColumns = !billing.enable
+  const filteredColumns = !billing?.enable
     ? userDatatableColumns.filter(c => c.key !== 'subscribed')
     : userDatatableColumns;
 
-  const query = useDatatableQuery(commonAdminQueries.users.index(searchParams));
+  const query = useDatatableQuery<User>(
+    listUsersForDatatableOptions(searchParams as any) as any,
+  );
 
   const selectedActions = (
     <DialogTrigger type="modal">
@@ -66,12 +73,11 @@ export function Component() {
   const actions = (
     <Fragment>
       <DataTableExportCsvButton endpoint="users/csv/export" />
-      <DialogTrigger type="modal">
-        <DataTableAddItemButton>
+      <CreateUserDialog>
+        <Dialog.Trigger render={<DataTableAddItemButton />}>
           <Trans message="Add new user" />
-        </DataTableAddItemButton>
-        <CreateUserDialog />
-      </DialogTrigger>
+        </Dialog.Trigger>
+      </CreateUserDialog>
     </Fragment>
   );
 
@@ -137,7 +143,7 @@ export function DeleteUsersDialog({
     mutationFn: () => apiClient.delete(`users/${selectedIds.join(',')}`),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
-        queryKey: commonAdminQueries.users.invalidateKey,
+        queryKey: usersBaseKey,
       });
       toast(message('Users deleted'));
       onDelete();

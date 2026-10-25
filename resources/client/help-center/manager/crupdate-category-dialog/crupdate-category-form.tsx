@@ -8,7 +8,7 @@ import {ManagedByField} from '@app/help-center/managed-by-field';
 import {CreateCategoryPayload} from '@app/help-center/manager/crupdate-category-dialog/use-create-category';
 import {VisibleToField} from '@app/help-center/visible-to-field';
 import {UploadType} from '@app/site-config';
-import {ImageSelector} from '@common/uploads/components/image-selector';
+import {ImageSelectorCompat} from '@common/uploads/components/image-selector';
 import {FileUploadProvider} from '@common/uploads/uploader/file-upload-provider';
 import {useQuery} from '@tanstack/react-query';
 import {ButtonBase} from '@ui/buttons/button-base';
@@ -161,7 +161,7 @@ function ImageSelectorDialog({selectedImage}: ImageSelectorDialogProps) {
             <Trans message="Upload custom icon" />
           </div>
           <FileUploadProvider>
-            <ImageSelector
+            <ImageSelectorCompat
               uploadType={UploadType.brandingImages}
               className="mb-24"
               showRemoveButton

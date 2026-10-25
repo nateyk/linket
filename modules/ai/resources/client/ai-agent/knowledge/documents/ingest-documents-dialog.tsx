@@ -1,3 +1,4 @@
+import {UploadType} from '@app/site-config';
 import {aiAgentQueries} from '@ai/ai-agent/ai-agent-queries';
 import {queryClient} from '@common/http/query-client';
 import {useFileUploadStore} from '@common/uploads/uploader/file-upload-provider';
@@ -59,6 +60,7 @@ export function IngestDocumentsDialog() {
     uploadMultiple(
       files,
       {
+        uploadType: UploadType.aiAgentDocuments,
         onSuccess: () => invalidateKnowledge(),
         metadata: {
           middleware: 'AiAgentDocuments',

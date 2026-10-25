@@ -7,6 +7,7 @@ import match from 'mime-match';
 export interface Restrictions {
   maxFileSize?: number;
   allowedFileTypes?: string[];
+  blockedFileTypes?: string[];
 }
 
 export function validateFile(
@@ -15,7 +16,14 @@ export function validateFile(
 ): MessageDescriptor | void {
   if (!restrictions) return;
 
-  const {maxFileSize, allowedFileTypes} = restrictions;
+  const {maxFileSize, allowedFileTypes, blockedFileTypes} = restrictions;
+
+  if (
+    blockedFileTypes?.length &&
+    fileMatchesTypes(file, blockedFileTypes)
+  ) {
+    return message('This file type is not allowed');
+  }
 
   if (maxFileSize && file.size != null && file.size > maxFileSize) {
     return message('`:file` exceeds maximum allowed size of :size', {

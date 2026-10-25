@@ -1,4 +1,5 @@
 import {FilterChipFieldControl} from '@common/datatable/filters/backend-filter';
+import {isMessageDescriptor} from '@common/datatable/filters/filter-trans';
 import {FilterPanelProps} from '@common/datatable/filters/panels/filter-panel-props';
 import {FormNormalizedModelChipField} from '@common/tags/form-normalized-model-chip-field';
 import {FormChipField} from '@ui/forms/input-field/chip-field/form-chip-field';
@@ -57,11 +58,20 @@ export function ChipFieldFilterValueField({
       displayWith={chip => {
         const o = filter.control.options?.find(o => o.key === chip.id);
         if (!o) return undefined;
-        return typeof o.label === 'string' ? o.label : o.label.message;
+        return typeof o.label === 'string'
+          ? o.label
+          : isMessageDescriptor(o.label)
+            ? o.label.message
+            : undefined;
       }}
       suggestions={filter.control.options?.map(o => ({
         id: o.key,
-        name: typeof o.label === 'string' ? o.label : o.label.message,
+        name:
+          typeof o.label === 'string'
+            ? o.label
+            : isMessageDescriptor(o.label)
+              ? o.label.message
+              : '',
       }))}
     >
       {chip => (

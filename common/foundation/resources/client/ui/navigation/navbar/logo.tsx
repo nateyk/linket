@@ -11,13 +11,16 @@ type Props = {
   className?: string;
   logoType?: 'wide' | 'compact' | 'auto';
   url?: string;
+  size?: string;
 };
 export function Logo({
   color = 'auto',
   className,
   logoType = 'auto',
   url,
+  size,
 }: Props) {
+  className = size ? `${size} ${className ?? ''}`.trim() : className;
   const isDarkMode = useIsDarkMode();
 
   if (color === 'auto') {

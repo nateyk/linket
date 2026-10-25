@@ -3,45 +3,63 @@ import {ChipValue} from '@ui/forms/input-field/chip-field/chip-field';
 import {AbsoluteDateRange} from '@ui/forms/input-field/date/date-range-picker/form-date-range-picker';
 import {MessageDescriptor} from '@ui/i18n/message-descriptor';
 import {NormalizedModel} from '@ui/types/normalized-model';
-import {ReactElement, ReactNode} from 'react';
+import {ReactElement} from 'react';
+import type {TranslatableLabel} from './filter-trans';
 
 export type ParsedFilterValue<V = any> = {
   value: V;
   operator?: FilterOperator;
 };
 
+export type FilterSelectOption = {
+  key?: string | number;
+  value: any;
+  label: TranslatableLabel;
+  image?: string;
+  description?: string;
+};
+
 export interface FilterSelectControl {
   type: FilterControlType.Select;
-  options: {
-    label: ReactNode;
-    value: string;
-    image?: string;
-    description?: string;
-  }[];
-  defaultValue?: string;
+  options: FilterSelectOption[];
+  defaultValue?: string | number | boolean | null;
   placeholder?: MessageDescriptor;
+  searchPlaceholder?: MessageDescriptor;
   showAvatar?: boolean;
+  showSearchField?: boolean;
 }
 
 export type FilterInputControl = {
   type: FilterControlType.Input;
   placeholder?: MessageDescriptor;
-  inputType: 'string' | 'number';
+  inputType?: 'string' | 'number';
   min?: number;
   max?: number;
-  defaultValue: string;
+  minValue?: number;
+  maxValue?: number;
+  minLength?: number;
+  maxLength?: number;
+  defaultValue: string | number;
+};
+
+export type FilterTextInputControl = FilterInputControl & {
+  inputType?: 'string';
+};
+
+export type FilterNumberInputControl = FilterInputControl & {
+  inputType: 'number';
 };
 
 export type FilterSelectModelControl = {
   type: FilterControlType.SelectModel;
-  model: string;
+  model?: string;
   endpoint?: string;
   defaultValue?: NormalizedModel;
 };
 
 export type FilterChipFieldControl = {
   type: FilterControlType.ChipField;
-  options?: FilterSelectControl['options'];
+  options?: FilterSelectOption[];
   placeholder?: MessageDescriptor;
   defaultValue: ChipValue[];
   autocompleteEndpoint?: string;
@@ -54,12 +72,25 @@ export type DatePickerFilterControl = {
   max?: DateValue;
 };
 
+export type FilterBooleanToggleControl = {
+  type: FilterControlType.BooleanToggle;
+  defaultValue?: boolean;
+};
+
+export type CustomFilterControl = {
+  type: FilterControlType.Custom;
+  listItem: (props: FilterListItemProps<any>) => ReactElement;
+  panel: (props: FilterPopoverContentProps<any>) => ReactElement;
+};
+
 export type FilterControl =
   | FilterSelectControl
   | FilterInputControl
   | FilterSelectModelControl
   | FilterChipFieldControl
-  | DatePickerFilterControl;
+  | DatePickerFilterControl
+  | FilterBooleanToggleControl
+  | CustomFilterControl;
 
 export type FilterListItemProps<V> = {
   filter: BackendFilter;
@@ -77,12 +108,21 @@ export type FilterPopoverContentProps<V> = {
   onDismiss?: () => void;
 };
 
-export type BackendFilter = {
+export type BackendFilter<C extends FilterControl = FilterControl> = {
   key: string;
-  label: ReactElement;
-  valueType: 'string' | 'array' | 'dateRange';
-  item: (props: FilterListItemProps<any>) => ReactElement;
-  popoverContent: (props: FilterPopoverContentProps<any>) => ReactElement;
+  label: TranslatableLabel;
+  description?: MessageDescriptor | ReactElement | null;
+  valueType?: 'string' | 'array' | 'dateRange';
+  control?: C;
+  defaultOperator?: FilterOperator;
+  operators?: FilterOperator[];
+  // Legacy Linket filter API, still used by AddFilterPopover.
+  item?: (props: FilterListItemProps<any>) => ReactElement;
+  popoverContent?: (props: FilterPopoverContentProps<any>) => ReactElement;
+};
+
+export type ControlledBackendFilter<C extends FilterControl> = BackendFilter<C> & {
+  control: C;
 };
 
 export enum FilterControlType {
@@ -91,6 +131,7 @@ export enum FilterControlType {
   SelectModel = 'selectModel',
   Input = 'input',
   ChipField = 'chipField',
+  BooleanToggle = 'booleanToggle',
   Custom = 'custom',
   MultipleCombobox = 'MultipleCombobox',
 }
@@ -110,6 +151,7 @@ export enum FilterOperator {
   hasAll = 'hasAll',
   doesntHave = 'doesntHave',
   between = 'between',
+  notNull = 'notNull',
 }
 
 export const ALL_OPERATORS = Object.values(FilterOperator);

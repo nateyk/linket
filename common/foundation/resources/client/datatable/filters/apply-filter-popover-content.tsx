@@ -4,9 +4,10 @@ import {Popover} from '@shadcn/popover/popover';
 import {Trans} from '@ui/i18n/trans';
 import {ChevronLeftIcon} from 'lucide-react';
 import {ReactNode} from 'react';
+import {FilterTrans, TranslatableLabel} from './filter-trans';
 
 type Props = {
-  label: ReactNode;
+  label: TranslatableLabel;
   onDismiss?: () => void;
   onApply: () => void;
   children: ReactNode;
@@ -34,7 +35,7 @@ export function ApplyFilterPopoverContent({
               <ChevronLeftIcon />
             </Button>
           )}
-          {label}
+          <FilterTrans label={label} />
         </Popover.Title>
       </Popover.Header>
       {children}

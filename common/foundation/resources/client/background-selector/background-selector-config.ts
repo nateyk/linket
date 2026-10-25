@@ -1,5 +1,16 @@
 import type {ImageBackgroundEffect} from './image-background-effect';
 
+export type EditableBackgroundProps = Pick<
+  BackgroundSelectorConfig,
+  | 'backgroundImage'
+  | 'backgroundColor'
+  | 'backgroundAttachment'
+  | 'backgroundSize'
+  | 'backgroundRepeat'
+  | 'backgroundPosition'
+  | 'color'
+>;
+
 export type BackgroundSelectorConfig = {
   tint?: number;
   noise?: boolean;

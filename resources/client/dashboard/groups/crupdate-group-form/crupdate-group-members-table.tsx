@@ -134,7 +134,7 @@ export function CrupdateGroupMembersTable({
   const {contains} = useFilter();
   const {setValue, formState, clearErrors} =
     useFormContext<CreateGroupPayload>();
-  const [sortDescriptor, onSortChange] = useState<SortDescriptor>({
+  const [sortDescriptor, onSortChange] = useState<Partial<SortDescriptor>>({
     orderBy: 'name',
     orderDir: 'asc',
   });

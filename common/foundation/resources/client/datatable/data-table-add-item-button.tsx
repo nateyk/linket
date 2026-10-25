@@ -7,7 +7,7 @@ import React, {ReactElement, ReactNode} from 'react';
 import {To} from 'react-router';
 
 export interface DataTableAddItemButtonProps {
-  children: ReactNode;
+  children?: ReactNode;
   to?: To;
   href?: string;
   download?: boolean | string;

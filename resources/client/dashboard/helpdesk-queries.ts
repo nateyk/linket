@@ -36,7 +36,7 @@ import {View} from '@app/dashboard/views/view';
 import {validateDatatableSearch} from '@common/datatable/filters/utils/validate-datatable-search';
 import {
   CursorPaginationResponse,
-  getNextPageParam,
+  getNextPageParamFromBackend,
   PaginatedBackendResponse,
 } from '@common/http/backend-response/pagination-response';
 import {apiClient, queryClient} from '@common/http/query-client';
@@ -113,7 +113,7 @@ export const helpdeskQueries = {
               },
             )
             .then(r => r.data),
-        getNextPageParam: getNextPageParam,
+        getNextPageParam: getNextPageParamFromBackend,
         initialPageParam: 1,
         initialData: () => {
           const firstPageResponse = queryClient.getQueryData(
@@ -160,7 +160,7 @@ export const helpdeskQueries = {
             pageParam ? {cursor: pageParam} : undefined,
           ),
         initialPageParam: null,
-        getNextPageParam: getNextPageParam,
+        getNextPageParam: getNextPageParamFromBackend,
       }),
     agentConversationList: (agentId: number | string) => {
       return infiniteQueryOptions({
@@ -171,7 +171,7 @@ export const helpdeskQueries = {
             pageParam ? {cursor: pageParam} : undefined,
           ),
         initialPageParam: null,
-        getNextPageParam: getNextPageParam,
+        getNextPageParam: getNextPageParamFromBackend,
       });
     },
     inboxViews: queryOptions({

@@ -13,6 +13,7 @@ export const widgetSizes = {
 };
 
 interface WidgetState {
+  isMobile: boolean;
   isAiAgentPreviewMode: boolean;
   setIsAiAgentPreviewMode: (isAiAgentPreviewMode: boolean) => void;
   activeConversationId: number | null;
@@ -32,6 +33,10 @@ interface WidgetState {
 let closeTimeout: ReturnType<typeof setTimeout> | null = null;
 
 export const useWidgetStore = create<WidgetState>()((set, get) => ({
+  isMobile:
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('xWidgetIsMobile') ===
+      'true',
   isAiAgentPreviewMode: false,
   setIsAiAgentPreviewMode: isAiAgentPreviewMode =>
     set({isAiAgentPreviewMode: isAiAgentPreviewMode}),

@@ -192,6 +192,7 @@ const DRAFT_FORM: ProductFormState = {
   files: [{id: 7, name: 'guide.pdf'}],
   biolinkIds: [3],
   productType: 'digital',
+  samples: [],
 };
 
 test('debounced auto-save sends CURRENT state, not first-render state', async () => {

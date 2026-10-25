@@ -73,5 +73,60 @@ return [
                 'max_file_size' => '31457280', // 30MB
             ],
         ],
+        'conversationImages' => [
+            'visibility' => 'private',
+            'dont_clean' => true,
+            'label' => 'Conversation inline images',
+            'description' => 'Images embedded in support conversation messages.',
+            'defaults' => [
+                'prefix' => 'conversation-images',
+                'accept' => ['image'],
+                'max_file_size' => '10485760', // 10MB
+            ],
+        ],
+        'articleAttachments' => [
+            'visibility' => 'private',
+            'dont_clean' => true,
+            'label' => 'Help center article attachments',
+            'description' => 'Files attached to help center articles.',
+            'defaults' => [
+                'prefix' => 'article-attachments',
+                'accept' => ['*'],
+                'max_file_size' => '31457280', // 30MB
+            ],
+        ],
+        'aiAgentFlowAttachments' => [
+            'visibility' => 'private',
+            'dont_clean' => true,
+            'label' => 'AI agent flow attachments',
+            'description' => 'Files attached to AI agent flow nodes.',
+            'defaults' => [
+                'prefix' => 'ai-agent-flow-attachments',
+                'accept' => ['*'],
+                'max_file_size' => '31457280', // 30MB
+            ],
+        ],
+        'aiAgentDocuments' => [
+            'visibility' => 'private',
+            'dont_clean' => true,
+            'label' => 'AI agent knowledge documents',
+            'description' => 'Documents ingested into the AI agent knowledge base.',
+            'defaults' => [
+                'prefix' => 'ai-agent-documents',
+                'accept' => ['*'],
+                'max_file_size' => '104857600', // 100MB
+            ],
+        ],
+        'chatWidgetUploads' => [
+            'visibility' => 'private',
+            'dont_clean' => true,
+            'label' => 'Live chat widget uploads',
+            'description' => 'Files uploaded by customers in the chat widget.',
+            'defaults' => [
+                'prefix' => 'chat-widget-uploads',
+                'accept' => ['*'],
+                'max_file_size' => '5242880', // 5MB
+            ],
+        ],
     ],
 ];
