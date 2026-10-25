@@ -7,6 +7,10 @@ import {
   useBootstrapDataStore,
 } from '@ui/bootstrap-data/bootstrap-data-store';
 import {loadFonts} from '@ui/fonts/font-picker/load-fonts';
+import {
+  removeThemeValue,
+  setThemeValue,
+} from '@ui/themes/utils/set-theme-value';
 import deepMerge from 'deepmerge';
 import {useCallback, useEffect, useRef} from 'react';
 
@@ -57,6 +61,9 @@ export function SettingsPreviewListener() {
           }
           return;
         case 'setCustomCode':
+          if (command.mode === 'html' && isHelpCenterPublicPath()) {
+            return renderCustomCode(command.mode, undefined);
+          }
           return renderCustomCode(command.mode, command.value);
         default:
       }
@@ -104,6 +111,16 @@ function eventIsTrusted(e: MessageEvent): boolean {
   return new URL(e.origin).hostname === window.location.hostname;
 }
 
+function isHelpCenterPublicPath(): boolean {
+  const {pathname} = window.location;
+  return (
+    pathname === '/help' ||
+    pathname.startsWith('/help/') ||
+    pathname === '/hc' ||
+    pathname.startsWith('/hc/')
+  );
+}
+
 function renderCustomCode(mode: 'html' | 'css', value?: string) {
   const parent = mode === 'html' ? document.body : document.head;
   const nodeType = mode === 'html' ? 'div' : 'style';
@@ -121,14 +138,6 @@ function renderCustomCode(mode: 'html' | 'css', value?: string) {
     }
     customNode.innerHTML = value;
   }
-}
-
-function setThemeValue(key: string, value: string) {
-  document.documentElement.style.setProperty(key, value);
-}
-
-function removeThemeValue(key: string) {
-  document.documentElement.style.removeProperty(key);
 }
 
 const possibleRadius = ['none', 'sm', 'md', 'default'];

@@ -7,6 +7,8 @@ import {ImageUpIcon} from 'lucide-react';
 import {useActiveUpload} from '../../uploads/uploader/use-active-upload';
 import {useCurrentTextEditor} from '../tiptap-editor-context';
 
+export const TwoMB = 2 * 1024 * 1024;
+
 type Props = {
   uploadType: keyof typeof UploadType;
 };

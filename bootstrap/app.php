@@ -5,6 +5,6 @@ use Common\Core\Application;
 return Application::create(
     basePath: dirname(__DIR__),
     providers: [
-        //
+        App\Providers\SupportServiceProvider::class,
     ],
 );

@@ -4,14 +4,15 @@ import {serviceCategoriesAdminOptions} from '@app/admin/service-categories/servi
 import {adminCustomPagesRoutes} from '@common/admin/custom-pages/admin-custom-pages-routes';
 import {adminFileEntriesRoutes} from '@common/admin/file-entry/admin-file-entries-routes';
 import {adminBlogRoutes} from '@common/admin/blog/admin-blog-routes';
-import {listHelpCategoriesOptions} from '@common/admin/help/help-admin-queries';
 import {adminLogsRoutes} from '@common/admin/logging/admin-logs-routes';
 import {adminRolesRoutes} from '@common/admin/roles/admin-roles-routes';
 import {commonAdminSettingsRoutes} from '@common/admin/settings/common-admin-settings-routes';
 import {adminBillingRoutes} from '@common/admin/subscriptions/admin-billing-routes';
 import {adminLocalizationsRoutes} from '@common/admin/translations/admin-localizations-routes';
 import {adminUsersRoutes} from '@common/admin/users/admin-users-routes';
+import {adminQueries} from '@app/admin/admin-queries';
 import {authGuard} from '@common/auth/guards/auth-route';
+import {shouldRevalidateDatatableLoader} from '@common/datatable/filters/utils/should-revalidate-datatable-loader';
 import {queryClient} from '@common/http/query-client';
 import {searchParamsFromUrl} from '@ui/utils/urls/search-params-from-url';
 import {redirect, RouteObject} from 'react-router';
@@ -55,17 +56,65 @@ export const adminRoutes: RouteObject[] = [
       ...Object.values(adminFileEntriesRoutes),
       ...Object.values(adminLogsRoutes),
 
+      // Legacy admin Help Center → BeDesk HC manager in agent app
       {
         path: 'help',
-        lazy: () => import('@common/admin/help/help-settings-page'),
-        loader: async () => {
-          const redirect = authGuard({permission: 'settings.update'});
-          if (redirect) return redirect;
-          await queryClient.ensureQueryData(
-            listHelpCategoriesOptions(),
+        loader: () => redirect('/agent/hc/arrange', 301),
+      },
+
+      // Phase 2 — attributes + triggers (BeDesk-native admin)
+      {
+        path: 'attributes',
+        shouldRevalidate: shouldRevalidateDatatableLoader,
+        lazy: () =>
+          import('@app/attributes/datatable/attributes-datatable-page'),
+      },
+      {
+        path: 'attributes/new',
+        lazy: () => import('@app/attributes/crupdate/create-attribute-page'),
+      },
+      {
+        path: 'attributes/:id/edit',
+        lazy: () => import('@app/attributes/crupdate/update-attribute-page'),
+      },
+      {
+        path: 'triggers',
+        shouldRevalidate: shouldRevalidateDatatableLoader,
+        lazy: () => import('@app/triggers/triggers-datatable-page'),
+        loader: async ({request}) => {
+          const redirectTo = authGuard({permission: 'triggers.update'});
+          if (redirectTo) return redirectTo;
+          return await queryClient.ensureQueryData(
+            adminQueries.triggers.index(searchParamsFromUrl(request.url)),
           );
         },
       },
+      {
+        path: 'triggers/new',
+        lazy: () => import('@app/triggers/create-trigger-page'),
+        loader: async () => {
+          const redirectTo = authGuard({permission: 'triggers.update'});
+          if (redirectTo) return redirectTo;
+          return await queryClient.ensureQueryData(
+            adminQueries.triggers.config(),
+          );
+        },
+      },
+      {
+        path: 'triggers/:triggerId/edit',
+        lazy: () => import('@app/triggers/update-trigger-page'),
+        loader: async ({params}) => {
+          const redirectTo = authGuard({permission: 'triggers.update'});
+          if (redirectTo) return redirectTo;
+          return await Promise.allSettled([
+            queryClient.ensureQueryData(
+              adminQueries.triggers.get(params.triggerId!),
+            ),
+            queryClient.ensureQueryData(adminQueries.triggers.config()),
+          ]);
+        },
+      },
+
       ...adminBlogRoutes,
       {
         path: 'service-categories',
@@ -105,6 +154,20 @@ export const adminRoutes: RouteObject[] = [
           {
             path: 'landing-page',
             lazy: () => import('@app/admin/settings/landing-page-settings'),
+          },
+          {
+            path: 'hc',
+            lazy: () => import('@app/admin/settings/hc/hc-settings'),
+          },
+          {
+            path: 'ai',
+            lazy: () =>
+              import('@ai/admin/settings/ai-settings-page'),
+          },
+          {
+            path: 'livechat',
+            lazy: () =>
+              import('@livechat/admin/settings/livechat-settings'),
           },
           {
             path: 'ads',

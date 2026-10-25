@@ -1,6 +1,6 @@
 import {CreateChannelPayload} from '@common/admin/channels/requests/use-create-channel';
 import {channelQueries} from '@common/channels/channel-queries';
-import {onFormQueryError} from '@common/errors/on-form-query-error';
+import {onFormQueryError} from '@common/http/errors/on-form-query-error';
 import {apiClient, queryClient} from '@common/http/query-client';
 import {useNavigate} from '@common/ui/navigation/use-navigate';
 import {useMutation} from '@tanstack/react-query';

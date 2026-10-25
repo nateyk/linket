@@ -3,6 +3,7 @@
 use App\CreatorServices\Controllers\PublicServicePageController;
 use App\CreatorServices\PublicCreatorServices;
 use App\Demo\Controllers\DemoLoginController;
+use App\HelpCenter\Controllers\LegacyHelpRedirectController;
 use App\Links\Controllers\FallbackRouteController;
 use App\Links\Controllers\LinkImageController;
 use App\QrCodes\Controllers\QrCodesController;
@@ -52,6 +53,10 @@ Route::get('{storeSlug}/products/{digitalProduct}', [PublicDigitalProductPageCon
 Route::get('{storeSlug}/products/{digitalProduct}/orders/{order}/success', [PublicDigitalProductPageController::class, 'success'])
     ->whereNumber('digitalProduct')
     ->name('digital-products.public.order.success');
+
+// Legacy Linket Help KB slugs → BeDesk HC
+Route::get('help/articles/{slug}', [LegacyHelpRedirectController::class, 'article']);
+Route::get('help/categories/{slug}', [LegacyHelpRedirectController::class, 'category']);
 
 // BLOG (public)
 Route::name('blog.')->prefix('blog')->group(function () {

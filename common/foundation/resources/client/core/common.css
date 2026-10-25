@@ -1,4 +1,6 @@
 @import './common-tailwind.css';
+@import './bedesk-compat.css';
+@import '../ui/dashboard-layout/dashbboard-layout.css';
 @import './presets/brutalist.css';
 @import './presets/tangerine.css';
 @import './presets/soft-pop.css';

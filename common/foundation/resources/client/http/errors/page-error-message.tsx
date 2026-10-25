@@ -10,7 +10,8 @@ export function PageErrorMessage() {
   const handleRetry = async () => {
     setIsRetrying(true);
     await queryClient.removeQueries();
-    setIsRetrying(false);
+    // Clearing the cache alone does not remount a failed route loader.
+    window.location.reload();
   };
 
   return (

@@ -24,8 +24,9 @@ import {
 } from '@app/digital-products/public/digital-product-public-pages';
 import {PublicServicePage} from '@app/services/public/public-service-page';
 import {NotFoundPage} from '@common/ui/not-found-page/not-found-page';
+import {HcLivechatWidgetLoader} from '@livechat/hc-livechat-widget-loader';
 import {getBootstrapData} from '@ui/bootstrap-data/bootstrap-data-store';
-import {useEffect, useState} from 'react';
+import {Fragment, useEffect, useState} from 'react';
 
 type Linkeable = LinkType | Folder | Biolink;
 
@@ -175,14 +176,17 @@ export function Component() {
   }
 
   return (
-    <LinkeableRenderer
-      linkeable={preview.biolink ?? linkeablePage.data}
-      appearance={preview.appearance}
-      content={preview.content}
-      profileConfig={preview.profileConfig}
-      preview={preview.isPreview}
-      previewSection={preview.previewSection}
-    />
+    <Fragment>
+      {!preview.isPreview ? <HcLivechatWidgetLoader /> : null}
+      <LinkeableRenderer
+        linkeable={preview.biolink ?? linkeablePage.data}
+        appearance={preview.appearance}
+        content={preview.content}
+        profileConfig={preview.profileConfig}
+        preview={preview.isPreview}
+        previewSection={preview.previewSection}
+      />
+    </Fragment>
   );
 }
 

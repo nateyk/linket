@@ -3,12 +3,18 @@
 namespace App\Providers;
 
 use App\Actions\AppBootstrapData;
+use App\Contacts\Models\PageVisit;
+use App\Conversations\Models\Conversation;
 use App\Files\Listeners\ConvertUploadedLinkImageToWebp;
 use App\Demo\Console\ResetDemoSite;
 use App\Demo\Console\SeedDemoData;
+use App\Demo\Console\SeedSupportDemoData;
 use App\Biolinks\Actions\CrupdateBiolink;
 use App\Biolinks\Console\DisableExpiredLeapLinks;
 use App\Biolinks\Models\Biolink;
+use App\HelpCenter\Models\HcArticle;
+use App\HelpCenter\Models\HcCategory;
+use App\HelpCenter\Models\SearchTerm;
 use App\Links\Models\Link;
 use App\Folders\Models\Folder;
 use App\LinkOverlays\Models\LinkOverlay;
@@ -17,6 +23,8 @@ use App\Links\Actions\CrupdateLink;
 use App\Links\Console\ArchiveExpiredLinkeables;
 use App\Entitlements\Entitlements;
 use App\QrCodes\Models\QrCode;
+use App\Team\Models\AgentInvite;
+use App\Team\Models\Group;
 use App\TrackingPixels\Models\TrackingPixel;
 use App\Models\User;
 use App\Storefront\Models\DigitalProduct;
@@ -91,6 +99,13 @@ class AppServiceProvider extends ServiceProvider
             Tag::MODEL_TYPE => Tag::class,
             DigitalProduct::class => DigitalProduct::class,
             StorefrontOrder::class => StorefrontOrder::class,
+            Conversation::MODEL_TYPE => Conversation::class,
+            SearchTerm::MODEL_TYPE => SearchTerm::class,
+            HcArticle::MODEL_TYPE => HcArticle::class,
+            HcCategory::MODEL_TYPE => HcCategory::class,
+            Group::MODEL_TYPE => Group::class,
+            AgentInvite::MODEL_TYPE => AgentInvite::class,
+            PageVisit::MODEL_TYPE => PageVisit::class,
         ]);
 
         Gate::policy(Store::class, \App\Biolinks\Policies\BiolinkPolicy::class);
@@ -238,6 +253,7 @@ class AppServiceProvider extends ServiceProvider
         $this->commands([
             ResetDemoSite::class,
             SeedDemoData::class,
+            SeedSupportDemoData::class,
             DeleteOldWebhookDeliveries::class,
             ArchiveExpiredLinkeables::class,
             DisableExpiredLeapLinks::class,

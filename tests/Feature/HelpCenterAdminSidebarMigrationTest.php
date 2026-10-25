@@ -131,7 +131,7 @@ test('help center migration is a no-op without an admin sidebar menu', function 
     expect(storedActions())->not->toContain('/admin/settings/help');
 });
 
-test('fresh installs ship the Help center admin sidebar entry', function () {
+test('fresh installs ship the Help center settings sidebar entry', function () {
     $defaults = (new LoadDefaultSettings())->execute();
     $menus = json_decode(
         collect($defaults)->firstWhere('name', 'menus')['value'],
@@ -141,9 +141,10 @@ test('fresh installs ship the Help center admin sidebar entry', function () {
     $admin = collect($menus)->firstWhere('positions.0', 'admin-sidebar');
     $actions = collect($admin['items'])->pluck('action');
 
-    // Help center is a top-level admin page, not a Settings tab.
-    expect($actions)->toContain('/admin/help');
+    // Linket Common\Help was retired; support HC settings live under Settings.
+    expect($actions)->toContain('/admin/settings/hc');
+    expect($actions)->not->toContain('/admin/help');
     expect($actions)->not->toContain('/admin/settings/help');
-    expect(array_search('/admin/help', $actions->all()))
+    expect(array_search('/admin/settings/hc', $actions->all()))
         ->toBe(array_search('/admin/settings', $actions->all()) + 1);
 });

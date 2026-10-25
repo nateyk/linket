@@ -12,6 +12,10 @@ return [
                 'api.access',
                 'files.create',
 
+                // SUPPORT (BeDesk-native)
+                'articles.view',
+                'conversations.create',
+
                 // COMMENTS
                 'comments.create',
                 'comments.view',
@@ -141,7 +145,34 @@ return [
             'internal' => true,
             'guests' => true,
             'type' => 'users',
-            'permissions' => ['links.create'],
+            'permissions' => [
+                'links.create',
+                'articles.view',
+                'conversations.create',
+                'files.create',
+            ],
+        ],
+
+        [
+            'name' => 'Agents',
+            'default' => false,
+            'guests' => false,
+            'type' => 'agents',
+            'permission_type' => 'users',
+            'permissions' => [
+                'articles.view',
+                'articles.update',
+                'conversations.update',
+                'users.update',
+                'tags.update',
+                'files.create',
+                'agents.update',
+                'views.update',
+                'statuses.update',
+                'reports.view',
+                'canned_replies.update',
+                'campaigns.update',
+            ],
         ],
 
         [
@@ -236,6 +267,70 @@ return [
         ],
     ],
     'all' => [
+        'Support' => [
+            [
+                'name' => 'articles.view',
+                'display_name' => 'View help center',
+                'description' =>
+                    'Allow viewing of all help center articles and categories.',
+            ],
+            [
+                'name' => 'conversations.create',
+                'display_name' => 'Start conversations',
+                'description' =>
+                    'Allow creating new conversations via email, ticket portal, or other channels.',
+            ],
+            [
+                'name' => 'conversations.update',
+                'display_name' => 'Manage conversations',
+                'description' =>
+                    'Allow full access to conversations in the agent inbox.',
+            ],
+            [
+                'name' => 'articles.update',
+                'display_name' => 'Manage help center',
+                'description' =>
+                    'Allow editing of all help center articles and categories.',
+            ],
+            [
+                'name' => 'canned_replies.update',
+                'display_name' => 'Manage saved replies',
+                'description' =>
+                    'Allow creating and editing canned replies for the agent inbox.',
+            ],
+            [
+                'name' => 'campaigns.update',
+                'display_name' => 'Manage campaigns',
+                'description' =>
+                    'Allow creating and editing live chat campaigns.',
+            ],
+            [
+                'name' => 'agents.update',
+                'display_name' => 'Manage agents',
+                'description' => 'Allow team management.',
+            ],
+            [
+                'name' => 'views.update',
+                'display_name' => 'Manage inbox views',
+                'description' => 'Allow managing conversation inbox views.',
+            ],
+            [
+                'name' => 'statuses.update',
+                'display_name' => 'Manage statuses',
+                'description' => 'Allow managing conversation statuses.',
+            ],
+            [
+                'name' => 'triggers.update',
+                'display_name' => 'Manage triggers',
+                'description' => 'Allow managing automation triggers.',
+            ],
+            [
+                'name' => 'attributes.update',
+                'display_name' => 'Manage custom attributes',
+                'description' =>
+                    'Allow creating and editing custom attributes for conversations and contacts.',
+            ],
+        ],
         'Features' => [
             [
                 'name' => 'links.create',

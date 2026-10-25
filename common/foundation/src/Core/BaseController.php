@@ -44,7 +44,10 @@ class BaseController extends Controller
             $guest = new User();
             // make sure ID is not NULL to avoid false positives in authorization
             $guest->forceFill(['id' => -1]);
-            $guest->setRelation('roles', collect([app('guestRole')]));
+            $guest->setRelation(
+                'roles',
+                collect([app('guestRole')])->filter(),
+            );
             return $this->authorizeForUser($guest, $ability, $arguments);
         }
     }

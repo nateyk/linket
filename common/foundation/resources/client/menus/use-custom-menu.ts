@@ -16,7 +16,8 @@ export function useCustomMenu(menuOrPosition?: string | MenuConfig) {
 
     const menu =
       typeof menuOrPosition === 'string'
-        ? settings.menus?.find(s => s.positions?.includes(menuOrPosition))
+        ? (settings.menus?.find(s => s.id === menuOrPosition) ??
+          settings.menus?.find(s => s.positions?.includes(menuOrPosition)))
         : menuOrPosition;
 
     const menuItems: MenuItemConfig[] = [];

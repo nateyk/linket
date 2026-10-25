@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="320" viewBox="0 0 1440 320" fill="none">
+  <defs>
+    <pattern id="hc-grid" width="48" height="48" patternUnits="userSpaceOnUse">
+      <path d="M0 24h48M24 0v48" stroke="white" stroke-opacity="0.08" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect width="1440" height="320" fill="url(#hc-grid)"/>
+  <circle cx="120" cy="80" r="3" fill="white" fill-opacity="0.12"/>
+  <circle cx="980" cy="140" r="4" fill="white" fill-opacity="0.1"/>
+  <rect x="640" y="60" width="28" height="28" rx="4" stroke="white" stroke-opacity="0.1" stroke-width="1.5"/>
+  <path d="M200 200c20-30 50-30 70 0s50 30 70 0" stroke="white" stroke-opacity="0.08" stroke-width="1.5"/>
+</svg>

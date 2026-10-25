@@ -159,6 +159,9 @@
   "autoload": {
     "psr-4": {
       "App\\": "app/",
+      "Ai\\": "modules/ai/src/",
+      "Envato\\": "modules/envato/src/",
+      "Livechat\\": "modules/livechat/src/",
       "Common\\": "common/foundation/src/",
       "Common\\Database\\Seeders\\": "common/foundation/database/seeders",
       "Database\\Seeders\\": "database/seeders/",

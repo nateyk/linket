@@ -1,6 +1,7 @@
 @import 'tailwindcss' source(none);
 
 @import '../../common/foundation/resources/client/core/common.css';
+@import './help-center/tickets-portal/ticket-page/customer-ticket-page-layout.css';
 
 @source '../../resources/client/**/*.ts*';
 @source '../../common/foundation/resources/client/**/*.ts*';

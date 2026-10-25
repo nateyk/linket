@@ -130,7 +130,10 @@ export default defineConfig({
   plugins: [
     react(),
     laravel({
-      input: ['resources/client/main.tsx'],
+      input: [
+        'resources/client/main.tsx',
+        'modules/livechat/resources/client/widget/widget-entry.tsx',
+      ],
       refresh: false,
     }),
     basePath(),

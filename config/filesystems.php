@@ -62,5 +62,16 @@ return [
                 'max_file_size' => '104857600',
             ],
         ],
+        'conversationAttachments' => [
+            'visibility' => 'private',
+            'dont_clean' => true,
+            'label' => 'Conversation attachments',
+            'description' => 'Files attached to support conversation messages.',
+            'defaults' => [
+                'prefix' => 'conversation-attachments',
+                'accept' => ['*'],
+                'max_file_size' => '31457280', // 30MB
+            ],
+        ],
     ],
 ];

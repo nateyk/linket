@@ -8,7 +8,7 @@ import {
   NavbarAuthUser,
   NavbarAuthUserProps,
 } from '@common/ui/navigation/navbar/navbar-auth-user';
-import {Button} from '@shadcn/button/button';
+import {Button, ButtonColor} from '@shadcn/button/button';
 import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {Trans} from '@ui/i18n/trans';
 import {useSettings} from '@ui/settings/use-settings';
@@ -52,9 +52,11 @@ function NavbarContent({children, className, ...props}: ComponentProps<'div'>) {
 function NavbarAuthContent({
   menuItems,
   className,
+  primaryButtonColor,
 }: {
   menuItems?: NavbarAuthUserProps['items'];
   className?: string;
+  primaryButtonColor?: ButtonColor;
 }) {
   const isMobile = useIsMobileMediaQuery();
   const {notifications} = useSettings();
@@ -69,7 +71,7 @@ function NavbarAuthContent({
           items={menuItems}
         />
       ) : (
-        <NavbarAuthButtons />
+        <NavbarAuthButtons primaryButtonColor={primaryButtonColor} />
       )}
     </NavbarContent>
   );

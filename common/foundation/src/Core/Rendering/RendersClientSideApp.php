@@ -11,6 +11,11 @@ use Illuminate\Support\Facades\Vite;
 
 trait RendersClientSideApp
 {
+    protected function renderClientOrApi(array $options)
+    {
+        return $this->clientSideOrPrerenderedResponse($options);
+    }
+
     protected function clientSideOrPrerenderedResponse(array $options)
     {
         $data = Arr::get($options, 'data', []);
@@ -29,7 +34,11 @@ trait RendersClientSideApp
         }
 
         // seo should not be included only for non-internal API requests
-        if (isset($seoTagsView) && (!$isApiRequest || $requestIsFromFrontend)) {
+        if (
+            isset($seoTagsView) &&
+            View::exists($seoTagsView) &&
+            (!$isApiRequest || $requestIsFromFrontend)
+        ) {
             $data['seoTags'] = view($seoTagsView, $data)->render();
         }
 

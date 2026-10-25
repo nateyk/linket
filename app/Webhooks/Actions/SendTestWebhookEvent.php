@@ -9,6 +9,8 @@ use App\Folders\Resources\FolderResource;
 use App\QrCodes\Models\QrCode;
 use App\QrCodes\Resources\QrCodeResource;
 use App\Webhooks\Jobs\DeliverWebhook;
+use App\Conversations\Models\Conversation;
+use App\Conversations\Resources\ConversationWebhookResource;
 use App\Links\Models\Link;
 use App\Links\Resources\LinkResource;
 use App\Webhooks\Models\Webhook;
@@ -61,6 +63,20 @@ class SendTestWebhookEvent
                 TrackedEvent::factory()->make([
                     'id' => random_int(1, 1000000),
                     'event_type' => 'scan',
+                ]),
+            ))->toWebhookArray(),
+            'ticket.created',
+            'ticket.updated',
+            'ticket.closed'
+                => (new ConversationWebhookResource(
+                Conversation::make([
+                    'id' => random_int(1, 1000000),
+                    'type' => 'ticket',
+                    'subject' => 'Example ticket',
+                    'status_id' => 1,
+                    'status_category' => 6,
+                    'user_id' => 1,
+                    'channel' => 'website',
                 ]),
             ))->toWebhookArray(),
             default => throw new InvalidArgumentException(

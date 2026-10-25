@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
             CreateDefaultMenusSeeder::class,
             CreateDefaultCustomPagesSeeder::class,
             CreateDefaultHelpCenterSeeder::class,
+            SupportDefaultsSeeder::class,
             CssThemesTableSeeder::class,
             ServiceCategoriesSeeder::class,
         ]);

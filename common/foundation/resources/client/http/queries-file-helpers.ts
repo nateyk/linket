@@ -97,6 +97,8 @@ const infiniteQuery = <T>({
   });
 };
 
+export {get};
+
 export const queryFactoryHelpers = {
   infiniteQuery,
   get,

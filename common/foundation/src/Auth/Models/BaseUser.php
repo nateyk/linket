@@ -308,16 +308,14 @@ abstract class BaseUser extends BaseModel implements
                 ]);
             }
 
-            if ($this->roles->pluck('id')->isNotEmpty()) {
-                $query->orWhere(function (Builder $builder) {
+            $roleIds = $this->roles->filter()->pluck('id')->filter();
+            if ($roleIds->isNotEmpty() && ($firstRole = $this->roles->filter()->first())) {
+                $query->orWhere(function (Builder $builder) use ($roleIds, $firstRole) {
                     return $builder
-                        ->whereIn(
-                            'permissionable_id',
-                            $this->roles->pluck('id'),
-                        )
+                        ->whereIn('permissionable_id', $roleIds)
                         ->where(
                             'permissionable_type',
-                            $this->roles->first()->getMorphClass(),
+                            $firstRole->getMorphClass(),
                         );
                 });
             }

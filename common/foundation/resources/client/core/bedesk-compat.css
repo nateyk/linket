@@ -1,0 +1,42 @@
+/**
+ * BeDesk-ported UI still uses legacy utility names from the pre–Tailwind v4
+ * theme. Map them to Linket semantic tokens so agent/helpdesk surfaces render
+ * with correct contrast inside cards and accordions.
+ *
+ * Spacing is not mapped here. BeDesk numeric utilities were pixel intents
+ * (`p-24` = 24px) and Tailwind v4 reads that same class as 6rem. Convert at
+ * the call site: 24px → p-6 / gap-6, 20px → p-5, 12px → p-3 / gap-3, 8px → p-2.
+ */
+@layer utilities {
+  .text-main {
+    @apply text-foreground;
+  }
+
+  .text-muted {
+    @apply text-muted-foreground;
+  }
+
+  .text-disabled {
+    @apply text-muted-foreground opacity-50;
+  }
+
+  .bg-alt {
+    @apply bg-muted;
+  }
+
+  .rounded-panel {
+    @apply rounded-card;
+  }
+
+  .border-divider {
+    @apply border-border;
+  }
+
+  .border-divider-darker {
+    @apply border-border;
+  }
+
+  .bg-text-muted {
+    @apply bg-muted-foreground;
+  }
+}

@@ -4,7 +4,14 @@ import {
   retrieveWebhookOptions,
 } from '@app/account-settings/webhooks/webhook-queries';
 import {adminRoutes} from '@app/admin/admin-routes';
+import {agentRoutes} from '@app/dashboard/agent-routes';
 import {dashboardRoutes} from '@app/dashboard/dashboard-routes';
+import {helpCenterRoutes} from '@app/help-center/help-center-routes';
+import {
+  customerNewTicketLoader,
+  customerTicketShowLoader,
+  customerTicketsIndexLoader,
+} from '@app/help-center/homepage/hc-public-routes';
 import {retrieveLinkPageOptions} from '@app/dashboard/link-pages/link-pages-queries';
 import {landingPageDataQueryOptions} from '@app/landing/use-landing-page-data';
 import {getSettingsPreviewMode} from '@common/admin/settings/preview/use-settings-preview-mode';
@@ -287,6 +294,8 @@ export const appRouter = createBrowserRouter(
         ...notificationRoutes,
         ...(legacyDashboardRedirects as unknown as typeof dashboardRoutes),
         ...dashboardRoutes,
+        ...agentRoutes,
+        ...helpCenterRoutes,
         ...adminRoutes,
         ...checkoutRoutes,
 
@@ -333,6 +342,37 @@ export const appRouter = createBrowserRouter(
           path: 'my-portal/audio/:orderId',
           lazy: () =>
             import('@app/digital-products/public/portal-audio-player-page'),
+        },
+        {
+          path: 'my-portal/tickets',
+          lazy: () =>
+            import('@app/digital-products/public/portal-tickets-layout'),
+          children: [
+            {
+              index: true,
+              lazy: () =>
+                import(
+                  '@app/help-center/tickets-portal/ticklets-table/tickets-table-page'
+                ),
+              loader: customerTicketsIndexLoader,
+            },
+            {
+              path: 'new',
+              lazy: () =>
+                import(
+                  '@app/help-center/tickets-portal/new-ticket-page/new-ticket-page'
+                ),
+              loader: customerNewTicketLoader,
+            },
+            {
+              path: ':conversationId',
+              lazy: () =>
+                import(
+                  '@app/help-center/tickets-portal/ticket-page/ticket-page'
+                ),
+              loader: customerTicketShowLoader,
+            },
+          ],
         },
         ...commonRoutes,
         {

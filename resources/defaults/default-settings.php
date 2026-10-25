@@ -34,6 +34,30 @@ return [
     ['name' => 'biolink.show_branding', 'value' => true],
     ['name' => 'store.show_branding', 'value' => true],
 
+    // HELP CENTER (BeDesk-native public HC)
+    [
+        'name' => 'hcLanding',
+        'value' => json_encode([
+            'header' => [
+                'variant' => 'colorful',
+                'title' => 'How can we help you?',
+                'subtitle' => 'Ask Questions. Browse Articles. Find Answers.',
+                'placeholder' => 'Enter your question or keyword here',
+                'background' => 'images/hc-header-pattern.svg',
+                'backgroundSize' => 'cover',
+                'backgroundRepeat' => 'no-repeat',
+                'backgroundPosition' => 'center top',
+            ],
+            'content' => [
+                'variant' => 'articleGrid',
+            ],
+            'articles_per_category' => 5,
+            'children_per_category' => 6,
+            'hide_small_categories' => false,
+            'show_footer' => false,
+        ]),
+    ],
+
     // HOMEPAGE APPEARANCE
     [
         'name' => 'homepage.type',
@@ -338,6 +362,77 @@ return [
                 'items' => [],
             ],
             [
+                'name' => 'Agent dashboard sidebar',
+                'id' => 'agent-dashboard-sidebar',
+                'positions' => ['dashboard-sidebar'],
+                'items' => [
+                    [
+                        'type' => 'route',
+                        'label' => 'Conversations',
+                        'action' => '/agent/conversations?viewId=mine',
+                        'id' => 'agent-nav-conversations',
+                        'permissions' => ['conversations.update'],
+                        'order' => 0,
+                    ],
+                    [
+                        'type' => 'route',
+                        'label' => 'Team',
+                        'action' => '/agent/team',
+                        'id' => 'agent-nav-team',
+                        'permissions' => ['agents.update'],
+                        'order' => 1,
+                    ],
+                    [
+                        'type' => 'route',
+                        'label' => 'Customers',
+                        'action' => '/agent/customers',
+                        'id' => 'agent-nav-customers',
+                        'permissions' => ['users.update'],
+                        'order' => 2,
+                    ],
+                    [
+                        'type' => 'route',
+                        'label' => 'Campaigns',
+                        'action' => '/agent/campaigns',
+                        'id' => 'agent-nav-campaigns',
+                        'permissions' => ['campaigns.update'],
+                        'order' => 3,
+                    ],
+                    [
+                        'type' => 'route',
+                        'label' => 'Help center',
+                        'action' => '/agent/hc/arrange',
+                        'id' => 'agent-nav-hc',
+                        'permissions' => ['articles.update'],
+                        'order' => 4,
+                    ],
+                    [
+                        'type' => 'route',
+                        'label' => 'AI Agent',
+                        'action' => '/agent/ai-agent/settings',
+                        'id' => 'agent-nav-ai-agents',
+                        'permissions' => ['conversations.update'],
+                        'order' => 5,
+                    ],
+                    [
+                        'type' => 'route',
+                        'label' => 'Reports',
+                        'action' => '/agent/reports',
+                        'id' => 'agent-nav-reports',
+                        'permissions' => ['reports.view'],
+                        'order' => 6,
+                    ],
+                    [
+                        'type' => 'route',
+                        'label' => 'Saved replies',
+                        'action' => '/agent/saved-replies',
+                        'id' => 'agent-nav-saved-replies',
+                        'permissions' => ['canned_replies.update'],
+                        'order' => 7,
+                    ],
+                ],
+            ],
+            [
                 'name' => 'Dashboard mobile',
                 'id' => 'a03',
                 'positions' => ['dashboard-mobile'],
@@ -496,7 +591,7 @@ return [
                     [
                         'label' => 'Help center',
                         'id' => 'admin-help-center',
-                        'action' => '/admin/help',
+                        'action' => '/admin/settings/hc',
                         'type' => 'route',
                         'permissions' => ['settings.update'],
                     ],

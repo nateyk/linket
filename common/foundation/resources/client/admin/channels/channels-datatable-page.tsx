@@ -17,7 +17,7 @@ const DashboardPage = {
 };
 import {useDatatableQuery} from '@common/datatable/requests/use-datatable-query';
 import {apiClient, queryClient} from '@common/http/query-client';
-import {showHttpErrorToast} from '@common/http/show-http-error-toast';
+import {showHttpErrorToast} from '@common/http/errors/show-http-error-toast';
 import {StaticPageTitle} from '@common/seo/static-page-title';
 import {Table} from '@common/ui/tables/table';
 import {useMutation} from '@tanstack/react-query';

@@ -145,6 +145,9 @@ jobs:
       - name: Schedule loads
         run: php artisan schedule:list
 
+      - name: OpenAPI hygiene (no legacy AdminHelp; hc + helpdesk present)
+        run: bash scripts/check-api-docs-drift.sh
+
       - name: TypeScript typecheck
         run: npx tsc --noEmit
 

@@ -1,6 +1,6 @@
 import {Channel, ChannelConfig} from '@common/channels/channel';
 import {channelQueries} from '@common/channels/channel-queries';
-import {onFormQueryError} from '@common/errors/on-form-query-error';
+import {onFormQueryError} from '@common/http/errors/on-form-query-error';
 import {BackendResponse} from '@common/http/backend-response/backend-response';
 import {PaginationResponse} from '@common/http/backend-response/pagination-response';
 import {apiClient} from '@common/http/query-client';

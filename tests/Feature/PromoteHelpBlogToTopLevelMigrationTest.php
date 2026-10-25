@@ -137,7 +137,7 @@ test('migration is a no-op without an admin sidebar menu', function () {
     expect(promoteStoredActions())->toBe([]);
 });
 
-test('defaults ship top-level help and blog actions', function () {
+test('defaults ship HC settings and top-level blog actions', function () {
     $defaults = (new \Common\Settings\LoadDefaultSettings())->execute();
     $menus = json_decode(
         collect($defaults)->firstWhere('name', 'menus')['value'],
@@ -147,8 +147,9 @@ test('defaults ship top-level help and blog actions', function () {
     $admin = collect($menus)->firstWhere('positions.0', 'admin-sidebar');
     $actions = collect($admin['items'])->pluck('action')->all();
 
-    expect($actions)->toContain('/admin/help');
+    expect($actions)->toContain('/admin/settings/hc');
     expect($actions)->toContain('/admin/blog');
+    expect($actions)->not->toContain('/admin/help');
     expect($actions)->not->toContain('/admin/settings/help');
     expect($actions)->not->toContain('/admin/settings/blog');
 });

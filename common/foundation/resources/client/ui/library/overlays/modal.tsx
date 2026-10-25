@@ -28,7 +28,7 @@ export const Modal = forwardRef<HTMLDivElement, OverlayProps>(
     return (
       <div
         className={clsx(
-          'inset-0 isolate z-50',
+          'inset-0 isolate z-[200]',
           position === 'absolute' ? 'absolute' : 'fixed',
         )}
         style={viewPortStyle}

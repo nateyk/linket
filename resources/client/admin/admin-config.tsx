@@ -18,7 +18,6 @@ import {
   CreditCardIcon,
   LandmarkIcon,
   CoinsIcon,
-  HelpCircleIcon,
   NewspaperIcon,
   ListTreeIcon,
 } from 'lucide-react';
@@ -41,7 +40,6 @@ export const AdminSidebarIcons: Record<
   '/admin/files': <FilesIcon />,
   '/admin/localizations': <GlobeIcon />,
   '/admin/logs': <ClipboardClockIcon />,
-  '/admin/help': <HelpCircleIcon />,
   '/admin/blog': <NewspaperIcon />,
   '/admin/service-categories': <ListTreeIcon />,
   '/admin/items': <StoreIcon />,
@@ -63,6 +61,9 @@ export const AppSettingsNavConfig: SettingsNavItem[] = [
   {label: message('Verification'), to: 'kyc', position: 2},
   {label: message('Product'), to: 'product', position: 2},
   {label: message('Landing page'), to: 'landing-page', position: 2},
+  {label: message('Help center'), to: 'hc', position: 3},
+  {label: message('AI agent'), to: 'ai', position: 4},
+  {label: message('Livechat'), to: 'livechat', position: 4},
   {label: message('Ads'), to: 'ads', position: 20},
 ];
 
@@ -75,9 +76,11 @@ export const AdminDocsUrls = {
     s3: `${base}/21/25/216/storing-files-on-amazon-s3`,
     backblaze: `${base}/21/25/217/storing-files-on-backblaze`,
     authentication: `${base}/21/25/274/authentication-settings`,
+    helpCenter: `${base}`,
   } as any,
   pages: {
     roles: `${base}/21/47/154/roles-and-permissions`,
     translations: `${base}/21/25/296/language-and-translation`,
+    helpCenter: `${base}`,
   } as any,
 };

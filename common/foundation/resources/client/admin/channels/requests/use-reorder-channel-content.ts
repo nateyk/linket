@@ -1,7 +1,7 @@
 import {Channel} from '@common/channels/channel';
 import {BackendResponse} from '@common/http/backend-response/backend-response';
 import {apiClient} from '@common/http/query-client';
-import {showHttpErrorToast} from '@common/http/show-http-error-toast';
+import {showHttpErrorToast} from '@common/http/errors/show-http-error-toast';
 import {useMutation} from '@tanstack/react-query';
 import {NormalizedModel} from '@ui/types/normalized-model';
 

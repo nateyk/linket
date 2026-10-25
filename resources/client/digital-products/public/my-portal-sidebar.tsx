@@ -10,6 +10,7 @@ import {
   GraduationCapIcon,
   HeadphonesIcon,
   LayoutGridIcon,
+  LifeBuoyIcon,
   LogInIcon,
   LogOutIcon,
   MailIcon,
@@ -17,8 +18,8 @@ import {
   SettingsIcon,
   UserPlusIcon,
 } from 'lucide-react';
-import {use, type ReactElement, type ReactNode} from 'react';
-import {Link} from 'react-router';
+import {Fragment, use, type ReactElement, type ReactNode} from 'react';
+import {Link, useLocation} from 'react-router';
 import type {PortalSection} from './portal-section';
 
 /** @deprecated Use PortalSection — kept for older imports. */
@@ -55,6 +56,8 @@ export function PortalSidebar({
   counts?: PortalNavCounts;
 }) {
   const {isMobileMode} = use(DashboardLayoutContext);
+  const {pathname} = useLocation();
+  const ticketsActive = pathname.startsWith('/my-portal/tickets');
   const logout = useLogout();
   const user = auth.user;
   const displayEmail = email || user?.email || undefined;
@@ -140,22 +143,37 @@ export function PortalSidebar({
           <Sidebar.GroupContent>
             <Sidebar.Menu>
               {libraryItems.map(item => (
-                <Sidebar.MenuItem key={item.section}>
-                  <Sidebar.MenuButton
-                    icon={item.icon}
-                    aria-current={
-                      activeSection === item.section ? 'page' : undefined
-                    }
-                    rightIcon={
-                      item.count != null ? (
-                        <Sidebar.MenuBadge>{item.count}</Sidebar.MenuBadge>
-                      ) : undefined
-                    }
-                    onClick={() => onSectionChange(item.section)}
-                  >
-                    <Trans message={item.label} />
-                  </Sidebar.MenuButton>
-                </Sidebar.MenuItem>
+                <Fragment key={item.section}>
+                  <Sidebar.MenuItem>
+                    <Sidebar.MenuButton
+                      icon={item.icon}
+                      aria-current={
+                        !ticketsActive && activeSection === item.section
+                          ? 'page'
+                          : undefined
+                      }
+                      rightIcon={
+                        item.count != null ? (
+                          <Sidebar.MenuBadge>{item.count}</Sidebar.MenuBadge>
+                        ) : undefined
+                      }
+                      onClick={() => onSectionChange(item.section)}
+                    >
+                      <Trans message={item.label} />
+                    </Sidebar.MenuButton>
+                  </Sidebar.MenuItem>
+                  {item.section === 'downloads' ? (
+                    <Sidebar.MenuItem>
+                      <Sidebar.MenuButton
+                        render={<Link to="/my-portal/tickets" />}
+                        icon={<LifeBuoyIcon aria-hidden />}
+                        aria-current={ticketsActive ? 'page' : undefined}
+                      >
+                        <Trans message="Tickets" />
+                      </Sidebar.MenuButton>
+                    </Sidebar.MenuItem>
+                  ) : null}
+                </Fragment>
               ))}
             </Sidebar.Menu>
           </Sidebar.GroupContent>

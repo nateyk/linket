@@ -2,7 +2,7 @@ import {createLinkPageOptions} from '@app/dashboard/link-pages/link-pages-querie
 import {useDatatableRouteType} from '@app/dashboard/use-datatable-route-type';
 import {CrupdateLinkPageBody} from '@app/gen/schemas/crupdate-link-page-body';
 import {UploadType} from '@app/site-config';
-import {ArticleEditor} from '@common/article-editor/article-editor-page';
+import {ArticleEditor} from '@common/article-editor/article-editor';
 import {onFormQueryError} from '@common/http/errors/on-form-query-error';
 import {StaticPageTitle} from '@common/seo/static-page-title';
 import {useNavigate} from '@common/ui/navigation/use-navigate';

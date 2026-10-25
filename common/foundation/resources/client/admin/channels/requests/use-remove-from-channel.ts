@@ -1,6 +1,6 @@
 import {channelQueries} from '@common/channels/channel-queries';
 import {apiClient, queryClient} from '@common/http/query-client';
-import {showHttpErrorToast} from '@common/http/show-http-error-toast';
+import {showHttpErrorToast} from '@common/http/errors/show-http-error-toast';
 import {useMutation} from '@tanstack/react-query';
 import {NormalizedModel} from '@ui/types/normalized-model';
 

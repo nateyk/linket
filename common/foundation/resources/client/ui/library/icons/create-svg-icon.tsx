@@ -12,7 +12,12 @@ export function createSvgIcon(
 
   if (type === 'material') {
     Component = (props: SvgIconProps, ref: RefObject<SVGSVGElement>) => (
-      <SvgIcon ref={ref} viewBox={viewBox} {...props} size={props.size || 'xs'}>
+      <SvgIcon
+        ref={ref}
+        viewBox={viewBox}
+        {...props}
+        size={props.size === undefined ? 'xs' : props.size}
+      >
         {path}
       </SvgIcon>
     );

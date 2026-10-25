@@ -12,6 +12,8 @@ import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {toast} from '@shadcn/toast/toast';
 import {useMutation} from '@tanstack/react-query';
 import {Trans} from '@ui/i18n/trans';
+import {ConfirmationDialog} from '@ui/overlays/dialog/confirmation-dialog';
+import {useDialogContext} from '@ui/overlays/dialog/dialog-context';
 import {ChevronDownIcon} from 'lucide-react';
 import {Fragment, ReactNode, useState} from 'react';
 
@@ -140,5 +142,39 @@ export function DeleteUserAlertDialog({
         </AlertDialog.Content>
       </AlertDialog.Portal>
     </AlertDialog.Root>
+  );
+}
+
+/** BeDesk DialogTrigger-compatible delete dialog (agent team index). */
+interface DeleteUserDialogProps {
+  userId: number;
+}
+export function DeleteUserDialog({userId}: DeleteUserDialogProps) {
+  const deleteUser = useMutation(deleteUsersOptions);
+  const {close} = useDialogContext();
+  const navigate = useNavigate();
+  return (
+    <ConfirmationDialog
+      isDanger
+      isLoading={deleteUser.isPending}
+      title={<Trans message="Delete user" />}
+      confirm={<Trans message="Delete" />}
+      body={<Trans message="Are you sure you want to delete this user?" />}
+      onConfirm={() => {
+        deleteUser.mutate([userId], {
+          onSuccess: () => {
+            toast(
+              <Trans
+                message="[one User deleted|other :count Users deleted]"
+                values={{count: 1}}
+              />,
+            );
+            close();
+            navigate('..', {relative: 'path'});
+          },
+          onError: err => showHttpErrorToast(err),
+        });
+      }}
+    />
   );
 }

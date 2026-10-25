@@ -23,6 +23,9 @@ export const availableWebhookEvents: AvailableWebhookEvent[] = [
   {value: 'folder.deleted', label: <Trans message="Folder deleted" />},
   {value: 'trackedEvent.clicked', label: <Trans message="Link clicked" />},
   {value: 'trackedEvent.scanned', label: <Trans message="QR code scanned" />},
+  {value: 'ticket.created', label: <Trans message="Ticket created" />},
+  {value: 'ticket.updated', label: <Trans message="Ticket updated" />},
+  {value: 'ticket.closed', label: <Trans message="Ticket closed" />},
 ];
 
 export const availableWebhookEventsByGroup: AvailableWebhookEventGroup[] = [
@@ -53,6 +56,14 @@ export const availableWebhookEventsByGroup: AvailableWebhookEventGroup[] = [
   {
     groupName: <Trans message="Tracked events" />,
     items: [availableWebhookEvents[9]!, availableWebhookEvents[10]!],
+  },
+  {
+    groupName: <Trans message="Support tickets" />,
+    items: [
+      availableWebhookEvents[11]!,
+      availableWebhookEvents[12]!,
+      availableWebhookEvents[13]!,
+    ],
   },
 ];
 

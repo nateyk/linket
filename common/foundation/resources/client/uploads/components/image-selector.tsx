@@ -456,3 +456,5 @@ export const ImageSelector = {
   Input: ImageSelectorInput,
   Square: ImageSelectorSquare,
 };
+
+export {FormImageSelector} from '@common/uploads/components/form-image-selector';

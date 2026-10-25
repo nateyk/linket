@@ -33,6 +33,7 @@ import {listWorkspacesOptions} from '@common/workspace/workspace-queries';
 import {useWorkspaceStore} from '@common/workspace/workspace-store';
 import {getBootstrapData} from '@ui/bootstrap-data/bootstrap-data-store';
 import {searchParamsFromUrl} from '@ui/utils/urls/search-params-from-url';
+import {creatorSupportRoutes} from '@app/dashboard/creator-support-routes';
 import {redirect, RouteObject} from 'react-router';
 
 export const sharedDashboardRoutes = (routeType: DatatableRouteType) => {
@@ -516,6 +517,7 @@ export const dashboardRoutes: RouteObject[] = [
         loader: () => redirect('/dashboard/stores', 308),
       },
 
+      ...creatorSupportRoutes,
       ...sharedDashboardRoutes('dashboard'),
     ],
   },

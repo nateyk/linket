@@ -132,7 +132,10 @@
         @endif
     @endif
 
-    @if (file_exists($customHtmlPath))
+    @if (
+        file_exists($customHtmlPath) &&
+        !request()->is('help', 'help/*', 'hc', 'hc/*')
+    )
         @if ($content = file_get_contents($customHtmlPath))
             {!! $content !!}
         @endif

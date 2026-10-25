@@ -5,6 +5,9 @@
       "@shadcn/*": ["./common/foundation/resources/client/shadcn/*"],
       "@common/*": ["./common/foundation/resources/client/*"],
       "@app/*": ["./resources/client/*"],
+      "@ai/*": ["./modules/ai/resources/client/*"],
+      "@livechat/*": ["./modules/livechat/resources/client/*"],
+      "@envato/*": ["./modules/envato/resources/client/*"],
       "@storybook/*": ["./common/foundation/resources/client/.storybook/*"]
     },
     "target": "ESNext",
@@ -24,6 +27,8 @@
   },
   "include": [
     "resources/client",
+    "modules/ai/resources/client",
+    "modules/livechat/resources/client",
     "common/foundation/resources/client",
     "common/foundation/.storybook/stories/autocomplete.stories.tsx",
     "common/foundation/resources/client/.storybook"

@@ -23,6 +23,11 @@ return [
             'route' => '/dashboard/links',
         ],
         [
+            'name' => 'dashboard-sidebar',
+            'label' => 'Agent dashboard sidebar',
+            'route' => '/agent',
+        ],
+        [
             'name' => 'footer',
             'label' => 'Footer',
             'route' => '/',

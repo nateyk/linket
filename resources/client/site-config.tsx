@@ -76,4 +76,5 @@ export const UploadType = {
   digitalProductFiles: 'digitalProductFiles',
   courseVideos: 'courseVideos',
   courseResources: 'courseResources',
+  conversationAttachments: 'conversationAttachments',
 } as const;

@@ -1,4 +1,5 @@
 import {AdminSidebarIcons} from '@app/admin/admin-config';
+import {UserAvatar, UserAvatarProps} from '@common/auth/user-avatar';
 import {useAuth} from '@common/auth/use-auth';
 import {useCustomMenu} from '@common/menus/use-custom-menu';
 import {
@@ -20,7 +21,7 @@ import {Popover} from '@shadcn/popover/popover';
 import {Trans} from '@ui/i18n/trans';
 import {cn} from '@ui/utils/cn';
 import {BellIcon, ChevronRightIcon, ChevronUpIcon, ShieldCheckIcon, StoreIcon, WalletCardsIcon, CreditCardIcon, CoinsIcon} from 'lucide-react';
-import {use, useState} from 'react';
+import {JSXElementConstructor, use, useState} from 'react';
 import {Link, NavLink, useLocation, useSearchParams} from 'react-router';
 
 const DIGITAL_PRODUCTS_PATH = '/admin/items';
@@ -243,5 +244,48 @@ function AdminSidebarFooter() {
         </NavbarAuthMenu>
       </Sidebar.Menu>
     </Sidebar.Footer>
+  );
+}
+
+/** BeDesk agent sidebar auth chip — kept for helpdesk layout (old dashboard-layout). */
+interface AuthUserItemProps {
+  isCompact: boolean;
+  avatar?: JSXElementConstructor<UserAvatarProps>;
+  accountSettingsLink?: string;
+}
+export function AdminSidebarAuthUserItem({
+  isCompact,
+  avatar: propsAvatar,
+  accountSettingsLink,
+}: AuthUserItemProps) {
+  const {user} = useAuth();
+  if (!user) return null;
+
+  const ItemAvatar = propsAvatar || UserAvatar;
+  const avatar = <ItemAvatar user={user} size="md" />;
+
+  return (
+    <NavbarAuthMenu
+      side="top"
+      align="center"
+      accountSettingsLink={accountSettingsLink}
+    >
+      {isCompact ? (
+        <button
+          aria-label="toggle authentication menu"
+          className="flex size-12 items-center justify-center rounded-panel hover:bg-hover"
+        >
+          {avatar}
+        </button>
+      ) : (
+        <button className="flex w-full items-center rounded-panel px-3 py-2 hover:bg-hover">
+          {avatar}
+          <span className="ml-2 block min-w-0 overflow-x-hidden overflow-ellipsis whitespace-nowrap text-sm">
+            {user.name}
+          </span>
+          <ChevronUpIcon className="ml-auto block size-4" />
+        </button>
+      )}
+    </NavbarAuthMenu>
   );
 }

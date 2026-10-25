@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\User;
 use Common\Permissions\Models\Permission;
+use Common\Roles\Models\Role;
 use Illuminate\Database\Seeder;
 
 class AdminUserSeeder extends Seeder
@@ -32,5 +33,10 @@ class AdminUserSeeder extends Seeder
         );
 
         $user->permissions()->syncWithoutDetaching($adminPermission->id);
+
+        $agentsRole = Role::query()->where('name', 'Agents')->first();
+        if ($agentsRole) {
+            $user->roles()->syncWithoutDetaching($agentsRole->id);
+        }
     }
 }

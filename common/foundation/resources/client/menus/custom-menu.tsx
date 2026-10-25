@@ -18,6 +18,10 @@ import {useCustomMenu} from './use-custom-menu';
 
 type MatchDescendants = undefined | boolean | ((to: string) => boolean);
 
+type MenuIconType =
+  | ReactElement<SvgIconProps>
+  | React.ComponentType<SvgIconProps>;
+
 // legacy, just use "useCustomMenu" directly with UnstyledCustomMenuItem
 export interface CustomMenuProps {
   className?: string;
@@ -38,7 +42,7 @@ export interface CustomMenuProps {
   orientation?: Orientation;
   onlyShowIcons?: boolean;
   unstyled?: boolean;
-  defaultIcons?: Record<string, ReactElement<SvgIconProps>>;
+  defaultIcons?: Record<string, MenuIconType>;
 }
 export function CustomMenu({
   className,
@@ -94,7 +98,7 @@ export function CustomMenu({
 export interface MenuItemProps extends React.RefAttributes<HTMLAnchorElement> {
   item: MenuItemConfig;
   icon?: ReactElement<SvgIconProps> | null;
-  defaultIcons?: Record<string, ReactElement<ComponentProps<'svg'>>>;
+  defaultIcons?: Record<string, MenuIconType>;
   iconClassName?: string;
   children?: ReactNode;
   className?: (props: {isActive: boolean}) => string | undefined;
@@ -124,18 +128,27 @@ export const CustomMenuItem = forwardRef<HTMLAnchorElement, MenuItemProps>(
     const label = <Trans message={item.label} />;
     let icon: ReactElement | null = null;
 
+    const iconProps = menuIconProps(iconClassName);
+
     if (propsIcon) {
       icon = propsIcon;
     } else if (item.icon) {
       const IconCmp = createSvgIconFromTree(item.icon, '', 'lucide');
-      icon = IconCmp && <IconCmp className={iconClassName} />;
+      icon = IconCmp && <IconCmp {...iconProps} />;
     } else if (defaultIcons) {
-      const IconCmp = defaultIcons[item.action.split('?')[0]];
-      icon =
-        IconCmp &&
-        cloneElement(IconCmp, {
-          className: iconClassName,
-        });
+      const IconCmp = defaultIcons[item.action.split('?')[0]] as
+        | ReactElement<SvgIconProps>
+        | React.ComponentType<SvgIconProps>
+        | undefined;
+      if (IconCmp) {
+        icon = React.isValidElement(IconCmp)
+          ? cloneElement(IconCmp, iconProps)
+          : // BeDesk sidebars pass component types, not elements.
+            React.createElement(
+              IconCmp as React.ComponentType<SvgIconProps>,
+              iconProps,
+            );
+      }
     }
 
     if (icon && onlyShowIcon && label) {
@@ -204,16 +217,40 @@ export function MenuItemIcon({
   defaultIcons,
 }: {
   item: MenuItemConfig;
-  defaultIcons?: Record<string, ReactElement<ComponentProps<'svg'>>>;
+  defaultIcons?: Record<
+    string,
+    ReactElement<ComponentProps<'svg'>> | React.ComponentType<SvgIconProps>
+  >;
 }) {
   if (item.icon) {
     const IconCmp = createSvgIconFromTree(item.icon, '', 'lucide');
     return IconCmp ? <IconCmp /> : null;
   } else if (defaultIcons) {
-    return defaultIcons[item.action.split('?')[0]];
+    const IconCmp = defaultIcons[item.action.split('?')[0]];
+    if (!IconCmp) {
+      return null;
+    }
+    return React.isValidElement(IconCmp)
+      ? IconCmp
+      : React.createElement(IconCmp as React.ComponentType<SvgIconProps>);
   }
 
   return null;
+}
+
+/**
+ * Lucide wrappers default to md (size-6). A caller size class must be the
+ * only size on the svg, otherwise the DOM gets both size-4 and size-6.
+ */
+function menuIconProps(iconClassName?: string): SvgIconProps {
+  if (!iconClassName) {
+    return {};
+  }
+  const setsSize = /(?:^|\s)!?(?:size-|w-|h-|icon-)/.test(iconClassName);
+  return {
+    className: iconClassName,
+    ...(setsSize ? {size: null} : {}),
+  };
 }
 
 type UnstyledCustomMenuItemProps = {
