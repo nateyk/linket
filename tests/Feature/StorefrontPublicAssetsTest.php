@@ -6,6 +6,7 @@ use App\Links\Actions\LinkeablePublicPolicy;
 use App\Analytics\Actions\GetMonthlyClicks;
 use App\Analytics\Models\TrackedEvent;
 use App\Stores\Models\Store;
+use Common\Database\Seeders\RolesTableSeeder;
 use Common\Files\FileEntry;
 use Common\Settings\Models\Setting;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
@@ -16,6 +17,12 @@ use Tests\TestCase;
 class StorefrontPublicAssetsTest extends TestCase
 {
     use DatabaseTransactions;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(RolesTableSeeder::class);
+    }
 
     public function testPublicProductRoutesUseAnUnboundStoreSlugParameter(): void
     {
@@ -70,19 +77,15 @@ class StorefrontPublicAssetsTest extends TestCase
 
     public function testPublicUploadUrlsPreserveTheirLeadingSlash(): void
     {
-        Setting::query()->updateOrCreate(
-            ['name' => 'uploading'],
-            ['value' => [
-                'backends' => [[
-                    'id' => 'local',
-                    'name' => 'Local',
-                    'type' => 'local',
-                    'root' => '',
-                ]],
-                'types' => ['linkImages' => ['backends' => ['local']]],
-            ], 'private' => false],
-        );
-        Cache::forget('settings.public');
+        settings()->set('uploading.backends', [[
+            'id' => 'local',
+            'name' => 'Local',
+            'type' => 'local',
+            'root' => '',
+        ]]);
+        settings()->set('uploading.types', [
+            'linkImages' => ['backends' => ['local']],
+        ]);
 
         $file = new FileEntry([
             'file_name' => 'cover.jpg',

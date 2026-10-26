@@ -12,6 +12,7 @@ use Common\Billing\Models\Product;
 use Common\Files\FileEntry;
 use Common\Permissions\Models\Permission;
 use Common\Workspaces\Actions\CreateWorkspace;
+use Common\Database\Seeders\RolesTableSeeder;
 use Common\Workspaces\Models\Workspace;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Str;
@@ -24,6 +25,7 @@ class EntitlementSystemTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->seed(RolesTableSeeder::class);
         config()->set('storefront.currency', 'ETB');
         config()->set('storefront.payout_hold_days', 0);
         settings()->save(['billing.enable' => true]);

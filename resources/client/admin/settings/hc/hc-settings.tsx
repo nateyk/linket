@@ -60,42 +60,49 @@ const sectionDefs = [
   {
     id: 'header',
     label: message('Header'),
+    description: message('Customize your help center header including logo, title, and background image.'),
     component: HeaderSettings,
     route: routes.home.route,
   },
   {
     id: 'landing',
     label: message('Landing page'),
+    description: message('Configure the help center landing page layout, content grid, and featured articles.'),
     component: LandingPageSettings,
     route: routes.home.route,
   },
   {
     id: 'article',
     label: message('Article page'),
+    description: message('Configure article display order and ticket submission link visibility on article pages.'),
     component: ArticlePageSettings,
     route: routes.article.route,
   },
   {
     id: 'newTicket',
     label: message('New ticket page'),
+    description: message('Configure the new ticket form fields, appearance, and custom attributes customers can fill in.'),
     component: NewTicketPageSettings,
     route: routes.newTicket.route,
   },
   {
     id: 'footer',
     label: message('Footer'),
+    description: message('Configure footer content shown on help center pages.'),
     component: FooterSettings,
     route: routes.home.route,
   },
   {
     id: 'data',
     label: message('Data'),
+    description: message('Import or export your help center content as a ZIP archive for backup or migration.'),
     component: DataSettings,
     route: routes.home.route,
   },
   {
     id: 'livechat',
     label: message('Livechat'),
+    description: message('Enable the live chat widget on help center pages for real-time customer support.'),
     component: LivechatSettings,
     route: routes.home.route,
   },
@@ -186,8 +193,13 @@ function Sections() {
         const SectionComponent = section.component;
         return (
           <Accordion.Item key={section.id} value={section.id}>
-            <Accordion.Trigger>
-              <Trans {...section.label} />
+            <Accordion.Trigger className="flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <Trans {...section.label} />
+              </div>
+              <div className="text-xs text-muted-foreground">
+                <Trans {...section.description} />
+              </div>
             </Accordion.Trigger>
             <Accordion.Content>
               <SectionComponent />
@@ -202,6 +214,9 @@ function Sections() {
 function ArticlePageSettings() {
   return (
     <Fragment>
+      <SettingsSectionHeader size="sm" className="mt-24 mb-12 border-t pt-18">
+        <Trans message="Article order" />
+      </SettingsSectionHeader>
       <FormSelect
         label={<Trans message="Default article order" />}
         name="client.articles.default_order"
@@ -224,6 +239,10 @@ function ArticlePageSettings() {
           <Trans message="A to Z" />
         </Item>
       </FormSelect>
+
+      <SettingsSectionHeader size="sm" className="mt-24 mb-12 border-t pt-18">
+        <Trans message="Ticket submission" />
+      </SettingsSectionHeader>
       <FormSwitch name="client.article.hide_new_ticket_link">
         <Trans message="Hide 'Submit a Request' link" />
       </FormSwitch>
@@ -367,7 +386,11 @@ function HeaderSettings() {
           <Trans message="Colorful" />
         </Item>
       </FormSelect>
-      <div className="mb-12">
+
+      <SettingsSectionHeader size="sm" className="mt-24 mb-12 border-t pt-18">
+        <Trans message="Background" />
+      </SettingsSectionHeader>
+      <div className="mb-8">
         <div className="mb-8 text-sm">
           <Trans message="Background image" />
         </div>
@@ -382,6 +405,10 @@ function HeaderSettings() {
         />
       </div>
       <BackgroundPositionSelector />
+
+      <SettingsSectionHeader size="sm" className="mt-24 mb-12 border-t pt-18">
+        <Trans message="Text" />
+      </SettingsSectionHeader>
       <FormTextField
         label={<Trans message="Header title" />}
         size="sm"
@@ -484,6 +511,9 @@ function LandingPageSettings() {
 function FooterSettings() {
   return (
     <Fragment>
+      <SettingsSectionHeader size="sm" className="mt-24 mb-12 border-t pt-18">
+        <Trans message="Footer" />
+      </SettingsSectionHeader>
       <FormSwitch name="client.hcLanding.show_footer">
         <Trans message="Show footer" />
       </FormSwitch>

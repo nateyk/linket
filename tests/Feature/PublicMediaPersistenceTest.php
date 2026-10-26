@@ -8,6 +8,7 @@ use App\Biolinks\Models\Biolink;
 use Common\Files\FileEntry;
 use Common\Files\PublicMediaUrl;
 use Common\Files\Uploads\UploadBackend;
+use Common\Database\Seeders\RolesTableSeeder;
 use Common\Files\Uploads\UploadDiskLocation;
 use Common\Files\Uploads\UploadType;
 use Common\Settings\Models\Setting;
@@ -25,6 +26,7 @@ class PublicMediaPersistenceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->seed(RolesTableSeeder::class);
         // Ensure uploading setting has local backend for linkImages/avatars
         // Seeder already sets it, but ensure for isolated test runs
         Cache::forget('settings.public');
@@ -32,17 +34,13 @@ class PublicMediaPersistenceTest extends TestCase
 
     public function testLocalPublicFileEntryProducesRootRelativeUrl(): void
     {
-        Setting::query()->updateOrCreate(
-            ['name' => 'uploading'],
-            ['value' => [
-                'backends' => [['id' => 'local', 'name' => 'Local', 'type' => 'local', 'root' => '']],
-                'types' => [
-                    'linkImages' => ['backends' => ['local']],
-                    'avatars' => ['backends' => ['local']],
-                ],
-            ], 'private' => false],
-        );
-        Cache::forget('settings.public');
+        settings()->set('uploading.backends', [
+            ['id' => 'local', 'name' => 'Local', 'type' => 'local', 'root' => ''],
+        ]);
+        settings()->set('uploading.types', [
+            'linkImages' => ['backends' => ['local']],
+            'avatars' => ['backends' => ['local']],
+        ]);
 
         $file = new FileEntry([
             'file_name' => 'cover.jpg',
@@ -376,11 +374,18 @@ class PublicMediaPersistenceTest extends TestCase
             }
         }
 
+        // Save the whole 'uploading' key as JSON (it's in Settings::$jsonKeys)
+        // so Setting::updateOrCreate() properly JSON-encodes it, and also set
+        // the singleton for the current request.
         Setting::query()->updateOrCreate(
             ['name' => 'uploading'],
             ['value' => $value, 'private' => false],
         );
         Cache::forget('settings.public');
+
+        settings()->set('uploading.backends', $value['backends']);
+        settings()->set('uploading.types', $value['types']);
+
         // Ensure file root exists
         File::ensureDirectoryExists(storage_path('app/public/link-images'));
         File::ensureDirectoryExists(storage_path('app/public/avatars'));

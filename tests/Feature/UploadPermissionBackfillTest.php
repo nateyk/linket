@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use Common\Database\Seeders\RolesTableSeeder;
 use Common\Roles\Models\Role;
 use Common\Workspaces\Actions\CreateWorkspace;
 use Common\Workspaces\Models\Workspace;
@@ -13,6 +14,12 @@ use Tests\TestCase;
 class UploadPermissionBackfillTest extends TestCase
 {
     use DatabaseTransactions;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(RolesTableSeeder::class);
+    }
 
     public function testUploadForbiddenWhenRoleLacksFilesCreatePermission(): void
     {

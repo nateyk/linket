@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use App\Storefront\Models\DigitalProduct;
+use Common\Database\Seeders\RolesTableSeeder;
 use Common\Files\FileEntry;
 use Common\Settings\Models\Setting;
 use Common\Workspaces\Actions\CreateWorkspace;
@@ -20,6 +21,7 @@ class ProductSettingsFilePolicyTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->seed(RolesTableSeeder::class);
         settings()->save(['billing.enable' => true]);
 
         if (!\Common\Billing\Models\Product::where('is_default', true)->exists()) {
