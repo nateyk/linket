@@ -17,7 +17,8 @@ trait CanBeAgent
 
     public function isAgent(): bool
     {
-        return $this->type === 'agent';
+        return $this->type === 'agent' ||
+            $this->roles->contains(fn($role) => $role->agents === true);
     }
 
     public function agentSettings(): HasOne

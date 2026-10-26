@@ -25,7 +25,13 @@ class CustomersController extends BaseController
     {
         $user = User::findOrFail($userId);
 
-        $this->authorize('index', Conversation::class);
+        // Only user accounts can be deleted through this endpoint — never admins
+        // or workspace accounts.
+        if ($user->type !== 'user') {
+            return $this->error(__('Only user accounts can be deleted.'));
+        }
+
+        $this->authorize('update', User::class);
         $this->blockOnDemoSite();
 
         $user->delete();

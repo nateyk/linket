@@ -60,7 +60,8 @@ class MailgunWebhookController extends BaseController
 
     protected function isValidRequest()
     {
-        if (!settings('incoming_email.mailgun.verify')) {
+        // Default to enabled: incoming email webhooks should be verified.
+        if (! (settings('incoming_email.mailgun.verify') ?? true)) {
             return true;
         }
 
@@ -68,12 +69,11 @@ class MailgunWebhookController extends BaseController
             ? request('signature')
             : request()->all();
 
-        $apiKey = config('services.mailgun.secret');
-        $token = $signature['token'];
-        $timestamp = $signature['timestamp'];
-        $signature = $signature['signature'];
+        $token = $signature['token'] ?? null;
+        $timestamp = $signature['timestamp'] ?? null;
+        $signature = $signature['signature'] ?? null;
 
-        if (!$apiKey || !$token || !$timestamp || !$signature) {
+        if (!$token || !$timestamp || !$signature) {
             return false;
         }
 
@@ -82,7 +82,19 @@ class MailgunWebhookController extends BaseController
             return false;
         }
 
-        //returns true if signature is valid
-        return hash_hmac('sha256', $timestamp . $token, $apiKey) === $signature;
+        // Use a dedicated webhook signing key, not the Mailgun API key.
+        $webhookKey = settings('incoming_email.mailgun.webhook_secret')
+            ?? config('services.mailgun.webhook_secret')
+            ?? config('services.mailgun.secret');
+
+        if (!$webhookKey) {
+            return false;
+        }
+
+        // Use timing-safe comparison.
+        return hash_equals(
+            hash_hmac('sha256', $timestamp . $token, $webhookKey),
+            $signature,
+        );
     }
 }

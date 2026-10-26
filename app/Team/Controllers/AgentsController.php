@@ -106,6 +106,8 @@ class AgentsController extends BaseController
         );
 
         $agent = User::findOrFail($agentId);
+        $user = Auth::user();
+        $canManageAgent = $user->hasPermission('agents.update');
 
         $data = request()->validate([
             'name' => 'string|nullable',
@@ -116,7 +118,7 @@ class AgentsController extends BaseController
             'roles' => 'nullable|array',
         ]);
 
-        if (isset($data['agent_settings'])) {
+        if (isset($data['agent_settings']) && $canManageAgent) {
             $agent
                 ->agentSettings()
                 ->updateOrCreate(
@@ -125,7 +127,7 @@ class AgentsController extends BaseController
                 );
         }
 
-        if (isset($data['groups'])) {
+        if (isset($data['groups']) && $canManageAgent) {
             $agent->groups()->sync(
                 collect($data['groups'])->mapWithKeys(
                     fn($groupId) => [
@@ -135,13 +137,13 @@ class AgentsController extends BaseController
             );
         }
 
-        if (isset($data['roles'])) {
+        if (isset($data['roles']) && $canManageAgent) {
             $agent->roles()->sync($data['roles']);
         }
 
-        $agent->update([
-            'name' => $data['name'],
-        ]);
+        if (isset($data['name'])) {
+            $agent->update(['name' => $data['name']]);
+        }
 
         event(new AgentUpdated($agent));
 

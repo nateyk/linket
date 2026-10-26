@@ -47,12 +47,17 @@ class ConversationViewsController extends BaseController
     public function show(ConversationView $view)
     {
         $this->authorize('index', Conversation::class);
+
+        $this->assertViewAccess($view);
+
         return $this->success(['view' => $view]);
     }
 
     public function update(ConversationView $view)
     {
         $this->authorize('index', Conversation::class);
+
+        $this->assertViewAccess($view);
 
         $rules = [
             'name' => 'string|max:255',
@@ -102,6 +107,9 @@ class ConversationViewsController extends BaseController
     public function destroy(ConversationView $view)
     {
         $this->authorize('index', Conversation::class);
+
+        $this->assertViewAccess($view);
+
         $this->blockOnDemoSite();
 
         if ($view->internal) {
@@ -118,12 +126,13 @@ class ConversationViewsController extends BaseController
         $this->authorize('index', Conversation::class);
 
         $data = request()->validate([
-            'viewIds' => 'array|min:1',
+            'viewIds' => 'required|array|min:1',
+            'viewIds.*' => 'integer',
         ]);
 
         $queryPart = '';
         foreach ($data['viewIds'] as $order => $id) {
-            $queryPart .= " when id=$id then $order";
+            $queryPart .= " when id=" . (int) $id . " then " . (int) $order;
         }
 
         DB::table('conversation_views')
@@ -131,5 +140,17 @@ class ConversationViewsController extends BaseController
             ->update(['order' => DB::raw("(case $queryPart end)")]);
 
         return $this->success();
+    }
+
+    protected function assertViewAccess(ConversationView $view): void
+    {
+        $user = Auth::user();
+        if (
+            $view->owner_id &&
+            $view->owner_id !== $user->id &&
+            !$user->hasPermission('views.update')
+        ) {
+            abort(403, 'You do not have access to this view.');
+        }
     }
 }

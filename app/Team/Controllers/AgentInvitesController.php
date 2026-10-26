@@ -18,7 +18,7 @@ class AgentInvitesController extends BaseController
 
     public function index()
     {
-        $this->authorize('index', Conversation::class);
+        $this->authorize('update', Conversation::class);
 
         $orderBy = request('orderBy', 'updated_at');
         $orderDir = request('orderDir', 'desc');
@@ -61,7 +61,7 @@ class AgentInvitesController extends BaseController
 
     public function store()
     {
-        $this->authorize('store', Conversation::class);
+        $this->authorize('update', Conversation::class);
 
         $data = request()->validate(
             [
@@ -106,7 +106,7 @@ class AgentInvitesController extends BaseController
 
     public function resend(string $inviteId)
     {
-        $this->authorize('store', Conversation::class);
+        $this->authorize('update', Conversation::class);
 
         $invite = AgentInvite::findOrFail($inviteId);
 
@@ -120,7 +120,7 @@ class AgentInvitesController extends BaseController
 
     public function destroy(string $inviteId)
     {
-        $this->authorize('store', Conversation::class);
+        $this->authorize('update', Conversation::class);
 
         $invite = AgentInvite::findOrFail($inviteId);
 

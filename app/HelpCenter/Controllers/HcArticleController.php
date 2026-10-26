@@ -25,6 +25,10 @@ class HcArticleController extends BaseController
     {
         $this->authorize('index', HcArticle::class);
 
+        $user = Auth::user();
+        $isAgent = $user?->isAgent();
+        $userRoleIds = $user?->roles?->pluck('id') ?? [];
+
         $builder = HcArticle::query()
             ->with(['author', 'tags'])
             ->when(
@@ -39,6 +43,15 @@ class HcArticleController extends BaseController
                     'id',
                     explode(',', request('articleIds')),
                 ),
+            )
+            // Non-agents only see published articles visible to their role
+            ->when(!$isAgent, fn($q) => $q->where('draft', false))
+            ->when(
+                !$isAgent,
+                fn($q) => $q->where(function ($sub) use ($userRoleIds) {
+                    $sub->whereNull('visible_to_role')
+                        ->orWhereIn('visible_to_role', $userRoleIds);
+                }),
             )
             ->select([
                 'articles.id',
@@ -86,7 +99,6 @@ class HcArticleController extends BaseController
                             'id' => $article->author->id,
                             'name' => $article->author->name,
                             'image' => $article->author->image,
-                            'email' => $article->author->email,
                         ]
                         : null,
                     'tags' => $article->tags->pluck('name'),
@@ -114,8 +126,18 @@ class HcArticleController extends BaseController
 
         $this->authorize('index', HcArticle::class);
 
-        if (Arr::get($data, 'article.draft') && !Auth::user()?->isAgent()) {
+        $user = Auth::user();
+        $isAgent = $user?->isAgent();
+        $userRoleIds = $user?->roles?->pluck('id') ?? [];
+
+        if (Arr::get($data, 'article.draft') && !$isAgent) {
             abort(403);
+        }
+
+        if (!$isAgent && Arr::get($data, 'article.visible_to_role')) {
+            if (!in_array($data['article']['visible_to_role'], $userRoleIds)) {
+                abort(403);
+            }
         }
 
         if (

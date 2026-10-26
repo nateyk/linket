@@ -14,7 +14,7 @@ class GroupsController extends BaseController
 
     public function index()
     {
-        $this->authorize('index', Conversation::class);
+        $this->authorize('update', Conversation::class);
 
         $orderBy = request('orderBy', 'groups.updated_at');
         $orderDir = request('orderDir', 'desc');
@@ -79,7 +79,7 @@ class GroupsController extends BaseController
 
     public function store()
     {
-        $this->authorize('store', Conversation::class);
+        $this->authorize('update', Conversation::class);
 
         $data = request()->validate(
             [
@@ -109,7 +109,7 @@ class GroupsController extends BaseController
 
     public function update(int $groupId)
     {
-        $this->authorize('store', Conversation::class);
+        $this->authorize('update', Conversation::class);
 
         $group = Group::findOrFail($groupId);
 
@@ -146,7 +146,7 @@ class GroupsController extends BaseController
 
     public function destroy(int $groupId)
     {
-        $this->authorize('store', Conversation::class);
+        $this->authorize('update', Conversation::class);
         $this->blockOnDemoSite();
 
         $group = Group::findOrFail($groupId);

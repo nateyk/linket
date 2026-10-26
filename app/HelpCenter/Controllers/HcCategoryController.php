@@ -25,7 +25,7 @@ class HcCategoryController extends BaseController
 
     public function store(ModifyHcCategory $request)
     {
-        $this->authorize('store', HcArticle::class);
+        $this->authorize('create', HcCategory::class);
 
         $last = HcCategory::orderBy('position', 'desc')->first();
 
@@ -48,9 +48,9 @@ class HcCategoryController extends BaseController
 
     public function update(int $id, ModifyHcCategory $request)
     {
-        $this->authorize('update', HcArticle::class);
-
         $category = HcCategory::findOrFail($id);
+
+        $this->authorize('update', $category);
 
         $data = $request->validated();
 

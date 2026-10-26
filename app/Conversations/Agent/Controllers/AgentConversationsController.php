@@ -38,7 +38,9 @@ class AgentConversationsController extends BaseController
 
     public function store()
     {
-        $this->authorize('store', Conversation::class);
+        // Agent-created conversations require agent permission, not the
+        // customer-facing conversations.create that guests also hold.
+        $this->authorize('update', Conversation::class);
 
         $data = $this->validate(
             request(),

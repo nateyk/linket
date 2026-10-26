@@ -18,6 +18,10 @@ class MergeConversationsController extends BaseController
 
         $this->authorize('update', $conversation);
 
+        foreach ($toMerge as $mergeConversation) {
+            $this->authorize('update', $mergeConversation);
+        }
+
         if (!$toMerge->isEmpty()) {
             (new MergeConversations())->execute($conversation, $toMerge);
         }
