@@ -25,6 +25,7 @@ export interface DashboardLeftSidebarProps
   matchDescendants?: MatchDescendants;
   menuName: string;
   bottomContent?: ReactNode;
+  afterMenu?: ReactNode;
   variant?: DashboardLeftSidebarVariant;
   customMenuRender?: CustomMenuProps['children'];
   showToggleSidebarButton?: boolean;
@@ -36,6 +37,7 @@ export function DashboardLeftSidebar({
   matchDescendants,
   menuName,
   bottomContent,
+  afterMenu,
   isOverlayMode,
   showToggleSidebarButton = true,
   defaultIcons,
@@ -50,42 +52,42 @@ export function DashboardLeftSidebar({
         typeof className === 'string'
           ? className.replace(/\boverflow-y-auto\b/g, '').replace(/\s+/g, ' ').trim()
           : className,
-        'relative flex h-full min-h-0 w-full flex-col gap-5 overflow-hidden border-border bg-sidebar text-sm font-medium text-foreground',
-        isOverlayMode ? 'border-r bg-background shadow-2xl' : 'border-r',
+        'relative flex h-full min-h-0 w-full flex-col gap-2 overflow-hidden rounded-card bg-background/50 text-sm font-medium text-foreground shadow-sm dark:bg-card',
+        isOverlayMode && 'bg-background shadow-2xl',
       )}
     >
-      <div className={clsx(isCompactMode ? 'px-1.5 pt-1.5' : 'px-3 pt-6')}>
+      <div className={clsx(isCompactMode ? 'px-2 pt-2' : 'px-4 pt-4')}>
         <Logo
           color="auto"
           logoType={isCompactMode ? 'compact' : 'wide'}
           className={
-            isCompactMode ? 'mx-auto mt-3 h-8.5 w-8.5' : 'mb-3 ml-2.5 h-9'
+            isCompactMode ? 'mx-auto h-8 w-8' : 'h-8 max-w-40'
           }
         />
         {showToggleSidebarButton && <SidebarToggleButton />}
       </div>
-      <CustomMenu
-        defaultIcons={defaultIcons}
-        matchDescendants={matchDescendants}
-        menu={menuName}
-        orientation="vertical"
-        onlyShowIcons={isCompactMode}
-        iconClassName="size-4"
-        gap={isCompactMode ? 'gap-0.5' : 'gap-1'}
-        className={clsx(
-          'compact-scrollbar min-h-0 flex-auto overflow-y-auto overflow-x-hidden',
-          isCompactMode ? 'px-1.5' : 'px-3',
-        )}
-        itemClassName={({isActive}) =>
-          dashboardLeftSidebarItemClassName({isActive, isCompactMode})
-        }
-      >
-        {customMenuRender}
-      </CustomMenu>
+      <div className="compact-scrollbar min-h-0 flex-auto overflow-y-auto overflow-x-hidden px-2">
+        <CustomMenu
+          defaultIcons={defaultIcons}
+          matchDescendants={matchDescendants}
+          menu={menuName}
+          orientation="vertical"
+          onlyShowIcons={isCompactMode}
+          iconClassName="size-4"
+          gap="gap-0.5"
+          className="w-full"
+          itemClassName={({isActive}) =>
+            dashboardLeftSidebarItemClassName({isActive, isCompactMode})
+          }
+        >
+          {customMenuRender}
+        </CustomMenu>
+        {afterMenu}
+      </div>
       <div
         className={clsx(
-          'mt-auto flex shrink-0 flex-col gap-0.5 border-t border-border pb-1.5 pt-4',
-          isCompactMode ? 'mx-auto px-1.5' : 'px-3',
+          'mt-auto flex shrink-0 flex-col gap-0.5 pb-2 pt-2',
+          isCompactMode ? 'mx-auto px-2' : 'px-2',
         )}
       >
         {bottomContent}
@@ -161,7 +163,7 @@ export const DashboardLeftSidebarItem = forwardRef<
           }),
         )}
       >
-        {cloneElement(icon, {size: 'xs'})}
+        {cloneElement(icon, {size: null, className: 'size-4'})}
         {!isCompact && label}
         {otherChildren}
       </Element>
@@ -177,12 +179,12 @@ export function dashboardLeftSidebarItemClassName({
   isCompactMode: boolean;
 }) {
   return clsx(
-    'rounded-card flex-shrink-0',
+    'flex-shrink-0 rounded-button',
     isCompactMode
-      ? 'h-12 w-12 items-center justify-center'
-      : 'block w-full justify-start px-4 py-3',
+      ? 'size-8 items-center justify-center p-2'
+      : 'h-9 w-full justify-start px-3 py-2 text-sm',
     isActive
-      ? 'bg-primary/10 font-semibold text-primary'
+      ? 'bg-sidebar-accent font-medium text-accent-foreground'
       : 'text-foreground hover:bg-sidebar-accent hover:text-accent-foreground',
   );
 }

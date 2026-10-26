@@ -13,7 +13,7 @@ export function MobileBottomNavbar() {
   const {user} = useAuth();
   if (!user) return null;
   return (
-    <div className="dashboard-grid-footer flex items-center border-t">
+    <div className="dashboard-grid-footer flex items-center border-t bg-background">
       <NavbarButton elementType={Link} to="/agent/conversations">
         <InboxIcon size="sm" />
         <Trans message="Inbox" />
@@ -60,14 +60,14 @@ function NavbarButton({
   return (
     <ButtonBase
       className={clsx(
-        'h-16 flex-1 items-center p-2.5',
-        isActive && 'bg-primary/8 font-semibold text-primary',
+        'h-16 flex-1 items-center gap-1.5 p-2.5',
+        isActive && 'bg-sidebar-accent font-medium text-accent-foreground',
       )}
       display="flex flex-col"
       {...props}
     >
       {children[0]}
-      <div className="mt-4 text-xs">{children[1]}</div>
+      <div className="mt-1.5 text-xs">{children[1]}</div>
     </ButtonBase>
   );
 }

@@ -262,7 +262,7 @@ export function AdminSidebarAuthUserItem({
   if (!user) return null;
 
   const ItemAvatar = propsAvatar || UserAvatar;
-  const avatar = <ItemAvatar user={user} size="md" />;
+  const avatar = <ItemAvatar user={user} size="sm" />;
 
   return (
     <NavbarAuthMenu
@@ -273,17 +273,15 @@ export function AdminSidebarAuthUserItem({
       {isCompact ? (
         <button
           aria-label="toggle authentication menu"
-          className="flex size-12 items-center justify-center rounded-panel hover:bg-hover"
+          className="flex size-8 items-center justify-center rounded-button hover:bg-sidebar-accent hover:text-accent-foreground"
         >
           {avatar}
         </button>
       ) : (
-        <button className="flex w-full items-center rounded-panel px-3 py-2 hover:bg-hover">
+        <button className="flex h-9 w-full items-center rounded-button px-3 py-2 text-sm hover:bg-sidebar-accent hover:text-accent-foreground">
           {avatar}
-          <span className="ml-2 block min-w-0 overflow-x-hidden overflow-ellipsis whitespace-nowrap text-sm">
-            {user.name}
-          </span>
-          <ChevronUpIcon className="ml-auto block size-4" />
+          <span className="ms-2 block min-w-0 truncate">{user.name}</span>
+          <ChevronUpIcon className="ms-auto block size-4" />
         </button>
       )}
     </NavbarAuthMenu>

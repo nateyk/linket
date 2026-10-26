@@ -1,5 +1,4 @@
 import {AgentAvatarWithIndicator} from '@app/dashboard/conversations/avatars/agent-avatar';
-import {dashboardIcons} from '@app/dashboard/dashboard-icons';
 import {useUnseenConversationsStore} from '@app/dashboard/websockets/websocket-updates-notifier';
 import {AdminSidebarAuthUserItem} from '@common/admin/admin-sidebar';
 import {useAuth} from '@common/auth/use-auth';
@@ -13,28 +12,44 @@ import {
 import {DashboardSidenavChildrenProps} from '@common/ui/dashboard-layout/dashboard-sidenav';
 import {Badge} from '@ui/badge/badge';
 import {Trans} from '@ui/i18n/trans';
-import {NotificationsIcon} from '@ui/icons/material/Notifications';
-import {SettingsIcon} from '@ui/icons/material/Settings';
 import {DialogTrigger} from '@ui/overlays/dialog/dialog-trigger';
+import {
+  ArchiveIcon,
+  BellIcon,
+  BotIcon,
+  ChartColumnBigIcon,
+  InboxIcon,
+  LibraryIcon,
+  MessageSquareTextIcon,
+  MousePointerClickIcon,
+  SettingsIcon,
+  UsersIcon,
+  UsersRoundIcon,
+} from 'lucide-react';
 import {Fragment, useCallback} from 'react';
 import {Link} from 'react-router';
 
+// Keep the helpdesk icon language on lucide, matching the admin/dashboard
+// shells instead of mixing Material and lucide glyphs.
 const defaultIcons = {
-  '/agent/conversations': dashboardIcons.inbox,
-  '/agent/campaigns': dashboardIcons.campaigns,
-  '/agent/ai-agent/settings': dashboardIcons.aiAgent,
-  '/agent/ai-agent': dashboardIcons.aiAgent,
-  '/agent/ai-agents': dashboardIcons.aiAgent,
-  '/agent/archive': dashboardIcons.archive,
-  '/agent/team': dashboardIcons.team,
-  '/agent/reports': dashboardIcons.reports,
-  '/agent/hc/arrange': dashboardIcons.library,
-  '/agent/customers': dashboardIcons.users,
-  '/agent/saved-replies': dashboardIcons.saveReplies,
-};
+  '/agent/conversations': InboxIcon,
+  '/agent/campaigns': MousePointerClickIcon,
+  '/agent/ai-agent/settings': BotIcon,
+  '/agent/ai-agent': BotIcon,
+  '/agent/ai-agents': BotIcon,
+  '/agent/archive': ArchiveIcon,
+  '/agent/team': UsersRoundIcon,
+  '/agent/reports': ChartColumnBigIcon,
+  '/agent/hc/arrange': LibraryIcon,
+  '/agent/customers': UsersIcon,
+  '/agent/saved-replies': MessageSquareTextIcon,
+} as any;
 
 export function HelpdeskDashboardSidebar(props: DashboardSidenavChildrenProps) {
   const {isCompactMode = false} = props;
+  const {hasPermission} = useAuth();
+  const canOpenSettings =
+    hasPermission('admin') || hasPermission('settings.update');
 
   const customMenuRender = useCallback(
     (item: MenuItemConfig, menuItemProps: MenuItemProps) => (
@@ -55,15 +70,6 @@ export function HelpdeskDashboardSidebar(props: DashboardSidenavChildrenProps) {
 
   const bottomContent = (
     <Fragment>
-      <DashboardLeftSidebarItem
-        elementType={Link}
-        target="_blank"
-        to="/admin/settings/general"
-        isCompact={isCompactMode}
-      >
-        <SettingsIcon />
-        <Trans message="Settings" />
-      </DashboardLeftSidebarItem>
       <NotificationsItem isCompact={isCompactMode} />
       <AdminSidebarAuthUserItem
         isCompact={isCompactMode}
@@ -73,6 +79,18 @@ export function HelpdeskDashboardSidebar(props: DashboardSidenavChildrenProps) {
     </Fragment>
   );
 
+  const afterMenu = canOpenSettings ? (
+    <DashboardLeftSidebarItem
+      elementType={Link}
+      target="_blank"
+      to="/admin/settings/general"
+      isCompact={isCompactMode}
+    >
+      <SettingsIcon />
+      <Trans message="Settings" />
+    </DashboardLeftSidebarItem>
+  ) : null;
+
   return (
     <DashboardLeftSidebar
       {...props}
@@ -80,6 +98,7 @@ export function HelpdeskDashboardSidebar(props: DashboardSidenavChildrenProps) {
       matchDescendants={to => to === '/agent'}
       menuName="agent-dashboard-sidebar"
       customMenuRender={customMenuRender}
+      afterMenu={afterMenu}
       bottomContent={bottomContent}
       showToggleSidebarButton={false}
     />
@@ -95,7 +114,7 @@ function NotificationsItem({isCompact}: NotificationsItemProps) {
   return (
     <DialogTrigger type="popover" placement="top">
       <DashboardLeftSidebarItem isCompact={isCompact} className="relative">
-        <NotificationsIcon />
+        <BellIcon />
         <Trans message="Notifications" />
         {hasUnread ? (
           <Badge>{user?.unread_notifications_count}</Badge>

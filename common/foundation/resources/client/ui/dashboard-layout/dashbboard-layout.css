@@ -42,7 +42,7 @@
 }
 
 .dashboard-grid:not(.dashboard-mobile-mode) .dashboard-rounded-panel {
-  @apply rounded-card border border-border;
+  @apply rounded-card;
 }
 
 .dashboard-grid .dashboard-rounded-panel {
@@ -52,9 +52,9 @@
 /* Linket agent shell uses shadcn dashboard layout without .dashboard-grid */
 .group\/dashboard-layout [data-slot='dashboard-content'] .dashboard-rounded-panel,
 [data-slot='dashboard-content'] > .dashboard-rounded-panel {
-  @apply h-full min-h-0 min-w-0 bg-card text-card-foreground rounded-card border border-border;
+  @apply h-full min-h-0 min-w-0 bg-card text-card-foreground rounded-card;
 }
 
 .dashboard-layout-with-spacing:not(.dashboard-mobile-mode) {
-  @apply bg-muted py-2 pe-2;
+  @apply bg-muted p-2;
 }
