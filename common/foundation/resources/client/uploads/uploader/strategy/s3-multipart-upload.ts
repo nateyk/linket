@@ -333,6 +333,8 @@ export class S3MultipartUpload implements UploadStrategy {
 
   private abortUploadOnS3() {
     return apiClient.post('s3/multipart/abort', {
+      backendId: this.config.backendId,
+      uploadType: this.config.uploadType,
       key: this.fileKey,
       uploadId: this.uploadId,
     });
