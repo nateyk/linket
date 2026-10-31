@@ -134,6 +134,8 @@ class TusServer
         $meta = $this->extractMeta();
         $secured = app(SecureUpload::class)->prepare(request(), $meta);
         $meta = $secured['metadata'];
+        $length = request()->header('Upload-Length');
+        abort_unless(is_string($length) && preg_match('/^\d+$/D', $length) === 1 && (int) $length === (int) $meta['clientSize'], Response::HTTP_UNPROCESSABLE_ENTITY, 'Upload length does not match file metadata.');
         $errors = FileUploadValidator::validateForUploadType(
             uploadType: Uploads::type(Arr::get($meta, 'uploadType')),
             fileSize: Arr::get($meta, 'clientSize'),
