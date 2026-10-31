@@ -7,6 +7,7 @@ use Common\Core\Demo\BlockedOnDemoSite;
 use Common\Files\Actions\CreateFileEntry;
 use Common\Files\Actions\Deletion\DeleteEntries;
 use Common\Files\Actions\StoreFile;
+use Common\Files\Actions\AuthorizeUploadDestination;
 use Common\Files\Events\FileUploaded;
 use Common\Files\FileEntry;
 use Common\Files\FileEntryPayload;
@@ -137,10 +138,11 @@ class FileEntriesController extends Controller
         $parentId = (int) request('parentId') ?: null;
         request()->merge(['parentId' => $parentId]);
 
-        Gate::authorize('store', [FileEntry::class, request('parentId')]);
+        // Destination authorization follows payload normalization.
 
         $file = $request->file('file');
         $payload = new FileEntryPayload($request->all());
+        app(AuthorizeUploadDestination::class)->execute($request, $payload);
         $detectedMime = $file instanceof UploadedFile
             ? ($file->getMimeType() ?: $payload->clientMime)
             : $payload->clientMime;
