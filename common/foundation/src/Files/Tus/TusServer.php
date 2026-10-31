@@ -181,7 +181,7 @@ class TusServer
                 'location' => $location,
                 'file_path' => $filePath,
                 'metadata' => $this->extractMeta(),
-                'owner_id' => auth()->id(),
+                'owner_id' => (request()->user('sanctum') ?? request()->user('web') ?? request()->user())?->id,
                 'created_at' => Carbon::now()->timestamp,
                 'expires_at' => $formattedExpiresAt,
             ],
@@ -295,7 +295,8 @@ class TusServer
 
     protected function authorizeOwner(array $data): void
     {
-        abort_unless(auth()->check() && isset($data['owner_id']) && (int) $data['owner_id'] === (int) auth()->id(), 403);
+        $user = request()->user('sanctum') ?? request()->user('web') ?? request()->user();
+        abort_unless($user && isset($data['owner_id']) && (int) $data['owner_id'] === (int) $user->id, 403);
     }
 
     protected function getClientChecksum(): string
