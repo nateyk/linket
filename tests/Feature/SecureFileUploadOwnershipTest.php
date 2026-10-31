@@ -91,6 +91,38 @@ class SecureFileUploadOwnershipTest extends TestCase
         ])->assertNotFound();
     }
 
+    public function test_s3_registration_requires_server_issued_grant(): void
+    {
+        [$creator, $workspace] = $this->creator();
+        $backendId = \Common\Files\Uploads\Uploads::type('linkImages')->backendIds[0];
+        $this->actingAs($creator)->post('/api/v1/s3/entries', [
+            'clientName' => 'cover.png',
+            'clientMime' => 'image/png',
+            'clientSize' => 100,
+            'clientExtension' => 'png',
+            'filename' => 'invented-object-name.png',
+            'uploadType' => 'linkImages',
+            'backendId' => $backendId,
+            'workspaceId' => $workspace->id,
+        ])->assertForbidden();
+    }
+
+    public function test_s3_presign_rejects_another_creators_workspace_before_storage_call(): void
+    {
+        [$creator] = $this->creator();
+        [, $victimWorkspace] = $this->creator();
+        $backendId = \Common\Files\Uploads\Uploads::type('linkImages')->backendIds[0];
+        $this->actingAs($creator)->post('/api/v1/s3/simple/presign', [
+            'clientName' => 'cover.png',
+            'clientMime' => 'image/png',
+            'clientSize' => 100,
+            'clientExtension' => 'png',
+            'uploadType' => 'linkImages',
+            'backendId' => $backendId,
+            'workspaceId' => $victimWorkspace->id,
+        ])->assertForbidden();
+    }
+
     private function creator(): array
     {
         $user = User::query()->forceCreate([
