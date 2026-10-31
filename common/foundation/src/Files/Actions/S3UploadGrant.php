@@ -18,6 +18,8 @@ class S3UploadGrant
             'workspace_id' => $payload->workspaceId,
             'parent_id' => $payload->parentId,
             'client_size' => $payload->size,
+            'client_extension' => $payload->clientExtension,
+            'client_mime' => $payload->clientMime,
         ], now()->addHours(24));
     }
 
@@ -40,11 +42,14 @@ class S3UploadGrant
             $grant['backend_id'] === $payload->backend->id &&
             (int) $grant['workspace_id'] === (int) $payload->workspaceId &&
             (int) $grant['parent_id'] === (int) $payload->parentId &&
-            (int) $grant['client_size'] === (int) $payload->size, 403);
+            (int) $grant['client_size'] === (int) $payload->size &&
+            $grant['client_extension'] === $payload->clientExtension &&
+            $grant['client_mime'] === $payload->clientMime, 403);
         // Never record a file entry for a missing/unuploaded object.
         $disk = \Common\Files\Uploads\Uploads::disk($payload->uploadType, $payload->backend);
         $relativePath = $payload->uploadType->public ? $filename : $filename . '/' . $filename;
         abort_unless($disk->exists($relativePath), 422, 'S3 upload is not complete.');
+        abort_unless((int) $disk->size($relativePath) === (int) $grant['client_size'], 422, 'Uploaded size differs from the authorized size.');
         $payload->filename = $filename;
         $payload->diskPrefix = $payload->uploadType->public ? null : $filename;
         Cache::forget('s3-upload-grant:' . hash('sha256', $filename));
