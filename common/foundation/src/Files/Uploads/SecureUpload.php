@@ -46,6 +46,9 @@ final class SecureUpload
         abort_unless(is_numeric($size) && (int) $size >= 0 && (string) (int) $size === (string) $size, 422, 'Invalid file size.');
 
         $relativePath = $data['relativePath'] ?? null;
+        if (in_array($relativePath, ['null', 'false'], true)) {
+            $relativePath = null;
+        }
         if ($relativePath !== null && $relativePath !== '') {
             abort_unless($type->supportsFolders && $workspaceId !== null && is_string($relativePath) && strlen($relativePath) <= 255, 422, 'Invalid upload folder path.');
             foreach (explode('/', str_replace('\\', '/', $relativePath)) as $segment) {
@@ -108,7 +111,7 @@ final class SecureUpload
 
     private function workspaceId(mixed $value): ?int
     {
-        if ($value === null || $value === '') {
+        if ($value === null || $value === '' || $value === 'null' || $value === 'false') {
             return null;
         }
         $id = filter_var($value, FILTER_VALIDATE_INT);
