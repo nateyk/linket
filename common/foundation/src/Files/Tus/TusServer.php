@@ -4,6 +4,8 @@ namespace Common\Files\Tus;
 
 use Carbon\Carbon;
 use Common\Files\Actions\FileUploadValidator;
+use Common\Files\Actions\AuthorizeUploadDestination;
+use Common\Files\FileEntryPayload;
 use Common\Files\Tus\Exceptions\ConnectionException;
 use Common\Files\Tus\Exceptions\FileException;
 use Common\Files\Tus\Exceptions\OutOfRangeException;
@@ -111,6 +113,7 @@ class TusServer
             return $this->response(null, Response::HTTP_NOT_FOUND);
         }
 
+        $this->authorizeOwner($tusData);
         $offset = $tusData['offset'] ?? false;
 
         if ($offset === false) {
@@ -156,7 +159,9 @@ class TusServer
             );
         }
 
-        $uploadKey = $this->getOrCreateUploadKey();
+        $payload = new FileEntryPayload($meta);
+        app(AuthorizeUploadDestination::class)->execute(request(), $payload);
+        $uploadKey = Uuid::uuid4()->toString();
         $filePath = storage_path("tus/$uploadKey");
 
         $checksum = $this->getClientChecksum();
@@ -173,6 +178,7 @@ class TusServer
                 'location' => $location,
                 'file_path' => $filePath,
                 'metadata' => $this->extractMeta(),
+                'owner_id' => auth()->id(),
                 'created_at' => Carbon::now()->timestamp,
                 'expires_at' => $formattedExpiresAt,
             ],
@@ -193,6 +199,7 @@ class TusServer
             return $this->response(null, Response::HTTP_GONE);
         }
 
+        $this->authorizeOwner($tusData);
         $status = $this->verifyPatchRequest($tusData);
         if (Response::HTTP_OK !== $status) {
             return $this->response(null, $status);
@@ -261,6 +268,9 @@ class TusServer
     {
         $uploadKey = $this->getUploadKeyFromUrl();
         $tusData = $this->cache->get($uploadKey);
+        if ($tusData) {
+            $this->authorizeOwner($tusData);
+        }
         $resource = $tusData['file_path'] ?? null;
 
         if (!$resource) {
@@ -278,6 +288,11 @@ class TusServer
         return $this->response(null, Response::HTTP_NO_CONTENT, [
             'Tus-Extension' => 'termination',
         ]);
+    }
+
+    protected function authorizeOwner(array $data): void
+    {
+        abort_unless(auth()->check() && isset($data['owner_id']) && (int) $data['owner_id'] === (int) auth()->id(), 403);
     }
 
     protected function getClientChecksum(): string
