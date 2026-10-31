@@ -7,6 +7,7 @@ import {Card} from '@shadcn/card/card';
 import {Dialog} from '@shadcn/dialog/dialog';
 import {Empty} from '@shadcn/empty/empty';
 import {Input} from '@shadcn/forms/input/input';
+import {Popover} from '@shadcn/popover/popover';
 import {Select} from '@shadcn/forms/select/select';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {Table} from '@shadcn/table/table';
@@ -16,14 +17,12 @@ import {FormattedCurrency} from '@ui/i18n/formatted-currency';
 import {FormattedDate} from '@ui/i18n/formatted-date';
 import {Trans} from '@ui/i18n/trans';
 import {
-  AlertTriangleIcon,
-  CircleDollarSignIcon,
-  ClockIcon,
   EyeIcon,
+  CalendarDaysIcon,
+  SearchIcon,
   PackageCheckIcon,
   ReceiptTextIcon,
   RefreshCwIcon,
-  ShieldCheckIcon,
 } from 'lucide-react';
 import {
   ReactNode,
@@ -522,7 +521,7 @@ export function Component() {
         </Button>
       </DashboardLayout.SectionHeader>
       <DashboardLayout.SectionContent className="overflow-y-auto">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 py-5">
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 py-4">
           {actionError && (
             <p className="text-sm text-destructive" role="alert">
               {actionError}
@@ -536,14 +535,15 @@ export function Component() {
             onValueChange={value => setTab(value as Tab)}
             className="gap-4"
           >
-            <Tabs.List variant="line" className="w-full justify-start">
-              <Tabs.Tab value="orders">
+            <div className="overflow-x-auto border-b border-border">
+              <Tabs.List variant="line" className="w-max justify-start">
+              <Tabs.Tab value="orders" className="flex-none">
                 <Trans message="Orders" />
               </Tabs.Tab>
-              <Tabs.Tab value="transactions">
+              <Tabs.Tab value="transactions" className="flex-none">
                 <Trans message="Transactions" />
               </Tabs.Tab>
-              <Tabs.Tab value="manual-review">
+              <Tabs.Tab value="manual-review" className="flex-none">
                 <Trans message="Manual review" />
                 {!!summary?.manual_review_count && (
                   <Badge variant="outline" className="bg-warning/10 text-warning">
@@ -551,23 +551,21 @@ export function Component() {
                   </Badge>
                 )}
               </Tabs.Tab>
-              <Tabs.Tab value="billing">
+              <Tabs.Tab value="billing" className="flex-none">
                 <Trans message="Billing" />
               </Tabs.Tab>
-            </Tabs.List>
+              </Tabs.List>
+            </div>
 
             <Tabs.Panel value="orders" className="flex flex-col gap-4">
-              <Card.Root>
-                <Card.Header className="gap-3 border-b">
-                  <div>
-                    <Card.Title>
-                      <Trans message="Orders" />
-                    </Card.Title>
-                    <Card.Description>
-                      <Trans message="Payments received for your products. Orders are only marked as paid after the payment provider verifies them." />
-                    </Card.Description>
-                  </div>
-                  <OrderFilters
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <h2 className="text-base font-medium"><Trans message="Orders" /></h2>
+                  <p className="text-sm text-muted-foreground">
+                    <Trans message="Payments received for your products. Orders are only marked as paid after the payment provider verifies them." />
+                  </p>
+                </div>
+                <OrderFilters
                     status={orderStatus}
                     search={orderSearch}
                     from={orderFrom}
@@ -590,7 +588,8 @@ export function Component() {
                       setOrderPage(1);
                     }}
                   />
-                </Card.Header>
+              </div>
+              <Card.Root size="sm" className="rounded-card-sm">
                 <Card.Content className="px-0">
                   <OrdersTable
                     orders={orders}
@@ -613,17 +612,14 @@ export function Component() {
             </Tabs.Panel>
 
             <Tabs.Panel value="transactions" className="flex flex-col gap-4">
-              <Card.Root>
-                <Card.Header className="gap-3 border-b">
-                  <div>
-                    <Card.Title>
-                      <Trans message="Transactions" />
-                    </Card.Title>
-                    <Card.Description>
-                      <Trans message="Verification attempts for payments sent to your receiving accounts. Provider evidence stays private." />
-                    </Card.Description>
-                  </div>
-                  <TransactionFilters
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <h2 className="text-base font-medium"><Trans message="Transactions" /></h2>
+                  <p className="text-sm text-muted-foreground">
+                    <Trans message="Verification attempts for payments sent to your receiving accounts. Provider evidence stays private." />
+                  </p>
+                </div>
+                <TransactionFilters
                     status={transactionStatus}
                     search={transactionSearch}
                     from={transactionFrom}
@@ -645,7 +641,8 @@ export function Component() {
                       setTransactionPage(1);
                     }}
                   />
-                </Card.Header>
+              </div>
+              <Card.Root size="sm" className="rounded-card-sm">
                 <Card.Content className="px-0">
                   <TransactionsTable
                     transactions={transactions}
@@ -668,7 +665,7 @@ export function Component() {
             </Tabs.Panel>
 
             <Tabs.Panel value="manual-review" className="flex flex-col gap-4">
-              <Card.Root>
+              <Card.Root size="sm" className="rounded-card-sm">
                 <Card.Header className="border-b">
                   <Card.Title>
                     <Trans message="Manual review" />
@@ -1123,9 +1120,8 @@ export function Component() {
 
 function SummaryCards({summary}: {summary?: Summary}) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
       <SummaryCard
-        icon={<CircleDollarSignIcon />}
         label={<Trans message="Verified sales" />}
         value={
           summary ? (
@@ -1147,20 +1143,17 @@ function SummaryCards({summary}: {summary?: Summary}) {
         }
       />
       <SummaryCard
-        icon={<ClockIcon />}
         label={<Trans message="Pending orders" />}
         value={summary?.pending_count ?? '—'}
         detail={<Trans message="Awaiting payment or provider verification" />}
       />
       <SummaryCard
-        icon={<AlertTriangleIcon />}
         label={<Trans message="Manual review" />}
         value={summary?.manual_review_count ?? '—'}
         detail={<Trans message="Resolved by Linket support" />}
         tone={summary?.manual_review_count ? 'warning' : undefined}
       />
       <SummaryCard
-        icon={<ShieldCheckIcon />}
         label={<Trans message="Rejected payments" />}
         value={summary?.rejected_count ?? '—'}
         detail={<Trans message="Never counted as sales" />}
@@ -1170,37 +1163,22 @@ function SummaryCards({summary}: {summary?: Summary}) {
 }
 
 function SummaryCard({
-  icon,
   label,
   value,
   detail,
   tone,
 }: {
-  icon: ReactNode;
   label: ReactNode;
   value: ReactNode;
   detail: ReactNode;
   tone?: 'warning';
 }) {
   return (
-    <Card.Root size="sm">
-      <Card.Content className="flex items-start gap-3">
-        <span
-          className={`flex size-9 shrink-0 items-center justify-center rounded-card-sm ${
-            tone === 'warning'
-              ? 'bg-warning/10 text-warning'
-              : 'bg-muted text-muted-foreground'
-          }`}
-        >
-          {icon}
-        </span>
-        <div className="min-w-0">
-          <p className="text-sm text-muted-foreground">{label}</p>
-          <p className="truncate text-xl font-semibold tracking-tight tabular-nums">
-            {value}
-          </p>
-          <p className="mt-0.5 text-xs text-muted-foreground">{detail}</p>
-        </div>
+    <Card.Root size="sm" className="rounded-card-sm">
+      <Card.Content className="flex min-w-0 flex-col gap-1.5">
+        <p className={tone === 'warning' ? 'text-sm text-warning' : 'text-sm text-muted-foreground'}>{label}</p>
+        <p className="text-xl font-semibold tracking-tight tabular-nums">{value}</p>
+        <p className="text-xs leading-snug text-muted-foreground">{detail}</p>
       </Card.Content>
     </Card.Root>
   );
@@ -1227,43 +1205,75 @@ function OrderFilters({
   onFromChange: (value: string) => void;
   onToChange: (value: string) => void;
 }) {
+  const isFiltered = status !== 'all' || !!search || !!from || !!to;
   return (
-    <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-      <Input
-        bindToHookForm={false}
-        aria-label="Search orders"
-        placeholder="Search product, buyer or reference"
-        value={search}
-        onChange={event => onSearchChange(event.target.value)}
-      />
-      <Select.Root value={status} onValueChange={value => onStatusChange(value ?? 'all')}>
-        <Select.Trigger className="w-full">
-          <Select.Value placeholder={<Trans message="All statuses" />} />
-        </Select.Trigger>
-        <Select.Content>
-          <Select.Group>
-            {statusOptions.map(option => (
-              <Select.Item key={option.value} value={option.value}>
-                {option.label}
-              </Select.Item>
-            ))}
-          </Select.Group>
-        </Select.Content>
-      </Select.Root>
-      <Input
-        bindToHookForm={false}
-        aria-label="From date"
-        type="date"
-        value={from}
-        onChange={event => onFromChange(event.target.value)}
-      />
-      <Input
-        bindToHookForm={false}
-        aria-label="To date"
-        type="date"
-        value={to}
-        onChange={event => onToChange(event.target.value)}
-      />
+    <div className="flex flex-col gap-2 md:flex-row md:items-center">
+      <div className="relative min-w-0 flex-1">
+        <SearchIcon aria-hidden="true" className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          bindToHookForm={false}
+          className="ps-9"
+          aria-label="Search orders"
+          placeholder="Search product, buyer or reference"
+          value={search}
+          onChange={event => onSearchChange(event.target.value)}
+        />
+      </div>
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 md:flex md:items-center">
+        <Select.Root value={status} onValueChange={value => onStatusChange(value ?? 'all')}>
+          <Select.Trigger aria-label="Order status" className="w-full md:w-52">
+            <Select.Value placeholder={<Trans message="All statuses" />} />
+          </Select.Trigger>
+          <Select.Content>
+            <Select.Group>
+              {statusOptions.map(option => (
+                <Select.Item key={option.value} value={option.value}>
+                  {option.label}
+                </Select.Item>
+              ))}
+            </Select.Group>
+          </Select.Content>
+        </Select.Root>
+        <Popover.Root>
+          <Popover.Trigger render={
+            <Button variant="outline" className="shrink-0" aria-label="Filter by date">
+              <CalendarDaysIcon />
+              <Trans message="Dates" />
+              {(from || to) && <span aria-hidden="true" className="size-1.5 rounded-full bg-primary" />}
+            </Button>
+          } />
+          <Popover.Portal>
+            <Popover.Content align="end" className="w-[min(20rem,calc(100vw-2rem))] rounded-card-sm">
+              <Popover.Header>
+                <Popover.Title><Trans message="Date range" /></Popover.Title>
+              </Popover.Header>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="flex min-w-0 flex-col gap-1.5 text-sm">
+                  <Trans message="From" />
+                  <Input bindToHookForm={false} aria-label="From date" type="date" value={from} max={to || undefined} onChange={event => onFromChange(event.target.value)} />
+                </label>
+                <label className="flex min-w-0 flex-col gap-1.5 text-sm">
+                  <Trans message="To" />
+                  <Input bindToHookForm={false} aria-label="To date" type="date" value={to} min={from || undefined} onChange={event => onToChange(event.target.value)} />
+                </label>
+              </div>
+              <Button variant="ghost" size="sm" className="self-end" disabled={!from && !to} onClick={() => {onFromChange(''); onToChange('');}}>
+                <Trans message="Clear dates" />
+              </Button>
+            </Popover.Content>
+          </Popover.Portal>
+        </Popover.Root>
+      </div>
+      {isFiltered && (
+        <Button variant="ghost" size="sm" className="self-start md:self-auto" onClick={() => {
+          onStatusChange('all');
+          onSearchChange('');
+          onFromChange('');
+          onToChange('');
+        }}>
+          <Trans message="Clear filters" />
+        </Button>
+      )}
     </div>
   );
 }
@@ -1287,43 +1297,75 @@ function TransactionFilters({
   onFromChange: (value: string) => void;
   onToChange: (value: string) => void;
 }) {
+  const isFiltered = status !== 'all' || !!search || !!from || !!to;
   return (
-    <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-      <Input
-        bindToHookForm={false}
-        aria-label="Search transactions"
-        placeholder="Search reference, buyer or product"
-        value={search}
-        onChange={event => onSearchChange(event.target.value)}
-      />
-      <Select.Root value={status} onValueChange={value => onStatusChange(value ?? 'all')}>
-        <Select.Trigger className="w-full">
-          <Select.Value placeholder={<Trans message="All statuses" />} />
-        </Select.Trigger>
-        <Select.Content>
-          <Select.Group>
-            {transactionStatusOptions.map(option => (
-              <Select.Item key={option.value} value={option.value}>
-                {option.label}
-              </Select.Item>
-            ))}
-          </Select.Group>
-        </Select.Content>
-      </Select.Root>
-      <Input
-        bindToHookForm={false}
-        aria-label="Transactions from date"
-        type="date"
-        value={from}
-        onChange={event => onFromChange(event.target.value)}
-      />
-      <Input
-        bindToHookForm={false}
-        aria-label="Transactions to date"
-        type="date"
-        value={to}
-        onChange={event => onToChange(event.target.value)}
-      />
+    <div className="flex flex-col gap-2 md:flex-row md:items-center">
+      <div className="relative min-w-0 flex-1">
+        <SearchIcon aria-hidden="true" className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          bindToHookForm={false}
+          className="ps-9"
+          aria-label="Search transactions"
+          placeholder="Search reference, buyer or product"
+          value={search}
+          onChange={event => onSearchChange(event.target.value)}
+        />
+      </div>
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 md:flex md:items-center">
+        <Select.Root value={status} onValueChange={value => onStatusChange(value ?? 'all')}>
+          <Select.Trigger aria-label="Transaction status" className="w-full md:w-52">
+            <Select.Value placeholder={<Trans message="All statuses" />} />
+          </Select.Trigger>
+          <Select.Content>
+            <Select.Group>
+              {transactionStatusOptions.map(option => (
+                <Select.Item key={option.value} value={option.value}>
+                  {option.label}
+                </Select.Item>
+              ))}
+            </Select.Group>
+          </Select.Content>
+        </Select.Root>
+        <Popover.Root>
+          <Popover.Trigger render={
+            <Button variant="outline" className="shrink-0" aria-label="Filter transactions by date">
+              <CalendarDaysIcon />
+              <Trans message="Dates" />
+              {(from || to) && <span aria-hidden="true" className="size-1.5 rounded-full bg-primary" />}
+            </Button>
+          } />
+          <Popover.Portal>
+            <Popover.Content align="end" className="w-[min(20rem,calc(100vw-2rem))] rounded-card-sm">
+              <Popover.Header>
+                <Popover.Title><Trans message="Date range" /></Popover.Title>
+              </Popover.Header>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="flex min-w-0 flex-col gap-1.5 text-sm">
+                  <Trans message="From" />
+                  <Input bindToHookForm={false} aria-label="Transactions from date" type="date" value={from} max={to || undefined} onChange={event => onFromChange(event.target.value)} />
+                </label>
+                <label className="flex min-w-0 flex-col gap-1.5 text-sm">
+                  <Trans message="To" />
+                  <Input bindToHookForm={false} aria-label="Transactions to date" type="date" value={to} min={from || undefined} onChange={event => onToChange(event.target.value)} />
+                </label>
+              </div>
+              <Button variant="ghost" size="sm" className="self-end" disabled={!from && !to} onClick={() => {onFromChange(''); onToChange('');}}>
+                <Trans message="Clear dates" />
+              </Button>
+            </Popover.Content>
+          </Popover.Portal>
+        </Popover.Root>
+      </div>
+      {isFiltered && (
+        <Button variant="ghost" size="sm" className="self-start md:self-auto" onClick={() => {
+          onStatusChange('all');
+          onSearchChange('');
+          onFromChange('');
+          onToChange('');
+        }}>
+          <Trans message="Clear filters" />
+        </Button>
+      )}
     </div>
   );
 }
