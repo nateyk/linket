@@ -2,6 +2,7 @@
 
 use HTMLPurifier;
 use HTMLPurifier_Config;
+use Illuminate\Support\Facades\File;
 
 class MessageBodyPurifier
 {
@@ -71,7 +72,9 @@ class MessageBodyPurifier
 
         $config->set('Core.Encoding', 'UTF-8');
         $config->set('HTML.Doctype', 'HTML 4.01 Transitional');
-        $config->set('Cache.SerializerPath', storage_path('app/purifier'));
+        $cachePath = storage_path('app/purifier');
+        File::ensureDirectoryExists($cachePath);
+        $config->set('Cache.SerializerPath', $cachePath);
         $config->set(
             'HTML.Allowed',
             'div,blockquote,b,strong,i,u,strike,a[href],ul,ol,li,br,p,img[src|width|height],pre,code',
