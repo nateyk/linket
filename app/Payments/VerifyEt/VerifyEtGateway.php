@@ -138,6 +138,23 @@ final class VerifyEtGateway
                 $verification->update(['status' => 'manual_review', 'latest_error_code' => 'confirmation_history_review']);
                 return 'manual_review';
             }
+            // The payment itself is verified, but a previously released free-sale
+            // slot cannot displace a newer reservation. Keep canonical evidence
+            // for safe review and retry; never label a real transfer a mismatch.
+            if ($verification->payable_type === StorefrontOrder::class) {
+                $order = StorefrontOrder::query()->whereKey($verification->payable_id)->lockForUpdate()->firstOrFail();
+                if (!app(\App\Storefront\Services\CreatorVerificationAllowance::class)->acquireForVerifiedPayment($order)) {
+                    $verification->update([
+                        'canonical_transaction_identity' => $identity,
+                        'verified_at' => now(),
+                        'status' => 'manual_review',
+                        'latest_error' => null,
+                        'latest_error_code' => 'free_allowance_exhausted',
+                    ]);
+                    $order->update(['status' => 'manual_review']);
+                    return 'manual_review';
+                }
+            }
             $verification->update(['canonical_transaction_identity' => $identity, 'verified_at' => now(), 'latest_error' => null, 'latest_error_code' => null]);
             if (!$this->settle($verification)) {
                 $verification->update(['status' => 'mismatch', 'latest_error_code' => 'payable_already_settled']);
