@@ -5,6 +5,7 @@ namespace Common\Files\Tus;
 use Common\Files\Actions\CreateFileEntry;
 use Common\Files\Actions\FileUploadValidator;
 use Common\Files\Actions\StoreFile;
+use Common\Files\Actions\AuthorizeUploadDestination;
 use Common\Files\Events\FileUploaded;
 use Common\Files\FileEntry;
 use Common\Files\FileEntryPayload;
@@ -42,6 +43,7 @@ class TusFileEntryController extends Controller
         unset($metadata['name']);
 
         $payload = new FileEntryPayload($metadata);
+        app(AuthorizeUploadDestination::class)->execute($request, $payload);
 
         Gate::authorize('store', [
             FileEntry::class,
