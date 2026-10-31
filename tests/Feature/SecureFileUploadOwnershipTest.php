@@ -66,7 +66,7 @@ class SecureFileUploadOwnershipTest extends TestCase
         [$uploader] = $this->creator();
         [$attacker] = $this->creator();
         $key = 'uploaded-'.Str::random(16);
-        app(\\Common\\Files\\Tus\\TusCache::class)->set($key, [
+        app(\Common\Files\Tus\TusCache::class)->set($key, [
             'owner_id' => $uploader->id,
             'file_path' => storage_path('tus/unused-test'),
             'size' => 10,
@@ -79,7 +79,7 @@ class SecureFileUploadOwnershipTest extends TestCase
                 'uploadKey' => $key,
             ])->assertForbidden();
         } finally {
-            app(\\Common\\Files\\Tus\\TusCache::class)->delete($key);
+            app(\Common\Files\Tus\TusCache::class)->delete($key);
         }
     }
 
