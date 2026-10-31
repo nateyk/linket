@@ -514,13 +514,12 @@ class EntitlementSystemTest extends TestCase
         $this->assertContains('No commission on new sales', $data['pricing_features']);
         $this->assertContains('10 lifetime verified sales', $data['pricing_features']);
 
-        // The charge fact is pinned as a literal, not just the displayed string:
-        // a half-edit (commission 500 + display "10%") fails here.
+        // Guard the 0% commission contract in the stored plan, not only the display text.
         $benefits = $plan->storefront_benefits;
         if (is_string($benefits)) {
             $benefits = json_decode($benefits, true);
         }
-        $this->assertSame(150, (int) $benefits['commission_bps']);
+        $this->assertSame(0, (int) $benefits['commission_bps']);
     }
 
     public function testMarkingNewDefaultPlanClearsOldDefault(): void
