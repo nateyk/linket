@@ -34,6 +34,10 @@ final class VerifyEtClient
     private function request(string $method, string $path, array $payload = [], ?string $idempotencyKey = null): array
     {
         if (config('services.verify_et.mock')) {
+            // A missed preflight must never turn production financial evidence into mock evidence.
+            if (app()->isProduction() || config('app.env') === 'production') {
+                throw new RuntimeException('Verify.et mock responses are forbidden in production.');
+            }
             return $this->mockedResponse($method, $path, $payload, $idempotencyKey);
         }
 
