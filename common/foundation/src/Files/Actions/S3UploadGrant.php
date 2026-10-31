@@ -4,13 +4,12 @@ namespace Common\Files\Actions;
 
 use Common\Files\FileEntryPayload;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Str;
 
 class S3UploadGrant
 {
     public function issue(FileEntryPayload $payload, string $key): void
     {
-        Cache::put('s3-upload-grant:' . hash('sha256', $key), [
+        Cache::put('s3-upload-grant:' . hash('sha256', $payload->filename), [
             'owner_id' => $payload->ownerId,
             'filename' => $payload->filename,
             'upload_type' => $payload->uploadType->name,
@@ -23,9 +22,7 @@ class S3UploadGrant
 
     public function verify(FileEntryPayload $payload, string $filename): void
     {
-        $disk = \Common\Files\Uploads\Uploads::disk($payload->uploadType, $payload->backend);
-        $path = trim($disk->path(''), '/') . '/' . $filename;
-        $grant = Cache::get('s3-upload-grant:' . hash('sha256', ltrim($path, '/')));
+        $grant = Cache::get('s3-upload-grant:' . hash('sha256', $filename));
         // Storage backends may prefix paths differently, so use the issued
         // full file key passed from presign instead of reconstructing paths.
         abort_unless($grant &&
@@ -38,6 +35,6 @@ class S3UploadGrant
             (int) $grant['client_size'] === (int) $payload->size, 403);
         $payload->filename = $filename;
         $payload->diskPrefix = $payload->uploadType->public ? null : $filename;
-        Cache::forget('s3-upload-grant:' . hash('sha256', ltrim($path, '/')));
+        Cache::forget('s3-upload-grant:' . hash('sha256', $filename));
     }
 }
