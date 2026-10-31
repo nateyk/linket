@@ -85,6 +85,7 @@ class S3MultipartUploadController extends Controller
      */
     public function getUploadedParts()
     {
+        app(S3UploadGrant::class)->authorizeKey((string) request('key'));
         $data = $this->getClient()->listParts([
             'Bucket' => $this->getBucket(),
             'Key' => request('key'),
@@ -104,6 +105,7 @@ class S3MultipartUploadController extends Controller
      */
     public function batchSignPartUrls()
     {
+        app(S3UploadGrant::class)->authorizeKey((string) request('key'));
         $partNumbers = request()->input('partNumbers');
 
         $urls = [];
@@ -129,6 +131,7 @@ class S3MultipartUploadController extends Controller
      */
     public function complete()
     {
+        app(S3UploadGrant::class)->authorizeKey((string) request('key'));
         $data = $this->getClient()->completeMultipartUpload([
             'Bucket' => $this->getBucket(),
             'Key' => request()->input('key'),
@@ -150,6 +153,7 @@ class S3MultipartUploadController extends Controller
      */
     public function abort()
     {
+        app(S3UploadGrant::class)->authorizeKey((string) request('key'));
         $this->getClient()->abortMultipartUpload([
             'Bucket' => $this->getBucket(),
             'Key' => request()->input('key'),
