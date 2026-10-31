@@ -1,0 +1,2 @@
+import{Et as e}from"./client-DDuoGab_.js";import{t}from"./message-BCKcasPr.js";import{t as n}from"./trans-DLdXWXX-.js";import{tc as r}from"./icons-CIjNMVMP.js";var i=r();function a({linkeable:t}){return t.name?t.name:(0,i.jsx)(n,{message:`Untitled :dateCreated`,values:{dateCreated:(0,i.jsx)(e,{date:t.created_at})}})}function o(e){return e.name?e.name:t(`Untitled :dateCreated`,{values:{dateCreated:e.created_at?e.created_at.split(`T`)[0]:``}})}export{o as n,a as t};
+//# sourceMappingURL=linkeable-name-Div-MiYd.js.map

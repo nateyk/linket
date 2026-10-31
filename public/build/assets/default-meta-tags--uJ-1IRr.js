@@ -1,0 +1,2 @@
+import{t as e}from"./helmet-D_VAJyYv.js";import{i as t}from"./bootstrap-data-store-VbxJ2ePj.js";import{tc as n}from"./icons-CIjNMVMP.js";var r=n();function i(){let{default_meta_tags:n}=t(e=>e.data);return(0,r.jsx)(e,{tags:n})}export{i as t};
+//# sourceMappingURL=default-meta-tags--uJ-1IRr.js.map

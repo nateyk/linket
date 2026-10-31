@@ -1,0 +1,2 @@
+import{t as e}from"./color-DHiWH3rF.js";function t(t,n=`hex`,r=`#fff`){try{return new e(t).toString({format:n})}catch{return new e(r).toString({format:n})}}export{t};
+//# sourceMappingURL=convert-color-to-format-B34PLj2V.js.map

@@ -1,0 +1,2 @@
+import{t as e}from"./mergeProps-827hkP70.js";import{a as t}from"./item-mB6bJbcy.js";import{n}from"./index.esm-BNJv9mud.js";import{t as r}from"./chip-field-67AQNWmo.js";import{tc as i}from"./icons-CIjNMVMP.js";var a=i();function o({children:i,...o}){let s=t({...o,multiSelect:!0}),{field:{onChange:c,onBlur:l,value:u=[],ref:d},fieldState:{invalid:f,error:p}}=n({name:o.name,rules:s}),m={onChange:c,onBlur:l,value:u,invalid:f,errorMessage:p?.message};return(0,a.jsx)(r,{ref:d,...e(m,o),children:i})}export{o as t};
+//# sourceMappingURL=form-chip-field-C2vku-1l.js.map

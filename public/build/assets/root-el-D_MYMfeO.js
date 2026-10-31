@@ -1,0 +1,2 @@
+var e=typeof document<`u`?document.getElementById(`root`)??document.body:void 0,t=typeof document<`u`?document.documentElement:void 0;function n(n){e=n,t=n}export{n,t as r,e as t};
+//# sourceMappingURL=root-el-D_MYMfeO.js.map

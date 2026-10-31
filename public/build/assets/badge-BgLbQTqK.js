@@ -1,0 +1,2 @@
+import{ec as e,tc as t}from"./icons-CIjNMVMP.js";var n=t();function r({children:t,className:r,withBorder:i=!0,top:a=`top-0.5`,right:o=`right-1`,color:s=`bg-warning text-primary-foreground`}){return(0,n.jsx)(`span`,{className:e(`absolute flex items-center justify-center whitespace-nowrap rounded-full text-[12px] font-bold shadow-sm`,i&&`border-2 border-white`,s,t?`w-max p-1 leading-[0.6]`:`h-3 w-3`,r,a,o),children:t})}export{r as t};
+//# sourceMappingURL=badge-BgLbQTqK.js.map

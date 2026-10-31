@@ -1,0 +1,2 @@
+import{t as e}from"./trans-DLdXWXX-.js";import{tc as t}from"./icons-CIjNMVMP.js";var n=t();function r({priority:t}){switch(t){case 1:return(0,n.jsx)(e,{message:`Low`});case 2:return(0,n.jsx)(e,{message:`Normal`});default:return(0,n.jsx)(e,{message:`High`})}}export{r as t};
+//# sourceMappingURL=conversation-priority-TnrXj3D0.js.map

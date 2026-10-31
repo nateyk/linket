@@ -1,0 +1,2 @@
+function e(e){if(e)return{backgroundImage:e.backgroundImage,backgroundColor:e.backgroundColor,backgroundAttachment:e.backgroundAttachment,backgroundSize:e.backgroundSize,backgroundRepeat:e.backgroundRepeat,backgroundPosition:e.backgroundPosition,color:e.color}}export{e as t};
+//# sourceMappingURL=css-props-from-bg-config-BpO7MmYd.js.map

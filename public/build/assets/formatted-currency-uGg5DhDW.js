@@ -1,0 +1,2 @@
+import{a as e}from"./rolldown-runtime-BWaJ3C7D.js";import{t}from"./format-money-BWB9NUki.js";import{nc as n,tc as r}from"./icons-CIjNMVMP.js";var i=e(n()),a=r(),o=(0,i.memo)(({value:e,valueInCents:n,currency:r})=>{let i=n??(e??0)*100;return(0,a.jsx)(a.Fragment,{children:t(i,r)})});export{o as t};
+//# sourceMappingURL=formatted-currency-uGg5DhDW.js.map

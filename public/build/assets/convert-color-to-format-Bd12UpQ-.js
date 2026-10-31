@@ -1,2 +1,0 @@
-import{t as e}from"./color-CzKk6fKW.js";function t(t,n=`hex`,r=`#fff`){try{return new e(t).toString({format:n})}catch{return new e(r).toString({format:n})}}export{t};
-//# sourceMappingURL=convert-color-to-format-Bd12UpQ-.js.map

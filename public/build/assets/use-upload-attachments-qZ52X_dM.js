@@ -1,0 +1,2 @@
+import{a as e}from"./rolldown-runtime-BWaJ3C7D.js";import{j as t}from"./client-DDuoGab_.js";import{r as n}from"./file-upload-provider-CtF1nAcw.js";import{t as r}from"./toast-DZ_8Dg9T.js";import{nc as i}from"./icons-CIjNMVMP.js";var a=e(i());function o({onSuccess:e}){let i=(0,a.useRef)(e);i.current=e;let o=n(e=>e.uploadMultiple);return(0,a.useCallback)(e=>{o(e,{showToastOnRestrictionFail:!0,uploadType:t.conversationAttachments,onSuccess:e=>{i.current(e)},onError:e=>{e&&r.danger(e)}})},[o])}export{o as t};
+//# sourceMappingURL=use-upload-attachments-qZ52X_dM.js.map

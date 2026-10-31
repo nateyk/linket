@@ -1,0 +1,2 @@
+import{i as e,t}from"./analytics-Bh_cS7u5.js";import{$i as n}from"./client-DDuoGab_.js";var r=[`tracked-events`],i=(t,i)=>{let a={...i};return t===`admin`&&(a.workspace_id=`all`),n({queryKey:[...r,a],queryFn:()=>e(a)})},a=e=>n({queryKey:[...r,`report`,e],queryFn:()=>t(e)});export{a as n,i as t};
+//# sourceMappingURL=tracked-events-queries-CP9agMsr.js.map

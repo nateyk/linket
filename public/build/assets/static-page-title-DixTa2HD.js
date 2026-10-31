@@ -1,0 +1,2 @@
+import{hi as e}from"./client-DDuoGab_.js";import{t}from"./helmet-D_VAJyYv.js";import{tc as n}from"./icons-CIjNMVMP.js";var r=n();function i({children:n}){let{branding:{site_name:i}}=e();return(0,r.jsx)(t,{children:n?(0,r.jsxs)(`title`,{children:[n,` - `,i]}):void 0})}export{i as t};
+//# sourceMappingURL=static-page-title-DixTa2HD.js.map

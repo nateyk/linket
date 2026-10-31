@@ -1,0 +1,2 @@
+import{tc as e}from"./icons-CIjNMVMP.js";var t=e();function n(){return(0,t.jsx)(`div`,{className:`self-stretch mx-1 w-px bg-border flex-shrink-0`})}export{n as t};
+//# sourceMappingURL=divider-DbaUT9WF.js.map

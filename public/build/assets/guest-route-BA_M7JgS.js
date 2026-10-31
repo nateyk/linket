@@ -1,0 +1,2 @@
+import{a as e,g as t,i as n}from"./chunk-62JRHF6Z-BMYGeZpM.js";import{Aa as r,zi as i}from"./client-DDuoGab_.js";import{tc as a}from"./icons-CIjNMVMP.js";var o=a();function s({children:a}){let{isLoggedIn:s,getRedirectUri:c}=i(),{isInsideSettingsPreview:l}=r(),u=c(),{pathname:d}=t();return s&&!l&&u!==d?(0,o.jsx)(n,{to:u,replace:!0}):a||(0,o.jsx)(e,{})}export{s as t};
+//# sourceMappingURL=guest-route-BA_M7JgS.js.map

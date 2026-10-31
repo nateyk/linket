@@ -1,0 +1,2 @@
+function e(e,t){let n={};return e.forEach(e=>{if(e){if(`value`in e)n[e.key]=e.value;else if(e.format===`rating`||e.format===`switch`)n[e.key]=!1;else if(e.format===`checkboxGroup`){let r=e.config?.options?.[0].value;n[e.key]=r!=null&&t?.selectFirstValue?[r]:[]}else e.config?.options?.length&&t?.selectFirstValue?n[e.key]=e.config.options[0].value:n[e.key]=``}}),n}export{e as t};
+//# sourceMappingURL=get-default-values-for-form-with-attributes-BgdKh51k.js.map

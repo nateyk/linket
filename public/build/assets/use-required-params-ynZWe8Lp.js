@@ -1,0 +1,2 @@
+import{S as e}from"./chunk-62JRHF6Z-BMYGeZpM.js";var t=t=>{let n=e();for(let e of t)if(!n[e])throw Error(`This component should not be rendered on a route which does not have the ${e} parameter`);return n};export{t};
+//# sourceMappingURL=use-required-params-ynZWe8Lp.js.map

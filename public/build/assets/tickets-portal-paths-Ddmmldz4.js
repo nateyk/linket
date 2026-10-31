@@ -1,0 +1,2 @@
+import{g as e}from"./chunk-62JRHF6Z-BMYGeZpM.js";function t(e){let t=e.startsWith(`/my-portal`)?`portal`:`help-center`,n=t===`portal`?`/my-portal/tickets`:`/hc/tickets`;return{surface:t,home:t===`portal`?`/my-portal`:`/hc`,list:n,newTicket:`${n}/new`,ticket:e=>`${n}/${e}`}}function n(){let{pathname:n}=e();return t(n)}export{n as t};
+//# sourceMappingURL=tickets-portal-paths-Ddmmldz4.js.map

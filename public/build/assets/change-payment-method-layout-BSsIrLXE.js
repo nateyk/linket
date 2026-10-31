@@ -1,0 +1,2 @@
+import{t as e}from"./trans-DLdXWXX-.js";import{a as t}from"./chunk-62JRHF6Z-BMYGeZpM.js";import{tc as n}from"./icons-CIjNMVMP.js";var r=n();function i(){return(0,r.jsxs)(`div`,{children:[(0,r.jsx)(`h1`,{className:`my-8 text-3xl font-bold`,children:(0,r.jsx)(e,{message:`Change payment method`})}),(0,r.jsx)(t,{})]})}export{i as Component};
+//# sourceMappingURL=change-payment-method-layout-BSsIrLXE.js.map

@@ -1,0 +1,2 @@
+import{hi as e}from"./client-DDuoGab_.js";function t({isUsingInvite:t}={}){let{social:n}=e();return!n?.google?.enable&&!n?.facebook?.enable&&!n?.twitter?.enable&&(!n?.envato?.enable||!!t)}export{t};
+//# sourceMappingURL=use-all-social-logins-disabled-Pp7inoca.js.map

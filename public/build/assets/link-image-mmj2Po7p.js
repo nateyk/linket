@@ -1,0 +1,2 @@
+import{t as e}from"./remote-favicon-CkoARHYI.js";import{t}from"./cn-1lwumymQ.js";import{tc as n}from"./icons-CIjNMVMP.js";var r=n();function i({link:n,className:i,size:a=`size-4`}){return n.image?(0,r.jsx)(`img`,{className:t(`object-cover`,a,i),alt:``,src:n.image}):(0,r.jsx)(e,{className:i,size:a,url:n.long_url})}export{i as t};
+//# sourceMappingURL=link-image-mmj2Po7p.js.map

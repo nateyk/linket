@@ -1,0 +1,2 @@
+import{a as e}from"./rolldown-runtime-BWaJ3C7D.js";import t from"./markdown-it-COayJb59.js";import{nc as n,tc as r}from"./icons-CIjNMVMP.js";var i=e(n()),a=r();function o({children:e}){let n=(0,i.useMemo)(()=>e?t().render(e):``,[e]);return(0,a.jsx)(`div`,{dangerouslySetInnerHTML:{__html:n}})}export{o as default};
+//# sourceMappingURL=markdown-renderer-B07kPm-7.js.map

@@ -1,0 +1,2 @@
+import{t as e}from"./isScrollable-CFRT0aqG.js";function t(t,n){let r=t;for(e(r,n)&&(r=r.parentElement);r&&!e(r,n);)r=r.parentElement;return r||document.scrollingElement||document.documentElement}export{t};
+//# sourceMappingURL=getScrollParent-Q7EEAp_N.js.map

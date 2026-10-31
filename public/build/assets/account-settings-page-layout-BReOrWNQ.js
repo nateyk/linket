@@ -1,0 +1,2 @@
+import{t as e}from"./dashboard-layout-BznVdq7T.js";import{tc as t}from"./icons-CIjNMVMP.js";var n=t();function r({children:t,title:r,headerRightContent:i}){return(0,n.jsxs)(e.MainSection,{children:[(0,n.jsxs)(e.SectionHeader,{children:[(0,n.jsx)(e.SidebarToggle,{}),(0,n.jsx)(e.SectionTitle,{children:(0,n.jsx)(`h1`,{children:r})}),i]}),(0,n.jsx)(`div`,{className:`w-full flex-auto overflow-y-auto`,children:(0,n.jsx)(`div`,{className:`mx-auto w-full max-w-6xl p-6`,children:t})})]})}export{r as t};
+//# sourceMappingURL=account-settings-page-layout-BReOrWNQ.js.map

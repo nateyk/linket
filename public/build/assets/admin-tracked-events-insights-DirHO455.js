@@ -1,0 +1,2 @@
+import{a as e}from"./rolldown-runtime-BWaJ3C7D.js";import{t}from"./tracked-events-filters-C_iUpzwo.js";import{t as n}from"./tracked-events-insights-Ckv5eV6D.js";import{nc as r,tc as i}from"./icons-CIjNMVMP.js";import{x as a}from"./chunk-62JRHF6Z-BMYGeZpM.js";var o=e(r()),s=i();function c(){let{dateRange:e}=a(),r=t(),i=(0,o.useMemo)(()=>({workspace_id:`all`}),[]);return(0,s.jsx)(n,{dateRange:e,forcedFilters:i,allFilters:r})}export{c as Component};
+//# sourceMappingURL=admin-tracked-events-insights-DirHO455.js.map

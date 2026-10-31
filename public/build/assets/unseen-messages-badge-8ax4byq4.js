@@ -1,0 +1,2 @@
+import{n as e}from"./websocket-updates-notifier-CDGTsFx7.js";import{ec as t,tc as n}from"./icons-CIjNMVMP.js";var r=n();function i({conversationId:n,className:i}){return e(e=>e.conversationsWithUnseenMessages.includes(n))?(0,r.jsx)(`div`,{className:t(`h-12 w-12 flex-shrink-0 rounded-full bg-danger`,i)}):null}export{i as t};
+//# sourceMappingURL=unseen-messages-badge-8ax4byq4.js.map

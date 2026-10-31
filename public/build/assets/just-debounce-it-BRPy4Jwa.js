@@ -1,0 +1,2 @@
+var e=t;function t(e,t,n){var r=null,i=null,a=function(){r&&=(clearTimeout(r),i=null,null)},o=function(){var e=i;a(),e&&e()},s=function(){if(!t)return e.apply(this,arguments);var o=this,s=arguments,c=n&&!r;if(a(),i=function(){e.apply(o,s)},r=setTimeout(function(){if(r=null,!c){var e=i;return i=null,e()}},t),c)return i()};return s.cancel=a,s.flush=o,s}export{e as t};
+//# sourceMappingURL=just-debounce-it-BRPy4Jwa.js.map

@@ -1,0 +1,2 @@
+function e(e,t,n){let r={};for(let i=0;i<e.length;i++){let a=e[i],o=t(a),s=r[o];a=n?.map?n.map(e[i],i):e[i],Array.isArray(s)?r[o].push(a):r[o]=[a]}return r}export{e as t};
+//# sourceMappingURL=group-array-by-BLMzwS6r.js.map

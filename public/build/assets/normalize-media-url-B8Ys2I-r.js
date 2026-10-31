@@ -1,0 +1,2 @@
+function e(e){if(!e)return``;let t=e.trim();if(!t)return``;let n=t.toLowerCase();if(n.startsWith(`http://`)||n.startsWith(`https://`)||n.startsWith(`//`))return t;if(n.startsWith(`blob:`)||n.startsWith(`data:`))return``;let r=t.replace(/^\/+/,``);return r.startsWith(`storage/`)?`/${r}`:t}export{e as t};
+//# sourceMappingURL=normalize-media-url-B8Ys2I-r.js.map

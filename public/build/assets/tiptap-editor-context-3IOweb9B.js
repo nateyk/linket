@@ -1,0 +1,2 @@
+import{a as e}from"./rolldown-runtime-BWaJ3C7D.js";import{nc as t}from"./icons-CIjNMVMP.js";var n=e(t()),r=(0,n.createContext)(null);function i(){return(0,n.useContext)(r)?.editor}export{i as n,r as t};
+//# sourceMappingURL=tiptap-editor-context-3IOweb9B.js.map
