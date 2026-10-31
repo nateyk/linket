@@ -4,6 +4,9 @@ namespace Common\Files\S3;
 
 use Carbon\Carbon;
 use Common\Files\Actions\FileUploadValidator;
+use Common\Files\Actions\AuthorizeUploadDestination;
+use Common\Files\Actions\S3UploadGrant;
+use Common\Files\FileEntryPayload;
 use Common\Files\S3\InteractsWithS3Api;
 use Common\Files\Uploads\Uploads;
 use Illuminate\Http\Request;
@@ -36,7 +39,9 @@ class S3MultipartUploadController extends Controller
             'backendId' => 'required|string',
         ]);
 
-        $uploadType = Uploads::type($data['uploadType']);
+        $payload = new FileEntryPayload($request->all());
+        app(AuthorizeUploadDestination::class)->execute($request, $payload);
+        $uploadType = $payload->uploadType;
         $errors = FileUploadValidator::validateForUploadType(
             uploadType: $uploadType,
             fileSize: $data['clientSize'],
@@ -58,11 +63,13 @@ class S3MultipartUploadController extends Controller
         }
 
         $result = $this->getClient()->createMultipartUpload([
-            'Key' => $this->buildFileKey(),
+            'Key' => $this->buildFileKey($payload),
             'Bucket' => $this->getBucket(),
             'ContentType' => $data['clientMime'],
             'ACL' => $uploadType->getS3ACL(),
         ]);
+
+        app(S3UploadGrant::class)->issue($payload, $result['Key']);
 
         return response()->json([
             'key' => $result['Key'],
