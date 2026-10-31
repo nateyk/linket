@@ -98,8 +98,6 @@ class FileEntryPayload
 
     private function getFilename()
     {
-        $keepOriginalName = settings('filesystems.keep_original_name');
-
         // Storage keys are never taken directly from request metadata.
         // S3 registration must use its separately authorized upload key.
 
@@ -107,9 +105,7 @@ class FileEntryPayload
 
         // public files will be stored with extension
         if ($this->uploadType->public) {
-            return $keepOriginalName
-                ? $this->clientName
-                : "{$uuid}.{$this->clientExtension}";
+            return "{$uuid}.{$this->clientExtension}";
         } else {
             return $uuid;
         }
