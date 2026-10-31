@@ -34,7 +34,8 @@ class TusFileEntryController extends Controller
         if (!$tusData) {
             return abort(404);
         }
-        abort_unless(auth()->check() && isset($tusData['owner_id']) && (int) $tusData['owner_id'] === (int) auth()->id(), 403);
+        $uploader = $request->user('sanctum') ?? $request->user('web') ?? $request->user();
+        abort_unless($uploader && isset($tusData['owner_id']) && (int) $tusData['owner_id'] === (int) $uploader->id, 403);
         abort_unless((int) ($tusData['offset'] ?? -1) === (int) $tusData['size'], 422);
 
         $uploadType = $tusData['metadata']['uploadType'] ?? null;
