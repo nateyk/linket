@@ -140,8 +140,9 @@ if (!function_exists('urls')) {
 if (!function_exists('isApiRequest')) {
     function isApiRequest(): bool
     {
-        return request()->route() &&
-            in_array('api', request()->route()->computedMiddleware);
+        $route = request()->route();
+
+        return $route !== null && in_array('api', $route->computedMiddleware ?? [], true);
     }
 }
 

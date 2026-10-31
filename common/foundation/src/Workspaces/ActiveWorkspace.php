@@ -9,6 +9,7 @@ use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
 
 class ActiveWorkspace
 {
@@ -16,6 +17,8 @@ class ActiveWorkspace
      * @var Collection<Workspace>|null
      */
     protected static Collection|null $cache = null;
+    protected static Request|null $cacheRequest = null;
+    protected static int|string|null $cacheUserId = null;
     protected int|null $id = null;
 
     public static function shouldScopeToWorkspace(): bool
@@ -55,10 +58,12 @@ class ActiveWorkspace
             return new Collection();
         }
 
-        if (self::$cache !== null) {
+        if (self::$cache !== null && self::$cacheRequest === request() && self::$cacheUserId === Auth::id()) {
             return self::$cache;
         }
 
+        self::$cacheRequest = request();
+        self::$cacheUserId = Auth::id();
         self::$cache = Workspace::query()
             ->forUser(Auth::id())
             ->withCount(['members'])
@@ -83,6 +88,8 @@ class ActiveWorkspace
     public static function clearCache(): void
     {
         self::$cache = null;
+        self::$cacheRequest = null;
+        self::$cacheUserId = null;
     }
 
     protected static function findOrCreatePersonalWorkspace(): Workspace

@@ -43,13 +43,18 @@ class ConversationFileEntryPolicy extends FileEntryPolicy
                 return true;
             }
 
+            if ($value->model_type !== ConversationItem::MODEL_TYPE) {
+                continue;
+            }
+
             $conversationId = ConversationItem::query()
                 ->where('id', $value->model_id)
                 ->value('conversation_id');
 
             $conversation = Conversation::find($conversationId);
 
-            if ($conversation && $conversation->user_id === $user->id) {
+            // Ticket participant, support owner, or platform agent with show access.
+            if ($conversation && $user->can('show', $conversation)) {
                 return true;
             }
         }

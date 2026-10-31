@@ -29,30 +29,26 @@ abstract class WorkspacedResourcePolicy extends BasePolicy
         }
 
         // user can view all resources as member of workspace
-        if (ActiveWorkspace::get()->isMember($currentUser)) {
+        $workspace = ActiveWorkspace::get();
+        if ($this->isWorkspaceMember($workspace, $currentUser)) {
             return true;
         }
 
         return Response::deny(
             'No permission',
-            ActiveWorkspace::get()->isOwner($currentUser)
+            $workspace?->isOwner($currentUser)
                 ? PolicyFailReason::NO_PERMISSION
                 : PolicyFailReason::NO_WORKSPACE_PERMISSION,
         );
     }
 
-    public function show(User $currentUser, Model $resource)
+    public function show(User $currentUser, Model $resource): bool|Response
     {
         $activeWorkspace = ActiveWorkspace::get(
             $resource->workspace_id,
             createIfNotFound: false,
         );
         [, $permission] = $this->parseNamespace($this->resource, 'view');
-
-        // user owns the resource
-        if ($resource->user_id === $currentUser->id) {
-            return true;
-        }
 
         // has global permission to view resources
         if (parent::hasPermission($currentUser, $permission)) {
@@ -71,7 +67,7 @@ abstract class WorkspacedResourcePolicy extends BasePolicy
         }
 
         // user can view resource as member of workspace
-        if ($activeWorkspace->isMember($currentUser)) {
+        if ($this->isWorkspaceMember($activeWorkspace, $currentUser)) {
             return true;
         }
 
@@ -150,11 +146,6 @@ abstract class WorkspacedResourcePolicy extends BasePolicy
         $activeWorkspace = ActiveWorkspace::get($resource->workspace_id);
         [, $permission] = $this->parseNamespace($this->resource, 'update');
 
-        // user owns the resource
-        if ($resource->user_id === $currentUser->id) {
-            return true;
-        }
-
         // has global permission to update resources
         if (parent::hasPermission($currentUser, $permission)) {
             return true;
@@ -171,18 +162,17 @@ abstract class WorkspacedResourcePolicy extends BasePolicy
             );
         }
 
-        $hasWorkspacePermission = $activeWorkspace
-            ->findMember($currentUser)
-            ?->hasPermission($permission);
+        $member = $activeWorkspace->members()->where('user_id', $currentUser->id)->first();
+        $hasWorkspacePermission = $member?->hasPermission($permission);
 
-        $allResourcesAreForActiveWorkspace =
-            !$resourceIds ||
-            $this->resource
-                ::query()
-                ->whereIn('id', $resourceIds)
-                ->select(['id', 'workspace_id'])
-                ->get()
-                ->every(fn($r) => $r->workspace_id === $activeWorkspace->id);
+        $resolvedResources = $resourceIds === null ? null : $this->resource::query()
+            ->whereIn('id', $resourceIds)
+            ->select(['id', 'workspace_id'])
+            ->get();
+        $allResourcesAreForActiveWorkspace = $resolvedResources === null || (
+            $resolvedResources->count() === count(array_unique($resourceIds))
+            && $resolvedResources->every(fn ($resolvedResource) => $resolvedResource->workspace_id === $activeWorkspace->id)
+        );
 
         // user has permission to delete resources in the active workspace
         if ($allResourcesAreForActiveWorkspace && $hasWorkspacePermission) {
@@ -207,25 +197,31 @@ abstract class WorkspacedResourcePolicy extends BasePolicy
             return true;
         }
 
+        if (!$workspace) {
+            return Response::deny('No workspace found', PolicyFailReason::NO_PERMISSION);
+        }
+
         if (!$resourceIds) {
             $resources = collect([]);
         } elseif ($resourceIds instanceof Model) {
             $resources = collect([$resourceIds]);
         } else {
+            $requestedIds = is_array($resourceIds) ? $resourceIds : [$resourceIds];
             $resources = app($this->resource)
-                ->whereIn('id', $resourceIds)
+                ->whereIn('id', $requestedIds)
                 ->select(['id', 'workspace_id'])
                 ->get();
+            if ($resources->count() !== count(array_unique($requestedIds))) {
+                return Response::deny('Some resources were not found', PolicyFailReason::NO_PERMISSION);
+            }
         }
 
-        // user owns all resources
-        if ($resources->every(fn($r) => $r->user_id === $currentUser->id)) {
-            return true;
+        if ($resources->isEmpty()) {
+            return Response::deny('No resources found', PolicyFailReason::NO_PERMISSION);
         }
 
-        $hasWorkspacePermission = $workspace
-            ->findMember($currentUser)
-            ?->hasPermission($permission);
+        $member = $workspace->members()->where('user_id', $currentUser->id)->first();
+        $hasWorkspacePermission = $member?->hasPermission($permission);
 
         $allResourcesAreForActiveWorkspace =
             $resources->isEmpty() ||
@@ -243,4 +239,14 @@ abstract class WorkspacedResourcePolicy extends BasePolicy
                 : PolicyFailReason::NO_WORKSPACE_PERMISSION,
         );
     }
+
+    private function isWorkspaceMember(mixed $workspace, User $user): bool
+    {
+        if (!$workspace) {
+            return false;
+        }
+
+        return $workspace->members()->where('user_id', $user->id)->exists();
+    }
+
 }
