@@ -1,5 +1,12 @@
 import {defineConfig, devices} from '@playwright/test';
 
+/**
+ * E2E notes (see also AGENTS.md → Testing):
+ * - Base URL: E2E_BASE_URL (default http://localhost:5173) or DDEV https://linket.ddev.site with E2E_NO_SERVER=1.
+ * - Chromium on Linux/WSL may need libasound (libasound.so.2). Install the distro package or set LD_LIBRARY_PATH
+ *   to a directory that provides it for your environment — never commit machine-specific library paths.
+ */
+
 export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: true,
@@ -10,6 +17,9 @@ export default defineConfig({
   use: {
     baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:5173',
     trace: 'on-first-retry',
+    extraHTTPHeaders: process.env.E2E_HOST_HEADER
+      ? {Host: process.env.E2E_HOST_HEADER}
+      : undefined,
   },
   projects: [
     {

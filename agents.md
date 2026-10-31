@@ -4,6 +4,14 @@
 - Always use <Trans message="some text" /> component, instead of just plain text. If possible use static text tring as "message" prop for Trans component, otherwise translation string can't be extracted.
 - For icons, uside lucide icon library.
 
+# Testing (developer)
+
+- PHP: `ddev artisan test --compact` with a file path or `--filter`.
+- Frontend unit/DOM: `npm run test`, lint `npm run lint`, types `npx tsc --noEmit -p tsconfig.json`.
+- Playwright: `npm run test:e2e` (or `npx playwright test tests/e2e/<spec>`). Prefer `E2E_NO_SERVER=1` with `E2E_BASE_URL` when DDEV/Vite is already running.
+- Playwright Chromium on Linux/WSL may need OS shared libraries such as `libasound` (`libasound.so.2`). Install the distro package (for example `libasound2t64` / `libasound2`) or point `LD_LIBRARY_PATH` at a directory that provides those `.so` files for your machine. Do not hardcode machine-specific library paths in application or test code.
+- Avoid Playwright `force: true` clicks; fix overlay/dialog/pointer-events issues in the product UI instead.
+
 # Code style for styling (Tailwind)
 
 - use available design tokens from common-tailwind.css file when possible, instead of direct values (e.g. text-muted-foreground instead of text-gray-200)

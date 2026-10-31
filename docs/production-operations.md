@@ -36,9 +36,21 @@ REDIS_CACHE_DB=1
 HORIZON_PREFIX=linket_horizon:
 ```
 
-Install `deploy/supervisor/linket-horizon.conf.example` as a Supervisor program after replacing the application path and Unix user. Reload Supervisor, then verify `php artisan horizon:status` reports an active process. Horizon handles both the `mail` and `default` queues; receipt emails and Chapa renewal reminders use `mail`.
+Install `deploy/supervisor/linket-horizon.conf.example` as a Supervisor program after replacing the application path and Unix user. Reload Supervisor, then verify `php artisan horizon:status` reports an active process. Horizon handles both the `mail` and `default` queues; receipt emails, Chapa renewal reminders, and payment-dispute notifications use those queues (`mail` for email channel, `default` for database channel). Dispute notification jobs must never refund, release files, or mark payments verified.
 
-During deployment, run migrations and rebuild application caches, then run `php artisan horizon:terminate`. Supervisor starts Horizon again with the new code.
+During deployment, run migrations (including `storefront_payment_disputes` lifecycle/events) and rebuild application caches, then run `php artisan horizon:terminate`. Supervisor starts Horizon again with the new code.
+
+Safe local (DDEV) mirror — do not apply these host values to production:
+
+```dotenv
+QUEUE_CONNECTION=redis
+REDIS_HOST=redis
+REDIS_PORT=6379
+HORIZON_PREFIX=linket_horizon:
+MAIL_MAILER=smtp
+```
+
+Verify locally with `ddev redis-cli ping`, `ddev artisan horizon` (or `queue:work redis --queue=mail,default`), `ddev artisan queue:failed`, and `ddev artisan schedule:list` before promoting the same operational checks to the target environment.
 
 ## Scheduler
 
@@ -93,6 +105,86 @@ Before enabling live payments:
 
 Logs may contain internal payout/order identifiers, gateway references, status, amount, currency, and safe failure codes. They must not contain webhook secrets, access tokens, buyer recovery tokens, bank or mobile destinations, full gateway payloads, or private file URLs.
 
+## Executable deployment checklist
+
+Run this sequence on the **target** host (or release candidate) before opening traffic. The preflight command is read-only and never prints secrets.
+
+### 1. Backup (before migrate)
+
+```bash
+# Database dump — store encrypted off-host with timestamp + checksum
+mysqldump --single-transaction --routines --triggers "$DB_DATABASE" \
+  | gzip -c > "/backups/linket-$(date -u +%Y%m%dT%H%M%SZ).sql.gz"
+sha256sum "/backups/linket-"*.sql.gz | tail -1
+
+# Private product objects — sync or snapshot the private disk/prefix
+# Keep this backup paired with the DB dump as one recovery set.
+```
+
+### 2. Build and install
+
+```bash
+composer install --prefer-dist --no-interaction
+npm ci
+php artisan test --compact --filter='PaymentDispute|VerifyEtDirectCheckout|BuyerDownload|ProductionPreflight|PaymentRecovery'
+composer audit
+npm audit
+npm run build
+composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
+```
+
+### 3. Migrate and activate
+
+```bash
+php artisan down --retry=60 --secret="$DEPLOY_SECRET"
+php artisan migrate --force --no-interaction
+php artisan optimize
+php artisan linket:production-preflight --strict --json
+# Expect overall Result PASS (or ok:true). Investigate every required FAIL.
+php artisan horizon:terminate
+# Supervisor/systemd restarts Horizon workers for mail + default queues.
+php artisan horizon:status
+php artisan schedule:list
+php artisan up
+```
+
+### 4. Smoke after traffic
+
+```bash
+php artisan linket:production-preflight --strict
+php artisan queue:failed
+# Confirm Admin → Transactions payment health: failed jobs, scheduler heartbeat,
+# Verify.et webhook failures, stale pending verifications.
+```
+
+### 5. Rollback
+
+Keep the previous release artifact and the pre-deployment database + private-storage backup until the gate passes.
+
+```bash
+php artisan down --retry=60 --secret="$DEPLOY_SECRET"
+# Point the web root / symlink at the previous release artifact
+composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
+php artisan optimize
+php artisan horizon:terminate
+php artisan horizon:status
+php artisan linket:production-preflight --strict
+php artisan up
+```
+
+Do not automatically roll back a migration after new production writes. Prefer a forward fix. Restore the database only as a coordinated incident action with matching private-storage state, because restoring one without the other can orphan entitlements or downloadable objects.
+
+## Production preflight command
+
+```bash
+php artisan linket:production-preflight
+php artisan linket:production-preflight --strict   # production hosts
+php artisan linket:production-preflight --json
+php artisan deploy:health --post                   # complementary deploy.sh checks
+```
+
+Required checks include dispute migrations, Redis connectivity, queue driver, Horizon workers (when not sync), scheduler registration/heartbeat, Verify.et API key + webhook signing configuration (presence only), storage writability, and advisory counts for failed jobs, stale pending verifications, and webhook failures.
+
 ## Deployment gate
 
 Build and test the release candidate before removing development dependencies:
@@ -112,6 +204,7 @@ Then deploy that source revision and its generated frontend assets:
 composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
 php artisan migrate --force --no-interaction
 php artisan optimize
+php artisan linket:production-preflight --strict
 php artisan route:list
 php artisan horizon:terminate
 php artisan horizon:status
@@ -129,9 +222,3 @@ The release is not approved until a real browser and mobile viewport complete:
 5. confirm the immutable fee snapshot, Purchase event, entitlement, receipt, and signed download;
 6. confirm the creator sees the same sale in Home, Orders, Customers, and payout data;
 7. confirm another workspace cannot access the product, order, customer, payout, or download.
-
-## Rollback
-
-Keep the previous release artifact and the pre-deployment database backup until the gate passes. For an application-only failure, put the site into maintenance mode, switch to the previous release, rebuild/restore its caches, restart Horizon, and rerun the smoke checks.
-
-Do not automatically roll back a migration after new production writes. Prefer a forward fix. Restore the database only as a coordinated incident action with matching private-storage state, because restoring one without the other can orphan entitlements or downloadable objects.
