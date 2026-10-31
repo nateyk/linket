@@ -1,7 +1,7 @@
 import {User} from '@app/gen/schemas/user';
 import {MenuConfig, MenuItemConfig} from '@common/menus/menu-config';
 import {useSettings} from '@ui/settings/use-settings';
-import dot from 'dot-object';
+import {pickNestedValue} from '@ui/utils/pick-nested-value';
 import {useMemo} from 'react';
 import {useAuth} from '../auth/use-auth';
 
@@ -35,7 +35,7 @@ export function useCustomMenu(menuOrPosition?: string | MenuConfig) {
       const hasSettings =
         !item.settings ||
         Object.entries(item.settings).every(([key, value]) => {
-          return dot.pick(key, settings) == value;
+          return pickNestedValue(key, settings) == value;
         });
 
       if (
