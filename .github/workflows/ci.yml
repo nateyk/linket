@@ -151,6 +151,9 @@ jobs:
       - name: TypeScript typecheck
         run: npx tsc --noEmit
 
+      - name: Install Playwright Chromium for Storybook browser tests
+        run: npx playwright install --with-deps chromium
+
       - name: Frontend tests (vitest)
         run: npm test
         env:
