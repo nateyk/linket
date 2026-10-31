@@ -9049,7 +9049,7 @@
     ]
   },
   "modules/livechat/resources/client/widget/campaigns/widget-active-campaign.tsx": {
-    "file": "assets/widget-active-campaign-DHo_3lA3.js",
+    "file": "assets/widget-active-campaign-COCASh9T.js",
     "name": "widget-active-campaign",
     "src": "modules/livechat/resources/client/widget/campaigns/widget-active-campaign.tsx",
     "isDynamicEntry": true,
@@ -9066,7 +9066,7 @@
     ]
   },
   "modules/livechat/resources/client/widget/livechat-popup.tsx": {
-    "file": "assets/livechat-popup-B3fqcdwQ.js",
+    "file": "assets/livechat-popup-DLZi_Fj_.js",
     "name": "livechat-popup",
     "src": "modules/livechat/resources/client/widget/livechat-popup.tsx",
     "isDynamicEntry": true,
@@ -9129,7 +9129,7 @@
     ]
   },
   "modules/livechat/resources/client/widget/widget-entry.tsx": {
-    "file": "assets/widget-entry-CKezn8tE.js",
+    "file": "assets/widget-entry-Dfuj9A-z.js",
     "name": "widget-entry",
     "src": "modules/livechat/resources/client/widget/widget-entry.tsx",
     "isEntry": true,
@@ -9184,7 +9184,7 @@
       "modules/livechat/resources/client/widget/campaigns/widget-active-campaign.tsx"
     ],
     "css": [
-      "assets/widget-entry-ZiBGhhVJ.css"
+      "assets/widget-entry-DDExYpsp.css"
     ]
   },
   "node_modules/ace-builds/src-noconflict/worker-css.js": {
