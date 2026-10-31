@@ -1,4 +1,4 @@
-import dot from 'dot-object';
+import {pickNestedValue} from '@ui/utils/pick-nested-value';
 
 const MAX_SAFE_INTEGER = 9007199254740991;
 
@@ -56,7 +56,7 @@ export function sortArrayOfObjects<T extends object>(
  * May be set to a custom function for different behavior.
  */
 function sortingDataAccessor(data: object, key: string): string {
-  const value = dot.pick(key, data);
+  const value = pickNestedValue<any>(key, data);
 
   if (isNumberValue(value)) {
     const numberValue = Number(value);

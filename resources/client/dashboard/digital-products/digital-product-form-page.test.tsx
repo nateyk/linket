@@ -144,9 +144,10 @@ describe('digital product list submission', () => {
       'utf8',
     );
 
-    expect(source).toMatch(
-      /await apiClient\.get\(\s*'\/api\/v1\/items\?per_page=100'\s*,?\s*\)/,
-    );
+    // The product list now uses paginated, filterable requests.
+    expect(source).toContain("await apiClient.get('/api/v1/items', {");
+    expect(source).toContain('per_page: 12,');
+    expect(source).toContain('page,');
   });
 
   test('does not require downloadable files before submitting a course', () => {
@@ -158,7 +159,7 @@ describe('digital product list submission', () => {
     );
 
     expect(source).toContain(
-      'disabled={submitting || (!isCourse && !product.files?.length)}',
+      'disabled={submitting || busy || (!isCourse && !product.files?.length)}',
     );
   });
 });

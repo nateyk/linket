@@ -462,7 +462,10 @@ test('long descriptions become label help popovers', async () => {
   renderProfileEditor('content', REAL_BIOLINK);
   fireEvent.click(triggerByName('Profile'));
 
-  expect(screen.queryByText(/JPG, PNG, or WebP/)).toBeNull();
+  // The cover and avatar upload tiles retain two inline format hints;
+  // separate field explanations still live in their label help popovers.
+  const inlineUploadHints = screen.getAllByText(/JPG, PNG, or WebP/).length;
+  expect(inlineUploadHints).toBe(2);
   expect(
     screen.queryByText('Choose the professional title shown below your name.'),
   ).toBeNull();
@@ -494,7 +497,9 @@ test('long descriptions become label help popovers', async () => {
   )!;
   fireEvent.click(coverTrigger);
   await waitFor(() => {
-    expect(screen.getByText(/JPG, PNG, or WebP/)).toBeTruthy();
+    expect(screen.getAllByText(/JPG, PNG, or WebP/).length).toBeGreaterThan(
+      inlineUploadHints,
+    );
   });
 });
 
