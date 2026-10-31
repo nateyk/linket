@@ -11,6 +11,7 @@ class S3UploadGrant
     {
         Cache::put('s3-upload-grant:' . hash('sha256', $payload->filename), [
             'owner_id' => $payload->ownerId,
+            'key' => $key,
             'filename' => $payload->filename,
             'upload_type' => $payload->uploadType->name,
             'backend_id' => $payload->backend->id,
@@ -20,11 +21,18 @@ class S3UploadGrant
         ], now()->addHours(24));
     }
 
+    public function authorizeKey(string $key): void
+    {
+        $grant = Cache::get('s3-upload-grant:' . hash('sha256', basename($key)));
+        abort_unless($grant && hash_equals($grant['key'], $key) &&
+            $grant['owner_id'] === auth()->id() &&
+            $grant['backend_id'] === request('backendId') &&
+            $grant['upload_type'] === request('uploadType'), 403);
+    }
+
     public function verify(FileEntryPayload $payload, string $filename): void
     {
         $grant = Cache::get('s3-upload-grant:' . hash('sha256', $filename));
-        // Storage backends may prefix paths differently, so use the issued
-        // full file key passed from presign instead of reconstructing paths.
         abort_unless($grant &&
             $grant['owner_id'] === $payload->ownerId &&
             $grant['filename'] === $filename &&
