@@ -18,6 +18,7 @@ class AuthorizeUploadDestination
         // Ownership comes from authentication, not client-supplied metadata.
         abort_if($payload->ownerId !== null && $payload->ownerId !== (int) $user->id, 403);
         $payload->ownerId = (int) $user->id;
+        abort_unless((bool) preg_match('/\A[a-zA-Z0-9]{1,12}\z/', $payload->clientExtension), 422);
 
         Gate::authorize('store', [FileEntry::class, $payload->parentId, $payload->uploadType->name]);
 
