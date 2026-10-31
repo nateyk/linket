@@ -44,6 +44,51 @@ final class CreatorVerificationAllowance
         ];
     }
 
+    /**
+     * An expired or cancelled free checkout may be verified after its slot was
+     * reallocated. Reclaim it only under the creator's shared reservation lock.
+     * The provider evidence is retained by the gateway if capacity is unavailable.
+     */
+    public function acquireForVerifiedPayment(StorefrontOrder $order): bool
+    {
+        if ($order->monetization_policy !== self::FREE_POLICY) {
+            return true;
+        }
+
+        $creator = User::query()->whereKey($order->creator_id)->lockForUpdate()->firstOrFail();
+        $row = DB::table('creator_verification_allowances')
+            ->where('storefront_order_id', $order->id)->lockForUpdate()->first();
+        abort_unless($row && (int) $row->creator_id === (int) $creator->id, 409);
+
+        if ($row->status === 'consumed' || $row->status === 'reserved') {
+            return true;
+        }
+        abort_unless($row->status === 'released', 409);
+
+        // Verified Pro activation can recover a late payment without spending
+        // or reallocating a lifetime free-sale allowance.
+        if ($this->isPro($creator)) {
+            $order->update(['monetization_policy' => self::PRO_POLICY]);
+            return true;
+        }
+
+        $occupied = DB::table('creator_verification_allowances')
+            ->where('creator_id', $creator->id)
+            ->whereIn('status', ['reserved', 'consumed'])
+            ->count();
+        if ($occupied >= $this->limit()) {
+            return false;
+        }
+
+        DB::table('creator_verification_allowances')->where('id', $row->id)
+            ->where('status', 'released')->update([
+                'status' => 'reserved', 'released_at' => null,
+                'release_reason' => null, 'updated_at' => now(),
+            ]);
+
+        return true;
+    }
+
     public function consume(StorefrontOrder $order): void
     {
         if ($order->monetization_policy !== self::FREE_POLICY) {
@@ -55,6 +100,8 @@ final class CreatorVerificationAllowance
         if ($row->consumed_at !== null) {
             return;
         }
+        // A released reservation must never be consumed without the creator lock.
+        abort_unless($row->status === 'reserved', 409);
         DB::table('creator_verification_allowances')->where('id', $row->id)->update([
             'status' => 'consumed', 'consumed_at' => now(), 'updated_at' => now(),
         ]);
