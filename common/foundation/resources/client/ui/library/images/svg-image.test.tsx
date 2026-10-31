@@ -10,7 +10,7 @@ describe('SvgImage security boundary', () => {
     );
     const img = container.querySelector('img');
     expect(img).not.toBeNull();
-    expect(img.getAttribute('src')).toBe('/images/safety-check.svg');
+    expect(img?.getAttribute('src')).toBe('/images/safety-check.svg');
     expect(container.querySelector('svg')).toBeNull();
     expect(container.querySelector('script')).toBeNull();
     expect(container.querySelector('[onload]')).toBeNull();
