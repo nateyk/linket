@@ -25,7 +25,7 @@ class S3UploadGrant
     {
         $grant = Cache::get('s3-upload-grant:' . hash('sha256', basename($key)));
         abort_unless($grant && hash_equals($grant['key'], $key) &&
-            $grant['owner_id'] === auth()->id() &&
+            $grant['owner_id'] === (request()->user('sanctum') ?? request()->user('web') ?? request()->user())?->id &&
             $grant['backend_id'] === request('backendId') &&
             $grant['upload_type'] === request('uploadType'), 403);
     }
@@ -41,6 +41,10 @@ class S3UploadGrant
             (int) $grant['workspace_id'] === (int) $payload->workspaceId &&
             (int) $grant['parent_id'] === (int) $payload->parentId &&
             (int) $grant['client_size'] === (int) $payload->size, 403);
+        // Never record a file entry for a missing/unuploaded object.
+        $disk = \Common\Files\Uploads\Uploads::disk($payload->uploadType, $payload->backend);
+        $relativePath = $payload->uploadType->public ? $filename : $filename . '/' . $filename;
+        abort_unless($disk->exists($relativePath), 422, 'S3 upload is not complete.');
         $payload->filename = $filename;
         $payload->diskPrefix = $payload->uploadType->public ? null : $filename;
         Cache::forget('s3-upload-grant:' . hash('sha256', $filename));
