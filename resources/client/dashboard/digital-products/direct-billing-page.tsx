@@ -1412,9 +1412,9 @@ function OrdersTable({
   }
 
   return (
-    <div className="overflow-x-auto">
-      <Table.Root>
-        <Table.Header>
+    <div className="min-w-0 md:overflow-x-auto">
+      <Table.Root className="block w-full md:table">
+        <Table.Header className="hidden md:table-header-group">
           <Table.Row>
             <Table.Head className="ps-6">
               <Trans message="Product" />
@@ -1441,11 +1441,11 @@ function OrdersTable({
             </Table.Head>
           </Table.Row>
         </Table.Header>
-        <Table.Body>
+        <Table.Body className="block md:table-row-group">
           {orders.map(order => (
-            <Table.Row key={order.uuid}>
-              <Table.Cell className="max-w-52 ps-6">
-                <span className="block truncate font-medium">
+            <Table.Row key={order.uuid} className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-2 px-4 py-4 md:table-row md:p-0">
+              <Table.Cell className="col-start-1 row-start-1 block min-w-0 max-w-none whitespace-normal p-0 md:table-cell md:max-w-52 md:whitespace-nowrap md:ps-6">
+                <span className="block line-clamp-2 font-medium md:truncate">
                   {order.product?.title ?? (
                     <Trans message="Deleted product" />
                   )}
@@ -1454,7 +1454,7 @@ function OrdersTable({
                   {order.transaction_reference ?? order.uuid}
                 </span>
               </Table.Cell>
-              <Table.Cell className="max-w-44">
+              <Table.Cell className="col-start-1 row-start-2 block min-w-0 p-0 text-muted-foreground md:table-cell md:max-w-44 md:p-3 md:text-foreground">
                 <span className="block truncate">
                   {order.buyer_name || (
                     <span className="text-muted-foreground">
@@ -1463,25 +1463,27 @@ function OrdersTable({
                   )}
                 </span>
               </Table.Cell>
-              <Table.Cell className="text-end font-medium tabular-nums">
+              <Table.Cell className="col-start-2 row-start-1 block p-0 text-end font-medium tabular-nums md:table-cell md:p-3">
                 <FormattedCurrency
                   valueInCents={order.gross_amount_cents}
                   currency={order.currency ?? 'ETB'}
                 />
               </Table.Cell>
-              <Table.Cell className="hidden text-muted-foreground md:table-cell">
+              <Table.Cell className="col-start-2 row-start-2 block p-0 text-end text-xs text-muted-foreground md:table-cell md:p-3 md:text-start md:text-sm">
                 <FormattedDate preset="short" date={order.created_at} />
               </Table.Cell>
               <Table.Cell className="hidden lg:table-cell">
                 <PaymentMethod order={order} />
               </Table.Cell>
-              <Table.Cell>
+              <Table.Cell className="col-span-2 row-start-3 block p-0 md:table-cell md:p-3">
+                <span className="sr-only md:hidden"><Trans message="Status: " /></span>
                 <OrderStatusBadge status={order.status} />
               </Table.Cell>
-              <Table.Cell className="pe-6 text-end">
+              <Table.Cell className="col-span-2 row-start-4 block p-0 text-end md:table-cell md:p-3 md:pe-6">
                 <Button
                   variant="outline"
                   size="sm"
+                  className="min-h-11 md:min-h-0"
                   onClick={() => onView(order.uuid)}
                 >
                   <EyeIcon />
@@ -1534,9 +1536,9 @@ function TransactionsTable({
   }
 
   return (
-    <div className="overflow-x-auto">
-      <Table.Root>
-        <Table.Header>
+    <div className="min-w-0 md:overflow-x-auto">
+      <Table.Root className="block w-full md:table">
+        <Table.Header className="hidden md:table-header-group">
           <Table.Row>
             <Table.Head className="ps-6">
               <Trans message="Reference" />
@@ -1563,10 +1565,10 @@ function TransactionsTable({
             </Table.Head>
           </Table.Row>
         </Table.Header>
-        <Table.Body>
+        <Table.Body className="block md:table-row-group">
           {transactions.map(transaction => (
-            <Table.Row key={transaction.id}>
-              <Table.Cell className="max-w-48 ps-6">
+            <Table.Row key={transaction.id} className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-2 px-4 py-4 md:table-row md:p-0">
+              <Table.Cell className="col-start-1 row-start-1 block min-w-0 p-0 md:table-cell md:max-w-48 md:ps-6">
                 <span className="block truncate font-medium">
                   {transaction.reference ?? '—'}
                 </span>
@@ -1580,7 +1582,7 @@ function TransactionsTable({
                     : null}
                 </span>
               </Table.Cell>
-              <Table.Cell className="max-w-48">
+              <Table.Cell className="col-start-1 row-start-2 block min-w-0 p-0 text-muted-foreground md:table-cell md:max-w-48 md:p-3 md:text-foreground">
                 <span className="block truncate">
                   {transaction.product_title ?? (
                     <Trans message="Deleted product" />
@@ -1590,7 +1592,7 @@ function TransactionsTable({
                   {transaction.buyer_name ?? transaction.order_uuid}
                 </span>
               </Table.Cell>
-              <Table.Cell className="text-end font-medium tabular-nums">
+              <Table.Cell className="col-start-2 row-start-1 block p-0 text-end font-medium tabular-nums md:table-cell md:p-3">
                 <FormattedCurrency
                   valueInCents={transaction.amount_cents}
                   currency={transaction.currency ?? 'ETB'}
@@ -1603,20 +1605,22 @@ function TransactionsTable({
                   '—'
                 )}
               </Table.Cell>
-              <Table.Cell>
+              <Table.Cell className="col-span-2 row-start-3 block p-0 md:table-cell md:p-3">
+                <span className="sr-only md:hidden"><Trans message="Status: " /></span>
                 <TransactionStatusBadge status={transaction.status} />
               </Table.Cell>
-              <Table.Cell className="hidden text-muted-foreground lg:table-cell">
+              <Table.Cell className="col-start-2 row-start-2 block p-0 text-end text-xs text-muted-foreground md:hidden lg:table-cell lg:p-3 lg:text-start lg:text-sm">
                 <FormattedDate
                   preset="short"
                   date={transaction.verified_at ?? transaction.created_at}
                 />
               </Table.Cell>
-              <Table.Cell className="pe-6 text-end">
+              <Table.Cell className="col-span-2 row-start-4 block p-0 text-end md:table-cell md:p-3 md:pe-6">
                 {transaction.order_uuid && (
                   <Button
                     variant="outline"
                     size="sm"
+                    className="min-h-11 md:min-h-0"
                     onClick={() => onViewOrder(transaction.order_uuid!)}
                   >
                     <EyeIcon />
@@ -2148,11 +2152,11 @@ function Pagination({
   onChange: (page: number) => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <p className="text-sm text-muted-foreground">
         <Trans message=":total results" values={{total}} />
       </p>
-      <div className="flex items-center gap-2">
+      <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start">
         <Button
           variant="outline"
           size="sm"
