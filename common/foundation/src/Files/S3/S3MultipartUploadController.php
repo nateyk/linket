@@ -6,6 +6,8 @@ use Carbon\Carbon;
 use Common\Files\Actions\FileUploadValidator;
 use Common\Files\S3\InteractsWithS3Api;
 use Common\Files\Uploads\Uploads;
+use Common\Files\Uploads\SecureUpload;
+use Common\Files\Uploads\UploadGrant;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 
@@ -36,7 +38,8 @@ class S3MultipartUploadController extends Controller
             'backendId' => 'required|string',
         ]);
 
-        $uploadType = Uploads::type($data['uploadType']);
+        $secured = app(SecureUpload::class)->prepare($request, $request->all());
+        $uploadType = $secured['payload']->uploadType;
         $errors = FileUploadValidator::validateForUploadType(
             uploadType: $uploadType,
             fileSize: $data['clientSize'],
@@ -58,13 +61,16 @@ class S3MultipartUploadController extends Controller
         }
 
         $result = $this->getClient()->createMultipartUpload([
-            'Key' => $this->buildFileKey(),
+            'Key' => $this->buildFileKey($secured['payload']),
             'Bucket' => $this->getBucket(),
             'ContentType' => $data['clientMime'],
             'ACL' => $uploadType->getS3ACL(),
         ]);
 
+        $grant = app(UploadGrant::class)->issue($request, $secured['metadata'], $result['Key'], 'multipart', $result['UploadId']);
+
         return response()->json([
+            'uploadGrant' => $grant,
             'key' => $result['Key'],
             'uploadId' => $result['UploadId'],
             'acl' => $uploadType->getS3ACL(),
@@ -76,8 +82,9 @@ class S3MultipartUploadController extends Controller
      *
      * @operationId getS3UploadedParts
      */
-    public function getUploadedParts()
+    public function getUploadedParts(Request $request)
     {
+        $this->authorizeMultipart($request);
         $data = $this->getClient()->listParts([
             'Bucket' => $this->getBucket(),
             'Key' => request('key'),
@@ -95,8 +102,9 @@ class S3MultipartUploadController extends Controller
      *
      * @operationId batchSignS3PartUrls
      */
-    public function batchSignPartUrls()
+    public function batchSignPartUrls(Request $request)
     {
+        $this->authorizeMultipart($request);
         $partNumbers = request()->input('partNumbers');
 
         $urls = [];
@@ -120,8 +128,9 @@ class S3MultipartUploadController extends Controller
      *
      * @operationId completeS3MultipartUpload
      */
-    public function complete()
+    public function complete(Request $request)
     {
+        $this->authorizeMultipart($request);
         $data = $this->getClient()->completeMultipartUpload([
             'Bucket' => $this->getBucket(),
             'Key' => request()->input('key'),
@@ -141,8 +150,9 @@ class S3MultipartUploadController extends Controller
      *
      * @operationId abortS3MultipartUpload
      */
-    public function abort()
+    public function abort(Request $request)
     {
+        $this->authorizeMultipart($request);
         $this->getClient()->abortMultipartUpload([
             'Bucket' => $this->getBucket(),
             'Key' => request()->input('key'),
@@ -150,6 +160,14 @@ class S3MultipartUploadController extends Controller
         ]);
 
         return response()->noContent();
+    }
+
+    private function authorizeMultipart(Request $request): void
+    {
+        $resolved = app(UploadGrant::class)->resolve($request, (string) $request->input('uploadGrant'), 'multipart');
+        $grant = $resolved['grant'];
+        abort_unless(hash_equals((string) $grant['key'], (string) $request->input('key')) && hash_equals((string) $grant['uploadId'], (string) $request->input('uploadId')), 403, 'Upload key or identifier does not belong to grant.');
+        $request->merge(['backendId' => $grant['metadata']['backendId'], 'uploadType' => $grant['metadata']['uploadType']]);
     }
 
     /**
