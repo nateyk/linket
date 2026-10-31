@@ -26,9 +26,9 @@ trait InteractsWithS3Api
         return Uploads::backend(request('backendId'))->bucket();
     }
 
-    protected function buildFileKey(): string
+    protected function buildFileKey(?FileEntryPayload $payload = null): string
     {
-        $payload = new FileEntryPayload(request()->all());
+        $payload ??= new FileEntryPayload(request()->all());
 
         $fileKey = trim("$payload->diskPrefix/$payload->filename", '/');
 
