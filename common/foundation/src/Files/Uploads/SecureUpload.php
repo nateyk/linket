@@ -77,7 +77,7 @@ final class SecureUpload
             'Upload backend is not permitted.',
         );
         abort_unless(
-            preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}(?:\.[a-z0-9]{1,12})?$/D', $payload->filename) === 1,
+            preg_match('/^[0-9a-f-]{36}(?:\.[a-z0-9]{1,12})?$/D', $payload->filename) === 1,
             403,
             'Invalid server-generated upload key.',
         );
@@ -88,11 +88,8 @@ final class SecureUpload
 
         if ($payload->parentId !== null) {
             $parent = FileEntry::query()->findOrFail($payload->parentId);
-            abort_unless(
-                $parent->type === 'folder' && $parent->workspace_id === $payload->workspaceId,
-                403,
-                'Upload parent belongs to another workspace.',
-            );
+            abort_unless((int) $parent->workspace_id === (int) $payload->workspaceId, 403, 'Upload parent belongs to another workspace.');
+            Gate::forUser($user)->authorize('update', $parent);
         }
 
         Gate::forUser($user)->authorize('store', [FileEntry::class, $payload->parentId, $payload->uploadType->name]);
