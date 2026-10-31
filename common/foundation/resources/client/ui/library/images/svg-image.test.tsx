@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import {describe, expect, it} from 'vitest';
-import {render, screen} from '@testing-library/react';
+import {render} from '@testing-library/react';
 import {SvgImage} from './svg-image';
 
 describe('SvgImage security boundary', () => {
@@ -8,7 +8,8 @@ describe('SvgImage security boundary', () => {
     const {container} = render(
       <SvgImage src="/images/safety-check.svg" className="test-svg" />,
     );
-    const img = screen.getByRole('img', {name: ''});
+    const img = container.querySelector('img');
+    expect(img).not.toBeNull();
     expect(img.getAttribute('src')).toBe('/images/safety-check.svg');
     expect(container.querySelector('svg')).toBeNull();
     expect(container.querySelector('script')).toBeNull();
