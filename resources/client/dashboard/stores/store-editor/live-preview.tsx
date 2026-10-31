@@ -217,7 +217,10 @@ export function LivePreview() {
           <Button
             type="button"
             size="sm"
-            className="fixed end-4 bottom-[calc(4.5rem+var(--safe-bottom,env(safe-area-inset-bottom,0px)))] z-30 shadow-sm motion-reduce:transition-none lg:hidden"
+            variant="outline"
+            aria-haspopup="dialog"
+            aria-expanded={sheetOpen}
+            className="fixed end-4 bottom-[calc(4.5rem+var(--safe-bottom,env(safe-area-inset-bottom,0px)))] z-30 bg-background shadow-sm motion-reduce:transition-none lg:hidden"
             onClick={() => {
               setSheetVisited(true);
               setSheetOpen(true);

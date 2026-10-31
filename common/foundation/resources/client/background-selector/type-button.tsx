@@ -26,6 +26,8 @@ export function TypeButton({isActive, icon, title, onClick, style}: Props) {
 
   return (
     <button
+      type="button"
+      aria-pressed={isActive}
       className="group flex flex-col items-center gap-2 outline-hidden"
       onClick={onClick}
       data-active={isActive}

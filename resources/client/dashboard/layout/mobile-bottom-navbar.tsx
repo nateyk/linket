@@ -16,20 +16,21 @@ export function MobileBottomNavbar() {
   const menu = useCustomMenu('dashboard-mobile');
   if (!menu) return null;
 
+  // This remains available in the sidebar and at /dashboard/stores.
+  // Filter here as well as in defaults: deployed accounts retain saved menus.
+  const items = menu.items.filter(item => {
+    const path = item.action.split('?')[0];
+    return path !== '/dashboard/stores' && path !== '/dashboard/biolinks';
+  });
+
   return (
     <nav
       aria-label={trans(message('Mobile navigation'))}
-      // Six DB menu labels (~367px of text) can't fit one line in a 360px
-      // bar at any padding, so items let labels wrap instead of clipping:
-      // without nowrap + shrink-0, flex floors each item at its
-      // min-content (its longest word), turning the old center-clipped
-      // stubs ("My Store" -> "Sto", "Home" -> "om") into two readable
-      // lines. gap-1 is a floor while justify-between distributes the
-      // remainder; items-start keeps the icon row aligned when only some
-      // labels take a second line.
-      className="flex items-start justify-between gap-1 border-t px-4 py-3"
+      // Five equal destinations leave room for long labels without clipping.
+      // Keep icon tops aligned when an item wraps to two lines.
+      className="flex items-start justify-between gap-1 border-t px-2 py-2.5"
     >
-      {menu.items.map(item => (
+      {items.map(item => (
         <UnstyledCustomMenuItem
           key={item.id}
           item={item}
@@ -40,11 +41,8 @@ export function MobileBottomNavbar() {
           matchDescendants={action => action === '/dashboard'}
           className={({isActive}) =>
             cn(
-              // text-center: once a label wraps, the anonymous text box
-              // fills the item, so centered lines are what keeps the copy
-              // under its icon instead of hanging left.
-              'flex flex-col items-center gap-1.5 overflow-hidden text-center text-xs',
-              isActive && 'font-bold',
+              'flex min-w-0 flex-1 flex-col items-center gap-1 rounded-button px-1 py-1 text-center text-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+              isActive && 'font-semibold text-primary',
             )
           }
         />
@@ -60,7 +58,7 @@ function AccountButton() {
 
   return (
     <NavbarAuthMenu>
-      <Dropdown.Trigger className="relative flex flex-col items-center gap-1.5 overflow-hidden text-center text-xs">
+      <Dropdown.Trigger className="relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-button px-1 py-1 text-center text-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
         <PersonIcon size="md" />
         {hasUnreadNotif ? (
           <Badge className="-top-1.5" right="right-1">
