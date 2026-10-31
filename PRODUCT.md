@@ -30,7 +30,7 @@ The storefront is built into the bio page itself. A creator sells digital produc
 ## Capabilities and Constraints
 
 - Link-in-bio page building: links, widgets, customization.
-- Digital product sales with tiered entitlements. **Free and Pro are the only plans** (confirmed by `2026_08_08_221006_simplify_plans_to_free_pro.php`); commission rates are product facts — Free 10%, Pro 5%.
+- Digital product sales with tiered entitlements. **Free and Pro are the only plans** (confirmed by `2026_08_08_221006_simplify_plans_to_free_pro.php`). New sales carry **0% commission**: creators receive customer payments directly, and Verify.et verifies new paid sales. Free includes 10 lifetime eligible verified sales; Pro is an admin-configurable monthly subscription (default ETB 500) with unlimited eligible verified sales while active. Historical Chapa and commission records remain preserved.
 - Course delivery with lessons and analytics; order history and purchase history for buyers.
 - **Stack constraint:** React 19 + Vite + react-router on the frontend, Laravel 12 + PHP 8.4 on the backend, Tailwind CSS 4 with design tokens in `common-tailwind.css`.
 - **UI system constraint:** components come from `common/foundation/resources/client/shadcn` first, then `common/foundation/resources/client/ui`; icons from lucide. Styling uses design tokens (e.g. `text-muted-foreground`) rather than direct values. A new or competing component system is out of scope for future work.
@@ -43,7 +43,7 @@ No binding voice, name guidance, or visual identity constraint has been asserted
 
 ## Evidence on Hand
 
-- `creator-storefront-concept.md` — the storefront concept with plan tiers and commission math (Free: 7 products, 10%; Pro: 50 products, 5%).
+- `creator-storefront-concept.md` — historical storefront concept document; plan tiers and commission math described there are superseded by the current 0%-commission Free/Pro model (see above).
 - `docs/reference/README.md` — UI/UX working notes and the reference dashboard template.
 - `agents.md` — frontend/backend code style rules, including the `<Trans>` and design-token requirements.
 - `docs/deployment-architecture.md`, `docs/production-operations.md` — deployment and operations facts.

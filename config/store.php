@@ -15,8 +15,8 @@ return [
     // App\Storefront\ProductFileFormats directly.
     'allowed_extensions' => \App\Storefront\ProductFileFormats::extensions(),
     'default_benefits' => [
-        'platform_fee_percent' => 1.5,
-        'commission_bps' => 150,
+        'platform_fee_percent' => 0.0,
+        'commission_bps' => 0,
         'max_products' => 5,
         'max_free_products' => 5,
         'max_paid_products' => 5,
@@ -33,8 +33,8 @@ return [
     ],
     'demo_benefits' => [
         'free' => [
-            'platform_fee_percent' => 1.5,
-            'commission_bps' => 150,
+            'platform_fee_percent' => 0.0,
+            'commission_bps' => 0,
             'max_products' => 5,
             'max_free_products' => 5,
             'max_paid_products' => 5,
