@@ -47,7 +47,7 @@ final class SecureUpload
 
         $filename = (string) Str::uuid() . ($type->public ? '.' . $extension : '');
         $metadata = [
-            ...$data,
+            ...array_diff_key($data, array_flip(['relativePath', 'type', 'file_size', 'ownerId', 'workspaceId', 'parentId', 'filename', 'diskPrefix'])),
             'uploadType' => $type->name,
             'backendId' => $backend->id,
             'clientName' => $name,
@@ -55,8 +55,8 @@ final class SecureUpload
             'clientExtension' => $extension,
             'clientSize' => (int) $size,
             'size' => (int) $size,
-            'workspaceId' => $workspaceId,
-            'parentId' => $parentId,
+            ...($workspaceId !== null ? ['workspaceId' => $workspaceId] : []),
+            ...($parentId !== null ? ['parentId' => $parentId] : []),
             'ownerId' => (int) $user->id,
             'filename' => $filename,
         ];
@@ -83,7 +83,9 @@ final class SecureUpload
         );
 
         if ($payload->workspaceId !== null) {
-            abort_unless(Workspace::query()->forUser($user->id)->where('id', $payload->workspaceId)->exists(), 403, 'Unauthorized workspace.');
+            $workspace = Workspace::query()->forUser($user->id)->where('id', $payload->workspaceId)->first();
+            abort_unless($workspace !== null, 403, 'Unauthorized workspace.');
+            abort_unless($workspace->isOwner($user) || $workspace->findMember($user)?->hasPermission('files.create'), 403, 'No workspace upload permission.');
         }
 
         if ($payload->parentId !== null) {
