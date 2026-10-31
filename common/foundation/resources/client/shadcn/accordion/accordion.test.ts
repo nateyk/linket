@@ -95,7 +95,7 @@ describe('accordion connector line', () => {
 });
 
 describe('builder section header icon', () => {
-  test('completed sections keep their own icon with a green tint', () => {
+  test('completed sections keep their own icon with subtle completion styling', () => {
     const source = fs.readFileSync(
       path.resolve(
         'resources/client/dashboard/stores/store-editor/builder-section-header.tsx',
@@ -104,6 +104,7 @@ describe('builder section header icon', () => {
     );
     expect(source).not.toContain('CheckIcon');
     expect(source).toContain('<Icon className="size-4" />');
-    expect(source).toContain("isComplete && 'bg-primary/10 text-primary'");
+    expect(source).toContain("'bg-muted text-foreground'");
+    expect(source).toContain("'bg-muted/70 text-muted-foreground'");
   });
 });
