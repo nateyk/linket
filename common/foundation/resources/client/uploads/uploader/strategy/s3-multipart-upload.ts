@@ -39,6 +39,7 @@ interface StoredUrl {
   createdAt: string;
   uploadId: string;
   fileKey: string;
+  uploadGrant: string;
 }
 
 interface UploadedPart {
@@ -53,6 +54,7 @@ export class S3MultipartUpload implements UploadStrategy {
   private chunks: ChunkState[] = [];
   private uploadId?: string;
   private fileKey?: string;
+  private uploadGrant?: string;
   private readonly chunkAxios: AxiosInstance;
   private abortedByUser = false;
   private uploadedParts?: UploadedPart[];
@@ -152,6 +154,7 @@ export class S3MultipartUpload implements UploadStrategy {
           partNumbers: batch.map(i => i.partNumber),
           uploadId: this.uploadId,
           key: this.fileKey,
+          uploadGrant: this.uploadGrant,
         },
         {signal: this.abortController.signal},
       )
@@ -216,7 +219,7 @@ export class S3MultipartUpload implements UploadStrategy {
         backendId: this.config.backendId,
         ...this.config.metadata,
       })
-      .then(r => r.data as {uploadId: string; key: string})
+      .then(r => r.data as {uploadId: string; key: string; uploadGrant: string})
       .catch(err => {
         if (err.code !== 'ERR_CANCELED') {
           const parsedError = parseApiError(err);
@@ -227,21 +230,24 @@ export class S3MultipartUpload implements UploadStrategy {
     if (response) {
       this.uploadId = response.uploadId;
       this.fileKey = response.key;
+      this.uploadGrant = response.uploadGrant;
       setInLocalStorage(this.storageKey, {
         createdAt: new Date().toISOString(),
         fileKey: this.fileKey,
         uploadId: this.uploadId,
+        uploadGrant: this.uploadGrant!,
       } as StoredUrl);
     }
   }
 
-  private async getUploadedParts({fileKey, uploadId}: StoredUrl) {
+  private async getUploadedParts({fileKey, uploadId, uploadGrant}: StoredUrl) {
     const response = await apiClient
       .post('s3/multipart/get-uploaded-parts', {
         backendId: this.config.backendId,
         uploadType: this.config.uploadType,
         key: fileKey,
         uploadId,
+        uploadGrant,
       })
       .then(r => r.data as {parts: UploadedPart[]})
       .catch(() => {
@@ -252,6 +258,7 @@ export class S3MultipartUpload implements UploadStrategy {
       this.uploadedParts = response.parts;
       this.uploadId = uploadId;
       this.fileKey = fileKey;
+      this.uploadGrant = uploadGrant;
     }
   }
 
@@ -287,7 +294,8 @@ export class S3MultipartUpload implements UploadStrategy {
         clientName: this.file.name,
         clientSize: this.file.size,
         clientExtension: this.file.extension,
-        filename: this.fileKey!.split('/').pop(),
+        uploadGrant: this.uploadGrant,
+        uploadStrategy: 'multipart',
         uploadType: this.config.uploadType,
         backendId: this.config.backendId,
       })
@@ -334,6 +342,7 @@ export class S3MultipartUpload implements UploadStrategy {
   private abortUploadOnS3() {
     return apiClient.post('s3/multipart/abort', {
       key: this.fileKey,
+      uploadGrant: this.uploadGrant,
       uploadId: this.uploadId,
     });
   }
