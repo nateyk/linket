@@ -80,7 +80,7 @@ class FileEntryPayload
         $this->relativePath = $this->getRelativePath();
         $this->diskPrefix = $this->getDiskPrefix();
         $this->parentId = (int) Arr::get($this->data, 'parentId') ?: null;
-        $this->ownerId = Auth::id();
+        $this->ownerId = (int) Arr::get($this->data, 'ownerId') ?: Auth::id();
         $this->size =
             $this->data['file_size'] ??
             ($this->data['size'] ?? $this->data['clientSize']);
