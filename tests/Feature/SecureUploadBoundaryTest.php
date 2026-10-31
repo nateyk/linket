@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\User;
 use Common\Database\Seeders\RolesTableSeeder;
 use Common\Files\Uploads\SecureUpload;
+use Common\Files\Tus\TusCache;
 use Common\Files\Uploads\UploadGrant;
 use Common\Roles\Models\Role;
 use Common\Workspaces\Actions\CreateWorkspace;
@@ -116,6 +117,54 @@ class SecureUploadBoundaryTest extends TestCase
         $foreignRequest->setUserResolver(fn () => $other);
         $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
         app(UploadGrant::class)->resolve($foreignRequest, $grant, 'simple');
+    }
+
+    public function testTUSResumeCannotReadAnotherUsersUpload(): void
+    {
+        [$owner] = $this->creator();
+        [$other] = $this->creator();
+
+        $key = 'test-' . strtolower(uniqid());
+        app(TusCache::class)->set($key, [
+            'user_id' => $owner->id,
+            'size' => 100,
+            'offset' => 20,
+            'file_path' => storage_path('tus/' . $key),
+            'metadata' => [],
+            'expires_at' => now()->addDay()->format('D, d M Y H:i:s \G\M\T'),
+        ], now()->addDay());
+
+        $this->stateful()->actingAs($other)
+            ->call('HEAD', '/api/v1/tus/upload/' . $key)
+            ->assertForbidden();
+
+        $this->stateful()->actingAs($owner)
+            ->call('HEAD', '/api/v1/tus/upload/' . $key)
+            ->assertSuccessful();
+
+        app(TusCache::class)->delete($key);
+    }
+
+    public function testS3GrantIsSingleUse(): void
+    {
+        [$user, $workspace] = $this->creator();
+        $this->actingAs($user);
+        $request = Request::create('/api/v1/s3/entries', 'POST');
+        $request->setUserResolver(fn () => $user);
+        $metadata = app(SecureUpload::class)->prepare($request, [
+            'workspaceId' => $workspace->id,
+            'uploadType' => 'linkImages',
+            'clientName' => 'cover.png',
+            'clientExtension' => 'png',
+            'clientMime' => 'image/png',
+            'clientSize' => 16,
+        ])['metadata'];
+
+        $token = app(UploadGrant::class)->issue($request, $metadata, 'server-key', 'simple');
+        $this->assertSame('server-key', app(UploadGrant::class)->resolve($request, $token, 'simple', true)['grant']['key']);
+
+        $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+        app(UploadGrant::class)->resolve($request, $token, 'simple', true);
     }
 
     private function creator(): array
