@@ -45,6 +45,14 @@ final class SecureUpload
         abort_unless(preg_match('/^[a-z0-9]{1,12}$/D', $extension) === 1, 422, 'Invalid file extension.');
         abort_unless(is_numeric($size) && (int) $size >= 0 && (string) (int) $size === (string) $size, 422, 'Invalid file size.');
 
+        $relativePath = $data['relativePath'] ?? null;
+        if ($relativePath !== null && $relativePath !== '') {
+            abort_unless($type->supportsFolders && $workspaceId !== null && is_string($relativePath) && strlen($relativePath) <= 255, 422, 'Invalid upload folder path.');
+            foreach (explode('/', str_replace('\\', '/', $relativePath)) as $segment) {
+                abort_unless($segment !== '' && $segment !== '.' && $segment !== '..' && !preg_match('/[\x00-\x1f]/', $segment), 422, 'Invalid upload folder path.');
+            }
+        }
+
         $filename = (string) Str::uuid() . ($type->public ? '.' . $extension : '');
         $metadata = [
             ...array_diff_key($data, array_flip(['relativePath', 'type', 'file_size', 'ownerId', 'workspaceId', 'parentId', 'filename', 'diskPrefix'])),
@@ -57,6 +65,7 @@ final class SecureUpload
             'size' => (int) $size,
             ...($workspaceId !== null ? ['workspaceId' => $workspaceId] : []),
             ...($parentId !== null ? ['parentId' => $parentId] : []),
+            ...($relativePath ? ['relativePath' => $relativePath] : []),
             'ownerId' => (int) $user->id,
             'filename' => $filename,
         ];
