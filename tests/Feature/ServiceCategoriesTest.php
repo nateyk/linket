@@ -185,13 +185,18 @@ test('the public endpoint only returns active categories and subcategories', fun
         '/api/v1/public/service-categories',
     );
 
-    $response->assertOk()->assertJsonCount(1, 'data');
+    $response->assertOk();
 
-    expect($response->json('data.0.name'))->toBe('Visible category')
-        ->and($response->json('data.0.subcategories'))->toHaveCount(1)
-        ->and($response->json('data.0.subcategories.0.name'))->toBe(
-            'Visible subcategory',
-        );
+    // CI seeds the standard taxonomy before tests. Check the fixture by slug
+    // instead of assuming it is the only active category in the database.
+    $categories = collect($response->json('data'));
+    $visible = $categories->firstWhere('slug', 'visible-category');
+
+    expect($visible)->not->toBeNull()
+        ->and($categories->contains('slug', 'hidden-category'))->toBeFalse()
+        ->and($categories->every(fn ($category) => $category['status'] === 'active'))->toBeTrue()
+        ->and($visible['subcategories'])->toHaveCount(1)
+        ->and($visible['subcategories'][0]['name'])->toBe('Visible subcategory');
 });
 
 test('non admins cannot manage service categories', function () {

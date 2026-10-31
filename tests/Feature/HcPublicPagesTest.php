@@ -49,10 +49,10 @@ function statefulHcPublic(): TestCase
         ->withHeader('X-CSRF-TOKEN', $csrfToken);
 }
 
-function seedPublishedHcArticle(): array
+function seedPublishedHcArticle(string $categoryName = 'Getting Started'): array
 {
     $category = HcCategory::query()->create([
-        'name' => 'Getting Started',
+        'name' => $categoryName,
         'position' => 1,
     ]);
     $section = HcCategory::query()->create([
@@ -118,8 +118,10 @@ test('legacy help article slug redirects to hc article', function () {
 });
 
 test('legacy help category slug redirects to hc category', function () {
-    ['category' => $category] = seedPublishedHcArticle();
+    // A seeded "Getting Started" category may already exist; use a unique slug.
+    ['category' => $category] = seedPublishedHcArticle('Redirect '.Str::random(12));
+    $slug = Str::slug($category->name);
 
-    $this->get('/help/categories/getting-started')
-        ->assertRedirect("/hc/categories/{$category->id}/getting-started");
+    $this->get("/help/categories/{$slug}")
+        ->assertRedirect("/hc/categories/{$category->id}/{$slug}");
 });

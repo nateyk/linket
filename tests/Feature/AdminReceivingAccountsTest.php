@@ -176,7 +176,8 @@ class AdminReceivingAccountsTest extends TestCase
     {
         Storage::fake('local');
         $creator = $this->createUser();
-        $creator->forceFill(['email' => 'admin@admin.com', 'name' => 'Local administrator'])->save();
+        $searchEmail = 'receiving-search-'.$creator->id.'@example.test';
+        $creator->forceFill(['email' => $searchEmail, 'name' => 'Local administrator'])->save();
         $workspace = app(CreateWorkspace::class)->createPersonalWorkspace($creator);
         ActiveWorkspace::clearCache();
         $this->enableCatalog('cbe');
@@ -189,9 +190,9 @@ class AdminReceivingAccountsTest extends TestCase
         $admin = $this->createAdmin();
 
         $this->stateful()->actingAs($admin, 'sanctum')
-            ->getJson('/api/v1/admin/storefront/payment-methods?search='.urlencode('admin@admin.com'))
+            ->getJson('/api/v1/admin/storefront/payment-methods?search='.urlencode($searchEmail))
             ->assertOk()
-            ->assertJsonPath('data.data.0.creator_email', 'admin@admin.com');
+            ->assertJsonPath('data.data.0.creator_email', $searchEmail);
 
         $this->stateful()->actingAs($admin, 'sanctum')
             ->getJson('/api/v1/admin/storefront/payment-methods?search=Commercial')
@@ -201,7 +202,7 @@ class AdminReceivingAccountsTest extends TestCase
         $this->stateful()->actingAs($admin, 'sanctum')
             ->getJson('/api/v1/admin/storefront/payment-methods?user_id='.$creator->id.'&submitted_from='.now()->toDateString())
             ->assertOk()
-            ->assertJsonPath('data.data.0.creator_email', 'admin@admin.com');
+            ->assertJsonPath('data.data.0.creator_email', $searchEmail);
     }
 
     public function test_catalog_includes_account_counts_and_persists_method_toggles(): void
