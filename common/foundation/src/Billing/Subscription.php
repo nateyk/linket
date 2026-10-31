@@ -5,6 +5,7 @@ namespace Common\Billing;
 use App\Models\User;
 use Common\Billing\Gateways\Contracts\CommonSubscriptionGatewayActions;
 use Common\Billing\Gateways\Chapa\Chapa;
+use App\Payments\VerifyEt\VerifyEtSubscriptionGateway;
 use Common\Billing\Gateways\Paypal\Paypal;
 use Common\Billing\Gateways\Stripe\Stripe;
 use Common\Billing\Invoices\Invoice;
@@ -268,6 +269,8 @@ class Subscription extends BaseModel
             return app(Paypal::class);
         } elseif ($this->gateway_name === 'chapa') {
             return app(Chapa::class);
+        } elseif ($this->gateway_name === 'verify_et') {
+            return app(VerifyEtSubscriptionGateway::class);
         }
 
         return null;

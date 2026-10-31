@@ -96,6 +96,7 @@ final class Entitlements
         return [
             'platform_fee_percent' => (float) ($raw['platform_fee_percent'] ?? round($commissionBps / 100, 4)),
             'commission_bps' => (int) $commissionBps,
+            'free_verified_sales' => (int) ($raw['free_verified_sales'] ?? config('storefront.free_verified_sales_default', 10)),
             'max_products' => $raw['max_products'] ?? null,
             'max_free_products' => $raw['max_free_products'] ?? $raw['max_products'] ?? null,
             'max_paid_products' => $raw['max_paid_products'] ?? $raw['max_products'] ?? null,

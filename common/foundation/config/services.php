@@ -60,6 +60,31 @@ return [
         'webhook_secret' => env('CHAPA_WEBHOOK_SECRET'),
     ],
 
+    'verify_et' => [
+        'base_url' => env('VERIFY_ET_BASE_URL', 'https://verify.et'),
+        'api_key' => env('VERIFY_ET_API_KEY'),
+        'webhook_secret' => env('VERIFY_ET_WEBHOOK_SECRET'),
+        'webhook_previous_secret' => env('VERIFY_ET_WEBHOOK_PREVIOUS_SECRET'),
+        'webhook_previous_secret_rotated_at' => env('VERIFY_ET_WEBHOOK_PREVIOUS_SECRET_ROTATED_AT'),
+        'webhook_previous_secret_expires_at' => env('VERIFY_ET_WEBHOOK_PREVIOUS_SECRET_EXPIRES_AT'),
+        'experiment_webhook_enabled' => env('VERIFY_ET_EXPERIMENT_WEBHOOK_ENABLED', false),
+        'experiment_webhook_secret' => env('VERIFY_ET_EXPERIMENT_WEBHOOK_SECRET'),
+        'experiment_webhook_previous_secret' => env('VERIFY_ET_EXPERIMENT_WEBHOOK_PREVIOUS_SECRET'),
+        'experiment_webhook_rotated_at' => env('VERIFY_ET_EXPERIMENT_WEBHOOK_ROTATED_AT'),
+        'experiment_receiver_id' => env('VERIFY_ET_EXPERIMENT_RECEIVER_ID'),
+        'experiment_webhook_url' => env('VERIFY_ET_EXPERIMENT_WEBHOOK_URL'),
+        'experiment_webhook_test_event_id' => env('VERIFY_ET_EXPERIMENT_WEBHOOK_TEST_EVENT_ID'),
+        'experiment_destination_confirmed' => env('VERIFY_ET_EXPERIMENT_DESTINATION_CONFIRMED', false),
+        'experiment_public_reachability_confirmed' => env('VERIFY_ET_EXPERIMENT_PUBLIC_REACHABILITY_CONFIRMED', false),
+        'image_processing_enabled' => env('VERIFY_ET_IMAGE_PROCESSING_ENABLED', false),
+        'corporate_account' => env('VERIFY_ET_CORPORATE_ACCOUNT'),
+        'corporate_bank_code' => env('VERIFY_ET_CORPORATE_BANK_CODE', 'cbe'),
+        'alert_email' => env('VERIFY_ET_ALERT_EMAIL'),
+        'enabled' => env('VERIFY_ET_ENABLED', false),
+        // Local/isolated E2E only. Never enable against a non-test database.
+        'mock' => env('VERIFY_ET_MOCK', false),
+    ],
+
     /**
      * Socialite login credentials
      */

@@ -12,6 +12,7 @@ use App\Storefront\Models\DownloadEntitlement;
 use App\Storefront\Models\StorefrontOrder;
 use Common\Files\FileEntry;
 use Common\Roles\Models\Role;
+use Common\Database\Seeders\RolesTableSeeder;
 use Common\Workspaces\Actions\CreateWorkspace;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
@@ -22,6 +23,12 @@ use Tests\TestCase;
 class ProductionHardeningTest extends TestCase
 {
     use DatabaseTransactions;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(RolesTableSeeder::class);
+    }
 
     public function testLateVerificationFailureCannotDowngradePaidTransaction(): void
     {
@@ -62,6 +69,7 @@ class ProductionHardeningTest extends TestCase
     {
         [$creator, $product] = $this->createProductFixture();
         $order = $this->createOrder($product, $creator, 'pending');
+        $order->update(['payment_gateway' => 'chapa', 'chapa_tx_ref' => 'expected_tx_ref']);
         $transaction = PaymentTransaction::query()->create([
             'uuid' => (string) Str::uuid(),
             'gateway' => 'chapa',

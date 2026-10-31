@@ -172,13 +172,10 @@ fwrite(
     )
 );
 
-// A cached config would pin the test run to whatever database was cached
-// (usually the dev one), ignoring DB_DATABASE entirely. Bust it before
-// Laravel boots so the run always resolves config from the test env.
-foreach (['config.php', 'routes-v7.php'] as $cached) {
-    $path = __DIR__.'/../bootstrap/cache/'.$cached;
-    if (is_file($path)) {
-        fwrite(STDERR, "Removing stale bootstrap/cache/{$cached} so tests cannot inherit a cached database.\n");
-        @unlink($path);
-    }
+// Keep the guarded database and application caches isolated across every
+// application boot, including subprocesses started by integration tests.
+foreach (['DB_DATABASE' => $database, 'APP_ENV' => 'testing', 'APP_CONFIG_CACHE' => sys_get_temp_dir().'/linket-test-config-'.getmypid().'.php', 'APP_ROUTES_CACHE' => sys_get_temp_dir().'/linket-test-routes-'.getmypid().'.php'] as $key => $value) {
+    putenv($key.'='.$value);
+    $_ENV[$key] = $value;
+    $_SERVER[$key] = $value;
 }

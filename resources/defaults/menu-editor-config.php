@@ -59,6 +59,6 @@ return [
         '/dashboard/pixels',
         '/dashboard/items',
         '/dashboard/services',
-        '/dashboard/sales-payouts',
+        '/dashboard/orders',
     ],
 ];

@@ -77,6 +77,19 @@ class AppServiceProvider extends ServiceProvider
 {
     public function boot()
     {
+        $this->app->booted(function (): void {
+            if (app()->bound('clockwork')) {
+                app('clockwork')->shouldCollect()->except([
+                    '/billing/verify-et/webhook',
+                    '/api/v1/storefront/payment-methods(?:/.*)?',
+                    '/api/v1/public/direct-orders/[^/]+(?:/.*)?',
+                    '/api/v1/billing/direct(?:/.*)?',
+                    '/api/v1/public/(?:stores|biolinks)/[^/]+/digital-products/[^/]+/checkout',
+                    '/api/v1/(?:storefront/products|digital-products)/[^/]+/checkout',
+                ]);
+            }
+        });
+
         Event::listen(FileUploaded::class, ConvertUploadedLinkImageToWebp::class);
 
         EncryptCookies::except(OrderRecoveryService::COOKIE);
@@ -257,6 +270,10 @@ class AppServiceProvider extends ServiceProvider
             DeleteOldWebhookDeliveries::class,
             ArchiveExpiredLinkeables::class,
             DisableExpiredLeapLinks::class,
+            \App\Payments\Commands\ReconcilePendingVerifications::class,
+            \App\Payments\Commands\ProcessDirectSubscriptionRenewals::class,
+            \App\Storefront\Commands\GenerateCommissionInvoices::class,
+            \App\Storefront\Commands\EnforceCommissionRestrictions::class,
         ]);
 
         $this->app->singleton(Agent::class, function () {

@@ -97,7 +97,7 @@ test('customer ticket list excludes creator-owned conversations', function () {
         'status_category' => Conversation::STATUS_OPEN,
     ]);
 
-    Conversation::query()->create([
+    $owned = Conversation::query()->create([
         'user_id' => $customer->id,
         'subject' => 'My creator ticket',
         'type' => 'ticket',
@@ -115,10 +115,6 @@ test('customer ticket list excludes creator-owned conversations', function () {
         ->pluck('id')
         ->values();
 
-    $creatorOwnedId = Conversation::query()
-        ->whereNotNull('support_owner_id')
-        ->value('id');
-
     expect($ids)->toContain($platform->id);
-    expect($ids)->toContain($creatorOwnedId);
+    expect($ids)->toContain($owned->id);
 });

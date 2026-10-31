@@ -16,6 +16,10 @@ class HcArticleAttachmentsController extends BaseController
         $entryId = app(FileEntry::class)->decodeHash($entryHash);
 
         $article = HcArticle::findOrFail($articleId);
+
+        // Draft article attachments stay private until published.
+        $this->authorize('show', $article);
+
         $entry = $article
             ->attachments()
             ->where('file_entries.id', $entryId)

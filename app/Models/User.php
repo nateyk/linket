@@ -17,6 +17,7 @@ use App\LinkOverlays\Models\LinkOverlay;
 use App\LinkPages\Models\LinkPage;
 use App\Links\Models\Link;
 use App\QrCodes\Models\QrCode;
+use App\Storefront\Models\CreatorPaymentMethod;
 use App\Stores\Models\Store;
 use App\Team\Traits\CanBeAgent;
 use App\TrackingPixels\Models\TrackingPixel;
@@ -62,6 +63,11 @@ class User extends BaseUser
     public function stores(): HasMany
     {
         return $this->hasMany(Store::class);
+    }
+
+    public function creatorPaymentMethods(): HasMany
+    {
+        return $this->hasMany(CreatorPaymentMethod::class);
     }
 
     public function linkOverlays(): HasMany

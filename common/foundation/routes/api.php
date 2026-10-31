@@ -62,6 +62,12 @@ use App\Storefront\Controllers\DigitalProductsController;
 use App\Storefront\Controllers\PayoutRequestsController;
 use App\Storefront\Controllers\StorefrontSalesController;
 use App\Storefront\Controllers\StorefrontCheckoutController;
+use App\Storefront\Controllers\OrderPaymentController;
+use App\Storefront\Controllers\CreatorPaymentMethodsController;
+use App\Storefront\Controllers\CreatorOrdersController;
+use App\Storefront\Controllers\AdminDirectOrdersController;
+use App\Payments\Controllers\DirectBillingController;
+use App\Payments\Controllers\AdminPlanManagementController;
 use App\Storefront\Controllers\DigitalProductPayoutMethodController;
 use App\Storefront\Controllers\DigitalProductWithdrawalMethodsController;
 use App\Storefront\Controllers\AdminDigitalProductRefundsController;
@@ -70,6 +76,7 @@ use App\Storefront\Controllers\PublicDigitalProductsController;
 use App\Payments\Controllers\AdminPaymentTransactionsController;
 use App\Payments\Controllers\AdminPaymentHealthController;
 use App\Storefront\Controllers\CustomerOrderPortalController;
+use App\Storefront\Controllers\PaymentDisputeController;
 use App\Storefront\Controllers\AdminDigitalProductOrderRecoveryDeliveriesController;
 use App\Storefront\Controllers\ProductReviewsController;
 use App\Storefront\Controllers\CreatorProductReviewsController;
@@ -200,6 +207,8 @@ Route::group(['prefix' => 'v1'], function () {
         // PRODUCTS
         Route::apiResource('billing/products', ProductsController::class);
         Route::post('billing/products/sync', [ProductsController::class, 'syncProducts']);
+        Route::get('admin/billing/products/{product}/subscribers', [AdminPlanManagementController::class, 'subscribers']);
+        Route::get('admin/billing/products/{product}/audit', [AdminPlanManagementController::class, 'audit']);
 
         // SUBSCRIPTIONS
         Route::get('billing/subscriptions', [SubscriptionsController::class, 'index']);
@@ -214,11 +223,52 @@ Route::group(['prefix' => 'v1'], function () {
         Route::post('billing/stripe/store-subscription-details-locally', [StripeController::class, 'storeSubscriptionDetailsLocally']);
         Route::post('billing/paypal/store-subscription-details-locally', [PaypalController::class, 'storeSubscriptionDetailsLocally']);
         Route::post('billing/chapa/checkout', [ChapaController::class, 'checkout'])->middleware('throttle:10,1');
+        Route::get('billing/direct', [DirectBillingController::class, 'index'])->middleware('auth:sanctum');
+        Route::get('billing/direct/pro/{payment}/receipt', [DirectBillingController::class, 'downloadProReceipt'])->middleware('auth:sanctum');
+        Route::post('billing/direct/pro', [DirectBillingController::class, 'startPro'])->middleware(['auth:sanctum', 'throttle:10,1']);
+        Route::post('billing/direct/pro/{payment}/reference', [DirectBillingController::class, 'submitProReference'])->middleware(['auth:sanctum', 'throttle:10,1']);
+        Route::post('billing/direct/invoices/{invoice}/reference', [DirectBillingController::class, 'submitInvoiceReference'])->middleware(['auth:sanctum', 'throttle:10,1']);
         Route::get('billing/chapa/transactions/{txRef}', [ChapaController::class, 'status'])->middleware('throttle:60,1');
 
         // CREATOR STOREFRONT
+        Route::post('storefront/products/{digitalProduct}/duplicate', [DigitalProductsController::class, 'duplicate']);
+        Route::post('storefront/products/{digitalProduct}/archive', [DigitalProductsController::class, 'archive']);
+        Route::post('storefront/products/{digitalProduct}/unarchive', [DigitalProductsController::class, 'unarchive']);
         Route::apiResource('storefront/products', DigitalProductsController::class)
             ->names('storefront.products');
+        Route::get('storefront/payment-methods', [CreatorPaymentMethodsController::class, 'index'])->middleware('auth:sanctum');
+        Route::get('storefront/payment-methods/{method}/details', [CreatorPaymentMethodsController::class, 'details'])->middleware(['auth:sanctum', 'throttle:20,1']);
+        Route::post('storefront/payment-methods', [CreatorPaymentMethodsController::class, 'store'])->middleware('auth:sanctum');
+        Route::post('storefront/payment-methods/{method}/deactivate', [CreatorPaymentMethodsController::class, 'deactivate'])->middleware('auth:sanctum');
+        Route::post('storefront/payment-methods/{method}/resubmit', [CreatorPaymentMethodsController::class, 'resubmit'])->middleware('auth:sanctum');
+        Route::post('storefront/payment-methods/{method}/activate', [CreatorPaymentMethodsController::class, 'activate'])->middleware('auth:sanctum');
+        Route::post('storefront/payment-methods/{method}/alias', [CreatorPaymentMethodsController::class, 'requestAlias'])->middleware('auth:sanctum');
+        Route::get('storefront/direct-orders', [CreatorOrdersController::class, 'index'])->middleware('auth:sanctum');
+        Route::get('storefront/direct-orders/transactions', [CreatorOrdersController::class, 'transactions'])->middleware('auth:sanctum');
+        Route::get('storefront/direct-orders/{order}', [CreatorOrdersController::class, 'show'])->middleware('auth:sanctum');
+        Route::get('storefront/direct-orders/{order}/disputes', [PaymentDisputeController::class, 'creatorIndex'])->middleware('auth:sanctum');
+        Route::patch('storefront/direct-orders/{order}/disputes/{dispute}', [PaymentDisputeController::class, 'creatorUpdate'])->middleware('auth:sanctum');
+        Route::post('storefront/direct-orders/{order}/manual-approve', [CreatorOrdersController::class, 'manualApprove'])->middleware('auth:sanctum');
+        Route::get('admin/storefront/direct-orders', [AdminDirectOrdersController::class, 'index'])->middleware('auth:sanctum');
+        Route::post('admin/storefront/direct-orders/{order}/approve', [AdminDirectOrdersController::class, 'approve'])->middleware('auth:sanctum');
+        Route::get('admin/storefront/payment-disputes', [PaymentDisputeController::class, 'adminIndex'])->middleware('auth:sanctum');
+        Route::get('admin/storefront/payment-disputes/{dispute}', [PaymentDisputeController::class, 'adminShow'])->middleware('auth:sanctum');
+        Route::patch('admin/storefront/payment-disputes/{dispute}', [PaymentDisputeController::class, 'adminUpdate'])->middleware('auth:sanctum');
+        Route::get('admin/storefront/creators/overview', [\App\Storefront\Controllers\AdminCreatorManagementController::class, 'overview'])->middleware('auth:sanctum');
+        Route::get('admin/storefront/creators', [\App\Storefront\Controllers\AdminCreatorManagementController::class, 'index'])->middleware('auth:sanctum');
+        Route::get('admin/storefront/creators/{user}/sales', [\App\Storefront\Controllers\AdminCreatorManagementController::class, 'sales'])->middleware('auth:sanctum');
+        Route::get('admin/storefront/creators/{user}', [\App\Storefront\Controllers\AdminCreatorManagementController::class, 'show'])->middleware('auth:sanctum');
+        Route::get('admin/storefront/payment-methods', [CreatorPaymentMethodsController::class, 'adminIndex'])->middleware('auth:sanctum');
+        Route::get('admin/storefront/payment-methods/{method}', [CreatorPaymentMethodsController::class, 'adminShow'])->middleware('auth:sanctum');
+        Route::get('admin/storefront/payment-method-catalog', [CreatorPaymentMethodsController::class, 'catalog'])->middleware('auth:sanctum');
+        Route::patch('admin/storefront/payment-method-catalog/{paymentMethod}', [CreatorPaymentMethodsController::class, 'updateCatalog'])->middleware('auth:sanctum');
+        Route::post('admin/storefront/payment-methods/{method}/approve', [CreatorPaymentMethodsController::class, 'approve'])->middleware('auth:sanctum');
+        Route::post('admin/storefront/payment-methods/{method}/provider-registration', [CreatorPaymentMethodsController::class, 'recordProviderRegistration'])->middleware('auth:sanctum');
+        Route::post('admin/storefront/payment-methods/{method}/suspend', [CreatorPaymentMethodsController::class, 'suspend'])->middleware('auth:sanctum');
+        Route::post('admin/storefront/payment-methods/{method}/restore', [CreatorPaymentMethodsController::class, 'restore'])->middleware('auth:sanctum');
+        Route::post('admin/storefront/payment-methods/{method}/reject', [CreatorPaymentMethodsController::class, 'reject'])->middleware('auth:sanctum');
+        Route::post('admin/storefront/payment-methods/{method}/approve-alias', [CreatorPaymentMethodsController::class, 'approveAlias'])->middleware('auth:sanctum');
+        Route::get('admin/storefront/payment-methods/{method}/proof', [CreatorPaymentMethodsController::class, 'proof'])->middleware('auth:sanctum');
         Route::post('storefront/products/{digitalProduct}/submit', [DigitalProductsController::class, 'submit']);
         Route::get('storefront/payout-requests', [PayoutRequestsController::class, 'index']);
         Route::post('storefront/payout-requests', [PayoutRequestsController::class, 'store']);
@@ -240,11 +290,16 @@ Route::group(['prefix' => 'v1'], function () {
         Route::apiResource('items', DigitalProductsController::class)->parameters(['items' => 'digitalProduct']);
         Route::get('items/{digitalProduct}/reviews', [CreatorProductReviewsController::class, 'index']);
         Route::post('items/{digitalProduct}/submit', [DigitalProductsController::class, 'submit']);
+        Route::post('items/{digitalProduct}/duplicate', [DigitalProductsController::class, 'duplicate']);
+        Route::post('items/{digitalProduct}/archive', [DigitalProductsController::class, 'archive']);
+        Route::post('items/{digitalProduct}/unarchive', [DigitalProductsController::class, 'unarchive']);
         Route::put('items/{digitalProduct}/draft', [DigitalProductsController::class, 'saveDraft']);
         Route::get('admin/items', [AdminDigitalProductsController::class, 'index']);
         Route::get('admin/items/{digitalProduct}', [AdminDigitalProductsController::class, 'show'])->whereNumber('digitalProduct');
+        Route::get('admin/items/{digitalProduct}/files/{fileEntry}', [AdminDigitalProductsController::class, 'downloadFile'])->whereNumber(['digitalProduct', 'fileEntry']);
         Route::post('admin/items/{digitalProduct}/approve', [AdminDigitalProductsController::class, 'approve']);
         Route::post('admin/items/{digitalProduct}/reject', [AdminDigitalProductsController::class, 'reject']);
+        Route::post('admin/items/{digitalProduct}/re-review', [AdminDigitalProductsController::class, 'reReview']);
         Route::post('admin/items/bulk-approve', [AdminDigitalProductsController::class, 'bulkApprove']);
         Route::post('admin/items/bulk-reject', [AdminDigitalProductsController::class, 'bulkReject']);
         Route::get('admin/items/payout-requests', [PayoutRequestsController::class, 'adminIndex']);
@@ -345,6 +400,25 @@ Route::group(['prefix' => 'v1'], function () {
             VerifyCsrfToken::class,
             VerifyApiAccessMiddleware::class,
         ]);
+    Route::get('public/direct-orders/{order}', [OrderPaymentController::class, 'show'])
+        ->middleware('throttle:60,1')
+        ->withoutMiddleware([EnsureFrontendRequestsAreStateful::class, VerifyApiAccessMiddleware::class]);
+    Route::post('public/direct-orders/{order}/recheck', [OrderPaymentController::class, 'recheck'])
+        ->middleware('throttle:6,1')
+        ->withoutMiddleware([EnsureFrontendRequestsAreStateful::class, VerifyCsrfToken::class, VerifyApiAccessMiddleware::class]);
+    Route::get('public/direct-orders/{order}/payment-instructions', [OrderPaymentController::class, 'instructions'])
+        ->middleware('throttle:10,1')
+        ->withoutMiddleware([EnsureFrontendRequestsAreStateful::class, VerifyApiAccessMiddleware::class]);
+    Route::post('public/direct-orders/{order}/cancel', [OrderPaymentController::class, 'cancel'])
+        ->middleware('throttle:10,1')
+        ->withoutMiddleware([EnsureFrontendRequestsAreStateful::class, VerifyCsrfToken::class, VerifyApiAccessMiddleware::class]);
+    Route::post('public/direct-orders/{order}/reference', [OrderPaymentController::class, 'submit'])
+        ->middleware('throttle:10,1')
+        ->withoutMiddleware([
+            EnsureFrontendRequestsAreStateful::class,
+            VerifyCsrfToken::class,
+            VerifyApiAccessMiddleware::class,
+        ]);
     Route::get('public/stores/{biolink}/digital-products/{digitalProduct}/orders/{order}', [PublicDigitalProductsController::class, 'order'])->middleware('throttle:60,1');
     Route::get('public/stores/{biolink}/digital-products/{digitalProduct}/reviews', [ProductReviewsController::class, 'index']);
     Route::get('public/stores/{biolink}/digital-products/{digitalProduct}/reviews/{order}', [ProductReviewsController::class, 'show']);
@@ -366,6 +440,11 @@ Route::group(['prefix' => 'v1'], function () {
         Route::post("public/{$prefix}/purchases/{order}/downloads/{entitlement}", [CustomerOrderPortalController::class, 'download'])->middleware('throttle:30,1')->withoutMiddleware(VerifyApiAccessMiddleware::class);
         Route::post("public/{$prefix}/purchases/{order}/resend-receipt", [CustomerOrderPortalController::class, 'resendReceipt'])->middleware('throttle:10,1')->withoutMiddleware(VerifyApiAccessMiddleware::class);
         Route::post("public/{$prefix}/purchases/{order}/review", [CustomerOrderPortalController::class, 'review'])->middleware('throttle:10,1')->withoutMiddleware(VerifyApiAccessMiddleware::class);
+        Route::post("public/{$prefix}/purchases/{order}/disputes", [PaymentDisputeController::class, 'store'])
+            ->middleware(app()->environment('testing') ? [] : ['throttle:30,1'])
+            ->withoutMiddleware(VerifyApiAccessMiddleware::class);
+        Route::get("public/{$prefix}/disputes", [PaymentDisputeController::class, 'index'])->middleware('throttle:60,1')->withoutMiddleware(VerifyApiAccessMiddleware::class);
+        Route::get("public/{$prefix}/disputes/{dispute}", [PaymentDisputeController::class, 'show'])->middleware('throttle:60,1')->withoutMiddleware(VerifyApiAccessMiddleware::class);
     };
     $registerCustomerPortal('my-portal');
     $registerCustomerPortal('my-order');

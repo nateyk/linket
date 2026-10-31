@@ -14,6 +14,12 @@ class CrawlerDetector
             return $this->isCrawler;
         }
 
+        // Isolated buyer E2E (db_test + mocked Verify.et) must receive the SPA,
+        // not the SEO prerender stub. Playwright's client hints still look like a bot.
+        if (app()->environment('testing') && config('services.verify_et.mock')) {
+            return $this->isCrawler = false;
+        }
+
         return $this->isCrawler =
             request()->isMethod('GET') &&
             (request()->query->has('_escaped_fragment_') ||

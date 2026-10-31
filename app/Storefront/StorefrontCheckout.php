@@ -3,9 +3,6 @@
 namespace App\Storefront;
 
 use App\Biolinks\Models\Biolink;
-use App\Entitlements\Entitlements;
-use App\Payments\ChapaGateway;
-use App\Payments\Models\PaymentTransaction;
 use App\Stores\Models\Store;
 use App\Storefront\Models\DigitalProduct;
 use App\Storefront\Models\StorefrontOrder;
@@ -19,13 +16,22 @@ class StorefrontCheckout
         DigitalProduct $product,
         Biolink|Store|null $biolink = null,
         array $buyer = [],
+        ?int $paymentMethodId = null,
     ): StorefrontOrder
     {
-        $entitlements = app(Entitlements::class);
+        if (config('services.verify_et.enabled')) {
+            return app(\App\Storefront\Services\DirectStorefrontCheckout::class)->create($product, $biolink, $buyer, $paymentMethodId);
+        }
+
+        if ((int) $product->price_cents > 0) {
+            abort(503, __('Checkout is temporarily unavailable.'));
+        }
+
         $gross = $product->price_cents;
-        $bps = $entitlements->feeBps($product->creator);
-        $fee = (int) round($gross * $bps / 10000);
-        $feePercent = round($bps / 100, 4);
+        $allowance = app(\App\Storefront\Services\CreatorVerificationAllowance::class);
+        $bps = 0;
+        $fee = 0;
+        $feePercent = 0.0;
 
         Log::info('store.checkout.initiated', [
             'store_id' => $biolink?->id,
@@ -49,6 +55,9 @@ class StorefrontCheckout
             'buyer_email' => $buyer['email'] ?? null,
             'currency' => $product->currency,
             'gross_amount_cents' => $gross,
+            'monetization_policy' => $allowance->isPro($product->creator)
+                ? \App\Storefront\Services\CreatorVerificationAllowance::PRO_POLICY
+                : \App\Storefront\Services\CreatorVerificationAllowance::FREE_POLICY,
             'commission_bps' => $bps,
             'platform_fee_percent' => $feePercent,
             'platform_fee_cents' => $fee,
@@ -62,48 +71,20 @@ class StorefrontCheckout
             'unit_amount_cents' => $gross,
         ]);
 
-        // Free course / free product: immediate fulfillment, no gateway.
-        if ((int) $gross === 0) {
+        try {
+            app(\App\Storefront\StorefrontWebhookHandler::class)->fulfill($order->fresh('product'), $buyer['email'] ?? null, []);
+        } catch (\Throwable $e) {
+            Log::warning('store.checkout.free_fulfill_failed', ['order_id' => $order->id, 'error' => $e->getMessage()]);
             try {
-                app(\App\Storefront\StorefrontWebhookHandler::class)->fulfill($order->fresh('product'), $buyer['email'] ?? null, []);
-            } catch (\Throwable $e) {
-                Log::warning('store.checkout.free_fulfill_failed', ['order_id' => $order->id, 'error' => $e->getMessage()]);
-                try {
-                    $order->delete();
-                } catch (\Throwable $deleteError) {
-                    Log::warning('store.checkout.free_cleanup_failed', ['order_id' => $order->id, 'error' => $deleteError->getMessage()]);
-                }
-                throw $e;
+                $order->delete();
+            } catch (\Throwable $deleteError) {
+                Log::warning('store.checkout.free_cleanup_failed', ['order_id' => $order->id, 'error' => $deleteError->getMessage()]);
             }
-            $order = $order->fresh();
-            $order->setAttribute('chapaCheckoutUrl', url("/find-my-purchase/orders?highlight={$order->uuid}"));
-            return $order;
+            throw $e;
         }
-        abort_unless(strtolower($order->currency) === 'etb', 422, 'Digital Products must use ETB before Chapa checkout can begin.');
-        $productUrl = $biolink
-            ? rtrim($biolink->short_url, '/') . "/products/{$product->id}"
-            : url("storefront/products/{$product->id}");
-        $transaction = app(ChapaGateway::class)->createTransaction(
-            $order,
-            'digital_product',
-            number_format($gross / 100, 2, '.', ''),
-            "{$productUrl}/orders/{$order->uuid}/success?tx_ref={tx_ref}",
-            $product->title,
-            $buyer,
-        );
-
-        $order->update([
-            'payment_gateway' => 'chapa',
-            'chapa_tx_ref' => $transaction->tx_ref,
-        ]);
         $order = $order->fresh();
-        $order->setAttribute('chapaCheckoutUrl', $transaction->checkout_url);
-        Log::info('store.checkout.created', [
-            'store_id' => $biolink?->id,
-            'product_id' => $product->id,
-            'workspace_id' => $product->workspace_id,
-            'order_id' => $order->id,
-        ]);
+        $order->setAttribute('chapaCheckoutUrl', url("/find-my-purchase/orders?highlight={$order->uuid}"));
+
         return $order;
     }
 }

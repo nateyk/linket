@@ -42,7 +42,9 @@ class HcLandingPageLoader
                         ->filterByVisibleToRole()
                         ->with([
                             'articles' => function ($query) {
-                                $query->filterByVisibleToRole();
+                                $query
+                                    ->filterByVisibleToRole()
+                                    ->where('articles.draft', false);
                             },
                         ]);
                 },

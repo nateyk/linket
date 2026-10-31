@@ -46,7 +46,14 @@ class ConversationStatus extends BaseModel
     public static function findOrGetDefaultOpen(int|null $id): self
     {
         $status = $id ? self::find($id) : null;
-        return $status ?? self::getDefaultOpen();
+        $status ??= self::getDefaultOpen();
+        if (! $status) {
+            throw new \RuntimeException(
+                'Default open conversation status is not configured. Seed SupportDefaultsSeeder.',
+            );
+        }
+
+        return $status;
     }
 
     public function toSearchableArray(): array

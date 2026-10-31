@@ -2,11 +2,32 @@
 
 use App\HelpCenter\Models\HcArticle;
 use App\HelpCenter\Models\HcCategory;
+use Common\Permissions\Models\Permission;
+use Common\Roles\Models\Role;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
 uses(DatabaseTransactions::class);
+
+beforeEach(function () {
+    $guestRole = Role::query()->firstOrCreate(
+        ['guests' => true],
+        [
+            'name' => 'Guests',
+            'type' => 'users',
+            'internal' => true,
+            'default' => false,
+        ],
+    );
+
+    foreach (['articles.view', 'conversations.create', 'files.create'] as $name) {
+        $permission = Permission::query()->firstOrCreate(['name' => $name]);
+        $guestRole->permissions()->syncWithoutDetaching([$permission->id]);
+    }
+
+    app()->forgetInstance('guestRole');
+});
 
 function statefulHcLanding(): TestCase
 {

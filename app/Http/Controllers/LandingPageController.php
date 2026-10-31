@@ -31,6 +31,13 @@ class LandingPageController extends Controller
             ->orderBy('position', 'asc')
             ->simplePaginate(15);
 
+        $sections = settings('landingPage.sections');
+        if ($sections === null) {
+            $defaults = collect(require resource_path('defaults/default-settings.php'));
+            $landingPage = json_decode($defaults->firstWhere('name', 'landingPage')['value'], true);
+            $sections = $landingPage['sections'] ?? [];
+        }
+
         return $this->clientSideOrPrerenderedResponse([
             'pageName' => 'landing-page',
             'loader' => 'landingPage',
@@ -41,7 +48,7 @@ class LandingPageController extends Controller
                     'clicks' => TrackedEvent::query()->count(),
                     'users' => User::query()->count(),
                 ],
-                'sections' => settings('landingPage.sections'),
+                'sections' => $sections,
                 'products' => ProductResource::collection($products)
                     ->response(request())
                     ->getData(true),

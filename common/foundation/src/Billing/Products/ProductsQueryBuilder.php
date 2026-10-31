@@ -18,7 +18,12 @@ class ProductsQueryBuilder extends BaseQueryBuilder
 
     protected function getBaseBuilder(): Builder
     {
-        return Product::query()->with(['prices']);
+        return Product::query()->with(['prices'])->withCount([
+            'subscriptions',
+            'subscriptions as active_subscriptions_count' => fn ($query) => $query
+                ->whereNull('ends_at')
+                ->where(fn ($active) => $active->whereNull('renews_at')->orWhere('renews_at', '>', now())),
+        ]);
     }
 
     protected function applyFilter(Filter $filter): Builder

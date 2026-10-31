@@ -18,7 +18,7 @@ class StorefrontWebhookHandler
 
         DB::transaction(function () use ($uuid, $session): void {
             $order = StorefrontOrder::query()->where('uuid', $uuid)->lockForUpdate()->first();
-            if (!$order || $order->status === 'paid') return;
+            if (!$order || $order->status === 'paid' || $order->monetization_policy !== null) return;
             $this->fulfill(
                 $order,
                 data_get($session, 'customer_details.email') ?? data_get($session, 'customer_email'),

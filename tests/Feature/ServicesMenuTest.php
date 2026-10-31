@@ -2,17 +2,17 @@
 
 namespace Tests\Feature;
 
-use Illuminate\Support\Facades\DB;
+use Common\Settings\LoadDefaultSettings;
 use Tests\TestCase;
 
 class ServicesMenuTest extends TestCase
 {
     public function test_my_services_item_is_added_to_dashboard_menus(): void
     {
-        $setting = DB::table('settings')->where('name', 'menus')->first();
-        $this->assertNotNull($setting);
-
-        $menus = json_decode($setting->value, true);
+        $menus = json_decode(
+            collect(app(LoadDefaultSettings::class)->execute())->firstWhere('name', 'menus')['value'],
+            true,
+        );
         $this->assertIsArray($menus);
 
         foreach (['dashboard-primary', 'dashboard-mobile'] as $position) {

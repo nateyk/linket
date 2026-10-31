@@ -30,11 +30,15 @@ class ProductResource extends JsonResource
             'is_default' => $this->is_default ?? false,
             'active' => $this->active,
             'hidden' => $this->hidden,
+            'system_key' => $this->system_key,
+            'subscriptions_count' => $this->whenCounted('subscriptions'),
+            'active_subscriptions_count' => $this->when(isset($this->active_subscriptions_count), (int) $this->active_subscriptions_count),
             'trial_period_days' => $this->trial_period_days,
             /**
              * @var array{
              *     platform_fee_percent?: int|null,
              *     commission_bps?: int|null,
+             *     free_verified_sales?: int,
              *     max_products?: int|null,
              *     max_free_products?: int|null,
              *     max_paid_products?: int|null,
@@ -45,7 +49,7 @@ class ProductResource extends JsonResource
              *     advanced_analytics_enabled?: bool|null,
              * }|null
              */
-            'storefront_benefits' => $this->storefront_benefits,
+            'storefront_benefits' => app(\App\Entitlements\Entitlements::class)->benefitsFor($this->resource),
             'pricing_features' => $this->pricingFeatures(),
             'created_at' => $this->created_at,
             'permissions' => $this->whenLoaded(
@@ -116,10 +120,10 @@ class ProductResource extends JsonResource
             ? 'Unlimited workspaces'
             : "$workspaces workspaces";
 
-        $fee = (float) ($benefits['platform_fee_percent'] ?? 0);
-        $features[] = $fee > 0
-            ? rtrim(rtrim(number_format($fee, 2), '0'), '.') . '% Linket transaction fee'
-            : 'No Linket transaction fee';
+        $features[] = 'No commission on new sales';
+            $features[] = $this->free
+            ? ((int) ($benefits['free_verified_sales'] ?? config('storefront.free_verified_sales_default', 10))) . ' lifetime verified sales'
+            : 'Unlimited eligible verified sales while subscribed';
 
         if (!empty($benefits['tracking_pixels_enabled'])) {
             $features[] = 'Tracking pixels';

@@ -3,6 +3,8 @@
 namespace App\Storefront\Resources;
 
 use App\Storefront\Models\DigitalProduct;
+use App\Storefront\Models\CreatorPaymentMethod;
+use App\Storefront\Models\DirectPaymentMethod;
 use App\Storefront\ProductSampleUrl;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -35,6 +37,16 @@ class PublicDigitalProductResource extends JsonResource
             'learning_outcomes' => $this->learning_outcomes,
             'price_cents' => $this->price_cents,
             'currency' => $this->currency,
+            'can_buy' => app(\App\Storefront\Services\AccountMonetizationStatus::class)->canSell($this->creator)
+                && ($this->price_cents === 0 || (config('services.verify_et.enabled') && app(\App\Storefront\Services\CreatorVerificationAllowance::class)->summary($this->creator)['can_start_checkout'])),
+            'verification_quota_exhausted' => $this->price_cents > 0 && config('services.verify_et.enabled') && !app(\App\Storefront\Services\CreatorVerificationAllowance::class)->summary($this->creator)['can_start_checkout'],
+            'payment_mode' => $this->price_cents === 0 ? 'free' : (config('services.verify_et.enabled') ? 'direct' : 'unavailable'),
+            'receiving_accounts' => config('services.verify_et.enabled') ? CreatorPaymentMethod::query()
+                ->where('workspace_id', $this->workspace_id)->where('user_id', $this->user_id)
+                ->get()
+                ->filter(fn (CreatorPaymentMethod $method) => $method->isAvailable()
+                    && DirectPaymentMethod::query()->where('code', $method->provider)->first()?->isAvailableForCheckout())
+                ->map(fn (CreatorPaymentMethod $method) => ['id' => $method->id, 'provider' => $method->provider, 'account_ending' => substr($method->account_number, -4), 'account_name' => $method->account_name_raw])->values() : [],
             'type' => $this->type ?? 'digital',
             'is_course' => $isCourse,
             'course_id' => $courseId,

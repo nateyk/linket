@@ -4,7 +4,9 @@ namespace App\Payments\Controllers;
 
 use App\Payments\Jobs\SendAdminMailTest;
 use App\Payments\Models\ChapaWebhookDelivery;
+use App\Payments\Models\DirectPaymentVerification;
 use App\Payments\Models\PaymentTransaction;
+use App\Payments\Models\VerifyEtWebhookDelivery;
 use Common\Logging\Schedule\ScheduleHealthCommand;
 use Common\Logging\Schedule\ScheduleLogItem;
 use Illuminate\Http\Request;
@@ -30,6 +32,7 @@ class AdminPaymentHealthController extends Controller
             'queue' => $this->queueHealth(),
             'scheduler' => $this->schedulerHealth(),
             'webhooks' => $this->webhookHealth(),
+            'verify_et' => $this->verifyEtHealth(),
         ]);
     }
 
@@ -159,6 +162,32 @@ class AdminPaymentHealthController extends Controller
                 'failure_reason' => $latest->failure_reason,
                 'received_at' => $latest->received_at,
             ] : null,
+        ];
+    }
+
+    private function verifyEtHealth(): array
+    {
+        if (! Schema::hasTable('direct_payment_verifications')) {
+            return [
+                'stale_pending_count' => 0,
+                'webhook_failures_24h' => 0,
+                'oldest_stale_pending_at' => null,
+            ];
+        }
+
+        $stale = DirectPaymentVerification::query()
+            ->whereIn('status', ['pending', 'verifying'])
+            ->where('created_at', '<', now()->subMinutes(30));
+
+        return [
+            'stale_pending_count' => (clone $stale)->count(),
+            'oldest_stale_pending_at' => (clone $stale)->oldest('created_at')->value('created_at'),
+            'webhook_failures_24h' => Schema::hasTable('verify_et_webhook_deliveries')
+                ? VerifyEtWebhookDelivery::query()
+                    ->where('received_at', '>=', now()->subDay())
+                    ->whereIn('status', ['failed', 'rejected', 'unmatched'])
+                    ->count()
+                : 0,
         ];
     }
 }

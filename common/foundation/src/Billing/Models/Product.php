@@ -16,6 +16,8 @@ class Product extends BaseModel
 
     protected $guarded = [];
 
+    protected $attributes = ['system_key' => null];
+
     protected $casts = [
         'free' => 'bool',
         'is_default' => 'bool',

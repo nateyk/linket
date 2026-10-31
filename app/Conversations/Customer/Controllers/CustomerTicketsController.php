@@ -74,12 +74,14 @@ class CustomerTicketsController extends BaseController
                 ),
             );
 
+        $status = $conversation->status;
+
         $data = [
             'id' => $conversation->id,
             'subject' => $conversation->subject,
-            'status' =>
-                $conversation->status->user_label ??
-                $conversation->status->label,
+            'status' => $status
+                ? ($status->user_label ?? $status->label)
+                : null,
             'updated_at' => $conversation->updated_at,
             'created_at' => $conversation->created_at,
             'status_category' => $conversation->status_category,

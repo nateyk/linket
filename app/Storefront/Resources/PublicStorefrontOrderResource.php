@@ -14,7 +14,7 @@ class PublicStorefrontOrderResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
-        $isPaid = $this->status === 'paid';
+        $isPaid = in_array($this->status, ['paid', 'fulfilled'], true);
 
         return [
             'id' => $this->uuid,
@@ -26,6 +26,10 @@ class PublicStorefrontOrderResource extends JsonResource
             'currency' => $this->currency,
             'gross_amount_cents' => $this->gross_amount_cents,
             'paid_at' => $this->paid_at?->toIso8601String(),
+            'verification' => $this->whenLoaded('latestDirectPaymentVerification', fn() => $this->latestDirectPaymentVerification ? [
+                'status' => $this->latestDirectPaymentVerification->status,
+                'error_code' => $this->latestDirectPaymentVerification->latest_error_code,
+            ] : null),
             'downloads' => $isPaid
                 ? $this->entitlements->map(fn($entitlement) => [
                     'name' => $entitlement->file->getNameWithExtension(),

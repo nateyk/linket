@@ -3,6 +3,9 @@
 namespace App\Analytics\Actions;
 
 use App\Analytics\QueryBuilder\TrackedEventsQueryBuilder;
+use App\Biolinks\Models\Biolink;
+use App\Stores\Models\Store;
+use Common\Workspaces\ActiveWorkspace;
 use Common\Core\Values\ValueLists;
 use Common\Database\Metrics\MetricDateRange;
 use Common\Database\Metrics\Partition;
@@ -21,6 +24,17 @@ class BuildTrackedEventsReport
     {
         $this->params = $params;
         $this->builder = (new TrackedEventsQueryBuilder($params))->getBuilder();
+
+        if (!empty($params['dashboard'])) {
+            $workspace = ActiveWorkspace::get();
+            abort_unless($workspace && auth()->check(), 403);
+            $storeIds = Store::query()->where('workspace_id', $workspace->id)
+                ->where('user_id', auth()->id())->select('id');
+            $this->builder->where('tracked_events.workspace_id', $workspace->id)
+                ->where('tracked_events.user_id', auth()->id())
+                ->whereIn('tracked_events.linkeable_type', [Biolink::MODEL_TYPE, Store::MODEL_TYPE])
+                ->whereIn('tracked_events.linkeable_id', $storeIds);
+        }
 
         $this->dateRange = new MetricDateRange(
             start: $this->params['start_date'] ?? null,

@@ -5,6 +5,7 @@ namespace Tests\Unit;
 use App\Payments\ChapaWebhookDeliveryLogger;
 use App\Payments\Jobs\SendAdminMailTest;
 use App\Payments\Notifications\ChapaRenewalReminder;
+use App\Payments\Notifications\DirectRenewalReminder;
 use App\Storefront\Jobs\SendStorefrontReceipt;
 use Common\Billing\Subscription;
 use ReflectionMethod;
@@ -26,12 +27,15 @@ class PaymentOperationsTest extends TestCase
     public function testRenewalNotificationsRouteMailSeparatelyFromDatabaseNotifications(): void
     {
         $notification = new ChapaRenewalReminder(new Subscription(), 7);
+        $direct = new DirectRenewalReminder(new Subscription(), 7);
 
         $this->assertSame([
             'mail' => 'mail',
             'database' => 'default',
         ], $notification->viaQueues());
+        $this->assertSame($notification->viaQueues(), $direct->viaQueues());
         $this->assertSame(3, $notification->tries);
+        $this->assertSame(3, $direct->tries);
     }
 
     public function testWebhookTelemetryOnlyKeepsSafeReferencesAndReasons(): void

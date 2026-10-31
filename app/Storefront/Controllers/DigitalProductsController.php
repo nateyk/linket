@@ -22,27 +22,53 @@ class DigitalProductsController extends Controller
 
     public function index(Request $request): AnonymousResourceCollection
     {
-        $perPage = min(max($request->integer('per_page', 15), 1), 100);
+        $data = $request->validate([
+            'search' => ['nullable', 'string', 'max:160'],
+            'status' => ['nullable', 'in:draft,pending_approval,approved,rejected,archived'],
+            'sort' => ['nullable', 'in:latest,oldest,title,sales,-sales,revenue,-revenue'],
+            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'page' => ['nullable', 'integer', 'min:1'],
+        ]);
+        $perPage = min(max((int) ($data['per_page'] ?? 15), 1), 100);
+        $query = DigitalProduct::query()
+            ->where('workspace_id', ActiveWorkspace::get()->id)
+            ->where('user_id', $request->user()->id)
+            ->withCount([
+                'orders as sales_count' => fn (Builder $builder): Builder => $builder->where('status', 'paid'),
+            ])
+            ->withSum([
+                'orders as gross_revenue_cents' => fn (Builder $builder): Builder => $builder->where('status', 'paid'),
+            ], 'gross_amount_cents')
+            ->with(['files', 'cover', 'biolinks', 'course', 'samples.file']);
 
-        return DigitalProductResource::collection(
-            DigitalProduct::query()
-                ->where('workspace_id', ActiveWorkspace::get()->id)
-                ->where('user_id', $request->user()->id)
-                ->withCount([
-                    'orders as sales_count' => fn (Builder $query): Builder => $query->where('status', 'paid'),
-                ])
-                ->withSum([
-                    'orders as gross_revenue_cents' => fn (Builder $query): Builder => $query->where('status', 'paid'),
-                ], 'gross_amount_cents')
-                ->with(['files', 'cover', 'biolinks', 'samples.file'])
-                ->latest()
-                ->paginate($perPage),
-        );
+        if (($search = trim((string) ($data['search'] ?? ''))) !== '') {
+            $query->where(function (Builder $builder) use ($search): void {
+                $builder->where('title', 'like', '%'.$search.'%')
+                    ->orWhere('description', 'like', '%'.$search.'%');
+            });
+        }
+
+        if (!empty($data['status'])) {
+            $query->where('status', $data['status']);
+        }
+
+        match ($data['sort'] ?? 'latest') {
+            'oldest' => $query->oldest(),
+            'title' => $query->orderBy('title'),
+            'sales' => $query->orderBy('sales_count')->orderByDesc('id'),
+            '-sales' => $query->orderByDesc('sales_count')->orderByDesc('id'),
+            'revenue' => $query->orderBy('gross_revenue_cents')->orderByDesc('id'),
+            '-revenue' => $query->orderByDesc('gross_revenue_cents')->orderByDesc('id'),
+            default => $query->latest(),
+        };
+
+        return DigitalProductResource::collection($query->paginate($perPage));
     }
     public function show(Request $request, DigitalProduct $digitalProduct) { $this->assertOwner($digitalProduct, $request); return new DigitalProductResource($digitalProduct->load(['files', 'cover', 'biolinks', 'course', 'samples.file'])); }
 
     public function store(Request $request)
     {
+        abort_unless(app(\App\Storefront\Services\AccountMonetizationStatus::class)->canSell($request->user()), 403);
         $data = $this->validated($request);
         $creator = $request->user();
         $entitlements = app(Entitlements::class);
@@ -67,6 +93,7 @@ class DigitalProductsController extends Controller
     public function update(Request $request, DigitalProduct $digitalProduct)
     {
         $this->assertOwner($digitalProduct, $request);
+        abort_unless(app(\App\Storefront\Services\AccountMonetizationStatus::class)->canSell($request->user()), 403);
         $data = $this->validated($request, $digitalProduct);
         $creator = $request->user();
         $entitlements = app(Entitlements::class);
@@ -87,6 +114,7 @@ class DigitalProductsController extends Controller
     public function saveDraft(Request $request, DigitalProduct $digitalProduct)
     {
         $this->assertOwner($digitalProduct, $request);
+        abort_unless(app(\App\Storefront\Services\AccountMonetizationStatus::class)->canSell($request->user()), 403);
         $data = $this->validatedDraft($request, $digitalProduct);
         $creator = $request->user();
         $entitlements = app(Entitlements::class);
@@ -107,6 +135,7 @@ class DigitalProductsController extends Controller
     public function submit(Request $request, DigitalProduct $digitalProduct)
     {
         $this->assertOwner($digitalProduct, $request);
+        abort_unless(app(\App\Storefront\Services\AccountMonetizationStatus::class)->canSell($request->user()), 403);
         abort_unless(
             in_array($digitalProduct->status, ['draft', 'rejected'], true),
             422,
@@ -179,7 +208,95 @@ class DigitalProductsController extends Controller
         return $product->fresh();
     }
 
-    public function destroy(Request $request, DigitalProduct $digitalProduct) { $this->assertOwner($digitalProduct, $request); app(DigitalProductVisibility::class)->sync($digitalProduct, []); $digitalProduct->delete(); return response()->noContent(); }
+    public function duplicate(Request $request, DigitalProduct $digitalProduct): \Illuminate\Http\JsonResponse
+    {
+        $this->assertOwner($digitalProduct, $request);
+        abort_unless(app(\App\Storefront\Services\AccountMonetizationStatus::class)->canSell($request->user()), 403);
+        $creator = $request->user();
+        $entitlements = app(Entitlements::class);
+        $this->enforceProductLimitForType(
+            $entitlements,
+            (int) $digitalProduct->price_cents,
+            $digitalProduct->type ?? 'digital',
+            $creator,
+            null,
+        );
+
+        $copy = $this->mutations->duplicate(
+            $digitalProduct,
+            $creator,
+            $entitlements->limit($creator, 'max_upload_bytes'),
+        );
+
+        return (new DigitalProductResource($copy))->response()->setStatusCode(201);
+    }
+
+    public function archive(Request $request, DigitalProduct $digitalProduct): DigitalProductResource
+    {
+        $this->assertOwner($digitalProduct, $request);
+        abort_if($digitalProduct->status === 'archived', 422, __('This product is already archived.'));
+
+        $from = $digitalProduct->status;
+        DB::transaction(function () use ($digitalProduct, $from, $request): void {
+            app(DigitalProductVisibility::class)->sync($digitalProduct, []);
+            $digitalProduct->update([
+                'status' => 'archived',
+                'review_requested_at' => null,
+                'review_requested_by' => null,
+            ]);
+            app(ProductReviewHistory::class)->record(
+                $digitalProduct,
+                'archived',
+                $from,
+                'archived',
+                $request->user(),
+                'creator',
+            );
+        });
+
+        return new DigitalProductResource($digitalProduct->fresh()->load(['files', 'cover', 'biolinks', 'course', 'samples.file']));
+    }
+
+    public function unarchive(Request $request, DigitalProduct $digitalProduct): DigitalProductResource
+    {
+        $this->assertOwner($digitalProduct, $request);
+        abort_unless($digitalProduct->status === 'archived', 422, __('Only archived products can be restored to draft.'));
+
+        DB::transaction(function () use ($digitalProduct, $request): void {
+            $digitalProduct->update([
+                'status' => 'draft',
+                'rejection_reason' => null,
+                'approved_at' => null,
+                'review_requested_at' => null,
+                'review_requested_by' => null,
+            ]);
+            app(ProductReviewHistory::class)->record(
+                $digitalProduct,
+                'unarchived',
+                'archived',
+                'draft',
+                $request->user(),
+                'creator',
+            );
+        });
+
+        return new DigitalProductResource($digitalProduct->fresh()->load(['files', 'cover', 'biolinks', 'course', 'samples.file']));
+    }
+
+    public function destroy(Request $request, DigitalProduct $digitalProduct)
+    {
+        $this->assertOwner($digitalProduct, $request);
+        abort_if(
+            $digitalProduct->orders()->whereIn('status', ['paid', 'fulfilled'])->exists(),
+            409,
+            __('Products with paid orders cannot be deleted. Archive them instead so buyers keep their downloads.'),
+        );
+
+        app(DigitalProductVisibility::class)->sync($digitalProduct, []);
+        $digitalProduct->delete();
+
+        return response()->noContent();
+    }
 
     private function validated(Request $request, ?DigitalProduct $existing = null): array
     {

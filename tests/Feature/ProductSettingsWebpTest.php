@@ -10,6 +10,7 @@ use App\Storefront\Models\DigitalProduct;
 use App\Storefront\ProductSettings;
 use Common\Files\FileEntry;
 use Common\Roles\Models\Role;
+use Common\Database\Seeders\RolesTableSeeder;
 use Common\Settings\Models\Setting;
 use Common\Workspaces\ActiveWorkspace;
 use Common\Workspaces\Actions\CreateWorkspace;
@@ -23,6 +24,12 @@ use Tests\TestCase;
 class ProductSettingsWebpTest extends TestCase
 {
     use DatabaseTransactions;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(RolesTableSeeder::class);
+    }
 
     protected function tearDown(): void
     {

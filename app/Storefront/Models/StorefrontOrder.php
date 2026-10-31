@@ -8,11 +8,14 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
 
 class StorefrontOrder extends StorefrontModel
 {
     protected $guarded = [];
-    protected $casts = ['gross_amount_cents' => 'integer', 'commission_bps' => 'integer', 'platform_fee_percent' => 'float', 'platform_fee_cents' => 'integer', 'creator_earnings_cents' => 'integer', 'paid_at' => 'datetime', 'receipt_sent_at' => 'datetime'];
+    protected $hidden = ['payment_account_snapshot', 'payment_access_token_hash'];
+    protected $casts = ['gross_amount_cents' => 'integer', 'commission_bps' => 'integer', 'commission_plan_id' => 'integer', 'payment_account_snapshot' => 'encrypted', 'payment_expires_at' => 'datetime', 'platform_fee_percent' => 'float', 'platform_fee_cents' => 'integer', 'creator_earnings_cents' => 'integer', 'paid_at' => 'datetime', 'receipt_sent_at' => 'datetime'];
     public function product(): BelongsTo { return $this->belongsTo(DigitalProduct::class, 'digital_product_id'); }
     public function biolink(): BelongsTo { return $this->belongsTo(Biolink::class, 'biolink_id'); }
     public function store(): BelongsTo { return $this->belongsTo(Store::class, 'biolink_id'); }
@@ -38,4 +41,7 @@ class StorefrontOrder extends StorefrontModel
     public function earningsLedger(): HasMany { return $this->hasMany(DigitalProductEarningsLedger::class); }
     public function refunds(): HasMany { return $this->hasMany(DigitalProductPaymentRefund::class); }
     public function review(): HasOne { return $this->hasOne(ProductReview::class); }
+    public function creatorPaymentMethod(): BelongsTo { return $this->belongsTo(CreatorPaymentMethod::class); }
+    public function directPaymentVerifications(): MorphMany { return $this->morphMany(\App\Payments\Models\DirectPaymentVerification::class, 'payable'); }
+    public function latestDirectPaymentVerification(): MorphOne { return $this->morphOne(\App\Payments\Models\DirectPaymentVerification::class, 'payable')->latestOfMany(); }
 }

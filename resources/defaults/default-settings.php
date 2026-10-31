@@ -337,8 +337,8 @@ return [
                     ],
                     [
                         'type' => 'route',
-                        'label' => 'Sales & Payouts',
-                        'action' => '/dashboard/sales-payouts',
+                        'label' => 'Orders & Sales',
+                        'action' => '/dashboard/orders',
                         'id' => 'sales-payouts-dashboard',
                     ],
                     [
@@ -463,8 +463,8 @@ return [
                     ],
                     [
                         'type' => 'route',
-                        'label' => 'Sales & Payouts',
-                        'action' => '/dashboard/sales-payouts',
+                        'label' => 'Orders & Sales',
+                        'action' => '/dashboard/orders',
                         'id' => 'sales-payouts-mobile',
                     ],
                 ],
@@ -632,6 +632,13 @@ return [
                         'permissions' => ['users.update'],
                     ],
                     [
+                        'label' => 'Creators',
+                        'action' => '/admin/creators',
+                        'type' => 'route',
+                        'id' => 'admin-creators',
+                        'permissions' => ['users.update'],
+                    ],
+                    [
                         'label' => 'Roles',
                         'action' => '/admin/roles',
                         'type' => 'route',
@@ -664,7 +671,13 @@ return [
                     ],
                     [
                         'type' => 'route',
-                        'label' => 'Withdrawal Methods',
+                        'label' => 'Payment Gateways',
+                        'action' => '/admin/financial/payment-gateways',
+                        'id' => 'admin-payment-gateways',
+                    ],
+                    [
+                        'type' => 'route',
+                        'label' => 'Receiving accounts',
                         'action' => '/admin/financial/withdrawal-methods',
                         'id' => 'admin-withdrawal-methods',
                     ],

@@ -51,7 +51,7 @@ class AdminDigitalProductResource extends JsonResource
                 'name' => $file->name,
                 'file_size' => $file->file_size,
                 'extension' => $file->extension,
-                'url' => $file->url,
+                'download_path' => "/api/v1/admin/items/{$this->id}/files/{$file->id}",
             ])),
             'stores' => $this->whenLoaded('biolinks', fn () => $this->biolinks->map(fn ($store) => [
                 'id' => $store->id,

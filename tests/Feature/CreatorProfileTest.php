@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Storefront\Models\DigitalProduct;
 use Common\Files\FileEntry;
 use Common\Workspaces\Models\Workspace;
+use Common\Workspaces\ActiveWorkspace;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Validator;
@@ -494,10 +495,14 @@ class CreatorProfileTest extends TestCase
 
     private function createWorkspace(User $owner): Workspace
     {
-        return Workspace::query()->create([
+        $workspace = Workspace::query()->create([
             'name' => 'Creator workspace',
             'owner_id' => $owner->id,
         ]);
+        $workspace->members()->create(['user_id' => $owner->id, 'is_owner' => true]);
+        ActiveWorkspace::clearCache();
+
+        return $workspace;
     }
 
     private function createDigitalProduct(

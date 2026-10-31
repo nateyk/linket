@@ -8,14 +8,15 @@ return [
     'courses_require_approval' => env('COURSES_REQUIRE_APPROVAL', false),
     'download_days' => 7,
     'download_limit' => 10,
+    'free_verified_sales_default' => env('FREE_VERIFIED_SALES_DEFAULT', 10),
     'payout_hold_days' => env('DIGITAL_PRODUCTS_PAYOUT_HOLD_DAYS', 7),
     // Deprecated alias: derived from the single source of truth so it can
     // never drift from the capability definition again. New code must use
     // App\Storefront\ProductFileFormats directly.
     'allowed_extensions' => \App\Storefront\ProductFileFormats::extensions(),
     'default_benefits' => [
-        'platform_fee_percent' => 10.0,
-        'commission_bps' => 1000,
+        'platform_fee_percent' => 1.5,
+        'commission_bps' => 150,
         'max_products' => 5,
         'max_free_products' => 5,
         'max_paid_products' => 5,
@@ -32,8 +33,8 @@ return [
     ],
     'demo_benefits' => [
         'free' => [
-            'platform_fee_percent' => 10.0,
-            'commission_bps' => 1000,
+            'platform_fee_percent' => 1.5,
+            'commission_bps' => 150,
             'max_products' => 5,
             'max_free_products' => 5,
             'max_paid_products' => 5,
@@ -49,9 +50,8 @@ return [
             'advanced_analytics_enabled' => false,
         ],
         'pro' => [
-            // PRODUCT.md:33 — Pro 5%.
-            'platform_fee_percent' => 5.0,
-            'commission_bps' => 500,
+            'platform_fee_percent' => 0.0,
+            'commission_bps' => 0,
             'max_products' => null,
             'max_free_products' => null,
             'max_paid_products' => null,

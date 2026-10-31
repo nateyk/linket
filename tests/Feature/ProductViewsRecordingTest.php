@@ -29,7 +29,7 @@ class ProductViewsRecordingTest extends TestCase
 
         $this->get("/{$biolink->back_half}/products/{$product->id}")->assertOk();
 
-        $this->assertDatabaseCount('product_views', 1);
+        $this->assertSame(1, $product->views()->count());
         $this->assertSame(1, $product->fresh()->views_count);
     }
 
@@ -41,7 +41,7 @@ class ProductViewsRecordingTest extends TestCase
         $this->get("/{$biolink->back_half}/products/{$product->id}")->assertOk();
         $this->get("/{$biolink->back_half}/products/{$product->id}")->assertOk();
 
-        $this->assertDatabaseCount('product_views', 1);
+        $this->assertSame(1, $product->views()->count());
         $this->assertSame(1, $product->fresh()->views_count);
     }
 

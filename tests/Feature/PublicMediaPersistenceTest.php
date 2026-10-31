@@ -12,6 +12,7 @@ use Common\Database\Seeders\RolesTableSeeder;
 use Common\Files\Uploads\UploadDiskLocation;
 use Common\Files\Uploads\UploadType;
 use Common\Settings\Models\Setting;
+use Common\Workspaces\ActiveWorkspace;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -319,10 +320,14 @@ class PublicMediaPersistenceTest extends TestCase
 
     private function createWorkspace(User $owner): \Common\Workspaces\Models\Workspace
     {
-        return \Common\Workspaces\Models\Workspace::query()->create([
+        $workspace = \Common\Workspaces\Models\Workspace::query()->create([
             'name' => 'Test workspace',
             'owner_id' => $owner->id,
         ]);
+        $workspace->members()->create(['user_id' => $owner->id, 'is_owner' => true]);
+        ActiveWorkspace::clearCache();
+
+        return $workspace;
     }
 
     private function createBiolink(array $attributes): Biolink

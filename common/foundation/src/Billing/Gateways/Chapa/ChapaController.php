@@ -29,6 +29,8 @@ class ChapaController extends Controller
             'price_id' => 'required|integer|exists:prices,id',
         ]);
         $product = Product::findOrFail($data['product_id']);
+        abort_if($product->system_key === 'pro', 409, 'New Pro payments must use direct Verify.et billing.');
+        abort_unless($product->active, 422, __('This plan is not accepting new subscriptions.'));
         $price = Price::query()
             ->where('id', $data['price_id'])
             ->where('product_id', $product->id)

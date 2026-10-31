@@ -9,11 +9,12 @@ use App\Biolinks\BiolinksQueryBuilder;
 use App\Biolinks\Requests\CrupdateBiolinkRequest;
 use App\Biolinks\Resources\BiolinkResource;
 use App\Entitlements\Entitlements;
-use Common\Workspaces\ActiveWorkspace;
 use Dedoc\Scramble\Attributes\Group;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\DB;
+use App\Models\User;
 
 #[Group('Biolinks', weight: 4)]
 class BiolinksController extends Controller
@@ -69,21 +70,21 @@ class BiolinksController extends Controller
     {
         Gate::authorize('store', Biolink::class);
 
-        $entitlements = app(Entitlements::class);
-        $creator = $request->user();
-        $maxStorefronts = $entitlements->limit($creator, 'max_storefronts');
-        if ($maxStorefronts !== null) {
-            $count = Biolink::query()
-                ->where('workspace_id', ActiveWorkspace::get()->id)
-                ->whereNull('deleted_at')
-                ->count();
-            abort_if($count >= $maxStorefronts, 422, __(
-                "You've reached your :plan limit of :count storefronts.",
-                ['plan' => $entitlements->planFor($creator)?->name ?? 'plan', 'count' => $maxStorefronts],
-            ));
-        }
+        $biolink = DB::transaction(function () use ($request): Biolink {
+            $creator = User::query()->whereKey($request->user()->id)->lockForUpdate()->firstOrFail();
+            $entitlements = app(Entitlements::class);
+            $plan = $entitlements->planFor($creator);
+            $maxStorefronts = $plan?->free ? 1 : $entitlements->limit($creator, 'max_storefronts');
+            if ($maxStorefronts !== null) {
+                $count = Biolink::query()->where('user_id', $creator->id)->whereNull('deleted_at')->count();
+                abort_if($count >= $maxStorefronts, 422, __(
+                    "You've reached your :plan limit of :count storefronts.",
+                    ['plan' => $plan?->name ?? 'plan', 'count' => $maxStorefronts],
+                ));
+            }
 
-        $biolink = (new CrupdateBiolink())->execute($request->validated());
+            return (new CrupdateBiolink())->execute($request->validated());
+        });
 
         return new BiolinkResource($biolink);
     }
@@ -98,6 +99,10 @@ class BiolinksController extends Controller
         $biolink = $id instanceof Biolink || $id instanceof \App\Stores\Models\Store ? $id : Biolink::query()->findOrFail($id);
 
         Gate::authorize('update', $biolink);
+
+        if ($request->exists('back_half') && $request->input('back_half') !== $biolink->back_half) {
+            abort_unless(app(\App\Storefront\Services\AccountMonetizationStatus::class)->canSell($request->user()), 403);
+        }
 
         $biolink = (new CrupdateBiolink())->execute(
             $request->validated(),

@@ -29,13 +29,22 @@ class StorefrontCheckoutController extends Controller
             'buyer_name' => ['required', 'string', 'min:2', 'max:120'],
             'buyer_email' => ['required', 'email:rfc', 'max:254'],
             'buyer_phone' => ['nullable', 'string', 'max:32'],
+            'creator_payment_method_id' => ['nullable', 'integer'],
         ]);
         $order = app(StorefrontCheckout::class)->create($digitalProduct->load(['creator', 'files']), null, [
             'name' => $buyer['buyer_name'],
             'email' => $buyer['buyer_email'],
             'phone' => $buyer['buyer_phone'] ?? null,
-        ]);
-        return response()->json(['order_id' => $order->uuid, 'checkout_url' => $order->chapaCheckoutUrl]);
+        ], isset($buyer['creator_payment_method_id']) ? (int) $buyer['creator_payment_method_id'] : null);
+        return response()->json([
+            'order_id' => $order->uuid,
+            'checkout_url' => $order->payment_gateway === 'verify_et' ? null : $order->chapaCheckoutUrl,
+            'instructions_endpoint' => $order->payment_gateway === 'verify_et' ? "/api/v1/public/direct-orders/{$order->uuid}/payment-instructions" : null,
+            'access_token' => $order->paymentAccessToken,
+            'status_endpoint' => $order->payment_gateway === 'verify_et' ? "/api/v1/public/direct-orders/{$order->uuid}" : null,
+            'reference_endpoint' => $order->payment_gateway === 'verify_et' ? "/api/v1/public/direct-orders/{$order->uuid}/reference" : null,
+            'status' => $order->status,
+        ])->header('Cache-Control', 'no-store, private');
     }
 
     public function success(Request $request, string $order)
@@ -45,7 +54,7 @@ class StorefrontCheckoutController extends Controller
             ? $request->string('tx_ref')
             : $request->string('session_id');
         $expectedReference = $order->chapa_tx_ref ?: $order->stripe_checkout_session_id;
-        abort_unless(hash_equals((string) $expectedReference, (string) $paymentReference), 403);
+        abort_unless($expectedReference && hash_equals((string) $expectedReference, (string) $paymentReference), 403);
         return response()->json([
             'id' => $order->uuid,
             'status' => $order->status,

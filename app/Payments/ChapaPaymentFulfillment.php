@@ -22,7 +22,7 @@ class ChapaPaymentFulfillment
      */
     public function syncPendingStorefrontOrder(StorefrontOrder $order): void
     {
-        if ($order->status === 'paid' || blank($order->chapa_tx_ref)) {
+        if ($order->status === 'paid' || blank($order->chapa_tx_ref) || !$this->acceptsLegacyChapaFulfillment($order)) {
             return;
         }
 
@@ -58,6 +58,10 @@ class ChapaPaymentFulfillment
                 ->findOrFail($transaction->id);
 
             if ($transaction->status === 'paid') return;
+
+            if ($transaction->payable instanceof StorefrontOrder && !$this->acceptsLegacyChapaFulfillment($transaction->payable)) {
+                throw new PaymentVerificationException('new_policy_requires_verify_et', false);
+            }
 
             $data = app(ChapaGateway::class)->verifiedData($verification);
             $amount = number_format((float) (Arr::get($data, 'amount') ?? 0), 2, '.', '');
@@ -115,6 +119,12 @@ class ChapaPaymentFulfillment
                 'status' => 'failed',
                 'verification_data' => ['failure_reason' => $exception->reason],
             ]);
+    }
+
+    private function acceptsLegacyChapaFulfillment(StorefrontOrder $order): bool
+    {
+        return $order->monetization_policy === null
+            && ($order->payment_gateway === 'chapa' || ($order->payment_gateway === null && filled($order->chapa_tx_ref)));
     }
 
     private function fulfillStorefrontOrder(PaymentTransaction $transaction, array $data): void

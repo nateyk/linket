@@ -129,6 +129,26 @@ final class DigitalProductMutationService
         return $updated;
     }
 
+    public function duplicate(DigitalProduct $source, User $creator, ?int $maxUploadBytes): DigitalProduct
+    {
+        $source->loadMissing(['files', 'samples', 'biolinks', 'cover']);
+
+        return $this->create([
+            'title' => trim($source->title).' (copy)',
+            'description' => $source->description,
+            'learning_outcomes' => $source->learning_outcomes,
+            'price_cents' => (int) $source->price_cents,
+            'currency' => $source->currency,
+            'type' => $source->type ?? 'digital',
+            'cover_file_entry_id' => $source->cover_file_entry_id,
+            'file_ids' => $source->files->pluck('id')->all(),
+            'biolink_ids' => [],
+            'sample_file_ids' => $source->samples->pluck('file_entry_id')->all(),
+            'sample_titles' => $source->samples->pluck('title')->all(),
+            'sample_durations' => $source->samples->pluck('duration_ms')->all(),
+        ], $creator, $maxUploadBytes);
+    }
+
     /**
      * Reject a product `type` change outright (never silently rewrite or
      * migrate) when delivered history or built curriculum would be stranded.

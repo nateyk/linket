@@ -35,7 +35,11 @@ class ProductsController extends Controller
             'updated_at' => 'string',
         ]);
 
-        $pagination = (new ProductsQueryBuilder($data))->paginate();
+        $query = new ProductsQueryBuilder($data);
+        if (Arr::get($data, 'fields_preset') === 'pricing-page') {
+            $query->getBuilder()->where('active', true)->where('hidden', false);
+        }
+        $pagination = $query->paginate();
 
         $response = ProductResource::collection($pagination);
 
@@ -67,6 +71,16 @@ class ProductsController extends Controller
             'prices' => fn(HasMany $builder) => $builder->withCount(
                 'subscriptions',
             ),
+        ]);
+        $product = $product->fresh()->load([
+            'prices' => fn (HasMany $builder) => $builder->withCount('subscriptions'),
+            'permissions',
+        ]);
+        $product->loadCount([
+            'subscriptions',
+            'subscriptions as active_subscriptions_count' => fn ($query) => $query
+                ->whereNull('ends_at')
+                ->where(fn ($active) => $active->whereNull('renews_at')->orWhere('renews_at', '>', now())),
         ]);
 
         return new ProductResource($product);
@@ -119,6 +133,8 @@ class ProductsController extends Controller
 
         Gate::authorize('destroy', $product);
 
+        abort_if(in_array($product->system_key, ['free', 'pro'], true), 422, __('The canonical Free and Pro plans cannot be deleted.'));
+
         abort_if(
             $product->is_default,
             422,
@@ -126,7 +142,8 @@ class ProductsController extends Controller
         );
 
         abort_if(
-            $product->subscriptions->isNotEmpty(),
+            $product->subscriptions()->exists()
+                || \App\Payments\Models\ProSubscriptionPayment::query()->where('product_id', $product->id)->where('status', 'pending_payment')->exists(),
             422,
             __(
                 "Could not delete ':product', because it has active subscriptions.",

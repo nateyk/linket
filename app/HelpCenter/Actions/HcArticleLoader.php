@@ -8,6 +8,7 @@ use App\HelpCenter\Models\HcCategory;
 use Common\Files\FileEntry;
 use Common\Tags\Tag;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 
 class HcArticleLoader
 {
@@ -148,11 +149,18 @@ class HcArticleLoader
 
     public function loadCategoryNav(int $categoryId): Collection
     {
+        $isAgent = Auth::user()?->isAgent() ?? false;
+
         return HcCategory::where('parent_id', $categoryId)
             ->filterByVisibleToRole()
             ->orderByPosition()
             ->with([
-                'articles' => fn($q) => $q->filterByVisibleToRole(),
+                'articles' => function ($q) use ($isAgent) {
+                    $q->filterByVisibleToRole();
+                    if (! $isAgent) {
+                        $q->where('draft', false);
+                    }
+                },
             ])
             ->limit(20)
             ->get()

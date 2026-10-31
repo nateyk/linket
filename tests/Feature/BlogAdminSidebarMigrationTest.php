@@ -107,5 +107,5 @@ test('fresh installs ship the Blog admin sidebar entry', function () {
     expect($actions)->toContain('/admin/blog');
     expect($actions)->not->toContain('/admin/settings/blog');
     expect(array_search('/admin/blog', $actions))
-        ->toBe(array_search('/admin/help', $actions) + 1);
+        ->toBe(array_search('/admin/settings/hc', $actions) + 1);
 });

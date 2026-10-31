@@ -61,6 +61,17 @@ class OrderRecoveryService
         ]);
 
         SendDigitalProductOrderRecoveryLink::dispatch($recovery->id, $code, $delivery->id)->afterCommit();
+        if (app()->environment('testing') && config('services.verify_et.mock')) {
+            $path = storage_path('app/e2e/last-recovery-code.json');
+            if (! is_dir(dirname($path))) {
+                mkdir(dirname($path), 0775, true);
+            }
+            file_put_contents($path, json_encode([
+                'email' => $email,
+                'code' => $code,
+                'expires_at' => $recovery->expires_at?->toIso8601String(),
+            ], JSON_UNESCAPED_SLASHES)."\n");
+        }
         Log::info('store.order.otp.requested', [
             'recovery_id' => $recovery->id,
             'email_hash' => $emailHash,

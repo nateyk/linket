@@ -129,7 +129,24 @@ abstract class CrupdateLinkeable
     ): array {
         $authModel = Auth::user() ?: Role::where('guests', true)->first();
 
-        if ($authModel->hasPermission('admin')) {
+        if ($authModel?->hasPermission('admin')) {
+            return $data;
+        }
+
+        if (!$authModel) {
+            foreach ([
+                ...$extraFieldsToRemove,
+                'back_half',
+                'expires_at',
+                'activates_at',
+                'password',
+                'utm',
+                'utm_custom',
+                'rules',
+            ] as $field) {
+                unset($data[$field]);
+            }
+
             return $data;
         }
 

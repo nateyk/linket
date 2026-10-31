@@ -8,6 +8,7 @@ use Common\Core\BaseController;
 use Common\Tags\Tag;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Auth;
 
 class HcCategoryController extends BaseController
 {
@@ -91,11 +92,20 @@ class HcCategoryController extends BaseController
     {
         $this->authorize('index', HcArticle::class);
 
+        $isAgent = Auth::user()?->isAgent() ?? false;
+
         $categories = HcCategory::where('parent_id', $categoryId)
             ->orderByPosition()
             ->with([
-                'articles' => function (BelongsToMany $query) {
-                    $query->select('id', 'title', 'position', 'slug');
+                'articles' => function (BelongsToMany $query) use ($isAgent) {
+                    $query->select([
+                        'articles.id',
+                        'articles.title',
+                        'articles.slug',
+                    ]);
+                    if (! $isAgent) {
+                        $query->where('articles.draft', false);
+                    }
                 },
             ])
             ->limit(20)

@@ -60,7 +60,7 @@ class ProductModerationNotification extends Notification implements ShouldQueue
             ->greeting(__('Hello, :name', ['name' => $notifiable->name]))
             ->line($this->summary($product));
 
-        if ($this->isRejection() && $this->reason) {
+        if ($this->includesReason() && $this->reason) {
             $mail->line(__('Reason: :reason', ['reason' => $this->reason]));
         }
 
@@ -85,7 +85,7 @@ class ProductModerationNotification extends Notification implements ShouldQueue
             ['content' => e($this->summary($product)), 'type' => 'primary'],
         ];
 
-        if ($this->isRejection() && $this->reason) {
+        if ($this->includesReason() && $this->reason) {
             $lines[] = [
                 'content' => e(__('Reason: :reason', ['reason' => $this->reason])),
                 'type' => 'secondary',
@@ -111,6 +111,11 @@ class ProductModerationNotification extends Notification implements ShouldQueue
         return in_array($this->event, ['rejected', 'update_rejected', 'update_reverted'], true);
     }
 
+    private function includesReason(): bool
+    {
+        return $this->isRejection() || $this->event === 're_review';
+    }
+
     private function subject(): string
     {
         return match ($this->event) {
@@ -119,6 +124,7 @@ class ProductModerationNotification extends Notification implements ShouldQueue
             'rejected' => __('Your product needs changes'),
             'update_rejected' => __('Your product update needs changes'),
             'update_reverted' => __('Your product update was rejected'),
+            're_review' => __('Your product was sent back for review'),
             default => __('Product update'),
         };
     }
@@ -131,6 +137,7 @@ class ProductModerationNotification extends Notification implements ShouldQueue
             'rejected' => __('Your product ":title" needs changes.', ['title' => $product->title]),
             'update_rejected' => __('Your update to ":title" needs changes.', ['title' => $product->title]),
             'update_reverted' => __('Your update to ":title" was rejected. Your previous version is still live.', ['title' => $product->title]),
+            're_review' => __('Your product ":title" was taken off the storefront for another review.', ['title' => $product->title]),
             default => __('Your product ":title" was updated.', ['title' => $product->title]),
         };
     }

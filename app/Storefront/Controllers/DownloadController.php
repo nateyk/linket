@@ -11,7 +11,10 @@ class DownloadController extends Controller
     public function show(Request $request, string $token)
     {
         abort_unless($request->hasValidSignature(), 403, __('This download link is invalid or has expired.'));
-        $entitlement = DownloadEntitlement::query()->where('token', $token)->with('file')->firstOrFail();
+        $entitlement = DownloadEntitlement::query()->where('token', $token)->with(['file', 'order'])->firstOrFail();
+        if (!$entitlement->order || ! in_array($entitlement->order->status, ['paid', 'fulfilled'], true)) {
+            return response(__('This download is locked until payment is verified.'), 403);
+        }
         abort_if($entitlement->revoked_at, 410, __('This download is no longer available because the order was refunded.'));
         abort_if($entitlement->expires_at->isPast(), 410, __('This download link is no longer available.'));
         $file = $entitlement->file;

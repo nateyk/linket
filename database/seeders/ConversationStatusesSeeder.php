@@ -31,6 +31,14 @@ class ConversationStatusesSeeder extends Seeder
         ]);
 
         ConversationStatus::create([
+            'label' => 'Investigating',
+            'user_label' => 'Being investigated',
+            'category' => Conversation::STATUS_PENDING,
+            'internal' => true,
+            'active' => true,
+        ]);
+
+        ConversationStatus::create([
             'label' => 'Resolved',
             'category' => Conversation::STATUS_CLOSED,
             'internal' => true,

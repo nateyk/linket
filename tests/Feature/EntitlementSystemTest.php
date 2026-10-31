@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use App\Payments\ChapaGateway;
-use App\Payments\Models\PaymentTransaction;
 use App\Storefront\Models\DigitalProduct;
 use App\Storefront\StorefrontBenefits;
 use App\Storefront\StorefrontCheckout;
@@ -252,36 +251,21 @@ class EntitlementSystemTest extends TestCase
             'status' => 'approved',
         ]);
 
+        config()->set('services.verify_et.enabled', false);
         $mockGateway = $this->getMockBuilder(ChapaGateway::class)
             ->disableOriginalConstructor()
             ->getMock();
-        $mockGateway->method('createTransaction')->willReturn(
-            new PaymentTransaction([
-                'tx_ref' => 'test_tx_ref',
-                'checkout_url' => 'https://checkout.chapa.com/test',
-            ]),
-        );
+        $mockGateway->expects($this->never())->method('createTransaction');
         app()->instance(ChapaGateway::class, $mockGateway);
 
-        $checkout = app(StorefrontCheckout::class);
-        $order = $checkout->create($product, null, ['name' => 'Buyer', 'email' => 'buyer@test.com']);
+        try {
+            app(StorefrontCheckout::class)->create($product, null, ['name' => 'Buyer', 'email' => 'buyer@test.com']);
+            $this->fail('Paid checkout started while Verify.et was unavailable.');
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $exception) {
+            $this->assertSame(503, $exception->getStatusCode());
+        }
 
-        $this->assertSame(5.0, (float) $order->platform_fee_percent);
-        $this->assertSame(500, $order->platform_fee_cents);
-        $this->assertSame(9500, $order->creator_earnings_cents);
-
-        $plan->update(['storefront_benefits' => array_merge($plan->storefront_benefits ?? [], [
-            'platform_fee_percent' => 0.0,
-            'commission_bps' => 0,
-        ])]);
-        $creator->refresh();
-
-        $order->refresh();
-        $this->assertSame(5.0, (float) $order->platform_fee_percent);
-        $this->assertSame(500, $order->commission_bps);
-        $this->assertSame(10000, $order->gross_amount_cents);
-        $this->assertSame(500, $order->platform_fee_cents);
-        $this->assertSame(9500, $order->creator_earnings_cents);
+        $this->assertSame(0, \App\Storefront\Models\StorefrontOrder::query()->where('digital_product_id', $product->id)->count());
     }
 
     public function testFeeMathUsesIntegerBasisPoints(): void
@@ -305,27 +289,25 @@ class EntitlementSystemTest extends TestCase
             'status' => 'approved',
         ]);
 
+        config()->set('services.verify_et.enabled', false);
         $mockGateway = $this->getMockBuilder(ChapaGateway::class)
             ->disableOriginalConstructor()
             ->getMock();
-        $mockGateway->method('createTransaction')->willReturn(
-            new PaymentTransaction([
-                'tx_ref' => 'test_tx_ref',
-                'checkout_url' => 'https://checkout.chapa.com/test',
-            ]),
-        );
+        $mockGateway->expects($this->never())->method('createTransaction');
         app()->instance(ChapaGateway::class, $mockGateway);
 
-        $order = app(StorefrontCheckout::class)->create(
-            $product,
-            null,
-            ['name' => 'Buyer', 'email' => 'buyer@test.com'],
-        );
+        try {
+            app(StorefrontCheckout::class)->create(
+                $product,
+                null,
+                ['name' => 'Buyer', 'email' => 'buyer@test.com'],
+            );
+            $this->fail('Paid checkout started while Verify.et was unavailable.');
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $exception) {
+            $this->assertSame(503, $exception->getStatusCode());
+        }
 
-        $this->assertSame(337, $order->commission_bps);
-        $this->assertSame(337, $order->platform_fee_cents);
-        $this->assertSame(9663, $order->creator_earnings_cents);
-        $this->assertSame(3.37, (float) $order->platform_fee_percent);
+        $this->assertSame(0, \App\Storefront\Models\StorefrontOrder::query()->where('digital_product_id', $product->id)->count());
     }
 
     public function testAdminConfigChangeDrivesBackend(): void
@@ -529,7 +511,8 @@ class EntitlementSystemTest extends TestCase
         $this->assertContains('5 free products', $data['pricing_features']);
         $this->assertContains('5 paid products', $data['pricing_features']);
         $this->assertContains('1 GB storage', $data['pricing_features']);
-        $this->assertContains('10% Linket transaction fee', $data['pricing_features']);
+        $this->assertContains('No commission on new sales', $data['pricing_features']);
+        $this->assertContains('10 lifetime verified sales', $data['pricing_features']);
 
         // The charge fact is pinned as a literal, not just the displayed string:
         // a half-edit (commission 500 + display "10%") fails here.
@@ -537,7 +520,7 @@ class EntitlementSystemTest extends TestCase
         if (is_string($benefits)) {
             $benefits = json_decode($benefits, true);
         }
-        $this->assertSame(1000, (int) $benefits['commission_bps']);
+        $this->assertSame(150, (int) $benefits['commission_bps']);
     }
 
     public function testMarkingNewDefaultPlanClearsOldDefault(): void

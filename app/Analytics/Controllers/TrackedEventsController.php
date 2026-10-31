@@ -123,6 +123,7 @@ class TrackedEventsController extends Controller
             'start_date' => 'date',
             'end_date' => 'date',
             'timezone' => 'string',
+            'dashboard' => 'boolean',
 
             'user_id' => 'integer',
             'workspace_id' => 'string',

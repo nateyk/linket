@@ -122,7 +122,7 @@ class ProductUpdateRevertTest extends TestCase
 
         $this->stateful()->actingAs($admin)->postJson(
             "/api/v1/admin/items/{$product->id}/reject",
-            ['reason' => 'No'],
+            ['reason' => 'Not approved'],
         )->assertOk();
 
         $this->assertSame('rejected', $product->fresh()->status);
@@ -221,7 +221,7 @@ class ProductUpdateRevertTest extends TestCase
 
         $this->stateful()->actingAs($admin)->postJson(
             "/api/v1/admin/items/{$product->id}/reject",
-            ['reason' => 'No'],
+            ['reason' => 'Not approved'],
         )->assertOk();
 
         $reverted = $product->fresh();
@@ -233,7 +233,7 @@ class ProductUpdateRevertTest extends TestCase
         $this->assertDatabaseHas('digital_product_review_events', [
             'digital_product_id' => $product->id,
             'event' => 'update_reverted',
-            'reason' => 'No',
+            'reason' => 'Not approved',
             'actor_role' => 'admin',
         ]);
     }
@@ -263,7 +263,7 @@ class ProductUpdateRevertTest extends TestCase
 
         $this->stateful()->actingAs($admin)->postJson(
             "/api/v1/admin/items/{$product->id}/reject",
-            ['reason' => 'No'],
+            ['reason' => 'Not approved'],
         )->assertOk();
 
         $reverted = $product->fresh();
@@ -315,7 +315,7 @@ class ProductUpdateRevertTest extends TestCase
 
         $this->stateful()->actingAs($admin)->postJson(
             "/api/v1/admin/items/{$product->id}/reject",
-            ['reason' => 'No'],
+            ['reason' => 'Not approved'],
         )->assertOk();
 
         $reverted = $product->fresh();

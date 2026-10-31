@@ -45,7 +45,11 @@ class AdminDigitalProductsController extends Controller
             });
         });
 
-        $query->when($status->isNotEmpty(), fn($q) => $q->where('status', $status));
+        $query->when($status->isNotEmpty() && $status->toString() !== 'published', fn ($q) => $q->where('status', $status));
+
+        $query->when($status->toString() === 'published' || $scope === 'published', fn ($q) => $q
+            ->where('status', 'approved')
+            ->whereNull('review_requested_at'));
 
         $query->when($scope === 'updated', fn ($q) => $q
             ->where('status', 'approved')
@@ -66,6 +70,7 @@ class AdminDigitalProductsController extends Controller
             'total' => ['total' => DigitalProduct::count()],
             'pending_approval' => ['total' => DigitalProduct::where('status', 'pending_approval')->count()],
             'approved' => ['total' => DigitalProduct::where('status', 'approved')->count()],
+            'published' => ['total' => DigitalProduct::where('status', 'approved')->whereNull('review_requested_at')->count()],
             'rejected' => ['total' => DigitalProduct::where('status', 'rejected')->count()],
             'draft' => ['total' => DigitalProduct::where('status', 'draft')->count()],
             'updated' => ['total' => DigitalProduct::where('status', 'approved')->whereNotNull('review_requested_at')->count()],
@@ -87,6 +92,13 @@ class AdminDigitalProductsController extends Controller
             // do not carry model accessors.
             $row['has_pending_update'] = ($row['status'] ?? null) === 'approved'
                 && !empty($row['review_requested_at']);
+            if (isset($row['files']) && is_array($row['files'])) {
+                $row['files'] = array_map(static function (array $file): array {
+                    unset($file['url'], $file['hash']);
+
+                    return $file;
+                }, $row['files']);
+            }
 
             return $row;
         }, $paginated['data']);
@@ -122,6 +134,16 @@ class AdminDigitalProductsController extends Controller
         return new AdminDigitalProductResource($digitalProduct);
     }
 
+    public function downloadFile(DigitalProduct $digitalProduct, FileEntry $fileEntry)
+    {
+        Gate::authorize('admin.access');
+        $attached = $digitalProduct->files()->whereKey($fileEntry->id)->exists()
+            || (int) $digitalProduct->cover_file_entry_id === (int) $fileEntry->id;
+        abort_unless($attached, 404);
+
+        return app(\Common\Files\Response\FileResponseFactory::class)->create($fileEntry, 'attachment');
+    }
+
     public function approve(Request $request, DigitalProduct $digitalProduct)
     {
         Gate::authorize('admin.access');
@@ -138,10 +160,24 @@ class AdminDigitalProductsController extends Controller
     {
         Gate::authorize('admin.access');
 
-        $data = $request->validate(['reason' => 'nullable|string|max:2000']);
+        $data = $request->validate(['reason' => 'required|string|min:3|max:2000']);
 
         abort_if(
             $this->applyDecision($digitalProduct->getKey(), false, $data['reason'] ?? null, $request->user()) === null,
+            422,
+        );
+
+        return $digitalProduct->fresh()->load(['creator', 'cover', 'files', 'biolinks']);
+    }
+
+    public function reReview(Request $request, DigitalProduct $digitalProduct)
+    {
+        Gate::authorize('admin.access');
+
+        $data = $request->validate(['reason' => 'required|string|min:3|max:2000']);
+
+        abort_if(
+            $this->applyReReview($digitalProduct->getKey(), $data['reason'], $request->user()) === null,
             422,
         );
 
@@ -169,7 +205,7 @@ class AdminDigitalProductsController extends Controller
         $data = $request->validate([
             'ids' => 'required|array|min:1|max:100',
             'ids.*' => 'integer',
-            'reason' => 'nullable|string|max:2000',
+            'reason' => 'required|string|min:3|max:2000',
         ]);
 
         return response()->json(
@@ -277,6 +313,57 @@ class AdminDigitalProductsController extends Controller
         }
 
         return $result['product'];
+    }
+
+    private function applyReReview(int $id, string $reason, User $actor): ?DigitalProduct
+    {
+        $product = DB::transaction(function () use ($id, $reason, $actor): ?DigitalProduct {
+            $locked = DigitalProduct::query()
+                ->with('creator')
+                ->whereKey($id)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$locked || $locked->status !== 'approved' || $locked->review_requested_at !== null) {
+                return null;
+            }
+
+            $from = $locked->status;
+            $locked->update([
+                'status' => 'pending_approval',
+                'rejection_reason' => $reason,
+                'review_requested_at' => null,
+                'review_requested_by' => null,
+                'pending_review_snapshot' => null,
+            ]);
+
+            app(ProductReviewHistory::class)->record(
+                $locked,
+                're_review',
+                $from,
+                'pending_approval',
+                $actor,
+                'admin',
+                $reason,
+            );
+
+            return $locked;
+        });
+
+        if ($product === null) {
+            return null;
+        }
+
+        try {
+            $product->creator?->notify(new ProductModerationNotification($product->id, 're_review', $reason));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to queue product re-review notification', [
+                'product_id' => $product->id,
+                'message' => $e->getMessage(),
+            ]);
+        }
+
+        return $product;
     }
 
     /**

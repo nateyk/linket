@@ -133,10 +133,11 @@ it('rejects analytics for a course outside the active workspace', function () {
     $course = $product->course;
     analyticsCreateStructure($course);
 
-    $otherWorkspace = (new CreateWorkspace())->execute([
+    $otherWorkspace = \Common\Workspaces\Models\Workspace::query()->create([
         'name' => 'Other workspace',
         'owner_id' => $creator->id,
     ]);
+    $otherWorkspace->members()->create(['user_id' => $creator->id, 'is_owner' => true]);
     ActiveWorkspace::clearCache();
 
     analyticsStateful($this)

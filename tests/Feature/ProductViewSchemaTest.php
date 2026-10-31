@@ -62,8 +62,9 @@ class ProductViewSchemaTest extends TestCase
 
         $this->assertSame(2, $product->views()->count());
 
+        $productId = $product->id;
         $product->forceDelete();
 
-        $this->assertDatabaseCount('product_views', 0);
+        $this->assertSame(0, \Illuminate\Support\Facades\DB::table('product_views')->where('digital_product_id', $productId)->count());
     }
 }
