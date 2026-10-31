@@ -12,6 +12,7 @@ interface PresignedRequest {
   url: string;
   key: string;
   acl: string;
+  uploadGrant: string;
 }
 
 export class S3Upload implements UploadStrategy {
@@ -105,7 +106,7 @@ export class S3Upload implements UploadStrategy {
         clientName: this.file.name,
         clientSize: this.file.size,
         clientExtension: this.file.extension,
-        filename: this.presignedRequest!.key.split('/').pop(),
+        uploadGrant: this.presignedRequest!.uploadGrant,
         uploadType: this.config.uploadType,
         backendId: this.config.backendId,
       })

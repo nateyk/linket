@@ -6,6 +6,7 @@ use Common\Files\Actions\CreateFileEntry;
 use Common\Files\Events\FileUploaded;
 use Common\Files\FileEntry;
 use Common\Files\FileEntryPayload;
+use Common\Files\Uploads\UploadGrant;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Gate;
@@ -22,7 +23,8 @@ class S3FileEntryController extends Controller
             'clientMime' => 'nullable|string|max:255',
             'clientName' => 'required|string',
             'clientSize' => 'required|int',
-            'filename' => 'required|string',
+            'uploadGrant' => 'required|string',
+            'uploadStrategy' => 'nullable|in:multipart',
             'parentId' => 'nullable|exists:file_entries,id',
             'relativePath' => 'nullable|string',
             'workspaceId' => 'nullable|int',
@@ -30,9 +32,9 @@ class S3FileEntryController extends Controller
             'backendId' => 'required|string',
         ]);
 
-        $payload = new FileEntryPayload($validatedData);
-
-        Gate::authorize('store', [FileEntry::class, $payload->parentId]);
+        $resolved = app(UploadGrant::class)->resolve($request, $validatedData['uploadGrant'], ($validatedData['uploadStrategy'] ?? null) === 'multipart' ? 'multipart' : 'simple', true);
+        $payload = $resolved['payload'];
+        $validatedData = $resolved['grant']['metadata'];
 
         $fileEntry = (new CreateFileEntry())->execute($payload);
 

@@ -8,6 +8,7 @@ use Common\Files\Actions\StoreFile;
 use Common\Files\Events\FileUploaded;
 use Common\Files\FileEntry;
 use Common\Files\FileEntryPayload;
+use Common\Files\Uploads\SecureUpload;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\File;
@@ -33,6 +34,7 @@ class TusFileEntryController extends Controller
         if (!$tusData) {
             return abort(404);
         }
+        abort_unless($request->user() && (int) ($tusData['user_id'] ?? 0) === (int) $request->user()->id, 403);
 
         $uploadType = $tusData['metadata']['uploadType'] ?? null;
         $metadata = $tusData['metadata'];
@@ -43,11 +45,8 @@ class TusFileEntryController extends Controller
 
         $payload = new FileEntryPayload($metadata);
 
-        Gate::authorize('store', [
-            FileEntry::class,
-            $payload->parentId,
-            $uploadType,
-        ]);
+        app(SecureUpload::class)->assertAuthorized($request, $payload);
+        abort_unless(is_file($tusFilePath) && filesize($tusFilePath) === (int) $tusData['size'] && (int) ($tusData['offset'] ?? -1) === (int) $tusData['size'], 422, 'Upload is incomplete.');
 
         if (
             $payload->uploadType->name === 'digitalProductFiles' &&

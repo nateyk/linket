@@ -10,6 +10,7 @@ use Common\Files\Actions\StoreFile;
 use Common\Files\Events\FileUploaded;
 use Common\Files\FileEntry;
 use Common\Files\FileEntryPayload;
+use Common\Files\Uploads\SecureUpload;
 use Common\Files\Actions\FileUploadValidator;
 use Common\Files\QueryBuilder\FileEntriesQueryBuilder;
 use Common\Files\Resources\FileEntryResource;
@@ -137,16 +138,14 @@ class FileEntriesController extends Controller
         $parentId = (int) request('parentId') ?: null;
         request()->merge(['parentId' => $parentId]);
 
-        Gate::authorize('store', [FileEntry::class, request('parentId')]);
-
         $file = $request->file('file');
-        $payload = new FileEntryPayload($request->all());
+        $payload = app(SecureUpload::class)->prepare($request, $request->all(), $file)['payload'];
         $detectedMime = $file instanceof UploadedFile
             ? ($file->getMimeType() ?: $payload->clientMime)
             : $payload->clientMime;
         $validationMime = in_array($payload->uploadType->name, ['digitalProductFiles', 'digitalProductSamples'], true)
             ? $detectedMime
-            : $payload->clientMime;
+            : $detectedMime;
 
         $request->validate([
             'file' => [

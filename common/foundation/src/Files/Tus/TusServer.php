@@ -10,6 +10,7 @@ use Common\Files\Tus\Exceptions\OutOfRangeException;
 use Common\Files\Tus\TusCache;
 use Common\Files\Tus\TusFile;
 use Common\Files\Uploads\Uploads;
+use Common\Files\Uploads\SecureUpload;
 use Illuminate\Support\Arr;
 use Ramsey\Uuid\Uuid;
 use Symfony\Component\HttpFoundation\Request;
@@ -111,6 +112,7 @@ class TusServer
             return $this->response(null, Response::HTTP_NOT_FOUND);
         }
 
+        abort_unless(request()->user() && (int) ($tusData['user_id'] ?? 0) === (int) request()->user()->id, Response::HTTP_FORBIDDEN);
         $offset = $tusData['offset'] ?? false;
 
         if ($offset === false) {
@@ -128,7 +130,12 @@ class TusServer
 
     protected function handlePost(): Response
     {
+        abort_unless(request()->user(), Response::HTTP_UNAUTHORIZED);
         $meta = $this->extractMeta();
+        $secured = app(SecureUpload::class)->prepare(request(), $meta);
+        $meta = $secured['metadata'];
+        $length = request()->header('Upload-Length');
+        abort_unless(is_string($length) && preg_match('/^\d+$/D', $length) === 1 && (int) $length === (int) $meta['clientSize'], Response::HTTP_UNPROCESSABLE_ENTITY, 'Upload length does not match file metadata.');
         $errors = FileUploadValidator::validateForUploadType(
             uploadType: Uploads::type(Arr::get($meta, 'uploadType')),
             fileSize: Arr::get($meta, 'clientSize'),
@@ -156,7 +163,7 @@ class TusServer
             );
         }
 
-        $uploadKey = $this->getOrCreateUploadKey();
+        $uploadKey = Uuid::uuid4()->toString();
         $filePath = storage_path("tus/$uploadKey");
 
         $checksum = $this->getClientChecksum();
@@ -172,7 +179,8 @@ class TusServer
                 'checksum' => $checksum,
                 'location' => $location,
                 'file_path' => $filePath,
-                'metadata' => $this->extractMeta(),
+                'metadata' => $meta,
+                'user_id' => (int) request()->user()->id,
                 'created_at' => Carbon::now()->timestamp,
                 'expires_at' => $formattedExpiresAt,
             ],
@@ -193,6 +201,7 @@ class TusServer
             return $this->response(null, Response::HTTP_GONE);
         }
 
+        abort_unless(request()->user() && (int) ($tusData['user_id'] ?? 0) === (int) request()->user()->id, Response::HTTP_FORBIDDEN);
         $status = $this->verifyPatchRequest($tusData);
         if (Response::HTTP_OK !== $status) {
             return $this->response(null, $status);
@@ -261,6 +270,7 @@ class TusServer
     {
         $uploadKey = $this->getUploadKeyFromUrl();
         $tusData = $this->cache->get($uploadKey);
+        abort_unless(request()->user() && (int) ($tusData['user_id'] ?? 0) === (int) request()->user()->id, Response::HTTP_FORBIDDEN);
         $resource = $tusData['file_path'] ?? null;
 
         if (!$resource) {
