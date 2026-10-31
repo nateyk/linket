@@ -80,7 +80,7 @@ class FileEntryPayload
         $this->relativePath = $this->getRelativePath();
         $this->diskPrefix = $this->getDiskPrefix();
         $this->parentId = (int) Arr::get($this->data, 'parentId') ?: null;
-        $this->ownerId = (int) Arr::get($this->data, 'ownerId') ?: Auth::id();
+        $this->ownerId = Auth::id();
         $this->size =
             $this->data['file_size'] ??
             ($this->data['size'] ?? $this->data['clientSize']);
@@ -100,9 +100,8 @@ class FileEntryPayload
     {
         $keepOriginalName = settings('filesystems.keep_original_name');
 
-        if (isset($this->data['filename'])) {
-            return $this->data['filename'];
-        }
+        // Storage keys are never taken directly from request metadata.
+        // S3 registration must use its separately authorized upload key.
 
         $uuid = Str::uuid();
 
