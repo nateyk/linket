@@ -22,6 +22,9 @@ export type Product = {
   is_default: boolean;
   active: boolean;
   hidden: boolean;
+  system_key?: string | null;
+  subscriptions_count?: number;
+  active_subscriptions_count?: number;
   trial_period_days: number;
   /** @nullable */
   storefront_benefits: ProductStorefrontBenefits;

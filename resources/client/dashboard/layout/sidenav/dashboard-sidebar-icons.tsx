@@ -12,7 +12,7 @@ import {
   PictureInPicture2Icon,
   QrCodeIcon,
   SearchIcon,
-  WalletCardsIcon,
+  ShoppingBagIcon,
 } from 'lucide-react';
 import {ReactElement, SVGProps} from 'react';
 
@@ -40,7 +40,9 @@ export const dashboardSidebarIcons: Record<
   '/dashboard/search': <SearchIcon />,
   '/dashboard/items': <PackageIcon />,
   '/dashboard/services': <BriefcaseBusinessIcon />,
-  '/dashboard/sales-payouts': <WalletCardsIcon />,
+  '/dashboard/orders': <ShoppingBagIcon />,
+  '/dashboard/sales-payouts': <ShoppingBagIcon />,
+  '/dashboard/sales-payments': <ShoppingBagIcon />,
 };
 
 for (const [key, value] of Object.entries(sharedDashboardIcons)) {

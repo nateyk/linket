@@ -4,7 +4,9 @@ import {Spinner} from '@shadcn/spinner/spinner';
 import {formatMoney as formatPrice} from '@ui/i18n/format-money';
 import {FormattedDate} from '@ui/i18n/formatted-date';
 import {Trans} from '@ui/i18n/trans';
-import {MailIcon, StarIcon} from 'lucide-react';
+import {FlagIcon, MailIcon, StarIcon} from 'lucide-react';
+import {useState} from 'react';
+import {PortalPaymentDisputeDialog} from './portal-payment-dispute-dialog';
 
 export type PortalOrdersTableOrder = {
   id: string;
@@ -45,6 +47,8 @@ export function PortalOrdersTable({
   onResend: (order: PortalOrdersTableOrder) => Promise<void>;
   onReview?: (order: PortalOrdersTableOrder) => void;
 }) {
+  const [disputeOrder, setDisputeOrder] = useState<PortalOrdersTableOrder>();
+
   if (!orders.length) {
     return (
       <p className="text-sm text-muted-foreground">
@@ -145,6 +149,16 @@ export function PortalOrdersTable({
                       )}
                       <Trans message="Receipt" />
                     </Button>
+                    {!order.is_demo ? (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setDisputeOrder(order)}
+                      >
+                        <FlagIcon data-icon="inline-start" />
+                        <Trans message="Report" />
+                      </Button>
+                    ) : null}
                   </div>
                 </td>
               </tr>
@@ -152,6 +166,16 @@ export function PortalOrdersTable({
           </tbody>
         </table>
       </div>
+      {disputeOrder ? (
+        <PortalPaymentDisputeDialog
+          orderId={disputeOrder.id}
+          productTitle={disputeOrder.product_title}
+          open={!!disputeOrder}
+          onOpenChange={open => {
+            if (!open) setDisputeOrder(undefined);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

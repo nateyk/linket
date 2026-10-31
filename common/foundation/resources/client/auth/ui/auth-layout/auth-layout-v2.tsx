@@ -2,6 +2,7 @@ import {Separator} from '@shadcn/separator';
 import {Trans} from '@ui/i18n/trans';
 import {useSettings} from '@ui/settings/use-settings';
 import {useIsDarkMode} from '@ui/themes/use-is-dark-mode';
+import {getAssetUrl} from '@ui/utils/urls/get-asset-url';
 import {ReactNode} from 'react';
 import {Link} from 'react-router';
 import {Command, Globe} from 'lucide-react';
@@ -68,7 +69,9 @@ export function AuthLayoutV2({children, topAction}: AuthLayoutV2Props) {
                   className="flex w-fit shrink-0 items-center"
                 >
                   <img
-                    src={isDarkMode ? branding.logo_light : branding.logo_dark}
+                    src={getAssetUrl(
+                      isDarkMode ? branding.logo_light : branding.logo_dark,
+                    )}
                     alt=""
                     className="block h-10 w-auto"
                   />

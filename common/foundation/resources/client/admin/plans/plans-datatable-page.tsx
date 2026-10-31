@@ -108,15 +108,15 @@ function SyncPlansButton() {
       onClick={() => {
         syncPlans.mutate(undefined, {
           onSuccess: () => {
-            toast.success(<Trans message="Plans synced" />);
+            toast.success(<Trans message="Plan list refreshed" />);
           },
           onError: err =>
-            showHttpErrorToast(err, <Trans message="Could not sync plans" />),
+            showHttpErrorToast(err, <Trans message="Could not refresh plans" />),
         });
       }}
     >
       <RefreshCcwIcon />
-      <Trans message="Sync plans" />
+      <Trans message="Refresh plans" />
     </Button>
   );
 }

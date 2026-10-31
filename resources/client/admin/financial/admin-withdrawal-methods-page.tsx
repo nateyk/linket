@@ -80,143 +80,201 @@ export function Component() {
       <DashboardLayout.SectionHeader>
         <DashboardLayout.SidebarToggle />
         <DashboardLayout.SectionTitle>
-          <Trans message="Withdrawal methods" />
+          <Trans message="Creator withdrawal methods" />
           <InfoTrigger />
         </DashboardLayout.SectionTitle>
-        <Button
-          variant="outline"
-          nativeButton={false}
-          render={<Link to="/admin/withdrawals" />}
-        >
-          <ArrowLeftIcon />
-          <Trans message="Withdrawals" />
-        </Button>
-        <Button
-          color="primary"
-          nativeButton={false}
-          render={<Link to="/admin/financial/withdrawal-methods/create" />}
-        >
-          <PlusIcon />
-          <Trans message="New method" />
-        </Button>
+        <div className="ms-auto flex min-w-0 shrink-0 flex-wrap items-center justify-end gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="hidden sm:inline-flex"
+            nativeButton={false}
+            render={<Link to="/admin/financial/withdrawal-methods" />}
+          >
+            <Trans message="Receiving accounts" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="hidden md:inline-flex"
+            nativeButton={false}
+            render={<Link to="/admin/withdrawals" />}
+          >
+            <ArrowLeftIcon />
+            <Trans message="Withdrawals" />
+          </Button>
+          <Button
+            color="primary"
+            size="sm"
+            nativeButton={false}
+            render={<Link to="/admin/financial/withdrawal-methods/create" />}
+          >
+            <PlusIcon />
+            <span className="hidden xs:inline sm:inline">
+              <Trans message="New method" />
+            </span>
+          </Button>
+        </div>
       </DashboardLayout.SectionHeader>
-      <DashboardLayout.SectionContent className="overflow-y-auto">
-        <div className="mx-auto w-full max-w-5xl py-6">
+      <DashboardLayout.SectionContent className="min-w-0 overflow-x-hidden overflow-y-auto">
+        <div className="mx-auto w-full min-w-0 max-w-5xl px-4 py-6 sm:px-0">
+          <p className="mb-5 text-sm text-muted-foreground">
+            <Trans message="These legacy payout destinations are for creator withdrawals and historical Chapa records. Creator receiving-account reviews live under Receiving accounts." />
+          </p>
+          <div className="mb-4 flex flex-wrap gap-2 sm:hidden">
+            <Button
+              variant="outline"
+              size="sm"
+              nativeButton={false}
+              render={<Link to="/admin/financial/withdrawal-methods" />}
+            >
+              <Trans message="Receiving accounts" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              nativeButton={false}
+              render={<Link to="/admin/withdrawals" />}
+            >
+              <ArrowLeftIcon />
+              <Trans message="Withdrawals" />
+            </Button>
+          </div>
           {error && (
             <div className="mb-5 rounded-input border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
               {error}
             </div>
           )}
-          <Card.Root>
+          <Card.Root className="min-w-0">
             <Card.Header>
               <Card.Title>
-                <Trans message="Payout methods" />
+                <Trans message="Withdrawal destinations" />
               </Card.Title>
+              <Card.Description>
+                <Trans message="Hidden from the direct-payment checkout experience. Keep this list for authorized withdrawal operations only." />
+              </Card.Description>
             </Card.Header>
-            <Card.Content className="overflow-x-auto">
-              <Table.Root>
-                <Table.Header>
-                  <Table.Row>
-                    <Table.Head>
-                      <Trans message="Method" />
-                    </Table.Head>
-                    <Table.Head>
-                      <Trans message="Destination label" />
-                    </Table.Head>
-                    <Table.Head>
-                      <Trans message="Range" />
-                    </Table.Head>
-                    <Table.Head>
-                      <Trans message="Status" />
-                    </Table.Head>
-                    <Table.Head />
-                  </Table.Row>
-                </Table.Header>
-                <Table.Body>
-                  {loading ? (
-                    <LoadingRows />
-                  ) : methods.length ? (
-                    methods.map(method => (
-                      <Table.Row key={method.id}>
-                        <Table.Cell>
-                          <div className="flex items-center gap-3">
-                            <div className="flex size-9 items-center justify-center rounded-full bg-muted">
-                              <BanknoteIcon className="size-4" />
-                            </div>
-                            <div>
-                              <p className="font-medium">{method.name}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {method.code}
-                              </p>
-                            </div>
+            <Card.Content className="min-w-0">
+              {loading ? (
+                <div className="flex flex-col gap-3">
+                  {Array.from({length: 4}, (_, index) => (
+                    <div
+                      key={index}
+                      className="h-16 animate-pulse rounded-input bg-muted"
+                    />
+                  ))}
+                </div>
+              ) : methods.length === 0 ? (
+                <div className="flex flex-col items-center py-12 text-center">
+                  <InboxIcon className="mb-3 size-10 text-muted-foreground/50" />
+                  <p className="font-medium">
+                    <Trans message="No withdrawal methods" />
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    <Trans message="Create a method so creators can request payouts." />
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="hidden min-w-0 overflow-x-auto md:block">
+                    <Table.Root>
+                      <Table.Header>
+                        <Table.Row>
+                          <Table.Head>
+                            <Trans message="Method" />
+                          </Table.Head>
+                          <Table.Head>
+                            <Trans message="Destination label" />
+                          </Table.Head>
+                          <Table.Head>
+                            <Trans message="Range" />
+                          </Table.Head>
+                          <Table.Head>
+                            <Trans message="Status" />
+                          </Table.Head>
+                          <Table.Head />
+                        </Table.Row>
+                      </Table.Header>
+                      <Table.Body>
+                        {methods.map(method => (
+                          <Table.Row key={method.id}>
+                            <Table.Cell>
+                              <MethodIdentity method={method} />
+                            </Table.Cell>
+                            <Table.Cell className="text-muted-foreground">
+                              {method.destination_label ?? '—'}
+                            </Table.Cell>
+                            <Table.Cell className="text-muted-foreground">
+                              {formatRange(method)}
+                            </Table.Cell>
+                            <Table.Cell>
+                              <StatusBadge active={method.is_active} />
+                            </Table.Cell>
+                            <Table.Cell>
+                              <div className="flex justify-end">
+                                <MethodActions
+                                  method={method}
+                                  onDelete={() => setDeleteTarget(method)}
+                                />
+                              </div>
+                            </Table.Cell>
+                          </Table.Row>
+                        ))}
+                      </Table.Body>
+                    </Table.Root>
+                  </div>
+
+                  <div className="flex flex-col gap-3 md:hidden">
+                    {methods.map(method => (
+                      <Card.Root key={method.id} size="sm" className="min-w-0">
+                        <Card.Header className="flex-row items-start justify-between gap-2 space-y-0">
+                          <div className="min-w-0">
+                            <Card.Title className="truncate text-base">
+                              {method.name}
+                            </Card.Title>
+                            <Card.Description className="truncate">
+                              {method.code}
+                            </Card.Description>
                           </div>
-                        </Table.Cell>
-                        <Table.Cell className="text-muted-foreground">
-                          {method.destination_label ?? '—'}
-                        </Table.Cell>
-                        <Table.Cell className="text-muted-foreground">
-                          {formatRange(method)}
-                        </Table.Cell>
-                        <Table.Cell>
-                          {method.is_active ? (
-                            <Badge variant="positive">
-                              <Trans message="Active" />
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline">
-                              <Trans message="Inactive" />
-                            </Badge>
-                          )}
-                        </Table.Cell>
-                        <Table.Cell>
-                          <div className="flex justify-end">
-                            <Dropdown>
-                              <Dropdown.Trigger
-                                className="flex size-8 items-center justify-center rounded-input hover:bg-muted"
-                                aria-label="Actions"
-                              >
-                                <EllipsisVerticalIcon className="size-4 text-muted-foreground" />
-                              </Dropdown.Trigger>
-                              <Dropdown.Content align="end">
-                                <Dropdown.Item
-                                  onClick={() =>
-                                    (window.location.href = `/admin/financial/withdrawal-methods/${method.id}/edit`)
-                                  }
-                                >
-                                  <EditIcon className="size-4" />
-                                  <Trans message="Edit" />
-                                </Dropdown.Item>
-                                <Dropdown.Separator />
-                                <Dropdown.Item
-                                  className="text-destructive focus:text-destructive"
-                                  onClick={() => setDeleteTarget(method)}
-                                >
-                                  <TrashIcon className="size-4" />
-                                  <Trans message="Delete" />
-                                </Dropdown.Item>
-                              </Dropdown.Content>
-                            </Dropdown>
-                          </div>
-                        </Table.Cell>
-                      </Table.Row>
-                    ))
-                  ) : (
-                    <Table.Row>
-                      <Table.Cell colSpan={5}>
-                        <div className="flex flex-col items-center py-12 text-center">
-                          <InboxIcon className="mb-3 size-10 text-muted-foreground/50" />
-                          <p className="font-medium">
-                            <Trans message="No withdrawal methods" />
+                          <MethodActions
+                            method={method}
+                            onDelete={() => setDeleteTarget(method)}
+                          />
+                        </Card.Header>
+                        <Card.Content className="flex flex-col gap-2 text-sm">
+                          <StatusBadge active={method.is_active} />
+                          <p className="text-muted-foreground">
+                            <Trans message="Destination" />:{' '}
+                            {method.destination_label ?? '—'}
                           </p>
-                          <p className="mt-1 text-sm text-muted-foreground">
-                            <Trans message="Create a method so creators can request payouts." />
+                          <p className="text-muted-foreground">
+                            <Trans message="Range" />: {formatRange(method)}
                           </p>
-                        </div>
-                      </Table.Cell>
-                    </Table.Row>
-                  )}
-                </Table.Body>
-              </Table.Root>
+                          {method.instructions ? (
+                            <p className="break-words text-muted-foreground">
+                              {method.instructions}
+                            </p>
+                          ) : null}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="w-full"
+                            nativeButton={false}
+                            render={
+                              <Link
+                                to={`/admin/financial/withdrawal-methods/${method.id}/edit`}
+                              />
+                            }
+                          >
+                            <EditIcon />
+                            <Trans message="Edit" />
+                          </Button>
+                        </Card.Content>
+                      </Card.Root>
+                    ))}
+                  </div>
+                </>
+              )}
             </Card.Content>
           </Card.Root>
         </div>
@@ -224,7 +282,12 @@ export function Component() {
 
       <Dialog.Root
         open={!!deleteTarget}
-        onOpenChange={open => !open && setDeleteTarget(undefined)}
+        disablePointerDismissal={deleting}
+        onOpenChange={open => {
+          if (!open && !deleting) {
+            setDeleteTarget(undefined);
+          }
+        }}
       >
         <Dialog.Portal>
           <Dialog.Backdrop />
@@ -264,26 +327,74 @@ export function Component() {
   );
 }
 
+function MethodIdentity({method}: {method: WithdrawalMethod}) {
+  return (
+    <div className="flex min-w-0 items-center gap-3">
+      <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted">
+        <BanknoteIcon className="size-4" />
+      </div>
+      <div className="min-w-0">
+        <p className="truncate font-medium">{method.name}</p>
+        <p className="truncate text-xs text-muted-foreground">{method.code}</p>
+      </div>
+    </div>
+  );
+}
+
+function StatusBadge({active}: {active: boolean}) {
+  return active ? (
+    <Badge variant="positive">
+      <Trans message="Active" />
+    </Badge>
+  ) : (
+    <Badge variant="outline">
+      <Trans message="Inactive" />
+    </Badge>
+  );
+}
+
+function MethodActions({
+  method,
+  onDelete,
+}: {
+  method: WithdrawalMethod;
+  onDelete: () => void;
+}) {
+  return (
+    <Dropdown>
+      <Dropdown.Trigger
+        className="flex size-8 items-center justify-center rounded-input hover:bg-muted"
+        aria-label="Actions"
+      >
+        <EllipsisVerticalIcon className="size-4 text-muted-foreground" />
+      </Dropdown.Trigger>
+      <Dropdown.Content align="end">
+        <Dropdown.Item
+          onClick={() =>
+            (window.location.href = `/admin/financial/withdrawal-methods/${method.id}/edit`)
+          }
+        >
+          <EditIcon className="size-4" />
+          <Trans message="Edit" />
+        </Dropdown.Item>
+        <Dropdown.Separator />
+        <Dropdown.Item
+          className="text-destructive focus:text-destructive"
+          onClick={onDelete}
+        >
+          <TrashIcon className="size-4" />
+          <Trans message="Delete" />
+        </Dropdown.Item>
+      </Dropdown.Content>
+    </Dropdown>
+  );
+}
+
 function formatRange(method: WithdrawalMethod) {
   const min = method.minimum_amount_cents ?? 0;
   const max = method.maximum_amount_cents;
   const range = `${formatMoney(min)} – ${max != null ? formatMoney(max) : '∞'}`;
   return max != null || min > 0 ? range : '—';
-}
-
-
-function LoadingRows() {
-  return (
-    <>
-      {Array.from({length: 5}, (_, index) => (
-        <Table.Row key={index}>
-          <Table.Cell colSpan={5}>
-            <div className="h-7 animate-pulse rounded-input bg-muted" />
-          </Table.Cell>
-        </Table.Row>
-      ))}
-    </>
-  );
 }
 
 function InfoTrigger() {

@@ -3,8 +3,16 @@ import {useTrans} from '@ui/i18n/use-trans';
 import {useSettings} from '@ui/settings/use-settings';
 import {useIsDarkMode} from '@ui/themes/use-is-dark-mode';
 import {cn} from '@ui/utils/cn';
+import {getAssetUrl} from '@ui/utils/urls/get-asset-url';
 import {ReactNode} from 'react';
 import {Link} from 'react-router';
+
+function logoSrc(path?: string | null): string | undefined {
+  if (!path) {
+    return undefined;
+  }
+  return getAssetUrl(path);
+}
 
 type Props = {
   color?: 'dark' | 'light' | 'auto';
@@ -41,10 +49,11 @@ function CompactLogo({color, className, url}: Omit<Props, 'logoType'>) {
   const {trans} = useTrans();
 
   // fallback to light logo if dark logo is not available
-  const src =
+  const src = logoSrc(
     color === 'dark' && branding.logo_dark_mobile
       ? branding.logo_dark_mobile
-      : branding.logo_light_mobile;
+      : branding.logo_light_mobile,
+  );
 
   if (!src) return null;
 
@@ -58,15 +67,12 @@ function CompactLogo({color, className, url}: Omit<Props, 'logoType'>) {
 function AutoLogo({color, className, url}: Omit<Props, 'logoType'>) {
   const {branding} = useSettings();
 
-  let wideLogo: string;
-  let compactLogo: string;
-  if (color === 'light') {
-    wideLogo = branding.logo_light;
-    compactLogo = branding.logo_light_mobile;
-  } else {
-    wideLogo = branding.logo_dark;
-    compactLogo = branding.logo_dark_mobile;
-  }
+  const wideLogo = logoSrc(
+    color === 'light' ? branding.logo_light : branding.logo_dark,
+  );
+  const compactLogo = logoSrc(
+    color === 'light' ? branding.logo_light_mobile : branding.logo_dark_mobile,
+  );
 
   if (!wideLogo && !compactLogo) {
     return null;
@@ -76,7 +82,7 @@ function AutoLogo({color, className, url}: Omit<Props, 'logoType'>) {
     <WrapperLink url={url} ariaLabel={branding.site_name}>
       <picture>
         <source srcSet={compactLogo || wideLogo} media="(max-width: 768px)" />
-        <source srcSet={wideLogo} media="(min-width: 768px)" />
+        <source srcSet={wideLogo || compactLogo} media="(min-width: 768px)" />
         <img
           src={wideLogo || compactLogo}
           className={cn('block h-8 w-auto', className)}
@@ -90,10 +96,11 @@ function AutoLogo({color, className, url}: Omit<Props, 'logoType'>) {
 function WideLogo({color, className, url}: Omit<Props, 'logoType'>) {
   const {branding} = useSettings();
 
-  const src =
+  const src = logoSrc(
     color === 'dark' && branding.logo_dark
       ? branding.logo_dark
-      : branding.logo_light;
+      : branding.logo_light,
+  );
 
   if (!src) return null;
 

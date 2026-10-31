@@ -1,5 +1,6 @@
 import {useSettings} from '@ui/settings/use-settings';
 import {useIsDarkMode} from '@ui/themes/use-is-dark-mode';
+import {getAssetUrl} from '@ui/utils/urls/get-asset-url';
 import {ReactNode} from 'react';
 import {Link} from 'react-router';
 import authBgSvg from './auth-bg.svg';
@@ -25,7 +26,9 @@ export function AuthLayout({heading, children, message}: AuthPageProps) {
         className="mb-10 flex shrink-0 items-center gap-2.5"
       >
         <img
-          src={isDarkMode ? branding.logo_light : branding?.logo_dark}
+          src={getAssetUrl(
+            isDarkMode ? branding.logo_light : branding.logo_dark,
+          )}
           className="block h-10 w-auto"
           alt=""
         />

@@ -31,11 +31,22 @@ import {
 } from 'lucide-react';
 import {ReactNode, useMemo} from 'react';
 import {useOutletContext} from 'react-router';
+import {Link} from 'react-router';
 import {Area, AreaChart, CartesianGrid, XAxis, YAxis} from 'recharts';
 
 interface CommerceInsights {
   currency: string;
   period: {start: string; end: string};
+  direct_sales: {
+    paid_orders: number;
+    gross_sales_cents: number;
+    unique_customers: number;
+    pending_verifications: number;
+    payments_needing_review: number;
+    allowances_consumed: number;
+  };
+  direct_sales_trend: Array<{date: string; orders: number; gross_sales_cents: number}>;
+  creator_trend: Array<{date: string; new_creators: number}>;
   sales: {
     gross_sales_cents: number;
     refunds_cents: number;
@@ -45,7 +56,7 @@ interface CommerceInsights {
     paid_orders: number;
     unique_customers: number;
   };
-  subscriptions: {revenue_cents: number; active_paid: number};
+  subscriptions: {revenue_cents: number; direct_revenue_cents: number; active_paid: number; pro_creators: number; free_creators: number};
   payouts: {paid_cents: number; pending_cents: number};
   platform: {
     new_users: number;
@@ -53,6 +64,10 @@ interface CommerceInsights {
     total_products: number;
     published_products: number;
     selling_creators: number;
+    active_creators: number;
+    creator_count: number;
+    pro_creators: number;
+    free_creators: number;
   };
   trend: Array<{
     date: string;
@@ -71,6 +86,7 @@ interface CommerceInsights {
   }>;
   recent_orders: Array<{
     id: number;
+    product_id: number;
     uuid: string;
     buyer_name: string | null;
     buyer_email: string | null;
@@ -112,7 +128,7 @@ export function Component() {
 }
 
 function InsightsDashboard({data}: {data: CommerceInsights}) {
-  const {sales, subscriptions, payouts, platform, currency} = data;
+  const {sales, direct_sales, subscriptions, payouts, platform, currency} = data;
 
   return (
     <div className="flex min-w-0 flex-col gap-5">
@@ -155,7 +171,7 @@ function InsightsDashboard({data}: {data: CommerceInsights}) {
         />
         <MetricCard
           icon={WalletCardsIcon}
-          label={<Trans message="Creator earnings" />}
+          label={<Trans message="Historical creator earnings snapshots (legacy)" />}
           value={
             <FormattedCurrency
               valueInCents={sales.creator_earnings_cents}
@@ -166,7 +182,7 @@ function InsightsDashboard({data}: {data: CommerceInsights}) {
         />
         <MetricCard
           icon={LandmarkIcon}
-          label={<Trans message="Linket fees" />}
+          label={<Trans message="Historical platform fee snapshots (legacy commission)" />}
           value={
             <FormattedCurrency
               valueInCents={sales.platform_fees_cents}
@@ -189,6 +205,17 @@ function InsightsDashboard({data}: {data: CommerceInsights}) {
         />
       </div>
 
+      <section className="flex min-w-0 flex-col gap-3">
+        <h3 className="text-sm font-medium"><Trans message="Direct sales performance" /></h3>
+        <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <MetricCard icon={CircleDollarSignIcon} label={<Trans message="Verified direct sales volume" />} value={<FormattedCurrency valueInCents={direct_sales.gross_sales_cents} currency={currency} />} tone="positive" />
+          <MetricCard icon={ReceiptTextIcon} label={<Trans message="Verified direct orders" />} value={<FormattedNumber value={direct_sales.paid_orders} />} detail={<Trans message=":count unique customers" values={{count: <FormattedNumber value={direct_sales.unique_customers} />}} />} tone="neutral" />
+          <MetricCard icon={CircleAlertIcon} label={<Trans message="Pending verifications" />} value={<FormattedNumber value={direct_sales.pending_verifications} />} tone="warning" />
+          <MetricCard icon={CircleAlertIcon} label={<Trans message="Payments needing review" />} value={<FormattedNumber value={direct_sales.payments_needing_review} />} tone="warning" />
+        </div>
+        <p className="text-sm text-muted-foreground"><Trans message="Free verified-sales allowances consumed in this period: :count" values={{count: <FormattedNumber value={direct_sales.allowances_consumed} />}} /></p>
+      </section>
+
       <OperationalMetrics
         currency={currency}
         sales={sales}
@@ -196,10 +223,19 @@ function InsightsDashboard({data}: {data: CommerceInsights}) {
         payouts={payouts}
       />
 
+      <section className="flex min-w-0 flex-col gap-3">
+        <h3 className="text-sm font-medium"><Trans message="Free vs Pro creators" /></h3>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <MetricCard icon={UsersIcon} label={<Trans message="Free creators" />} value={<FormattedNumber value={platform.free_creators} />} tone="neutral" />
+          <MetricCard icon={CreditCardIcon} label={<Trans message="Active Pro creators" />} value={<FormattedNumber value={platform.pro_creators} />} tone="positive" />
+        </div>
+      </section>
+
       <div className="grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-2">
-        <SalesTrend data={data} />
+        <DirectSalesTrend data={data} />
         <PlatformSnapshot platform={platform} />
       </div>
+      <CreatorGrowth data={data} />
       <div className="grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-2">
         <TopProducts data={data} />
         <RecentOrders data={data} />
@@ -263,10 +299,20 @@ function OperationalMetrics({
     },
     {
       icon: CreditCardIcon,
-      label: <Trans message="Subscription revenue" />,
+      label: <Trans message="Legacy Chapa subscription revenue" />,
       value: (
         <FormattedCurrency
           valueInCents={subscriptions.revenue_cents}
+          currency={currency}
+        />
+      ),
+    },
+    {
+      icon: CreditCardIcon,
+      label: <Trans message="Confirmed direct Pro subscription revenue" />,
+      value: (
+        <FormattedCurrency
+          valueInCents={subscriptions.direct_revenue_cents}
           currency={currency}
         />
       ),
@@ -278,14 +324,14 @@ function OperationalMetrics({
     },
     {
       icon: HandCoinsIcon,
-      label: <Trans message="Payouts completed" />,
+      label: <Trans message="Historical payouts completed" />,
       value: (
         <FormattedCurrency valueInCents={payouts.paid_cents} currency={currency} />
       ),
     },
     {
       icon: BanknoteArrowDownIcon,
-      label: <Trans message="Payouts pending" />,
+      label: <Trans message="Historical payouts pending" />,
       value: (
         <FormattedCurrency
           valueInCents={payouts.pending_cents}
@@ -298,7 +344,7 @@ function OperationalMetrics({
   return (
     <section className="flex min-w-0 flex-col gap-3">
       <h3 className="text-sm font-medium">
-        <Trans message="Revenue operations" />
+          <Trans message="Subscription and historical payout operations" />
       </h3>
       <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {metrics.map(({icon: Icon, label, value}, index) => (
@@ -422,6 +468,7 @@ function PlatformSnapshot({platform}: {platform: CommerceInsights['platform']}) 
     {icon: ShoppingBagIcon, label: <Trans message="Digital products" />, value: platform.total_products},
     {icon: PackageCheckIcon, label: <Trans message="Published products" />, value: platform.published_products},
     {icon: HandCoinsIcon, label: <Trans message="Creators with sales" />, value: platform.selling_creators},
+    {icon: UsersIcon, label: <Trans message="Active creators in period" />, value: platform.active_creators},
   ];
 
   return (
@@ -447,6 +494,23 @@ function PlatformSnapshot({platform}: {platform: CommerceInsights['platform']}) 
       </Card.Content>
     </Card>
   );
+}
+
+function DirectSalesTrend({data}: {data: CommerceInsights}) {
+  const {localeCode} = useSelectedLocale();
+  const chartData = data.direct_sales_trend.map(item => ({...item, gross: item.gross_sales_cents / 100}));
+  return <Card size="sm" className="min-w-0">
+    <Card.Header><Card.Title><Trans message="Verified direct sales trend" /></Card.Title><Card.Description><Trans message="Confirmed order volume and ETB sales for the selected dates" /></Card.Description></Card.Header>
+    <Card.Content className="relative h-64 min-w-0 md:h-72">
+      {chartData.some(item => item.orders > 0) ? <Chart.Container className="size-full"><AreaChart data={chartData}><CartesianGrid vertical={false} /><XAxis dataKey="date" tickFormatter={value => new Intl.DateTimeFormat(localeCode, {month: 'short', day: 'numeric'}).format(new Date(`${value}T00:00:00Z`))} /><YAxis hide /><Chart.Tooltip formatter={(value, name) => name === 'gross' ? [<FormattedCurrency valueInCents={Number(value) * 100} currency={data.currency} />, 'ETB sales'] : [value, 'Orders']} /><Area type="monotone" dataKey="gross" name="Verified sales" stroke="var(--chart-1)" fill="var(--chart-1)" fillOpacity={0.15} /></AreaChart></Chart.Container> : <CompactEmptyState message={<Trans message="No verified direct sales in this period." />} />}
+    </Card.Content>
+  </Card>;
+}
+
+function CreatorGrowth({data}: {data: CommerceInsights}) {
+  return <Card size="sm" className="min-w-0"><Card.Header><Card.Title><Trans message="Creator growth" /></Card.Title><Card.Description><Trans message="New account registrations by day" /></Card.Description></Card.Header><Card.Content className="relative h-56 min-w-0">
+    {data.creator_trend.some(item => item.new_creators > 0) ? <Chart.Container className="size-full"><AreaChart data={data.creator_trend}><CartesianGrid vertical={false} /><XAxis dataKey="date" /><YAxis hide /><Chart.Tooltip /><Area type="monotone" dataKey="new_creators" name="New creators" stroke="var(--chart-2)" fill="var(--chart-2)" fillOpacity={0.12} /></AreaChart></Chart.Container> : <CompactEmptyState message={<Trans message="No new creators in this period." />} />}
+  </Card.Content></Card>;
 }
 
 function TopProducts({data}: {data: CommerceInsights}) {
@@ -504,6 +568,7 @@ function RecentOrders({data}: {data: CommerceInsights}) {
     <Card size="sm" className="min-w-0">
       <Card.Header>
         <Card.Title><Trans message="Recent sales" /></Card.Title>
+        <Card.Action><Link to="/admin/items/payment-methods" className="text-sm text-primary underline"><Trans message="Filter and page through payment orders" /></Link></Card.Action>
       </Card.Header>
       <Card.Content className="min-w-0 overflow-x-auto px-0!">
         {data.recent_orders.length ? (
@@ -527,7 +592,7 @@ function RecentOrders({data}: {data: CommerceInsights}) {
                         <FormattedDate date={order.paid_at} preset="short" /> · {order.creator_name}
                       </div>
                     </Table.Cell>
-                    <Table.Cell className="max-w-52"><div className="truncate">{order.product_title}</div></Table.Cell>
+                    <Table.Cell className="max-w-52"><Link to={`/admin/items/${order.product_id}`} className="truncate text-primary underline">{order.product_title}</Link></Table.Cell>
                     <Table.Cell>
                       <Badge variant={fullyRefunded ? 'destructive' : order.refunds_cents > 0 ? 'secondary' : 'positive'}>
                         {fullyRefunded ? <Trans message="Refunded" /> : order.refunds_cents > 0 ? <Trans message="Partially refunded" /> : <Trans message="Paid" />}

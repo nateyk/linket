@@ -67,10 +67,8 @@ describe('buyer payment dialog', () => {
       'formatPrice(product.price_cents, product.currency)',
     );
     // The submit action admits that payment happens on the provider's page.
-    expect(page).toContain("'Continue to secure checkout'");
-    expect(page).toContain(
-      "You'll continue to Chapa's secure checkout to pay, then return to this page.",
-    );
+    expect(page).toContain("'Show payment details'");
+    expect(page).toContain('Checkout is temporarily unavailable.');
     // The dialog names the counterparty: store identity travels with the
     // product recap, and the provider is named (Chapa powers checkout).
     expect(page).toContain('Sold by :store');

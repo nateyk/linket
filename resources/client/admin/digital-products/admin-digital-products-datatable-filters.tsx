@@ -18,9 +18,10 @@ export const AdminDigitalProductsDatatableFilters: BackendFilter[] = [
         {...props}
         placeholder={<Trans message="Select status" />}
         items={[
-          {label: <Trans message="Pending" />, value: 'pending_approval'},
+          {label: <Trans message="Pending review" />, value: 'pending_approval'},
           {label: <Trans message="Approved" />, value: 'approved'},
           {label: <Trans message="Rejected" />, value: 'rejected'},
+          {label: <Trans message="Published" />, value: 'published'},
         ]}
       />
     ),

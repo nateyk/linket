@@ -20,6 +20,30 @@ describe('creator product pending-update badge', () => {
   });
 });
 
+describe('creator product dashboard lifecycle controls', () => {
+  test('supports search, status filter, sort and pagination params', () => {
+    expect(source).toContain('params: {');
+    expect(source).toContain('search: search.trim() || undefined');
+    expect(source).toContain('status: status || undefined');
+    expect(source).toContain('sort: sort || undefined');
+    expect(source).toContain('per_page: 12');
+    expect(source).toContain('<Trans message="Previous" />');
+    expect(source).toContain('<Trans message="Next" />');
+  });
+
+  test('exposes duplicate, archive, restore and sales-safe delete actions', () => {
+    expect(source).toContain('/duplicate');
+    expect(source).toContain('/archive');
+    expect(source).toContain('/unarchive');
+    expect(source).toContain('<Trans message="Duplicate" />');
+    expect(source).toContain('<Trans message="Archive" />');
+    expect(source).toContain('<Trans message="Restore to draft" />');
+    expect(source).toContain('<Trans message="Delete blocked after sales" />');
+    expect(source).toContain('<Trans message="Resubmit for review" />');
+    expect(source).toContain('gross_revenue_cents');
+  });
+});
+
 describe('dropdown portal rendering', () => {
   test('all dropdowns use Dropdown.Content with Portal', () => {
     const triggerCount = (source.match(/Dropdown\.Trigger/g) || []).length;

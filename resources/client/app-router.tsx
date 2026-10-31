@@ -165,6 +165,10 @@ export const appRouter = createBrowserRouter(
                 lazy: () => import('@app/account-settings/kyc/kyc-page'),
               },
               {
+                path: 'receiving-accounts',
+                lazy: () => import('@app/account-settings/receiving-accounts-page'),
+              },
+              {
                 path: 'payouts',
                 lazy: () =>
                   import('@app/account-settings/payout-settings-page'),

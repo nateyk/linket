@@ -7,6 +7,7 @@
  */
 
 export type CrupdateProductBodyStorefrontBenefits = {
+  free_verified_sales?: number | null;
   /**
    * @minimum 0
    * @maximum 100

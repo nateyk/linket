@@ -73,6 +73,26 @@ describe('dashboard routes aliases', () => {
     expect(strs).toContain('biolinks');
   });
 
+  test('orders is canonical and legacy sales routes redirect with filters', async () => {
+    const children = dashboardRoutes[0].children!;
+    expect(children.map(c => c.path)).toContain('orders');
+
+    for (const path of ['sales-payouts', 'sales-payments']) {
+      const route = children.find(c => c.path === path) as any;
+      expect(route).toBeTruthy();
+      expect(route.lazy).toBeUndefined();
+
+      const redirected = await route.loader({
+        request: {
+          url: `http://localhost/dashboard/${path}?status=manual_review&page=2`,
+        },
+      });
+      expect(redirected.headers.get('Location')).toBe(
+        '/dashboard/orders?status=manual_review&page=2',
+      );
+    }
+  });
+
   test('sharedDashboardRoutes includes canonical stores/:storeId and legacy biolinks/:biolinkId', () => {
     const shared = sharedDashboardRoutes('dashboard').map((r: any) => r.path);
     expect(shared).toContain('stores/:storeId');
@@ -162,7 +182,15 @@ describe('dashboard homepage setting', () => {
     expect(normalizeHomepageValue('digital-products')).toBe('items');
     expect(normalizeHomepageValue('items')).toBe('items');
     expect(normalizeHomepageValue('stores')).toBe('stores');
+    expect(normalizeHomepageValue('sales-payouts')).toBe('orders');
+    expect(normalizeHomepageValue('orders')).toBe('orders');
     expect(normalizeHomepageValue(undefined)).toBe('');
+  });
+
+  test('index loader redirects the old sales homepage to orders', async () => {
+    mergeBootstrapData({settings: {dashboard: {homepage: 'sales-payouts'}}} as any);
+    const redirected = await indexRoute().loader();
+    expect(redirected.headers.get('Location')).toBe('/dashboard/orders');
   });
 
   test('index loader redirects a legacy stored homepage to items', async () => {

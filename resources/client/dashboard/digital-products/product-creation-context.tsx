@@ -189,11 +189,14 @@ export function ProductCreationProvider({
   // current state at the moment the idle window elapses.
   const latest = useRef({state, dirty, productId});
   latest.current = {state, dirty, productId};
+  const autoSaveInFlight = useRef(false);
+  const mounted = useRef(true);
 
   const autoSaveRef = useRef(
     debounce(async () => {
       const {state, dirty, productId} = latest.current;
-      if (!productId || !dirty) return;
+      if (!productId || !dirty || autoSaveInFlight.current) return;
+      autoSaveInFlight.current = true;
       try {
         const {apiClient} = await import('@common/http/query-client');
         await apiClient.put(`/api/v1/items/${productId}/draft`, {
@@ -210,16 +213,29 @@ export function ProductCreationProvider({
           biolink_ids: state.biolinkIds,
           type: state.productType,
         });
-        setDirty(false);
+        if (mounted.current && latest.current.state === state && latest.current.productId === productId) {
+          setDirty(false);
+        }
       } catch {
         // Silent fail - auto-save is best effort
+      } finally {
+        autoSaveInFlight.current = false;
+        if (mounted.current && latest.current.dirty && latest.current.state !== state && latest.current.productId === productId) {
+          autoSaveRef.current();
+        }
       }
     }, 1500),
   );
 
   // Leaving the page must cancel a pending draft PUT (just-debounce-it
   // exposes .cancel()), otherwise it fires against an unmounted tree.
-  useEffect(() => () => autoSaveRef.current.cancel(), []);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      autoSaveRef.current.cancel();
+    };
+  }, []);
 
   const autoSave = useCallback(() => {
     autoSaveRef.current();

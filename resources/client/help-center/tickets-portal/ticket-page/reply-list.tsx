@@ -13,13 +13,13 @@ import {ListViewEventItem} from '@app/dashboard/conversations/conversation-page/
 import {ListViewSubmittedFormData} from '@app/dashboard/conversations/conversation-page/messages/list/list-view-submitted-form-data';
 import {MessageListItemLayout} from '@app/dashboard/conversations/conversation-page/messages/list/message-list-item-layout';
 import {MessagesInfiniteScrollContainer} from '@app/dashboard/conversations/conversation-page/messages/messages-infinite-scroll-container';
-import {useConversationMessages} from '@app/dashboard/conversations/conversation-page/requests/use-conversation-messages';
 import {helpdeskChannel} from '@app/dashboard/helpdesk-channel';
 import {helpdeskQueries} from '@app/dashboard/helpdesk-queries';
 import {ConversationAttachment} from '@app/dashboard/types/conversation-attachment';
 import {echoStore} from '@app/dashboard/websockets/echo-store';
 import {WebsocketConversationEvent} from '@app/dashboard/websockets/websocket-conversation-event';
 import {TicketsPortalConversationResponse} from '@app/help-center/tickets-portal/ticket-page/conversation-response';
+import {useCustomerConversationMessages} from '@app/help-center/tickets-portal/ticket-page/use-customer-conversation-messages';
 import {queryClient} from '@common/http/query-client';
 import {Fragment, useEffect} from 'react';
 
@@ -27,7 +27,7 @@ interface Props {
   data: TicketsPortalConversationResponse;
 }
 export function ReplyList({data}: Props) {
-  const query = useConversationMessages(data.conversation.id);
+  const query = useCustomerConversationMessages(data.conversation.id);
   const messages = query.data?.items ?? [];
 
   // invalidate messages query when new message is created on backend for this ticket
@@ -39,7 +39,7 @@ export function ReplyList({data}: Props) {
       callback: e => {
         if (e.conversations.every(c => c.id === data.conversation.id)) {
           queryClient.invalidateQueries({
-            queryKey: helpdeskQueries.conversations.messages(
+            queryKey: helpdeskQueries.conversations.customerMessages(
               data.conversation.id,
             ).queryKey,
           });

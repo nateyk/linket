@@ -85,7 +85,7 @@ export function Component() {
           is_active: isActive,
         },
       );
-      navigate('/admin/financial/withdrawal-methods');
+      navigate('/admin/financial/withdrawal-methods/legacy');
     } catch (e: unknown) {
       setError(extractError(e));
     } finally {
@@ -113,7 +113,7 @@ export function Component() {
         <Button
           variant="outline"
           nativeButton={false}
-          render={<Link to="/admin/financial/withdrawal-methods" />}
+          render={<Link to="/admin/financial/withdrawal-methods/legacy" />}
         >
           <ArrowLeftIcon />
           <Trans message="Withdrawal methods" />

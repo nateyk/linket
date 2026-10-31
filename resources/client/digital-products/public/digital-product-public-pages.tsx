@@ -15,6 +15,7 @@ import {
 import {ProductCreatorCard} from '@app/digital-products/public/product-page/product-creator-card';
 import {ProductOverview} from '@app/digital-products/public/product-page/product-overview';
 import {ProductPricingCard} from '@app/digital-products/public/product-page/product-pricing-card';
+import {DirectPaymentModal, type DirectCheckout} from '@app/digital-products/public/direct-payment-modal';
 import {ProductSummary} from '@app/digital-products/public/product-page/product-summary';
 import {
   ProductTabs,
@@ -86,6 +87,10 @@ export type PublicDigitalProduct = {
   description?: string | null;
   learning_outcomes?: string[] | null;
   price_cents: number;
+  can_buy?: boolean;
+  verification_quota_exhausted?: boolean;
+  payment_mode?: 'direct' | 'free' | 'unavailable';
+  receiving_accounts?: Array<{id: number; provider: string; account_ending: string; account_name: string}>;
   currency: string;
   type?: string;
   is_course?: boolean;
@@ -169,8 +174,10 @@ export function PublicDigitalProductPage({
   const [buyerName, setBuyerName] = useState('');
   const [buyerEmail, setBuyerEmail] = useState('');
   const [buyerPhone, setBuyerPhone] = useState('');
+  const [paymentMethodId, setPaymentMethodId] = useState<number | undefined>();
   const [buyerError, setBuyerError] = useState<'name' | 'email'>();
   const [checkoutFailed, setCheckoutFailed] = useState(false);
+  const [directCheckout, setDirectCheckout] = useState<DirectCheckout | null>(null);
   const [reviewsSummary, setReviewsSummary] = useState<ProductReviewsSummary>();
   const checkoutCancelled =
     new URLSearchParams(window.location.search).get('checkout') === 'cancelled';
@@ -203,6 +210,14 @@ export function PublicDigitalProductPage({
       setBuyerError('email');
       return;
     }
+    if (data.product.payment_mode === 'unavailable') {
+      setCheckoutFailed(true);
+      return;
+    }
+    if (data.product.payment_mode === 'direct' && (data.product.receiving_accounts?.length ?? 0) > 1 && !paymentMethodId) {
+      setCheckoutFailed(true);
+      return;
+    }
 
     setSubmitting(true);
     setCheckoutFailed(false);
@@ -216,10 +231,18 @@ export function PublicDigitalProductPage({
           buyer_name: buyerName.trim(),
           buyer_email: buyerEmail.trim(),
           buyer_phone: buyerPhone.trim() || undefined,
+          creator_payment_method_id: paymentMethodId,
         },
       );
       const payload = response.data;
       const checkoutUrl = payload?.checkout_url ?? payload?.data?.checkout_url;
+
+      if (payload?.reference_endpoint && payload?.access_token) {
+        setDirectCheckout(payload as DirectCheckout);
+        setBuyerDialogOpen(false);
+        setSubmitting(false);
+        return;
+      }
 
       if (typeof checkoutUrl !== 'string') {
         throw new Error('Checkout could not be started.');
@@ -373,11 +396,11 @@ export function PublicDigitalProductPage({
               className={cn('shrink-0', buttonAppearance.className)}
               style={buttonAppearance.style}
               size="lg"
-              disabled={submitting}
+              disabled={submitting || data.product.can_buy === false}
               onClick={() => setBuyerDialogOpen(true)}
             >
               <LockKeyholeIcon />
-              <Trans message="Buy now" />
+              {data.product.verification_quota_exhausted ? <Trans message="Creator cannot accept additional verified sales right now" /> : <Trans message={data.product.can_buy === false ? 'Temporarily unavailable' : 'Buy now'} />}
             </Button>
           </div>
         </div>
@@ -392,13 +415,16 @@ export function PublicDigitalProductPage({
         name={buyerName}
         email={buyerEmail}
         phone={buyerPhone}
+        paymentMethodId={paymentMethodId}
         error={buyerError}
         onOpenChange={setBuyerDialogOpen}
         onNameChange={setBuyerName}
         onEmailChange={setBuyerEmail}
         onPhoneChange={setBuyerPhone}
+        onPaymentMethodChange={setPaymentMethodId}
         onSubmit={() => void beginCheckout()}
       />
+      <DirectPaymentModal checkout={directCheckout} onClose={() => setDirectCheckout(null)} />
     </PublicProductShell>
   );
 }
@@ -567,11 +593,13 @@ function BuyerDetailsDialog({
   name,
   email,
   phone,
+  paymentMethodId,
   error,
   onOpenChange,
   onNameChange,
   onEmailChange,
   onPhoneChange,
+  onPaymentMethodChange,
   onSubmit,
 }: {
   appearance?: BiolinkAppearanceConfig | null;
@@ -583,11 +611,13 @@ function BuyerDetailsDialog({
   name: string;
   email: string;
   phone: string;
+  paymentMethodId?: number;
   error?: 'name' | 'email';
   onOpenChange: (open: boolean) => void;
   onNameChange: (value: string) => void;
   onEmailChange: (value: string) => void;
   onPhoneChange: (value: string) => void;
+  onPaymentMethodChange: (value: number | undefined) => void;
   onSubmit: () => void;
 }) {
   const buttonAppearance = resolveBiolinkButtonAppearance(appearance);
@@ -701,7 +731,9 @@ function BuyerDetailsDialog({
               </div>
             </div>
             <Dialog.Description className="text-[var(--biolink-muted-text)]">
-              <Trans message="You'll continue to Chapa's secure checkout to pay, then return to this page." />
+              {product.payment_mode === 'direct'
+                ? <Trans message="You'll pay the creator directly using their bank or wallet details." />
+                : <Trans message="Checkout is temporarily unavailable." />}
             </Dialog.Description>
           </Dialog.Header>
           <Dialog.Body>
@@ -775,9 +807,20 @@ function BuyerDetailsDialog({
                   onChange={event => onPhoneChange(event.target.value)}
                 />
                 <Field.Description className="text-[var(--biolink-muted-text)]">
-                  <Trans message="Only shared with Chapa to process this payment." />
+                  {product.payment_mode === 'direct'
+                    ? <Trans message="Used only to help with your order." />
+                    : <Trans message="Checkout is temporarily unavailable." />}
                 </Field.Description>
               </Field.Root>
+              {product.payment_mode === 'direct' && (product.receiving_accounts?.length ?? 0) > 1 && (
+                <Field.Root>
+                  <Field.Label><Trans message="Payment destination" /></Field.Label>
+                  <select className="h-10 rounded-input border border-[var(--biolink-border)] bg-[var(--biolink-surface)] px-3 text-sm text-[var(--biolink-text)]" value={paymentMethodId ?? ''} onChange={event => onPaymentMethodChange(event.target.value ? Number(event.target.value) : undefined)}>
+                    <option value=""><Trans message="Choose an account" /></option>
+                    {product.receiving_accounts?.map(account => <option key={account.id} value={account.id}>{account.provider.toUpperCase()} · {account.account_name} · {account.account_ending}</option>)}
+                  </select>
+                </Field.Root>
+              )}
               <ul className="flex flex-col gap-2 border-t border-[var(--biolink-border)] pt-4 text-sm text-[var(--biolink-muted-text)]">
                 <li className="flex items-start gap-2">
                   <CheckCircle2Icon
@@ -819,14 +862,16 @@ function BuyerDetailsDialog({
               variant="ghost"
               className={buttonAppearance.className}
               style={buttonAppearance.style}
-              disabled={submitting}
+              disabled={submitting || product.payment_mode === 'unavailable'}
             >
               {submitting ? <Spinner /> : <LockKeyholeIcon />}
               <Trans
                 message={
                   submitting
-                    ? 'Opening secure checkout...'
-                    : 'Continue to secure checkout'
+                    ? 'Starting checkout...'
+                    : product.payment_mode === 'direct'
+                      ? 'Show payment details'
+                      : 'Checkout unavailable'
                 }
               />
             </Button>

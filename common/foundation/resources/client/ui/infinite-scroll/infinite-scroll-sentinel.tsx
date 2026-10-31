@@ -1,8 +1,8 @@
 import { UseInfiniteQueryResult, UseSuspenseInfiniteQueryResult } from '@tanstack/react-query';
-import { opacityAnimation } from '@ui/animation/opacity-animation';
-import { Button } from '@ui/buttons/button';
-import { Trans } from '@ui/i18n/trans';
-import { ProgressCircle } from '@ui/progress/progress-circle';
+import {opacityAnimation} from '../library/animation/opacity-animation';
+import {Button} from '../library/buttons/button';
+import {Trans} from '../library/i18n/trans';
+import {ProgressCircle} from '../library/progress/progress-circle';
 import clsx from 'clsx';
 import { AnimatePresence, m } from 'framer-motion';
 import React, { ReactNode, useEffect, useRef, useState } from 'react';

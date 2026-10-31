@@ -144,6 +144,7 @@ export function Component() {
   return (
     <FileUploadProvider>
       <ProductCreationProvider
+        key={productId ?? 'new'}
         prefill={parseWizardPrefill(searchParams)}
         productId={productId ? Number(productId) : null}
       >
@@ -333,6 +334,7 @@ function DigitalProductForm() {
 
   const save = useCallback(
     async (submitAfterSave = false) => {
+      if (productId && (!product || String(product.id) !== productId)) return;
       const priceCents = Math.round(Number(price) * 100);
       const effectiveType = product?.type ?? productType ?? 'digital';
       const isCourse = effectiveType === 'course';
@@ -439,6 +441,7 @@ function DigitalProductForm() {
       navigate,
       price,
       product,
+      productId,
       productType,
       title,
     ],
@@ -508,6 +511,7 @@ function DigitalProductForm() {
   const completedSections = progressSections.filter(isSectionComplete).length;
   const canSubmit =
     !product || product.status === 'draft' || product.status === 'rejected';
+  const unavailable = !!productId && (!product || String(product.id) !== productId);
 
   return (
     <DashboardLayout.MainSection>
@@ -564,7 +568,7 @@ function DigitalProductForm() {
           <Button
             variant="outline"
             size="sm"
-            disabled={saving || submitting}
+            disabled={saving || submitting || unavailable}
             aria-label={
               saving
                 ? trans({message: 'Saving...'})
@@ -583,7 +587,7 @@ function DigitalProductForm() {
           </Button>
           <Button
             size="sm"
-            disabled={saving || submitting || !canSubmit}
+            disabled={saving || submitting || unavailable || !canSubmit}
             aria-label={
               submitting
                 ? trans({message: 'Submitting...'})
@@ -671,7 +675,7 @@ function DigitalProductForm() {
                 <PreviewSkeleton />
               </aside>
             </>
-          ) : (
+          ) : unavailable ? null : (
             <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_26rem] xl:gap-6">
               <div className="flex min-w-0 flex-col gap-4">
                 <ProductFormProgress

@@ -40,6 +40,7 @@ export interface UploadItem {
   progress: number;
   status: UploadItemStatus;
   error?: string;
+  file?: File;
 }
 
 export interface UploadRestrictions {
@@ -276,6 +277,7 @@ export function SharedFileUploader({
           progress: 0,
           status: (error ? 'error' : 'uploading') as UploadItemStatus,
           error,
+          file,
         };
       });
       setItems(prev => [...next, ...prev]);
@@ -527,6 +529,20 @@ export function SharedFileUploader({
                       </AttachmentDescription>
                     </AttachmentContent>
                     <AttachmentActions>
+                      {item.status === 'error' && item.file && (
+                        <AttachmentAction
+                          aria-label={`Retry ${item.name}`}
+                          onClick={() => {
+                            const file = item.file;
+                            removeItem(item.id);
+                            if (file) {
+                              addFiles([file]);
+                            }
+                          }}
+                        >
+                          <Trans message="Retry" />
+                        </AttachmentAction>
+                      )}
                       <AttachmentAction
                         aria-label={`Remove ${item.name}`}
                         onClick={() => removeItem(item.id)}

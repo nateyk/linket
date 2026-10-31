@@ -305,7 +305,7 @@ function CommerceSection() {
         <Trans message="Commerce" />
       </FieldSet.Legend>
       <Field.Group>
-        <PlatformFeeField />
+        <FreeVerifiedSalesField />
         <LimitField
           name="storefront_benefits.max_free_products"
           label={<Trans message="Free products" />}
@@ -390,7 +390,7 @@ function LimitField({name, label, description}: LimitFieldProps) {
   const unlimited = value === null || value === undefined;
 
   return (
-    <Field.Group>
+    <Field.Root>
       <Field.Label>{label}</Field.Label>
       <div className="flex items-center gap-3">
         <Input
@@ -415,44 +415,7 @@ function LimitField({name, label, description}: LimitFieldProps) {
         </label>
       </div>
       {description && <Field.Description>{description}</Field.Description>}
-    </Field.Group>
-  );
-}
-
-function PlatformFeeField() {
-  const {watch, setValue} = useFormContext<CrupdatePlanFormValues>();
-  const value = watch('storefront_benefits.platform_fee_percent') as
-    | number
-    | null
-    | undefined;
-
-  return (
-    <Field.Group>
-      <Field.Label>
-        <Trans message="Linket transaction fee" />
-      </Field.Label>
-      <div className="flex items-center gap-3">
-        <Input
-          type="number"
-          min={0}
-          max={100}
-          step={0.5}
-          className="max-w-32"
-          value={value ?? 0}
-          onChange={e =>
-            setValue(
-              'storefront_benefits.platform_fee_percent',
-              Number(e.target.value),
-              {shouldDirty: true},
-            )
-          }
-        />
-        <span className="text-sm text-muted-foreground">%</span>
-      </div>
-      <Field.Description>
-        <Trans message="Percentage Linket retains from future sales. Existing order fee snapshots never change." />
-      </Field.Description>
-    </Field.Group>
+    </Field.Root>
   );
 }
 
@@ -466,7 +429,7 @@ function StorageLimitField() {
   const [gb, setGb] = useState<number>(bytes == null ? 1 : bytes / 1073741824);
 
   return (
-    <Field.Group>
+    <Field.Root>
       <Field.Label>
         <Trans message="Storage" />
       </Field.Label>
@@ -513,7 +476,7 @@ function StorageLimitField() {
       <Field.Description>
         <Trans message="Total size of all downloadable product files per workspace." />
       </Field.Description>
-    </Field.Group>
+    </Field.Root>
   );
 }
 
@@ -538,5 +501,35 @@ function AdvancedSection() {
         </Accordion.Content>
       </Accordion.Item>
     </Accordion.Root>
+  );
+}
+
+function FreeVerifiedSalesField() {
+  const {watch, setValue} = useFormContext<CrupdatePlanFormValues>();
+  return (
+    <HookForm.Field name="storefront_benefits.free_verified_sales">
+      <Field.Label>
+        <Trans message="Lifetime Free verified sales" />
+      </Field.Label>
+      <Input
+        bindToHookForm={false}
+        type="number"
+        min={0}
+        max={100000}
+        step={1}
+        value={watch('storefront_benefits.free_verified_sales') ?? 0}
+        onChange={event =>
+          setValue(
+            'storefront_benefits.free_verified_sales',
+            Number(event.target.value),
+            {shouldDirty: true},
+          )
+        }
+      />
+      <Field.Description>
+        <Trans message="Applies to the Free plan only. Pro has no Free allowance limit. New sales have no commission." />
+      </Field.Description>
+      <Field.Error />
+    </HookForm.Field>
   );
 }

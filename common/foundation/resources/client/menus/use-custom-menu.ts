@@ -14,46 +14,48 @@ export function useCustomMenu(menuOrPosition?: string | MenuConfig) {
       return null;
     }
 
-    const menu =
+    const sourceMenu =
       typeof menuOrPosition === 'string'
         ? (settings.menus?.find(s => s.id === menuOrPosition) ??
           settings.menus?.find(s => s.positions?.includes(menuOrPosition)))
         : menuOrPosition;
 
-    const menuItems: MenuItemConfig[] = [];
-
-    if (menu) {
-      for (const item of menu.items) {
-        const hasRoles = (item.roles || []).every(a => hasRole(a));
-        const hasPermissions = (item.permissions || []).every(a =>
-          hasPermission(a),
-        );
-        const hasSettings =
-          !item.settings ||
-          Object.entries(item.settings).every(([key, value]) => {
-            return dot.pick(key, settings) == value;
-          });
-
-        if (
-          !item.action ||
-          !hasRoles ||
-          !hasPermissions ||
-          !hasSettings ||
-          !subscriptionStatusMatches(item, user)
-        ) {
-          continue;
-        }
-
-        if (user?.id) {
-          item.action = item.action.replace(/{currentUser}/g, `${user.id}`);
-        }
-
-        menuItems.push(item);
-      }
-      menu.items = menuItems;
+    if (!sourceMenu) {
+      return null;
     }
 
-    return menu;
+    const menuItems: MenuItemConfig[] = [];
+
+    for (const rawItem of sourceMenu.items ?? []) {
+      const item = {...rawItem};
+      const hasRoles = (item.roles || []).every(a => hasRole(a));
+      const hasPermissions = (item.permissions || []).every(a =>
+        hasPermission(a),
+      );
+      const hasSettings =
+        !item.settings ||
+        Object.entries(item.settings).every(([key, value]) => {
+          return dot.pick(key, settings) == value;
+        });
+
+      if (
+        !item.action ||
+        !hasRoles ||
+        !hasPermissions ||
+        !hasSettings ||
+        !subscriptionStatusMatches(item, user)
+      ) {
+        continue;
+      }
+
+      if (user?.id) {
+        item.action = item.action.replace(/{currentUser}/g, `${user.id}`);
+      }
+
+      menuItems.push(item);
+    }
+
+    return {...sourceMenu, items: menuItems};
   }, [hasPermission, settings, menuOrPosition, user, hasRole]);
 }
 

@@ -240,6 +240,26 @@ test('debounced auto-save sends CURRENT state, not first-render state', async ()
   vi.useRealTimers();
 });
 
+test('saves edits made while an earlier autosave is in flight without overlapping writes', async () => {
+  vi.useFakeTimers();
+  let resolveFirst!: (value: unknown) => void;
+  h.put.mockImplementationOnce(() => new Promise(resolve => { resolveFirst = resolve; }));
+  mountProvider();
+  act(() => ctxActions!.hydrate({...DRAFT_FORM}));
+  act(() => ctxActions!.setTitle('First edit'));
+  await advance(1600);
+  expect(h.put).toHaveBeenCalledTimes(1);
+
+  act(() => ctxActions!.setTitle('Latest edit'));
+  await advance(1600);
+  expect(h.put).toHaveBeenCalledTimes(1);
+
+  await act(async () => resolveFirst({data: {data: {}}}));
+  await advance(1600);
+  expect(h.put).toHaveBeenCalledTimes(2);
+  expect(h.put).toHaveBeenLastCalledWith('/api/v1/items/1/draft', expect.objectContaining({title: 'Latest edit'}));
+});
+
 test(
   'no auto-save while product.status is not draft (null during load), and none after unmount',
   {
@@ -253,8 +273,7 @@ test(
     // is in flight the page renders skeletons (there is not even an input to
     // edit). It then settles WITHOUT hydrating — the shipped load-failure
     // path (`setError` + `setLoading(false)`, `setProduct` never called), so
-    // `product` stays null while the form is editable and the route's
-    // productId = 1 exists: a PUT would be possible if the gate were missing.
+    // `product` stays null and the form must remain unavailable.
     renderEditPage();
     expect(h.pending).toHaveLength(1);
     expect(
@@ -269,22 +288,10 @@ test(
     await act(async () => {
       h.rejectPending(new Error('Network error'));
     });
-    const input = (await screen.findByRole(
-      'textbox',
-      {name: /product title/i},
-      {timeout: 10_000},
-    )) as HTMLInputElement;
-    // Never hydrated → `product === null` (not "a non-draft status"):
-    // empty form + the shipped load-error banner.
-    expect(input.value).toBe('');
-    expect(screen.getByText(/Network error/)).toBeTruthy();
+    expect(await screen.findByText(/Network error/)).toBeTruthy();
+    expect(screen.queryByRole('textbox', {name: /product title/i})).toBeNull();
 
-    // Edit with `product === null`: `product?.status === 'draft'` is false, so
-    // the shipped effect must not schedule the 1500ms PUT — even though the
-    // form is dirty and a PUT would be fully sendable. This assertion fails
-    // if digital-product-form-page.tsx's gate is weakened or removed.
     vi.useFakeTimers();
-    fireEvent.change(input, {target: {value: 'Edited while product is null'}});
     await advance(1600);
     expect(h.put).not.toHaveBeenCalled();
     vi.useRealTimers();

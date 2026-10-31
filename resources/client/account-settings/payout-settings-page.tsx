@@ -8,7 +8,7 @@ import {Select} from '@shadcn/forms/select/select';
 import {useSuspenseQuery} from '@tanstack/react-query';
 import {Trans} from '@ui/i18n/trans';
 import {WalletCardsIcon} from 'lucide-react';
-import {useSearchParams} from 'react-router';
+import {Link, useSearchParams} from 'react-router';
 
 export function Component() {
   const activeWorkspace = useWorkspaceStore(s => s.activeWorkspace);
@@ -36,7 +36,12 @@ export function Component() {
   };
 
   return (
-    <AccountSettingsPageLayout title={<Trans message="Payout settings" />}>
+    <AccountSettingsPageLayout title={<Trans message="Receiving accounts" />}>
+      <div className="rounded-card-sm border border-border p-4">
+        <h2 className="font-semibold"><Trans message="Direct receiving accounts" /></h2>
+        <p className="text-sm text-muted-foreground"><Trans message="Add and manage the accounts buyers use for direct payments." /></p>
+        <Link className="text-primary underline" to="/dashboard/orders"><Trans message="Manage receiving accounts" /></Link>
+      </div>
       {workspace ? (
         <div className="space-y-5">
           <div className="flex flex-col gap-4 border-b pb-5 md:flex-row md:items-end md:justify-between">

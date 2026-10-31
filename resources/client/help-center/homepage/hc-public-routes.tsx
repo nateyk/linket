@@ -72,7 +72,7 @@ export const customerTicketShowLoader: RouteObject['loader'] = async ({
       helpCenterQueries.customerConversations.get(params.conversationId!),
     ),
     queryClient.ensureInfiniteQueryData(
-      helpdeskQueries.conversations.messages(params.conversationId!),
+      helpdeskQueries.conversations.customerMessages(params.conversationId!),
     ),
   ]);
 };

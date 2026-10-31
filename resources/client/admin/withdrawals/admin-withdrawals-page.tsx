@@ -62,7 +62,7 @@ export function Component() {
         <Button
           variant="outline"
           nativeButton={false}
-          render={<Link to="/admin/financial/withdrawal-methods" />}
+          render={<Link to="/admin/financial/withdrawal-methods/legacy" />}
         >
           <BanknoteIcon />
           <Trans message="Withdrawal methods" />

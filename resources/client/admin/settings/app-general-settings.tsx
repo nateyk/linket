@@ -52,7 +52,7 @@ const homepageOptions = [
     value: 'items',
     label: <Trans message="My Items" />,
   },
-  {value: 'sales-payouts', label: <Trans message="Sales & Payouts" />},
+  {value: 'orders', label: <Trans message="Orders & Sales" />},
   {value: 'insights', label: <Trans message="Insights" />},
 ] as const;
 

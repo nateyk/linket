@@ -50,8 +50,13 @@ function SiteAlertsList() {
     return null;
   }
 
+  // Entire stack is non-blocking so diagnostics never intercept admin clicks.
+  // Only dismiss (and in-alert links) re-enable pointer events.
   return (
-    <div className="fixed right-6 bottom-6 z-10 mx-auto flex w-185.5 max-w-[calc(100%-48px)] flex-col gap-3">
+    <div
+      aria-live="polite"
+      className="pointer-events-none fixed top-4 right-4 z-50 flex w-full max-w-sm flex-col gap-3"
+    >
       {alerts.map(alert => (
         <SetupAlert key={alert.id} alert={alert} />
       ))}
@@ -85,9 +90,10 @@ function SetupAlert({alert}: SetupAlertProps) {
 
   return (
     <Alert.Root
-      className="shadow-md"
+      className="pointer-events-none shadow-md"
       variant="destructive"
       fillStyle="subtleFill"
+      data-site-alert={alert.id}
     >
       {alert.severity === 'error' ? (
         <CircleXIcon className="text-destructive" />
@@ -95,10 +101,12 @@ function SetupAlert({alert}: SetupAlertProps) {
         <InfoIcon />
       )}
       <Alert.Title>{alert.title}</Alert.Title>
-      <Alert.Description>{description}</Alert.Description>
+      <Alert.Description className="pointer-events-auto [&_a]:pointer-events-auto">
+        {description}
+      </Alert.Description>
       <Alert.Action>
         <Button
-          className="hover:bg-destructive/10"
+          className="pointer-events-auto hover:bg-destructive/10"
           variant="ghost"
           size="icon-sm"
           onClick={() => handleDismiss()}

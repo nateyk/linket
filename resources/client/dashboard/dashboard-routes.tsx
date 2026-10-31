@@ -349,6 +349,7 @@ export const sharedDashboardRoutes = (routeType: DatatableRouteType) => {
  */
 export function normalizeHomepageValue(value: string | undefined): string {
   if (value === 'digital-products') return 'items';
+  if (value === 'sales-payouts') return 'orders';
   return value ?? '';
 }
 
@@ -390,7 +391,8 @@ export const dashboardRoutes: RouteObject[] = [
             items: '/dashboard/items',
             // legacy stored value, normalized above; kept for clarity
             'digital-products': '/dashboard/items',
-            'sales-payouts': '/dashboard/sales-payouts',
+            'sales-payouts': '/dashboard/orders',
+            orders: '/dashboard/orders',
             insights: '/dashboard/insights',
           };
           const destination = homepage ? homepageRoutes[homepage] : undefined;
@@ -493,9 +495,23 @@ export const dashboardRoutes: RouteObject[] = [
           import('@app/dashboard/digital-products/product-reviews-page'),
       },
       {
-        path: 'sales-payouts',
+        path: 'orders',
         lazy: () =>
-          import('@app/dashboard/digital-products/sales-payouts-page'),
+          import('@app/dashboard/digital-products/direct-billing-page'),
+      },
+      {
+        path: 'sales-payments',
+        loader: ({request}) =>
+          redirect(`/dashboard/orders${new URL(request.url).search}`, 308),
+      },
+      {
+        path: 'sales-payouts',
+        loader: ({request}) =>
+          redirect(`/dashboard/orders${new URL(request.url).search}`, 308),
+      },
+      {
+        path: 'legacy-payouts',
+        lazy: () => import('@app/dashboard/digital-products/sales-payouts-page'),
       },
       {
         path: 'commerce',

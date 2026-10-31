@@ -1,4 +1,5 @@
 import {apiClient} from '@common/http/query-client';
+import {getApiErrorMessage} from '@common/http/errors/parsed-api-error';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {AlertDialog} from '@shadcn/alert-dialog/alert-dialog';
 import {Badge} from '@shadcn/badge/badge';
@@ -6,8 +7,11 @@ import {Button} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
 import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {Empty} from '@shadcn/empty/empty';
+import {Input} from '@shadcn/forms/input/input';
+import {Select} from '@shadcn/forms/select/select';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {Tooltip} from '@shadcn/tooltip/tooltip';
+import {formatMoney} from '@ui/i18n/format-money';
 import {FormattedCurrency} from '@ui/i18n/formatted-currency';
 import {message} from '@ui/i18n/message';
 import {Trans} from '@ui/i18n/trans';
@@ -16,6 +20,7 @@ import {toast} from '@ui/toast/toast';
 import useClipboard from '@ui/utils/hooks/use-clipboard';
 import {
   ArchiveIcon,
+  ArchiveRestoreIcon,
   BarChart3Icon,
   ChartNoAxesCombinedIcon,
   CheckCircle2Icon,
@@ -24,6 +29,7 @@ import {
   CircleDashedIcon,
   Clock3Icon,
   CopyIcon,
+  CopyPlusIcon,
   ExternalLinkIcon,
   GraduationCapIcon,
   MoreHorizontalIcon,
@@ -75,6 +81,12 @@ type Product = {
 
 type ProductsResponse = {
   data?: Product[];
+  meta?: {
+    current_page?: number;
+    last_page?: number;
+    total?: number;
+    per_page?: number;
+  };
 };
 
 export function Component() {
@@ -83,29 +95,42 @@ export function Component() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
   const [submittingId, setSubmittingId] = useState<number>();
-  const [deletingId, setDeletingId] = useState<number>();
+  const [busyId, setBusyId] = useState<number>();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState('');
+  const [sort, setSort] = useState('latest');
+  const [page, setPage] = useState(1);
+  const [lastPage, setLastPage] = useState(1);
+  const [total, setTotal] = useState(0);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(undefined);
 
     try {
-      const response = await apiClient.get(
-        '/api/v1/items?per_page=100',
-      );
+      const response = await apiClient.get('/api/v1/items', {
+        params: {
+          page,
+          per_page: 12,
+          search: search.trim() || undefined,
+          status: status || undefined,
+          sort: sort || undefined,
+        },
+      });
       const payload: ProductsResponse = response.data;
       setProducts(payload.data ?? []);
+      setLastPage(payload.meta?.last_page ?? 1);
+      setTotal(payload.meta?.total ?? payload.data?.length ?? 0);
     } catch (reason) {
       setError(
-        reason instanceof Error
-          ? reason.message
-          : trans({message: 'Unable to load digital products.'}),
+        getApiErrorMessage(reason) ||
+          trans({message: 'Unable to load digital products.'}),
       );
     } finally {
       setLoading(false);
     }
-  }, [trans]);
+  }, [page, search, sort, status, trans]);
 
   useEffect(() => {
     void load();
@@ -121,33 +146,83 @@ export function Component() {
       await load();
     } catch (reason) {
       setError(
-        reason instanceof Error
-          ? reason.message
-          : trans({message: 'Unable to submit product.'}),
+        getApiErrorMessage(reason) ||
+          trans({message: 'Unable to submit product.'}),
       );
     } finally {
       setSubmittingId(undefined);
     }
   };
 
+  const duplicate = async (product: Product) => {
+    setBusyId(product.id);
+    setError(undefined);
+    try {
+      await apiClient.post(`/api/v1/items/${product.id}/duplicate`);
+      toast.positive(message('Product duplicated as a draft'));
+      setPage(1);
+      await load();
+    } catch (reason) {
+      setError(
+        getApiErrorMessage(reason) ||
+          trans({message: 'Unable to duplicate product.'}),
+      );
+    } finally {
+      setBusyId(undefined);
+    }
+  };
+
+  const archive = async (product: Product) => {
+    setBusyId(product.id);
+    setError(undefined);
+    try {
+      await apiClient.post(`/api/v1/items/${product.id}/archive`);
+      toast.positive(message('Product archived'));
+      await load();
+    } catch (reason) {
+      setError(
+        getApiErrorMessage(reason) ||
+          trans({message: 'Unable to archive product.'}),
+      );
+    } finally {
+      setBusyId(undefined);
+    }
+  };
+
+  const unarchive = async (product: Product) => {
+    setBusyId(product.id);
+    setError(undefined);
+    try {
+      await apiClient.post(`/api/v1/items/${product.id}/unarchive`);
+      toast.positive(message('Product restored to draft'));
+      await load();
+    } catch (reason) {
+      setError(
+        getApiErrorMessage(reason) ||
+          trans({message: 'Unable to restore product.'}),
+      );
+    } finally {
+      setBusyId(undefined);
+    }
+  };
+
   const remove = async (product: Product): Promise<boolean> => {
-    setDeletingId(product.id);
+    setBusyId(product.id);
     setError(undefined);
 
     try {
       await apiClient.delete(`/api/v1/items/${product.id}`);
-      setProducts(current => current.filter(item => item.id !== product.id));
       toast.positive(message('Product deleted'));
+      await load();
       return true;
     } catch (reason) {
       setError(
-        reason instanceof Error
-          ? reason.message
-          : trans({message: 'Unable to delete product.'}),
+        getApiErrorMessage(reason) ||
+          trans({message: 'Unable to delete product.'}),
       );
       return false;
     } finally {
-      setDeletingId(undefined);
+      setBusyId(undefined);
     }
   };
 
@@ -165,24 +240,103 @@ export function Component() {
       </DashboardLayout.SectionHeader>
 
       <DashboardLayout.SectionContent className="overflow-y-auto">
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 py-4">
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-1 py-4 sm:px-0">
           {error && <ErrorNotice message={error} onRetry={() => void load()} />}
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <Input
+              value={search}
+              onChange={event => {
+                setSearch(event.target.value);
+                setPage(1);
+              }}
+              placeholder={trans({message: 'Search products'})}
+              aria-label={trans({message: 'Search products'})}
+            />
+            <Select.Root
+              value={status}
+              onValueChange={value => {
+                setStatus(value ?? '');
+                setPage(1);
+              }}
+            >
+              <Select.Trigger className="w-full">
+                <Select.Value placeholder={<Trans message="All statuses" />} />
+              </Select.Trigger>
+              <Select.Content>
+                <Select.Item value=""><Trans message="All statuses" /></Select.Item>
+                <Select.Item value="draft"><Trans message="Draft" /></Select.Item>
+                <Select.Item value="pending_approval"><Trans message="In review" /></Select.Item>
+                <Select.Item value="approved"><Trans message="Live" /></Select.Item>
+                <Select.Item value="rejected"><Trans message="Needs changes" /></Select.Item>
+                <Select.Item value="archived"><Trans message="Archived" /></Select.Item>
+              </Select.Content>
+            </Select.Root>
+            <Select.Root
+              value={sort}
+              onValueChange={value => {
+                setSort(value ?? 'latest');
+                setPage(1);
+              }}
+            >
+              <Select.Trigger className="w-full">
+                <Select.Value placeholder={<Trans message="Sort by" />} />
+              </Select.Trigger>
+              <Select.Content>
+                <Select.Item value="latest"><Trans message="Newest" /></Select.Item>
+                <Select.Item value="oldest"><Trans message="Oldest" /></Select.Item>
+                <Select.Item value="title"><Trans message="Title" /></Select.Item>
+                <Select.Item value="-sales"><Trans message="Most sales" /></Select.Item>
+                <Select.Item value="-revenue"><Trans message="Highest revenue" /></Select.Item>
+              </Select.Content>
+            </Select.Root>
+            <p className="flex items-center text-sm text-muted-foreground">
+              <Trans message=":count products" values={{count: total}} />
+            </p>
+          </div>
 
           {loading ? (
             <ProductSkeleton />
           ) : products.length ? (
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {products.map(product => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  submitting={submittingId === product.id}
-                  deleting={deletingId === product.id}
-                  onSubmit={() => void submit(product)}
-                  onDelete={() => remove(product)}
-                />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {products.map(product => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    submitting={submittingId === product.id}
+                    busy={busyId === product.id}
+                    onSubmit={() => void submit(product)}
+                    onDuplicate={() => void duplicate(product)}
+                    onArchive={() => void archive(product)}
+                    onUnarchive={() => void unarchive(product)}
+                    onDelete={() => remove(product)}
+                  />
+                ))}
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <Button
+                  variant="outline"
+                  disabled={page <= 1 || loading}
+                  onClick={() => setPage(current => Math.max(1, current - 1))}
+                >
+                  <Trans message="Previous" />
+                </Button>
+                <p className="text-sm text-muted-foreground">
+                  <Trans
+                    message="Page :page of :last"
+                    values={{page, last: lastPage}}
+                  />
+                </p>
+                <Button
+                  variant="outline"
+                  disabled={page >= lastPage || loading}
+                  onClick={() => setPage(current => current + 1)}
+                >
+                  <Trans message="Next" />
+                </Button>
+              </div>
+            </>
           ) : (
             <EmptyProducts onNewProduct={() => setCreateDialogOpen(true)} />
           )}
@@ -222,14 +376,20 @@ function ErrorNotice({
 function ProductCard({
   product,
   submitting,
-  deleting,
+  busy,
   onSubmit,
+  onDuplicate,
+  onArchive,
+  onUnarchive,
   onDelete,
 }: {
   product: Product;
   submitting: boolean;
-  deleting: boolean;
+  busy: boolean;
   onSubmit: () => void;
+  onDuplicate: () => void;
+  onArchive: () => void;
+  onUnarchive: () => void;
   onDelete: () => Promise<boolean>;
 }) {
   const {trans} = useTrans();
@@ -296,7 +456,7 @@ function ProductCard({
           </Card.Title>
         </div>
 
-        {product.status === 'rejected' && product.rejection_reason && (
+        {(product.status === 'rejected' || product.status === 'pending_approval') && product.rejection_reason && (
           <div className="flex gap-2 rounded-card-sm bg-destructive/8 p-2.5 text-xs leading-4 text-destructive">
             <TriangleAlertIcon className="mt-0.5 size-3.5 shrink-0" />
             <span className="line-clamp-2">{product.rejection_reason}</span>
@@ -305,15 +465,30 @@ function ProductCard({
       </Card.Content>
 
       <Card.Footer className="justify-between gap-3 px-4 py-4">
-        <div className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
-          <SalesLabel count={product.sales_count} />
-          <span className="size-1 rounded-full bg-muted-foreground/40" />
-          <span className="truncate font-semibold text-foreground">
-            <FormattedCurrency
-              valueInCents={product.price_cents}
-              currency={product.currency.toUpperCase()}
-            />
-          </span>
+        <div className="flex min-w-0 flex-col gap-0.5 text-sm text-muted-foreground">
+          <div className="flex min-w-0 items-center gap-2">
+            <SalesLabel count={product.sales_count} />
+            <span className="size-1 rounded-full bg-muted-foreground/40" />
+            <span className="truncate font-semibold text-foreground">
+              <FormattedCurrency
+                valueInCents={product.price_cents}
+                currency={product.currency.toUpperCase()}
+              />
+            </span>
+          </div>
+          {product.sales_count > 0 && (
+            <span className="truncate">
+              <Trans
+                message=":amount earned"
+                values={{
+                  amount: formatMoney(
+                    product.gross_revenue_cents,
+                    product.currency.toUpperCase(),
+                  ),
+                }}
+              />
+            </span>
+          )}
         </div>
 
         <Tooltip.Provider>
@@ -374,8 +549,11 @@ function ProductCard({
               product={product}
               canSubmit={canSubmit}
               submitting={submitting}
-              deleting={deleting}
+              busy={busy}
               onSubmit={onSubmit}
+              onDuplicate={onDuplicate}
+              onArchive={onArchive}
+              onUnarchive={onUnarchive}
               onDelete={onDelete}
             />
           </div>
@@ -397,20 +575,27 @@ function ProductActions({
   product,
   canSubmit,
   submitting,
-  deleting,
+  busy,
   onSubmit,
+  onDuplicate,
+  onArchive,
+  onUnarchive,
   onDelete,
 }: {
   product: Product;
   canSubmit: boolean;
   submitting: boolean;
-  deleting: boolean;
+  busy: boolean;
   onSubmit: () => void;
+  onDuplicate: () => void;
+  onArchive: () => void;
+  onUnarchive: () => void;
   onDelete: () => Promise<boolean>;
 }) {
   const {trans} = useTrans();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const isCourse = product.type === 'course' || product.is_course;
+  const hasSales = product.sales_count > 0;
 
   return (
     <>
@@ -449,15 +634,34 @@ function ProductActions({
 
           {canSubmit && (
             <Dropdown.Item
-              disabled={submitting || (!isCourse && !product.files?.length)}
+              disabled={submitting || busy || (!isCourse && !product.files?.length)}
               onClick={onSubmit}
             >
               <SendIcon />
               {submitting ? (
                 <Trans message="Submitting..." />
+              ) : product.status === 'rejected' ? (
+                <Trans message="Resubmit for review" />
               ) : (
                 <Trans message="Submit for review" />
               )}
+            </Dropdown.Item>
+          )}
+
+          <Dropdown.Item disabled={busy} onClick={onDuplicate}>
+            <CopyPlusIcon />
+            <Trans message="Duplicate" />
+          </Dropdown.Item>
+
+          {product.status === 'archived' ? (
+            <Dropdown.Item disabled={busy} onClick={onUnarchive}>
+              <ArchiveRestoreIcon />
+              <Trans message="Restore to draft" />
+            </Dropdown.Item>
+          ) : (
+            <Dropdown.Item disabled={busy} onClick={onArchive}>
+              <ArchiveIcon />
+              <Trans message="Archive" />
             </Dropdown.Item>
           )}
 
@@ -493,10 +697,15 @@ function ProductActions({
           <Dropdown.Separator />
           <Dropdown.Item
             variant="destructive"
+            disabled={hasSales}
             onClick={() => setDeleteDialogOpen(true)}
           >
             <Trash2Icon />
-            <Trans message="Delete product" />
+            {hasSales ? (
+              <Trans message="Delete blocked after sales" />
+            ) : (
+              <Trans message="Delete product" />
+            )}
           </Dropdown.Item>
         </Dropdown.Content>
       </Dropdown.Root>
@@ -516,23 +725,23 @@ function ProductActions({
                 <Trans message="Delete this product?" />
               </AlertDialog.Title>
               <AlertDialog.Description>
-                <Trans message="This removes the product from every storefront. This action cannot be undone." />
+                <Trans message="This removes the product from every storefront. Purchased files stay available to buyers through their orders. This action cannot be undone." />
               </AlertDialog.Description>
             </AlertDialog.Header>
             <AlertDialog.Footer>
-              <AlertDialog.Cancel disabled={deleting}>
+              <AlertDialog.Cancel disabled={busy}>
                 <Trans message="Cancel" />
               </AlertDialog.Cancel>
               <AlertDialog.Action
                 color="danger"
-                disabled={deleting}
+                disabled={busy}
                 onClick={async () => {
                   if (await onDelete()) {
                     setDeleteDialogOpen(false);
                   }
                 }}
               >
-                {deleting ? (
+                {busy ? (
                   <Trans message="Deleting..." />
                 ) : (
                   <Trans message="Delete product" />

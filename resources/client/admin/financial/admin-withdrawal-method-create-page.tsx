@@ -42,7 +42,7 @@ export function Component() {
       navigate(
         id
           ? `/admin/financial/withdrawal-methods/${id}/edit`
-          : '/admin/financial/withdrawal-methods',
+          : '/admin/financial/withdrawal-methods/legacy',
       );
     } catch (e: unknown) {
       setError(extractError(e));
@@ -61,7 +61,7 @@ export function Component() {
         <Button
           variant="outline"
           nativeButton={false}
-          render={<Link to="/admin/financial/withdrawal-methods" />}
+          render={<Link to="/admin/financial/withdrawal-methods/legacy" />}
         >
           <ArrowLeftIcon />
           <Trans message="Withdrawal methods" />

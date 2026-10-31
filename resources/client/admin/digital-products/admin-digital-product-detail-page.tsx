@@ -81,7 +81,7 @@ type AdminProductDetail = {
     name: string;
     file_size: number;
     extension: string;
-    url: string;
+    download_path: string;
   }>;
   stores?: Array<{id: number; name: string; short_url: string}>;
   course?: {
@@ -100,6 +100,7 @@ export function Component() {
   const query = useSuspenseQuery(adminDigitalProductDetailOptions(productId ?? ''));
   const queryClient = useQueryClient();
   const [rejectOpen, setRejectOpen] = useState(false);
+  const [reReviewOpen, setReReviewOpen] = useState(false);
   const [reason, setReason] = useState('');
 
   const product = query.data?.data as AdminProductDetail | undefined;
@@ -135,12 +136,27 @@ export function Component() {
     onError: error => showHttpErrorToast(error),
   });
 
+  const reReview = useMutation({
+    mutationFn: () =>
+      apiClient.post(`/api/v1/admin/items/${product?.id}/re-review`, {
+        reason: reason.trim(),
+      }),
+    onSuccess: () => {
+      setReReviewOpen(false);
+      setReason('');
+      invalidate();
+      toast.success(<Trans message="Product sent back for review." />);
+    },
+    onError: error => showHttpErrorToast(error),
+  });
+
   if (!product) {
     return null;
   }
 
   const isActionable =
     product.status === 'pending_approval' || !!product.has_pending_update;
+  const isPublished = product.status === 'approved' && !product.has_pending_update;
   const primaryStore = product.stores?.[0];
   const publicUrl = primaryStore
     ? `${primaryStore.short_url.replace(/\/$/, '')}/products/${product.id}`
@@ -180,13 +196,18 @@ export function Component() {
               <Trans message="View live" />
             </Button>
           )}
+          {isPublished && (
+            <Button variant="outline" onClick={() => { setReason(''); setReReviewOpen(true); }}>
+              <Trans message="Send back for review" />
+            </Button>
+          )}
           {isActionable && (
             <>
               <Button
                 variant="outline"
                 color="danger"
                 disabled={reject.isPending}
-                onClick={() => setRejectOpen(true)}
+                onClick={() => { setReason(''); setRejectOpen(true); }}
               >
                 <XIcon />
                 <Trans message="Reject" />
@@ -271,11 +292,54 @@ export function Component() {
               <Button
                 variant="outline"
                 color="danger"
-                disabled={reject.isPending}
+                disabled={reject.isPending || reason.trim().length < 3}
                 onClick={() => reject.mutate()}
               >
                 <XIcon />
                 <Trans message="Reject" />
+              </Button>
+            </Dialog.Footer>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+
+      <Dialog.Root open={reReviewOpen} onOpenChange={setReReviewOpen}>
+        <Dialog.Portal>
+          <Dialog.Backdrop />
+          <Dialog.Content className="sm:max-w-lg">
+            <Dialog.Header>
+              <Dialog.Title>
+                <Trans message="Send back for review" />
+              </Dialog.Title>
+              <Dialog.Description>
+                <Trans message="This takes the product off the storefront until you approve it again. Past purchases stay available." />
+              </Dialog.Description>
+            </Dialog.Header>
+            <Dialog.Body>
+              <Field.Root>
+                <Field.Label htmlFor="re-review-reason">
+                  <Trans message="Reason" />
+                </Field.Label>
+                <Textarea
+                  id="re-review-reason"
+                  rows={4}
+                  value={reason}
+                  onChange={e => setReason(e.target.value)}
+                  placeholder={trans({
+                    message: 'Explain what needs another look.',
+                  })}
+                />
+              </Field.Root>
+            </Dialog.Body>
+            <Dialog.Footer>
+              <Button variant="outline" onClick={() => setReReviewOpen(false)}>
+                <Trans message="Cancel" />
+              </Button>
+              <Button
+                disabled={reReview.isPending || reason.trim().length < 3}
+                onClick={() => reReview.mutate()}
+              >
+                <Trans message="Send back for review" />
               </Button>
             </Dialog.Footer>
           </Dialog.Content>
@@ -387,7 +451,7 @@ function DetailsPanel({product}: {product: AdminProductDetail}) {
                     variant="outline"
                     nativeButton={false}
                     render={
-                      <a href={file.url} target="_blank" rel="noreferrer" />
+                      <a href={file.download_path} target="_blank" rel="noreferrer" />
                     }
                   >
                     <Trans message="Download" />
@@ -577,6 +641,8 @@ function eventLabel(event: string) {
       return <Trans message="Rejected" />;
     case 'update_rejected':
       return <Trans message="Update rejected" />;
+    case 're_review':
+      return <Trans message="Sent back for review" />;
     default:
       return event;
   }

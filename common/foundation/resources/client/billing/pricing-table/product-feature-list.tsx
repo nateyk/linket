@@ -20,7 +20,7 @@ export function ProductFeatureList({product}: FeatureListProps) {
       <div className="mb-2.5 text-sm font-semibold">
         <Trans message="What's included" />
       </div>
-      {features.map(feature => (
+      {features.filter(feature => !/commission/i.test(feature)).map(feature => (
         <div key={feature} className="flex items-center gap-2.5 py-1.5 text-sm">
           <CheckIcon className="size-4 text-primary" />
           <Trans message={feature} />

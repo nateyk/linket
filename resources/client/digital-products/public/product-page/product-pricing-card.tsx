@@ -65,11 +65,11 @@ export function ProductPricingCard({
             className={cn('w-full', buttonAppearance.className)}
             style={buttonAppearance.style}
             size="lg"
-            disabled={submitting}
+            disabled={submitting || product.can_buy === false}
             onClick={onBuy}
           >
             <LockKeyholeIcon />
-            <Trans message="Buy now" />
+            {product.verification_quota_exhausted ? <Trans message="Creator cannot accept additional verified sales right now" /> : <Trans message={product.can_buy === false ? 'Temporarily unavailable' : 'Buy now'} />}
           </Button>
         </div>
 

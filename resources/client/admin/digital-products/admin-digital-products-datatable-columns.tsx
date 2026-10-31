@@ -247,6 +247,7 @@ export function ProductActionsButton({
   const [reason, setReason] = useState('');
   const isUpdate = product.status === 'approved' && !!product.has_pending_update;
   const isActionable = product.status === 'pending_approval' || isUpdate;
+  const isPublished = product.status === 'approved' && !product.has_pending_update;
 
   const approve = useMutation({
     mutationFn: () =>
@@ -269,6 +270,20 @@ export function ProductActionsButton({
       setReason('');
       queryClient.invalidateQueries({queryKey: adminDigitalProductsBaseKey});
       toast.success(<Trans message="Product rejected." />);
+    },
+    onError: error => showHttpErrorToast(error),
+  });
+
+  const reReview = useMutation({
+    mutationFn: () =>
+      apiClient.post(`/api/v1/admin/items/${product.id}/re-review`, {
+        reason: reason.trim(),
+      }),
+    onSuccess: () => {
+      setDetailsOpen(false);
+      setReason('');
+      queryClient.invalidateQueries({queryKey: adminDigitalProductsBaseKey});
+      toast.success(<Trans message="Product sent back for review." />);
     },
     onError: error => showHttpErrorToast(error),
   });
@@ -379,10 +394,10 @@ export function ProductActionsButton({
                   />
                 </p>
               )}
-              {isActionable && (
+              {(isActionable || isPublished) && (
                 <Field.Root>
                   <Field.Label htmlFor="rejection-reason">
-                    <Trans message="Rejection reason (optional)" />
+                    <Trans message="Reason" />
                   </Field.Label>
                   <Textarea
                     id="rejection-reason"
@@ -402,12 +417,21 @@ export function ProductActionsButton({
               >
                 <Trans message="Close" />
               </Button>
+              {isPublished && (
+                <Button
+                  variant="outline"
+                  disabled={reReview.isPending || reason.trim().length < 3}
+                  onClick={() => reReview.mutate()}
+                >
+                  <Trans message="Send back for review" />
+                </Button>
+              )}
               {isActionable && (
                 <>
                   <Button
                     variant="outline"
                     color="danger"
-                    disabled={reject.isPending}
+                    disabled={reject.isPending || reason.trim().length < 3}
                     onClick={() => reject.mutate()}
                   >
                     <XIcon className="size-4" />

@@ -98,6 +98,9 @@ function PlanList({plans, selectedPeriod}: PlanListProps) {
               <div className="mb-3 text-xl font-semibold">
                 <Trans message={plan.name} />
               </div>
+              <p className="text-sm text-muted-foreground">
+                {plan.free ? <Trans message="Free forever · :limit lifetime verified sales · No commission" values={{limit: plan.storefront_benefits?.free_verified_sales ?? 0}} /> : <Trans message="Unlimited eligible verified sales while subscribed · No commission" />}
+              </p>
               {plan.description ? (
                 <div className="text-sm text-muted-foreground">
                   <Trans message={plan.description} />

@@ -18,9 +18,9 @@ export function ArticleGrid() {
   );
 
   const variant = hcLanding?.content?.variant ?? 'articleGrid';
-  const visibleRoots = query.data.categories.filter(
-    category => !category.hide_from_structure,
-  );
+  // hide_from_structure only hides the parent header (e.g. single-root HC),
+  // not the category's sections/articles.
+  const visibleRoots = query.data.categories;
   const rootCategories =
     variant === 'multiProduct' ? visibleRoots : visibleRoots.slice(0, 1);
 

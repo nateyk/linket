@@ -1,14 +1,16 @@
 import {trackedEventsReportOptions} from '@app/dashboard/reports/tracked-events-queries';
+import {CreatorSetupChecklist} from './creator-setup-checklist';
 import type {GenerateTrackedEventsReport200Data} from '@app/gen/schemas/generate-tracked-events-report200-data';
-import type {StorefrontOrder} from '@app/gen/schemas/storefront-order';
+import {PaymentStatusLabel} from '@app/dashboard/digital-products/payment-status-badge';
 import {ReportDateSelector} from '@common/admin/analytics/report-date-selector';
 import {apiClient} from '@common/http/query-client';
+import {useWorkspaceStore} from '@common/workspace/workspace-store';
 import {StaticPageTitle} from '@common/seo/static-page-title';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {Badge} from '@shadcn/badge/badge';
 import {Card} from '@shadcn/card/card';
 import {Chart} from '@shadcn/chart/chart';
-import {getSiteCurrency} from '@ui/i18n/format-money';
+import {formatMoney, getSiteCurrency} from '@ui/i18n/format-money';
 import {FormattedDate} from '@ui/i18n/formatted-date';
 import {
   generateTimeChartLabel,
@@ -39,22 +41,24 @@ import {
 } from 'lucide-react';
 import {ReactNode, useCallback, useRef, useState} from 'react';
 import {Area, AreaChart, CartesianGrid, XAxis, YAxis} from 'recharts';
+import {Link} from 'react-router';
 
 type SalesSummary = {
-  gross_sales_cents: number;
-  creator_earnings_cents: number;
-  available_for_payout_cents: number;
-  held_earnings_cents: number;
-  reserved_payout_cents: number;
-  paid_out_cents: number;
-  lifetime_earnings_cents: number;
+  verified_sales_count: number;
+  verified_revenue_cents: number;
+  pending_count: number;
+  manual_review_count: number;
   currency: string;
 };
 
 type SalesResponse = {
   summary: SalesSummary;
-  orders: StorefrontOrder[];
+  data: {data: DashboardOrder[]};
+  sales_trend: {date: string; amount_cents: number}[];
+  verification_allowance: {consumed: number; remaining: number; reserved: number; limit: number; is_pro: boolean};
 };
+
+type DashboardOrder = {uuid: string; status: string; gross_amount_cents: number; currency: string; created_at?: string; paid_at?: string; product?: {title: string} | null};
 
 export function Component() {
   const [dateRange, setDateRange] = useState<DateRangeValue>(() =>
@@ -74,12 +78,15 @@ export function Component() {
         <DashboardLayout.SectionContent className="overflow-y-auto">
           <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 py-4">
             <StatCards dateRange={dateRange} />
+            <CreatorSetupChecklist />
+            <AllowanceCards />
             <div className="grid min-w-0 grid-cols-1 gap-5 lg:grid-cols-12">
               <EngagementTrend
                 dateRange={dateRange}
                 onDateRangeChange={setDateRange}
               />
               <TopLocations dateRange={dateRange} />
+              <SalesTrend dateRange={dateRange} />
               <RecentOrders />
               <TopReferrers dateRange={dateRange} />
             </div>
@@ -90,7 +97,25 @@ export function Component() {
   );
 }
 
+function AllowanceCards() {
+  const {data, isLoading, isError} = useDashboardSales();
+  const allowance = data?.verification_allowance;
+  return <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+    <Card size="sm"><Card.Header><Card.Title><Trans message="Payments needing manual review" /></Card.Title></Card.Header><Card.Content>{isLoading ? <Skeleton className="h-8 w-20" /> : isError ? <SalesErrorState /> : <FormattedNumber value={data?.summary.manual_review_count ?? 0} />}</Card.Content></Card>
+    <Card size="sm"><Card.Header><Card.Title><Trans message="Verification allowance" /></Card.Title></Card.Header><Card.Content>{isLoading ? <Skeleton className="h-8 w-20" /> : isError || !allowance ? <SalesErrorState /> : allowance.is_pro ? <Trans message="Unlimited eligible verified sales" /> : <><p><Trans message=":used of :limit used" values={{used: allowance.consumed, limit: allowance.limit}} /></p><p><Trans message=":remaining remaining · :reserved reserved" values={{remaining: allowance.remaining, reserved: allowance.reserved}} /></p>{allowance.remaining <= 2 && <Link to="/account-settings/billing" className="text-primary underline"><Trans message="Explore Pro" /></Link>}</>}</Card.Content></Card>
+    <Card size="sm"><Card.Header><Card.Title><Trans message="Current subscription" /></Card.Title></Card.Header><Card.Content>{isLoading ? <Skeleton className="h-8 w-20" /> : isError || !allowance ? <SalesErrorState /> : allowance.is_pro ? <Trans message="Pro" /> : <Trans message="Free" />}</Card.Content></Card>
+  </section>;
+}
+
+function SalesTrend({dateRange}: {dateRange: DateRangeValue}) {
+  const {data, isLoading, isError} = useDashboardSales(dateRange);
+  return <Card size="sm" className="min-w-0 lg:col-span-12"><Card.Header><Card.Title><Trans message="Verified sales trend" /></Card.Title><Card.Description><Trans message="Verified revenue in the selected period" /></Card.Description></Card.Header><Card.Content className="min-h-52">
+    {isLoading ? <Skeleton className="h-48 w-full" /> : isError ? <SalesErrorState /> : !data?.sales_trend.length ? <OverviewEmptyState icon={CircleDollarSignIcon} title={<Trans message="No verified sales in this period" />} description={<Trans message="Verified sales will appear here." />} /> : <Chart.Container className="h-52 w-full"><AreaChart data={data.sales_trend}><CartesianGrid vertical={false} /><XAxis dataKey="date" /><YAxis hide /><Chart.Tooltip formatter={value => formatMoney(Number(value), 'ETB')} /><Area dataKey="amount_cents" stroke="var(--chart-1)" fill="var(--chart-1)" fillOpacity={0.15} /></AreaChart></Chart.Container>}
+  </Card.Content></Card>;
+}
+
 function StatCards({dateRange}: {dateRange: DateRangeValue}) {
+  const workspaceId = useWorkspaceStore(s => s.activeWorkspace?.id);
   const {
     data: salesData,
     isLoading: salesLoading,
@@ -103,6 +128,8 @@ function StatCards({dateRange}: {dateRange: DateRangeValue}) {
     isError: engagementError,
   } = useQuery({
     ...trackedEventsReportOptions({
+      ...{dashboard: '1'},
+      workspace_id: workspaceId ? String(workspaceId) : undefined,
       metric: 'events',
       start_date: dateRange.start.toAbsoluteString(),
       end_date: dateRange.end.toAbsoluteString(),
@@ -125,43 +152,43 @@ function StatCards({dateRange}: {dateRange: DateRangeValue}) {
     tone: string;
   }> = [
     {
-      key: 'gross-sales',
-      label: <Trans message="Gross sales" />,
+      key: 'verified-revenue',
+      label: <Trans message="Verified sales revenue" />,
       scope: <Trans message="Lifetime" />,
       value: salesLoading
         ? null
         : salesError
           ? undefined
-          : (summary?.gross_sales_cents ?? 0),
+          : (summary?.verified_revenue_cents ?? 0),
       icon: CircleDollarSignIcon,
       format: 'currency',
       tone: 'text-primary bg-primary/10',
     },
     {
-      key: 'creator-earnings',
-      label: <Trans message="Creator earnings" />,
+      key: 'verified-sales',
+      label: <Trans message="Verified sales" />,
       scope: <Trans message="Lifetime" />,
       value: salesLoading
         ? null
         : salesError
           ? undefined
-          : (summary?.creator_earnings_cents ?? 0),
+          : (summary?.verified_sales_count ?? 0),
       icon: WalletCardsIcon,
-      format: 'currency',
+      format: 'number',
       tone: 'text-positive bg-positive/10',
     },
     {
-      key: 'available-payout',
-      label: <Trans message="Available for payout" />,
+      key: 'pending-verification',
+      label: <Trans message="Awaiting payment or verification" />,
       scope: <Trans message="Lifetime" />,
       value: salesLoading
         ? null
         : salesError
           ? undefined
-          : (summary?.available_for_payout_cents ?? 0),
+          : (summary?.pending_count ?? 0),
       icon: LandmarkIcon,
-      format: 'currency',
-      tone: 'text-amber-600 bg-amber-500/10 dark:text-amber-400',
+      format: 'number',
+      tone: 'text-warning bg-warning/10',
     },
     {
       key: 'engagements',
@@ -186,7 +213,7 @@ function StatCards({dateRange}: {dateRange: DateRangeValue}) {
         return (
           <Card key={card.key} size="sm" className="min-h-32 gap-3">
             <Card.Header>
-              <Card.Title className="truncate text-sm font-normal text-muted-foreground">
+              <Card.Title className="text-sm font-normal leading-snug text-muted-foreground whitespace-normal">
                 {card.label}
               </Card.Title>
               <Card.Description className="text-xs">
@@ -424,7 +451,7 @@ function TopLocations({dateRange}: {dateRange: DateRangeValue}) {
 
 function RecentOrders() {
   const {data: salesData, isLoading, isError} = useDashboardSales();
-  const orders = salesData?.orders.slice(0, 5) ?? [];
+  const orders = salesData?.data.data.slice(0, 5) ?? [];
 
   return (
     <Card size="sm" className="min-w-0 lg:col-span-8">
@@ -436,9 +463,7 @@ function RecentOrders() {
           <Trans message="Latest digital product purchases" />
         </Card.Description>
         <Card.Action>
-          <span className="flex size-8 items-center justify-center rounded-card-sm bg-muted text-muted-foreground [&>svg]:size-4">
-            <ReceiptTextIcon aria-hidden="true" />
-          </span>
+          <Link to="/dashboard/orders" className="text-primary underline"><Trans message="View all orders" /></Link>
         </Card.Action>
       </Card.Header>
       <Card.Content className="min-h-64 flex-1">
@@ -468,14 +493,11 @@ function RecentOrders() {
                     <Table.Head className="text-end">
                       <Trans message="Gross" />
                     </Table.Head>
-                    <Table.Head className="text-end">
-                      <Trans message="Earnings" />
-                    </Table.Head>
                   </Table.Row>
                 </Table.Header>
                 <Table.Body>
                   {orders.map(order => (
-                    <Table.Row key={order.id}>
+                    <Table.Row key={order.uuid}>
                       <Table.Cell className="max-w-56 truncate font-medium">
                         {order.product?.title ?? (
                           <Trans message="Digital product" />
@@ -493,12 +515,6 @@ function RecentOrders() {
                           currency={order.currency}
                         />
                       </Table.Cell>
-                      <Table.Cell className="text-end font-medium tabular-nums">
-                        <FormattedCurrency
-                          valueInCents={order.creator_earnings_cents}
-                          currency={order.currency}
-                        />
-                      </Table.Cell>
                     </Table.Row>
                   ))}
                 </Table.Body>
@@ -507,7 +523,7 @@ function RecentOrders() {
             <div className="flex flex-col gap-4 md:hidden">
               {orders.map(order => (
                 <article
-                  key={order.id}
+                  key={order.uuid}
                   className="flex min-w-0 items-center justify-between gap-3"
                 >
                   <div className="min-w-0">
@@ -524,12 +540,12 @@ function RecentOrders() {
                   <div className="shrink-0 text-end">
                     <p className="font-medium tabular-nums">
                       <FormattedCurrency
-                        valueInCents={order.creator_earnings_cents}
+                        valueInCents={order.gross_amount_cents}
                         currency={order.currency}
                       />
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      <Trans message="Earnings" />
+                      <Trans message="Amount" />
                     </p>
                   </div>
                 </article>
@@ -629,38 +645,10 @@ function TopReferrers({dateRange}: {dateRange: DateRangeValue}) {
 }
 
 function OrderStatusBadge({status}: {status: string}) {
-  if (status === 'paid' || status === 'completed') {
-    return (
-      <Badge variant="positive">
-        <Trans message="Paid" />
-      </Badge>
-    );
-  }
-
-  if (status === 'failed' || status === 'rejected') {
-    return (
-      <Badge variant="destructive">
-        <Trans message="Failed" />
-      </Badge>
-    );
-  }
-
-  if (status === 'cancelled') {
-    return (
-      <Badge variant="destructive">
-        <Trans message="Cancelled" />
-      </Badge>
-    );
-  }
-
-  return (
-    <Badge variant="secondary">
-      <Trans message="Pending" />
-    </Badge>
-  );
+  return <Badge variant={status === 'paid' || status === 'fulfilled' ? 'positive' : status === 'failed_verification' ? 'destructive' : 'secondary'}><PaymentStatusLabel status={status} /></Badge>;
 }
 
-function OrderDate({order}: {order: StorefrontOrder}) {
+function OrderDate({order}: {order: DashboardOrder}) {
   const date = order.paid_at ?? order.created_at;
 
   return date ? <FormattedDate date={date} /> : <Trans message="Date unavailable" />;
@@ -724,12 +712,15 @@ function SalesErrorState() {
   );
 }
 
-function useDashboardSales() {
+function useDashboardSales(dateRange?: DateRangeValue) {
+  const workspaceId = useWorkspaceStore(s => s.activeWorkspace?.id);
+  const from = dateRange?.start.toString().slice(0, 10);
+  const to = dateRange?.end.toString().slice(0, 10);
   return useQuery({
-    queryKey: ['dashboard-sales-summary'],
+    queryKey: ['dashboard-sales-summary', workspaceId, from, to],
     queryFn: async () => {
       const response = await apiClient.get<SalesResponse>(
-        '/api/v1/items/sales',
+        '/api/v1/storefront/direct-orders', {params: {from, to, per_page: 5}},
       );
       return response.data;
     },
@@ -746,9 +737,12 @@ function useAsyncChart<Metric extends ReportMetric>({
   metric: Metric;
 }) {
   const [isEnabled, setIsEnabled] = useState(false);
+  const workspaceId = useWorkspaceStore(s => s.activeWorkspace?.id);
 
   const params: Record<string, string> = {
     metric,
+    dashboard: '1',
+    ...(workspaceId ? {workspace_id: String(workspaceId)} : {}),
     start_date: dateRange.start.toAbsoluteString(),
     end_date: dateRange.end.toAbsoluteString(),
     timezone: dateRange.start.timeZone,
@@ -800,4 +794,3 @@ function formatReferrer(value: string): string {
     return value;
   }
 }
-

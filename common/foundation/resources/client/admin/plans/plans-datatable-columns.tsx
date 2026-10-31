@@ -40,6 +40,15 @@ export const plansDatatableColumns: ColumnDef<Product>[] = [
               <FormattedPrice price={price} />
             )}
           </div>
+          <div className="mt-1 text-xs text-muted-foreground">
+            <Trans
+              message=":active active · :total total subscribers"
+              values={{
+                active: product.active_subscriptions_count ?? 0,
+                total: product.subscriptions_count ?? 0,
+              }}
+            />
+          </div>
         </div>
       );
     },

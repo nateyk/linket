@@ -1,3 +1,4 @@
+import {FilterOperator} from '@common/datatable/filters/backend-filter';
 import {StaticPageTitle} from '@common/seo/static-page-title';
 import {useShowGlobalLoadingBar} from '@common/core/use-show-global-loading-bar';
 import {AddFilterButton} from '@common/datatable/filters/add-filter-button';
@@ -58,10 +59,21 @@ export function Component() {
   const total = counters?.total?.total ?? items.length;
   const pending = counters?.pending_approval?.total ?? 0;
   const approved = counters?.approved?.total ?? 0;
+  const published = counters?.published?.total ?? 0;
   const rejected = counters?.rejected?.total ?? 0;
   const updated = counters?.updated?.total ?? 0;
   const scope = queryState.scope;
-  const isScopeFiltering = scope === 'updated';
+  const statusFilter = String((queryState.status as {value?: string} | null)?.value ?? '');
+  const isScopeFiltering = scope === 'updated' || scope === 'published' || statusFilter !== '';
+
+  const selectStatus = (next: string) =>
+    setQueryState(
+      {
+        status: statusFilter === next ? null : {value: next, operator: FilterOperator.eq},
+        scope: null,
+      },
+      {resetPage: true},
+    );
 
   const queryClient = useQueryClient();
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -169,6 +181,10 @@ export function Component() {
           </Tooltip.Provider>
         </DashboardLayout.SectionTitle>
         <div className="flex items-center gap-2">
+          <Button variant="outline" nativeButton={false} render={<Link to="/admin/items/payment-methods" />}>
+            <LandmarkIcon />
+            <Trans message="Receiving accounts" />
+          </Button>
           <Button
             variant="outline"
             nativeButton={false}
@@ -182,39 +198,55 @@ export function Component() {
 
       <DashboardLayout.SectionContent className="overflow-y-auto">
         <div className="mx-auto w-full max-w-6xl space-y-5 py-6">
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             <MetricCard
               label="All products"
               value={String(total)}
               icon={<PackageIcon />}
+              active={!statusFilter && !scope}
+              onClick={() => setQueryState({status: null, scope: null}, {resetPage: true})}
             />
             <MetricCard
               label="Pending review"
               value={String(pending)}
               icon={<ClockIcon />}
               tone={pending > 0 ? 'warning' : 'default'}
+              active={statusFilter === 'pending_approval'}
+              onClick={() => selectStatus('pending_approval')}
             />
             <MetricCard
               label="Approved"
               value={String(approved)}
               icon={<BadgeCheckIcon />}
               tone="positive"
+              active={statusFilter === 'approved'}
+              onClick={() => selectStatus('approved')}
             />
             <MetricCard
               label="Rejected"
               value={String(rejected)}
               icon={<XCircleIcon />}
               tone={rejected > 0 ? 'warning' : 'default'}
+              active={statusFilter === 'rejected'}
+              onClick={() => selectStatus('rejected')}
+            />
+            <MetricCard
+              label="Published"
+              value={String(published)}
+              icon={<BadgeCheckIcon />}
+              tone="positive"
+              active={statusFilter === 'published'}
+              onClick={() => selectStatus('published')}
             />
             <MetricCard
               label="Updates pending"
               value={String(updated)}
               icon={<RefreshCwIcon />}
               tone={updated > 0 ? 'warning' : 'default'}
-              active={isScopeFiltering}
+              active={scope === 'updated'}
               onClick={() =>
                 setQueryState(
-                  {scope: scope === 'updated' ? null : 'updated'},
+                  {scope: scope === 'updated' ? null : 'updated', status: null},
                   {resetPage: true},
                 )
               }
@@ -351,7 +383,7 @@ export function Component() {
               <Button
                 variant="outline"
                 color="danger"
-                disabled={bulkReject.isPending}
+                disabled={bulkReject.isPending || bulkReason.trim().length < 3}
                 onClick={() => bulkReject.mutate()}
               >
                 <XIcon />

@@ -10,6 +10,7 @@
  * @nullable
  */
 export type ProductStorefrontBenefits = {
+  free_verified_sales?: number | null;
   /** @nullable */
   platform_fee_percent?: number | null;
   /** @nullable */

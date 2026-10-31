@@ -49,6 +49,16 @@ export const adminRoutes: RouteObject[] = [
         ],
       },
       ...Object.values(adminUsersRoutes),
+      {
+        path: 'creators',
+        lazy: () => import('@app/admin/creators/admin-creators-page'),
+        loader: async () => authGuard({permission: 'users.update'}) ?? null,
+      },
+      {
+        path: 'creators/:userId',
+        lazy: () => import('@app/admin/creators/admin-creator-detail-page'),
+        loader: async () => authGuard({permission: 'users.update'}) ?? null,
+      },
       ...Object.values(adminRolesRoutes),
       ...Object.values(adminBillingRoutes),
       ...Object.values(adminCustomPagesRoutes),
@@ -209,6 +219,10 @@ export const adminRoutes: RouteObject[] = [
         lazy: () => import('@app/admin/digital-products/admin-digital-product-payouts-page'),
       },
       {
+        path: 'items/payment-methods',
+        lazy: () => import('@app/admin/digital-products/admin-direct-payment-methods-page'),
+      },
+      {
         path: 'items/:productId/reviews',
         lazy: () =>
           import('@app/admin/digital-products/admin-product-reviews-page'),
@@ -236,7 +250,15 @@ export const adminRoutes: RouteObject[] = [
         lazy: () => import('@app/admin/withdrawals/admin-withdrawal-review-page'),
       },
       {
+        path: 'financial/payment-gateways',
+        lazy: () => import('@app/admin/digital-products/admin-direct-payment-methods-page'),
+      },
+      {
         path: 'financial/withdrawal-methods',
+        lazy: () => import('@app/admin/financial/admin-receiving-accounts-page'),
+      },
+      {
+        path: 'financial/withdrawal-methods/legacy',
         lazy: () => import('@app/admin/financial/admin-withdrawal-methods-page'),
       },
       {

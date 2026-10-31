@@ -1,4 +1,5 @@
 import {AdminSidebarIcons} from '@app/admin/admin-config';
+import {shouldEndMatchSidebarItem} from '@common/admin/admin-sidebar-nav-end';
 import {UserAvatar, UserAvatarProps} from '@common/auth/user-avatar';
 import {useAuth} from '@common/auth/use-auth';
 import {useCustomMenu} from '@common/menus/use-custom-menu';
@@ -20,7 +21,7 @@ import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {Popover} from '@shadcn/popover/popover';
 import {Trans} from '@ui/i18n/trans';
 import {cn} from '@ui/utils/cn';
-import {BellIcon, ChevronRightIcon, ChevronUpIcon, ShieldCheckIcon, StoreIcon, WalletCardsIcon, CreditCardIcon, CoinsIcon} from 'lucide-react';
+import {BellIcon, ChevronRightIcon, ChevronUpIcon, ShieldCheckIcon, StoreIcon, WalletCardsIcon, CreditCardIcon, CoinsIcon, LandmarkIcon} from 'lucide-react';
 import {JSXElementConstructor, use, useState} from 'react';
 import {Link, NavLink, useLocation, useSearchParams} from 'react-router';
 
@@ -45,6 +46,9 @@ export function AdminSidebar() {
   );
   const hasWithdrawals = adminMenu?.items.some(
     item => item.action === '/admin/withdrawals',
+  );
+  const hasPaymentGateways = adminMenu?.items.some(
+    item => item.action === '/admin/financial/payment-gateways',
   );
   const hasWithdrawalMethods = adminMenu?.items.some(
     item => item.action === '/admin/financial/withdrawal-methods',
@@ -73,7 +77,13 @@ export function AdminSidebar() {
             <Sidebar.MenuFromConfig
               position="admin-sidebar"
               defaultIcons={AdminSidebarIcons}
-              end={item => item.action === '/admin'}
+              end={item =>
+                shouldEndMatchSidebarItem(
+                  item,
+                  pathname,
+                  adminMenu?.items ?? [],
+                )
+              }
               filter={item => item.action !== DIGITAL_PRODUCTS_PATH}
             />
             {isCompactMode ? (
@@ -149,7 +159,7 @@ export function AdminSidebar() {
                 </Sidebar.MenuItem>
               </Sidebar.Menu>
             )}
-            {(!hasTransactions || !hasKyc || !hasWithdrawals || !hasWithdrawalMethods) && (
+            {(!hasTransactions || !hasKyc || !hasWithdrawals || !hasPaymentGateways || !hasWithdrawalMethods) && (
               <Sidebar.Menu>
                 {!hasTransactions && (
                   <Sidebar.MenuItem>
@@ -181,13 +191,23 @@ export function AdminSidebar() {
                     </Sidebar.MenuButton>
                   </Sidebar.MenuItem>
                 )}
+                {!hasPaymentGateways && (
+                  <Sidebar.MenuItem>
+                    <Sidebar.MenuButton
+                      render={<NavLink to="/admin/financial/payment-gateways" />}
+                      icon={<LandmarkIcon />}
+                    >
+                      <Trans message="Payment Gateways" />
+                    </Sidebar.MenuButton>
+                  </Sidebar.MenuItem>
+                )}
                 {!hasWithdrawalMethods && (
                   <Sidebar.MenuItem>
                     <Sidebar.MenuButton
                       render={<NavLink to="/admin/financial/withdrawal-methods" />}
                       icon={<CoinsIcon />}
                     >
-                      <Trans message="Withdrawal Methods" />
+                      <Trans message="Receiving accounts" />
                     </Sidebar.MenuButton>
                   </Sidebar.MenuItem>
                 )}
@@ -233,7 +253,7 @@ function AdminSidebarFooter() {
             </Popover.Trigger>
           </NotificationsDialog>
         </Sidebar.MenuItem>
-        <NavbarAuthMenu side="top" align="center">
+        <NavbarAuthMenu side="top" align="end">
           <Sidebar.MenuButton
             icon={avatar}
             rightIcon={<ChevronUpIcon />}
@@ -267,22 +287,22 @@ export function AdminSidebarAuthUserItem({
   return (
     <NavbarAuthMenu
       side="top"
-      align="center"
+      align="end"
       accountSettingsLink={accountSettingsLink}
     >
       {isCompact ? (
-        <button
+        <Dropdown.Trigger
           aria-label="toggle authentication menu"
           className="flex size-8 items-center justify-center rounded-button hover:bg-sidebar-accent hover:text-accent-foreground"
         >
           {avatar}
-        </button>
+        </Dropdown.Trigger>
       ) : (
-        <button className="flex h-9 w-full items-center rounded-button px-3 py-2 text-sm hover:bg-sidebar-accent hover:text-accent-foreground">
+        <Dropdown.Trigger className="flex h-9 w-full items-center rounded-button px-3 py-2 text-sm hover:bg-sidebar-accent hover:text-accent-foreground">
           {avatar}
           <span className="ms-2 block min-w-0 truncate">{user.name}</span>
           <ChevronUpIcon className="ms-auto block size-4" />
-        </button>
+        </Dropdown.Trigger>
       )}
     </NavbarAuthMenu>
   );

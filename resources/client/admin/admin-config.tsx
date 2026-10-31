@@ -20,6 +20,7 @@ import {
   CoinsIcon,
   NewspaperIcon,
   ListTreeIcon,
+  LifeBuoyIcon,
 } from 'lucide-react';
 import {ComponentProps, ReactElement} from 'react';
 
@@ -31,9 +32,12 @@ export const AdminSidebarIcons: Record<
   '/admin/insights': <ChartColumnBigIcon />,
   '/admin/settings': <SettingsIcon />,
   '/admin/settings/general': <SettingsIcon />,
+  '/admin/settings/hc': <LifeBuoyIcon />,
+  '/admin/help': <LifeBuoyIcon />,
   '/admin/subscriptions': <CircleDollarSignIcon />,
   '/admin/plans': <SquareStackIcon />,
   '/admin/users': <UserIcon />,
+  '/admin/creators': <StoreIcon />,
   '/admin/roles': <UserRoundKeyIcon />,
   '/admin/custom-pages': <NotebookTextIcon />,
   '/admin/tags': <TagsIcon />,
@@ -46,6 +50,7 @@ export const AdminSidebarIcons: Record<
   '/admin/payment-activity': <CircleDollarSignIcon />,
   '/admin/kyc-verifications': <ShieldCheckIcon />,
   '/admin/withdrawals': <CreditCardIcon />,
+  '/admin/financial/payment-gateways': <LandmarkIcon />,
   '/admin/financial/withdrawal-methods': <CoinsIcon />,
   '/admin/financial': <LandmarkIcon />,
 };

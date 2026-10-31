@@ -28,12 +28,15 @@ describe('admin product review queue', () => {
 
   test('renders an Updates pending metric from counters', () => {
     expect(page).toContain('counters?.updated');
+    expect(page).toContain('counters?.published');
     expect(page).toContain('Updates pending');
+    expect(page).toContain('Published');
     expect(page).toContain('parseAsString');
   });
 
   test('allows approve/reject on updated rows', () => {
     expect(columns).toContain('has_pending_update');
     expect(columns).toContain('isActionable');
+    expect(columns).toContain('/re-review');
   });
 });

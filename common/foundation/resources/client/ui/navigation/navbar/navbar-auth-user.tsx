@@ -48,7 +48,7 @@ export function NavbarAuthUser({
   );
 
   return (
-    <NavbarAuthMenu items={items}>
+    <NavbarAuthMenu items={items} align="end">
       {variant === 'wide' ? wideButton : compactButton}
     </NavbarAuthMenu>
   );

@@ -229,6 +229,21 @@ test('refetches when the productId changes', async () => {
   await waitFor(() =>
     expect(h.itemUrls).toContain('/api/v1/items/2'),
   );
+  expect(screen.queryByRole('textbox', {name: /product title/i})).toBeNull();
+  expect((screen.getByRole('button', {name: /save draft/i}) as HTMLButtonElement).disabled).toBe(true);
+});
+
+test('disables editing and saving when an existing product cannot be loaded', async () => {
+  mount();
+  await waitFor(() => expect(h.itemGetCount).toBe(1));
+  await act(async () => {
+    h.pending.splice(0).forEach(request => request.reject(new Error('Load failed')));
+  });
+
+  expect(await screen.findByText('Load failed')).toBeTruthy();
+  expect((screen.getByRole('button', {name: /save draft/i}) as HTMLButtonElement).disabled).toBe(true);
+  expect((screen.getByRole('button', {name: /submit for review/i}) as HTMLButtonElement).disabled).toBe(true);
+  expect(screen.queryByRole('textbox', {name: /product title/i})).toBeNull();
 });
 
 test('a stale response for a previous product never hydrates the current one', async () => {

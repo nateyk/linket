@@ -17,4 +17,9 @@ describe('admin sidebar products navigation', () => {
   test('keeps no stale digital-products links', () => {
     expect(sidebar).not.toContain('/admin/digital-products');
   });
+
+  test('uses path-aware end matching so Settings is not active on Help center', () => {
+    expect(sidebar).toContain('shouldEndMatchSidebarItem');
+    expect(sidebar).not.toContain("end={item => item.action === '/admin'}");
+  });
 });

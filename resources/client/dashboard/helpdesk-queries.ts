@@ -162,6 +162,22 @@ export const helpdeskQueries = {
         initialPageParam: null,
         getNextPageParam: getNextPageParamFromBackend,
       }),
+    customerMessages: (conversationId: string | number) =>
+      infiniteQueryOptions({
+        queryKey: [
+          'conversations',
+          'customer',
+          `${conversationId}`,
+          'messages',
+        ],
+        queryFn: ({pageParam}) =>
+          get<{pagination: CursorPaginationResponse<ConversationContentItem>}>(
+            `helpdesk/customer/conversations/${conversationId}/messages`,
+            pageParam ? {cursor: pageParam} : undefined,
+          ),
+        initialPageParam: null,
+        getNextPageParam: getNextPageParamFromBackend,
+      }),
     agentConversationList: (agentId: number | string) => {
       return infiniteQueryOptions({
         queryKey: ['conversations', 'agent', 'list', `${agentId}`],
