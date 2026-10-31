@@ -268,6 +268,7 @@ export class S3MultipartUpload implements UploadStrategy {
         backendId: this.config.backendId,
         uploadType: this.config.uploadType,
         key: this.fileKey,
+        uploadGrant: this.uploadGrant,
         uploadId: this.uploadId,
         parts: this.chunks.map(c => {
           return {
