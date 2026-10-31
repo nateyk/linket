@@ -3,6 +3,7 @@
 namespace Common\Files\S3;
 
 use Common\Files\Actions\CreateFileEntry;
+use Common\Files\Actions\AuthorizeUploadDestination;
 use Common\Files\Events\FileUploaded;
 use Common\Files\FileEntry;
 use Common\Files\FileEntryPayload;
@@ -31,6 +32,7 @@ class S3FileEntryController extends Controller
         ]);
 
         $payload = new FileEntryPayload($validatedData);
+        app(AuthorizeUploadDestination::class)->execute($request, $payload);
 
         Gate::authorize('store', [FileEntry::class, $payload->parentId]);
 
