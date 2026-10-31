@@ -24,6 +24,7 @@ class S3FileEntryController extends Controller
             'clientName' => 'required|string',
             'clientSize' => 'required|int',
             'uploadGrant' => 'required|string',
+            'uploadStrategy' => 'nullable|in:multipart',
             'parentId' => 'nullable|exists:file_entries,id',
             'relativePath' => 'nullable|string',
             'workspaceId' => 'nullable|int',
@@ -31,7 +32,7 @@ class S3FileEntryController extends Controller
             'backendId' => 'required|string',
         ]);
 
-        $resolved = app(UploadGrant::class)->resolve($request, $validatedData['uploadGrant'], 'simple', true);
+        $resolved = app(UploadGrant::class)->resolve($request, $validatedData['uploadGrant'], ($validatedData['uploadStrategy'] ?? null) === 'multipart' ? 'multipart' : 'simple', true);
         $payload = $resolved['payload'];
         $validatedData = $resolved['grant']['metadata'];
 
