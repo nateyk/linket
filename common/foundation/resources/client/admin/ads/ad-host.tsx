@@ -1,7 +1,7 @@
 import {Settings} from '@ui/settings/settings';
 import {useSettings} from '@ui/settings/use-settings';
 import clsx from 'clsx';
-import dot from 'dot-object';
+import {pickNestedValue} from '@ui/utils/pick-nested-value';
 import {memo, useMemo} from 'react';
 import {useAuth} from '../../auth/use-auth';
 
@@ -13,7 +13,7 @@ export function AdHost({slot, className}: AdHostProps) {
   const settings = useSettings();
   const {isSubscribed} = useAuth();
   const adCode = useMemo(() => {
-    return dot.pick(`ads.${slot}`, settings);
+    return pickNestedValue<string>(`ads.${slot}`, settings);
   }, [slot, settings]);
 
   if (settings.ads?.disable || isSubscribed || !adCode) return null;
