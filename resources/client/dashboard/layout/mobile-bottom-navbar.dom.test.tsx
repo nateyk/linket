@@ -28,6 +28,13 @@ const {mobileMenu} = vi.hoisted(() => ({
         action: '/dashboard/stores',
       },
       {
+        id: 'legacy-stores',
+        type: 'route',
+        order: 1.5,
+        label: 'Legacy Store',
+        action: '/dashboard/biolinks',
+      },
+      {
         id: 'products',
         type: 'route',
         order: 2,
@@ -40,6 +47,13 @@ const {mobileMenu} = vi.hoisted(() => ({
         order: 3,
         label: 'Payouts',
         action: '/dashboard/sales-payouts',
+      },
+      {
+        id: 'services',
+        type: 'route',
+        order: 4,
+        label: 'Services',
+        action: '/dashboard/services',
       },
     ],
   },
@@ -77,15 +91,15 @@ test('bottom navbar is a labelled navigation landmark', async () => {
     name: 'Mobile navigation',
   });
   expect(within(nav).getAllByRole('link')).toHaveLength(4);
+  expect(within(nav).queryByRole('link', {name: 'Stores'})).toBeNull();
+  expect(within(nav).queryByRole('link', {name: 'Legacy Store'})).toBeNull();
 });
 
-test('only the current section gets aria-current on nested routes', async () => {
+test('store editor remains reachable elsewhere without activating the bottom bar', async () => {
   renderNavbar('/dashboard/stores/3006');
 
   const current = document.querySelectorAll('[aria-current="page"]');
-  expect([...current].map(link => link.getAttribute('href'))).toEqual([
-    '/dashboard/stores',
-  ]);
+  expect([...current].map(link => link.getAttribute('href'))).toEqual([]);
 });
 
 test('dashboard link is the only aria-current on the home route', async () => {
@@ -97,25 +111,23 @@ test('dashboard link is the only aria-current on the home route', async () => {
   ]);
 });
 
-test('labels wrap to two lines instead of shrinking to clipped stubs', async () => {
-  // Six menu labels (~367px) can't fit one line in a 360px bar at any
-  // padding: nowrap + shrink-0 let flex squeeze each item below its text
-  // width and overflow-hidden center-clipped it ("My Store" -> "Sto",
-  // "Home" -> "om"). Wrapping floors each item at its longest word, so
-  // nothing is ever cut mid-word; text-center keeps wrapped lines under
-  // the icon; items-start keeps the icon row aligned across items whose
-  // labels wrapped or didn't.
+test('remaining destinations share the bar and keep visible focus', async () => {
+  // Four route items plus Account fit at equal widths on compact phones.
+  // Titles may wrap at spaces but are not clipped mid-word.
   renderNavbar('/dashboard');
   const nav = await screen.findByRole('navigation', {
     name: 'Mobile navigation',
   });
 
   expect(nav.className).not.toContain('gap-7.5');
-  expect(nav.className).toContain('px-4');
+  expect(nav.className).toContain('px-2');
   expect(nav.className).toContain('items-start');
   for (const item of nav.querySelectorAll('a, button')) {
     expect(item.className).not.toContain('whitespace-nowrap');
     expect(item.className).not.toContain('shrink-0');
+    expect(item.className).toContain('min-w-0');
+    expect(item.className).toContain('flex-1');
     expect(item.className).toContain('text-center');
+    expect(item.className).toContain('focus-visible:outline-2');
   }
 });

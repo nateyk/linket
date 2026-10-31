@@ -419,3 +419,13 @@ describe('preview sheet below lg (A-19)', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 });
+
+test('mobile preview is a secondary action with dialog semantics', () => {
+  location.pathname = '/dashboard/stores/demo';
+  const {unmount} = render(<LivePreview />);
+  const button = screen.getByRole('button', {name: 'Preview'});
+  expect(button.getAttribute('aria-haspopup')).toBe('dialog');
+  expect(button.getAttribute('aria-expanded')).toBe('false');
+  expect(button.className).toContain('bg-background');
+  unmount();
+});

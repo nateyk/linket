@@ -74,3 +74,19 @@ test('appearance row titles use the shared section label (truncating title)', ()
   const title = titleId ? document.getElementById(titleId) : null;
   expect(title?.className).toContain('truncate');
 });
+
+
+test('background choices fit a narrow editor and expose their active state', () => {
+  renderAppearanceTab();
+  fireEvent.click(trigger('Background'));
+
+  const options = ['Solid', 'Gradient', 'Pattern', 'Image'].map(trigger);
+  expect(options[0].parentElement?.className).toContain('grid-cols-4');
+  for (const option of options) {
+    expect(option.getAttribute('type')).toBe('button');
+  }
+  expect(trigger('Solid').getAttribute('aria-pressed')).toBe('true');
+  fireEvent.click(trigger('Image'));
+  expect(trigger('Image').getAttribute('aria-pressed')).toBe('true');
+  expect(trigger('Solid').getAttribute('aria-pressed')).toBe('false');
+});

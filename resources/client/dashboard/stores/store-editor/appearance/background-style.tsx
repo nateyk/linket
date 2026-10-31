@@ -6,6 +6,8 @@ export function BackgroundStyle() {
   const value = useBiolinkEditorStore(s => s.appearance?.bgConfig);
   return (
     <BackgroundSelector
+      compactTypeSelector
+      tabClassName="gap-5"
       uploadType="linkImages"
       value={value}
       onChange={newValue =>

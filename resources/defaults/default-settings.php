@@ -445,12 +445,6 @@ return [
                     ],
                     [
                         'type' => 'route',
-                        'label' => 'My Store',
-                        'action' => '/dashboard/stores',
-                        'id' => 239,
-                    ],
-                    [
-                        'type' => 'route',
                         'label' => 'My Items',
                         'action' => '/dashboard/items',
                         'id' => 'digital-products-mobile',

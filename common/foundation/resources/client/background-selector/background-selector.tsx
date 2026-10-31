@@ -30,6 +30,8 @@ type TabName = keyof typeof TabMap;
 interface BackgroundSelectorProps {
   className?: string;
   tabClassName?: string;
+  /** Use smaller background options inside narrow builder panels. */
+  compactTypeSelector?: boolean;
   value: BackgroundSelectorConfig | null | undefined;
   onChange: (newValue: BackgroundSelectorConfig | null) => void;
   centerTabs?: boolean;
@@ -44,6 +46,7 @@ export function BackgroundSelector({
   value,
   onChange,
   tabClassName,
+  compactTypeSelector = false,
   centerTabs,
   underTabs,
   uploadType = 'linkImages',
@@ -59,6 +62,7 @@ export function BackgroundSelector({
         activeType={activeType}
         onSelected={nextValue => onChange?.(nextValue)}
         className={cn(centerTabs && 'justify-center')}
+        compact={compactTypeSelector}
         value={value ?? undefined}
       />
       {underTabs}
@@ -74,12 +78,14 @@ export function BackgroundSelector({
 
 interface TypeSelectorProps {
   activeType: TabName;
+  compact?: boolean;
   onSelected: (nextValue: BackgroundSelectorConfig) => void;
   value?: BackgroundSelectorConfig;
   className?: string;
 }
 function TypeSelector({
   activeType,
+  compact = false,
   onSelected: onTabChange,
   value,
   className,
@@ -92,7 +98,12 @@ function TypeSelector({
 
   return (
     <div
-      className={cn('mb-5 flex items-center gap-5 border-b pb-5', className)}
+      className={cn(
+        'mb-5 flex items-center gap-5 border-b pb-5',
+        compact &&
+          'grid grid-cols-4 gap-2 pb-4 [&>button]:min-w-0 [&>button]:gap-1.5 [&>button>span]:h-14 [&>button>span]:w-full [&>button>span_svg]:size-5',
+        className,
+      )}
     >
       <ColorTypeButton
         isActive={activeType === 'color'}
