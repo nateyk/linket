@@ -98,3 +98,8 @@ C:\Users\*
 
 # Local-only helpers
 storage/seed-my-order-test.php
+
+# Local test and typecheck artifacts
+/playwright-report/
+/test-results/
+/tsconfig.tsbuildinfo
