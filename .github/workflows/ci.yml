@@ -127,6 +127,13 @@ jobs:
       - name: Seed upload backends (required for FileEntry legacy disk)
         run: php artisan db:seed --class="Common\Database\Seeders\UploadBackendsSeeder" --force --no-interaction
 
+      - name: Release-control security regression gates
+        run: |
+          set -euo pipefail
+          bash scripts/tests/test-release-artifact.sh
+          bash scripts/tests/test-resolve-verified-ci.sh
+          bash scripts/tests/test-release-gates.sh
+
       - name: Tests — 0 failures is the gate
         run: php artisan test --compact
         # Do NOT hardcode expected count; repo grows. Only exit 0 matters.
@@ -247,7 +254,6 @@ jobs:
 
       - name: Upload CI artifact for CD (main only)
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: linket-ci-${{ github.sha }}
