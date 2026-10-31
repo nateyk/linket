@@ -145,7 +145,7 @@ class FileUploadValidator
             return false;
         }
 
-        return in_array($mime, $mimes);
+        return !!Arr::first($mimes, fn($allowed) => Str::is($allowed, $mime));
     }
 
     protected function extensionMatches(
