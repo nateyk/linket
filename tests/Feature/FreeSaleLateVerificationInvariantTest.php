@@ -215,7 +215,7 @@ class FreeSaleLateVerificationInvariantTest extends TestCase
 
     private function expireAndRelease(StorefrontOrder $order): void
     {
-        $order->update(['status' => 'expired', 'payment_expires_at' => now()->subMinute()]);
+        StorefrontOrder::query()->whereKey($order->id)->update(['status' => 'expired', 'payment_expires_at' => now()->subMinute()]);
         app(CreatorVerificationAllowance::class)->release($order, 'abandoned_without_submitted_reference');
         $this->assertSame('released', $this->rowStatus($order));
     }
