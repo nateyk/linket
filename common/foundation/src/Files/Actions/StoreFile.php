@@ -50,6 +50,9 @@ class StoreFile
             abort(403);
         }
 
+        $destination = trim(($payload->diskPrefix ? $payload->diskPrefix . '/' : '') . $payload->filename, '/');
+        abort_if($this->disk->exists($destination), 409, 'Upload destination already exists.');
+
         if (isset($fileOptions['file'])) {
             return $this->storeUploadedFile($fileOptions['file']);
         } elseif (isset($fileOptions['contents'])) {
