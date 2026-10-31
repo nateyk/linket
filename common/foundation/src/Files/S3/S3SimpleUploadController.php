@@ -4,6 +4,10 @@ namespace Common\Files\S3;
 
 use Carbon\Carbon;
 use Common\Files\Actions\FileUploadValidator;
+use Common\Files\Actions\AuthorizeUploadDestination;
+use Common\Files\Actions\S3UploadGrant;
+use Common\Files\FileEntryPayload;
+use Illuminate\Support\Facades\Gate;
 use Common\Files\S3\InteractsWithS3Api;
 use Common\Files\Uploads\Uploads;
 use Illuminate\Http\Request;
@@ -28,8 +32,6 @@ class S3SimpleUploadController extends Controller
      */
     public function presignPost(Request $request)
     {
-        $fileKey = $this->buildFileKey();
-
         $data = $request->validate([
             'clientSize' => 'required|integer',
             'clientExtension' => 'required|string',
@@ -38,7 +40,10 @@ class S3SimpleUploadController extends Controller
             'backendId' => 'required|string',
         ]);
 
-        $uploadType = Uploads::type($data['uploadType']);
+        $payload = new FileEntryPayload($request->all());
+        app(AuthorizeUploadDestination::class)->execute($request, $payload);
+        $fileKey = $this->buildFileKey($payload);
+        $uploadType = $payload->uploadType;
         $errors = FileUploadValidator::validateForUploadType(
             uploadType: $uploadType,
             fileSize: $data['clientSize'],
@@ -69,6 +74,8 @@ class S3SimpleUploadController extends Controller
         $uri = $this->getClient()
             ->createPresignedRequest($command, Carbon::now()->addHour())
             ->getUri();
+
+        app(S3UploadGrant::class)->issue($payload, $fileKey);
 
         return response()->json([
             'url' => $uri,
