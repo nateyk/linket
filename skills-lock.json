@@ -12,6 +12,12 @@
       "sourceType": "github",
       "skillPath": "skills/shadcn/SKILL.md",
       "computedHash": "f615de216e085a84e31593ad0fa9062232adc40cd87b7c7ab2b8e49abf6500be"
+    },
+    "verify-et-api": {
+      "source": "NegusNati/verify-et-api",
+      "sourceType": "github",
+      "skillPath": "skills/verify-et-api/SKILL.md",
+      "computedHash": "0df120494bae53315138b370144cc1dbd465a5f3e9f3b28f9ed9a91f40e6642c"
     }
   }
 }

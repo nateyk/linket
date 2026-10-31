@@ -9,7 +9,8 @@
     "vitest.explorer",
     "ms-playwright.playwright",
     "mikestead.dotenv",
-    "EditorConfig.EditorConfig"
+    "EditorConfig.EditorConfig",
+    "openai.chatgpt"
   ],
   "unwantedRecommendations": [
     "felixfbecker.php-debug",
