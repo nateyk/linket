@@ -102,6 +102,13 @@ export default defineConfig({
   resolve: {
     preserveSymlinks: true,
     tsconfigPaths: true,
+    // tests/js is outside tsconfig.json's include, so tsconfigPaths alone
+    // does not resolve its application imports in Vitest. Keep these aliases
+    // aligned with tsconfig.json for both unit tests and production builds.
+    alias: {
+      '@app': path.join(dirname, 'resources/client'),
+      '@common': path.join(dirname, 'common/foundation/resources/client'),
+    },
   },
   test: {
     projects: (() => {
