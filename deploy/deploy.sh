@@ -21,6 +21,7 @@ set -euo pipefail
 
 # ---------- args ----------
 RELEASE_ID=""
+EXPECTED_SHA=""
 ARTIFACT=""
 PHP_BIN="${PHP_BINARY:-php}"
 HEALTH_URL="${APP_URL:-}/up"
@@ -30,6 +31,7 @@ LINK_PUBLIC_HTML="${LINK_PUBLIC_HTML:-false}"
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --release-id=*) RELEASE_ID="${1#*=}" ; shift ;;
+    --expected-sha=*) EXPECTED_SHA="${1#*=}"; shift ;;
     --release-id)  RELEASE_ID="$2"; shift 2 ;;
     --artifact=*)   ARTIFACT="${1#*=}"; shift ;;
     --artifact)     ARTIFACT="$2"; shift 2 ;;
@@ -46,6 +48,7 @@ done
 
 if [[ -z "$RELEASE_ID" ]]; then echo "Missing --release-id" >&2; exit 2; fi
 if [[ -z "$ARTIFACT" ]]; then echo "Missing --artifact" >&2; exit 2; fi
+[[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "Full --expected-sha is required" >&2; exit 2; }
 
 DEPLOY_PATH="${DEPLOY_PATH:-$HOME/linket}"
 # Allow caller to pass absolute artifact or relative to DEPLOY_PATH
@@ -101,6 +104,12 @@ else
 fi
 PREV_NAME="$(basename "$PREV_TARGET" 2>/dev/null || echo "")"
 
+# ---------- verify exact release artifact BEFORE extraction, migration, or activation ----------
+# Verification is performed a second time on the server after transfer.
+VERIFIER="$DEPLOY_PATH/deploy/verify-release-artifact.sh"
+[[ -f "$VERIFIER" ]] || fail "Missing release artifact verifier"
+bash "$VERIFIER" "$ARTIFACT" "$EXPECTED_SHA" || fail "Release artifact did not pass integrity/provenance verification"
+
 # ---------- extract ----------
 if [[ -d "$RELEASE_DIR" ]]; then
   # idempotent re-run: remove partial previous attempt with same id (but never if it's current)
@@ -130,7 +139,7 @@ if [[ -f "$RELEASE_DIR/RELEASE_SHA" ]]; then
 fi
 # sanity: public/build must exist (artifact mode)
 if [[ ! -f "$RELEASE_DIR/public/build/manifest.json" ]]; then
-  log "WARN: public/build/manifest.json missing in release — Vite build may have been skipped"
+  fail "Verified artifact missing public/build/manifest.json"
   if command -v node >/dev/null 2>&1 && [[ -f "$RELEASE_DIR/package.json" ]]; then
     log "Attempting server-side npm ci && npm run build fallback (hybrid)"
     (cd "$RELEASE_DIR" && npm ci 2>&1 | tail -n 20 && npm run build 2>&1 | tail -n 40)
@@ -192,7 +201,7 @@ chmod 775 "$SHARED/storage" "$SHARED/storage/framework" "$SHARED/storage/logs" 2
 
 # vendor fallback (hybrid) — only if artifact somehow lacks vendor
 if [[ ! -d "$RELEASE_DIR/vendor" ]]; then
-  log "vendor/ missing — running composer install --no-dev (hybrid fallback)"
+  fail "Verified artifact missing vendor; refusing server-side dependency rebuild"
   (cd "$RELEASE_DIR" && composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction 2>&1 | tail -n 40)
   [[ -d "$RELEASE_DIR/vendor" ]] || fail "composer install fallback failed to create vendor/"
 fi
@@ -203,8 +212,9 @@ chmod -R 775 "$SHARED/storage" 2>/dev/null || true
 chmod 775 "$RELEASE_DIR/bootstrap/cache" 2>/dev/null || true
 chmod 640 "$SHARED/.env" 2>/dev/null || true
 
-# ---------- pre-migration backup (best-effort) ----------
+# ---------- pre-migration backup (mandatory; abort if unavailable) ----------
 BACKUP_FILE=""
+command -v mysqldump >/dev/null 2>&1 || fail "mysqldump is required before production migration"
 if command -v mysqldump >/dev/null 2>&1; then
   # parse DB creds from shared env (without exposing password in logs)
   DB_HOST="$(grep -E '^DB_HOST=' "$SHARED/.env" 2>/dev/null | cut -d= -f2- | tail -1 | tr -d '\"'\'' ' || echo "127.0.0.1")"
@@ -217,19 +227,21 @@ if command -v mysqldump >/dev/null 2>&1; then
     BACKUP_FILE="$DEPLOY_PATH/backups/pre-${RELEASE_ID}.sql.gz"
     log "Creating pre-migration backup $BACKUP_FILE (mysqldump --single-transaction --quick)"
     # Use MYSQL_PWD to avoid password on cmdline
-    if MYSQL_PWD="$DB_PASS" mysqldump -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" --single-transaction --quick "$DB_DB" 2>&1 | gzip -c > "$BACKUP_FILE" 2>&1; then
+    if MYSQL_PWD="$DB_PASS" mysqldump -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" --single-transaction --quick "$DB_DB" | gzip -c > "$BACKUP_FILE" 2>&1; then
+      [[ -s "$BACKUP_FILE" ]] && gzip -t "$BACKUP_FILE" || fail "Backup failure blocks deployment: invalid or empty archive"
       sha256sum "$BACKUP_FILE" 2>&1 | head -1 | log 2>&1 || true
       log "Backup OK: $(du -h "$BACKUP_FILE" 2>&1 | awk '{print $1}')  $(sha256sum "$BACKUP_FILE" 2>&1 | awk '{print $1}' | cut -c1-16)..."
     else
-      log "WARN: mysqldump backup failed — continuing deploy (manual backup recommended before destructive migrations)"
+      log "Backup failure blocks deployment"
       rm -f "$BACKUP_FILE" 2>/dev/null || true
       BACKUP_FILE=""
+      fail "Backup failure blocks deployment"
     fi
   else
-    log "WARN: DB creds not found in shared/.env — skipping mysqldump backup (create DB backup manually before destructive migrations)"
+    fail "Backup failure blocks deployment: missing database credentials"
   fi
 else
-  log "WARN: mysqldump not available — skipping pre-migration backup (ensure offsite backup exists per docs/production-operations.md)"
+  fail "Backup failure blocks deployment: mysqldump unavailable"
 fi
 
 # ---------- pre-migration health (no DB writes) ----------

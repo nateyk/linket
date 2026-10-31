@@ -1,452 +1,144 @@
 name: Deploy Production
-
 on:
-  workflow_run:
-    workflows: ["CI"]
-    types: [completed]
-    branches: [main]
   workflow_dispatch:
     inputs:
       deploy_sha:
-        description: "Git SHA to deploy (leave empty to deploy head_sha from triggering CI run, or triggering commit for manual run)"
-        required: false
+        description: Exact main commit SHA
+        required: true
         type: string
-
-# Never interleave two production deploys — queue them.
+      confirm_production:
+        description: Type DEPLOY
+        required: true
+        type: string
 concurrency:
   group: production-deploy
   cancel-in-progress: false
-
 permissions:
   contents: read
   actions: read
-
 jobs:
-  # When triggered by workflow_run we reuse the EXACT CI artifact that passed verification.
-  # When triggered by workflow_dispatch we build a fresh verified artifact for that SHA.
   resolve:
-    name: Resolve deploy SHA and gating
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    timeout-minutes: 5
     outputs:
-      sha: ${{ steps.r.outputs.sha }}
-      short: ${{ steps.r.outputs.short }}
-      release_id: ${{ steps.r.outputs.release_id }}
-      artifact_name: ${{ steps.r.outputs.artifact_name }}
-      ci_run_id: ${{ steps.r.outputs.ci_run_id }}
-      source: ${{ steps.r.outputs.source }}
+      sha: ${{ steps.ci.outputs.sha }}
+      ci_run_id: ${{ steps.ci.outputs.ci_run_id }}
+      artifact_name: ${{ steps.ci.outputs.artifact_name }}
+      release_id: ${{ steps.id.outputs.release_id }}
     steps:
-      - name: Resolve SHA / gating
-        id: r
+      - uses: actions/checkout@v4
+      - name: Resolve successful exact-main CI
+        id: ci
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ inputs.deploy_sha }}
+          CONFIRM: ${{ inputs.confirm_production }}
         run: |
           set -euo pipefail
-          SOURCE=""
-          SHA=""
-          CI_RUN_ID=""
-          # workflow_run path — only proceeds if CI concluded success
-          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
-            CONCLUSION="${{ github.event.workflow_run.conclusion }}"
-            if [[ "$CONCLUSION" != "success" ]]; then
-              echo "CI workflow concluded with '$CONCLUSION' — refusing to deploy. Gate requires success." >&2
-              exit 1
-            fi
-            SHA="${{ github.event.workflow_run.head_sha }}"
-            CI_RUN_ID="${{ github.event.workflow_run.id }}"
-            SOURCE="ci_artifact"
-            echo "Gated on CI success for SHA=$SHA run_id=$CI_RUN_ID"
-          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            SHA="${{ inputs.deploy_sha }}"
-            if [[ -z "$SHA" ]]; then SHA="${{ github.sha }}"; fi
-            SOURCE="dispatch_build"
-            echo "Manual dispatch for SHA=$SHA (verified build will run in next job)"
-          else
-            echo "Unexpected event ${{ github.event_name }}" >&2; exit 1
-          fi
-          if ! [[ "$SHA" =~ ^[0-9a-f]{7,40}$ ]]; then echo "Invalid SHA: $SHA" >&2; exit 1; fi
+          [[ "$CONFIRM" == DEPLOY ]] || exit 1
+          bash scripts/release/resolve-verified-ci.sh "$SHA"
+      - name: Build release ID
+        id: id
+        env:
+          SHA: ${{ steps.ci.outputs.sha }}
+        run: |
           SHORT="${SHA:0:7}"
-          TS="$(date -u +%Y%m%d-%H%M%S)"
-          RELEASE_ID="${TS}-${SHORT}"
-          if [[ "$SOURCE" == "ci_artifact" ]]; then
-            # artifact name as uploaded by CI: linket-ci-<full-sha>
-            ARTIFACT_NAME="linket-ci-${SHA}"
-          else
-            ARTIFACT_NAME="linket-${SHORT}-${TS}"
-          fi
-          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
-          echo "short=$SHORT" >> "$GITHUB_OUTPUT"
-          echo "release_id=$RELEASE_ID" >> "$GITHUB_OUTPUT"
-          echo "artifact_name=$ARTIFACT_NAME" >> "$GITHUB_OUTPUT"
-          echo "ci_run_id=$CI_RUN_ID" >> "$GITHUB_OUTPUT"
-          echo "source=$SOURCE" >> "$GITHUB_OUTPUT"
-          echo "Resolved SOURCE=$SOURCE SHA=$SHA SHORT=$SHORT RELEASE_ID=$RELEASE_ID ARTIFACT=$ARTIFACT_NAME CI_RUN_ID=$CI_RUN_ID"
-
-  # Manual dispatch needs its own verified build; CI path skips this and reuses CI artifact
-  build:
-    name: Build release artifact (dispatch only)
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-    needs: [resolve]
-    if: needs.resolve.outputs.source == 'dispatch_build'
-    outputs:
-      artifact_name: ${{ steps.meta.outputs.artifact_name }}
-      release_id: ${{ steps.meta.outputs.release_id }}
-      sha: ${{ steps.meta.outputs.sha }}
-    steps:
-      - name: Resolve for build
-        id: meta
-        run: |
-          echo "sha=${{ needs.resolve.outputs.sha }}" >> "$GITHUB_OUTPUT"
-          echo "short=${{ needs.resolve.outputs.short }}" >> "$GITHUB_OUTPUT"
-          echo "release_id=${{ needs.resolve.outputs.release_id }}" >> "$GITHUB_OUTPUT"
-          echo "artifact_name=${{ needs.resolve.outputs.artifact_name }}" >> "$GITHUB_OUTPUT"
-          echo "dispatch build for ${{ needs.resolve.outputs.sha }}"
-
-      - name: Checkout pinned SHA
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ steps.meta.outputs.sha }}
-
-      - name: Setup PHP 8.4
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: "8.4"
-          extensions: mbstring, pdo_mysql, gd, zip, bcmath, exif, redis, curl, openssl, fileinfo
-          coverage: none
-          tools: composer:v2
-
-      - name: Setup Node 24
-        uses: actions/setup-node@v4
-        with:
-          node-version: "24.19.0"
-          cache: npm
-
-      - name: Composer install (production)
-        run: composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction --no-progress
-
-      - name: Synthetic env
-        run: |
-          set -euo pipefail
-          cp env.example .env
-          sed -i 's/^INSTALLED=.*/INSTALLED=true/' .env
-          grep -q "^INSTALLED=true" .env || echo "INSTALLED=true" >> .env
-          echo "APP_KEY=base64:CiBuildKeyForArtifactOnly12345678901234567890=" >> .env
-          cat >> .env <<'EOF'
-          APP_ENV=production
-          APP_DEBUG=false
-          APP_URL=http://localhost
-          CACHE_STORE=array
-          SESSION_DRIVER=array
-          QUEUE_CONNECTION=sync
-          SCOUT_DRIVER=null
-          DB_CONNECTION=sqlite
-          DB_DATABASE=:memory:
-          MAIL_MAILER=array
-          EOF
-          php artisan key:generate --force --ansi >/dev/null 2>&1 || true
-
-      - name: npm ci
-        run: npm ci
-
-      - name: Vite build
-        run: npm run build
-
-      - name: Laravel optimize dry-run
-        run: |
-          set -euo pipefail
-          php artisan config:cache
-          php artisan route:cache
-          php artisan event:cache
-          php artisan view:cache
-          php artisan optimize:clear
-
-      - name: Composer audit
-        run: composer audit --no-interaction --format plain
-
-      - name: npm audit — production only
-        run: npm audit --omit=dev --audit-level=moderate
-
-      - name: Assemble artifact
-        run: |
-          set -euo pipefail
-          RELEASE_ID="${{ steps.meta.outputs.release_id }}"
-          SHA="${{ steps.meta.outputs.sha }}"
-          ARTIFACT_NAME="${{ steps.meta.outputs.artifact_name }}"
-          echo "$SHA" > RELEASE_SHA
-          echo "$RELEASE_ID" > RELEASE_ID
-          date -u +%Y-%m-%dT%H:%M:%SZ > BUILD_AT
-          tar -czf "/tmp/${ARTIFACT_NAME}.tar.gz" \
-            --exclude='.git' --exclude='.gitignore' --exclude='node_modules' \
-            --exclude='storage/app/*' --exclude='storage/framework/cache/*' \
-            --exclude='storage/framework/sessions/*' --exclude='storage/framework/views/*' \
-            --exclude='storage/logs/*' --exclude='storage/tus/*' \
-            --exclude='storage/clockwork/*' --exclude='storage/pail/*' \
-            --exclude='bootstrap/cache/*.php' \
-            --exclude='.env' --exclude='.env.*' \
-            --exclude='public/hot' --exclude='.phpunit.cache' --exclude='coverage' \
-            --exclude='*.sql' --exclude='*.sql.gz' --exclude='.ddev' --exclude='.agents' --exclude='.superpowers' \
-            --exclude='.cursor' --exclude='.bootstrap-admin.json' --exclude='linket codex.md' --exclude='NUL' \
-            --exclude='linket-*.tar.gz' --exclude='*.tar.gz' \
-            --exclude='public/storage/*' \
-            .
-          mv "/tmp/${ARTIFACT_NAME}.tar.gz" "./${ARTIFACT_NAME}.tar.gz"
-          tar -tzf "${ARTIFACT_NAME}.tar.gz" | grep -E '^(./)?RELEASE_SHA' >/dev/null || { echo "RELEASE_SHA missing"; exit 1; }
-          tar -tzf "${ARTIFACT_NAME}.tar.gz" | grep -E 'public/build/manifest.json' >/dev/null || { echo "manifest missing"; exit 1; }
-          tar -tzf "${ARTIFACT_NAME}.tar.gz" | grep -E 'vendor/autoload.php' >/dev/null || { echo "vendor missing"; exit 1; }
-          sha256sum "${ARTIFACT_NAME}.tar.gz" > "${ARTIFACT_NAME}.tar.gz.sha256"
-          cat "${ARTIFACT_NAME}.tar.gz.sha256"
-          ls -lh "${ARTIFACT_NAME}.tar.gz"*
-
-      - name: Upload dispatch artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ steps.meta.outputs.artifact_name }}
-          path: |
-            ${{ steps.meta.outputs.artifact_name }}.tar.gz
-            ${{ steps.meta.outputs.artifact_name }}.tar.gz.sha256
-            RELEASE_SHA
-            RELEASE_ID
-          if-no-files-found: error
-          retention-days: 30
-
+          echo "release_id=$(date -u +%Y%m%d-%H%M%S)-$SHORT" >> "$GITHUB_OUTPUT"
   deploy:
-    name: "Deploy to cPanel (environment: production)"
+    if: github.ref == 'refs/heads/main' && needs.resolve.result == 'success'
+    needs: resolve
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    needs: [resolve, build]
-    # For workflow_run path, build is skipped — condition ensures we still run deploy when gated SHA present
-    if: always() && needs.resolve.result == 'success' && (needs.build.result == 'success' || needs.build.result == 'skipped')
     environment:
       name: production
       url: ${{ vars.APP_URL }}
     steps:
-      - name: Determine effective artifact name / SHA
-        id: eff
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.sha }}
+      - name: Revalidate approved CI after human approval
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ needs.resolve.outputs.sha }}
+          RUN_ID: ${{ needs.resolve.outputs.ci_run_id }}
         run: |
           set -euo pipefail
-          SOURCE="${{ needs.resolve.outputs.source }}"
-          if [[ "$SOURCE" == "ci_artifact" ]]; then
-            echo "sha=${{ needs.resolve.outputs.sha }}" >> "$GITHUB_OUTPUT"
-            echo "release_id=${{ needs.resolve.outputs.release_id }}" >> "$GITHUB_OUTPUT"
-            echo "artifact_name=${{ needs.resolve.outputs.artifact_name }}" >> "$GITHUB_OUTPUT"
-            echo "ci_run_id=${{ needs.resolve.outputs.ci_run_id }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "sha=${{ needs.build.outputs.sha }}" >> "$GITHUB_OUTPUT"
-            echo "release_id=${{ needs.build.outputs.release_id }}" >> "$GITHUB_OUTPUT"
-            echo "artifact_name=${{ needs.build.outputs.artifact_name }}" >> "$GITHUB_OUTPUT"
-            echo "ci_run_id=" >> "$GITHUB_OUTPUT"
-          fi
-          cat "$GITHUB_OUTPUT"
-
-      - name: Download CI artifact (gated path)
-        id: dl
-        if: needs.resolve.outputs.source == 'ci_artifact'
-        continue-on-error: true
-        uses: dawidd6/action-download-artifact@v6
+          f="$(mktemp)"
+          trap 'rm -f "$f"' EXIT
+          GITHUB_OUTPUT="$f" bash scripts/release/resolve-verified-ci.sh "$SHA"
+          grep -Fxq "ci_run_id=$RUN_ID" "$f"
+      - uses: actions/download-artifact@v4
         with:
-          workflow: ci.yml
-          run_id: ${{ steps.eff.outputs.ci_run_id }}
-          name: ${{ steps.eff.outputs.artifact_name }}
-          path: ./artifact
-          check_artifacts: true
-          search_artifacts: false
-          if_no_artifact_found: warn
-
-      - name: Checkout for fallback build (quota)
-        if: always() && needs.resolve.outputs.source == 'ci_artifact'
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ steps.eff.outputs.sha }}
-          path: build-fallback
-
-      - name: Setup PHP 8.4 (fallback)
-        if: always() && needs.resolve.outputs.source == 'ci_artifact'
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: "8.4"
-          extensions: mbstring, pdo_mysql, gd, zip, bcmath, exif, redis, curl, openssl, fileinfo
-          coverage: none
-          tools: composer:v2
-
-      - name: Setup Node 24 (fallback)
-        if: always() && needs.resolve.outputs.source == 'ci_artifact'
-        uses: actions/setup-node@v4
-        with:
-          node-version: "24.19.0"
-          cache: npm
-          cache-dependency-path: build-fallback/package-lock.json
-
-      - name: Fallback build when CI artifact missing (quota)
-        if: always() && needs.resolve.outputs.source == 'ci_artifact'
+          name: ${{ needs.resolve.outputs.artifact_name }}
+          run-id: ${{ needs.resolve.outputs.ci_run_id }}
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          path: artifact
+      - name: Validate exact CI release bytes
+        env:
+          SHA: ${{ needs.resolve.outputs.sha }}
         run: |
           set -euo pipefail
-          if ls "$GITHUB_WORKSPACE/artifact"/*.tar.gz >/dev/null 2>&1; then
-            echo "Artifact already present from CI, skipping fallback build"
-            ls -lh "$GITHUB_WORKSPACE/artifact/"*
-            exit 0
-          fi
-          echo "CI artifact missing (quota hit) — building release artifact locally for ${{ steps.eff.outputs.sha }}"
-          SHA="${{ steps.eff.outputs.sha }}"
-          RELEASE_ID="${{ steps.eff.outputs.release_id }}"
-          ARTIFACT_NAME="${{ steps.eff.outputs.artifact_name }}"
-          cd "$GITHUB_WORKSPACE/build-fallback"
-          composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction --no-progress
-          npm ci
-          npm run build
-          echo "$SHA" > RELEASE_SHA
-          echo "$RELEASE_ID" > RELEASE_ID
-          date -u +%Y-%m-%dT%H:%M:%SZ > BUILD_AT
-          mkdir -p "$GITHUB_WORKSPACE/artifact"
-          tar -czf "$GITHUB_WORKSPACE/artifact/${ARTIFACT_NAME}.tar.gz" \
-            --exclude='.git' --exclude='.gitignore' --exclude='node_modules' \
-            --exclude='storage/app/*' --exclude='storage/framework/cache/*' \
-            --exclude='storage/framework/sessions/*' --exclude='storage/framework/views/*' \
-            --exclude='storage/logs/*' --exclude='storage/tus/*' \
-            --exclude='storage/clockwork/*' --exclude='storage/pail/*' \
-            --exclude='bootstrap/cache/*.php' \
-            --exclude='.env' --exclude='.env.*' \
-            --exclude='public/hot' --exclude='.phpunit.cache' --exclude='coverage' \
-            --exclude='*.sql' --exclude='*.sql.gz' --exclude='.ddev' --exclude='.agents' --exclude='.superpowers' \
-            --exclude='.cursor' --exclude='.bootstrap-admin.json' --exclude='linket codex.md' --exclude='NUL' \
-            --exclude='linket-*.tar.gz' --exclude='*.tar.gz' \
-            --exclude='public/storage/*' \
-            .
-          echo "$SHA" > "$GITHUB_WORKSPACE/artifact/RELEASE_SHA"
-          echo "$RELEASE_ID" > "$GITHUB_WORKSPACE/artifact/RELEASE_ID"
-          date -u +%Y-%m-%dT%H:%M:%SZ > "$GITHUB_WORKSPACE/artifact/BUILD_AT"
-          sha256sum "$GITHUB_WORKSPACE/artifact/${ARTIFACT_NAME}.tar.gz" > "$GITHUB_WORKSPACE/artifact/${ARTIFACT_NAME}.tar.gz.sha256"
-          ls -lh "$GITHUB_WORKSPACE/artifact/"*
-
-      - name: Download dispatch artifact
-        if: needs.resolve.outputs.source == 'dispatch_build'
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ steps.eff.outputs.artifact_name }}
-          path: ./artifact
-
-      - name: Inspect artifact provenance
+          shopt -s nullglob
+          a=(artifact/*.tar.gz)
+          [[ ${#a[@]} -eq 1 ]] || exit 1
+          bash deploy/verify-release-artifact.sh "${a[0]}" "$SHA"
+          echo "ARTIFACT_FILE=${a[0]}" >> "$GITHUB_ENV"
+          echo "ARTIFACT_BASE=$(basename "${a[0]}")" >> "$GITHUB_ENV"
+      - name: Pinned SSH connection
+        env:
+          KEY: ${{ secrets.CPANEL_SSH_KEY }}
+          KNOWN: ${{ secrets.CPANEL_SSH_KNOWN_HOSTS }}
+          HOST: ${{ vars.CPANEL_SSH_HOST }}
+          PORT: ${{ vars.CPANEL_SSH_PORT }}
+          USERNAME: ${{ vars.CPANEL_SSH_USER }}
         run: |
           set -euo pipefail
-          ls -lh artifact/ 2>&1 | head -n 50
-          echo "--- RELEASE_SHA ---"; cat artifact/RELEASE_SHA 2>&1 | head -1 || true
-          echo "--- RELEASE_ID ---"; cat artifact/RELEASE_ID 2>&1 | head -1 || true
-          # The release filename embeds a build timestamp, so it cannot be
-          # derived here — require exactly one tarball instead. A glob both
-          # breaks `test -f` and can silently pick a stale build.
-          mapfile -t TARBALLS < <(find artifact -maxdepth 1 -type f -name '*.tar.gz' | sort)
-          if [[ ${#TARBALLS[@]} -ne 1 ]]; then
-            echo "expected exactly 1 release tarball in artifact/, found ${#TARBALLS[@]}: ${TARBALLS[*]:-none}" >&2
-            exit 1
-          fi
-          ARTIFACT_FILE="${TARBALLS[0]}"
-          echo "ARTIFACT_FILE=${ARTIFACT_FILE}" >> "$GITHUB_ENV"
-          echo "--- sha256 ---"; cat "${ARTIFACT_FILE%.tar.gz}.sha256" 2>&1 | head -1 || true
-          # Verify artifact SHA matches resolved SHA (exact tested commit)
-          RESOLVED_SHA="${{ steps.eff.outputs.sha }}"
-          FILE_SHA="$(tr -d '\r\n ' < artifact/RELEASE_SHA 2>&1 | head -c 40 || true)"
-          if [[ -n "$RESOLVED_SHA" && -n "$FILE_SHA" && "$RESOLVED_SHA" != "$FILE_SHA" ]]; then
-            echo "Artifact SHA mismatch: resolved $RESOLVED_SHA vs file $FILE_SHA" >&2; exit 1
-          fi
-
-      - name: Provision SSH (known_hosts pinned, single multiplexed connection)
-        run: |
-          set -euo pipefail
-          mkdir -p ~/.ssh && chmod 700 ~/.ssh
-          echo "${{ secrets.CPANEL_SSH_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          # Canonical secret is CPANEL_SSH_KNOWN_HOSTS — keep backward compat with KNOWN_HOSTS alias for transition
-          KNOWN="${{ secrets.CPANEL_SSH_KNOWN_HOSTS }}"
-          if [[ -z "$KNOWN" ]]; then KNOWN="${{ secrets.KNOWN_HOSTS }}"; fi
-          if [[ -n "$KNOWN" ]]; then
-            echo "$KNOWN" > ~/.ssh/known_hosts
-            chmod 600 ~/.ssh/known_hosts
-          elif [[ "${{ vars.ALLOW_INSECURE_HOSTKEY }}" == "true" ]]; then
-            echo "WARN: no known_hosts secret, ALLOW_INSECURE_HOSTKEY=true — ssh-keyscan one-time" >&2
-            ssh-keyscan -p "${{ vars.CPANEL_SSH_PORT }}" "${{ vars.CPANEL_SSH_HOST }}" >> ~/.ssh/known_hosts 2>&1 | head
-          else
-            echo "CPANEL_SSH_KNOWN_HOSTS secret required (ssh-keyscan -p \$PORT \$HOST). Refusing insecure deploy." >&2
-            exit 1
-          fi
-          ssh-keygen -l -f ~/.ssh/known_hosts 2>&1 | head -5 || true
-          # ControlMaster: all subsequent ssh/scp reuse ONE TCP connection.
-          # Shared hosts (fail2ban/CSF) rate-limit many rapid SSH logins from CI runners.
+          [[ -n "$KEY" && -n "$KNOWN" ]] || exit 1
+          [[ "$HOST" =~ ^[A-Za-z0-9.-]+$ ]] || exit 1
+          [[ "$PORT" =~ ^[0-9]{1,5}$ ]] || exit 1
+          [[ "$USERNAME" =~ ^[A-Za-z0-9_.-]+$ ]] || exit 1
           mkdir -p ~/.ssh/cm
-          cat > ~/.ssh/config <<SSHCFG
+          chmod 700 ~/.ssh ~/.ssh/cm
+          printf '%s\n' "$KEY" > ~/.ssh/id_ed25519
+          printf '%s\n' "$KNOWN" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_ed25519 ~/.ssh/known_hosts
+          cat > ~/.ssh/config <<CONFIG
           Host cpanel
-            HostName ${{ vars.CPANEL_SSH_HOST }}
-            Port ${{ vars.CPANEL_SSH_PORT }}
-            User ${{ vars.CPANEL_SSH_USER }}
+            HostName $HOST
+            Port $PORT
+            User $USERNAME
             IdentityFile ~/.ssh/id_ed25519
             StrictHostKeyChecking yes
             UserKnownHostsFile ~/.ssh/known_hosts
+            BatchMode yes
             ControlMaster auto
             ControlPath ~/.ssh/cm/%r@%h:%p
             ControlPersist 15m
-            ServerAliveInterval 30
-            ConnectTimeout 20
-          SSHCFG
+          CONFIG
           chmod 600 ~/.ssh/config
-          MASTER_UP=false
-          for i in 1 2 3; do
-            if ssh -MNf cpanel; then echo "SSH master established (attempt $i)"; MASTER_UP=true; break; fi
-            echo "SSH attempt $i failed (host firewall may rate-limit CI IPs); retrying in 30s"; sleep 30
-          done
-          if [[ "$MASTER_UP" != "true" ]]; then
-            echo "SSH unreachable after 3 attempts. If this persists, ask the host to allowlist GitHub Actions IPs or check fail2ban." >&2
-            exit 1
-          fi
-          ssh -O check cpanel
-
-      - name: Copy artifact to server
+          ssh -MNf cpanel
+      - name: Transfer checked artifact and server verifier
         run: |
           set -euo pipefail
-          ARTIFACT_FILE="${ARTIFACT_FILE:-}"
-          if [[ -z "$ARTIFACT_FILE" || ! -f "$ARTIFACT_FILE" ]]; then
-            echo "release tarball not resolved (ARTIFACT_FILE='${ARTIFACT_FILE}')" >&2; exit 1
-          fi
-          RELEASE_ID="${{ steps.eff.outputs.release_id }}"
-          SHA="${{ steps.eff.outputs.sha }}"
-          echo "Uploading $(basename "$ARTIFACT_FILE") as releases/${RELEASE_ID}.tar.gz for SHA $SHA"
-          ssh cpanel "mkdir -p ~/linket/releases ~/linket/shared ~/linket/deploy"
-          scp "$ARTIFACT_FILE" "cpanel:~/linket/releases/${RELEASE_ID}.tar.gz"
-          scp artifact/RELEASE_SHA "cpanel:~/linket/releases/${RELEASE_ID}.RELEASE_SHA.tmp" || true
-
-      - name: Checkout pinned SHA for helper sync
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ steps.eff.outputs.sha }}
-          path: source
-
-      - name: Sync deploy helpers
+          ssh cpanel 'mkdir -p ~/linket/releases ~/linket/deploy'
+          scp "$ARTIFACT_FILE" "${ARTIFACT_FILE}.sha256" 'cpanel:~/linket/releases/'
+          scp deploy/deploy.sh deploy/verify-release-artifact.sh 'cpanel:~/linket/deploy/'
+          ssh cpanel 'chmod +x ~/linket/deploy/deploy.sh ~/linket/deploy/verify-release-artifact.sh'
+      - name: Deploy exact approved release
+        env:
+          SHA: ${{ needs.resolve.outputs.sha }}
+          RELEASE_ID: ${{ needs.resolve.outputs.release_id }}
+          PHP_BIN: ${{ vars.PHP_BINARY }}
+          APP_URL: ${{ vars.APP_URL }}
         run: |
           set -euo pipefail
-          scp source/deploy/deploy.sh "cpanel:~/linket/deploy/deploy.sh"
-          scp source/deploy/cpanel-discovery.sh "cpanel:~/linket/deploy/cpanel-discovery.sh" || true
-          ssh cpanel "chmod +x ~/linket/deploy/deploy.sh ~/linket/deploy/cpanel-discovery.sh 2>&1 | head"
-
-      - name: Run atomic deploy on server
+          PHP_BIN="${PHP_BIN:-php}"
+          [[ -n "$APP_URL" ]] || exit 1
+          printf -v command 'DEPLOY_PATH="$HOME/linket" PHP_BINARY=%q APP_URL=%q bash "$HOME/linket/deploy/deploy.sh" --release-id=%q --artifact=%q --expected-sha=%q --php-binary=%q --health-url=%q --keep-releases=5' "$PHP_BIN" "$APP_URL" "$RELEASE_ID" "releases/$ARTIFACT_BASE" "$SHA" "$PHP_BIN" "${APP_URL%/}/up"
+          ssh cpanel "$command"
+      - name: Post-deploy public health
+        env:
+          APP_URL: ${{ vars.APP_URL }}
         run: |
           set -euo pipefail
-          RELEASE_ID="${{ steps.eff.outputs.release_id }}"
-          ssh cpanel \
-            "DEPLOY_PATH=\"\$HOME/linket\" PHP_BINARY=\"${{ vars.PHP_BINARY }}\" APP_URL=\"${{ vars.APP_URL }}\" bash ~/linket/deploy/deploy.sh --release-id=\"$RELEASE_ID\" --artifact=\"releases/${RELEASE_ID}.tar.gz\" --php-binary=\"${{ vars.PHP_BINARY }}\" --health-url=\"${{ vars.APP_URL }}/up\" --keep-releases=5 2>&1"
-          echo "Remote deploy exit $?"
-
-      - name: Post-deploy HTTP health
-        run: |
-          set -euo pipefail
-          APP_URL="${{ vars.APP_URL }}"
-          if [[ -z "$APP_URL" ]]; then echo "APP_URL not set — skipping"; exit 0; fi
-          echo "Curl $APP_URL/up"
-          curl -fsS --retry 3 --retry-delay 5 --max-time 15 "$APP_URL/up" 2>&1 | head -n 50
-          echo "External /up OK"
-
-      - name: Summary
-        if: always()
-        run: |
-          echo "## Deploy summary" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Source: \`${{ needs.resolve.outputs.source }}\` (workflow_run gated on CI success vs dispatch)" >> "$GITHUB_STEP_SUMMARY"
-          echo "- SHA: \`${{ steps.eff.outputs.sha }}\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Release: \`${{ steps.eff.outputs.release_id }}\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Artifact: \`${{ steps.eff.outputs.artifact_name }}.tar.gz\` (exact CI artifact when source=ci_artifact)" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Host: \`${{ vars.CPANEL_SSH_HOST }}:${{ vars.CPANEL_SSH_PORT }}\` as \`${{ vars.CPANEL_SSH_USER }}\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Path: \`\$HOME/linket\`  Health: \`${{ vars.APP_URL }}/up\`" >> "$GITHUB_STEP_SUMMARY"
+          curl -fsS --retry 3 --retry-delay 5 --max-time 15 "${APP_URL%/}/up"
