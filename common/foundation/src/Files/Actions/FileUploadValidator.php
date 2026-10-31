@@ -106,27 +106,24 @@ class FileUploadValidator
             }
         }
 
-        if (
-            $extension &&
-            !empty($acceptExtensions) &&
-            $this->extensionMatches($extension, $acceptExtensions)
-        ) {
-            return null;
-        }
+        $hasExtensions = !empty($acceptExtensions);
+        $hasMimes = !empty($acceptMimes) || !empty($acceptTypes);
 
-        if (
-            $mime &&
-            !empty($acceptMimes) &&
-            $this->mimeMatches($mime, $acceptMimes)
-        ) {
-            return null;
-        }
+        $extensionAllowed = $extension
+            && $hasExtensions
+            && $this->extensionMatches($extension, $acceptExtensions);
+        $mimeAllowed = $mime
+            && (($acceptMimes && $this->mimeMatches($mime, $acceptMimes))
+                || ($acceptTypes && $this->typeMatches($mime, $acceptTypes)));
 
-        if (
-            $mime &&
-            !empty($acceptTypes) &&
-            $this->typeMatches($mime, $acceptTypes)
-        ) {
+        // When a policy declares both extensions and MIME families,
+        // a file must satisfy both rather than bypass either restriction.
+        if ($hasExtensions && $hasMimes) {
+            return $extensionAllowed && $mimeAllowed
+                ? null
+                : __('Files of this type are not allowed');
+        }
+        if ($extensionAllowed || $mimeAllowed) {
             return null;
         }
 
