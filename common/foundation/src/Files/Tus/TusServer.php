@@ -132,6 +132,9 @@ class TusServer
     protected function handlePost(): Response
     {
         $meta = $this->extractMeta();
+        $declaredLength = request()->header('Upload-Length');
+        abort_unless(is_numeric($declaredLength) && (int) $declaredLength >= 0 &&
+            (int) $declaredLength === (int) ($meta['clientSize'] ?? -1), 422);
         $errors = FileUploadValidator::validateForUploadType(
             uploadType: Uploads::type(Arr::get($meta, 'uploadType')),
             fileSize: Arr::get($meta, 'clientSize'),
