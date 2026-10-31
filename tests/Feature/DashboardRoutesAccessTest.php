@@ -52,7 +52,8 @@ it('creator dashboard does not expose admin link tools', function () {
     $mobile = collect($menus)->firstWhere(fn($m) => ($m['positions'][0] ?? null) === 'dashboard-mobile');
     $mobileActions = collect($mobile['items'] ?? [])->pluck('action');
     expect($mobileActions)->not->toContain('/dashboard/links');
-    expect($mobileActions)->toContain('/dashboard/stores');
+    // The mobile bottom bar intentionally omits Stores; sidebar access remains.
+    expect($mobileActions)->not->toContain('/dashboard/stores');
 });
 
 it('global search and workspace navigation are storefront-first (hardening)', function () {
