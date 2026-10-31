@@ -82,8 +82,7 @@ final class CreatorVerificationAllowance
 
         DB::table('creator_verification_allowances')->where('id', $row->id)
             ->where('status', 'released')->update([
-                'status' => 'reserved', 'released_at' => null,
-                'release_reason' => null, 'updated_at' => now(),
+                'status' => 'reserved', 'updated_at' => now(),
             ]);
 
         return true;
