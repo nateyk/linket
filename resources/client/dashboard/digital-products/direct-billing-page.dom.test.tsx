@@ -297,7 +297,7 @@ it('shows summary and orders, and sends status, search and page filters to the s
   mockApi({orders: [baseOrder], lastPage: 2, total: 30});
   render(<Component />);
 
-  expect(await screen.findByText('Workbook')).toBeTruthy();
+  expect((await screen.findAllByText('Workbook')).length).toBeGreaterThan(0);
   expect(screen.getByText('25000 ETB')).toBeTruthy();
   expect(screen.getByText('Verified sales')).toBeTruthy();
   expect(screen.getByRole('list', {name: 'Orders'})).toBeTruthy();
@@ -452,10 +452,11 @@ it('loads transactions and manual review in separate tabs', async () => {
     manualOrders: [{...baseOrder, uuid: 'order-2', status: 'manual_review'}],
   });
   render(<Component />);
-  await screen.findByText('Workbook');
+  await screen.findAllByText('Workbook');
 
   fireEvent.click(screen.getByRole('tab', {name: 'Transactions'}));
-  expect(await screen.findByText('TX-REF')).toBeTruthy();
+  expect((await screen.findAllByText('TX-REF')).length).toBeGreaterThan(0);
+  expect(screen.getByRole('list', {name: 'Transactions'})).toBeTruthy();
   expect(api.get).toHaveBeenCalledWith(
     '/api/v1/storefront/direct-orders/transactions',
     expect.any(Object),
