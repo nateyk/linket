@@ -29,6 +29,7 @@
     "itsgoingd/clockwork": "^5.1",
     "james-heinrich/getid3": "^1.9",
     "jenssegers/agent": "^2.6",
+    "laravel-notification-channels/telegram": "^8.0",
     "laravel/ai": "^1.0",
     "laravel/fortify": "^1.25",
     "laravel/framework": "^13.0",
