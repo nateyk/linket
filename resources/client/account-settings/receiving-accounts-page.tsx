@@ -456,7 +456,7 @@ export function Component() {
                       id="receiving-provider"
                       className="h-11 w-full min-w-0"
                     >
-                      <Select.Value placeholder={<Trans message="Select payment method" />} className="sr-only" />
+                      <Select.Value placeholder={<Trans message="Select payment method" />} className={selectedMethod ? "sr-only" : undefined} />
                       {selectedMethod && (
                         <span aria-hidden="true" className="flex min-w-0 flex-1 items-center gap-2 text-start">
                           <BankLogo code={selectedMethod.code} name={selectedMethod.name} compact decorative />
