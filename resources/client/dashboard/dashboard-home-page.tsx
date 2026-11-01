@@ -684,7 +684,21 @@ function TopReferrers({dateRange}: {dateRange: DateRangeValue}) {
 }
 
 function OrderStatusBadge({status}: {status: string}) {
-  return <Badge variant={status === 'paid' || status === 'fulfilled' ? 'positive' : status === 'failed_verification' ? 'destructive' : 'secondary'}><PaymentStatusLabel status={status} /></Badge>;
+  const verified =
+    status === 'paid' || status === 'completed' || status === 'fulfilled';
+  return (
+    <Badge
+      variant={
+        verified
+          ? 'positive'
+          : status === 'failed_verification'
+            ? 'destructive'
+            : 'secondary'
+      }
+    >
+      <PaymentStatusLabel status={status} />
+    </Badge>
+  );
 }
 
 function OrderDate({order}: {order: DashboardOrder}) {
