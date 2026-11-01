@@ -7,7 +7,7 @@ import {render} from '@testing-library/react';
 import {expect, test} from 'vitest';
 import {CroppedImageSelector} from './cropped-image-selector';
 
-function renderSelector(value: string | null) {
+function renderSelector(value: string | null, showHint = true) {
   const client = new QueryClient({
     defaultOptions: {queries: {retry: false}, mutations: {retry: false}},
   });
@@ -19,6 +19,7 @@ function renderSelector(value: string | null) {
           onChange={() => {}}
           uploadType="linkImages"
           label="Cover image"
+          showHint={showHint}
         />
       </FileUploadProvider>
     </QueryClientProvider>,
@@ -48,4 +49,11 @@ test('file input stays labelled when there is no image yet (A-04)', () => {
   expect(input).toBeTruthy();
   expect(input!.getAttribute('aria-label')).toBe('Cover image');
   expect(container.querySelector('[data-slot="dropdown-trigger"]')).toBeNull();
+});
+
+
+test('showHint=false removes the inline upload requirements text', () => {
+  const {container} = renderSelector(null, false);
+
+  expect(container.textContent).not.toContain('JPG, PNG, or WebP');
 });
