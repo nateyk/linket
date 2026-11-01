@@ -623,7 +623,9 @@ function OrderFilters({
       <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 md:flex md:items-center">
         <Select.Root value={status} onValueChange={value => onStatusChange(value ?? 'all')}>
           <Select.Trigger aria-label="Order status" className="w-full md:w-52">
-            <Select.Value placeholder={<Trans message="All statuses" />} />
+            <Select.Value placeholder={<Trans message="All statuses" />}>
+              {statusOptions.find(option => option.value === status)?.label ?? <Trans message="All statuses" />}
+            </Select.Value>
           </Select.Trigger>
           <Select.Content>
             <Select.Group>
@@ -715,7 +717,9 @@ function TransactionFilters({
       <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 md:flex md:items-center">
         <Select.Root value={status} onValueChange={value => onStatusChange(value ?? 'all')}>
           <Select.Trigger aria-label="Transaction status" className="w-full md:w-52">
-            <Select.Value placeholder={<Trans message="All statuses" />} />
+            <Select.Value placeholder={<Trans message="All statuses" />}>
+              {transactionStatusOptions.find(option => option.value === status)?.label ?? <Trans message="All statuses" />}
+            </Select.Value>
           </Select.Trigger>
           <Select.Content>
             <Select.Group>
