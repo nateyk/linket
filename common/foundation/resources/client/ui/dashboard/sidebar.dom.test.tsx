@@ -37,16 +37,17 @@ test('consumers can override the sidebar landmark label (A-10)', () => {
   expect(nav!.getAttribute('aria-label')).toBe('Settings navigation');
 });
 
-test('layout shell does not clip positioned children (no overflow-hidden)', () => {
+test('layout shell tracks the dynamic viewport without clipping positioned children', () => {
   renderSidebar();
 
-  // The h-screen shell intentionally leaves overflow visible so sr-only
-  // anchors and other positioned children inside it are never cut off;
-  // the inner scroll regions own their own overflow.
+  // Mobile browser chrome changes the visual viewport height while the app is
+  // open. The dashboard shell must follow that dynamic viewport so its footer
+  // navigation cannot be stranded above or below the visible screen.
   const root = document.querySelector<HTMLElement>(
     '[class*="group/dashboard-layout"]',
   );
   expect(root).toBeTruthy();
-  expect(root!.className).toContain('h-screen');
+  expect(root!.className).toContain('h-dvh');
+  expect(root!.className).not.toContain('h-screen');
   expect(root!.className).not.toContain('overflow-hidden');
 });
