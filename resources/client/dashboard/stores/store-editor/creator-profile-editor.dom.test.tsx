@@ -409,7 +409,8 @@ test('filled cover and avatar tiles stay on dashboard chrome', () => {
   expect(coverTile.style.aspectRatio).toBe('3 / 1');
 
   const avatarField = document.querySelector('[data-field-name="avatar_url"]')!;
-  expect(avatarField.classList.contains('max-w-56')).toBe(true);
+  expect(avatarField.classList.contains('absolute')).toBe(true);
+  expect(avatarField.classList.contains('translate-y-1/2')).toBe(true);
   const avatarTile = avatarField.querySelector('div.group.relative')!;
   expect(avatarTile.classList.contains('size-22')).toBe(true);
   expect(avatarTile.classList.contains('max-w-22')).toBe(true);
@@ -455,13 +456,13 @@ test('empty cover shows a rectangular banner placeholder', () => {
   expect(button.querySelector('svg')).not.toBeNull();
 });
 
-test('profile fields group media, identity and details without duplicate upload hints', async () => {
+test('profile fields keep one media group and flow directly into editable fields', async () => {
   renderProfileEditor('content', REAL_BIOLINK);
   fireEvent.click(triggerByName('Profile'));
 
   expect(screen.getByRole('heading', {level: 3, name: 'Profile media'})).toBeTruthy();
-  expect(screen.getByRole('heading', {level: 3, name: 'Identity'})).toBeTruthy();
-  expect(screen.getByRole('heading', {level: 3, name: 'Profile details'})).toBeTruthy();
+  expect(screen.queryByRole('heading', {level: 3, name: 'Identity'})).toBeNull();
+  expect(screen.queryByRole('heading', {level: 3, name: 'Profile details'})).toBeNull();
 
   expect(screen.queryByText(/JPG, PNG, or WebP/)).toBeNull();
 
