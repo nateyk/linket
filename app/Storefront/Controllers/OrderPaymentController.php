@@ -2,6 +2,7 @@
 
 namespace App\Storefront\Controllers;
 
+use App\Payments\VerifyEt\VerifyEtSettings;
 use App\Payments\Models\DirectPaymentVerification;
 use App\Payments\VerifyEt\VerifyEtGateway;
 use App\Storefront\Models\StorefrontOrder;
@@ -94,7 +95,7 @@ final class OrderPaymentController extends Controller
         ]);
         $order = StorefrontOrder::query()->where('uuid', $order)->firstOrFail();
         $this->assertAccess($request, $order);
-        abort_unless(config('services.verify_et.enabled') && $order->payment_gateway === 'verify_et', 404);
+        abort_unless(VerifyEtSettings::get('enabled') && $order->payment_gateway === 'verify_et', 404);
         $data['reference'] = app(\App\Payments\VerifyEt\ReceiptReference::class)->normalize((string) $order->payment_provider_snapshot, $data['reference']);
 
         try {

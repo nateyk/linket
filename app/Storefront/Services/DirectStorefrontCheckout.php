@@ -2,6 +2,7 @@
 
 namespace App\Storefront\Services;
 
+use App\Payments\VerifyEt\VerifyEtSettings;
 use App\Biolinks\Models\Biolink;
 use App\Stores\Models\Store;
 use App\Storefront\Models\DigitalProduct;
@@ -24,7 +25,7 @@ final class DirectStorefrontCheckout
 
         $method = null;
         if ($product->price_cents > 0) {
-            abort_unless(config('services.verify_et.enabled'), 503, __('Checkout is temporarily unavailable.'));
+            abort_unless(VerifyEtSettings::get('enabled'), 503, __('Checkout is temporarily unavailable.'));
             $methods = app(CheckoutAvailability::class)->eligibleAccounts($product->user_id, $product->workspace_id);
             $method = $paymentMethodId !== null ? $methods->firstWhere('id', $paymentMethodId) : $methods->first();
             abort_unless($method, 422, $paymentMethodId !== null

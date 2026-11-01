@@ -45,6 +45,7 @@ class Settings
      * Settings that are json encoded in database.
      */
     public static array $jsonKeys = [
+        'billing.verify_et',
         'menus',
         'landingPage',
         'uploading',
@@ -65,6 +66,7 @@ class Settings
     ];
 
     public static array $secretKeys = [
+        'billing.verify_et',
         'captcha.g_secret_key',
         'captcha.t_secret_key',
         'incoming_email',
@@ -254,6 +256,7 @@ class Settings
     public function getAllForFrontendForm(): array
     {
         $value = Setting::select('name', 'value')
+            ->where('name', '!=', 'billing.verify_et')
             ->get()
             ->mapWithKeys(
                 fn($setting) => [

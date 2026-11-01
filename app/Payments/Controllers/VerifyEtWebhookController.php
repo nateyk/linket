@@ -2,6 +2,7 @@
 
 namespace App\Payments\Controllers;
 
+use App\Payments\VerifyEt\VerifyEtSettings;
 use App\Jobs\ProcessVerifyEtWebhook;
 use App\Payments\Models\VerifyEtWebhookDelivery;
 use App\Payments\VerifyEt\VerifyEtJson;
@@ -96,9 +97,9 @@ final class VerifyEtWebhookController extends Controller
 
     private function signatureIsValid(string $timestamp, string $rawBody, string $header): bool
     {
-        $previousSecret = config('services.verify_et.webhook_previous_secret');
-        $previousSecretRotatedAt = config('services.verify_et.webhook_previous_secret_rotated_at');
-        $previousSecretExpiresAt = config('services.verify_et.webhook_previous_secret_expires_at');
+        $previousSecret = VerifyEtSettings::get('webhook_previous_secret');
+        $previousSecretRotatedAt = VerifyEtSettings::get('webhook_previous_secret_rotated_at');
+        $previousSecretExpiresAt = VerifyEtSettings::get('webhook_previous_secret_expires_at');
         try {
             $rotationStartedAt = is_string($previousSecretRotatedAt) && $previousSecretRotatedAt !== ''
                 ? \Carbon\CarbonImmutable::parse($previousSecretRotatedAt)
@@ -118,7 +119,7 @@ final class VerifyEtWebhookController extends Controller
             $previousSecretIsInRotationWindow = false;
         }
         $secrets = array_filter([
-            config('services.verify_et.webhook_secret'),
+            VerifyEtSettings::get('webhook_secret'),
             $previousSecretIsInRotationWindow ? $previousSecret : null,
         ], static fn (mixed $secret): bool => is_string($secret) && $secret !== '');
         foreach ($secrets as $secret) {

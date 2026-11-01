@@ -12,6 +12,7 @@ vi.mock('react-router', () => ({
   useSearchParams: () => [params, vi.fn()],
   useNavigate: () => navigate,
 }));
+vi.mock('./verify-et-settings-panel', () => ({VerifyEtSettingsPanel: () => <div>Verify.et connection</div>}));
 vi.mock('./verify-et-method-catalog', () => ({VerifyEtMethodCatalog: () => <div>Methods catalog</div>}));
 
 afterEach(() => { cleanup(); vi.clearAllMocks(); params = new URLSearchParams(); });
@@ -21,6 +22,7 @@ describe('admin payment gateways page', () => {
     render(<Component />);
     expect(await screen.findByText('Payment gateways')).toBeTruthy();
     expect(screen.getByText('Methods catalog')).toBeTruthy();
+    expect(screen.getByText('Verify.et connection')).toBeTruthy();
     expect(screen.queryByText('Receiving account reviews')).toBeNull();
     expect(navigate).not.toHaveBeenCalled();
   });

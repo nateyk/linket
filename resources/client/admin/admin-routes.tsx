@@ -139,6 +139,7 @@ export const adminRoutes: RouteObject[] = [
 
       commonAdminSettingsRoutes(
         [
+          {path: 'payment-gateways', loader: () => redirect('/admin/financial/payment-gateways')},
           {
             path: 'search',
             lazy: () =>

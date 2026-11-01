@@ -81,6 +81,7 @@ class AppServiceProvider extends ServiceProvider
             if (app()->bound('clockwork')) {
                 app('clockwork')->shouldCollect()->except([
                     '/billing/verify-et/webhook',
+                    '/api/v1/admin/storefront/verify-et-settings',
                     '/api/v1/storefront/payment-methods(?:/.*)?',
                     '/api/v1/public/direct-orders/[^/]+(?:/.*)?',
                     '/api/v1/billing/direct(?:/.*)?',

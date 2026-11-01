@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Payments\VerifyEt\VerifyEtSettings;
 use App\Models\User;
 use App\Storefront\Models\CreatorPaymentMethod;
 use App\Storefront\Models\DigitalProduct;
@@ -33,7 +34,7 @@ class PrepareBuyerE2eCommand extends Command
             return self::FAILURE;
         }
 
-        if (! config('services.verify_et.mock') || ! config('services.verify_et.enabled')) {
+        if (! config('services.verify_et.mock') || ! VerifyEtSettings::get('enabled')) {
             $this->error('Refusing to seed: VERIFY_ET_ENABLED and VERIFY_ET_MOCK must be true for isolated buyer E2E.');
 
             return self::FAILURE;

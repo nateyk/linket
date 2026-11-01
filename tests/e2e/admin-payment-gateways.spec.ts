@@ -16,7 +16,11 @@ test.describe('Admin payment gateways', () => {
     await expect(page.getByText(/payment gateways/i).first()).toBeVisible({
       timeout: 30000,
     });
-    await expect(page.getByText(/payment methods/i).first()).toBeVisible();
+    await expect(page.getByText('Banks and wallets', {exact: true})).toBeVisible();
+    await expect(page.getByText('Verify.et connection', {exact: true})).toBeVisible();
+    await expect(page.getByLabel('API key', {exact: true})).toHaveValue('');
+    await expect(page.getByLabel('Webhook signing secret', {exact: true})).toHaveValue('');
+    await expect(page.getByLabel('Webhook URL', {exact: true})).toHaveAttribute('readonly', '');
     await expect(page.getByRole('tab', {name: /receiving account reviews/i})).toHaveCount(0);
 
     await page.goto(

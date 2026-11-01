@@ -74,10 +74,10 @@ export function VerifyEtMethodCatalog() {
     <div className="flex flex-col gap-4">
       <div>
         <h2 className="text-lg font-semibold">
-          <Trans message="Payment methods" />
+          <Trans message="Banks and wallets" />
         </h2>
         <p className="text-sm text-muted-foreground">
-          <Trans message="Control which banks and wallets creators can set up and which ones buyers can use at checkout. Register accounts in Verify.et before recording provider registration on a receiving account." />
+          <Trans message="Choose which methods creators can set up and buyers can use. Suspending a method pauses both without changing account approval." />
         </p>
       </div>
       {loading && (

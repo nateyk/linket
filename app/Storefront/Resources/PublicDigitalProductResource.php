@@ -2,6 +2,7 @@
 
 namespace App\Storefront\Resources;
 
+use App\Payments\VerifyEt\VerifyEtSettings;
 use App\Storefront\Models\DigitalProduct;
 use App\Storefront\Models\CreatorPaymentMethod;
 use App\Storefront\ProductSampleUrl;
@@ -31,7 +32,7 @@ class PublicDigitalProductResource extends JsonResource
         $courseId = $isCourse && $this->relationLoaded('course') && $this->course ? $this->course->id : null;
         $availability = app(\App\Storefront\Services\CheckoutAvailability::class);
         $blocker = $this->price_cents > 0 ? $availability->creatorBlocker($this->creator) : null;
-        $accounts = config('services.verify_et.enabled')
+        $accounts = VerifyEtSettings::get('enabled')
             ? $availability->eligibleAccounts($this->user_id, $this->workspace_id) : collect();
         if ($this->price_cents > 0 && ! $blocker && strtoupper($this->currency) !== 'ETB') {
             $blocker = 'unsupported_currency';
@@ -49,7 +50,7 @@ class PublicDigitalProductResource extends JsonResource
             'can_buy' => app(\App\Storefront\Services\AccountMonetizationStatus::class)->canSell($this->creator) && ! $blocker,
             'checkout_blocker' => $blocker,
             'verification_quota_exhausted' => $blocker === 'verification_quota_exhausted',
-            'payment_mode' => $this->price_cents === 0 ? 'free' : (config('services.verify_et.enabled') ? 'direct' : 'unavailable'),
+            'payment_mode' => $this->price_cents === 0 ? 'free' : (VerifyEtSettings::get('enabled') ? 'direct' : 'unavailable'),
             'receiving_accounts' => $accounts->map(fn (CreatorPaymentMethod $method) => ['id' => $method->id, 'provider' => $method->provider, 'account_ending' => substr($method->account_number, -4), 'account_name' => $method->account_name_raw])->values(),
             'type' => $this->type ?? 'digital',
             'is_course' => $isCourse,
