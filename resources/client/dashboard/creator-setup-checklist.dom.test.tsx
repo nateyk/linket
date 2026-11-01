@@ -1,17 +1,22 @@
 /** @vitest-environment jsdom */
-import {act, cleanup, render, screen, waitFor} from '@testing-library/react';
+import {act, cleanup, fireEvent, render, screen, waitFor} from '@testing-library/react';
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
 import {afterEach, expect, it, vi} from 'vitest';
 import {CreatorSetupChecklist} from './creator-setup-checklist';
 
 const api = vi.hoisted(() => ({get: vi.fn()}));
 vi.mock('@common/http/query-client', () => ({apiClient: api}));
+vi.mock('@common/auth/use-auth', () => ({useAuth: () => ({user: {id: 77}})}));
 vi.mock('@ui/i18n/trans', () => ({Trans: ({message, values}: {message: string; values?: Record<string, string | number>}) => Object.entries(values ?? {}).reduce((text, [key, value]) => text.replace(`:${key}`, String(value)), message)}));
 vi.mock('@shadcn/skeleton/skeleton', () => ({Skeleton: 'div'}));
 vi.mock('@shadcn/toast/toast', () => ({toast: {success: vi.fn(), warning: vi.fn()}}));
 vi.mock('@ui/utils/hooks/use-clipboard', () => ({default: () => [false, vi.fn()]}));
 vi.mock('react-router', () => ({Link: ({to, ...props}: React.AnchorHTMLAttributes<HTMLAnchorElement> & {to: string}) => <a href={to} {...props} />}));
-afterEach(() => {cleanup(); vi.clearAllMocks();});
+afterEach(() => {
+  cleanup();
+  localStorage.clear();
+  vi.clearAllMocks();
+});
 
 
 it('derives setup completion from stores, product files, and usable receiving accounts', async () => {
@@ -39,6 +44,56 @@ it('derives setup completion from stores, product files, and usable receiving ac
   expect(screen.getByRole('link', {name: 'Publish product in storefront'}).getAttribute('href')).toBe('/dashboard/items/22/edit');
 });
 
+
+it('uses the shared card, progress and collapsible primitives for setup progress', async () => {
+  api.get.mockImplementation((url: string) => {
+    if (url === '/api/v1/stores') return Promise.resolve({data: {data: [{id: 9}]}});
+    if (url === '/api/v1/storefront/products') return Promise.resolve({data: {data: [{id: 22, status: 'pending_approval', files: [{id: 1}], biolink_ids: [], sales_count: 0}]}});
+    if (url === '/api/v1/storefront/payment-methods') return Promise.resolve({data: {data: [{checkout_eligible: true}]}});
+    throw new Error(`Unexpected URL: ${url}`);
+  });
+  const client = new QueryClient({defaultOptions: {queries: {retry: false}}});
+  render(<QueryClientProvider client={client}><CreatorSetupChecklist /></QueryClientProvider>);
+
+  expect(await screen.findByText('4 of 7 setup steps complete')).toBeTruthy();
+  expect(document.querySelector('[data-slot="card"]')).toBeTruthy();
+  const progress = screen.getByRole('progressbar', {
+    name: '4 of 7 setup steps complete',
+  });
+  expect(progress.getAttribute('aria-valuenow')).toBe('57');
+  expect(document.querySelector('[data-slot="collapsible-trigger"]')).toBeTruthy();
+  expect(screen.queryByRole('button', {name: 'Remove setup checklist from dashboard'})).toBeNull();
+});
+
+it('lets a creator dismiss the checklist only after setup is complete and remembers it', async () => {
+  api.get.mockImplementation((url: string) => {
+    if (url === '/api/v1/stores') return Promise.resolve({data: {data: [{id: 9, short_url: 'https://example.test/store'}]}});
+    if (url === '/api/v1/storefront/products') return Promise.resolve({data: {data: [{
+      id: 22,
+      status: 'approved',
+      files: [{id: 1}],
+      biolink_ids: [9],
+      sales_count: 1,
+    }]}});
+    if (url === '/api/v1/storefront/payment-methods') return Promise.resolve({data: {data: [{checkout_eligible: true}]}});
+    throw new Error(`Unexpected URL: ${url}`);
+  });
+  const client = new QueryClient({defaultOptions: {queries: {retry: false}}});
+  const view = render(<QueryClientProvider client={client}><CreatorSetupChecklist /></QueryClientProvider>);
+
+  expect(await screen.findByText('7 of 7 setup steps complete')).toBeTruthy();
+  const dismiss = screen.getByRole('button', {name: 'Remove setup checklist from dashboard'});
+  fireEvent.click(dismiss);
+  expect(screen.queryByText('Get your storefront ready to sell')).toBeNull();
+  expect(localStorage.getItem('creator-setup-checklist-dismissed-v1:77')).toBe('true');
+
+  view.unmount();
+  const nextClient = new QueryClient({defaultOptions: {queries: {retry: false}}});
+  render(<QueryClientProvider client={nextClient}><CreatorSetupChecklist /></QueryClientProvider>);
+  await waitFor(() =>
+    expect(screen.queryByText('Get your storefront ready to sell')).toBeNull(),
+  );
+});
 
 it('does not count an approved course as published until its lessons are published', async () => {
   const product = {id: 22, status: 'approved', is_course: true, files: [], biolink_ids: [9], sales_count: 0, course: {published_at: null as string | null}};

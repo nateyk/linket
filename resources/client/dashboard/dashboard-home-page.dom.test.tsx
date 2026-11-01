@@ -12,6 +12,7 @@ vi.mock('@common/http/query-client', () => ({apiClient: {get: async () => {
   return {data: fixture.sales};
 }}}));
 vi.mock('@common/workspace/workspace-store', () => ({useWorkspaceStore: (selector: any) => selector({activeWorkspace: {id: fixture.workspaceId}})}));
+vi.mock('@common/auth/use-auth', () => ({useAuth: () => ({user: {id: 77}})}));
 vi.mock('@app/dashboard/reports/tracked-events-queries', () => ({trackedEventsReportOptions: (params: any) => { fixture.reportParams.push(params); return {queryKey: ['analytics', params.metric, params.workspace_id], queryFn: async () => fixture.report}; }}));
 vi.mock('@common/seo/static-page-title', () => ({StaticPageTitle: () => null}));
 vi.mock('@common/ui/dashboard/dashboard-layout', () => ({DashboardLayout: {MainSection: 'main', SectionHeader: 'header', SidebarToggle: 'span', SectionTitle: 'h1', SectionContent: 'section'}}));
