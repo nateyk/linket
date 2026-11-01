@@ -106,6 +106,7 @@ class DirectBillingContractTest extends TestCase
         $this->stateful()->actingAs($creator)->getJson('/api/v1/billing/direct')
             ->assertOk()
             ->assertJsonPath('pro_subscription.payments.0.payment_id', $payment->uuid)
+            ->assertJsonPath('pro_subscription.pending_payment.payment_id', $payment->uuid)
             ->assertJsonPath('pro_subscription.payments.0.status', 'manual_review')
             ->assertJsonPath('pro_subscription.payments.0.transaction_reference', $verification->reference)
             ->assertJsonCount(1, 'pro_subscription.payments');
