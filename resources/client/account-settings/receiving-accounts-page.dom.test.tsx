@@ -97,7 +97,7 @@ it('explains a platform verification pause without changing the approved account
   api.get.mockResolvedValue({data: {data: [{id: 1, provider: 'cbe', account_name: 'Owner', account_ending: '1234', status: 'approved', is_active: true, is_suspended: false, provider_registration_status: 'registered', checkout_eligible: false, checkout_blocker: 'verification_unavailable'}], available_methods: [{code: 'cbe', name: 'CBE'}]}});
   render(<Component />);
   expect(await screen.findByText('Payment verification is temporarily unavailable. Contact support for help.')).toBeTruthy();
-  expect(screen.getByText('Approved and active')).toBeTruthy();
+  expect(screen.getByRole('button', {name: 'Deactivate'})).toBeTruthy();
   expect(screen.getByText('Unavailable at checkout')).toBeTruthy();
 });
 
@@ -105,5 +105,5 @@ it('explains exhausted sales capacity without changing account approval', async 
   api.get.mockResolvedValue({data: {data: [{id: 1, provider: 'cbe', account_name: 'Owner', account_ending: '1234', status: 'approved', is_active: true, is_suspended: false, provider_registration_status: 'registered', checkout_eligible: false, checkout_blocker: 'verification_quota_exhausted'}], available_methods: [{code: 'cbe', name: 'CBE'}]}});
   render(<Component />);
   expect(await screen.findByText('You cannot accept additional verified sales right now. Upgrade to Pro to continue.')).toBeTruthy();
-  expect(screen.getByText('Approved and active')).toBeTruthy();
+  expect(screen.getByRole('button', {name: 'Deactivate'})).toBeTruthy();
 });

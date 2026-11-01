@@ -174,11 +174,11 @@ function ReceivingAccountCard({
         <div className="flex min-w-0 items-start gap-3">
           <BankLogo code={account.provider} name={methodName} />
           <div className="min-w-0 flex-1">
-            <h2 className="text-base font-semibold leading-6">{methodName}</h2>
+            <h2 className="text-sm font-semibold leading-5">{methodName}</h2>
             <p className="mt-0.5 truncate text-sm text-muted-foreground">
               {account.account_name}
             </p>
-            <p className="mt-1 font-mono text-xs tabular-nums text-muted-foreground">
+            <p className="mt-1 text-xs tabular-nums text-muted-foreground">
               <Trans
                 message="Account ending :digits"
                 values={{digits: account.account_ending}}
@@ -187,9 +187,6 @@ function ReceivingAccountCard({
           </div>
         </div>
 
-        {account.status === 'approved' && account.provider_registration_status === 'registered' && account.is_active && !account.is_suspended && (
-          <Badge variant="positive"><Trans message="Approved and active" /></Badge>
-        )}
         <AccountAvailability account={account} />
 
         {!methodAvailable && (
@@ -199,7 +196,7 @@ function ReceivingAccountCard({
         )}
 
         {!account.is_suspended && (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 border-t border-border pt-3">
             <Button
               variant="outline"
               size="sm"
@@ -459,32 +456,26 @@ export function Component() {
                       id="receiving-provider"
                       className="h-11 w-full min-w-0"
                     >
-                      <Select.Value placeholder={<Trans message="Select payment method" />}>
-                        {selectedMethod ? (
-                          <span className="flex min-w-0 items-center gap-2">
-                            <BankLogo
-                              code={selectedMethod.code}
-                              name={selectedMethod.name}
-                              compact
-                              decorative
-                            />
-                            <span className="truncate">{selectedMethod.name}</span>
-                          </span>
-                        ) : undefined}
-                      </Select.Value>
+                      <Select.Value placeholder={<Trans message="Select payment method" />} className={selectedMethod ? "sr-only" : undefined} />
+                      {selectedMethod && (
+                        <span aria-hidden="true" className="flex min-w-0 flex-1 items-center gap-2 text-start">
+                          <BankLogo code={selectedMethod.code} name={selectedMethod.name} compact decorative />
+                          <span className="truncate font-medium">{selectedMethod.name}</span>
+                        </span>
+                      )}
                     </Select.Trigger>
                     <Select.Content
                       align="start"
-                      className="max-h-[min(17rem,42dvh)] rounded-card-sm shadow-lg"
+                      className="max-h-[min(17rem,42dvh)] min-w-[var(--anchor-width)] rounded-card-sm"
                     >
                       <Select.Group>
                         {providers.map(method => (
                           <Select.Item
                             key={method.code}
                             value={method.code}
-                            className="min-h-11"
+                            className="min-h-12"
                           >
-                            <span className="flex min-w-0 items-center gap-2.5">
+                            <span className="flex min-w-0 items-center gap-2.5 py-1">
                               <BankLogo
                                 code={method.code}
                                 name={method.name}
