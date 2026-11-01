@@ -8,7 +8,20 @@ vi.mock('@common/http/query-client', () => ({apiClient: api}));
 vi.mock('@ui/i18n/trans', () => ({Trans: ({message}: {message: string}) => message}));
 vi.mock('@ui/i18n/message', () => ({message: (message: string) => ({message})}));
 vi.mock('@ui/i18n/use-trans', () => ({useTrans: () => ({trans: ({message}: {message: string}) => message})}));
-vi.mock('@app/account-settings/account-settings-page-layout', () => ({AccountSettingsPageLayout: ({children}: {children: React.ReactNode}) => <main>{children}</main>}));
+vi.mock('@app/account-settings/account-settings-page-layout', () => ({
+  AccountSettingsPageLayout: ({
+    children,
+    headerRightContent,
+  }: {
+    children: React.ReactNode;
+    headerRightContent?: React.ReactNode;
+  }) => (
+    <main>
+      <header>{headerRightContent}</header>
+      {children}
+    </main>
+  ),
+}));
 vi.mock('@shadcn/button/button', () => ({Button: 'button'}));
 vi.mock('@shadcn/forms/input/input', () => ({Input: ({bindToHookForm: _ignored, ...props}: Record<string, unknown>) => <input {...props} />}));
 vi.mock('@shadcn/spinner/spinner', () => ({Spinner: () => <span>Loading</span>}));
