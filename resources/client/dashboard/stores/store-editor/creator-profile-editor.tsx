@@ -434,178 +434,175 @@ export function CreatorProfileEditor({
                         </InfoTrigger>
                       </div>
 
-                      <HookForm.Field name="cover_url">
-                        <Field.Label>
-                          <Trans message="Cover image" />
-                        </Field.Label>
-                        <CroppedCover
-                          className="w-full"
-                          showHint={false}
-                          placeholderIcon={
-                            <span className="flex size-full flex-col items-center justify-center gap-2 text-muted-foreground">
-                              <ImagePlusIcon className="size-5" />
-                              <span className="text-sm font-medium">
-                                <Trans message="Add a cover image" />
-                              </span>
-                            </span>
-                          }
-                          value={values.cover_url || ''}
-                          label={trans(message('Cover image'))}
-                          onChange={value =>
-                            form.setValue('cover_url', value || '', {
-                              shouldDirty: true,
-                            })
-                          }
-                          uploadType="linkImages"
-                          aspect={3}
-                        />
-                      </HookForm.Field>
-
-                      <HookForm.Field name="avatar_url" className="max-w-56">
-                        <Field.Label>
-                          <Trans message="Profile photo" />
-                        </Field.Label>
-                        <CroppedAvatar
-                          className="size-22 max-w-22"
-                          showHint={false}
-                          placeholderIcon={
-                            <span className="flex size-full items-center justify-center">
-                              <CameraIcon className="size-4 text-muted-foreground" />
-                            </span>
-                          }
-                          value={values.avatar_url || ''}
-                          label={trans(message('Profile photo'))}
-                          onChange={value =>
-                            form.setValue('avatar_url', value || '', {
-                              shouldDirty: true,
-                            })
-                          }
-                          uploadType="linkImages"
-                          aspect={1}
-                        />
-                      </HookForm.Field>
-                    </section>
-
-                    <section className="flex flex-col gap-4 border-t border-border pt-4">
-                      <h3 className="text-sm font-medium">
-                        <Trans message="Identity" />
-                      </h3>
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <HookForm.Field name="display_name">
-                          <Field.Label>
-                            <Trans message="Display name" />
+                      <div className="relative pb-12">
+                        <HookForm.Field name="cover_url">
+                          <Field.Label className="sr-only">
+                            <Trans message="Cover image" />
                           </Field.Label>
-                          <Input required maxLength={80} />
-                          <Field.Error />
-                        </HookForm.Field>
-                        <HookForm.Field name="profile_title">
-                          <FieldHelpLabel
-                            label={<Trans message="Profile title" />}
-                            help={
-                              <Trans message="Choose the professional title shown below your name." />
+                          <CroppedCover
+                            className="w-full"
+                            showHint={false}
+                            placeholderIcon={
+                              <span className="flex size-full flex-col items-center justify-center gap-2 text-muted-foreground">
+                                <ImagePlusIcon className="size-5" />
+                                <span className="text-sm font-medium">
+                                  <Trans message="Add a cover image" />
+                                </span>
+                              </span>
                             }
+                            value={values.cover_url || ''}
+                            label={trans(message('Cover image'))}
+                            onChange={value =>
+                              form.setValue('cover_url', value || '', {
+                                shouldDirty: true,
+                              })
+                            }
+                            uploadType="linkImages"
+                            aspect={3}
                           />
-                          <Combobox.Root<ProfessionOption>
-                            bindToHookForm={false}
-                            items={professionItems}
-                            value={selectedProfession}
-                            onValueChange={option =>
-                              form.setValue(
-                                'profile_title',
-                                option?.value || '',
-                                {
+                        </HookForm.Field>
+
+                        <HookForm.Field
+                          name="avatar_url"
+                          className="absolute start-4 bottom-0 z-10 w-fit translate-y-1/2"
+                        >
+                          <Field.Label className="sr-only">
+                            <Trans message="Profile photo" />
+                          </Field.Label>
+                          <div className="rounded-full bg-background p-1.5">
+                            <CroppedAvatar
+                              className="size-22 max-w-22"
+                              showHint={false}
+                              placeholderIcon={
+                                <span className="flex size-full items-center justify-center">
+                                  <CameraIcon className="size-4 text-muted-foreground" />
+                                </span>
+                              }
+                              value={values.avatar_url || ''}
+                              label={trans(message('Profile photo'))}
+                              onChange={value =>
+                                form.setValue('avatar_url', value || '', {
                                   shouldDirty: true,
-                                },
-                              )
-                            }
-                            itemToStringLabel={option => trans(option.label)}
-                            isItemEqualToValue={(option, value) =>
-                              option.value === value.value
-                            }
-                          >
-                            <Combobox.Input
-                              clearLabel={trans(message('Clear profile title'))}
-                              placeholder={trans(
-                                message('Choose a profession'),
-                              )}
+                                })
+                              }
+                              uploadType="linkImages"
+                              aspect={1}
                             />
-                            <Combobox.Content>
-                              <Combobox.Empty>
-                                <Trans message="No professions found." />
-                              </Combobox.Empty>
-                              <Combobox.List>
-                                {(option: ProfessionOption) => (
-                                  <Combobox.Item
-                                    key={option.value}
-                                    value={option}
-                                  >
-                                    <Trans {...option.label} />
-                                  </Combobox.Item>
-                                )}
-                              </Combobox.List>
-                            </Combobox.Content>
-                          </Combobox.Root>
-                          <Field.Error />
+                          </div>
                         </HookForm.Field>
                       </div>
                     </section>
 
-                    <section className="flex flex-col gap-4 border-t border-border pt-4">
-                      <h3 className="text-sm font-medium">
-                        <Trans message="Profile details" />
-                      </h3>
-                      <HookForm.Field name="bio">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <HookForm.Field name="display_name">
+                        <Field.Label>
+                          <Trans message="Display name" />
+                        </Field.Label>
+                        <Input required maxLength={80} />
+                        <Field.Error />
+                      </HookForm.Field>
+                      <HookForm.Field name="profile_title">
                         <FieldHelpLabel
-                          label={<Trans message="Short bio" />}
+                          label={<Trans message="Profile title" />}
                           help={
-                            <Trans message="A short introduction to your work and audience." />
+                            <Trans message="Choose the professional title shown below your name." />
                           }
                         />
-                        <Textarea rows={4} maxLength={BIO_MAX_LENGTH} />
-                        <Field.Description className="flex items-start justify-between gap-3">
-                          <CharacterCounter
-                            current={values.bio?.length ?? 0}
-                            max={BIO_MAX_LENGTH}
+                        <Combobox.Root<ProfessionOption>
+                          bindToHookForm={false}
+                          items={professionItems}
+                          value={selectedProfession}
+                          onValueChange={option =>
+                            form.setValue(
+                              'profile_title',
+                              option?.value || '',
+                              {
+                                shouldDirty: true,
+                              },
+                            )
+                          }
+                          itemToStringLabel={option => trans(option.label)}
+                          isItemEqualToValue={(option, value) =>
+                            option.value === value.value
+                          }
+                        >
+                          <Combobox.Input
+                            clearLabel={trans(message('Clear profile title'))}
+                            placeholder={trans(message('Choose a profession'))}
                           />
-                        </Field.Description>
+                          <Combobox.Content>
+                            <Combobox.Empty>
+                              <Trans message="No professions found." />
+                            </Combobox.Empty>
+                            <Combobox.List>
+                              {(option: ProfessionOption) => (
+                                <Combobox.Item
+                                  key={option.value}
+                                  value={option}
+                                >
+                                  <Trans {...option.label} />
+                                </Combobox.Item>
+                              )}
+                            </Combobox.List>
+                          </Combobox.Content>
+                        </Combobox.Root>
                         <Field.Error />
                       </HookForm.Field>
-                      <HookForm.Field name="skills">
-                        <FieldHelpLabel
-                          label={<Trans message="Skills" />}
-                          help={
-                            <Trans message="Separate skills with commas. The first eight are shown." />
-                          }
+                    </div>
+
+                    <HookForm.Field name="bio">
+                      <FieldHelpLabel
+                        label={<Trans message="Short bio" />}
+                        help={
+                          <Trans message="A short introduction to your work and audience." />
+                        }
+                      />
+                      <Textarea rows={4} maxLength={BIO_MAX_LENGTH} />
+                      <Field.Description className="flex items-start justify-between gap-3">
+                        <CharacterCounter
+                          current={values.bio?.length ?? 0}
+                          max={BIO_MAX_LENGTH}
                         />
-                        <SkillsChipsField
-                          placeholder={trans(
-                            message('Design, Photography, Coaching'),
-                          )}
-                        />
-                        <Field.Description className="flex items-start justify-between gap-3">
-                          <span className="shrink-0 tabular-nums text-sm text-muted-foreground">
-                            {parseSkills(values.skills).length}/{SKILLS_MAX}
-                          </span>
-                        </Field.Description>
-                        <Field.Error />
-                      </HookForm.Field>
-                      <HookForm.Field name="available_for_work">
-                        <Field.Root orientation="horizontal">
-                          <div
-                            data-slot="field-content"
-                            className="flex min-w-0 flex-1 flex-col gap-1"
-                          >
-                            <FieldHelpLabel
-                              label={<Trans message="Available for work" />}
-                              help={
-                                <Trans message="Show a small availability badge on your profile." />
-                              }
-                            />
-                          </div>
-                          <Switch />
-                        </Field.Root>
-                      </HookForm.Field>
-                    </section>
+                      </Field.Description>
+                      <Field.Error />
+                    </HookForm.Field>
+
+                    <HookForm.Field name="skills">
+                      <FieldHelpLabel
+                        label={<Trans message="Skills" />}
+                        help={
+                          <Trans message="Separate skills with commas. The first eight are shown." />
+                        }
+                      />
+                      <SkillsChipsField
+                        placeholder={trans(
+                          message('Design, Photography, Coaching'),
+                        )}
+                      />
+                      <Field.Description className="flex items-start justify-between gap-3">
+                        <span className="shrink-0 tabular-nums text-sm text-muted-foreground">
+                          {parseSkills(values.skills).length}/{SKILLS_MAX}
+                        </span>
+                      </Field.Description>
+                      <Field.Error />
+                    </HookForm.Field>
+
+                    <HookForm.Field name="available_for_work">
+                      <Field.Root orientation="horizontal">
+                        <div
+                          data-slot="field-content"
+                          className="flex min-w-0 flex-1 flex-col gap-1"
+                        >
+                          <FieldHelpLabel
+                            label={<Trans message="Available for work" />}
+                            help={
+                              <Trans message="Show a small availability badge on your profile." />
+                            }
+                          />
+                        </div>
+                        <Switch />
+                      </Field.Root>
+                    </HookForm.Field>
                   </Field.Group>
                 </Accordion.Content>
               </Accordion.Item>
