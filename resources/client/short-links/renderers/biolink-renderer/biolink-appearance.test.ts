@@ -698,11 +698,13 @@ describe('creator profile editor wiring', () => {
     expect(source).not.toContain('cropRadius=');
     expect(source).not.toContain('previewClassName=');
     expect(source).not.toContain('--biolink-');
-    // The avatar is a plain dashboard avatar tile: no storefront surface
-    // token behind it, just the image — and the max-w clamps keep the
-    // field's width:100% from turning it into a full-width pill.
+    // The avatar stays a plain dashboard avatar tile, but the approved
+    // mobile composition now overlays it on the cover instead of placing it
+    // in a separate max-width field.
     expect(source).toContain('className="size-22 max-w-22"');
-    expect(source).toContain('className="max-w-56"');
+    expect(source).toContain(
+      'className="absolute start-4 bottom-0 z-10 w-fit translate-y-1/2"',
+    );
     expect(source).not.toContain('bg-[var(--biolink-surface-strong)]');
   });
 
