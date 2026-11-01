@@ -46,6 +46,7 @@ use App\Biolinks\Controllers\BiolinksController;
 use App\Biolinks\Controllers\BiolinkWidgetsController;
 use App\Biolinks\Controllers\CreatorProfileController;
 use App\TrackingPixels\Controllers\TrackingPixelsController;
+use App\Telegram\Controllers\TelegramConnectionController;
 use App\Webhooks\Controllers\WebhookAttemptsController;
 use App\Webhooks\Controllers\WebhooksController;
 use App\Tags\Controllers\TagsController;
@@ -112,6 +113,14 @@ Route::group(['prefix' => 'v1'], function() {
         Route::post('admin/kyc-verifications/{kycVerification}/reject', [AdminKycVerificationsController::class, 'reject']);
         Route::get('admin/kyc-verifications/{kycVerification}/documents/{key}', [AdminKycVerificationsController::class, 'document']);
         Route::delete('admin/kyc-verifications/{kycVerification}', [AdminKycVerificationsController::class, 'destroy']);
+
+        // TELEGRAM CREATOR NOTIFICATIONS
+        Route::middleware('auth')->prefix('integrations/telegram')->group(function () {
+            Route::get('/', [TelegramConnectionController::class, 'show']);
+            Route::post('connect', [TelegramConnectionController::class, 'connect'])
+                ->middleware('throttle:10,1');
+            Route::delete('/', [TelegramConnectionController::class, 'disconnect']);
+        });
 
         // BLOG (admin)
         Route::name('blog.')->prefix('blog')->group(function () {

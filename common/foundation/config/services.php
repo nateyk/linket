@@ -155,6 +155,17 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
+    'telegram' => [
+        'enabled' => env('TELEGRAM_ENABLED', false),
+        'token' => env('TELEGRAM_BOT_TOKEN'),
+        'bot_username' => env('TELEGRAM_BOT_USERNAME'),
+        'webhook_secret' => env('TELEGRAM_WEBHOOK_SECRET'),
+        'link_token_ttl_minutes' => (int) env('TELEGRAM_LINK_TOKEN_TTL_MINUTES', 10),
+        'http' => [
+            'timeout' => (float) env('TELEGRAM_HTTP_TIMEOUT', 10),
+            'connect_timeout' => (float) env('TELEGRAM_HTTP_CONNECT_TIMEOUT', 5),
+        ],
+    ],
     'unsplash' => [
         'access_key' => env('UNSPLASH_ACCESS_KEY'),
     ],
