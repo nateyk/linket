@@ -3,10 +3,12 @@
 namespace App\Storefront\Notifications;
 
 use App\Storefront\Models\DigitalProduct;
+use App\Telegram\Support\TelegramNotificationChannels;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use NotificationChannels\Telegram\TelegramMessage;
 
 class ProductModerationNotification extends Notification implements ShouldQueue
 {
@@ -27,7 +29,10 @@ class ProductModerationNotification extends Notification implements ShouldQueue
 
     public function via(object $notifiable): array
     {
-        return ['mail', 'database'];
+        return TelegramNotificationChannels::append(
+            $notifiable,
+            ['mail', 'database'],
+        );
     }
 
     public function viaQueues(): array
@@ -35,6 +40,7 @@ class ProductModerationNotification extends Notification implements ShouldQueue
         return [
             'mail' => 'mail',
             'database' => 'default',
+            'telegram' => 'default',
         ];
     }
 
@@ -65,6 +71,32 @@ class ProductModerationNotification extends Notification implements ShouldQueue
         }
 
         return $mail->action($this->actionLabel(), url($this->actionPath($product)));
+    }
+
+    public function toTelegram(object $notifiable): TelegramMessage
+    {
+        $product = $this->product();
+        $message = TelegramMessage::create()->normal();
+
+        if (! $product) {
+            return $message
+                ->content(__('Product update'))
+                ->line(__('Your product catalog changed. Open Linket for the latest.'))
+                ->button(__('Open dashboard'), url('/dashboard/items'));
+        }
+
+        $message
+            ->content($this->subject())
+            ->line($this->summary($product));
+
+        if ($this->includesReason() && $this->reason) {
+            $message->line(__('Reason: :reason', ['reason' => $this->reason]));
+        }
+
+        return $message->button(
+            $this->actionLabel(),
+            url($this->actionPath($product)),
+        );
     }
 
     public function toDatabase(object $notifiable): array

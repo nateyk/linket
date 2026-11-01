@@ -3,10 +3,12 @@
 namespace App\CreatorServices\Notifications;
 
 use App\CreatorServices\Models\ServiceInquiry;
+use App\Telegram\Support\TelegramNotificationChannels;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use NotificationChannels\Telegram\TelegramMessage;
 
 class NewServiceInquiryNotification extends Notification implements ShouldQueue
 {
@@ -24,7 +26,10 @@ class NewServiceInquiryNotification extends Notification implements ShouldQueue
 
     public function via(object $notifiable): array
     {
-        return ['mail', 'database'];
+        return TelegramNotificationChannels::append(
+            $notifiable,
+            ['mail', 'database'],
+        );
     }
 
     public function viaQueues(): array
@@ -32,6 +37,7 @@ class NewServiceInquiryNotification extends Notification implements ShouldQueue
         return [
             'mail' => 'mail',
             'database' => 'default',
+            'telegram' => 'default',
         ];
     }
 
@@ -67,6 +73,37 @@ class NewServiceInquiryNotification extends Notification implements ShouldQueue
         return $mail
             ->line(__('Message: :message', ['message' => $inquiry->message]))
             ->action(__('View inquiry'), url('/dashboard/services/inquiries'));
+    }
+
+    public function toTelegram(object $notifiable): TelegramMessage
+    {
+        $inquiry = $this->inquiry();
+        $message = TelegramMessage::create()->normal();
+
+        if (! $inquiry) {
+            return $message
+                ->content(__('New service inquiry'))
+                ->line(__('Open Linket to view the latest inquiries.'))
+                ->button(__('View inquiries'), url('/dashboard/services/inquiries'));
+        }
+
+        $message
+            ->content(__('New service inquiry'))
+            ->line(__(':name wants to talk about ":service".', [
+                'name' => $inquiry->name,
+                'service' => $inquiry->service?->title ?? __('your service'),
+            ]));
+
+        if ($inquiry->package) {
+            $message->line(
+                __('Package: :package', ['package' => $inquiry->package->name]),
+            );
+        }
+
+        return $message->button(
+            __('View inquiry'),
+            url('/dashboard/services/inquiries'),
+        );
     }
 
     public function toDatabase(object $notifiable): array
