@@ -7,6 +7,7 @@ use App\Storefront\Jobs\SendStorefrontReceipt;
 use App\Storefront\Models\CommissionAccrual;
 use App\Storefront\Models\DownloadEntitlement;
 use App\Storefront\Models\StorefrontOrder;
+use App\Storefront\Notifications\VerifiedSaleNotification;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -14,7 +15,7 @@ final class DirectStorefrontFulfillment
 {
     public function fulfill(StorefrontOrder $order): bool
     {
-        return DB::transaction(function () use ($order): bool {
+        $fulfilled = DB::transaction(function () use ($order): bool {
             $order = StorefrontOrder::query()->whereKey($order->id)->lockForUpdate()->firstOrFail();
             if ($order->status === 'paid') {
                 return false;
@@ -75,5 +76,27 @@ final class DirectStorefrontFulfillment
 
             return true;
         });
+
+        if ($fulfilled) {
+            try {
+                $fulfilledOrder = StorefrontOrder::query()
+                    ->with('creator')
+                    ->find($order->id);
+
+                if (
+                    $fulfilledOrder?->creator &&
+                    $fulfilledOrder->gross_amount_cents > 0 &&
+                    $fulfilledOrder->payment_gateway === 'verify_et'
+                ) {
+                    $fulfilledOrder->creator->notify(
+                        new VerifiedSaleNotification($fulfilledOrder->id),
+                    );
+                }
+            } catch (\Throwable $exception) {
+                report($exception);
+            }
+        }
+
+        return $fulfilled;
     }
 }
