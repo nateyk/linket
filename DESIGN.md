@@ -294,9 +294,11 @@ breaks.
 
 ## Layout
 
-The dashboard is a viewport, not a document. `DashboardLayout` renders a `h-screen`
-flex column with `overflow-hidden`; scrolling happens inside content regions rather
-than on the page. This is why panels, tables and the sidebar never fight the window.
+The dashboard is a viewport, not a document. `DashboardLayout` renders a `h-screen h-dvh`
+flex column: `100vh` is the compatibility fallback and `100dvh` follows the visible
+mobile viewport as browser chrome expands or collapses. Scrolling happens inside
+content regions rather than on the page. This keeps panels, tables, the sidebar and
+the mobile bottom navigation anchored to the visible viewport.
 
 - **Content container:** `max-w-7xl` (80rem), centered, `py-4` (16px) with `gap-5`
   (20px) between stacked sections — the standard page rhythm.
