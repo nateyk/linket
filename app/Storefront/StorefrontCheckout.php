@@ -2,6 +2,7 @@
 
 namespace App\Storefront;
 
+use App\Payments\VerifyEt\VerifyEtSettings;
 use App\Biolinks\Models\Biolink;
 use App\Stores\Models\Store;
 use App\Storefront\Models\DigitalProduct;
@@ -19,7 +20,7 @@ class StorefrontCheckout
         ?int $paymentMethodId = null,
     ): StorefrontOrder
     {
-        if (config('services.verify_et.enabled')) {
+        if (VerifyEtSettings::get('enabled')) {
             return app(\App\Storefront\Services\DirectStorefrontCheckout::class)->create($product, $biolink, $buyer, $paymentMethodId);
         }
 

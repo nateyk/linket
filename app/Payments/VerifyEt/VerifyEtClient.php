@@ -41,7 +41,7 @@ final class VerifyEtClient
             return $this->mockedResponse($method, $path, $payload, $idempotencyKey);
         }
 
-        $apiKey = config('services.verify_et.api_key');
+        $apiKey = VerifyEtSettings::get('api_key');
         if (!is_string($apiKey) || $apiKey === '') {
             throw new RuntimeException('Verify.et is not configured.');
         }

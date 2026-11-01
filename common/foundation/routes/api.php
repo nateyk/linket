@@ -260,6 +260,8 @@ Route::group(['prefix' => 'v1'], function () {
         Route::get('admin/storefront/creators/{user}', [\App\Storefront\Controllers\AdminCreatorManagementController::class, 'show'])->middleware('auth:sanctum');
         Route::get('admin/storefront/payment-methods', [CreatorPaymentMethodsController::class, 'adminIndex'])->middleware('auth:sanctum');
         Route::get('admin/storefront/payment-methods/{method}', [CreatorPaymentMethodsController::class, 'adminShow'])->middleware('auth:sanctum');
+        Route::get('admin/storefront/verify-et-settings', [\App\Payments\Controllers\AdminVerifyEtSettingsController::class, 'show'])->middleware('auth:sanctum');
+        Route::patch('admin/storefront/verify-et-settings', [\App\Payments\Controllers\AdminVerifyEtSettingsController::class, 'update'])->middleware('auth:sanctum');
         Route::get('admin/storefront/payment-method-catalog', [CreatorPaymentMethodsController::class, 'catalog'])->middleware('auth:sanctum');
         Route::patch('admin/storefront/payment-method-catalog/{paymentMethod}', [CreatorPaymentMethodsController::class, 'updateCatalog'])->middleware('auth:sanctum');
         Route::post('admin/storefront/payment-methods/{method}/approve', [CreatorPaymentMethodsController::class, 'approve'])->middleware('auth:sanctum');

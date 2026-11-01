@@ -2,6 +2,7 @@
 
 namespace App\Storefront\Services;
 
+use App\Payments\VerifyEt\VerifyEtSettings;
 use App\Models\User;
 use App\Storefront\Models\CreatorPaymentMethod;
 use App\Storefront\Models\DirectPaymentMethod;
@@ -11,7 +12,7 @@ final class CheckoutAvailability
 {
     public function creatorBlocker(User $creator): ?string
     {
-        if (! config('services.verify_et.enabled')) {
+        if (! VerifyEtSettings::get('enabled')) {
             return 'verification_unavailable';
         }
         if (! app(AccountMonetizationStatus::class)->canSell($creator)) {

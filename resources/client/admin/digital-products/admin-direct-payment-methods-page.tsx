@@ -2,6 +2,7 @@ import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {Trans} from '@ui/i18n/trans';
 import {useEffect} from 'react';
 import {useNavigate, useSearchParams} from 'react-router';
+import {VerifyEtSettingsPanel} from './verify-et-settings-panel';
 import {VerifyEtMethodCatalog} from './verify-et-method-catalog';
 
 export function Component() {
@@ -41,11 +42,13 @@ export function Component() {
         </DashboardLayout.SectionTitle>
       </DashboardLayout.SectionHeader>
       <DashboardLayout.SectionContent className="overflow-y-auto">
-        <div className="mx-auto w-full max-w-6xl px-4 py-5">
-          <p className="mb-4 text-sm text-muted-foreground">
-            <Trans message="Enable, disable, and suspend the banks and wallets creators can offer at checkout. Review creator receiving accounts under Receiving accounts." />
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-5">
+          <p className="text-sm text-muted-foreground">
+            <Trans message="Manage Verify.et and the banks and wallets offered at checkout in one place." />
           </p>
+          <VerifyEtSettingsPanel />
           <VerifyEtMethodCatalog />
+          <a href="/admin/financial/withdrawal-methods" className="text-sm text-primary underline"><Trans message="Review creator receiving accounts" /></a>
         </div>
       </DashboardLayout.SectionContent>
     </DashboardLayout.MainSection>

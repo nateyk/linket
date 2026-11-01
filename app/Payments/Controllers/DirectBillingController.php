@@ -2,6 +2,7 @@
 
 namespace App\Payments\Controllers;
 
+use App\Payments\VerifyEt\VerifyEtSettings;
 use App\Payments\Models\DirectPaymentVerification;
 use App\Payments\Models\ProSubscriptionPayment;
 use App\Models\User;
@@ -155,7 +156,7 @@ final class DirectBillingController extends Controller
 
     public function startPro(Request $request): \Illuminate\Http\JsonResponse
     {
-        abort_unless(config('services.verify_et.enabled'), 503);
+        abort_unless(VerifyEtSettings::get('enabled'), 503);
         $instructions = $this->corporateInstructions();
         abort_unless($instructions['account_number'], 503, __('Linket payment account is unavailable.'));
         $payment = DB::transaction(function () use ($request): ProSubscriptionPayment {
@@ -216,7 +217,7 @@ final class DirectBillingController extends Controller
     /** @return array<string, mixed> */
     private function submitReference(Request $request, CommissionInvoice|ProSubscriptionPayment $payable, int $amountCents): array
     {
-        abort_unless(config('services.verify_et.enabled'), 503);
+        abort_unless(VerifyEtSettings::get('enabled'), 503);
         $data = $request->validate(['reference' => ['required', 'string', 'min:6', 'max:150', 'regex:/^[A-Za-z0-9._-]+$/']]);
         $instructions = $this->corporateInstructions();
         abort_unless($instructions['account_number'], 503);

@@ -431,7 +431,7 @@ final class VerifyEtGateway
         $verification->update(['status' => $status, 'latest_error_code' => $exception->providerCode, 'latest_error' => $exception->getMessage()]);
         if ($exception->httpStatus === 402) {
             Log::critical('verify_et.credits_exhausted', ['verification_id' => $verification->id, 'code' => $exception->providerCode]);
-            if ($email = config('services.verify_et.alert_email')) {
+            if ($email = VerifyEtSettings::get('alert_email')) {
                 Mail::raw('Verify.et verification credits require attention.', fn ($message) => $message->to($email)->subject('Verify.et credits require attention'));
             }
         }
@@ -441,7 +441,7 @@ final class VerifyEtGateway
                 'http_status' => $exception->httpStatus,
                 'code' => $exception->providerCode,
             ]);
-            if ($email = config('services.verify_et.alert_email')) {
+            if ($email = VerifyEtSettings::get('alert_email')) {
                 \Illuminate\Support\Facades\RateLimiter::attempt(
                     'verify-et:authentication-alert',
                     fn () => Mail::raw('Verify.et rejected Linket credentials or scoped API permissions.', fn ($message) => $message->to($email)->subject('Verify.et integration configuration requires attention')),

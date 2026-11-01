@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Payments\VerifyEt\VerifyEtSettings;
 use App\Payments\Models\DirectPaymentVerification;
 use App\Payments\Models\VerifyEtWebhookDelivery;
 use Common\Logging\Schedule\ScheduleHealthCommand;
@@ -266,11 +267,11 @@ class ProductionPreflightCommand extends Command
      */
     private function checkVerifyEt(callable $add, bool $strict): void
     {
-        $enabled = (bool) config('services.verify_et.enabled');
+        $enabled = (bool) VerifyEtSettings::get('enabled');
         $add('verify_et_enabled_flag', true, $enabled ? 'enabled' : 'disabled', false);
 
-        $apiKeyPresent = filled(config('services.verify_et.api_key'));
-        $webhookPresent = filled(config('services.verify_et.webhook_secret'));
+        $apiKeyPresent = filled(VerifyEtSettings::get('api_key'));
+        $webhookPresent = filled(VerifyEtSettings::get('webhook_secret'));
 
         $add(
             'verify_et_api_key_configured',
@@ -287,7 +288,7 @@ class ProductionPreflightCommand extends Command
 
         // Never print secret values — only length buckets.
         if ($webhookPresent) {
-            $len = strlen((string) config('services.verify_et.webhook_secret'));
+            $len = strlen((string) VerifyEtSettings::get('webhook_secret'));
             $add(
                 'verify_et_webhook_secret_shape',
                 $len >= 16,

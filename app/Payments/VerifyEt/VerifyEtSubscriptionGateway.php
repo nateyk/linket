@@ -9,7 +9,7 @@ use Common\Billing\Subscription;
 
 final class VerifyEtSubscriptionGateway implements CommonSubscriptionGatewayActions
 {
-    public function isEnabled(): bool { return (bool) config('services.verify_et.enabled'); }
+    public function isEnabled(): bool { return (bool) VerifyEtSettings::get('enabled'); }
     public function syncPlan(Product $product): bool { return true; }
     public function deletePlan(Product $product): bool { return true; }
     public function changePlan(Subscription $subscription, Product $newProduct, Price $newPrice): bool { return false; }
