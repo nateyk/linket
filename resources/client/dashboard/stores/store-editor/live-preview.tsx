@@ -192,8 +192,8 @@ export function LivePreview() {
     <Activity>
       {/* On large screens the panel is a fixed column. Below lg it is hidden
           but stays mounted — frame and A-05/A-06 state intact — while the
-          floating trigger and sheet take over, so the preview never sits far
-          below a long scrolling form (A-19). `h-full` plus `overflow-hidden`
+          footer trigger and sheet take over, so Preview stays reachable without
+          covering long-form controls (A-19). `h-full` plus `overflow-hidden`
           is what lets the frame shrink to the space it has instead of
           running off the bottom. */}
       <div
@@ -212,23 +212,27 @@ export function LivePreview() {
 
       {!isInsightsTab && (
         <>
-          {/* The trigger floats above the compact layout's bottom nav
-              (4.5rem clears it) plus whatever safe area there is. */}
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            aria-haspopup="dialog"
-            aria-expanded={sheetOpen}
-            className="fixed end-4 bottom-[calc(4.5rem+var(--safe-bottom,env(safe-area-inset-bottom,0px)))] z-30 bg-background shadow-sm motion-reduce:transition-none lg:hidden"
-            onClick={() => {
-              setSheetVisited(true);
-              setSheetOpen(true);
-            }}
-          >
-            <SmartphoneIcon />
-            <Trans message="Preview" />
-          </Button>
+          {/* Keep Preview in the editor flow on compact layouts. The app shell
+              renders mobile navigation after dashboard content, so this sticky
+              footer naturally sits immediately above it without hard-coded nav
+              offsets or covering the editor's last controls. */}
+          <div className="sticky bottom-0 z-20 border-t bg-background px-4 py-2.5 lg:hidden">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              aria-haspopup="dialog"
+              aria-expanded={sheetOpen}
+              className="min-h-11 w-full bg-background motion-reduce:transition-none"
+              onClick={() => {
+                setSheetVisited(true);
+                setSheetOpen(true);
+              }}
+            >
+              <SmartphoneIcon />
+              <Trans message="Preview" />
+            </Button>
+          </div>
 
           {/* A modal bottom sheet: focus is trapped, Esc closes, focus
               returns to the trigger. The frame mounts on first open and
