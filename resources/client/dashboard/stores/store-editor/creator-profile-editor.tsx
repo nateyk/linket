@@ -434,8 +434,9 @@ export function CreatorProfileEditor({
                         </InfoTrigger>
                       </div>
 
-                      <div className="relative pb-12">
-                        <HookForm.Field name="cover_url">
+                      <div>
+                        <div className="relative">
+                          <HookForm.Field name="cover_url">
                           <Field.Label className="sr-only">
                             <Trans message="Cover image" />
                           </Field.Label>
@@ -460,9 +461,9 @@ export function CreatorProfileEditor({
                             uploadType="linkImages"
                             aspect={3}
                           />
-                        </HookForm.Field>
+                          </HookForm.Field>
 
-                        <HookForm.Field
+                          <HookForm.Field
                           name="avatar_url"
                           className="absolute start-4 bottom-0 z-10 w-fit translate-y-1/2"
                         >
@@ -489,7 +490,9 @@ export function CreatorProfileEditor({
                               aspect={1}
                             />
                           </div>
-                        </HookForm.Field>
+                          </HookForm.Field>
+                        </div>
+                        <div className="h-12" aria-hidden="true" />
                       </div>
                     </section>
 
