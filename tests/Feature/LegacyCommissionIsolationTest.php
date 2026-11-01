@@ -167,6 +167,8 @@ class LegacyCommissionIsolationTest extends TestCase
 
     public function testHistoricalInvoiceAndLegacyRecordsStayReadableAndUnchanged(): void
     {
+        // The accrual fixtures are dated October 15; the estimate covers only the current month.
+        $this->travelTo(CarbonImmutable::parse('2026-10-20 12:00:00', 'Africa/Nairobi'));
         [$order] = $this->orderAndVerification();
         $invoice = $this->historicalInvoice($order->creator, $order->product->workspace_id, [
             'status' => 'paid',
@@ -194,6 +196,13 @@ class LegacyCommissionIsolationTest extends TestCase
         $this->assertSame($before['sales_count'], $invoice->sales_count);
         $this->assertSame($before['status'], $invoice->status);
         $this->assertTrue($invoice->paid_at->equalTo($before['paid_at']));
+
+        // Once November starts, the October legacy accrual must no longer count as this month's estimate.
+        $this->travelTo(CarbonImmutable::parse('2026-11-01 00:01:00', 'Africa/Nairobi'));
+        $this->stateful()->actingAs($order->creator)->getJson('/api/v1/billing/direct')
+            ->assertOk()
+            ->assertJsonPath('estimated_commission.fee_cents', 0);
+        $this->travelBack();
     }
 
     public function testCommissionInvoiceJobIgnoresNewPolicyOrders(): void
