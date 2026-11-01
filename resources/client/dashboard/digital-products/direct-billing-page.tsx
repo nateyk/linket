@@ -12,7 +12,6 @@ import {Select} from '@shadcn/forms/select/select';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {Table} from '@shadcn/table/table';
 import {Tabs} from '@shadcn/tabs/tabs';
-import {formatMoney} from '@ui/i18n/format-money';
 import {FormattedCurrency} from '@ui/i18n/formatted-currency';
 import {FormattedDate} from '@ui/i18n/formatted-date';
 import {Trans} from '@ui/i18n/trans';
@@ -20,7 +19,6 @@ import {
   EyeIcon,
   CalendarDaysIcon,
   SearchIcon,
-  PackageCheckIcon,
   ReceiptTextIcon,
   RefreshCwIcon,
 } from 'lucide-react';
@@ -31,10 +29,10 @@ import {
   useRef,
   useState,
 } from 'react';
-import {Link, useSearchParams} from 'react-router';
+import {useSearchParams} from 'react-router';
 import {PaymentStatusLabel} from './payment-status-badge';
 
-type Tab = 'orders' | 'transactions' | 'manual-review' | 'billing';
+type Tab = 'orders' | 'transactions' | 'manual-review';
 
 type Pagination = {
   current_page: number;
@@ -139,60 +137,6 @@ type Transaction = {
   buyer_name?: string | null;
 };
 
-type Method = {
-  id: number;
-  provider: string;
-  account_ending: string;
-  account_name: string;
-  status: string;
-  is_active: boolean;
-  lifecycle_state: string;
-  is_suspended: boolean;
-};
-
-type PaymentProvider = {code: string; name: string};
-
-type Invoice = {
-  uuid: string;
-  invoice_number: string;
-  commission_fee_cents: number;
-  status: string;
-  sales_count: number;
-};
-
-type Billing = {
-  pro_plan?: {monthly_price_cents: number | null; currency: string};
-  pro_subscription?: {
-    status: string;
-    renews_at?: string | null;
-    ends_at?: string | null;
-    pending_payment?: {status: string; amount_cents: number} | null;
-    payments?: Array<{
-      payment_id: string;
-      amount_cents: number;
-      currency: string;
-      status: string;
-      transaction_reference?: string | null;
-      provider?: string | null;
-      paid_at?: string | null;
-      created_at?: string | null;
-    }>;
-  };
-  verification_allowance?: {
-    consumed: number;
-    reserved: number;
-    remaining: number;
-    limit: number;
-    is_pro: boolean;
-    can_start_checkout: boolean;
-    renews_at?: string | null;
-  };
-  estimated_commission: {gross_sales_cents: number; fee_cents: number};
-  invoices: {data: Invoice[]};
-  corporate_account: {provider: string; account_number: string | null};
-  legacy_access: boolean;
-};
-
 const emptyPagination: Pagination = {
   current_page: 1,
   last_page: 1,
@@ -226,11 +170,6 @@ export function Component() {
   const [searchParams] = useSearchParams();
   const [tab, setTab] = useState<Tab>('orders');
   const [refreshKey, setRefreshKey] = useState(0);
-
-  const [billing, setBilling] = useState<Billing>();
-  const [methods, setMethods] = useState<Method[]>([]);
-  const [availableMethods, setAvailableMethods] = useState<PaymentProvider[]>([]);
-  const [billingLoading, setBillingLoading] = useState(true);
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [ordersPagination, setOrdersPagination] =
@@ -270,44 +209,9 @@ export function Component() {
 
   const [detailUuid, setDetailUuid] = useState<string>();
 
-  const [busy, setBusy] = useState(false);
-  const [actionError, setActionError] = useState<string>();
-
-  const [visibleAccount, setVisibleAccount] = useState<{
-    id: number;
-    number: string;
-  }>();
-  const [provider, setProvider] = useState('cbe');
-  const [accountNumber, setAccountNumber] = useState('');
-  const [accountName, setAccountName] = useState('');
-  const [proof, setProof] = useState<File>();
-  const [invoiceReference, setInvoiceReference] = useState<
-    Record<string, string>
-  >({});
-  const [proPayment, setProPayment] = useState<string>();
-  const [proAmountCents, setProAmountCents] = useState<number>();
-  const [proReference, setProReference] = useState('');
-
   const ordersRequest = useRef(0);
   const transactionsRequest = useRef(0);
   const manualRequest = useRef(0);
-
-  const loadBilling = useCallback(async () => {
-    setBillingLoading(true);
-    try {
-      const [billingResponse, methodsResponse] = await Promise.all([
-        apiClient.get('/api/v1/billing/direct'),
-        apiClient.get('/api/v1/storefront/payment-methods'),
-      ]);
-      setBilling(billingResponse.data);
-      setMethods(methodsResponse.data.data ?? []);
-      setAvailableMethods(methodsResponse.data.available_methods ?? []);
-    } catch (reason) {
-      setActionError(getApiErrorMessage(reason));
-    } finally {
-      setBillingLoading(false);
-    }
-  }, [refreshKey]);
 
   const loadOrders = useCallback(async () => {
     const sequence = ++ordersRequest.current;
@@ -405,10 +309,6 @@ export function Component() {
   }, [tab, manualPage, refreshKey]);
 
   useEffect(() => {
-    void loadBilling();
-  }, [loadBilling]);
-
-  useEffect(() => {
     void loadOrders();
   }, [loadOrders]);
 
@@ -419,88 +319,6 @@ export function Component() {
   useEffect(() => {
     void loadManualOrders();
   }, [loadManualOrders]);
-
-  const saveMethod = async () => {
-    if (!proof || !accountNumber.trim() || !accountName.trim()) return;
-    setBusy(true);
-    try {
-      const form = new FormData();
-      form.append('provider', provider);
-      form.append('account_number', accountNumber.trim());
-      form.append('account_name', accountName.trim());
-      form.append('proof', proof);
-      await apiClient.post('/api/v1/storefront/payment-methods', form);
-      setAccountNumber('');
-      setAccountName('');
-      setProof(undefined);
-      await loadBilling();
-    } catch (reason) {
-      setActionError(getApiErrorMessage(reason));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const showAccount = async (id: number) => {
-    if (visibleAccount?.id === id) {
-      setVisibleAccount(undefined);
-      return;
-    }
-    try {
-      const response = await apiClient.get(
-        `/api/v1/storefront/payment-methods/${id}/details`,
-        {headers: {'Cache-Control': 'no-store'}},
-      );
-      setVisibleAccount({id, number: response.data.data.account_number});
-    } catch (reason) {
-      setActionError(getApiErrorMessage(reason));
-    }
-  };
-
-  const verifyInvoice = async (invoice: Invoice) => {
-    setBusy(true);
-    try {
-      await apiClient.post(
-        `/api/v1/billing/direct/invoices/${invoice.uuid}/reference`,
-        {reference: invoiceReference[invoice.uuid]},
-      );
-      await loadBilling();
-    } catch (reason) {
-      setActionError(getApiErrorMessage(reason));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const startPro = async () => {
-    setBusy(true);
-    try {
-      const response = await apiClient.post('/api/v1/billing/direct/pro');
-      setProPayment(response.data.payment_id);
-      setProAmountCents(response.data.amount_cents);
-      setActionError(undefined);
-    } catch (reason) {
-      setActionError(getApiErrorMessage(reason));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const verifyPro = async () => {
-    if (!proPayment || !proReference.trim()) return;
-    setBusy(true);
-    try {
-      await apiClient.post(
-        `/api/v1/billing/direct/pro/${proPayment}/reference`,
-        {reference: proReference.trim()},
-      );
-      await loadBilling();
-    } catch (reason) {
-      setActionError(getApiErrorMessage(reason));
-    } finally {
-      setBusy(false);
-    }
-  };
 
   const refresh = () => setRefreshKey(key => key + 1);
 
@@ -522,12 +340,6 @@ export function Component() {
       </DashboardLayout.SectionHeader>
       <DashboardLayout.SectionContent className="overflow-y-auto">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 py-4">
-          {actionError && (
-            <p className="text-sm text-destructive" role="alert">
-              {actionError}
-            </p>
-          )}
-
           <SummaryCards summary={summary} />
 
           <Tabs.Root
@@ -550,9 +362,6 @@ export function Component() {
                     {summary.manual_review_count}
                   </Badge>
                 )}
-              </Tabs.Tab>
-              <Tabs.Tab value="billing" className="flex-none">
-                <Trans message="Billing" />
               </Tabs.Tab>
               </Tabs.List>
             </div>
@@ -698,414 +507,6 @@ export function Component() {
               </Card.Root>
             </Tabs.Panel>
 
-            <Tabs.Panel value="billing" className="flex flex-col gap-5">
-              {billingLoading && !billing ? (
-                <BillingLoading />
-              ) : (
-                <>
-                  {billing?.verification_allowance && (
-                    <Card.Root>
-                      <Card.Header>
-                        <Card.Title>
-                          {billing.verification_allowance.is_pro ? (
-                            <Trans message="Pro active" />
-                          ) : (
-                            <Trans message="Free verified-sales allowance" />
-                          )}
-                        </Card.Title>
-                        <Card.Description>
-                          <Trans message="The free allowance covers verified sales and is separate from historical commission obligations." />
-                        </Card.Description>
-                      </Card.Header>
-                      <Card.Content>
-                        {billing.verification_allowance.is_pro ? (
-                          <>
-                            <p>
-                              <Trans message="Unlimited eligible verified sales while Pro is active." />
-                            </p>
-                            {billing.pro_subscription?.ends_at && (
-                              <p role="status" className="mt-1 text-warning">
-                                <Trans
-                                  message="Pro access ends on :date. Free limits will apply after expiration."
-                                  values={{date: new Date(billing.pro_subscription.ends_at).toLocaleDateString()}}
-                                />
-                              </p>
-                            )}
-                            {billing.verification_allowance.renews_at && (
-                              <p className="mt-1 text-muted-foreground">
-                                <Trans
-                                  message="Renewal date: :date"
-                                  values={{
-                                    date: new Date(
-                                      billing.verification_allowance.renews_at,
-                                    ).toLocaleDateString(),
-                                  }}
-                                />
-                              </p>
-                            )}
-                          </>
-                        ) : (
-                          <div className="flex flex-col items-start gap-3">
-                            <p>
-                              <Trans
-                                message=":used of :limit verified sales used"
-                                values={{
-                                  used: billing.verification_allowance.consumed,
-                                  limit: billing.verification_allowance.limit,
-                                }}
-                              />
-                            </p>
-                            <p className="text-muted-foreground">
-                              <Trans
-                                message=":remaining available · :reserved awaiting payment verification"
-                                values={{
-                                  remaining:
-                                    billing.verification_allowance.remaining,
-                                  reserved: billing.verification_allowance.reserved,
-                                }}
-                              />
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              {billing.pro_plan?.monthly_price_cents != null ? (
-                                <Trans
-                                  message="Pro is :price per month, with unlimited eligible verified sales while active."
-                                  values={{price: formatMoney(billing.pro_plan.monthly_price_cents, billing.pro_plan.currency)}}
-                                />
-                              ) : (
-                                <Trans message="Pro includes unlimited eligible verified sales while active." />
-                              )}
-                            </p>
-                            {billing.pro_subscription?.pending_payment && (
-                              <p role="status" className="text-warning">
-                                <Trans message="Pro payment pending verification. Your Free limits remain in effect until payment is verified." />
-                              </p>
-                            )}
-                            {!billing.verification_allowance
-                              .can_start_checkout && (
-                              <p role="status" className="text-warning">
-                                <Trans message="Your free verified-sales allowance is used or reserved. Upgrade to Pro to accept more sales." />
-                              </p>
-                            )}
-                            <Button
-                              disabled={busy}
-                              onClick={() => void startPro()}
-                            >
-                              <Trans message="Upgrade to Pro" />
-                            </Button>
-                          </div>
-                        )}
-                      </Card.Content>
-                    </Card.Root>
-                  )}
-
-                  <Card.Root>
-                    <Card.Header>
-                      <Card.Title>
-                        <Trans message="Receiving accounts" />
-                      </Card.Title>
-                      <Card.Description>
-                        <Trans message="Buyers pay directly to an approved account. New accounts are reviewed before checkout can use them." />
-                      </Card.Description>
-                    </Card.Header>
-                    <Card.Content className="flex flex-col gap-4">
-                      {methods.length === 0 && (
-                        <p className="text-sm text-muted-foreground">
-                          <Trans message="No receiving accounts yet." />
-                        </p>
-                      )}
-                      {methods.map(method => (
-                        <div
-                          key={method.id}
-                          className="flex flex-wrap items-center justify-between gap-3 rounded-card-sm bg-muted p-3 text-sm"
-                        >
-                          <div>
-                            <p className="font-medium">{method.account_name}</p>
-                            <p className="text-muted-foreground">
-                              {method.provider.toUpperCase()} ·{' '}
-                              {visibleAccount?.id === method.id ? (
-                                visibleAccount.number
-                              ) : (
-                                <Trans
-                                  message="Ending :digits"
-                                  values={{digits: method.account_ending}}
-                                />
-                              )}
-                            </p>
-                          </div>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <Badge>{lifecycleLabel(method.lifecycle_state)}</Badge>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => void showAccount(method.id)}
-                            >
-                              {visibleAccount?.id === method.id ? (
-                                <Trans message="Hide account" />
-                              ) : (
-                                <Trans message="View account" />
-                              )}
-                            </Button>
-                            {method.lifecycle_state ===
-                              'provider_registered' && (
-                              <Button
-                                size="sm"
-                                onClick={() =>
-                                  void apiClient
-                                    .post(
-                                      `/api/v1/storefront/payment-methods/${method.id}/activate`,
-                                    )
-                                    .then(loadBilling)
-                                    .catch(reason =>
-                                      setActionError(getApiErrorMessage(reason)),
-                                    )
-                                }
-                              >
-                                <Trans message="Activate receiving account" />
-                              </Button>
-                            )}
-                            {method.is_active && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() =>
-                                  void apiClient
-                                    .post(
-                                      `/api/v1/storefront/payment-methods/${method.id}/deactivate`,
-                                    )
-                                    .then(loadBilling)
-                                }
-                              >
-                                <Trans message="Deactivate" />
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <Select.Root
-                          value={provider}
-                          onValueChange={value => value && setProvider(value)}
-                        >
-                          <Select.Trigger className="w-full">
-                            <Select.Value />
-                          </Select.Trigger>
-                          <Select.Content>
-                            <Select.Group>
-                              {availableMethods.map(method => (
-                                <Select.Item
-                                  key={method.code}
-                                  value={method.code}
-                                >
-                                  {method.name}
-                                </Select.Item>
-                              ))}
-                            </Select.Group>
-                          </Select.Content>
-                        </Select.Root>
-                        <Input
-                          bindToHookForm={false}
-                          value={accountNumber}
-                          onChange={event =>
-                            setAccountNumber(event.target.value)
-                          }
-                          placeholder="Account or wallet number"
-                        />
-                        <Input
-                          bindToHookForm={false}
-                          value={accountName}
-                          onChange={event => setAccountName(event.target.value)}
-                          placeholder="Account holder name"
-                        />
-                        <Input
-                          bindToHookForm={false}
-                          type="file"
-                          accept=".pdf,.jpg,.jpeg,.png,.webp"
-                          onChange={event =>
-                            setProof(event.target.files?.[0])
-                          }
-                        />
-                      </div>
-                      <Button
-                        disabled={busy || !proof || !accountNumber || !accountName}
-                        onClick={() => void saveMethod()}
-                      >
-                        <Trans message="Submit account for review" />
-                      </Button>
-                    </Card.Content>
-                  </Card.Root>
-
-                  {billing &&
-                    (billing.invoices.data.length > 0 ||
-                      billing.estimated_commission.fee_cents > 0) && (
-                    <Card.Root>
-                      <Card.Header>
-                        <Card.Title>
-                          <Trans message="Legacy billing" />
-                        </Card.Title>
-                        <Card.Description>
-                          <Trans message="Historical commission invoices stay payable. New verified sales are not added to this balance." />
-                        </Card.Description>
-                      </Card.Header>
-                      <Card.Content className="flex flex-col gap-4 text-sm">
-                        {billing.estimated_commission.fee_cents > 0 && (
-                          <div className="grid gap-3 sm:grid-cols-2">
-                            <div>
-                              <p className="text-muted-foreground">
-                                <Trans message="Uninvoiced legacy sales" />
-                              </p>
-                              <p className="font-semibold tabular-nums">
-                                {formatMoney(
-                                  billing.estimated_commission.gross_sales_cents,
-                                  'ETB',
-                                )}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-muted-foreground">
-                                <Trans message="Uninvoiced legacy commission" />
-                              </p>
-                              <p className="font-semibold tabular-nums">
-                                {formatMoney(
-                                  billing.estimated_commission.fee_cents,
-                                  'ETB',
-                                )}
-                              </p>
-                            </div>
-                          </div>
-                        )}
-                        {billing.invoices.data.map(invoice => (
-                          <div
-                            key={invoice.uuid}
-                            className="flex flex-wrap items-center justify-between gap-3 rounded-card-sm bg-muted p-3"
-                          >
-                            <div>
-                              <p className="font-medium">
-                                {invoice.invoice_number}
-                              </p>
-                              <p>
-                                {formatMoney(
-                                  invoice.commission_fee_cents,
-                                  'ETB',
-                                )}{' '}
-                                · {invoice.status} · {invoice.sales_count}{' '}
-                                <Trans message="sales" />
-                              </p>
-                            </div>
-                            {['pending', 'overdue'].includes(invoice.status) && (
-                              <div className="flex gap-2">
-                                <Input
-                                  bindToHookForm={false}
-                                  value={invoiceReference[invoice.uuid] ?? ''}
-                                  onChange={event =>
-                                    setInvoiceReference(current => ({
-                                      ...current,
-                                      [invoice.uuid]: event.target.value,
-                                    }))
-                                  }
-                                  placeholder="Transaction reference"
-                                />
-                                <Button
-                                  disabled={
-                                    busy || !invoiceReference[invoice.uuid]
-                                  }
-                                  onClick={() => void verifyInvoice(invoice)}
-                                >
-                                  <Trans message="Verify" />
-                                </Button>
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </Card.Content>
-                    </Card.Root>
-                  )}
-
-                  {billing && (
-                    <Card.Root>
-                      <Card.Header>
-                        <Card.Title>
-                          <Trans message="Pro subscription" />
-                        </Card.Title>
-                      </Card.Header>
-                      <Card.Content className="flex flex-col gap-4 text-sm">
-                        <p>
-                          <Trans
-                            message="Pay Linket directly to :provider account :account."
-                            values={{
-                              provider:
-                                billing.corporate_account.provider.toUpperCase(),
-                              account:
-                                billing.corporate_account.account_number ?? '—',
-                            }}
-                          />
-                        </p>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Button disabled={busy} onClick={() => void startPro()}>
-                            <Trans message="View Pro payment instructions" />
-                          </Button>
-                          {proPayment && (
-                            <>
-                              {proAmountCents !== undefined && (
-                                <span>
-                                  <Trans
-                                    message="Amount due: :amount"
-                                    values={{
-                                      amount: formatMoney(
-                                        proAmountCents,
-                                        'ETB',
-                                      ),
-                                    }}
-                                  />
-                                </span>
-                              )}
-                              <Input
-                                bindToHookForm={false}
-                                value={proReference}
-                                onChange={event =>
-                                  setProReference(event.target.value)
-                                }
-                                placeholder="Transaction reference"
-                              />
-                              <Button
-                                disabled={busy || !proReference}
-                                onClick={() => void verifyPro()}
-                              >
-                                <Trans message="Verify Pro payment" />
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                        <div className="flex flex-col gap-3 border-t border-border pt-4">
-                          <h3 className="font-medium"><Trans message="Pro subscription payment history" /></h3>
-                          {billing.pro_subscription?.payments?.length ? billing.pro_subscription.payments.map(payment => (
-                            <div key={payment.payment_id} className="flex flex-wrap items-center justify-between gap-3 rounded-card-sm bg-muted p-3">
-                              <div>
-                                <p className="font-medium">{formatMoney(payment.amount_cents, payment.currency)}</p>
-                                <p className="text-muted-foreground">
-                                  {payment.transaction_reference ? <Trans message="Reference: :reference" values={{reference: payment.transaction_reference}} /> : <Trans message="No transaction reference submitted" />}
-                                  {payment.provider ? ` · ${payment.provider.toUpperCase()}` : ''}
-                                </p>
-                                <p className="text-muted-foreground"><FormattedDate date={payment.paid_at ?? payment.created_at} /></p>
-                              </div>
-                              <Badge>{proPaymentStatusLabel(payment.status)}</Badge>
-                            </div>
-                          )) : <p className="text-muted-foreground"><Trans message="No Pro subscription payments yet." /></p>}
-                        </div>
-                      </Card.Content>
-                    </Card.Root>
-                  )}
-
-                  {billing?.legacy_access && (
-                    <Link
-                      to="/dashboard/legacy-payouts"
-                      className="text-sm text-primary underline"
-                    >
-                      <Trans message="View historical payout requests" />
-                    </Link>
-                  )}
-                </>
-              )}
-            </Tabs.Panel>
           </Tabs.Root>
         </div>
       </DashboardLayout.SectionContent>
@@ -1120,7 +521,7 @@ export function Component() {
 
 function SummaryCards({summary}: {summary?: Summary}) {
   return (
-    <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+    <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
       <SummaryCard
         label={<Trans message="Verified sales" />}
         value={
@@ -1145,18 +546,18 @@ function SummaryCards({summary}: {summary?: Summary}) {
       <SummaryCard
         label={<Trans message="Pending orders" />}
         value={summary?.pending_count ?? '—'}
-        detail={<Trans message="Awaiting payment or provider verification" />}
+        detail={<Trans message="Awaiting verification" />}
       />
       <SummaryCard
         label={<Trans message="Manual review" />}
         value={summary?.manual_review_count ?? '—'}
-        detail={<Trans message="Resolved by Linket support" />}
+        detail={<Trans message="Support review" />}
         tone={summary?.manual_review_count ? 'warning' : undefined}
       />
       <SummaryCard
         label={<Trans message="Rejected payments" />}
         value={summary?.rejected_count ?? '—'}
-        detail={<Trans message="Never counted as sales" />}
+        detail={<Trans message="Excluded from sales" />}
       />
     </div>
   );
@@ -1175,7 +576,7 @@ function SummaryCard({
 }) {
   return (
     <Card.Root size="sm" className="rounded-card-sm">
-      <Card.Content className="flex min-w-0 flex-col gap-1.5">
+      <Card.Content className="flex min-w-0 flex-col gap-1 p-3 sm:gap-1.5 sm:p-4">
         <p className={tone === 'warning' ? 'text-sm text-warning' : 'text-sm text-muted-foreground'}>{label}</p>
         <p className="text-xl font-semibold tracking-tight tabular-nums">{value}</p>
         <p className="text-xs leading-snug text-muted-foreground">{detail}</p>
@@ -1214,7 +615,7 @@ function OrderFilters({
           bindToHookForm={false}
           className="ps-9"
           aria-label="Search orders"
-          placeholder="Search product, buyer or reference"
+          placeholder="Search orders"
           value={search}
           onChange={event => onSearchChange(event.target.value)}
         />
@@ -1443,18 +844,18 @@ function OrdersTable({
         </Table.Header>
         <Table.Body className="block md:table-row-group">
           {orders.map(order => (
-            <Table.Row key={order.uuid} className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-2 px-4 py-4 md:table-row md:p-0">
+            <Table.Row key={order.uuid} className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-2 px-3 py-3 md:table-row md:p-0">
               <Table.Cell className="col-start-1 row-start-1 block min-w-0 max-w-none whitespace-normal p-0 md:table-cell md:max-w-52 md:whitespace-nowrap md:ps-6">
                 <span className="block line-clamp-2 font-medium md:truncate">
                   {order.product?.title ?? (
                     <Trans message="Deleted product" />
                   )}
                 </span>
-                <span className="block truncate text-xs text-muted-foreground">
+                <span className="hidden truncate text-xs text-muted-foreground md:block">
                   {order.transaction_reference ?? order.uuid}
                 </span>
               </Table.Cell>
-              <Table.Cell className="col-start-1 row-start-2 block min-w-0 p-0 text-muted-foreground md:table-cell md:max-w-44 md:p-3 md:text-foreground">
+              <Table.Cell className="col-start-1 row-start-2 block min-w-0 p-0 text-xs text-muted-foreground md:table-cell md:max-w-44 md:p-3 md:text-foreground">
                 <span className="block truncate">
                   {order.buyer_name || (
                     <span className="text-muted-foreground">
@@ -1475,15 +876,15 @@ function OrdersTable({
               <Table.Cell className="hidden lg:table-cell">
                 <PaymentMethod order={order} />
               </Table.Cell>
-              <Table.Cell className="col-span-2 row-start-3 block p-0 md:table-cell md:p-3">
+              <Table.Cell className="col-start-1 row-start-3 block min-w-0 p-0 md:table-cell md:p-3">
                 <span className="sr-only md:hidden"><Trans message="Status: " /></span>
                 <OrderStatusBadge status={order.status} />
               </Table.Cell>
-              <Table.Cell className="col-span-2 row-start-4 block p-0 text-end md:table-cell md:p-3 md:pe-6">
+              <Table.Cell className="col-start-2 row-start-3 block p-0 text-end md:table-cell md:p-3 md:pe-6">
                 <Button
                   variant="outline"
                   size="sm"
-                  className="min-h-11 md:min-h-0"
+                  className="min-h-10 md:min-h-0"
                   onClick={() => onView(order.uuid)}
                 >
                   <EyeIcon />
@@ -1567,7 +968,7 @@ function TransactionsTable({
         </Table.Header>
         <Table.Body className="block md:table-row-group">
           {transactions.map(transaction => (
-            <Table.Row key={transaction.id} className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-2 px-4 py-4 md:table-row md:p-0">
+            <Table.Row key={transaction.id} className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-2 px-3 py-3 md:table-row md:p-0">
               <Table.Cell className="col-start-1 row-start-1 block min-w-0 p-0 md:table-cell md:max-w-48 md:ps-6">
                 <span className="block truncate font-medium">
                   {transaction.reference ?? '—'}
@@ -1605,7 +1006,7 @@ function TransactionsTable({
                   '—'
                 )}
               </Table.Cell>
-              <Table.Cell className="col-span-2 row-start-3 block p-0 md:table-cell md:p-3">
+              <Table.Cell className="col-start-1 row-start-3 block min-w-0 p-0 md:table-cell md:p-3">
                 <span className="sr-only md:hidden"><Trans message="Status: " /></span>
                 <TransactionStatusBadge status={transaction.status} />
               </Table.Cell>
@@ -1615,7 +1016,7 @@ function TransactionsTable({
                   date={transaction.verified_at ?? transaction.created_at}
                 />
               </Table.Cell>
-              <Table.Cell className="col-span-2 row-start-4 block p-0 text-end md:table-cell md:p-3 md:pe-6">
+              <Table.Cell className="col-start-2 row-start-3 block p-0 text-end md:table-cell md:p-3 md:pe-6">
                 {transaction.order_uuid && (
                   <Button
                     variant="outline"
@@ -2194,15 +1595,6 @@ function TableLoading() {
   );
 }
 
-function BillingLoading() {
-  return (
-    <div className="flex flex-col gap-3">
-      <Skeleton className="h-36 w-full" />
-      <Skeleton className="h-56 w-full" />
-    </div>
-  );
-}
-
 function paginationFrom(value: Partial<Pagination> | undefined): Pagination {
   return {
     current_page: Number(value?.current_page ?? 1),
@@ -2219,36 +1611,6 @@ function useDebouncedValue<T>(value: T, delay: number): T {
     return () => window.clearTimeout(timeout);
   }, [value, delay]);
   return debounced;
-}
-
-function lifecycleLabel(state: string) {
-  switch (state) {
-    case 'pending_ownership_review':
-      return <Trans message="Pending ownership review" />;
-    case 'pending_provider_registration':
-      return <Trans message="Pending provider registration" />;
-    case 'provider_registered':
-      return <Trans message="Provider registered" />;
-    case 'suspended':
-      return <Trans message="Suspended" />;
-    case 'rejected':
-      return <Trans message="Rejected" />;
-    default:
-      return <Trans message="Active" />;
-  }
-}
-
-function proPaymentStatusLabel(status: string): ReactNode {
-  const labels: Record<string, ReactNode> = {
-    paid: <Trans message="Paid" />,
-    pending_payment: <Trans message="Awaiting payment" />,
-    pending_verification: <Trans message="Pending verification" />,
-    manual_review: <Trans message="Manual review" />,
-    rejected: <Trans message="Rejected" />,
-    expired: <Trans message="Expired" />,
-  };
-
-  return labels[status] ?? <Trans message="Payment status unavailable" />;
 }
 
 function paymentMethodLabel(order: Order): string {
