@@ -3,9 +3,11 @@ import {paymentStatusLabel} from './payment-status';
 
 describe('direct payment status', () => {
   it.each([
+    ['pending', 'Payment pending'],
     ['pending_payment', 'Payment pending'],
     ['verifying', 'Awaiting provider verification'],
     ['paid', 'Payment verified'],
+    ['completed', 'Payment verified'],
     ['fulfilled', 'Payment verified'],
     ['failed_verification', 'Verification rejected'],
     ['manual_review', 'Manual review needed'],
