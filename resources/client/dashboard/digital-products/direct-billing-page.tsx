@@ -17,6 +17,7 @@ import {FormattedDate} from '@ui/i18n/formatted-date';
 import {Trans} from '@ui/i18n/trans';
 import {
   EyeIcon,
+  PackageCheckIcon,
   CalendarDaysIcon,
   SearchIcon,
   ReceiptTextIcon,
