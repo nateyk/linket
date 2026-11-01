@@ -455,31 +455,22 @@ test('empty cover shows a rectangular banner placeholder', () => {
   expect(button.querySelector('svg')).not.toBeNull();
 });
 
-test('long descriptions become label help popovers', async () => {
-  // The upload rules and field explanations live behind hover/focus help
-  // popovers at the label instead of muted description lines, which kept
-  // the form visually noisy.
+test('profile fields group media, identity and details without duplicate upload hints', async () => {
   renderProfileEditor('content', REAL_BIOLINK);
   fireEvent.click(triggerByName('Profile'));
 
-  // The cover and avatar upload tiles retain two inline format hints;
-  // separate field explanations still live in their label help popovers.
-  const inlineUploadHints = screen.getAllByText(/JPG, PNG, or WebP/).length;
-  expect(inlineUploadHints).toBe(2);
-  expect(
-    screen.queryByText('Choose the professional title shown below your name.'),
-  ).toBeNull();
-  expect(
-    screen.queryByText('A short introduction to your work and audience.'),
-  ).toBeNull();
-  expect(
-    screen.queryByText('Separate skills with commas. The first eight are shown.'),
-  ).toBeNull();
+  expect(screen.getByRole('heading', {level: 3, name: 'Profile media'})).toBeTruthy();
+  expect(screen.getByRole('heading', {level: 3, name: 'Identity'})).toBeTruthy();
+  expect(screen.getByRole('heading', {level: 3, name: 'Profile details'})).toBeTruthy();
 
-  // Exactly one help trigger beside every label that used to carry one.
+  expect(screen.queryByText(/JPG, PNG, or WebP/)).toBeNull();
+
+  const coverField = document.querySelector('[data-field-name="cover_url"]')!;
+  const avatarField = document.querySelector('[data-field-name="avatar_url"]')!;
+  expect(coverField.querySelector('[data-slot="popover-trigger"]')).toBeNull();
+  expect(avatarField.querySelector('[data-slot="popover-trigger"]')).toBeNull();
+
   for (const fieldName of [
-    'cover_url',
-    'avatar_url',
     'profile_title',
     'bio',
     'skills',
@@ -491,15 +482,17 @@ test('long descriptions become label help popovers', async () => {
     );
   }
 
-  // The trigger opens the rules in a popover.
-  const coverTrigger = document.querySelector(
-    '[data-field-name="cover_url"] [data-slot="popover-trigger"]',
+  const mediaHeading = screen.getByRole('heading', {
+    level: 3,
+    name: 'Profile media',
+  });
+  const mediaSection = mediaHeading.closest('section')!;
+  const uploadHelp = mediaSection.querySelector(
+    '[data-slot="popover-trigger"]',
   )!;
-  fireEvent.click(coverTrigger);
+  fireEvent.click(uploadHelp);
   await waitFor(() => {
-    expect(screen.getAllByText(/JPG, PNG, or WebP/).length).toBeGreaterThan(
-      inlineUploadHints,
-    );
+    expect(screen.getByText(/JPG, PNG, or WebP/)).toBeTruthy();
   });
 });
 

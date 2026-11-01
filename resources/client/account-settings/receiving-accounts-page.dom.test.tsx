@@ -6,11 +6,21 @@ import {Component} from './receiving-accounts-page';
 const api = vi.hoisted(() => ({get: vi.fn(), post: vi.fn()}));
 vi.mock('@common/http/query-client', () => ({apiClient: api}));
 vi.mock('@ui/i18n/trans', () => ({Trans: ({message}: {message: string}) => message}));
+vi.mock('@ui/i18n/message', () => ({message: (message: string) => ({message})}));
+vi.mock('@ui/i18n/use-trans', () => ({useTrans: () => ({trans: ({message}: {message: string}) => message})}));
 vi.mock('@app/account-settings/account-settings-page-layout', () => ({AccountSettingsPageLayout: ({children}: {children: React.ReactNode}) => <main>{children}</main>}));
 vi.mock('@shadcn/button/button', () => ({Button: 'button'}));
 vi.mock('@shadcn/forms/input/input', () => ({Input: ({bindToHookForm: _ignored, ...props}: Record<string, unknown>) => <input {...props} />}));
 vi.mock('@shadcn/spinner/spinner', () => ({Spinner: () => <span>Loading</span>}));
 vi.mock('@shadcn/forms/select/select', () => ({Select: {Root: ({children, onValueChange}: {children: React.ReactNode; onValueChange: (value: string) => void}) => <select aria-label="Payment method" onChange={event => onValueChange(event.target.value)}>{children}</select>, Trigger: () => null, Value: () => null, Content: ({children}: {children: React.ReactNode}) => children, Group: ({children}: {children: React.ReactNode}) => children, Item: ({children, value}: {children: React.ReactNode; value: string}) => <option value={value}>{children}</option>}}));
+
+// jsdom has no Web Animations API. Base UI's dropdown scroll area queries
+// getAnimations() after its popup opens, so provide the same no-op browser
+// shim used by the other Base UI DOM tests in this repository.
+if (!(Element.prototype as unknown as {getAnimations?: unknown}).getAnimations) {
+  (Element.prototype as unknown as {getAnimations: () => []}).getAnimations =
+    () => [];
+}
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
 it('lists, creates, resubmits and changes activation through the page', async () => {
@@ -19,7 +29,7 @@ it('lists, creates, resubmits and changes activation through the page', async ()
   api.post.mockResolvedValue({data: {}});
   render(<Component />);
   expect(await screen.findByText(/Test Owner/)).toBeTruthy();
-  expect(screen.getByRole('img', {name: 'Telebirr'})).toBeTruthy();
+  expect(screen.getByText('Telebirr')).toBeTruthy();
   fireEvent.click(screen.getByRole('button', {name: 'Add receiving account'}));
   fireEvent.change(screen.getByLabelText('Payment method'), {target: {value: 'telebirr'}});
   fireEvent.change(screen.getByLabelText('Account or wallet number'), {target: {value: '0912345678'}});
@@ -34,9 +44,11 @@ it('lists, creates, resubmits and changes activation through the page', async ()
   fireEvent.click(screen.getByRole('button', {name: 'Submit account for review'}));
   await waitFor(() => expect(api.post).toHaveBeenCalledWith('/api/v1/storefront/payment-methods/4/resubmit', expect.any(FormData)));
   api.get.mockResolvedValue({data: {data: [{...account, is_active: true}], available_methods: [{code: 'telebirr', name: 'Telebirr'}]}});
-  fireEvent.click(screen.getByRole('button', {name: 'Activate'}));
+  fireEvent.click(screen.getByRole('button', {name: 'Account actions'}));
+  fireEvent.click(await screen.findByRole('menuitem', {name: 'Activate'}));
   await waitFor(() => expect(api.post).toHaveBeenCalledWith('/api/v1/storefront/payment-methods/4/activate'));
-  fireEvent.click(await screen.findByRole('button', {name: 'Deactivate'}));
+  fireEvent.click(await screen.findByRole('button', {name: 'Account actions'}));
+  fireEvent.click(await screen.findByRole('menuitem', {name: 'Deactivate'}));
   await waitFor(() => expect(api.post).toHaveBeenCalledWith('/api/v1/storefront/payment-methods/4/deactivate'));
 });
 
@@ -48,7 +60,23 @@ it('explains pending and rejected approvals without offering activation', async 
   render(<Component />);
   expect(await screen.findByText('Pending review')).toBeTruthy();
   expect(screen.getByText('Rejected')).toBeTruthy();
-  expect(screen.queryByRole('button', {name: 'Activate'})).toBeNull();
+  expect(screen.queryByRole('button', {name: 'Account actions'})).toBeNull();
+});
+
+
+it('moves the checkout explanation behind the compact info control', async () => {
+  api.get.mockResolvedValue({data: {data: [], available_methods: [{code: 'cbe', name: 'CBE'}]}});
+  render(<Component />);
+
+  expect(
+    screen.queryByText('Manage the accounts customers can pay directly at checkout.'),
+  ).toBeNull();
+  fireEvent.click(
+    await screen.findByRole('button', {name: 'About receiving accounts'}),
+  );
+  expect(
+    await screen.findByText('Manage the accounts customers can pay directly at checkout.'),
+  ).toBeTruthy();
 });
 
 it('shows an empty state and only offers enabled providers', async () => {
@@ -65,8 +93,8 @@ it('keeps suspended accounts visible without activation or resubmission actions'
   api.get.mockResolvedValue({data: {data: [{id: 7, provider: 'awash', account_name: 'Suspended Owner', account_ending: '1234', status: 'approved', is_active: false, is_suspended: true, provider_registration_status: 'registered'}], available_methods: [{code: 'awash', name: 'Awash'}]}});
   render(<Component />);
   expect((await screen.findAllByText('Suspended')).length).toBeGreaterThan(0);
-  expect(screen.getByRole('img', {name: 'Awash'})).toBeTruthy();
-  expect(screen.queryByRole('button', {name: 'Activate'})).toBeNull();
+  expect(screen.getByText('Awash')).toBeTruthy();
+  expect(screen.queryByRole('button', {name: 'Account actions'})).toBeNull();
   expect(screen.queryByRole('button', {name: 'Edit and resubmit'})).toBeNull();
 });
 
@@ -76,8 +104,9 @@ it('shows checkout eligibility from the account API', async () => {
     {id: 2, provider: 'cbe', account_name: 'Disabled Owner', account_ending: '5678', status: 'approved', is_active: true, is_suspended: false, provider_registration_status: 'registered', checkout_eligible: false},
   ], available_methods: [{code: 'cbe', name: 'CBE'}]}});
   render(<Component />);
-  expect(await screen.findByText('Available at checkout')).toBeTruthy();
-  expect(screen.getByText('Unavailable at checkout')).toBeTruthy();
+  expect(await screen.findByText('Available')).toBeTruthy();
+  expect(screen.getByText('Unavailable')).toBeTruthy();
+  expect(screen.getAllByText('Approved').length).toBe(2);
 });
 
 it('keeps readable bank names and logo rendering in the selected-value implementation', async () => {
@@ -97,13 +126,14 @@ it('explains a platform verification pause without changing the approved account
   api.get.mockResolvedValue({data: {data: [{id: 1, provider: 'cbe', account_name: 'Owner', account_ending: '1234', status: 'approved', is_active: true, is_suspended: false, provider_registration_status: 'registered', checkout_eligible: false, checkout_blocker: 'verification_unavailable'}], available_methods: [{code: 'cbe', name: 'CBE'}]}});
   render(<Component />);
   expect(await screen.findByText('Payment verification is temporarily unavailable. Contact support for help.')).toBeTruthy();
-  expect(screen.getByRole('button', {name: 'Deactivate'})).toBeTruthy();
-  expect(screen.getByText('Unavailable at checkout')).toBeTruthy();
+  expect(screen.getByRole('button', {name: 'Account actions'})).toBeTruthy();
+  expect(screen.getByText('Approved')).toBeTruthy();
+  expect(screen.getByText('Unavailable')).toBeTruthy();
 });
 
 it('explains exhausted sales capacity without changing account approval', async () => {
   api.get.mockResolvedValue({data: {data: [{id: 1, provider: 'cbe', account_name: 'Owner', account_ending: '1234', status: 'approved', is_active: true, is_suspended: false, provider_registration_status: 'registered', checkout_eligible: false, checkout_blocker: 'verification_quota_exhausted'}], available_methods: [{code: 'cbe', name: 'CBE'}]}});
   render(<Component />);
   expect(await screen.findByText('You cannot accept additional verified sales right now. Upgrade to Pro to continue.')).toBeTruthy();
-  expect(screen.getByRole('button', {name: 'Deactivate'})).toBeTruthy();
+  expect(screen.getByRole('button', {name: 'Account actions'})).toBeTruthy();
 });

@@ -96,6 +96,7 @@ export function CroppedImageSelector({
   fit = 'cover',
   shape = 'square',
   placeholderIcon,
+  showHint = true,
   cropRadius,
   label,
 }: CroppedImageSelectorProps) {
@@ -290,12 +291,14 @@ export function CroppedImageSelector({
         </button>
       )}
 
-      <p className="text-xs text-muted-foreground">
-        <Trans
-          message="JPG, PNG, or WebP up to :size. Large images are compressed to WebP automatically."
-          values={{size: prettyBytes(uploadMaxFileSize(uploadType))}}
-        />
-      </p>
+      {showHint && (
+        <p className="text-xs text-muted-foreground">
+          <Trans
+            message="JPG, PNG, or WebP up to :size. Large images are compressed to WebP automatically."
+            values={{size: prettyBytes(uploadMaxFileSize(uploadType))}}
+          />
+        </p>
+      )}
 
       <Dialog.Root
         open={cropOpen}
