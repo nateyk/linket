@@ -418,78 +418,53 @@ export function CreatorProfileEditor({
                   />
                 </SectionAccordionTrigger>
                 <Accordion.Content className="border-t pt-4">
-                  <Field.Group className="max-w-2xl gap-4">
-                    <HookForm.Field name="cover_url">
-                      <FieldHelpLabel
-                        label={<Trans message="Cover image" />}
-                        help={
+                  <Field.Group className="max-w-2xl gap-5">
+                    <section className="flex flex-col gap-3">
+                      <div className="flex items-center gap-1">
+                        <h3 className="text-sm font-medium">
+                          <Trans message="Profile media" />
+                        </h3>
+                        <InfoTrigger>
                           <Trans
                             message="JPG, PNG, or WebP up to :size. Large images are compressed to WebP automatically."
                             values={{
                               size: prettyBytes(uploadMaxFileSize('linkImages')),
                             }}
                           />
-                        }
-                      />
-                      {/* Dashboard chrome, not storefront preview: the tiles
-                          keep the dashboard's own radii, and the storefront's
-                          Corner roundness is left to the phone live preview.
-                          Driving them from the appearance config re-skinned
-                          form controls whenever the creator changed a
-                          storefront setting. */}
-                      {/* Full-width banner: the tile's inline 3:1
-                          aspect-ratio drives the height off the column
-                          width, so the editor shows exactly the box the
-                          storefront card renders — proportional at every
-                          breakpoint (~110px at 360, 224px at max-w-2xl). */}
-                      <CroppedCover
-                        className="w-full"
-                        showHint={false}
-                        placeholderIcon={
-                          <span className="flex size-full flex-col items-center justify-center gap-2 text-muted-foreground">
-                            <ImagePlusIcon className="size-5" />
-                            <span className="text-sm font-medium">
-                              <Trans message="Add a cover image" />
-                            </span>
-                          </span>
-                        }
-                        value={values.cover_url || ''}
-                        label={trans(message('Cover image'))}
-                        onChange={value =>
-                          form.setValue('cover_url', value || '', {
-                            shouldDirty: true,
-                          })
-                        }
-                        uploadType="linkImages"
-                        aspect={3}
-                      />
-                    </HookForm.Field>
+                        </InfoTrigger>
+                      </div>
 
-                    <div className="grid gap-4 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-start sm:gap-5">
-                      {/* max-w-56: the field is the grid's auto track, and the
-                          upload hint's max-content (one long line) would
-                          otherwise size that track to ~508px — a pill-shaped
-                          avatar tile and a name/title column squeezed to
-                          ~190px. Capping the field keeps the avatar column
-                          at the tile plus a two-line hint. */}
-                      <HookForm.Field name="avatar_url" className="max-w-56">
-                        <FieldHelpLabel
-                          label={<Trans message="Profile photo" />}
-                          help={
-                            <Trans
-                              message="JPG, PNG, or WebP up to :size. Large images are compressed to WebP automatically."
-                              values={{
-                                size: prettyBytes(
-                                  uploadMaxFileSize('linkImages'),
-                                ),
-                              }}
-                            />
+                      <HookForm.Field name="cover_url">
+                        <Field.Label>
+                          <Trans message="Cover image" />
+                        </Field.Label>
+                        <CroppedCover
+                          className="w-full"
+                          showHint={false}
+                          placeholderIcon={
+                            <span className="flex size-full flex-col items-center justify-center gap-2 text-muted-foreground">
+                              <ImagePlusIcon className="size-5" />
+                              <span className="text-sm font-medium">
+                                <Trans message="Add a cover image" />
+                              </span>
+                            </span>
                           }
+                          value={values.cover_url || ''}
+                          label={trans(message('Cover image'))}
+                          onChange={value =>
+                            form.setValue('cover_url', value || '', {
+                              shouldDirty: true,
+                            })
+                          }
+                          uploadType="linkImages"
+                          aspect={3}
                         />
-                        {/* max-w-22: the field gives every child width:100%,
-                            which beats size-22 at equal specificity — the
-                            clamp is what keeps the tile a circle instead of
-                            a full-width pill. */}
+                      </HookForm.Field>
+
+                      <HookForm.Field name="avatar_url" className="max-w-56">
+                        <Field.Label>
+                          <Trans message="Profile photo" />
+                        </Field.Label>
                         <CroppedAvatar
                           className="size-22 max-w-22"
                           showHint={false}
@@ -509,8 +484,13 @@ export function CreatorProfileEditor({
                           aspect={1}
                         />
                       </HookForm.Field>
+                    </section>
 
-                      <Field.Group>
+                    <section className="flex flex-col gap-4 border-t border-border pt-4">
+                      <h3 className="text-sm font-medium">
+                        <Trans message="Identity" />
+                      </h3>
+                      <div className="grid gap-4 sm:grid-cols-2">
                         <HookForm.Field name="display_name">
                           <Field.Label>
                             <Trans message="Display name" />
@@ -567,59 +547,65 @@ export function CreatorProfileEditor({
                           </Combobox.Root>
                           <Field.Error />
                         </HookForm.Field>
-                      </Field.Group>
-                    </div>
-                    <HookForm.Field name="bio">
-                      <FieldHelpLabel
-                        label={<Trans message="Short bio" />}
-                        help={
-                          <Trans message="A short introduction to your work and audience." />
-                        }
-                      />
-                      <Textarea rows={4} maxLength={BIO_MAX_LENGTH} />
-                      <Field.Description className="flex items-start justify-between gap-3">
-                        <CharacterCounter
-                          current={values.bio?.length ?? 0}
-                          max={BIO_MAX_LENGTH}
+                      </div>
+                    </section>
+
+                    <section className="flex flex-col gap-4 border-t border-border pt-4">
+                      <h3 className="text-sm font-medium">
+                        <Trans message="Profile details" />
+                      </h3>
+                      <HookForm.Field name="bio">
+                        <FieldHelpLabel
+                          label={<Trans message="Short bio" />}
+                          help={
+                            <Trans message="A short introduction to your work and audience." />
+                          }
                         />
-                      </Field.Description>
-                      <Field.Error />
-                    </HookForm.Field>
-                    <HookForm.Field name="skills">
-                      <FieldHelpLabel
-                        label={<Trans message="Skills" />}
-                        help={
-                          <Trans message="Separate skills with commas. The first eight are shown." />
-                        }
-                      />
-                      <SkillsChipsField
-                        placeholder={trans(
-                          message('Design, Photography, Coaching'),
-                        )}
-                      />
-                      <Field.Description className="flex items-start justify-between gap-3">
-                        <span className="shrink-0 tabular-nums text-sm text-muted-foreground">
-                          {parseSkills(values.skills).length}/{SKILLS_MAX}
-                        </span>
-                      </Field.Description>
-                      <Field.Error />
-                    </HookForm.Field>
-                    <HookForm.Field name="available_for_work">
-                      <Field.Root orientation="horizontal">
-                        <div
-                          data-slot="field-content"
-                          className="flex min-w-0 flex-1 flex-col gap-1"
-                        >
-                          <FieldHelpLabel
-                            label={<Trans message="Available for work" />}
-                            help={
-                              <Trans message="Show a small availability badge on your profile." />
-                            }
+                        <Textarea rows={4} maxLength={BIO_MAX_LENGTH} />
+                        <Field.Description className="flex items-start justify-between gap-3">
+                          <CharacterCounter
+                            current={values.bio?.length ?? 0}
+                            max={BIO_MAX_LENGTH}
                           />
-                        </div>
-                        <Switch />
-                      </Field.Root>
-                    </HookForm.Field>
+                        </Field.Description>
+                        <Field.Error />
+                      </HookForm.Field>
+                      <HookForm.Field name="skills">
+                        <FieldHelpLabel
+                          label={<Trans message="Skills" />}
+                          help={
+                            <Trans message="Separate skills with commas. The first eight are shown." />
+                          }
+                        />
+                        <SkillsChipsField
+                          placeholder={trans(
+                            message('Design, Photography, Coaching'),
+                          )}
+                        />
+                        <Field.Description className="flex items-start justify-between gap-3">
+                          <span className="shrink-0 tabular-nums text-sm text-muted-foreground">
+                            {parseSkills(values.skills).length}/{SKILLS_MAX}
+                          </span>
+                        </Field.Description>
+                        <Field.Error />
+                      </HookForm.Field>
+                      <HookForm.Field name="available_for_work">
+                        <Field.Root orientation="horizontal">
+                          <div
+                            data-slot="field-content"
+                            className="flex min-w-0 flex-1 flex-col gap-1"
+                          >
+                            <FieldHelpLabel
+                              label={<Trans message="Available for work" />}
+                              help={
+                                <Trans message="Show a small availability badge on your profile." />
+                              }
+                            />
+                          </div>
+                          <Switch />
+                        </Field.Root>
+                      </HookForm.Field>
+                    </section>
                   </Field.Group>
                 </Accordion.Content>
               </Accordion.Item>
