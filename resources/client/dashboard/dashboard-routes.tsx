@@ -496,6 +496,13 @@ export const dashboardRoutes: RouteObject[] = [
       },
       {
         path: 'orders',
+        loader: ({request}) => {
+          const url = new URL(request.url);
+          if (url.searchParams.get('tab') === 'billing') {
+            throw redirect('/account-settings/billing');
+          }
+          return null;
+        },
         lazy: () =>
           import('@app/dashboard/digital-products/direct-billing-page'),
       },

@@ -59,5 +59,5 @@ it('initiates renewal through the existing Verify.et billing endpoint', async ()
   await screen.findByRole('button', {name: 'Renew Pro'});
   await userEvent.click(screen.getByRole('button', {name: 'Renew Pro'}));
   expect(api.post).toHaveBeenCalledWith('/api/v1/billing/direct/pro');
-  expect(await screen.findByText(/Renewal invoice ready for 50000 ETB/)).toBeTruthy();
+  expect(await screen.findByText(/Pro payment created for 50000 ETB/)).toBeTruthy();
 });

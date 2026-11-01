@@ -2,6 +2,7 @@ import {apiClient} from '@common/http/query-client';
 import {getApiErrorMessage} from '@common/http/errors/parsed-api-error';
 import {Badge} from '@shadcn/badge/badge';
 import {Button} from '@shadcn/button/button';
+import {Input} from '@shadcn/forms/input/input';
 import {Card} from '@shadcn/card/card';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {formatMoney} from '@ui/i18n/format-money';
@@ -18,7 +19,7 @@ type BillingHistory = {
     renews_at?: string | null;
     ends_at?: string | null;
     can_renew?: boolean;
-    pending_payment?: {status: string; amount_cents: number} | null;
+    pending_payment?: {payment_id?: string; status: string; amount_cents: number} | null;
     payments?: Array<{
       payment_id: string;
       amount_cents: number;
@@ -33,6 +34,8 @@ type BillingHistory = {
     }>;
   };
   invoices?: {data: Array<{uuid: string; invoice_number: string; commission_fee_cents: number; status: string; created_at?: string; paid_at?: string | null}>};
+  corporate_account?: {provider: string; account_number: string | null};
+  estimated_commission?: {gross_sales_cents: number; fee_cents: number};
 };
 
 export function SubscriptionBillingHistory() {
@@ -40,6 +43,9 @@ export function SubscriptionBillingHistory() {
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string>();
   const [startedAmountCents, setStartedAmountCents] = useState<number>();
+  const [startedPaymentId, setStartedPaymentId] = useState<string>();
+  const [proReference, setProReference] = useState('');
+  const [invoiceReferences, setInvoiceReferences] = useState<Record<string, string>>({});
   const query = useQuery({
     queryKey: ['creator-direct-billing-history'],
     queryFn: async () => (await apiClient.get<BillingHistory>('/api/v1/billing/direct')).data,
@@ -50,6 +56,7 @@ export function SubscriptionBillingHistory() {
     try {
       const response = await apiClient.post('/api/v1/billing/direct/pro');
       setStartedAmountCents(response.data.amount_cents);
+      setStartedPaymentId(response.data.payment_id);
       setActionError(undefined);
       await queryClient.invalidateQueries({queryKey: ['creator-direct-billing-history']});
     } catch (reason) {
@@ -59,6 +66,22 @@ export function SubscriptionBillingHistory() {
     }
   };
 
+  const submitReference = async (endpoint: string, reference: string) => {
+    if (!reference.trim()) return;
+    setBusy(true);
+    try {
+      await apiClient.post(endpoint, {reference: reference.trim()});
+      setActionError(undefined);
+      setProReference('');
+      await queryClient.invalidateQueries({queryKey: ['creator-direct-billing-history']});
+    } catch (reason) {
+      setActionError(getApiErrorMessage(reason));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const pendingPaymentId = query.data?.pro_subscription?.pending_payment?.payment_id ?? startedPaymentId ?? query.data?.pro_subscription?.payments?.find(payment => payment.status === 'pending_payment')?.payment_id;
   const renewalPriceCents =
     query.data?.pro_subscription?.pending_payment?.amount_cents ??
     query.data?.pro_plan?.monthly_price_cents ??
@@ -106,7 +129,7 @@ export function SubscriptionBillingHistory() {
             {startedAmountCents != null && (
               <p role="status">
                 <Trans
-                  message="Renewal invoice ready for :amount. Complete payment verification from Orders & Sales billing."
+                  message="Pro payment created for :amount. Enter your transfer reference below."
                   values={{amount: formatMoney(startedAmountCents, currency)}}
                 />
               </p>
@@ -117,10 +140,26 @@ export function SubscriptionBillingHistory() {
                   <Trans message="Renew Pro" />
                 </Button>
               )}
-              <Link className="text-primary underline" to="/dashboard/orders?tab=billing">
-                <Trans message="Open payment verification" />
+              <Link className="text-primary underline" to="/account-settings/receiving-accounts">
+                <Trans message="Manage receiving accounts" />
               </Link>
             </div>
+            {query.data?.corporate_account?.account_number && (
+              <p className="text-muted-foreground">
+                <Trans message="Send the Pro payment to :provider account :account." values={{provider: query.data.corporate_account.provider.toUpperCase(), account: query.data.corporate_account.account_number}} />
+              </p>
+            )}
+            {pendingPaymentId && (
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
+                  <Trans message="Pro payment reference" />
+                  <Input bindToHookForm={false} value={proReference} onChange={event => setProReference(event.target.value)} placeholder="Transaction reference" />
+                </label>
+                <Button disabled={busy || !proReference.trim()} onClick={() => void submitReference(`/api/v1/billing/direct/pro/${pendingPaymentId}/reference`, proReference)}>
+                  <Trans message="Verify Pro payment" />
+                </Button>
+              </div>
+            )}
             {query.data.pro_subscription?.payments?.length ? query.data.pro_subscription.payments.map(payment => (
               <div key={payment.payment_id} className="flex flex-wrap items-center justify-between gap-3 rounded-card-sm bg-muted p-3">
                 <div className="min-w-0">
@@ -156,7 +195,20 @@ export function SubscriptionBillingHistory() {
               <Badge>{invoice.status}</Badge>
             </div>
           )) : query.isPending ? <Skeleton className="h-16 w-full" /> : <p className="text-muted-foreground"><Trans message="No legacy commission invoices." /></p>}
-          <Link className="text-primary underline" to="/dashboard/orders?tab=billing"><Trans message="Open billing and payment details" /></Link>
+          {query.data?.estimated_commission && query.data.estimated_commission.fee_cents > 0 && (
+            <p><Trans message="Uninvoiced historical commission: :amount" values={{amount: formatMoney(query.data.estimated_commission.fee_cents, 'ETB')}} /></p>
+          )}
+          {query.data?.invoices?.data?.filter(invoice => ['pending', 'overdue'].includes(invoice.status)).map(invoice => (
+            <div key={`${invoice.uuid}-verify`} className="flex flex-col gap-2 sm:flex-row sm:items-end">
+              <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
+                <Trans message="Payment reference for invoice :number" values={{number: invoice.invoice_number}} />
+                <Input bindToHookForm={false} value={invoiceReferences[invoice.uuid] ?? ''} onChange={event => setInvoiceReferences(current => ({...current, [invoice.uuid]: event.target.value}))} placeholder="Transaction reference" />
+              </label>
+              <Button disabled={busy || !(invoiceReferences[invoice.uuid] ?? '').trim()} onClick={() => void submitReference(`/api/v1/billing/direct/invoices/${invoice.uuid}/reference`, invoiceReferences[invoice.uuid] ?? '')}>
+                <Trans message="Verify invoice payment" />
+              </Button>
+            </div>
+          ))}
         </Card.Content>
       </Card.Root>
     </div>
