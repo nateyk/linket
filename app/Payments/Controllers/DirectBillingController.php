@@ -92,6 +92,7 @@ final class DirectBillingController extends Controller
                 'can_renew' => $this->canRenewPro($subscription),
                 'payments' => $proPayments,
                 'pending_payment' => $pendingProPayment ? [
+                    'payment_id' => $pendingProPayment->uuid,
                     'status' => $pendingProPayment->status,
                     'amount_cents' => $pendingProPayment->amount_cents,
                 ] : null,
