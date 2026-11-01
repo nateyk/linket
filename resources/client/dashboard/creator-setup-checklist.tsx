@@ -229,11 +229,7 @@ export function CreatorSetupChecklist() {
         </Card.Header>
 
         <Card.Content className="pb-4">
-          <Progress.Root
-            value={percent}
-            aria-label="Creator setup progress"
-            className="gap-y-2"
-          >
+          <Progress.Root value={percent} className="gap-y-2">
             <Progress.Label className="text-sm text-muted-foreground">
               <Trans
                 message=":completed of :total setup steps complete"
