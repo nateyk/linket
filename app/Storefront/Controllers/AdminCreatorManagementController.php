@@ -146,8 +146,10 @@ final class AdminCreatorManagementController extends BaseController
             ->get(['id', 'title', 'status', 'price_cents', 'currency', 'created_at']);
 
         $catalog = DirectPaymentMethod::query()->get()->keyBy('code');
+        $availability = app(\App\Storefront\Services\CheckoutAvailability::class);
+        $creatorBlocker = $availability->creatorBlocker($user);
         $paymentMethods = CreatorPaymentMethod::query()->where('user_id', $user->id)->latest('id')->get()
-            ->map(function (CreatorPaymentMethod $method) use ($catalog): array {
+            ->map(function (CreatorPaymentMethod $method) use ($catalog, $availability, $creatorBlocker): array {
                 $providerCatalog = $catalog->get($method->provider);
 
                 return [
@@ -165,7 +167,7 @@ final class AdminCreatorManagementController extends BaseController
                     'submitted_at' => $method->created_at?->toIso8601String(),
                     'reviewed_at' => $method->verified_at?->toIso8601String(),
                     'lifecycle_state' => $method->lifecycleState(),
-                    'checkout_eligible' => $method->isAvailable() && ($providerCatalog?->isAvailableForCheckout() ?? false),
+                    'checkout_eligible' => ! $creatorBlocker && $availability->accountIsReady($method, $providerCatalog),
                 ];
             });
 

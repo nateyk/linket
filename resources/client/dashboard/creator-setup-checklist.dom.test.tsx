@@ -137,3 +137,23 @@ it('refreshes approval and first sale while the dashboard stays open', async () 
     vi.useRealTimers();
   }
 });
+
+it('keeps account setup complete when verification is unavailable', async () => {
+  api.get.mockImplementation((url: string) => {
+    if (url === '/api/v1/storefront/payment-methods') return Promise.resolve({data: {data: [{account_ready: true, checkout_eligible: false}]}});
+    return Promise.resolve({data: {data: []}});
+  });
+  const client = new QueryClient({defaultOptions: {queries: {retry: false}}});
+  render(<QueryClientProvider client={client}><CreatorSetupChecklist /></QueryClientProvider>);
+  expect(await screen.findByText('1 of 7 setup steps complete')).toBeTruthy();
+});
+
+it('keeps account setup complete when the configured bank is unavailable', async () => {
+  api.get.mockImplementation((url: string) => {
+    if (url === '/api/v1/storefront/payment-methods') return Promise.resolve({data: {data: [{account_configured: true, account_ready: false, checkout_eligible: false}]}});
+    return Promise.resolve({data: {data: []}});
+  });
+  const client = new QueryClient({defaultOptions: {queries: {retry: false}}});
+  render(<QueryClientProvider client={client}><CreatorSetupChecklist /></QueryClientProvider>);
+  expect(await screen.findByText('1 of 7 setup steps complete')).toBeTruthy();
+});

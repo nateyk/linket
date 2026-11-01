@@ -28,6 +28,7 @@ type Account = {
   is_suspended: boolean;
   provider_registration_status: string;
   checkout_eligible: boolean;
+  checkout_blocker?: string | null;
 };
 
 type Provider = {code: string; name: string};
@@ -117,8 +118,14 @@ function AccountAvailability({account}: {account: Account}) {
     <Trans message="Waiting for provider registration before checkout is enabled." />
   ) : !account.is_active ? (
     <Trans message="Activate this account to offer it at checkout." />
+  ) : account.checkout_blocker === 'verification_unavailable' ? (
+    <Trans message="Payment verification is temporarily unavailable. Contact support for help." />
+  ) : account.checkout_blocker === 'verification_quota_exhausted' ? (
+    <Trans message="You cannot accept additional verified sales right now. Upgrade to Pro to continue." />
+  ) : account.checkout_blocker === 'creator_restricted' ? (
+    <Trans message="Your account cannot accept sales right now. Contact support." />
   ) : !available ? (
-    <Trans message="This account is currently unavailable at checkout." />
+    <Trans message="This account is currently unavailable at checkout. Contact support for help." />
   ) : null;
 
   return (
@@ -180,6 +187,9 @@ function ReceivingAccountCard({
           </div>
         </div>
 
+        {account.status === 'approved' && account.provider_registration_status === 'registered' && account.is_active && !account.is_suspended && (
+          <Badge variant="positive"><Trans message="Approved and active" /></Badge>
+        )}
         <AccountAvailability account={account} />
 
         {!methodAvailable && (
@@ -377,7 +387,7 @@ export function Component() {
                 <Trans message="No receiving accounts yet" />
               </Empty.Title>
               <Empty.Description>
-                <Trans message="Add a bank or wallet account to receive customer payments." />
+                <Trans message="Add a bank or wallet account in this workspace to receive customer payments." />
               </Empty.Description>
             </Empty.Header>
           </Empty.Root>

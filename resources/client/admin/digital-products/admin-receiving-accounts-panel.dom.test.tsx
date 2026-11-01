@@ -233,3 +233,15 @@ it('requires a reason before rejecting an account', async () => {
     ),
   );
 });
+
+it('explains when payment verification is unavailable', async () => {
+  api.get.mockImplementation(async (url: string) => {
+    if (url.endsWith('/payment-methods/9')) {
+      return {data: {data: {...pendingAccount, checkout_blockers: ['verification_unavailable'], audits: []}}};
+    }
+    return {data: {summary: {pending: 1, approved: 0, rejected: 0, suspended: 0}, data: {data: [pendingAccount], last_page: 1}}};
+  });
+  render(<AdminReceivingAccountsPanel />);
+  fireEvent.click(await screen.findByRole('button', {name: 'Review'}));
+  expect(await screen.findByText('Payment verification is temporarily unavailable.')).toBeTruthy();
+});

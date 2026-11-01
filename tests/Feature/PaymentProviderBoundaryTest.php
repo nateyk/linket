@@ -27,8 +27,10 @@ class PaymentProviderBoundaryTest extends TestCase
 
     public function testPaidCheckoutStaysUnavailableWhenVerifyEtIsDisabled(): void
     {
+        \Illuminate\Support\Facades\Http::preventStrayRequests();
         config()->set('services.verify_et.enabled', false);
         [$creator, $product] = $this->product();
+        $reservationsBefore = \Illuminate\Support\Facades\DB::table('creator_verification_allowances')->where('creator_id', $creator->id)->count();
         $gateway = $this->getMockBuilder(ChapaGateway::class)->disableOriginalConstructor()->getMock();
         $gateway->expects($this->never())->method('createTransaction');
         app()->instance(ChapaGateway::class, $gateway);
@@ -44,10 +46,68 @@ class PaymentProviderBoundaryTest extends TestCase
         }
 
         $this->assertSame(0, StorefrontOrder::query()->where('digital_product_id', $product->id)->count());
+        $this->assertSame($reservationsBefore, \Illuminate\Support\Facades\DB::table('creator_verification_allowances')->where('creator_id', $creator->id)->count());
         $payload = (new PublicDigitalProductResource($product->fresh()->load('creator')))->resolve(request());
         $this->assertFalse($payload['can_buy']);
         $this->assertSame('unavailable', $payload['payment_mode']);
         $this->assertSame($creator->id, $product->user_id);
+    }
+
+    public function testPaidProductWithoutAnEligibleAccountCannotBeBought(): void
+    {
+        \Illuminate\Support\Facades\Http::preventStrayRequests();
+        config()->set('services.verify_et.enabled', true);
+        [$creator, $product] = $this->product();
+        $payload = (new PublicDigitalProductResource($product->fresh()->load('creator')))->resolve(request());
+
+        $this->assertFalse($payload['can_buy']);
+        $this->assertEmpty($payload['receiving_accounts']);
+        try {
+            app(StorefrontCheckout::class)->create($product->fresh()->load('creator'), null, ['email' => 'buyer@example.test']);
+            $this->fail('Checkout accepted a product without an eligible account.');
+        } catch (HttpException $exception) {
+            $this->assertSame(422, $exception->getStatusCode());
+        }
+        $this->assertSame(0, StorefrontOrder::query()->where('digital_product_id', $product->id)->count());
+    }
+
+    public function testReceivingAccountInAnotherWorkspaceDoesNotMakePaidProductBuyable(): void
+    {
+        \Illuminate\Support\Facades\Http::preventStrayRequests();
+        config()->set('services.verify_et.enabled', true);
+        [$creator, $product] = $this->product();
+        $otherCreator = User::factory()->create();
+        $otherWorkspace = (new CreateWorkspace())->createPersonalWorkspace($otherCreator);
+        \App\Storefront\Models\DirectPaymentMethod::query()->where('code', 'cbe')->update([
+            'checkout_enabled' => true, 'automated_verification_supported' => true,
+            'recipient_matching_supported' => true, 'operationally_suspended' => false,
+        ]);
+        \App\Storefront\Models\CreatorPaymentMethod::query()->create([
+            'workspace_id' => $otherWorkspace->id, 'user_id' => $creator->id,
+            'provider' => 'cbe', 'account_number' => '1000123456789',
+            'account_fingerprint' => hash('sha256', (string) Str::uuid()),
+            'account_name_raw' => 'Synthetic Owner', 'account_name_normalized' => 'synthetic owner',
+            'status' => 'approved', 'provider_registration_status' => 'registered', 'is_active' => true,
+        ]);
+        $payload = (new PublicDigitalProductResource($product->fresh()->load('creator')))->resolve(request());
+        $this->assertFalse($payload['can_buy']);
+        $this->assertSame('no_eligible_receiving_account', $payload['checkout_blocker']);
+        $this->assertEmpty($payload['receiving_accounts']);
+    }
+
+    public function testFreeProductDoesNotRequireAReceivingAccount(): void
+    {
+        \Illuminate\Support\Facades\Http::preventStrayRequests();
+        config()->set('services.verify_et.enabled', true);
+        [$creator, $product] = $this->product();
+        $product->update(['price_cents' => 0]);
+        $product->refresh()->load('creator');
+        $payload = (new PublicDigitalProductResource($product))->resolve(request());
+        $this->assertTrue($payload['can_buy']);
+        $this->assertEmpty($payload['receiving_accounts']);
+        $order = app(StorefrontCheckout::class)->create($product, null, ['email' => 'buyer@example.test']);
+        $this->assertSame('paid', $order->fresh()->status);
+        $this->assertNull($order->creator_payment_method_id);
     }
 
     public function testNewPolicyOrderCannotBeMarkedPaidByChapa(): void

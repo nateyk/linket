@@ -48,6 +48,122 @@ class VerifyEtDirectCheckoutTest extends TestCase
         ]);
     }
 
+    public function testAutomaticSelectionSkipsNewerAccountWithUnavailableBank(): void
+    {
+        \Illuminate\Support\Facades\Http::preventStrayRequests();
+        [$seedOrder] = $this->orderAndVerification();
+        $product = DigitalProduct::query()->findOrFail($seedOrder->digital_product_id)->load('creator');
+        $olderAccount = CreatorPaymentMethod::query()->findOrFail($seedOrder->creator_payment_method_id);
+        \App\Storefront\Models\DirectPaymentMethod::query()->where('code', 'telebirr')->update(['checkout_enabled' => false]);
+        $newerAccount = CreatorPaymentMethod::query()->create([
+            'workspace_id' => $product->workspace_id, 'user_id' => $product->user_id,
+            'provider' => 'telebirr', 'account_number' => '0912345678',
+            'account_fingerprint' => hash('sha256', (string) Str::uuid()),
+            'account_name_raw' => 'Synthetic Recipient', 'account_name_normalized' => 'synthetic recipient',
+            'status' => 'approved', 'provider_registration_status' => 'registered', 'is_active' => true,
+        ]);
+
+        $order = app(StorefrontCheckout::class)->create($product, null, ['name' => 'Buyer', 'email' => 'buyer@example.test']);
+        $this->assertSame($olderAccount->id, $order->creator_payment_method_id);
+        $this->assertSame($olderAccount->account_number, $order->payment_account_snapshot);
+        $this->assertNotSame($newerAccount->id, $order->creator_payment_method_id);
+    }
+
+    public function testExplicitUnavailableAccountDoesNotFallBackToAnotherRecipient(): void
+    {
+        \Illuminate\Support\Facades\Http::preventStrayRequests();
+        [$seedOrder] = $this->orderAndVerification();
+        $product = DigitalProduct::query()->findOrFail($seedOrder->digital_product_id)->load('creator');
+        $account = CreatorPaymentMethod::query()->findOrFail($seedOrder->creator_payment_method_id);
+        $unavailable = $account->replicate();
+        $unavailable->account_fingerprint = hash('sha256', (string) Str::uuid());
+        $unavailable->is_active = false;
+        $unavailable->save();
+        $before = \App\Storefront\Models\StorefrontOrder::query()->count();
+        try {
+            app(StorefrontCheckout::class)->create($product, null, ['email' => 'buyer@example.test'], $unavailable->id);
+            $this->fail('An explicitly unavailable recipient was accepted.');
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $exception) {
+            $this->assertSame(422, $exception->getStatusCode());
+        }
+        $this->assertSame($before, \App\Storefront\Models\StorefrontOrder::query()->count());
+    }
+
+    public function testInvalidExplicitAccountIdDoesNotFallBack(): void
+    {
+        \Illuminate\Support\Facades\Http::preventStrayRequests();
+        [$seedOrder] = $this->orderAndVerification();
+        $product = DigitalProduct::query()->findOrFail($seedOrder->digital_product_id)->load('creator');
+        $before = \App\Storefront\Models\StorefrontOrder::query()->count();
+        try {
+            app(StorefrontCheckout::class)->create($product, null, ['email' => 'buyer@example.test'], 0);
+            $this->fail('Checkout accepted an invalid recipient ID.');
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $exception) {
+            $this->assertSame(422, $exception->getStatusCode());
+        }
+        $this->assertSame($before, \App\Storefront\Models\StorefrontOrder::query()->count());
+    }
+
+    public function testExplicitAccountFromAnotherCreatorOrWorkspaceIsRejected(): void
+    {
+        \Illuminate\Support\Facades\Http::preventStrayRequests();
+        [$seedOrder] = $this->orderAndVerification();
+        $product = DigitalProduct::query()->findOrFail($seedOrder->digital_product_id)->load('creator');
+        $account = CreatorPaymentMethod::query()->findOrFail($seedOrder->creator_payment_method_id);
+        $other = User::factory()->create();
+        $otherWorkspace = (new CreateWorkspace())->createPersonalWorkspace($other);
+        foreach ([['user_id' => $other->id, 'workspace_id' => $product->workspace_id], ['user_id' => $product->user_id, 'workspace_id' => $otherWorkspace->id]] as $scope) {
+            $foreign = $account->replicate();
+            $foreign->fill($scope);
+            $foreign->account_fingerprint = hash('sha256', (string) Str::uuid());
+            $foreign->save();
+            $before = \App\Storefront\Models\StorefrontOrder::query()->count();
+            try {
+                app(StorefrontCheckout::class)->create($product, null, ['email' => 'buyer@example.test'], $foreign->id);
+                $this->fail('Checkout accepted a recipient from another scope.');
+            } catch (\Symfony\Component\HttpKernel\Exception\HttpException $exception) {
+                $this->assertSame(422, $exception->getStatusCode());
+                $this->assertStringNotContainsString($foreign->account_number, $exception->getMessage());
+            }
+            $this->assertSame($before, \App\Storefront\Models\StorefrontOrder::query()->count());
+        }
+    }
+
+    public function testCheckoutRevalidatesTheSelectedRecipientAfterAvailabilityChanges(): void
+    {
+        \Illuminate\Support\Facades\Http::preventStrayRequests();
+        [$seedOrder] = $this->orderAndVerification();
+        $product = DigitalProduct::query()->findOrFail($seedOrder->digital_product_id)->load('creator');
+        $account = CreatorPaymentMethod::query()->findOrFail($seedOrder->creator_payment_method_id);
+        $ordersBeforeRead = \App\Storefront\Models\StorefrontOrder::query()->count();
+        $reservationsBeforeRead = DB::table('creator_verification_allowances')->count();
+        $payload = (new \App\Storefront\Resources\PublicDigitalProductResource($product))->resolve(request());
+        $this->assertSame($ordersBeforeRead, \App\Storefront\Models\StorefrontOrder::query()->count());
+        $this->assertSame($reservationsBeforeRead, DB::table('creator_verification_allowances')->count());
+        $this->assertTrue($payload['can_buy']);
+        $this->assertStringNotContainsString($account->account_number, json_encode($payload));
+        $before = \App\Storefront\Models\StorefrontOrder::query()->count();
+        foreach ([['is_suspended' => true], ['is_active' => false], ['provider_registration_status' => 'pending']] as $change) {
+            $account->update(['is_suspended' => false, 'is_active' => true, 'provider_registration_status' => 'registered', ...$change]);
+            try {
+                app(StorefrontCheckout::class)->create($product, null, ['email' => 'buyer@example.test'], $account->id);
+                $this->fail('Checkout accepted an unavailable recipient.');
+            } catch (\Symfony\Component\HttpKernel\Exception\HttpException $exception) {
+                $this->assertSame(422, $exception->getStatusCode());
+            }
+            $this->assertSame($before, \App\Storefront\Models\StorefrontOrder::query()->count());
+        }
+        $account->update(['provider_registration_status' => 'registered']);
+        \App\Storefront\Models\DirectPaymentMethod::query()->where('code', $account->provider)->update(['checkout_enabled' => false]);
+        try {
+            app(StorefrontCheckout::class)->create($product, null, ['email' => 'buyer@example.test'], $account->id);
+            $this->fail('Checkout accepted a disabled bank.');
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $exception) {
+            $this->assertSame(422, $exception->getStatusCode());
+        }
+        $this->assertSame($before, \App\Storefront\Models\StorefrontOrder::query()->count());
+    }
+
     public function testMatchedDirectPaymentFulfillsOnceWithoutCustodialLedger(): void
     {
         Queue::fake();

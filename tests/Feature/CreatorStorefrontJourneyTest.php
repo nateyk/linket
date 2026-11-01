@@ -273,7 +273,11 @@ test('creator uploads a product for approval and a buyer receives the approved d
         \Common\Workspaces\ActiveWorkspace::clearCache();
         $this->postJson("/api/v1/storefront/payment-methods/{$methodId}/activate")->assertOk();
         $this->getJson('/api/v1/storefront/payment-methods')->assertOk()
+            ->assertJsonFragment(['id' => $methodId, 'checkout_eligible' => false]);
+        config()->set('services.verify_et.enabled', true);
+        $this->getJson('/api/v1/storefront/payment-methods')->assertOk()
             ->assertJsonFragment(['id' => $methodId, 'checkout_eligible' => true]);
+        config()->set('services.verify_et.enabled', false);
         $this->postJson('/auth/logout')->assertSuccessful();
         $this->app['auth']->forgetGuards();
         $this->postJson('/auth/login', [

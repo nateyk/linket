@@ -200,8 +200,12 @@ test('ten free verified sales block the eleventh until a verified Pro payment, a
         $sell($sale);
     }
 
-    $this->getJson($base)->assertOk()->assertJsonPath('data.can_buy', false);
     $blocked = StorefrontOrder::query()->where('creator_id', $creator->id)->count();
+    $reservationsBeforeRead = DB::table('creator_verification_allowances')->where('creator_id', $creator->id)->count();
+    $this->getJson($base)->assertOk()->assertJsonPath('data.can_buy', false)
+        ->assertJsonPath('data.checkout_blocker', 'verification_quota_exhausted');
+    expect(StorefrontOrder::query()->where('creator_id', $creator->id)->count())->toBe($blocked)
+        ->and(DB::table('creator_verification_allowances')->where('creator_id', $creator->id)->count())->toBe($reservationsBeforeRead);
     $this->postJson("{$base}/checkout", [
         'buyer_name' => 'Nathnael',
         'buyer_email' => 'nathnael-eleventh@example.test',

@@ -4,9 +4,7 @@ namespace App\Storefront\Services;
 
 use App\Biolinks\Models\Biolink;
 use App\Stores\Models\Store;
-use App\Storefront\Models\CreatorPaymentMethod;
 use App\Storefront\Models\DigitalProduct;
-use App\Storefront\Models\DirectPaymentMethod;
 use App\Storefront\Models\StorefrontOrder;
 use App\Storefront\VisitorAttributes;
 use App\Entitlements\Entitlements;
@@ -26,17 +24,12 @@ final class DirectStorefrontCheckout
 
         $method = null;
         if ($product->price_cents > 0) {
-            $methods = CreatorPaymentMethod::query()
-                ->where('workspace_id', $product->workspace_id)
-                ->where('user_id', $product->user_id)
-                ->where('status', 'approved')
-                ->where('provider_registration_status', 'registered')
-                ->where('is_active', true)
-                ->where('is_suspended', false)
-                ->latest('id')->get();
-            $method = $paymentMethodId ? $methods->firstWhere('id', $paymentMethodId) : $methods->first();
-            abort_unless($method, 422, __('The creator has not set up a receiving account.'));
-            abort_unless(DirectPaymentMethod::query()->where('code', $method->provider)->first()?->isAvailableForCheckout(), 422, __('This payment method is temporarily unavailable.'));
+            abort_unless(config('services.verify_et.enabled'), 503, __('Checkout is temporarily unavailable.'));
+            $methods = app(CheckoutAvailability::class)->eligibleAccounts($product->user_id, $product->workspace_id);
+            $method = $paymentMethodId !== null ? $methods->firstWhere('id', $paymentMethodId) : $methods->first();
+            abort_unless($method, 422, $paymentMethodId !== null
+                ? __('This payment method is temporarily unavailable.')
+                : __('The creator has not set up a receiving account.'));
         }
 
         $accessToken = Str::random(64);

@@ -274,8 +274,9 @@ class LegacyCommissionIsolationTest extends TestCase
 
     public function testDisabledVerifyEtCheckoutDoesNotStartChapaOrMarkTheOrderPaid(): void
     {
-        config()->set('services.verify_et.enabled', false);
+        config()->set('services.verify_et.enabled', true);
         [$order] = $this->orderAndVerification();
+        config()->set('services.verify_et.enabled', false);
         $before = StorefrontOrder::query()->where('digital_product_id', $order->digital_product_id)->count();
         $gateway = $this->getMockBuilder(ChapaGateway::class)->disableOriginalConstructor()->getMock();
         $gateway->expects($this->never())->method('createTransaction');
