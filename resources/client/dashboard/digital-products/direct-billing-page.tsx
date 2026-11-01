@@ -844,15 +844,15 @@ function OrdersTable({
 
   return (
     <>
-      <div className="divide-y md:hidden" role="list" aria-label="Orders">
+      <ul className="divide-y md:hidden" aria-label="Orders">
         {orders.map(order => (
-          <Item.Root
-            key={order.uuid}
-            size="sm"
-            render={<button type="button" />}
-            className="rounded-none border-0 px-4 py-3 text-start hover:bg-muted/40"
-            onClick={() => onView(order.uuid)}
-          >
+          <li key={order.uuid}>
+            <Item.Root
+              size="sm"
+              render={<button type="button" />}
+              className="min-h-14 rounded-none border-0 px-4 py-3 text-start hover:bg-muted/40"
+              onClick={() => onView(order.uuid)}
+            >
             <Item.Media
               align="center"
               variant="icon"
@@ -883,10 +883,11 @@ function OrdersTable({
               <Item.Row>
                 <OrderStatusBadge status={order.status} />
               </Item.Row>
-            </Item.Content>
-          </Item.Root>
+              </Item.Content>
+            </Item.Root>
+          </li>
         ))}
-      </div>
+      </ul>
 
       <div className="hidden min-w-0 overflow-x-auto md:block">
         <Table.Root>
