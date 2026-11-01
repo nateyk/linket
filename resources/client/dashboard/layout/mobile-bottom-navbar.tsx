@@ -28,7 +28,7 @@ export function MobileBottomNavbar() {
       aria-label={trans(message('Mobile navigation'))}
       // Five equal destinations leave room for long labels without clipping.
       // Keep icon tops aligned when an item wraps to two lines.
-      className="flex items-start justify-between gap-1 border-t px-2 py-2.5"
+      className="relative z-20 flex shrink-0 items-start justify-between gap-1 border-t bg-background px-2 py-2.5"
     >
       {items.map(item => (
         <UnstyledCustomMenuItem
