@@ -1155,7 +1155,7 @@ function OrderDetailDialog({
     <Dialog.Root open={!!uuid} onOpenChange={open => !open && onClose()}>
       <Dialog.Portal>
         <Dialog.Backdrop />
-        <Dialog.Content className="sm:max-w-2xl">
+        <Dialog.Content className="sm:max-w-xl">
           <Dialog.Header>
             <Dialog.Title>
               <ReceiptTextIcon />
@@ -1195,36 +1195,49 @@ function OrderDetailContent({order}: {order: OrderDetail}) {
   const accountEnding = order.account_ending;
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-start justify-between gap-3 rounded-card-sm bg-muted p-4">
-        <div>
-          <p className="text-base font-medium">
+    <div className="flex flex-col gap-4">
+      <Item.Root
+        variant="muted"
+        size="sm"
+        className="rounded-card-sm border-0"
+      >
+        <Item.Media
+          align="center"
+          variant="icon"
+          className="size-10 rounded-card-xs bg-background text-muted-foreground ring-1 ring-foreground/10"
+        >
+          <ReceiptTextIcon />
+        </Item.Media>
+        <Item.Content className="min-w-0">
+          <Item.Title className="line-clamp-2 whitespace-normal">
             {order.product?.title ?? <Trans message="Deleted product" />}
-          </p>
-          <p className="text-sm text-muted-foreground">
+          </Item.Title>
+          <Item.Description className="line-clamp-none">
             {order.buyer_name || <Trans message="Guest buyer" />}
             {order.buyer_email ? ` · ${order.buyer_email}` : null}
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">
+          </Item.Description>
+          <Item.Description>
             <Trans
               message="Created :date"
-              values={{date: <FormattedDate preset="short" date={order.created_at} />}}
+              values={{
+                date: <FormattedDate preset="short" date={order.created_at} />,
+              }}
             />
-          </p>
-        </div>
-        <div className="text-end">
-          <p className="text-lg font-semibold tabular-nums">
+          </Item.Description>
+        </Item.Content>
+        <Item.Actions className="basis-full justify-between border-t pt-3 md:ms-6 md:basis-auto md:border-0 md:pt-0">
+          <OrderStatusBadge status={order.status} />
+          <span className="font-semibold tabular-nums">
             <FormattedCurrency
               valueInCents={order.gross_amount_cents}
               currency={currency}
             />
-          </p>
-          <OrderStatusBadge status={order.status} />
-        </div>
-      </div>
+          </span>
+        </Item.Actions>
+      </Item.Root>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <DetailSection title={<Trans message="Payment" />}>
+        <DetailSection title={<Trans message="Payment information" />}>
           <DetailRow
             label={<Trans message="Transaction reference" />}
             value={order.transaction_reference ?? '—'}
@@ -1262,6 +1275,7 @@ function OrderDetailContent({order}: {order: OrderDetail}) {
                 currency={currency}
               />
             }
+            emphasis
           />
         </DetailSection>
 
