@@ -261,7 +261,7 @@ export function CreatorSetupChecklist() {
                     {completed}/{checks.length}
                   </span>
                 </span>
-                <ChevronDownIcon className="transition-transform group-data-[state=open]/button:rotate-180" />
+                <ChevronDownIcon className="transition-transform group-data-panel-open/button:rotate-180" />
               </Button>
             }
           />
