@@ -76,5 +76,18 @@ it('shows checkout eligibility from the account API', async () => {
   ], available_methods: [{code: 'cbe', name: 'CBE'}]}});
   render(<Component />);
   expect(await screen.findByText('Available at checkout')).toBeTruthy();
-  expect(screen.getByText('Disabled')).toBeTruthy();
+  expect(screen.getByText('Unavailable at checkout')).toBeTruthy();
+});
+
+it('keeps readable bank names and logo rendering in the selected-value implementation', async () => {
+  api.get.mockResolvedValue({data: {data: [], available_methods: [
+    {code: 'cbe', name: 'Commercial Bank of Ethiopia'},
+    {code: 'telebirr', name: 'Telebirr'},
+  ]}});
+  render(<Component />);
+  fireEvent.click(await screen.findByRole('button', {name: 'Add receiving account'}));
+  fireEvent.change(screen.getByLabelText('Payment method'), {target: {value: 'cbe'}});
+  expect(screen.getByRole('option', {name: /Commercial Bank of Ethiopia/})).toBeTruthy();
+  expect(screen.getByRole('option', {name: /Telebirr/})).toBeTruthy();
+  expect(screen.getByLabelText('Payment method')).toHaveProperty('value', 'cbe');
 });
