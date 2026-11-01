@@ -122,6 +122,8 @@ test('remaining destinations share the bar and keep visible focus', async () => 
   expect(nav.className).not.toContain('gap-7.5');
   expect(nav.className).toContain('px-2');
   expect(nav.className).toContain('items-start');
+  expect(nav.className).toContain('shrink-0');
+  expect(nav.className).toContain('bg-background');
   for (const item of nav.querySelectorAll('a, button')) {
     expect(item.className).not.toContain('whitespace-nowrap');
     expect(item.className).not.toContain('shrink-0');
