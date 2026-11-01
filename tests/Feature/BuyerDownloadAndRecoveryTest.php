@@ -24,6 +24,12 @@ class BuyerDownloadAndRecoveryTest extends TestCase
 {
     use DatabaseTransactions;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config()->set('services.verify_et.enabled', true);
+    }
+
     public function testMockedVerifiedPurchaseGrantsSecureDownloadImmediately(): void
     {
         Queue::fake();

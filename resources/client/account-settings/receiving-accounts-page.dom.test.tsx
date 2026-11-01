@@ -55,6 +55,7 @@ it('shows an empty state and only offers enabled providers', async () => {
   api.get.mockResolvedValue({data: {data: [], available_methods: [{code: 'cbe', name: 'CBE'}]}});
   render(<Component />);
   expect(await screen.findByText('No receiving accounts yet')).toBeTruthy();
+  expect(screen.getByText('Add a bank or wallet account in this workspace to receive customer payments.')).toBeTruthy();
   fireEvent.click(screen.getByRole('button', {name: 'Add receiving account'}));
   expect(screen.getByRole('option', {name: /CBE/})).toBeTruthy();
   expect(screen.queryByRole('option', {name: /Telebirr/})).toBeNull();
@@ -90,4 +91,19 @@ it('keeps readable bank names and logo rendering in the selected-value implement
   expect(screen.getByRole('option', {name: /Commercial Bank of Ethiopia/})).toBeTruthy();
   expect(screen.getByRole('option', {name: /Telebirr/})).toBeTruthy();
   expect(screen.getByLabelText('Payment method')).toHaveProperty('value', 'cbe');
+});
+
+it('explains a platform verification pause without changing the approved account status', async () => {
+  api.get.mockResolvedValue({data: {data: [{id: 1, provider: 'cbe', account_name: 'Owner', account_ending: '1234', status: 'approved', is_active: true, is_suspended: false, provider_registration_status: 'registered', checkout_eligible: false, checkout_blocker: 'verification_unavailable'}], available_methods: [{code: 'cbe', name: 'CBE'}]}});
+  render(<Component />);
+  expect(await screen.findByText('Payment verification is temporarily unavailable. Contact support for help.')).toBeTruthy();
+  expect(screen.getByText('Approved and active')).toBeTruthy();
+  expect(screen.getByText('Unavailable at checkout')).toBeTruthy();
+});
+
+it('explains exhausted sales capacity without changing account approval', async () => {
+  api.get.mockResolvedValue({data: {data: [{id: 1, provider: 'cbe', account_name: 'Owner', account_ending: '1234', status: 'approved', is_active: true, is_suspended: false, provider_registration_status: 'registered', checkout_eligible: false, checkout_blocker: 'verification_quota_exhausted'}], available_methods: [{code: 'cbe', name: 'CBE'}]}});
+  render(<Component />);
+  expect(await screen.findByText('You cannot accept additional verified sales right now. Upgrade to Pro to continue.')).toBeTruthy();
+  expect(screen.getByText('Approved and active')).toBeTruthy();
 });

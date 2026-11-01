@@ -30,13 +30,18 @@ final class CreatorPaymentMethodsController extends Controller
     public function index(Request $request): array
     {
         $catalog = DirectPaymentMethod::query()->get()->keyBy('code');
+        $availability = app(\App\Storefront\Services\CheckoutAvailability::class);
+        $creatorBlocker = $availability->creatorBlocker($request->user());
         return [
             'data' => CreatorPaymentMethod::query()
                 ->where('workspace_id', ActiveWorkspace::get()->id)
                 ->where('user_id', $request->user()->id)
                 ->latest()->get()->map(fn (CreatorPaymentMethod $method): array => [
                     ...$this->resource($method),
-                    'checkout_eligible' => $method->isAvailable() && ($catalog->get($method->provider)?->isAvailableForCheckout() ?? false),
+                    'account_configured' => $method->isAvailable(),
+                    'account_ready' => $availability->accountIsReady($method, $catalog->get($method->provider)),
+                    'checkout_eligible' => ! $creatorBlocker && $availability->accountIsReady($method, $catalog->get($method->provider)),
+                    'checkout_blocker' => $creatorBlocker ?? ($availability->accountIsReady($method, $catalog->get($method->provider)) ? null : 'account_unavailable'),
                 ])->all(),
             'available_methods' => DirectPaymentMethod::query()
                 ->where('creator_setup_enabled', true)
@@ -463,7 +468,9 @@ final class CreatorPaymentMethodsController extends Controller
     {
         $catalog ??= DirectPaymentMethod::query()->get()->keyBy('code');
         $providerCatalog = $catalog->get($method->provider);
-        $checkoutEligible = $method->isAvailable() && ($providerCatalog?->isAvailableForCheckout() ?? false);
+        $availability = app(\App\Storefront\Services\CheckoutAvailability::class);
+        $creatorBlocker = $method->creator ? $availability->creatorBlocker($method->creator) : 'creator_restricted';
+        $checkoutEligible = ! $creatorBlocker && $availability->accountIsReady($method, $providerCatalog);
 
         return [
             ...$this->resource($method),
@@ -474,7 +481,7 @@ final class CreatorPaymentMethodsController extends Controller
             'linket_approved' => $method->status === 'approved',
             'verify_et_registered' => $method->provider_registration_status === 'registered',
             'checkout_eligible' => $checkoutEligible,
-            'checkout_blockers' => $this->checkoutBlockers($method, $providerCatalog),
+            'checkout_blockers' => array_values(array_filter([...$this->checkoutBlockers($method, $providerCatalog), $creatorBlocker])),
             'submitted_at' => $method->created_at?->toIso8601String(),
             'reviewed_at' => $method->verified_at?->toIso8601String(),
             'reviewed_by' => $method->reviewed_by,

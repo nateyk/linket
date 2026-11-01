@@ -20,7 +20,7 @@ type Product = {
   biolink_ids?: number[];
   sales_count?: number;
 };
-type ReceivingAccount = {checkout_eligible?: boolean};
+type ReceivingAccount = {account_configured?: boolean; account_ready?: boolean; checkout_eligible?: boolean};
 type ChecklistData = {stores: Store[]; products: Product[]; accounts: ReceivingAccount[]};
 type SetupStep = {
   label: string;
@@ -97,7 +97,7 @@ export function CreatorSetupChecklist() {
     },
     {
       label: 'Configure receiving account',
-      done: query.data.accounts.some(account => account.checkout_eligible === true),
+      done: query.data.accounts.some(account => (account.account_configured ?? account.account_ready ?? account.checkout_eligible) === true),
       to: '/account-settings/receiving-accounts',
     },
     {

@@ -114,6 +114,12 @@ function checkoutBlockerLabel(blocker: string) {
       return <Trans message="Verify.et registration is not recorded." />;
     case 'creator_activation':
       return <Trans message="The creator has not activated this account." />;
+    case 'verification_unavailable':
+      return <Trans message="Payment verification is temporarily unavailable." />;
+    case 'verification_quota_exhausted':
+      return <Trans message="The creator cannot accept additional verified sales right now." />;
+    case 'creator_restricted':
+      return <Trans message="The creator cannot accept sales right now." />;
     case 'bank_checkout':
       return <Trans message="Checkout is turned off for this bank in Payment Gateways." />;
     default:

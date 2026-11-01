@@ -55,6 +55,7 @@ class AdminReceivingAccountsTest extends TestCase
 
     public function test_approve_provider_registration_and_activate_makes_checkout_eligible(): void
     {
+        config()->set('services.verify_et.enabled', true);
         $creator = $this->createUser();
         $workspace = app(CreateWorkspace::class)->createPersonalWorkspace($creator);
         $method = $this->pendingAccount($creator, $workspace->id);
@@ -82,6 +83,19 @@ class AdminReceivingAccountsTest extends TestCase
             ->assertJsonPath('data.data.0.checkout_eligible', true)
             ->assertJsonPath('data.data.0.verify_et_registered', true)
             ->assertJsonPath('data.data.0.linket_approved', true);
+    }
+
+    public function test_admin_sees_verification_pause_for_an_active_account(): void
+    {
+        config()->set('services.verify_et.enabled', false);
+        $creator = $this->createUser();
+        $workspace = app(CreateWorkspace::class)->createPersonalWorkspace($creator);
+        $method = $this->pendingAccount($creator, $workspace->id);
+        $method->update(['status' => 'approved', 'provider_registration_status' => 'registered', 'is_active' => true]);
+        $this->enableCatalog('cbe');
+        $this->stateful()->actingAs($this->createAdmin(), 'sanctum')->getJson("/api/v1/admin/storefront/payment-methods/{$method->id}")
+            ->assertOk()->assertJsonPath('data.checkout_eligible', false)
+            ->assertJsonPath('data.checkout_blockers.0', 'verification_unavailable');
     }
 
     public function test_reject_requires_reason_and_excludes_checkout(): void

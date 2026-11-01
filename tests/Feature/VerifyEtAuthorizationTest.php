@@ -90,6 +90,7 @@ class VerifyEtAuthorizationTest extends TestCase
 
     public function testAccountListReflectsCheckoutEligibilityAndCatalogSwitches(): void
     {
+        config()->set('services.verify_et.enabled', true);
         $owner = $this->createUser();
         $workspace = app(CreateWorkspace::class)->createPersonalWorkspace($owner);
         $account = $this->createAccount($owner, $workspace->id);
@@ -98,7 +99,10 @@ class VerifyEtAuthorizationTest extends TestCase
         ActiveWorkspace::clearCache();
         $this->stateful()->actingAs($owner, 'sanctum')->getJson('/api/v1/storefront/payment-methods')->assertOk()->assertJsonPath('data.0.checkout_eligible', true);
         $catalog->update(['checkout_enabled' => false]);
-        $this->getJson('/api/v1/storefront/payment-methods')->assertOk()->assertJsonPath('data.0.checkout_eligible', false);
+        $this->getJson('/api/v1/storefront/payment-methods')->assertOk()
+            ->assertJsonPath('data.0.checkout_eligible', false)
+            ->assertJsonPath('data.0.account_configured', true)
+            ->assertJsonPath('data.0.account_ready', false);
         $catalog->update(['checkout_enabled' => true]);
         $account->update(['status' => 'pending']);
         $this->getJson('/api/v1/storefront/payment-methods')->assertOk()->assertJsonPath('data.0.checkout_eligible', false);
@@ -112,6 +116,54 @@ class VerifyEtAuthorizationTest extends TestCase
         $this->getJson('/api/v1/storefront/payment-methods')->assertOk()->assertJsonPath('data.0.checkout_eligible', false);
         $account->update(['is_active' => true, 'is_suspended' => true]);
         $this->getJson('/api/v1/storefront/payment-methods')->assertOk()->assertJsonPath('data.0.checkout_eligible', false);
+    }
+
+    public function testApprovedAccountIsNotCheckoutEligibleWhenVerificationIsDisabled(): void
+    {
+        \Illuminate\Support\Facades\Http::preventStrayRequests();
+        config()->set('services.verify_et.enabled', false);
+        $owner = $this->createUser();
+        $workspace = app(CreateWorkspace::class)->createPersonalWorkspace($owner);
+        $account = $this->createAccount($owner, $workspace->id);
+        \App\Storefront\Models\DirectPaymentMethod::query()->where('code', 'cbe')->update([
+            'checkout_enabled' => true, 'automated_verification_supported' => true,
+            'recipient_matching_supported' => true, 'operationally_suspended' => false,
+        ]);
+        ActiveWorkspace::clearCache();
+        $ordersBefore = \App\Storefront\Models\StorefrontOrder::query()->where('creator_id', $owner->id)->count();
+        $reservationsBefore = \Illuminate\Support\Facades\DB::table('creator_verification_allowances')->where('creator_id', $owner->id)->count();
+        $this->stateful()->actingAs($owner, 'sanctum')->getJson('/api/v1/storefront/payment-methods')
+            ->assertOk()->assertJsonPath('data.0.checkout_eligible', false)
+            ->assertJsonPath('data.0.account_configured', true)
+            ->assertJsonPath('data.0.account_ready', true)
+            ->assertJsonPath('data.0.checkout_blocker', 'verification_unavailable');
+        $this->assertSame($ordersBefore, \App\Storefront\Models\StorefrontOrder::query()->where('creator_id', $owner->id)->count());
+        $this->assertSame($reservationsBefore, \Illuminate\Support\Facades\DB::table('creator_verification_allowances')->where('creator_id', $owner->id)->count());
+        $this->assertSame('approved', $account->fresh()->status);
+        $this->assertTrue($account->fresh()->is_active);
+    }
+
+    public function testExhaustedAllowanceDoesNotChangeAccountApproval(): void
+    {
+        \Illuminate\Support\Facades\Http::preventStrayRequests();
+        config()->set('services.verify_et.enabled', true);
+        $plan = \Common\Billing\Models\Product::query()->where('system_key', 'free')->first()
+            ?? \Common\Billing\Models\Product::query()->where('free', true)->orderByDesc('is_default')->firstOrFail();
+        $plan->update(['storefront_benefits' => [...($plan->storefront_benefits ?? []), 'free_verified_sales' => 0]]);
+        $owner = $this->createUser();
+        $workspace = app(CreateWorkspace::class)->createPersonalWorkspace($owner);
+        $account = $this->createAccount($owner, $workspace->id);
+        \App\Storefront\Models\DirectPaymentMethod::query()->where('code', 'cbe')->update([
+            'checkout_enabled' => true, 'automated_verification_supported' => true,
+            'recipient_matching_supported' => true, 'operationally_suspended' => false,
+        ]);
+        ActiveWorkspace::clearCache();
+        $this->stateful()->actingAs($owner, 'sanctum')->getJson('/api/v1/storefront/payment-methods')
+            ->assertOk()->assertJsonPath('data.0.checkout_eligible', false)
+            ->assertJsonPath('data.0.account_configured', true)
+            ->assertJsonPath('data.0.checkout_blocker', 'verification_quota_exhausted');
+        $this->assertSame('approved', $account->fresh()->status);
+        $this->assertTrue($account->fresh()->is_active);
     }
 
     public function testCreatorCannotDeactivateAnotherCreatorsPaymentAccount(): void
