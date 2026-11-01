@@ -1012,103 +1012,165 @@ function TransactionsTable({
   }
 
   return (
-    <div className="min-w-0 md:overflow-x-auto">
-      <Table.Root className="block w-full md:table">
-        <Table.Header className="hidden md:table-header-group">
-          <Table.Row>
-            <Table.Head className="ps-6">
-              <Trans message="Reference" />
-            </Table.Head>
-            <Table.Head>
-              <Trans message="Order" />
-            </Table.Head>
-            <Table.Head className="text-end">
-              <Trans message="Amount" />
-            </Table.Head>
-            <Table.Head className="hidden md:table-cell">
-              <Trans message="Provider" />
-            </Table.Head>
-            <Table.Head>
-              <Trans message="Status" />
-            </Table.Head>
-            <Table.Head className="hidden lg:table-cell">
-              <Trans message="Date" />
-            </Table.Head>
-            <Table.Head className="pe-6">
-              <span className="sr-only">
-                <Trans message="Actions" />
-              </span>
-            </Table.Head>
-          </Table.Row>
-        </Table.Header>
-        <Table.Body className="block md:table-row-group">
-          {transactions.map(transaction => (
-            <Table.Row key={transaction.id} className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-2 px-3 py-3 md:table-row md:p-0">
-              <Table.Cell className="col-start-1 row-start-1 block min-w-0 p-0 md:table-cell md:max-w-48 md:ps-6">
-                <span className="block truncate font-medium">
-                  {transaction.reference ?? '—'}
+    <>
+      <ul className="divide-y md:hidden" aria-label="Transactions">
+        {transactions.map(transaction => (
+          <li key={transaction.id}>
+            <Item.Root
+              size="sm"
+              render={
+                transaction.order_uuid ? <button type="button" /> : undefined
+              }
+              className="min-h-14 rounded-none border-0 px-4 py-3 text-start hover:bg-muted/40"
+              onClick={
+                transaction.order_uuid
+                  ? () => onViewOrder(transaction.order_uuid!)
+                  : undefined
+              }
+            >
+              <Item.Media
+                align="center"
+                variant="icon"
+                className="size-10 rounded-card-xs bg-muted text-muted-foreground"
+              >
+                <ReceiptTextIcon />
+              </Item.Media>
+              <Item.Content className="gap-1.5">
+                <Item.Row className="items-start justify-between gap-3">
+                  <Item.Title className="min-w-0 flex-1">
+                    {transaction.product_title ?? (
+                      <Trans message="Deleted product" />
+                    )}
+                  </Item.Title>
+                  <span className="shrink-0 font-medium tabular-nums">
+                    <FormattedCurrency
+                      valueInCents={transaction.amount_cents}
+                      currency={transaction.currency ?? 'ETB'}
+                    />
+                  </span>
+                </Item.Row>
+                <Item.Row className="justify-between text-xs text-muted-foreground">
+                  <span className="min-w-0 truncate">
+                    {transaction.reference ?? transaction.order_uuid ?? '—'}
+                  </span>
+                  <span className="shrink-0">
+                    <FormattedDate
+                      preset="short"
+                      date={transaction.verified_at ?? transaction.created_at}
+                    />
+                  </span>
+                </Item.Row>
+                <Item.Row className="justify-between">
+                  <TransactionStatusBadge status={transaction.status} />
+                  <span className="text-xs text-muted-foreground">
+                    <Trans
+                      message="Attempt :attempt"
+                      values={{attempt: transaction.attempt}}
+                    />
+                  </span>
+                </Item.Row>
+              </Item.Content>
+            </Item.Root>
+          </li>
+        ))}
+      </ul>
+
+      <div className="hidden min-w-0 overflow-x-auto md:block">
+        <Table.Root>
+          <Table.Header>
+            <Table.Row>
+              <Table.Head className="ps-6">
+                <Trans message="Reference" />
+              </Table.Head>
+              <Table.Head>
+                <Trans message="Order" />
+              </Table.Head>
+              <Table.Head className="text-end">
+                <Trans message="Amount" />
+              </Table.Head>
+              <Table.Head>
+                <Trans message="Provider" />
+              </Table.Head>
+              <Table.Head>
+                <Trans message="Status" />
+              </Table.Head>
+              <Table.Head className="hidden lg:table-cell">
+                <Trans message="Date" />
+              </Table.Head>
+              <Table.Head className="pe-6">
+                <span className="sr-only">
+                  <Trans message="Actions" />
                 </span>
-                <span className="block text-xs text-muted-foreground">
-                  <Trans
-                    message="Attempt :attempt"
-                    values={{attempt: transaction.attempt}}
-                  />
-                  {transaction.error_code
-                    ? ` · ${transaction.error_code}`
-                    : null}
-                </span>
-              </Table.Cell>
-              <Table.Cell className="col-start-1 row-start-2 block min-w-0 p-0 text-muted-foreground md:table-cell md:max-w-48 md:p-3 md:text-foreground">
-                <span className="block truncate">
-                  {transaction.product_title ?? (
-                    <Trans message="Deleted product" />
-                  )}
-                </span>
-                <span className="block truncate text-xs text-muted-foreground">
-                  {transaction.buyer_name ?? transaction.order_uuid}
-                </span>
-              </Table.Cell>
-              <Table.Cell className="col-start-2 row-start-1 block p-0 text-end font-medium tabular-nums md:table-cell md:p-3">
-                <FormattedCurrency
-                  valueInCents={transaction.amount_cents}
-                  currency={transaction.currency ?? 'ETB'}
-                />
-              </Table.Cell>
-              <Table.Cell className="hidden md:table-cell">
-                {transaction.provider ? (
-                  <span className="uppercase">{transaction.provider}</span>
-                ) : (
-                  '—'
-                )}
-              </Table.Cell>
-              <Table.Cell className="col-start-1 row-start-3 block min-w-0 p-0 md:table-cell md:p-3">
-                <span className="sr-only md:hidden"><Trans message="Status: " /></span>
-                <TransactionStatusBadge status={transaction.status} />
-              </Table.Cell>
-              <Table.Cell className="col-start-2 row-start-2 block p-0 text-end text-xs text-muted-foreground md:hidden lg:table-cell lg:p-3 lg:text-start lg:text-sm">
-                <FormattedDate
-                  preset="short"
-                  date={transaction.verified_at ?? transaction.created_at}
-                />
-              </Table.Cell>
-              <Table.Cell className="col-start-2 row-start-3 block p-0 text-end md:table-cell md:p-3 md:pe-6">
-                {transaction.order_uuid && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="min-h-11 md:min-h-0"
-                    onClick={() => onViewOrder(transaction.order_uuid!)}
-                  >
-                    <EyeIcon />
-                    <Trans message="View order" />
-                  </Button>
-                )}
-              </Table.Cell>
+              </Table.Head>
             </Table.Row>
-          ))}
-        </Table.Body>
-      </Table.Root>
-    </div>
+          </Table.Header>
+          <Table.Body>
+            {transactions.map(transaction => (
+              <Table.Row key={transaction.id}>
+                <Table.Cell className="max-w-48 ps-6">
+                  <span className="block truncate font-medium">
+                    {transaction.reference ?? '—'}
+                  </span>
+                  <span className="block text-xs text-muted-foreground">
+                    <Trans
+                      message="Attempt :attempt"
+                      values={{attempt: transaction.attempt}}
+                    />
+                    {transaction.error_code
+                      ? ` · ${transaction.error_code}`
+                      : null}
+                  </span>
+                </Table.Cell>
+                <Table.Cell className="max-w-48">
+                  <span className="block truncate">
+                    {transaction.product_title ?? (
+                      <Trans message="Deleted product" />
+                    )}
+                  </span>
+                  <span className="block truncate text-xs text-muted-foreground">
+                    {transaction.buyer_name ?? transaction.order_uuid}
+                  </span>
+                </Table.Cell>
+                <Table.Cell className="text-end font-medium tabular-nums">
+                  <FormattedCurrency
+                    valueInCents={transaction.amount_cents}
+                    currency={transaction.currency ?? 'ETB'}
+                  />
+                </Table.Cell>
+                <Table.Cell>
+                  {transaction.provider ? (
+                    <span className="uppercase">{transaction.provider}</span>
+                  ) : (
+                    '—'
+                  )}
+                </Table.Cell>
+                <Table.Cell>
+                  <TransactionStatusBadge status={transaction.status} />
+                </Table.Cell>
+                <Table.Cell className="hidden text-muted-foreground lg:table-cell">
+                  <FormattedDate
+                    preset="short"
+                    date={transaction.verified_at ?? transaction.created_at}
+                  />
+                </Table.Cell>
+                <Table.Cell className="pe-6 text-end">
+                  {transaction.order_uuid && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onViewOrder(transaction.order_uuid!)}
+                    >
+                      <EyeIcon />
+                      <Trans message="View order" />
+                    </Button>
+                  )}
+                </Table.Cell>
+              </Table.Row>
+            ))}
+          </Table.Body>
+        </Table.Root>
+      </div>
+    </>
   );
 }
 
