@@ -406,7 +406,7 @@ for (const [status, label] of [
   });
 }
 
-it('loads transactions, manual review and billing in separate tabs', async () => {
+it('loads transactions and manual review in separate tabs', async () => {
   mockApi({
     orders: [baseOrder],
     transactions: [
@@ -452,22 +452,7 @@ it('loads transactions, manual review and billing in separate tabs', async () =>
     ),
   ).toBeTruthy();
 
-  fireEvent.click(screen.getByRole('tab', {name: 'Billing'}));
-  expect(await screen.findByText('Free verified-sales allowance')).toBeTruthy();
-  expect(
-    screen.getByText(
-      'Your free verified-sales allowance is used or reserved. Upgrade to Pro to accept more sales.',
-    ),
-  ).toBeTruthy();
-  expect(screen.getByText('Pro is 70000 per month, with unlimited eligible verified sales while active.')).toBeTruthy();
-  expect(screen.getByText('Pro subscription payment history')).toBeTruthy();
-  expect(await screen.findByText(/PRO-REF-1/)).toBeTruthy();
-  expect(screen.getAllByText('Manual review').length).toBeGreaterThan(1);
-
-  fireEvent.click(screen.getByRole('button', {name: 'Upgrade to Pro'}));
-  await waitFor(() =>
-    expect(api.post).toHaveBeenCalledWith('/api/v1/billing/direct/pro'),
-  );
+  expect(screen.queryByRole('tab', {name: 'Billing'})).toBeNull();
 });
 
 it('surfaces order loading errors', async () => {
