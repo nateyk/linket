@@ -4,12 +4,23 @@ import {Badge} from '@shadcn/badge/badge';
 import {Button} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
 import {Dialog} from '@shadcn/dialog/dialog';
+import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {Empty} from '@shadcn/empty/empty';
 import {Input} from '@shadcn/forms/input/input';
 import {Select} from '@shadcn/forms/select/select';
+import {Popover} from '@shadcn/popover/popover';
 import {Spinner} from '@shadcn/spinner/spinner';
+import {message} from '@ui/i18n/message';
 import {Trans} from '@ui/i18n/trans';
-import {LandmarkIcon, PlusIcon, UploadIcon} from 'lucide-react';
+import {useTrans} from '@ui/i18n/use-trans';
+import {
+  InfoIcon,
+  LandmarkIcon,
+  MoreHorizontalIcon,
+  PlusIcon,
+  PowerIcon,
+  UploadIcon,
+} from 'lucide-react';
 import {useCallback, useEffect, useState} from 'react';
 import awash from './bank-logos/awash.svg';
 import boa from './bank-logos/boa.svg';
@@ -85,12 +96,9 @@ function isValidAccountNumber(number: string, provider: string): boolean {
   return true;
 }
 
-function AccountAvailability({account}: {account: Account}) {
+function AccountLifecycleBadge({account}: {account: Account}) {
   const approved = account.status === 'approved';
   const registered = account.provider_registration_status === 'registered';
-  const available =
-    account.checkout_eligible && approved && registered &&
-    account.is_active && !account.is_suspended;
 
   const label = account.is_suspended ? (
     <Trans message="Suspended" />
@@ -99,14 +107,35 @@ function AccountAvailability({account}: {account: Account}) {
   ) : !approved ? (
     <Trans message="Pending review" />
   ) : !registered ? (
-    <Trans message="Pending provider registration" />
-  ) : !account.is_active ? (
-    <Trans message="Inactive" />
-  ) : available ? (
-    <Trans message="Available at checkout" />
+    <Trans message="Provider setup" />
   ) : (
-    <Trans message="Unavailable at checkout" />
+    <Trans message="Approved" />
   );
+
+  return (
+    <Badge
+      variant={
+        account.is_suspended || account.status === 'rejected'
+          ? 'destructive'
+          : approved && registered
+            ? 'positive'
+            : 'secondary'
+      }
+    >
+      {label}
+    </Badge>
+  );
+}
+
+function AccountAvailability({account}: {account: Account}) {
+  const approved = account.status === 'approved';
+  const registered = account.provider_registration_status === 'registered';
+  const available =
+    account.checkout_eligible &&
+    approved &&
+    registered &&
+    account.is_active &&
+    !account.is_suspended;
 
   const explanation = account.is_suspended ? (
     <Trans message="Contact support about this suspended account." />
@@ -126,24 +155,27 @@ function AccountAvailability({account}: {account: Account}) {
     <Trans message="Your account cannot accept sales right now. Contact support." />
   ) : !available ? (
     <Trans message="This account is currently unavailable at checkout. Contact support for help." />
-  ) : null;
+  ) : (
+    <Trans message="Buyers can use this account for direct payment at checkout." />
+  );
 
   return (
-    <div className="flex flex-col items-start gap-1.5 border-t border-border pt-3">
-      <Badge
-        variant={
-          available
-            ? 'positive'
-            : account.is_suspended || account.status === 'rejected'
-              ? 'destructive'
-              : 'secondary'
-        }
-      >
-        {label}
-      </Badge>
-      {explanation && (
-        <p className="text-sm leading-5 text-muted-foreground">{explanation}</p>
-      )}
+    <div className="rounded-card-xs bg-muted/40 p-3">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-xs font-medium text-muted-foreground">
+          <Trans message="Checkout" />
+        </span>
+        <Badge variant={available ? 'positive' : 'secondary'}>
+          {available ? (
+            <Trans message="Available" />
+          ) : (
+            <Trans message="Unavailable" />
+          )}
+        </Badge>
+      </div>
+      <p className="mt-1.5 text-sm leading-5 text-muted-foreground">
+        {explanation}
+      </p>
     </div>
   );
 }
@@ -163,22 +195,37 @@ function ReceivingAccountCard({
   onEdit: (account: Account) => void;
   onToggle: (account: Account) => void;
 }) {
+  const {trans} = useTrans();
   const canToggle =
     account.status === 'approved' &&
     account.provider_registration_status === 'registered' &&
     !account.is_suspended;
 
   return (
-    <Card.Root size="sm" className="rounded-card-sm">
+    <Card.Root size="sm" className="overflow-hidden rounded-card-sm">
       <Card.Content className="flex flex-col gap-3 p-4 sm:p-5">
         <div className="flex min-w-0 items-start gap-3">
-          <BankLogo code={account.provider} name={methodName} />
+          <span className="flex size-12 shrink-0 items-center justify-center rounded-card-sm border border-border/70 bg-background/80 p-1.5 backdrop-blur-sm">
+            <BankLogo
+              code={account.provider}
+              name={methodName}
+              compact
+              decorative
+            />
+          </span>
           <div className="min-w-0 flex-1">
-            <h2 className="text-sm font-semibold leading-5">{methodName}</h2>
-            <p className="mt-0.5 truncate text-sm text-muted-foreground">
-              {account.account_name}
-            </p>
-            <p className="mt-1 text-xs tabular-nums text-muted-foreground">
+            <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
+              <div className="min-w-0">
+                <h2 className="truncate text-sm font-semibold leading-5">
+                  {methodName}
+                </h2>
+                <p className="mt-0.5 truncate text-sm text-muted-foreground">
+                  {account.account_name}
+                </p>
+              </div>
+              <AccountLifecycleBadge account={account} />
+            </div>
+            <p className="mt-1.5 text-xs tabular-nums text-muted-foreground">
               <Trans
                 message="Account ending :digits"
                 values={{digits: account.account_ending}}
@@ -196,7 +243,7 @@ function ReceivingAccountCard({
         )}
 
         {!account.is_suspended && (
-          <div className="flex flex-wrap gap-2 border-t border-border pt-3">
+          <div className="flex items-center gap-2 border-t border-border pt-3">
             <Button
               variant="outline"
               size="sm"
@@ -207,24 +254,55 @@ function ReceivingAccountCard({
               <Trans message="Edit and resubmit" />
             </Button>
             {canToggle && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="min-h-10 flex-1 sm:flex-none"
-                disabled={busy || (!methodAvailable && !account.is_active)}
-                onClick={() => onToggle(account)}
-              >
-                {account.is_active ? (
-                  <Trans message="Deactivate" />
-                ) : (
-                  <Trans message="Activate" />
-                )}
-              </Button>
+              <Dropdown.Root>
+                <Dropdown.Trigger
+                  render={<Button variant="outline" size="icon-sm" />}
+                  aria-label={trans(message('Account actions'))}
+                  disabled={busy}
+                >
+                  <MoreHorizontalIcon />
+                </Dropdown.Trigger>
+                <Dropdown.Content align="end">
+                  <Dropdown.Item
+                    disabled={busy || (!methodAvailable && !account.is_active)}
+                    onClick={() => onToggle(account)}
+                  >
+                    <PowerIcon />
+                    {account.is_active ? (
+                      <Trans message="Deactivate" />
+                    ) : (
+                      <Trans message="Activate" />
+                    )}
+                  </Dropdown.Item>
+                </Dropdown.Content>
+              </Dropdown.Root>
             )}
           </div>
         )}
       </Card.Content>
     </Card.Root>
+  );
+}
+
+function ReceivingAccountsInfo() {
+  const {trans} = useTrans();
+
+  return (
+    <Popover.Root>
+      <Popover.Trigger
+        openOnHover
+        render={<Button variant="ghost" size="icon-sm" color="default" />}
+        className="shrink-0 text-muted-foreground"
+        aria-label={trans(message('About receiving accounts'))}
+      >
+        <InfoIcon />
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content align="end" className="max-w-xs">
+          <Trans message="Manage the accounts customers can pay directly at checkout." />
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   );
 }
 
@@ -345,12 +423,10 @@ export function Component() {
   return (
     <AccountSettingsPageLayout title={<Trans message="Receiving accounts" />}>
       <div className="flex flex-col gap-5">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="max-w-2xl text-sm leading-5 text-muted-foreground">
-            <Trans message="Manage the accounts customers can pay directly at checkout." />
-          </p>
+        <div className="flex items-center justify-end gap-2">
+          <ReceivingAccountsInfo />
           <Button
-            className="w-full shrink-0 sm:w-auto"
+            className="min-w-0 flex-1 sm:flex-none"
             disabled={loading || !providers.length || busy}
             onClick={openNewAccount}
           >
