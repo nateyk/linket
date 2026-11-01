@@ -86,14 +86,18 @@ it('shows loading placeholders while the sales request is pending', () => {
 it('renders API-provided verified revenue and recent verification statuses', async () => {
   fixture.sales.summary = {verified_sales_count: 1, verified_revenue_cents: 4200, pending_count: 1, manual_review_count: 1, currency: 'ETB'};
   fixture.sales.data.data = [
-    {uuid: 'paid', status: 'paid', gross_amount_cents: 4200, currency: 'ETB', product: {title: 'Paid workbook'}},
-    {uuid: 'review', status: 'manual_review', gross_amount_cents: 3300, currency: 'ETB', product: {title: 'Review workbook'}},
+    {uuid: 'paid', status: 'paid', gross_amount_cents: 4200, currency: 'ETB', buyer_name: 'Sample buyer', created_at: '2026-10-10T10:00:00Z', product: {title: 'Paid workbook'}},
+    {uuid: 'review', status: 'manual_review', gross_amount_cents: 3300, currency: 'ETB', buyer_name: null, created_at: '2026-10-11T10:00:00Z', product: {title: 'Review workbook'}},
   ];
   fixture.sales.sales_trend = [{date: '2026-10-10', amount_cents: 4200}];
   showDashboard();
   expect(await screen.findByText('4200 ETB cents')).toBeTruthy();
   expect(screen.getAllByText('Paid workbook').length).toBeGreaterThan(0);
+  expect(screen.getAllByText('Sample buyer').length).toBeGreaterThan(0);
+  expect(screen.getAllByText('Guest buyer').length).toBeGreaterThan(0);
+  expect(screen.getByText('Buyer')).toBeTruthy();
   expect(screen.getAllByText('Manual review needed').length).toBeGreaterThan(0);
+  expect(screen.getByRole('link', {name: 'View all orders'})).toBeTruthy();
   expect(screen.queryByText('No verified sales in this period')).toBeNull();
 });
 
