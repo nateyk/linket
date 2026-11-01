@@ -8,6 +8,7 @@ import {useWorkspaceStore} from '@common/workspace/workspace-store';
 import {StaticPageTitle} from '@common/seo/static-page-title';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {Badge} from '@shadcn/badge/badge';
+import {LinkButton} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
 import {Chart} from '@shadcn/chart/chart';
 import {formatMoney, getSiteCurrency} from '@ui/i18n/format-money';
@@ -28,6 +29,7 @@ import {FormattedNumber} from '@ui/i18n/formatted-number';
 import {useSelectedLocale} from '@ui/i18n/selected-locale';
 import {Trans} from '@ui/i18n/trans';
 import {
+  ArrowRightIcon,
   ChartNoAxesCombinedIcon,
   CircleAlertIcon,
   CircleDollarSignIcon,
@@ -58,7 +60,16 @@ type SalesResponse = {
   verification_allowance: {consumed: number; remaining: number; reserved: number; limit: number; is_pro: boolean};
 };
 
-type DashboardOrder = {uuid: string; status: string; gross_amount_cents: number; currency: string; created_at?: string; paid_at?: string; product?: {title: string} | null};
+type DashboardOrder = {
+  uuid: string;
+  status: string;
+  gross_amount_cents: number;
+  currency: string;
+  buyer_name?: string | null;
+  created_at?: string;
+  paid_at?: string;
+  product?: {title: string} | null;
+};
 
 export function Component() {
   const [dateRange, setDateRange] = useState<DateRangeValue>(() =>
@@ -454,8 +465,8 @@ function RecentOrders() {
   const orders = salesData?.data.data.slice(0, 5) ?? [];
 
   return (
-    <Card size="sm" className="min-w-0 lg:col-span-8">
-      <Card.Header>
+    <Card size="sm" className="min-w-0 gap-0 lg:col-span-8">
+      <Card.Header className="pb-4">
         <Card.Title>
           <Trans message="Recent orders" />
         </Card.Title>
@@ -463,26 +474,37 @@ function RecentOrders() {
           <Trans message="Latest digital product purchases" />
         </Card.Description>
         <Card.Action>
-          <Link to="/dashboard/orders" className="text-primary underline"><Trans message="View all orders" /></Link>
+          <LinkButton
+            to="/dashboard/orders"
+            variant="link"
+            size="sm"
+            className="h-auto px-0"
+          >
+            <Trans message="View all orders" />
+            <ArrowRightIcon data-icon="inline-end" aria-hidden="true" />
+          </LinkButton>
         </Card.Action>
       </Card.Header>
-      <Card.Content className="min-h-64 flex-1">
+      <Card.Content className="min-h-64 flex-1 border-t px-0">
         {isLoading ? (
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3 px-4 pt-4">
             {[...Array(5)].map((_, index) => (
-              <Skeleton key={index} className="h-10 w-full" />
+              <Skeleton key={index} className="h-14 w-full" />
             ))}
           </div>
         ) : isError ? (
           <SalesErrorState />
         ) : orders.length ? (
           <>
-            <div className="hidden overflow-x-auto md:block">
+            <div className="hidden overflow-x-auto px-4 md:block">
               <Table.Root>
                 <Table.Header>
                   <Table.Row>
                     <Table.Head>
                       <Trans message="Product" />
+                    </Table.Head>
+                    <Table.Head>
+                      <Trans message="Buyer" />
                     </Table.Head>
                     <Table.Head>
                       <Trans message="Status" />
@@ -498,10 +520,17 @@ function RecentOrders() {
                 <Table.Body>
                   {orders.map(order => (
                     <Table.Row key={order.uuid}>
-                      <Table.Cell className="max-w-56 truncate font-medium">
-                        {order.product?.title ?? (
-                          <Trans message="Digital product" />
-                        )}
+                      <Table.Cell className="max-w-64">
+                        <span className="block truncate font-medium">
+                          {order.product?.title ?? (
+                            <Trans message="Digital product" />
+                          )}
+                        </span>
+                      </Table.Cell>
+                      <Table.Cell className="max-w-44">
+                        <span className="block truncate text-muted-foreground">
+                          {order.buyer_name || <Trans message="Guest buyer" />}
+                        </span>
                       </Table.Cell>
                       <Table.Cell>
                         <OrderStatusBadge status={order.status} />
@@ -509,7 +538,7 @@ function RecentOrders() {
                       <Table.Cell className="text-muted-foreground">
                         <OrderDate order={order} />
                       </Table.Cell>
-                      <Table.Cell className="text-end tabular-nums">
+                      <Table.Cell className="text-end font-medium tabular-nums">
                         <FormattedCurrency
                           valueInCents={order.gross_amount_cents}
                           currency={order.currency}
@@ -520,46 +549,56 @@ function RecentOrders() {
                 </Table.Body>
               </Table.Root>
             </div>
-            <div className="flex flex-col gap-4 md:hidden">
+
+            <ol
+              className="divide-y md:hidden"
+              aria-label="Recent orders"
+            >
               {orders.map(order => (
-                <article
+                <li
                   key={order.uuid}
-                  className="flex min-w-0 items-center justify-between gap-3"
+                  className="grid min-w-0 grid-cols-[2.5rem_minmax(0,1fr)_auto] gap-x-3 gap-y-1 px-4 py-3"
                 >
-                  <div className="min-w-0">
-                    <p className="truncate font-medium">
-                      {order.product?.title ?? (
-                        <Trans message="Digital product" />
-                      )}
-                    </p>
-                    <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-                      <OrderStatusBadge status={order.status} />
-                      <OrderDate order={order} />
-                    </div>
+                  <span className="row-span-3 flex size-10 items-center justify-center self-start rounded-card-xs bg-muted text-muted-foreground">
+                    <ReceiptTextIcon className="size-4" aria-hidden="true" />
+                  </span>
+
+                  <p className="min-w-0 truncate font-medium">
+                    {order.product?.title ?? (
+                      <Trans message="Digital product" />
+                    )}
+                  </p>
+                  <p className="shrink-0 text-end font-medium tabular-nums">
+                    <FormattedCurrency
+                      valueInCents={order.gross_amount_cents}
+                      currency={order.currency}
+                    />
+                  </p>
+
+                  <p className="min-w-0 truncate text-xs text-muted-foreground">
+                    {order.buyer_name || <Trans message="Guest buyer" />}
+                  </p>
+                  <span className="text-end text-xs text-muted-foreground">
+                    <OrderDate order={order} />
+                  </span>
+
+                  <div className="col-span-2 flex min-w-0 items-center pt-1">
+                    <OrderStatusBadge status={order.status} />
                   </div>
-                  <div className="shrink-0 text-end">
-                    <p className="font-medium tabular-nums">
-                      <FormattedCurrency
-                        valueInCents={order.gross_amount_cents}
-                        currency={order.currency}
-                      />
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      <Trans message="Amount" />
-                    </p>
-                  </div>
-                </article>
+                </li>
               ))}
-            </div>
+            </ol>
           </>
         ) : (
-          <OverviewEmptyState
-            icon={ReceiptTextIcon}
-            title={<Trans message="No orders yet" />}
-            description={
-              <Trans message="Your latest digital product orders will appear here." />
-            }
-          />
+          <div className="px-4">
+            <OverviewEmptyState
+              icon={ReceiptTextIcon}
+              title={<Trans message="No orders yet" />}
+              description={
+                <Trans message="Your latest digital product orders will appear here." />
+              }
+            />
+          </div>
         )}
       </Card.Content>
     </Card>
