@@ -303,14 +303,21 @@ describe('preview sheet below lg (A-19)', () => {
     store.profileConfig = null;
   });
 
-  test('the stacked panel hides below lg and a floating Preview button takes over', () => {
+  test('the stacked panel hides below lg and a footer Preview action takes over', () => {
     const {container} = render(<LivePreview />);
 
     // The panel stays mounted (so its frame keeps its state) but is hidden
-    // below lg, where a fixed trigger opens the sheet instead.
+    // below lg. The trigger belongs to a reserved footer row instead of
+    // floating over editor content or the app navigation.
     expect(panelOf(container).className).toContain('max-lg:hidden');
     const trigger = screen.getByRole('button', {name: 'Preview'});
-    expect(trigger.className).toContain('lg:hidden');
+    const footer = trigger.parentElement as HTMLElement;
+    expect(footer.className).toContain('sticky');
+    expect(footer.className).toContain('bottom-0');
+    expect(footer.className).toContain('border-t');
+    expect(footer.className).toContain('lg:hidden');
+    expect(trigger.className).toContain('w-full');
+    expect(trigger.className).not.toContain('fixed');
   });
 
   test('the sheet is a titled modal that lazily mounts its own frame', async () => {
