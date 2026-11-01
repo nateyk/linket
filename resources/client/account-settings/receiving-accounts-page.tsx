@@ -508,6 +508,7 @@ export function Component() {
                   <Input
                     bindToHookForm={false}
                     id="receiving-number"
+                    aria-label="Account or wallet number"
                     className="h-11"
                     inputMode="tel"
                     autoComplete="off"
@@ -553,6 +554,7 @@ export function Component() {
                   <Input
                     bindToHookForm={false}
                     id="receiving-proof"
+                    aria-label="Ownership evidence"
                     type="file"
                     accept=".pdf,.jpg,.jpeg,.png,.webp"
                     className="peer sr-only"
