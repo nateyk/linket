@@ -48,6 +48,6 @@ test('layout shell tracks the dynamic viewport without clipping positioned child
   );
   expect(root).toBeTruthy();
   expect(root!.className).toContain('h-screen');
-  expect(root!.className).toContain('h-dvh');
+  expect(root!.className).toContain('supports-[height:100dvh]:h-dvh');
   expect(root!.className).not.toContain('overflow-hidden');
 });
