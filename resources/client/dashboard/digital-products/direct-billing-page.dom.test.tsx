@@ -111,6 +111,17 @@ vi.mock('@shadcn/forms/input/input', () => ({
     bindToHookForm?: boolean;
   }) => <input {...props} />,
 }));
+vi.mock('@shadcn/popover/popover', () => ({
+  Popover: {
+    Root: ({children}: {children: React.ReactNode}) => <div>{children}</div>,
+    Trigger: ({render, children}: {render?: React.ReactNode; children?: React.ReactNode}) => <>{render ?? children}</>,
+    Portal: ({children}: {children: React.ReactNode}) => <>{children}</>,
+    Content: ({children}: {children: React.ReactNode}) => <div>{children}</div>,
+    Header: 'div',
+    Title: 'h3',
+  },
+}));
+
 vi.mock('@shadcn/forms/select/select', () => ({
   Select: {
     Root: ({
