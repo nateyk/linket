@@ -7,6 +7,7 @@ import {Card} from '@shadcn/card/card';
 import {Dialog} from '@shadcn/dialog/dialog';
 import {Empty} from '@shadcn/empty/empty';
 import {Input} from '@shadcn/forms/input/input';
+import {Item} from '@shadcn/item/item';
 import {Popover} from '@shadcn/popover/popover';
 import {Select} from '@shadcn/forms/select/select';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
@@ -370,9 +371,16 @@ export function Component() {
             <Tabs.Panel value="orders" className="flex flex-col gap-4">
               <div className="space-y-3">
                 <div className="space-y-1">
-                  <h2 className="text-base font-medium"><Trans message="Orders" /></h2>
+                  <h2 className="text-base font-medium">
+                    <Trans message="Orders" />
+                    {ordersPagination.total > 0 ? (
+                      <span className="ms-1 text-muted-foreground tabular-nums">
+                        ({ordersPagination.total})
+                      </span>
+                    ) : null}
+                  </h2>
                   <p className="text-sm text-muted-foreground">
-                    <Trans message="Payments received for your products. Orders are only marked as paid after the payment provider verifies them." />
+                    <Trans message="Track buyer payments and delivery. Only verified payments count as sales." />
                   </p>
                 </div>
                 <OrderFilters
@@ -522,67 +530,84 @@ export function Component() {
 
 function SummaryCards({summary}: {summary?: Summary}) {
   return (
-    <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
-      <SummaryCard
-        label={<Trans message="Verified sales" />}
-        value={
-          summary ? (
-            <FormattedCurrency
-              valueInCents={summary.verified_revenue_cents}
-              currency={summary.currency}
-            />
-          ) : (
-            '—'
-          )
-        }
-        detail={
-          summary ? (
-            <Trans
-              message=":count verified orders"
-              values={{count: summary.verified_sales_count}}
-            />
-          ) : null
-        }
-      />
-      <SummaryCard
-        label={<Trans message="Pending orders" />}
-        value={summary?.pending_count ?? '—'}
-        detail={<Trans message="Awaiting verification" />}
-      />
-      <SummaryCard
-        label={<Trans message="Manual review" />}
-        value={summary?.manual_review_count ?? '—'}
-        detail={<Trans message="Support review" />}
-        tone={summary?.manual_review_count ? 'warning' : undefined}
-      />
-      <SummaryCard
-        label={<Trans message="Rejected payments" />}
-        value={summary?.rejected_count ?? '—'}
-        detail={<Trans message="Excluded from sales" />}
-      />
-    </div>
+    <Card.Root size="sm" className="gap-0 rounded-card-sm py-0">
+      <Card.Content className="grid grid-cols-2 p-0 sm:grid-cols-4">
+        <SummaryMetric
+          className="border-e border-b sm:border-b-0"
+          label={<Trans message="Verified sales" />}
+          value={
+            summary ? (
+              <FormattedCurrency
+                valueInCents={summary.verified_revenue_cents}
+                currency={summary.currency}
+              />
+            ) : (
+              '—'
+            )
+          }
+          detail={
+            summary ? (
+              <Trans
+                message=":count verified orders"
+                values={{count: summary.verified_sales_count}}
+              />
+            ) : null
+          }
+        />
+        <SummaryMetric
+          className="border-b sm:border-e sm:border-b-0"
+          label={<Trans message="Pending orders" />}
+          value={summary?.pending_count ?? '—'}
+          detail={<Trans message="Awaiting verification" />}
+        />
+        <SummaryMetric
+          className="border-e"
+          label={<Trans message="Manual review" />}
+          value={summary?.manual_review_count ?? '—'}
+          detail={<Trans message="Support review" />}
+          tone={summary?.manual_review_count ? 'warning' : undefined}
+        />
+        <SummaryMetric
+          label={<Trans message="Rejected payments" />}
+          value={summary?.rejected_count ?? '—'}
+          detail={<Trans message="Excluded from sales" />}
+        />
+      </Card.Content>
+    </Card.Root>
   );
 }
 
-function SummaryCard({
+function SummaryMetric({
+  className,
   label,
   value,
   detail,
   tone,
 }: {
+  className?: string;
   label: ReactNode;
   value: ReactNode;
   detail: ReactNode;
   tone?: 'warning';
 }) {
   return (
-    <Card.Root size="sm" className="rounded-card-sm">
-      <Card.Content className="flex min-w-0 flex-col gap-1 p-3 sm:gap-1.5 sm:p-4">
-        <p className={tone === 'warning' ? 'text-sm text-warning' : 'text-sm text-muted-foreground'}>{label}</p>
-        <p className="text-xl font-semibold tracking-tight tabular-nums">{value}</p>
-        <p className="text-xs leading-snug text-muted-foreground">{detail}</p>
-      </Card.Content>
-    </Card.Root>
+    <div className={`min-w-0 p-4 ${className ?? ''}`}>
+      <p
+        className={
+          tone === 'warning'
+            ? 'text-sm text-warning'
+            : 'text-sm text-muted-foreground'
+        }
+      >
+        {label}
+      </p>
+      <p className="mt-1 text-xl font-semibold tracking-tight tabular-nums">
+        {value}
+      </p>
+      <p className="mt-1 text-xs leading-snug text-muted-foreground">
+        {detail}
+      </p>
+    </div>
   );
 }
 
@@ -616,7 +641,7 @@ function OrderFilters({
           bindToHookForm={false}
           className="ps-9"
           aria-label="Search orders"
-          placeholder="Search orders"
+          placeholder="Product, buyer or reference"
           value={search}
           onChange={event => onSearchChange(event.target.value)}
         />
@@ -818,89 +843,133 @@ function OrdersTable({
   }
 
   return (
-    <div className="min-w-0 md:overflow-x-auto">
-      <Table.Root className="block w-full md:table">
-        <Table.Header className="hidden md:table-header-group">
-          <Table.Row>
-            <Table.Head className="ps-6">
-              <Trans message="Product" />
-            </Table.Head>
-            <Table.Head>
-              <Trans message="Buyer" />
-            </Table.Head>
-            <Table.Head className="text-end">
-              <Trans message="Amount" />
-            </Table.Head>
-            <Table.Head className="hidden md:table-cell">
-              <Trans message="Date" />
-            </Table.Head>
-            <Table.Head className="hidden lg:table-cell">
-              <Trans message="Payment method" />
-            </Table.Head>
-            <Table.Head>
-              <Trans message="Status" />
-            </Table.Head>
-            <Table.Head className="pe-6">
-              <span className="sr-only">
-                <Trans message="Actions" />
-              </span>
-            </Table.Head>
-          </Table.Row>
-        </Table.Header>
-        <Table.Body className="block md:table-row-group">
-          {orders.map(order => (
-            <Table.Row key={order.uuid} className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-2 px-3 py-3 md:table-row md:p-0">
-              <Table.Cell className="col-start-1 row-start-1 block min-w-0 max-w-none whitespace-normal p-0 md:table-cell md:max-w-52 md:whitespace-nowrap md:ps-6">
-                <span className="block line-clamp-2 font-medium md:truncate">
-                  {order.product?.title ?? (
-                    <Trans message="Deleted product" />
-                  )}
+    <>
+      <div className="divide-y md:hidden" role="list" aria-label="Orders">
+        {orders.map(order => (
+          <Item.Root
+            key={order.uuid}
+            size="sm"
+            render={<button type="button" />}
+            className="rounded-none border-0 px-4 py-3 text-start hover:bg-muted/40"
+            onClick={() => onView(order.uuid)}
+          >
+            <Item.Media
+              align="center"
+              variant="icon"
+              className="size-10 rounded-card-xs bg-muted text-muted-foreground"
+            >
+              <ReceiptTextIcon />
+            </Item.Media>
+            <Item.Content className="gap-1.5">
+              <Item.Row className="items-start justify-between gap-3">
+                <Item.Title className="min-w-0 flex-1">
+                  {order.product?.title ?? <Trans message="Deleted product" />}
+                </Item.Title>
+                <span className="shrink-0 font-medium tabular-nums">
+                  <FormattedCurrency
+                    valueInCents={order.gross_amount_cents}
+                    currency={order.currency ?? 'ETB'}
+                  />
                 </span>
-                <span className="hidden truncate text-xs text-muted-foreground md:block">
-                  {order.transaction_reference ?? order.uuid}
+              </Item.Row>
+              <Item.Row className="justify-between text-xs text-muted-foreground">
+                <span className="min-w-0 truncate">
+                  {order.buyer_name || <Trans message="Guest buyer" />}
                 </span>
-              </Table.Cell>
-              <Table.Cell className="col-start-1 row-start-2 block min-w-0 p-0 text-xs text-muted-foreground md:table-cell md:max-w-44 md:p-3 md:text-foreground">
-                <span className="block truncate">
-                  {order.buyer_name || (
-                    <span className="text-muted-foreground">
-                      <Trans message="Guest buyer" />
-                    </span>
-                  )}
+                <span className="shrink-0">
+                  <FormattedDate preset="short" date={order.created_at} />
                 </span>
-              </Table.Cell>
-              <Table.Cell className="col-start-2 row-start-1 block p-0 text-end font-medium tabular-nums md:table-cell md:p-3">
-                <FormattedCurrency
-                  valueInCents={order.gross_amount_cents}
-                  currency={order.currency ?? 'ETB'}
-                />
-              </Table.Cell>
-              <Table.Cell className="col-start-2 row-start-2 block p-0 text-end text-xs text-muted-foreground md:table-cell md:p-3 md:text-start md:text-sm">
-                <FormattedDate preset="short" date={order.created_at} />
-              </Table.Cell>
-              <Table.Cell className="hidden lg:table-cell">
-                <PaymentMethod order={order} />
-              </Table.Cell>
-              <Table.Cell className="col-start-1 row-start-3 block min-w-0 p-0 md:table-cell md:p-3">
-                <span className="sr-only md:hidden"><Trans message="Status: " /></span>
+              </Item.Row>
+              <Item.Row>
                 <OrderStatusBadge status={order.status} />
-              </Table.Cell>
-              <Table.Cell className="col-start-2 row-start-3 block p-0 text-end md:table-cell md:p-3 md:pe-6">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="min-h-10 md:min-h-0"
-                  onClick={() => onView(order.uuid)}
-                >
-                  <EyeIcon />
-                  <Trans message="View details" />
-                </Button>
-              </Table.Cell>
+              </Item.Row>
+            </Item.Content>
+          </Item.Root>
+        ))}
+      </div>
+
+      <div className="hidden min-w-0 overflow-x-auto md:block">
+        <Table.Root>
+          <Table.Header>
+            <Table.Row>
+              <Table.Head className="ps-6">
+                <Trans message="Product" />
+              </Table.Head>
+              <Table.Head>
+                <Trans message="Buyer" />
+              </Table.Head>
+              <Table.Head className="text-end">
+                <Trans message="Amount" />
+              </Table.Head>
+              <Table.Head>
+                <Trans message="Date" />
+              </Table.Head>
+              <Table.Head className="hidden lg:table-cell">
+                <Trans message="Payment method" />
+              </Table.Head>
+              <Table.Head>
+                <Trans message="Status" />
+              </Table.Head>
+              <Table.Head className="pe-6">
+                <span className="sr-only">
+                  <Trans message="Actions" />
+                </span>
+              </Table.Head>
             </Table.Row>
-          ))}
-        </Table.Body>
-      </Table.Root>
-    </div>
+          </Table.Header>
+          <Table.Body>
+            {orders.map(order => (
+              <Table.Row key={order.uuid}>
+                <Table.Cell className="max-w-52 ps-6">
+                  <span className="block truncate font-medium">
+                    {order.product?.title ?? (
+                      <Trans message="Deleted product" />
+                    )}
+                  </span>
+                  <span className="block truncate text-xs text-muted-foreground">
+                    {order.transaction_reference ?? order.uuid}
+                  </span>
+                </Table.Cell>
+                <Table.Cell className="max-w-44">
+                  <span className="block truncate">
+                    {order.buyer_name || (
+                      <span className="text-muted-foreground">
+                        <Trans message="Guest buyer" />
+                      </span>
+                    )}
+                  </span>
+                </Table.Cell>
+                <Table.Cell className="text-end font-medium tabular-nums">
+                  <FormattedCurrency
+                    valueInCents={order.gross_amount_cents}
+                    currency={order.currency ?? 'ETB'}
+                  />
+                </Table.Cell>
+                <Table.Cell className="text-muted-foreground">
+                  <FormattedDate preset="short" date={order.created_at} />
+                </Table.Cell>
+                <Table.Cell className="hidden lg:table-cell">
+                  <PaymentMethod order={order} />
+                </Table.Cell>
+                <Table.Cell>
+                  <OrderStatusBadge status={order.status} />
+                </Table.Cell>
+                <Table.Cell className="pe-6 text-end">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onView(order.uuid)}
+                  >
+                    <EyeIcon />
+                    <Trans message="View details" />
+                  </Button>
+                </Table.Cell>
+              </Table.Row>
+            ))}
+          </Table.Body>
+        </Table.Root>
+      </div>
+    </>
   );
 }
 
