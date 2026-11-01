@@ -16,6 +16,7 @@ return new class extends Migration {
             $table->string('language_code', 16)->nullable();
             $table->timestamp('connected_at');
             $table->timestamp('last_seen_at')->nullable();
+            $table->timestamp('revoked_at')->nullable();
             $table->timestamps();
 
             $table->foreign('user_id')
