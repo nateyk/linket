@@ -49,6 +49,27 @@ vi.mock('@shadcn/card/card', () => ({
     Footer: 'footer',
   },
 }));
+vi.mock('@shadcn/item/item', () => ({
+  Item: {
+    Root: ({
+      render: _render,
+      variant: _variant,
+      size: _size,
+      ...props
+    }: React.ComponentProps<'div'> & {
+      render?: React.ReactNode;
+      variant?: string;
+      size?: string;
+    }) => <div {...props} />,
+    Media: 'div',
+    Content: 'div',
+    Row: 'div',
+    Title: 'div',
+    Description: 'p',
+    Actions: 'div',
+    Group: 'div',
+  },
+}));
 vi.mock('@shadcn/badge/badge', () => ({
   Badge: ({variant: _variant, className, ...props}: React.ComponentProps<'span'> & {variant?: string}) => (
     <span className={className} {...props} />
@@ -279,6 +300,8 @@ it('shows summary and orders, and sends status, search and page filters to the s
   expect(await screen.findByText('Workbook')).toBeTruthy();
   expect(screen.getByText('25000 ETB')).toBeTruthy();
   expect(screen.getByText('Verified sales')).toBeTruthy();
+  expect(screen.getByRole('list', {name: 'Orders'})).toBeTruthy();
+  expect(screen.getByText('Track buyer payments and delivery. Only verified payments count as sales.')).toBeTruthy();
 
   fireEvent.change(screen.getByLabelText('Status'), {
     target: {value: 'manual_review'},
@@ -378,6 +401,7 @@ it('opens the read-only order detail with masked account and delivery state', as
   fireEvent.click(await screen.findByRole('button', {name: 'View details'}));
 
   expect(await screen.findByText('Order details')).toBeTruthy();
+  expect(screen.getByText('Payment information')).toBeTruthy();
   expect(screen.getAllByText('REF-ONE').length).toBeGreaterThan(0);
   expect(screen.getAllByText('•••• 6789')).toHaveLength(2);
   expect(screen.getByText('buyer@example.test', {exact: false})).toBeTruthy();
