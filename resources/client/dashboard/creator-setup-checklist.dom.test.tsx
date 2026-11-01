@@ -57,7 +57,9 @@ it('uses the shared card, progress and collapsible primitives for setup progress
 
   expect(await screen.findByText('4 of 7 setup steps complete')).toBeTruthy();
   expect(document.querySelector('[data-slot="card"]')).toBeTruthy();
-  const progress = screen.getByRole('progressbar', {name: 'Creator setup progress'});
+  const progress = screen.getByRole('progressbar', {
+    name: '4 of 7 setup steps complete',
+  });
   expect(progress.getAttribute('aria-valuenow')).toBe('57');
   expect(document.querySelector('[data-slot="collapsible-trigger"]')).toBeTruthy();
   expect(screen.queryByRole('button', {name: 'Remove setup checklist from dashboard'})).toBeNull();
