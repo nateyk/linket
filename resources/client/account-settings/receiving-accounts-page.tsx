@@ -164,10 +164,10 @@ function AccountAvailability({account}: {account: Account}) {
   );
 
   return (
-    <div className="rounded-card-xs bg-muted/40 p-3">
+    <div className="border-t border-border pt-3">
       <div className="flex items-center justify-between gap-3">
-        <span className="text-xs font-medium text-muted-foreground">
-          <Trans message="Checkout" />
+        <span className="text-sm font-medium">
+          <Trans message="Checkout status" />
         </span>
         <Badge variant={available ? 'positive' : 'secondary'}>
           {available ? (
@@ -177,7 +177,7 @@ function AccountAvailability({account}: {account: Account}) {
           )}
         </Badge>
       </div>
-      <p className="mt-1.5 text-sm leading-5 text-muted-foreground">
+      <p className="mt-1 text-sm leading-5 text-muted-foreground">
         {explanation}
       </p>
     </div>
@@ -207,7 +207,7 @@ function ReceivingAccountCard({
 
   return (
     <Card.Root size="sm" className="overflow-hidden rounded-card-sm">
-      <Card.Content className="flex flex-col gap-3 p-4 sm:p-5">
+      <Card.Content className="flex flex-col gap-3 p-4">
         <div className="flex min-w-0 items-start gap-3">
           <BankLogo
             code={account.provider}
@@ -232,6 +232,12 @@ function ReceivingAccountCard({
                 message="Account ending :digits"
                 values={{digits: account.account_ending}}
               />
+              <span aria-hidden="true"> · </span>
+              {account.is_active ? (
+                <Trans message="Active" />
+              ) : (
+                <Trans message="Inactive" />
+              )}
             </p>
           </div>
         </div>
@@ -249,16 +255,16 @@ function ReceivingAccountCard({
             <Button
               variant="outline"
               size="sm"
-              className="min-h-10 flex-1 sm:flex-none"
               disabled={busy || !methodAvailable}
               onClick={() => onEdit(account)}
             >
-              <Trans message="Edit and resubmit" />
+              <Trans message="Edit account" />
             </Button>
             {canToggle && (
               <Dropdown.Root>
                 <Dropdown.Trigger
-                  render={<Button variant="outline" size="icon-sm" />}
+                  render={<Button variant="ghost" size="icon-sm" />}
+                  className="ms-auto"
                   aria-label={trans(message('Account actions'))}
                   disabled={busy}
                 >
@@ -301,7 +307,7 @@ function ReceivingAccountsInfo() {
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content align="end" className="max-w-xs">
-          <Trans message="Manage the accounts customers can pay directly at checkout." />
+          <Trans message="Accounts customers can pay directly at checkout." />
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>
@@ -423,12 +429,14 @@ export function Component() {
   };
 
   return (
-    <AccountSettingsPageLayout title={<Trans message="Receiving accounts" />}>
+    <AccountSettingsPageLayout
+      title={<Trans message="Receiving accounts" />}
+      headerRightContent={<ReceivingAccountsInfo />}
+    >
       <div className="flex flex-col gap-5">
-        <div className="flex items-center justify-end gap-2">
-          <ReceivingAccountsInfo />
+        <div className="flex justify-end">
           <Button
-            className="min-w-0 flex-1 sm:flex-none"
+            className="w-full sm:w-auto"
             disabled={loading || !providers.length || busy}
             onClick={openNewAccount}
           >
