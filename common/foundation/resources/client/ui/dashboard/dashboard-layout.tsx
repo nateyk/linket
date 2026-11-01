@@ -46,7 +46,7 @@ function Root({
             // No overflow-hidden: the shell must not clip positioned children
           // inside it (sr-only anchors, meter helpers). The scroll regions
           // below own their own overflow.
-          'group/dashboard-layout relative isolate flex h-screen flex-col bg-background',
+          'group/dashboard-layout relative isolate flex h-screen supports-[height:100dvh]:h-dvh flex-col bg-background',
             !isMobileMode &&
               'has-data-[variant=floating]:gap-2 has-data-[variant=floating]:p-2 light:has-data-[variant=floating]:bg-muted light:has-data-[variant=inset]:bg-muted',
             className,
