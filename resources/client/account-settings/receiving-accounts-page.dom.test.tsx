@@ -8,7 +8,20 @@ vi.mock('@common/http/query-client', () => ({apiClient: api}));
 vi.mock('@ui/i18n/trans', () => ({Trans: ({message}: {message: string}) => message}));
 vi.mock('@ui/i18n/message', () => ({message: (message: string) => ({message})}));
 vi.mock('@ui/i18n/use-trans', () => ({useTrans: () => ({trans: ({message}: {message: string}) => message})}));
-vi.mock('@app/account-settings/account-settings-page-layout', () => ({AccountSettingsPageLayout: ({children}: {children: React.ReactNode}) => <main>{children}</main>}));
+vi.mock('@app/account-settings/account-settings-page-layout', () => ({
+  AccountSettingsPageLayout: ({
+    children,
+    headerRightContent,
+  }: {
+    children: React.ReactNode;
+    headerRightContent?: React.ReactNode;
+  }) => (
+    <main>
+      <header>{headerRightContent}</header>
+      {children}
+    </main>
+  ),
+}));
 vi.mock('@shadcn/button/button', () => ({Button: 'button'}));
 vi.mock('@shadcn/forms/input/input', () => ({Input: ({bindToHookForm: _ignored, ...props}: Record<string, unknown>) => <input {...props} />}));
 vi.mock('@shadcn/spinner/spinner', () => ({Spinner: () => <span>Loading</span>}));
@@ -38,7 +51,7 @@ it('lists, creates, resubmits and changes activation through the page', async ()
   fireEvent.click(screen.getByRole('button', {name: 'Submit account for review'}));
   await waitFor(() => expect(api.post).toHaveBeenCalledWith('/api/v1/storefront/payment-methods', expect.any(FormData)));
   expect((api.post.mock.calls[0][1] as FormData).get('account_number')).toBe('0912345678');
-  fireEvent.click(screen.getByRole('button', {name: 'Edit and resubmit'}));
+  fireEvent.click(screen.getByRole('button', {name: 'Edit account'}));
   fireEvent.change(screen.getByLabelText('Account or wallet number'), {target: {value: '0912345679'}});
   fireEvent.change(screen.getByLabelText('Ownership evidence'), {target: {files: [new File(['proof'], 'proof.pdf', {type: 'application/pdf'})]}});
   fireEvent.click(screen.getByRole('button', {name: 'Submit account for review'}));
@@ -69,13 +82,13 @@ it('moves the checkout explanation behind the compact info control', async () =>
   render(<Component />);
 
   expect(
-    screen.queryByText('Manage the accounts customers can pay directly at checkout.'),
+    screen.queryByText('Accounts customers can pay directly at checkout.'),
   ).toBeNull();
   fireEvent.click(
     await screen.findByRole('button', {name: 'About receiving accounts'}),
   );
   expect(
-    await screen.findByText('Manage the accounts customers can pay directly at checkout.'),
+    await screen.findByText('Accounts customers can pay directly at checkout.'),
   ).toBeTruthy();
 });
 
@@ -95,7 +108,7 @@ it('keeps suspended accounts visible without activation or resubmission actions'
   expect((await screen.findAllByText('Suspended')).length).toBeGreaterThan(0);
   expect(screen.getByText('Awash')).toBeTruthy();
   expect(screen.queryByRole('button', {name: 'Account actions'})).toBeNull();
-  expect(screen.queryByRole('button', {name: 'Edit and resubmit'})).toBeNull();
+  expect(screen.queryByRole('button', {name: 'Edit account'})).toBeNull();
 });
 
 it('shows checkout eligibility from the account API', async () => {
@@ -107,6 +120,7 @@ it('shows checkout eligibility from the account API', async () => {
   expect(await screen.findByText('Available')).toBeTruthy();
   expect(screen.getByText('Unavailable')).toBeTruthy();
   expect(screen.getAllByText('Approved').length).toBe(2);
+  expect(screen.getAllByText('Checkout status').length).toBe(2);
 });
 
 it('keeps readable bank names and logo rendering in the selected-value implementation', async () => {

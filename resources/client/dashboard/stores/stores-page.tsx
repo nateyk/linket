@@ -15,14 +15,16 @@ import {useTableQueryState} from '@shadcn/table/utils/use-table-query-state';
 import {Tooltip} from '@shadcn/tooltip/tooltip';
 import {useSuspenseQuery} from '@tanstack/react-query';
 import {FormattedNumber} from '@ui/i18n/formatted-number';
-import {FormattedRelativeTime} from '@ui/i18n/formatted-relative-time';
 import {Trans} from '@ui/i18n/trans';
+import useClipboard from '@ui/utils/hooks/use-clipboard';
+import {toast} from '@shadcn/toast/toast';
 import {ignoreEventsFromPortal} from '@ui/utils/dom/ignore-events-from-portal';
 import {removeProtocol} from '@ui/utils/urls/remove-protocol';
 import {
   BarChart3Icon,
-  Clock3Icon,
+  CopyIcon,
   EllipsisVerticalIcon,
+  ExternalLinkIcon,
   InfoIcon,
   LayoutPanelTop,
   MousePointerClick,
@@ -77,10 +79,11 @@ export function Component() {
             <div className="mx-auto flex w-full max-w-5xl flex-col gap-3">
               <div className="flex items-center justify-between gap-4 px-1">
                 <p className="text-sm font-medium">
-                  <Trans
-                    message=":count profiles"
-                    values={{count: items.length}}
-                  />
+                  {items.length === 1 ? (
+                    <Trans message=":count profile" values={{count: items.length}} />
+                  ) : (
+                    <Trans message=":count profiles" values={{count: items.length}} />
+                  )}
                 </p>
                 <p className="text-xs text-muted-foreground">
                   <Trans message="Select a profile to edit it" />
@@ -146,13 +149,20 @@ type BiolinkCardProps = {
 };
 
 function BiolinkCard({biolink, onClick, onInsights}: BiolinkCardProps) {
+  const [, copyToClipboard] = useClipboard(biolink.short_url);
+
+  const copyProfileLink = () => {
+    copyToClipboard();
+    toast.success(<Trans message="Copied to clipboard" />);
+  };
+
   return (
     <Item.Root
       variant="outline"
       size="sm"
       role="button"
       tabIndex={0}
-      className="cursor-pointer bg-card transition-[border-color,background-color,box-shadow] hover:border-foreground/20 hover:bg-muted/30 hover:shadow-sm"
+      className="cursor-pointer bg-card transition-[border-color,background-color] hover:border-foreground/20 hover:bg-muted/30"
       onKeyDown={event => {
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
@@ -187,27 +197,38 @@ function BiolinkCard({biolink, onClick, onInsights}: BiolinkCardProps) {
           </div>
         </Item.Row>
       </Item.Content>
-      <Item.Actions className="basis-full justify-between gap-3 border-t pt-2.5 sm:ml-6 sm:basis-auto sm:justify-end sm:border-0 sm:pt-0">
-        <span className="flex items-center gap-1.5 text-xs whitespace-nowrap text-muted-foreground">
+
+      <Item.Actions className="basis-full gap-2 border-t pt-2.5 sm:ms-6 sm:basis-auto sm:border-0 sm:pt-0">
+        <span className="me-auto flex items-center gap-1.5 text-xs whitespace-nowrap text-muted-foreground sm:me-2">
           <MousePointerClick />
           <FormattedNumber value={biolink.clicks_count ?? 0} />
           <Trans message="clicks" />
         </span>
-        <span className="flex items-center gap-1.5 text-xs whitespace-nowrap text-muted-foreground">
-          <Clock3Icon />
-          <FormattedRelativeTime date={biolink.created_at} style="narrow" />
-        </span>
+
+        <Button variant="outline" size="sm" onClick={onClick}>
+          <PencilIcon />
+          <Trans message="Edit" />
+        </Button>
+
         <Dropdown.Root>
           <Dropdown.Trigger
-            render={<Button variant="outline" size="icon-sm" />}
+            render={<Button variant="ghost" size="icon-sm" />}
             aria-label="Profile actions"
           >
             <EllipsisVerticalIcon />
           </Dropdown.Trigger>
           <Dropdown.Content align="end">
-            <Dropdown.Item onClick={onClick}>
-              <PencilIcon />
-              <Trans message="Edit" />
+            <Dropdown.Item
+              onClick={() =>
+                window.open(biolink.short_url, '_blank', 'noopener,noreferrer')
+              }
+            >
+              <ExternalLinkIcon />
+              <Trans message="Open profile" />
+            </Dropdown.Item>
+            <Dropdown.Item onClick={copyProfileLink}>
+              <CopyIcon />
+              <Trans message="Copy link" />
             </Dropdown.Item>
             <Dropdown.Item onClick={onInsights}>
               <BarChart3Icon />
