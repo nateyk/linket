@@ -52,18 +52,22 @@ function BankLogo({
   name,
   compact = false,
   decorative = false,
+  frosted = false,
 }: {
   code: string;
   name: string;
   compact?: boolean;
   decorative?: boolean;
+  frosted?: boolean;
 }) {
   return (
     <span
       className={
-        compact
-          ? 'flex size-8 shrink-0 items-center justify-center rounded-input border border-border bg-background p-1'
-          : 'flex size-11 shrink-0 items-center justify-center rounded-card-sm border border-border bg-background p-1.5'
+        frosted
+          ? 'flex size-12 shrink-0 items-center justify-center rounded-card-sm border border-border/70 bg-background/80 p-2 backdrop-blur-sm'
+          : compact
+            ? 'flex size-8 shrink-0 items-center justify-center rounded-input border border-border bg-background p-1'
+            : 'flex size-11 shrink-0 items-center justify-center rounded-card-sm border border-border bg-background p-1.5'
       }
     >
       {logos[code] ? (
@@ -205,14 +209,12 @@ function ReceivingAccountCard({
     <Card.Root size="sm" className="overflow-hidden rounded-card-sm">
       <Card.Content className="flex flex-col gap-3 p-4 sm:p-5">
         <div className="flex min-w-0 items-start gap-3">
-          <span className="flex size-12 shrink-0 items-center justify-center rounded-card-sm border border-border/70 bg-background/80 p-1.5 backdrop-blur-sm">
-            <BankLogo
-              code={account.provider}
-              name={methodName}
-              compact
-              decorative
-            />
-          </span>
+          <BankLogo
+            code={account.provider}
+            name={methodName}
+            decorative
+            frosted
+          />
           <div className="min-w-0 flex-1">
             <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
               <div className="min-w-0">
