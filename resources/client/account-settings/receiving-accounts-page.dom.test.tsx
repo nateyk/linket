@@ -13,6 +13,14 @@ vi.mock('@shadcn/button/button', () => ({Button: 'button'}));
 vi.mock('@shadcn/forms/input/input', () => ({Input: ({bindToHookForm: _ignored, ...props}: Record<string, unknown>) => <input {...props} />}));
 vi.mock('@shadcn/spinner/spinner', () => ({Spinner: () => <span>Loading</span>}));
 vi.mock('@shadcn/forms/select/select', () => ({Select: {Root: ({children, onValueChange}: {children: React.ReactNode; onValueChange: (value: string) => void}) => <select aria-label="Payment method" onChange={event => onValueChange(event.target.value)}>{children}</select>, Trigger: () => null, Value: () => null, Content: ({children}: {children: React.ReactNode}) => children, Group: ({children}: {children: React.ReactNode}) => children, Item: ({children, value}: {children: React.ReactNode; value: string}) => <option value={value}>{children}</option>}}));
+
+// jsdom has no Web Animations API. Base UI's dropdown scroll area queries
+// getAnimations() after its popup opens, so provide the same no-op browser
+// shim used by the other Base UI DOM tests in this repository.
+if (!(Element.prototype as unknown as {getAnimations?: unknown}).getAnimations) {
+  (Element.prototype as unknown as {getAnimations: () => []}).getAnimations =
+    () => [];
+}
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
 it('lists, creates, resubmits and changes activation through the page', async () => {
