@@ -9,7 +9,7 @@ import {Input} from '@shadcn/forms/input/input';
 import {Select} from '@shadcn/forms/select/select';
 import {Spinner} from '@shadcn/spinner/spinner';
 import {Trans} from '@ui/i18n/trans';
-import {LandmarkIcon, PlusIcon} from 'lucide-react';
+import {LandmarkIcon, PlusIcon, UploadIcon} from 'lucide-react';
 import {useCallback, useEffect, useState} from 'react';
 import awash from './bank-logos/awash.svg';
 import boa from './bank-logos/boa.svg';
@@ -18,79 +18,591 @@ import cbebirr from './bank-logos/cbebirr.svg';
 import dashen from './bank-logos/dashen.svg';
 import telebirr from './bank-logos/telebirr.svg';
 
-type Account = {id: number; provider: string; account_ending: string; account_name: string; status: string; is_active: boolean; is_suspended: boolean; provider_registration_status: string; checkout_eligible: boolean};
+type Account = {
+  id: number;
+  provider: string;
+  account_ending: string;
+  account_name: string;
+  status: string;
+  is_active: boolean;
+  is_suspended: boolean;
+  provider_registration_status: string;
+  checkout_eligible: boolean;
+};
+
 type Provider = {code: string; name: string};
+
+const MAX_PROOF_SIZE = 5 * 1024 * 1024;
 const logos: Record<string, string> = {awash, boa, cbe, cbebirr, dashen, telebirr};
 
-function BankLogo({code, name}: {code: string; name: string}) {
-  return <div className="flex size-12 shrink-0 items-center justify-center rounded-card-sm border border-border bg-background p-1">{logos[code] ? <img src={logos[code]} alt={name} className="size-full object-contain" /> : <LandmarkIcon aria-label={name} role="img" />}</div>;
+function BankLogo({
+  code,
+  name,
+  compact = false,
+  decorative = false,
+}: {
+  code: string;
+  name: string;
+  compact?: boolean;
+  decorative?: boolean;
+}) {
+  return (
+    <span
+      className={
+        compact
+          ? 'flex size-8 shrink-0 items-center justify-center rounded-input border border-border bg-background p-1'
+          : 'flex size-11 shrink-0 items-center justify-center rounded-card-sm border border-border bg-background p-1.5'
+      }
+    >
+      {logos[code] ? (
+        <img
+          src={logos[code]}
+          alt={decorative ? '' : name}
+          className="size-full object-contain"
+        />
+      ) : (
+        <LandmarkIcon
+          className="size-5 text-muted-foreground"
+          role={decorative ? undefined : 'img'}
+          aria-label={decorative ? undefined : name}
+          aria-hidden={decorative ? true : undefined}
+        />
+      )}
+    </span>
+  );
+}
+
+function isValidAccountNumber(number: string, provider: string): boolean {
+  const trimmed = number.trim();
+  const normalized = trimmed.replace(/[\s-]+/g, '');
+  if (!/^[0-9+ -]{8,100}$/.test(trimmed)) return false;
+  if (provider === 'telebirr') {
+    return /^(?:0\d{9}|\+251\d{9})$/.test(normalized);
+  }
+  if (provider === 'awash') return /^\d{14}$/.test(normalized);
+  if (provider === 'boa') return /^(?:\d{8}|\d{16})$/.test(normalized);
+  return true;
+}
+
+function AccountAvailability({account}: {account: Account}) {
+  const approved = account.status === 'approved';
+  const registered = account.provider_registration_status === 'registered';
+  const available =
+    account.checkout_eligible && approved && registered &&
+    account.is_active && !account.is_suspended;
+
+  const label = account.is_suspended ? (
+    <Trans message="Suspended" />
+  ) : account.status === 'rejected' ? (
+    <Trans message="Rejected" />
+  ) : !approved ? (
+    <Trans message="Pending review" />
+  ) : !registered ? (
+    <Trans message="Pending provider registration" />
+  ) : !account.is_active ? (
+    <Trans message="Inactive" />
+  ) : available ? (
+    <Trans message="Available at checkout" />
+  ) : (
+    <Trans message="Unavailable at checkout" />
+  );
+
+  const explanation = account.is_suspended ? (
+    <Trans message="Contact support about this suspended account." />
+  ) : account.status === 'rejected' ? (
+    <Trans message="Update the details and submit new ownership evidence." />
+  ) : !approved ? (
+    <Trans message="This account needs approval before buyers can use it." />
+  ) : !registered ? (
+    <Trans message="Waiting for provider registration before checkout is enabled." />
+  ) : !account.is_active ? (
+    <Trans message="Activate this account to offer it at checkout." />
+  ) : !available ? (
+    <Trans message="This account is currently unavailable at checkout." />
+  ) : null;
+
+  return (
+    <div className="flex flex-col items-start gap-1.5 border-t border-border pt-3">
+      <Badge
+        variant={
+          available
+            ? 'positive'
+            : account.is_suspended || account.status === 'rejected'
+              ? 'destructive'
+              : 'secondary'
+        }
+      >
+        {label}
+      </Badge>
+      {explanation && (
+        <p className="text-sm leading-5 text-muted-foreground">{explanation}</p>
+      )}
+    </div>
+  );
+}
+
+function ReceivingAccountCard({
+  account,
+  methodName,
+  methodAvailable,
+  busy,
+  onEdit,
+  onToggle,
+}: {
+  account: Account;
+  methodName: string;
+  methodAvailable: boolean;
+  busy: boolean;
+  onEdit: (account: Account) => void;
+  onToggle: (account: Account) => void;
+}) {
+  const canToggle =
+    account.status === 'approved' &&
+    account.provider_registration_status === 'registered' &&
+    !account.is_suspended;
+
+  return (
+    <Card.Root size="sm" className="rounded-card-sm">
+      <Card.Content className="flex flex-col gap-3 p-4 sm:p-5">
+        <div className="flex min-w-0 items-start gap-3">
+          <BankLogo code={account.provider} name={methodName} />
+          <div className="min-w-0 flex-1">
+            <h2 className="text-base font-semibold leading-6">{methodName}</h2>
+            <p className="mt-0.5 truncate text-sm text-muted-foreground">
+              {account.account_name}
+            </p>
+            <p className="mt-1 font-mono text-xs tabular-nums text-muted-foreground">
+              <Trans
+                message="Account ending :digits"
+                values={{digits: account.account_ending}}
+              />
+            </p>
+          </div>
+        </div>
+
+        <AccountAvailability account={account} />
+
+        {!methodAvailable && (
+          <p className="text-sm text-muted-foreground">
+            <Trans message="This payment method is not available for new setup. Contact support for assistance." />
+          </p>
+        )}
+
+        {!account.is_suspended && (
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="min-h-10 flex-1 sm:flex-none"
+              disabled={busy || !methodAvailable}
+              onClick={() => onEdit(account)}
+            >
+              <Trans message="Edit and resubmit" />
+            </Button>
+            {canToggle && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="min-h-10 flex-1 sm:flex-none"
+                disabled={busy || (!methodAvailable && !account.is_active)}
+                onClick={() => onToggle(account)}
+              >
+                {account.is_active ? (
+                  <Trans message="Deactivate" />
+                ) : (
+                  <Trans message="Activate" />
+                )}
+              </Button>
+            )}
+          </div>
+        )}
+      </Card.Content>
+    </Card.Root>
+  );
 }
 
 export function Component() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [providers, setProviders] = useState<Provider[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [actionError, setActionError] = useState(false);
+  const [formError, setFormError] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState<number>();
+
   const [provider, setProvider] = useState('');
   const [number, setNumber] = useState('');
   const [name, setName] = useState('');
   const [proof, setProof] = useState<File>();
-  const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [open, setOpen] = useState(false);
-  const [editingId, setEditingId] = useState<number>();
-  const cleanNumber = number.trim().replace(/[\s-]+/g, '');
-  const validNumber = /^[0-9+ -]{8,100}$/.test(number.trim()) && (provider === 'telebirr' ? /^(?:0\d{9}|\+251\d{9})$/.test(cleanNumber) : provider === 'awash' ? /^\d{14}$/.test(cleanNumber) : provider === 'boa' ? /^(?:\d{8}|\d{16})$/.test(cleanNumber) : true);
+
+  const selectedMethod =
+    providers.find(method => method.code === provider) ??
+    (provider ? {code: provider, name: provider.toUpperCase()} : undefined);
+  const validNumber = isValidAccountNumber(number, provider);
+  const invalidNumber = number.trim().length > 0 && !validNumber;
+  const invalidName = name.trim().length > 0 && name.trim().length < 3;
+  const invalidProof = !!proof && proof.size > MAX_PROOF_SIZE;
+  const canSubmit =
+    !!provider && validNumber && name.trim().length >= 3 &&
+    !!proof && !invalidProof && !busy;
+
   const load = useCallback(async () => {
     try {
       const response = await apiClient.get('/api/v1/storefront/payment-methods');
       setAccounts(response.data.data ?? []);
       setProviders(response.data.available_methods ?? []);
-      setError(false);
-    } catch { setError(true); } finally { setLoading(false); }
+      setLoadError(false);
+    } catch {
+      setLoadError(true);
+    } finally {
+      setLoading(false);
+    }
   }, []);
-  useEffect(() => { void load(); }, [load]);
-  const reset = () => { setProvider(''); setNumber(''); setName(''); setProof(undefined); setEditingId(undefined); };
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const resetForm = () => {
+    setProvider('');
+    setNumber('');
+    setName('');
+    setProof(undefined);
+    setEditingId(undefined);
+    setFormError(false);
+  };
+
+  const openNewAccount = () => {
+    resetForm();
+    setOpen(true);
+  };
+
+  const editAccount = (account: Account) => {
+    resetForm();
+    setEditingId(account.id);
+    setProvider(account.provider);
+    setName(account.account_name);
+    // Never prefill an account number from a masked account list.
+    setNumber('');
+    setOpen(true);
+  };
+
   const submit = async () => {
-    if (!provider || !number.trim() || !name.trim() || !proof) return;
-    setBusy(true); setSaved(false);
+    if (!canSubmit) return;
+    setBusy(true);
+    setFormError(false);
+    setSaved(false);
     try {
       const form = new FormData();
-      form.append('provider', provider); form.append('account_number', number.trim()); form.append('account_name', name.trim()); form.append('proof', proof);
-      await apiClient.post(editingId ? `/api/v1/storefront/payment-methods/${editingId}/resubmit` : '/api/v1/storefront/payment-methods', form);
-      setOpen(false); reset(); setSaved(true); await load();
-    } catch { setError(true); } finally { setBusy(false); }
+      form.append('provider', provider);
+      form.append('account_number', number.trim());
+      form.append('account_name', name.trim());
+      form.append('proof', proof!);
+      await apiClient.post(
+        editingId
+          ? '/api/v1/storefront/payment-methods/' + editingId + '/resubmit'
+          : '/api/v1/storefront/payment-methods',
+        form,
+      );
+      setOpen(false);
+      resetForm();
+      setSaved(true);
+      await load();
+    } catch {
+      setFormError(true);
+    } finally {
+      setBusy(false);
+    }
   };
+
   const toggle = async (account: Account) => {
+    if (busy) return;
     setBusy(true);
-    try { await apiClient.post(`/api/v1/storefront/payment-methods/${account.id}/${account.is_active ? 'deactivate' : 'activate'}`); await load(); }
-    catch { setError(true); } finally { setBusy(false); }
+    setActionError(false);
+    try {
+      await apiClient.post(
+        '/api/v1/storefront/payment-methods/' + account.id +
+          (account.is_active ? '/deactivate' : '/activate'),
+      );
+      await load();
+    } catch {
+      setActionError(true);
+    } finally {
+      setBusy(false);
+    }
   };
-  return <AccountSettingsPageLayout title={<Trans message="Receiving Accounts" />}>
-    <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-4"><p className="text-sm text-muted-foreground"><Trans message="Manage the accounts where customers pay you directly." /></p><Button onClick={() => { reset(); setOpen(true); }} disabled={loading || !providers.length}><PlusIcon /><Trans message="Add receiving account" /></Button></div>
-      {loading && <Spinner />}
-      {error && <p role="alert" className="text-sm text-destructive"><Trans message="Unable to save or load receiving accounts. Check your details and try again." /></p>}
-      {saved && <p role="status" className="text-sm text-positive"><Trans message="Account submitted for review." /></p>}
-      {!loading && !accounts.length && <Empty.Root><Empty.Header><Empty.Media variant="icon"><LandmarkIcon /></Empty.Media><Empty.Title><Trans message="No receiving accounts yet" /></Empty.Title><Empty.Description><Trans message="Add an account to receive payments directly from your customers." /></Empty.Description></Empty.Header></Empty.Root>}
-      <div className="grid gap-4 md:grid-cols-2">{accounts.map(account => {
-        const method = providers.find(item => item.code === account.provider);
-        const methodName = method?.name ?? account.provider.toUpperCase();
-        const eligible = account.status === 'approved' && account.provider_registration_status === 'registered' && !account.is_suspended;
-        const checkoutStatus = account.is_suspended ? <Trans message="Suspended" /> : account.checkout_eligible ? <Trans message="Available at checkout" /> : account.status === 'pending' || (account.status === 'approved' && account.provider_registration_status !== 'registered') ? <Trans message="Pending approval" /> : <Trans message="Disabled" />;
-        return <Card.Root key={account.id} size="sm"><Card.Content className="flex flex-col gap-4"><div className="flex items-start gap-3"><BankLogo code={account.provider} name={methodName} /><div className="min-w-0 flex-1"><h2 className="font-semibold">{methodName}</h2><p className="truncate text-sm text-muted-foreground">{account.account_name}</p><p className="font-mono text-sm text-muted-foreground">•••• {account.account_ending}</p></div><Badge variant={eligible ? 'positive' : account.is_suspended || account.status === 'rejected' ? 'destructive' : 'secondary'}>{account.is_suspended ? <Trans message="Suspended" /> : account.status === 'rejected' ? <Trans message="Rejected" /> : account.status !== 'approved' ? <Trans message="Pending review" /> : account.provider_registration_status !== 'registered' ? <Trans message="Pending provider registration" /> : <Trans message="Approved" />}</Badge></div><p className="text-sm font-medium">{checkoutStatus}</p><p className="text-sm text-muted-foreground">{!method ? <Trans message="This payment method is unavailable for setup. Contact support for its checkout availability." /> : eligible ? account.is_active ? <Trans message="Active — approved and registered." /> : <Trans message="Inactive — activate to use at eligible checkouts." /> : <Trans message="Not available at checkout until approval and provider registration are complete." />}</p><div className="flex flex-wrap gap-2">{!account.is_suspended && <Button size="sm" disabled={busy || !method} variant="outline" onClick={() => { setEditingId(account.id); setProvider(account.provider); setName(account.account_name); setNumber(''); setProof(undefined); setOpen(true); }}><Trans message="Edit and resubmit" /></Button>}{eligible && <Button size="sm" disabled={busy || (!method && !account.is_active)} variant="outline" onClick={() => void toggle(account)}>{account.is_active ? <Trans message="Deactivate" /> : <Trans message="Activate" />}</Button>}</div></Card.Content></Card.Root>;
-      })}</div>
-      {!loading && !providers.length && <p className="text-sm text-muted-foreground"><Trans message="No payment methods are currently available for setup." /></p>}
-    </div>
-    <Dialog.Root open={open} onOpenChange={setOpen}><Dialog.Portal><Dialog.Backdrop /><Dialog.Content><Dialog.Header><Dialog.Title>{editingId ? <Trans message="Edit and resubmit account" /> : <Trans message="Add receiving account" />}</Dialog.Title><Dialog.Description><Trans message="New and resubmitted accounts require approval before customers can use them." /></Dialog.Description></Dialog.Header><Dialog.Body><div className="flex flex-col gap-4">
-      <label className="flex flex-col gap-1 text-sm font-medium"><Trans message="Payment method" /><Select.Root value={provider} disabled={!!editingId} onValueChange={value => setProvider(value ?? '')}><Select.Trigger className="w-full"><Select.Value placeholder={<Trans message="Select payment method" />} /></Select.Trigger><Select.Content><Select.Group>{providers.map(method => <Select.Item key={method.code} value={method.code}><span className="flex items-center gap-2"><BankLogo code={method.code} name={method.name} />{method.name}</span></Select.Item>)}</Select.Group></Select.Content></Select.Root></label>
-      <label className="flex flex-col gap-1 text-sm font-medium">{provider === 'telebirr' || provider === 'cbebirr' ? <Trans message="Wallet phone number" /> : <Trans message="Account number" />}<Input bindToHookForm={false} aria-label="Account or wallet number" inputMode="tel" autoComplete="off" value={number} onChange={event => setNumber(event.target.value)} /></label>
-      {number && !validNumber && <p className="text-sm text-destructive"><Trans message="Enter a valid account or wallet number for this provider." /></p>}
-      <label className="flex flex-col gap-1 text-sm font-medium"><Trans message="Account holder name" /><Input bindToHookForm={false} aria-label="Account holder name" value={name} onChange={event => setName(event.target.value)} /></label>
-      <label className="flex flex-col gap-1 text-sm font-medium"><Trans message="Supporting document" /><Input bindToHookForm={false} type="file" aria-label="Ownership evidence" accept=".pdf,.jpg,.jpeg,.png,.webp" onChange={event => setProof(event.target.files?.[0])} /><span className="text-xs font-normal text-muted-foreground"><Trans message="PDF or image, up to 5 MB." /></span></label>
-      {error && <p role="alert" className="text-sm text-destructive"><Trans message="Unable to submit this account. Check your details and try again." /></p>}
-      {name && name.trim().length < 3 && <p className="text-sm text-destructive"><Trans message="Account holder name must be at least 3 characters." /></p>}
-      {proof && proof.size > 5 * 1024 * 1024 && <p className="text-sm text-destructive"><Trans message="Supporting document must be 5 MB or less." /></p>}
-    </div></Dialog.Body><Dialog.Footer><Dialog.CloseButton><Trans message="Cancel" /></Dialog.CloseButton><Button disabled={busy || !provider || !validNumber || name.trim().length < 3 || !proof || proof.size > 5 * 1024 * 1024} onClick={() => void submit()}><Trans message="Submit account for review" /></Button></Dialog.Footer></Dialog.Content></Dialog.Portal></Dialog.Root>
-  </AccountSettingsPageLayout>;
+
+  return (
+    <AccountSettingsPageLayout title={<Trans message="Receiving accounts" />}>
+      <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="max-w-2xl text-sm leading-5 text-muted-foreground">
+            <Trans message="Manage the accounts customers can pay directly at checkout." />
+          </p>
+          <Button
+            className="w-full shrink-0 sm:w-auto"
+            disabled={loading || !providers.length || busy}
+            onClick={openNewAccount}
+          >
+            <PlusIcon />
+            <Trans message="Add receiving account" />
+          </Button>
+        </div>
+
+        {loading && <Spinner />}
+        {loadError && (
+          <p role="alert" className="text-sm text-destructive">
+            <Trans message="Unable to load receiving accounts. Try again." />
+          </p>
+        )}
+        {actionError && (
+          <p role="alert" className="text-sm text-destructive">
+            <Trans message="Unable to update the account. Try again." />
+          </p>
+        )}
+        {saved && (
+          <p role="status" className="text-sm text-positive">
+            <Trans message="Account submitted for review." />
+          </p>
+        )}
+
+        {!loading && !loadError && accounts.length === 0 && (
+          <Empty.Root>
+            <Empty.Header>
+              <Empty.Media variant="icon"><LandmarkIcon /></Empty.Media>
+              <Empty.Title>
+                <Trans message="No receiving accounts yet" />
+              </Empty.Title>
+              <Empty.Description>
+                <Trans message="Add a bank or wallet account to receive customer payments." />
+              </Empty.Description>
+            </Empty.Header>
+          </Empty.Root>
+        )}
+
+        <div className="grid gap-3 md:grid-cols-2">
+          {accounts.map(account => {
+            const method = providers.find(item => item.code === account.provider);
+            return (
+              <ReceivingAccountCard
+                key={account.id}
+                account={account}
+                methodName={method?.name ?? account.provider.toUpperCase()}
+                methodAvailable={!!method}
+                busy={busy}
+                onEdit={editAccount}
+                onToggle={account => void toggle(account)}
+              />
+            );
+          })}
+        </div>
+
+        {!loading && providers.length === 0 && (
+          <p className="text-sm text-muted-foreground">
+            <Trans message="No payment methods are currently available for setup." />
+          </p>
+        )}
+      </div>
+
+      <Dialog.Root
+        open={open}
+        onOpenChange={next => {
+          setOpen(next);
+          if (!next) resetForm();
+        }}
+      >
+        <Dialog.Portal>
+          <Dialog.Backdrop />
+          <Dialog.Content className="max-h-[calc(100dvh-3rem)] gap-4 rounded-card-sm sm:max-w-lg">
+            <Dialog.Header>
+              <Dialog.Title>
+                {editingId ? (
+                  <Trans message="Edit and resubmit account" />
+                ) : (
+                  <Trans message="Add receiving account" />
+                )}
+              </Dialog.Title>
+              <Dialog.Description>
+                <Trans message="An account must be approved before buyers can use it." />
+              </Dialog.Description>
+            </Dialog.Header>
+
+            <Dialog.Body>
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="receiving-provider" className="text-sm font-medium">
+                    <Trans message="Payment method" />
+                  </label>
+                  <Select.Root
+                    value={provider}
+                    disabled={!!editingId || busy}
+                    onValueChange={value => {
+                      setProvider(value ?? '');
+                      setNumber('');
+                      setFormError(false);
+                    }}
+                  >
+                    <Select.Trigger
+                      id="receiving-provider"
+                      className="h-11 w-full min-w-0"
+                    >
+                      <Select.Value placeholder={<Trans message="Select payment method" />}>
+                        {selectedMethod ? (
+                          <span className="flex min-w-0 items-center gap-2">
+                            <BankLogo
+                              code={selectedMethod.code}
+                              name={selectedMethod.name}
+                              compact
+                              decorative
+                            />
+                            <span className="truncate">{selectedMethod.name}</span>
+                          </span>
+                        ) : undefined}
+                      </Select.Value>
+                    </Select.Trigger>
+                    <Select.Content
+                      align="start"
+                      className="max-h-[min(17rem,42dvh)] rounded-card-sm shadow-lg"
+                    >
+                      <Select.Group>
+                        {providers.map(method => (
+                          <Select.Item
+                            key={method.code}
+                            value={method.code}
+                            className="min-h-11"
+                          >
+                            <span className="flex min-w-0 items-center gap-2.5">
+                              <BankLogo
+                                code={method.code}
+                                name={method.name}
+                                compact
+                                decorative
+                              />
+                              <span className="min-w-0 whitespace-normal font-medium">
+                                {method.name}
+                              </span>
+                            </span>
+                          </Select.Item>
+                        ))}
+                      </Select.Group>
+                    </Select.Content>
+                  </Select.Root>
+                  {editingId && (
+                    <p className="text-xs text-muted-foreground">
+                      <Trans message="To update this account, re-enter the number and attach new proof." />
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="receiving-number" className="text-sm font-medium">
+                    {provider === 'telebirr' || provider === 'cbebirr' ? (
+                      <Trans message="Wallet phone number" />
+                    ) : (
+                      <Trans message="Account number" />
+                    )}
+                  </label>
+                  <Input
+                    bindToHookForm={false}
+                    id="receiving-number"
+                    className="h-11"
+                    inputMode="tel"
+                    autoComplete="off"
+                    value={number}
+                    disabled={busy}
+                    aria-invalid={invalidNumber}
+                    aria-describedby={invalidNumber ? 'receiving-number-error' : undefined}
+                    onChange={event => setNumber(event.target.value)}
+                  />
+                  {invalidNumber && (
+                    <p id="receiving-number-error" role="alert" className="text-sm text-destructive">
+                      <Trans message="Enter a valid number for this payment method." />
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="receiving-name" className="text-sm font-medium">
+                    <Trans message="Account holder name" />
+                  </label>
+                  <Input
+                    bindToHookForm={false}
+                    id="receiving-name"
+                    className="h-11"
+                    value={name}
+                    disabled={busy}
+                    autoComplete="name"
+                    aria-invalid={invalidName}
+                    aria-describedby={invalidName ? 'receiving-name-error' : undefined}
+                    onChange={event => setName(event.target.value)}
+                  />
+                  {invalidName && (
+                    <p id="receiving-name-error" role="alert" className="text-sm text-destructive">
+                      <Trans message="Account holder name must be at least 3 characters." />
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="receiving-proof" className="text-sm font-medium">
+                    <Trans message="Supporting document" />
+                  </label>
+                  <Input
+                    bindToHookForm={false}
+                    id="receiving-proof"
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,.webp"
+                    className="peer sr-only"
+                    disabled={busy}
+                    aria-invalid={invalidProof}
+                    aria-describedby="receiving-proof-help"
+                    onChange={event => setProof(event.target.files?.[0])}
+                  />
+                  <label
+                    htmlFor="receiving-proof"
+                    className="flex min-h-11 cursor-pointer items-center gap-2 rounded-input border border-input px-3 py-2 text-sm font-medium hover:border-foreground/20 peer-focus-visible:ring-2 peer-focus-visible:ring-primary peer-disabled:cursor-not-allowed peer-disabled:opacity-50"
+                  >
+                    <UploadIcon className="size-4 shrink-0 text-muted-foreground" />
+                    <span className="min-w-0 truncate">
+                      {proof ? proof.name : <Trans message="Choose document" />}
+                    </span>
+                  </label>
+                  <p id="receiving-proof-help" className="text-xs text-muted-foreground">
+                    <Trans message="PDF or image, up to 5 MB." />
+                  </p>
+                  {invalidProof && (
+                    <p role="alert" className="text-sm text-destructive">
+                      <Trans message="Supporting document must be 5 MB or less." />
+                    </p>
+                  )}
+                </div>
+
+                {formError && (
+                  <p role="alert" className="text-sm text-destructive">
+                    <Trans message="Unable to submit this account. Check your details and try again." />
+                  </p>
+                )}
+              </div>
+            </Dialog.Body>
+
+            <Dialog.Footer>
+              <Dialog.CloseButton disabled={busy}>
+                <Trans message="Cancel" />
+              </Dialog.CloseButton>
+              <Button disabled={!canSubmit} onClick={() => void submit()}>
+                {busy ? (
+                  <Trans message="Submitting…" />
+                ) : (
+                  <Trans message="Submit account for review" />
+                )}
+              </Button>
+            </Dialog.Footer>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+    </AccountSettingsPageLayout>
+  );
 }
