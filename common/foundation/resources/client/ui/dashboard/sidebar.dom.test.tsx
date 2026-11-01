@@ -47,7 +47,7 @@ test('layout shell tracks the dynamic viewport without clipping positioned child
     '[class*="group/dashboard-layout"]',
   );
   expect(root).toBeTruthy();
+  expect(root!.className).toContain('h-screen');
   expect(root!.className).toContain('h-dvh');
-  expect(root!.className).not.toContain('h-screen');
   expect(root!.className).not.toContain('overflow-hidden');
 });
