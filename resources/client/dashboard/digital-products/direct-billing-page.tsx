@@ -1571,18 +1571,34 @@ function DetailSection({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-card-sm border border-border p-3">
-      <h3 className="mb-2 text-sm font-medium">{title}</h3>
-      <div className="flex flex-col gap-1.5">{children}</div>
+    <section className="border-t border-border py-4 first:border-t-0 first:pt-0">
+      <h3 className="mb-3 text-base font-medium">{title}</h3>
+      <div className="flex flex-col gap-2.5">{children}</div>
     </section>
   );
 }
 
-function DetailRow({label, value}: {label: ReactNode; value: ReactNode}) {
+function DetailRow({
+  label,
+  value,
+  emphasis = false,
+}: {
+  label: ReactNode;
+  value: ReactNode;
+  emphasis?: boolean;
+}) {
   return (
-    <div className="flex items-start justify-between gap-3 text-sm">
+    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 text-sm">
       <span className="text-muted-foreground">{label}</span>
-      <span className="min-w-0 truncate text-end">{value}</span>
+      <span
+        className={
+          emphasis
+            ? 'min-w-0 text-end font-medium tabular-nums'
+            : 'min-w-0 text-end'
+        }
+      >
+        {value}
+      </span>
     </div>
   );
 }
@@ -1747,6 +1763,7 @@ function statusBadgeVariant(
 ): 'positive' | 'destructive' | 'outline' | 'secondary' {
   switch (status) {
     case 'paid':
+    case 'completed':
     case 'fulfilled':
     case 'success':
     case 'manual_approved':
