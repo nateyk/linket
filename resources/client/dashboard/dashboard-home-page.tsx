@@ -33,6 +33,7 @@ import {
   ChartNoAxesCombinedIcon,
   CircleAlertIcon,
   CircleDollarSignIcon,
+  FileTextIcon,
   LandmarkIcon,
   Link2Icon,
   MapPinIcon,
@@ -465,7 +466,10 @@ function RecentOrders() {
   const orders = salesData?.data.data.slice(0, 5) ?? [];
 
   return (
-    <Card size="sm" className="min-w-0 gap-0 lg:col-span-8">
+    <Card
+      size="sm"
+      className="min-w-0 gap-0 overflow-hidden lg:col-span-8"
+    >
       <Card.Header className="pb-4">
         <Card.Title>
           <Trans message="Recent orders" />
@@ -473,21 +477,11 @@ function RecentOrders() {
         <Card.Description>
           <Trans message="Latest digital product purchases" />
         </Card.Description>
-        <Card.Action>
-          <LinkButton
-            to="/dashboard/orders"
-            variant="link"
-            size="sm"
-            className="h-auto px-0"
-          >
-            <Trans message="View all orders" />
-            <ArrowRightIcon data-icon="inline-end" aria-hidden="true" />
-          </LinkButton>
-        </Card.Action>
       </Card.Header>
+
       <Card.Content className="min-h-64 flex-1 border-t px-0">
         {isLoading ? (
-          <div className="flex flex-col gap-3 px-4 pt-4">
+          <div className="flex flex-col gap-3 px-4 pt-4" aria-busy="true">
             {[...Array(5)].map((_, index) => (
               <Skeleton key={index} className="h-14 w-full" />
             ))}
@@ -496,49 +490,55 @@ function RecentOrders() {
           <SalesErrorState />
         ) : orders.length ? (
           <>
-            <div className="hidden overflow-x-auto px-4 md:block">
+            <div className="hidden min-w-0 overflow-x-auto lg:block">
               <Table.Root>
                 <Table.Header>
                   <Table.Row>
-                    <Table.Head>
+                    <Table.Head className="ps-5">
                       <Trans message="Product" />
                     </Table.Head>
                     <Table.Head>
                       <Trans message="Buyer" />
                     </Table.Head>
                     <Table.Head>
-                      <Trans message="Status" />
-                    </Table.Head>
-                    <Table.Head>
                       <Trans message="Date" />
                     </Table.Head>
-                    <Table.Head className="text-end">
-                      <Trans message="Gross" />
+                    <Table.Head>
+                      <Trans message="Status" />
+                    </Table.Head>
+                    <Table.Head className="pe-5 text-end">
+                      <Trans message="Amount" />
                     </Table.Head>
                   </Table.Row>
                 </Table.Header>
                 <Table.Body>
                   {orders.map(order => (
                     <Table.Row key={order.uuid}>
-                      <Table.Cell className="max-w-64">
-                        <span className="block truncate font-medium">
+                      <Table.Cell className="max-w-64 ps-5">
+                        <span
+                          className="block truncate font-medium"
+                          title={order.product?.title ?? undefined}
+                        >
                           {order.product?.title ?? (
                             <Trans message="Digital product" />
                           )}
                         </span>
+                        <span className="block truncate text-xs text-muted-foreground">
+                          #{order.uuid.slice(0, 8)}
+                        </span>
                       </Table.Cell>
                       <Table.Cell className="max-w-44">
-                        <span className="block truncate text-muted-foreground">
+                        <span className="block truncate">
                           {order.buyer_name || <Trans message="Guest buyer" />}
                         </span>
+                      </Table.Cell>
+                      <Table.Cell className="whitespace-nowrap text-muted-foreground">
+                        <OrderDate order={order} />
                       </Table.Cell>
                       <Table.Cell>
                         <OrderStatusBadge status={order.status} />
                       </Table.Cell>
-                      <Table.Cell className="text-muted-foreground">
-                        <OrderDate order={order} />
-                      </Table.Cell>
-                      <Table.Cell className="text-end font-medium tabular-nums">
+                      <Table.Cell className="whitespace-nowrap pe-5 text-end font-medium tabular-nums">
                         <FormattedCurrency
                           valueInCents={order.gross_amount_cents}
                           currency={order.currency}
@@ -550,14 +550,11 @@ function RecentOrders() {
               </Table.Root>
             </div>
 
-            <ol
-              className="divide-y md:hidden"
-              aria-label="Recent orders"
-            >
+            <ol className="divide-y lg:hidden" aria-label="Recent orders">
               {orders.map(order => (
                 <li
                   key={order.uuid}
-                  className="grid min-w-0 grid-cols-[2.5rem_minmax(0,1fr)_auto] gap-x-3 gap-y-1 px-4 py-3"
+                  className="grid min-w-0 grid-cols-[2.5rem_minmax(0,1fr)_auto] gap-x-3 gap-y-1 px-4 py-3.5"
                 >
                   <span className="row-span-3 flex size-10 items-center justify-center self-start rounded-card-xs bg-muted text-muted-foreground">
                     <ReceiptTextIcon className="size-4" aria-hidden="true" />
@@ -577,6 +574,8 @@ function RecentOrders() {
 
                   <p className="min-w-0 truncate text-xs text-muted-foreground">
                     {order.buyer_name || <Trans message="Guest buyer" />}
+                    <span aria-hidden="true"> · </span>
+                    <span>#{order.uuid.slice(0, 8)}</span>
                   </p>
                   <span className="text-end text-xs text-muted-foreground">
                     <OrderDate order={order} />
@@ -601,6 +600,20 @@ function RecentOrders() {
           </div>
         )}
       </Card.Content>
+
+      {!isLoading && !isError && orders.length > 0 ? (
+        <Card.Footer className="border-t p-0">
+          <LinkButton
+            to="/dashboard/orders"
+            variant="ghost"
+            className="h-11 w-full justify-center rounded-none"
+          >
+            <FileTextIcon aria-hidden="true" />
+            <Trans message="See all orders" />
+            <ArrowRightIcon data-icon="inline-end" aria-hidden="true" />
+          </LinkButton>
+        </Card.Footer>
+      ) : null}
     </Card>
   );
 }
