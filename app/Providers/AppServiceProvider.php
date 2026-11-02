@@ -269,6 +269,7 @@ class AppServiceProvider extends ServiceProvider
             SeedDemoData::class,
             SeedSupportDemoData::class,
             DeleteOldWebhookDeliveries::class,
+            \App\Telegram\Commands\PruneTelegramRecords::class,
             ArchiveExpiredLinkeables::class,
             DisableExpiredLeapLinks::class,
             \App\Payments\Commands\ReconcilePendingVerifications::class,

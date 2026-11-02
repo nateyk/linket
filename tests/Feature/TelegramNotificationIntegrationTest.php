@@ -269,6 +269,37 @@ class TelegramNotificationIntegrationTest extends TestCase
         );
     }
 
+    public function test_pruning_only_removes_telegram_records_older_than_thirty_days(): void
+    {
+        $user = User::factory()->create(['email_verified_at' => now()]);
+
+        TelegramLinkToken::query()->create([
+            'user_id' => $user->id,
+            'token_hash' => hash('sha256', 'old-telegram-token'),
+            'expires_at' => now()->subDays(31),
+            'created_at' => now()->subDays(32),
+        ]);
+        TelegramLinkToken::query()->create([
+            'user_id' => $user->id,
+            'token_hash' => hash('sha256', 'recent-telegram-token'),
+            'expires_at' => now()->addMinutes(5),
+        ]);
+
+        \DB::table('telegram_webhook_updates')->insert([
+            ['update_id' => 910001, 'processed_at' => now()->subDays(31),
+                'created_at' => now()->subDays(31), 'updated_at' => now()->subDays(31)],
+            ['update_id' => 910002, 'processed_at' => now()->subDays(1),
+                'created_at' => now()->subDay(), 'updated_at' => now()->subDay()],
+        ]);
+
+        $this->artisan('telegram:prune-records')->assertSuccessful();
+
+        $this->assertDatabaseMissing('telegram_link_tokens', ['token_hash' => hash('sha256', 'old-telegram-token')]);
+        $this->assertDatabaseHas('telegram_link_tokens', ['token_hash' => hash('sha256', 'recent-telegram-token')]);
+        $this->assertDatabaseMissing('telegram_webhook_updates', ['update_id' => 910001]);
+        $this->assertDatabaseHas('telegram_webhook_updates', ['update_id' => 910002]);
+    }
+
     private function stateful(): static
     {
         return $this

@@ -31,3 +31,6 @@ Schedule::command(GenerateCommissionInvoices::class)->monthlyOn(1, '00:01')->tim
 Schedule::command(EnforceCommissionRestrictions::class)->hourly()->withoutOverlapping()->onOneServer();
 Schedule::command(ProcessDirectSubscriptionRenewals::class)->dailyAt('09:00')->timezone('Africa/Nairobi')->withoutOverlapping()->onOneServer();
 
+
+Schedule::command(\App\Telegram\Commands\PruneTelegramRecords::class)
+    ->dailyAt('04:00')->withoutOverlapping()->onOneServer();
