@@ -4,6 +4,10 @@ namespace App\Payments\VerifyEt;
 
 use App\Payments\Models\DirectPaymentVerification;
 use App\Payments\Models\ProSubscriptionPayment;
+use App\Payments\Notifications\DirectProLifecycleNotification;
+use App\Models\User;
+use App\Telegram\Support\TelegramNotificationChannels;
+use App\Telegram\Support\TelegramNotificationPreferences;
 use App\Storefront\Models\CommissionInvoice;
 use App\Storefront\Models\CreatorPaymentMethod;
 use App\Storefront\Models\StorefrontOrder;
@@ -52,8 +56,9 @@ final class VerifyEtGateway
     /** @param array<string, mixed> $result */
     public function processResult(DirectPaymentVerification $verification, array $result): string
     {
+        $proLifecycle = null;
         try {
-            $outcome = DB::transaction(function () use ($verification, $result): string {
+            $outcome = DB::transaction(function () use ($verification, $result, &$proLifecycle): string {
             $verification = DirectPaymentVerification::query()->whereKey($verification->id)->lockForUpdate()->firstOrFail();
             if (in_array($verification->status, ['success', 'manual_approved'], true)) {
                 return $verification->status;
@@ -156,7 +161,7 @@ final class VerifyEtGateway
                 }
             }
             $verification->update(['canonical_transaction_identity' => $identity, 'verified_at' => now(), 'latest_error' => null, 'latest_error_code' => null]);
-            if (!$this->settle($verification)) {
+            if (!$this->settle($verification, $proLifecycle)) {
                 $verification->update(['status' => 'mismatch', 'latest_error_code' => 'payable_already_settled']);
                 return 'mismatch';
             }
@@ -166,6 +171,10 @@ final class VerifyEtGateway
             if ($outcome === 'mismatch' && $verification->payable_type === StorefrontOrder::class && $verification->payable) {
                 app(\App\Storefront\Services\CreatorVerificationAllowance::class)->release($verification->payable, 'definitive_verification_mismatch');
             }
+            if ($outcome === 'success' && is_array($proLifecycle)) {
+                $this->notifyProLifecycle($proLifecycle);
+            }
+
             return $outcome;
         } catch (UniqueConstraintViolationException) {
             DirectPaymentVerification::query()->whereKey($verification->id)->update([
@@ -382,7 +391,7 @@ final class VerifyEtGateway
         ], static fn (mixed $value): bool => $value !== null);
     }
 
-    private function settle(DirectPaymentVerification $verification): bool
+    private function settle(DirectPaymentVerification $verification, ?array &$proLifecycle = null): bool
     {
         if ($verification->payable_type === StorefrontOrder::class) {
             return app(DirectStorefrontFulfillment::class)->fulfill($verification->payable);
@@ -404,12 +413,13 @@ final class VerifyEtGateway
             : Price::query()->where('product_id', $payment->product_id)->where('currency', 'ETB')
                 ->whereRaw('ROUND(amount * 100) = ?', [$payment->amount_cents])->orderByDesc('default')->firstOrFail();
         $subscription = Subscription::query()->where('user_id', $payment->creator_id)->where('gateway_name', 'verify_et')->whereNull('ends_at')->lockForUpdate()->latest('id')->first();
+        $wasRenewal = $subscription !== null;
         if ($subscription) {
             $periodStart = $subscription->renews_at?->isFuture() ? $subscription->renews_at->copy() : now();
             $periodEnd = $periodStart->copy()->addMonthNoOverflow();
             $subscription->update(['product_id' => $payment->product_id, 'price_id' => $price->id, 'gateway_status' => 'active', 'renews_at' => $periodEnd]);
         } else {
-            Subscription::query()->create(['user_id' => $payment->creator_id, 'product_id' => $payment->product_id, 'price_id' => $price->id, 'gateway_name' => 'verify_et', 'gateway_id' => $payment->uuid, 'gateway_status' => 'active', 'renews_at' => $periodEnd]);
+            $subscription = Subscription::query()->create(['user_id' => $payment->creator_id, 'product_id' => $payment->product_id, 'price_id' => $price->id, 'gateway_name' => 'verify_et', 'gateway_id' => $payment->uuid, 'gateway_status' => 'active', 'renews_at' => $periodEnd]);
         }
         $payment->update([
             'status' => 'paid',
@@ -419,7 +429,38 @@ final class VerifyEtGateway
             'subscription_period_end' => $periodEnd,
         ]);
 
+        $proLifecycle = [
+            'creator_id' => $payment->creator_id,
+            'subscription_id' => $subscription->id,
+            'payment_id' => $payment->id,
+            'event' => $wasRenewal ? 'renewed' : 'activated',
+        ];
+
         return true;
+    }
+
+    /**
+     * @param array{creator_id: int, subscription_id: int, payment_id: int, event: string} $lifecycle
+     */
+    private function notifyProLifecycle(array $lifecycle): void
+    {
+        try {
+            $creator = User::query()->find($lifecycle['creator_id']);
+            if ($creator && TelegramNotificationChannels::isAvailableFor(
+                $creator, TelegramNotificationPreferences::PRO_BILLING,
+            )) {
+                $creator->notify(new DirectProLifecycleNotification(
+                    $lifecycle['subscription_id'],
+                    $lifecycle['event'],
+                    $lifecycle['payment_id'],
+                ));
+            }
+        } catch (\Throwable) {
+            // A Telegram queue outage must not affect a successfully verified Pro payment.
+            Log::warning('telegram.pro_lifecycle_alert_enqueue_failed', [
+                'subscription_id' => $lifecycle['subscription_id'],
+            ]);
+        }
     }
 
     private function handleProviderFailure(DirectPaymentVerification $verification, VerifyEtException $exception): string
