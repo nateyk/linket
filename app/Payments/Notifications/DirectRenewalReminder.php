@@ -4,6 +4,7 @@ namespace App\Payments\Notifications;
 
 use App\Models\User;
 use App\Telegram\Support\TelegramNotificationChannels;
+use App\Telegram\Support\TelegramNotificationPreferences;
 use Common\Billing\Subscription;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -29,6 +30,7 @@ class DirectRenewalReminder extends Notification implements ShouldQueue
         return TelegramNotificationChannels::append(
             $notifiable,
             ['mail', 'database'],
+            TelegramNotificationPreferences::PRO_BILLING,
         );
     }
 
