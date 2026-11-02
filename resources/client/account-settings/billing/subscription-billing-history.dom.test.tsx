@@ -39,7 +39,7 @@ it('renders creator-owned Pro payment amount, date, reference and status', async
   expect(screen.getByText('Paid')).toBeTruthy();
   expect(screen.getByText('Rejected')).toBeTruthy();
   expect(screen.getByText('Monthly price')).toBeTruthy();
-  expect(screen.getByText(/Payment pending_payment/)).toBeTruthy();
+  expect(screen.getByText('Pending payment')).toBeTruthy();
   expect(screen.getByRole('button', {name: 'Renew Pro'})).toBeTruthy();
   expect(screen.getByRole('link', {name: 'Download receipt'}).getAttribute('href')).toBe('/api/v1/billing/direct/pro/paid/receipt');
   expect(screen.getAllByText('50000 ETB').length).toBeGreaterThanOrEqual(4);
