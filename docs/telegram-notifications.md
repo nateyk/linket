@@ -178,3 +178,20 @@ Creator notifications also cover receiving account **approved**, **rejected**, *
 5. Connect a test creator, use **Send test**, then verify a non-financial receiving-account status event with fake/synthetic account data.
 6. Confirm scheduled `telegram:prune-records` appears in `php artisan schedule:list`.
 7. Do not treat synthetic CI success as proof of production Bot API connectivity, and never use a real payment receipt solely for Telegram testing.
+
+
+## Creator lifecycle notifications — V1.2
+
+Telegram alerts remain informational: Linket/Verify.et are the **only** sources of truth for payment status, Pro activation, free-sale allowance consumption and download entitlements.
+
+When a creator successfully links a private Telegram chat using a valid, consumed, one-time token, Linket queues one acknowledgement to that same connected chat. Replayed link attempts do not issue duplicates.
+
+Two additional creator switches are available under **Account Settings → Integrations → Telegram**:
+- **Free sales allowance** (`free_sales_quota`): warns when verified free-sale consumption reaches the final three slots of the current configured lifetime limit. Reserved or unverified checkouts never count, and a unique milestone record deduplicates retries.
+- **Payment review** (`payment_review`): informs the creator when Linket actually marks a Verify.et buyer order `manual_review`. It does not mean the funds have been confirmed, and it provides no override action.
+
+The existing **Pro billing** switch controls Verified Pro activation, renewal, past-due and expired notices. Only a successfully settled Verify.et subscription payment activates or renews Pro. Chapa subscriptions are unaffected. Repeated scheduler passes and duplicated provider callbacks do not produce duplicate transition messages.
+
+All new messages recheck creator ownership, connection/prefs, and persisted status when the queued message is delivered. They never expose buyer contact data, full receiving account numbers, payment reference IDs or provider verification evidence. No Telegram response is used to change settlement, accounting, entitlements or quotas.
+
+For production rollout: deploy the new idempotency-table migration, refresh config and restart queue workers. Then verify a connected **test** creator receives these informational events using synthetic orders, not real receipts. CI tests fake the Telegram transport and cannot prove real production connectivity.

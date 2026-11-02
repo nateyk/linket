@@ -147,6 +147,52 @@ final class TelegramCreatorLifecycleTest extends TestCase
         );
     }
 
+    public function test_payment_review_and_pro_notifications_respect_creator_mutes_and_ownership(): void
+    {
+        $creator = $this->connectedCreator();
+        $other = $this->connectedCreator();
+        $workspace = (new CreateWorkspace())->createPersonalWorkspace($creator);
+        $product = DigitalProduct::query()->create([
+            'workspace_id' => $workspace->id, 'user_id' => $creator->id,
+            'title' => 'Private synthetic guide', 'status' => 'approved',
+            'price_cents' => 1000, 'currency' => 'ETB', 'type' => 'digital',
+        ]);
+        $order = $this->order($creator, $product, 'manual_review');
+        $verification = DirectPaymentVerification::query()->create([
+            'reference' => 'PRIVATE'.Str::upper(Str::random(14)),
+            'payable_type' => StorefrontOrder::class,
+            'payable_id' => $order->id,
+            'bank_code' => 'cbe',
+            'settlement_account' => '1000123456789',
+            'amount_cents' => 1000, 'currency' => 'ETB',
+            'status' => 'manual_review',
+        ]);
+        $review = new \App\Storefront\Notifications\PaymentReviewNeededNotification(
+            $order->id, $verification->id,
+        );
+        $this->assertTrue($review->shouldSend($creator, 'telegram'));
+        $this->assertFalse($review->shouldSend($other, 'telegram'));
+
+        $plan = Product::query()->where('system_key', 'pro')->firstOrFail();
+        $price = Price::query()->where('product_id', $plan->id)->firstOrFail();
+        $subscription = Subscription::query()->create([
+            'user_id' => $creator->id, 'product_id' => $plan->id,
+            'price_id' => $price->id, 'gateway_name' => 'verify_et',
+            'gateway_status' => 'past_due', 'renews_at' => now()->subDay(),
+        ]);
+        $pro = new \App\Payments\Notifications\DirectProLifecycleNotification(
+            $subscription->id, 'past_due',
+        );
+        $this->assertTrue($pro->shouldSend($creator, 'telegram'));
+        $this->assertFalse($pro->shouldSend($other, 'telegram'));
+
+        $creator->telegramConnection()->update([
+            'notification_preferences' => ['payment_review' => false, 'pro_billing' => false],
+        ]);
+        $this->assertFalse($review->shouldSend($creator->fresh(), 'telegram'));
+        $this->assertFalse($pro->shouldSend($creator->fresh(), 'telegram'));
+    }
+
     private function connectedCreator(): User
     {
         $creator = User::factory()->create(['email_verified_at' => now()]);
