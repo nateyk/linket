@@ -18,6 +18,15 @@ type WebhookState = {
   pending_update_count: number;
   allowed_updates: string[];
   last_error_date?: number | null;
+  last_synchronization_error_date?: number | null;
+  url_matches?: boolean;
+  updates_match?: boolean;
+};
+
+type LiveBot = {
+  id: number | null;
+  username: string;
+  identity_matches: boolean;
 };
 
 type TelegramHealth = {
@@ -35,13 +44,15 @@ type TelegramHealth = {
   http_connect_timeout: number;
   current_admin_connected: boolean;
   webhook?: WebhookState;
+  bot?: LiveBot;
+  status?: 'healthy' | 'degraded';
   test_sent?: boolean;
 };
 
 export function Component() {
   const [telegram, setTelegram] = useState<TelegramHealth | null>(null);
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState<'sync' | 'test' | 'refresh' | null>(null);
+  const [busy, setBusy] = useState<'sync' | 'test' | 'refresh' | 'inspect' | null>(null);
   const [error, setError] = useState(false);
   const [syncSuccess, setSyncSuccess] = useState(false);
   const [testSuccess, setTestSuccess] = useState(false);
@@ -63,6 +74,19 @@ export function Component() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const inspect = async () => {
+    setBusy('inspect');
+    setError(false);
+    try {
+      const response = await apiClient.get('/api/v1/admin/integrations/telegram/health');
+      setTelegram(response.data.telegram);
+    } catch {
+      setError(true);
+    } finally {
+      setBusy(null);
+    }
+  };
 
   const syncWebhook = async () => {
     setBusy('sync');
@@ -222,6 +246,19 @@ export function Component() {
                   </p>
                 </div>
 
+                {telegram.bot ? (
+                  <div className="rounded-card-sm border p-4">
+                    <p className="text-sm font-semibold"><Trans message="Live bot diagnostics" /></p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {telegram.bot.username ? `@${telegram.bot.username}` : '—'} ·{' '}
+                      {telegram.bot.identity_matches ? <Trans message="Bot identity matches" /> : <Trans message="Bot identity mismatch" />}
+                    </p>
+                    <Badge variant={telegram.status === 'healthy' ? 'positive' : 'secondary'}>
+                      {telegram.status === 'healthy' ? <Trans message="Healthy" /> : <Trans message="Degraded" />}
+                    </Badge>
+                  </div>
+                ) : null}
+
                 {telegram.webhook ? (
                   <div className="rounded-card-sm border p-4">
                     <div className="flex items-center gap-2">
@@ -234,6 +271,12 @@ export function Component() {
                       {telegram.webhook.pending_update_count}{' '}
                       <Trans message="pending updates" />
                     </p>
+                    {telegram.webhook.url_matches === false ? (
+                      <p className="mt-1 text-sm text-destructive"><Trans message="Remote webhook URL mismatch" /></p>
+                    ) : null}
+                    {telegram.webhook.last_error_date ? (
+                      <p className="mt-1 text-sm text-destructive"><Trans message="Telegram reported a recent webhook delivery error" /></p>
+                    ) : null}
                     <p className="mt-1 text-xs text-muted-foreground">
                       <Trans message="Allowed updates:" />{' '}
                       {telegram.webhook.allowed_updates.join(', ') || '—'}
@@ -265,6 +308,14 @@ export function Component() {
                   >
                     <RefreshCwIcon />
                     <Trans message="Refresh status" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    disabled={!telegram.ready || busy !== null}
+                    onClick={() => void inspect()}
+                  >
+                    <RefreshCwIcon />
+                    <Trans message="Check Telegram health" />
                   </Button>
                   <Button
                     variant="outline"
