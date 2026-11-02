@@ -1267,6 +1267,7 @@ function OrderDetailDialog({
   const [detail, setDetail] = useState<OrderDetail>();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>();
+  const [detailRefreshKey, setDetailRefreshKey] = useState(0);
 
   useEffect(() => {
     if (!uuid) {
@@ -1277,11 +1278,12 @@ function OrderDetailDialog({
 
     let active = true;
     setLoading(true);
-    setDetail(undefined);
+    // Refresh in place, but never show another order's data.
+    setDetail(current => (current?.uuid === uuid ? current : undefined));
     setError(undefined);
 
     apiClient
-      .get(`/api/v1/storefront/direct-orders/${uuid}`)
+      .get('/api/v1/storefront/direct-orders/' + uuid)
       .then(response => {
         if (active) setDetail(response.data.data);
       })
@@ -1295,14 +1297,14 @@ function OrderDetailDialog({
     return () => {
       active = false;
     };
-  }, [uuid]);
+  }, [uuid, detailRefreshKey]);
 
   return (
     <Dialog.Root open={!!uuid} onOpenChange={open => !open && onClose()}>
       <Dialog.Portal>
         <Dialog.Backdrop />
-        <Dialog.Content className="sm:max-w-xl">
-          <Dialog.Header>
+        <Dialog.Content className="min-w-0 sm:max-w-xl">
+          <Dialog.Header className="min-w-0">
             <Dialog.Title>
               <ReceiptTextIcon />
               <Trans message="Order details" />
@@ -1311,21 +1313,40 @@ function OrderDetailDialog({
               <Trans message="Payment verification and delivery information for this order." />
             </Dialog.Description>
           </Dialog.Header>
-          <Dialog.Body>
-            {loading && <TableLoading />}
+          <Dialog.Body className="min-w-0" aria-busy={loading}>
+            {loading && !detail && <TableLoading />}
+            {loading && detail && (
+              <p role="status" className="mb-3 text-xs text-muted-foreground">
+                <Trans message="Refreshing order details..." />
+              </p>
+            )}
             {error && (
-              <p className="text-sm text-destructive" role="alert">
+              <p className="mb-3 text-sm text-destructive" role="alert">
                 {error}
               </p>
             )}
             {detail && (
-              <div className="flex flex-col gap-5">
+              <div className="flex min-w-0 flex-col gap-5">
                 <OrderDetailContent order={detail} />
                 <CreatorOrderDisputes orderUuid={detail.uuid ?? uuid!} />
               </div>
             )}
           </Dialog.Body>
-          <Dialog.Footer variant="muted">
+          <Dialog.Footer variant="muted" className="sm:justify-between">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={!uuid || loading}
+              onClick={() => setDetailRefreshKey(current => current + 1)}
+            >
+              <RefreshCwIcon className={loading ? 'animate-spin' : undefined} />
+              {error && !detail ? (
+                <Trans message="Try again" />
+              ) : (
+                <Trans message="Refresh status" />
+              )}
+            </Button>
             <Dialog.CloseButton>
               <Trans message="Close" />
             </Dialog.CloseButton>
@@ -1341,11 +1362,11 @@ function OrderDetailContent({order}: {order: OrderDetail}) {
   const accountEnding = order.account_ending;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex min-w-0 flex-col gap-4">
       <Item.Root
         variant="muted"
         size="sm"
-        className="rounded-card-sm border-0"
+        className="min-w-0 rounded-card-sm border-0"
       >
         <Item.Media
           align="center"
@@ -1358,7 +1379,7 @@ function OrderDetailContent({order}: {order: OrderDetail}) {
           <Item.Title className="line-clamp-2 whitespace-normal">
             {order.product?.title ?? <Trans message="Deleted product" />}
           </Item.Title>
-          <Item.Description className="line-clamp-none">
+          <Item.Description className="line-clamp-none break-words">
             {order.buyer_name || <Trans message="Guest buyer" />}
             {order.buyer_email ? ` · ${order.buyer_email}` : null}
           </Item.Description>
@@ -1382,11 +1403,15 @@ function OrderDetailContent({order}: {order: OrderDetail}) {
         </Item.Actions>
       </Item.Root>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid min-w-0 gap-4 sm:grid-cols-2">
         <DetailSection title={<Trans message="Payment information" />}>
           <DetailRow
             label={<Trans message="Transaction reference" />}
-            value={order.transaction_reference ?? '—'}
+            value={
+              <span className="break-all font-mono text-xs">
+                {order.transaction_reference ?? '—'}
+              </span>
+            }
           />
           <DetailRow
             label={<Trans message="Payment gateway" />}
@@ -1451,21 +1476,30 @@ function OrderDetailContent({order}: {order: OrderDetail}) {
                 value={order.verification.attempts}
               />
               <DetailRow
-                label={<Trans message="Verified at" />}
+                label={
+                  order.verification.verified_at &&
+                  ['success', 'manual_approved'].includes(order.verification.status) ? (
+                    <Trans message="Verified at" />
+                  ) : (
+                    <Trans message="Submitted at" />
+                  )
+                }
                 value={
                   <FormattedDate
                     preset="timestamp"
                     date={
-                      order.verification.verified_at ??
-                      order.verification.created_at
+                      order.verification.verified_at &&
+                      ['success', 'manual_approved'].includes(order.verification.status)
+                        ? order.verification.verified_at
+                        : order.verification.created_at
                     }
                   />
                 }
               />
               {order.verification.error_code && (
                 <DetailRow
-                  label={<Trans message="Reason code" />}
-                  value={order.verification.error_code}
+                  label={<Trans message="Reason" />}
+                  value={verificationReasonLabel(order.verification.error_code)}
                 />
               )}
             </>
