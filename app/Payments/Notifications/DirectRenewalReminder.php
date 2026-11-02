@@ -43,6 +43,14 @@ class DirectRenewalReminder extends Notification implements ShouldQueue
         ];
     }
 
+    public function shouldSend(object $notifiable, string $channel): bool
+    {
+        return $channel !== 'telegram' || TelegramNotificationChannels::isAvailableFor(
+            $notifiable,
+            TelegramNotificationPreferences::PRO_BILLING,
+        );
+    }
+
     public function toMail(User $notifiable): MailMessage
     {
         return (new MailMessage())

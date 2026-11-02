@@ -357,6 +357,30 @@ class TelegramNotificationIntegrationTest extends TestCase
         );
     }
 
+    public function test_queued_telegram_preference_is_rechecked_at_send_time(): void
+    {
+        $creator = User::factory()->create(['email_verified_at' => now()]);
+        $connection = $creator->telegramConnection()->create([
+            'telegram_user_id' => 1234567890765,
+            'telegram_chat_id' => 1234567890765,
+            'connected_at' => now(),
+        ]);
+        $notification = new \App\Storefront\Notifications\ProductModerationSummaryNotification(
+            'approved',
+            ['Test product'],
+        );
+
+        $this->assertContains('telegram', $notification->via($creator));
+        $connection->forceFill([
+            'notification_preferences' => [
+                'product_moderation' => false,
+            ],
+        ])->save();
+
+        $this->assertFalse($notification->shouldSend($creator->fresh(), 'telegram'));
+        $this->assertTrue($notification->shouldSend($creator->fresh(), 'mail'));
+    }
+
     private function stateful(): static
     {
         return $this

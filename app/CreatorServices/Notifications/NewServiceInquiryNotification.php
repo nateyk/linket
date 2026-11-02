@@ -45,6 +45,13 @@ class NewServiceInquiryNotification extends Notification implements ShouldQueue
 
     public function shouldSend(object $notifiable, string $channel): bool
     {
+        if ($channel === 'telegram' && ! TelegramNotificationChannels::isAvailableFor(
+            $notifiable,
+            TelegramNotificationPreferences::SERVICE_INQUIRIES,
+        )) {
+            return false;
+        }
+
         return ServiceInquiry::query()->whereKey($this->inquiryId)->exists();
     }
 

@@ -56,6 +56,13 @@ class PaymentDisputeStatusChangedNotification extends Notification implements Sh
 
     public function shouldSend(object $notifiable, string $channel): bool
     {
+        if ($channel === 'telegram' && ! TelegramNotificationChannels::isAvailableFor(
+            $notifiable,
+            TelegramNotificationPreferences::PAYMENT_DISPUTES,
+        )) {
+            return false;
+        }
+
         return StorefrontPaymentDispute::query()->whereKey($this->disputeId)->exists();
     }
 

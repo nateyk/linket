@@ -41,6 +41,13 @@ final class VerifiedSaleNotification extends Notification implements ShouldQueue
 
     public function shouldSend(object $notifiable, string $channel): bool
     {
+        if ($channel === 'telegram' && ! TelegramNotificationChannels::isAvailableFor(
+            $notifiable,
+            TelegramNotificationPreferences::VERIFIED_SALES,
+        )) {
+            return false;
+        }
+
         return StorefrontOrder::query()
             ->whereKey($this->orderId)
             ->where('creator_id', $notifiable->getKey())
