@@ -6,6 +6,7 @@ import {Component} from './integrations-settings';
 const api = vi.hoisted(() => ({
   get: vi.fn(),
   post: vi.fn(),
+  patch: vi.fn(),
 }));
 
 vi.mock('@common/http/query-client', () => ({apiClient: api}));
@@ -55,6 +56,7 @@ const health = {
 
 beforeEach(() => {
   api.get.mockResolvedValue({data: {telegram: health}});
+  api.patch.mockResolvedValue({data: {telegram: health}});
   api.post.mockResolvedValue({
     data: {
       telegram: {
@@ -85,7 +87,7 @@ it('shows safe Telegram readiness without rendering environment secrets', async 
   expect(screen.queryByDisplayValue('synthetic-webhook-secret')).toBeNull();
 });
 
-it('explains missing server configuration and disables operational actions', async () => {
+it('explains missing Telegram configuration and disables operational actions', async () => {
   api.get.mockResolvedValue({
     data: {
       telegram: {
@@ -99,7 +101,7 @@ it('explains missing server configuration and disables operational actions', asy
 
   render(<Component />);
 
-  expect(await screen.findByText('Server configuration required')).toBeTruthy();
+  expect(await screen.findByText('Configure Telegram')).toBeTruthy();
   expect(screen.getByRole('button', {name: 'Sync webhook'})).toHaveProperty('disabled', true);
   expect(screen.getByRole('button', {name: 'Send test notification'})).toHaveProperty('disabled', true);
 });
@@ -146,4 +148,25 @@ it('sends a test only when the current admin has Telegram connected', async () =
     expect(api.post).toHaveBeenCalledWith('/api/v1/admin/integrations/telegram/test'),
   );
   expect(await screen.findByText('Test notification sent.')).toBeTruthy();
+});
+
+it('saves Telegram configuration with write-only credentials', async () => {
+  render(<Component />);
+  fireEvent.change(await screen.findByLabelText('Bot username'), {target: {value: 'CreatorTestBot'}});
+  fireEvent.change(screen.getByLabelText('Bot token'), {target: {value: '123456:synthetic_token'}});
+  fireEvent.change(screen.getByLabelText('Webhook secret'), {target: {value: 'synthetic_secret'}});
+  fireEvent.click(screen.getByRole('button', {name: 'Save Telegram settings'}));
+
+  await waitFor(() => expect(api.patch).toHaveBeenCalledWith(
+    '/api/v1/admin/integrations/telegram',
+    expect.objectContaining({
+      enabled: true,
+      bot_username: 'CreatorTestBot',
+      token: '123456:synthetic_token',
+      webhook_secret: 'synthetic_secret',
+    }),
+  ));
+  expect(await screen.findByText('Telegram settings saved. Sync the webhook to apply changes.')).toBeTruthy();
+  expect((screen.getByLabelText('Bot token') as HTMLInputElement).value).toBe('');
+  expect((screen.getByLabelText('Webhook secret') as HTMLInputElement).value).toBe('');
 });
