@@ -13,7 +13,7 @@ export function FreePlanPanel() {
   return (
     <>
       <BillingPlanPanel title={<Trans message="Current plan" />}>
-        <div className="mt-6 flex justify-between gap-5">
+        <div className="mt-6 flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <div className="mb-0.5 text-xl font-bold">
               <Trans message="Free plan" />
@@ -41,7 +41,7 @@ export function FreePlanPanel() {
             color="primary"
             size="lg"
             to="/pricing"
-            className="w-58"
+            className="w-full sm:w-58"
           >
             <Trans message="Upgrade" />
           </LinkButton>
