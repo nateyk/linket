@@ -124,7 +124,13 @@ final class TelegramConnectionController extends Controller
 
         try {
             Notification::sendNow($request->user(), new TelegramIntegrationTestNotification());
-        } catch (\Throwable) {
+        } catch (\Throwable $exception) {
+            if (app()->runningUnitTests()) {
+                throw ValidationException::withMessages([
+                    'telegram' => get_class($exception).' at '.basename($exception->getFile()).':'.$exception->getLine(),
+                ]);
+            }
+
             throw ValidationException::withMessages([
                 'telegram' => __('Telegram test notification could not be delivered.'),
             ]);
