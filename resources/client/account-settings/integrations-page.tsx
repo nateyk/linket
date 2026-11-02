@@ -20,7 +20,8 @@ type PreferenceKey =
   | 'service_inquiries'
   | 'product_moderation'
   | 'payment_disputes'
-  | 'pro_billing';
+  | 'pro_billing'
+  | 'receiving_accounts';
 
 type TelegramState = {
   enabled: boolean;
@@ -53,6 +54,11 @@ const preferenceRows: {key: PreferenceKey; label: string; description: string}[]
     key: 'payment_disputes',
     label: 'Payment disputes',
     description: 'Receive creator-side dispute status changes.',
+  },
+  {
+    key: 'receiving_accounts',
+    label: 'Receiving accounts',
+    description: 'Know when Linket reviews, registers, suspends or restores a receiving account.',
   },
   {
     key: 'pro_billing',

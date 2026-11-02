@@ -262,6 +262,40 @@ class AdminReceivingAccountsTest extends TestCase
         $this->stateful()->actingAs($admin, 'sanctum')->postJson("/api/v1/admin/storefront/payment-methods/{$method->id}/approve")->assertStatus(409);
     }
 
+    public function test_telegram_receiving_account_review_notifies_only_connected_creator_with_safe_content(): void
+    {
+        config()->set('services.telegram.enabled', true);
+        config()->set('services.telegram.token', 'synthetic-bot-token');
+        \Illuminate\Support\Facades\Notification::fake();
+
+        $creator = $this->createUser();
+        $workspace = app(CreateWorkspace::class)->createPersonalWorkspace($creator);
+        $method = $this->pendingAccount($creator, $workspace->id);
+        $creator->telegramConnection()->create([
+            'telegram_user_id' => 1234567890155,
+            'telegram_chat_id' => 1234567890155,
+            'connected_at' => now(),
+        ]);
+
+        $this->stateful()->actingAs($this->createAdmin(), 'sanctum')
+            ->postJson("/api/v1/admin/storefront/payment-methods/{$method->id}/approve")
+            ->assertOk();
+
+        \Illuminate\Support\Facades\Notification::assertSentTo(
+            $creator,
+            \App\Storefront\Notifications\ReceivingAccountStatusNotification::class,
+            function ($notification) use ($creator): bool {
+                $message = $notification->toTelegram($creator)->toArray();
+                $content = json_encode($message, JSON_THROW_ON_ERROR);
+
+                $this->assertStringNotContainsString('1000123456789', $content);
+                $this->assertStringContainsString('6789', $content);
+
+                return $notification->event === 'approved';
+            },
+        );
+    }
+
     private function createAdmin(): User
     {
         $admin = $this->createUser();
