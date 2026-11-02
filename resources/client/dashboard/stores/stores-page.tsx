@@ -205,11 +205,6 @@ function BiolinkCard({biolink, onClick, onInsights}: BiolinkCardProps) {
           <Trans message="clicks" />
         </span>
 
-        <Button variant="outline" size="sm" onClick={onClick}>
-          <PencilIcon />
-          <Trans message="Edit" />
-        </Button>
-
         <Dropdown.Root>
           <Dropdown.Trigger
             render={<Button variant="ghost" size="icon-sm" />}
@@ -218,6 +213,10 @@ function BiolinkCard({biolink, onClick, onInsights}: BiolinkCardProps) {
             <EllipsisVerticalIcon />
           </Dropdown.Trigger>
           <Dropdown.Content align="end">
+            <Dropdown.Item onClick={onClick}>
+              <PencilIcon />
+              <Trans message="Edit profile" />
+            </Dropdown.Item>
             <Dropdown.Item
               onClick={() =>
                 window.open(biolink.short_url, '_blank', 'noopener,noreferrer')
