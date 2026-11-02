@@ -12,10 +12,13 @@ vi.mock('@common/http/query-client', () => ({apiClient: api}));
 vi.mock('@ui/i18n/trans', () => ({
   Trans: ({message}: {message: string}) => message,
 }));
-vi.mock('@common/admin/settings/layout/settings-layout', () => ({
-  AdminSettingsLayout: ({children}: {children: React.ReactNode}) => (
-    <main>{children}</main>
-  ),
+vi.mock('@common/ui/dashboard/dashboard-layout', () => ({
+  DashboardLayout: {
+    MainSection: 'main',
+    SectionHeader: 'header',
+    SidebarToggle: 'span',
+    SectionTitle: 'h1',
+  },
 }));
 vi.mock('@common/admin/settings/layout/settings-panel', () => ({
   SettingsPanel: ({
@@ -33,9 +36,6 @@ vi.mock('@common/admin/settings/layout/settings-panel', () => ({
       {children}
     </section>
   ),
-}));
-vi.mock('@common/admin/settings/use-admin-settings', () => ({
-  useAdminSettings: () => ({data: {client: {}}}),
 }));
 
 const health = {
