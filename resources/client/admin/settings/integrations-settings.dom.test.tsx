@@ -118,7 +118,7 @@ it('checks remote bot health without modifying the webhook', async () => {
   fireEvent.click(await screen.findByRole('button', {name: 'Check Telegram health'}));
 
   await waitFor(() => expect(api.get).toHaveBeenCalledWith('/api/v1/admin/integrations/telegram/health'));
-  expect(await screen.findByText('Bot identity mismatch')).toBeTruthy();
+  expect(await screen.findByText(/Bot identity mismatch/)).toBeTruthy();
   expect(screen.getByText('Remote webhook URL mismatch')).toBeTruthy();
   expect(api.post).not.toHaveBeenCalled();
 });
