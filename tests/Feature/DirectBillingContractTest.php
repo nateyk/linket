@@ -287,6 +287,61 @@ class DirectBillingContractTest extends TestCase
         $this->assertNotNull($subscription->fresh()->ends_at);
     }
 
+    public function testFirstVerifiedProPaymentActivatesAndNotifiesExactlyOnce(): void
+    {
+        \Illuminate\Support\Facades\Notification::fake();
+        config()->set('services.verify_et.enabled', true);
+        config()->set('services.telegram.enabled', true);
+        config()->set('services.telegram.token', 'synthetic-bot-token');
+
+        $creator = User::factory()->create();
+        $creator->telegramConnection()->create([
+            'telegram_user_id' => 1234567890666,
+            'telegram_chat_id' => 1234567890666,
+            'connected_at' => now(),
+        ]);
+        [$plan, $price] = $this->proPlan();
+        $payment = ProSubscriptionPayment::query()->create([
+            'uuid' => (string) Str::uuid(),
+            'creator_id' => $creator->id,
+            'product_id' => $plan->id,
+            'price_id' => $price->id,
+            'amount_cents' => 50000,
+            'status' => 'pending_payment',
+        ]);
+        $verification = DirectPaymentVerification::query()->create([
+            'reference' => 'SYNTH'.Str::upper(Str::random(12)),
+            'payable_type' => ProSubscriptionPayment::class,
+            'payable_id' => $payment->id,
+            'bank_code' => 'cbe',
+            'settlement_account' => '1000123456789',
+            'amount_cents' => 50000,
+            'currency' => 'ETB',
+        ]);
+        $result = $this->matchedResult($verification, 500, '1000123456789');
+
+        $this->assertSame('success', app(VerifyEtGateway::class)->processResult($verification, $result));
+        $this->assertSame('success', app(VerifyEtGateway::class)->processResult($verification, $result));
+        $this->assertSame('paid', $payment->fresh()->status);
+
+        $active = Subscription::query()
+            ->where('user_id', $creator->id)
+            ->where('gateway_name', 'verify_et')
+            ->where('gateway_status', 'active')
+            ->firstOrFail();
+        \Illuminate\Support\Facades\Notification::assertSentToTimes(
+            $creator,
+            \App\Payments\Notifications\DirectProLifecycleNotification::class,
+            1,
+        );
+        \Illuminate\Support\Facades\Notification::assertSentTo(
+            $creator,
+            \App\Payments\Notifications\DirectProLifecycleNotification::class,
+            fn ($notification): bool => $notification->event === 'activated'
+                && $notification->subscriptionId === $active->id,
+        );
+    }
+
     public function testVerifiedRenewalExtendsExistingDirectSubscriptionOnlyOnce(): void
     {
         \Illuminate\Support\Facades\Notification::fake();
