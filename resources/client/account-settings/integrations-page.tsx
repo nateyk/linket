@@ -6,6 +6,7 @@ import {Badge} from '@shadcn/badge/badge';
 import {Button} from '@shadcn/button/button';
 import {Switch} from '@shadcn/forms/switch/switch';
 import {Spinner} from '@shadcn/spinner/spinner';
+import {FormattedDate} from '@ui/i18n/formatted-date';
 import {Trans} from '@ui/i18n/trans';
 import {
   ExternalLinkIcon,
@@ -35,6 +36,7 @@ type TelegramState = {
   notifications_enabled: boolean;
   delivery_status?: 'healthy' | 'attention_required' | 'unknown';
   last_delivery_at?: string | null;
+  last_failed_at?: string | null;
   preferences: Record<PreferenceKey, boolean>;
 };
 
@@ -158,6 +160,7 @@ export function Component() {
     setTestSent(false);
     try {
       await apiClient.post('/api/v1/integrations/telegram/test');
+      await load();
       setTestSent(true);
     } catch {
       setError(true);
@@ -240,14 +243,6 @@ export function Component() {
                     <p className="mt-1 text-sm text-muted-foreground">
                       <Trans message="Linket can send creator notifications to this private Telegram chat." />
                     </p>
-                    {telegram.delivery_status === 'attention_required' ? (
-                      <p className="mt-1 text-sm text-destructive"><Trans message="Telegram delivery needs attention. Open the bot chat and send /start." /></p>
-                    ) : null}
-                    {telegram.last_seen_at ? (
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        <Trans message="Telegram connection is active." />
-                      </p>
-                    ) : null}
                   </div>
                   <div className="flex shrink-0 flex-wrap gap-2">
                     <Button
@@ -275,6 +270,44 @@ export function Component() {
                       <Trans message="Reconnect" />
                     </Button>
                   </div>
+                </div>
+
+                <div className="rounded-card-sm border p-4">
+                  <p className="text-sm font-semibold"><Trans message="Delivery status" /></p>
+                  <p className="mt-1 text-sm font-medium">
+                    {telegram.delivery_status === 'healthy' ? (
+                      <Trans message="Delivery working" />
+                    ) : telegram.delivery_status === 'attention_required' ? (
+                      <Trans message="Delivery needs attention" />
+                    ) : (
+                      <Trans message="No delivery recorded yet" />
+                    )}
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {telegram.delivery_status === 'healthy' ? (
+                      <Trans message="The most recent recorded Telegram delivery succeeded." />
+                    ) : telegram.delivery_status === 'attention_required' ? (
+                      <Trans message="Open your bot chat, unblock the bot if needed, and send a test." />
+                    ) : (
+                      <Trans message="Send a test to check that Telegram can receive messages." />
+                    )}
+                  </p>
+                  {(telegram.last_delivery_at || telegram.last_failed_at) ? (
+                    <dl className="mt-4 space-y-2 text-sm">
+                      {telegram.last_delivery_at ? (
+                        <div className="flex flex-wrap justify-between gap-2">
+                          <dt className="text-muted-foreground"><Trans message="Last successful delivery" /></dt>
+                          <dd><FormattedDate date={telegram.last_delivery_at} preset="timestamp" /></dd>
+                        </div>
+                      ) : null}
+                      {telegram.last_failed_at ? (
+                        <div className="flex flex-wrap justify-between gap-2">
+                          <dt className="text-muted-foreground"><Trans message="Last failed delivery" /></dt>
+                          <dd><FormattedDate date={telegram.last_failed_at} preset="timestamp" /></dd>
+                        </div>
+                      ) : null}
+                    </dl>
+                  ) : null}
                 </div>
 
                 <div className="divide-y rounded-card-sm border">
