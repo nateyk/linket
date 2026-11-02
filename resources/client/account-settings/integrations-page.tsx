@@ -6,6 +6,7 @@ import {Badge} from '@shadcn/badge/badge';
 import {Button} from '@shadcn/button/button';
 import {Switch} from '@shadcn/forms/switch/switch';
 import {Spinner} from '@shadcn/spinner/spinner';
+import {FormattedDate} from '@ui/i18n/formatted-date';
 import {Trans} from '@ui/i18n/trans';
 import {
   ExternalLinkIcon,
@@ -35,6 +36,7 @@ type TelegramState = {
   notifications_enabled: boolean;
   delivery_status?: 'healthy' | 'attention_required' | 'unknown';
   last_delivery_at?: string | null;
+  last_failed_at?: string | null;
   preferences: Record<PreferenceKey, boolean>;
 };
 
@@ -87,16 +89,18 @@ export function Component() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [testSent, setTestSent] = useState(false);
+  const [testResult, setTestResult] = useState<'sent' | 'failed' | 'refresh_failed' | null>(null);
   const [disconnectOpen, setDisconnectOpen] = useState(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (silent = false): Promise<boolean> => {
     setError(false);
     try {
       const response = await apiClient.get('/api/v1/integrations/telegram');
       setTelegram(response.data.telegram);
+      return true;
     } catch {
-      setError(true);
+      if (!silent) setError(true);
+      return false;
     } finally {
       setLoading(false);
     }
@@ -135,7 +139,7 @@ export function Component() {
       preferences,
     });
     setSaved(false);
-    setTestSent(false);
+    setTestResult(null);
     setError(false);
 
     try {
@@ -155,12 +159,14 @@ export function Component() {
     setBusy(true);
     setError(false);
     setSaved(false);
-    setTestSent(false);
+    setTestResult(null);
     try {
       await apiClient.post('/api/v1/integrations/telegram/test');
-      setTestSent(true);
+      const refreshed = await load(true);
+      setTestResult(refreshed ? 'sent' : 'refresh_failed');
     } catch {
-      setError(true);
+      await load(true);
+      setTestResult('failed');
     } finally {
       setBusy(false);
     }
@@ -240,14 +246,6 @@ export function Component() {
                     <p className="mt-1 text-sm text-muted-foreground">
                       <Trans message="Linket can send creator notifications to this private Telegram chat." />
                     </p>
-                    {telegram.delivery_status === 'attention_required' ? (
-                      <p className="mt-1 text-sm text-destructive"><Trans message="Telegram delivery needs attention. Open the bot chat and send /start." /></p>
-                    ) : null}
-                    {telegram.last_seen_at ? (
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        <Trans message="Telegram connection is active." />
-                      </p>
-                    ) : null}
                   </div>
                   <div className="flex shrink-0 flex-wrap gap-2">
                     <Button
@@ -275,6 +273,47 @@ export function Component() {
                       <Trans message="Reconnect" />
                     </Button>
                   </div>
+                </div>
+
+                <div className="rounded-card-sm border p-4">
+                  <p className="text-sm font-semibold"><Trans message="Delivery status" /></p>
+                  <p className="mt-1 text-sm font-medium">
+                    {telegram.delivery_status === 'healthy' ? (
+                      <Trans message="Last recorded delivery succeeded" />
+                    ) : telegram.delivery_status === 'attention_required' ? (
+                      <Trans message="Delivery needs attention" />
+                    ) : (
+                      <Trans message="No delivery recorded yet" />
+                    )}
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {telegram.delivery_status === 'healthy' ? (
+                      <Trans message="The most recent recorded Telegram delivery succeeded." />
+                    ) : telegram.delivery_status === 'attention_required' ? (
+                      <Trans message="Open your bot chat, unblock the bot if needed, and send a test." />
+                    ) : (
+                      <Trans message="Send a test to check that Telegram can receive messages." />
+                    )}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    <Trans message="Delivery history may include a previously connected chat." />
+                  </p>
+                  {(telegram.last_delivery_at || telegram.last_failed_at) ? (
+                    <dl className="mt-4 space-y-2 text-sm">
+                      {telegram.last_delivery_at ? (
+                        <div className="flex flex-wrap justify-between gap-2">
+                          <dt className="text-muted-foreground"><Trans message="Last successful delivery" /></dt>
+                          <dd><FormattedDate date={telegram.last_delivery_at} preset="timestamp" /></dd>
+                        </div>
+                      ) : null}
+                      {telegram.last_failed_at ? (
+                        <div className="flex flex-wrap justify-between gap-2">
+                          <dt className="text-muted-foreground"><Trans message="Last failed delivery" /></dt>
+                          <dd><FormattedDate date={telegram.last_failed_at} preset="timestamp" /></dd>
+                        </div>
+                      ) : null}
+                    </dl>
+                  ) : null}
                 </div>
 
                 <div className="divide-y rounded-card-sm border">
@@ -309,9 +348,17 @@ export function Component() {
                     <Trans message="Telegram notification preferences updated." />
                   </p>
                 ) : null}
-                {testSent ? (
+                {testResult === 'sent' ? (
                   <p role="status" className="text-sm text-positive">
                     <Trans message="Test notification sent." />
+                  </p>
+                ) : testResult === 'failed' ? (
+                  <p role="alert" className="text-sm text-destructive">
+                    <Trans message="Could not confirm the test was sent. Refresh to update delivery status." />
+                  </p>
+                ) : testResult === 'refresh_failed' ? (
+                  <p role="alert" className="text-sm text-destructive">
+                    <Trans message="Test sent, but delivery status could not be refreshed." />
                   </p>
                 ) : null}
                 {error ? (

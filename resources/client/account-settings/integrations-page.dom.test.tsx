@@ -11,6 +11,9 @@ const api = vi.hoisted(() => ({
 }));
 
 vi.mock('@common/http/query-client', () => ({apiClient: api}));
+vi.mock('@ui/i18n/formatted-date', () => ({
+  FormattedDate: ({date}: {date: string}) => <time>{date}</time>,
+}));
 vi.mock('@ui/i18n/trans', () => ({
   Trans: ({message}: {message: string}) => message,
 }));
@@ -158,4 +161,59 @@ it('shows unavailable configuration without offering connect', async () => {
 
   expect(await screen.findByText('Telegram notifications are not available right now.')).toBeTruthy();
   expect(screen.queryByRole('button', {name: 'Connect Telegram'})).toBeNull();
+});
+
+it('shows the latest delivery status and recovery guidance after a failed delivery', async () => {
+  api.get.mockResolvedValue({data: {telegram: {
+    ...connected,
+    delivery_status: 'attention_required',
+    last_delivery_at: '2026-11-02T01:00:00+00:00',
+    last_failed_at: '2026-11-02T02:00:00+00:00',
+  }}});
+  render(<Component />);
+
+  expect(await screen.findByText('Delivery needs attention')).toBeTruthy();
+  expect(screen.getByText('Last successful delivery')).toBeTruthy();
+  expect(screen.getByText('Last failed delivery')).toBeTruthy();
+  expect(screen.getByText('Open your bot chat, unblock the bot if needed, and send a test.')).toBeTruthy();
+});
+
+it('does not call an untested connection healthy', async () => {
+  api.get.mockResolvedValue({data: {telegram: {
+    ...connected, delivery_status: 'unknown', last_delivery_at: null, last_failed_at: null,
+  }}});
+  render(<Component />);
+
+  expect(await screen.findByText('No delivery recorded yet')).toBeTruthy();
+  expect(screen.getByText('Send a test to check that Telegram can receive messages.')).toBeTruthy();
+});
+
+it('refreshes delivery status after sending a test', async () => {
+  api.get.mockResolvedValueOnce({data: {telegram: {...connected, delivery_status: 'unknown'}}})
+    .mockResolvedValueOnce({data: {telegram: {...connected, delivery_status: 'healthy', last_delivery_at: '2026-11-02T02:00:00+00:00'}}});
+  render(<Component />);
+  fireEvent.click(await screen.findByRole('button', {name: 'Send test'}));
+
+  expect(await screen.findByText('Last recorded delivery succeeded')).toBeTruthy();
+  expect(api.get).toHaveBeenCalledTimes(2);
+});
+
+it('refreshes delivery status after a failed test without hiding the error', async () => {
+  api.get.mockResolvedValueOnce({data: {telegram: {...connected, delivery_status: 'healthy'}}})
+    .mockResolvedValueOnce({data: {telegram: {...connected, delivery_status: 'attention_required'}}});
+  api.post.mockRejectedValueOnce(new Error('delivery failed'));
+  render(<Component />);
+  fireEvent.click(await screen.findByRole('button', {name: 'Send test'}));
+
+  expect(await screen.findByText('Delivery needs attention')).toBeTruthy();
+  expect(screen.getByText('Could not confirm the test was sent. Refresh to update delivery status.')).toBeTruthy();
+});
+
+it('explains when a sent test could not refresh the delivery status', async () => {
+  api.get.mockResolvedValueOnce({data: {telegram: connected}})
+    .mockRejectedValueOnce(new Error('refresh failed'));
+  render(<Component />);
+  fireEvent.click(await screen.findByRole('button', {name: 'Send test'}));
+
+  expect(await screen.findByText('Test sent, but delivery status could not be refreshed.')).toBeTruthy();
 });
