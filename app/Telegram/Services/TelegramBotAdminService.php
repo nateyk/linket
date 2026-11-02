@@ -26,6 +26,42 @@ final class TelegramBotAdminService
     }
 
     /** @return array<string, mixed> */
+    public function inspect(): array
+    {
+        $this->assertConfigured();
+
+        $identity = $this->request('getMe');
+        $webhookInfo = $this->request('getWebhookInfo');
+        $bot = is_array($identity['result'] ?? null) ? $identity['result'] : [];
+        $remoteUsername = is_string($bot['username'] ?? null) ? $bot['username'] : '';
+        $configuredUsername = ltrim((string) config('services.telegram.bot_username'), '@');
+        $webhook = $this->safeWebhook(
+            is_array($webhookInfo['result'] ?? null) ? $webhookInfo['result'] : [],
+        );
+        $identityMatches = $remoteUsername !== ''
+            && strcasecmp($configuredUsername, $remoteUsername) === 0;
+        $urlMatches = hash_equals($this->webhookUrl(), $webhook['url']);
+        $updatesMatch = in_array('message', $webhook['allowed_updates'], true);
+        $healthy = $identityMatches && $urlMatches && $updatesMatch
+            && $webhook['last_error_date'] === null
+            && $webhook['last_synchronization_error_date'] === null;
+
+        return [
+            'status' => $healthy ? 'healthy' : 'degraded',
+            'bot' => [
+                'id' => is_numeric($bot['id'] ?? null) ? (int) $bot['id'] : null,
+                'username' => $remoteUsername,
+                'identity_matches' => $identityMatches,
+            ],
+            'webhook' => [
+                ...$webhook,
+                'url_matches' => $urlMatches,
+                'updates_match' => $updatesMatch,
+            ],
+        ];
+    }
+
+    /** @return array<string, mixed> */
     private function request(string $method, array $payload = []): array
     {
         $token = (string) config('services.telegram.token');
@@ -71,6 +107,14 @@ final class TelegramBotAdminService
                 'telegram' => __('Telegram server configuration is incomplete.'),
             ]);
         }
+
+        $secret = (string) config('services.telegram.webhook_secret');
+        if (! preg_match('/^[A-Za-z0-9_-]{1,256}$/D', $secret)
+            || ! str_starts_with($this->webhookUrl(), 'https://')) {
+            throw ValidationException::withMessages([
+                'telegram' => __('Telegram webhook configuration must use HTTPS and a valid secret token.'),
+            ]);
+        }
     }
 
     private function webhookUrl(): string
@@ -103,6 +147,12 @@ final class TelegramBotAdminService
             )),
             'last_error_date' => isset($result['last_error_date'])
                 ? (int) $result['last_error_date']
+                : null,
+            'last_synchronization_error_date' => isset($result['last_synchronization_error_date'])
+                ? (int) $result['last_synchronization_error_date']
+                : null,
+            'max_connections' => isset($result['max_connections'])
+                ? max(0, (int) $result['max_connections'])
                 : null,
         ];
     }

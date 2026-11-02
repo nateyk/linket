@@ -5,6 +5,8 @@ namespace App\Telegram\Controllers;
 use App\Telegram\Models\TelegramConnection;
 use App\Telegram\Models\TelegramLinkToken;
 use App\Telegram\Support\TelegramNotificationPreferences;
+use App\Telegram\Notifications\TelegramIntegrationTestNotification;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -110,6 +112,29 @@ final class TelegramConnectionController extends Controller
         ]);
     }
 
+    public function sendTest(Request $request): JsonResponse
+    {
+        abort_unless(
+            config('services.telegram.enabled') && filled(config('services.telegram.token')),
+            Response::HTTP_SERVICE_UNAVAILABLE,
+            __('Telegram notifications are unavailable.'),
+        );
+        abort_unless($request->user()->telegramConnection()->exists(),
+            Response::HTTP_UNPROCESSABLE_ENTITY,
+            __('Connect Telegram before sending a test notification.'),
+        );
+
+        try {
+            Notification::sendNow($request->user(), new TelegramIntegrationTestNotification());
+        } catch (\Throwable) {
+            throw ValidationException::withMessages([
+                'telegram' => __('Telegram test notification could not be delivered.'),
+            ]);
+        }
+
+        return response()->json(['telegram' => ['test_sent' => true]]);
+    }
+
     public function disconnect(Request $request): Response
     {
         DB::transaction(function () use ($request): void {
@@ -134,6 +159,9 @@ final class TelegramConnectionController extends Controller
             'last_seen_at' => $connection?->last_seen_at?->toIso8601String(),
             'bot_username' => $this->botUsername(),
             'notifications_enabled' => $connection?->notifications_enabled ?? true,
+            'delivery_status' => $connection?->delivery_status ?? 'unknown',
+            'last_delivery_at' => $connection?->last_delivery_at?->toIso8601String(),
+            'last_failed_at' => $connection?->last_failed_at?->toIso8601String(),
             'preferences' => $connection?->notificationPreferences()
                 ?? TelegramNotificationPreferences::defaults(),
         ];

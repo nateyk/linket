@@ -104,6 +104,25 @@ it('explains missing server configuration and disables operational actions', asy
   expect(screen.getByRole('button', {name: 'Send test notification'})).toHaveProperty('disabled', true);
 });
 
+it('checks remote bot health without modifying the webhook', async () => {
+  api.get.mockImplementation((url: string) => Promise.resolve({
+    data: {telegram: url.endsWith('/health') ? {
+      ...health,
+      status: 'degraded',
+      bot: {id: 12345, username: 'OtherBot', identity_matches: false},
+      webhook: {url: 'https://wrong.example.test/webhook', pending_update_count: 2, allowed_updates: ['message'], url_matches: false},
+    } : health},
+  }));
+
+  render(<Component />);
+  fireEvent.click(await screen.findByRole('button', {name: 'Check Telegram health'}));
+
+  await waitFor(() => expect(api.get).toHaveBeenCalledWith('/api/v1/admin/integrations/telegram/health'));
+  expect(await screen.findByText(/Bot identity mismatch/)).toBeTruthy();
+  expect(screen.getByText('Remote webhook URL mismatch')).toBeTruthy();
+  expect(api.post).not.toHaveBeenCalled();
+});
+
 it('syncs the webhook and displays the safe remote status', async () => {
   render(<Component />);
   fireEvent.click(await screen.findByRole('button', {name: 'Sync webhook'}));

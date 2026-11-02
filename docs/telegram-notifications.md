@@ -158,3 +158,23 @@ The Telegram connection schema now includes notification preference columns. Dur
 9. Test a normal non-financial creator event before validating verified-sale notification delivery.
 
 Never use a real payment reference only to test Telegram.
+
+## V1.1 operational diagnostics and delivery health
+
+After PR #70, V1.1 adds **Admin → Settings → Integrations → Check Telegram health**. The read-only API `GET /api/v1/admin/integrations/telegram/health` calls Telegram `getMe` and `getWebhookInfo` without changing the webhook. It reports identity/URL match, pending updates, allowed updates and safe error timestamps; bot token, webhook secret, remote human-readable error strings and HTTP request contents are not returned. Webhook sync refuses non-HTTPS callback URLs and invalid `secret_token` syntax (Telegram permits only `A-Z`, `a-z`, `0-9`, underscore, and hyphen, length 1–256).
+
+A connected creator can request a non-financial test with `POST /api/v1/integrations/telegram/test` (rate-limited). The Account Settings page displays delivery-attention state. Laravel `NotificationSent` / `NotificationFailed` listeners update the Telegram connection with last successful/failed delivery timestamps, a bounded failure count and a safe health enum; **no message body, exception message, bank detail or failed provider request is persisted**. Queue-time preference rechecks ensure a muted creator no longer receives a delayed Telegram job; email/database remain independent.
+
+The scheduled `telegram:prune-records` command deletes consumed or expired link tokens older than 30 days and processed webhook IDs older than 30 days. The command is daily, non-overlapping and intentionally preserves recent deduplication rows.
+
+Creator notifications also cover receiving account **approved**, **rejected**, **provider registered**, **suspended** and **restored** state transitions. Messages contain the provider and only the last four account-number characters. No account proof, full account number, rejection/suspension reason or Verify.et reference is included. Creators can opt out under the `receiving_accounts` event preference.
+
+### Deployment checklist
+
+1. Deploy code and **run migrations first** (delivery-health columns), then refresh config cache and restart queue workers.
+2. Confirm `APP_URL` resolves to the public HTTPS Linket domain; HTTP webhook URLs are rejected.
+3. Confirm the environment-only Telegram secret contains 1–256 permitted ASCII characters.
+4. In Admin → Settings → Integrations, use **Check Telegram health**; resolve bot identity/webhook mismatches before **Sync webhook**.
+5. Connect a test creator, use **Send test**, then verify a non-financial receiving-account status event with fake/synthetic account data.
+6. Confirm scheduled `telegram:prune-records` appears in `php artisan schedule:list`.
+7. Do not treat synthetic CI success as proof of production Bot API connectivity, and never use a real payment receipt solely for Telegram testing.

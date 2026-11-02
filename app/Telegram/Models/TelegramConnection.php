@@ -17,6 +17,9 @@ final class TelegramConnection extends Model
         'last_seen_at' => 'datetime',
         'notifications_enabled' => 'boolean',
         'notification_preferences' => 'array',
+        'last_delivery_at' => 'datetime',
+        'last_failed_at' => 'datetime',
+        'consecutive_failures' => 'integer',
     ];
 
     /** @return array<string, bool> */

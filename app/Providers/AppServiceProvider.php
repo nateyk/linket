@@ -92,6 +92,10 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Event::listen(FileUploaded::class, ConvertUploadedLinkImageToWebp::class);
+        Event::listen(\Illuminate\Notifications\Events\NotificationSent::class,
+            fn (\Illuminate\Notifications\Events\NotificationSent $event) => app(\App\Telegram\Listeners\TelegramDeliveryMonitor::class)->sent($event));
+        Event::listen(\Illuminate\Notifications\Events\NotificationFailed::class,
+            fn (\Illuminate\Notifications\Events\NotificationFailed $event) => app(\App\Telegram\Listeners\TelegramDeliveryMonitor::class)->failed($event));
 
         EncryptCookies::except(OrderRecoveryService::COOKIE);
 
@@ -269,6 +273,7 @@ class AppServiceProvider extends ServiceProvider
             SeedDemoData::class,
             SeedSupportDemoData::class,
             DeleteOldWebhookDeliveries::class,
+            \App\Telegram\Commands\PruneTelegramRecords::class,
             ArchiveExpiredLinkeables::class,
             DisableExpiredLeapLinks::class,
             \App\Payments\Commands\ReconcilePendingVerifications::class,

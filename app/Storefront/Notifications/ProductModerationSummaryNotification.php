@@ -50,6 +50,13 @@ class ProductModerationSummaryNotification extends Notification implements Shoul
 
     public function shouldSend(object $notifiable, string $channel): bool
     {
+        if ($channel === 'telegram' && ! TelegramNotificationChannels::isAvailableFor(
+            $notifiable,
+            TelegramNotificationPreferences::PRODUCT_MODERATION,
+        )) {
+            return false;
+        }
+
         return count($this->titles) > 0;
     }
 

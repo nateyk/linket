@@ -9,6 +9,7 @@ final class TelegramNotificationPreferences
     public const PRODUCT_MODERATION = 'product_moderation';
     public const PAYMENT_DISPUTES = 'payment_disputes';
     public const PRO_BILLING = 'pro_billing';
+    public const RECEIVING_ACCOUNTS = 'receiving_accounts';
 
     /** @return list<string> */
     public static function keys(): array
@@ -19,6 +20,7 @@ final class TelegramNotificationPreferences
             self::PRODUCT_MODERATION,
             self::PAYMENT_DISPUTES,
             self::PRO_BILLING,
+            self::RECEIVING_ACCOUNTS,
         ];
     }
 

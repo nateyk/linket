@@ -346,6 +346,7 @@ final class CreatorPaymentMethodsController extends Controller
         ]);
         $this->recordAdminAudit($method, $request->user()->id, 'approved');
 
+        $this->notifyCreatorOfAccountChange($method, 'approved');
         return ['data' => $this->adminResource($method->fresh()->load('creator:id,name,email'))];
     }
 
@@ -370,6 +371,7 @@ final class CreatorPaymentMethodsController extends Controller
         $method->refresh();
         $this->recordAdminAudit($method, $request->user()->id, 'provider_registered');
 
+        $this->notifyCreatorOfAccountChange($method, 'provider_registered');
         return ['data' => $this->adminResource($method->load('creator:id,name,email'))];
     }
 
@@ -387,6 +389,7 @@ final class CreatorPaymentMethodsController extends Controller
         ])->save();
         $this->recordAdminAudit($method, $request->user()->id, 'suspended', $payload['reason']);
 
+        $this->notifyCreatorOfAccountChange($method, 'suspended');
         return ['data' => $this->adminResource($method->load('creator:id,name,email'))];
     }
 
@@ -397,6 +400,7 @@ final class CreatorPaymentMethodsController extends Controller
         $method->forceFill(['is_suspended' => false, 'is_active' => false, 'suspension_reason' => null])->save();
         $this->recordAdminAudit($method, $request->user()->id, 'restored');
 
+        $this->notifyCreatorOfAccountChange($method, 'restored');
         return ['data' => $this->adminResource($method->load('creator:id,name,email'))];
     }
 
@@ -414,6 +418,7 @@ final class CreatorPaymentMethodsController extends Controller
         ]);
         $this->recordAdminAudit($method, $request->user()->id, 'rejected', $payload['reason']);
 
+        $this->notifyCreatorOfAccountChange($method, 'rejected');
         return ['data' => $this->adminResource($method->load('creator:id,name,email'))];
     }
 
@@ -516,6 +521,20 @@ final class CreatorPaymentMethodsController extends Controller
         }
 
         return $blockers;
+    }
+
+    private function notifyCreatorOfAccountChange(CreatorPaymentMethod $method, string $event): void
+    {
+        $creator = $method->creator()->first();
+        if ($creator && \App\Telegram\Support\TelegramNotificationChannels::isAvailableFor(
+            $creator,
+            \App\Telegram\Support\TelegramNotificationPreferences::RECEIVING_ACCOUNTS,
+        )) {
+            $creator->notify(new \App\Storefront\Notifications\ReceivingAccountStatusNotification(
+                $method->id,
+                $event,
+            ));
+        }
     }
 
     private function recordAdminAudit(CreatorPaymentMethod $method, int $actorId, string $action, ?string $note = null): void

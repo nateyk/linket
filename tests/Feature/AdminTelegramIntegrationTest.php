@@ -25,6 +25,7 @@ class AdminTelegramIntegrationTest extends TestCase
         config()->set('services.telegram.link_token_ttl_minutes', 10);
         config()->set('services.telegram.http.timeout', 10);
         config()->set('services.telegram.http.connect_timeout', 5);
+        \Illuminate\Support\Facades\URL::forceScheme('https');
     }
 
     public function test_non_admin_cannot_read_or_operate_telegram_integration(): void
@@ -33,6 +34,7 @@ class AdminTelegramIntegrationTest extends TestCase
 
         $this->getJson('/api/v1/admin/integrations/telegram')->assertForbidden();
         $this->postJson('/api/v1/admin/integrations/telegram/webhook/sync')->assertForbidden();
+        $this->getJson('/api/v1/admin/integrations/telegram/health')->assertForbidden();
         $this->postJson('/api/v1/admin/integrations/telegram/test')->assertForbidden();
     }
 
@@ -150,6 +152,59 @@ class AdminTelegramIntegrationTest extends TestCase
             $admin,
             \App\Telegram\Notifications\TelegramIntegrationTestNotification::class,
         );
+    }
+
+
+    public function test_read_only_health_detects_mismatched_bot_and_webhook_without_changing_telegram(): void
+    {
+        Http::fake([
+            'https://api.telegram.org/botsynthetic-bot-token/getMe' => Http::response([
+                'ok' => true,
+                'result' => ['id' => 12345, 'username' => 'UnexpectedBot'],
+            ]),
+            'https://api.telegram.org/botsynthetic-bot-token/getWebhookInfo' => Http::response([
+                'ok' => true,
+                'result' => [
+                    'url' => 'https://other.example.test/telegram',
+                    'pending_update_count' => 4,
+                    'allowed_updates' => ['message'],
+                    'last_error_date' => 1720000000,
+                    'last_error_message' => 'sensitive provider detail',
+                    'max_connections' => 20,
+                ],
+            ]),
+        ]);
+
+        $this->stateful()->actingAs($this->admin(), 'sanctum');
+
+        $response = $this->getJson('/api/v1/admin/integrations/telegram/health')
+            ->assertOk()
+            ->assertJsonPath('telegram.status', 'degraded')
+            ->assertJsonPath('telegram.bot.identity_matches', false)
+            ->assertJsonPath('telegram.bot.username', 'UnexpectedBot')
+            ->assertJsonPath('telegram.webhook.url_matches', false)
+            ->assertJsonPath('telegram.webhook.pending_update_count', 4)
+            ->assertJsonMissingPath('telegram.webhook.last_error_message');
+
+        Http::assertSentCount(2);
+        Http::assertNotSent(fn ($request): bool => str_ends_with($request->url(), '/setWebhook'));
+        $json = $response->getContent();
+        $this->assertStringNotContainsString('synthetic-bot-token', $json);
+        $this->assertStringNotContainsString('synthetic-webhook-secret', $json);
+        $this->assertStringNotContainsString('sensitive provider detail', $json);
+    }
+
+    public function test_webhook_sync_rejects_invalid_secret_before_network_call(): void
+    {
+        config()->set('services.telegram.webhook_secret', 'invalid secret with spaces');
+        Http::fake();
+        $this->stateful()->actingAs($this->admin(), 'sanctum');
+
+        $this->postJson('/api/v1/admin/integrations/telegram/webhook/sync')
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['telegram']);
+
+        Http::assertNothingSent();
     }
 
     private function admin(): User
