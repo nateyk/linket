@@ -31,6 +31,8 @@ type TelegramState = {
   last_seen_at: string | null;
   bot_username: string;
   notifications_enabled: boolean;
+  delivery_status?: 'healthy' | 'attention_required' | 'unknown';
+  last_delivery_at?: string | null;
   preferences: Record<PreferenceKey, boolean>;
 };
 
@@ -135,6 +137,20 @@ export function Component() {
     }
   };
 
+  const sendTest = async () => {
+    setBusy(true);
+    setError(false);
+    setSaved(false);
+    try {
+      await apiClient.post('/api/v1/integrations/telegram/test');
+      setSaved(true);
+    } catch {
+      setError(true);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const disconnect = async () => {
     setBusy(true);
     setError(false);
@@ -209,6 +225,9 @@ export function Component() {
                     <p className="mt-1 text-sm text-muted-foreground">
                       <Trans message="Linket can send creator notifications to this private Telegram chat." />
                     </p>
+                    {telegram.delivery_status === 'attention_required' ? (
+                      <p className="mt-1 text-sm text-destructive"><Trans message="Telegram delivery needs attention. Open the bot chat and send /start." /></p>
+                    ) : null}
                     {telegram.last_seen_at ? (
                       <p className="mt-1 text-xs text-muted-foreground">
                         <Trans message="Telegram connection is active." />
@@ -223,6 +242,14 @@ export function Component() {
                     >
                       <RefreshCwIcon />
                       <Trans message="Refresh" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      disabled={busy}
+                      onClick={() => void sendTest()}
+                    >
+                      <SendIcon />
+                      <Trans message="Send test" />
                     </Button>
                     <Button
                       variant="outline"

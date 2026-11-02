@@ -300,6 +300,63 @@ class TelegramNotificationIntegrationTest extends TestCase
         $this->assertDatabaseHas('telegram_webhook_updates', ['update_id' => 910002]);
     }
 
+    public function test_telegram_delivery_events_track_only_safe_connection_health(): void
+    {
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $user->telegramConnection()->create([
+            'telegram_user_id' => 1234567890123,
+            'telegram_chat_id' => 1234567890123,
+            'connected_at' => now(),
+        ]);
+
+        event(new \Illuminate\Notifications\Events\NotificationFailed(
+            $user,
+            new \App\Telegram\Notifications\TelegramIntegrationTestNotification(),
+            'telegram',
+            ['to' => 1234567890123, 'request' => ['text' => 'sensitive-notification-body'],
+                'exception' => new \RuntimeException('sensitive-error-details')],
+        ));
+
+        $connection = $user->telegramConnection()->firstOrFail();
+        $this->assertSame('attention_required', $connection->delivery_status);
+        $this->assertSame(1, $connection->consecutive_failures);
+        $this->assertStringNotContainsString('sensitive', json_encode($connection->toArray(), JSON_THROW_ON_ERROR));
+
+        event(new \Illuminate\Notifications\Events\NotificationSent(
+            $user,
+            new \App\Telegram\Notifications\TelegramIntegrationTestNotification(),
+            'telegram',
+            ['ok' => true],
+        ));
+
+        $connection->refresh();
+        $this->assertSame('healthy', $connection->delivery_status);
+        $this->assertSame(0, $connection->consecutive_failures);
+        $this->assertNotNull($connection->last_delivery_at);
+    }
+
+    public function test_connected_creator_can_request_non_financial_telegram_test(): void
+    {
+        \Illuminate\Support\Facades\Notification::fake();
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $this->stateful()->actingAs($user)
+            ->postJson('/api/v1/integrations/telegram/test')->assertStatus(422);
+
+        $user->telegramConnection()->create([
+            'telegram_user_id' => 1234567890123,
+            'telegram_chat_id' => 1234567890123,
+            'connected_at' => now(),
+        ]);
+        $this->stateful()->actingAs($user)
+            ->postJson('/api/v1/integrations/telegram/test')
+            ->assertOk()->assertJsonPath('telegram.test_sent', true);
+
+        \Illuminate\Support\Facades\Notification::assertSentTo(
+            $user,
+            \App\Telegram\Notifications\TelegramIntegrationTestNotification::class,
+        );
+    }
+
     private function stateful(): static
     {
         return $this

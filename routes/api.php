@@ -123,6 +123,8 @@ Route::group(['prefix' => 'v1'], function() {
             Route::patch('/', [TelegramConnectionController::class, 'update'])
                 ->middleware('throttle:30,1');
             Route::delete('/', [TelegramConnectionController::class, 'disconnect']);
+            Route::post('test', [TelegramConnectionController::class, 'sendTest'])
+                ->middleware('throttle:5,1');
         });
 
         Route::middleware('auth')->prefix('admin/integrations/telegram')->group(function () {
