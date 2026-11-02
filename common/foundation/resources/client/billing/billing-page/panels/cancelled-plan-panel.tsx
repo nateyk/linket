@@ -52,7 +52,7 @@ export function CancelledPlanPanel() {
             </div>
           </div>
         </div>
-        <div className="w-58">
+        <div className="w-full sm:w-58">
           <LinkButton
             variant="default"
             color="primary"
