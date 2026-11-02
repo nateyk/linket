@@ -11,6 +11,9 @@ const api = vi.hoisted(() => ({
 }));
 
 vi.mock('@common/http/query-client', () => ({apiClient: api}));
+vi.mock('@ui/i18n/formatted-date', () => ({
+  FormattedDate: ({date}: {date: string}) => <time>{date}</time>,
+}));
 vi.mock('@ui/i18n/trans', () => ({
   Trans: ({message}: {message: string}) => message,
 }));
