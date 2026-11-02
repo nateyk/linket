@@ -100,8 +100,8 @@ it('explains missing server configuration and disables operational actions', asy
   render(<Component />);
 
   expect(await screen.findByText('Server configuration required')).toBeTruthy();
-  expect(screen.getByRole('button', {name: 'Sync webhook'})).toBeDisabled();
-  expect(screen.getByRole('button', {name: 'Send test notification'})).toBeDisabled();
+  expect(screen.getByRole('button', {name: 'Sync webhook'})).toHaveProperty('disabled', true);
+  expect(screen.getByRole('button', {name: 'Send test notification'})).toHaveProperty('disabled', true);
 });
 
 it('syncs the webhook and displays the safe remote status', async () => {
