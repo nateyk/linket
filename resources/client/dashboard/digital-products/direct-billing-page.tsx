@@ -139,11 +139,13 @@ type Transaction = {
   buyer_name?: string | null;
 };
 
+const PAGE_SIZE_OPTIONS = [15, 25, 50] as const;
+
 const emptyPagination: Pagination = {
   current_page: 1,
   last_page: 1,
   total: 0,
-  per_page: 25,
+  per_page: PAGE_SIZE_OPTIONS[0],
 };
 
 const orderStatusOptions = [
@@ -188,6 +190,9 @@ export function Component() {
     const value = Number(searchParams.get('page'));
     return Number.isSafeInteger(value) && value > 0 ? value : 1;
   });
+  const [orderPerPage, setOrderPerPage] = useState(() =>
+    pageSizeFrom(searchParams.get('per_page')),
+  );
   const debouncedOrderSearch = useDebouncedValue(orderSearch, 300);
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -200,6 +205,9 @@ export function Component() {
   const [transactionFrom, setTransactionFrom] = useState('');
   const [transactionTo, setTransactionTo] = useState('');
   const [transactionPage, setTransactionPage] = useState(1);
+  const [transactionPerPage, setTransactionPerPage] = useState(
+    PAGE_SIZE_OPTIONS[0],
+  );
   const debouncedTransactionSearch = useDebouncedValue(transactionSearch, 300);
 
   const [manualOrders, setManualOrders] = useState<Order[]>([]);
@@ -208,6 +216,7 @@ export function Component() {
   const [manualLoading, setManualLoading] = useState(false);
   const [manualError, setManualError] = useState<string>();
   const [manualPage, setManualPage] = useState(1);
+  const [manualPerPage, setManualPerPage] = useState(PAGE_SIZE_OPTIONS[0]);
 
   const [detailUuid, setDetailUuid] = useState<string>();
 
@@ -226,6 +235,7 @@ export function Component() {
           from: orderFrom || undefined,
           to: orderTo || undefined,
           page: orderPage,
+          per_page: orderPerPage,
         },
       });
       if (sequence !== ordersRequest.current) return;
@@ -246,6 +256,7 @@ export function Component() {
     orderFrom,
     orderTo,
     orderPage,
+    orderPerPage,
     refreshKey,
   ]);
 
@@ -263,6 +274,7 @@ export function Component() {
             from: transactionFrom || undefined,
             to: transactionTo || undefined,
             page: transactionPage,
+            per_page: transactionPerPage,
           },
         },
       );
@@ -286,6 +298,7 @@ export function Component() {
     transactionFrom,
     transactionTo,
     transactionPage,
+    transactionPerPage,
     refreshKey,
   ]);
 
@@ -295,7 +308,11 @@ export function Component() {
     setManualLoading(true);
     try {
       const response = await apiClient.get('/api/v1/storefront/direct-orders', {
-        params: {status: 'manual_review', page: manualPage},
+        params: {
+          status: 'manual_review',
+          page: manualPage,
+          per_page: manualPerPage,
+        },
       });
       if (sequence !== manualRequest.current) return;
       setManualOrders(response.data.data?.data ?? []);
@@ -308,7 +325,7 @@ export function Component() {
     } finally {
       if (sequence === manualRequest.current) setManualLoading(false);
     }
-  }, [tab, manualPage, refreshKey]);
+  }, [tab, manualPage, manualPerPage, refreshKey]);
 
   useEffect(() => {
     void loadOrders();
@@ -335,13 +352,21 @@ export function Component() {
           variant="outline"
           onClick={refresh}
           disabled={ordersLoading || transactionsLoading || manualLoading}
+          aria-busy={ordersLoading || transactionsLoading || manualLoading}
         >
-          <RefreshCwIcon />
+          <RefreshCwIcon
+            aria-hidden="true"
+            className={
+              ordersLoading || transactionsLoading || manualLoading
+                ? 'animate-spin'
+                : undefined
+            }
+          />
           <Trans message="Refresh" />
         </Button>
       </DashboardLayout.SectionHeader>
       <DashboardLayout.SectionContent className="overflow-y-auto">
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 py-4">
+        <div className="mx-auto flex w-full min-w-0 max-w-7xl flex-col gap-5 px-3 py-4 sm:px-5">
           <SummaryCards summary={summary} />
 
           <Tabs.Root
@@ -349,7 +374,7 @@ export function Component() {
             onValueChange={value => setTab(value as Tab)}
             className="gap-4"
           >
-            <div className="overflow-x-auto border-b border-border">
+            <div className="min-w-0 overflow-x-auto border-b border-border">
               <Tabs.List variant="line" className="w-max justify-start">
               <Tabs.Tab value="orders" className="flex-none">
                 <Trans message="Orders" />
@@ -414,6 +439,7 @@ export function Component() {
                     loading={ordersLoading}
                     error={ordersError}
                     onView={setDetailUuid}
+                    onRetry={() => void loadOrders()}
                   />
                 </Card.Content>
                 {ordersPagination.total > 0 && (
@@ -422,7 +448,13 @@ export function Component() {
                       page={ordersPagination.current_page}
                       lastPage={ordersPagination.last_page}
                       total={ordersPagination.total}
+                      perPage={ordersPagination.per_page}
+                      pageSizeName="orders-per-page"
                       onChange={setOrderPage}
+                      onPerPageChange={value => {
+                        setOrderPerPage(value);
+                        setOrderPage(1);
+                      }}
                     />
                   </Card.Footer>
                 )}
@@ -467,6 +499,7 @@ export function Component() {
                     loading={transactionsLoading}
                     error={transactionsError}
                     onViewOrder={setDetailUuid}
+                    onRetry={() => void loadTransactions()}
                   />
                 </Card.Content>
                 {transactionsPagination.total > 0 && (
@@ -475,7 +508,13 @@ export function Component() {
                       page={transactionsPagination.current_page}
                       lastPage={transactionsPagination.last_page}
                       total={transactionsPagination.total}
+                      perPage={transactionsPagination.per_page}
+                      pageSizeName="transactions-per-page"
                       onChange={setTransactionPage}
+                      onPerPageChange={value => {
+                        setTransactionPerPage(value);
+                        setTransactionPage(1);
+                      }}
                     />
                   </Card.Footer>
                 )}
@@ -498,6 +537,7 @@ export function Component() {
                     loading={manualLoading}
                     error={manualError}
                     onView={setDetailUuid}
+                    onRetry={() => void loadManualOrders()}
                     emptyMessage={
                       <Trans message="No orders are waiting for manual review." />
                     }
@@ -509,7 +549,13 @@ export function Component() {
                       page={manualPagination.current_page}
                       lastPage={manualPagination.last_page}
                       total={manualPagination.total}
+                      perPage={manualPagination.per_page}
+                      pageSizeName="manual-review-per-page"
                       onChange={setManualPage}
+                      onPerPageChange={value => {
+                        setManualPerPage(value);
+                        setManualPage(1);
+                      }}
                     />
                   </Card.Footer>
                 )}
@@ -806,20 +852,31 @@ function OrdersTable({
   loading,
   error,
   onView,
+  onRetry,
   emptyMessage,
 }: {
   orders: Order[];
   loading: boolean;
   error?: string;
   onView: (uuid: string) => void;
+  onRetry?: () => void;
   emptyMessage?: ReactNode;
 }) {
   if (loading) return <TableLoading />;
   if (error) {
     return (
-      <p className="px-6 py-8 text-sm text-destructive" role="alert">
-        {error}
-      </p>
+      <div
+        className="flex flex-col items-start gap-3 px-6 py-8"
+        role="alert"
+      >
+        <p className="text-sm text-destructive">{error}</p>
+        {onRetry && (
+          <Button variant="outline" size="sm" onClick={onRetry}>
+            <RefreshCwIcon aria-hidden="true" />
+            <Trans message="Try again" />
+          </Button>
+        )}
+      </div>
     );
   }
   if (!orders.length) {
@@ -844,14 +901,17 @@ function OrdersTable({
 
   return (
     <>
-      <ul className="divide-y md:hidden" aria-label="Orders">
+      <ul className="divide-y lg:hidden" aria-label="Orders">
         {orders.map(order => (
           <li key={order.uuid}>
             <Item.Root
               size="sm"
               render={<button type="button" />}
-              className="min-h-14 rounded-none border-0 px-4 py-3 text-start hover:bg-muted/40"
+              className="min-h-14 w-full min-w-0 rounded-none border-0 px-4 py-3 text-start hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
               onClick={() => onView(order.uuid)}
+              aria-label={`View details for ${
+                order.product?.title ?? 'Deleted product'
+              }`}
             >
             <Item.Media
               align="center"
@@ -862,7 +922,7 @@ function OrdersTable({
             </Item.Media>
             <Item.Content className="gap-1.5">
               <Item.Row className="items-start justify-between gap-3">
-                <Item.Title className="min-w-0 flex-1">
+                <Item.Title className="min-w-0 flex-1 break-words">
                   {order.product?.title ?? <Trans message="Deleted product" />}
                 </Item.Title>
                 <span className="shrink-0 font-medium tabular-nums">
@@ -889,7 +949,7 @@ function OrdersTable({
         ))}
       </ul>
 
-      <div className="hidden min-w-0 overflow-x-auto md:block">
+      <div className="hidden min-w-0 overflow-x-auto lg:block">
         <Table.Root>
           <Table.Header>
             <Table.Row>
@@ -905,7 +965,7 @@ function OrdersTable({
               <Table.Head>
                 <Trans message="Date" />
               </Table.Head>
-              <Table.Head className="hidden lg:table-cell">
+              <Table.Head className="hidden xl:table-cell">
                 <Trans message="Payment method" />
               </Table.Head>
               <Table.Head>
@@ -922,7 +982,10 @@ function OrdersTable({
             {orders.map(order => (
               <Table.Row key={order.uuid}>
                 <Table.Cell className="max-w-52 ps-6">
-                  <span className="block truncate font-medium">
+                  <span
+                    className="block truncate font-medium"
+                    title={order.product?.title ?? undefined}
+                  >
                     {order.product?.title ?? (
                       <Trans message="Deleted product" />
                     )}
@@ -949,13 +1012,13 @@ function OrdersTable({
                 <Table.Cell className="text-muted-foreground">
                   <FormattedDate preset="short" date={order.created_at} />
                 </Table.Cell>
-                <Table.Cell className="hidden lg:table-cell">
+                <Table.Cell className="hidden xl:table-cell">
                   <PaymentMethod order={order} />
                 </Table.Cell>
                 <Table.Cell>
                   <OrderStatusBadge status={order.status} />
                 </Table.Cell>
-                <Table.Cell className="pe-6 text-end">
+                <Table.Cell className="whitespace-nowrap pe-6 text-end">
                   <Button
                     variant="outline"
                     size="sm"
@@ -979,18 +1042,29 @@ function TransactionsTable({
   loading,
   error,
   onViewOrder,
+  onRetry,
 }: {
   transactions: Transaction[];
   loading: boolean;
   error?: string;
   onViewOrder: (uuid: string) => void;
+  onRetry?: () => void;
 }) {
   if (loading) return <TableLoading />;
   if (error) {
     return (
-      <p className="px-6 py-8 text-sm text-destructive" role="alert">
-        {error}
-      </p>
+      <div
+        className="flex flex-col items-start gap-3 px-6 py-8"
+        role="alert"
+      >
+        <p className="text-sm text-destructive">{error}</p>
+        {onRetry && (
+          <Button variant="outline" size="sm" onClick={onRetry}>
+            <RefreshCwIcon aria-hidden="true" />
+            <Trans message="Try again" />
+          </Button>
+        )}
+      </div>
     );
   }
   if (!transactions.length) {
@@ -1013,7 +1087,7 @@ function TransactionsTable({
 
   return (
     <>
-      <ul className="divide-y md:hidden" aria-label="Transactions">
+      <ul className="divide-y xl:hidden" aria-label="Transactions">
         {transactions.map(transaction => (
           <li key={transaction.id}>
             <Item.Root
@@ -1021,10 +1095,17 @@ function TransactionsTable({
               render={
                 transaction.order_uuid ? <button type="button" /> : undefined
               }
-              className="min-h-14 rounded-none border-0 px-4 py-3 text-start hover:bg-muted/40"
+              className="min-h-14 w-full min-w-0 rounded-none border-0 px-4 py-3 text-start hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
               onClick={
                 transaction.order_uuid
                   ? () => onViewOrder(transaction.order_uuid!)
+                  : undefined
+              }
+              aria-label={
+                transaction.order_uuid
+                  ? `View order for ${
+                      transaction.product_title ?? 'Deleted product'
+                    }`
                   : undefined
               }
             >
@@ -1075,7 +1156,7 @@ function TransactionsTable({
         ))}
       </ul>
 
-      <div className="hidden min-w-0 overflow-x-auto md:block">
+      <div className="hidden min-w-0 overflow-x-auto xl:block">
         <Table.Root>
           <Table.Header>
             <Table.Row>
@@ -1094,7 +1175,7 @@ function TransactionsTable({
               <Table.Head>
                 <Trans message="Status" />
               </Table.Head>
-              <Table.Head className="hidden lg:table-cell">
+              <Table.Head className="hidden 2xl:table-cell">
                 <Trans message="Date" />
               </Table.Head>
               <Table.Head className="pe-6">
@@ -1147,7 +1228,7 @@ function TransactionsTable({
                 <Table.Cell>
                   <TransactionStatusBadge status={transaction.status} />
                 </Table.Cell>
-                <Table.Cell className="hidden text-muted-foreground lg:table-cell">
+                <Table.Cell className="hidden text-muted-foreground 2xl:table-cell">
                   <FormattedDate
                     preset="short"
                     date={transaction.verified_at ?? transaction.created_at}
@@ -1712,19 +1793,58 @@ function Pagination({
   page,
   lastPage,
   total,
+  perPage,
+  pageSizeName,
   onChange,
+  onPerPageChange,
 }: {
   page: number;
   lastPage: number;
   total: number;
+  perPage: number;
+  pageSizeName: string;
   onChange: (page: number) => void;
+  onPerPageChange: (perPage: number) => void;
 }) {
+  const items = paginationItems(page, lastPage);
+
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <p className="text-sm text-muted-foreground">
-        <Trans message=":total results" values={{total}} />
-      </p>
-      <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start">
+    <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <span><Trans message="Rows" /></span>
+        <Select.Root
+          name={pageSizeName}
+          value={String(perPage)}
+          onValueChange={value => {
+            const next = pageSizeFrom(value);
+            if (next !== perPage) onPerPageChange(next);
+          }}
+        >
+          <Select.Trigger
+            aria-label="Rows per page"
+            className="h-8 w-[4.75rem]"
+          >
+            <Select.Value>{perPage}</Select.Value>
+          </Select.Trigger>
+          <Select.Content align="start">
+            <Select.Group>
+              {PAGE_SIZE_OPTIONS.map(option => (
+                <Select.Item key={option} value={String(option)}>
+                  {option}
+                </Select.Item>
+              ))}
+            </Select.Group>
+          </Select.Content>
+        </Select.Root>
+        <span aria-live="polite">
+          <Trans message="of :total" values={{total}} />
+        </span>
+      </div>
+
+      <nav
+        className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start"
+        aria-label="Pagination"
+      >
         <Button
           variant="outline"
           size="sm"
@@ -1733,12 +1853,40 @@ function Pagination({
         >
           <Trans message="Previous" />
         </Button>
-        <span className="text-sm text-muted-foreground">
+
+        <div className="hidden items-center gap-1 sm:flex">
+          {items.map(item =>
+            typeof item === 'number' ? (
+              <Button
+                key={item}
+                variant={item === page ? 'secondary' : 'ghost'}
+                size="sm"
+                className="min-w-9 px-2"
+                aria-current={item === page ? 'page' : undefined}
+                aria-label={`Go to page ${item}`}
+                onClick={() => onChange(item)}
+              >
+                {item}
+              </Button>
+            ) : (
+              <span
+                key={item}
+                className="flex size-9 items-center justify-center text-muted-foreground"
+                aria-hidden="true"
+              >
+                …
+              </span>
+            ),
+          )}
+        </div>
+
+        <span className="text-sm text-muted-foreground sm:hidden" aria-live="polite">
           <Trans
             message="Page :page of :last"
             values={{page, last: lastPage}}
           />
         </span>
+
         <Button
           variant="outline"
           size="sm"
@@ -1747,7 +1895,7 @@ function Pagination({
         >
           <Trans message="Next" />
         </Button>
-      </div>
+      </nav>
     </div>
   );
 }
@@ -1762,12 +1910,41 @@ function TableLoading() {
   );
 }
 
+function pageSizeFrom(value: string | null | undefined): number {
+  const parsed = Number(value);
+  return PAGE_SIZE_OPTIONS.includes(
+    parsed as (typeof PAGE_SIZE_OPTIONS)[number],
+  )
+    ? parsed
+    : PAGE_SIZE_OPTIONS[0];
+}
+
+function paginationItems(
+  page: number,
+  lastPage: number,
+): Array<number | 'start-ellipsis' | 'end-ellipsis'> {
+  if (lastPage <= 5) {
+    return Array.from({length: Math.max(lastPage, 1)}, (_, index) => index + 1);
+  }
+
+  const items: Array<number | 'start-ellipsis' | 'end-ellipsis'> = [1];
+  const start = Math.max(2, page - 1);
+  const end = Math.min(lastPage - 1, page + 1);
+
+  if (start > 2) items.push('start-ellipsis');
+  for (let value = start; value <= end; value += 1) items.push(value);
+  if (end < lastPage - 1) items.push('end-ellipsis');
+  items.push(lastPage);
+
+  return items;
+}
+
 function paginationFrom(value: Partial<Pagination> | undefined): Pagination {
   return {
     current_page: Number(value?.current_page ?? 1),
     last_page: Number(value?.last_page ?? 1),
     total: Number(value?.total ?? 0),
-    per_page: Number(value?.per_page ?? 25),
+    per_page: pageSizeFrom(String(value?.per_page ?? PAGE_SIZE_OPTIONS[0])),
   };
 }
 
