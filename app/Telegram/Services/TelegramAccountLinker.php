@@ -4,6 +4,9 @@ namespace App\Telegram\Services;
 
 use App\Telegram\Models\TelegramConnection;
 use App\Telegram\Models\TelegramLinkToken;
+use App\Telegram\Notifications\TelegramConnectedNotification;
+use App\Models\User;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 
 final class TelegramAccountLinker
@@ -24,7 +27,7 @@ final class TelegramAccountLinker
             return null;
         }
 
-        return DB::transaction(function () use (
+        $connection = DB::transaction(function () use (
             $plainToken,
             $telegramUserId,
             $telegramChatId,
@@ -75,5 +78,19 @@ final class TelegramAccountLinker
 
             return $connection;
         });
+
+        if ($connection) {
+            try {
+                User::query()->find($connection->user_id)
+                    ?->notify(new TelegramConnectedNotification($telegramChatId));
+            } catch (\Throwable) {
+                // A transport problem must not undo a successfully consumed link token.
+                Log::warning('telegram.connection_ack_enqueue_failed', [
+                    'user_id' => $connection->user_id,
+                ]);
+            }
+        }
+
+        return $connection;
     }
 }
