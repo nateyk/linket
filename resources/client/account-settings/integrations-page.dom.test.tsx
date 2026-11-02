@@ -206,7 +206,7 @@ it('refreshes delivery status after a failed test without hiding the error', asy
   fireEvent.click(await screen.findByRole('button', {name: 'Send test'}));
 
   expect(await screen.findByText('Delivery needs attention')).toBeTruthy();
-  expect(screen.getByText('Test notification could not be sent.')).toBeTruthy();
+  expect(screen.getByText('Could not confirm the test was sent. Refresh to update delivery status.')).toBeTruthy();
 });
 
 it('explains when a sent test could not refresh the delivery status', async () => {
