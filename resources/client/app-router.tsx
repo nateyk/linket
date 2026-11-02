@@ -161,6 +161,11 @@ export const appRouter = createBrowserRouter(
                 },
               },
               {
+                path: 'integrations',
+                lazy: () =>
+                  import('@app/account-settings/integrations-page'),
+              },
+              {
                 path: 'verification',
                 lazy: () => import('@app/account-settings/kyc/kyc-page'),
               },
