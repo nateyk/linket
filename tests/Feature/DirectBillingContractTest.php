@@ -289,8 +289,16 @@ class DirectBillingContractTest extends TestCase
 
     public function testVerifiedRenewalExtendsExistingDirectSubscriptionOnlyOnce(): void
     {
+        \Illuminate\Support\Facades\Notification::fake();
+        config()->set('services.telegram.enabled', true);
+        config()->set('services.telegram.token', 'synthetic-bot-token');
         config()->set('services.verify_et.enabled', true);
         $creator = User::factory()->create();
+        $creator->telegramConnection()->create([
+            'telegram_user_id' => 1234567890555,
+            'telegram_chat_id' => 1234567890555,
+            'connected_at' => now(),
+        ]);
         [$plan, $price] = $this->proPlan();
         $renewalAt = now()->addDays(3)->startOfSecond();
         $subscription = Subscription::query()->create(['user_id' => $creator->id, 'product_id' => $plan->id, 'price_id' => $price->id, 'gateway_name' => 'verify_et', 'gateway_status' => 'active', 'renews_at' => $renewalAt]);
@@ -299,6 +307,16 @@ class DirectBillingContractTest extends TestCase
         $result = $this->matchedResult($verification, 500, '1000123456789');
         $this->assertSame('success', app(VerifyEtGateway::class)->processResult($verification, $result));
         $this->assertSame('success', app(VerifyEtGateway::class)->processResult($verification, $result));
+        \Illuminate\Support\Facades\Notification::assertSentToTimes(
+            $creator,
+            \App\Payments\Notifications\DirectProLifecycleNotification::class,
+            1,
+        );
+        \Illuminate\Support\Facades\Notification::assertSentTo(
+            $creator,
+            \App\Payments\Notifications\DirectProLifecycleNotification::class,
+            fn ($notification): bool => $notification->event === 'renewed',
+        );
         $this->assertTrue($subscription->fresh()->renews_at->equalTo($renewalAt->copy()->addMonthNoOverflow()));
         $this->assertSame(1, Subscription::query()->where('user_id', $creator->id)->count());
     }
