@@ -11,6 +11,7 @@ export type CustomSections = Record<
 export type LandingPageSettingsContextValue = {
   customSections?: CustomSections;
   heroSettings?: ComponentType<{formPrefix: string; index: number}>;
+  creatorPreset?: {sections: unknown[]};
 };
 
 export const LandingPageSettingsContext =
