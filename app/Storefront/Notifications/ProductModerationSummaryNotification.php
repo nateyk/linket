@@ -2,10 +2,12 @@
 
 namespace App\Storefront\Notifications;
 
+use App\Telegram\Support\TelegramNotificationChannels;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use NotificationChannels\Telegram\TelegramMessage;
 
 class ProductModerationSummaryNotification extends Notification implements ShouldQueue
 {
@@ -29,7 +31,10 @@ class ProductModerationSummaryNotification extends Notification implements Shoul
 
     public function via(object $notifiable): array
     {
-        return ['mail', 'database'];
+        return TelegramNotificationChannels::append(
+            $notifiable,
+            ['mail', 'database'],
+        );
     }
 
     public function viaQueues(): array
@@ -37,6 +42,7 @@ class ProductModerationSummaryNotification extends Notification implements Shoul
         return [
             'mail' => 'mail',
             'database' => 'default',
+            'telegram' => 'default',
         ];
     }
 
@@ -57,6 +63,23 @@ class ProductModerationSummaryNotification extends Notification implements Shoul
         }
 
         return $mail->action($this->actionLabel(), url('/dashboard/items'));
+    }
+
+    public function toTelegram(object $notifiable): TelegramMessage
+    {
+        $message = TelegramMessage::create()
+            ->normal()
+            ->content($this->subject())
+            ->line($this->summary());
+
+        if ($this->showsReason() && $this->reason) {
+            $message->line(__('Reason: :reason', ['reason' => $this->reason]));
+        }
+
+        return $message->button(
+            $this->actionLabel(),
+            url('/dashboard/items'),
+        );
     }
 
     public function toDatabase(object $notifiable): array

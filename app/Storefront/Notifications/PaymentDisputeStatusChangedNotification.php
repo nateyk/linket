@@ -4,10 +4,12 @@ namespace App\Storefront\Notifications;
 
 use App\Storefront\Models\StorefrontPaymentDispute;
 use App\Storefront\Services\CreatePaymentDispute;
+use App\Telegram\Support\TelegramNotificationChannels;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use NotificationChannels\Telegram\TelegramMessage;
 
 class PaymentDisputeStatusChangedNotification extends Notification implements ShouldQueue
 {
@@ -31,7 +33,11 @@ class PaymentDisputeStatusChangedNotification extends Notification implements Sh
 
     public function via(object $notifiable): array
     {
-        return ['mail', 'database'];
+        $channels = ['mail', 'database'];
+
+        return $this->audience === 'creator'
+            ? TelegramNotificationChannels::append($notifiable, $channels)
+            : $channels;
     }
 
     public function viaQueues(): array
@@ -39,6 +45,7 @@ class PaymentDisputeStatusChangedNotification extends Notification implements Sh
         return [
             'mail' => 'mail',
             'database' => 'default',
+            'telegram' => 'default',
         ];
     }
 
@@ -60,6 +67,20 @@ class PaymentDisputeStatusChangedNotification extends Notification implements Sh
             ->line($this->summary($label))
             ->when($this->note, fn (MailMessage $mail) => $mail->line(__('Note: :note', ['note' => $this->note])))
             ->action(__('Open Linket'), url($this->actionPath($dispute)));
+    }
+
+    public function toTelegram(object $notifiable): TelegramMessage
+    {
+        $dispute = $this->dispute();
+        $label = $dispute
+            ? (CreatePaymentDispute::REASON_LABELS[$dispute->reason] ?? $dispute->reason)
+            : __('Payment dispute');
+
+        return TelegramMessage::create()
+            ->normal()
+            ->content($this->subject($label))
+            ->line($this->summary($label))
+            ->button(__('Open Linket'), url($this->actionPath($dispute)));
     }
 
     public function toDatabase(object $notifiable): array

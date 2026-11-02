@@ -21,6 +21,7 @@ use App\Storefront\Models\CreatorPaymentMethod;
 use App\Stores\Models\Store;
 use App\Team\Traits\CanBeAgent;
 use App\TrackingPixels\Models\TrackingPixel;
+use App\Telegram\Models\TelegramConnection;
 use Common\Auth\Models\BaseUser;
 use Common\Domains\CustomDomain;
 use Common\Tags\Tag;
@@ -68,6 +69,23 @@ class User extends BaseUser
     public function creatorPaymentMethods(): HasMany
     {
         return $this->hasMany(CreatorPaymentMethod::class);
+    }
+
+    public function telegramConnection(): HasOne
+    {
+        return $this->hasOne(TelegramConnection::class);
+    }
+
+    public function routeNotificationForTelegram(mixed $notification = null): int|string|null
+    {
+        if (
+            ! config('services.telegram.enabled') ||
+            blank(config('services.telegram.token'))
+        ) {
+            return null;
+        }
+
+        return $this->telegramConnection()->value('telegram_chat_id');
     }
 
     public function linkOverlays(): HasMany

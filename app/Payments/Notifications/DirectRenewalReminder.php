@@ -3,11 +3,13 @@
 namespace App\Payments\Notifications;
 
 use App\Models\User;
+use App\Telegram\Support\TelegramNotificationChannels;
 use Common\Billing\Subscription;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use NotificationChannels\Telegram\TelegramMessage;
 
 class DirectRenewalReminder extends Notification implements ShouldQueue
 {
@@ -24,7 +26,10 @@ class DirectRenewalReminder extends Notification implements ShouldQueue
 
     public function via(mixed $notifiable): array
     {
-        return ['mail', 'database'];
+        return TelegramNotificationChannels::append(
+            $notifiable,
+            ['mail', 'database'],
+        );
     }
 
     public function viaQueues(): array
@@ -32,6 +37,7 @@ class DirectRenewalReminder extends Notification implements ShouldQueue
         return [
             'mail' => 'mail',
             'database' => 'default',
+            'telegram' => 'default',
         ];
     }
 
@@ -46,6 +52,19 @@ class DirectRenewalReminder extends Notification implements ShouldQueue
             ]))
             ->line(__('Pay by direct transfer in Billing to keep Pro active without interruption.'))
             ->action(__('Renew Pro'), url('/account-settings/billing'));
+    }
+
+    public function toTelegram(User $notifiable): TelegramMessage
+    {
+        return TelegramMessage::create()
+            ->normal()
+            ->content(__('Linket Pro renewal reminder'))
+            ->line(__('Your :plan subscription renews in :days day(s).', [
+                'plan' => $this->subscription->product?->name ?? 'Pro',
+                'days' => $this->daysBefore,
+            ]))
+            ->line(__('Pay by direct transfer in Billing to keep Pro active without interruption.'))
+            ->button(__('Renew Pro'), url('/account-settings/billing'));
     }
 
     public function toArray(mixed $notifiable): array

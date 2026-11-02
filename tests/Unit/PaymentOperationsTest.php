@@ -33,7 +33,11 @@ class PaymentOperationsTest extends TestCase
             'mail' => 'mail',
             'database' => 'default',
         ], $notification->viaQueues());
-        $this->assertSame($notification->viaQueues(), $direct->viaQueues());
+        $this->assertSame([
+            'mail' => 'mail',
+            'database' => 'default',
+            'telegram' => 'default',
+        ], $direct->viaQueues());
         $this->assertSame(3, $notification->tries);
         $this->assertSame(3, $direct->tries);
     }

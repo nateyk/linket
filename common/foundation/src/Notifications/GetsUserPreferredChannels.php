@@ -4,6 +4,7 @@ namespace Common\Notifications;
 
 use App\Models\User;
 use NotificationChannels\Fcm\FcmChannel;
+use App\Telegram\Support\TelegramNotificationChannels;
 
 trait GetsUserPreferredChannels
 {
@@ -33,6 +34,11 @@ trait GetsUserPreferredChannels
                     $channels[] = 'mail';
                 } elseif ($channel === 'mobile') {
                     $channels[] = FcmChannel::class;
+                } elseif ($channel === 'telegram') {
+                    $channels = TelegramNotificationChannels::append(
+                        $notifiable,
+                        $channels,
+                    );
                 } else {
                     $channels[] = $channel;
                 }
