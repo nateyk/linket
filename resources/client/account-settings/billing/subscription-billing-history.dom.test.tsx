@@ -15,7 +15,15 @@ vi.mock('@shadcn/card/card', () => ({Card: {Root: 'section', Header: 'header', T
 vi.mock('@shadcn/badge/badge', () => ({Badge: 'span'}));
 vi.mock('@shadcn/button/button', () => ({Button: ({children, onClick, disabled}: {children?: any; onClick?: () => void; disabled?: boolean}) => <button disabled={disabled} onClick={onClick}>{children}</button>}));
 vi.mock('@shadcn/skeleton/skeleton', () => ({Skeleton: 'span'}));
-vi.mock('react-router', () => ({Link: 'a'}));
+vi.mock('react-router', () => ({
+  Link: ({
+    to,
+    children,
+  }: {
+    to: string;
+    children: React.ReactNode;
+  }) => <a href={to}>{children}</a>,
+}));
 
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
