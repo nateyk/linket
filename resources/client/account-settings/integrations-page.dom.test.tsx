@@ -104,6 +104,17 @@ it('lets creators mute payment-review Telegram alerts without disconnecting', as
   expect(api.delete).not.toHaveBeenCalled();
 });
 
+it('confirms a Telegram test message without claiming preferences changed', async () => {
+  render(<Component />);
+  fireEvent.click(await screen.findByRole('button', {name: 'Send test'}));
+
+  await waitFor(() =>
+    expect(api.post).toHaveBeenCalledWith('/api/v1/integrations/telegram/test'),
+  );
+  expect(await screen.findByText('Test notification sent.')).toBeTruthy();
+  expect(screen.queryByText('Telegram notification preferences updated.')).toBeNull();
+});
+
 it('starts the existing one-time Telegram connection flow when disconnected', async () => {
   api.get.mockResolvedValue({
     data: {

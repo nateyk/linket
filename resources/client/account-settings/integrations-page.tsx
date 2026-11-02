@@ -77,7 +77,7 @@ const preferenceRows: {key: PreferenceKey; label: string; description: string}[]
   {
     key: 'pro_billing',
     label: 'Pro billing reminders',
-    description: 'Receive Pro activation, renewal, past-due and expiry updates.'
+    description: 'Receive Pro activation, renewal, past-due and expiry updates.',
   },
 ];
 
@@ -87,6 +87,7 @@ export function Component() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [testSent, setTestSent] = useState(false);
   const [disconnectOpen, setDisconnectOpen] = useState(false);
 
   const load = useCallback(async () => {
@@ -134,6 +135,7 @@ export function Component() {
       preferences,
     });
     setSaved(false);
+    setTestSent(false);
     setError(false);
 
     try {
@@ -153,9 +155,10 @@ export function Component() {
     setBusy(true);
     setError(false);
     setSaved(false);
+    setTestSent(false);
     try {
       await apiClient.post('/api/v1/integrations/telegram/test');
-      setSaved(true);
+      setTestSent(true);
     } catch {
       setError(true);
     } finally {
@@ -304,6 +307,11 @@ export function Component() {
                 {saved ? (
                   <p role="status" className="text-sm text-positive">
                     <Trans message="Telegram notification preferences updated." />
+                  </p>
+                ) : null}
+                {testSent ? (
+                  <p role="status" className="text-sm text-positive">
+                    <Trans message="Test notification sent." />
                   </p>
                 ) : null}
                 {error ? (
