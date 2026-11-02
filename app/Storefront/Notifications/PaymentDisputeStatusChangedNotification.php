@@ -5,6 +5,7 @@ namespace App\Storefront\Notifications;
 use App\Storefront\Models\StorefrontPaymentDispute;
 use App\Storefront\Services\CreatePaymentDispute;
 use App\Telegram\Support\TelegramNotificationChannels;
+use App\Telegram\Support\TelegramNotificationPreferences;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -36,7 +37,11 @@ class PaymentDisputeStatusChangedNotification extends Notification implements Sh
         $channels = ['mail', 'database'];
 
         return $this->audience === 'creator'
-            ? TelegramNotificationChannels::append($notifiable, $channels)
+            ? TelegramNotificationChannels::append(
+                $notifiable,
+                $channels,
+                TelegramNotificationPreferences::PAYMENT_DISPUTES,
+            )
             : $channels;
     }
 
