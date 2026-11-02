@@ -24,6 +24,7 @@ import {
   ChevronLeftIcon,
   KeyIcon,
   LockIcon,
+  PlugIcon,
   SettingsIcon,
   StoreIcon,
   UsersIcon,
@@ -137,6 +138,14 @@ function AccountSettingsSidebar() {
                   icon={<LockIcon />}
                 >
                   <Trans message="Security" />
+                </Sidebar.MenuButton>
+              </Sidebar.MenuItem>
+              <Sidebar.MenuItem>
+                <Sidebar.MenuButton
+                  render={<NavLink to="/account-settings/integrations" />}
+                  icon={<PlugIcon />}
+                >
+                  <Trans message="Integrations" />
                 </Sidebar.MenuButton>
               </Sidebar.MenuItem>
               <Sidebar.MenuItem>
