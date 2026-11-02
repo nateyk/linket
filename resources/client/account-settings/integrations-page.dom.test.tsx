@@ -61,11 +61,11 @@ it('shows the connected Telegram integration and notification preferences', asyn
 
   expect(await screen.findByText('Telegram')).toBeTruthy();
   expect(screen.getByText('@creator_test')).toBeTruthy();
-  expect(screen.getByLabelText('Verified sales')).toBeChecked();
-  expect(screen.getByLabelText('Service inquiries')).toBeChecked();
-  expect(screen.getByLabelText('Product moderation')).toBeChecked();
-  expect(screen.getByLabelText('Payment disputes')).toBeChecked();
-  expect(screen.getByLabelText('Pro billing reminders')).toBeChecked();
+  expect(screen.getByLabelText('Verified sales').getAttribute('aria-checked')).toBe('true');
+  expect(screen.getByLabelText('Service inquiries').getAttribute('aria-checked')).toBe('true');
+  expect(screen.getByLabelText('Product moderation').getAttribute('aria-checked')).toBe('true');
+  expect(screen.getByLabelText('Payment disputes').getAttribute('aria-checked')).toBe('true');
+  expect(screen.getByLabelText('Pro billing reminders').getAttribute('aria-checked')).toBe('true');
 });
 
 it('saves an event preference without disconnecting Telegram', async () => {
