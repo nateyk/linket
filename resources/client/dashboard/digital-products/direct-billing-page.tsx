@@ -1933,16 +1933,29 @@ function paginationItems(
     return Array.from({length: Math.max(lastPage, 1)}, (_, index) => index + 1);
   }
 
-  const items: Array<number | 'start-ellipsis' | 'end-ellipsis'> = [1];
-  const start = Math.max(2, page - 1);
-  const end = Math.min(lastPage - 1, page + 1);
+  if (page <= 3) {
+    return [1, 2, 3, 'end-ellipsis', lastPage];
+  }
 
-  if (start > 2) items.push('start-ellipsis');
-  for (let value = start; value <= end; value += 1) items.push(value);
-  if (end < lastPage - 1) items.push('end-ellipsis');
-  items.push(lastPage);
+  if (page >= lastPage - 2) {
+    return [
+      1,
+      'start-ellipsis',
+      lastPage - 2,
+      lastPage - 1,
+      lastPage,
+    ];
+  }
 
-  return items;
+  return [
+    1,
+    'start-ellipsis',
+    page - 1,
+    page,
+    page + 1,
+    'end-ellipsis',
+    lastPage,
+  ];
 }
 
 function paginationFrom(value: Partial<Pagination> | undefined): Pagination {
