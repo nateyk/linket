@@ -144,7 +144,7 @@ export function Component() {
                     {telegram.ready ? (
                       <Trans message="Ready" />
                     ) : (
-                      <Trans message="Server configuration required" />
+                      <Trans message="Needs setup" />
                     )}
                   </Badge>
                   {telegram.enabled ? (
@@ -227,7 +227,7 @@ export function Component() {
                     <div className="flex items-center gap-2">
                       <WebhookIcon className="size-4 text-muted-foreground" />
                       <p className="text-sm font-semibold">
-                        <Trans message="Webhook synced" />
+                        <Trans message="Webhook status" />
                       </p>
                     </div>
                     <p className="mt-1 text-sm text-muted-foreground">
