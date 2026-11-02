@@ -118,14 +118,9 @@ class AdminTelegramIntegrationTest extends TestCase
         Notification::assertNothingSent();
     }
 
-    public function test_admin_test_notification_uses_connected_chat_even_when_creator_notifications_are_muted(): void
+    public function test_admin_test_notification_targets_connected_chat_even_when_creator_notifications_are_muted(): void
     {
-        Http::fake([
-            'https://api.telegram.org/botsynthetic-bot-token/sendMessage' => Http::response([
-                'ok' => true,
-                'result' => ['message_id' => 1],
-            ]),
-        ]);
+        Notification::fake();
 
         $admin = $this->admin();
         $admin->telegramConnection()->create([
@@ -137,16 +132,24 @@ class AdminTelegramIntegrationTest extends TestCase
             'notifications_enabled' => false,
         ]);
 
+        $message = (new \App\Telegram\Notifications\TelegramIntegrationTestNotification())
+            ->toTelegram($admin);
+
+        $this->assertSame(
+            1234567890999,
+            $message->getPayloadValue('chat_id'),
+        );
+
         $this->stateful()->actingAs($admin, 'sanctum');
 
         $this->postJson('/api/v1/admin/integrations/telegram/test')
             ->assertOk()
             ->assertJsonPath('telegram.test_sent', true);
 
-        Http::assertSent(function ($request): bool {
-            return str_ends_with($request->url(), '/sendMessage')
-                && (int) ($request->data()['chat_id'] ?? 0) === 1234567890999;
-        });
+        Notification::assertSentTo(
+            $admin,
+            \App\Telegram\Notifications\TelegramIntegrationTestNotification::class,
+        );
     }
 
     private function admin(): User
