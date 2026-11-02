@@ -175,6 +175,11 @@ final class VerifyEtGateway
                 $this->notifyProLifecycle($proLifecycle);
             }
 
+            if ($verification->payable_type === StorefrontOrder::class
+                && in_array($outcome, ['success', 'manual_review'], true)) {
+                $this->notifyCreatorForOrderOutcome($verification, $outcome);
+            }
+
             return $outcome;
         } catch (UniqueConstraintViolationException) {
             DirectPaymentVerification::query()->whereKey($verification->id)->update([
@@ -442,6 +447,31 @@ final class VerifyEtGateway
     /**
      * @param array{creator_id: int, subscription_id: int, payment_id: int, event: string} $lifecycle
      */
+    private function notifyCreatorForOrderOutcome(
+        DirectPaymentVerification $verification,
+        string $outcome,
+    ): void {
+        try {
+            $order = StorefrontOrder::query()->find($verification->payable_id);
+            if (! $order) {
+                return;
+            }
+
+            if ($outcome === 'success' && $order->status === 'paid') {
+                app(\App\Storefront\Services\CreatorQuotaTelegramNotifier::class)
+                    ->notifyFromVerifiedOrder($order);
+            } elseif ($outcome === 'manual_review' && $order->status === 'manual_review') {
+                app(\App\Storefront\Services\CreatorPaymentReviewNotifier::class)
+                    ->notify($order, $verification->id);
+            }
+        } catch (\Throwable) {
+            // The notification channel is never an authority on the payment outcome.
+            Log::warning('telegram.order_alert_enqueue_failed', [
+                'verification_id' => $verification->id,
+            ]);
+        }
+    }
+
     private function notifyProLifecycle(array $lifecycle): void
     {
         try {
