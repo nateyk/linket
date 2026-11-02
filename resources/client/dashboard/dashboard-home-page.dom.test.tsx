@@ -97,7 +97,8 @@ it('renders API-provided verified revenue and recent verification statuses', asy
   expect(screen.getAllByText('Guest buyer').length).toBeGreaterThan(0);
   expect(screen.getByText('Buyer')).toBeTruthy();
   expect(screen.getAllByText('Manual review needed').length).toBeGreaterThan(0);
-  expect(screen.getByRole('link', {name: 'View all orders'})).toBeTruthy();
+  expect(screen.getByRole('link', {name: 'See all orders'})).toBeTruthy();
+  expect(screen.getAllByText('#paid').length).toBeGreaterThan(0);
   expect(screen.queryByText('No verified sales in this period')).toBeNull();
 });
 
