@@ -222,7 +222,7 @@ class AdminTelegramIntegrationTest extends TestCase
             ->assertJsonMissingPath('telegram.token')
             ->assertJsonMissingPath('telegram.webhook_secret');
 
-        $raw = \DB::table('settings')->where('name', 'integrations.telegram')->value('value');
+        $raw = \DB::table('telegram_integration_settings')->where('id', 1)->value('encrypted_config');
         $this->assertIsString($raw);
         $this->assertStringNotContainsString('synthetic_saved_token', $raw);
         $this->assertStringNotContainsString('synthetic_saved_secret', $raw);
@@ -240,7 +240,7 @@ class AdminTelegramIntegrationTest extends TestCase
             'enabled' => false, 'token' => '', 'webhook_secret' => '',
         ])->assertOk()->assertJsonPath('telegram.enabled', false)
             ->assertJsonPath('telegram.bot_token_configured', true);
-        $saved = (new \Common\Settings\Settings())->get('integrations.telegram');
+        $saved = \App\Telegram\Support\TelegramSettings::stored();
         $this->assertSame('123456:synthetic_saved_token', $saved['token']);
         $this->assertSame('synthetic_saved_secret', $saved['webhook_secret']);
     }
