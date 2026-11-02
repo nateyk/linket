@@ -4,6 +4,7 @@ namespace App\Storefront\Notifications;
 
 use App\Storefront\Models\DigitalProduct;
 use App\Telegram\Support\TelegramNotificationChannels;
+use App\Telegram\Support\TelegramNotificationPreferences;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -32,6 +33,7 @@ class ProductModerationNotification extends Notification implements ShouldQueue
         return TelegramNotificationChannels::append(
             $notifiable,
             ['mail', 'database'],
+            TelegramNotificationPreferences::PRODUCT_MODERATION,
         );
     }
 
