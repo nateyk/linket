@@ -2,8 +2,8 @@ import {User} from '@app/gen/schemas/user';
 import {Badge} from '@shadcn/badge/badge';
 import {FormattedCurrency} from '@ui/i18n/formatted-currency';
 import {FormattedDate} from '@ui/i18n/formatted-date';
-import {Trans} from '@ui/i18n/trans';
 import {getSiteCurrency} from '@ui/i18n/format-money';
+import {Trans} from '@ui/i18n/trans';
 import {useSettings} from '@ui/settings/use-settings';
 import {ExternalLinkIcon} from 'lucide-react';
 import {useOutletContext} from 'react-router';
@@ -17,52 +17,80 @@ export function InvoiceHistoryPanel() {
 
   return (
     <BillingPlanPanel title={<Trans message="Invoices" />}>
-      <div className="max-w-116">
-        <div>
-          {!invoices.length ? (
-            <div className="text-muted-foreground italic">
-              <Trans message="No invoices yet" />
-            </div>
-          ) : undefined}
+      {!invoices.length ? (
+        <div className="py-2">
+          <p className="font-medium">
+            <Trans message="No invoices yet" />
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            <Trans message="Subscription invoices will appear here after a completed billing event." />
+          </p>
+        </div>
+      ) : (
+        <div className="divide-y">
           {invoices.map(invoice => (
             <div
-              className="mb-3.5 flex items-center justify-between gap-2.5 text-base whitespace-nowrap"
+              className="flex flex-col gap-3 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
               key={invoice.id}
             >
-              <a
-                href={`${base_url}/billing/invoices/${invoice.uuid}`}
-                target="_blank"
-                className="flex items-center gap-2 hover:underline"
-                rel="noreferrer"
-              >
-                <FormattedDate date={invoice.created_at} />
-                <ExternalLinkIcon className="size-4" />
-              </a>
-              <AmountPaid invoice={invoice} subscription={data.subscription!} />
-              <Badge
-                variant={invoice.status === 'paid' ? 'positive' : 'destructive'}
-              >
-                {invoice.status === 'paid' ? (
-                  <Trans message="Paid" />
-                ) : (
-                  <Trans message="Unpaid" />
-                )}
-              </Badge>
-              <div>{data.subscription?.product?.name}</div>
+              <div className="min-w-0">
+                <p className="font-medium">
+                  <FormattedDate date={invoice.created_at} />
+                </p>
+                <p className="truncate text-sm text-muted-foreground">
+                  {data.subscription?.product?.name}
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="font-medium tabular-nums">
+                  <AmountPaid
+                    invoice={invoice}
+                    subscription={data.subscription!}
+                  />
+                </span>
+                <Badge
+                  variant={
+                    invoice.status === 'paid' ? 'positive' : 'destructive'
+                  }
+                >
+                  {invoice.status === 'paid' ? (
+                    <Trans message="Paid" />
+                  ) : (
+                    <Trans message="Unpaid" />
+                  )}
+                </Badge>
+                <a
+                  href={`${base_url}/billing/invoices/${invoice.uuid}`}
+                  target="_blank"
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-primary underline-offset-4 hover:underline"
+                  rel="noreferrer"
+                >
+                  <Trans message="Open invoice" />
+                  <ExternalLinkIcon className="size-4" aria-hidden="true" />
+                </a>
+              </div>
             </div>
           ))}
         </div>
-      </div>
+      )}
     </BillingPlanPanel>
   );
 }
 
 type AmountPaidProps = {
-  invoice: NonNullable<NonNullable<User['subscription']>['invoices']>[number];
+  invoice: NonNullable<
+    NonNullable<User['subscription']>['invoices']
+  >[number];
   subscription: NonNullable<User['subscription']>;
 };
+
 function AmountPaid({invoice, subscription}: AmountPaidProps) {
-  const currency = invoice.currency || subscription.price?.currency || getSiteCurrency();
+  const currency =
+    invoice.currency ||
+    subscription.price?.currency ||
+    getSiteCurrency();
+
   if (invoice.amount_paid != null && invoice.currency != null) {
     return (
       <FormattedCurrency
