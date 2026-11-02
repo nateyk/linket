@@ -205,7 +205,7 @@ export function Component() {
   const [transactionFrom, setTransactionFrom] = useState('');
   const [transactionTo, setTransactionTo] = useState('');
   const [transactionPage, setTransactionPage] = useState(1);
-  const [transactionPerPage, setTransactionPerPage] = useState(
+  const [transactionPerPage, setTransactionPerPage] = useState<number>(
     PAGE_SIZE_OPTIONS[0],
   );
   const debouncedTransactionSearch = useDebouncedValue(transactionSearch, 300);
@@ -216,7 +216,9 @@ export function Component() {
   const [manualLoading, setManualLoading] = useState(false);
   const [manualError, setManualError] = useState<string>();
   const [manualPage, setManualPage] = useState(1);
-  const [manualPerPage, setManualPerPage] = useState(PAGE_SIZE_OPTIONS[0]);
+  const [manualPerPage, setManualPerPage] = useState<number>(
+    PAGE_SIZE_OPTIONS[0],
+  );
 
   const [detailUuid, setDetailUuid] = useState<string>();
 
@@ -1859,9 +1861,13 @@ function Pagination({
             typeof item === 'number' ? (
               <Button
                 key={item}
-                variant={item === page ? 'secondary' : 'ghost'}
+                variant={item === page ? 'outline' : 'ghost'}
                 size="sm"
-                className="min-w-9 px-2"
+                className={
+                  item === page
+                    ? 'min-w-9 bg-muted px-2 font-medium'
+                    : 'min-w-9 px-2'
+                }
                 aria-current={item === page ? 'page' : undefined}
                 aria-label={`Go to page ${item}`}
                 onClick={() => onChange(item)}
