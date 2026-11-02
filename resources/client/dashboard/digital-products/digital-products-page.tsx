@@ -23,11 +23,8 @@ import {
   ArchiveRestoreIcon,
   BarChart3Icon,
   ChartNoAxesCombinedIcon,
-  CheckCircle2Icon,
   CheckIcon,
   CircleAlertIcon,
-  CircleDashedIcon,
-  Clock3Icon,
   CopyIcon,
   CopyPlusIcon,
   ExternalLinkIcon,
@@ -299,7 +296,7 @@ export function Component() {
             <ProductSkeleton />
           ) : products.length ? (
             <>
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 xl:gap-5">
                 {products.map(product => (
                   <ProductCard
                     key={product.id}
@@ -408,7 +405,7 @@ function ProductCard({
   const editPath = isCourse ? `/dashboard/items/${product.id}/course` : `/dashboard/items/${product.id}/edit`;
 
   return (
-    <Card.Root className="group flex h-full flex-col gap-0 overflow-hidden py-0 shadow-xs transition-shadow hover:shadow-md">
+    <Card.Root className="group flex h-full flex-col gap-0 overflow-hidden py-0">
       <Card.Header className="relative block p-0">
         <Link
           to={editPath}
@@ -429,21 +426,19 @@ function ProductCard({
             <ProductCoverFallback />
           )}
         </Link>
-        <div className="absolute top-3 left-3">
-          <StatusBadge
-            status={product.status}
-            hasPendingUpdate={product.has_pending_update}
-          />
-        </div>
       </Card.Header>
 
-      <Card.Content className="flex flex-1 flex-col gap-3 p-4 pb-0">
-          <div className="flex min-w-0 flex-col gap-1">
-          <div className="flex min-h-5 items-center gap-2">
+      <Card.Content className="flex flex-1 flex-col gap-2.5 p-4 pb-0">
+        <div className="flex min-w-0 flex-col gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <StatusBadge
+              status={product.status}
+              hasPendingUpdate={product.has_pending_update}
+            />
             {isCourse && (
-              <Badge variant="outline" className="h-5 px-1.5">
+              <span className="text-xs font-medium text-muted-foreground">
                 <Trans message="Course" />
-              </Badge>
+              </span>
             )}
           </div>
           <Card.Title className="truncate text-sm font-semibold leading-5">
@@ -464,7 +459,7 @@ function ProductCard({
         )}
       </Card.Content>
 
-      <Card.Footer className="justify-between gap-3 px-4 py-4">
+      <Card.Footer className="justify-between gap-3 px-4 pt-3 pb-4">
         <div className="flex min-w-0 flex-col gap-0.5 text-sm text-muted-foreground">
           <div className="flex min-w-0 items-center gap-2">
             <SalesLabel count={product.sales_count} />
@@ -758,7 +753,7 @@ function ProductActions({
 function ProductCoverFallback() {
   return (
     <div className="flex size-full items-center justify-center bg-muted/45">
-      <div className="flex size-10 items-center justify-center rounded-card-sm bg-background/85 text-muted-foreground shadow-xs ring-1 ring-foreground/10">
+      <div className="flex size-10 items-center justify-center rounded-card-sm bg-background/85 text-muted-foreground ring-1 ring-foreground/10">
         <PackageIcon className="size-4" />
       </div>
     </div>
@@ -772,12 +767,9 @@ function StatusBadge({
   status: ProductStatus;
   hasPendingUpdate?: boolean;
 }) {
-  const className = 'border border-border/70 bg-background/95 shadow-sm';
-
   if (status === 'approved' && hasPendingUpdate) {
     return (
-      <Badge variant="outline" className={className}>
-        <Clock3Icon />
+      <Badge variant="outline">
         <Trans message="Update under review" />
       </Badge>
     );
@@ -786,36 +778,31 @@ function StatusBadge({
   switch (status) {
     case 'pending_approval':
       return (
-        <Badge variant="secondary" className={className}>
-          <Clock3Icon />
+        <Badge variant="secondary">
           <Trans message="In review" />
         </Badge>
       );
     case 'approved':
       return (
-        <Badge variant="positive" className={className}>
-          <CheckCircle2Icon />
+        <Badge variant="positive">
           <Trans message="Live" />
         </Badge>
       );
     case 'rejected':
       return (
-        <Badge variant="destructive" className={className}>
-          <TriangleAlertIcon />
+        <Badge variant="destructive">
           <Trans message="Needs changes" />
         </Badge>
       );
     case 'archived':
       return (
-        <Badge variant="secondary" className={className}>
-          <ArchiveIcon />
+        <Badge variant="secondary">
           <Trans message="Archived" />
         </Badge>
       );
     default:
       return (
-        <Badge variant="outline" className={className}>
-          <CircleDashedIcon />
+        <Badge variant="outline">
           <Trans message="Draft" />
         </Badge>
       );
@@ -848,7 +835,7 @@ function EmptyProducts({onNewProduct}: {onNewProduct: () => void}) {
 
 function ProductSkeleton() {
   return (
-    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 xl:gap-5">
       {[1, 2, 3].map(item => (
         <Card.Root key={item} className="gap-0 overflow-hidden py-0">
           <Card.Header className="p-0">

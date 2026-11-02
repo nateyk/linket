@@ -30,6 +30,7 @@ import {useMutation, useSuspenseQuery} from '@tanstack/react-query';
 import {message} from '@ui/i18n/message';
 import {Trans} from '@ui/i18n/trans';
 import {useSettings} from '@ui/settings/use-settings';
+import {useTrans} from '@ui/i18n/use-trans';
 import {toast} from '@ui/toast/toast';
 import {
   CircleQuestionMarkIcon,
@@ -261,12 +262,15 @@ function NewTrackingPixelButton() {
 }
 
 function InfoTrigger() {
+  const {trans} = useTrans();
+
   return (
     <Popover.Root>
       <Popover.Trigger
         render={<Button variant="ghost" size="icon-sm" />}
         className="text-muted-foreground"
         openOnHover
+        aria-label={trans(message('About tracking pixels'))}
       >
         <CircleQuestionMarkIcon />
       </Popover.Trigger>

@@ -675,7 +675,7 @@ export function CreatorProfileEditor({
                   <Field.Group className="max-w-2xl gap-3">
                     <Field.Root
                       orientation="horizontal"
-                      className="items-start rounded-card-sm border border-border/70 bg-transparent p-4"
+                      className="items-start py-1"
                     >
                       <div
                         data-slot="field-content"

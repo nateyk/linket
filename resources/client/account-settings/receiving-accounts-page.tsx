@@ -17,6 +17,7 @@ import {
   InfoIcon,
   LandmarkIcon,
   MoreHorizontalIcon,
+  PencilIcon,
   PlusIcon,
   PowerIcon,
   UploadIcon,
@@ -206,28 +207,21 @@ function ReceivingAccountCard({
     !account.is_suspended;
 
   return (
-    <Card.Root size="sm" className="overflow-hidden rounded-card-sm">
-      <Card.Content className="flex flex-col gap-3 p-4">
+    <Card.Root size="sm" className="min-w-0">
+      <Card.Content className="flex flex-col gap-3">
         <div className="flex min-w-0 items-start gap-3">
-          <BankLogo
-            code={account.provider}
-            name={methodName}
-            decorative
-            frosted
-          />
+          <BankLogo code={account.provider} name={methodName} decorative />
           <div className="min-w-0 flex-1">
-            <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
-              <div className="min-w-0">
-                <h2 className="truncate text-sm font-semibold leading-5">
-                  {methodName}
-                </h2>
-                <p className="mt-0.5 truncate text-sm text-muted-foreground">
-                  {account.account_name}
-                </p>
-              </div>
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <h2 className="min-w-0 truncate text-sm font-medium">
+                {methodName}
+              </h2>
               <AccountLifecycleBadge account={account} />
             </div>
-            <p className="mt-1.5 text-xs tabular-nums text-muted-foreground">
+            <p className="mt-0.5 truncate text-sm text-muted-foreground">
+              {account.account_name}
+            </p>
+            <p className="mt-1 text-xs tabular-nums text-muted-foreground">
               <Trans
                 message="Account ending :digits"
                 values={{digits: account.account_ending}}
@@ -240,37 +234,26 @@ function ReceivingAccountCard({
               )}
             </p>
           </div>
-        </div>
 
-        <AccountAvailability account={account} />
-
-        {!methodAvailable && (
-          <p className="text-sm text-muted-foreground">
-            <Trans message="This payment method is not available for new setup. Contact support for assistance." />
-          </p>
-        )}
-
-        {!account.is_suspended && (
-          <div className="flex items-center gap-2 border-t border-border pt-3">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={busy || !methodAvailable}
-              onClick={() => onEdit(account)}
-            >
-              <Trans message="Edit account" />
-            </Button>
-            {canToggle && (
-              <Dropdown.Root>
-                <Dropdown.Trigger
-                  render={<Button variant="ghost" size="icon-sm" />}
-                  className="ms-auto"
-                  aria-label={trans(message('Account actions'))}
-                  disabled={busy}
+          {!account.is_suspended && (
+            <Dropdown.Root>
+              <Dropdown.Trigger
+                render={<Button variant="ghost" size="icon-sm" />}
+                className="shrink-0"
+                aria-label={trans(message('Account actions'))}
+                disabled={busy}
+              >
+                <MoreHorizontalIcon />
+              </Dropdown.Trigger>
+              <Dropdown.Content align="end">
+                <Dropdown.Item
+                  disabled={busy || !methodAvailable}
+                  onClick={() => onEdit(account)}
                 >
-                  <MoreHorizontalIcon />
-                </Dropdown.Trigger>
-                <Dropdown.Content align="end">
+                  <PencilIcon />
+                  <Trans message="Edit account" />
+                </Dropdown.Item>
+                {canToggle && (
                   <Dropdown.Item
                     disabled={busy || (!methodAvailable && !account.is_active)}
                     onClick={() => onToggle(account)}
@@ -282,10 +265,18 @@ function ReceivingAccountCard({
                       <Trans message="Activate" />
                     )}
                   </Dropdown.Item>
-                </Dropdown.Content>
-              </Dropdown.Root>
-            )}
-          </div>
+                )}
+              </Dropdown.Content>
+            </Dropdown.Root>
+          )}
+        </div>
+
+        <AccountAvailability account={account} />
+
+        {!methodAvailable && (
+          <p className="text-sm text-muted-foreground">
+            <Trans message="This payment method is not available for new setup. Contact support for assistance." />
+          </p>
         )}
       </Card.Content>
     </Card.Root>
@@ -306,7 +297,7 @@ function ReceivingAccountsInfo() {
         <InfoIcon />
       </Popover.Trigger>
       <Popover.Portal>
-        <Popover.Content align="end" className="max-w-xs">
+        <Popover.Content align="start" className="max-w-xs">
           <Trans message="Accounts customers can pay directly at checkout." />
         </Popover.Content>
       </Popover.Portal>
@@ -430,20 +421,23 @@ export function Component() {
 
   return (
     <AccountSettingsPageLayout
-      title={<Trans message="Receiving accounts" />}
-      headerRightContent={<ReceivingAccountsInfo />}
+      title={
+        <span className="flex items-center gap-1">
+          <Trans message="Receiving accounts" />
+          <ReceivingAccountsInfo />
+        </span>
+      }
+      headerRightContent={
+        <Button
+          disabled={loading || !providers.length || busy}
+          onClick={openNewAccount}
+        >
+          <PlusIcon />
+          <Trans message="Add receiving account" />
+        </Button>
+      }
     >
       <div className="flex flex-col gap-5">
-        <div className="flex justify-end">
-          <Button
-            className="w-full sm:w-auto"
-            disabled={loading || !providers.length || busy}
-            onClick={openNewAccount}
-          >
-            <PlusIcon />
-            <Trans message="Add receiving account" />
-          </Button>
-        </div>
 
         {loading && <Spinner />}
         {loadError && (
