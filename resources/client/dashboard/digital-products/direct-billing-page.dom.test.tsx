@@ -149,14 +149,17 @@ vi.mock('@shadcn/forms/select/select', () => ({
       children,
       value,
       onValueChange,
+      name,
     }: {
       children: React.ReactNode;
       value: string;
       onValueChange: (value: string) => void;
+      name?: string;
     }) => (
       <select
         value={value}
-        aria-label="Status"
+        name={name}
+        aria-label={name?.includes('per-page') ? 'Rows per page' : 'Status'}
         onChange={event => onValueChange(event.target.value)}
       >
         {children}
@@ -183,12 +186,12 @@ afterEach(() => {
 });
 
 it('applies redirected order filters to the controls and request', async () => {
-  window.history.replaceState({}, '', '/dashboard/orders?status=paid&search=Workbook&from=2026-10-01&to=2026-10-29&page=2');
+  window.history.replaceState({}, '', '/dashboard/orders?status=paid&search=Workbook&from=2026-10-01&to=2026-10-29&page=2&per_page=25');
   mockApi({orders: [baseOrder], lastPage: 3, total: 30});
   render(<Component />);
   await waitFor(() => expect(api.get).toHaveBeenCalledWith(
     '/api/v1/storefront/direct-orders',
-    expect.objectContaining({params: expect.objectContaining({status: 'paid', search: 'Workbook', from: '2026-10-01', to: '2026-10-29', page: 2})}),
+    expect.objectContaining({params: expect.objectContaining({status: 'paid', search: 'Workbook', from: '2026-10-01', to: '2026-10-29', page: 2, per_page: 25})}),
   ));
   expect((screen.getByLabelText('Search orders') as HTMLInputElement).value).toBe('Workbook');
   expect((screen.getByLabelText('Status') as HTMLSelectElement).value).toBe('paid');
@@ -352,6 +355,46 @@ it('shows summary and orders, and sends status, search and page filters to the s
   );
 });
 
+it('changes rows per page with server-backed pagination and resets to page one', async () => {
+  mockApi({orders: [baseOrder], lastPage: 4, total: 60});
+  render(<Component />);
+
+  await screen.findAllByText('Workbook');
+
+  const rowsPerPage = screen.getByLabelText('Rows per page') as HTMLSelectElement;
+  expect(rowsPerPage.value).toBe('15');
+
+  fireEvent.change(rowsPerPage, {target: {value: '25'}});
+
+  await waitFor(() =>
+    expect(api.get).toHaveBeenCalledWith(
+      '/api/v1/storefront/direct-orders',
+      expect.objectContaining({
+        params: expect.objectContaining({page: 1, per_page: 25}),
+      }),
+    ),
+  );
+});
+
+it('offers direct page navigation while keeping previous and next controls', async () => {
+  mockApi({orders: [baseOrder], lastPage: 6, total: 90});
+  render(<Component />);
+
+  await screen.findAllByText('Workbook');
+  fireEvent.click(screen.getByRole('button', {name: 'Go to page 3'}));
+
+  await waitFor(() =>
+    expect(api.get).toHaveBeenCalledWith(
+      '/api/v1/storefront/direct-orders',
+      expect.objectContaining({
+        params: expect.objectContaining({page: 3}),
+      }),
+    ),
+  );
+  expect(screen.getByRole('button', {name: 'Previous'})).toBeTruthy();
+  expect(screen.getByRole('button', {name: 'Next'})).toBeTruthy();
+});
+
 it('opens the read-only order detail with masked account and delivery state', async () => {
   mockApi({
     orders: [{...baseOrder, status: 'manual_review'}],
@@ -486,4 +529,5 @@ it('surfaces order loading errors', async () => {
 
   const alert = await screen.findByRole('alert');
   expect(alert.textContent).toContain('Unable to load orders');
+  expect(screen.getByRole('button', {name: 'Try again'})).toBeTruthy();
 });
