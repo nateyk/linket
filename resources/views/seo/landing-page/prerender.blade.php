@@ -5,9 +5,7 @@
 @endsection
 
 @section ('body')
-  @if ($data = settings('landingPage'))
-    @if (isset($data['sections']))
-      @foreach ($data['sections'] as $section)
+  @foreach ($sections ?? [] as $section)
         @if ($section['name'] === 'hero-split-with-screenshot' ||
           $section['name'] === 'hero-with-background-image' ||
           $section['name'] === 'hero-simple-centered')
@@ -90,7 +88,5 @@
             @endif
           </footer>
         @endif
-      @endforeach
-    @endif
-  @endif
+  @endforeach
 @endsection
