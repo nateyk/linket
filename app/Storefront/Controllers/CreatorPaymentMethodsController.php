@@ -525,7 +525,7 @@ final class CreatorPaymentMethodsController extends Controller
 
     private function notifyCreatorOfAccountChange(CreatorPaymentMethod $method, string $event): void
     {
-        $creator = $method->creator;
+        $creator = $method->creator()->first();
         if ($creator && \App\Telegram\Support\TelegramNotificationChannels::isAvailableFor(
             $creator,
             \App\Telegram\Support\TelegramNotificationPreferences::RECEIVING_ACCOUNTS,
