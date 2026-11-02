@@ -18,11 +18,11 @@ final class TelegramWebhookController extends Controller
     public function handle(Request $request): Response
     {
         abort_unless(
-            config('services.telegram.enabled'),
+            \App\Telegram\Support\TelegramSettings::get('enabled'),
             Response::HTTP_NOT_FOUND,
         );
 
-        $configuredSecret = (string) config('services.telegram.webhook_secret');
+        $configuredSecret = (string) \App\Telegram\Support\TelegramSettings::get('webhook_secret');
         $providedSecret = (string) $request->header(
             'X-Telegram-Bot-Api-Secret-Token',
             '',

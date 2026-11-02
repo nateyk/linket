@@ -4,6 +4,7 @@ import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {Badge} from '@shadcn/badge/badge';
 import {Button} from '@shadcn/button/button';
 import {Input} from '@shadcn/forms/input/input';
+import {Switch} from '@shadcn/forms/switch/switch';
 import {Spinner} from '@shadcn/spinner/spinner';
 import {Trans} from '@ui/i18n/trans';
 import {
@@ -52,10 +53,15 @@ type TelegramHealth = {
 export function Component() {
   const [telegram, setTelegram] = useState<TelegramHealth | null>(null);
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState<'sync' | 'test' | 'refresh' | 'inspect' | null>(null);
+  const [busy, setBusy] = useState<'sync' | 'test' | 'refresh' | 'inspect' | 'save' | null>(null);
   const [error, setError] = useState(false);
   const [syncSuccess, setSyncSuccess] = useState(false);
   const [testSuccess, setTestSuccess] = useState(false);
+  const [configSaved, setConfigSaved] = useState(false);
+  const [enabled, setEnabled] = useState(false);
+  const [botUsername, setBotUsername] = useState('');
+  const [botToken, setBotToken] = useState('');
+  const [webhookSecret, setWebhookSecret] = useState('');
 
   const load = useCallback(async () => {
     setBusy('refresh');
@@ -63,6 +69,8 @@ export function Component() {
     try {
       const response = await apiClient.get('/api/v1/admin/integrations/telegram');
       setTelegram(response.data.telegram);
+      setEnabled(response.data.telegram.enabled);
+      setBotUsername(response.data.telegram.bot_username || '');
     } catch {
       setError(true);
     } finally {
@@ -74,6 +82,32 @@ export function Component() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const saveConfiguration = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setBusy('save');
+    setError(false);
+    setConfigSaved(false);
+    setSyncSuccess(false);
+    setTestSuccess(false);
+    try {
+      const response = await apiClient.patch('/api/v1/admin/integrations/telegram', {
+        enabled,
+        ...(botUsername.trim() ? {bot_username: botUsername.trim().replace(/^@/, '')} : {}),
+        ...(botToken ? {token: botToken} : {}),
+        ...(webhookSecret ? {webhook_secret: webhookSecret} : {}),
+      });
+      setTelegram(response.data.telegram);
+      setBotUsername(response.data.telegram.bot_username || '');
+      setBotToken('');
+      setWebhookSecret('');
+      setConfigSaved(true);
+    } catch {
+      setError(true);
+    } finally {
+      setBusy(null);
+    }
+  };
 
   const inspect = async () => {
     setBusy('inspect');
@@ -143,7 +177,7 @@ export function Component() {
               </span>
             }
             description={
-              <Trans message="Monitor Linket's Telegram creator notification channel and keep its webhook synchronized. Bot credentials remain environment-only." />
+              <Trans message="Configure Telegram notifications and keep the bot webhook synchronized." />
             }
             layout="vertical"
           >
@@ -182,16 +216,38 @@ export function Component() {
                   )}
                 </div>
 
-                {!telegram.ready ? (
-                  <div className="rounded-card-sm border bg-secondary/30 p-4">
-                    <p className="text-sm font-semibold">
-                      <Trans message="Server configuration required" />
-                    </p>
+                <form onSubmit={event => void saveConfiguration(event)} className="space-y-4 rounded-card-sm border p-4">
+                  <div>
+                    <p className="text-sm font-semibold"><Trans message="Configure Telegram" /></p>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      <Trans message="Configure TELEGRAM_ENABLED, TELEGRAM_BOT_TOKEN, TELEGRAM_BOT_USERNAME and TELEGRAM_WEBHOOK_SECRET on the server, then refresh this page." />
+                      <Trans message="Credentials are stored securely and cannot be viewed after saving. Leave a secret blank to keep its current value." />
                     </p>
                   </div>
-                ) : null}
+                  <div className="flex items-center justify-between gap-4">
+                    <label htmlFor="telegram-enabled" className="text-sm font-medium"><Trans message="Enable Telegram" /></label>
+                    <Switch id="telegram-enabled" checked={enabled} onCheckedChange={setEnabled} disabled={busy !== null} />
+                  </div>
+                  <div>
+                    <label htmlFor="telegram-bot-username" className="mb-1.5 block text-sm font-medium"><Trans message="Bot username" /></label>
+                    <Input bindToHookForm={false} id="telegram-bot-username" value={botUsername}
+                      onChange={event => setBotUsername(event.target.value)} disabled={busy !== null} autoComplete="off" />
+                  </div>
+                  <div>
+                    <label htmlFor="telegram-bot-token" className="mb-1.5 block text-sm font-medium"><Trans message="Bot token" /></label>
+                    <Input bindToHookForm={false} id="telegram-bot-token" type="password" value={botToken}
+                      onChange={event => setBotToken(event.target.value)} disabled={busy !== null} autoComplete="new-password" />
+                  </div>
+                  <div>
+                    <label htmlFor="telegram-webhook-secret" className="mb-1.5 block text-sm font-medium"><Trans message="Webhook secret" /></label>
+                    <Input bindToHookForm={false} id="telegram-webhook-secret" type="password" value={webhookSecret}
+                      onChange={event => setWebhookSecret(event.target.value)} disabled={busy !== null} autoComplete="new-password" />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    <Trans message="After changing credentials, sync the webhook. A secret change may interrupt incoming updates until synchronization succeeds." />
+                  </p>
+                  {configSaved ? <p role="status" className="text-sm text-positive"><Trans message="Telegram settings saved. Sync the webhook to apply changes." /></p> : null}
+                  <Button type="submit" disabled={busy !== null}><Trans message="Save Telegram settings" /></Button>
+                </form>
 
                 <div className="grid gap-3 sm:grid-cols-2">
                   <StatusItem
@@ -296,7 +352,7 @@ export function Component() {
                 ) : null}
                 {error ? (
                   <p role="alert" className="text-sm text-destructive">
-                    <Trans message="Telegram operation failed. Check server configuration and try again." />
+                    <Trans message="Telegram operation failed. Check your settings and try again." />
                   </p>
                 ) : null}
 

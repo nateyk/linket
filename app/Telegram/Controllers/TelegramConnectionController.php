@@ -27,8 +27,8 @@ final class TelegramConnectionController extends Controller
     public function connect(Request $request): JsonResponse
     {
         abort_unless(
-            config('services.telegram.enabled') &&
-            filled(config('services.telegram.token')) &&
+            \App\Telegram\Support\TelegramSettings::get('enabled') &&
+            filled(\App\Telegram\Support\TelegramSettings::get('token')) &&
             filled($this->botUsername()),
             Response::HTTP_SERVICE_UNAVAILABLE,
             __('Telegram notifications are not available right now.'),
@@ -115,7 +115,7 @@ final class TelegramConnectionController extends Controller
     public function sendTest(Request $request): JsonResponse
     {
         abort_unless(
-            config('services.telegram.enabled') && filled(config('services.telegram.token')),
+            \App\Telegram\Support\TelegramSettings::get('enabled') && filled(\App\Telegram\Support\TelegramSettings::get('token')),
             Response::HTTP_SERVICE_UNAVAILABLE,
             __('Telegram notifications are unavailable.'),
         );
@@ -152,7 +152,7 @@ final class TelegramConnectionController extends Controller
     private function payload(?TelegramConnection $connection): array
     {
         return [
-            'enabled' => (bool) config('services.telegram.enabled'),
+            'enabled' => (bool) \App\Telegram\Support\TelegramSettings::get('enabled'),
             'connected' => $connection !== null,
             'username' => $connection?->telegram_username,
             'connected_at' => $connection?->connected_at?->toIso8601String(),
@@ -169,6 +169,6 @@ final class TelegramConnectionController extends Controller
 
     private function botUsername(): string
     {
-        return ltrim((string) config('services.telegram.bot_username'), '@');
+        return ltrim((string) \App\Telegram\Support\TelegramSettings::get('bot_username'), '@');
     }
 }

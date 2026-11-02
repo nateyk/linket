@@ -272,6 +272,36 @@ class AdminTelegramIntegrationTest extends TestCase
             ->assertUnprocessable()->assertJsonValidationErrors(['webhook_secret']);
     }
 
+    public function test_webhook_sync_uses_saved_credentials_without_disclosing_them(): void
+    {
+        Http::preventStrayRequests();
+        Http::fake([
+            'https://api.telegram.org/bot123456:synthetic_saved_token/setWebhook' =>
+                Http::response(['ok' => true, 'result' => true]),
+            'https://api.telegram.org/bot123456:synthetic_saved_token/getWebhookInfo' =>
+                Http::response(['ok' => true, 'result' => [
+                    'url' => url('integrations/telegram/webhook'),
+                    'allowed_updates' => ['message'],
+                ]]),
+        ]);
+
+        $this->stateful()->actingAs($this->admin(), 'sanctum')
+            ->patchJson('/api/v1/admin/integrations/telegram', [
+                'enabled' => true,
+                'bot_username' => 'SavedTestBot',
+                'token' => '123456:synthetic_saved_token',
+                'webhook_secret' => 'synthetic_saved_secret',
+            ])->assertOk();
+
+        $response = $this->postJson('/api/v1/admin/integrations/telegram/webhook/sync')->assertOk();
+        $this->assertStringNotContainsString('synthetic_saved_token', $response->getContent());
+        $this->assertStringNotContainsString('synthetic_saved_secret', $response->getContent());
+        Http::assertSent(fn ($request): bool =>
+            str_ends_with($request->url(), '/setWebhook')
+            && $request['secret_token'] === 'synthetic_saved_secret'
+        );
+    }
+
     private function admin(): User
     {
         $user = User::factory()->create();

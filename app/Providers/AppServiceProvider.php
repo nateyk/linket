@@ -77,6 +77,23 @@ class AppServiceProvider extends ServiceProvider
 {
     public function boot()
     {
+        // Resolve the current encrypted token for each notification, including long-running workers.
+        $this->app->bind(\NotificationChannels\Telegram\Telegram::class, function ($app) {
+            $httpOptions = config('services.telegram.http', []);
+            $http = $app->make(\GuzzleHttp\Client::class, [
+                'config' => $httpOptions + [
+                    'timeout' => \NotificationChannels\Telegram\Telegram::DEFAULT_TIMEOUT,
+                    'connect_timeout' => \NotificationChannels\Telegram\Telegram::DEFAULT_CONNECT_TIMEOUT,
+                ],
+            ]);
+
+            return new \NotificationChannels\Telegram\Telegram(
+                \App\Telegram\Support\TelegramSettings::get('token'),
+                $http,
+                config('services.telegram.base_uri') ?? config('services.telegram-bot-api.base_uri'),
+            );
+        });
+
         $this->app->booted(function (): void {
             if (app()->bound('clockwork')) {
                 app('clockwork')->shouldCollect()->except([

@@ -14,7 +14,7 @@ final class TelegramBotAdminService
 
         $this->request('setWebhook', [
             'url' => $this->webhookUrl(),
-            'secret_token' => (string) config('services.telegram.webhook_secret'),
+            'secret_token' => (string) \App\Telegram\Support\TelegramSettings::get('webhook_secret'),
             'allowed_updates' => ['message'],
         ]);
 
@@ -34,7 +34,7 @@ final class TelegramBotAdminService
         $webhookInfo = $this->request('getWebhookInfo');
         $bot = is_array($identity['result'] ?? null) ? $identity['result'] : [];
         $remoteUsername = is_string($bot['username'] ?? null) ? $bot['username'] : '';
-        $configuredUsername = ltrim((string) config('services.telegram.bot_username'), '@');
+        $configuredUsername = ltrim((string) \App\Telegram\Support\TelegramSettings::get('bot_username'), '@');
         $webhook = $this->safeWebhook(
             is_array($webhookInfo['result'] ?? null) ? $webhookInfo['result'] : [],
         );
@@ -64,7 +64,7 @@ final class TelegramBotAdminService
     /** @return array<string, mixed> */
     private function request(string $method, array $payload = []): array
     {
-        $token = (string) config('services.telegram.token');
+        $token = (string) \App\Telegram\Support\TelegramSettings::get('token');
         $timeout = max(1.0, (float) config('services.telegram.http.timeout', 10));
         $connectTimeout = max(
             1.0,
@@ -98,17 +98,17 @@ final class TelegramBotAdminService
     private function assertConfigured(): void
     {
         if (
-            ! config('services.telegram.enabled') ||
-            blank(config('services.telegram.token')) ||
-            blank(config('services.telegram.bot_username')) ||
-            blank(config('services.telegram.webhook_secret'))
+            ! \App\Telegram\Support\TelegramSettings::get('enabled') ||
+            blank(\App\Telegram\Support\TelegramSettings::get('token')) ||
+            blank(\App\Telegram\Support\TelegramSettings::get('bot_username')) ||
+            blank(\App\Telegram\Support\TelegramSettings::get('webhook_secret'))
         ) {
             throw ValidationException::withMessages([
                 'telegram' => __('Telegram server configuration is incomplete.'),
             ]);
         }
 
-        $secret = (string) config('services.telegram.webhook_secret');
+        $secret = (string) \App\Telegram\Support\TelegramSettings::get('webhook_secret');
         if (! preg_match('/^[A-Za-z0-9_-]{1,256}$/D', $secret)
             || ! str_starts_with($this->webhookUrl(), 'https://')) {
             throw ValidationException::withMessages([

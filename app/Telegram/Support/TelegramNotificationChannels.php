@@ -29,8 +29,8 @@ final class TelegramNotificationChannels
         ?string $preferenceKey = null,
     ): bool {
         if (
-            ! config('services.telegram.enabled') ||
-            blank(config('services.telegram.token')) ||
+            ! \App\Telegram\Support\TelegramSettings::get('enabled') ||
+            blank(\App\Telegram\Support\TelegramSettings::get('token')) ||
             ! method_exists($notifiable, 'routeNotificationForTelegram')
         ) {
             return false;
