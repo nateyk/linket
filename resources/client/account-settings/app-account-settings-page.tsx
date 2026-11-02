@@ -163,14 +163,6 @@ function AccountSettingsSidebar() {
               </Sidebar.MenuItem>
               <Sidebar.MenuItem>
                 <Sidebar.MenuButton
-                  render={<NavLink to="/account-settings/payouts" />}
-                  icon={<WalletCardsIcon />}
-                >
-                  <Trans message="Payout settings" />
-                </Sidebar.MenuButton>
-              </Sidebar.MenuItem>
-              <Sidebar.MenuItem>
-                <Sidebar.MenuButton
                   render={<NavLink to="/account-settings/workspaces" />}
                   icon={<UsersIcon />}
                 >

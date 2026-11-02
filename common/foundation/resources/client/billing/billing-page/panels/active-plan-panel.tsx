@@ -23,7 +23,7 @@ export function ActivePlanPanel() {
     <Fragment>
       {data.subscription.past_due ? <PastDueMessage /> : null}
       <BillingPlanPanel title={<Trans message="Current plan" />}>
-        <div className="mt-6 flex justify-between gap-5">
+        <div className="mt-6 flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <div className="mb-0.5 text-xl font-bold">
               {data.subscription.product.name}
@@ -40,7 +40,7 @@ export function ActivePlanPanel() {
             </div>
           </div>
           {data.subscription.gateway_name === 'none' ? null : (
-            <div className="flex w-58 flex-col gap-3">
+            <div className="flex w-full flex-col gap-3 sm:w-58">
               <LinkButton
                 variant="default"
                 color="primary"

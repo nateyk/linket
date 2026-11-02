@@ -1,16 +1,29 @@
-import {apiClient} from '@common/http/query-client';
 import {getApiErrorMessage} from '@common/http/errors/parsed-api-error';
+import {apiClient} from '@common/http/query-client';
 import {Badge} from '@shadcn/badge/badge';
 import {Button} from '@shadcn/button/button';
-import {Input} from '@shadcn/forms/input/input';
 import {Card} from '@shadcn/card/card';
+import {Input} from '@shadcn/forms/input/input';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
+import {useQuery, useQueryClient} from '@tanstack/react-query';
 import {formatMoney} from '@ui/i18n/format-money';
 import {FormattedDate} from '@ui/i18n/formatted-date';
 import {Trans} from '@ui/i18n/trans';
-import {useQuery, useQueryClient} from '@tanstack/react-query';
-import {Link} from 'react-router';
 import {ReactNode, useState} from 'react';
+import {Link} from 'react-router';
+
+type ProPayment = {
+  payment_id: string;
+  amount_cents: number;
+  currency: string;
+  status: string;
+  transaction_reference?: string | null;
+  provider?: string | null;
+  paid_at?: string | null;
+  created_at?: string | null;
+  receipt_number?: string | null;
+  receipt_url?: string | null;
+};
 
 type BillingHistory = {
   pro_plan?: {monthly_price_cents: number | null; currency: string};
@@ -19,23 +32,14 @@ type BillingHistory = {
     renews_at?: string | null;
     ends_at?: string | null;
     can_renew?: boolean;
-    pending_payment?: {payment_id?: string; status: string; amount_cents: number} | null;
-    payments?: Array<{
-      payment_id: string;
-      amount_cents: number;
-      currency: string;
+    pending_payment?: {
+      payment_id?: string;
       status: string;
-      transaction_reference?: string | null;
-      provider?: string | null;
-      paid_at?: string | null;
-      created_at?: string | null;
-      receipt_number?: string | null;
-      receipt_url?: string | null;
-    }>;
+      amount_cents: number;
+    } | null;
+    payments?: ProPayment[];
   };
-  invoices?: {data: Array<{uuid: string; invoice_number: string; commission_fee_cents: number; status: string; created_at?: string; paid_at?: string | null}>};
   corporate_account?: {provider: string; account_number: string | null};
-  estimated_commission?: {gross_sales_cents: number; fee_cents: number};
 };
 
 export function SubscriptionBillingHistory() {
@@ -45,10 +49,11 @@ export function SubscriptionBillingHistory() {
   const [startedAmountCents, setStartedAmountCents] = useState<number>();
   const [startedPaymentId, setStartedPaymentId] = useState<string>();
   const [proReference, setProReference] = useState('');
-  const [invoiceReferences, setInvoiceReferences] = useState<Record<string, string>>({});
+
   const query = useQuery({
     queryKey: ['creator-direct-billing-history'],
-    queryFn: async () => (await apiClient.get<BillingHistory>('/api/v1/billing/direct')).data,
+    queryFn: async () =>
+      (await apiClient.get<BillingHistory>('/api/v1/billing/direct')).data,
   });
 
   const startRenewal = async () => {
@@ -58,7 +63,9 @@ export function SubscriptionBillingHistory() {
       setStartedAmountCents(response.data.amount_cents);
       setStartedPaymentId(response.data.payment_id);
       setActionError(undefined);
-      await queryClient.invalidateQueries({queryKey: ['creator-direct-billing-history']});
+      await queryClient.invalidateQueries({
+        queryKey: ['creator-direct-billing-history'],
+      });
     } catch (reason) {
       setActionError(getApiErrorMessage(reason));
     } finally {
@@ -66,14 +73,20 @@ export function SubscriptionBillingHistory() {
     }
   };
 
-  const submitReference = async (endpoint: string, reference: string) => {
-    if (!reference.trim()) return;
+  const submitProReference = async () => {
+    if (!pendingPaymentId || !proReference.trim()) return;
+
     setBusy(true);
     try {
-      await apiClient.post(endpoint, {reference: reference.trim()});
+      await apiClient.post(
+        `/api/v1/billing/direct/pro/${pendingPaymentId}/reference`,
+        {reference: proReference.trim()},
+      );
       setActionError(undefined);
       setProReference('');
-      await queryClient.invalidateQueries({queryKey: ['creator-direct-billing-history']});
+      await queryClient.invalidateQueries({
+        queryKey: ['creator-direct-billing-history'],
+      });
     } catch (reason) {
       setActionError(getApiErrorMessage(reason));
     } finally {
@@ -81,138 +94,312 @@ export function SubscriptionBillingHistory() {
     }
   };
 
-  const pendingPaymentId = query.data?.pro_subscription?.pending_payment?.payment_id ?? startedPaymentId ?? query.data?.pro_subscription?.payments?.find(payment => payment.status === 'pending_payment')?.payment_id;
+  const pendingPaymentId =
+    query.data?.pro_subscription?.pending_payment?.payment_id ??
+    startedPaymentId ??
+    query.data?.pro_subscription?.payments?.find(
+      payment => payment.status === 'pending_payment',
+    )?.payment_id;
+
   const renewalPriceCents =
     query.data?.pro_subscription?.pending_payment?.amount_cents ??
     query.data?.pro_plan?.monthly_price_cents ??
     startedAmountCents;
   const currency = query.data?.pro_plan?.currency ?? 'ETB';
   const canRenew = query.data?.pro_subscription?.can_renew !== false;
+  const subscriptionStatus =
+    query.data?.pro_subscription?.status ?? 'inactive';
+  const payments = query.data?.pro_subscription?.payments ?? [];
+  const isUpgrade =
+    subscriptionStatus === 'inactive' ||
+    subscriptionStatus === 'expired' ||
+    subscriptionStatus === 'cancelled';
 
   return (
-    <div className="flex flex-col gap-4">
-      <Card.Root>
-        <Card.Header>
-          <Card.Title><Trans message="Pro subscription and renewals" /></Card.Title>
-          <Card.Description><Trans message="Verified payments are required to activate or renew Pro." /></Card.Description>
-        </Card.Header>
-        <Card.Content className="flex flex-col gap-3 text-sm">
-          {query.isPending ? <Skeleton className="h-16 w-full" /> : query.isError ? (
-            <p role="alert" className="text-destructive"><Trans message="Billing history could not be loaded. Please try again." /></p>
-          ) : <>
-            <div className="flex flex-wrap items-center gap-2">
-              <span><Trans message="Plan status: :status" values={{status: query.data.pro_subscription?.status ?? 'inactive'}} /></span>
-              <Badge>{query.data.pro_subscription?.status ?? 'inactive'}</Badge>
-              {query.data.pro_subscription?.renews_at && <span className="text-muted-foreground"><Trans message="Next renewal: :date" values={{date: new Date(query.data.pro_subscription.renews_at).toLocaleDateString()}} /></span>}
-              {query.data.pro_subscription?.ends_at && <span className="text-muted-foreground"><Trans message="Access ends: :date" values={{date: new Date(query.data.pro_subscription.ends_at).toLocaleDateString()}} /></span>}
+    <Card.Root size="sm" className="rounded-card-sm">
+      <Card.Header className="border-b">
+        <Card.Title>
+          <Trans message="Pro subscription" />
+        </Card.Title>
+        <Card.Description>
+          <Trans message="Upgrade or renew Pro with a verified direct payment." />
+        </Card.Description>
+        <Card.Action>
+          <Link
+            to="/pricing"
+            className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+          >
+            <Trans message="View Pro" />
+          </Link>
+        </Card.Action>
+      </Card.Header>
+
+      <Card.Content className="flex flex-col gap-5">
+        {query.isPending ? (
+          <div className="grid gap-3 sm:grid-cols-3" aria-busy="true">
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-16 w-full" />
+          </div>
+        ) : query.isError ? (
+          <div className="flex flex-col items-start gap-3" role="alert">
+            <p className="text-sm text-destructive">
+              <Trans message="Billing details could not be loaded." />
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void query.refetch()}
+            >
+              <Trans message="Try again" />
+            </Button>
+          </div>
+        ) : (
+          <>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <BillingFact
+                label={<Trans message="Plan status" />}
+                value={
+                  <Badge variant={subscriptionStatusVariant(subscriptionStatus)}>
+                    {subscriptionStatusLabel(subscriptionStatus)}
+                  </Badge>
+                }
+              />
+              <BillingFact
+                label={<Trans message="Monthly price" />}
+                value={
+                  renewalPriceCents != null ? (
+                    formatMoney(renewalPriceCents, currency)
+                  ) : (
+                    <Trans message="Not available" />
+                  )
+                }
+              />
+              <BillingFact
+                label={<Trans message="Next renewal" />}
+                value={
+                  query.data?.pro_subscription?.renews_at ? (
+                    <FormattedDate
+                      preset="long"
+                      date={query.data.pro_subscription.renews_at}
+                    />
+                  ) : query.data?.pro_subscription?.ends_at ? (
+                    <FormattedDate
+                      preset="long"
+                      date={query.data.pro_subscription.ends_at}
+                    />
+                  ) : (
+                    <Trans message="Not scheduled" />
+                  )
+                }
+              />
             </div>
-            {renewalPriceCents != null && (
-              <p>
+
+            {query.data?.pro_subscription?.pending_payment && (
+              <p
+                role="status"
+                className="rounded-card-xs bg-warning/10 px-3 py-2 text-sm text-warning"
+              >
+                <span className="font-medium">
+                  {billingPaymentStatus(
+                    query.data.pro_subscription.pending_payment.status,
+                  )}
+                </span>
+                <span aria-hidden="true"> · </span>
                 <Trans
-                  message="Renewal price: :price"
-                  values={{price: formatMoney(renewalPriceCents, currency)}}
-                />
-              </p>
-            )}
-            {query.data.pro_subscription?.pending_payment && (
-              <p role="status" className="text-warning">
-                <Trans
-                  message="Payment status: :status · :amount due"
+                  message=":amount due"
                   values={{
-                    status: query.data.pro_subscription.pending_payment.status,
-                    amount: formatMoney(query.data.pro_subscription.pending_payment.amount_cents, currency),
+                    amount: formatMoney(
+                      query.data.pro_subscription.pending_payment.amount_cents,
+                      currency,
+                    ),
                   }}
                 />
               </p>
             )}
-            {actionError && <p role="alert" className="text-destructive">{actionError}</p>}
+
+            {actionError && (
+              <p role="alert" className="text-sm text-destructive">
+                {actionError}
+              </p>
+            )}
+
             {startedAmountCents != null && (
-              <p role="status">
+              <p role="status" className="text-sm">
                 <Trans
                   message="Pro payment created for :amount. Enter your transfer reference below."
-                  values={{amount: formatMoney(startedAmountCents, currency)}}
+                  values={{
+                    amount: formatMoney(startedAmountCents, currency),
+                  }}
                 />
               </p>
             )}
+
             <div className="flex flex-wrap items-center gap-2">
               {canRenew && (
-                <Button disabled={busy} onClick={() => void startRenewal()}>
-                  <Trans message="Renew Pro" />
+                <Button
+                  disabled={busy}
+                  aria-busy={busy}
+                  onClick={() => void startRenewal()}
+                >
+                  <Trans
+                    message={isUpgrade ? 'Upgrade to Pro' : 'Renew Pro'}
+                  />
                 </Button>
               )}
-              <Link className="text-primary underline" to="/account-settings/receiving-accounts">
-                <Trans message="Manage receiving accounts" />
+              <Link
+                className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+                to="/pricing"
+              >
+                <Trans message="Compare plan benefits" />
               </Link>
             </div>
+
             {query.data?.corporate_account?.account_number && (
-              <p className="text-muted-foreground">
-                <Trans message="Send the Pro payment to :provider account :account." values={{provider: query.data.corporate_account.provider.toUpperCase(), account: query.data.corporate_account.account_number}} />
-              </p>
+              <div className="border-t pt-4 text-sm">
+                <p className="font-medium">
+                  <Trans message="Payment instructions" />
+                </p>
+                <p className="mt-1 text-muted-foreground">
+                  <Trans
+                    message="Send the Pro payment to :provider account :account."
+                    values={{
+                      provider:
+                        query.data.corporate_account.provider.toUpperCase(),
+                      account: query.data.corporate_account.account_number,
+                    }}
+                  />
+                </p>
+              </div>
             )}
+
             {pendingPaymentId && (
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
+              <div className="flex flex-col gap-2 border-t pt-4 sm:flex-row sm:items-end">
+                <label className="flex min-w-0 flex-1 flex-col gap-1.5 text-sm">
                   <Trans message="Pro payment reference" />
-                  <Input bindToHookForm={false} value={proReference} onChange={event => setProReference(event.target.value)} placeholder="Transaction reference" />
+                  <Input
+                    bindToHookForm={false}
+                    value={proReference}
+                    onChange={event => setProReference(event.target.value)}
+                    placeholder="Transaction reference"
+                  />
                 </label>
-                <Button disabled={busy || !proReference.trim()} onClick={() => void submitReference(`/api/v1/billing/direct/pro/${pendingPaymentId}/reference`, proReference)}>
+                <Button
+                  disabled={busy || !proReference.trim()}
+                  onClick={() => void submitProReference()}
+                >
                   <Trans message="Verify Pro payment" />
                 </Button>
               </div>
             )}
-            {query.data.pro_subscription?.payments?.length ? query.data.pro_subscription.payments.map(payment => (
-              <div key={payment.payment_id} className="flex flex-wrap items-center justify-between gap-3 rounded-card-sm bg-muted p-3">
-                <div className="min-w-0">
-                  <p className="font-medium">{formatMoney(payment.amount_cents, payment.currency)}</p>
-                  <p className="break-all text-muted-foreground"><Trans message="Transaction reference: :reference" values={{reference: payment.transaction_reference ?? '—'}} /></p>
-                  <p className="text-muted-foreground"><FormattedDate date={payment.paid_at ?? payment.created_at} />{payment.provider ? ` · ${payment.provider.toUpperCase()}` : ''}</p>
-                </div>
-                <Badge>{billingPaymentStatus(payment.status)}</Badge>
-                {payment.status === 'paid' && payment.receipt_url && (
-                  <a className="text-primary underline" href={payment.receipt_url}>
-                    <Trans message="Download payment receipt" />
-                  </a>
-                )}
-              </div>
-            )) : <p className="text-muted-foreground"><Trans message="No Pro payments recorded yet." /></p>}
-          </>}
-        </Card.Content>
-      </Card.Root>
 
-      <Card.Root>
-        <Card.Header>
-          <Card.Title><Trans message="Legacy billing" /></Card.Title>
-          <Card.Description><Trans message="Historical commission invoices stay payable. New verified sales are not added to this balance." /></Card.Description>
-        </Card.Header>
-        <Card.Content className="flex flex-col gap-3 text-sm">
-          {query.data?.invoices?.data.length ? query.data.invoices.data.map(invoice => (
-            <div key={invoice.uuid} className="flex flex-wrap items-center justify-between gap-3 rounded-card-sm bg-muted p-3">
-              <div>
-                <p className="font-medium">{invoice.invoice_number}</p>
-                <p>{formatMoney(invoice.commission_fee_cents, 'ETB')} · {invoice.status}</p>
-                <p className="text-muted-foreground"><FormattedDate date={invoice.paid_at ?? invoice.created_at} /></p>
+            <section aria-labelledby="pro-payment-history-title" className="border-t pt-5">
+              <div className="mb-2">
+                <h3 id="pro-payment-history-title" className="font-medium">
+                  <Trans message="Recent Pro payments" />
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  <Trans message="Verified subscription payment activity." />
+                </p>
               </div>
-              <Badge>{invoice.status}</Badge>
-            </div>
-          )) : query.isPending ? <Skeleton className="h-16 w-full" /> : <p className="text-muted-foreground"><Trans message="No legacy commission invoices." /></p>}
-          {query.data?.estimated_commission && query.data.estimated_commission.fee_cents > 0 && (
-            <p><Trans message="Uninvoiced historical commission: :amount" values={{amount: formatMoney(query.data.estimated_commission.fee_cents, 'ETB')}} /></p>
-          )}
-          {query.data?.invoices?.data?.filter(invoice => ['pending', 'overdue'].includes(invoice.status)).map(invoice => (
-            <div key={`${invoice.uuid}-verify`} className="flex flex-col gap-2 sm:flex-row sm:items-end">
-              <label className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
-                <Trans message="Payment reference for invoice :number" values={{number: invoice.invoice_number}} />
-                <Input bindToHookForm={false} value={invoiceReferences[invoice.uuid] ?? ''} onChange={event => setInvoiceReferences(current => ({...current, [invoice.uuid]: event.target.value}))} placeholder="Transaction reference" />
-              </label>
-              <Button disabled={busy || !(invoiceReferences[invoice.uuid] ?? '').trim()} onClick={() => void submitReference(`/api/v1/billing/direct/invoices/${invoice.uuid}/reference`, invoiceReferences[invoice.uuid] ?? '')}>
-                <Trans message="Verify invoice payment" />
-              </Button>
-            </div>
-          ))}
-        </Card.Content>
-      </Card.Root>
+
+              {payments.length ? (
+                <div className="divide-y">
+                  {payments.map(payment => (
+                    <div
+                      key={payment.payment_id}
+                      className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-medium tabular-nums">
+                          {formatMoney(
+                            payment.amount_cents,
+                            payment.currency,
+                          )}
+                        </p>
+                        <p className="truncate text-sm text-muted-foreground">
+                          <Trans
+                            message="Reference: :reference"
+                            values={{
+                              reference:
+                                payment.transaction_reference ?? '—',
+                            }}
+                          />
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          <FormattedDate
+                            date={payment.paid_at ?? payment.created_at}
+                          />
+                          {payment.provider
+                            ? ` · ${payment.provider.toUpperCase()}`
+                            : ''}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge
+                          variant={billingPaymentBadgeVariant(payment.status)}
+                        >
+                          {billingPaymentStatus(payment.status)}
+                        </Badge>
+                        {payment.status === 'paid' &&
+                          payment.receipt_url && (
+                            <a
+                              className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+                              href={payment.receipt_url}
+                            >
+                              <Trans message="Download receipt" />
+                            </a>
+                          )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="py-3 text-sm text-muted-foreground">
+                  <Trans message="No Pro payments recorded yet." />
+                </p>
+              )}
+            </section>
+          </>
+        )}
+      </Card.Content>
+    </Card.Root>
+  );
+}
+
+function BillingFact({
+  label,
+  value,
+}: {
+  label: ReactNode;
+  value: ReactNode;
+}) {
+  return (
+    <div className="min-w-0">
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
+      <div className="mt-1 text-sm font-medium">{value}</div>
     </div>
   );
+}
+
+function subscriptionStatusLabel(status: string): ReactNode {
+  const labels: Record<string, ReactNode> = {
+    active: <Trans message="Active" />,
+    inactive: <Trans message="Inactive" />,
+    past_due: <Trans message="Past due" />,
+    expired: <Trans message="Expired" />,
+    cancelled: <Trans message="Canceled" />,
+  };
+
+  return labels[status] ?? <Trans message="Status unavailable" />;
+}
+
+function subscriptionStatusVariant(
+  status: string,
+): 'positive' | 'destructive' | 'secondary' {
+  if (status === 'active') return 'positive';
+  if (status === 'past_due' || status === 'expired') return 'destructive';
+  return 'secondary';
 }
 
 function billingPaymentStatus(status: string): ReactNode {
@@ -226,4 +413,13 @@ function billingPaymentStatus(status: string): ReactNode {
   };
 
   return labels[status] ?? <Trans message="Status unavailable" />;
+}
+
+function billingPaymentBadgeVariant(
+  status: string,
+): 'positive' | 'destructive' | 'secondary' | 'outline' {
+  if (status === 'paid') return 'positive';
+  if (status === 'rejected' || status === 'expired') return 'destructive';
+  if (status === 'manual_review') return 'outline';
+  return 'secondary';
 }
