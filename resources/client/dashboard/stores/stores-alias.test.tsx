@@ -63,6 +63,17 @@ describe('stores alias (Task 4)', () => {
     expect(content).not.toContain('/biolinks/');
   });
 
+  test('profile edit is grouped into the row action menu', () => {
+    const content = fs.readFileSync(
+      path.resolve('resources/client/dashboard/stores/stores-page.tsx'),
+      'utf8',
+    );
+    expect(content).toContain('<Trans message="Edit profile" />');
+    expect(content).toContain('<Dropdown.Item onClick={onClick}>');
+    expect(content).not.toContain('<Trans message="Edit" />');
+  });
+
+
   test('internal nav uses /stores (store-editor-page)', () => {
     const content = fs.readFileSync(path.resolve('resources/client/dashboard/stores/store-editor/store-editor-page.tsx'), 'utf8');
     expect(content).toContain('/stores/');
