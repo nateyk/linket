@@ -11,7 +11,7 @@ vi.mock('@common/http/errors/parsed-api-error', () => ({getApiErrorMessage: () =
 vi.mock('@ui/i18n/trans', () => ({Trans: ({message, values}: {message: string; values?: Record<string, string | number>}) => Object.entries(values ?? {}).reduce((text, [key, value]) => text.replace(`:${key}`, String(value)), message)}));
 vi.mock('@ui/i18n/format-money', () => ({formatMoney: (amount: number) => `${amount} ETB`}));
 vi.mock('@ui/i18n/formatted-date', () => ({FormattedDate: ({date}: {date?: string | null}) => <time>{date}</time>}));
-vi.mock('@shadcn/card/card', () => ({Card: {Root: 'section', Header: 'header', Title: 'h2', Description: 'p', Content: 'div'}}));
+vi.mock('@shadcn/card/card', () => ({Card: {Root: 'section', Header: 'header', Title: 'h2', Description: 'p', Content: 'div', Action: 'div'}}));
 vi.mock('@shadcn/badge/badge', () => ({Badge: 'span'}));
 vi.mock('@shadcn/button/button', () => ({Button: ({children, onClick, disabled}: {children?: any; onClick?: () => void; disabled?: boolean}) => <button disabled={disabled} onClick={onClick}>{children}</button>}));
 vi.mock('@shadcn/skeleton/skeleton', () => ({Skeleton: 'span'}));
@@ -38,13 +38,16 @@ it('renders creator-owned Pro payment amount, date, reference and status', async
   expect(screen.getByText('Pending verification')).toBeTruthy();
   expect(screen.getByText('Paid')).toBeTruthy();
   expect(screen.getByText('Rejected')).toBeTruthy();
-  expect(screen.getByText(/Renewal price: 50000 ETB/)).toBeTruthy();
-  expect(screen.getByText(/Payment status: pending_payment/)).toBeTruthy();
+  expect(screen.getByText('Monthly price')).toBeTruthy();
+  expect(screen.getByText(/Payment pending_payment/)).toBeTruthy();
   expect(screen.getByRole('button', {name: 'Renew Pro'})).toBeTruthy();
-  expect(screen.getByRole('link', {name: 'Download payment receipt'}).getAttribute('href')).toBe('/api/v1/billing/direct/pro/paid/receipt');
+  expect(screen.getByRole('link', {name: 'Download receipt'}).getAttribute('href')).toBe('/api/v1/billing/direct/pro/paid/receipt');
   expect(screen.getAllByText('50000 ETB').length).toBeGreaterThanOrEqual(4);
   expect(screen.getByText('2026-10-29T00:00:00Z')).toBeTruthy();
-  expect(screen.getByText('CM-202610-1')).toBeTruthy();
+  expect(screen.getByText('Recent Pro payments')).toBeTruthy();
+  expect(screen.getByRole('link', {name: 'View Pro'})).toBeTruthy();
+  expect(screen.queryByText('Legacy billing')).toBeNull();
+  expect(screen.queryByText('CM-202610-1')).toBeNull();
 });
 
 it('initiates renewal through the existing Verify.et billing endpoint', async () => {
