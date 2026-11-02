@@ -354,7 +354,7 @@ export function Component() {
                   </p>
                 ) : testResult === 'failed' ? (
                   <p role="alert" className="text-sm text-destructive">
-                    <Trans message="Test notification could not be sent." />
+                    <Trans message="Could not confirm the test was sent. Refresh to update delivery status." />
                   </p>
                 ) : testResult === 'refresh_failed' ? (
                   <p role="alert" className="text-sm text-destructive">
