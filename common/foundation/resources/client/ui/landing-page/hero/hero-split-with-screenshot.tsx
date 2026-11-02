@@ -35,8 +35,8 @@ export function HeroSplitWithScreenshot({config}: Props) {
         config.forceDarkMode && 'dark',
       )}
     >
-      {creator ? <CreatorPattern /> : <GridDecoration />}
-      {!creator && <ColorSplash />}
+      <GridDecoration />
+      <ColorSplash />
       {config.bgColors ? <BgColors config={config} /> : null}
       <div className={creator ? "mx-auto grid max-w-7xl items-center gap-8 px-6 py-16 sm:py-24 lg:grid-cols-2 lg:gap-12 lg:px-8 lg:py-28" : "mx-auto max-w-7xl px-6 pt-10 pb-24 sm:pb-32 lg:flex lg:px-8 lg:py-40"}>
         <div className="mx-auto max-w-2xl lg:mx-0 lg:shrink-0 lg:pt-8">
@@ -130,4 +130,3 @@ function ColorSplash() {
   );
 }
 
-function CreatorPattern() { return <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"><div className="absolute inset-0 bg-[radial-gradient(ellipse_at_75%_30%,color-mix(in_oklch,var(--be-primary)_12%,transparent),transparent_55%)]" /><svg className="absolute inset-0 size-full opacity-25 dark:opacity-10"><defs><pattern id="linket-creator-dots" width="28" height="28" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="1" fill="var(--be-primary)" /></pattern></defs><rect width="100%" height="100%" fill="url(#linket-creator-dots)" /></svg></div>; }
