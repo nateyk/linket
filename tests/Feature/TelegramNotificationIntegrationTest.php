@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\CreatorServices\Notifications\NewServiceInquiryNotification;
 use App\Models\User;
 use App\Storefront\Notifications\VerifiedSaleNotification;
 use App\Telegram\Models\TelegramLinkToken;
@@ -237,6 +238,35 @@ class TelegramNotificationIntegrationTest extends TestCase
         $channels = (new VerifiedSaleNotification(1))->via($user->fresh());
 
         $this->assertSame([], $channels);
+    }
+
+    public function test_event_preferences_mute_only_the_selected_telegram_event(): void
+    {
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $user->telegramConnection()->create([
+            'telegram_user_id' => 1234567890126,
+            'telegram_chat_id' => 1234567890126,
+            'telegram_username' => 'selective_creator',
+            'language_code' => 'en',
+            'connected_at' => now(),
+            'notifications_enabled' => true,
+            'notification_preferences' => [
+                'verified_sales' => false,
+                'service_inquiries' => true,
+                'product_moderation' => true,
+                'payment_disputes' => true,
+                'pro_billing' => true,
+            ],
+        ]);
+
+        $this->assertSame(
+            [],
+            (new VerifiedSaleNotification(1))->via($user->fresh()),
+        );
+        $this->assertSame(
+            ['mail', 'database', 'telegram'],
+            (new NewServiceInquiryNotification(1))->via($user->fresh()),
+        );
     }
 
     private function stateful(): static
