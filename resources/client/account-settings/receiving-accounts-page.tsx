@@ -297,7 +297,7 @@ function ReceivingAccountsInfo() {
         <InfoIcon />
       </Popover.Trigger>
       <Popover.Portal>
-        <Popover.Content align="end" className="max-w-xs">
+        <Popover.Content align="start" className="max-w-xs">
           <Trans message="Accounts customers can pay directly at checkout." />
         </Popover.Content>
       </Popover.Portal>
