@@ -5,6 +5,8 @@ namespace App\Telegram\Controllers;
 use App\Telegram\Models\TelegramConnection;
 use App\Telegram\Models\TelegramLinkToken;
 use App\Telegram\Support\TelegramNotificationPreferences;
+use App\Telegram\Notifications\TelegramIntegrationTestNotification;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -124,13 +126,7 @@ final class TelegramConnectionController extends Controller
 
         try {
             Notification::sendNow($request->user(), new TelegramIntegrationTestNotification());
-        } catch (\Throwable $exception) {
-            if (app()->runningUnitTests()) {
-                throw ValidationException::withMessages([
-                    'telegram' => get_class($exception).' at '.basename($exception->getFile()).':'.$exception->getLine(),
-                ]);
-            }
-
+        } catch (\Throwable) {
             throw ValidationException::withMessages([
                 'telegram' => __('Telegram test notification could not be delivered.'),
             ]);
