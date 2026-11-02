@@ -207,6 +207,71 @@ class AdminTelegramIntegrationTest extends TestCase
         Http::assertNothingSent();
     }
 
+
+    public function test_authorized_admin_can_save_encrypted_write_only_telegram_configuration(): void
+    {
+        $this->stateful()->actingAs($this->admin(), 'sanctum');
+        $this->patchJson('/api/v1/admin/integrations/telegram', [
+            'enabled' => true,
+            'bot_username' => 'SavedTestBot',
+            'token' => '123456:synthetic_saved_token',
+            'webhook_secret' => 'synthetic_saved_secret',
+        ])->assertOk()
+            ->assertJsonPath('telegram.ready', true)
+            ->assertJsonPath('telegram.bot_username', 'SavedTestBot')
+            ->assertJsonMissingPath('telegram.token')
+            ->assertJsonMissingPath('telegram.webhook_secret');
+
+        $raw = \DB::table('settings')->where('name', 'integrations.telegram')->value('value');
+        $this->assertIsString($raw);
+        $this->assertStringNotContainsString('synthetic_saved_token', $raw);
+        $this->assertStringNotContainsString('synthetic_saved_secret', $raw);
+        $settings = new \Common\Settings\Settings();
+        $this->assertArrayNotHasKey('integrations.telegram', $settings->all());
+        $this->assertArrayNotHasKey('telegram', $settings->getAllForFrontendForm()['integrations'] ?? []);
+        $this->assertSame('123456:synthetic_saved_token', app(\NotificationChannels\Telegram\Telegram::class)->getToken());
+
+        $this->postJson('/integrations/telegram/webhook', ['update_id' => 998811])
+            ->assertUnauthorized();
+        $this->withHeader('X-Telegram-Bot-Api-Secret-Token', 'synthetic_saved_secret')
+            ->postJson('/integrations/telegram/webhook', ['update_id' => 998812])->assertNoContent();
+
+        $this->patchJson('/api/v1/admin/integrations/telegram', [
+            'enabled' => false, 'token' => '', 'webhook_secret' => '',
+        ])->assertOk()->assertJsonPath('telegram.enabled', false)
+            ->assertJsonPath('telegram.bot_token_configured', true);
+        $saved = (new \Common\Settings\Settings())->get('integrations.telegram');
+        $this->assertSame('123456:synthetic_saved_token', $saved['token']);
+        $this->assertSame('synthetic_saved_secret', $saved['webhook_secret']);
+    }
+
+    public function test_telegram_configuration_requires_both_admin_permissions(): void
+    {
+        $this->stateful()->actingAs(User::factory()->create(), 'sanctum')
+            ->patchJson('/api/v1/admin/integrations/telegram', ['enabled' => false])
+            ->assertForbidden();
+
+        $adminWithoutSettings = User::factory()->create();
+        $adminWithoutSettings->permissions()->attach(
+            Permission::query()->firstOrCreate(['name' => 'admin.access']),
+        );
+        $this->stateful()->actingAs($adminWithoutSettings, 'sanctum')
+            ->patchJson('/api/v1/admin/integrations/telegram', ['enabled' => false])
+            ->assertForbidden();
+    }
+
+    public function test_telegram_settings_validate_secret_and_require_complete_configuration_before_enabling(): void
+    {
+        config()->set('services.telegram.token', null);
+        config()->set('services.telegram.bot_username', null);
+        config()->set('services.telegram.webhook_secret', null);
+        $this->stateful()->actingAs($this->admin(), 'sanctum');
+        $this->patchJson('/api/v1/admin/integrations/telegram', ['enabled' => true])
+            ->assertUnprocessable()->assertJsonValidationErrors(['token', 'bot_username', 'webhook_secret']);
+        $this->patchJson('/api/v1/admin/integrations/telegram', ['webhook_secret' => 'invalid secret'])
+            ->assertUnprocessable()->assertJsonValidationErrors(['webhook_secret']);
+    }
+
     private function admin(): User
     {
         $user = User::factory()->create();
