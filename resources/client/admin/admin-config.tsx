@@ -65,6 +65,7 @@ export const AppSettingsNavConfig: SettingsNavItem[] = [
   {label: message('Links'), to: 'links', position: 2},
   {label: message('Biolinks'), to: 'biolinks', position: 2},
   {label: message('Verification'), to: 'kyc', position: 2},
+  {label: message('Integrations'), to: 'integrations', position: 4},
   {label: message('Product'), to: 'product', position: 2},
   {label: message('Landing page'), to: 'landing-page', position: 2},
   {label: message('Help center'), to: 'hc', position: 3},
