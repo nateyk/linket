@@ -200,11 +200,15 @@ export function SubscriptionBillingHistory() {
                 role="status"
                 className="rounded-card-xs bg-warning/10 px-3 py-2 text-sm text-warning"
               >
+                <span className="font-medium">
+                  {billingPaymentStatus(
+                    query.data.pro_subscription.pending_payment.status,
+                  )}
+                </span>
+                <span aria-hidden="true"> · </span>
                 <Trans
-                  message="Payment :status · :amount due"
+                  message=":amount due"
                   values={{
-                    status:
-                      query.data.pro_subscription.pending_payment.status,
                     amount: formatMoney(
                       query.data.pro_subscription.pending_payment.amount_cents,
                       currency,
