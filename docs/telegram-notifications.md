@@ -8,7 +8,7 @@ The integration uses `laravel-notification-channels/telegram:^8.0`, which suppor
 
 ## Environment
 
-Configure these values only in the deployment environment or secret manager:
+Telegram can be configured in **Admin → Settings → Integrations → Telegram**. Existing environment values remain a fallback until the administrator saves a value. The optional server defaults are:
 
 ```dotenv
 TELEGRAM_ENABLED=true
@@ -20,7 +20,7 @@ TELEGRAM_HTTP_TIMEOUT=10
 TELEGRAM_HTTP_CONNECT_TIMEOUT=5
 ```
 
-Do not commit populated secrets.
+Do not commit populated secrets. The admin form stores the token and webhook secret encrypted, never returns their values, and leaves them unchanged when the secret fields are blank. Protect the application key and backups: without the application key, stored credentials cannot be decrypted.
 
 The Telegram Bot API webhook target is:
 
@@ -28,7 +28,7 @@ The Telegram Bot API webhook target is:
 https://<linket-host>/integrations/telegram/webhook
 ```
 
-When registering the webhook with Telegram, pass the same random value as `secret_token` that is configured in `TELEGRAM_WEBHOOK_SECRET`. Linket validates the `X-Telegram-Bot-Api-Secret-Token` header before it stores or processes an update.
+When registering the webhook with Telegram, pass the same random value as `secret_token` that is configured in the admin panel or `TELEGRAM_WEBHOOK_SECRET`. Linket validates the `X-Telegram-Bot-Api-Secret-Token` header before it stores or processes an update.
 
 ## Connection flow
 
@@ -71,13 +71,12 @@ Existing mail/database delivery remains unchanged. Telegram is appended only whe
 
 After deploying the code:
 
-1. Run migrations.
-2. Add the Telegram environment values.
-3. Rebuild Laravel configuration cache.
-4. Register the HTTPS webhook with Telegram using the configured secret token and `allowed_updates=["message"]`.
-5. Restart Horizon/queue workers.
-6. Connect a test creator and test a non-financial event first.
-7. Test a synthetic Verify.et-backed sale and confirm Telegram delivery happens only after the order is paid.
+1. Run migrations before serving the new application code.
+2. Restart Horizon/queue workers after deploying the code.
+3. In Admin → Settings → Integrations → Telegram, enter the bot username, bot token and webhook secret, enable Telegram, and save. Existing environment values are also supported.
+4. Use **Check Telegram health** and **Sync webhook** to register the HTTPS webhook with `allowed_updates=["message"]`. Saving a new secret requires synchronization; incoming updates may fail until it succeeds.
+5. Connect a test creator and test a non-financial event first.
+6. Test a synthetic Verify.et-backed sale and confirm Telegram delivery happens only after the order is paid.
 
 Do not use a production payment reference merely to test Telegram.
 
@@ -110,7 +109,7 @@ Administrators with both `admin.access` and `settings.update` manage operational
 Admin → Settings → Integrations → Telegram
 ```
 
-The admin surface is intentionally operational, not a credential editor. It can show:
+The admin surface allows authorized administrators to update the enabled state, bot username, bot token and webhook secret. Secrets are write-only. It can show:
 
 - whether Telegram is enabled
 - whether the bot token, bot username and webhook secret are configured
@@ -125,12 +124,13 @@ It can also:
 - synchronize the webhook with Telegram using `allowed_updates=["message"]`
 - send a non-financial test notification to the current admin when that admin has connected Telegram
 
-`TELEGRAM_BOT_TOKEN` and `TELEGRAM_WEBHOOK_SECRET` are never returned to the browser, stored in Linket settings, partially masked for display, or exposed through these endpoints.
+The bot token and webhook secret are encrypted in a dedicated database record and never returned to the browser. Existing environment credentials remain fallback values. After changing the secret, sync the webhook promptly: incoming updates can fail until Telegram receives the new secret.
 
 The admin API routes are:
 
 ```text
 GET  /api/v1/admin/integrations/telegram
+PATCH /api/v1/admin/integrations/telegram
 POST /api/v1/admin/integrations/telegram/webhook/sync
 POST /api/v1/admin/integrations/telegram/test
 ```
@@ -147,7 +147,7 @@ for Telegram-only global and per-event preferences.
 
 The Telegram connection schema now includes notification preference columns. During deployment:
 
-1. Put the Telegram environment variables in the production secret/config environment.
+1. Run the Telegram integration settings migration and configure credentials through the admin panel or the environment.
 2. Run database migrations before restarting web or queue workers.
 3. Rebuild the Laravel configuration cache.
 4. Restart Horizon/queue workers.
@@ -171,9 +171,9 @@ Creator notifications also cover receiving account **approved**, **rejected**, *
 
 ### Deployment checklist
 
-1. Deploy code and **run migrations first** (delivery-health columns), then refresh config cache and restart queue workers.
+1. Deploy code and **run migrations first**, then refresh config cache and restart queue workers.
 2. Confirm `APP_URL` resolves to the public HTTPS Linket domain; HTTP webhook URLs are rejected.
-3. Confirm the environment-only Telegram secret contains 1–256 permitted ASCII characters.
+3. Confirm the Telegram webhook secret contains 1–256 permitted ASCII characters.
 4. In Admin → Settings → Integrations, use **Check Telegram health**; resolve bot identity/webhook mismatches before **Sync webhook**.
 5. Connect a test creator, use **Send test**, then verify a non-financial receiving-account status event with fake/synthetic account data.
 6. Confirm scheduled `telegram:prune-records` appears in `php artisan schedule:list`.

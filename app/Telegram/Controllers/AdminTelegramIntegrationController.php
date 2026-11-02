@@ -28,6 +28,28 @@ final class AdminTelegramIntegrationController extends Controller
         ]);
     }
 
+    public function update(Request $request): JsonResponse
+    {
+        $this->authorize();
+
+        $data = $request->validate([
+            'enabled' => ['sometimes', 'boolean'],
+            'bot_username' => ['sometimes', 'required', 'string', 'max:32', 'regex:/^[A-Za-z0-9_]+$/D'],
+            'token' => ['sometimes', 'nullable', 'string', 'max:256', 'regex:/^[0-9]+:[A-Za-z0-9_-]+$/D'],
+            'webhook_secret' => ['sometimes', 'nullable', 'string', 'max:256', 'regex:/^[A-Za-z0-9_-]+$/D'],
+        ]);
+
+        foreach (['token', 'webhook_secret'] as $key) {
+            if (! filled($data[$key] ?? null)) {
+                unset($data[$key]);
+            }
+        }
+
+        \App\Telegram\Support\TelegramSettings::update($data);
+
+        return response()->json(['telegram' => $this->health($request)]);
+    }
+
     public function inspect(Request $request): JsonResponse
     {
         $this->authorize();
@@ -90,11 +112,11 @@ final class AdminTelegramIntegrationController extends Controller
     /** @return array<string, mixed> */
     private function health(Request $request): array
     {
-        $enabled = (bool) config('services.telegram.enabled');
-        $tokenConfigured = filled(config('services.telegram.token'));
-        $secretConfigured = filled(config('services.telegram.webhook_secret'));
+        $enabled = (bool) \App\Telegram\Support\TelegramSettings::get('enabled');
+        $tokenConfigured = filled(\App\Telegram\Support\TelegramSettings::get('token'));
+        $secretConfigured = filled(\App\Telegram\Support\TelegramSettings::get('webhook_secret'));
         $botUsername = ltrim(
-            (string) config('services.telegram.bot_username'),
+            (string) \App\Telegram\Support\TelegramSettings::get('bot_username'),
             '@',
         );
         $botUsernameConfigured = $botUsername !== '';

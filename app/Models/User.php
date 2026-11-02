@@ -79,8 +79,8 @@ class User extends BaseUser
     public function routeNotificationForTelegram(mixed $notification = null): int|string|null
     {
         if (
-            ! config('services.telegram.enabled') ||
-            blank(config('services.telegram.token'))
+            ! \App\Telegram\Support\TelegramSettings::get('enabled') ||
+            blank(\App\Telegram\Support\TelegramSettings::get('token'))
         ) {
             return null;
         }
