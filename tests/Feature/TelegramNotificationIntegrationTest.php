@@ -161,6 +161,84 @@ class TelegramNotificationIntegrationTest extends TestCase
         $this->assertSame([], $channels);
     }
 
+    public function test_creator_settings_expose_default_notification_preferences_without_secrets(): void
+    {
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $user->telegramConnection()->create([
+            'telegram_user_id' => 1234567890123,
+            'telegram_chat_id' => 1234567890123,
+            'telegram_username' => 'creator_test',
+            'language_code' => 'en',
+            'connected_at' => now(),
+            'last_seen_at' => now(),
+        ]);
+
+        $this->stateful()
+            ->actingAs($user)
+            ->getJson('/api/v1/integrations/telegram')
+            ->assertOk()
+            ->assertJsonPath('telegram.connected', true)
+            ->assertJsonPath('telegram.notifications_enabled', true)
+            ->assertJsonPath('telegram.preferences.verified_sales', true)
+            ->assertJsonPath('telegram.preferences.service_inquiries', true)
+            ->assertJsonPath('telegram.preferences.product_moderation', true)
+            ->assertJsonPath('telegram.preferences.payment_disputes', true)
+            ->assertJsonPath('telegram.preferences.pro_billing', true)
+            ->assertJsonMissingPath('telegram.bot_token')
+            ->assertJsonMissingPath('telegram.webhook_secret');
+    }
+
+    public function test_creator_can_update_telegram_notification_preferences(): void
+    {
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $user->telegramConnection()->create([
+            'telegram_user_id' => 1234567890124,
+            'telegram_chat_id' => 1234567890124,
+            'telegram_username' => 'creator_preferences',
+            'language_code' => 'en',
+            'connected_at' => now(),
+        ]);
+
+        $this->stateful()
+            ->actingAs($user)
+            ->patchJson('/api/v1/integrations/telegram', [
+                'notifications_enabled' => false,
+                'preferences' => [
+                    'verified_sales' => false,
+                    'service_inquiries' => true,
+                    'product_moderation' => false,
+                    'payment_disputes' => true,
+                    'pro_billing' => false,
+                ],
+            ])
+            ->assertOk()
+            ->assertJsonPath('telegram.notifications_enabled', false)
+            ->assertJsonPath('telegram.preferences.verified_sales', false)
+            ->assertJsonPath('telegram.preferences.service_inquiries', true);
+
+        $connection = $user->fresh()->telegramConnection;
+        $this->assertFalse($connection->notifications_enabled);
+        $this->assertFalse($connection->notification_preferences['verified_sales']);
+        $this->assertTrue($connection->notification_preferences['service_inquiries']);
+    }
+
+    public function test_global_mute_removes_telegram_from_notification_routing(): void
+    {
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $user->telegramConnection()->create([
+            'telegram_user_id' => 1234567890125,
+            'telegram_chat_id' => 1234567890125,
+            'telegram_username' => 'muted_creator',
+            'language_code' => 'en',
+            'connected_at' => now(),
+            'notifications_enabled' => false,
+        ]);
+
+        $channels = (new VerifiedSaleNotification(1))->via($user->fresh());
+
+        $this->assertSame([], $channels);
+    }
+
     private function stateful(): static
     {
         return $this
