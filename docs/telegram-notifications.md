@@ -28,7 +28,7 @@ The Telegram Bot API webhook target is:
 https://<linket-host>/integrations/telegram/webhook
 ```
 
-When registering the webhook with Telegram, pass the same random value as `secret_token` that is configured in `TELEGRAM_WEBHOOK_SECRET`. Linket validates the `X-Telegram-Bot-Api-Secret-Token` header before it stores or processes an update.
+When registering the webhook with Telegram, pass the same random value as `secret_token` that is configured in the admin panel or `TELEGRAM_WEBHOOK_SECRET`. Linket validates the `X-Telegram-Bot-Api-Secret-Token` header before it stores or processes an update.
 
 ## Connection flow
 
@@ -71,13 +71,12 @@ Existing mail/database delivery remains unchanged. Telegram is appended only whe
 
 After deploying the code:
 
-1. Run migrations.
-2. Add the Telegram environment values.
-3. Rebuild Laravel configuration cache.
-4. Register the HTTPS webhook with Telegram using the configured secret token and `allowed_updates=["message"]`.
-5. Restart Horizon/queue workers.
-6. Connect a test creator and test a non-financial event first.
-7. Test a synthetic Verify.et-backed sale and confirm Telegram delivery happens only after the order is paid.
+1. Run migrations before serving the new application code.
+2. Restart Horizon/queue workers after deploying the code.
+3. In Admin → Settings → Integrations → Telegram, enter the bot username, bot token and webhook secret, enable Telegram, and save. Existing environment values are also supported.
+4. Use **Check Telegram health** and **Sync webhook** to register the HTTPS webhook with `allowed_updates=["message"]`. Saving a new secret requires synchronization; incoming updates may fail until it succeeds.
+5. Connect a test creator and test a non-financial event first.
+6. Test a synthetic Verify.et-backed sale and confirm Telegram delivery happens only after the order is paid.
 
 Do not use a production payment reference merely to test Telegram.
 

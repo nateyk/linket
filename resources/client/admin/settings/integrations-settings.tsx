@@ -236,11 +236,13 @@ export function Component() {
                     <label htmlFor="telegram-bot-token" className="mb-1.5 block text-sm font-medium"><Trans message="Bot token" /></label>
                     <Input bindToHookForm={false} id="telegram-bot-token" type="password" value={botToken}
                       onChange={event => setBotToken(event.target.value)} disabled={busy !== null} autoComplete="new-password" />
+                    <p className="mt-1 text-xs text-muted-foreground"><Trans message="Use the bot token provided by BotFather." /></p>
                   </div>
                   <div>
                     <label htmlFor="telegram-webhook-secret" className="mb-1.5 block text-sm font-medium"><Trans message="Webhook secret" /></label>
                     <Input bindToHookForm={false} id="telegram-webhook-secret" type="password" value={webhookSecret}
                       onChange={event => setWebhookSecret(event.target.value)} disabled={busy !== null} autoComplete="new-password" />
+                    <p className="mt-1 text-xs text-muted-foreground"><Trans message="Choose a random secret of 1–256 letters, numbers, hyphens, or underscores." /></p>
                   </div>
                   <p className="text-xs text-muted-foreground">
                     <Trans message="After changing credentials, sync the webhook. A secret change may interrupt incoming updates until synchronization succeeds." />
