@@ -1267,6 +1267,7 @@ function OrderDetailDialog({
   const [detail, setDetail] = useState<OrderDetail>();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>();
+  const [detailRefreshKey, setDetailRefreshKey] = useState(0);
 
   useEffect(() => {
     if (!uuid) {
@@ -1277,11 +1278,12 @@ function OrderDetailDialog({
 
     let active = true;
     setLoading(true);
-    setDetail(undefined);
+    // Refresh in place, but never show another order's data.
+    setDetail(current => (current?.uuid === uuid ? current : undefined));
     setError(undefined);
 
     apiClient
-      .get(`/api/v1/storefront/direct-orders/${uuid}`)
+      .get('/api/v1/storefront/direct-orders/' + uuid)
       .then(response => {
         if (active) setDetail(response.data.data);
       })
@@ -1295,14 +1297,14 @@ function OrderDetailDialog({
     return () => {
       active = false;
     };
-  }, [uuid]);
+  }, [uuid, detailRefreshKey]);
 
   return (
     <Dialog.Root open={!!uuid} onOpenChange={open => !open && onClose()}>
       <Dialog.Portal>
         <Dialog.Backdrop />
-        <Dialog.Content className="sm:max-w-xl">
-          <Dialog.Header>
+        <Dialog.Content className="min-w-0 sm:max-w-xl">
+          <Dialog.Header className="min-w-0">
             <Dialog.Title>
               <ReceiptTextIcon />
               <Trans message="Order details" />
@@ -1311,21 +1313,40 @@ function OrderDetailDialog({
               <Trans message="Payment verification and delivery information for this order." />
             </Dialog.Description>
           </Dialog.Header>
-          <Dialog.Body>
-            {loading && <TableLoading />}
+          <Dialog.Body className="min-w-0" aria-busy={loading}>
+            {loading && !detail && <TableLoading />}
+            {loading && detail && (
+              <p role="status" className="mb-3 text-xs text-muted-foreground">
+                <Trans message="Refreshing order details..." />
+              </p>
+            )}
             {error && (
-              <p className="text-sm text-destructive" role="alert">
+              <p className="mb-3 text-sm text-destructive" role="alert">
                 {error}
               </p>
             )}
             {detail && (
-              <div className="flex flex-col gap-5">
+              <div className="flex min-w-0 flex-col gap-5">
                 <OrderDetailContent order={detail} />
                 <CreatorOrderDisputes orderUuid={detail.uuid ?? uuid!} />
               </div>
             )}
           </Dialog.Body>
-          <Dialog.Footer variant="muted">
+          <Dialog.Footer variant="muted" className="sm:justify-between">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={!uuid || loading}
+              onClick={() => setDetailRefreshKey(current => current + 1)}
+            >
+              <RefreshCwIcon className={loading ? 'animate-spin' : undefined} />
+              {error && !detail ? (
+                <Trans message="Try again" />
+              ) : (
+                <Trans message="Refresh status" />
+              )}
+            </Button>
             <Dialog.CloseButton>
               <Trans message="Close" />
             </Dialog.CloseButton>
@@ -1341,11 +1362,11 @@ function OrderDetailContent({order}: {order: OrderDetail}) {
   const accountEnding = order.account_ending;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex min-w-0 flex-col gap-4">
       <Item.Root
         variant="muted"
         size="sm"
-        className="rounded-card-sm border-0"
+        className="min-w-0 rounded-card-sm border-0"
       >
         <Item.Media
           align="center"
@@ -1358,7 +1379,7 @@ function OrderDetailContent({order}: {order: OrderDetail}) {
           <Item.Title className="line-clamp-2 whitespace-normal">
             {order.product?.title ?? <Trans message="Deleted product" />}
           </Item.Title>
-          <Item.Description className="line-clamp-none">
+          <Item.Description className="line-clamp-none break-words">
             {order.buyer_name || <Trans message="Guest buyer" />}
             {order.buyer_email ? ` · ${order.buyer_email}` : null}
           </Item.Description>
@@ -1382,11 +1403,15 @@ function OrderDetailContent({order}: {order: OrderDetail}) {
         </Item.Actions>
       </Item.Root>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid min-w-0 gap-4 sm:grid-cols-2">
         <DetailSection title={<Trans message="Payment information" />}>
           <DetailRow
             label={<Trans message="Transaction reference" />}
-            value={order.transaction_reference ?? '—'}
+            value={
+              <span className="break-all font-mono text-xs">
+                {order.transaction_reference ?? '—'}
+              </span>
+            }
           />
           <DetailRow
             label={<Trans message="Payment gateway" />}
@@ -1451,21 +1476,30 @@ function OrderDetailContent({order}: {order: OrderDetail}) {
                 value={order.verification.attempts}
               />
               <DetailRow
-                label={<Trans message="Verified at" />}
+                label={
+                  order.verification.verified_at &&
+                  ['success', 'manual_approved'].includes(order.verification.status) ? (
+                    <Trans message="Verified at" />
+                  ) : (
+                    <Trans message="Submitted at" />
+                  )
+                }
                 value={
                   <FormattedDate
                     preset="timestamp"
                     date={
-                      order.verification.verified_at ??
-                      order.verification.created_at
+                      order.verification.verified_at &&
+                      ['success', 'manual_approved'].includes(order.verification.status)
+                        ? order.verification.verified_at
+                        : order.verification.created_at
                     }
                   />
                 }
               />
               {order.verification.error_code && (
                 <DetailRow
-                  label={<Trans message="Reason code" />}
-                  value={order.verification.error_code}
+                  label={<Trans message="Reason" />}
+                  value={verificationReasonLabel(order.verification.error_code)}
                 />
               )}
             </>
@@ -1479,39 +1513,40 @@ function OrderDetailContent({order}: {order: OrderDetail}) {
 
       {!!order.verification?.history?.length && (
         <DetailSection title={<Trans message="Verification history" />}>
-          <div className="overflow-x-auto">
+          <ul className="flex min-w-0 flex-col gap-2 sm:hidden" aria-label="Verification attempts">
+            {order.verification.history.map((entry, index) => (
+              <li key={[entry.reference, entry.attempt, index].join('-')} className="min-w-0 rounded-card-sm border border-border p-3 text-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    <Trans message="Attempt :number" values={{number: entry.attempt}} />
+                  </span>
+                  <TransactionStatusBadge status={entry.status} />
+                </div>
+                <p className="mt-2 break-all font-mono text-xs">{entry.reference ?? '—'}</p>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  <FormattedDate preset="short" date={entry.verified_at ?? entry.created_at} />
+                </p>
+              </li>
+            ))}
+          </ul>
+          <div className="hidden min-w-0 overflow-x-auto sm:block">
             <Table.Root>
               <Table.Header>
                 <Table.Row>
-                  <Table.Head>
-                    <Trans message="Reference" />
-                  </Table.Head>
-                  <Table.Head>
-                    <Trans message="Status" />
-                  </Table.Head>
-                  <Table.Head>
-                    <Trans message="Attempt" />
-                  </Table.Head>
-                  <Table.Head>
-                    <Trans message="Date" />
-                  </Table.Head>
+                  <Table.Head><Trans message="Reference" /></Table.Head>
+                  <Table.Head><Trans message="Status" /></Table.Head>
+                  <Table.Head><Trans message="Attempt" /></Table.Head>
+                  <Table.Head><Trans message="Date" /></Table.Head>
                 </Table.Row>
               </Table.Header>
               <Table.Body>
                 {order.verification.history.map((entry, index) => (
-                  <Table.Row key={`${entry.reference}-${index}`}>
-                    <Table.Cell className="max-w-40 truncate">
-                      {entry.reference ?? '—'}
-                    </Table.Cell>
-                    <Table.Cell>
-                      <TransactionStatusBadge status={entry.status} />
-                    </Table.Cell>
+                  <Table.Row key={[entry.reference, entry.attempt, index].join('-')}>
+                    <Table.Cell className="max-w-40 break-all font-mono text-xs">{entry.reference ?? '—'}</Table.Cell>
+                    <Table.Cell><TransactionStatusBadge status={entry.status} /></Table.Cell>
                     <Table.Cell>{entry.attempt}</Table.Cell>
                     <Table.Cell className="text-muted-foreground">
-                      <FormattedDate
-                        preset="short"
-                        date={entry.verified_at ?? entry.created_at}
-                      />
+                      <FormattedDate preset="short" date={entry.verified_at ?? entry.created_at} />
                     </Table.Cell>
                   </Table.Row>
                 ))}
@@ -1522,44 +1557,39 @@ function OrderDetailContent({order}: {order: OrderDetail}) {
       )}
 
       <DetailSection title={<Trans message="Delivery" />}>
-        <div className="flex flex-wrap gap-3 text-sm">
+        <div className="flex min-w-0 flex-wrap items-center gap-3 text-sm">
           <Badge variant={deliveryBadgeVariant(order.delivery?.status)}>
-            {deliveryStatusLabel(order.delivery?.status)}
+            {deliveryStatusLabel(order.delivery?.status, order.status)}
           </Badge>
-          {order.delivery && (
+          {order.delivery && order.delivery.entitlements_count > 0 && (
             <span className="text-muted-foreground">
-              <Trans
-                message=":downloaded of :limit downloads used across :count files"
-                values={{
-                  downloaded: order.delivery.downloaded_count,
-                  limit: order.delivery.download_limit,
-                  count: order.delivery.entitlements_count,
-                }}
-              />
+              <Trans message=":downloaded of :limit downloads used across :count files" values={{
+                downloaded: order.delivery.downloaded_count,
+                limit: order.delivery.download_limit,
+                count: order.delivery.entitlements_count,
+              }} />
             </span>
           )}
         </div>
+        {!['paid', 'fulfilled'].includes(order.status) ? (
+          <p className="text-sm text-muted-foreground">
+            <Trans message="Buyer downloads remain locked until the payment is verified." />
+          </p>
+        ) : (order.delivery?.entitlements_count ?? 0) === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            <Trans message="No download access has been issued for this order." />
+          </p>
+        ) : null}
         {!!order.delivery?.files?.length && (
           <ul className="mt-3 flex flex-col gap-2">
             {order.delivery.files.map((file, index) => (
-              <li
-                key={`${file.name}-${index}`}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-card-sm bg-muted px-3 py-2 text-sm"
-              >
+              <li key={[file.name, index].join('-')} className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-card-sm bg-muted px-3 py-2 text-sm">
                 <span className="flex min-w-0 items-center gap-2">
-                  <PackageCheckIcon className="size-4 text-muted-foreground" />
-                  <span className="truncate">
-                    {file.name ?? <Trans message="File" />}
-                  </span>
+                  <PackageCheckIcon className="size-4 shrink-0 text-muted-foreground" />
+                  <span className="min-w-0 break-words">{file.name ?? <Trans message="File" />}</span>
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  <Trans
-                    message=":count of :limit downloads"
-                    values={{
-                      count: file.download_count,
-                      limit: file.download_limit,
-                    }}
-                  />
+                  <Trans message=":count of :limit downloads" values={{count: file.download_count, limit: file.download_limit}} />
                 </span>
               </li>
             ))}
@@ -1568,20 +1598,24 @@ function OrderDetailContent({order}: {order: OrderDetail}) {
       </DetailSection>
 
       {order.manual_review && (
-        <div className="rounded-card-sm border border-warning/20 bg-warning/10 p-3 text-sm">
-          <p className="font-medium text-warning">
-            <Trans message="Manual review is read-only" />
-          </p>
+        <div role="note" className="min-w-0 rounded-card-sm border border-warning/20 bg-warning/10 p-3 text-sm">
+          <p className="font-medium text-warning"><Trans message="Payment needs support review" /></p>
           <p className="mt-1 text-muted-foreground">
-            <Trans message="Linket support resolves this payment. The order cannot be marked as paid from your dashboard." />
+            <Trans message="Linket support must resolve this payment. You cannot mark this order paid or release buyer downloads." />
           </p>
-          {order.manual_review.reason_code && (
-            <p className="mt-1 text-xs text-muted-foreground">
-              <Trans
-                message="Reason code: :code"
-                values={{code: order.manual_review.reason_code}}
-              />
+          {order.manual_review.reason_code === 'recipient_evidence_missing' && (
+            <p className="mt-2 text-muted-foreground">
+              <Trans message="Verify.et did not provide enough evidence to confirm the intended receiving account. Do not ask the buyer to pay again until support reviews the payment." />
             </p>
+          )}
+          <a href="/help" className="mt-2 inline-flex min-h-9 items-center text-primary underline-offset-4 hover:underline focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+            <Trans message="Open Help Center" />
+          </a>
+          {order.manual_review.reason_code && (
+            <details className="mt-2 text-xs text-muted-foreground">
+              <summary className="cursor-pointer py-1"><Trans message="Technical reason" /></summary>
+              <code className="block break-all pt-1">{order.manual_review.reason_code}</code>
+            </details>
           )}
         </div>
       )}
@@ -1734,15 +1768,9 @@ function DetailRow({
   emphasis?: boolean;
 }) {
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 text-sm">
-      <span className="text-muted-foreground">{label}</span>
-      <span
-        className={
-          emphasis
-            ? 'min-w-0 text-end font-medium tabular-nums'
-            : 'min-w-0 text-end'
-        }
-      >
+    <div className="grid min-w-0 grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] items-start gap-3 text-sm">
+      <span className="min-w-0 text-muted-foreground">{label}</span>
+      <span className={emphasis ? 'min-w-0 break-words text-end font-medium tabular-nums' : 'min-w-0 break-words text-end'}>
         {value}
       </span>
     </div>
@@ -2039,7 +2067,33 @@ function statusBadgeVariant(
   }
 }
 
-function deliveryStatusLabel(status: string | undefined): ReactNode {
+function verificationReasonLabel(code: string): ReactNode {
+  switch (code) {
+    case 'recipient_evidence_missing':
+      return <Trans message="Receiving account could not be confirmed" />;
+    case 'confirmation_history_review':
+      return <Trans message="Transaction confirmation needs review" />;
+    case 'free_allowance_exhausted':
+      return <Trans message="Free verified-sales allowance exhausted" />;
+    case 'verification_evidence_mismatch':
+      return <Trans message="Payment details did not match" />;
+    default:
+      return <Trans message="Additional verification needed" />;
+  }
+}
+
+function deliveryStatusLabel(status: string | undefined, orderStatus?: string): ReactNode {
+  switch (orderStatus) {
+    case 'manual_review':
+      return <Trans message="On hold — payment review" />;
+    case 'pending_payment':
+      return <Trans message="Awaiting payment" />;
+    case 'verifying':
+      return <Trans message="Verifying payment" />;
+    case 'failed_verification':
+    case 'expired':
+      return <Trans message="Payment not verified" />;
+  }
   switch (status) {
     case 'downloaded':
       return <Trans message="Downloaded" />;
