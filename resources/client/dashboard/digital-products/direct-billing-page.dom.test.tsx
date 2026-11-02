@@ -448,12 +448,59 @@ it('opens the read-only order detail with masked account and delivery state', as
   expect(screen.getAllByText('REF-ONE').length).toBeGreaterThan(0);
   expect(screen.getAllByText('•••• 6789')).toHaveLength(2);
   expect(screen.getByText('buyer@example.test', {exact: false})).toBeTruthy();
-  expect(screen.getByText('Manual review is read-only')).toBeTruthy();
+  expect(screen.getByText('Payment needs support review')).toBeTruthy();
+  expect(screen.getByText('On hold — payment review')).toBeTruthy();
+  expect(screen.getByText('Buyer downloads remain locked until the payment is verified.')).toBeTruthy();
+  expect(screen.getByText('Submitted at')).toBeTruthy();
+  expect(screen.getByRole('button', {name: 'Refresh status'})).toBeTruthy();
   expect(screen.getByText('workbook.pdf')).toBeTruthy();
   expect(screen.queryByRole('button', {name: /mark.*paid/i})).toBeNull();
   expect(api.get).toHaveBeenCalledWith(
     '/api/v1/storefront/direct-orders/order-1',
   );
+});
+
+it('explains missing recipient evidence without suggesting payment is verified', async () => {
+  mockApi({
+    orders: [{...baseOrder, status: 'manual_review'}],
+    detail: {
+      ...baseOrder,
+      status: 'manual_review',
+      verification: {
+        status: 'manual_review', provider: 'dashen', attempts: 1,
+        error_code: 'recipient_evidence_missing',
+        created_at: '2026-11-02T15:02:33Z',
+        history: [{reference: '247WDTS26292000E', status: 'manual_review', attempt: 1}],
+      },
+      manual_review: {reason_code: 'recipient_evidence_missing'},
+      delivery: {status: 'unknown', entitlements_count: 0, downloaded_count: 0, download_limit: 0, files: []},
+    },
+  });
+  render(<Component />);
+  fireEvent.click(await screen.findByRole('button', {name: 'View details'}));
+  expect(await screen.findByText('Receiving account could not be confirmed')).toBeTruthy();
+  expect(screen.getByText('On hold — payment review')).toBeTruthy();
+  expect(screen.getByText(/Verify.et did not provide enough evidence/)).toBeTruthy();
+  expect(screen.getByText('Buyer downloads remain locked until the payment is verified.')).toBeTruthy();
+  expect(screen.queryByText('0 of 0 downloads used across 0 files')).toBeNull();
+  expect(screen.getByRole('list', {name: 'Verification attempts'})).toBeTruthy();
+  expect(screen.getAllByText('247WDTS26292000E').length).toBeGreaterThan(0);
+  expect(screen.getByText('Submitted at')).toBeTruthy();
+  expect(screen.queryByText('Verified at')).toBeNull();
+  expect(screen.queryByRole('button', {name: /mark.*paid/i})).toBeNull();
+});
+
+it('refreshes read-only order status without submitting a verification', async () => {
+  mockApi({orders: [baseOrder], detail: {...baseOrder}});
+  render(<Component />);
+  fireEvent.click(await screen.findByRole('button', {name: 'View details'}));
+  expect(await screen.findByText('Order details')).toBeTruthy();
+  await waitFor(() => expect(screen.getByRole('button', {name: 'Refresh status'})).not.toHaveProperty('disabled', true));
+  fireEvent.click(screen.getByRole('button', {name: 'Refresh status'}));
+  await waitFor(() => {
+    expect(api.get.mock.calls.filter(([url]) => url === '/api/v1/storefront/direct-orders/order-1').length).toBe(2);
+  });
+  expect(api.post).not.toHaveBeenCalled();
 });
 
 for (const [status, label] of [
