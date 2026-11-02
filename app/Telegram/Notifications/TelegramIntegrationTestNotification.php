@@ -15,6 +15,7 @@ final class TelegramIntegrationTestNotification extends Notification
     public function toTelegram(object $notifiable): TelegramMessage
     {
         return TelegramMessage::create()
+            ->to((int) $notifiable->telegramConnection()->value('telegram_chat_id'))
             ->normal()
             ->content(__('Linket Telegram test'))
             ->line(__('Your Telegram integration is connected and ready to receive creator notifications.'))
