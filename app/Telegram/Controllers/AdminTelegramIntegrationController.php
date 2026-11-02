@@ -28,6 +28,18 @@ final class AdminTelegramIntegrationController extends Controller
         ]);
     }
 
+    public function inspect(Request $request): JsonResponse
+    {
+        $this->authorize();
+
+        return response()->json([
+            'telegram' => [
+                ...$this->health($request),
+                ...$this->telegram->inspect(),
+            ],
+        ]);
+    }
+
     public function syncWebhook(Request $request): JsonResponse
     {
         $this->authorize();

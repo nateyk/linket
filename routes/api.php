@@ -127,6 +127,8 @@ Route::group(['prefix' => 'v1'], function() {
 
         Route::middleware('auth')->prefix('admin/integrations/telegram')->group(function () {
             Route::get('/', [AdminTelegramIntegrationController::class, 'show']);
+            Route::get('health', [AdminTelegramIntegrationController::class, 'inspect'])
+                ->middleware('throttle:10,1');
             Route::post('webhook/sync', [AdminTelegramIntegrationController::class, 'syncWebhook'])
                 ->middleware('throttle:10,1');
             Route::post('test', [AdminTelegramIntegrationController::class, 'sendTest'])
