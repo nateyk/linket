@@ -18,7 +18,8 @@ test('the landing page has usable content when its settings are missing', functi
         ->getJson('/api/v1/landing-page-data')
         ->assertOk()
         ->assertJsonPath('sections.0.name', 'hero-split-with-screenshot')
-        ->assertJsonPath('sections.0.image.src', 'images/landing/links.webp')
+        ->assertJsonPath('sections.0.title', 'One link. Your entire creator business.')
+        ->assertJsonPath('sections.0.image.src', 'images/landing/creator-hero.svg')
         ->assertJsonFragment(['name' => 'pricing']);
 });
 

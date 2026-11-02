@@ -1,3 +1,4 @@
+import {AlertDialog} from '@shadcn/alert-dialog/alert-dialog';
 import {AdminSettings} from '@common/admin/settings/admin-settings';
 import {CtaSectionSettings} from '@common/admin/settings/landing-page-settings/cta-section-settings';
 import {FaqSectionSettings} from '@common/admin/settings/landing-page-settings/faq-section-settings';
@@ -16,9 +17,9 @@ import {Button} from '@shadcn/button/button';
 import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {Trans} from '@ui/i18n/trans';
 import {useSortable} from '@ui/interactions/dnd/sortable/use-sortable';
-import {GripHorizontal, PlusIcon} from 'lucide-react';
+import {GripHorizontal, PlusIcon, SparklesIcon} from 'lucide-react';
 import {use, useRef, useState} from 'react';
-import {useFieldArray, useForm} from 'react-hook-form';
+import {useFieldArray, useForm, useFormContext} from 'react-hook-form';
 
 export function Component() {
   const {data} = useAdminSettings();
@@ -55,8 +56,11 @@ function Sections() {
   });
   const [expandedSections, setExpandedSections] = useState<string[]>([]);
   const ctx = use(LandingPageSettingsContext);
+  const [presetOpen, setPresetOpen] = useState(false);
+  const {setValue} = useFormContext<AdminSettings>();
   return (
     <div>
+      {ctx?.creatorPreset && <div className="mb-5 rounded-xl border bg-muted/30 p-4"><p className="mb-3 text-sm text-muted-foreground"><Trans message="Apply the creator storefront layout. Review the preview before saving." /></p><Button type="button" variant="outline" color="primary" size="sm" onClick={() => setPresetOpen(true)}><SparklesIcon /><Trans message="Use creator homepage template" /></Button><AlertDialog.Root open={presetOpen} onOpenChange={setPresetOpen}><AlertDialog.Portal><AlertDialog.Backdrop /><AlertDialog.Content size="sm"><AlertDialog.Header><AlertDialog.Title><Trans message="Replace the page sections?" /></AlertDialog.Title><AlertDialog.Description><Trans message="This replaces the page sections in the editor. The live homepage is unchanged until you save." /></AlertDialog.Description></AlertDialog.Header><AlertDialog.Footer><AlertDialog.Cancel><Trans message="Cancel" /></AlertDialog.Cancel><AlertDialog.Action onClick={() => {setValue('client.landingPage.sections', structuredClone(ctx.creatorPreset!.sections) as SectionConfig[], {shouldDirty: true});setExpandedSections([]);setPresetOpen(false);}}><Trans message="Apply template" /></AlertDialog.Action></AlertDialog.Footer></AlertDialog.Content></AlertDialog.Portal></AlertDialog.Root></div>}
       <Dropdown.Root>
         <Dropdown.Trigger
           render={

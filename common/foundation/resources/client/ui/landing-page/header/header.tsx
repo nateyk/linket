@@ -36,36 +36,17 @@ import {useSettings} from '@ui/settings/use-settings';
 import {use, useState, useEffect, MouseEvent} from 'react';
 import {MegaMenu} from './mega-menu';
 
-// Every href must resolve to a real anchor on the landing page (see
-// buildSectionAnchors) or to an actual route.
-const navigationItems = [
-  {
-    name: 'Features',
-    href: '#links-that-work-harder-for-you',
-    hasMegaMenu: true,
-  },
-  {name: 'Pricing', href: '#pricing-section'},
-  {name: 'Contact', href: '/contact'},
-];
-
-type MobileNavItem = {
-  title?: string;
-  name?: string;
-  href?: string;
-};
-
-// Same anchors as the desktop mega menu, flattened for the mobile sheet.
-const solutionsItems: MobileNavItem[] = [
-  {title: 'Create'},
-  {name: 'Short links', href: '#short-urls-with-serious-control'},
-  {name: 'Storefront', href: '#one-link-for-everything-you-share'},
-  {name: 'QR codes', href: '#turn-any-link-into-a-scannable-code'},
-  {title: 'Manage & measure'},
-  {name: 'Everything in one place', href: '#links-that-work-harder-for-you'},
-  {name: 'Growth toolkit', href: '#the-toolkit-serious-marketers-expect'},
-  {name: 'Plans & pricing', href: '#pricing-section'},
-];
-
+type HomeSection = {name: string; title?: string; badge?: string};
+type HeaderProps = {sections?: HomeSection[]; anchors?: (string | undefined)[]};
+type NavigationItem = {name: string; href: string; hasMegaMenu?: boolean};
+type MobileNavItem = {title?: string; name?: string; href?: string};
+function sectionLinks(sections: HomeSection[], anchors: (string | undefined)[]) {
+  return sections.flatMap((section, index) => {
+    if (section.name === 'pricing') return [{name: 'Pricing', href: '#pricing-section'}];
+    if (!section.name.startsWith('feature-') && section.name !== 'features-grid') return [];
+    return anchors[index] ? [{name: section.title || section.badge || 'Features', href: '#' + anchors[index]}] : [];
+  });
+}
 // Section anchors ("#…") live on the landing page. When this header renders on
 // another route (e.g. /pricing) the target isn't on the page, so hand the click
 // to the landing instead of swallowing it. On the landing itself a target that
@@ -106,7 +87,10 @@ const onMegaMenuClick = (e: MouseEvent<HTMLDivElement>) => {
   goToLandingSection(href);
 };
 
-export function Header() {
+export function Header({sections = [], anchors = []}: HeaderProps) {
+  const links = sectionLinks(sections, anchors);
+  const navigationItems: NavigationItem[] = [...(links.length ? [{name: 'Features', href: links[0].href, hasMegaMenu: true}] : []), ...(sections.some(s => s.name === 'pricing') ? [{name: 'Pricing', href: '#pricing-section'}] : []), {name: 'Contact', href: '/contact'}];
+  const solutionsItems: MobileNavItem[] = links.map(link => ({name: link.name, href: link.href}));
   const [isOpen, setIsOpen] = useState(false);
   const [solutionsOpen, setSolutionsOpen] = useState(false);
   const {colorScheme, setColorScheme} = use(ColorSchemeContext);
@@ -189,7 +173,7 @@ export function Header() {
                       className="left-1/2 w-[700px] max-w-[95vw] -translate-x-1/2 overflow-hidden rounded-xl border border-border/40 bg-card/95 shadow-xl backdrop-blur"
                       onClick={onMegaMenuClick}
                     >
-                      <MegaMenu />
+                      <MegaMenu items={links} />
                     </NavigationMenuContent>
                   </>
                 ) : (

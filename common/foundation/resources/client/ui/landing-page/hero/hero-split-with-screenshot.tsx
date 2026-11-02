@@ -25,6 +25,7 @@ export function HeroSplitWithScreenshot({config}: Props) {
     ? (heroSearchBarSlot ?? null)
     : null;
   const siteIsInDarkMode = useIsDarkMode();
+  const creator = config.presentation === 'creator';
   const isDarkMode = siteIsInDarkMode || config.forceDarkMode;
   return (
     <div
@@ -34,50 +35,46 @@ export function HeroSplitWithScreenshot({config}: Props) {
         config.forceDarkMode && 'dark',
       )}
     >
-      <GridDecoration />
-      <ColorSplash />
+      {creator ? <CreatorPattern /> : <GridDecoration />}
+      {!creator && <ColorSplash />}
       {config.bgColors ? <BgColors config={config} /> : null}
-      <div className="mx-auto max-w-7xl px-6 pt-10 pb-24 sm:pb-32 lg:flex lg:px-8 lg:py-40">
+      <div className={creator ? "mx-auto grid max-w-7xl items-center gap-8 px-6 py-16 sm:py-24 lg:grid-cols-2 lg:gap-12 lg:px-8 lg:py-28" : "mx-auto max-w-7xl px-6 pt-10 pb-24 sm:pb-32 lg:flex lg:px-8 lg:py-40"}>
         <div className="mx-auto max-w-2xl lg:mx-0 lg:shrink-0 lg:pt-8">
-          <Logo
-            className="h-10"
-            color={isDarkMode ? 'light' : 'dark'}
-            url="/"
-          />
+          {!creator && <Logo className="h-10" color={isDarkMode ? 'light' : 'dark'} url="/" />}
           {config.badge ? (
-            <div className="mt-24 w-max rounded-full bg-primary/10 px-3 py-1.5 text-sm/6 font-semibold text-primary ring-1 ring-primary/10 ring-inset sm:mt-32 lg:mt-16">
+            <div className={cn("w-max max-w-full rounded-full bg-primary/10 px-3 py-1.5 text-sm/6 font-semibold text-primary ring-1 ring-primary/10 ring-inset", creator ? "mt-6" : "mt-24 sm:mt-32 lg:mt-16")}>
               <Trans message={config.badge} />
             </div>
           ) : null}
           {config.title ? (
-            <Heading className="mt-10">
+            <Heading className={creator ? "mt-6 max-w-2xl text-4xl! leading-tight! sm:text-6xl!" : "mt-10"}>
               <Trans message={config.title} />
             </Heading>
           ) : null}
           {config.description ? (
-            <Description className="mt-8">
+            <Description className={creator ? "mt-5 max-w-xl text-base! font-normal! sm:text-lg!" : "mt-8"}>
               <Trans message={config.description} />
             </Description>
           ) : null}
-          {SearchBarCmp ? (
+          {SearchBarCmp && !config.buttons?.length ? (
             <div className="light mt-10 pb-12.5 text-muted-foreground">
               <SearchBarCmp background="bg-white" config={config} />
             </div>
           ) : null}
           {config.buttons?.length ? (
-            <Buttons buttons={config.buttons} className="mt-10 gap-x-4" />
+            <Buttons buttons={config.buttons} className="mt-8 flex-wrap gap-3" />
           ) : null}
         </div>
         {config.image ? (
-          <div className="mx-auto mt-16 flex max-w-2xl sm:mt-24 lg:mt-0 lg:mr-0 lg:ml-10 lg:max-w-none lg:flex-none xl:ml-32">
-            <div className="max-w-3xl flex-none sm:max-w-5xl lg:max-w-none">
-              <div className="-m-2 rounded-2xl border bg-muted/60 p-2 lg:-m-4 lg:rounded-3xl lg:p-4">
+          <div className={creator ? "mx-auto w-full min-w-0 max-w-full" : "mx-auto mt-16 flex max-w-2xl sm:mt-24 lg:mt-0 lg:mr-0 lg:ml-10 lg:max-w-none lg:flex-none xl:ml-32"}>
+            <div className={creator ? "w-full min-w-0" : "max-w-3xl flex-none sm:max-w-5xl lg:max-w-none"}>
+              <div className={creator ? "overflow-hidden rounded-2xl border border-primary/10 bg-background/75 p-2 shadow-xl" : "-m-2 rounded-2xl border bg-muted/60 p-2 lg:-m-4 lg:rounded-3xl lg:p-4"}>
                 <img
                   alt=""
                   src={config.image.src}
                   width={config.image.width}
                   height={config.image.height}
-                  className="w-304 rounded-md border shadow-2xl"
+                  className={creator ? "block h-auto w-full rounded-xl" : "w-304 rounded-md border shadow-2xl"}
                 />
               </div>
             </div>
@@ -132,3 +129,5 @@ function ColorSplash() {
     </div>
   );
 }
+
+function CreatorPattern() { return <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"><div className="absolute inset-0 bg-[radial-gradient(ellipse_at_75%_30%,color-mix(in_oklch,var(--be-primary)_12%,transparent),transparent_55%)]" /><svg className="absolute inset-0 size-full opacity-25 dark:opacity-10"><defs><pattern id="linket-creator-dots" width="28" height="28" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r="1" fill="var(--be-primary)" /></pattern></defs><rect width="100%" height="100%" fill="url(#linket-creator-dots)" /></svg></div>; }

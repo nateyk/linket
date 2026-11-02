@@ -35,7 +35,7 @@ export function LandingPage() {
 
   return (
     <div>
-      <Header />
+      <Header sections={sections} anchors={anchors} />
       <DefaultMetaTags />
       {sections.map((section, index) => (
         <Fragment key={index}>

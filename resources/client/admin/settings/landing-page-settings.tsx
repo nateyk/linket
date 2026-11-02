@@ -1,3 +1,4 @@
+import creatorHomepagePreset from '../../../defaults/creator-homepage.json';
 import {Component as CommonLandingPageSettings} from '@common/admin/settings/landing-page-settings/landing-page-settings';
 import {
   LandingPageSettingsContext,
@@ -9,6 +10,7 @@ import {Switch} from '@shadcn/forms/switch/switch';
 import {Trans} from '@ui/i18n/trans';
 
 const contextValue: LandingPageSettingsContextValue = {
+  creatorPreset: creatorHomepagePreset,
   customSections: {
     stats: {
       label: <Trans message="Statistics" />,

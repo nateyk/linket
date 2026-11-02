@@ -1,0 +1,240 @@
+{
+  "sections": [
+    {
+      "name": "hero-split-with-screenshot",
+      "title": "One link. Your entire creator business.",
+      "description": "Bring your content, digital products, services, and audience together in one beautiful storefront. Share one link, sell directly to customers, and run your creator business from one place.",
+      "badge": "Creator storefront · Digital products · Services",
+      "presentation": "creator",
+      "showSearchBarSlot": false,
+      "buttons": [
+        {
+          "label": "Create your storefront",
+          "action": "/register",
+          "type": "route",
+          "variant": "default",
+          "color": "primary"
+        },
+        {
+          "label": "Explore features",
+          "action": "#from-your-first-idea-to-your-first-sale",
+          "type": "route",
+          "variant": "outline",
+          "color": "default"
+        }
+      ],
+      "image": {
+        "src": "images/landing/creator-hero.svg",
+        "width": 1280,
+        "height": 880
+      }
+    },
+    {
+      "name": "features-grid",
+      "title": "From your first idea to your first sale",
+      "description": "Your page is more than a list of links. Give your audience one place to discover your work and support what you create.",
+      "badge": "A simpler way to start",
+      "maxColumns": 3,
+      "iconsOnTop": true,
+      "mutedBg": true,
+      "features": [
+        {
+          "icon": "stores",
+          "title": "Make it yours",
+          "description": "Build a mobile-first storefront that reflects your style, content, and brand."
+        },
+        {
+          "icon": "links",
+          "title": "Share what you create",
+          "description": "Publish digital products, courses, services, and useful links in one place."
+        },
+        {
+          "icon": "insights",
+          "title": "Run your business",
+          "description": "Follow your orders, verified sales, and audience activity from one dashboard."
+        }
+      ]
+    },
+    {
+      "name": "feature-with-screenshot",
+      "title": "Not just a bio page. Your own corner of the internet.",
+      "description": "Give your personal brand and your business one home. Visitors can explore your work, discover products, and find the right way to connect with you.",
+      "badge": "A storefront that's yours",
+      "presentation": "creator",
+      "wrapIconsInBg": false,
+      "imageSize": "lg",
+      "alignLeft": false,
+      "image": {
+        "src": "images/landing/creator-storefront.svg",
+        "width": 1280,
+        "height": 880
+      },
+      "features": [
+        {
+          "icon": "brand",
+          "title": "Make it look like you",
+          "description": "Choose colors, layouts, images, and the content people see first."
+        },
+        {
+          "icon": "stores",
+          "title": "Sell from your own page",
+          "description": "Keep your products alongside your profile and links instead of sending buyers away."
+        },
+        {
+          "icon": "insights",
+          "title": "Built for mobile",
+          "description": "Showcase your work on the screens your audience uses every day."
+        }
+      ]
+    },
+    {
+      "name": "features-grid",
+      "title": "Your ideas come in all forms. Your storefront can too.",
+      "description": "Sell what you know, share what you make, and offer your services from the same page.",
+      "badge": "What you can create",
+      "maxColumns": 4,
+      "iconsOnTop": true,
+      "features": [
+        {
+          "icon": "stores",
+          "title": "Ebooks and guides",
+          "description": "Publish useful guides and digital reading materials."
+        },
+        {
+          "icon": "links",
+          "title": "Digital downloads",
+          "description": "Offer templates, files, and creative resources."
+        },
+        {
+          "icon": "date",
+          "title": "Courses and learning",
+          "description": "Share your knowledge with course content and lessons."
+        },
+        {
+          "icon": "settings",
+          "title": "Creator services",
+          "description": "Let customers discover your skills and request your services."
+        }
+      ]
+    },
+    {
+      "name": "feature-with-screenshot",
+      "title": "Your sales. Your customers. Your money.",
+      "description": "Customers pay your approved receiving account directly. Linket uses Verify.et to check eligible payments before paid digital products become available. Linket does not hold your funds.",
+      "badge": "Payments built for Ethiopian creators",
+      "presentation": "creator",
+      "forceDarkMode": true,
+      "wrapIconsInBg": false,
+      "imageSize": "lg",
+      "alignLeft": true,
+      "image": {
+        "src": "images/landing/creator-checkout.svg",
+        "width": 1280,
+        "height": 880
+      },
+      "features": [
+        {
+          "icon": "settings",
+          "title": "Direct payments",
+          "description": "Give customers instructions for your approved receiving account."
+        },
+        {
+          "icon": "insights",
+          "title": "Verified before delivery",
+          "description": "Paid digital downloads unlock only after successful verification."
+        },
+        {
+          "icon": "stores",
+          "title": "Reliable purchase access",
+          "description": "Eligible buyers can access their purchases and authorized re-downloads."
+        }
+      ]
+    },
+    {
+      "name": "features-grid",
+      "title": "Everything you need to create and grow",
+      "description": "Your storefront is the beginning. Keep the everyday tools for running your creator business together.",
+      "badge": "Creator business tools",
+      "maxColumns": 3,
+      "iconsOnTop": false,
+      "features": [
+        {
+          "icon": "stores",
+          "title": "Storefront builder",
+          "description": "Design your profile, organize links, and showcase your work."
+        },
+        {
+          "icon": "insights",
+          "title": "Orders and insights",
+          "description": "Understand order activity and your visitors' engagement."
+        },
+        {
+          "icon": "links",
+          "title": "Short links and QR codes",
+          "description": "Share products and content across online and offline channels."
+        },
+        {
+          "icon": "settings",
+          "title": "Receiving accounts",
+          "description": "Manage the accounts your customers use to pay you directly."
+        },
+        {
+          "icon": "date",
+          "title": "Creator notifications",
+          "description": "Follow important account and order updates, including Telegram when connected."
+        },
+        {
+          "icon": "brand",
+          "title": "Your brand, your way",
+          "description": "Shape the experience your audience sees with customizable content."
+        }
+      ]
+    },
+    {
+      "name": "pricing",
+      "title": "Start free. Grow at your own pace.",
+      "description": "Free includes one storefront link and 10 lifetime eligible verified sales. Pro offers unlimited eligible verified sales while active. Linket takes 0% commission on new creator sales; the displayed plan price comes from current billing settings."
+    },
+    {
+      "name": "faq",
+      "title": "Questions before you get started",
+      "description": "A few useful details about selling with Linket.",
+      "variant": "bordered",
+      "questions": [
+        {
+          "question": "What can I sell on Linket?",
+          "answer": "Publish eligible ebooks, guides, templates, courses, digital downloads, and creator services from your storefront."
+        },
+        {
+          "question": "How do customers pay me?",
+          "answer": "Customers pay your approved receiving account directly through supported Ethiopian payment methods. Linket verifies eligible payments before allowing paid digital content to be accessed."
+        },
+        {
+          "question": "Can I start for free?",
+          "answer": "Yes. Free includes one storefront link and 10 lifetime eligible verified sales. Active Pro offers unlimited eligible verified sales."
+        },
+        {
+          "question": "Does Linket take a commission?",
+          "answer": "Linket's commission on new creator sales is 0%. Any fees charged by an external payment provider are separate."
+        }
+      ]
+    },
+    {
+      "name": "cta-simple-centered",
+      "title": "Make something worth sharing. We'll help you sell it.",
+      "description": "Give your next customer one simple place to find everything you create.",
+      "buttons": [
+        {
+          "label": "Create your storefront",
+          "action": "/register",
+          "type": "route",
+          "variant": "default",
+          "color": "primary"
+        }
+      ]
+    },
+    {
+      "name": "footer"
+    }
+  ]
+}

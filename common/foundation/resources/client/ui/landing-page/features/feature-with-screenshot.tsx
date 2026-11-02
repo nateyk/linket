@@ -10,6 +10,7 @@ import clsx from 'clsx';
 
 export type FeatureWithScreenshotConfig = {
   name: 'feature-with-screenshot';
+  presentation?: 'creator';
   title: string;
   badge: string;
   description: string;
@@ -31,6 +32,7 @@ type Props = {
   config: FeatureWithScreenshotConfig;
 };
 export function FeatureWithScreenshot({config}: Props) {
+  const creator = config.presentation === 'creator';
   const isSmallPanel = config.inPanel && config.imageSize !== 'lg';
   const isLargePanel = config.inPanel && !isSmallPanel;
 
@@ -124,15 +126,15 @@ export function FeatureWithScreenshot({config}: Props) {
                       width={config.image.width}
                       height={config.image.height}
                       className={cn(
-                        'max-w-none rounded-xl border shadow-xl md:-ml-4 lg:ml-0',
-                        getImageWidth(config),
+                        creator ? 'block h-auto w-full max-w-full rounded-2xl border shadow-lg' : 'max-w-none rounded-xl border shadow-xl md:-ml-4 lg:ml-0',
+                        !creator && getImageWidth(config),
                       )}
                     />
                   )}
                 </div>
               ) : null}
             </div>
-            <Gradient />
+            {!creator && <Gradient />}
           </div>
         </div>
       </section>

@@ -5,6 +5,7 @@ import {
 
 export type BaseHeroConfig = {
   badge?: string;
+  presentation?: 'creator';
   title?: string;
   description?: string;
   image?: LandingPageImageConfig;
