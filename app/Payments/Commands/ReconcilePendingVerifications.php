@@ -7,6 +7,7 @@ use App\Payments\Models\VerifyEtWebhookDelivery;
 use App\Payments\VerifyEt\VerifyEtGateway;
 use App\Jobs\ProcessVerifyEtWebhook;
 use App\Storefront\Models\StorefrontOrder;
+use App\Storefront\Services\CreatorPaymentReviewNotifier;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Mail;
 
@@ -55,6 +56,12 @@ final class ReconcilePendingVerifications extends Command
                             if ($creatorEmail) {
                                 Mail::raw('A buyer payment needs your review in Linket.', fn ($message) => $message->to($creatorEmail)->subject('Payment needs review'));
                             }
+                            if ($updated) {
+                                $order = StorefrontOrder::query()->find($verification->payable_id);
+                                if ($order) {
+                                    app(CreatorPaymentReviewNotifier::class)->notify($order, $verification->id);
+                                }
+                            }
                         }
                         continue;
                     }
@@ -66,6 +73,10 @@ final class ReconcilePendingVerifications extends Command
                         StorefrontOrder::query()->whereKey($verification->payable_id)->whereIn('status', ['pending_payment', 'verifying'])->update(['status' => 'failed_verification']);
                     } elseif ($status === 'manual_review' && $verification->payable_type === StorefrontOrder::class) {
                         StorefrontOrder::query()->whereKey($verification->payable_id)->whereIn('status', ['pending_payment', 'verifying'])->update(['status' => 'manual_review']);
+                        $order = StorefrontOrder::query()->find($verification->payable_id);
+                        if ($order) {
+                            app(CreatorPaymentReviewNotifier::class)->notify($order, $verification->id);
+                        }
                     }
                 }
             });

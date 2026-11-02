@@ -6,6 +6,7 @@ use App\Payments\Models\DirectPaymentVerification;
 use App\Payments\Models\VerifyEtWebhookDelivery;
 use App\Payments\VerifyEt\VerifyEtGateway;
 use App\Storefront\Models\StorefrontOrder;
+use App\Storefront\Services\CreatorPaymentReviewNotifier;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -55,6 +56,13 @@ final class ProcessVerifyEtWebhook implements ShouldQueue
             StorefrontOrder::query()->whereKey($verification->payable_id)->whereIn('status', ['verifying', 'pending_payment'])->update([
                 'status' => $status === 'mismatch' ? 'failed_verification' : 'manual_review',
             ]);
+
+            if ($status === 'manual_review') {
+                $order = StorefrontOrder::query()->find($verification->payable_id);
+                if ($order) {
+                    app(CreatorPaymentReviewNotifier::class)->notify($order, $verification->id);
+                }
+            }
         }
     }
 }

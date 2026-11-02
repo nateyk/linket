@@ -6,6 +6,7 @@ use App\Payments\VerifyEt\VerifyEtSettings;
 use App\Payments\Models\DirectPaymentVerification;
 use App\Payments\VerifyEt\VerifyEtGateway;
 use App\Storefront\Models\StorefrontOrder;
+use App\Storefront\Services\CreatorPaymentReviewNotifier;
 use App\Storefront\Resources\PublicStorefrontOrderResource;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
@@ -60,6 +61,7 @@ final class OrderPaymentController extends Controller
                 $order->update(['status' => 'failed_verification']);
             } elseif ($status === 'manual_review') {
                 $order->update(['status' => 'manual_review']);
+                app(CreatorPaymentReviewNotifier::class)->notify($order, $verification->id);
             }
         }
 
@@ -164,6 +166,7 @@ final class OrderPaymentController extends Controller
             $order->update(['status' => 'failed_verification']);
         } elseif ($status === 'manual_review') {
             $order->update(['status' => 'manual_review']);
+            app(CreatorPaymentReviewNotifier::class)->notify($order, $verification->id);
         }
 
         return ['status' => $order->fresh()->status, 'order_id' => $order->uuid];

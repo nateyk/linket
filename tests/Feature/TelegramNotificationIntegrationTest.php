@@ -52,6 +52,7 @@ class TelegramNotificationIntegrationTest extends TestCase
 
     public function test_valid_private_start_update_links_creator_once(): void
     {
+        \Illuminate\Support\Facades\Notification::fake();
         $user = User::factory()->create(['email_verified_at' => now()]);
         $plainToken = 'SyntheticTelegramLinkToken1234567890';
 
@@ -98,6 +99,24 @@ class TelegramNotificationIntegrationTest extends TestCase
             'X-Telegram-Bot-Api-Secret-Token',
             'synthetic-webhook-secret',
         )->postJson('/integrations/telegram/webhook', $payload)->assertNoContent();
+
+        \Illuminate\Support\Facades\Notification::assertSentToTimes(
+            $user,
+            \App\Telegram\Notifications\TelegramConnectedNotification::class,
+            1,
+        );
+        \Illuminate\Support\Facades\Notification::assertSentTo(
+            $user,
+            \App\Telegram\Notifications\TelegramConnectedNotification::class,
+            function ($notification) use ($user, $plainToken): bool {
+                $message = $notification->toTelegram($user);
+                $this->assertSame(1234567890123, $message->getPayloadValue('chat_id'));
+                $body = json_encode($message->toArray(), JSON_THROW_ON_ERROR);
+                $this->assertStringNotContainsString($plainToken, $body);
+
+                return true;
+            },
+        );
 
         $this->assertSame(1, \DB::table('telegram_webhook_updates')->count());
         $this->assertSame(1, \DB::table('telegram_connections')->count());

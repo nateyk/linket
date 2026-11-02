@@ -37,7 +37,15 @@ class FreeSaleLateVerificationInvariantTest extends TestCase
 
     public function testVerifiedLatePaymentIsHeldWithoutSpendingAnotherOrdersReservedAllowance(): void
     {
+        \Illuminate\Support\Facades\Notification::fake();
+        config()->set('services.telegram.enabled', true);
+        config()->set('services.telegram.token', 'synthetic-bot-token');
         [$creator, $product] = $this->creatorAndProduct();
+        $creator->telegramConnection()->create([
+            'telegram_user_id' => 1234567890111,
+            'telegram_chat_id' => 1234567890111,
+            'connected_at' => now(),
+        ]);
         $oldOrder = $this->checkout($product);
         $this->expireAndRelease($oldOrder);
         $replacement = $this->checkout($product);
@@ -62,11 +70,22 @@ class FreeSaleLateVerificationInvariantTest extends TestCase
         $this->assertSame('manual_review', app(VerifyEtGateway::class)->processResult($verification, $evidence));
         $this->assertSame(0, $oldOrder->entitlements()->count());
         $this->assertSame('reserved', $this->rowStatus($replacement));
+        \Illuminate\Support\Facades\Notification::assertSentToTimes(
+            $creator, \App\Storefront\Notifications\PaymentReviewNeededNotification::class, 1,
+        );
     }
 
     public function testAReleasedOrderReclaimsCapacityWhenItIsStillAvailable(): void
     {
+        \Illuminate\Support\Facades\Notification::fake();
+        config()->set('services.telegram.enabled', true);
+        config()->set('services.telegram.token', 'synthetic-bot-token');
         [$creator, $product] = $this->creatorAndProduct();
+        $creator->telegramConnection()->create([
+            'telegram_user_id' => 1234567890222,
+            'telegram_chat_id' => 1234567890222,
+            'connected_at' => now(),
+        ]);
         $oldOrder = $this->checkout($product);
         $this->expireAndRelease($oldOrder);
         $verification = $this->verificationFor($oldOrder);
@@ -80,6 +99,9 @@ class FreeSaleLateVerificationInvariantTest extends TestCase
             app(CreatorVerificationAllowance::class)->usage($creator, 1));
         $this->assertSame('success', app(VerifyEtGateway::class)->processResult($verification, $evidence));
         $this->assertSame(1, $oldOrder->entitlements()->count());
+        \Illuminate\Support\Facades\Notification::assertSentToTimes(
+            $creator, \App\Storefront\Notifications\FreeQuotaMilestoneNotification::class, 1,
+        );
     }
 
     public function testHeldVerifiedPaymentCanSettleAfterTheReservedSlotBecomesAvailable(): void

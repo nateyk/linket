@@ -21,7 +21,9 @@ type PreferenceKey =
   | 'product_moderation'
   | 'payment_disputes'
   | 'pro_billing'
-  | 'receiving_accounts';
+  | 'receiving_accounts'
+  | 'free_sales_quota'
+  | 'payment_review';
 
 type TelegramState = {
   enabled: boolean;
@@ -63,9 +65,19 @@ const preferenceRows: {key: PreferenceKey; label: string; description: string}[]
     description: 'Know when Linket reviews, registers, suspends or restores a receiving account.',
   },
   {
+    key: 'free_sales_quota',
+    label: 'Free sales allowance',
+    description: 'Receive milestone alerts as you approach your free verified-sale limit.',
+  },
+  {
+    key: 'payment_review',
+    label: 'Payment review',
+    description: 'Know when a submitted buyer payment requires review in Linket.',
+  },
+  {
     key: 'pro_billing',
     label: 'Pro billing reminders',
-    description: 'Receive reminders about upcoming Linket Pro renewal.',
+    description: 'Receive Pro activation, renewal, past-due and expiry updates.',
   },
 ];
 
@@ -75,6 +87,7 @@ export function Component() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [testSent, setTestSent] = useState(false);
   const [disconnectOpen, setDisconnectOpen] = useState(false);
 
   const load = useCallback(async () => {
@@ -122,6 +135,7 @@ export function Component() {
       preferences,
     });
     setSaved(false);
+    setTestSent(false);
     setError(false);
 
     try {
@@ -141,9 +155,10 @@ export function Component() {
     setBusy(true);
     setError(false);
     setSaved(false);
+    setTestSent(false);
     try {
       await apiClient.post('/api/v1/integrations/telegram/test');
-      setSaved(true);
+      setTestSent(true);
     } catch {
       setError(true);
     } finally {
@@ -292,6 +307,11 @@ export function Component() {
                 {saved ? (
                   <p role="status" className="text-sm text-positive">
                     <Trans message="Telegram notification preferences updated." />
+                  </p>
+                ) : null}
+                {testSent ? (
+                  <p role="status" className="text-sm text-positive">
+                    <Trans message="Test notification sent." />
                   </p>
                 ) : null}
                 {error ? (

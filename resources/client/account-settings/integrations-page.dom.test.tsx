@@ -34,6 +34,9 @@ const connected = {
     product_moderation: true,
     payment_disputes: true,
     pro_billing: true,
+    receiving_accounts: true,
+    free_sales_quota: true,
+    payment_review: true,
   },
 };
 
@@ -66,6 +69,9 @@ it('shows the connected Telegram integration and notification preferences', asyn
   expect(screen.getByLabelText('Product moderation').getAttribute('aria-checked')).toBe('true');
   expect(screen.getByLabelText('Payment disputes').getAttribute('aria-checked')).toBe('true');
   expect(screen.getByLabelText('Pro billing reminders').getAttribute('aria-checked')).toBe('true');
+  expect(screen.getByLabelText('Free sales allowance').getAttribute('aria-checked')).toBe('true');
+  expect(screen.getByLabelText('Payment review').getAttribute('aria-checked')).toBe('true');
+
 });
 
 it('saves an event preference without disconnecting Telegram', async () => {
@@ -82,6 +88,31 @@ it('saves an event preference without disconnecting Telegram', async () => {
     ),
   );
   expect(api.delete).not.toHaveBeenCalled();
+});
+
+it('lets creators mute payment-review Telegram alerts without disconnecting', async () => {
+  render(<Component />);
+  fireEvent.click(await screen.findByLabelText('Payment review'));
+
+  await waitFor(() => expect(api.patch).toHaveBeenCalledWith(
+    '/api/v1/integrations/telegram',
+    expect.objectContaining({
+      notifications_enabled: true,
+      preferences: expect.objectContaining({payment_review: false}),
+    }),
+  ));
+  expect(api.delete).not.toHaveBeenCalled();
+});
+
+it('confirms a Telegram test message without claiming preferences changed', async () => {
+  render(<Component />);
+  fireEvent.click(await screen.findByRole('button', {name: 'Send test'}));
+
+  await waitFor(() =>
+    expect(api.post).toHaveBeenCalledWith('/api/v1/integrations/telegram/test'),
+  );
+  expect(await screen.findByText('Test notification sent.')).toBeTruthy();
+  expect(screen.queryByText('Telegram notification preferences updated.')).toBeNull();
 });
 
 it('starts the existing one-time Telegram connection flow when disconnected', async () => {
