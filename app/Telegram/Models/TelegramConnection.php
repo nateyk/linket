@@ -15,7 +15,17 @@ final class TelegramConnection extends Model
         'telegram_chat_id' => 'integer',
         'connected_at' => 'datetime',
         'last_seen_at' => 'datetime',
+        'notifications_enabled' => 'boolean',
+        'notification_preferences' => 'array',
     ];
+
+    /** @return array<string, bool> */
+    public function notificationPreferences(): array
+    {
+        return \App\Telegram\Support\TelegramNotificationPreferences::normalize(
+            $this->notification_preferences,
+        );
+    }
 
     public function user(): BelongsTo
     {

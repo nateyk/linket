@@ -80,3 +80,81 @@ After deploying the code:
 7. Test a synthetic Verify.et-backed sale and confirm Telegram delivery happens only after the order is paid.
 
 Do not use a production payment reference merely to test Telegram.
+
+
+## Account settings integration
+
+Creators manage Telegram from:
+
+```text
+Account Settings → Integrations → Telegram
+```
+
+The page uses the existing one-time private-chat connection flow. A connected creator can pause Telegram globally or enable/disable these event groups independently:
+
+- verified sales
+- service inquiries
+- product moderation
+- creator-side payment disputes
+- Pro billing reminders
+
+These preferences affect Telegram only. Existing mail/database delivery continues according to each notification's own routing.
+
+Disconnecting Telegram removes the routing connection immediately. Reconnecting creates a new short-lived one-time link token.
+
+## Admin integration operations
+
+Administrators with both `admin.access` and `settings.update` manage operational readiness from:
+
+```text
+Admin → Settings → Integrations → Telegram
+```
+
+The admin surface is intentionally operational, not a credential editor. It can show:
+
+- whether Telegram is enabled
+- whether the bot token, bot username and webhook secret are configured
+- the public webhook URL
+- connected creator counts
+- notification-enabled creator counts
+- effective link-token lifetime and HTTP timeout values
+- safe remote webhook status after synchronization
+
+It can also:
+
+- synchronize the webhook with Telegram using `allowed_updates=["message"]`
+- send a non-financial test notification to the current admin when that admin has connected Telegram
+
+`TELEGRAM_BOT_TOKEN` and `TELEGRAM_WEBHOOK_SECRET` are never returned to the browser, stored in Linket settings, partially masked for display, or exposed through these endpoints.
+
+The admin API routes are:
+
+```text
+GET  /api/v1/admin/integrations/telegram
+POST /api/v1/admin/integrations/telegram/webhook/sync
+POST /api/v1/admin/integrations/telegram/test
+```
+
+The creator API also supports:
+
+```text
+PATCH /api/v1/integrations/telegram
+```
+
+for Telegram-only global and per-event preferences.
+
+## Deployment order for preference support
+
+The Telegram connection schema now includes notification preference columns. During deployment:
+
+1. Put the Telegram environment variables in the production secret/config environment.
+2. Run database migrations before restarting web or queue workers.
+3. Rebuild the Laravel configuration cache.
+4. Restart Horizon/queue workers.
+5. Open **Admin → Settings → Integrations → Telegram** and confirm the integration reports **Ready**.
+6. Use **Sync webhook** to register/refresh the HTTPS webhook.
+7. Connect a dedicated admin/test Telegram account through **Account Settings → Integrations**.
+8. Send the safe test notification.
+9. Test a normal non-financial creator event before validating verified-sale notification delivery.
+
+Never use a real payment reference only to test Telegram.

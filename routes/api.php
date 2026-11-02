@@ -46,6 +46,7 @@ use App\Biolinks\Controllers\BiolinksController;
 use App\Biolinks\Controllers\BiolinkWidgetsController;
 use App\Biolinks\Controllers\CreatorProfileController;
 use App\TrackingPixels\Controllers\TrackingPixelsController;
+use App\Telegram\Controllers\AdminTelegramIntegrationController;
 use App\Telegram\Controllers\TelegramConnectionController;
 use App\Webhooks\Controllers\WebhookAttemptsController;
 use App\Webhooks\Controllers\WebhooksController;
@@ -119,7 +120,17 @@ Route::group(['prefix' => 'v1'], function() {
             Route::get('/', [TelegramConnectionController::class, 'show']);
             Route::post('connect', [TelegramConnectionController::class, 'connect'])
                 ->middleware('throttle:10,1');
+            Route::patch('/', [TelegramConnectionController::class, 'update'])
+                ->middleware('throttle:30,1');
             Route::delete('/', [TelegramConnectionController::class, 'disconnect']);
+        });
+
+        Route::middleware('auth')->prefix('admin/integrations/telegram')->group(function () {
+            Route::get('/', [AdminTelegramIntegrationController::class, 'show']);
+            Route::post('webhook/sync', [AdminTelegramIntegrationController::class, 'syncWebhook'])
+                ->middleware('throttle:10,1');
+            Route::post('test', [AdminTelegramIntegrationController::class, 'sendTest'])
+                ->middleware('throttle:10,1');
         });
 
         // BLOG (admin)

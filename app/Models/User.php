@@ -85,7 +85,9 @@ class User extends BaseUser
             return null;
         }
 
-        return $this->telegramConnection()->value('telegram_chat_id');
+        return $this->telegramConnection()
+            ->where('notifications_enabled', true)
+            ->value('telegram_chat_id');
     }
 
     public function linkOverlays(): HasMany

@@ -4,6 +4,7 @@ namespace App\Storefront\Notifications;
 
 use App\Storefront\Models\StorefrontOrder;
 use App\Telegram\Support\TelegramNotificationChannels;
+use App\Telegram\Support\TelegramNotificationPreferences;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
@@ -26,7 +27,11 @@ final class VerifiedSaleNotification extends Notification implements ShouldQueue
 
     public function via(object $notifiable): array
     {
-        return TelegramNotificationChannels::append($notifiable, []);
+        return TelegramNotificationChannels::append(
+            $notifiable,
+            [],
+            TelegramNotificationPreferences::VERIFIED_SALES,
+        );
     }
 
     public function viaQueues(): array

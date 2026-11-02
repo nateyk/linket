@@ -4,6 +4,7 @@ namespace App\CreatorServices\Notifications;
 
 use App\CreatorServices\Models\ServiceInquiry;
 use App\Telegram\Support\TelegramNotificationChannels;
+use App\Telegram\Support\TelegramNotificationPreferences;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -29,6 +30,7 @@ class NewServiceInquiryNotification extends Notification implements ShouldQueue
         return TelegramNotificationChannels::append(
             $notifiable,
             ['mail', 'database'],
+            TelegramNotificationPreferences::SERVICE_INQUIRIES,
         );
     }
 
