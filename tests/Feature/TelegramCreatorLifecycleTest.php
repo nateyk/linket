@@ -186,9 +186,9 @@ final class TelegramCreatorLifecycleTest extends TestCase
         $this->assertTrue($pro->shouldSend($creator, 'telegram'));
         $this->assertFalse($pro->shouldSend($other, 'telegram'));
 
-        $creator->telegramConnection()->update([
+        $creator->telegramConnection()->firstOrFail()->forceFill([
             'notification_preferences' => ['payment_review' => false, 'pro_billing' => false],
-        ]);
+        ])->save();
         $this->assertFalse($review->shouldSend($creator->fresh(), 'telegram'));
         $this->assertFalse($pro->shouldSend($creator->fresh(), 'telegram'));
     }
