@@ -11,13 +11,18 @@ vi.mock('@ui/i18n/use-trans', () => ({useTrans: () => ({trans: ({message}: {mess
 vi.mock('@app/account-settings/account-settings-page-layout', () => ({
   AccountSettingsPageLayout: ({
     children,
+    title,
     headerRightContent,
   }: {
     children: React.ReactNode;
+    title?: React.ReactNode;
     headerRightContent?: React.ReactNode;
   }) => (
     <main>
-      <header>{headerRightContent}</header>
+      <header>
+        <h1>{title}</h1>
+        {headerRightContent}
+      </header>
       {children}
     </main>
   ),
@@ -51,7 +56,8 @@ it('lists, creates, resubmits and changes activation through the page', async ()
   fireEvent.click(screen.getByRole('button', {name: 'Submit account for review'}));
   await waitFor(() => expect(api.post).toHaveBeenCalledWith('/api/v1/storefront/payment-methods', expect.any(FormData)));
   expect((api.post.mock.calls[0][1] as FormData).get('account_number')).toBe('0912345678');
-  fireEvent.click(screen.getByRole('button', {name: 'Edit account'}));
+  fireEvent.click(screen.getByRole('button', {name: 'Account actions'}));
+  fireEvent.click(await screen.findByRole('menuitem', {name: 'Edit account'}));
   fireEvent.change(screen.getByLabelText('Account or wallet number'), {target: {value: '0912345679'}});
   fireEvent.change(screen.getByLabelText('Ownership evidence'), {target: {files: [new File(['proof'], 'proof.pdf', {type: 'application/pdf'})]}});
   fireEvent.click(screen.getByRole('button', {name: 'Submit account for review'}));
@@ -73,7 +79,10 @@ it('explains pending and rejected approvals without offering activation', async 
   render(<Component />);
   expect(await screen.findByText('Pending review')).toBeTruthy();
   expect(screen.getByText('Rejected')).toBeTruthy();
-  expect(screen.queryByRole('button', {name: 'Account actions'})).toBeNull();
+  expect(screen.getAllByRole('button', {name: 'Account actions'})).toHaveLength(2);
+  fireEvent.click(screen.getAllByRole('button', {name: 'Account actions'})[0]);
+  expect(screen.queryByRole('menuitem', {name: 'Activate'})).toBeNull();
+  expect(screen.queryByRole('menuitem', {name: 'Deactivate'})).toBeNull();
 });
 
 
