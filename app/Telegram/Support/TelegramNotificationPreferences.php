@@ -10,6 +10,8 @@ final class TelegramNotificationPreferences
     public const PAYMENT_DISPUTES = 'payment_disputes';
     public const PRO_BILLING = 'pro_billing';
     public const RECEIVING_ACCOUNTS = 'receiving_accounts';
+    public const FREE_SALES_QUOTA = 'free_sales_quota';
+    public const PAYMENT_REVIEW = 'payment_review';
 
     /** @return list<string> */
     public static function keys(): array
@@ -21,6 +23,8 @@ final class TelegramNotificationPreferences
             self::PAYMENT_DISPUTES,
             self::PRO_BILLING,
             self::RECEIVING_ACCOUNTS,
+            self::FREE_SALES_QUOTA,
+            self::PAYMENT_REVIEW,
         ];
     }
 

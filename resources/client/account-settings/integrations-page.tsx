@@ -21,7 +21,9 @@ type PreferenceKey =
   | 'product_moderation'
   | 'payment_disputes'
   | 'pro_billing'
-  | 'receiving_accounts';
+  | 'receiving_accounts'
+  | 'free_sales_quota'
+  | 'payment_review';
 
 type TelegramState = {
   enabled: boolean;
@@ -63,9 +65,19 @@ const preferenceRows: {key: PreferenceKey; label: string; description: string}[]
     description: 'Know when Linket reviews, registers, suspends or restores a receiving account.',
   },
   {
+    key: 'free_sales_quota',
+    label: 'Free sales allowance',
+    description: 'Receive milestone alerts as you approach your free verified-sale limit.',
+  },
+  {
+    key: 'payment_review',
+    label: 'Payment review',
+    description: 'Know when a submitted buyer payment requires review in Linket.',
+  },
+  {
     key: 'pro_billing',
     label: 'Pro billing reminders',
-    description: 'Receive reminders about upcoming Linket Pro renewal.',
+    description: 'Receive Pro activation, renewal, past-due and expiry updates.'
   },
 ];
 

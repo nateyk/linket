@@ -91,6 +91,9 @@ final class DirectStorefrontFulfillment
                     $fulfilledOrder->creator->notify(
                         new VerifiedSaleNotification($fulfilledOrder->id),
                     );
+                    if ($fulfilledOrder->monetization_policy === CreatorVerificationAllowance::FREE_POLICY) {
+                        app(CreatorQuotaTelegramNotifier::class)->notifyFromVerifiedOrder($fulfilledOrder);
+                    }
                 }
             } catch (\Throwable $exception) {
                 report($exception);
