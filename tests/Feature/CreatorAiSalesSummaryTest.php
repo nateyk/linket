@@ -40,7 +40,7 @@ function creatorAiSalesOrder(User $creator, DigitalProduct $product, array $attr
         'digital_product_id' => $product->id,
         'buyer_name' => 'PRIVATE BUYER NAME',
         'buyer_email' => 'private-buyer@example.test',
-        'payment_reference' => 'PRIVATE-TRANSACTION-REF',
+        'payment_reference' => 'PRIVATE-TRANSACTION-REF-'.Str::upper(Str::random(12)),
         'currency' => 'ETB',
         'gross_amount_cents' => 10000,
         'commission_bps' => 0,
