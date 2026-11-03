@@ -16,6 +16,8 @@ return [
         'product_performance' => env('CREATOR_AI_PRODUCT_PERFORMANCE_ENABLED', false),
         'order_insights' => env('CREATOR_AI_ORDER_INSIGHTS_ENABLED', false),
         'mcp' => env('CREATOR_AI_MCP_ENABLED', false),
+        // Separate, default-OFF public OAuth protocol gate; MCP reports may remain internal.
+        'mcp_oauth' => env('CREATOR_AI_MCP_OAUTH_ENABLED', false),
         'forecast' => env('CREATOR_AI_FORECAST_ENABLED', false),
         'writing_basic' => env('CREATOR_AI_WRITING_BASIC_ENABLED', false),
         'writing_advanced' => env('CREATOR_AI_WRITING_ADVANCED_ENABLED', false),
