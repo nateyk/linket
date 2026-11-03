@@ -43,6 +43,16 @@ final class CreatorAiAccess
             || $this->hasCurrentVerifiedPro($creator);
     }
 
+    /**
+     * Reuse the same current, Verify.et-backed Pro proof for generation
+     * accounting. A dashboard feature flag must not change the creator's
+     * actual billing tier or the shared per-creator quota.
+     */
+    public function verifiedPro(User $creator): bool
+    {
+        return $creator->exists && $this->hasCurrentVerifiedPro($creator);
+    }
+
     public function authorize(User $creator, int $workspaceId, string $ability): void
     {
         abort_unless($this->allows($creator, $workspaceId, $ability), 403);
