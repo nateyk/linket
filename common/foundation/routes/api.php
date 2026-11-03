@@ -230,6 +230,14 @@ Route::group(['prefix' => 'v1'], function () {
         Route::post('billing/direct/invoices/{invoice}/reference', [DirectBillingController::class, 'submitInvoiceReference'])->middleware(['auth:sanctum', 'throttle:10,1']);
         Route::get('billing/chapa/transactions/{txRef}', [ChapaController::class, 'status'])->middleware('throttle:60,1');
 
+        // CREATOR AI: deny by default, independently authorized per service.
+        Route::get('creator-ai/sales-summary', [\\App\\CreatorAi\\Controllers\\CreatorAiReportsController::class, 'salesSummary'])
+            ->middleware(['auth:sanctum', 'throttle:30,1']);
+        Route::get('creator-ai/order-insights', [\\App\\CreatorAi\\Controllers\\CreatorAiReportsController::class, 'orderInsights'])
+            ->middleware(['auth:sanctum', 'throttle:30,1']);
+        Route::get('creator-ai/product-performance', [\\App\\CreatorAi\\Controllers\\CreatorAiReportsController::class, 'productPerformance'])
+            ->middleware(['auth:sanctum', 'throttle:30,1']);
+
         // CREATOR STOREFRONT
         Route::post('storefront/products/{digitalProduct}/duplicate', [DigitalProductsController::class, 'duplicate']);
         Route::post('storefront/products/{digitalProduct}/archive', [DigitalProductsController::class, 'archive']);
