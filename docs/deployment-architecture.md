@@ -12,8 +12,8 @@
 
 | Layer | Evidence | Value |
 |---|---|---|
-| PHP | `composer.json:11` `php >=8.2` ; `.ddev/config.yaml` php_version 8.4 ; `ddev exec php -v` 8.4.22 | **Require >=8.2, CI pins 8.4** |
-| Laravel | `composer.json:34` `laravel/framework ^12.0`; `php artisan --version` 12.67.0 | **12.x** |
+| PHP | `composer.json` requires `php >=8.3`; CI pins PHP 8.4 | **Require >=8.3, CI pins 8.4** |
+| Laravel | `composer.json` requires `laravel/framework ^13.0`; locked baseline 13.38.0 | **13.x** |
 | Node | `.ddev/config.yaml` nodejs_version 24; `package.json` engines `^22.22.2 \|\| ^24.15.0 \|\| >=26.0.0`, vite 8 | **Node 24, Vite 8, `npm ci` + `vite build`** (jsdom 30 requires >=22.22.2) |
 | DB | `common/foundation/config/database.php` mysql/mariadb, migrations 81 files under `database/migrations` | MySQL 8.0, `DB_PREFIX` empty by default |
 | Cache / Queue | `env.example:32-42` `CACHE_STORE=file`, `QUEUE_CONNECTION=sync` locally ; `docs/production-operations.md:25-37` production `redis` + `HORIZON_PREFIX=linket_horizon:` ; `config/horizon.php:5-48` | Production must be `redis`; local sync is dev-only |
@@ -593,7 +593,7 @@ Each `releases/<id>` contains:
 
 ### 15.1 Pre-deploy (read-only)
 
-- [ ] Run `bash deploy/cpanel-discovery.sh` on cPanel — paste output to cutover log, resolve any REQUIRED FAIL.
+- [ ] Run `bash deploy/cpanel-discovery.sh` on cPanel — paste output to cutover log, resolve every REQUIRED FAIL, and supply manual evidence for every UNKNOWN. Exit 2 means incomplete evidence, not readiness.
 - [ ] Confirm `shared/.env` on server matches `docs/production-operations.md` HTTPS/ trusted proxy / redis / horizon block; `TRUSTED_PROXIES` is exact, not `*`; `APP_DEBUG=false`.
 - [ ] Verify `~/linket/shared/storage` is writable, `shared/storage/app/digital-products` exists, `bootstrap/cache` writable (least-privilege 775/640).
 - [ ] Confirm Cron entry exists: `* * * * * cd ~/linket/current && $PHP_BINARY artisan schedule:run …` (check `crontab -l`).

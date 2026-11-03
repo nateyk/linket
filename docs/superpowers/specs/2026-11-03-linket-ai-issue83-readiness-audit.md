@@ -2,7 +2,7 @@
 
 > **Status:** Documentation review / technical baseline; **implementation and production readiness: NO-GO (insufficient evidence + blockers).**  
 > **Repository baseline:** `nateyk/linket`, `main` commit `bd1420b069851c36b1bf3772a8a4c343555bf96f` (2026-11-03 03:40 UTC).  
-> **Scope:** Only GitHub repository and public official documentation were inspected. No production server access, DB/test execution, key creation, secrets, application code or settings changes.  
+> **Scope:** GitHub repository and current official documentation were inspected. No production server access, production DB action, key creation, secret access, deployment or merge occurred. The unified feature branch contains documentation and safety-default changes only.  
 > **Approved architecture:** [Notion Q1–Q10 specification](https://app.notion.com/p/40dbae7367ac814c8113f936f729c6ad) · [Issue #83](https://github.com/nateyk/linket/issues/83) · [Epic #82](https://github.com/nateyk/linket/issues/82).
 
 ## Executive decision
@@ -17,7 +17,7 @@
 | Laravel AI | `composer.lock`: `laravel/ai v1.3.0`; `config/ai.php` has OpenAI and Gemini provider definitions | Dependency available; creator assistant not proven implemented |
 | Laravel MCP | `composer.lock`: `laravel/mcp v1.1.1`; no runtime `Mcp::web` registration found in targeted source search (examples exist in skills) | Package present; working remote server unverified |
 | OAuth | `laravel/passport` absent from `composer.json` and `composer.lock`; current `User` imports `Laravel\\Sanctum\\HasApiTokens` | **BLOCKER** for package's built-in MCP OAuth |
-| CI | [2026-11-03 main push run 41573563141](https://github.com/nateyk/linket/actions/runs/41573563141): Verify (PHP 8.4 + Node 24 + MySQL 8.0) completed **success** on exact baseline SHA | Confirmed historical run, not newly executed tests |
+| CI | Main baseline run 41573563141 and unified-branch run [41591658207](https://github.com/nateyk/linket/actions/runs/41591658207) completed **success** | Confirmed GitHub CI evidence; OAuth/MCP tests are still not implemented |
 | GitHub main protection | GitHub branch API returned `protected: false` on `main` | **Governance gap**; workflow protections alone can be bypassed |
 | CI lint | `.github/workflows/ci.yml` has `oxlint` ending with `|| echo` instead of strict exit | **Nonblocking lint**; harden for AI-related changes |
 | OpenAI provider | `config/ai.php` line for OpenAI: `'store' => env('OPENAI_STORE', true)` (Azure same default) | **Privacy risk / requires decision**; does not prove how production env is set |
@@ -35,6 +35,7 @@
 - Official Laravel MCP package implements web/HTTP MCP and emits OAuth metadata routes when configured; its server-side OAuth uses **Laravel Passport**. `Mcp::oauthRoutes()` registers well-known endpoints and can enable dynamic OAuth client registration, exposing the broad `mcp:use` scope. Without Passport, its registration implementation can error.
 - Official Laravel 13 Passport documentation describes authorization-code + PKCE, public OAuth clients, token management and authorization approval UI. The Passport 13 upgrade notes require Laravel >=11.35; Laravel 13 is within that minimum, but **exact composer dependency resolution against this lockfile remains untested**.
 - OpenAI ChatGPT Plugins OAuth requirements include HTTPS resource metadata, authorization-server metadata, S256 PKCE, exact redirect URI checks, `resource` parameter propagation, issuer/audience/scope checks, and CIMD/DCR/predefined-client handling. Do **not** assume `mcp:use` alone provides Linket fine-grained read-only permissions.
+- Official Laravel 13 documentation confirms `Mcp::oauthRoutes()` uses Passport, advertises a single `mcp:use` scope, and requires rate limiting for publicly accessible dynamic client registration. Official Passport guidance requires `Laravel\\Passport\\HasApiTokens` plus `OAuthenticatable`; Linket currently uses Sanctum's trait of the same short name, so coexistence must be implemented and regression-tested explicitly.
 
 ### Required design before code
 
@@ -66,7 +67,7 @@ Official references:
 - [OpenAI API data controls](https://developers.openai.com/api/docs/guides/your-data)
 - [OpenAI Plugins MCP OAuth](https://developers.openai.com/plugins/build/auth)
 - [Laravel 13 Passport](https://laravel.com/framework/docs/13.x/passport)
-- [Laravel MCP](https://github.com/laravel/mcp)
+- [Laravel 13 MCP](https://laravel.com/framework/docs/13.x/mcp)
 - [Laravel AI SDK](https://github.com/laravel/ai)
 
 ## 4. cPanel compatibility and preflight safety
@@ -129,16 +130,17 @@ Official references:
 - [ ] Remote OAuth/MCP metadata, S256, resource binding, audience/issuer, dynamic registration and revocation exercised.
 - [ ] cPanel **actual** PHP, TLS, DocumentRoot, rewrite, sessions, queue and staging integration proven.
 - [ ] Deployment/preflight script corrected (safe to inspect, version floor corrected, unknown != PASS).
-- [ ] Provider retention configuration and minimization policy implemented/verified.
+- [x] Provider SDK defaults changed to privacy-minimizing `store=false` on the unified feature branch.
+- [ ] Effective provider account retention controls, field minimization and request transport verified before any real creator data.
 - [ ] Strict AI/MCP security CI and Verify.et/fulfillment regression tests green.
 - [ ] GitHub branch protection or equivalent reviewed enforcement signed off.
 - [ ] Explicit owner GO/NO-GO and production approval after evidence.
 
-**Decision:** **NO-GO for implementation rollout and any production MCP/AI enablement.** This does not block safe, independently reviewed development of PR-02–PR-09 in isolated worktrees after architecture dependencies are reconciled. Issue #83 documentation can be reviewed now, but its *operational readiness gate* remains open.
+**Decision:** **NO-GO for production rollout and any production MCP/AI enablement.** This does not block safe development on the unified `feature/linket-ai-v1` branch. Issue #83's operational readiness gate remains open until OAuth, hosting and regression evidence is complete.
 
 ## 8. Immediate next work
 
-1. Review this report and the documentation-only draft PR; do not merge without approval.
+1. Continue focused work on `feature/linket-ai-v1`; do not merge or deploy without final approval.
 2. Create/track separate correction task for `deploy/cpanel-discovery.sh` and stale deployment docs, or include safely in the next governed infrastructure PR.
 3. Perform a **test-only** dependency resolution and API auth compatibility spike using Passport 13 with existing Sanctum auth, under disposable database and mock users.
 4. Request operator-provided **non-secret** cPanel readiness evidence (PHP CLI+web version, HTTPS metadata routing, safe DocumentRoot and worker capacity).
