@@ -204,6 +204,23 @@ final class CreatorMcpConnectionRegistry
                         'updated_at' => now(),
                     ]);
             }
+
+            // Passport stores access and refresh token IDs separately.
+            // Revoke both for this exact creator/grant inside the same DB
+            // transaction. Do not touch unrelated, unbound OAuth clients.
+            // Repeated disconnect also re-revokes any historical records.
+            $accessTokenIds = DB::table('creator_ai_mcp_oauth_token_bindings')
+                ->where('connection_id', $connectionId)
+                ->where('creator_id', $creator->getKey())
+                ->select('access_token_id');
+
+            DB::table('oauth_refresh_tokens')
+                ->whereIn('access_token_id', clone $accessTokenIds)
+                ->update(['revoked' => true]);
+
+            DB::table('oauth_access_tokens')
+                ->whereIn('id', $accessTokenIds)
+                ->update(['revoked' => true]);
         }, 3);
     }
 }
