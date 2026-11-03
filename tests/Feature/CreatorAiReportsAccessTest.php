@@ -83,20 +83,24 @@ function aiReportsActAs($test, User $creator): void
 function aiReportsPro(User $creator, bool $verified = true, bool $expired = false): void
 {
     settings()->save(['billing.enable' => true]);
-    $plan = Product::query()->create([
-        'name' => 'AI Pro synthetic '.Str::random(8),
-        'uuid' => (string) Str::uuid(),
-        'free' => false,
-        'is_default' => false,
-        'active' => true,
-    ]);
-    $price = Price::query()->create([
-        'product_id' => $plan->id,
-        'currency' => 'ETB',
-        'amount' => 500,
-        'interval' => 'month',
-        'interval_count' => 1,
-    ]);
+    $plan = Product::query()->where('system_key', 'pro')->first()
+        ?? Product::query()->create([
+            'name' => 'AI Pro synthetic',
+            'uuid' => (string) Str::uuid(),
+            'system_key' => 'pro',
+            'free' => false,
+            'is_default' => false,
+            'active' => true,
+        ]);
+    $price = Price::query()->where('product_id', $plan->id)
+        ->where('currency', 'ETB')->where('interval', 'month')->first()
+        ?? Price::query()->create([
+            'product_id' => $plan->id,
+            'currency' => 'ETB',
+            'amount' => 500,
+            'interval' => 'month',
+            'interval_count' => 1,
+        ]);
     $endsAt = $expired ? now()->subDay() : now()->addMonth();
 
     Subscription::query()->create([
