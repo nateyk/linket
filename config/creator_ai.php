@@ -27,6 +27,8 @@ return [
     // Exact canonical HTTPS resource used for OAuth RFC 8707 resource binding.
     // No fallback: if unset, MCP OAuth preflight fails closed even if enabled.
     'mcp_resource_url' => env('CREATOR_AI_MCP_RESOURCE_URL'),
+    // HTTPS issuer must be explicitly configured; no fallback to app URL.
+    'oauth_issuer' => env('CREATOR_AI_OAUTH_ISSUER'),
 
     'max_report_days' => 366,
     'max_orders_per_page' => 20,

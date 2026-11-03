@@ -4,6 +4,7 @@ namespace App\CreatorAi\Auth;
 
 use Illuminate\Support\ServiceProvider;
 use Laravel\Passport\Bridge\AuthCodeRepository as PassportAuthCodeRepository;
+use Laravel\Passport\Bridge\AccessTokenRepository as PassportAccessTokenRepository;
 use Laravel\Passport\Passport;
 
 /**
@@ -25,6 +26,12 @@ final class CreatorMcpOAuthServiceProvider extends ServiceProvider
         $this->app->bind(
             PassportAuthCodeRepository::class,
             CreatorMcpAuthCodeRepository::class,
+        );
+
+        $this->app->scoped(CreatorMcpPassportTokenIssuanceContext::class);
+        $this->app->bind(
+            PassportAccessTokenRepository::class,
+            CreatorMcpPassportAccessTokenRepository::class,
         );
 
         // Preserve any other scopes that were already registered.
