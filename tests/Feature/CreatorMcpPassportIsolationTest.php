@@ -49,5 +49,7 @@ test('OAuth MCP registration remains unavailable until the deployment feature fl
     // mere presence of a Composer package.
     expect(Route::has('linket.mcp'))->toBeFalse()
         ->and(Route::has('mcp.oauth.register'))->toBeFalse()
-        ->and(Route::has('mcp.oauth.protected-resource'))->toBeFalse();
+        ->and(Route::has('mcp.oauth.protected-resource'))->toBeFalse()
+        ->and(Route::has('passport.authorizations.authorize'))->toBeFalse()
+        ->and(Route::has('passport.token'))->toBeFalse();
 });
