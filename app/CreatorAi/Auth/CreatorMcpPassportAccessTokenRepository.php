@@ -9,6 +9,9 @@ use League\OAuth2\Server\Entities\AccessTokenEntityInterface;
 use League\OAuth2\Server\Entities\ClientEntityInterface;
 
 /**
+ * Passport's singleton AuthorizationServer retains this repository across
+ * Laravel request lifecycles. Resolve a NEW scoped context on each operation;
+ * never persist stale creator/connection data in a repository instance.
  * On a strictly scoped Linket OAuth exchange, persist + bind the token ID
  * within the same transaction. Ordinary Passport token issuance is unchanged.
  */
@@ -16,7 +19,6 @@ final class CreatorMcpPassportAccessTokenRepository extends PassportAccessTokenR
 {
     public function __construct(
         Dispatcher $events,
-        private readonly CreatorMcpPassportTokenIssuanceContext $context,
         private readonly CreatorMcpPassportTokenBindings $bindings,
     ) {
         parent::__construct($events);
@@ -27,7 +29,7 @@ final class CreatorMcpPassportAccessTokenRepository extends PassportAccessTokenR
         array $scopes,
         ?string $userIdentifier = null
     ): AccessTokenEntityInterface {
-        $grant = $this->context->current();
+        $grant = app(CreatorMcpPassportTokenIssuanceContext::class)->current();
 
         if ($grant === null) {
             return parent::getNewToken($clientEntity, $scopes, $userIdentifier);
@@ -50,7 +52,7 @@ final class CreatorMcpPassportAccessTokenRepository extends PassportAccessTokenR
     {
         parent::persistNewAccessToken($accessToken);
 
-        $grant = $this->context->current();
+        $grant = app(CreatorMcpPassportTokenIssuanceContext::class)->current();
         if ($grant === null) {
             return;
         }

@@ -14,13 +14,12 @@ use League\OAuth2\Server\Entities\AuthCodeEntityInterface;
  */
 final class CreatorMcpAuthCodeRepository extends PassportAuthCodeRepository
 {
-    public function __construct(
-        private readonly CreatorMcpPassportCodeIssuanceContext $context,
-    ) {}
+    // Passport retains this repository inside a singleton AuthorizationServer.
+    // Never capture a scoped consent context in this object's constructor.
 
     public function persistNewAuthCode(AuthCodeEntityInterface $code): void
     {
-        $approved = $this->context->requireApprovedGrant();
+        $approved = app(CreatorMcpPassportCodeIssuanceContext::class)->requireApprovedGrant();
         $scopes = array_map(static fn ($scope): string => $scope->getIdentifier(), $code->getScopes());
 
         abort_unless(
