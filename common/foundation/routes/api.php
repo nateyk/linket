@@ -231,11 +231,11 @@ Route::group(['prefix' => 'v1'], function () {
         Route::get('billing/chapa/transactions/{txRef}', [ChapaController::class, 'status'])->middleware('throttle:60,1');
 
         // CREATOR AI: deny by default, independently authorized per service.
-        Route::get('creator-ai/sales-summary', [\\App\\CreatorAi\\Controllers\\CreatorAiReportsController::class, 'salesSummary'])
+        Route::get('creator-ai/sales-summary', [\App\CreatorAi\Controllers\CreatorAiReportsController::class, 'salesSummary'])
             ->middleware(['auth:sanctum', 'throttle:30,1']);
-        Route::get('creator-ai/order-insights', [\\App\\CreatorAi\\Controllers\\CreatorAiReportsController::class, 'orderInsights'])
+        Route::get('creator-ai/order-insights', [\App\CreatorAi\Controllers\CreatorAiReportsController::class, 'orderInsights'])
             ->middleware(['auth:sanctum', 'throttle:30,1']);
-        Route::get('creator-ai/product-performance', [\\App\\CreatorAi\\Controllers\\CreatorAiReportsController::class, 'productPerformance'])
+        Route::get('creator-ai/product-performance', [\App\CreatorAi\Controllers\CreatorAiReportsController::class, 'productPerformance'])
             ->middleware(['auth:sanctum', 'throttle:30,1']);
 
         // CREATOR STOREFRONT
