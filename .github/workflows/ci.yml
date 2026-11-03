@@ -4,20 +4,93 @@ on:
   pull_request:
     branches: [main]
   push:
+    # One verified build of each main commit; feature PRs use pull_request.
     branches: [main]
+  # Verify an isolated branch manually before opening a PR when needed.
   workflow_dispatch:
 
-# CI PR pushes cancel stale runs; production deploys use separate concurrency group (queued)
+# Cancel obsolete CI work per event and PR/branch. Production deployment has
+# its own separate, non-cancelling concurrency group.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
-  verify:
-    name: Verify (PHP 8.4 + Node 24 + MySQL 8.0)
+  changes:
+    name: Classify changed files
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      run_php: ${{ steps.scope.outputs.run_php }}
+      run_node: ${{ steps.scope.outputs.run_node }}
+    steps:
+      # Keep this required workflow running even for docs-only PRs: GitHub
+      # may leave required checks pending when the entire workflow is skipped
+      # using on.pull_request.paths-ignore.
+      - name: Choose safe verification scope
+        id: scope
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          # Main must ALWAYS build its deployable artifact. A manually
+          # dispatched run also verifies everything.
+          if [[ "$EVENT_NAME" != 'pull_request' ]]; then
+            printf 'run_php=true\nrun_node=true\n' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # GitHub CLI is preinstalled on github-hosted Ubuntu runners.
+          # --paginate covers PRs changing more than 100 files. Fail closed
+          # if the API fails: never silently declare code changes docs-only.
+          files="$(gh api --paginate \
+            "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/files?per_page=100" \
+            --jq '.[].filename')"
+          run_php=false
+          run_node=false
+          if [[ -z "$files" ]]; then
+            run_php=true
+            run_node=true
+          else
+            while IFS= read -r file; do
+              case "$file" in
+                # Docs-only patterns are intentionally narrow so MDX or
+                # Markdown imported by application code is not missed.
+                docs/*|README.md|CHANGELOG.md|CONTRIBUTING.md|SECURITY.md|.github/ISSUE_TEMPLATE/*|.github/PULL_REQUEST_TEMPLATE.md)
+                  ;;
+                # PHP/server-only changes (Composer is deliberately separate).
+                *.php|composer.json|composer.lock|phpunit.xml|database/*)
+                  run_php=true
+                  ;;
+                # Only known frontend paths are safe to treat as Node-only.
+                resources/client/*|resources/scripts/*|tests/js/*|common/foundation/resources/client/*|modules/*/resources/client/*|package.json|package-lock.json|vite.config.ts|tsconfig.json|tsconfig.*.json)
+                  run_node=true
+                  ;;
+                # Any ambiguous file can affect both systems. In particular,
+                # other scripts, YAML, env, config, and workflow changes run both.
+                *)
+                  run_php=true
+                  run_node=true
+                  ;;
+              esac
+            done <<< "$files"
+          fi
+          printf 'run_php=%s\nrun_node=%s\n' "$run_php" "$run_node" >> "$GITHUB_OUTPUT"
+          echo "Verification scope: PHP=$run_php, Node=$run_node"
+
+  php:
+    name: PHP tests and security (8.4 / MySQL 8.0)
+    needs: changes
+    if: ${{ needs.changes.outputs.run_php == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
@@ -29,40 +102,48 @@ jobs:
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="mysqladmin ping -h localhost -proot"
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot --silent"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=10
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Checkout (shallow)
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          persist-credentials: false
 
       - name: Setup PHP 8.4
         uses: shivammathur/setup-php@v2
         with:
-          php-version: "8.4"
+          php-version: '8.4'
           extensions: mbstring, pdo_mysql, gd, zip, bcmath, exif, redis, curl, openssl, fileinfo
           coverage: none
           tools: composer:v2
 
-      - name: Cache Composer dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.composer/cache/files
-          key: composer-${{ hashFiles('**/composer.lock') }}
-          restore-keys: composer-
+      # The old hardcoded ~/.composer/cache/files did not exist on Ubuntu;
+      # successful prior runs reported a cache Path Validation Error.
+      - name: Discover real Composer download cache
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
 
-      - name: Create synthetic CI env (no production secrets)
+      - name: Cache Composer package archives (not vendor)
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-php84-composer-${{ hashFiles('composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php84-composer-
+
+      - name: Create synthetic test environment (no production credentials)
+        shell: bash
         run: |
           set -euo pipefail
-          # env.example lacks APP_KEY and has INSTALLED=false; synthesize a minimal .env for CI
           cp env.example .env
-          # Ensure app is considered installed so CommonServiceProvider registers api middleware (optionalAuth etc.)
           sed -i 's/^INSTALLED=.*/INSTALLED=true/' .env
-          grep -q "^INSTALLED=true" .env || echo "INSTALLED=true" >> .env
+          grep -q '^INSTALLED=true' .env || echo 'INSTALLED=true' >> .env
           echo "APP_KEY=base64:$(php -r 'echo base64_encode(random_bytes(32));')" >> .env
-          # Override to CI-safe values — never use production redis/hosts
           cat >> .env <<'EOF'
           APP_ENV=testing
           APP_DEBUG=false
@@ -80,65 +161,54 @@ jobs:
           REDIS_HOST=127.0.0.1
           MAIL_MAILER=array
           EOF
-          # Verify synthetic env does not contain production marker
-          ! grep -q "CHASECK_TEST" .env || { echo "Synthetic env leaked real Chapa test key"; exit 1; }
+          ! grep -q 'CHASECK_TEST' .env || { echo 'Unexpected payment test key in CI env'; exit 1; }
 
-      - name: Composer install
+      - name: Install Composer dependencies
         run: composer install --prefer-dist --no-interaction --no-progress
         env:
           COMPOSER_AUDIT_ABANDONED: ignore
 
-      - name: Ensure a valid APP_KEY
+      - name: Ensure APP_KEY
         run: php artisan key:generate --force
 
-      - name: Setup Node 24
-        uses: actions/setup-node@v4
-        with:
-          node-version: "24.19.0"
-          cache: npm
-
-      - name: Setup npm 11
-        run: npm install --global npm@11
-
-      - name: Verify Node tooling
+      - name: Wait until MySQL accepts an authenticated connection
+        shell: bash
         run: |
-          node --version
-          npm --version
-
-      - name: npm ci
-        run: npm ci
-
-      - name: Wait for MySQL
-        run: |
+          set -euo pipefail
           for i in {1..30}; do
-            if mysqladmin ping -h 127.0.0.1 -P 3306 -u root -proot --silent 2>&1 | grep -q "mysqld is alive"; then
-              echo "MySQL ready"; exit 0
+            if mysql --protocol=tcp -h 127.0.0.1 -P 3306 -u root -proot \
+              -N -e 'SELECT 1' belink_test >/dev/null 2>&1; then
+              echo 'MySQL is ready'
+              exit 0
             fi
-            echo "Waiting for MySQL... $i"; sleep 2
+            sleep 2
           done
-          echo "MySQL not ready"; exit 1
+          echo 'MySQL did not become ready' >&2
+          exit 1
 
-      - name: Migrate
+      - name: Migrate isolated test database
         run: php artisan migrate --force --no-interaction
 
-      - name: Seed required defaults (roles, themes, settings)
+      - name: Seed required defaults
         run: php artisan db:seed --force --no-interaction
 
-      - name: Seed upload backends (required for FileEntry legacy disk)
-        run: php artisan db:seed --class="Common\Database\Seeders\UploadBackendsSeeder" --force --no-interaction
+      - name: Seed upload backends
+        run: php artisan db:seed --class="Common\\Database\\Seeders\\UploadBackendsSeeder" --force --no-interaction
 
+      # Preserve mandatory fail-closed deployment/security regressions.
       - name: Release-control security regression gates
+        shell: bash
         run: |
           set -euo pipefail
           bash scripts/tests/test-release-artifact.sh
           bash scripts/tests/test-resolve-verified-ci.sh
           bash scripts/tests/test-release-gates.sh
 
-      - name: Tests — 0 failures is the gate
+      - name: PHP tests - zero failures required
         run: php artisan test --compact
-        # Do NOT hardcode expected count; repo grows. Only exit 0 matters.
 
-      - name: Laravel production cache checks (prove deploy will succeed)
+      - name: Validate Laravel deploy caches
+        shell: bash
         run: |
           set -euo pipefail
           php artisan config:cache
@@ -146,64 +216,228 @@ jobs:
           php artisan event:cache
           php artisan view:cache
           php artisan optimize
-          # clear so subsequent steps run uncached (tests already passed)
           php artisan optimize:clear
 
-      - name: Schedule loads
-        run: php artisan schedule:list
+      - name: Verify scheduler and API documentation
+        shell: bash
+        run: |
+          set -euo pipefail
+          php artisan schedule:list
+          bash scripts/check-api-docs-drift.sh
 
-      - name: OpenAPI hygiene (no legacy AdminHelp; hc + helpdesk present)
-        run: bash scripts/check-api-docs-drift.sh
+      - name: Audit production Composer dependencies
+        run: composer audit --no-dev --no-interaction --format plain
+
+      - name: Verify route registration (avoid broken-pipe false failures)
+        shell: bash
+        run: |
+          set -euo pipefail
+          php artisan route:list > /tmp/linket-routes.txt
+          head -n 20 /tmp/linket-routes.txt
+
+  frontend:
+    name: TypeScript, browser tests and Vite build (Node 24)
+    needs: changes
+    if: ${{ needs.changes.outputs.run_node == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout (shallow)
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Setup Node 24 with npm download cache
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24.19.0'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      # npm ci recreates node_modules deterministically. npm's download cache
+      # is faster/safer to reuse than restoring node_modules from a cache.
+      - name: Install locked npm dependencies
+        run: npm ci --prefer-offline --no-audit --no-fund
+
+      - name: Create CI-safe frontend environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp env.example .env
+          cat >> .env <<'EOF'
+          APP_ENV=testing
+          APP_URL=http://localhost
+          EOF
 
       - name: TypeScript typecheck
         run: npx tsc --noEmit
 
-      - name: Install Playwright Chromium for Storybook browser tests
+      # Required: vite.config.ts enables Storybook/Vitest browser projects.
+      - name: Install Playwright Chromium and system libraries
         run: npx playwright install --with-deps chromium
 
-      - name: Frontend tests (vitest)
+      - name: Run frontend tests (Vitest + Storybook browser)
         run: npm test
         env:
-          LARAVEL_BYPASS_ENV_CHECK: 1
+          LARAVEL_BYPASS_ENV_CHECK: '1'
 
-      - name: Composer audit (production advisories only)
+      - name: Audit production npm dependencies
+        run: npm audit --omit=dev --audit-level=moderate
+
+      # Explicitly advisory, matching existing policy. Run once rather than
+      # twice; do not quietly pretend the current lint baseline is clean.
+      - name: oxlint (advisory until repository baseline is clean)
+        shell: bash
         run: |
-          # Fail on any production advisory. Network failures fail the job (retry will help).
-          composer audit --no-interaction --format plain
+          if npm run lint; then
+            echo 'oxlint passed'
+          else
+            echo '::warning::oxlint found issues; existing policy is advisory'
+          fi
 
-      - name: npm audit — production deps only
-        run: |
-          # --omit=dev ignores storybook/mcp dev-only CVEs that don't ship to cPanel.
-          # Moderate+ is the gate; tweak to --audit-level=high if too noisy after initial triage.
-          npm audit --omit=dev --audit-level=moderate
-
-      - name: oxlint
-        run: npm run lint -- --type-aware 2>&1 || npm run lint 2>&1 || echo "oxlint not configured as strict gate — see logs"
-        # Purposely non-blocking on lint warnings until team enforces zero-warning policy.
-        # Change to `run: npm run lint` with no fallback to enforce.
-
-      - name: Vite production build
+      - name: Build production Vite assets
         run: npm run build
 
-      - name: Verify build artifact (manifest + assets)
+      - name: Verify Vite build output
+        shell: bash
         run: |
           set -euo pipefail
-          test -f public/build/manifest.json
-          echo "manifest.json: $(wc -c < public/build/manifest.json) bytes"
+          test -s public/build/manifest.json
           test -d public/build/assets
-          ls -lh public/build/manifest.json | awk '{print $9, $5}'
 
-      - name: Route sanity (no duplicates)
-        run: php artisan route:list 2>&1 | head -n 20
+      # Only main push runs need to transfer frontend assets to release job.
+      # Short retention limits the cost of temporary cross-job artifacts.
+      - name: Transfer frontend assets for the release job (main only)
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: frontend-build-${{ github.sha }}
+          path: public/build/
+          if-no-files-found: error
+          retention-days: 1
 
-      - name: Assemble release artifact (main only — for CD reuse)
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+  verify:
+    # Preserve the original required GitHub branch-protection check name.
+    name: Verify (PHP 8.4 + Node 24 + MySQL 8.0)
+    needs: [changes, php, frontend]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Enforce success of every required verification job
+        shell: bash
+        env:
+          SCOPE: ${{ needs.changes.result }}
+          RUN_PHP: ${{ needs.changes.outputs.run_php }}
+          RUN_NODE: ${{ needs.changes.outputs.run_node }}
+          PHP_RESULT: ${{ needs.php.result }}
+          NODE_RESULT: ${{ needs.frontend.result }}
         run: |
           set -euo pipefail
-          # Reuse already-installed vendor and already-built public/build from this job
-          # Re-run production composer install to strip dev deps deterministically
-          composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction --no-progress
-          SHA="${{ github.sha }}"
+          [[ "$SCOPE" == 'success' ]] || { echo 'Scope classification failed'; exit 1; }
+          if [[ "$RUN_PHP" == 'true' ]]; then
+            [[ "$PHP_RESULT" == 'success' ]] || { echo "PHP: $PHP_RESULT"; exit 1; }
+          else
+            [[ "$RUN_PHP" == 'false' && "$PHP_RESULT" == 'skipped' ]] || exit 1
+          fi
+          if [[ "$RUN_NODE" == 'true' ]]; then
+            [[ "$NODE_RESULT" == 'success' ]] || { echo "Frontend: $NODE_RESULT"; exit 1; }
+          else
+            [[ "$RUN_NODE" == 'false' && "$NODE_RESULT" == 'skipped' ]] || exit 1
+          fi
+          echo 'All required checks passed (or were safely docs-only skipped)'
+
+  release:
+    name: Assemble SHA-locked production artifact
+    # A deployable main SHA must have BOTH backend and frontend verified.
+    needs: [verify, frontend]
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.verify.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout (shallow)
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Setup production PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_mysql, gd, zip, bcmath, exif, redis, curl, openssl, fileinfo
+          coverage: none
+          tools: composer:v2
+
+      - name: Discover Composer cache path
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore Composer archives
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-php84-composer-${{ hashFiles('composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php84-composer-
+
+      - name: Create synthetic environment for Composer's Laravel scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp env.example .env
+          sed -i 's/^INSTALLED=.*/INSTALLED=true/' .env
+          grep -q '^INSTALLED=true' .env || echo 'INSTALLED=true' >> .env
+          echo "APP_KEY=base64:$(php -r 'echo base64_encode(random_bytes(32));')" >> .env
+          cat >> .env <<'EOF'
+          APP_ENV=testing
+          APP_DEBUG=false
+          APP_URL=http://localhost
+          CACHE_STORE=array
+          SESSION_DRIVER=array
+          QUEUE_CONNECTION=sync
+          SCOUT_DRIVER=null
+          DB_CONNECTION=mysql
+          DB_HOST=127.0.0.1
+          DB_PORT=3306
+          DB_DATABASE=belink_test
+          DB_USERNAME=root
+          DB_PASSWORD=root
+          REDIS_HOST=127.0.0.1
+          MAIL_MAILER=array
+          EOF
+
+      # Install production vendor cleanly: do not cache or ship test/dev vendor.
+      - name: Install production Composer dependencies
+        run: composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction --no-progress
+        env:
+          COMPOSER_AUDIT_ABANDONED: ignore
+
+      - name: Remove tracked or stale built assets before downloading
+        run: rm -rf public/build
+
+      - name: Download the frontend job's checked build
+        uses: actions/download-artifact@v6
+        with:
+          name: frontend-build-${{ github.sha }}
+          path: public/build
+
+      - name: Verify downloaded build
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s public/build/manifest.json
+          test -d public/build/assets
+          test -f vendor/autoload.php
+
+      # Preserve the EXACT archive naming, SHA metadata, checksum, and artifact
+      # name used by deploy-production.yml and resolve-verified-ci.sh.
+      - name: Assemble release artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          SHA="$GITHUB_SHA"
           SHORT="${SHA:0:7}"
           TS="$(date -u +%Y%m%d-%H%M%S)"
           RELEASE_ID="${TS}-${SHORT}"
@@ -215,7 +449,10 @@ jobs:
           echo "CI_RELEASE_ID=$RELEASE_ID" >> CI_META
           tar -czf "/tmp/${ARTIFACT_NAME}.tar.gz" \
             --exclude='.git' \
+            --exclude='.github' \
             --exclude='.gitignore' \
+            --exclude='tests' \
+            --exclude='scripts/tests' \
             --exclude='node_modules' \
             --exclude='storage/app/*' \
             --exclude='storage/framework/cache/*' \
@@ -243,17 +480,18 @@ jobs:
             --exclude='public/storage/*' \
             .
           mv "/tmp/${ARTIFACT_NAME}.tar.gz" "./${ARTIFACT_NAME}.tar.gz"
-          tar -tzf "${ARTIFACT_NAME}.tar.gz" | grep -E '^(./)?RELEASE_SHA' >/dev/null || { echo "RELEASE_SHA missing"; exit 1; }
-          tar -tzf "${ARTIFACT_NAME}.tar.gz" | grep -E 'public/build/manifest.json' >/dev/null || { echo "manifest missing"; exit 1; }
-          tar -tzf "${ARTIFACT_NAME}.tar.gz" | grep -E 'vendor/autoload.php' >/dev/null || { echo "vendor missing"; exit 1; }
+          # Avoid tar -> grep -q SIGPIPE under pipefail for large releases.
+          tar -tzf "${ARTIFACT_NAME}.tar.gz" > /tmp/linket-release-members.txt
+          grep -Eq '^(\./)?RELEASE_SHA$' /tmp/linket-release-members.txt || { echo 'RELEASE_SHA missing'; exit 1; }
+          grep -Eq '^(\./)?public/build/manifest.json$' /tmp/linket-release-members.txt || { echo 'manifest missing'; exit 1; }
+          grep -Eq '^(\./)?vendor/autoload.php$' /tmp/linket-release-members.txt || { echo 'vendor missing'; exit 1; }
           sha256sum "${ARTIFACT_NAME}.tar.gz" > "${ARTIFACT_NAME}.tar.gz.sha256"
           cat "${ARTIFACT_NAME}.tar.gz.sha256"
           ls -lh "${ARTIFACT_NAME}.tar.gz"*
-          echo "ARTIFACT_NAME=${ARTIFACT_NAME}" >> "$GITHUB_ENV"
-          echo "RELEASE_ID=${RELEASE_ID}" >> "$GITHUB_ENV"
 
-      - name: Upload CI artifact for CD (main only)
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      # Keep upload-artifact@v4 for the final CD artifact until the separate
+      # deploy-production.yml download-artifact@v4 is upgraded together.
+      - name: Upload exact CI artifact for production CD
         uses: actions/upload-artifact@v4
         with:
           name: linket-ci-${{ github.sha }}
@@ -264,4 +502,5 @@ jobs:
             RELEASE_ID
             CI_META
           if-no-files-found: error
+          compression-level: 0
           retention-days: 3
