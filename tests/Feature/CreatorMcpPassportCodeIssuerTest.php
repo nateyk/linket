@@ -352,3 +352,48 @@ test('refresh issuance after a new request lifecycle binds the rotated token to 
     expect(app(\App\CreatorAi\Auth\CreatorMcpPassportBearerAccess::class)
         ->workspaceForBearer($rotated['access_token']))->toBe($workspaceId);
 });
+
+
+test('an expired access record can rotate a still-valid unrevoked refresh token for its original workspace', function () {
+    [$creator, $workspaceId, $clientId, $params, $code] = mcpExchangeTestCode($this);
+    $tokens = mcpExchangeTokenResult($code, $clientId, $params);
+    $oldAccessId = DB::table('creator_ai_mcp_oauth_token_bindings')->value('access_token_id');
+
+    // Access-token expiry is normal and independent of the longer-lived
+    // refresh credential. Simulate database-side access expiration without
+    // revoking the separate refresh credential or creator workspace consent.
+    DB::table('oauth_access_tokens')->where('id', $oldAccessId)
+        ->update(['expires_at' => now()->subSecond()]);
+
+    expect((int) DB::table('oauth_access_tokens')->where('id', $oldAccessId)->value('revoked'))->toBe(0);
+    expect((int) DB::table('oauth_refresh_tokens')->where('access_token_id', $oldAccessId)->value('revoked'))->toBe(0);
+
+    mcpExchangeAssertDenied(fn () => app(\App\CreatorAi\Auth\CreatorMcpPassportBearerAccess::class)
+        ->workspaceForBearer($tokens['access_token']));
+
+    $response = app(\App\CreatorAi\Auth\CreatorMcpPassportTokenExchange::class)
+        ->refresh($tokens['refresh_token'], $clientId, $params['resource']);
+    expect($response->getStatusCode())->toBe(200);
+
+    $rotated = json_decode((string) $response->getBody(), true, 512, JSON_THROW_ON_ERROR);
+    expect($rotated['access_token'])->not->toBe($tokens['access_token']);
+    expect(DB::table('creator_ai_mcp_oauth_token_bindings')->count())->toBe(2);
+    expect(app(\App\CreatorAi\Auth\CreatorMcpPassportBearerAccess::class)
+        ->workspaceForBearer($rotated['access_token']))->toBe($workspaceId);
+    expect((int) DB::table('oauth_access_tokens')->where('id', $oldAccessId)->value('revoked'))->toBe(1);
+    expect((int) DB::table('oauth_refresh_tokens')->where('access_token_id', $oldAccessId)->value('revoked'))->toBe(1);
+});
+
+test('a revoked access token cannot be refreshed even when the refresh credential itself is not revoked', function () {
+    [$creator, $workspaceId, $clientId, $params, $code] = mcpExchangeTestCode($this);
+    $tokens = mcpExchangeTokenResult($code, $clientId, $params);
+    $oldAccessId = DB::table('creator_ai_mcp_oauth_token_bindings')->value('access_token_id');
+
+    DB::table('oauth_access_tokens')->where('id', $oldAccessId)->update(['revoked' => true]);
+    expect((int) DB::table('oauth_refresh_tokens')->where('access_token_id', $oldAccessId)->value('revoked'))->toBe(0);
+
+    mcpExchangeAssertDenied(fn () => app(\App\CreatorAi\Auth\CreatorMcpPassportTokenExchange::class)
+        ->refresh($tokens['refresh_token'], $clientId, $params['resource']));
+
+    expect(DB::table('creator_ai_mcp_oauth_token_bindings')->count())->toBe(1);
+});
