@@ -3,7 +3,9 @@
 namespace App\CreatorAi\Auth;
 
 use Closure;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -41,6 +43,14 @@ final class CreatorMcpOAuthHttpSecurity
             503,
             'MCP OAuth requires a shared lock-capable session and cache configuration.',
         );
+
+        // Enforce browser authentication AFTER HTTPS is checked; otherwise
+        // Laravel may redirect an insecure guest to the login route first.
+        $creator = Auth::guard('web')->user();
+        if (! $creator instanceof User) {
+            return redirect()->guest(route('login'));
+        }
+        abort_unless($creator->hasVerifiedEmail(), 403);
 
         return $next($request);
     }

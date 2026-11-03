@@ -13,7 +13,7 @@ if (config('creator_ai.features.mcp_http_oauth') !== true) {
 // Keep Laravel Passport's default OAuth routes disabled. Only browser consent
 // is registered in this slice; /oauth/token, discovery and /mcp stay absent.
 Route::prefix('oauth/linket')->name('creator-ai.oauth.')
-    ->middleware(['web', CreatorMcpOAuthHttpSecurity::class, 'auth:web', 'verified'])
+    ->middleware(['web', CreatorMcpOAuthHttpSecurity::class])
     ->group(function (): void {
         Route::get('authorize', [CreatorMcpOAuthHttpConsentController::class, 'authorize'])
             ->block(30, 10)->name('authorize');

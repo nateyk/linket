@@ -22,7 +22,7 @@
 <main>
     <h1>Connect your Linket workspace</h1>
     <p><strong>{{ $clientName }}</strong> requests read-only access to reporting for one workspace. You can disconnect this connection at any time. Payments and private receiving account numbers are not shared.</p>
-    <form method="POST" action="{{ route('creator-ai.oauth.approve') }}">
+    <form method="POST" action="{{ url('/oauth/linket/authorize/approve') }}">
         @csrf
         <input type="hidden" name="nonce" value="{{ $nonce }}">
         <label for="workspace_id">Choose a workspace</label>
@@ -33,7 +33,7 @@
         </select>
         <button class="primary" type="submit">Approve connection</button>
     </form>
-    <form method="POST" action="{{ route('creator-ai.oauth.deny') }}">
+    <form method="POST" action="{{ url('/oauth/linket/authorize/deny') }}">
         @csrf
         <input type="hidden" name="nonce" value="{{ $nonce }}">
         <button class="secondary" type="submit">Deny request</button>

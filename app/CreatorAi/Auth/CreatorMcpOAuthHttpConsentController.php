@@ -21,7 +21,6 @@ final class CreatorMcpOAuthHttpConsentController
     public function __construct(
         private readonly CreatorMcpOAuthAuthorizationPolicy $policy,
         private readonly CreatorMcpOAuthConsentFlow $consent,
-        private readonly CreatorMcpPassportCodeIssuer $issuer,
     ) {}
 
     public function authorize(Request $request): Response
@@ -64,7 +63,7 @@ final class CreatorMcpOAuthHttpConsentController
         // This service revalidates the original OAuth params and the user's
         // current verified-Pro/workspace membership, consumes the nonce, then
         // issues the ACTUAL Passport/League authorization code in a transaction.
-        $passport = $this->issuer->complete($request, $nonce, (int) $workspaceId);
+        $passport = app(CreatorMcpPassportCodeIssuer::class)->complete($request, $nonce, (int) $workspaceId);
 
         abort_unless($passport->getStatusCode() === 302, 503);
 
