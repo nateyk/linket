@@ -24,6 +24,10 @@ return [
         'storefront_drafts' => env('CREATOR_AI_STOREFRONT_DRAFTS_ENABLED', false),
     ],
 
+    // Exact canonical HTTPS resource used for OAuth RFC 8707 resource binding.
+    // No fallback: if unset, MCP OAuth preflight fails closed even if enabled.
+    'mcp_resource_url' => env('CREATOR_AI_MCP_RESOURCE_URL'),
+
     'max_report_days' => 366,
     'max_orders_per_page' => 20,
     'max_product_results' => 20,
