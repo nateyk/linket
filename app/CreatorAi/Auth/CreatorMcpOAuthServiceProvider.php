@@ -3,6 +3,7 @@
 namespace App\CreatorAi\Auth;
 
 use Illuminate\Support\ServiceProvider;
+use Laravel\Passport\Bridge\AuthCodeRepository as PassportAuthCodeRepository;
 use Laravel\Passport\Passport;
 
 /**
@@ -18,6 +19,20 @@ final class CreatorMcpOAuthServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        // Only trusted, request-scoped Linket consent can persist a Passport
+        // authorization code. The public Passport routes remain disabled.
+        $this->app->scoped(CreatorMcpPassportCodeIssuanceContext::class);
+        $this->app->bind(
+            PassportAuthCodeRepository::class,
+            CreatorMcpAuthCodeRepository::class,
+        );
+
+        // Preserve any other scopes that were already registered.
+        Passport::tokensCan([
+            ...Passport::$scopes,
+            'mcp:use' => 'Read authorized creator workspace reporting via Linket MCP',
+        ]);
+
         config()->set('auth.providers.creator_mcp_users', [
             'driver' => 'eloquent',
             'model' => PassportCreatorIdentity::class,
