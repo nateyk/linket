@@ -28,7 +28,6 @@ final class CreatorMcpPassportCodeIssuer
         private readonly CreatorMcpOAuthConsentFlow $consent,
         private readonly CreatorMcpOAuthAuthorizationPolicy $policy,
         private readonly CreatorMcpPassportCodeIssuanceContext $context,
-        private readonly AuthorizationServer $server,
     ) {}
 
     public function complete(Request $browser, string $nonce, int $workspaceId): ResponseInterface
@@ -57,7 +56,8 @@ final class CreatorMcpPassportCodeIssuer
 
             // This IS Passport/League's actual authorization-code and PKCE
             // validation, not a hand-rolled substitute.
-            $authorization = $this->server->validateAuthorizationRequest($request);
+            $server = app(AuthorizationServer::class);
+            $authorization = $server->validateAuthorizationRequest($request);
             $scopes = array_map(
                 static fn (ScopeEntityInterface $scope): string => $scope->getIdentifier(),
                 $authorization->getScopes(),
@@ -87,7 +87,7 @@ final class CreatorMcpPassportCodeIssuer
                 'resource' => $parameters['resource'],
                 'redirect_uri' => $parameters['redirect_uri'],
                 'code_challenge' => $parameters['code_challenge'],
-            ], fn (): ResponseInterface => $this->server->completeAuthorizationRequest(
+            ], fn (): ResponseInterface => $server->completeAuthorizationRequest(
                 $authorization,
                 new Response,
             ));
