@@ -47,18 +47,20 @@ final class CreatorMcpPassportTokenExchange
 
         return DB::transaction(function () use ($payload, $codeId, $code, $clientId, $redirectUri, $verifier, $resource): ResponseInterface {
             $row = DB::table('creator_ai_mcp_oauth_code_bindings')
-                ->where('auth_code_id', $codeId)->lockForUpdate()->first();
+                ->where('auth_code_id', $codeId)
+                ->where('expires_at', '>', now())
+                ->lockForUpdate()->first();
             abort_unless(
                 $row
                 && $row->oauth_client_id === $clientId
                 && $row->redirect_uri === $redirectUri
                 && $row->resource === $resource
                 && $row->code_challenge === rtrim(strtr(base64_encode(hash('sha256', $verifier, true)), '+/', '-_'), '=')
-                && $row->expires_at > now()
-                && ($payload['client_id'] ?? null) === $clientId
+                 && ($payload['client_id'] ?? null) === $clientId
                 && ($payload['redirect_uri'] ?? null) === $redirectUri
                 && ($payload['user_id'] ?? null) == $row->creator_id
                 && ($payload['code_challenge_method'] ?? null) === 'S256'
+                && ($payload['scopes'] ?? null) === ['mcp:use']
                 && ($payload['code_challenge'] ?? null) === $row->code_challenge,
                 403,
             );
@@ -124,6 +126,18 @@ final class CreatorMcpPassportTokenExchange
                 ->first();
             abort_unless($binding, 403);
             abort_unless((string) ($payload['user_id'] ?? '') === (string) $binding->creator_id, 403);
+
+            // Revoking only the old access token must also prevent use of
+            // its refresh credential; the refresh row alone is insufficient.
+            $oldAccess = DB::table('oauth_access_tokens')
+                ->where('id', $accessId)
+                ->where('user_id', $binding->creator_id)
+                ->where('client_id', $clientId)
+                ->where('revoked', false)
+                ->where('expires_at', '>', now())
+                ->lockForUpdate()
+                ->first(['scopes']);
+            abort_unless($oldAccess && json_decode((string) $oldAccess->scopes, true) === ['mcp:use'], 403);
 
             $creator = User::query()->find($binding->creator_id);
             abort_unless($creator instanceof User, 403);
@@ -211,7 +225,8 @@ final class CreatorMcpPassportTokenExchange
             && ! $client->confidential()
             && $client->provider === 'creator_mcp_users'
             && $client->hasGrantType('authorization_code')
-            && $client->hasGrantType('refresh_token'),
+            && $client->hasGrantType('refresh_token')
+            && array_diff($client->grant_types, ['authorization_code', 'refresh_token']) === [],
             403,
         );
     }
