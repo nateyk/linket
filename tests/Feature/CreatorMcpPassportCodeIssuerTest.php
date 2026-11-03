@@ -303,3 +303,52 @@ test('signed bearer must match configured issuer and MCP audience, and tampering
 
     expect($bearer->workspaceForBearer($tokens['access_token']))->toBe($workspaceId);
 });
+
+
+test('a new request lifecycle can issue and bind a second approved code using the existing Passport singleton', function () {
+    [$creator, $workspaceId, $clientId, $params, $session] = codeGrantTestSetup($this);
+    config()->set('creator_ai.oauth_issuer', 'https://linket.example.test');
+
+    $issueCode = function () use ($session, $params, $workspaceId): string {
+        $pending = app(CreatorMcpOAuthConsentFlow::class)->begin(codeGrantBrowser($session), $params);
+        $response = app(CreatorMcpPassportCodeIssuer::class)
+            ->complete(codeGrantBrowser($session), $pending['nonce'], $workspaceId);
+        parse_str((string) parse_url($response->getHeaderLine('Location'), PHP_URL_QUERY), $query);
+
+        return (string) $query['code'];
+    };
+
+    $firstCode = $issueCode();
+    $firstTokens = mcpExchangeTokenResult($firstCode, $clientId, $params);
+    expect(app(\App\CreatorAi\Auth\CreatorMcpPassportBearerAccess::class)
+        ->workspaceForBearer($firstTokens['access_token']))->toBe($workspaceId);
+
+    // Laravel Octane/queue-style lifecycle reset: Passport's AuthorizationServer
+    // singleton still holds its repository instances after scoped instances flush.
+    app()->forgetScopedInstances();
+
+    $secondCode = $issueCode();
+    $secondTokens = mcpExchangeTokenResult($secondCode, $clientId, $params);
+
+    expect(DB::table('creator_ai_mcp_oauth_code_bindings')->count())->toBe(2);
+    expect(DB::table('creator_ai_mcp_oauth_token_bindings')->count())->toBe(2);
+    expect(app(\App\CreatorAi\Auth\CreatorMcpPassportBearerAccess::class)
+        ->workspaceForBearer($secondTokens['access_token']))->toBe($workspaceId);
+});
+
+test('refresh issuance after a new request lifecycle binds the rotated token to the original workspace', function () {
+    [$creator, $workspaceId, $clientId, $params, $code] = mcpExchangeTestCode($this);
+    $tokens = mcpExchangeTokenResult($code, $clientId, $params);
+
+    app()->forgetScopedInstances();
+
+    $response = app(\App\CreatorAi\Auth\CreatorMcpPassportTokenExchange::class)
+        ->refresh($tokens['refresh_token'], $clientId, $params['resource']);
+
+    expect($response->getStatusCode())->toBe(200);
+    $rotated = json_decode((string) $response->getBody(), true, 512, JSON_THROW_ON_ERROR);
+
+    expect(DB::table('creator_ai_mcp_oauth_token_bindings')->count())->toBe(2);
+    expect(app(\App\CreatorAi\Auth\CreatorMcpPassportBearerAccess::class)
+        ->workspaceForBearer($rotated['access_token']))->toBe($workspaceId);
+});
