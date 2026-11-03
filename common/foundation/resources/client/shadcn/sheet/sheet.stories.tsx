@@ -7,7 +7,7 @@ import {
   SheetTrigger,
 } from '@shadcn/sheet/sheet';
 import type {Meta, StoryObj} from '@storybook/react-vite';
-import {expect, within} from 'storybook/test';
+import {expect, waitFor, within} from 'storybook/test';
 
 const meta = {
   component: Sheet,
@@ -34,9 +34,11 @@ export const Right: Story = {
   play: async ({canvas, userEvent, canvasElement}) => {
     await userEvent.click(canvas.getByRole('button', {name: /open sheet/i}));
     const body = within(canvasElement.ownerDocument.body);
-    await expect(
-      await body.findByRole('heading', {name: /account settings/i}),
-    ).toBeVisible();
+    const title = await body.findByRole('heading', {
+      name: /account settings/i,
+    });
+    // The portal can mount before Base UI's opening animation makes it visible.
+    await waitFor(() => expect(title).toBeVisible());
   },
 };
 
