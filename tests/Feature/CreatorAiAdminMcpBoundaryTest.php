@@ -259,7 +259,8 @@ test('MCP reporting facade returns only safe verified sales, trends, order and p
         expect($serialized)->not->toContain($secret);
     }
 
-    expect(app(CreatorAiUsageService::class)->summary($creator)['remaining'])->toBe(10);
+    // MCP reads do not consume requests; verified Pro retains all 100 credits.
+    expect(app(CreatorAiUsageService::class)->summary($creator)['remaining'])->toBe(100);
 });
 
 test('MCP forecast stays disabled until a tested forecast engine exists', function () {
