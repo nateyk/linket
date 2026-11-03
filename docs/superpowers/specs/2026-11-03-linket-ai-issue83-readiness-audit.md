@@ -20,7 +20,7 @@
 | CI | Main baseline run 41573563141 and unified-branch run [41591658207](https://github.com/nateyk/linket/actions/runs/41591658207) completed **success** | Confirmed GitHub CI evidence; OAuth/MCP tests are still not implemented |
 | GitHub main protection | GitHub branch API returned `protected: false` on `main` | **Governance gap**; workflow protections alone can be bypassed |
 | CI lint | `.github/workflows/ci.yml` has `oxlint` ending with `|| echo` instead of strict exit | **Nonblocking lint**; harden for AI-related changes |
-| OpenAI provider | `config/ai.php` line for OpenAI: `'store' => env('OPENAI_STORE', true)` (Azure same default) | **Privacy risk / requires decision**; does not prove how production env is set |
+| OpenAI provider | Unified branch defaults OpenAI and Azure `store` to `false` | Privacy-minimizing repository default implemented; effective provider account policy remains unverified |
 | Hosting | cPanel deployment docs/scripts present; runtime network or production SSH evidence not supplied | **BLOCKER** to production compatibility signoff |
 | Server discovery | `deploy/cpanel-discovery.sh` claims read-only, but its checks write/delete in `/tmp` and `~/linket/shared`, and DocumentRoot probe is `true` | **Preflight test design bug**; do not run unreviewed on production |
 | Deployment docs | `docs/deployment-architecture.md` says Laravel 12 / PHP >=8.2; script enforces >=8.2 | **Documentation/preflight stale** against actual Laravel 13 and PHP >=8.3 |
@@ -129,7 +129,7 @@ Official references:
 - [ ] Compatible dual Sanctum + Passport guard and token lifecycle designed/tested.
 - [ ] Remote OAuth/MCP metadata, S256, resource binding, audience/issuer, dynamic registration and revocation exercised.
 - [ ] cPanel **actual** PHP, TLS, DocumentRoot, rewrite, sessions, queue and staging integration proven.
-- [ ] Deployment/preflight script corrected (safe to inspect, version floor corrected, unknown != PASS).
+- [x] Deployment/preflight script corrected (read-only checks, PHP >=8.3, required manual evidence reports UNKNOWN and exits incomplete).
 - [x] Provider SDK defaults changed to privacy-minimizing `store=false` on the unified feature branch.
 - [ ] Effective provider account retention controls, field minimization and request transport verified before any real creator data.
 - [ ] Strict AI/MCP security CI and Verify.et/fulfillment regression tests green.
