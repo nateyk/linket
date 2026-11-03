@@ -239,6 +239,13 @@ Route::group(['prefix' => 'v1'], function () {
             ->middleware(['auth:sanctum', 'throttle:10,1']);
         Route::get('creator-ai/usage', [\App\CreatorAi\Controllers\CreatorAiUsageController::class, 'show'])
             ->middleware(['auth:sanctum', 'throttle:30,1']);
+        // MCP connection management does not issue OAuth credentials.
+        // The future consent callback is a separate, Passport-protected flow.
+        Route::get('creator-ai/mcp-connections', [\App\CreatorAi\Controllers\CreatorMcpConnectionsController::class, 'index'])
+            ->middleware(['auth:sanctum', 'throttle:20,1']);
+        Route::delete('creator-ai/mcp-connections/{connectionId}', [\App\CreatorAi\Controllers\CreatorMcpConnectionsController::class, 'destroy'])
+            ->whereUuid('connectionId')
+            ->middleware(['auth:sanctum', 'throttle:20,1']);
         Route::get('creator-ai/sales-summary', [\App\CreatorAi\Controllers\CreatorAiReportsController::class, 'salesSummary'])
             ->middleware(['auth:sanctum', 'throttle:30,1']);
         Route::get('creator-ai/order-insights', [\App\CreatorAi\Controllers\CreatorAiReportsController::class, 'orderInsights'])
