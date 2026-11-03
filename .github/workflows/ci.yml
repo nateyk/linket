@@ -4,7 +4,8 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main]
+    # Verify isolated Linket AI development without opening partial PRs.
+    branches: [main, feat/linket-ai-v1]
   workflow_dispatch:
 
 # CI PR pushes cancel stale runs; production deploys use separate concurrency group (queued)
