@@ -10,7 +10,7 @@ on:
 # Prove that Passport can resolve against the *existing* locked packages.
 # Do not change the repo's composer.json or composer.lock from CI.
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: ai-oauth-deps-${{ github.ref }}
@@ -79,3 +79,19 @@ jobs:
             composer.lock
           retention-days: 3
           if-no-files-found: error
+
+      - name: Commit approved security-checked Passport lockfiles on feature branch ONLY
+        if: github.ref == 'refs/heads/feat/linket-ai-v1' && github.event_name == 'push'
+        run: |
+          set -euo pipefail
+          # Do not alter tracked files outside the reviewed Composer manifest/lock.
+          git add -- composer.json composer.lock
+          test -n "$(git diff --cached --name-only)"
+          test "$(git diff --cached --name-only | wc -l)" -eq 2
+          git diff --cached --name-only | grep -Fx 'composer.json'
+          git diff --cached --name-only | grep -Fx 'composer.lock'
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "build(ai): lock security-audited Passport 13.7.6 and phpseclib 3.0.58"
+          # Fast-forward only: fails safely if another commit landed meanwhile.
+          git push origin HEAD:refs/heads/feat/linket-ai-v1
