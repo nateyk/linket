@@ -231,6 +231,14 @@ Route::group(['prefix' => 'v1'], function () {
         Route::get('billing/chapa/transactions/{txRef}', [ChapaController::class, 'status'])->middleware('throttle:60,1');
 
         // CREATOR AI: deny by default, independently authorized per service.
+        // Settings can be read/changed only by an admin with settings.update.
+        // Credentials are write-only; all responses are private and no-store.
+        Route::get('admin/creator-ai/settings', [\App\CreatorAi\Controllers\AdminCreatorAiSettingsController::class, 'show'])
+            ->middleware(['auth:sanctum', 'throttle:20,1']);
+        Route::patch('admin/creator-ai/settings', [\App\CreatorAi\Controllers\AdminCreatorAiSettingsController::class, 'update'])
+            ->middleware(['auth:sanctum', 'throttle:10,1']);
+        Route::get('creator-ai/usage', [\App\CreatorAi\Controllers\CreatorAiUsageController::class, 'show'])
+            ->middleware(['auth:sanctum', 'throttle:30,1']);
         Route::get('creator-ai/sales-summary', [\App\CreatorAi\Controllers\CreatorAiReportsController::class, 'salesSummary'])
             ->middleware(['auth:sanctum', 'throttle:30,1']);
         Route::get('creator-ai/order-insights', [\App\CreatorAi\Controllers\CreatorAiReportsController::class, 'orderInsights'])
