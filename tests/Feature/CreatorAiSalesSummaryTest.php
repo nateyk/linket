@@ -12,6 +12,12 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 
 uses(DatabaseTransactions::class);
 
+// Direct internal service access must also respect the default-off feature gate.
+beforeEach(function (): void {
+    config()->set('creator_ai.enabled', true);
+    config()->set('creator_ai.features.sales_summary', true);
+});
+
 /** @return array{0: User, 1: \Common\Workspaces\Models\Workspace, 2: DigitalProduct} */
 function creatorAiSalesFixture(): array
 {
