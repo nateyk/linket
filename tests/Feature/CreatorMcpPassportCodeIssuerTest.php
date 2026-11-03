@@ -169,3 +169,137 @@ test('no public OAuth or MCP route is registered by the internal code issuer', f
     expect(Route::has('passport.token'))->toBeFalse();
     expect(Route::has('linket.mcp'))->toBeFalse();
 });
+
+
+/**
+ * The following tests exercise the real Passport/League code exchange
+ * and resource-audience gate, not fabricated OAuth bearer strings.
+ *
+ * @return array{0:User,1:int,2:string,3:array<string,string>,4:string}
+ */
+function mcpExchangeTestCode($test): array
+{
+    [$creator, $workspaceId, $clientId, $params, $session] = codeGrantTestSetup($test);
+    config()->set('creator_ai.oauth_issuer', 'https://linket.example.test');
+    $pending = app(CreatorMcpOAuthConsentFlow::class)->begin(codeGrantBrowser($session), $params);
+    $response = app(CreatorMcpPassportCodeIssuer::class)
+        ->complete(codeGrantBrowser($session), $pending['nonce'], $workspaceId);
+    parse_str((string) parse_url($response->getHeaderLine('Location'), PHP_URL_QUERY), $query);
+
+    return [$creator, $workspaceId, $clientId, $params, (string) $query['code']];
+}
+
+/** @return array<string,mixed> */
+function mcpExchangeTokenResult(string $code, string $clientId, array $params): array
+{
+    $response = app(\App\CreatorAi\Auth\CreatorMcpPassportTokenExchange::class)
+        ->exchangeAuthorizationCode(
+            $code,
+            $clientId,
+            $params['redirect_uri'],
+            str_repeat('x', 43),
+            $params['resource'],
+        );
+
+    expect($response->getStatusCode())->toBe(200);
+    return json_decode((string) $response->getBody(), true, 512, JSON_THROW_ON_ERROR);
+}
+
+/** @param callable():mixed $action */
+function mcpExchangeAssertDenied(callable $action): void
+{
+    try {
+        $action();
+        test()->fail('Untrusted OAuth input was accepted.');
+    } catch (HttpException $e) {
+        expect($e->getStatusCode())->toBe(403);
+    }
+}
+
+test('actual Passport authorization code exchanges with S256 into grant-bound access and refresh tokens', function () {
+    [$creator, $workspaceId, $clientId, $params, $code] = mcpExchangeTestCode($this);
+    $tokens = mcpExchangeTokenResult($code, $clientId, $params);
+
+    expect($tokens['access_token'] ?? null)->toBeString()->not->toBeEmpty();
+    expect($tokens['refresh_token'] ?? null)->toBeString()->not->toBeEmpty();
+    expect($tokens['token_type'] ?? null)->toBe('Bearer');
+    expect(DB::table('creator_ai_mcp_oauth_token_bindings')->count())->toBe(1);
+    expect(DB::table('oauth_refresh_tokens')->count())->toBe(1);
+
+    expect(app(\App\CreatorAi\Auth\CreatorMcpPassportBearerAccess::class)
+        ->workspaceForBearer($tokens['access_token']))->toBe($workspaceId);
+});
+
+test('wrong PKCE verifier and authorization code replay cannot mint any second token', function () {
+    [$creator, $workspaceId, $clientId, $params, $code] = mcpExchangeTestCode($this);
+    $exchange = app(\App\CreatorAi\Auth\CreatorMcpPassportTokenExchange::class);
+
+    mcpExchangeAssertDenied(fn () => $exchange->exchangeAuthorizationCode(
+        $code, $clientId, $params['redirect_uri'], str_repeat('z', 43), $params['resource'],
+    ));
+    expect(DB::table('oauth_access_tokens')->count())->toBe(0);
+
+    mcpExchangeTokenResult($code, $clientId, $params);
+
+    mcpExchangeAssertDenied(fn () => $exchange->exchangeAuthorizationCode(
+        $code, $clientId, $params['redirect_uri'], str_repeat('x', 43), $params['resource'],
+    ));
+    expect(DB::table('creator_ai_mcp_oauth_token_bindings')->count())->toBe(1);
+});
+
+test('refresh rotates actual Passport access and refresh credentials while preserving one workspace grant', function () {
+    [$creator, $workspaceId, $clientId, $params, $code] = mcpExchangeTestCode($this);
+    $tokens = mcpExchangeTokenResult($code, $clientId, $params);
+    $oldTokenId = DB::table('creator_ai_mcp_oauth_token_bindings')->value('access_token_id');
+
+    $response = app(\App\CreatorAi\Auth\CreatorMcpPassportTokenExchange::class)
+        ->refresh($tokens['refresh_token'], $clientId, $params['resource']);
+    $newTokens = json_decode((string) $response->getBody(), true, 512, JSON_THROW_ON_ERROR);
+
+    expect($newTokens['access_token'])->not->toBe($tokens['access_token']);
+    expect($newTokens['refresh_token'])->not->toBe($tokens['refresh_token']);
+    expect(DB::table('oauth_access_tokens')->where('id', $oldTokenId)->value('revoked'))->toBe(1);
+    expect(DB::table('oauth_refresh_tokens')->where('access_token_id', $oldTokenId)->value('revoked'))->toBe(1);
+    expect(DB::table('creator_ai_mcp_oauth_token_bindings')->count())->toBe(2);
+    expect(app(\App\CreatorAi\Auth\CreatorMcpPassportBearerAccess::class)
+        ->workspaceForBearer($newTokens['access_token']))->toBe($workspaceId);
+
+    mcpExchangeAssertDenied(fn () => app(\App\CreatorAi\Auth\CreatorMcpPassportTokenExchange::class)
+        ->refresh($tokens['refresh_token'], $clientId, $params['resource']));
+});
+
+test('revoke or expired Pro prevents fresh Passport tokens and invalidates existing bearer access', function () {
+    [$creator, $workspaceId, $clientId, $params, $code] = mcpExchangeTestCode($this);
+    $tokens = mcpExchangeTokenResult($code, $clientId, $params);
+    $grantId = DB::table('creator_ai_mcp_oauth_token_bindings')->value('connection_id');
+
+    app(\App\CreatorAi\Services\CreatorMcpConnectionRegistry::class)->revoke($creator, $grantId);
+
+    mcpExchangeAssertDenied(fn () => app(\App\CreatorAi\Auth\CreatorMcpPassportTokenExchange::class)
+        ->refresh($tokens['refresh_token'], $clientId, $params['resource']));
+    mcpExchangeAssertDenied(fn () => app(\App\CreatorAi\Auth\CreatorMcpPassportBearerAccess::class)
+        ->workspaceForBearer($tokens['access_token']));
+
+    expect(DB::table('oauth_access_tokens')->where('revoked', true)->count())->toBe(1);
+    expect(DB::table('oauth_refresh_tokens')->where('revoked', true)->count())->toBe(1);
+});
+
+test('signed bearer must match configured issuer and MCP audience, and tampering fails validation', function () {
+    [$creator, $workspaceId, $clientId, $params, $code] = mcpExchangeTestCode($this);
+    $tokens = mcpExchangeTokenResult($code, $clientId, $params);
+    $bearer = app(\App\CreatorAi\Auth\CreatorMcpPassportBearerAccess::class);
+
+    config()->set('creator_ai.oauth_issuer', 'https://wrong-issuer.example.test');
+    mcpExchangeAssertDenied(fn () => $bearer->workspaceForBearer($tokens['access_token']));
+    config()->set('creator_ai.oauth_issuer', 'https://linket.example.test');
+
+    config()->set('creator_ai.mcp_resource_url', 'https://linket.example.test/another-mcp');
+    mcpExchangeAssertDenied(fn () => $bearer->workspaceForBearer($tokens['access_token']));
+    config()->set('creator_ai.mcp_resource_url', $params['resource']);
+
+    $altered = substr($tokens['access_token'], 0, -1).
+        (substr($tokens['access_token'], -1) === 'A' ? 'B' : 'A');
+    mcpExchangeAssertDenied(fn () => $bearer->workspaceForBearer($altered));
+
+    expect($bearer->workspaceForBearer($tokens['access_token']))->toBe($workspaceId);
+});
