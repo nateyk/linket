@@ -7,7 +7,7 @@ import {
   SheetTrigger,
 } from '@shadcn/sheet/sheet';
 import type {Meta, StoryObj} from '@storybook/react-vite';
-import {expect, within} from 'storybook/test';
+import {expect, waitFor, within} from 'storybook/test';
 
 const meta = {
   component: Sheet,
@@ -34,9 +34,13 @@ export const Right: Story = {
   play: async ({canvas, userEvent, canvasElement}) => {
     await userEvent.click(canvas.getByRole('button', {name: /open sheet/i}));
     const body = within(canvasElement.ownerDocument.body);
-    await expect(
-      await body.findByRole('heading', {name: /account settings/i}),
-    ).toBeVisible();
+    // The Base UI sheet mounts the heading before its opening transition
+    // completes. Retry the visibility assertion rather than racing it.
+    await waitFor(
+      () =>
+        expect(body.getByRole('heading', {name: /account settings/i})).toBeVisible(),
+      {timeout: 3000},
+    );
   },
 };
 
