@@ -127,14 +127,15 @@ final class CreatorMcpPassportTokenExchange
             abort_unless($binding, 403);
             abort_unless((string) ($payload['user_id'] ?? '') === (string) $binding->creator_id, 403);
 
-            // Revoking only the old access token must also prevent use of
-            // its refresh credential; the refresh row alone is insufficient.
+            // A valid refresh credential outlives an expired access token.
+            // Natural access expiry must NOT prevent renewal. But explicit
+            // access revocation invalidates the refresh family even if its
+            // separate refresh row is still unrevoked.
             $oldAccess = DB::table('oauth_access_tokens')
                 ->where('id', $accessId)
                 ->where('user_id', $binding->creator_id)
                 ->where('client_id', $clientId)
                 ->where('revoked', false)
-                ->where('expires_at', '>', now())
                 ->lockForUpdate()
                 ->first(['scopes']);
             abort_unless($oldAccess && json_decode((string) $oldAccess->scopes, true) === ['mcp:use'], 403);
