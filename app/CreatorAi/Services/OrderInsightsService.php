@@ -5,7 +5,6 @@ namespace App\CreatorAi\Services;
 use App\Models\User;
 use App\Storefront\Models\StorefrontOrder;
 use Carbon\CarbonImmutable;
-use Illuminate\Database\Eloquent\Builder;
 use InvalidArgumentException;
 
 /**
@@ -50,7 +49,7 @@ final class OrderInsightsService
         $revenueCents = (int) (clone $verified)->sum('gross_amount_cents');
 
         $pageOfOrders = (clone $verified)
-            ->with(['product' => static fn (Builder $query): Builder => $query
+            ->with(['product' => static fn ($product) => $product
                 ->withTrashed()->select(['id', 'title'])])
             ->orderByDesc('paid_at')
             ->orderByDesc('id')
