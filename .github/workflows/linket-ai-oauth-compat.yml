@@ -30,11 +30,11 @@ jobs:
           coverage: none
           tools: composer:v2
 
-      - name: Resolve safe Passport 13.7.6 on existing locked stack
+      - name: Resolve safe Passport with minimal locked-package changes
         run: |
           set -euo pipefail
           composer install --prefer-dist --no-interaction --no-progress --no-scripts
-          composer require 'laravel/passport:13.7.6' 'phpseclib/phpseclib:^3.0.57' --with-all-dependencies --no-scripts --no-interaction --no-progress
+          composer require 'laravel/passport:13.7.6' 'phpseclib/phpseclib:^3.0.57' --no-scripts --no-interaction --no-progress
           composer validate --no-check-publish
           composer show laravel/passport laravel/sanctum laravel/mcp 2>/dev/null || true
           composer audit --no-interaction --format plain
