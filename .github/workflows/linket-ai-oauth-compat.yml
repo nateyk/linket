@@ -1,0 +1,81 @@
+name: Linket AI OAuth dependency compatibility (isolated)
+
+on:
+  push:
+    branches: [feat/linket-ai-v1]
+    paths:
+      - ".github/workflows/linket-ai-oauth-compat.yml"
+  workflow_dispatch:
+
+# Prove that Passport can resolve against the *existing* locked packages.
+# Do not change the repo's composer.json or composer.lock from CI.
+permissions:
+  contents: read
+
+concurrency:
+  group: ai-oauth-deps-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  passport-compatibility:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup PHP 8.4
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: mbstring, pdo_mysql, gd, zip, bcmath, exif, curl, openssl, fileinfo
+          coverage: none
+          tools: composer:v2
+
+      - name: Resolve Passport on existing locked Laravel/Sanctum/MCP stack
+        run: |
+          set -euo pipefail
+          composer install --prefer-dist --no-interaction --no-progress --no-scripts
+          composer require 'laravel/passport:^13.10' --with-all-dependencies --no-scripts --no-interaction --no-progress
+          composer validate --no-check-publish
+          composer show laravel/passport laravel/sanctum laravel/mcp 2>/dev/null || true
+          composer audit --no-interaction --format plain
+          git diff --stat -- composer.json composer.lock
+
+      - name: Check independent OAuth identity can load alongside Sanctum User
+        run: |
+          set -euo pipefail
+          cat > /tmp/test-oauth-compat.php <<'PHP'
+          <?php
+          require getcwd().'/vendor/autoload.php';
+
+          class PassportCompatibilityIdentity extends \Common\Auth\Models\BaseUser
+              implements \Laravel\Passport\Contracts\OAuthenticatable
+          {
+              use \Laravel\Passport\HasApiTokens;
+          }
+
+          if (!class_exists(\Laravel\Mcp\Facades\Mcp::class)
+              || !class_exists(\Laravel\Passport\Passport::class)
+              || !is_a(PassportCompatibilityIdentity::class, \Laravel\Passport\Contracts\OAuthenticatable::class, true)
+              || !method_exists(PassportCompatibilityIdentity::class, 'withAccessToken')
+              || !method_exists(\App\Models\User::class, 'createToken')) {
+              fwrite(STDERR, "Passport/Sanctum or Laravel MCP compatibility proof failed.\n");
+              exit(1);
+          }
+
+          $sanctumTokens = (new ReflectionMethod(\App\Models\User::class, 'tokens'))->getReturnType();
+          $passportTokens = (new ReflectionMethod(PassportCompatibilityIdentity::class, 'tokens'))->getReturnType();
+          echo "Separate Passport identity compiled, App User Sanctum trait unchanged.\n";
+          echo "Sanctum tokens return: ".($sanctumTokens ?: 'inferred')."\n";
+          echo "Passport tokens return: ".($passportTokens ?: 'inferred')."\n";
+          PHP
+          php /tmp/test-oauth-compat.php
+
+      - name: Upload candidate lockfiles for deliberate reviewed commit
+        uses: actions/upload-artifact@v4
+        with:
+          name: oauth-passport-lock-candidate
+          path: |
+            composer.json
+            composer.lock
+          retention-days: 3
+          if-no-files-found: error
