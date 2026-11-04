@@ -520,7 +520,10 @@ export function SharedFileUploader({
                     </AttachmentMedia>
                     <AttachmentContent>
                       <AttachmentTitle>{item.name}</AttachmentTitle>
-                      <AttachmentDescription className="tabular-nums">
+                      <AttachmentDescription
+                        className="tabular-nums"
+                        role={item.status === 'error' ? 'alert' : undefined}
+                      >
                         {item.status === 'error'
                           ? (item.error ?? <Trans message="Upload failed" />)
                           : item.status === 'done'
