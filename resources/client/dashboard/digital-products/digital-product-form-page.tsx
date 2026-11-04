@@ -144,6 +144,7 @@ export function Component() {
   const {productId, creationType} = useParams();
   const prefill = parseWizardPrefill(searchParams);
   if (creationType) prefill.type = resolveCreateType(creationType);
+  if (prefill.billing === 'free') prefill.price = '0';
   return (
     <FileUploadProvider>
       <ProductCreationProvider
