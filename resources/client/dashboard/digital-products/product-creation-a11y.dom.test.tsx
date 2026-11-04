@@ -231,41 +231,35 @@ function renderDialog(onOpenChange = vi.fn()) {
   return onOpenChange;
 }
 
-describe('R08 dialog close confirmation', () => {  beforeEach(() => {
+describe('R08 one-step dialog dismissal', () => {
+  beforeEach(() => {
     localStorage.clear();
   });
 
-  test('closing with selections prompts before discarding', async () => {
+  test('cancel closes even after selecting a type, without a false unsaved-product warning', async () => {
     const user = userEvent.setup();
     const onOpenChange = renderDialog();
     await user.click(screen.getByRole('radio', {name: /digital product/i}));
     await user.click(screen.getByRole('button', {name: /^cancel$/i}));
-    expect(screen.getByText('Discard this product?')).not.toBeNull();
-    expect(onOpenChange).not.toHaveBeenCalled();
-  });
-
-  test('confirming discards state and closes', async () => {
-    const user = userEvent.setup();
-    const onOpenChange = renderDialog();
-    await user.click(screen.getByRole('radio', {name: /digital product/i}));
-    await user.click(screen.getByRole('button', {name: /^cancel$/i}));
-    await user.click(screen.getByRole('button', {name: /^discard$/i}));
+    expect(screen.queryByText('Discard this product?')).toBeNull();
     expect(onOpenChange).toHaveBeenCalledWith(false);
-    // State is back to a fresh wizard (persist effect may rewrite the
-    // initial state after reset clears it — behaviorally equivalent).
-    const stored = localStorage.getItem('productCreateWizard');
-    expect(
-      stored === null ||
-        JSON.parse(stored).state.type === null,
-    ).toBe(true);
   });
 
-  test('closing with no input resets silently', async () => {
+  test('close without a selection needs no discard confirmation', async () => {
     const user = userEvent.setup();
     const onOpenChange = renderDialog();
     await user.click(screen.getByRole('button', {name: /^cancel$/i}));
     expect(screen.queryByText('Discard this product?')).toBeNull();
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  test('Continue is disabled until a product type is selected', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+    const continueButton = screen.getByRole('button', {name: /continue/i});
+    expect(continueButton.hasAttribute('disabled')).toBe(true);
+    await user.click(screen.getByRole('radio', {name: /audio/i}));
+    expect(continueButton.hasAttribute('disabled')).toBe(false);
   });
 });
 
