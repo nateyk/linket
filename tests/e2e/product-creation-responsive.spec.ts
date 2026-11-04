@@ -180,11 +180,24 @@ test('invalid upload is announced and removable without submitting a product', a
   await page.goto('/dashboard/items/new/digital');
   const files = page.getByRole('region', {name: 'Files buyers receive'});
   const browse = files.getByRole('button', {name: 'Browse files', exact: true});
+  const fileInput = files.locator('input[type="file"]');
+  await expect(fileInput).toHaveCount(1);
+
+  // Assert genuine keyboard activation of the upload input, without depending
+  // on Chromium showing an OS file chooser in a headless CI environment.
+  await fileInput.evaluate(input => {
+    input.addEventListener('click', () => {
+      input.setAttribute('data-keyboard-activated', 'true');
+    }, {once: true});
+  });
   await browse.focus();
-  const chooserPromise = page.waitForEvent('filechooser');
+  await expect(browse).toBeFocused();
   await page.keyboard.press('Enter');
-  const chooser = await chooserPromise;
-  await chooser.setFiles({
+  await expect(fileInput).toHaveAttribute('data-keyboard-activated', 'true');
+
+  // Directly attach a synthetic invalid file for deterministic validation QA.
+  // Playwright supports setting files on inputs hidden from the visual layout.
+  await fileInput.setInputFiles({
     name: 'unsupported-e2e.exe',
     mimeType: 'application/octet-stream',
     buffer: Buffer.from('synthetic invalid file'),
