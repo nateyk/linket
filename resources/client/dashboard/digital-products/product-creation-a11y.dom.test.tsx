@@ -366,7 +366,8 @@ describe('R13 progress total is derived', () => {
   test('form passes the actual section count, not a hardcoded total', () => {
     const source = readSource('digital-product-form-page.tsx');
     expect(source).toContain('total={progressSections.length}');
-    expect(source).toContain("const progressSections = sectionOrder.filter(section => section !== 'previews');");
+    expect(source).toContain("? ['details', 'files', 'pricing']");
+    expect(source).toContain("section !== 'bio-pages'");
     expect(source).not.toMatch(/total=\{[0-9]+\}/);
   });
 });
@@ -851,14 +852,15 @@ describe('T4 heading hierarchy: sections are h2 under the page h1', () => {
 
     // The section list mounts after the product GET resolves.
     const sections = await screen.findAllByRole('heading', {level: 2});
-    expect(sections).toHaveLength(4);
+    expect(sections).toHaveLength(5);
 
     const {h1} = expectHeadingHierarchy();
     expect(h1.textContent).toContain('Edit digital product');
     expect(sections.map(h => h.textContent)).toEqual([
       expect.stringContaining('Product details'),
-      expect.stringContaining('Product files'),
+      expect.stringContaining('Files buyers receive'),
       expect.stringContaining('Sample PDF'),
+      expect.stringContaining('Price'),
       expect.stringContaining('Storefront placement'),
     ]);
   });
