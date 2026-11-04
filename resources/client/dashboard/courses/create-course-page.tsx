@@ -166,6 +166,7 @@ export function Component() {
                 <BillingModePicker
                   value={billingMode}
                   onValueChange={mode => {
+                    if (!mode) return;
                     setBillingMode(mode);
                     setPrice(current => priceForBillingMode(current, mode));
                     setErrors(current => ({...current, price: undefined}));
