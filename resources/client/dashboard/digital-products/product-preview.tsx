@@ -143,7 +143,7 @@ export function ProductFormCustomerPreview({
   );
 }
 
-export function ProductPreview() {
+export function ProductPreview({buyerOnly = false}: {buyerOnly?: boolean}) {
   const {
     state: {title, description, price, coverUrl, files, productType},
   } = useProductCreation();
@@ -151,11 +151,14 @@ export function ProductPreview() {
     <ProductFormCustomerPreview
       title={title}
       emptyTitle="Your digital product"
-      price={formatPreviewPrice(price)}
+      price={buyerOnly && Number(price) === 0
+        ? <Trans message="Free" />
+        : formatPreviewPrice(price)}
       productType={productType}
       coverUrl={coverUrl || undefined}
-      descriptionLength={description?.length ?? 0}
-      fileCount={files.length}
+      description={buyerOnly ? description : undefined}
+      descriptionLength={buyerOnly ? undefined : description?.length ?? 0}
+      fileCount={buyerOnly ? undefined : files.length}
     />
   );
 }

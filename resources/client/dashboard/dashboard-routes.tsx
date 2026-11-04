@@ -448,21 +448,33 @@ export const dashboardRoutes: RouteObject[] = [
         path: 'items/new/details',
         loader: ({request}) => {
           const url = new URL(request.url);
-          if (url.searchParams.get('type') !== 'course') return null;
+          const type = url.searchParams.get('type');
+          if (!['digital', 'ebook', 'audio', 'course'].includes(type ?? '')) {
+            return redirect('/dashboard/items/new');
+          }
           const forward = new URLSearchParams();
           for (const key of ['price_cents', 'billing'] as const) {
             const value = url.searchParams.get(key);
             if (value !== null && value !== '') forward.set(key, value);
           }
           const suffix = [...forward].length ? `?${forward}` : '';
-          return redirect(`/dashboard/items/new/course${suffix}`);
+          return redirect(`/dashboard/items/new/${type}${suffix}`);
         },
         lazy: () =>
-          import('@app/dashboard/digital-products/digital-product-form-page'),
+          import('@app/dashboard/digital-products/product-type-selection-page'),
       },
       {
         path: 'items/new/course',
         lazy: () => import('@app/dashboard/courses/create-course-page'),
+      },
+      {
+        path: 'items/new/:creationType',
+        loader: ({params}) =>
+          ['digital', 'ebook', 'audio'].includes(params.creationType ?? '')
+            ? null
+            : redirect('/dashboard/items/new'),
+        lazy: () =>
+          import('@app/dashboard/digital-products/digital-product-form-page'),
       },
       {
         path: 'items/:productId/edit',
