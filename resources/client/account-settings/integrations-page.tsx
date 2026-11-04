@@ -1,4 +1,5 @@
 import {AccountSettingsPageLayout} from '@app/account-settings/account-settings-page-layout';
+import {ChatGptIntegrationPanel} from '@app/account-settings/chatgpt-integration-panel';
 import {AccountSettingsPanel} from '@common/auth/ui/account-settings/account-settings-panel';
 import {apiClient} from '@common/http/query-client';
 import {AlertDialog} from '@shadcn/alert-dialog/alert-dialog';
@@ -188,6 +189,7 @@ export function Component() {
 
   return (
     <AccountSettingsPageLayout title={<Trans message="Integrations" />}>
+      <ChatGptIntegrationPanel />
       <AccountSettingsPanel
         id="telegram"
         title={
