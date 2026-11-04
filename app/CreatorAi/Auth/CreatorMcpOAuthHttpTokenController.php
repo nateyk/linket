@@ -22,6 +22,7 @@ final class CreatorMcpOAuthHttpTokenController
         $contentType = strtolower(trim(explode(';', (string) $request->header('Content-Type'))[0]));
         if (
             $contentType !== 'application/x-www-form-urlencoded'
+            || $request->query->count() !== 0
             || $request->headers->has('Authorization')
             || $request->headers->has('Cookie')
             || strlen($request->getContent()) > 20000
