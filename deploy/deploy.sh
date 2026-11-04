@@ -92,7 +92,6 @@ done
 
 if [[ ! -f "$SHARED/.env" ]]; then fail "Shared env missing: $SHARED/.env — create from env.example per docs/production-operations.md"; fi
 if [[ ! -e "$ARTIFACT" ]]; then fail "Artifact not found: $ARTIFACT"; fi
-mkdir -p "$SHARED/storage/app" "$SHARED/storage/framework/cache" "$SHARED/storage/framework/sessions" "$SHARED/storage/framework/views" "$SHARED/storage/logs" "$SHARED/storage/tus" "$SHARED/bootstrap/cache" 2>/dev/null || true
 
 # record previous release for rollback (if any)
 PREV_TARGET=""
@@ -149,6 +148,15 @@ if [[ ! -f "$RELEASE_DIR/public/build/manifest.json" ]]; then
   fi
 fi
 
+# ---------- secure storage BEFORE shared writes or Artisan ----------
+# Extraction keeps public artifact modes. All subsequent generated files (including
+# backups, config caches containing inline keys, and rollback caches) are owner-only.
+umask 0077
+PERMISSION_CHECKER="$DEPLOY_PATH/deploy/secure-storage.php"
+[[ -f "$PERMISSION_CHECKER" && ! -L "$PERMISSION_CHECKER" ]] || fail "Missing deployment storage security checker"
+secure_release() {
+  "$PHP_BIN" "$PERMISSION_CHECKER" "$1" "$SHARED" || fail "Storage/key security checks failed; refusing release activation"
+}
 # ---------- shared links ----------
 log "Linking shared files"
 # .env
@@ -156,8 +164,10 @@ ln -sfn "$SHARED/.env" "$RELEASE_DIR/.env"
 # storage (entire storage dir is shared — private product files + tus survive)
 if [[ -L "$RELEASE_DIR/storage" || -d "$RELEASE_DIR/storage" ]]; then rm -rf "$RELEASE_DIR/storage"; fi
 ln -sfn "$SHARED/storage" "$RELEASE_DIR/storage"
-# Ensure storage subdirs exist (shared side) — including canonical public media root
-mkdir -p "$SHARED/storage/app/digital-products" "$SHARED/storage/app/uploads" "$SHARED/storage/app/public/avatars" "$SHARED/storage/app/public/link-images" "$SHARED/storage/app/public/branding-images" "$SHARED/storage/app/public/article-images" "$SHARED/storage/app/editable-views/seo-tags" "$SHARED/storage/app/tokens" "$SHARED/storage/tus" "$SHARED/storage/logs" "$SHARED/storage/framework/cache" "$SHARED/storage/framework/sessions" "$SHARED/storage/framework/views" "$SHARED/storage/tntsearch"
+secure_release "$RELEASE_DIR"
+if [[ -n "$PREV_TARGET" ]]; then
+  secure_release "$PREV_TARGET"
+fi
 # Migrate legacy public/storage files to shared public root (one-time, idempotent)
 if [[ -d "$RELEASE_DIR/public/storage" && ! -L "$RELEASE_DIR/public/storage" ]]; then
   log "Migrating legacy public/storage files to shared/storage/app/public (idempotent, preserve)"
@@ -168,8 +178,8 @@ if [[ -d "$RELEASE_DIR/public/storage" && ! -L "$RELEASE_DIR/public/storage" ]];
       if command -v rsync >/dev/null 2>&1; then
         rsync -a --ignore-existing "$RELEASE_DIR/public/storage/$sub/" "$SHARED/storage/app/public/$sub/" 2>&1 | tail -n 5 || true
       else
-        # cp -rn = no-clobber, recursive
-        cp -rn "$RELEASE_DIR/public/storage/$sub"/* "$SHARED/storage/app/public/$sub/" 2>&1 | tail -n 5 || true
+        # Preserve public file modes despite the restrictive deployment umask.
+        cp -rpn "$RELEASE_DIR/public/storage/$sub"/* "$SHARED/storage/app/public/$sub/" 2>&1 | tail -n 5 || true
       fi
       count_src=$(find "$RELEASE_DIR/public/storage/$sub" -type f 2>/dev/null | wc -l | tr -d ' ')
       count_dst=$(find "$SHARED/storage/app/public/$sub" -type f 2>/dev/null | wc -l | tr -d ' ')
@@ -184,7 +194,7 @@ if [[ -d "$RELEASE_DIR/public/storage" && ! -L "$RELEASE_DIR/public/storage" ]];
       # skip .gitignore/.htaccess
       if [[ "$base" == ".gitignore" || "$base" == ".htaccess" ]]; then continue; fi
       if [[ ! -f "$SHARED/storage/app/public/$base" ]]; then
-        cp -n "$f" "$SHARED/storage/app/public/$base" 2>&1 | tail -n 5 || true
+        cp -pn "$f" "$SHARED/storage/app/public/$base" 2>&1 | tail -n 5 || true
         log " migrated top-level $base to shared"
       fi
     done
@@ -194,10 +204,6 @@ fi
 if [[ -L "$RELEASE_DIR/public/storage" || -d "$RELEASE_DIR/public/storage" ]]; then rm -rf "$RELEASE_DIR/public/storage"; fi
 ln -sfn "$SHARED/storage/app/public" "$RELEASE_DIR/public/storage"
 log "public/storage -> $SHARED/storage/app/public (canonical persistent)"
-# bootstrap/cache: keep per-release but ensure writable; optionally symlink to shared
-mkdir -p "$RELEASE_DIR/bootstrap/cache" "$SHARED/bootstrap/cache"
-chmod 775 "$RELEASE_DIR/bootstrap/cache" 2>/dev/null || true
-chmod 775 "$SHARED/storage" "$SHARED/storage/framework" "$SHARED/storage/logs" 2>/dev/null || true
 
 # vendor fallback (hybrid) — only if artifact somehow lacks vendor
 if [[ ! -d "$RELEASE_DIR/vendor" ]]; then
@@ -205,12 +211,6 @@ if [[ ! -d "$RELEASE_DIR/vendor" ]]; then
   (cd "$RELEASE_DIR" && composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction 2>&1 | tail -n 40)
   [[ -d "$RELEASE_DIR/vendor" ]] || fail "composer install fallback failed to create vendor/"
 fi
-
-# ---------- perms ----------
-log "Setting permissions (storage 775, bootstrap/cache 775, .env 640 where applicable)"
-chmod -R 775 "$SHARED/storage" 2>/dev/null || true
-chmod 775 "$RELEASE_DIR/bootstrap/cache" 2>/dev/null || true
-chmod 640 "$SHARED/.env" 2>/dev/null || true
 
 # ---------- pre-migration backup (mandatory; abort if unavailable) ----------
 BACKUP_FILE=""
@@ -321,6 +321,10 @@ if [[ -d "$RELEASE_DIR/public/digital-products" ]]; then
 fi
 
 # ---------- activate atomically (temp symlink + mv -Tf for same-filesystem atomic rename) ----------
+secure_release "$RELEASE_DIR"
+if [[ -n "$PREV_TARGET" ]]; then
+  secure_release "$PREV_TARGET"
+fi
 log "Activating release atomically: $RELEASE_DIR -> $CURRENT (via temp symlink + mv -Tf)"
 # atomic_swap creates a temp symlink on the same filesystem and renames it over the live symlink
 # mv -Tf is atomic on POSIX when source and target are on same mount
@@ -378,9 +382,11 @@ fi
 if [[ $HEALTH_RC -ne 0 ]]; then
   log "POST-ACTIVATION HEALTH FAILED — rolling back to $PREV_TARGET"
   if [[ -n "$PREV_TARGET" && -d "$PREV_TARGET" ]]; then
+    secure_release "$PREV_TARGET"
     ln -s "$PREV_TARGET" "$CURRENT.next"
     mv -Tf "$CURRENT.next" "$CURRENT"
     (cd "$CURRENT" && $PHP_BIN artisan optimize 2>&1 | tail -n 5 || true)
+    secure_release "$PREV_TARGET"
     (cd "$CURRENT" && $PHP_BIN artisan horizon:terminate 2>&1 | tail -n 5 || (cd "$CURRENT" && $PHP_BIN artisan queue:restart 2>&1 | tail -n 5 || true))
     log "Rollback complete — current now -> $PREV_TARGET; failed release kept at $RELEASE_DIR for forensics"
   else
