@@ -489,3 +489,163 @@ test('HTTP token endpoint rejects unexpected query parameters without consuming 
     $this->post('https://linket.example.test/oauth/linket/token', $form, $headers)
         ->assertOk()->assertJsonPath('token_type', 'Bearer');
 });
+
+
+/**
+ * Real HTTP MCP integration. No fake JWTs: these tests redeem a genuine
+ * consent-bound Passport code and exercise Laravel MCP's transport.
+ */
+function mcpRemoteRoutes(bool $discovery = true, bool $server = true): void
+{
+    config()->set('creator_ai.features.mcp_http_discovery', $discovery);
+    config()->set('creator_ai.features.mcp_http_server', $server);
+    config()->set('creator_ai.oauth_issuer', 'https://linket.example.test');
+    config()->set('creator_ai.mcp_resource_url', 'https://linket.example.test/mcp');
+    config()->set('app.url', 'https://linket.example.test');
+
+    require base_path('routes/creator-ai-mcp-oauth.php');
+    Route::getRoutes()->refreshNameLookups();
+}
+
+function mcpRemoteMessage(string $method, ?array $params = null): array
+{
+    return [
+        'jsonrpc' => '2.0', 'id' => 7, 'method' => $method,
+        'params' => [
+            ...($params ?? []),
+            '_meta' => [
+                'io.modelcontextprotocol/protocolVersion' => '2026-07-28',
+                'io.modelcontextprotocol/clientCapabilities' => (object) [],
+            ],
+        ],
+    ];
+}
+
+function mcpRemoteHeaders(string $method, ?string $token = null, ?string $name = null): array
+{
+    return [
+        'MCP-Protocol-Version' => '2026-07-28',
+        'Mcp-Method' => $method,
+        ...($name !== null ? ['Mcp-Name' => $name] : []),
+        'Accept' => 'application/json, text/event-stream',
+        ...($token !== null ? ['Authorization' => 'Bearer '.$token] : []),
+    ];
+}
+
+test('remote MCP and OAuth discovery routes are absent unless separately enabled', function () {
+    expect(config('creator_ai.features.mcp_http_discovery'))->toBeFalse();
+    expect(config('creator_ai.features.mcp_http_server'))->toBeFalse();
+    expect(Route::has('creator-ai.oauth.resource-metadata'))->toBeFalse();
+    expect(Route::has('creator-ai.oauth.server-metadata'))->toBeFalse();
+    expect(Route::has('creator-ai.mcp.http'))->toBeFalse();
+    expect(Route::has('mcp.oauth.register'))->toBeFalse();
+});
+
+test('HTTPS OAuth metadata advertises exactly one resource and restricted public PKCE endpoints', function () {
+    mcpRemoteRoutes(true, false);
+
+    $this->get('https://linket.example.test/.well-known/oauth-protected-resource/mcp')
+        ->assertOk()
+        ->assertJsonPath('resource', 'https://linket.example.test/mcp')
+        ->assertJsonPath('authorization_servers.0', 'https://linket.example.test')
+        ->assertJsonPath('scopes_supported.0', 'mcp:use')
+        ->assertJsonMissingPath('registration_endpoint');
+
+    $this->get('https://linket.example.test/.well-known/oauth-authorization-server')
+        ->assertOk()
+        ->assertJsonPath('issuer', 'https://linket.example.test')
+        ->assertJsonPath('authorization_endpoint', 'https://linket.example.test/oauth/linket/authorize')
+        ->assertJsonPath('token_endpoint', 'https://linket.example.test/oauth/linket/token')
+        ->assertJsonPath('grant_types_supported.0', 'authorization_code')
+        ->assertJsonPath('grant_types_supported.1', 'refresh_token')
+        ->assertJsonPath('code_challenge_methods_supported.0', 'S256')
+        ->assertJsonPath('token_endpoint_auth_methods_supported.0', 'none')
+        ->assertJsonMissingPath('registration_endpoint');
+
+    expect(Route::has('mcp.oauth.register'))->toBeFalse();
+    expect(Route::has('passport.token'))->toBeFalse();
+    $this->get('https://foreign.example.test/.well-known/oauth-authorization-server')->assertStatus(403);
+    $this->get('http://linket.example.test/.well-known/oauth-protected-resource/mcp')->assertStatus(403);
+});
+
+test('MCP HTTP transport challenges missing and malformed bearer credentials before listing tools', function () {
+    mcpRemoteRoutes(true, true);
+
+    $method = 'tools/list';
+    $message = mcpRemoteMessage($method);
+    $unauth = $this->postJson('https://linket.example.test/mcp', $message, mcpRemoteHeaders($method));
+    $unauth->assertStatus(401);
+    expect($unauth->headers->get('WWW-Authenticate'))
+        ->toContain('resource_metadata="https://linket.example.test/.well-known/oauth-protected-resource/mcp"');
+
+    $this->postJson('https://linket.example.test/mcp', $message, [
+        ...mcpRemoteHeaders($method),
+        'Authorization' => 'Bearer fake.unsig.ned',
+    ])->assertStatus(401);
+
+    $this->postJson('https://linket.example.test/mcp', $message, [
+        ...mcpRemoteHeaders($method),
+        'Cookie' => 'laravel_session=bad',
+    ])->assertStatus(401);
+
+    $this->postJson('https://linket.example.test/mcp?access_token=abc', $message, mcpRemoteHeaders($method))
+        ->assertStatus(400);
+});
+
+test('signed creator bearer lists only Linket read tools and invokes sales in its live workspace', function () {
+    [$creator, $workspaceId, $clientId, $params, $code] = mcpExchangeTestCode($this);
+    $token = mcpExchangeTokenResult($code, $clientId, $params)['access_token'];
+    mcpRemoteRoutes(true, true);
+
+    $listing = $this->postJson(
+        'https://linket.example.test/mcp',
+        mcpRemoteMessage('tools/list'),
+        mcpRemoteHeaders('tools/list', $token),
+    );
+    $listing->assertOk();
+    $names = array_column($listing->json('result.tools'), 'name');
+    expect($names)->toEqualCanonicalizing([
+        'sales_summary', 'sales_trends', 'order_insights', 'list_orders', 'product_performance',
+    ]);
+    expect($listing->json('result.tools.0.annotations.readOnlyHint'))->toBeTrue();
+
+    $args = ['from' => now()->subDays(7)->toDateString(), 'to' => now()->toDateString()];
+    $called = $this->postJson(
+        'https://linket.example.test/mcp',
+        mcpRemoteMessage('tools/call', ['name' => 'sales_summary', 'arguments' => $args]),
+        mcpRemoteHeaders('tools/call', $token, 'sales_summary'),
+    );
+    $called->assertOk();
+    expect($called->json('result.isError') ?? false)->toBeFalse();
+    expect((string) $called->json('result.content.0.text'))->toContain('ETB');
+
+    $this->postJson(
+        'https://linket.example.test/mcp',
+        mcpRemoteMessage('tools/call', [
+            'name' => 'sales_summary',
+            'arguments' => [...$args, 'workspace_id' => $workspaceId],
+        ]),
+        mcpRemoteHeaders('tools/call', $token, 'sales_summary'),
+    )->assertOk()->assertJsonPath('result.isError', true);
+});
+
+test('MCP bearer immediately loses access after disconnect and Verify.et Pro expiry', function () {
+    [$creator, $workspaceId, $clientId, $params, $code] = mcpExchangeTestCode($this);
+    $token = mcpExchangeTokenResult($code, $clientId, $params)['access_token'];
+    mcpRemoteRoutes(true, true);
+    $message = mcpRemoteMessage('tools/list');
+    $headers = mcpRemoteHeaders('tools/list', $token);
+
+    $this->postJson('https://linket.example.test/mcp', $message, $headers)->assertOk();
+    \Common\Billing\Subscription::query()
+        ->where('user_id', $creator->id)->where('gateway_name', 'verify_et')
+        ->update(['gateway_status' => 'expired']);
+    $this->postJson('https://linket.example.test/mcp', $message, $headers)->assertStatus(401);
+
+    \Common\Billing\Subscription::query()
+        ->where('user_id', $creator->id)->where('gateway_name', 'verify_et')
+        ->update(['gateway_status' => 'active']);
+    $grantId = DB::table('creator_ai_mcp_oauth_token_bindings')->value('connection_id');
+    app(\App\CreatorAi\Services\CreatorMcpConnectionRegistry::class)->revoke($creator, $grantId);
+    $this->postJson('https://linket.example.test/mcp', $message, $headers)->assertStatus(401);
+});
