@@ -8,6 +8,17 @@ use Tests\Support\InteractsWithCreatorMcpOAuth;
 uses(DatabaseTransactions::class, InteractsWithCreatorMcpOAuth::class);
 
 /**
+ * Cache-Control may include additional safe directives (such as private).
+ * Require no-store as a complete directive, never an exact header string.
+ */
+function assertMcpNoStoreCacheControl(\Illuminate\Testing\TestResponse $response): void
+{
+    $header = strtolower((string) $response->headers->get('Cache-Control'));
+    $directives = array_map('trim', explode(',', $header));
+    expect($directives)->toContain('no-store');
+}
+
+/**
  * Synthetic ChatGPT protocol rehearsal, NOT a connection to ChatGPT or to a
  * live staging/production host. Every request uses Laravel's test client,
  * db_test, fixture users/clients and an ephemeral RSA signing key.
@@ -15,12 +26,12 @@ uses(DatabaseTransactions::class, InteractsWithCreatorMcpOAuth::class);
 test('ChatGPT-style discovery and challenge advertise only the isolated read-only OAuth resource', function () {
     $this->enableMcpOAuth();
 
-    $this->get('https://linket.example.test/.well-known/oauth-protected-resource/mcp')
+    $resourceMetadata = $this->get('https://linket.example.test/.well-known/oauth-protected-resource/mcp')
         ->assertOk()
         ->assertJsonPath('resource', 'https://linket.example.test/mcp')
         ->assertJsonPath('authorization_servers.0', 'https://linket.example.test')
-        ->assertJsonPath('scopes_supported.0', 'mcp:use')
-        ->assertHeader('Cache-Control', 'no-store');
+        ->assertJsonPath('scopes_supported.0', 'mcp:use');
+    assertMcpNoStoreCacheControl($resourceMetadata);
 
     $this->get('https://linket.example.test/.well-known/oauth-authorization-server')
         ->assertOk()
@@ -60,8 +71,9 @@ test('a pre-registered ChatGPT-shaped callback can authorize list read-only tool
     $parameters['redirect_uri'] = $redirectUri;
 
     $authorizationCode = $this->mcpConsent($creator, $workspaceId, $parameters);
-    $tokens = $this->mcpRedeem($authorizationCode, $parameters)
-        ->assertOk()->assertHeader('Cache-Control', 'no-store')->json();
+    $tokenResponse = $this->mcpRedeem($authorizationCode, $parameters)->assertOk();
+    assertMcpNoStoreCacheControl($tokenResponse);
+    $tokens = $tokenResponse->json();
 
     expect($tokens['token_type'])->toBe('Bearer');
     expect($tokens['access_token'])->toBeString()->not->toBeEmpty();
