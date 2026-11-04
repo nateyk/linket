@@ -44,8 +44,10 @@ test.describe('product creation responsive evidence', () => {
   );
 
   const viewports = [
+    {name: 'reflow-320', width: 320, height: 900},
     {name: 'mobile-small', width: 360, height: 800},
     {name: 'mobile', width: 375, height: 812},
+    {name: 'zoom-200pct-equivalent', width: 720, height: 900},
     {name: 'tablet', width: 768, height: 1024},
     {name: 'tablet-wide', width: 1024, height: 768},
     {name: 'desktop', width: 1440, height: 900},
@@ -141,8 +143,7 @@ test('mobile curriculum returns to unsaved lesson without a false discard prompt
   page,
 }, testInfo) => {
   test.skip(
-    process.env.LINKET_ISOLATED_E2E !== '1' ||
-      !process.env.LINKET_E2E_COURSE_ID,
+    process.env.LINKET_ISOLATED_E2E !== '1',
     'Requires an isolated test database with a seeded course containing a lesson',
   );
 
@@ -150,6 +151,9 @@ test('mobile curriculum returns to unsaved lesson without a false discard prompt
   await loginAsSeededCreator(page);
 
   const courseId = process.env.LINKET_E2E_COURSE_ID;
+  if (!courseId || !/^[1-9]\\d*$/.test(courseId)) {
+    throw new Error('Missing numeric LINKET_E2E_COURSE_ID for isolated browser QA');
+  }
   await page.goto(`/dashboard/items/${courseId}/course`);
   await expect(page.getByRole('heading', {name: 'Curriculum'})).toBeVisible();
   const resume = page.getByRole('button', {name: 'Continue editing'});
