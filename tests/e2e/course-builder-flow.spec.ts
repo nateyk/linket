@@ -3,23 +3,30 @@ import {test, expect} from '@playwright/test';
 test.describe.configure({retries: 0});
 
 test.describe('Course Builder full flow', () => {
-  test('create course with video lesson, readable lesson, and reordered outcomes', async ({page}) => {
-    // 1. Login
+  test('create course with video and readable lessons and confirm outcome persistence', async ({page}) => {
+    test.skip(
+      process.env.LINKET_ISOLATED_E2E !== '1',
+      'Requires a deliberately isolated test server/database; this scenario writes course data',
+    );
+    // Keep the legacy end-to-end creation journey isolated from real creators.
+    // Mobile mode exercises the one-surface curriculum/editor navigation.
+    await page.setViewportSize({width: 390, height: 844});
     await page.goto('/login');
-    await page.fill('input[name="email"]', 'test@example.com');
-    await page.fill('input[name="password"]', 'password');
-    await page.click('button[type="submit"]');
+    await page.locator('#email').fill(
+      process.env.LINKET_E2E_CREATOR_EMAIL ?? 'creator@example.test',
+    );
+    await page.locator('#password').fill(
+      process.env.LINKET_E2E_CREATOR_PASSWORD ?? 'password',
+    );
+    await page.getByRole('button', {name: /log in|sign in/i}).click();
     await expect(page).toHaveURL(/.*dashboard/);
 
-    // 2. Create a new course product
-    await page.goto('/dashboard/items/create');
-    await expect(page.locator('h1')).toContainText('Create product');
-
-    // Fill product form
-    await page.fill('input[name="title"]', 'E2E Test Course');
-    await page.fill('textarea[name="description"]', 'A test course for E2E testing');
-    await page.fill('input[name="price"]', '0');
-    await page.click('button:has-text("Create course")');
+    // The current Course editor uses a type-specific route and inline price.
+    await page.goto('/dashboard/items/new/course');
+    await expect(page.getByRole('heading', {name: 'Create course', level: 1})).toBeVisible();
+    await page.getByRole('textbox', {name: 'Course title'}).fill('E2E Test Course');
+    await page.getByRole('radio', {name: /free access/i}).click();
+    await page.getByRole('button', {name: 'Create course'}).click();
 
     // Wait for redirect to course builder
     await expect(page).toHaveURL(/\/dashboard\/items\/\d+\/course/);

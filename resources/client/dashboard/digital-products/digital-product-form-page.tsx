@@ -42,11 +42,11 @@ import {useTrans} from '@ui/i18n/use-trans';
 import {getBootstrapData} from '@ui/bootstrap-data/bootstrap-data-store';
 import {FormattedBytes} from '@ui/i18n/formatted-bytes';
 import {
-  BookIcon,
-  DownloadIcon,
+  Clock3Icon,
   FileArchiveIcon,
   FileIcon,
   FileTextIcon,
+  EyeIcon,
   GraduationCapIcon,
   HeadphonesIcon,
   Link2Icon,
@@ -57,7 +57,12 @@ import {
 } from 'lucide-react';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {useNavigate, useParams, useSearchParams} from 'react-router';
-import {parseWizardPrefill, firstInvalidFieldId} from './product-create-flow';
+import {parseWizardPrefill, firstInvalidFieldId, parseEtbToCents, priceForBillingMode, resolveCreateType, type BillingMode} from './product-create-flow';
+import {DigitalProductEditor} from './digital-product-editor';
+import {EbookEditor} from './ebook-editor';
+import {AudioEditor} from './audio-editor';
+import {ProductPreviewDialog} from './product-preview-dialog';
+import {BillingModePicker} from './billing-mode-picker';
 import {
   ProductCreationProvider,
   sampleRequestPayload,
@@ -75,6 +80,7 @@ import {
   type ProductSetupSection,
 } from './product-form-section';
 import {ProductPreview, ProductStatus} from './product-preview';
+import {missingProductRequirements} from './product-authoring-status';
 import type {ProductType} from './product-type-picker';
 
 type Biolink = {id: number; name: string; short_url?: string};
@@ -101,19 +107,27 @@ type Product = {
   }>;
   biolink_ids?: number[];
   status: string;
+  has_pending_update?: boolean;
+  review_requested_at?: string | null;
   type?: string;
 };
 
 type FieldErrors = Record<string, string>;
 
-const PRODUCT_TYPE_CONFIG: Record<
-  ProductType,
-  {label: string; icon: typeof DownloadIcon}
-> = {
-  digital: {label: 'Digital product', icon: DownloadIcon},
-  ebook: {label: 'E-book', icon: BookIcon},
-  audio: {label: 'Audio', icon: HeadphonesIcon},
-  course: {label: 'Course', icon: GraduationCapIcon},
+// Each message is a static literal so the translation extractor finds it.
+const PRODUCT_PAGE_TITLES = {
+  create: {
+    digital: <Trans message="Create digital product" />,
+    ebook: <Trans message="Create e-book" />,
+    audio: <Trans message="Create audio" />,
+    course: <Trans message="Create course" />,
+  },
+  edit: {
+    digital: <Trans message="Edit digital product" />,
+    ebook: <Trans message="Edit e-book" />,
+    audio: <Trans message="Edit audio" />,
+    course: <Trans message="Edit course" />,
+  },
 };
 
 const SECTION_META: Record<
@@ -140,12 +154,15 @@ const SECTION_META: Record<
 
 export function Component() {
   const [searchParams] = useSearchParams();
-  const {productId} = useParams();
+  const {productId, creationType} = useParams();
+  const prefill = parseWizardPrefill(searchParams);
+  if (creationType) prefill.type = resolveCreateType(creationType);
+  if (prefill.billing === 'free') prefill.price = '0';
   return (
     <FileUploadProvider>
       <ProductCreationProvider
-        key={productId ?? 'new'}
-        prefill={parseWizardPrefill(searchParams)}
+        key={productId ?? `new:${creationType ?? 'legacy'}`}
+        prefill={prefill}
         productId={productId ? Number(productId) : null}
       >
         <DigitalProductForm />
@@ -158,7 +175,7 @@ function DigitalProductForm() {
   const {productId} = useParams();
   const navigate = useNavigate();
   const {trans} = useTrans();
-  const {state, actions, dirty} = useProductCreation();
+  const {state, actions, dirty, autoSaveState, billing} = useProductCreation();
   const title = state.title;
   const description = state.description;
   const price = state.price;
@@ -169,6 +186,9 @@ function DigitalProductForm() {
   const biolinkIds = state.biolinkIds;
   const productType = state.productType as ProductType | null;
   const [product, setProduct] = useState<Product | null>(null);
+  const [billingChoice, setBillingChoice] = useState<BillingMode | null>(billing);
+  const effectiveBilling: BillingMode | null =
+    billingChoice ?? (product ? (product.price_cents === 0 ? 'free' : 'paid') : null);
   const [biolinks, setBiolinks] = useState<Biolink[]>([]);
   const [loading, setLoading] = useState(!!productId);
   const [saving, setSaving] = useState(false);
@@ -177,6 +197,7 @@ function DigitalProductForm() {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [convertToEtb, setConvertToEtb] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [openSection, setOpenSection] = useState<ProductSetupSection | null>(
     'details',
   );
@@ -187,7 +208,7 @@ function DigitalProductForm() {
   // the GET is in flight, which also keeps auto-save off during load.
   useEffect(() => {
     if (dirty && product?.status === 'draft') actions.autoSave();
-  }, [dirty, actions, product?.status]);
+  }, [dirty, actions.autoSave, product?.status]);
 
   const validateField = useCallback(
     (field: string, value: string) => {
@@ -225,7 +246,6 @@ function DigitalProductForm() {
     [],
   );
 
-  const typeConfig = productType ? PRODUCT_TYPE_CONFIG[productType] : null;
   // Creator-facing file formats come from the server capability
   // (App\Storefront\ProductFileFormats via bootstrap data) — never hardcoded.
   const effectiveFileType = (product?.type ?? productType ?? 'digital') as
@@ -244,10 +264,10 @@ function DigitalProductForm() {
     );
   const fileHint = fileCapability?.hint;
   const pageTitle = product
-    ? 'Edit digital product'
-    : typeConfig
-      ? `Create ${typeConfig.label}`
-      : 'Create digital product';
+    ? PRODUCT_PAGE_TITLES.edit[effectiveFileType]
+    : productType
+      ? PRODUCT_PAGE_TITLES.create[productType]
+      : <Trans message="Create digital product" />;
 
   // The product must be loaded exactly once per productId. `actions` is
   // rebuilt by the creation-context memo on every state change, so listing it
@@ -335,25 +355,31 @@ function DigitalProductForm() {
   const save = useCallback(
     async (submitAfterSave = false) => {
       if (productId && (!product || String(product.id) !== productId)) return;
-      const priceCents = Math.round(Number(price) * 100);
+      const priceCents = effectiveBilling === 'free' ? 0 : Math.round(Number(price) * 100);
       const effectiveType = product?.type ?? productType ?? 'digital';
       const isCourse = effectiveType === 'course';
 
       if (
         !title.trim() ||
+        !effectiveBilling ||
         !Number.isFinite(priceCents) ||
         priceCents < 0 ||
+        (effectiveBilling === 'paid' && priceCents <= 0) ||
         (!isCourse && !files.length)
       ) {
         setOpenSection(
-          !title.trim() || !Number.isFinite(priceCents) || priceCents < 0
+          !title.trim() || !effectiveBilling || !Number.isFinite(priceCents) || priceCents < 0 || (effectiveBilling === 'paid' && priceCents <= 0)
             ? 'details'
             : 'files',
         );
         setError(
-          isCourse
-            ? 'Add a title and a valid price.'
-            : 'Add a title, a price of ETB 0 or more, and one downloadable file.',
+          !effectiveBilling
+            ? 'Choose Free access or Paid before saving.'
+            : effectiveBilling === 'paid' && priceCents <= 0
+              ? 'Enter an amount greater than ETB 0.'
+              : isCourse
+                ? 'Add a title and a valid price.'
+                : 'Add a title, a price of ETB 0 or more, and one downloadable file.',
         );
         return;
       }
@@ -439,6 +465,7 @@ function DigitalProductForm() {
       files,
       samples,
       navigate,
+      effectiveBilling,
       price,
       product,
       productId,
@@ -501,21 +528,120 @@ function DigitalProductForm() {
 
   const isSectionComplete = (section: ProductSetupSection) => {
     const isCourse = productType === 'course';
-    if (section === 'details')
-      return title.trim().length > 0 && price.trim().length > 0;
+    if (section === 'details') return title.trim().length > 0;
     if (section === 'files') return isCourse ? true : files.length > 0;
+    if (section === 'pricing') return !!effectiveBilling &&
+      (effectiveBilling === 'free' || (parseEtbToCents(price) ?? 0) > 0);
     return true;
   };
 
-  const progressSections = sectionOrder.filter(section => section !== 'previews');
+  const progressSections: ProductSetupSection[] = ['details', 'files', 'pricing'];
   const completedSections = progressSections.filter(isSectionComplete).length;
   const canSubmit =
     !product || product.status === 'draft' || product.status === 'rejected';
+  const missingRequirements = missingProductRequirements({
+    title,
+    filesCount: files.length,
+    billing: effectiveBilling,
+    price,
+    type: effectiveFileType,
+  });
+  // Explain the first missing required item without counting optional samples
+  // or storefront placement as mandatory.
+  const readinessHint = canSubmit && missingRequirements.length > 0 ? (
+    <p className="text-xs text-muted-foreground" role="status">
+      {missingRequirements[0] === 'title' ? (
+        <Trans message="Add a title before submitting." />
+      ) : missingRequirements[0] === 'files' ? (
+        <Trans message="Upload at least one private product file before submitting." />
+      ) : (
+        <Trans message="Choose Free access or enter a valid paid price before submitting." />
+      )}
+    </p>
+  ) : null;
   const unavailable = !!productId && (!product || String(product.id) !== productId);
+
+  const handleBillingChange = (mode: BillingMode) => {
+    setBillingChoice(mode);
+    actions.setPrice(priceForBillingMode(price, mode));
+    setFieldErrors(current => {
+      const next = {...current};
+      delete next.price_cents;
+      return next;
+    });
+  };
+
+  const detailsFields = (
+    <DetailsPanel
+      title={title}
+      description={description}
+      price={price}
+      billingMode={effectiveBilling}
+      onBillingModeChange={handleBillingChange}
+      coverUrl={coverUrl}
+      onTitleChange={actions.setTitle}
+      onDescriptionChange={actions.setDescription}
+      onPriceChange={actions.setPrice}
+      legacyCurrency={product?.currency}
+      convertToEtb={convertToEtb}
+      onConvertToEtbChange={setConvertToEtb}
+      onCoverChange={actions.setCover}
+      errors={fieldErrors}
+      validateField={validateField}
+      hidePricing={effectiveFileType !== 'course'}
+    />
+  );
+
+  const pricingFields = (
+    <PricingFields
+      price={price}
+      billingMode={effectiveBilling}
+      onBillingModeChange={handleBillingChange}
+      onPriceChange={actions.setPrice}
+      legacyCurrency={product?.currency}
+      convertToEtb={convertToEtb}
+      onConvertToEtbChange={setConvertToEtb}
+      errors={fieldErrors}
+      validateField={validateField}
+    />
+  );
+
+  const privateFileFields = (
+    <FilesPanel
+      files={files}
+      accept={fileAccept}
+      hint={fileHint}
+      onUploaded={file => {
+        if (!files.some(item => item.id === file.id)) {
+          actions.setFiles([...files, file]);
+        }
+      }}
+      onRemove={id => actions.setFiles(files.filter(file => file.id !== id))}
+      error={fieldErrors.file_ids}
+    />
+  );
+
+  const sampleFields = previewKind ? (
+    <ProductSampleFields
+      kind={previewKind}
+      productType={effectiveFileType === 'digital' ? 'digital' : 'ebook'}
+      samples={samples}
+      onChange={actions.setSamples}
+      error={fieldErrors.sample_file_ids || fieldErrors.sample_titles}
+    />
+  ) : null;
+
+  const storefrontFields = (
+    <BioPagesPanel
+      biolinks={biolinks}
+      selectedIds={biolinkIds}
+      onChange={actions.setBiolinkIds}
+    />
+  );
 
   return (
     <DashboardLayout.MainSection>
-      <DashboardLayout.SectionHeader>
+      <DashboardLayout.SectionHeader className="max-sm:h-auto max-sm:flex-wrap max-sm:py-2">
         <DashboardLayout.SidebarToggle />
         {/* P2 (crit3-A/3-B): the SectionTitle (page title + status badge)
             measured width 0 at 1280/1440/1920. Root cause is the flex
@@ -535,18 +661,29 @@ function DigitalProductForm() {
             </Breadcrumb.Link>
           </Breadcrumb.Item>
         </Breadcrumb>
-        <DashboardLayout.SectionTitle render={<h1 />}>
+        <DashboardLayout.SectionTitle render={<h1 />} className="max-sm:order-3 max-sm:basis-full max-sm:flex-none max-sm:w-full max-sm:text-xl max-sm:overflow-visible max-sm:whitespace-normal max-sm:text-clip">
           {/* P2: in a tight row the TEXT is what truncates (min-w-0), so
               the status badge — the one product-specific fact the chrome
               carries — keeps its 36px at every width.
               Final-fix item 2: `render={<h1 />}` makes this the page's one
               and only heading (T7's mechanism on the selection page). */}
-          <span className="min-w-0 truncate">
-            <Trans message={pageTitle} />
+          <span className="min-w-0 truncate max-sm:overflow-visible max-sm:whitespace-normal max-sm:text-clip">
+            {pageTitle}
           </span>
-          {product && <ProductStatus status={product.status} />}
+          {product && <ProductStatus status={product.status} hasPendingUpdate={product.has_pending_update === true} />}
         </DashboardLayout.SectionTitle>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 max-sm:ml-auto">
+          {effectiveFileType !== 'course' && (
+            <Button
+              variant="outline"
+              size="sm"
+              aria-label={trans({message: 'Preview'})}
+              onClick={() => setPreviewOpen(true)}
+            >
+              <EyeIcon className="size-4" aria-hidden="true" />
+              <span className="max-sm:hidden"><Trans message="Preview" /></span>
+            </Button>
+          )}
           {/* P2 (crit3-A): the text labels collapse below 640px
               (max-sm:hidden), leaving icon-only buttons with no accessible
               name. aria-labels match the visible text via trans() — the
@@ -608,7 +745,33 @@ function DigitalProductForm() {
       </DashboardLayout.SectionHeader>
 
       <DashboardLayout.SectionContent className="overflow-y-auto">
-        <div className="mx-auto w-full max-w-6xl py-4 sm:py-5">
+        <div className={effectiveFileType !== 'course' ? 'mx-auto w-full max-w-3xl py-4 sm:py-5' : 'mx-auto w-full max-w-6xl py-4 sm:py-5'}>
+          {!loading && !unavailable && (
+            <div role="status" aria-live="polite" className="mb-4 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <span>
+                {saving ? (
+                  <Trans message="Saving changes..." />
+                ) : !product ? (
+                  <Trans message="Not saved yet" />
+                ) : product.status === 'draft' && autoSaveState === 'saving' ? (
+                  <Trans message="Saving draft..." />
+                ) : product.status === 'draft' && autoSaveState === 'failed' ? (
+                  <Trans message="Autosave failed. Changes are still on this page." />
+                ) : dirty ? (
+                  <Trans message="Unsaved changes" />
+                ) : product.status === 'draft' ? (
+                  <Trans message="Draft saved" />
+                ) : (
+                  <Trans message="No unsaved changes" />
+                )}
+              </span>
+              {product?.status === 'draft' && autoSaveState === 'failed' && dirty && (
+                <Button type="button" variant="outline" size="sm" onClick={() => actions.autoSave()}>
+                  <Trans message="Retry save" />
+                </Button>
+              )}
+            </div>
+          )}
           {error && (
             <Alert.Root
               variant="destructive"
@@ -620,11 +783,20 @@ function DigitalProductForm() {
             </Alert.Root>
           )}
 
-          {product?.status === 'approved' && dirty && (
+          {product?.status === 'approved' && product.has_pending_update === true && (
+            <Alert.Root variant="warning" fillStyle="subtleFill" className="mb-5">
+              <Clock3Icon />
+              <Alert.Description>
+                <Trans message="This product remains approved while an update is under review." />
+              </Alert.Description>
+            </Alert.Root>
+          )}
+
+          {product?.status === 'approved' && dirty && product.has_pending_update !== true && (
             <Alert.Root variant="warning" fillStyle="subtleFill" className="mb-5">
               <TriangleAlertIcon />
               <Alert.Description>
-                <Trans message="Saving changes will return this approved product to draft." />
+                <Trans message="Changes to approved products may require review. The published version remains available during review." />
               </Alert.Description>
             </Alert.Root>
           )}
@@ -671,11 +843,47 @@ function DigitalProductForm() {
                 <FilesSkeleton />
                 <BioPagesSkeleton />
               </div>
-              <aside className="min-w-0 lg:sticky lg:top-6">
-                <PreviewSkeleton />
-              </aside>
+              {effectiveFileType === 'course' && (
+                <aside className="min-w-0 lg:sticky lg:top-6">
+                  <PreviewSkeleton />
+                </aside>
+              )}
             </>
-          ) : unavailable ? null : (
+          ) : unavailable ? null : effectiveFileType === 'digital' ? (
+            <div className="flex min-w-0 flex-col gap-5">
+              <ProductFormProgress completed={completedSections} total={progressSections.length} />
+              {readinessHint}
+              <DigitalProductEditor
+                details={detailsFields}
+                files={privateFileFields}
+                sample={sampleFields}
+                pricing={pricingFields}
+                storefront={storefrontFields}
+              />
+            </div>
+          ) : effectiveFileType === 'ebook' ? (
+            <div className="flex min-w-0 flex-col gap-5">
+              <ProductFormProgress completed={completedSections} total={progressSections.length} />
+              {readinessHint}
+              <EbookEditor
+                details={detailsFields}
+                files={privateFileFields}
+                sample={sampleFields}
+                pricing={pricingFields}
+                storefront={storefrontFields}
+              />
+            </div>          ) : effectiveFileType === 'audio' ? (
+            <div className="flex min-w-0 flex-col gap-5">
+              <ProductFormProgress completed={completedSections} total={progressSections.length} />
+              {readinessHint}
+              <AudioEditor
+                details={detailsFields}
+                files={privateFileFields}
+                sample={sampleFields}
+                pricing={pricingFields}
+                storefront={storefrontFields}
+              />
+            </div>          ) : (
             <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_26rem] xl:gap-6">
               <div className="flex min-w-0 flex-col gap-4">
                 <ProductFormProgress
@@ -779,12 +987,17 @@ function DigitalProductForm() {
                             title={title}
                             description={description}
                             price={price}
+                            billingMode={effectiveBilling}
+                            onBillingModeChange={mode => {
+                              setBillingChoice(mode);
+                              actions.setPrice(priceForBillingMode(price, mode));
+                              setFieldErrors(current => {const next = {...current}; delete next.price_cents; return next;});
+                            }}
                             coverUrl={coverUrl}
                             onTitleChange={actions.setTitle}
                             onDescriptionChange={actions.setDescription}
                             onPriceChange={actions.setPrice}
                             legacyCurrency={product?.currency}
-                            isApproved={product?.status === 'approved'}
                             convertToEtb={convertToEtb}
                             onConvertToEtbChange={setConvertToEtb}
                             onCoverChange={actions.setCover}
@@ -832,6 +1045,10 @@ function DigitalProductForm() {
           )}
         </div>
       </DashboardLayout.SectionContent>
+
+      <ProductPreviewDialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <ProductPreview buyerOnly />
+      </ProductPreviewDialog>
 
       <AlertDialog.Root
         open={deleteDialogOpen}
@@ -884,32 +1101,34 @@ function DetailsPanel({
   title,
   description,
   price,
+  billingMode,
+  onBillingModeChange,
   coverUrl,
   onTitleChange,
   onDescriptionChange,
   onPriceChange,
   legacyCurrency,
-  isApproved,
   convertToEtb,
   onConvertToEtbChange,
   onCoverChange,
   errors,
+  hidePricing = false,
 }: {
   title: string;
   description: string;
   price: string;
+  billingMode: BillingMode | null;
+  onBillingModeChange: (mode: BillingMode) => void;
   coverUrl: string;
   onTitleChange: (value: string) => void;
   onDescriptionChange: (value: string) => void;
   onPriceChange: (value: string) => void;
   legacyCurrency?: string;
-  /** Approved products revert to draft on save, so the free-offer helper
-   * would promise something saving cannot do — only show it otherwise. */
-  isApproved?: boolean;
   convertToEtb: boolean;
   onConvertToEtbChange: (value: boolean) => void;
   onCoverChange: (url: string, entry?: {id: number}) => void;
   errors: FieldErrors;
+  hidePricing?: boolean;
   validateField: (field: string, value: string) => void;
 }) {
   const {validateField} = arguments[0] as {validateField: (field: string, value: string) => void};
@@ -934,13 +1153,88 @@ function DetailsPanel({
         />
       </ProductFormField>
 
+      {!hidePricing && (
+        <PricingFields
+          price={price}
+          billingMode={billingMode}
+          onBillingModeChange={onBillingModeChange}
+          onPriceChange={onPriceChange}
+          legacyCurrency={legacyCurrency}
+          convertToEtb={convertToEtb}
+          onConvertToEtbChange={onConvertToEtbChange}
+          errors={errors}
+          validateField={validateField}
+        />
+      )}
+
+      <ProductFormField
+        label="Description"
+        description="Describe what customers will receive."
+        error={errors.description}
+        htmlFor="product-description"
+        onBlur={() => validateField('description', description)}
+      >
+        <DescriptionEditor value={description} onChange={onDescriptionChange} />
+      </ProductFormField>
+
+      <ProductFormField
+        label="Cover image"
+        description="Shown on your product listing and Storefronts."
+        error={errors.cover_file_entry_id}
+        htmlFor="product-cover"
+      >
+        <CroppedCover
+          value={coverUrl}
+          onChange={onCoverChange}
+          uploadType="linkImages"
+          aspect={16 / 9}
+          label={trans(message('Cover image'))}
+          className="aspect-video h-auto w-full"
+        />
+      </ProductFormField>
+    </div>
+  );
+}
+
+interface PricingFieldsProps {
+  price: string;
+  billingMode: BillingMode | null;
+  onBillingModeChange: (mode: BillingMode) => void;
+  onPriceChange: (value: string) => void;
+  legacyCurrency?: string;
+  convertToEtb: boolean;
+  onConvertToEtbChange: (value: boolean) => void;
+  errors: FieldErrors;
+  validateField: (field: string, value: string) => void;
+}
+
+function PricingFields({
+  price,
+  billingMode,
+  onBillingModeChange,
+  onPriceChange,
+  legacyCurrency,
+  convertToEtb,
+  onConvertToEtbChange,
+  errors,
+  validateField,
+}: PricingFieldsProps) {
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-2">
+        <p className="text-sm font-medium">
+          <Trans message="Free or paid?" />
+        </p>
+        <BillingModePicker value={billingMode} onValueChange={mode => {if (mode) onBillingModeChange(mode);}} />
+      </div>
+      {billingMode === 'free' ? (
+        <p className="text-sm text-muted-foreground">
+          <Trans message="Buyers pay nothing." />
+        </p>
+      ) : billingMode === 'paid' ? (
       <ProductFormField
         label="Price"
-        description={
-          isApproved
-            ? undefined
-            : 'Set ETB 0 to offer this product for free.'
-        }
+        description="One-time price in ETB."
         error={errors.price_cents}
         htmlFor="product-price"
         required
@@ -978,32 +1272,9 @@ function DetailsPanel({
           </label>
         )}
       </ProductFormField>
+      ) : null}
 
-      <ProductFormField
-        label="Description"
-        description="Describe what customers will receive."
-        error={errors.description}
-        htmlFor="product-description"
-        onBlur={() => validateField('description', description)}
-      >
-        <DescriptionEditor value={description} onChange={onDescriptionChange} />
-      </ProductFormField>
 
-      <ProductFormField
-        label="Cover image"
-        description="Shown on your product listing and Storefronts."
-        error={errors.cover_file_entry_id}
-        htmlFor="product-cover"
-      >
-        <CroppedCover
-          value={coverUrl}
-          onChange={onCoverChange}
-          uploadType="linkImages"
-          aspect={16 / 9}
-          label={trans(message('Cover image'))}
-          className="aspect-video h-auto w-full"
-        />
-      </ProductFormField>
     </div>
   );
 }
@@ -1075,7 +1346,12 @@ function FilesPanel({
   hint?: string;
 }) {
   return (
-    <div className="flex flex-col gap-3" id="product-files" tabIndex={-1}>
+    <div
+      className="flex flex-col gap-3"
+      id="product-files"
+      tabIndex={-1}
+      aria-describedby={error ? 'product-files-error' : undefined}
+    >
       <SharedFileUploader
         uploadType="digitalProductFiles"
         bare
@@ -1090,7 +1366,11 @@ function FilesPanel({
         accept={accept}
         hint={hint}
       />
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && (
+        <p id="product-files-error" role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      )}
       {!!files.length && (
         <ul className="flex flex-col gap-2">
           {files.map(file => {
