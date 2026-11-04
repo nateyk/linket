@@ -70,6 +70,16 @@ export interface WizardPrefill {
 
 const PRODUCT_TYPES: ProductType[] = ['digital', 'ebook', 'audio', 'course'];
 
+export function resolveCreateType(raw: string | null): ProductType | null {
+  return raw !== null && PRODUCT_TYPES.includes(raw as ProductType)
+    ? (raw as ProductType)
+    : null;
+}
+
+export function productTypeCreateUrl(type: ProductType | null): string | null {
+  return type ? `/dashboard/items/new/${type}` : null;
+}
+
 export function parseWizardPrefill(params: URLSearchParams): WizardPrefill {
   const rawType = params.get('type');
   const rawBilling = params.get('billing');
