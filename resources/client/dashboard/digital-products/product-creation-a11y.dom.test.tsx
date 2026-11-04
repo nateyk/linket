@@ -756,7 +756,7 @@ describe('one-step page shell', () => {
     const next = screen.getByRole('button', {name: /continue/i});
     expect(next.hasAttribute('disabled')).toBe(true);
     const user = userEvent.setup();
-    await user.click(screen.getByRole('radio', {name: /ebook/i}));
+    await user.click(screen.getByRole('radio', {name: /e-book/i}));
     expect(next.hasAttribute('disabled')).toBe(false);
   });
 });
