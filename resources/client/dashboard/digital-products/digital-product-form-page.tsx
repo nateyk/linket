@@ -957,7 +957,7 @@ function DetailsPanel({
         <p className="text-sm font-medium">
           <Trans message="Free or paid?" />
         </p>
-        <BillingModePicker value={billingMode} onValueChange={onBillingModeChange} />
+        <BillingModePicker value={billingMode} onValueChange={mode => {if (mode) onBillingModeChange(mode);}} />
       </div>
       {billingMode === 'free' ? (
         <p className="text-sm text-muted-foreground">
