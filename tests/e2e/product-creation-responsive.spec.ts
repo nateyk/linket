@@ -165,7 +165,7 @@ test('keyboard-only product choice and Preview support focus return', async ({pa
   await page.keyboard.press('Enter');
   const dialog = page.getByRole('dialog', {name: 'Customer preview'});
   await expect(dialog).toBeVisible();
-  await expect(dialog.getByRole('button', {name: 'Close'})).toBeVisible();
+  await expect(dialog.getByRole('button', {name: 'Close', exact: true}).first()).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(dialog).toBeHidden();
   await expect(preview).toBeFocused();
@@ -179,7 +179,7 @@ test('invalid upload is announced and removable without submitting a product', a
   await loginAsSeededCreator(page);
   await page.goto('/dashboard/items/new/digital');
   const files = page.getByRole('region', {name: 'Files buyers receive'});
-  const browse = files.getByRole('button', {name: 'Browse files'});
+  const browse = files.getByRole('button', {name: 'Browse files', exact: true});
   await browse.focus();
   const chooserPromise = page.waitForEvent('filechooser');
   await page.keyboard.press('Enter');
