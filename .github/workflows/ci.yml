@@ -12,7 +12,9 @@ on:
 # Cancel obsolete CI work per event and PR/branch. Production deployment has
 # its own separate, non-cancelling concurrency group.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  # Move to a fresh concurrency namespace after a cancelled legacy verify join
+  # remained queued and blocked the current PR. Keep cancellation for future SHAs.
+  group: ci-v2-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 permissions:
