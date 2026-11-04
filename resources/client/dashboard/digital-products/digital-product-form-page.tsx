@@ -805,7 +805,7 @@ function DigitalProductForm() {
             <Alert.Root className="mb-5 border-primary/20 bg-primary/5">
               <Link2Icon />
               <Alert.Description>
-                <Trans message="This product is placed on storefronts, but it will not appear publicly until it is approved." />
+                <Trans message="Storefronts selected. This product cannot appear publicly until it is approved." />
               </Alert.Description>
             </Alert.Root>
           )}
@@ -1420,40 +1420,63 @@ function BioPagesPanel({
 }) {
   if (!biolinks.length) {
     return (
-      <p className="py-4 text-sm text-muted-foreground">
-        <Trans message="You can sell this product directly. Create a Storefront later if you want to display it there." />
-      </p>
+      <div className="flex flex-col gap-2 py-4 text-sm text-muted-foreground">
+        <p>
+          <Trans message="You can sell this product directly. Create a Storefront later if you want to display it there." />
+        </p>
+        <p className="text-xs">
+          <Trans message="Storefront placement is optional and does not block product submission." />
+        </p>
+      </div>
     );
   }
 
   return (
-    <div className="divide-y">
-      {biolinks.map(page => (
-        <label
-          key={page.id}
-          className="flex cursor-pointer items-center gap-3 py-3 text-sm transition-colors hover:bg-muted/40"
-        >
-          <Checkbox
-            bindToHookForm={false}
-            checked={selectedIds.includes(page.id)}
-            onCheckedChange={checked =>
-              onChange(
-                checked
-                  ? [...selectedIds, page.id]
-                  : selectedIds.filter(id => id !== page.id),
-              )
-            }
+    <div className="flex flex-col gap-2">
+      <p className="text-sm text-muted-foreground">
+        <Trans message="Optional. Choose where customers can find this product after approval." />
+      </p>
+      <div className="divide-y" role="group" aria-label="Storefront placement">
+        {biolinks.map(page => (
+          <label
+            key={page.id}
+            className="flex cursor-pointer items-center gap-3 py-3 text-sm transition-colors hover:bg-muted/40"
+          >
+            <Checkbox
+              bindToHookForm={false}
+              checked={selectedIds.includes(page.id)}
+              onCheckedChange={checked =>
+                onChange(
+                  checked
+                    ? selectedIds.includes(page.id) ? selectedIds : [...selectedIds, page.id]
+                    : selectedIds.filter(id => id !== page.id),
+                )
+              }
+            />
+            <span className="min-w-0">
+              <span className="block truncate font-medium">{page.name}</span>
+              {page.short_url && (
+                <span className="block truncate text-xs text-muted-foreground">
+                  {page.short_url}
+                </span>
+              )}
+            </span>
+          </label>
+        ))}
+      </div>
+      <p className="text-xs text-muted-foreground" role="status" aria-live="polite">
+        {selectedIds.length > 0 ? (
+          <Trans
+            message="[one :count Storefront selected|other :count Storefronts selected]"
+            values={{count: selectedIds.length}}
           />
-          <span className="min-w-0">
-            <span className="block truncate font-medium">{page.name}</span>
-            {page.short_url && (
-              <span className="block truncate text-xs text-muted-foreground">
-                {page.short_url}
-              </span>
-            )}
-          </span>
-        </label>
-      ))}
+        ) : (
+          <Trans message="No Storefront selected" />
+        )}
+      </p>
+      <p className="text-xs text-muted-foreground">
+        <Trans message="Selection does not publish the product; approval is handled separately." />
+      </p>
     </div>
   );
 }

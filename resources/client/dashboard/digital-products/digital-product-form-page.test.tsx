@@ -133,6 +133,31 @@ describe('digital product form submission', () => {
   });
 });
 
+describe('optional Storefront placement UX-21', () => {
+  test('distinguishes selecting Storefronts from publishing or submission requirements', () => {
+    const source = fs.readFileSync(
+      path.resolve('resources/client/dashboard/digital-products/digital-product-form-page.tsx'),
+      'utf8',
+    );
+    expect(source).toContain('Storefront placement is optional and does not block product submission.');
+    expect(source).toContain('Optional. Choose where customers can find this product after approval.');
+    expect(source).toContain('No Storefront selected');
+    expect(source).toContain('[one :count Storefront selected|other :count Storefronts selected]');
+    expect(source).toContain('Selection does not publish the product; approval is handled separately.');
+    expect(source).not.toContain('This product is placed on storefronts, but it will not appear publicly until it is approved.');
+  });
+
+  test('keeps selection associated with existing Storefront checkboxes, not buyer links', () => {
+    const source = fs.readFileSync(
+      path.resolve('resources/client/dashboard/digital-products/digital-product-form-page.tsx'),
+      'utf8',
+    );
+    expect(source).toContain('checked={selectedIds.includes(page.id)}');
+    expect(source).toContain('selectedIds.filter(id => id !== page.id)');
+    expect(source).toContain('selectedIds.includes(page.id) ? selectedIds : [...selectedIds, page.id]');
+  });
+});
+
 describe('digital product list submission', () => {
   test('loads the product list through the shared API client', () => {
     const source = fs.readFileSync(
