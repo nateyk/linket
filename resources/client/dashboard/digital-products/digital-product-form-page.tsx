@@ -534,6 +534,83 @@ function DigitalProductForm() {
     !product || product.status === 'draft' || product.status === 'rejected';
   const unavailable = !!productId && (!product || String(product.id) !== productId);
 
+  const handleBillingChange = (mode: BillingMode) => {
+    setBillingChoice(mode);
+    actions.setPrice(priceForBillingMode(price, mode));
+    setFieldErrors(current => {
+      const next = {...current};
+      delete next.price_cents;
+      return next;
+    });
+  };
+
+  const detailsFields = (
+    <DetailsPanel
+      title={title}
+      description={description}
+      price={price}
+      billingMode={effectiveBilling}
+      onBillingModeChange={handleBillingChange}
+      coverUrl={coverUrl}
+      onTitleChange={actions.setTitle}
+      onDescriptionChange={actions.setDescription}
+      onPriceChange={actions.setPrice}
+      legacyCurrency={product?.currency}
+      convertToEtb={convertToEtb}
+      onConvertToEtbChange={setConvertToEtb}
+      onCoverChange={actions.setCover}
+      errors={fieldErrors}
+      validateField={validateField}
+      hidePricing={effectiveFileType === 'digital'}
+    />
+  );
+
+  const pricingFields = (
+    <PricingFields
+      price={price}
+      billingMode={effectiveBilling}
+      onBillingModeChange={handleBillingChange}
+      onPriceChange={actions.setPrice}
+      legacyCurrency={product?.currency}
+      convertToEtb={convertToEtb}
+      onConvertToEtbChange={setConvertToEtb}
+      errors={fieldErrors}
+      validateField={validateField}
+    />
+  );
+
+  const privateFileFields = (
+    <FilesPanel
+      files={files}
+      accept={fileAccept}
+      hint={fileHint}
+      onUploaded={file => {
+        if (!files.some(item => item.id === file.id)) {
+          actions.setFiles([...files, file]);
+        }
+      }}
+      onRemove={id => actions.setFiles(files.filter(file => file.id !== id))}
+      error={fieldErrors.file_ids}
+    />
+  );
+
+  const sampleFields = previewKind ? (
+    <ProductSampleFields
+      kind={previewKind}
+      samples={samples}
+      onChange={actions.setSamples}
+      error={fieldErrors.sample_file_ids || fieldErrors.sample_titles}
+    />
+  ) : null;
+
+  const storefrontFields = (
+    <BioPagesPanel
+      biolinks={biolinks}
+      selectedIds={biolinkIds}
+      onChange={actions.setBiolinkIds}
+    />
+  );
+
   return (
     <DashboardLayout.MainSection>
       <DashboardLayout.SectionHeader>
