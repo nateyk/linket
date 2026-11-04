@@ -410,6 +410,8 @@ test('HTTPS form token request redeems a consent-bound PKCE code and rotates ref
     config()->set('creator_ai.features.mcp_http_token', true);
     require base_path('routes/creator-ai-mcp-oauth.php');
 
+    // Refresh names after this test dynamically registers routes post-boot.
+    Route::getRoutes()->refreshNameLookups();
     $route = Route::getRoutes()->getByName('creator-ai.oauth.token');
     expect($route)->not->toBeNull();
     expect($route->excludedMiddleware())->toContain('web');
