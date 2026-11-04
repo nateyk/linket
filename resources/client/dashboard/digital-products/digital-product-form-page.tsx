@@ -1418,6 +1418,7 @@ function BioPagesPanel({
   selectedIds: number[];
   onChange: (ids: number[]) => void;
 }) {
+  const {trans} = useTrans();
   if (!biolinks.length) {
     return (
       <div className="flex flex-col gap-2 py-4 text-sm text-muted-foreground">
@@ -1436,7 +1437,7 @@ function BioPagesPanel({
       <p className="text-sm text-muted-foreground">
         <Trans message="Optional. Choose where customers can find this product after approval." />
       </p>
-      <div className="divide-y" role="group" aria-label="Storefront placement">
+      <div className="divide-y" role="group" aria-label={trans({message: 'Storefront placement'})}>
         {biolinks.map(page => (
           <label
             key={page.id}
