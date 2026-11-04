@@ -70,7 +70,7 @@ export function ChatGptIntegrationPanel() {
         ...current,
         connections: current.connections.map(connection =>
           connection.id === selected.id
-            ? {...connection, status: 'revoked', revoked_at: new Date().toISOString()}
+            ? {...connection, status: 'revoked' as const}
             : connection,
         ),
       } : current);
