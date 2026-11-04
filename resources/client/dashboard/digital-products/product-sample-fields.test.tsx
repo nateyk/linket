@@ -28,6 +28,20 @@ describe('sample section by product type', () => {
     ).toBeTruthy();
   });
 
+  test('Digital product PDF samples explicitly keep paid downloads private', () => {
+    render(
+      <ProductSampleFields
+        kind="pdf"
+        productType="digital"
+        samples={[]}
+        onChange={() => {}}
+      />,
+    );
+    expect(screen.getByText(
+      'Offer a short PDF sample before purchase. Your full product files stay private.',
+    )).toBeTruthy();
+  });
+
   test('pdf fields explain that the full ebook stays private', () => {
     render(
       <ProductSampleFields kind="pdf" samples={[]} onChange={() => {}} />,
