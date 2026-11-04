@@ -796,7 +796,7 @@ function DigitalProductForm() {
                             onBillingModeChange={mode => {
                               setBillingChoice(mode);
                               actions.setPrice(priceForBillingMode(price, mode));
-                              setFieldErrors(current => ({...current, price_cents: undefined}));
+                              setFieldErrors(current => {const next = {...current}; delete next.price_cents; return next;});
                             }}
                             coverUrl={coverUrl}
                             onTitleChange={actions.setTitle}
