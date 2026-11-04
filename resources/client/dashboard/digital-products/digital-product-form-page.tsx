@@ -42,6 +42,7 @@ import {useTrans} from '@ui/i18n/use-trans';
 import {getBootstrapData} from '@ui/bootstrap-data/bootstrap-data-store';
 import {FormattedBytes} from '@ui/i18n/formatted-bytes';
 import {
+  Clock3Icon,
   FileArchiveIcon,
   FileIcon,
   FileTextIcon,
@@ -105,6 +106,8 @@ type Product = {
   }>;
   biolink_ids?: number[];
   status: string;
+  has_pending_update?: boolean;
+  review_requested_at?: string | null;
   type?: string;
 };
 
@@ -171,7 +174,7 @@ function DigitalProductForm() {
   const {productId} = useParams();
   const navigate = useNavigate();
   const {trans} = useTrans();
-  const {state, actions, dirty, billing} = useProductCreation();
+  const {state, actions, dirty, autoSaveState, billing} = useProductCreation();
   const title = state.title;
   const description = state.description;
   const price = state.price;
@@ -204,7 +207,7 @@ function DigitalProductForm() {
   // the GET is in flight, which also keeps auto-save off during load.
   useEffect(() => {
     if (dirty && product?.status === 'draft') actions.autoSave();
-  }, [dirty, actions, product?.status]);
+  }, [dirty, actions.autoSave, product?.status]);
 
   const validateField = useCallback(
     (field: string, value: string) => {
@@ -646,7 +649,7 @@ function DigitalProductForm() {
           <span className="min-w-0 truncate max-sm:overflow-visible max-sm:whitespace-normal max-sm:text-clip">
             {pageTitle}
           </span>
-          {product && <ProductStatus status={product.status} />}
+          {product && <ProductStatus status={product.status} hasPendingUpdate={product.has_pending_update === true} />}
         </DashboardLayout.SectionTitle>
         <div className="flex items-center gap-2 max-sm:ml-auto">
           {effectiveFileType !== 'course' && (
@@ -722,6 +725,32 @@ function DigitalProductForm() {
 
       <DashboardLayout.SectionContent className="overflow-y-auto">
         <div className={effectiveFileType !== 'course' ? 'mx-auto w-full max-w-3xl py-4 sm:py-5' : 'mx-auto w-full max-w-6xl py-4 sm:py-5'}>
+          {!loading && !unavailable && (
+            <div role="status" aria-live="polite" className="mb-4 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <span>
+                {saving ? (
+                  <Trans message="Saving changes..." />
+                ) : !product ? (
+                  <Trans message="Not saved yet" />
+                ) : product.status === 'draft' && autoSaveState === 'saving' ? (
+                  <Trans message="Saving draft..." />
+                ) : product.status === 'draft' && autoSaveState === 'failed' ? (
+                  <Trans message="Autosave failed. Changes are still on this page." />
+                ) : dirty ? (
+                  <Trans message="Unsaved changes" />
+                ) : product.status === 'draft' ? (
+                  <Trans message="Draft saved" />
+                ) : (
+                  <Trans message="No unsaved changes" />
+                )}
+              </span>
+              {product?.status === 'draft' && autoSaveState === 'failed' && dirty && (
+                <Button type="button" variant="outline" size="sm" onClick={() => actions.autoSave()}>
+                  <Trans message="Retry save" />
+                </Button>
+              )}
+            </div>
+          )}
           {error && (
             <Alert.Root
               variant="destructive"
@@ -733,7 +762,16 @@ function DigitalProductForm() {
             </Alert.Root>
           )}
 
-          {product?.status === 'approved' && dirty && (
+          {product?.status === 'approved' && product.has_pending_update === true && (
+            <Alert.Root variant="warning" fillStyle="subtleFill" className="mb-5">
+              <Clock3Icon />
+              <Alert.Description>
+                <Trans message="This product remains approved while an update is under review." />
+              </Alert.Description>
+            </Alert.Root>
+          )}
+
+          {product?.status === 'approved' && dirty && product.has_pending_update !== true && (
             <Alert.Root variant="warning" fillStyle="subtleFill" className="mb-5">
               <TriangleAlertIcon />
               <Alert.Description>

@@ -157,6 +157,7 @@ async function advance(ms: number) {
 type Creation = ReturnType<typeof useProductCreation>;
 
 let ctxActions: Creation['actions'] | null = null;
+let latestAutoSaveState: Creation['autoSaveState'] | null = null;
 
 /**
  * Test 1 only needs the debounce to be TRIGGERED when the form becomes dirty.
@@ -165,13 +166,14 @@ let ctxActions: Creation['actions'] | null = null;
  * this harness deliberately does NOT re-implement that condition.
  */
 function Trigger() {
-  const {actions, dirty} = useProductCreation();
+  const {actions, dirty, autoSaveState} = useProductCreation();
   useEffect(() => {
     if (dirty) actions.autoSave();
-  }, [dirty, actions]);
+  }, [dirty, actions.autoSave]);
   // Every render commits inside act(), so the test always reads the latest
   // context (all actions are stable callbacks; the `actions` object is not).
   ctxActions = actions;
+  latestAutoSaveState = autoSaveState;
   return null;
 }
 
@@ -238,6 +240,26 @@ test('debounced auto-save sends CURRENT state, not first-render state', async ()
   expect(h.put).toHaveBeenCalledTimes(1);
 
   vi.useRealTimers();
+});
+
+test('autosave status reflects confirmed success, failed write, and recovery', async () => {
+  vi.useFakeTimers();
+  mountProvider();
+  act(() => ctxActions!.hydrate({...DRAFT_FORM}));
+  expect(latestAutoSaveState).toBe('saved');
+  h.put.mockRejectedValueOnce(new Error('Synthetic network failure'));
+
+  act(() => ctxActions!.setTitle('First unsaved edit'));
+  expect(latestAutoSaveState).toBe('idle');
+  await advance(1600);
+  expect(h.put).toHaveBeenCalledTimes(1);
+  expect(latestAutoSaveState).toBe('failed');
+
+  act(() => ctxActions!.setTitle('Recovered draft'));
+  expect(latestAutoSaveState).toBe('idle');
+  await advance(1600);
+  expect(h.put).toHaveBeenCalledTimes(2);
+  expect(latestAutoSaveState).toBe('saved');
 });
 
 test('saves edits made while an earlier autosave is in flight without overlapping writes', async () => {

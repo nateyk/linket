@@ -18,6 +18,7 @@ import {
 import type {ReactNode} from 'react';
 import {useProductCreation} from './product-creation-context';
 import type {ProductType} from './product-type-picker';
+import {resolveProductReviewState, type ProductReviewState} from './product-authoring-status';
 
 const PRODUCT_TYPE_LABELS: Record<ProductType, string> = {
   digital: 'Digital product',
@@ -163,54 +164,48 @@ export function ProductPreview({buyerOnly = false}: {buyerOnly?: boolean}) {
   );
 }
 
-export function ProductStatus({status}: {status: string}) {
-  const configs: Record<
-    string,
-    {icon: LucideIcon; tone: string; label: string}
-  > = {
-    draft: {
-      icon: PencilIcon,
-      tone: 'text-muted-foreground bg-muted',
-      label: 'Draft',
-    },
-    pending_approval: {
-      icon: Clock3Icon,
-      tone: 'text-warning bg-warning/10',
-      label: 'In review',
-    },
-    approved: {
-      icon: CheckIcon,
-      tone: 'text-primary bg-primary/10',
-      label: 'Approved',
-    },
-    rejected: {
-      icon: TriangleAlertIcon,
-      tone: 'text-destructive bg-destructive/10',
-      label: 'Needs changes',
-    },
-    archived: {
-      icon: ArchiveIcon,
-      tone: 'text-muted-foreground bg-muted',
-      label: 'Archived',
-    },
+export function ProductStatus({
+  status,
+  hasPendingUpdate = false,
+}: {
+  status: string;
+  hasPendingUpdate?: boolean;
+}) {
+  const {trans} = useTrans();
+  const reviewState = resolveProductReviewState(status, hasPendingUpdate);
+  const configs: Record<ProductReviewState, {icon: LucideIcon; tone: string}> = {
+    draft: {icon: PencilIcon, tone: 'text-muted-foreground bg-muted'},
+    pending_approval: {icon: Clock3Icon, tone: 'text-warning bg-warning/10'},
+    approved: {icon: CheckIcon, tone: 'text-primary bg-primary/10'},
+    approved_update_review: {icon: Clock3Icon, tone: 'text-warning bg-warning/10'},
+    rejected: {icon: TriangleAlertIcon, tone: 'text-destructive bg-destructive/10'},
+    archived: {icon: ArchiveIcon, tone: 'text-muted-foreground bg-muted'},
   };
-  const config = configs[status] ?? configs.draft;
+  const config = configs[reviewState];
   const Icon = config.icon;
+  // Literal message descriptors are required for Linket's translation extractor.
+  const label = reviewState === 'approved_update_review'
+    ? trans({message: 'Approved · update under review'})
+    : reviewState === 'approved'
+      ? trans({message: 'Approved'})
+      : reviewState === 'pending_approval'
+        ? trans({message: 'In review'})
+        : reviewState === 'rejected'
+          ? trans({message: 'Needs changes'})
+          : reviewState === 'archived'
+            ? trans({message: 'Archived'})
+            : trans({message: 'Draft'});
   return (
     <Tooltip.Root>
       <Tooltip.Trigger
-        aria-label={config.label}
+        aria-label={label}
         render={
-          <span
-            className={`flex size-9 shrink-0 items-center justify-center rounded-card-sm ${config.tone}`}
-          />
+          <span className={`flex size-9 shrink-0 items-center justify-center rounded-card-sm ${config.tone}`} />
         }
       >
         <Icon className="size-4" aria-hidden="true" />
       </Tooltip.Trigger>
-      <Tooltip.Content>
-        <Trans message={config.label} />
-      </Tooltip.Content>
+      <Tooltip.Content>{label}</Tooltip.Content>
     </Tooltip.Root>
   );
 }
