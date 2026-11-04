@@ -261,13 +261,18 @@ cPanel cron (shared, not per-release)
 
 ### 6.4 Permissions
 
-```bash
-chmod 750 ~/linket/shared/storage      # owner=rwx, group=rx, other=---
-chmod 750 ~/linket/shared/storage/app
-chmod 640 ~/linket/shared/.env
-# deploy.sh enforces 775 on storage, 775 on bootstrap/cache per Laravel requirement,
-# least-privilege otherwise, matching docs/production-operations.md § Deployment gate.
-```
+Task 5 (`f6e409ac`) removed recursive permission changes. Laravel requires access
+by its runtime account, not a particular blanket `775` mode. Deployment CLI,
+PHP-FPM/LiteSpeed, queues, and scheduler must use the verified cPanel account:
+private keys retain `0400`/`0600`, `.env` and optimized configuration use `0600`,
+and private runtime/cache directories use `0700`. No ownership changes occur.
+Public media uses a separate canonical public tree with traversal/read access
+for the actual web-server identity; all home/deployment ancestors matter.
+
+Use the read-only metadata preflight and operator evidence procedure in
+[the runtime security audit](linket-ai-cpanel-runtime-security-audit.md).
+Different application UIDs are incompatible with the owner-only policy. Do not
+restore recursive chmod or loosen private keys to work around that mismatch.
 
 ---
 
@@ -593,11 +598,11 @@ Each `releases/<id>` contains:
 
 ### 15.1 Pre-deploy (read-only)
 
-- [ ] Run `bash deploy/cpanel-discovery.sh` on cPanel — paste output to cutover log, resolve every REQUIRED FAIL, and supply manual evidence for every UNKNOWN. Exit 2 means incomplete evidence, not readiness.
+- [ ] Have a human review and run the scoped metadata procedure in [the runtime audit](linket-ai-cpanel-runtime-security-audit.md). Resolve every FAIL and collect independent evidence for every UNKNOWN. Do not paste unreviewed process arguments, cron entries, environment files, or general discovery-script output into the cutover log.
 - [ ] Confirm `shared/.env` on server matches `docs/production-operations.md` HTTPS/ trusted proxy / redis / horizon block; `TRUSTED_PROXIES` is exact, not `*`; `APP_DEBUG=false`.
-- [ ] Verify `~/linket/shared/storage` is writable, `shared/storage/app/digital-products` exists, `bootstrap/cache` writable (least-privilege 775/640).
-- [ ] Confirm Cron entry exists: `* * * * * cd ~/linket/current && $PHP_BINARY artisan schedule:run …` (check `crontab -l`).
-- [ ] Confirm Supervisor (or cron fallback) shows `linket-horizon RUNNING` (`supervisorctl status` / `ps aux | grep horizon`).
+- [ ] Verify storage/cache ownership and access for the actual application UIDs using Task 5's owner-only policy; verify public-media traversal separately. No blanket 775/640 permission recipe applies.
+- [ ] Confirm the scheduler entry through an authorized configuration review; record only its UID, approved PHP binary, working directory, and heartbeat result. Do not paste raw cron entries that may contain secrets.
+- [ ] Confirm Supervisor (or cron fallback) shows `linket-horizon RUNNING` and the correct effective UID (`supervisorctl status` / `ps -eo pid,euid,egid,comm` without command arguments).
 - [ ] Record current production `RELEASE_SHA` (`cat ~/linket/current/RELEASE_SHA` or doc prior hash).
 
 ### 15.2 CI gate (must be green on `main` HEAD SHA)
