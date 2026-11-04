@@ -316,10 +316,14 @@ describe('inline course settings', () => {
         'Add a short description to show learners what to expect.',
       ),
     ).toBeNull();
+    expect(screen.queryByText('Your course title')).toBeNull();
+    await user.click(screen.getByRole('button', {name: 'Preview'}));
     expect(screen.getByText('Your course title')).toBeTruthy();
+    await user.keyboard('{Escape}');
 
     await openSettingsSection(user);
     await typeDescription(user, 'Cafe basics');
+    await user.click(screen.getByRole('button', {name: 'Preview'}));
 
     // The preview shows the typed text — the TipTap value is tag-stripped and
     // rendered as a plain text node (the editor itself also holds the text,
