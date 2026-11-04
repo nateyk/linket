@@ -240,3 +240,83 @@ test('grant renewal requires explicit fresh trusted consent; no public connect e
         'client_id' => 'chatgpt-client-123',
     ])->assertStatus(405);
 });
+
+
+test('connection setup is unavailable while remote OAuth remains disabled even for verified Pro', function () {
+    [$creator] = aiMcpConnectionsCreator();
+    aiMcpConnectionsPro($creator);
+    aiMcpConnectionsEnable();
+
+    aiMcpConnectionsLogin($this, $creator);
+    $this->getJson('/api/v1/creator-ai/mcp-connections')
+        ->assertOk()
+        ->assertJsonPath('data.oauth_connection_available', false)
+        ->assertJsonPath('data.connection_setup.status', 'unavailable')
+        ->assertJsonPath('data.connection_setup.resource_url', null);
+});
+
+test('connection setup requires verified Pro and only supplies the approved HTTPS MCP URL to eligible creators', function () {
+    [$creator, $workspaceId] = aiMcpConnectionsCreator();
+    aiMcpConnectionsEnable();
+    foreach (['mcp_oauth', 'mcp_http_oauth', 'mcp_http_token', 'mcp_http_discovery', 'mcp_http_server'] as $flag) {
+        config()->set('creator_ai.features.'.$flag, true);
+    }
+    config()->set('app.url', 'https://linket.example.test');
+    config()->set('creator_ai.oauth_issuer', 'https://linket.example.test');
+    config()->set('creator_ai.mcp_resource_url', 'https://linket.example.test/mcp');
+
+    aiMcpConnectionsLogin($this, $creator);
+    $this->getJson('/api/v1/creator-ai/mcp-connections')
+        ->assertOk()
+        ->assertJsonPath('data.oauth_connection_available', false)
+        ->assertJsonPath('data.connection_setup.status', 'verified_pro_required')
+        ->assertJsonPath('data.connection_setup.resource_url', null);
+
+    aiMcpConnectionsPro($creator);
+    $this->getJson('/api/v1/creator-ai/mcp-connections')
+        ->assertOk()
+        ->assertJsonPath('data.oauth_connection_available', true)
+        ->assertJsonPath('data.connection_setup.status', 'ready')
+        ->assertJsonPath('data.connection_setup.resource_url', 'https://linket.example.test/mcp');
+
+    // Availability must never return another creator's workspace identifier.
+    expect($workspaceId)->toBeGreaterThan(0);
+});
+
+test('connection setup remains unavailable if the OAuth issuer is inconsistent with the application', function () {
+    [$creator] = aiMcpConnectionsCreator();
+    aiMcpConnectionsPro($creator);
+    aiMcpConnectionsEnable();
+    foreach (['mcp_oauth', 'mcp_http_oauth', 'mcp_http_token', 'mcp_http_discovery', 'mcp_http_server'] as $flag) {
+        config()->set('creator_ai.features.'.$flag, true);
+    }
+    config()->set('app.url', 'https://linket.example.test');
+    config()->set('creator_ai.oauth_issuer', 'https://untrusted.example.test');
+    config()->set('creator_ai.mcp_resource_url', 'https://linket.example.test/mcp');
+
+    aiMcpConnectionsLogin($this, $creator);
+    $this->getJson('/api/v1/creator-ai/mcp-connections')
+        ->assertOk()
+        ->assertJsonPath('data.oauth_connection_available', false)
+        ->assertJsonPath('data.connection_setup.status', 'unavailable')
+        ->assertJsonPath('data.connection_setup.resource_url', null);
+});
+
+test('connection setup requires a creator-owned workspace even with a valid verified Pro term', function () {
+    $creator = User::factory()->create(['email_verified_at' => now()]);
+    aiMcpConnectionsPro($creator);
+    aiMcpConnectionsEnable();
+    foreach (['mcp_oauth', 'mcp_http_oauth', 'mcp_http_token', 'mcp_http_discovery', 'mcp_http_server'] as $flag) {
+        config()->set('creator_ai.features.'.$flag, true);
+    }
+    config()->set('app.url', 'https://linket.example.test');
+    config()->set('creator_ai.oauth_issuer', 'https://linket.example.test');
+    config()->set('creator_ai.mcp_resource_url', 'https://linket.example.test/mcp');
+
+    aiMcpConnectionsLogin($this, $creator);
+    $this->getJson('/api/v1/creator-ai/mcp-connections')
+        ->assertOk()
+        ->assertJsonPath('data.oauth_connection_available', false)
+        ->assertJsonPath('data.connection_setup.status', 'workspace_required')
+        ->assertJsonPath('data.connection_setup.resource_url', null);
+});

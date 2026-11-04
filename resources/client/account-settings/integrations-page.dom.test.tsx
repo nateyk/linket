@@ -295,3 +295,62 @@ it('shows a retry state for ChatGPT API errors without hiding Telegram settings'
   expect(screen.getByText('@creator_test')).toBeTruthy();
   expect(screen.getByRole('button', {name: 'Retry ChatGPT connections'})).toBeTruthy();
 });
+
+
+it('explains verified Pro eligibility without exposing the MCP URL to ineligible creators', async () => {
+  api.get.mockImplementation(async (url: string) => {
+    if (url === '/api/v1/integrations/telegram') return {data: {telegram: connected}};
+    if (url === '/api/v1/creator-ai/mcp-connections') {
+      return {data: {data: {
+        connections: [],
+        oauth_connection_available: false,
+        connection_setup: {status: 'verified_pro_required', resource_url: null},
+      }}};
+    }
+    throw new Error('Unexpected endpoint');
+  });
+
+  render(<Component />);
+
+  expect(await screen.findByText('Verified Linket Pro is required to connect ChatGPT.')).toBeTruthy();
+  expect(screen.queryByText('New ChatGPT connections are not available yet.')).toBeNull();
+  expect(screen.queryByText('https://linket.example.test/mcp')).toBeNull();
+});
+
+it('shows the approved MCP URL and consent steps only when the creator is eligible', async () => {
+  api.get.mockImplementation(async (url: string) => {
+    if (url === '/api/v1/integrations/telegram') return {data: {telegram: connected}};
+    if (url === '/api/v1/creator-ai/mcp-connections') {
+      return {data: {data: {
+        connections: [],
+        oauth_connection_available: true,
+        connection_setup: {status: 'ready', resource_url: 'https://linket.example.test/mcp'},
+      }}};
+    }
+    throw new Error('Unexpected endpoint');
+  });
+
+  render(<Component />);
+
+  expect(await screen.findByText('https://linket.example.test/mcp')).toBeTruthy();
+  expect(screen.getByText('Connect from ChatGPT')).toBeTruthy();
+  expect(screen.getByText('Approve access to the workspace you select in Linket.')).toBeTruthy();
+  expect(screen.queryByRole('button', {name: 'Connect ChatGPT'})).toBeNull();
+});
+
+it('explains when an eligible Pro creator has no workspace available', async () => {
+  api.get.mockImplementation(async (url: string) => {
+    if (url === '/api/v1/integrations/telegram') return {data: {telegram: connected}};
+    if (url === '/api/v1/creator-ai/mcp-connections') {
+      return {data: {data: {
+        connections: [],
+        oauth_connection_available: false,
+        connection_setup: {status: 'workspace_required', resource_url: null},
+      }}};
+    }
+    throw new Error('Unexpected endpoint');
+  });
+
+  render(<Component />);
+  expect(await screen.findByText('Create or join a Linket workspace before connecting ChatGPT.')).toBeTruthy();
+});
