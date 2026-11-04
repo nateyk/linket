@@ -150,13 +150,23 @@ jobs:
           cat /tmp/linket-qa-serve.log >&2
           exit 1
 
+      - name: Smoke-check accessible synthetic creator login first
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$APP_ENV" == "testing" && "$DB_DATABASE" == "belink_test" ]]
+          npx playwright test tests/e2e/product-creation-responsive.spec.ts \
+            --project=chromium --workers=1 --retries=0 \
+            --grep 'smoke: isolated creator can authenticate' --timeout=30000
+
       - name: Run isolated authenticated editor browser matrix
         shell: bash
         run: |
           set -euo pipefail
           [[ "$APP_ENV" == "testing" && "$DB_DATABASE" == "belink_test" ]]
           npx playwright test tests/e2e/product-creation-responsive.spec.ts \
-            --project=chromium --workers=1
+            --project=chromium --workers=1 --retries=0 \
+            --grep-invert 'smoke: isolated creator can authenticate'
 
       - name: Attach screenshots, trace and browser report
         if: always()

@@ -1,4 +1,4 @@
-import {expect, test} from '@playwright/test';
+import {expect, test, type Page} from '@playwright/test';
 
 /**
  * Read-only authenticated viewport evidence for all four creation types.
@@ -10,6 +10,33 @@ import {expect, test} from '@playwright/test';
  * Screenshots attach to Playwright's HTML report. No product is submitted,
  * saved, published, purchased or downloaded by these tests.
  */
+/**
+ * The app's login inputs are labelled but have no stable #email/#password
+ * IDs. Use the actual accessible names observed in Playwright's RED trace.
+ */
+async function loginAsSeededCreator(page: Page) {
+  await page.goto('/login');
+  await expect(page.getByRole('heading', {name: 'Login to your account'})).toBeVisible();
+  await page.getByRole('textbox', {name: 'Email Address'}).fill(
+    process.env.LINKET_E2E_CREATOR_EMAIL ?? 'creator@example.test',
+  );
+  await page.getByRole('textbox', {name: 'Password'}).fill(
+    process.env.LINKET_E2E_CREATOR_PASSWORD ?? 'password',
+  );
+  await page.getByRole('button', {name: 'Login', exact: true}).click();
+  await expect(page).toHaveURL(/\/dashboard(?:\/|$)/, {timeout: 15000});
+}
+
+test('smoke: isolated creator can authenticate and open product picker', async ({page}) => {
+  test.skip(
+    process.env.LINKET_ISOLATED_E2E !== '1',
+    'Requires isolated test database and synthetic creator fixture',
+  );
+  await loginAsSeededCreator(page);
+  await page.goto('/dashboard/items/new');
+  await expect(page.getByRole('heading', {name: 'What are you selling?'})).toBeVisible();
+});
+
 test.describe('product creation responsive evidence', () => {
   test.skip(
     process.env.LINKET_ISOLATED_E2E !== '1',
@@ -36,14 +63,7 @@ test.describe('product creation responsive evidence', () => {
       page,
     }, testInfo) => {
       await page.setViewportSize({width: viewport.width, height: viewport.height});
-      await page.goto('/login');
-      await page.locator('#email').fill(
-        process.env.LINKET_E2E_CREATOR_EMAIL ?? 'creator@example.test',
-      );
-      await page.locator('#password').fill(
-        process.env.LINKET_E2E_CREATOR_PASSWORD ?? 'password',
-      );
-      await page.getByRole('button', {name: /log in|sign in/i}).click();
+      await loginAsSeededCreator(page);
 
       await page.goto('/dashboard/items/new');
       await expect(page.getByRole('heading', {name: 'What are you selling?'})).toBeVisible();
@@ -97,14 +117,7 @@ test('mobile curriculum returns to unsaved lesson without a false discard prompt
   );
 
   await page.setViewportSize({width: 360, height: 800});
-  await page.goto('/login');
-  await page.locator('#email').fill(
-    process.env.LINKET_E2E_CREATOR_EMAIL ?? 'creator@example.test',
-  );
-  await page.locator('#password').fill(
-    process.env.LINKET_E2E_CREATOR_PASSWORD ?? 'password',
-  );
-  await page.getByRole('button', {name: /log in|sign in/i}).click();
+  await loginAsSeededCreator(page);
 
   const courseId = process.env.LINKET_E2E_COURSE_ID;
   await page.goto(`/dashboard/items/${courseId}/course`);
@@ -144,14 +157,7 @@ test('rejects empty product drafts and Course setup without creating an item', a
     'Requires an isolated test server and seeded creator',
   );
   await page.setViewportSize({width: 375, height: 812});
-  await page.goto('/login');
-  await page.locator('#email').fill(
-    process.env.LINKET_E2E_CREATOR_EMAIL ?? 'creator@example.test',
-  );
-  await page.locator('#password').fill(
-    process.env.LINKET_E2E_CREATOR_PASSWORD ?? 'password',
-  );
-  await page.getByRole('button', {name: /log in|sign in/i}).click();
+  await loginAsSeededCreator(page);
 
   let unexpectedCreates = 0;
   page.on('request', request => {
