@@ -779,9 +779,11 @@ function DigitalProductForm() {
                 <FilesSkeleton />
                 <BioPagesSkeleton />
               </div>
-              <aside className="min-w-0 lg:sticky lg:top-6">
-                <PreviewSkeleton />
-              </aside>
+              {effectiveFileType !== 'digital' && (
+                <aside className="min-w-0 lg:sticky lg:top-6">
+                  <PreviewSkeleton />
+                </aside>
+              )}
             </>
           ) : unavailable ? null : effectiveFileType === 'digital' ? (
             <div className="flex min-w-0 flex-col gap-5">
@@ -958,7 +960,7 @@ function DigitalProductForm() {
       </DashboardLayout.SectionContent>
 
       <ProductPreviewDialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <ProductPreview />
+        <ProductPreview buyerOnly />
       </ProductPreviewDialog>
 
       <AlertDialog.Root
