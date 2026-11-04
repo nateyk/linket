@@ -17,8 +17,10 @@ test.describe('product creation responsive evidence', () => {
   );
 
   const viewports = [
-    {name: 'mobile', width: 360, height: 800},
+    {name: 'mobile-small', width: 360, height: 800},
+    {name: 'mobile', width: 375, height: 812},
     {name: 'tablet', width: 768, height: 1024},
+    {name: 'tablet-wide', width: 1024, height: 768},
     {name: 'desktop', width: 1440, height: 900},
   ] as const;
 
@@ -47,6 +49,12 @@ test.describe('product creation responsive evidence', () => {
       await expect(page.getByRole('heading', {name: 'What are you selling?'})).toBeVisible();
       await expect(page.getByRole('radio')).toHaveCount(4);
       await expect(page.getByRole('button', {name: 'Continue'})).toBeDisabled();
+      const pickerCapture = testInfo.outputPath(`type-picker-${viewport.width}px.png`);
+      await page.screenshot({path: pickerCapture, fullPage: true});
+      await testInfo.attach(`type picker ${viewport.width}px`, {
+        path: pickerCapture,
+        contentType: 'image/png',
+      });
 
       for (const item of types) {
         await page.goto(`/dashboard/items/new/${item.type}`);
@@ -77,4 +85,53 @@ test.describe('product creation responsive evidence', () => {
       }
     });
   }
+});
+
+test('mobile curriculum returns to unsaved lesson without a false discard prompt', async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    process.env.LINKET_ISOLATED_E2E !== '1' ||
+      !process.env.LINKET_E2E_COURSE_ID,
+    'Requires an isolated test database with a seeded course containing a lesson',
+  );
+
+  await page.setViewportSize({width: 360, height: 800});
+  await page.goto('/login');
+  await page.locator('#email').fill(
+    process.env.LINKET_E2E_CREATOR_EMAIL ?? 'creator@example.test',
+  );
+  await page.locator('#password').fill(
+    process.env.LINKET_E2E_CREATOR_PASSWORD ?? 'password',
+  );
+  await page.getByRole('button', {name: /log in|sign in/i}).click();
+
+  const courseId = process.env.LINKET_E2E_COURSE_ID;
+  await page.goto(`/dashboard/items/${courseId}/course`);
+  await expect(page.getByRole('heading', {name: 'Curriculum'})).toBeVisible();
+  const resume = page.getByRole('button', {name: 'Continue editing'});
+  await expect(resume).toBeVisible();
+  await resume.click();
+
+  const title = page.getByRole('textbox', {name: 'Lesson title'});
+  await expect(title).toBeVisible();
+  const original = await title.inputValue();
+  const draft = `${original} (unsaved mobile QA)`;
+  await title.fill(draft);
+
+  await page.getByRole('button', {name: 'Back to curriculum'}).click();
+  await expect(page.getByRole('heading', {name: 'Curriculum'})).toBeVisible();
+  await expect(resume).toBeVisible();
+  await resume.click();
+
+  await expect(page.getByRole('textbox', {name: 'Lesson title'})).toHaveValue(draft);
+  await expect(page.getByRole('alertdialog', {name: 'Discard unsaved changes?'})).toHaveCount(0);
+
+  const screenshotPath = testInfo.outputPath('mobile-lesson-resumed-unsaved.png');
+  await page.screenshot({path: screenshotPath, fullPage: true});
+  await testInfo.attach('Course same-lesson resume 360px', {
+    path: screenshotPath,
+    contentType: 'image/png',
+  });
+  // No save, publish, reorder, upload, or API mutation is triggered.
 });
