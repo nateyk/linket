@@ -80,8 +80,19 @@ test.describe('product creation responsive evidence', () => {
 
       for (const item of types) {
         await page.goto(`/dashboard/items/new/${item.type}`);
-        await expect(page.getByRole('heading', {name: item.heading, level: 1})).toBeVisible();
+        const heading = page.getByRole('heading', {name: item.heading, level: 1});
+        await expect(heading).toBeVisible();
         await expect(page.getByRole('heading', {name: item.section})).toBeVisible();
+
+        // A page can avoid horizontal scroll yet leave its only title clipped
+        // by header actions. Verify the full title fits at narrow widths.
+        if (viewport.width <= 375) {
+          const clippedTextPixels = await heading.locator('span').first().evaluate(
+            span => Math.max(0, span.scrollWidth - span.clientWidth),
+          );
+          expect(clippedTextPixels, `${item.type} title is truncated at ${viewport.width}px`)
+            .toBeLessThanOrEqual(1);
+        }
 
         const overflow = await page.evaluate(() =>
           Math.max(0, document.documentElement.scrollWidth - document.documentElement.clientWidth),

@@ -617,7 +617,7 @@ function DigitalProductForm() {
 
   return (
     <DashboardLayout.MainSection>
-      <DashboardLayout.SectionHeader>
+      <DashboardLayout.SectionHeader className="max-sm:h-auto max-sm:flex-wrap max-sm:py-2">
         <DashboardLayout.SidebarToggle />
         {/* P2 (crit3-A/3-B): the SectionTitle (page title + status badge)
             measured width 0 at 1280/1440/1920. Root cause is the flex
@@ -637,7 +637,7 @@ function DigitalProductForm() {
             </Breadcrumb.Link>
           </Breadcrumb.Item>
         </Breadcrumb>
-        <DashboardLayout.SectionTitle render={<h1 />}>
+        <DashboardLayout.SectionTitle render={<h1 />} className="max-sm:order-3 max-sm:basis-full max-sm:flex-none max-sm:w-full">
           {/* P2: in a tight row the TEXT is what truncates (min-w-0), so
               the status badge — the one product-specific fact the chrome
               carries — keeps its 36px at every width.
@@ -648,7 +648,7 @@ function DigitalProductForm() {
           </span>
           {product && <ProductStatus status={product.status} />}
         </DashboardLayout.SectionTitle>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 max-sm:ml-auto">
           {effectiveFileType !== 'course' && (
             <Button
               variant="outline"

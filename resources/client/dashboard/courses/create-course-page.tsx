@@ -131,7 +131,7 @@ export function Component() {
   // FileUploadContext — same provider wrap as the builder and the
   // digital-product form, or opening the section throws during render.
   return <FileUploadProvider><DashboardLayout.MainSection>
-    <DashboardLayout.SectionHeader>
+    <DashboardLayout.SectionHeader className="max-sm:h-auto max-sm:flex-wrap max-sm:py-2">
       <DashboardLayout.SidebarToggle />
       {/* Final-fix item 1 (same root cause + fix as the edit page, see
           p2-report item 7): the breadcrumb <nav> ships `w-full`, a flex base
@@ -145,11 +145,11 @@ export function Component() {
       <Breadcrumb className="w-auto max-sm:hidden"><Breadcrumb.Item><Breadcrumb.Link to="/dashboard/items"><Trans message="All products" /></Breadcrumb.Link></Breadcrumb.Item></Breadcrumb>
       {/* Final-fix item 2: the page's single h1 — same mechanism T7 used on
           the selection page; in a tight row the TEXT truncates (min-w-0). */}
-      <DashboardLayout.SectionTitle render={<h1 />}><span className="min-w-0 truncate"><Trans message="Create course" /></span></DashboardLayout.SectionTitle>
+      <DashboardLayout.SectionTitle render={<h1 />} className="max-sm:order-3 max-sm:basis-full max-sm:flex-none max-sm:w-full"><span className="min-w-0 truncate"><Trans message="Create course" /></span></DashboardLayout.SectionTitle>
       {/* Header actions mirror the digital-product edit page: icon + label
           that collapses to icon-only below 640px. aria-labels keep the
           collapsed buttons named. */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 max-sm:ml-auto">
         <Button type="button" variant="outline" size="sm"
           aria-label={trans({message: 'Preview'})}
           onClick={() => setPreviewOpen(true)}>
