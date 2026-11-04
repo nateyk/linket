@@ -14,6 +14,7 @@ import {CroppedCover} from '@common/uploads/components/cropped-image-selector';
 import {FileUploadProvider} from '@common/uploads/uploader/file-upload-provider';
 import {SharedFileUploader} from '@common/ui/file-uploader';
 import {Accordion} from '@shadcn/accordion/accordion';
+import {Dialog} from '@shadcn/dialog/dialog';
 import {
   Attachment,
   AttachmentAction,
@@ -47,6 +48,7 @@ import {
   FileArchiveIcon,
   FileIcon,
   FileTextIcon,
+  EyeIcon,
   GraduationCapIcon,
   HeadphonesIcon,
   Link2Icon,
@@ -57,7 +59,8 @@ import {
 } from 'lucide-react';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {useNavigate, useParams, useSearchParams} from 'react-router';
-import {parseWizardPrefill, firstInvalidFieldId, priceForBillingMode, resolveCreateType, type BillingMode} from './product-create-flow';
+import {parseWizardPrefill, firstInvalidFieldId, parseEtbToCents, priceForBillingMode, resolveCreateType, type BillingMode} from './product-create-flow';
+import {DigitalProductEditor} from './digital-product-editor';
 import {BillingModePicker} from './billing-mode-picker';
 import {
   ProductCreationProvider,
@@ -184,6 +187,7 @@ function DigitalProductForm() {
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [convertToEtb, setConvertToEtb] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [openSection, setOpenSection] = useState<ProductSetupSection | null>(
     'details',
   );
@@ -515,13 +519,16 @@ function DigitalProductForm() {
 
   const isSectionComplete = (section: ProductSetupSection) => {
     const isCourse = productType === 'course';
-    if (section === 'details')
-      return title.trim().length > 0 && price.trim().length > 0;
+    if (section === 'details') return title.trim().length > 0;
     if (section === 'files') return isCourse ? true : files.length > 0;
+    if (section === 'pricing') return !!effectiveBilling &&
+      (effectiveBilling === 'free' || (parseEtbToCents(price) ?? 0) > 0);
     return true;
   };
 
-  const progressSections = sectionOrder.filter(section => section !== 'previews');
+  const progressSections = effectiveFileType === 'digital'
+    ? ['details', 'files', 'pricing']
+    : sectionOrder.filter(section => section !== 'previews' && section !== 'bio-pages');
   const completedSections = progressSections.filter(isSectionComplete).length;
   const canSubmit =
     !product || product.status === 'draft' || product.status === 'rejected';
@@ -622,7 +629,7 @@ function DigitalProductForm() {
       </DashboardLayout.SectionHeader>
 
       <DashboardLayout.SectionContent className="overflow-y-auto">
-        <div className="mx-auto w-full max-w-6xl py-4 sm:py-5">
+        <div className={effectiveFileType === 'digital' ? 'mx-auto w-full max-w-3xl py-4 sm:py-5' : 'mx-auto w-full max-w-6xl py-4 sm:py-5'}>
           {error && (
             <Alert.Root
               variant="destructive"
@@ -638,7 +645,7 @@ function DigitalProductForm() {
             <Alert.Root variant="warning" fillStyle="subtleFill" className="mb-5">
               <TriangleAlertIcon />
               <Alert.Description>
-                <Trans message="Saving changes will return this approved product to draft." />
+                <Trans message="Changes to approved products may require review. The published version remains available during review." />
               </Alert.Description>
             </Alert.Root>
           )}
@@ -689,7 +696,18 @@ function DigitalProductForm() {
                 <PreviewSkeleton />
               </aside>
             </>
-          ) : unavailable ? null : (
+          ) : unavailable ? null : effectiveFileType === 'digital' ? (
+            <div className="flex min-w-0 flex-col gap-5">
+              <ProductFormProgress completed={completedSections} total={progressSections.length} />
+              <DigitalProductEditor
+                details={detailsFields}
+                files={privateFileFields}
+                sample={sampleFields}
+                pricing={pricingFields}
+                storefront={storefrontFields}
+              />
+            </div>
+          ) : (
             <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_26rem] xl:gap-6">
               <div className="flex min-w-0 flex-col gap-4">
                 <ProductFormProgress
