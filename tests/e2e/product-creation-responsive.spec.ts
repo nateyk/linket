@@ -158,7 +158,7 @@ test('keyboard-only product choice and Preview support focus return', async ({pa
   await expect(continueButton).toBeEnabled();
   await continueButton.focus();
   await page.keyboard.press('Enter');
-  await expect(page).toHaveURL(/\\/dashboard\\/items\\/new\\/ebook$/);
+  await expect(page).toHaveURL(/\/dashboard\/items\/new\/ebook$/);
 
   const preview = page.getByRole('button', {name: 'Preview'});
   await preview.focus();
