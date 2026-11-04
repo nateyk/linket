@@ -26,6 +26,8 @@ grep -Fq 'test-release-gates.sh' "$ci"
 # Cancellation must skip the final join, rather than leaving an obsolete
 # queued verification job blocking the next PR run.
 grep -Fq 'if: ${{ always() && !cancelled() }}' "$ci"
+# CI PR checks must run without requiring an optional third-party runner fleet.
+test "$(grep -cF 'runs-on: ${{ github.event_name == ' "$ci")" -eq 5
 grep -Fq 'group: ci-v2-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}' "$ci"
 grep -Fq 'test-release-artifact.sh' "$ci"
 grep -Fq 'test-resolve-verified-ci.sh' "$ci"
