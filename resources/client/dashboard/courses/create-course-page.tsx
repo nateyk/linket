@@ -145,7 +145,7 @@ export function Component() {
       <Breadcrumb className="w-auto max-sm:hidden"><Breadcrumb.Item><Breadcrumb.Link to="/dashboard/items"><Trans message="All products" /></Breadcrumb.Link></Breadcrumb.Item></Breadcrumb>
       {/* Final-fix item 2: the page's single h1 — same mechanism T7 used on
           the selection page; in a tight row the TEXT truncates (min-w-0). */}
-      <DashboardLayout.SectionTitle render={<h1 />} className="max-sm:order-3 max-sm:basis-full max-sm:flex-none max-sm:w-full"><span className="min-w-0 truncate"><Trans message="Create course" /></span></DashboardLayout.SectionTitle>
+      <DashboardLayout.SectionTitle render={<h1 />} className="max-sm:order-3 max-sm:basis-full max-sm:flex-none max-sm:w-full max-sm:text-xl max-sm:overflow-visible max-sm:whitespace-normal max-sm:text-clip"><span className="min-w-0 truncate max-sm:overflow-visible max-sm:whitespace-normal max-sm:text-clip"><Trans message="Create course" /></span></DashboardLayout.SectionTitle>
       {/* Header actions mirror the digital-product edit page: icon + label
           that collapses to icon-only below 640px. aria-labels keep the
           collapsed buttons named. */}

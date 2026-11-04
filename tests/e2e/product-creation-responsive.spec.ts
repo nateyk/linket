@@ -92,6 +92,28 @@ test.describe('product creation responsive evidence', () => {
           );
           expect(clippedTextPixels, `${item.type} title is truncated at ${viewport.width}px`)
             .toBeLessThanOrEqual(1);
+          // Also guard the parent heading: scrollWidth of the child alone
+          // did not detect an ellipsis visible in the 320px screenshot.
+          const titleStyles = await heading.evaluate(node => {
+            const text = node.querySelector('span');
+            if (!text) throw new Error('Missing product title span');
+            const parent = getComputedStyle(node);
+            const child = getComputedStyle(text);
+            return {
+              parentWhiteSpace: parent.whiteSpace,
+              childWhiteSpace: child.whiteSpace,
+              parentOverflow: parent.overflow,
+              childOverflow: child.overflow,
+              parentTextOverflow: parent.textOverflow,
+              childTextOverflow: child.textOverflow,
+            };
+          });
+          expect(titleStyles.parentWhiteSpace).not.toBe('nowrap');
+          expect(titleStyles.childWhiteSpace).not.toBe('nowrap');
+          expect(titleStyles.parentOverflow).toBe('visible');
+          expect(titleStyles.childOverflow).toBe('visible');
+          expect(titleStyles.parentTextOverflow).toBe('clip');
+          expect(titleStyles.childTextOverflow).toBe('clip');
         }
 
         const overflow = await page.evaluate(() =>

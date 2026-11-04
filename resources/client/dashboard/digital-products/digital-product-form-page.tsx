@@ -637,13 +637,13 @@ function DigitalProductForm() {
             </Breadcrumb.Link>
           </Breadcrumb.Item>
         </Breadcrumb>
-        <DashboardLayout.SectionTitle render={<h1 />} className="max-sm:order-3 max-sm:basis-full max-sm:flex-none max-sm:w-full">
+        <DashboardLayout.SectionTitle render={<h1 />} className="max-sm:order-3 max-sm:basis-full max-sm:flex-none max-sm:w-full max-sm:text-xl max-sm:overflow-visible max-sm:whitespace-normal max-sm:text-clip">
           {/* P2: in a tight row the TEXT is what truncates (min-w-0), so
               the status badge — the one product-specific fact the chrome
               carries — keeps its 36px at every width.
               Final-fix item 2: `render={<h1 />}` makes this the page's one
               and only heading (T7's mechanism on the selection page). */}
-          <span className="min-w-0 truncate">
+          <span className="min-w-0 truncate max-sm:overflow-visible max-sm:whitespace-normal max-sm:text-clip">
             {pageTitle}
           </span>
           {product && <ProductStatus status={product.status} />}
