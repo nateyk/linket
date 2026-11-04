@@ -932,6 +932,7 @@ function DetailsPanel({
   onConvertToEtbChange,
   onCoverChange,
   errors,
+  hidePricing = false,
 }: {
   title: string;
   description: string;
@@ -947,6 +948,7 @@ function DetailsPanel({
   onConvertToEtbChange: (value: boolean) => void;
   onCoverChange: (url: string, entry?: {id: number}) => void;
   errors: FieldErrors;
+  hidePricing?: boolean;
   validateField: (field: string, value: string) => void;
 }) {
   const {validateField} = arguments[0] as {validateField: (field: string, value: string) => void};
@@ -971,6 +973,74 @@ function DetailsPanel({
         />
       </ProductFormField>
 
+      {!hidePricing && (
+        <PricingFields
+          price={price}
+          billingMode={billingMode}
+          onBillingModeChange={onBillingModeChange}
+          onPriceChange={onPriceChange}
+          legacyCurrency={legacyCurrency}
+          convertToEtb={convertToEtb}
+          onConvertToEtbChange={onConvertToEtbChange}
+          errors={errors}
+          validateField={validateField}
+        />
+      )}
+
+      <ProductFormField
+        label="Description"
+        description="Describe what customers will receive."
+        error={errors.description}
+        htmlFor="product-description"
+        onBlur={() => validateField('description', description)}
+      >
+        <DescriptionEditor value={description} onChange={onDescriptionChange} />
+      </ProductFormField>
+
+      <ProductFormField
+        label="Cover image"
+        description="Shown on your product listing and Storefronts."
+        error={errors.cover_file_entry_id}
+        htmlFor="product-cover"
+      >
+        <CroppedCover
+          value={coverUrl}
+          onChange={onCoverChange}
+          uploadType="linkImages"
+          aspect={16 / 9}
+          label={trans(message('Cover image'))}
+          className="aspect-video h-auto w-full"
+        />
+      </ProductFormField>
+    </div>
+  );
+}
+
+interface PricingFieldsProps {
+  price: string;
+  billingMode: BillingMode | null;
+  onBillingModeChange: (mode: BillingMode) => void;
+  onPriceChange: (value: string) => void;
+  legacyCurrency?: string;
+  convertToEtb: boolean;
+  onConvertToEtbChange: (value: boolean) => void;
+  errors: FieldErrors;
+  validateField: (field: string, value: string) => void;
+}
+
+function PricingFields({
+  price,
+  billingMode,
+  onBillingModeChange,
+  onPriceChange,
+  legacyCurrency,
+  convertToEtb,
+  onConvertToEtbChange,
+  errors,
+  validateField,
+}: PricingFieldsProps) {
+  return (
+    <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
         <p className="text-sm font-medium">
           <Trans message="Free or paid?" />
@@ -1024,31 +1094,7 @@ function DetailsPanel({
       </ProductFormField>
       ) : null}
 
-      <ProductFormField
-        label="Description"
-        description="Describe what customers will receive."
-        error={errors.description}
-        htmlFor="product-description"
-        onBlur={() => validateField('description', description)}
-      >
-        <DescriptionEditor value={description} onChange={onDescriptionChange} />
-      </ProductFormField>
 
-      <ProductFormField
-        label="Cover image"
-        description="Shown on your product listing and Storefronts."
-        error={errors.cover_file_entry_id}
-        htmlFor="product-cover"
-      >
-        <CroppedCover
-          value={coverUrl}
-          onChange={onCoverChange}
-          uploadType="linkImages"
-          aspect={16 / 9}
-          label={trans(message('Cover image'))}
-          className="aspect-video h-auto w-full"
-        />
-      </ProductFormField>
     </div>
   );
 }
