@@ -42,7 +42,11 @@ class BaseExceptionHandler extends Handler
             $isAuthException &&
             (requestIsFromFrontend() &&
                 !$request->expectsJson() &&
-                !Auth::check())
+                !Auth::check()) &&
+            // OAuth transport/client/consent failures are security decisions,
+            // not login prompts. Never turn a 403 (foreign Host, HTTP or
+            // nonce replay) into a potentially unsafe guest redirect.
+            !$request->is('oauth/linket/authorize', 'oauth/linket/authorize/*')
         ) {
             return redirect('/login');
         }
