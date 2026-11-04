@@ -53,9 +53,26 @@ function forecastSourcePro(User $creator): void
     ]);
 }
 
-function forecastSourceOrder(User $creator, DigitalProduct $product, string $status, int $cents, string $currency = 'ETB'): void
+function forecastSourceProof(StorefrontOrder $order, array $overrides = []): DirectPaymentVerification
 {
-    StorefrontOrder::query()->create([
+    return DirectPaymentVerification::query()->create([
+        'reference' => 'FCST-'.Str::upper(Str::random(18)),
+        'payable_type' => StorefrontOrder::class,
+        'payable_id' => $order->getKey(),
+        'bank_code' => 'cbe',
+        'settlement_account' => '1000123456789',
+        'amount_cents' => (int) $order->gross_amount_cents,
+        'currency' => (string) $order->currency,
+        'status' => 'success',
+        'verified_at' => now()->subDay(),
+        'canonical_transaction_identity' => Str::upper(Str::random(24)),
+        ...$overrides,
+    ]);
+}
+
+function forecastSourceOrder(User $creator, DigitalProduct $product, string $status, int $cents, string $currency = 'ETB', bool $withProof = true): StorefrontOrder
+{
+    $order = StorefrontOrder::query()->create([
         'uuid' => (string) Str::uuid(), 'creator_id' => $creator->id, 'digital_product_id' => $product->id,
         'buyer_name' => 'PRIVATE FORECAST BUYER', 'buyer_email' => 'private-forecast@example.test',
         'payment_reference' => 'PRIVATE-FORECAST-REFERENCE-'.Str::random(12), 'currency' => $currency,
@@ -63,6 +80,11 @@ function forecastSourceOrder(User $creator, DigitalProduct $product, string $sta
         'commission_bps' => 0, 'platform_fee_cents' => 0, 'payment_gateway' => 'verify_et',
         'status' => $status, 'paid_at' => '2026-10-12 10:00:00',
     ]);
+    if ($withProof && in_array($status, ['paid', 'fulfilled'], true)) {
+        forecastSourceProof($order);
+    }
+
+    return $order;
 }
 
 test('scoped daily adapter zero fills UTC calendar but excludes unverified, foreign and non ETB sales', function () {
@@ -90,6 +112,42 @@ test('scoped daily adapter zero fills UTC calendar but excludes unverified, fore
     expect($json)->not->toContain('PRIVATE FORECAST BUYER')
         ->not->toContain('private-forecast@example.test')
         ->not->toContain('PRIVATE-FORECAST-REFERENCE');
+});
+
+test('forecast history ignores paid labels without exact Verify.et confirmation and deduplicates multiple attempts', function () {
+    config()->set('creator_ai.enabled', true);
+    config()->set('creator_ai.features.forecast', true);
+    [$creator, $workspace, $product] = forecastSourceFixture();
+    forecastSourcePro($creator);
+
+    $trusted = forecastSourceOrder($creator, $product, 'paid', 12000);
+    forecastSourceProof($trusted); // duplicate success does not add another order
+
+    forecastSourceOrder($creator, $product, 'paid', 200000, 'ETB', false); // status spoofed without proof
+
+    $badAmount = forecastSourceOrder($creator, $product, 'paid', 300000, 'ETB', false);
+    forecastSourceProof($badAmount, ['amount_cents' => 299999]);
+
+    $missingIdentity = forecastSourceOrder($creator, $product, 'paid', 400000, 'ETB', false);
+    forecastSourceProof($missingIdentity, ['canonical_transaction_identity' => null]);
+
+    $missingVerifiedAt = forecastSourceOrder($creator, $product, 'paid', 500000, 'ETB', false);
+    forecastSourceProof($missingVerifiedAt, ['verified_at' => null]);
+
+    $legacy = forecastSourceOrder($creator, $product, 'paid', 600000);
+    $legacy->update(['payment_gateway' => 'chapa']);
+
+    $rows = app(VerifiedRevenueDailySeries::class)->forCreator(
+        $creator, $workspace,
+        CarbonImmutable::parse('2026-10-12', 'UTC'),
+        CarbonImmutable::parse('2026-10-12', 'UTC')
+    );
+
+    expect($rows)->toBe([[
+        'date' => '2026-10-12',
+        'verified_sales_count' => 1,
+        'verified_revenue_cents' => 12000,
+    ]]);
 });
 
 test('scoped forecast history requires current verified Pro, workspace membership and enabled flag', function () {

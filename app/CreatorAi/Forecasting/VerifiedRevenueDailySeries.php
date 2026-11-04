@@ -28,6 +28,16 @@ final class VerifiedRevenueDailySeries
         // Reuse the live creator, workspace, Pro, default-off feature and
         // authoritative bounded verified-order restrictions on every read.
         $rows = $this->reporting->verifiedOrders($creator, $workspaceId, $from, $to, 'forecast')
+            // A paid status alone is not provider evidence. Keep legacy/manual
+            // orders and mismatched or incomplete Verify.et attempts out of
+            // forecasting, without changing the other reporting products.
+            ->where('payment_gateway', 'verify_et')
+            ->whereHas('directPaymentVerifications', static fn ($query) => $query
+                ->where('status', 'success')
+                ->where('currency', 'ETB')
+                ->whereNotNull('verified_at')
+                ->whereNotNull('canonical_transaction_identity')
+                ->whereColumn('direct_payment_verifications.amount_cents', 'storefront_orders.gross_amount_cents'))
             ->selectRaw('DATE(paid_at) as day, COUNT(*) as verified_sales_count, SUM(gross_amount_cents) as verified_revenue_cents')
             ->groupByRaw('DATE(paid_at)')
             ->orderByRaw('DATE(paid_at) ASC')
