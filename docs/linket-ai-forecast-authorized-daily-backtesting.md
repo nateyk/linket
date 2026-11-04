@@ -11,3 +11,7 @@ Remaining before publication: integrate backtest policy with forecast suppressio
 ## Verify.et-only forecast evidence gate
 
 Forecast history now **requires** an order with `payment_gateway=verify_et`, paid/fulfilled status, a successful related `DirectPaymentVerification`, non-null verified timestamp and canonical transaction identity, ETB currency, and an amount that exactly equals gross order cents. The Eloquent relation uses `EXISTS`, so multiple attempts cannot multiply revenue. Legacy Chapa and orders merely labeled paid are excluded. Existing sales reports, payment state transitions and fulfillment remain unchanged. Synthetic negative tests cover missing evidence, wrong amount, missing identity/timestamp and legacy gateway.
+
+## History coverage guard
+
+After entitlement/workspace authorization, the internal adapter reads the workspace creation date and refuses a requested history range that begins before the workspace existed. This prevents fabricating a 30-day track record from zero-filled dates preceding creation. It does **not** establish continuous availability of historic payment records, detect missing database records after creation, or certify forecast accuracy; those remain separate data-quality and model-validation gates.

@@ -8,6 +8,7 @@ use App\Payments\Models\ProSubscriptionPayment;
 use App\Storefront\Models\DigitalProduct;
 use App\Storefront\Models\StorefrontOrder;
 use Carbon\CarbonImmutable;
+use Common\Workspaces\Models\Workspace;
 use Common\Billing\Models\Price;
 use Common\Billing\Models\Product;
 use Common\Billing\Subscription;
@@ -22,6 +23,9 @@ function forecastSourceFixture(): array
 {
     $creator = User::factory()->create(['email_verified_at' => now()]);
     $workspace = (new CreateWorkspace())->createPersonalWorkspace($creator);
+    // Synthetic fixture: this workspace really existed before the October
+    // verified-sale history. It must not rely on fabricated pre-opening days.
+    $workspace->forceFill(['created_at' => CarbonImmutable::parse('2026-09-01 00:00:00', 'UTC')])->save();
     $product = DigitalProduct::query()->create([
         'workspace_id' => $workspace->id, 'user_id' => $creator->id,
         'title' => 'Synthetic forecast guide', 'type' => 'digital',
@@ -175,6 +179,21 @@ test('scoped forecast history requires current verified Pro, workspace membershi
     } catch (HttpException $exception) {
         expect($exception->getStatusCode())->toBe(403);
     }
+});
+
+test('forecast daily adapter rejects invented pre-opening days even when the creator is verified Pro', function () {
+    config()->set('creator_ai.enabled', true);
+    config()->set('creator_ai.features.forecast', true);
+    [$creator, $workspaceId] = forecastSourceFixture();
+    forecastSourcePro($creator);
+    $workspace = Workspace::query()->findOrFail($workspaceId);
+    $workspace->forceFill(['created_at' => CarbonImmutable::parse('2026-10-20 00:00:00', 'UTC')])->save();
+
+    expect(fn () => app(VerifiedRevenueDailySeries::class)->forCreator(
+        $creator, $workspaceId,
+        CarbonImmutable::parse('2026-10-01', 'UTC'),
+        CarbonImmutable::parse('2026-10-30', 'UTC')
+    ))->toThrow(InvalidArgumentException::class, 'Forecast history predates workspace creation.');
 });
 
 test('forecast adapter rejects incomplete UTC history and non-UTC or invalid boundaries', function () {

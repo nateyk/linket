@@ -5,6 +5,7 @@ namespace App\CreatorAi\Forecasting;
 use App\CreatorAi\Services\ScopedReportingService;
 use App\Models\User;
 use Carbon\CarbonImmutable;
+use Common\Workspaces\Models\Workspace;
 use InvalidArgumentException;
 
 /** Authenticated, bounded, read-only verified ETB daily history (UTC). */
@@ -25,9 +26,19 @@ final class VerifiedRevenueDailySeries
             throw new InvalidArgumentException('Incomplete UTC days are not valid historical data.');
         }
 
-        // Reuse the live creator, workspace, Pro, default-off feature and
-        // authoritative bounded verified-order restrictions on every read.
-        $rows = $this->reporting->verifiedOrders($creator, $workspaceId, $from, $to, 'forecast')
+        // Authorize the creator/workspace/verified Pro and date bounds before
+        // consulting workspace metadata or querying any payment history.
+        $verified = $this->reporting->verifiedOrders($creator, $workspaceId, $from, $to, 'forecast');
+        $workspace = Workspace::query()->whereKey($workspaceId)->first(['created_at']);
+        if ($workspace?->created_at === null) {
+            throw new InvalidArgumentException('Forecast workspace age cannot be verified.');
+        }
+        $workspaceStarted = CarbonImmutable::instance($workspace->created_at)->utc()->startOfDay();
+        if ($from->lessThan($workspaceStarted)) {
+            throw new InvalidArgumentException('Forecast history predates workspace creation.');
+        }
+
+        $rows = $verified
             // A paid status alone is not provider evidence. Keep legacy/manual
             // orders and mismatched or incomplete Verify.et attempts out of
             // forecasting, without changing the other reporting products.
