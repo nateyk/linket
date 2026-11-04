@@ -49,6 +49,8 @@ test('forecast engine backtests against a naive model before returning a bounded
         ->and($result['currency'])->toBe('ETB')
         ->and($result['revenue_basis'])->toBe('verified_gross')
         ->and($result['backtest_days'])->toBe(7)
+        ->and($result['rolling_backtest_folds'])->toBe(2)
+        ->and($result['rolling_backtest_mae_cents'])->toBe(0)
         ->and($result['backtest_mae_cents'])->toBe(0)
         ->and($result['naive_backtest_mae_cents'])->toBe(0)
         ->and($result['estimated_total_gross_cents'])->toBe(70000)
@@ -116,4 +118,17 @@ test('forecast engine suppresses inactive creators and missing recent verified r
     $result = (new VerifiedRevenueForecastEngine())->evaluate($days);
     expect($result['eligible'])->toBeFalse()
         ->and($result['reason'])->toBe('no_recent_verified_activity');
+});
+
+
+test('forecast evaluation suppresses a model when an earlier chronological fold loses despite latest holdout passing', function () {
+    $history = verifiedForecastFixture(30);
+    for ($day = 9; $day < 15; $day++) {
+        $history[$day]['verified_revenue_cents'] = 0;
+    }
+
+    $result = (new VerifiedRevenueForecastEngine())->evaluate($history, 7);
+    expect($result['eligible'])->toBeFalse()
+        ->and($result['reason'])->toBe('rolling_backtest_underperformed_naive')
+        ->and(array_key_exists('estimated_total_gross_cents', $result))->toBeFalse();
 });
