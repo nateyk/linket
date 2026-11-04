@@ -86,7 +86,7 @@ import {
   CourseSettingsDescriptionField,
   CourseSettingsOutcomesField,
 } from './course-settings-fields';
-import {resolveLessonNavigation} from './course-lesson-navigation';
+import {chooseLessonAfterReload, resolveLessonNavigation} from './course-lesson-navigation';
 import {CourseMobileLessonResume} from './course-mobile-lesson-resume';
 import {
   isLessonEditorDirty,
@@ -199,6 +199,11 @@ function CourseBuilder() {
     chapterId: number;
   } | null>(null);
   const lessonDirtyCheckRef = useRef<(() => boolean) | null>(null);
+  const selectedLessonIdRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    selectedLessonIdRef.current = selectedLesson?.id ?? null;
+  }, [selectedLesson?.id]);
 
   const switchToLesson = (nextLesson: Lesson, nextChapterId: number) => {
     setSelectedLesson(nextLesson);
@@ -238,20 +243,18 @@ function CourseBuilder() {
       const payload = res.data.data as Course;
       setCourse(payload);
       const lessonId = Number(searchParams.get('lessonId'));
-      const requestedChapter = Number.isInteger(lessonId)
-        ? payload.chapters.find(chapter =>
-            chapter.lessons.some(lesson => lesson.id === lessonId),
-          )
-        : undefined;
-      const requestedLesson = requestedChapter?.lessons.find(
-        lesson => lesson.id === lessonId,
+      const requestedLessonId =
+        Number.isInteger(lessonId) && lessonId > 0 ? lessonId : null;
+      // A refresh after saving must not jump back to the first chapter.
+      // Existing current selection wins; initial deep links work when no lesson
+      // has been selected yet.
+      const selection = chooseLessonAfterReload(
+        payload.chapters,
+        selectedLessonIdRef.current,
+        requestedLessonId,
       );
-      const firstChapter = payload.chapters[0];
-      const selectedLesson = requestedLesson ?? firstChapter?.lessons[0];
-      if (selectedLesson) {
-        setSelectedLesson(selectedLesson);
-        setSelectedChapterId(requestedChapter?.id ?? firstChapter.id);
-      }
+      setSelectedLesson(selection?.lesson ?? null);
+      setSelectedChapterId(selection?.chapterId ?? null);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load course');
     } finally {
