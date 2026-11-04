@@ -113,10 +113,10 @@ type FieldErrors = Record<string, string>;
 // Each message is a static literal so the translation extractor finds it.
 const PRODUCT_PAGE_TITLES = {
   create: {
-    digital: <Trans message="Create Digital product" />,
-    ebook: <Trans message="Create E-book" />,
-    audio: <Trans message="Create Audio" />,
-    course: <Trans message="Create Course" />,
+    digital: <Trans message="Create digital product" />,
+    ebook: <Trans message="Create e-book" />,
+    audio: <Trans message="Create audio" />,
+    course: <Trans message="Create course" />,
   },
   edit: {
     digital: <Trans message="Edit digital product" />,

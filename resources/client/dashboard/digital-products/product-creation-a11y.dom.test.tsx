@@ -288,18 +288,21 @@ describe('P2 nested-cards: the wizard dialog has no card inside its panel', () =
 describe('R09 picker strings are translatable', () => {
   test('editor create/edit page headings are static extractable translations', () => {
     const source = readSource('digital-product-form-page.tsx');
+    const catalog = JSON.parse(
+      fs.readFileSync(path.resolve('resources/client-translations.json'), 'utf8'),
+    ) as Record<string, string>;
     for (const literal of [
-      'Create Digital product',
-      'Create E-book',
-      'Create Audio',
-      'Create Course',
       'Create digital product',
+      'Create e-book',
+      'Create audio',
+      'Create course',
       'Edit digital product',
       'Edit e-book',
       'Edit audio',
       'Edit course',
     ]) {
       expectExtractable(source, literal);
+      expect(catalog[literal], `missing catalog key: ${literal}`).toBe(literal);
     }
     expect(source).not.toContain('<Trans message={pageTitle} />');
   });
