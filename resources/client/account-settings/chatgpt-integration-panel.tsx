@@ -23,6 +23,15 @@ type McpConnection = {
 type ConnectionResponse = {
   connections: McpConnection[];
   oauth_connection_available: boolean;
+  connection_setup?: {
+    status:
+      | 'unavailable'
+      | 'verified_pro_required'
+      | 'workspace_required'
+      | 'admin_setup_required'
+      | 'ready';
+    resource_url: string | null;
+  };
 };
 
 /**
@@ -140,13 +149,60 @@ export function ChatGptIntegrationPanel() {
             </Button>
           </div>
 
-          {!data.oauth_connection_available ? (
+          {data.connection_setup?.status === 'verified_pro_required' ? (
             <p className="text-sm text-muted-foreground">
-              <Trans message="New ChatGPT connections are not available yet." />
+              <Trans message="Verified Linket Pro is required to connect ChatGPT." />
             </p>
+          ) : data.connection_setup?.status === 'workspace_required' ? (
+            <p className="text-sm text-muted-foreground">
+              <Trans message="Create or join a Linket workspace before connecting ChatGPT." />
+            </p>
+          ) : data.connection_setup?.status === 'admin_setup_required' ? (
+            <p className="text-sm text-muted-foreground">
+              <Trans message="A Linket administrator must approve the ChatGPT OAuth client before connections are available." />
+            </p>
+          ) : data.oauth_connection_available &&
+              data.connection_setup?.status === 'ready' &&
+              data.connection_setup.resource_url?.startsWith('https://') ? (
+            <div className="space-y-3 rounded-card-sm border bg-secondary/30 p-4">
+              <p className="text-sm font-semibold">
+                <Trans message="Connect from ChatGPT" />
+              </p>
+              <p className="text-sm text-muted-foreground">
+                <Trans message="A ChatGPT workspace administrator or authorized developer must add and approve Linket as a custom MCP app on ChatGPT web." />
+              </p>
+              <p className="text-xs font-medium text-muted-foreground">
+                <Trans message="Approved Linket HTTPS MCP endpoint" />
+              </p>
+              <code className="block break-all rounded-card-sm bg-background px-3 py-2 text-sm">
+                {data.connection_setup.resource_url}
+              </code>
+              <ol className="list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
+                <li>
+                  <Trans message="In ChatGPT Plugins, choose Add custom MCP server if your workspace permits it." />
+                </li>
+                <li>
+                  <Trans message="Enter this approved HTTPS endpoint and configure OAuth through your workspace administrator." />
+                </li>
+                <li>
+                  <Trans message="Approve access to the workspace you select in Linket." />
+                </li>
+                <li>
+                  <Trans message="Return here to review or disconnect that authorization at any time." />
+                </li>
+              </ol>
+              <a
+                href="https://help.openai.com/en/articles/12584461-connecting-custom-mcp-servers-in-chatgpt"
+                className="inline-flex text-sm font-medium text-primary underline-offset-4 hover:underline"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Trans message="ChatGPT custom MCP setup guidance" />
+              </a>
+            </div>
           ) : (
             <p className="text-sm text-muted-foreground">
-              <Trans message="Start a Linket connection in ChatGPT and approve its access to your chosen workspace." />
+              <Trans message="New ChatGPT connections are not available yet." />
             </p>
           )}
 

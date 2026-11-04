@@ -321,7 +321,8 @@ jobs:
     # Preserve the original required GitHub branch-protection check name.
     name: Verify (PHP 8.4 + Node 24 + MySQL 8.0)
     needs: [changes, php, frontend]
-    if: ${{ always() }}
+    # Cancelled PR runs must not queue the final join and block newer SHA checks.
+    if: ${{ always() && !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
