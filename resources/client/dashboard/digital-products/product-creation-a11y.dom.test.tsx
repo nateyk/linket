@@ -366,8 +366,8 @@ describe('R13 progress total is derived', () => {
   test('form passes the actual section count, not a hardcoded total', () => {
     const source = readSource('digital-product-form-page.tsx');
     expect(source).toContain('total={progressSections.length}');
-    expect(source).toContain("? ['details', 'files', 'pricing']");
-    expect(source).toContain("section !== 'bio-pages'");
+    expect(source).toContain("const progressSections: ProductSetupSection[] = ['details', 'files', 'pricing'];");
+    expect(source).not.toContain("section !== 'previews' && section !== 'bio-pages'");
     expect(source).not.toMatch(/total=\{[0-9]+\}/);
   });
 });
