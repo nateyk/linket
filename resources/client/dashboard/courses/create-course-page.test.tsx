@@ -31,7 +31,7 @@ describe('course creation page', () => {
   });
 
   test('shows a Free badge instead of a price field for free billing', () => {
-    expect(source).toContain('const isFree = prefill.billing === \'free\'');
+    expect(source).toContain("const isFree = billingMode === 'free'");
     expect(source).toContain('<Trans message="Free" />');
     expect(source).toContain('Badge');
     // Price field only for paid — free renders the badge, not the ETB input.
@@ -64,10 +64,12 @@ describe('wizard handoff continuity', () => {
     expect(source).not.toContain('From previous step');
   });
 
-  test('customer preview reuses the shared product-form preview shell', () => {
+  test('customer preview opens through the shared read-only dialog', () => {
     expect(source).toContain('ProductFormCustomerPreview');
     expect(source).not.toContain('<Card.Root>');
-    expect(source).not.toContain('<Trans message="Preview" />');
+    expect(source).toContain('<ProductPreviewDialog');
+    expect(source).toContain('<Trans message="Preview" />');
+    expect(source).not.toContain('<aside className="min-w-0 lg:sticky lg:top-6">');
   });
 
   test('course settings uses a non-price icon', () => {
@@ -314,10 +316,14 @@ describe('inline course settings', () => {
         'Add a short description to show learners what to expect.',
       ),
     ).toBeNull();
+    expect(screen.queryByText('Your course title')).toBeNull();
+    await user.click(screen.getByRole('button', {name: 'Preview'}));
     expect(screen.getByText('Your course title')).toBeTruthy();
+    await user.keyboard('{Escape}');
 
     await openSettingsSection(user);
     await typeDescription(user, 'Cafe basics');
+    await user.click(screen.getByRole('button', {name: 'Preview'}));
 
     // The preview shows the typed text — the TipTap value is tag-stripped and
     // rendered as a plain text node (the editor itself also holds the text,
