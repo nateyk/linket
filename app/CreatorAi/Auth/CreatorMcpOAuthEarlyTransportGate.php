@@ -72,6 +72,10 @@ final class CreatorMcpOAuthEarlyTransportGate
             app(CreatorMcpRemoteConfiguration::class)->endpoints();
         }
 
+        if ($isConsent) {
+            app(CreatorMcpOAuthHttpSecurity::class)->ensureSessionConfiguration();
+        }
+
         if ($isToken || $isMcp) {
             // An OAuth/MCP rate limiter must be shared across production
             // workers, not scoped to an isolated application instance.

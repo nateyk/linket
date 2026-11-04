@@ -30,19 +30,7 @@ final class CreatorMcpOAuthHttpSecurity
 
         abort_unless($request->isSecure(), 403, 'HTTPS is required for OAuth consent.');
 
-        $driver = config('session.driver');
-        $cacheDriver = config('cache.default');
-
-        abort_unless(
-            is_string($driver) && $driver !== 'cookie'
-            && in_array($driver, ['array', 'file', 'database', 'redis', 'memcached', 'dynamodb', 'mongodb'], true)
-            && in_array($cacheDriver, ['array', 'file', 'database', 'redis', 'memcached', 'dynamodb', 'mongodb'], true)
-            // In-memory sessions/locks are only acceptable for isolated tests,
-            // never production where concurrent requests run in workers.
-            && (! app()->environment('production') || ($driver !== 'array' && $cacheDriver !== 'array')),
-            503,
-            'MCP OAuth requires a shared lock-capable session and cache configuration.',
-        );
+        $this->ensureSessionConfiguration();
 
         // Enforce browser authentication AFTER HTTPS is checked; otherwise
         // Laravel may redirect an insecure guest to the login route first.
@@ -77,5 +65,25 @@ final class CreatorMcpOAuthHttpSecurity
         abort_unless($creator->hasVerifiedEmail(), 403);
 
         return $next($request);
+    }
+
+    public function ensureSessionConfiguration(): void
+    {
+        $driver = config('session.driver');
+        $lockStore = config('session.block_store') ?? config('cache.default');
+        $lockDriver = is_string($lockStore) && $lockStore !== ''
+            ? config('cache.stores.'.$lockStore.'.driver')
+            : null;
+
+        // StartSession uses the named block store, which can differ from the
+        // default cache. Validate before StartSession tries to acquire a lock.
+        abort_unless(
+            is_string($driver)
+            && in_array($driver, ['array', 'file', 'database', 'redis', 'memcached', 'dynamodb', 'mongodb'], true)
+            && in_array($lockDriver, ['array', 'file', 'database', 'redis', 'memcached', 'dynamodb', 'mongodb'], true)
+            && (! app()->environment('production') || ($driver !== 'array' && $lockDriver !== 'array')),
+            503,
+            'MCP OAuth requires a shared lock-capable session and cache configuration.',
+        );
     }
 }

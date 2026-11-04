@@ -17,7 +17,7 @@ use Laravel\Mcp\Server\Transport\HttpTransport;
 if (config('creator_ai.features.mcp_http_token') === true) {
     Route::post('oauth/linket/token', CreatorMcpOAuthHttpTokenController::class)
         ->withoutMiddleware('web')
-        ->middleware('throttle:10,1')
+        ->middleware('throttle:10,1,creator-mcp-token:')
         ->name('creator-ai.oauth.token');
 }
 
@@ -44,7 +44,7 @@ if (config('creator_ai.features.mcp_http_server') === true) {
     })
         ->withoutMiddleware('web')
         ->middleware([
-            'throttle:30,1',
+            'throttle:30,1,creator-mcp-read:',
             CreatorMcpOAuthRemoteSecurity::class,
             ReorderJsonAccept::class,
             ValidateMcpHeaders::class,
