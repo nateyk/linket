@@ -55,7 +55,8 @@ describe('course builder analytics navigation', () => {
 
     expect(source).toContain('useSearchParams');
     expect(source).toContain("searchParams.get('lessonId')");
-    expect(source).toContain('requestedLesson');
+    expect(source).toContain('chooseLessonAfterReload(');
+    expect(source).toContain('selectedLessonIdRef.current');
   });
 });
 
