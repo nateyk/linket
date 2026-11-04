@@ -190,7 +190,7 @@ test('fetches the product exactly once and typed input survives context re-rende
   expect(input.value).toBe('MY DRAFT TITLE');
 });
 
-test('approved→draft banner never flashes on load and stays after a real edit', async () => {
+test('approved-update review banner never flashes on load and stays after a real edit', async () => {
   const user = userEvent.setup();
   mount();
 
@@ -199,7 +199,7 @@ test('approved→draft banner never flashes on load and stays after a real edit'
   // Loading never sets `dirty`, so the moderation banner must not flash while
   // the page hydrates (it used to appear and vanish with every refetch).
   expect(
-    screen.queryByText(/Saving changes will return this approved product to draft/i),
+    screen.queryByText(/Changes to approved products may require review\. The published version remains available during review\./i),
   ).toBeNull();
 
   await user.type(input, '!');
@@ -214,7 +214,7 @@ test('approved→draft banner never flashes on load and stays after a real edit'
 
   expect(input.value).toBe(`${serverProduct.title}!`);
   expect(
-    screen.getByText(/Saving changes will return this approved product to draft/i),
+    screen.getByText(/Changes to approved products may require review\. The published version remains available during review\./i),
   ).toBeTruthy();
 });
 
