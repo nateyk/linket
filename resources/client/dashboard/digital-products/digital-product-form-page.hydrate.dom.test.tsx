@@ -53,6 +53,9 @@ const h = vi.hoisted(() => {
   return {
     pending,
     itemUrls: [] as string[],
+    storefrontGetCount: 0,
+    storefrontFail: false,
+    storefrontRecords: [] as {id: number; name: string; short_url?: string}[],
     get(url: string): Promise<unknown> {
       if (url.startsWith('/api/v1/items/')) {
         this.itemUrls.push(url);
@@ -61,7 +64,10 @@ const h = vi.hoisted(() => {
         });
       }
       if (url.startsWith('/api/v1/biolinks')) {
-        return Promise.resolve({data: {data: []}});
+        this.storefrontGetCount++;
+        return this.storefrontFail
+          ? Promise.reject(new Error('Synthetic Storefront list outage'))
+          : Promise.resolve({data: {data: this.storefrontRecords}});
       }
       return Promise.resolve({data: {data: []}});
     },
@@ -71,6 +77,9 @@ const h = vi.hoisted(() => {
     reset() {
       this.itemUrls.length = 0;
       pending.length = 0;
+      this.storefrontGetCount = 0;
+      this.storefrontFail = false;
+      this.storefrontRecords = [];
     },
     /** Complete every in-flight product request with the server payload. */
     resolvePendingItems(product: unknown) {
@@ -155,17 +164,47 @@ async function flushTasks(iterations = 4) {
 }
 
 /** Resolve the pending product request and wait for the hydrated form. */
-async function loadProduct() {
+async function loadProduct(product = serverProduct) {
   await waitFor(() => expect(h.itemGetCount).toBe(1));
   await act(async () => {
-    h.resolvePendingItems(serverProduct);
+    h.resolvePendingItems(product);
   });
   const input = (await screen.findByRole('textbox', {
     name: /product title/i,
   })) as HTMLInputElement;
-  expect(input.value).toBe(serverProduct.title);
+  expect(input.value).toBe(product.title);
   return input;
 }
+
+test('Storefront outage remains recoverable and does not discard existing placement', async () => {
+  const user = userEvent.setup();
+  h.storefrontFail = true;
+  mount();
+  await loadProduct({...serverProduct, biolink_ids: [42]});
+
+  expect(await screen.findByText(/Unable to load Storefronts\. Your product can still be saved or submitted\./)).toBeTruthy();
+  expect(screen.queryByText(/Create a Storefront later if you want to display it there/)).toBeNull();
+  expect((screen.getByRole('button', {name: 'Save draft'}) as HTMLButtonElement).disabled).toBe(false);
+  expect(h.itemGetCount).toBe(1);
+  expect(h.storefrontGetCount).toBe(1);
+
+  h.storefrontFail = false;
+  h.storefrontRecords = [{id: 42, name: 'My Existing Storefront', short_url: 'my-store'}];
+  await user.click(screen.getByRole('button', {name: 'Retry Storefront loading'}));
+  expect(await screen.findByText('My Existing Storefront')).toBeTruthy();
+  expect(screen.queryByText(/Unable to load Storefronts/)).toBeNull();
+  expect(screen.getByRole('checkbox', {name: /My Existing Storefront/}).getAttribute('aria-checked')).toBe('true');
+  expect(h.itemGetCount).toBe(1); // A retry must not rehydrate the product or lose edits.
+  expect(h.storefrontGetCount).toBe(2);
+});
+
+test('a successful empty Storefront lookup is not misrepresented as an outage', async () => {
+  mount();
+  await loadProduct();
+  expect(await screen.findByText(/Create a Storefront later if you want to display it there/)).toBeTruthy();
+  expect(screen.queryByRole('button', {name: 'Retry Storefront loading'})).toBeNull();
+  expect(h.storefrontGetCount).toBe(1);
+});
 
 test('fetches the product exactly once and typed input survives context re-renders', async () => {
   const user = userEvent.setup();

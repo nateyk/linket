@@ -190,6 +190,8 @@ function DigitalProductForm() {
   const effectiveBilling: BillingMode | null =
     billingChoice ?? (product ? (product.price_cents === 0 ? 'free' : 'paid') : null);
   const [biolinks, setBiolinks] = useState<Biolink[]>([]);
+  const [storefrontLoadStatus, setStorefrontLoadStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [storefrontRetry, setStorefrontRetry] = useState(0);
   const [loading, setLoading] = useState(!!productId);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -326,16 +328,6 @@ function DigitalProductForm() {
           });
         }
 
-        try {
-          const pageResponse = await apiClient.get(
-            '/api/v1/biolinks?fields_preset=minimal',
-          );
-          if (cancelled) return;
-          const payload = pageResponse.data;
-          setBiolinks(payload.data ?? []);
-        } catch {
-          // Storefront placement is optional, so a failed list request is non-fatal.
-        }
       } catch (reason) {
         if (cancelled) return;
         setError(
@@ -351,6 +343,27 @@ function DigitalProductForm() {
       cancelled = true;
     };
   }, [navigate, productId]);
+
+  // Optional Storefront lookup is independent of item hydration. A failed
+  // request must not look like an empty account, wipe selected IDs, or block
+  // product creation. Each retry invalidates only the previous list request.
+  useEffect(() => {
+    let cancelled = false;
+    setStorefrontLoadStatus('loading');
+    void (async () => {
+      try {
+        const response = await apiClient.get('/api/v1/biolinks?fields_preset=minimal');
+        const records: unknown = response.data?.data;
+        if (!Array.isArray(records)) throw new Error('Invalid Storefront list response');
+        if (cancelled) return;
+        setBiolinks(records as Biolink[]);
+        setStorefrontLoadStatus('ready');
+      } catch {
+        if (!cancelled) setStorefrontLoadStatus('error');
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [storefrontRetry]);
 
   const save = useCallback(
     async (submitAfterSave = false) => {
@@ -636,6 +649,8 @@ function DigitalProductForm() {
       biolinks={biolinks}
       selectedIds={biolinkIds}
       onChange={actions.setBiolinkIds}
+      loadStatus={storefrontLoadStatus}
+      onRetry={() => setStorefrontRetry(current => current + 1)}
     />
   );
 
@@ -1030,6 +1045,8 @@ function DigitalProductForm() {
                             biolinks={biolinks}
                             selectedIds={biolinkIds}
                             onChange={actions.setBiolinkIds}
+                            loadStatus={storefrontLoadStatus}
+                            onRetry={() => setStorefrontRetry(current => current + 1)}
                           />
                         )}
                       </ProductFormSection>
@@ -1413,12 +1430,37 @@ function BioPagesPanel({
   biolinks,
   selectedIds,
   onChange,
+  loadStatus,
+  onRetry,
 }: {
   biolinks: Biolink[];
   selectedIds: number[];
   onChange: (ids: number[]) => void;
+  loadStatus: 'loading' | 'ready' | 'error';
+  onRetry: () => void;
 }) {
   const {trans} = useTrans();
+  if (loadStatus === 'loading') {
+    return (
+      <p role="status" className="py-4 text-sm text-muted-foreground">
+        <Trans message="Loading Storefronts..." />
+      </p>
+    );
+  }
+
+  if (loadStatus === 'error') {
+    return (
+      <div role="status" className="flex flex-col items-start gap-3 py-4">
+        <p className="text-sm text-muted-foreground">
+          <Trans message="Unable to load Storefronts. Your product can still be saved or submitted. Retry to choose placement." />
+        </p>
+        <Button type="button" size="sm" variant="outline" onClick={onRetry}>
+          <Trans message="Retry Storefront loading" />
+        </Button>
+      </div>
+    );
+  }
+
   if (!biolinks.length) {
     return (
       <div className="flex flex-col gap-2 py-4 text-sm text-muted-foreground">
