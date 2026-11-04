@@ -58,7 +58,7 @@ function forecastSourceOrder(User $creator, DigitalProduct $product, string $sta
     StorefrontOrder::query()->create([
         'uuid' => (string) Str::uuid(), 'creator_id' => $creator->id, 'digital_product_id' => $product->id,
         'buyer_name' => 'PRIVATE FORECAST BUYER', 'buyer_email' => 'private-forecast@example.test',
-        'payment_reference' => 'PRIVATE-FORECAST-REFERENCE', 'currency' => $currency,
+        'payment_reference' => 'PRIVATE-FORECAST-REFERENCE-'.Str::random(12), 'currency' => $currency,
         'gross_amount_cents' => $cents, 'creator_earnings_cents' => $cents,
         'commission_bps' => 0, 'platform_fee_cents' => 0, 'payment_gateway' => 'verify_et',
         'status' => $status, 'paid_at' => '2026-10-12 10:00:00',
