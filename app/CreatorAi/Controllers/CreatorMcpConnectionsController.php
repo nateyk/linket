@@ -12,6 +12,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
@@ -103,7 +104,7 @@ final class CreatorMcpConnectionsController extends Controller
                 ->whereNull('secret')
                 ->where('revoked', false)
                 ->limit(100)
-                ->get(['grant_types', 'redirect_uris']);
+                ->get(['id', 'grant_types', 'redirect_uris']);
         } catch (QueryException) {
             return $unavailable;
         }
@@ -114,7 +115,9 @@ final class CreatorMcpConnectionsController extends Controller
             $redirects = is_string($client->redirect_uris)
                 ? json_decode($client->redirect_uris, true) : null;
 
-            return is_array($grants)
+            return is_string($client->id)
+                && Str::isUuid($client->id)
+                && is_array($grants)
                 && array_is_list($grants)
                 && in_array('authorization_code', $grants, true)
                 && count(array_filter($grants, 'is_string')) === count($grants)
