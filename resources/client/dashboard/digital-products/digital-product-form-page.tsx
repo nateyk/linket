@@ -14,7 +14,6 @@ import {CroppedCover} from '@common/uploads/components/cropped-image-selector';
 import {FileUploadProvider} from '@common/uploads/uploader/file-upload-provider';
 import {SharedFileUploader} from '@common/ui/file-uploader';
 import {Accordion} from '@shadcn/accordion/accordion';
-import {Dialog} from '@shadcn/dialog/dialog';
 import {
   Attachment,
   AttachmentAction,
@@ -61,6 +60,7 @@ import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {useNavigate, useParams, useSearchParams} from 'react-router';
 import {parseWizardPrefill, firstInvalidFieldId, parseEtbToCents, priceForBillingMode, resolveCreateType, type BillingMode} from './product-create-flow';
 import {DigitalProductEditor} from './digital-product-editor';
+import {ProductPreviewDialog} from './product-preview-dialog';
 import {BillingModePicker} from './billing-mode-picker';
 import {
   ProductCreationProvider,
@@ -645,6 +645,17 @@ function DigitalProductForm() {
           {product && <ProductStatus status={product.status} />}
         </DashboardLayout.SectionTitle>
         <div className="flex items-center gap-2">
+          {effectiveFileType === 'digital' && (
+            <Button
+              variant="outline"
+              size="sm"
+              aria-label={trans({message: 'Preview'})}
+              onClick={() => setPreviewOpen(true)}
+            >
+              <EyeIcon className="size-4" aria-hidden="true" />
+              <span className="max-sm:hidden"><Trans message="Preview" /></span>
+            </Button>
+          )}
           {/* P2 (crit3-A): the text labels collapse below 640px
               (max-sm:hidden), leaving icon-only buttons with no accessible
               name. aria-labels match the visible text via trans() — the
@@ -946,6 +957,10 @@ function DigitalProductForm() {
           )}
         </div>
       </DashboardLayout.SectionContent>
+
+      <ProductPreviewDialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <ProductPreview />
+      </ProductPreviewDialog>
 
       <AlertDialog.Root
         open={deleteDialogOpen}
