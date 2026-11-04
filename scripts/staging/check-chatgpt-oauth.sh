@@ -5,8 +5,6 @@ set -euo pipefail
 
 fail() { printf 'FAIL: %s\n' "$*" >&2; exit 1; }
 [[ "$#" -eq 1 ]] || fail 'Usage: LINKET_STAGING_HOST=staging.example.com bash scripts/staging/check-chatgpt-oauth.sh https://staging.example.com/mcp'
-command -v curl >/dev/null 2>&1 || fail 'curl is required'
-command -v jq >/dev/null 2>&1 || fail 'jq is required'
 [[ -n "${LINKET_STAGING_HOST:-}" ]] || fail 'Set LINKET_STAGING_HOST to the separate staging host (without scheme)'
 resource="$1"
 [[ "$resource" =~ ^(https://([A-Za-z0-9.-]+)(:[0-9]+)?)/mcp$ ]] || fail 'Resource must be an HTTPS origin followed by /mcp'
@@ -16,6 +14,10 @@ host="${BASH_REMATCH[2]}"
 case "$host" in
   linket.agrigebeya.com|www.linket.agrigebeya.com|localhost|127.0.0.1) fail 'Production and loopback hosts are forbidden' ;;
 esac
+
+# Reject invalid/production hosts before checking optional tooling or making requests.
+command -v curl >/dev/null 2>&1 || fail 'curl is required'
+command -v jq >/dev/null 2>&1 || fail 'jq is required'
 
 curl_opts=(--silent --show-error --max-time 12 --max-redirs 0 --proto '=https')
 meta_url="$issuer/.well-known/oauth-protected-resource/mcp"
