@@ -80,6 +80,7 @@ import {
   type ProductSetupSection,
 } from './product-form-section';
 import {ProductPreview, ProductStatus} from './product-preview';
+import {missingProductRequirements} from './product-authoring-status';
 import type {ProductType} from './product-type-picker';
 
 type Biolink = {id: number; name: string; short_url?: string};
@@ -538,6 +539,26 @@ function DigitalProductForm() {
   const completedSections = progressSections.filter(isSectionComplete).length;
   const canSubmit =
     !product || product.status === 'draft' || product.status === 'rejected';
+  const missingRequirements = missingProductRequirements({
+    title,
+    filesCount: files.length,
+    billing: effectiveBilling,
+    price,
+    type: effectiveFileType,
+  });
+  // Explain the first missing required item without counting optional samples
+  // or storefront placement as mandatory.
+  const readinessHint = canSubmit && missingRequirements.length > 0 ? (
+    <p className="text-xs text-muted-foreground" role="status">
+      {missingRequirements[0] === 'title' ? (
+        <Trans message="Add a title before submitting." />
+      ) : missingRequirements[0] === 'files' ? (
+        <Trans message="Upload at least one private product file before submitting." />
+      ) : (
+        <Trans message="Choose Free access or enter a valid paid price before submitting." />
+      )}
+    </p>
+  ) : null;
   const unavailable = !!productId && (!product || String(product.id) !== productId);
 
   const handleBillingChange = (mode: BillingMode) => {
@@ -831,6 +852,7 @@ function DigitalProductForm() {
           ) : unavailable ? null : effectiveFileType === 'digital' ? (
             <div className="flex min-w-0 flex-col gap-5">
               <ProductFormProgress completed={completedSections} total={progressSections.length} />
+              {readinessHint}
               <DigitalProductEditor
                 details={detailsFields}
                 files={privateFileFields}
@@ -842,6 +864,7 @@ function DigitalProductForm() {
           ) : effectiveFileType === 'ebook' ? (
             <div className="flex min-w-0 flex-col gap-5">
               <ProductFormProgress completed={completedSections} total={progressSections.length} />
+              {readinessHint}
               <EbookEditor
                 details={detailsFields}
                 files={privateFileFields}
@@ -852,6 +875,7 @@ function DigitalProductForm() {
             </div>          ) : effectiveFileType === 'audio' ? (
             <div className="flex min-w-0 flex-col gap-5">
               <ProductFormProgress completed={completedSections} total={progressSections.length} />
+              {readinessHint}
               <AudioEditor
                 details={detailsFields}
                 files={privateFileFields}
