@@ -120,7 +120,17 @@ test('guarded browser route rejects insecure transport and unauthenticated reque
     mcpBrowserRoutes();
     [, , $parameters] = mcpBrowserCreator();
 
+    $kernel = app(\Illuminate\Contracts\Http\Kernel::class);
+    expect($kernel->getGlobalMiddleware())->toContain(\App\CreatorAi\Auth\CreatorMcpOAuthEarlyTransportGate::class);
+    expect(app()->shouldSkipMiddleware())->toBeFalse();
+
     $insecure = $this->get('http://linket.example.test/oauth/linket/authorize?'.http_build_query($parameters));
+    // Inspect the actual request observed by the kernel, not an assumed URL
+    // constructed from the test call. These assertions isolate routing,
+    // scheme and host parsing from middleware order.
+    expect($insecure->baseRequest->getPathInfo())->toBe('/oauth/linket/authorize');
+    expect($insecure->baseRequest->isSecure())->toBeFalse();
+    expect($insecure->baseRequest->getHost())->toBe('linket.example.test');
     if ($insecure->getStatusCode() !== 403) {
         // Some deployments enforce an HTTPS upgrade before route middleware.
         // Only a redirect to the same trusted HTTPS origin is acceptable.
