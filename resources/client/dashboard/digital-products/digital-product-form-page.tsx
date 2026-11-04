@@ -597,6 +597,7 @@ function DigitalProductForm() {
   const sampleFields = previewKind ? (
     <ProductSampleFields
       kind={previewKind}
+      productType={effectiveFileType === 'digital' ? 'digital' : 'ebook'}
       samples={samples}
       onChange={actions.setSamples}
       error={fieldErrors.sample_file_ids || fieldErrors.sample_titles}
