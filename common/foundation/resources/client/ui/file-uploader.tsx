@@ -380,6 +380,8 @@ export function SharedFileUploader({
       multiple={multiple}
       accept={acceptAttr(uploadType, accept)}
       hidden
+      // The programmatic click must not bubble into the dropzone and open it again.
+      onClick={event => event.stopPropagation()}
       onChange={event => {
         addFiles(event.target.files);
         event.target.value = '';
@@ -427,6 +429,8 @@ export function SharedFileUploader({
           tabIndex={0}
           onClick={() => inputRef.current?.click()}
           onKeyDown={event => {
+            // Let the nested native Browse button handle its own keyboard activation.
+            if (event.target !== event.currentTarget) return;
             if (event.key === 'Enter' || event.key === ' ') {
               event.preventDefault();
               inputRef.current?.click();
