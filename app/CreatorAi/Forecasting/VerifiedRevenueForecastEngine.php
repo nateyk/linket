@@ -99,6 +99,11 @@ final class VerifiedRevenueForecastEngine
             $naiveError += abs($row['verified_revenue_cents'] - $naiveDaily);
         }
 
+        $rolling = (new RollingRevenueBacktest())->evaluate($daily, $horizonDays);
+        if (! $rolling['all_folds_pass']) {
+            return [...$metadata, 'reason' => 'rolling_backtest_underperformed_naive'];
+        }
+
         $candidateMae = intdiv($candidateError + $horizonDays - 1, $horizonDays);
         $naiveMae = intdiv($naiveError + $horizonDays - 1, $horizonDays);
         if ($candidateError > $naiveError) {
@@ -129,6 +134,9 @@ final class VerifiedRevenueForecastEngine
             'eligible' => true,
             'model' => 'trailing_7_day_mean_v1',
             'backtest_days' => $horizonDays,
+            'rolling_backtest_folds' => $rolling['fold_count'],
+            'rolling_backtest_mae_cents' => $rolling['candidate_mae_cents'],
+            'rolling_naive_mae_cents' => $rolling['naive_mae_cents'],
             'backtest_mae_cents' => $candidateMae,
             'naive_backtest_mae_cents' => $naiveMae,
             'estimated_daily_gross_cents' => $predictedDaily,
