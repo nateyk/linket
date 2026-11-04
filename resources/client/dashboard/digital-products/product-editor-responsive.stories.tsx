@@ -81,12 +81,11 @@ const meta = {
   title: 'Product Creation/Responsive Editor QA',
   component: ResponsiveEditorFixture,
   tags: ['ai-generated'],
-  args: {kind: 'digital', width: 360},
 } satisfies Meta<typeof ResponsiveEditorFixture>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-async function verifyResponsiveFrame({canvas}: {canvas: any}) {
+const verifyResponsiveFrame: NonNullable<Story['play']> = async ({canvas}) => {
   const frame = canvas.getByTestId('editor-viewport') as HTMLElement;
   await expect(frame).toBeVisible();
   await expect(canvas.getAllByRole('region')).toHaveLength(5);
