@@ -55,7 +55,8 @@ describe('course builder analytics navigation', () => {
 
     expect(source).toContain('useSearchParams');
     expect(source).toContain("searchParams.get('lessonId')");
-    expect(source).toContain('requestedLesson');
+    expect(source).toContain('chooseLessonAfterReload(');
+    expect(source).toContain('selectedLessonIdRef.current');
   });
 });
 
@@ -108,9 +109,9 @@ describe('course builder mobile navigation', () => {
       'utf8',
     );
 
-    expect(source).toMatch(
-      /onClick=\{\(\) => \{\s*if \(lessonDirtyCheckRef\.current\?\.\(\)\) \{\s*setPendingSwitch\(\{\s*lesson,\s*chapterId: chapter\.id,\s*\}\);\s*return;\s*\}\s*switchToLesson\(lesson, chapter\.id\);\s*\}\}/,
-    );
+    expect(source).toContain('onClick={() => openLesson(lesson, chapter.id)}');
+    expect(source).toContain("if (decision === 'resume')");
+    expect(source).toContain("if (decision === 'confirm-discard')");
     expect(source).toMatch(
       /const switchToLesson = \(nextLesson: Lesson, nextChapterId: number\) => \{\s*setSelectedLesson\(nextLesson\);\s*setSelectedChapterId\(nextChapterId\);\s*setMobileSurface\('editor'\);/,
     );
