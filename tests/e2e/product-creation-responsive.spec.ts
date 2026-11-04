@@ -84,6 +84,36 @@ test.describe('product creation responsive evidence', () => {
         const overflow = await page.evaluate(() =>
           Math.max(0, document.documentElement.scrollWidth - document.documentElement.clientWidth),
         );
+        if (overflow > 1) {
+          const offenders = await page.evaluate(() => {
+            const width = document.documentElement.clientWidth;
+            return [...document.querySelectorAll<HTMLElement>('*')]
+              .map(el => {
+                const rect = el.getBoundingClientRect();
+                return {
+                  tag: el.tagName.toLowerCase(),
+                  role: el.getAttribute('role'),
+                  slot: el.getAttribute('data-slot'),
+                  className: typeof el.className === 'string' ? el.className.slice(0, 170) : '',
+                  right: Math.round(rect.right),
+                  width: Math.round(rect.width),
+                  scrollWidth: el.scrollWidth,
+                  clientWidth: el.clientWidth,
+                  text: (el.textContent ?? '').replace(/\\s+/g, ' ').slice(0, 75),
+                };
+              })
+              .filter(x => x.right > width + 1 && x.width > 0)
+              .sort((a, b) => b.right - a.right)
+              .slice(0, 18);
+          });
+          console.log('HORIZONTAL_OVERFLOW', JSON.stringify({type: item.type, viewport: viewport.width, overflow, offenders}));
+          const overflowCapture = testInfo.outputPath(`${item.type}-${viewport.width}px-overflow.png`);
+          await page.screenshot({path: overflowCapture, fullPage: true});
+          await testInfo.attach(`${item.type} mobile overflow ${viewport.width}px`, {
+            path: overflowCapture,
+            contentType: 'image/png',
+          });
+        }
         expect(overflow, `${item.type} must not overflow at ${viewport.width}px`).toBeLessThanOrEqual(1);
 
         const preview = page.getByRole('button', {name: 'Preview'});
