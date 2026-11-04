@@ -48,7 +48,31 @@ final class CreatorMcpOAuthHttpSecurity
         // Laravel may redirect an insecure guest to the login route first.
         $creator = Auth::guard('web')->user();
         if (! $creator instanceof User) {
-            return redirect()->guest(route('login'));
+            // Never generate a login target from request Host/forwarded scheme
+            // or Laravel's cached URL generator (which may be http://localhost
+            // under tests, proxies or custom-domain deployments).
+            $issuer = config('creator_ai.oauth_issuer');
+            $parts = is_string($issuer) ? parse_url($issuer) : false;
+            abort_unless(
+                is_array($parts)
+                && ($parts['scheme'] ?? null) === 'https'
+                && is_string($parts['host'] ?? null)
+                && $parts['host'] !== ''
+                && ! isset($parts['user'])
+                && ! isset($parts['pass'])
+                && ! isset($parts['query'])
+                && ! isset($parts['fragment']),
+                503,
+                'MCP OAuth issuer must be a canonical HTTPS origin.',
+            );
+
+            $origin = 'https://'.strtolower($parts['host'])
+                .(isset($parts['port']) ? ':'.$parts['port'] : '');
+
+            return redirect()->guest($origin.'/login')->withHeaders([
+                'Cache-Control' => 'no-store',
+                'Referrer-Policy' => 'no-referrer',
+            ]);
         }
         abort_unless($creator->hasVerifiedEmail(), 403);
 
