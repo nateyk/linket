@@ -50,13 +50,11 @@ describe('digital product form submission', () => {
       'utf8',
     );
 
-    expect(selectionPage).toContain('useProductCreateWizard');
-    expect(selectionPage).toContain('finishUrl');
-    expect(flow).toMatch(
-      /state\.type === 'course'[\s\S]*?\/dashboard\/items\/new\/course/,
-    );
-    expect(dialog).toContain('useProductCreateWizard');
-    expect(dialog).toContain('finishUrl');
+    expect(selectionPage).toContain('productTypeCreateUrl(selectedType)');
+    expect(flow).toContain('productTypeCreateUrl');
+    expect(dialog).toContain('ProductTypePicker');
+    expect(dialog).toContain('productTypeCreateUrl(selectedType)');
+    expect(dialog).not.toContain('useProductCreateWizard');
   });
 
   test('existing course edit links redirect to the course builder', () => {
@@ -198,11 +196,8 @@ describe('digital product file capability', () => {
   });
 });
 
-describe('price helper honesty', () => {
-  // crit3-A: `Set ETB 0 to offer this product for free.` rendered on approved
-  // products, where saving already reverts them to draft — a promise the form
-  // cannot keep. The helper is status-gated to non-approved products.
-  test('free-offer helper only renders for products that can still become free', () => {
+describe('inline Free or Paid pricing', () => {
+  test('creator selects free or paid within the editor, not an earlier wizard step', () => {
     const source = fs.readFileSync(
       path.resolve(
         'resources/client/dashboard/digital-products/digital-product-form-page.tsx',
@@ -210,14 +205,11 @@ describe('price helper honesty', () => {
       'utf8',
     );
 
-    expect(source).toContain("isApproved={product?.status === 'approved'}");
-    expect(source).toMatch(
-      /description=\{\s*isApproved\s*\?\s*undefined\s*:\s*'Set ETB 0 to offer this product for free\.'\s*\}/,
-    );
-    // It never renders unconditionally any more.
-    expect(source).not.toContain(
-      'description="Set ETB 0 to offer this product for free."',
-    );
+    expect(source).toContain('<BillingModePicker');
+    expect(source).toContain('effectiveBilling');
+    expect(source).toContain('priceForBillingMode(price, mode)');
+    expect(source).toContain("effectiveBilling === 'paid' && priceCents <= 0");
+    expect(source).not.toContain("isApproved={product?.status === 'approved'}");
   });
 });
 
