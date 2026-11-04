@@ -19,7 +19,7 @@ permissions:
 jobs:
   resolve:
     if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
+    runs-on: runzumi-ubuntu-24.04-x64-4
     outputs:
       sha: ${{ steps.ci.outputs.sha }}
       ci_run_id: ${{ steps.ci.outputs.ci_run_id }}
@@ -47,7 +47,7 @@ jobs:
   deploy:
     if: github.ref == 'refs/heads/main' && needs.resolve.result == 'success'
     needs: resolve
-    runs-on: ubuntu-latest
+    runs-on: runzumi-ubuntu-24.04-x64-4
     environment:
       name: production
       url: ${{ vars.APP_URL }}
