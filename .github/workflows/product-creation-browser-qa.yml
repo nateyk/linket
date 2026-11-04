@@ -126,6 +126,10 @@ jobs:
           php artisan db:seed --class="Common\\Database\\Seeders\\UploadBackendsSeeder" --force --no-interaction
           # This command checks APP_ENV and DB name itself and uses mocked Verify.et.
           php artisan linket:prepare-buyer-e2e --no-interaction
+          # The seeded course is required so Course mobile QA cannot silently skip.
+          COURSE_ID="$(php -r '$data = json_decode(file_get_contents("storage/app/e2e/buyer-fixture.json"), true, 512, JSON_THROW_ON_ERROR); $id = $data["course_product_id"] ?? null; if (!is_int($id) || $id < 1) {fwrite(STDERR, "Missing course fixture\\n"); exit(1);} echo $id;')"
+          [[ "$COURSE_ID" =~ ^[0-9]+$ ]]
+          echo "LINKET_E2E_COURSE_ID=$COURSE_ID" >> "$GITHUB_ENV"
 
       - name: Build browser assets and install Chromium
         shell: bash
