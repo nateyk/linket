@@ -62,6 +62,28 @@ afterEach(() => {
   vi.resetAllMocks();
 });
 
+/**
+ * Telegram and ChatGPT both request their own integration state on mount.
+ * Delivery tests must mock the Telegram endpoint only, not count unrelated
+ * integrations or let another endpoint consume a one-shot response.
+ */
+function mockTelegramSequence(...responses: Array<{data: unknown} | Error>) {
+  let index = 0;
+  api.get.mockImplementation((url: string) => {
+    if (url === '/api/v1/integrations/telegram') {
+      const next = responses[Math.min(index++, responses.length - 1)];
+      return next instanceof Error ? Promise.reject(next) : Promise.resolve(next);
+    }
+    if (url === '/api/v1/creator-ai/mcp-connections') {
+      return Promise.resolve({
+        data: {data: {connections: [], oauth_connection_available: false}},
+      });
+    }
+    return Promise.reject(new Error('Unexpected API endpoint'));
+  });
+}
+
+
 it('shows the connected Telegram integration and notification preferences', async () => {
   render(<Component />);
 
@@ -189,18 +211,22 @@ it('does not call an untested connection healthy', async () => {
 });
 
 it('refreshes delivery status after sending a test', async () => {
-  api.get.mockResolvedValueOnce({data: {telegram: {...connected, delivery_status: 'unknown'}}})
-    .mockResolvedValueOnce({data: {telegram: {...connected, delivery_status: 'healthy', last_delivery_at: '2026-11-02T02:00:00+00:00'}}});
+  mockTelegramSequence(
+    {data: {telegram: {...connected, delivery_status: 'unknown'}}},
+    {data: {telegram: {...connected, delivery_status: 'healthy', last_delivery_at: '2026-11-02T02:00:00+00:00'}}},
+  );
   render(<Component />);
   fireEvent.click(await screen.findByRole('button', {name: 'Send test'}));
 
   expect(await screen.findByText('Last recorded delivery succeeded')).toBeTruthy();
-  expect(api.get).toHaveBeenCalledTimes(2);
+  expect(api.get.mock.calls.filter(([url]) => url === '/api/v1/integrations/telegram')).toHaveLength(2);
 });
 
 it('refreshes delivery status after a failed test without hiding the error', async () => {
-  api.get.mockResolvedValueOnce({data: {telegram: {...connected, delivery_status: 'healthy'}}})
-    .mockResolvedValueOnce({data: {telegram: {...connected, delivery_status: 'attention_required'}}});
+  mockTelegramSequence(
+    {data: {telegram: {...connected, delivery_status: 'healthy'}}},
+    {data: {telegram: {...connected, delivery_status: 'attention_required'}}},
+  );
   api.post.mockRejectedValueOnce(new Error('delivery failed'));
   render(<Component />);
   fireEvent.click(await screen.findByRole('button', {name: 'Send test'}));
@@ -210,8 +236,7 @@ it('refreshes delivery status after a failed test without hiding the error', asy
 });
 
 it('explains when a sent test could not refresh the delivery status', async () => {
-  api.get.mockResolvedValueOnce({data: {telegram: connected}})
-    .mockRejectedValueOnce(new Error('refresh failed'));
+  mockTelegramSequence({data: {telegram: connected}}, new Error('refresh failed'));
   render(<Component />);
   fireEvent.click(await screen.findByRole('button', {name: 'Send test'}));
 
