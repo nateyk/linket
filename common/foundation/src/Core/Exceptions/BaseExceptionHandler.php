@@ -46,7 +46,7 @@ class BaseExceptionHandler extends Handler
             // OAuth transport/client/consent failures are security decisions,
             // not login prompts. Never turn a 403 (foreign Host, HTTP or
             // nonce replay) into a potentially unsafe guest redirect.
-            !$request->is('oauth/linket/authorize', 'oauth/linket/authorize/*', 'oauth/linket/token')
+            !$request->is('oauth/linket/authorize', 'oauth/linket/authorize/*', 'oauth/linket/token', '.well-known/oauth-protected-resource/mcp', '.well-known/oauth-authorization-server', 'mcp')
         ) {
             return redirect('/login');
         }
@@ -90,7 +90,7 @@ class BaseExceptionHandler extends Handler
 
     protected function shouldReturnJson($request, Throwable $e)
     {
-        if ($request->is('oauth/linket/token') || str_starts_with($request->path(), 'api/')) {
+        if ($request->is('oauth/linket/token', '.well-known/oauth-protected-resource/mcp', '.well-known/oauth-authorization-server', 'mcp') || str_starts_with($request->path(), 'api/')) {
             return true;
         }
 

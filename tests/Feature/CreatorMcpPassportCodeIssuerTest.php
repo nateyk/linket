@@ -506,6 +506,14 @@ function mcpRemoteRoutes(bool $discovery = true, bool $server = true): void
     }
     config()->set('creator_ai.features.mcp_http_discovery', $discovery);
     config()->set('creator_ai.features.mcp_http_server', $server);
+    // Isolated test keypair: invalid-bearer checks exercise actual League
+    // signature verification, not an unconfigured Passport ResourceServer.
+    if (! is_string(config('passport.private_key')) || ! is_string(config('passport.public_key'))) {
+        $key = openssl_pkey_new(['private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA]);
+        openssl_pkey_export($key, $private);
+        config()->set('passport.private_key', $private);
+        config()->set('passport.public_key', openssl_pkey_get_details($key)['key']);
+    }
     config()->set('creator_ai.oauth_issuer', 'https://linket.example.test');
     config()->set('creator_ai.mcp_resource_url', 'https://linket.example.test/mcp');
     config()->set('app.url', 'https://linket.example.test');
