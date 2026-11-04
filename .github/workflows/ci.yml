@@ -214,40 +214,10 @@ jobs:
           date -u +%Y-%m-%dT%H:%M:%SZ > BUILD_AT
           echo "CI_SHA=$SHA" > CI_META
           echo "CI_RELEASE_ID=$RELEASE_ID" >> CI_META
-          tar -czf "/tmp/${ARTIFACT_NAME}.tar.gz" \
-            --exclude='.git' \
-            --exclude='.gitignore' \
-            --exclude='node_modules' \
-            --exclude='storage/app/*' \
-            --exclude='storage/framework/cache/*' \
-            --exclude='storage/framework/sessions/*' \
-            --exclude='storage/framework/views/*' \
-            --exclude='storage/logs/*' \
-            --exclude='storage/tus/*' \
-            --exclude='storage/clockwork/*' \
-            --exclude='storage/pail/*' \
-            --exclude='bootstrap/cache/*.php' \
-            --exclude='.env' --exclude='.env.*' \
-            --exclude='public/hot' \
-            --exclude='.phpunit.cache' \
-            --exclude='coverage' \
-            --exclude='*.sql' --exclude='*.sql.gz' \
-            --exclude='.ddev' \
-            --exclude='.agents' \
-            --exclude='.superpowers' \
-            --exclude='.cursor' \
-            --exclude='.bootstrap-admin.json' \
-            --exclude='linket codex.md' \
-            --exclude='NUL' \
-            --exclude='linket-*.tar.gz' \
-            --exclude='*.tar.gz' \
-            --exclude='public/storage/*' \
-            .
+          bash scripts/release/build-release-artifact.sh "$PWD" "/tmp/${ARTIFACT_NAME}.tar.gz" "$SHA"
           mv "/tmp/${ARTIFACT_NAME}.tar.gz" "./${ARTIFACT_NAME}.tar.gz"
-          tar -tzf "${ARTIFACT_NAME}.tar.gz" | grep -E '^(./)?RELEASE_SHA' >/dev/null || { echo "RELEASE_SHA missing"; exit 1; }
-          tar -tzf "${ARTIFACT_NAME}.tar.gz" | grep -E 'public/build/manifest.json' >/dev/null || { echo "manifest missing"; exit 1; }
-          tar -tzf "${ARTIFACT_NAME}.tar.gz" | grep -E 'vendor/autoload.php' >/dev/null || { echo "vendor missing"; exit 1; }
-          sha256sum "${ARTIFACT_NAME}.tar.gz" > "${ARTIFACT_NAME}.tar.gz.sha256"
+          mv "/tmp/${ARTIFACT_NAME}.tar.gz.sha256" "./${ARTIFACT_NAME}.tar.gz.sha256"
+          bash deploy/verify-release-artifact.sh "${ARTIFACT_NAME}.tar.gz" "$SHA"
           cat "${ARTIFACT_NAME}.tar.gz.sha256"
           ls -lh "${ARTIFACT_NAME}.tar.gz"*
           echo "ARTIFACT_NAME=${ARTIFACT_NAME}" >> "$GITHUB_ENV"
@@ -259,8 +229,8 @@ jobs:
         with:
           name: linket-ci-${{ github.sha }}
           path: |
-            linket-*.tar.gz
-            linket-*.tar.gz.sha256
+            ${{ env.ARTIFACT_NAME }}.tar.gz
+            ${{ env.ARTIFACT_NAME }}.tar.gz.sha256
             RELEASE_SHA
             RELEASE_ID
             CI_META

@@ -11,6 +11,12 @@ afterEach(function () {
     $this->deployment->cleanup();
 });
 
+test('artifact verification uses the explicit cPanel PHP binary over the environment default', function () {
+    $result = $this->deployment->deploy(environment: ['PHP_BINARY' => '/bin/false']);
+
+    $this->assertSame(0, $result->getExitCode(), $result->getOutput().$result->getErrorOutput());
+});
+
 test('deployment and repeated preparation preserve owner-only private keys and readable public keys', function (int $privateMode) {
     $fixture = $this->deployment;
     chmod($fixture->root.'/shared/storage/oauth-private.key', $privateMode);

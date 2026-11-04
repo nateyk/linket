@@ -107,7 +107,7 @@ PREV_NAME="$(basename "$PREV_TARGET" 2>/dev/null || echo "")"
 # Verification is performed a second time on the server after transfer.
 VERIFIER="$DEPLOY_PATH/deploy/verify-release-artifact.sh"
 [[ -f "$VERIFIER" ]] || fail "Missing release artifact verifier"
-bash "$VERIFIER" "$ARTIFACT" "$EXPECTED_SHA" || fail "Release artifact did not pass integrity/provenance verification"
+PHP_BINARY="$PHP_BIN" bash "$VERIFIER" "$ARTIFACT" "$EXPECTED_SHA" || fail "Release artifact did not pass integrity/provenance verification"
 
 # ---------- extract ----------
 if [[ -d "$RELEASE_DIR" ]]; then

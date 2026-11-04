@@ -17,3 +17,4 @@ if bash "$verifier" "$tmp/$name" bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb >/dev/
 printf tamper >> "$tmp/$name"
 if bash "$verifier" "$tmp/$name" "$sha" >/dev/null 2>&1; then exit 1; fi
 echo 'PASS: correct archive accepted; wrong SHA and tampering rejected'
+python3 scripts/tests/release-artifact-security.py
