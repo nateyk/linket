@@ -467,3 +467,25 @@ test('HTTP token endpoint rejects wrong PKCE, resource, client and unsupported g
     expect(DB::table('oauth_access_tokens')->count())->toBe(0);
     $this->post('https://linket.example.test/oauth/linket/token', $form, $headers)->assertOk();
 });
+
+
+test('HTTP token endpoint rejects unexpected query parameters without consuming the authorization code', function () {
+    [$creator, $workspaceId, $clientId, $params, $code] = mcpExchangeTestCode($this);
+    config()->set('creator_ai.features.mcp_http_token', true);
+    require base_path('routes/creator-ai-mcp-oauth.php');
+
+    $form = [
+        'grant_type' => 'authorization_code', 'client_id' => $clientId,
+        'code' => $code, 'code_verifier' => str_repeat('x', 43),
+        'redirect_uri' => $params['redirect_uri'], 'resource' => $params['resource'],
+    ];
+    $headers = ['Content-Type' => 'application/x-www-form-urlencoded', 'Accept' => 'application/json'];
+
+    $this->post('https://linket.example.test/oauth/linket/token?scope=admin', $form, $headers)
+        ->assertStatus(400)->assertJsonPath('error', 'invalid_request');
+    expect(DB::table('oauth_access_tokens')->count())->toBe(0);
+
+    // Rejected requests must not burn an otherwise valid, one-use PKCE code.
+    $this->post('https://linket.example.test/oauth/linket/token', $form, $headers)
+        ->assertOk()->assertJsonPath('token_type', 'Bearer');
+});
