@@ -24,8 +24,8 @@ function EditorSection({
   children,
 }: {
   id: string;
-  title: string;
-  description: string;
+  title: ReactNode;
+  description: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -36,10 +36,10 @@ function EditorSection({
     >
       <header className="mb-4">
         <h2 id={id} className="text-base font-semibold text-foreground">
-          <Trans message={title} />
+          {title}
         </h2>
         <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-          <Trans message={description} />
+          {description}
         </p>
       </header>
       <div className="min-w-0">{children}</div>
@@ -58,40 +58,40 @@ export function DigitalProductEditor({
     <div className="flex min-w-0 flex-col gap-4" data-testid="digital-product-editor">
       <EditorSection
         id="digital-product-details"
-        title="Product details"
-        description="Tell customers what is included and show a clear cover image."
+        title={<Trans message="Product details" />}
+        description={<Trans message="Tell customers what is included and show a clear cover image." />}
       >
         {details}
       </EditorSection>
 
       <EditorSection
         id="digital-product-files"
-        title="Files buyers receive"
-        description="These downloadable files stay private until a purchase is verified."
+        title={<Trans message="Files buyers receive" />}
+        description={<Trans message="These downloadable files stay private until a purchase is verified." />}
       >
         {files}
       </EditorSection>
 
       <EditorSection
         id="digital-product-sample"
-        title="Sample PDF (optional)"
-        description="Offer a PDF preview before purchase. Your full files remain private."
+        title={<Trans message="Sample PDF (optional)" />}
+        description={<Trans message="Offer a PDF preview before purchase. Your full files remain private." />}
       >
         {sample}
       </EditorSection>
 
       <EditorSection
         id="digital-product-pricing"
-        title="Price"
-        description="Choose free access or set a one-time price in ETB."
+        title={<Trans message="Price" />}
+        description={<Trans message="Choose free access or set a one-time price in ETB." />}
       >
         {pricing}
       </EditorSection>
 
       <EditorSection
         id="digital-product-storefront"
-        title="Storefront placement (optional)"
-        description="Choose where this product appears after approval."
+        title={<Trans message="Storefront placement (optional)" />}
+        description={<Trans message="Choose where this product appears after approval." />}
       >
         {storefront}
       </EditorSection>
