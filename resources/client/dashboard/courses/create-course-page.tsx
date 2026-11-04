@@ -13,14 +13,16 @@ import {Trans} from '@ui/i18n/trans';
 import {useTrans} from '@ui/i18n/use-trans';
 import {toast} from '@ui/toast/toast';
 import {isAxiosError} from 'axios';
-import {GraduationCapIcon, ListChecksIcon, TriangleAlertIcon} from 'lucide-react';
+import {EyeIcon, GraduationCapIcon, ListChecksIcon, TriangleAlertIcon} from 'lucide-react';
 import {FormEvent, useState} from 'react';
 import {Link, useNavigate, useSearchParams} from 'react-router';
-import {parseEtbToCents, parseWizardPrefill} from '../digital-products/product-create-flow';
+import {parseEtbToCents, parseWizardPrefill, priceForBillingMode, type BillingMode} from '../digital-products/product-create-flow';
+import {BillingModePicker} from '../digital-products/billing-mode-picker';
 import {ProductFormField} from '../digital-products/product-form-field';
 import {ProductFormProgress} from '../digital-products/product-form-progress';
 import {ProductFormSection} from '../digital-products/product-form-section';
 import {ProductFormCustomerPreview} from '../digital-products/product-preview';
+import {ProductPreviewDialog} from '../digital-products/product-preview-dialog';
 import {
   CourseSettingsCoverField,
   CourseSettingsDescriptionField,
@@ -39,14 +41,16 @@ export function Component() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const prefill = parseWizardPrefill(params);
-  const isFree = prefill.billing === 'free';
   const {trans} = useTrans();
+  const [billingMode, setBillingMode] = useState<BillingMode | null>(prefill.billing);
+  const isFree = billingMode === 'free';
   const [title, setTitle] = useState('');
-  const [price, setPrice] = useState(() => prefill.price ?? '0');
+  const [price, setPrice] = useState(() => prefill.billing === 'free' ? '0' : (prefill.price ?? ''));
   const [errors, setErrors] = useState<Errors>({});
   const [error, setError] = useState<string>();
   const [creating, setCreating] = useState(false);
   const [creationUncertain, setCreationUncertain] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [openSection, setOpenSection] = useState<string | null>('details');
   // Inline course settings (Task B): the same shared fields the builder's
   // CourseSettingsDialog renders, filled in before the course exists.
@@ -69,23 +73,24 @@ export function Component() {
   // lessons are authored in the course builder after creation, so this setup
   // form has no files or storefront-placement sections.
   const sections = [
-    {id: 'details', title: 'Course details', description: 'Name your course and confirm its price.', icon: GraduationCapIcon, isComplete: !!title.trim() && (isFree || (parseEtbToCents(price) ?? 0) > 0)},
+    {id: 'details', title: 'Course details', description: 'Name your course and confirm its price.', icon: GraduationCapIcon, isComplete: !!title.trim() && !!billingMode && (isFree || (parseEtbToCents(price) ?? 0) > 0)},
     {id: 'settings', title: 'Course settings', description: 'Add a description, learning outcomes, and a cover image.', icon: ListChecksIcon, isComplete: hasSettingsContent},
   ];
   const createCourse = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const next: Errors = {};
     if (!title.trim()) next.title = 'Add a course title.';
+    if (!billingMode) next.price = trans({message: 'Choose Free access or Paid.'});
     // Paid must mean a real price: mirror the wizard's cents > 0 gate so an
     // empty (or zero) field never submits price_cents: 0 under Paid billing.
-    if (!isFree) {
+    if (billingMode === 'paid') {
       const cents = parseEtbToCents(price);
       if (cents === null || cents <= 0) {
         next.price = trans({message: 'Enter an amount greater than ETB 0.'});
       }
     }
     setErrors(next);
-    if (Object.keys(next).length) { setOpenSection('details'); document.getElementById(next.title ? 'course-title' : 'course-price')?.focus(); return; }
+    if (Object.keys(next).length) { setOpenSection('details'); document.getElementById(next.title ? 'course-title' : billingMode ? 'course-price' : 'course-billing')?.focus(); return; }
     setCreating(true); setError(undefined);
     try {
       const response = await apiClient.post('/api/v1/items', {title: title.trim(), description: null, price_cents: isFree ? 0 : Math.round(Number(price) * 100), currency: 'etb', type: 'course'});
@@ -144,29 +149,45 @@ export function Component() {
       {/* Header actions mirror the digital-product edit page: icon + label
           that collapses to icon-only below 640px. aria-labels keep the
           collapsed buttons named. */}
-      <div className="flex items-center gap-2">{creationUncertain && <Button variant="outline" size="sm" aria-label={trans({message: 'Check My Items'})} render={<Link to="/dashboard/items" />}><span className="max-sm:hidden"><Trans message="Check My Items" /></span></Button>}<Button size="sm" type="submit" form="course-create-form" aria-label={creating ? trans({message: 'Creating course...'}) : trans({message: 'Create course'})} disabled={creating}>{creating ? <Spinner data-icon="inline-start" /> : <GraduationCapIcon className="size-4" data-icon="inline-start" />}<span className="max-sm:hidden">{creating ? <Trans message="Creating course..." /> : <Trans message="Create course" />}</span></Button></div>
+      <div className="flex items-center gap-2">
+        <Button type="button" variant="outline" size="sm"
+          aria-label={trans({message: 'Preview'})}
+          onClick={() => setPreviewOpen(true)}>
+          <EyeIcon className="size-4" aria-hidden="true" />
+          <span className="max-sm:hidden"><Trans message="Preview" /></span>
+        </Button>
+        {creationUncertain && <Button variant="outline" size="sm" aria-label={trans({message: 'Check My Items'})} render={<Link to="/dashboard/items" />}><span className="max-sm:hidden"><Trans message="Check My Items" /></span></Button>}<Button size="sm" type="submit" form="course-create-form" aria-label={creating ? trans({message: 'Creating course...'}) : trans({message: 'Create course'})} disabled={creating}>{creating ? <Spinner data-icon="inline-start" /> : <GraduationCapIcon className="size-4" data-icon="inline-start" />}<span className="max-sm:hidden">{creating ? <Trans message="Creating course..." /> : <Trans message="Create course" />}</span></Button></div>
     </DashboardLayout.SectionHeader>
-    <DashboardLayout.SectionContent className="overflow-y-auto"><form id="course-create-form" onSubmit={createCourse} className="mx-auto w-full max-w-6xl py-4 sm:py-5">
+    <DashboardLayout.SectionContent className="overflow-y-auto"><form id="course-create-form" onSubmit={createCourse} className="mx-auto w-full max-w-3xl py-4 sm:py-5">
       {error && <Alert.Root variant="destructive" fillStyle="subtleFill" className="mb-5"><TriangleAlertIcon /><Alert.Description>{error}</Alert.Description></Alert.Root>}
-      {/* Same content geometry as the digital-product edit page: max-w-6xl
-          centered container, form column + sticky customer preview at
-          xl (1280px), preview stacking below the form on smaller screens. */}
-      <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_26rem] xl:gap-6">
+      {/* Focused Course setup column; customer preview opens only on request. */}
+      <div className="flex min-w-0 flex-col gap-5">
         <div className="flex min-w-0 flex-col gap-4">
-          {/* Wizard billing/price arrive via URL prefill — same silent handoff
-              the digital form uses. No "previous step" seam copy. */}
+          {/* Existing URLs still prefill billing/price; new courses select them inline. */}
           <ProductFormProgress completed={sections.filter(s => s.isComplete).length} total={sections.length} />
           <Accordion.Root variant="bordered" value={openSection ? [openSection] : []} onValueChange={value => setOpenSection(value[0] ?? null)}>
             {sections.map(section => <ProductFormSection key={section.id} {...section} hasError={section.id === 'details' && !!(errors.title || errors.price)}>{section.id === 'details' ? <div className="flex flex-col gap-4">
               <ProductFormField label="Course title" description="Choose a clear title learners can easily understand." error={errors.title} htmlFor="course-title" required><Input id="course-title" aria-invalid={!!errors.title} value={title} maxLength={160} onChange={event => { setTitle(event.target.value); setErrors(current => ({...current, title: undefined})); }} placeholder="Complete course title" autoFocus /></ProductFormField>
+              <div id="course-billing" className="flex flex-col gap-2" tabIndex={-1}>
+                <p className="text-sm font-medium"><Trans message="Free or paid?" /></p>
+                <BillingModePicker
+                  value={billingMode}
+                  onValueChange={mode => {
+                    if (!mode) return;
+                    setBillingMode(mode);
+                    setPrice(current => priceForBillingMode(current, mode));
+                    setErrors(current => ({...current, price: undefined}));
+                  }}
+                />
+              </div>
               {isFree ? (
                 <div className="flex flex-col gap-1.5">
                   <p className="text-sm font-medium"><Trans message="Price" /></p>
                   <Badge variant="secondary"><Trans message="Free" /></Badge>
                 </div>
-              ) : (
+              ) : billingMode === 'paid' ? (
                 <ProductFormField label="Price (ETB)" description="This course is paid. Update the price if needed." error={errors.price} htmlFor="course-price" required><InputGroup><InputGroupAddon align="inline-start"><InputGroupText>ETB</InputGroupText></InputGroupAddon><InputGroupInput id="course-price" aria-invalid={!!errors.price} type="number" min="0" step="0.01" value={price} onChange={event => { setPrice(event.target.value); setErrors(current => ({...current, price: undefined})); }} placeholder="0.00" /></InputGroup></ProductFormField>
-              )}
+              ) : null}
             </div> : <div className="flex flex-col gap-4">
               {/* Same shared settings fields as the builder's CourseSettingsDialog; the two-step submit threads them into PUT /courses/{id}. */}
               <CourseSettingsDescriptionField inputId="course-create" value={description} onChange={setDescription} />
@@ -177,10 +198,10 @@ export function Component() {
             </div>}</ProductFormSection>)}
           </Accordion.Root>
         </div>
-        {/* Same ProductFormCustomerPreview shell as the digital-product edit
-            page (ProductCard + Buy now / Preview only). Course skips the
-            download-file meta row; cover fallback keeps the graduation mark. */}
-        <aside className="min-w-0 lg:sticky lg:top-6">
+
+
+      </div>
+      <ProductPreviewDialog open={previewOpen} onOpenChange={setPreviewOpen}>
           <ProductFormCustomerPreview
             title={title}
             emptyTitle="Your course title"
@@ -197,8 +218,7 @@ export function Component() {
               </div>
             }
           />
-        </aside>
-      </div>
+      </ProductPreviewDialog>
     </form></DashboardLayout.SectionContent>
   </DashboardLayout.MainSection></FileUploadProvider>;
 }

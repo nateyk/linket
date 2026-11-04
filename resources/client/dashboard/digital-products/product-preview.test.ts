@@ -71,6 +71,16 @@ describe('product preview wiring', () => {
     expect(source).not.toContain('message=":count characters"');
   });
 
+  test('on-demand buyer preview excludes creator-only metadata', () => {
+    const source = fs.readFileSync(
+      path.resolve('resources/client/dashboard/digital-products/product-preview.tsx'),
+      'utf8',
+    );
+    expect(source).toContain('buyerOnly?: boolean');
+    expect(source).toContain('description={buyerOnly ? description : undefined}');
+    expect(source).toContain('fileCount={buyerOnly ? undefined : files.length}');
+  });
+
   test('status tones use semantic warning tokens, not raw amber', () => {
     const source = fs.readFileSync(
       path.resolve(

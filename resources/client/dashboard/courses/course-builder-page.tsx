@@ -86,6 +86,8 @@ import {
   CourseSettingsDescriptionField,
   CourseSettingsOutcomesField,
 } from './course-settings-fields';
+import {chooseLessonAfterReload, resolveLessonNavigation} from './course-lesson-navigation';
+import {CourseMobileLessonResume} from './course-mobile-lesson-resume';
 import {
   isLessonEditorDirty,
   normalizeQuizForCompare,
@@ -197,12 +199,33 @@ function CourseBuilder() {
     chapterId: number;
   } | null>(null);
   const lessonDirtyCheckRef = useRef<(() => boolean) | null>(null);
+  const selectedLessonIdRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    selectedLessonIdRef.current = selectedLesson?.id ?? null;
+  }, [selectedLesson?.id]);
 
   const switchToLesson = (nextLesson: Lesson, nextChapterId: number) => {
     setSelectedLesson(nextLesson);
     setSelectedChapterId(nextChapterId);
     setMobileSurface('editor');
     setPendingSwitch(null);
+  };
+
+  const openLesson = (nextLesson: Lesson, nextChapterId: number) => {
+    const decision = resolveLessonNavigation(
+      selectedLesson?.id ?? null,
+      nextLesson.id,
+      lessonDirtyCheckRef.current?.() ?? false,
+    );
+    if (decision === 'resume') {
+      // The same mounted editor retains unsaved form and quiz state.
+      setMobileSurface('editor');
+    } else if (decision === 'confirm-discard') {
+      setPendingSwitch({lesson: nextLesson, chapterId: nextChapterId});
+    } else {
+      switchToLesson(nextLesson, nextChapterId);
+    }
   };
 
   const load = useCallback(async () => {
@@ -220,20 +243,18 @@ function CourseBuilder() {
       const payload = res.data.data as Course;
       setCourse(payload);
       const lessonId = Number(searchParams.get('lessonId'));
-      const requestedChapter = Number.isInteger(lessonId)
-        ? payload.chapters.find(chapter =>
-            chapter.lessons.some(lesson => lesson.id === lessonId),
-          )
-        : undefined;
-      const requestedLesson = requestedChapter?.lessons.find(
-        lesson => lesson.id === lessonId,
+      const requestedLessonId =
+        Number.isInteger(lessonId) && lessonId > 0 ? lessonId : null;
+      // A refresh after saving must not jump back to the first chapter.
+      // Existing current selection wins; initial deep links work when no lesson
+      // has been selected yet.
+      const selection = chooseLessonAfterReload(
+        payload.chapters,
+        selectedLessonIdRef.current,
+        requestedLessonId,
       );
-      const firstChapter = payload.chapters[0];
-      const selectedLesson = requestedLesson ?? firstChapter?.lessons[0];
-      if (selectedLesson) {
-        setSelectedLesson(selectedLesson);
-        setSelectedChapterId(requestedChapter?.id ?? firstChapter.id);
-      }
+      setSelectedLesson(selection?.lesson ?? null);
+      setSelectedChapterId(selection?.chapterId ?? null);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load course');
     } finally {
@@ -811,6 +832,12 @@ function CourseBuilder() {
                 <Trans message="New chapter" />
               </Button>
             </div>
+            {selectedLesson && (
+              <CourseMobileLessonResume
+                lessonTitle={selectedLesson.title}
+                onResume={() => setMobileSurface('editor')}
+              />
+            )}
             <ScrollArea className="min-h-0 flex-1">
               <ScrollAreaViewport className="p-3">
                 <div className="flex flex-col gap-3">
@@ -974,17 +1001,10 @@ function CourseBuilder() {
                                           </div>
                                           <VideoIcon className="size-3.5 text-muted-foreground" />
                                           <button
-                                            className="flex-1 truncate text-left font-medium"
-                                            onClick={() => {
-                                              if (lessonDirtyCheckRef.current?.()) {
-                                                setPendingSwitch({
-                                                  lesson,
-                                                  chapterId: chapter.id,
-                                                });
-                                                return;
-                                              }
-                                              switchToLesson(lesson, chapter.id);
-                                            }}
+                                            type="button"
+                                            className="min-w-0 flex-1 truncate rounded-sm text-left font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                                            aria-current={selectedLesson?.id === lesson.id ? 'true' : undefined}
+                                            onClick={() => openLesson(lesson, chapter.id)}
                                           >
                                             {lesson.title}
                                           </button>
@@ -1865,9 +1885,20 @@ function LessonEditor({
         <p className="text-xs text-muted-foreground">
           <Trans message="Chapter :id • Lesson editor" values={{id: chapterId}} />
         </p>
-        <Badge variant={status === 'published' ? 'positive' : 'outline'}>
-          {status}
-        </Badge>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {hasUnsavedChanges() && (
+            <span role="status" className="text-xs font-medium text-warning">
+              <Trans message="Unsaved edits" />
+            </span>
+          )}
+          <Badge variant={status === 'published' ? 'positive' : 'outline'}>
+            {status === 'published' ? (
+              <Trans message="Published lesson" />
+            ) : (
+              <Trans message="Draft lesson" />
+            )}
+          </Badge>
+        </div>
       </div>
 
       <Field.Root>

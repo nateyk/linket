@@ -1,6 +1,9 @@
 import {describe, expect, test} from 'vitest';
 import {
   buildCreateUrl,
+  productTypeCreateUrl,
+  priceForBillingMode,
+  resolveCreateType,
   canContinue,
   hasNextStep,
   initialPriceFromParam,
@@ -152,5 +155,35 @@ describe('wizard prefill transport', () => {
     expect(
       parseWizardPrefill(new URLSearchParams('type=audio&billing=free')).price,
     ).toBeNull();
+  });
+});
+
+describe('single-choice product type handoff', () => {
+  test('sends each supported type straight to its editor', () => {
+    expect(productTypeCreateUrl('digital')).toBe('/dashboard/items/new/digital');
+    expect(productTypeCreateUrl('ebook')).toBe('/dashboard/items/new/ebook');
+    expect(productTypeCreateUrl('audio')).toBe('/dashboard/items/new/audio');
+    expect(productTypeCreateUrl('course')).toBe('/dashboard/items/new/course');
+    expect(productTypeCreateUrl(null)).toBeNull();
+  });
+
+  test('rejects malformed or unsupported types instead of silently choosing Digital', () => {
+    expect(resolveCreateType('ebook')).toBe('ebook');
+    expect(resolveCreateType('audio')).toBe('audio');
+    expect(resolveCreateType(null)).toBeNull();
+    expect(resolveCreateType('')).toBeNull();
+    expect(resolveCreateType('EBOOK')).toBeNull();
+    expect(resolveCreateType('unknown')).toBeNull();
+  });
+});
+
+describe('inline Free or Paid pricing', () => {
+  test('free resets an old paid price to ETB zero', () => {
+    expect(priceForBillingMode('19.99', 'free')).toBe('0');
+  });
+
+  test('switching back to paid never silently retains a free amount', () => {
+    expect(priceForBillingMode('0', 'paid')).toBe('');
+    expect(priceForBillingMode('19.99', 'paid')).toBe('19.99');
   });
 });
