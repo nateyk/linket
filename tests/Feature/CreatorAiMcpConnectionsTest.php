@@ -342,3 +342,37 @@ test('connection setup requires a creator-owned workspace even with a valid veri
         ->assertJsonPath('data.connection_setup.status', 'workspace_required')
         ->assertJsonPath('data.connection_setup.resource_url', null);
 });
+
+
+test('unusable OAuth client IDs do not advertise a ChatGPT connection', function () {
+    [$creator] = aiMcpConnectionsCreator();
+    aiMcpConnectionsPro($creator);
+    aiMcpConnectionsEnable();
+    foreach (['mcp_oauth', 'mcp_http_oauth', 'mcp_http_token', 'mcp_http_discovery', 'mcp_http_server'] as $flag) {
+        config()->set('creator_ai.features.'.$flag, true);
+    }
+    config()->set('app.url', 'https://linket.example.test');
+    config()->set('creator_ai.oauth_issuer', 'https://linket.example.test');
+    config()->set('creator_ai.mcp_resource_url', 'https://linket.example.test/mcp');
+
+    DB::table('oauth_clients')->insert([
+        'id' => 'not-a-valid-uuid',
+        'owner_type' => null,
+        'owner_id' => null,
+        'name' => 'Invalid synthetic creator MCP client',
+        'secret' => null,
+        'provider' => 'creator_mcp_users',
+        'redirect_uris' => json_encode(['https://client.example.test/oauth/callback']),
+        'grant_types' => json_encode(['authorization_code', 'refresh_token']),
+        'revoked' => false,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    aiMcpConnectionsLogin($this, $creator);
+    $this->getJson('/api/v1/creator-ai/mcp-connections')
+        ->assertOk()
+        ->assertJsonPath('data.oauth_connection_available', false)
+        ->assertJsonPath('data.connection_setup.status', 'admin_setup_required')
+        ->assertJsonPath('data.connection_setup.resource_url', null);
+});
