@@ -217,3 +217,81 @@ it('explains when a sent test could not refresh the delivery status', async () =
 
   expect(await screen.findByText('Test sent, but delivery status could not be refreshed.')).toBeTruthy();
 });
+
+
+const chatGptConnection = {
+  id: '11111111-2222-4333-8444-555555555555',
+  workspace_id: 42,
+  client_id: 'chatgpt-oauth-client',
+  status: 'active',
+  consented_at: '2026-11-04T09:00:00+00:00',
+  expires_at: '2026-12-04T09:00:00+00:00',
+  revoked_at: null,
+  last_accessed_at: null,
+};
+
+it('shows ChatGPT connection availability without offering an unimplemented OAuth shortcut', async () => {
+  api.get.mockImplementation(async (url: string) => {
+    if (url === '/api/v1/integrations/telegram') return {data: {telegram: connected}};
+    if (url === '/api/v1/creator-ai/mcp-connections') {
+      return {data: {data: {connections: [], oauth_connection_available: false}}};
+    }
+    throw new Error('Unexpected API endpoint');
+  });
+
+  render(<Component />);
+
+  expect(await screen.findByText('ChatGPT')).toBeTruthy();
+  expect(screen.getByText('New ChatGPT connections are not available yet.')).toBeTruthy();
+  expect(screen.getByText('No ChatGPT connections yet.')).toBeTruthy();
+  expect(screen.queryByRole('button', {name: 'Connect ChatGPT'})).toBeNull();
+});
+
+it('shows the creator-owned ChatGPT consent grant and revokes it only after confirmation', async () => {
+  let connections = [chatGptConnection];
+  api.get.mockImplementation(async (url: string) => {
+    if (url === '/api/v1/integrations/telegram') return {data: {telegram: connected}};
+    if (url === '/api/v1/creator-ai/mcp-connections') {
+      return {data: {data: {connections, oauth_connection_available: false}}};
+    }
+    throw new Error('Unexpected API endpoint');
+  });
+  api.delete.mockImplementation(async (url: string) => {
+    if (url !== '/api/v1/creator-ai/mcp-connections/' + chatGptConnection.id) {
+      throw new Error('Unexpected revoke target');
+    }
+    connections = [{...chatGptConnection, status: 'revoked'}];
+    return {data: {}};
+  });
+
+  render(<Component />);
+
+  expect(await screen.findByText('chatgpt-oauth-client')).toBeTruthy();
+  expect(screen.getByText('Workspace #42')).toBeTruthy();
+  expect(screen.getByText('Active')).toBeTruthy();
+
+  fireEvent.click(screen.getByRole('button', {name: 'Disconnect ChatGPT connection'}));
+  expect(api.delete).not.toHaveBeenCalled();
+  fireEvent.click(await screen.findByRole('button', {name: 'Disconnect connection'}));
+
+  await waitFor(() => expect(api.delete).toHaveBeenCalledWith(
+    '/api/v1/creator-ai/mcp-connections/' + chatGptConnection.id,
+  ));
+  expect(await screen.findByText('Revoked')).toBeTruthy();
+  expect(screen.queryByRole('button', {name: 'Disconnect ChatGPT connection'})).toBeNull();
+  expect(screen.getByText('ChatGPT connection disconnected.')).toBeTruthy();
+});
+
+it('shows a retry state for ChatGPT API errors without hiding Telegram settings', async () => {
+  api.get.mockImplementation(async (url: string) => {
+    if (url === '/api/v1/integrations/telegram') return {data: {telegram: connected}};
+    if (url === '/api/v1/creator-ai/mcp-connections') throw new Error('Unavailable');
+    throw new Error('Unexpected API endpoint');
+  });
+
+  render(<Component />);
+
+  expect(await screen.findByText('Unable to load ChatGPT connections.')).toBeTruthy();
+  expect(screen.getByText('@creator_test')).toBeTruthy();
+  expect(screen.getByRole('button', {name: 'Retry ChatGPT connections'})).toBeTruthy();
+});
