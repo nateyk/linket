@@ -23,7 +23,7 @@ permissions:
 jobs:
   changes:
     name: Classify changed files
-    runs-on: ubuntu-latest
+    runs-on: runzumi-ubuntu-24.04-x64-8
     timeout-minutes: 3
     permissions:
       contents: read
@@ -93,7 +93,7 @@ jobs:
     name: PHP tests and security (8.4 / MySQL 8.0)
     needs: changes
     if: ${{ needs.changes.outputs.run_php == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: runzumi-ubuntu-24.04-x64-8
     timeout-minutes: 20
     services:
       mysql:
@@ -241,7 +241,7 @@ jobs:
     name: TypeScript, browser tests and Vite build (Node 24)
     needs: changes
     if: ${{ needs.changes.outputs.run_node == 'true' }}
-    runs-on: ubuntu-latest
+    runs-on: runzumi-ubuntu-24.04-x64-8
     timeout-minutes: 20
     steps:
       - name: Checkout (shallow)
@@ -325,7 +325,7 @@ jobs:
     needs: [changes, php, frontend]
     # Cancelled PR runs must not queue the final join and block newer SHA checks.
     if: ${{ always() && !cancelled() }}
-    runs-on: ubuntu-latest
+    runs-on: runzumi-ubuntu-24.04-x64-8
     timeout-minutes: 2
     steps:
       - name: Enforce success of every required verification job
@@ -356,7 +356,7 @@ jobs:
     # A deployable main SHA must have BOTH backend and frontend verified.
     needs: [verify, frontend]
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.verify.result == 'success' }}
-    runs-on: ubuntu-latest
+    runs-on: runzumi-ubuntu-24.04-x64-8
     timeout-minutes: 15
     steps:
       - name: Checkout (shallow)
