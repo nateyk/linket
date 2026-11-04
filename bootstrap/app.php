@@ -8,4 +8,7 @@ return Application::create(
         App\CreatorAi\Auth\CreatorMcpOAuthServiceProvider::class,
         App\Providers\SupportServiceProvider::class,
     ],
+    middleware: [
+        App\CreatorAi\Auth\CreatorMcpOAuthEarlyTransportGate::class,
+    ],
 );
