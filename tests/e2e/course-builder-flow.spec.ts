@@ -3,7 +3,7 @@ import {test, expect} from '@playwright/test';
 test.describe.configure({retries: 0});
 
 test.describe('Course Builder full flow', () => {
-  test('create course with video lesson, readable lesson, and reordered outcomes', async ({page}) => {
+  test('create course with video and readable lessons and confirm outcome persistence', async ({page}) => {
     test.skip(
       process.env.LINKET_ISOLATED_E2E !== '1',
       'Requires a deliberately isolated test server/database; this scenario writes course data',
