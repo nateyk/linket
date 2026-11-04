@@ -204,6 +204,50 @@ test('keyboard-only product choice and Preview support focus return', async ({pa
   await expect(preview).toBeFocused();
 });
 
+test('optional Storefront lookup failure can retry without creating or saving a product', async ({page}) => {
+  test.skip(
+    process.env.LINKET_ISOLATED_E2E !== '1',
+    'Requires disposable test database and synthetic creator',
+  );
+  await loginAsSeededCreator(page);
+
+  let attempts = 0;
+  let unexpectedCreates = 0;
+  page.on('request', request => {
+    if (request.method() === 'POST' && new URL(request.url()).pathname === '/api/v1/items') {
+      unexpectedCreates++;
+    }
+  });
+  await page.route('**/api/v1/biolinks?fields_preset=minimal', async route => {
+    attempts++;
+    if (attempts === 1) {
+      await route.fulfill({
+        status: 503,
+        contentType: 'application/json',
+        body: JSON.stringify({message: 'Isolated synthetic Storefront outage'}),
+      });
+    } else {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({data: []}),
+      });
+    }
+  });
+
+  await page.goto('/dashboard/items/new/digital?billing=free');
+  const placement = page.getByRole('region', {name: 'Storefront placement (optional)'});
+  await expect(placement.getByText('Unable to load Storefronts. Your product can still be saved or submitted. Retry to choose placement.')).toBeVisible();
+  await expect(placement.getByText(/Create a Storefront later if you want to display it there/)).toHaveCount(0);
+  await expect(page.getByRole('button', {name: 'Save draft'})).toBeEnabled();
+
+  await placement.getByRole('button', {name: 'Retry Storefront loading'}).click();
+  await expect(placement.getByText(/Create a Storefront later if you want to display it there/)).toBeVisible();
+  await expect(placement.getByText(/Unable to load Storefronts/)).toHaveCount(0);
+  expect(attempts).toBe(2);
+  expect(unexpectedCreates).toBe(0);
+});
+
 test('invalid upload is announced and removable without submitting a product', async ({page}) => {
   test.skip(
     process.env.LINKET_ISOLATED_E2E !== '1',
