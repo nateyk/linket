@@ -31,7 +31,7 @@ describe('course creation page', () => {
   });
 
   test('shows a Free badge instead of a price field for free billing', () => {
-    expect(source).toContain('const isFree = prefill.billing === \'free\'');
+    expect(source).toContain("const isFree = billingMode === 'free'");
     expect(source).toContain('<Trans message="Free" />');
     expect(source).toContain('Badge');
     // Price field only for paid — free renders the badge, not the ETB input.
