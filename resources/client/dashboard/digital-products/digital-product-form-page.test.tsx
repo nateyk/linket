@@ -128,7 +128,7 @@ describe('digital product form submission', () => {
 
     expect(source).toContain("product?.status === 'approved' && dirty");
     expect(source).toContain(
-      'Changes to approved products may require review. The published version remains available during review..',
+      'Changes to approved products may require review. The published version remains available during review.',
     );
   });
 });
