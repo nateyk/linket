@@ -2,6 +2,7 @@ import {describe, expect, test} from 'vitest';
 import {
   buildCreateUrl,
   productTypeCreateUrl,
+  priceForBillingMode,
   resolveCreateType,
   canContinue,
   hasNextStep,
@@ -173,5 +174,16 @@ describe('single-choice product type handoff', () => {
     expect(resolveCreateType('')).toBeNull();
     expect(resolveCreateType('EBOOK')).toBeNull();
     expect(resolveCreateType('unknown')).toBeNull();
+  });
+});
+
+describe('inline Free or Paid pricing', () => {
+  test('free resets an old paid price to ETB zero', () => {
+    expect(priceForBillingMode('19.99', 'free')).toBe('0');
+  });
+
+  test('switching back to paid never silently retains a free amount', () => {
+    expect(priceForBillingMode('0', 'paid')).toBe('');
+    expect(priceForBillingMode('19.99', 'paid')).toBe('19.99');
   });
 });
