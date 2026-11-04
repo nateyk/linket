@@ -20,6 +20,8 @@ return [
         'mcp_oauth' => env('CREATOR_AI_MCP_OAUTH_ENABLED', false),
         // Independent, default-OFF HTTP browser consent gate (no token or MCP routes).
         'mcp_http_oauth' => env('CREATOR_AI_MCP_HTTP_ENABLED', false),
+        // Separate, default-OFF stateless code and refresh token endpoint.
+        'mcp_http_token' => env('CREATOR_AI_MCP_TOKEN_HTTP_ENABLED', false),
         'forecast' => env('CREATOR_AI_FORECAST_ENABLED', false),
         'writing_basic' => env('CREATOR_AI_WRITING_BASIC_ENABLED', false),
         'writing_advanced' => env('CREATOR_AI_WRITING_ADVANCED_ENABLED', false),

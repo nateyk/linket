@@ -17,14 +17,18 @@ final class CreatorMcpOAuthEarlyTransportGate
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if (! $request->is('oauth/linket/authorize', 'oauth/linket/authorize/*')) {
+        $isConsent = $request->is('oauth/linket/authorize', 'oauth/linket/authorize/*');
+        $isToken = $request->is('oauth/linket/token');
+        if (! $isConsent && ! $isToken) {
             return $next($request);
         }
 
         // Runtime disabling also covers processes using a previously cached
         // route table with these sensitive endpoints registered.
         abort_unless(
-            config('creator_ai.features.mcp_http_oauth') === true
+            ($isConsent
+                ? config('creator_ai.features.mcp_http_oauth') === true
+                : config('creator_ai.features.mcp_http_token') === true)
             && config('creator_ai.features.mcp_oauth') === true
             && config('creator_ai.features.mcp') === true
             && config('creator_ai.enabled') === true,
@@ -52,6 +56,18 @@ final class CreatorMcpOAuthEarlyTransportGate
             403,
             'HTTPS and the canonical Linket OAuth issuer host are required.',
         );
+
+        if ($isToken) {
+            abort_unless($request->isMethod('POST'), 405);
+
+            // Rate limiting must use cache shared across production workers.
+            abort_unless(
+                ! app()->environment('production')
+                || in_array(config('cache.default'), ['file', 'database', 'redis', 'memcached', 'dynamodb'], true),
+                503,
+                'MCP OAuth token endpoint requires shared rate limiting.',
+            );
+        }
 
         return $next($request);
     }
