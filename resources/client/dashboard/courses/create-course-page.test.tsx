@@ -64,10 +64,12 @@ describe('wizard handoff continuity', () => {
     expect(source).not.toContain('From previous step');
   });
 
-  test('customer preview reuses the shared product-form preview shell', () => {
+  test('customer preview opens through the shared read-only dialog', () => {
     expect(source).toContain('ProductFormCustomerPreview');
     expect(source).not.toContain('<Card.Root>');
-    expect(source).not.toContain('<Trans message="Preview" />');
+    expect(source).toContain('<ProductPreviewDialog');
+    expect(source).toContain('<Trans message="Preview" />');
+    expect(source).not.toContain('<aside className="min-w-0 lg:sticky lg:top-6">');
   });
 
   test('course settings uses a non-price icon', () => {
