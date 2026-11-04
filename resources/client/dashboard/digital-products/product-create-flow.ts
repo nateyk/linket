@@ -80,6 +80,10 @@ export function productTypeCreateUrl(type: ProductType | null): string | null {
   return type ? `/dashboard/items/new/${type}` : null;
 }
 
+export function priceForBillingMode(current: string, billing: BillingMode): string {
+  return billing === 'free' ? '0' : current === '0' ? '' : current;
+}
+
 export function parseWizardPrefill(params: URLSearchParams): WizardPrefill {
   const rawType = params.get('type');
   const rawBilling = params.get('billing');
