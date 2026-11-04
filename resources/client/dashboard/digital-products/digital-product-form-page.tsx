@@ -60,6 +60,8 @@ import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {useNavigate, useParams, useSearchParams} from 'react-router';
 import {parseWizardPrefill, firstInvalidFieldId, parseEtbToCents, priceForBillingMode, resolveCreateType, type BillingMode} from './product-create-flow';
 import {DigitalProductEditor} from './digital-product-editor';
+import {EbookEditor} from './ebook-editor';
+import {AudioEditor} from './audio-editor';
 import {ProductPreviewDialog} from './product-preview-dialog';
 import {BillingModePicker} from './billing-mode-picker';
 import {
@@ -559,7 +561,7 @@ function DigitalProductForm() {
       onCoverChange={actions.setCover}
       errors={fieldErrors}
       validateField={validateField}
-      hidePricing={effectiveFileType === 'digital'}
+      hidePricing={effectiveFileType !== 'course'}
     />
   );
 
@@ -644,7 +646,7 @@ function DigitalProductForm() {
           {product && <ProductStatus status={product.status} />}
         </DashboardLayout.SectionTitle>
         <div className="flex items-center gap-2">
-          {effectiveFileType === 'digital' && (
+          {effectiveFileType !== 'course' && (
             <Button
               variant="outline"
               size="sm"
@@ -716,7 +718,7 @@ function DigitalProductForm() {
       </DashboardLayout.SectionHeader>
 
       <DashboardLayout.SectionContent className="overflow-y-auto">
-        <div className={effectiveFileType === 'digital' ? 'mx-auto w-full max-w-3xl py-4 sm:py-5' : 'mx-auto w-full max-w-6xl py-4 sm:py-5'}>
+        <div className={effectiveFileType !== 'course' ? 'mx-auto w-full max-w-3xl py-4 sm:py-5' : 'mx-auto w-full max-w-6xl py-4 sm:py-5'}>
           {error && (
             <Alert.Root
               variant="destructive"
@@ -779,7 +781,7 @@ function DigitalProductForm() {
                 <FilesSkeleton />
                 <BioPagesSkeleton />
               </div>
-              {effectiveFileType !== 'digital' && (
+              {effectiveFileType === 'course' && (
                 <aside className="min-w-0 lg:sticky lg:top-6">
                   <PreviewSkeleton />
                 </aside>
@@ -796,7 +798,27 @@ function DigitalProductForm() {
                 storefront={storefrontFields}
               />
             </div>
-          ) : (
+          ) : effectiveFileType === 'ebook' ? (
+            <div className="flex min-w-0 flex-col gap-5">
+              <ProductFormProgress completed={completedSections} total={progressSections.length} />
+              <EbookEditor
+                details={detailsFields}
+                files={privateFileFields}
+                sample={sampleFields}
+                pricing={pricingFields}
+                storefront={storefrontFields}
+              />
+            </div>          ) : effectiveFileType === 'audio' ? (
+            <div className="flex min-w-0 flex-col gap-5">
+              <ProductFormProgress completed={completedSections} total={progressSections.length} />
+              <AudioEditor
+                details={detailsFields}
+                files={privateFileFields}
+                sample={sampleFields}
+                pricing={pricingFields}
+                storefront={storefrontFields}
+              />
+            </div>          ) : (
             <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_26rem] xl:gap-6">
               <div className="flex min-w-0 flex-col gap-4">
                 <ProductFormProgress
