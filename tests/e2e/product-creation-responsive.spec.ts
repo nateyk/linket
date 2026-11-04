@@ -135,3 +135,50 @@ test('mobile curriculum returns to unsaved lesson without a false discard prompt
   });
   // No save, publish, reorder, upload, or API mutation is triggered.
 });
+
+test('rejects empty product drafts and Course setup without creating an item', async ({
+  page,
+}) => {
+  test.skip(
+    process.env.LINKET_ISOLATED_E2E !== '1',
+    'Requires an isolated test server and seeded creator',
+  );
+  await page.setViewportSize({width: 375, height: 812});
+  await page.goto('/login');
+  await page.locator('#email').fill(
+    process.env.LINKET_E2E_CREATOR_EMAIL ?? 'creator@example.test',
+  );
+  await page.locator('#password').fill(
+    process.env.LINKET_E2E_CREATOR_PASSWORD ?? 'password',
+  );
+  await page.getByRole('button', {name: /log in|sign in/i}).click();
+
+  let unexpectedCreates = 0;
+  page.on('request', request => {
+    if (
+      request.method() === 'POST' &&
+      new URL(request.url()).pathname === '/api/v1/items'
+    ) {
+      unexpectedCreates++;
+    }
+  });
+
+  for (const type of ['digital', 'ebook', 'audio', 'course'] as const) {
+    await page.goto(`/dashboard/items/new/${type}`);
+    const submit = page.getByRole('button', {
+      name: type === 'course' ? 'Create course' : 'Save draft',
+    });
+    await submit.click();
+
+    await expect(page).toHaveURL(new RegExp(`/dashboard/items/new/${type}$`));
+    if (type === 'course') {
+      await expect(page.locator('#course-title')).toBeFocused();
+      await expect(page.getByText('Add a course title.')).toBeVisible();
+    } else {
+      await expect(
+        page.getByText('Choose Free access or Paid before saving.'),
+      ).toBeVisible();
+    }
+    expect(unexpectedCreates, `Empty ${type} must not POST a product`).toBe(0);
+  }
+});
