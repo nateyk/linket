@@ -44,7 +44,7 @@ export function Component() {
   const [billingMode, setBillingMode] = useState<BillingMode | null>(prefill.billing);
   const isFree = billingMode === 'free';
   const [title, setTitle] = useState('');
-  const [price, setPrice] = useState(() => prefill.price ?? (prefill.billing === 'free' ? '0' : ''));
+  const [price, setPrice] = useState(() => prefill.billing === 'free' ? '0' : (prefill.price ?? ''));
   const [errors, setErrors] = useState<Errors>({});
   const [error, setError] = useState<string>();
   const [creating, setCreating] = useState(false);
