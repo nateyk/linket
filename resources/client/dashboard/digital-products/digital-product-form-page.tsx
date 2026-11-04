@@ -193,6 +193,7 @@ function DigitalProductForm() {
   const [storefrontLoadStatus, setStorefrontLoadStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [storefrontRetry, setStorefrontRetry] = useState(0);
   const [loading, setLoading] = useState(!!productId);
+  const [productLoadRetry, setProductLoadRetry] = useState(0);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string>();
@@ -289,6 +290,10 @@ function DigitalProductForm() {
     // `product` record Save PUTs against). Only the latest request's response
     // may apply; the cleanup cancels the previous run.
     let cancelled = false;
+    if (productId) {
+      setLoading(true);
+      setError(undefined);
+    }
     void (async () => {
       try {
         if (productId) {
@@ -342,7 +347,7 @@ function DigitalProductForm() {
     return () => {
       cancelled = true;
     };
-  }, [navigate, productId]);
+  }, [navigate, productId, productLoadRetry]);
 
   // Optional Storefront lookup is independent of item hydration. A failed
   // request must not look like an empty account, wipe selected IDs, or block
@@ -796,6 +801,18 @@ function DigitalProductForm() {
               <TriangleAlertIcon />
               <Alert.Description>{error}</Alert.Description>
             </Alert.Root>
+          )}
+
+          {unavailable && !loading && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="mb-4"
+              onClick={() => setProductLoadRetry(current => current + 1)}
+            >
+              <Trans message="Retry loading product" />
+            </Button>
           )}
 
           {product?.status === 'approved' && product.has_pending_update === true && (
