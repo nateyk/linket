@@ -397,3 +397,71 @@ test('a revoked access token cannot be refreshed even when the refresh credentia
 
     expect(DB::table('creator_ai_mcp_oauth_token_bindings')->count())->toBe(1);
 });
+
+
+test('HTTP token endpoint stays absent until the independent deployment flag is on', function () {
+    expect(config('creator_ai.features.mcp_http_token'))->toBeFalse();
+    expect(Route::has('creator-ai.oauth.token'))->toBeFalse();
+    expect(Route::has('passport.token'))->toBeFalse();
+});
+
+test('HTTPS form token request redeems a consent-bound PKCE code and rotates refresh without a web session', function () {
+    [$creator, $workspaceId, $clientId, $params, $code] = mcpExchangeTestCode($this);
+    config()->set('creator_ai.features.mcp_http_token', true);
+    require base_path('routes/creator-ai-mcp-oauth.php');
+
+    $route = Route::getRoutes()->getByName('creator-ai.oauth.token');
+    expect($route)->not->toBeNull();
+    expect($route->excludedMiddleware())->toContain('web');
+
+    $form = [
+        'grant_type' => 'authorization_code', 'client_id' => $clientId,
+        'code' => $code, 'code_verifier' => str_repeat('x', 43),
+        'redirect_uri' => $params['redirect_uri'], 'resource' => $params['resource'],
+    ];
+    $headers = ['Content-Type' => 'application/x-www-form-urlencoded', 'Accept' => 'application/json'];
+    $firstResponse = $this->post('https://linket.example.test/oauth/linket/token', $form, $headers);
+    $firstResponse->assertOk()->assertJsonPath('token_type', 'Bearer');
+    expect($firstResponse->headers->get('Cache-Control'))->toContain('no-store');
+    $first = $firstResponse->json();
+
+    $refresh = [
+        'grant_type' => 'refresh_token', 'client_id' => $clientId,
+        'refresh_token' => $first['refresh_token'], 'resource' => $params['resource'],
+    ];
+    $secondResponse = $this->post('https://linket.example.test/oauth/linket/token', $refresh, $headers);
+    $secondResponse->assertOk()->assertJsonPath('token_type', 'Bearer');
+    $second = $secondResponse->json();
+    expect($second['access_token'])->not->toBe($first['access_token']);
+    expect(app(\App\CreatorAi\Auth\CreatorMcpPassportBearerAccess::class)
+        ->workspaceForBearer($second['access_token']))->toBe($workspaceId);
+
+    $this->post('https://linket.example.test/oauth/linket/token', $refresh, $headers)
+        ->assertStatus(400)->assertJsonPath('error', 'invalid_grant');
+    expect(DB::table('creator_ai_mcp_oauth_token_bindings')->count())->toBe(2);
+});
+
+test('HTTP token endpoint rejects wrong PKCE, resource, client and unsupported grants without issuing tokens', function () {
+    [$creator, $workspaceId, $clientId, $params, $code] = mcpExchangeTestCode($this);
+    config()->set('creator_ai.features.mcp_http_token', true);
+    require base_path('routes/creator-ai-mcp-oauth.php');
+
+    $form = [
+        'grant_type' => 'authorization_code', 'client_id' => $clientId,
+        'code' => $code, 'code_verifier' => str_repeat('x', 43),
+        'redirect_uri' => $params['redirect_uri'], 'resource' => $params['resource'],
+    ];
+    $headers = ['Content-Type' => 'application/x-www-form-urlencoded', 'Accept' => 'application/json'];
+    foreach ([
+        [...$form, 'code_verifier' => str_repeat('z', 43)],
+        [...$form, 'resource' => 'https://linket.example.test/foreign'],
+        [...$form, 'client_id' => (string) Str::uuid()],
+        [...$form, 'grant_type' => 'client_credentials'],
+        [...$form, 'scope' => 'admin'],
+    ] as $invalid) {
+        $this->post('https://linket.example.test/oauth/linket/token', $invalid, $headers)
+            ->assertStatus(400);
+    }
+    expect(DB::table('oauth_access_tokens')->count())->toBe(0);
+    $this->post('https://linket.example.test/oauth/linket/token', $form, $headers)->assertOk();
+});
