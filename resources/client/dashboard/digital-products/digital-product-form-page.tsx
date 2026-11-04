@@ -526,9 +526,7 @@ function DigitalProductForm() {
     return true;
   };
 
-  const progressSections = effectiveFileType === 'digital'
-    ? ['details', 'files', 'pricing']
-    : sectionOrder.filter(section => section !== 'previews' && section !== 'bio-pages');
+  const progressSections: ProductSetupSection[] = ['details', 'files', 'pricing'];
   const completedSections = progressSections.filter(isSectionComplete).length;
   const canSubmit =
     !product || product.status === 'draft' || product.status === 'rejected';
