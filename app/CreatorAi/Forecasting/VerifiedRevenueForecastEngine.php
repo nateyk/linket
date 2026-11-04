@@ -99,11 +99,6 @@ final class VerifiedRevenueForecastEngine
             $naiveError += abs($row['verified_revenue_cents'] - $naiveDaily);
         }
 
-        $rolling = (new RollingRevenueBacktest())->evaluate($daily, $horizonDays);
-        if (! $rolling['all_folds_pass']) {
-            return [...$metadata, 'reason' => 'rolling_backtest_underperformed_naive'];
-        }
-
         $candidateMae = intdiv($candidateError + $horizonDays - 1, $horizonDays);
         $naiveMae = intdiv($naiveError + $horizonDays - 1, $horizonDays);
         if ($candidateError > $naiveError) {
@@ -116,6 +111,11 @@ final class VerifiedRevenueForecastEngine
         );
         if ($candidateMae > max(1, $trainingMean)) {
             return [...$metadata, 'reason' => 'backtest_error_too_high'];
+        }
+
+        $rolling = (new RollingRevenueBacktest())->evaluate($daily, $horizonDays);
+        if (! $rolling['all_folds_pass']) {
+            return [...$metadata, 'reason' => 'rolling_backtest_underperformed_naive'];
         }
 
         $predictedDaily = $this->trailingSevenDayAverage($daily);
