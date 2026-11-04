@@ -3,15 +3,15 @@
 namespace App\CreatorAi\Auth;
 
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use League\OAuth2\Server\Exception\OAuthServerException;
 use League\OAuth2\Server\ResourceServer;
 use Nyholm\Psr7\ServerRequest;
 use Throwable;
 
 /**
- * INTERNAL only; verify actual Passport JWS signature/expiry/revocation first,
- * then exact issuer/audience/scopes and Linket creator grant on every use.
- * No public MCP request controller has been registered.
+ * Verify Passport JWS signature/expiry/revocation, then exact
+ * issuer/audience/scopes and live Linket creator grant on every use.
  */
 final class CreatorMcpPassportBearerAccess
 {
@@ -21,6 +21,12 @@ final class CreatorMcpPassportBearerAccess
     ) {}
 
     public function workspaceForBearer(string $bearer): int
+    {
+        return $this->grantForBearer($bearer)['workspace_id'];
+    }
+
+    /** @return array{creator_id:int,workspace_id:int,connection_id:string,client_id:string} */
+    public function grantForBearer(string $bearer): array
     {
         abort_unless(
             $bearer !== '' && strlen($bearer) <= 8192
@@ -77,6 +83,20 @@ final class CreatorMcpPassportBearerAccess
         $creator = User::query()->find((int) $creatorId);
         abort_unless($creator instanceof User, 403);
 
-        return $this->bindings->authorizeBoundAccessToken($creator, $accessId, $clientId, $resource);
+        $workspaceId = $this->bindings->authorizeBoundAccessToken($creator, $accessId, $clientId, $resource);
+        $binding = DB::table('creator_ai_mcp_oauth_token_bindings')
+            ->where('access_token_id', $accessId)
+            ->where('creator_id', $creator->getKey())
+            ->where('oauth_client_id', $clientId)
+            ->where('resource', $resource)
+            ->first(['connection_id']);
+        abort_unless($binding && is_string($binding->connection_id), 403);
+
+        return [
+            'creator_id' => (int) $creator->getKey(),
+            'workspace_id' => $workspaceId,
+            'connection_id' => $binding->connection_id,
+            'client_id' => $clientId,
+        ];
     }
 }

@@ -7,11 +7,8 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Early HTTP boundary for the default-OFF creator consent endpoints.
- *
- * Runs after Linket's TrustHosts/TrustProxies but BEFORE web/auth routes.
- * Route middleware cannot prevent earlier auth redirects using an insecure
- * request scheme or foreign Host.
+ * Global, pre-routing transport boundary; never allow Host/HTTP-based guest
+ * redirects to consume OAuth requests, including cached routes after shutdown.
  */
 final class CreatorMcpOAuthEarlyTransportGate
 {
@@ -19,19 +16,33 @@ final class CreatorMcpOAuthEarlyTransportGate
     {
         $isConsent = $request->is('oauth/linket/authorize', 'oauth/linket/authorize/*');
         $isToken = $request->is('oauth/linket/token');
-        if (! $isConsent && ! $isToken) {
+        $isDiscovery = $request->is(
+            '.well-known/oauth-protected-resource/mcp',
+            '.well-known/oauth-authorization-server',
+        );
+        $isMcp = $request->is('mcp');
+
+        if (! $isConsent && ! $isToken && ! $isDiscovery && ! $isMcp) {
             return $next($request);
         }
 
-        // Runtime disabling also covers processes using a previously cached
-        // route table with these sensitive endpoints registered.
+        $feature = match (true) {
+            $isConsent => 'mcp_http_oauth',
+            $isToken => 'mcp_http_token',
+            $isDiscovery => 'mcp_http_discovery',
+            default => 'mcp_http_server',
+        };
+
+        // Both route-registration and runtime gates are required. A cached
+        // route cannot continue serving requests after a feature is disabled.
         abort_unless(
-            ($isConsent
-                ? config('creator_ai.features.mcp_http_oauth') === true
-                : config('creator_ai.features.mcp_http_token') === true)
+            config('creator_ai.features.'.$feature) === true
             && config('creator_ai.features.mcp_oauth') === true
             && config('creator_ai.features.mcp') === true
-            && config('creator_ai.enabled') === true,
+            && config('creator_ai.enabled') === true
+            && ((! $isDiscovery && ! $isMcp)
+                || (config('creator_ai.features.mcp_http_oauth') === true
+                    && config('creator_ai.features.mcp_http_token') === true)),
             404,
         );
 
@@ -57,15 +68,17 @@ final class CreatorMcpOAuthEarlyTransportGate
             'HTTPS and the canonical Linket OAuth issuer host are required.',
         );
 
-        if ($isToken) {
-            abort_unless($request->isMethod('POST'), 405);
+        if ($isDiscovery || $isMcp) {
+            app(CreatorMcpRemoteConfiguration::class)->endpoints();
+        }
 
-            // Rate limiting must use cache shared across production workers.
+        if ($isToken || $isMcp) {
+            // An OAuth/MCP rate limiter must be shared across production
+            // workers, not scoped to an isolated application instance.
             abort_unless(
                 ! app()->environment('production')
                 || in_array(config('cache.default'), ['file', 'database', 'redis', 'memcached', 'dynamodb'], true),
                 503,
-                'MCP OAuth token endpoint requires shared rate limiting.',
             );
         }
 

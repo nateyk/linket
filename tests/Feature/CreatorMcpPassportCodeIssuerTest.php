@@ -497,6 +497,13 @@ test('HTTP token endpoint rejects unexpected query parameters without consuming 
  */
 function mcpRemoteRoutes(bool $discovery = true, bool $server = true): void
 {
+    config()->set('creator_ai.enabled', true);
+    foreach ([
+        'mcp', 'mcp_oauth', 'mcp_http_oauth', 'mcp_http_token',
+        'sales_summary', 'sales_trends', 'order_insights', 'product_performance',
+    ] as $flag) {
+        config()->set('creator_ai.features.'.$flag, true);
+    }
     config()->set('creator_ai.features.mcp_http_discovery', $discovery);
     config()->set('creator_ai.features.mcp_http_server', $server);
     config()->set('creator_ai.oauth_issuer', 'https://linket.example.test');
@@ -605,15 +612,16 @@ test('signed creator bearer lists only Linket read tools and invokes sales in it
     $listing->assertOk();
     $names = array_column($listing->json('result.tools'), 'name');
     expect($names)->toEqualCanonicalizing([
-        'sales_summary', 'sales_trends', 'order_insights', 'list_orders', 'product_performance',
+        'linket.get_sales_summary', 'linket.get_sales_trends', 'linket.get_order_insights',
+        'linket.list_orders', 'linket.get_product_performance',
     ]);
     expect($listing->json('result.tools.0.annotations.readOnlyHint'))->toBeTrue();
 
     $args = ['from' => now()->subDays(7)->toDateString(), 'to' => now()->toDateString()];
     $called = $this->postJson(
         'https://linket.example.test/mcp',
-        mcpRemoteMessage('tools/call', ['name' => 'sales_summary', 'arguments' => $args]),
-        mcpRemoteHeaders('tools/call', $token, 'sales_summary'),
+        mcpRemoteMessage('tools/call', ['name' => 'linket.get_sales_summary', 'arguments' => $args]),
+        mcpRemoteHeaders('tools/call', $token, 'linket.get_sales_summary'),
     );
     $called->assertOk();
     expect($called->json('result.isError') ?? false)->toBeFalse();
@@ -622,10 +630,10 @@ test('signed creator bearer lists only Linket read tools and invokes sales in it
     $this->postJson(
         'https://linket.example.test/mcp',
         mcpRemoteMessage('tools/call', [
-            'name' => 'sales_summary',
+            'name' => 'linket.get_sales_summary',
             'arguments' => [...$args, 'workspace_id' => $workspaceId],
         ]),
-        mcpRemoteHeaders('tools/call', $token, 'sales_summary'),
+        mcpRemoteHeaders('tools/call', $token, 'linket.get_sales_summary'),
     )->assertOk()->assertJsonPath('result.isError', true);
 });
 
