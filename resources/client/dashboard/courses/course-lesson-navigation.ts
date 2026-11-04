@@ -10,6 +10,8 @@ export function resolveLessonNavigation(
   hasUnsavedEdits: boolean,
 ): LessonNavigationDecision {
   if (currentLessonId === targetLessonId) return 'resume';
+  // With no active lesson there are no mounted edits to discard.
+  if (currentLessonId === null) return 'switch';
   return hasUnsavedEdits ? 'confirm-discard' : 'switch';
 }
 
