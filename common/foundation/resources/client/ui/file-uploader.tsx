@@ -379,7 +379,7 @@ export function SharedFileUploader({
       type="file"
       multiple={multiple}
       accept={acceptAttr(uploadType, accept)}
-      className="sr-only"
+      hidden
       onChange={event => {
         addFiles(event.target.files);
         event.target.value = '';
