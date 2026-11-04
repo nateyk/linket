@@ -57,7 +57,8 @@ import {
 } from 'lucide-react';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {useNavigate, useParams, useSearchParams} from 'react-router';
-import {parseWizardPrefill, firstInvalidFieldId} from './product-create-flow';
+import {parseWizardPrefill, firstInvalidFieldId, priceForBillingMode, resolveCreateType, type BillingMode} from './product-create-flow';
+import {BillingModePicker} from './billing-mode-picker';
 import {
   ProductCreationProvider,
   sampleRequestPayload,
@@ -140,12 +141,14 @@ const SECTION_META: Record<
 
 export function Component() {
   const [searchParams] = useSearchParams();
-  const {productId} = useParams();
+  const {productId, creationType} = useParams();
+  const prefill = parseWizardPrefill(searchParams);
+  if (creationType) prefill.type = resolveCreateType(creationType);
   return (
     <FileUploadProvider>
       <ProductCreationProvider
-        key={productId ?? 'new'}
-        prefill={parseWizardPrefill(searchParams)}
+        key={productId ?? `new:${creationType ?? 'legacy'}`}
+        prefill={prefill}
         productId={productId ? Number(productId) : null}
       >
         <DigitalProductForm />
@@ -158,7 +161,7 @@ function DigitalProductForm() {
   const {productId} = useParams();
   const navigate = useNavigate();
   const {trans} = useTrans();
-  const {state, actions, dirty} = useProductCreation();
+  const {state, actions, dirty, billing} = useProductCreation();
   const title = state.title;
   const description = state.description;
   const price = state.price;
@@ -169,6 +172,9 @@ function DigitalProductForm() {
   const biolinkIds = state.biolinkIds;
   const productType = state.productType as ProductType | null;
   const [product, setProduct] = useState<Product | null>(null);
+  const [billingChoice, setBillingChoice] = useState<BillingMode | null>(billing);
+  const effectiveBilling: BillingMode | null =
+    billingChoice ?? (product ? (product.price_cents === 0 ? 'free' : 'paid') : null);
   const [biolinks, setBiolinks] = useState<Biolink[]>([]);
   const [loading, setLoading] = useState(!!productId);
   const [saving, setSaving] = useState(false);
@@ -244,7 +250,7 @@ function DigitalProductForm() {
     );
   const fileHint = fileCapability?.hint;
   const pageTitle = product
-    ? 'Edit digital product'
+    ? `Edit ${PRODUCT_TYPE_CONFIG[effectiveFileType].label.toLowerCase()}`
     : typeConfig
       ? `Create ${typeConfig.label}`
       : 'Create digital product';
@@ -335,25 +341,31 @@ function DigitalProductForm() {
   const save = useCallback(
     async (submitAfterSave = false) => {
       if (productId && (!product || String(product.id) !== productId)) return;
-      const priceCents = Math.round(Number(price) * 100);
+      const priceCents = effectiveBilling === 'free' ? 0 : Math.round(Number(price) * 100);
       const effectiveType = product?.type ?? productType ?? 'digital';
       const isCourse = effectiveType === 'course';
 
       if (
         !title.trim() ||
+        !effectiveBilling ||
         !Number.isFinite(priceCents) ||
         priceCents < 0 ||
+        (effectiveBilling === 'paid' && priceCents <= 0) ||
         (!isCourse && !files.length)
       ) {
         setOpenSection(
-          !title.trim() || !Number.isFinite(priceCents) || priceCents < 0
+          !title.trim() || !effectiveBilling || !Number.isFinite(priceCents) || priceCents < 0 || (effectiveBilling === 'paid' && priceCents <= 0)
             ? 'details'
             : 'files',
         );
         setError(
-          isCourse
-            ? 'Add a title and a valid price.'
-            : 'Add a title, a price of ETB 0 or more, and one downloadable file.',
+          !effectiveBilling
+            ? 'Choose Free access or Paid before saving.'
+            : effectiveBilling === 'paid' && priceCents <= 0
+              ? 'Enter an amount greater than ETB 0.'
+              : isCourse
+                ? 'Add a title and a valid price.'
+                : 'Add a title, a price of ETB 0 or more, and one downloadable file.',
         );
         return;
       }
@@ -439,6 +451,7 @@ function DigitalProductForm() {
       files,
       samples,
       navigate,
+      effectiveBilling,
       price,
       product,
       productId,
@@ -779,12 +792,17 @@ function DigitalProductForm() {
                             title={title}
                             description={description}
                             price={price}
+                            billingMode={effectiveBilling}
+                            onBillingModeChange={mode => {
+                              setBillingChoice(mode);
+                              actions.setPrice(priceForBillingMode(price, mode));
+                              setFieldErrors(current => ({...current, price_cents: undefined}));
+                            }}
                             coverUrl={coverUrl}
                             onTitleChange={actions.setTitle}
                             onDescriptionChange={actions.setDescription}
                             onPriceChange={actions.setPrice}
                             legacyCurrency={product?.currency}
-                            isApproved={product?.status === 'approved'}
                             convertToEtb={convertToEtb}
                             onConvertToEtbChange={setConvertToEtb}
                             onCoverChange={actions.setCover}
@@ -884,6 +902,8 @@ function DetailsPanel({
   title,
   description,
   price,
+  billingMode,
+  onBillingModeChange,
   coverUrl,
   onTitleChange,
   onDescriptionChange,
@@ -898,14 +918,13 @@ function DetailsPanel({
   title: string;
   description: string;
   price: string;
+  billingMode: BillingMode | null;
+  onBillingModeChange: (mode: BillingMode) => void;
   coverUrl: string;
   onTitleChange: (value: string) => void;
   onDescriptionChange: (value: string) => void;
   onPriceChange: (value: string) => void;
   legacyCurrency?: string;
-  /** Approved products revert to draft on save, so the free-offer helper
-   * would promise something saving cannot do — only show it otherwise. */
-  isApproved?: boolean;
   convertToEtb: boolean;
   onConvertToEtbChange: (value: boolean) => void;
   onCoverChange: (url: string, entry?: {id: number}) => void;
@@ -934,13 +953,20 @@ function DetailsPanel({
         />
       </ProductFormField>
 
+      <div className="flex flex-col gap-2">
+        <p className="text-sm font-medium">
+          <Trans message="Free or paid?" />
+        </p>
+        <BillingModePicker value={billingMode} onValueChange={onBillingModeChange} />
+      </div>
+      {billingMode === 'free' ? (
+        <p className="text-sm text-muted-foreground">
+          <Trans message="Buyers pay nothing." />
+        </p>
+      ) : billingMode === 'paid' ? (
       <ProductFormField
         label="Price"
-        description={
-          isApproved
-            ? undefined
-            : 'Set ETB 0 to offer this product for free.'
-        }
+        description="One-time price in ETB."
         error={errors.price_cents}
         htmlFor="product-price"
         required
@@ -978,6 +1004,7 @@ function DetailsPanel({
           </label>
         )}
       </ProductFormField>
+      ) : null}
 
       <ProductFormField
         label="Description"
