@@ -139,6 +139,61 @@ test.describe('product creation responsive evidence', () => {
   }
 });
 
+test('keyboard-only product choice and Preview support focus return', async ({page}) => {
+  test.skip(
+    process.env.LINKET_ISOLATED_E2E !== '1',
+    'Requires disposable database and synthetic creator',
+  );
+  await page.setViewportSize({width: 360, height: 800});
+  await loginAsSeededCreator(page);
+  await page.goto('/dashboard/items/new');
+
+  const radios = page.getByRole('radio');
+  await expect(radios).toHaveCount(4);
+  await radios.first().focus();
+  await page.keyboard.press('ArrowDown');
+  await expect(radios.nth(1)).toBeChecked();
+
+  const continueButton = page.getByRole('button', {name: 'Continue'});
+  await expect(continueButton).toBeEnabled();
+  await continueButton.focus();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\\/dashboard\\/items\\/new\\/ebook$/);
+
+  const preview = page.getByRole('button', {name: 'Preview'});
+  await preview.focus();
+  await page.keyboard.press('Enter');
+  const dialog = page.getByRole('dialog', {name: 'Customer preview'});
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('button', {name: 'Close'})).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  await expect(preview).toBeFocused();
+});
+
+test('invalid upload is announced and removable without submitting a product', async ({page}) => {
+  test.skip(
+    process.env.LINKET_ISOLATED_E2E !== '1',
+    'Requires disposable database and synthetic creator',
+  );
+  await loginAsSeededCreator(page);
+  await page.goto('/dashboard/items/new/digital');
+  const files = page.getByRole('region', {name: 'Files buyers receive'});
+  const browse = files.getByRole('button', {name: 'Browse files'});
+  await browse.focus();
+  const chooserPromise = page.waitForEvent('filechooser');
+  await page.keyboard.press('Enter');
+  const chooser = await chooserPromise;
+  await chooser.setFiles({
+    name: 'unsupported-e2e.exe',
+    mimeType: 'application/octet-stream',
+    buffer: Buffer.from('synthetic invalid file'),
+  });
+  await expect(files.getByRole('alert')).toContainText('Unsupported file type');
+  await files.getByRole('button', {name: 'Remove unsupported-e2e.exe'}).click();
+  await expect(files.getByRole('alert')).toHaveCount(0);
+});
+
 test('mobile curriculum returns to unsaved lesson without a false discard prompt', async ({
   page,
 }, testInfo) => {
@@ -151,7 +206,7 @@ test('mobile curriculum returns to unsaved lesson without a false discard prompt
   await loginAsSeededCreator(page);
 
   const courseId = process.env.LINKET_E2E_COURSE_ID;
-  if (!courseId || !/^[1-9]\\d*$/.test(courseId)) {
+  if (!courseId || !/^[1-9]\d*$/.test(courseId)) {
     throw new Error('Missing numeric LINKET_E2E_COURSE_ID for isolated browser QA');
   }
   await page.goto(`/dashboard/items/${courseId}/course`);
