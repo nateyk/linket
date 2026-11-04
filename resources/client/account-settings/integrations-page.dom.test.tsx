@@ -354,3 +354,20 @@ it('explains when an eligible Pro creator has no workspace available', async () 
   render(<Component />);
   expect(await screen.findByText('Create or join a Linket workspace before connecting ChatGPT.')).toBeTruthy();
 });
+
+it('explains that ChatGPT requires an approved registered OAuth client', async () => {
+  api.get.mockImplementation(async (url: string) => {
+    if (url === '/api/v1/integrations/telegram') return {data: {telegram: connected}};
+    if (url === '/api/v1/creator-ai/mcp-connections') {
+      return {data: {data: {
+        connections: [],
+        oauth_connection_available: false,
+        connection_setup: {status: 'admin_setup_required', resource_url: null},
+      }}};
+    }
+    throw new Error('Unexpected endpoint');
+  });
+
+  render(<Component />);
+  expect(await screen.findByText('A Linket administrator must approve the ChatGPT OAuth client before connections are available.')).toBeTruthy();
+});

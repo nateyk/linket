@@ -275,6 +275,28 @@ test('connection setup requires verified Pro and only supplies the approved HTTP
     aiMcpConnectionsPro($creator);
     $this->getJson('/api/v1/creator-ai/mcp-connections')
         ->assertOk()
+        ->assertJsonPath('data.oauth_connection_available', false)
+        ->assertJsonPath('data.connection_setup.status', 'admin_setup_required')
+        ->assertJsonPath('data.connection_setup.resource_url', null);
+
+    // A valid, registered public OAuth client is required before suggesting
+    // that ChatGPT can connect. Flags and a Pro badge alone are insufficient.
+    DB::table('oauth_clients')->insert([
+        'id' => (string) Str::uuid(),
+        'owner_type' => null,
+        'owner_id' => null,
+        'name' => 'Approved synthetic creator MCP client',
+        'secret' => null,
+        'provider' => 'creator_mcp_users',
+        'redirect_uris' => json_encode(['https://client.example.test/oauth/callback']),
+        'grant_types' => json_encode(['authorization_code', 'refresh_token']),
+        'revoked' => false,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $this->getJson('/api/v1/creator-ai/mcp-connections')
+        ->assertOk()
         ->assertJsonPath('data.oauth_connection_available', true)
         ->assertJsonPath('data.connection_setup.status', 'ready')
         ->assertJsonPath('data.connection_setup.resource_url', 'https://linket.example.test/mcp');

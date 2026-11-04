@@ -23,6 +23,9 @@ grep -Fq 'Backup failure blocks deployment' "$f"
 grep -Fq 'gzip -t' "$f"
 ! grep -Fq 'continuing deploy (manual backup recommended' "$f"
 grep -Fq 'test-release-gates.sh' "$ci"
+# Cancellation must skip the final join, rather than leaving an obsolete
+# queued verification job blocking the next PR run.
+grep -Fq 'if: ${{ always() && !cancelled() }}' "$ci"
 grep -Fq 'test-release-artifact.sh' "$ci"
 grep -Fq 'test-resolve-verified-ci.sh' "$ci"
 grep -Fq 'bash scripts/release/build-release-artifact.sh' "$ci"
