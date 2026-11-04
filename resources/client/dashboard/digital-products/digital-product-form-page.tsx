@@ -910,7 +910,6 @@ function DetailsPanel({
   onDescriptionChange,
   onPriceChange,
   legacyCurrency,
-  isApproved,
   convertToEtb,
   onConvertToEtbChange,
   onCoverChange,
