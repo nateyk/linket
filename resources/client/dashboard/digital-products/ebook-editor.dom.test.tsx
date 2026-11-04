@@ -28,7 +28,7 @@ describe('dedicated E-book editor', () => {
   test('supports PDF or EPUB without requiring both formats', () => {
     render(<EbookEditor {...slots} />);
     const bookFiles = screen.getByRole('region', {name: 'Book files'});
-    expect(within(bookFiles).getByText(/PDF or EPUB/)).not.toBeNull();
+    expect(within(bookFiles).getByText(/^Upload a PDF or EPUB book file\./)).not.toBeNull();
     expect(within(bookFiles).getByRole('button', {name: 'Upload PDF or EPUB'})).not.toBeNull();
     expect(within(bookFiles).queryByText(/both files required/i)).toBeNull();
   });
