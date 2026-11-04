@@ -4,8 +4,10 @@ on:
   pull_request:
     branches: [main]
   push:
-    # One verified build of each main commit; feature PRs use pull_request.
-    branches: [main]
+    # Temporary isolated staging CI: PR #94 cannot query the PR API while
+    # GitHub reports pull requests disabled. Remove this feature-branch trigger
+    # before merging; production artifacts remain restricted to main only.
+    branches: [main, feat/linket-ai-v1]
   # Verify an isolated branch manually before opening a PR when needed.
   workflow_dispatch:
 
@@ -23,7 +25,7 @@ permissions:
 jobs:
   changes:
     name: Classify changed files
-    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || 'runzumi-ubuntu-24.04-x64-8' }}
+    runs-on: ${{ (github.event_name == 'pull_request' || github.ref == 'refs/heads/feat/linket-ai-v1') && 'ubuntu-latest' || 'runzumi-ubuntu-24.04-x64-8' }}
     timeout-minutes: 3
     permissions:
       contents: read
@@ -54,9 +56,14 @@ jobs:
           # GitHub CLI is preinstalled on github-hosted Ubuntu runners.
           # --paginate covers PRs changing more than 100 files. Fail closed
           # if the API fails: never silently declare code changes docs-only.
-          files="$(gh api --paginate \
+          if ! files="$(gh api --paginate \
             "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/files?per_page=100" \
-            --jq '.[].filename')"
+            --jq '.[].filename')"; then
+            # A disabled/unavailable PR API must never skip required checks.
+            echo '::warning::PR file list unavailable; verifying full PHP and Node suites'
+            printf 'run_php=true\nrun_node=true\n' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           run_php=false
           run_node=false
           if [[ -z "$files" ]]; then
@@ -93,7 +100,7 @@ jobs:
     name: PHP tests and security (8.4 / MySQL 8.0)
     needs: changes
     if: ${{ needs.changes.outputs.run_php == 'true' }}
-    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || 'runzumi-ubuntu-24.04-x64-8' }}
+    runs-on: ${{ (github.event_name == 'pull_request' || github.ref == 'refs/heads/feat/linket-ai-v1') && 'ubuntu-latest' || 'runzumi-ubuntu-24.04-x64-8' }}
     timeout-minutes: 20
     services:
       mysql:
@@ -241,7 +248,7 @@ jobs:
     name: TypeScript, browser tests and Vite build (Node 24)
     needs: changes
     if: ${{ needs.changes.outputs.run_node == 'true' }}
-    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || 'runzumi-ubuntu-24.04-x64-8' }}
+    runs-on: ${{ (github.event_name == 'pull_request' || github.ref == 'refs/heads/feat/linket-ai-v1') && 'ubuntu-latest' || 'runzumi-ubuntu-24.04-x64-8' }}
     timeout-minutes: 20
     steps:
       - name: Checkout (shallow)
@@ -325,7 +332,7 @@ jobs:
     needs: [changes, php, frontend]
     # Cancelled PR runs must not queue the final join and block newer SHA checks.
     if: ${{ always() && !cancelled() }}
-    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || 'runzumi-ubuntu-24.04-x64-8' }}
+    runs-on: ${{ (github.event_name == 'pull_request' || github.ref == 'refs/heads/feat/linket-ai-v1') && 'ubuntu-latest' || 'runzumi-ubuntu-24.04-x64-8' }}
     timeout-minutes: 2
     steps:
       - name: Enforce success of every required verification job
@@ -356,7 +363,7 @@ jobs:
     # A deployable main SHA must have BOTH backend and frontend verified.
     needs: [verify, frontend]
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.verify.result == 'success' }}
-    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || 'runzumi-ubuntu-24.04-x64-8' }}
+    runs-on: ${{ (github.event_name == 'pull_request' || github.ref == 'refs/heads/feat/linket-ai-v1') && 'ubuntu-latest' || 'runzumi-ubuntu-24.04-x64-8' }}
     timeout-minutes: 15
     steps:
       - name: Checkout (shallow)
