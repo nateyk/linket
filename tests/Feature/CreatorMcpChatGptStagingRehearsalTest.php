@@ -54,7 +54,9 @@ test('ChatGPT-style discovery and challenge advertise only the isolated read-onl
     expect($response->headers->get('WWW-Authenticate'))
         ->toContain('Bearer realm="linket-mcp"')
         ->toContain('resource_metadata="https://linket.example.test/.well-known/oauth-protected-resource/mcp"')
-        ->toContain('scope="mcp:use"');
+        ->toContain('scope="mcp:use"')
+        ->toContain('error="invalid_token"')
+        ->toContain('error_description="Linket OAuth authorization is required"');
     expect(DB::table('oauth_access_tokens')->count())->toBe(0);
 });
 
@@ -104,6 +106,15 @@ test('a pre-registered ChatGPT-shaped callback can authorize list read-only tool
         'linket.list_orders',
         'linket.get_product_performance',
     ]);
+    // Explicit per-tool auth metadata is required to show ChatGPT OAuth
+    // linking; no tool may silently fall back to anonymous access.
+    $tools = $list->json('result.tools') ?? [];
+    expect($tools)->toHaveCount(5);
+    foreach ($tools as $tool) {
+        expect($tool['securitySchemes'] ?? null)->toBe([
+            ['type' => 'oauth2', 'scopes' => ['mcp:use']],
+        ]);
+    }
     expect($list->getContent())
         ->not->toContain('sales_forecast')
         ->not->toContain('payment_reference')

@@ -35,6 +35,23 @@ abstract class CreatorMcpReadOnlyTool extends Tool
         ];
     }
 
+    /**
+     * ChatGPT requires per-tool OAuth metadata to discover the linking policy.
+     * Advertising a scope is not authorization: the HTTP bearer guard and
+     * workspace/verified-Pro checks still run before every invocation.
+     *
+     * @return array<string, mixed>
+     */
+    public function toArray(): array
+    {
+        return [
+            ...parent::toArray(),
+            'securitySchemes' => [
+                ['type' => 'oauth2', 'scopes' => ['mcp:use']],
+            ],
+        ];
+    }
+
     public function handle(Request $request): Response
     {
         $grant = request()->attributes->get(CreatorMcpOAuthRemoteSecurity::GRANT_ATTRIBUTE);

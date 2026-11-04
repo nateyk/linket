@@ -75,7 +75,7 @@ final class CreatorMcpOAuthRemoteSecurity
     {
         return response()->json(['error' => 'invalid_token'], 401, [
             ...$this->headers(),
-            'WWW-Authenticate' => 'Bearer realm="linket-mcp", resource_metadata="'.$metadata.'", scope="mcp:use"',
+            'WWW-Authenticate' => 'Bearer realm="linket-mcp", resource_metadata="'.$metadata.'", scope="mcp:use", error="invalid_token", error_description="Linket OAuth authorization is required"',
         ]);
     }
 
