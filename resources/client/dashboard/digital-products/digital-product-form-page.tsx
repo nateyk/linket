@@ -42,8 +42,6 @@ import {useTrans} from '@ui/i18n/use-trans';
 import {getBootstrapData} from '@ui/bootstrap-data/bootstrap-data-store';
 import {FormattedBytes} from '@ui/i18n/formatted-bytes';
 import {
-  BookIcon,
-  DownloadIcon,
   FileArchiveIcon,
   FileIcon,
   FileTextIcon,
@@ -112,14 +110,20 @@ type Product = {
 
 type FieldErrors = Record<string, string>;
 
-const PRODUCT_TYPE_CONFIG: Record<
-  ProductType,
-  {label: string; icon: typeof DownloadIcon}
-> = {
-  digital: {label: 'Digital product', icon: DownloadIcon},
-  ebook: {label: 'E-book', icon: BookIcon},
-  audio: {label: 'Audio', icon: HeadphonesIcon},
-  course: {label: 'Course', icon: GraduationCapIcon},
+// Each message is a static literal so the translation extractor finds it.
+const PRODUCT_PAGE_TITLES = {
+  create: {
+    digital: <Trans message="Create Digital product" />,
+    ebook: <Trans message="Create E-book" />,
+    audio: <Trans message="Create Audio" />,
+    course: <Trans message="Create Course" />,
+  },
+  edit: {
+    digital: <Trans message="Edit digital product" />,
+    ebook: <Trans message="Edit e-book" />,
+    audio: <Trans message="Edit audio" />,
+    course: <Trans message="Edit course" />,
+  },
 };
 
 const SECTION_META: Record<
@@ -238,7 +242,6 @@ function DigitalProductForm() {
     [],
   );
 
-  const typeConfig = productType ? PRODUCT_TYPE_CONFIG[productType] : null;
   // Creator-facing file formats come from the server capability
   // (App\Storefront\ProductFileFormats via bootstrap data) — never hardcoded.
   const effectiveFileType = (product?.type ?? productType ?? 'digital') as
@@ -257,10 +260,10 @@ function DigitalProductForm() {
     );
   const fileHint = fileCapability?.hint;
   const pageTitle = product
-    ? `Edit ${PRODUCT_TYPE_CONFIG[effectiveFileType].label.toLowerCase()}`
-    : typeConfig
-      ? `Create ${typeConfig.label}`
-      : 'Create digital product';
+    ? PRODUCT_PAGE_TITLES.edit[effectiveFileType]
+    : productType
+      ? PRODUCT_PAGE_TITLES.create[productType]
+      : <Trans message="Create digital product" />;
 
   // The product must be loaded exactly once per productId. `actions` is
   // rebuilt by the creation-context memo on every state change, so listing it
@@ -641,7 +644,7 @@ function DigitalProductForm() {
               Final-fix item 2: `render={<h1 />}` makes this the page's one
               and only heading (T7's mechanism on the selection page). */}
           <span className="min-w-0 truncate">
-            <Trans message={pageTitle} />
+            {pageTitle}
           </span>
           {product && <ProductStatus status={product.status} />}
         </DashboardLayout.SectionTitle>
@@ -1281,7 +1284,12 @@ function FilesPanel({
   hint?: string;
 }) {
   return (
-    <div className="flex flex-col gap-3" id="product-files" tabIndex={-1}>
+    <div
+      className="flex flex-col gap-3"
+      id="product-files"
+      tabIndex={-1}
+      aria-describedby={error ? 'product-files-error' : undefined}
+    >
       <SharedFileUploader
         uploadType="digitalProductFiles"
         bare
@@ -1296,7 +1304,11 @@ function FilesPanel({
         accept={accept}
         hint={hint}
       />
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && (
+        <p id="product-files-error" role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      )}
       {!!files.length && (
         <ul className="flex flex-col gap-2">
           {files.map(file => {

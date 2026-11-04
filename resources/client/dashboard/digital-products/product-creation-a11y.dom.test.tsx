@@ -286,6 +286,30 @@ describe('P2 nested-cards: the wizard dialog has no card inside its panel', () =
 });
 
 describe('R09 picker strings are translatable', () => {
+  test('editor create/edit page headings are static extractable translations', () => {
+    const source = readSource('digital-product-form-page.tsx');
+    for (const literal of [
+      'Create Digital product',
+      'Create E-book',
+      'Create Audio',
+      'Create Course',
+      'Create digital product',
+      'Edit digital product',
+      'Edit e-book',
+      'Edit audio',
+      'Edit course',
+    ]) {
+      expectExtractable(source, literal);
+    }
+    expect(source).not.toContain('<Trans message={pageTitle} />');
+  });
+
+  test('validation errors on product files are announced and associated with the focus target', () => {
+    const source = readSource('digital-product-form-page.tsx');
+    expect(source).toContain("aria-describedby={error ? 'product-files-error' : undefined}");
+    expect(source).toContain('id="product-files-error" role="alert"');
+  });
+
   test('every type option title, description and group label is an extractable Trans/trans literal', () => {
     const source = readSource('product-type-picker.tsx');
     for (const literal of [

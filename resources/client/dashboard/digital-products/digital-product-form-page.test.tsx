@@ -401,7 +401,7 @@ describe('P2 header: the page title owns the row', () => {
     // ...but the title itself (and its status badge) stays, and in a tight
     // row the TEXT truncates (min-w-0) so the badge keeps its 36px.
     expect(source).toMatch(
-      /<DashboardLayout\.SectionTitle[^>]*>[\s\S]*?<span className="min-w-0 truncate">\s*<Trans message=\{pageTitle\} \/>\s*<\/span>\s*\{product && <ProductStatus/,
+      /<DashboardLayout\.SectionTitle[^>]*>[\s\S]*?<span className="min-w-0 truncate">\s*\{pageTitle\}\s*<\/span>\s*\{product && <ProductStatus/,
     );
   });
 
