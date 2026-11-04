@@ -143,7 +143,9 @@ test('rolling origin comparison uses two independent holdouts and rejects histor
     $thirty = (new RollingRevenueBacktest())->evaluate($steady, 30);
     expect($thirty['fold_count'])->toBe(2)->and($thirty['all_folds_pass'])->toBeTrue();
     $history = array_fill(0, 30, ['verified_revenue_cents' => 10000]);
-    $history[15]['verified_revenue_cents'] = 0;
+    for ($day = 9; $day < 15; $day++) {
+        $history[$day]['verified_revenue_cents'] = 0;
+    }
     $result = (new RollingRevenueBacktest())->evaluate($history, 7);
     expect($result['all_folds_pass'])->toBeFalse();
 });
