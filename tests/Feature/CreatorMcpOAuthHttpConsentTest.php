@@ -197,3 +197,20 @@ test('HTTPS consent denial consumes nonce and never issues a Passport grant or t
         ...$post, 'workspace_id' => $workspaceId,
     ])->assertStatus(403);
 });
+
+
+test('OAuth consent rejects a foreign HTTPS request host before saving a post-login destination', function () {
+    mcpBrowserRoutes();
+    [, , $parameters] = mcpBrowserCreator();
+
+    // Laravel Redirector::guest() records the incoming full URL as
+    // url.intended. Without an exact issuer-host check, an attacker-controlled
+    // Host could survive the canonical login redirect and become the
+    // post-login destination.
+    $this->get('https://untrusted.example.test/oauth/linket/authorize?'.http_build_query($parameters))
+        ->assertStatus(403);
+
+    expect(session()->get('url.intended'))->toBeNull();
+    expect(DB::table('creator_ai_mcp_connections')->count())->toBe(0);
+    expect(DB::table('oauth_auth_codes')->count())->toBe(0);
+});
