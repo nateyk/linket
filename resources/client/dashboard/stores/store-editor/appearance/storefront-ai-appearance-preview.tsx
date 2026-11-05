@@ -10,7 +10,6 @@ interface Preview {
   preset: Preset;
   source_fingerprint: string;
   changes: {
-    layout?: 'default' | 'profile-sidebar';
     btnConfig?: {
       variant?: 'outline' | 'solid';
       radius?: 'rounded-sm' | 'rounded-lg';
@@ -122,10 +121,6 @@ export function StorefrontAiAppearancePreview() {
             </p>
           ) : (
             <dl className="grid gap-2 text-sm sm:grid-cols-2">
-              {preview.changes.layout && (
-                <div><dt className="text-xs text-muted-foreground">Layout</dt>
-                  <dd>{preview.changes.layout}</dd></div>
-              )}
               {Object.entries(preview.changes.btnConfig ?? {}).map(([key, value]) => (
                 <div key={key}>
                   <dt className="text-xs text-muted-foreground">{key}</dt>

@@ -131,7 +131,8 @@ test('PR09 preview returns only preset allowlist differences and leaves appearan
         ->assertJsonPath('data.requires_review', true)
         ->assertJsonPath('data.read_only', true)
         ->assertJsonPath('data.changes.btnConfig.variant', 'solid')
-        ->assertJsonPath('data.changes.btnConfig.radius', 'rounded-lg');
+        ->assertJsonPath('data.changes.btnConfig.radius', 'rounded-lg')
+        ->assertJsonMissingPath('data.changes.layout');
 
     $json = $response->getContent();
     expect($response->json('data.source_fingerprint'))->toMatch('/^[a-f0-9]{64}$/')
