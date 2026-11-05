@@ -25,7 +25,7 @@ use Illuminate\Support\Str;
 
 class PrepareBuyerE2eCommand extends Command
 {
-    protected $signature = 'linket:prepare-buyer-e2e {--write=storage/app/e2e/buyer-fixture.json}';
+    protected $signature = 'linket:prepare-buyer-e2e {--write=storage/app/e2e/buyer-fixture.json} {--with-reviewer : Seed an isolated moderation test reviewer}';
 
     protected $description = 'Upsert synthetic buyer-journey fixtures into the isolated test database for Playwright';
 
@@ -57,14 +57,31 @@ class PrepareBuyerE2eCommand extends Command
             '--no-interaction' => true,
         ]);
 
-        // These flags apply only to the guarded, disposable QA database. Keep
-        // moderation transitions deterministic without touching live settings.
-        settings()->save([
-            'product.adding_requires_review' => 1,
-            'product.updating_requires_review' => 1,
-        ]);
+        $withReviewer = (bool) $this->option('with-reviewer');
+        $reviewerPassword = null;
+        if ($withReviewer) {
+            $appHost = strtolower((string) parse_url((string) config('app.url'), PHP_URL_HOST));
+            $reviewerPassword = getenv('LINKET_E2E_REVIEWER_PASSWORD');
+            if (
+                getenv('LINKET_ISOLATED_E2E') !== '1'
+                || $database !== 'belink_test'
+                || ! in_array($appHost, ['127.0.0.1', 'localhost'], true)
+                || ! is_string($reviewerPassword)
+                || strlen($reviewerPassword) < 24
+            ) {
+                $this->error('Refusing moderation fixture: explicit isolated E2E, loopback app URL, disposable database and temporary reviewer credential required.');
 
-        $fixture = DB::transaction(function (): array {
+                return self::FAILURE;
+            }
+
+            // Change moderation defaults only when that scenario is requested.
+            settings()->save([
+                'product.adding_requires_review' => 1,
+                'product.updating_requires_review' => 1,
+            ]);
+        }
+
+        $fixture = DB::transaction(function () use ($withReviewer, $reviewerPassword): array {
             DirectPaymentMethod::query()->updateOrCreate(
                 ['code' => 'cbe'],
                 [
@@ -165,46 +182,50 @@ class PrepareBuyerE2eCommand extends Command
             }
             $file->getDisk()->put($file->getStoragePath(), $fileContent);
 
-            // Real authenticated moderation test fixture. This never runs outside
-            // APP_ENV=testing and a database name containing "test" (guard above).
-            $reviewer = User::query()->firstOrCreate(
-                ['email' => 'e2e-product-reviewer@example.test'],
-                [
-                    'name' => 'E2E Product Reviewer',
-                    'username' => 'e2e-product-reviewer-'.Str::lower(Str::random(6)),
-                    'password' => Hash::make('E2eProductReview!23'),
+            $reviewProductId = null;
+            if ($withReviewer) {
+                // Real authenticated moderation test fixture. This never runs outside
+                // APP_ENV=testing and a database name containing "test" (guard above).
+                $reviewer = User::query()->firstOrCreate(
+                    ['email' => 'e2e-product-reviewer@example.test'],
+                    [
+                        'name' => 'E2E Product Reviewer',
+                        'username' => 'e2e-product-reviewer-'.Str::lower(Str::random(6)),
+                        'password' => Hash::make($reviewerPassword),
+                        'email_verified_at' => now(),
+                    ],
+                );
+                $reviewer->forceFill([
+                    'password' => Hash::make($reviewerPassword),
                     'email_verified_at' => now(),
-                ],
-            );
-            $reviewer->forceFill([
-                'password' => Hash::make('E2eProductReview!23'),
-                'email_verified_at' => now(),
-            ])->save();
-            $reviewer->permissions()->syncWithoutDetaching([
-                Permission::query()->firstOrCreate(['name' => 'admin'])->id,
-            ]);
-
-            $reviewFixtureDescription = 'Synthetic private moderation lifecycle fixture';
-            $reviewProduct = DigitalProduct::query()
-                ->where('user_id', $creator->id)
-                ->where('description', $reviewFixtureDescription)
-                ->first() ?? new DigitalProduct();
-            $reviewProduct->forceFill([
-                'workspace_id' => $workspaceId,
-                'user_id' => $creator->id,
-                'title' => 'E2E Moderation Lifecycle Guide',
-                'description' => $reviewFixtureDescription,
-                'price_cents' => 0,
-                'currency' => 'ETB',
-                'status' => 'pending_approval',
-                'approved_at' => null,
-                'review_requested_by' => $creator->id,
-                'review_requested_at' => now(),
-                'rejection_reason' => null,
-                'pending_review_snapshot' => null,
-                'type' => 'digital',
-            ])->save();
-            $reviewProduct->files()->syncWithoutDetaching([$file->id]);
+                ])->save();
+                $reviewer->permissions()->syncWithoutDetaching([
+                    Permission::query()->firstOrCreate(['name' => 'admin'])->id,
+                ]);
+    
+                $reviewFixtureDescription = 'Synthetic private moderation lifecycle fixture';
+                $reviewProduct = DigitalProduct::query()
+                    ->where('user_id', $creator->id)
+                    ->where('description', $reviewFixtureDescription)
+                    ->first() ?? new DigitalProduct();
+                $reviewProduct->forceFill([
+                    'workspace_id' => $workspaceId,
+                    'user_id' => $creator->id,
+                    'title' => 'E2E Moderation Lifecycle Guide',
+                    'description' => $reviewFixtureDescription,
+                    'price_cents' => 0,
+                    'currency' => 'ETB',
+                    'status' => 'pending_approval',
+                    'approved_at' => null,
+                    'review_requested_by' => $creator->id,
+                    'review_requested_at' => now(),
+                    'rejection_reason' => null,
+                    'pending_review_snapshot' => null,
+                    'type' => 'digital',
+                ])->save();
+                $reviewProduct->files()->syncWithoutDetaching([$file->id]);
+                $reviewProductId = (int) $reviewProduct->id;
+            }
 
             $method = CreatorPaymentMethod::query()
                 ->where('workspace_id', $workspaceId)
@@ -254,7 +275,7 @@ class PrepareBuyerE2eCommand extends Command
                 'product_url' => '/'.$store->back_half.'/products/'.$product->id,
                 'product_title' => $product->title,
                 'course_product_id' => $courseProductId,
-                'review_product_id' => $reviewProduct->id,
+                'review_product_id' => $reviewProductId,
                 'buyer_email' => 'e2e-buyer-'.Str::lower(Str::random(8)).'@example.test',
                 'buyer_name' => 'E2E Buyer',
                 'verify_mock' => true,
