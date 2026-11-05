@@ -304,10 +304,12 @@ describe('the preview is on-demand and live', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
 
     await user.type(titleInput(), 'Logo design');
+    // The modal correctly makes background content inert. Inspect the sidebar
+    // before opening it, then verify the focused dialog's own content.
+    expect(within(screen.getByRole('complementary', {name: 'Service preview'})).queryByText('Untitled service')).toBeNull();
     await user.click(screen.getByRole('button', {name: 'Preview'}));
 
     expect(within(screen.getByRole('dialog', {name: 'Customer preview'})).getByText('Logo design')).toBeTruthy();
-    expect(within(screen.getByRole('complementary', {name: 'Service preview'})).queryByText('Untitled service')).toBeNull();
     expect(api.post).not.toHaveBeenCalled();
     expect(api.put).not.toHaveBeenCalled();
   });
