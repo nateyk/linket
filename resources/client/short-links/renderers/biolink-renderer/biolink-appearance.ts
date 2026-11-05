@@ -554,7 +554,9 @@ export function shouldUseLightBiolinkLogo(
   appearance: BiolinkAppearanceConfig | null | undefined,
   fallback: boolean,
 ): boolean {
-  const foreground = resolveBackgroundContext(appearance?.bgConfig).foregroundColor;
+  const foreground = resolveBackgroundContext(
+    appearance?.bgConfig,
+  ).foregroundColor;
   return foreground ? isLightSurface(foreground) : fallback;
 }
 
