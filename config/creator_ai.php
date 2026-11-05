@@ -109,6 +109,15 @@ return [
         'model' => env('CREATOR_AI_PRODUCT_COPY_MODEL', 'gpt-4o-mini'),
     ],
 
+    // Organization billing evidence is read-only and restricted to a dedicated
+    // OpenAI project with an independently provisioned admin credential.
+    // Disabled by default. Aggregated daily costs are NOT per-request receipts.
+    'openai_cost_audit' => [
+        'enabled' => env('CREATOR_AI_OPENAI_COST_AUDIT_ENABLED', false),
+        'admin_api_key' => env('CREATOR_AI_OPENAI_COST_AUDIT_ADMIN_KEY'),
+        'dedicated_project_id' => env('CREATOR_AI_OPENAI_COST_AUDIT_PROJECT_ID'),
+    ],
+
     // Defaults for the separate future generation-quota service, NOT a billing
     // charge for deterministic reports or read-only MCP calls.
     'free_monthly_generation_requests' => 10,
