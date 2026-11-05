@@ -21,9 +21,9 @@ permissions:
 jobs:
   changes:
     name: Classify changed files
-    # PRs use ephemeral GitHub runners when dedicated runners have no capacity.
-    # Main pushes retain the configured dedicated runner; no release change.
-    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || 'runzumi-ubuntu-24.04-x64-8' }}
+    # Verify both PRs and main on disposable hosted runners.
+    # The external runner workspace is paused; avoid indefinite queues.
+    runs-on: ubuntu-latest
     timeout-minutes: 3
     permissions:
       contents: read
@@ -93,9 +93,9 @@ jobs:
     name: PHP tests and security (8.4 / MySQL 8.0)
     needs: changes
     if: ${{ needs.changes.outputs.run_php == 'true' }}
-    # PRs use ephemeral GitHub runners when dedicated runners have no capacity.
-    # Main pushes retain the configured dedicated runner; no release change.
-    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || 'runzumi-ubuntu-24.04-x64-8' }}
+    # Verify both PRs and main on disposable hosted runners.
+    # The external runner workspace is paused; avoid indefinite queues.
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
       mysql:
@@ -243,9 +243,9 @@ jobs:
     name: TypeScript, browser tests and Vite build (Node 24)
     needs: changes
     if: ${{ needs.changes.outputs.run_node == 'true' }}
-    # PRs use ephemeral GitHub runners when dedicated runners have no capacity.
-    # Main pushes retain the configured dedicated runner; no release change.
-    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || 'runzumi-ubuntu-24.04-x64-8' }}
+    # Verify both PRs and main on disposable hosted runners.
+    # The external runner workspace is paused; avoid indefinite queues.
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - name: Checkout (shallow)
@@ -328,9 +328,9 @@ jobs:
     name: Verify (PHP 8.4 + Node 24 + MySQL 8.0)
     needs: [changes, php, frontend]
     if: ${{ always() }}
-    # PRs use ephemeral GitHub runners when dedicated runners have no capacity.
-    # Main pushes retain the configured dedicated runner; no release change.
-    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || 'runzumi-ubuntu-24.04-x64-8' }}
+    # Verify both PRs and main on disposable hosted runners.
+    # The external runner workspace is paused; avoid indefinite queues.
+    runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
       - name: Enforce success of every required verification job
@@ -361,7 +361,8 @@ jobs:
     # A deployable main SHA must have BOTH backend and frontend verified.
     needs: [verify, frontend]
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.verify.result == 'success' }}
-    runs-on: runzumi-ubuntu-24.04-x64-8
+    # The SHA-locked artifact builder must also remain runnable without an external runner.
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: Checkout (shallow)
