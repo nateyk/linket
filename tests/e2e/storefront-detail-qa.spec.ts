@@ -127,6 +127,87 @@ test.describe('SF-09/SF-10 real public pages in isolated Chromium', () => {
     }
   });
 
+  test('text tokens retain readable contrast on storefront surfaces', async ({
+    page,
+  }) => {
+    // Measure representative foreground/surface pairs (WCAG 2.2 AA 4.5:1).
+    // This is not a full audit of images, gradients, focus rings or all
+    // possible creator-selected colors; those still need human review.
+    for (const mode of ['free', 'service'] as const) {
+      for (const dark of [false, true]) {
+        await page.setViewportSize({width: 390, height: 844});
+        await openDetail(page, mode, {dark});
+        const ratios = await page.evaluate(darkBackground => {
+          const main = document.querySelector('main');
+          if (!main) throw new Error('Missing storefront content');
+          const scope = main.parentElement ?? main;
+          const probe = document.createElement('span');
+          probe.style.color = 'var(--biolink-text)';
+          probe.style.backgroundColor = 'var(--biolink-surface-strong)';
+          scope.appendChild(probe);
+          const style = getComputedStyle(probe);
+          const text = style.color;
+          const surface = style.backgroundColor;
+          probe.style.color = 'var(--biolink-muted-text)';
+          const muted = getComputedStyle(probe).color;
+          probe.remove();
+
+          const rgba = (css: string): number[] => {
+            const canvas = document.createElement('canvas');
+            canvas.width = canvas.height = 1;
+            const context = canvas.getContext('2d', {
+              willReadFrequently: true,
+            });
+            if (!context) throw new Error('Canvas color parser unavailable');
+            context.clearRect(0, 0, 1, 1);
+            context.fillStyle = css;
+            context.fillRect(0, 0, 1, 1);
+            return Array.from(context.getImageData(0, 0, 1, 1).data);
+          };
+          const matte = darkBackground ? [17, 24, 39] : [255, 255, 255];
+          const composite = (color: number[], on: number[]) => {
+            const alpha = color[3] / 255;
+            return color.slice(0, 3).map((c, i) =>
+              c * alpha + on[i] * (1 - alpha),
+            );
+          };
+          const bg = composite(rgba(surface), matte);
+          const fg = composite(rgba(text), bg);
+          const mutedFg = composite(rgba(muted), bg);
+          const luminance = (rgb: number[]) =>
+            rgb
+              .map(v => {
+                const c = v / 255;
+                return c <= 0.04045
+                  ? c / 12.92
+                  : Math.pow((c + 0.055) / 1.055, 2.4);
+              })
+              .reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0);
+          const ratio = (a: number[], b: number[]) => {
+            const low = Math.min(luminance(a), luminance(b));
+            const high = Math.max(luminance(a), luminance(b));
+            return (high + 0.05) / (low + 0.05);
+          };
+          return {
+            main: ratio(fg, bg),
+            muted: ratio(mutedFg, bg),
+            text,
+            surface,
+            mutedColor: muted,
+          };
+        }, dark);
+        expect(
+          ratios.main,
+          `${mode} ${dark ? 'dark' : 'light'} primary text/surface contrast`,
+        ).toBeGreaterThanOrEqual(4.5);
+        expect(
+          ratios.muted,
+          `${mode} ${dark ? 'dark' : 'light'} muted text/surface contrast`,
+        ).toBeGreaterThanOrEqual(4.5);
+      }
+    }
+  });
+
   test('keyboard access, selected quote-only tier, and focus return', async ({
     page,
   }) => {
