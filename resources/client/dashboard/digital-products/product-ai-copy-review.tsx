@@ -2,7 +2,7 @@ import {apiClient} from '@common/http/query-client';
 import {Button} from '@shadcn/button/button';
 import {Trans} from '@ui/i18n/trans';
 import {SparklesIcon, XIcon} from 'lucide-react';
-import {useEffect, useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import {canUseProductCopyDraft, type ProductCopyDraft} from './product-ai-copy-review-state';
 
 interface Props {
@@ -25,6 +25,8 @@ export function ProductAiCopyReview({
   const [error, setError] = useState<string>();
   const [draft, setDraft] = useState<ProductCopyDraft>();
   const [text, setText] = useState('');
+  const latestSource = useRef({title: currentTitle, description: currentDescription});
+  latestSource.current = {title: currentTitle, description: currentDescription};
   const base = '/api/v1/creator-ai/products/' + productId;
 
   useEffect(() => {
@@ -92,6 +94,14 @@ export function ProductAiCopyReview({
       await apiClient.post(base + '/copy-revision', {
         source_fingerprint: draft.source_fingerprint,
       });
+      // A creator may have edited the form while the revision request was
+      // in flight. Do not overwrite newer local changes with a stale result.
+      if (!canUseProductCopyDraft(
+        draft, latestSource.current.title, latestSource.current.description, text,
+      )) {
+        setError('The product was edited while checking. Generate another suggestion.');
+        return;
+      }
       onUseDescription(text.trim());
       setDraft(undefined);
       setText('');

@@ -58,13 +58,16 @@ final class CreatorProductCopyDraftService
         abort_unless($policy['enabled'] && $policy['api_key_configured'], 503,
             'AI generation has not been configured by an administrator.');
 
-        $requestId = (string) Str::uuid();
-        $this->usage->reserve($creator, (int) $current->workspace_id, $ability, $requestId);
-
+        // Missing runtime configuration must not burn the creator's
+        // generation quota. Reserve only once preflight is complete and just
+        // before a potentially billable provider call.
         $model = (string) config('creator_ai.product_copy_provider.model', '');
         abort_unless($model !== '', 503, 'Product writing model is not configured.');
         $apiKey = $this->settings->apiKey();
         abort_unless(is_string($apiKey) && $apiKey !== '', 503, 'AI provider is unavailable.');
+
+        $requestId = (string) Str::uuid();
+        $this->usage->reserve($creator, (int) $current->workspace_id, $ability, $requestId);
 
         // The Laravel SDK uses the same OpenAI provider driver as the rest of
         // the application. PHP-FPM stage only: this scoped config override
