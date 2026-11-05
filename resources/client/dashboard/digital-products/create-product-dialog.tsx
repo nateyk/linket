@@ -1,18 +1,12 @@
-import {AlertDialog} from '@shadcn/alert-dialog/alert-dialog';
 import {Dialog} from '@shadcn/dialog/dialog';
 import {Button} from '@shadcn/button/button';
 import {Trans} from '@ui/i18n/trans';
+import {useTrans} from '@ui/i18n/use-trans';
 import {useState} from 'react';
 import {useNavigate} from 'react-router';
-import {ArrowLeftIcon, ArrowRightIcon} from 'lucide-react';
-import {hasNextStep} from './product-create-flow';
-import {
-  STEP_META,
-  focusWizardStep,
-  useProductCreateWizard,
-  WizardStepBody,
-  WizardStepDots,
-} from './product-create-wizard';
+import {ArrowRightIcon, PackagePlusIcon} from 'lucide-react';
+import {productTypeCreateUrl} from './product-create-flow';
+import {ProductTypePicker, type ProductType} from './product-type-picker';
 
 interface CreateProductDialogProps {
   open: boolean;
@@ -24,95 +18,47 @@ export function CreateProductDialog({
   onOpenChange,
 }: CreateProductDialogProps) {
   const navigate = useNavigate();
-  const wizard = useProductCreateWizard();
-  const meta = STEP_META[wizard.step];
-  const MetaIcon = meta.icon;
-  const [confirmDiscardOpen, setConfirmDiscardOpen] = useState(false);
+  const {trans} = useTrans();
+  const [selectedType, setSelectedType] = useState<ProductType | null>(null);
 
-  const handleFinish = () => {
-    if (wizard.finishUrl) {
-      // Success path: the wizard handed off to the create form. Clear the
-      // store (state + persisted localStorage copy) before leaving, so the
-      // next "New product" opens fresh at step 1 instead of resuming with a
-      // stale price. Bypasses handleOpenChange on purpose — the dirty guard
-      // must not fire on an intentional finish.
-      wizard.reset();
-      onOpenChange(false);
-      navigate(wizard.finishUrl);
-    }
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) setSelectedType(null);
+    onOpenChange(nextOpen);
   };
 
-  const discardAndClose = () => {
-    wizard.reset();
-    setConfirmDiscardOpen(false);
+  const handleContinue = () => {
+    const destination = productTypeCreateUrl(selectedType);
+    if (!destination) return;
+    setSelectedType(null);
     onOpenChange(false);
-  };
-
-  const handleOpenChange = (newOpen: boolean) => {
-    if (!newOpen && wizard.isDirty) {
-      setConfirmDiscardOpen(true);
-      return;
-    }
-    if (!newOpen) {
-      wizard.reset();
-    }
-    onOpenChange(newOpen);
+    navigate(destination);
   };
 
   return (
-    <>
-      <Dialog.Root open={open} onOpenChange={handleOpenChange}>
+    <Dialog.Root open={open} onOpenChange={handleOpenChange}>
       <Dialog.Portal>
         <Dialog.Backdrop />
         <Dialog.Content className="sm:max-w-xl">
           <Dialog.Header>
             <Dialog.Title>
-              <MetaIcon className="size-5" />
-              <Trans message={meta.title} />
+              <PackagePlusIcon className="size-5" aria-hidden="true" />
+              <Trans message="What are you selling?" />
             </Dialog.Title>
-            {meta.description ? (
-              <Dialog.Description>
-                <Trans message={meta.description} />
-              </Dialog.Description>
-            ) : null}
+            <Dialog.Description>
+              <Trans message="Choose a type to open its editor." />
+            </Dialog.Description>
           </Dialog.Header>
-          {/* Dialog.Body gives the step area `min-h-0 flex-1 overflow-y-auto`,
-              so on short viewports the option cards scroll INSIDE the panel
-              instead of pushing the storage line out below the dialog edge
-              (it used to render outside the popover, clipped by the viewport). */}
-          <Dialog.Body className="flex flex-col gap-4 pt-2">
-            <WizardStepDots wizard={wizard} />
-            <div
-              key={wizard.step}
-              ref={focusWizardStep}
-              className="animate-in fade-in duration-200"
-            >
-              <WizardStepBody wizard={wizard} />
-            </div>
+          <Dialog.Body className="flex min-h-0 flex-col gap-4 overflow-y-auto pt-2">
+            <ProductTypePicker value={selectedType} onValueChange={setSelectedType} />
           </Dialog.Body>
-          {/* P2 (crit1-B nested-cards): `variant="muted"` painted a
-              `border-t bg-muted/50` strip inside the dialog panel — a card
-              inside a card (DESIGN.md "Don't nest a card inside a card").
-              The footer is an action row, so it renders on the panel
-              itself, spaced by the same `py-4` every other dialog uses. */}
           <Dialog.Footer className="py-4 sm:justify-between">
-            {wizard.step === 'type' ? (
-              <Dialog.CloseButton render={<Button variant="outline" />}>
-                <Trans message="Cancel" />
-              </Dialog.CloseButton>
-            ) : (
-              <Button variant="outline" onClick={wizard.goBack}>
-                <ArrowLeftIcon data-icon="inline-start" />
-                <Trans message="Back" />
-              </Button>
-            )}
+            <Dialog.CloseButton render={<Button variant="outline" />}>
+              <Trans message="Cancel" />
+            </Dialog.CloseButton>
             <Button
-              disabled={!wizard.canContinue}
-              onClick={() =>
-                hasNextStep(wizard.step, wizard.billing)
-                  ? wizard.goNext()
-                  : handleFinish()
-              }
+              disabled={!selectedType}
+              onClick={handleContinue}
+              aria-label={trans({message: 'Continue'})}
             >
               <Trans message="Continue" />
               <ArrowRightIcon data-icon="inline-end" />
@@ -120,33 +66,6 @@ export function CreateProductDialog({
           </Dialog.Footer>
         </Dialog.Content>
       </Dialog.Portal>
-      </Dialog.Root>
-      <AlertDialog.Root
-        open={confirmDiscardOpen}
-        onOpenChange={setConfirmDiscardOpen}
-      >
-        <AlertDialog.Portal>
-          <AlertDialog.Backdrop />
-          <AlertDialog.Content size="sm">
-            <AlertDialog.Header>
-              <AlertDialog.Title>
-                <Trans message="Discard this product?" />
-              </AlertDialog.Title>
-              <AlertDialog.Description>
-                <Trans message="Your progress in this wizard will be lost. This action cannot be undone." />
-              </AlertDialog.Description>
-            </AlertDialog.Header>
-            <AlertDialog.Footer>
-              <AlertDialog.Cancel>
-                <Trans message="Cancel" />
-              </AlertDialog.Cancel>
-              <AlertDialog.Action color="danger" onClick={discardAndClose}>
-                <Trans message="Discard" />
-              </AlertDialog.Action>
-            </AlertDialog.Footer>
-          </AlertDialog.Content>
-        </AlertDialog.Portal>
-      </AlertDialog.Root>
-    </>
+    </Dialog.Root>
   );
 }

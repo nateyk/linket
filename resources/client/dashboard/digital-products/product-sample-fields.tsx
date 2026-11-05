@@ -35,11 +35,13 @@ export function sampleSectionKind(
 
 export function ProductSampleFields({
   kind,
+  productType,
   samples,
   onChange,
   error,
 }: {
   kind: 'audio' | 'pdf';
+  productType?: 'digital' | 'ebook';
   samples: ProductSampleDraft[];
   onChange: (samples: ProductSampleDraft[]) => void;
   error?: string;
@@ -75,6 +77,10 @@ export function ProductSampleFields({
       {kind === 'audio' ? (
         <p className="text-sm text-muted-foreground">
           <Trans message="Short clips buyers can play before purchase. Full tracks stay private." />
+        </p>
+      ) : productType === 'digital' ? (
+        <p className="text-sm text-muted-foreground">
+          <Trans message="Offer a short PDF sample before purchase. Your full product files stay private." />
         </p>
       ) : (
         <p className="text-sm text-muted-foreground">

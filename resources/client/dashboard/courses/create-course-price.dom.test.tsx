@@ -193,3 +193,30 @@ describe('page shell: one h1, and a title that owns the header row', () => {
     expect(bar.getAttribute('aria-label')).toBe('Product setup progress');
   });
 });
+
+describe('course setup customer preview on demand', () => {
+  test('keeps buyer preview hidden until opened, and Escape returns to the editor', async () => {
+    const user = userEvent.setup();
+    mount('/dashboard/items/new/course?billing=free');
+    expect(screen.queryByRole('dialog', {name: 'Customer preview'})).toBeNull();
+    expect(screen.queryByText('Your course title')).toBeNull();
+
+    const preview = screen.getByRole('button', {name: 'Preview'});
+    await user.click(preview);
+    expect(screen.getByRole('dialog', {name: 'Customer preview'})).not.toBeNull();
+    expect(screen.getByText('Your course title')).not.toBeNull();
+
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog', {name: 'Customer preview'})).toBeNull();
+    expect(document.activeElement).toBe(preview);
+  });
+
+  test('previews the current course title without creating a course', async () => {
+    const user = userEvent.setup();
+    mount('/dashboard/items/new/course?billing=paid&price_cents=1000');
+    await typeTitle(user);
+    await user.click(screen.getByRole('button', {name: 'Preview'}));
+    expect(screen.getByText('Ethiopian coffee course')).not.toBeNull();
+    expect(mockPost).not.toHaveBeenCalled();
+  });
+});
