@@ -39,7 +39,7 @@ final class S3ComplianceForecastManifestReader implements ImmutableForecastManif
             || ! str_starts_with($key, $prefix)
             || strlen($key) > 240 || preg_match('#^[a-zA-Z0-9/_\.-]+$#D', $key) !== 1
             || str_contains($key, '..')
-            || ! preg_match('/^[A-Za-z0-9_.~+/=-]{1,512}$/D', $versionId)
+            || ! preg_match('#^[A-Za-z0-9_.~+/=-]{1,512}$#D', $versionId)
             || $days < 365 || $days > 3650
             || $maxBytes < 1024 || $maxBytes > 65536) {
             throw new RuntimeException('Immutable forecast evidence configuration or object reference is invalid.');
