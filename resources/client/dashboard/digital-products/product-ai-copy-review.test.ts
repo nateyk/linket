@@ -33,3 +33,25 @@ describe('creator-reviewed product suggestions', () => {
     expect(form).toContain('<ProductAiCopyReview');
   });
 });
+
+
+describe('copy review accessible and safe error recovery contract', () => {
+  it('keeps labels, stable focus targets, status announcements and keyboard dismissal', () => {
+    const source = fs.readFileSync(
+      path.resolve('resources/client/dashboard/digital-products/product-ai-copy-review.tsx'),
+      'utf8',
+    );
+    expect(source).toContain('aria-labelledby={titleId}');
+    expect(source).toContain('aria-busy={busy}');
+    expect(source).toContain('htmlFor={suggestionId}');
+    expect(source).toContain('aria-describedby={hintId}');
+    expect(source).toContain("event.key === 'Escape'");
+    expect(source).toContain('textareaRef.current?.focus()');
+    expect(source).toContain('triggerRef.current?.focus()');
+    expect(source).toContain('<Textarea');
+    expect(source).toContain('role="alert"');
+    expect(source).toContain('role="status"');
+    expect(source).toContain('status === 429');
+    expect(source).toContain('status === 409');
+  });
+});
