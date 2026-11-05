@@ -29,6 +29,7 @@ export function ProductPricingCard({
   checkoutCancelled,
   checkoutFailed,
   submitting,
+  completed = false,
   onBuy,
   actionRef,
 }: {
@@ -37,6 +38,7 @@ export function ProductPricingCard({
   checkoutCancelled: boolean;
   checkoutFailed: boolean;
   submitting: boolean;
+  completed?: boolean;
   onBuy: () => void;
   actionRef?: Ref<HTMLDivElement>;
 }) {
@@ -66,11 +68,13 @@ export function ProductPricingCard({
             className={cn('w-full', buttonAppearance.className)}
             style={buttonAppearance.style}
             size="lg"
-            disabled={submitting || product.can_buy === false}
+            disabled={submitting || product.can_buy === false || completed}
             onClick={onBuy}
           >
             {isFree ? <ShoppingBagIcon aria-hidden="true" /> : <LockKeyholeIcon aria-hidden="true" />}
-            {product.verification_quota_exhausted ? (
+            {completed && isFree ? (
+              <Trans message="Free order complete" />
+            ) : product.verification_quota_exhausted ? (
               <Trans message="Creator cannot accept additional verified sales right now" />
             ) : product.can_buy === false ? (
               <Trans message="Temporarily unavailable" />
