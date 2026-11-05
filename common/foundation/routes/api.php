@@ -239,6 +239,11 @@ Route::group(['prefix' => 'v1'], function () {
             ->middleware(['auth:sanctum', 'throttle:10,1']);
         Route::get('creator-ai/usage', [\App\CreatorAi\Controllers\CreatorAiUsageController::class, 'show'])
             ->middleware(['auth:sanctum', 'throttle:30,1']);
+        // PR-09: Pro-only storefront appearance preview, never an update route.
+        Route::get('creator-ai/stores/{store}/appearance-preview', [\App\CreatorAi\Controllers\CreatorStorefrontAppearancePreviewController::class, 'show'])
+            ->middleware(['auth:sanctum', 'throttle:20,1']);
+        Route::post('creator-ai/stores/{store}/appearance-revision', [\App\CreatorAi\Controllers\CreatorStorefrontAppearancePreviewController::class, 'verifyRevision'])
+            ->middleware(['auth:sanctum', 'throttle:20,1']);
         Route::get('creator-ai/products/{digitalProduct}/copy-availability', [\App\CreatorAi\Controllers\CreatorProductCopyController::class, 'availability'])
             ->middleware(['auth:sanctum', 'throttle:20,1']);
         Route::post('creator-ai/products/{digitalProduct}/copy-proposals', [\App\CreatorAi\Controllers\CreatorProductCopyController::class, 'propose'])

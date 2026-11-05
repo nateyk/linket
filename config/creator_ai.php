@@ -102,6 +102,10 @@ return [
     'max_orders_per_page' => 20,
     'max_product_results' => 20,
 
+    'storefront_preview' => [
+        'enabled' => env('CREATOR_AI_STOREFRONT_PREVIEW_ENABLED', false),
+    ],
+
     // Extra deployment gate for the first creator-reviewed writing slice.
     // Disabled by default even if account feature flags are enabled.
     'product_copy_provider' => [
