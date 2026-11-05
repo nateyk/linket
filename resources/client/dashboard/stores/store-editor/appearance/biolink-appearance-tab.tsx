@@ -41,7 +41,9 @@ export function Component() {
     <div className="mx-auto flex max-w-2xl flex-col gap-4">
       <SectionHeading
         title={<Trans message="Appearance" />}
-        description={<Trans message="Customize your public storefront, products, and services." />}
+        description={
+          <Trans message="Customize your public storefront, products, and services." />
+        }
       />
       {/* Default (divider list), not separated: this accordion sits inside
           the section's card pane, and separated items would be cards inside
