@@ -14,7 +14,7 @@ import {useTrans} from '@ui/i18n/use-trans';
 import {toast} from '@ui/toast/toast';
 import {isAxiosError} from 'axios';
 import {EyeIcon, GraduationCapIcon, ListChecksIcon, TriangleAlertIcon} from 'lucide-react';
-import {FormEvent, useState} from 'react';
+import {FormEvent, useRef, useState} from 'react';
 import {Link, useNavigate, useSearchParams} from 'react-router';
 import {parseEtbToCents, parseWizardPrefill, priceForBillingMode, type BillingMode} from '../digital-products/product-create-flow';
 import {BillingModePicker} from '../digital-products/billing-mode-picker';
@@ -49,6 +49,7 @@ export function Component() {
   const [errors, setErrors] = useState<Errors>({});
   const [error, setError] = useState<string>();
   const [creating, setCreating] = useState(false);
+  const createInFlight = useRef(false);
   const [creationUncertain, setCreationUncertain] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [openSection, setOpenSection] = useState<string | null>('details');
@@ -78,6 +79,9 @@ export function Component() {
   ];
   const createCourse = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    // A missing response may mean the server already created the Course.
+    // Never repeat a POST in the same form after an uncertain outcome.
+    if (createInFlight.current || creationUncertain) return;
     const next: Errors = {};
     if (!title.trim()) next.title = 'Add a course title.';
     if (!billingMode) next.price = trans({message: 'Choose Free access or Paid.'});
@@ -91,19 +95,25 @@ export function Component() {
     }
     setErrors(next);
     if (Object.keys(next).length) { setOpenSection('details'); document.getElementById(next.title ? 'course-title' : billingMode ? 'course-price' : 'course-billing')?.focus(); return; }
+    createInFlight.current = true;
     setCreating(true); setError(undefined);
     try {
       const response = await apiClient.post('/api/v1/items', {title: title.trim(), description: null, price_cents: isFree ? 0 : Math.round(Number(price) * 100), currency: 'etb', type: 'course'});
-      const created = response.data.data as CreatedProduct;
+      const created = response.data?.data as CreatedProduct | undefined;
+      if (!created || !Number.isSafeInteger(created.id) || created.id <= 0) {
+        // A malformed 2xx response is not proof that the POST did not commit.
+        throw new Error('Course creation response missing a product ID');
+      }
       // The settings PUT binds the COURSE id (courses.{course} route
       // binding), never the product id from the response's top level.
       const courseId = created.course?.id ?? null;
+      const hasValidCourseId = Number.isSafeInteger(courseId) && (courseId ?? 0) > 0;
       // Second step: the course exists now, so settings go along as a
       // best-effort PUT of ONLY the settings subset. A rejected PUT must
       // never re-POST (that would duplicate the course) — the learner is
       // routed into the builder either way and can fix settings there.
       if (hasSettingsContent) {
-        if (courseId == null) {
+        if (!hasValidCourseId) {
           // Should not happen for type=course, but without a course id the
           // settings cannot be saved: warn once, navigate, never re-create.
           toast.danger(trans({message: 'Course created, but some settings could not be saved. You can update them from the course builder.'}));
@@ -121,10 +131,21 @@ export function Component() {
       }
       navigate(`/dashboard/items/${created.id}/course`, {replace: true});
     } catch (reason) {
-      const requestUncertain = isAxiosError(reason) && !reason.response;
+      // Only an actual HTTP rejection confirms that a create POST failed.
+      // Network errors and malformed success payloads require reconciliation.
+      const requestUncertain = !isAxiosError(reason) || !reason.response;
       setCreationUncertain(requestUncertain);
-      setError(requestUncertain ? 'We could not confirm whether the course was created. Check My Items before trying again.' : isAxiosError<{message?: string}>(reason) ? reason.response?.data?.message || 'Unable to create the course. Please try again.' : 'Unable to create the course. Please try again.');
-    } finally { setCreating(false); }
+      setError(
+        requestUncertain
+          ? trans({message: 'We could not confirm whether the course was created. Check My Items before trying again.'})
+          : isAxiosError<{message?: string}>(reason)
+            ? reason.response?.data?.message || trans({message: 'Unable to create the course. Please try again.'})
+            : trans({message: 'Unable to create the course. Please try again.'}),
+      );
+    } finally {
+      createInFlight.current = false;
+      setCreating(false);
+    }
   };
   const previewPrice = isFree ? trans({message: 'Free'}) : `ETB ${(Number(price) || 0).toFixed(2)}`;
   // The settings panel mounts CroppedCover, whose upload hook reads the
@@ -156,10 +177,10 @@ export function Component() {
           <EyeIcon className="size-4" aria-hidden="true" />
           <span className="max-sm:hidden"><Trans message="Preview" /></span>
         </Button>
-        {creationUncertain && <Button variant="outline" size="sm" aria-label={trans({message: 'Check My Items'})} render={<Link to="/dashboard/items" />}><span className="max-sm:hidden"><Trans message="Check My Items" /></span></Button>}<Button size="sm" type="submit" form="course-create-form" aria-label={creating ? trans({message: 'Creating course...'}) : trans({message: 'Create course'})} disabled={creating}>{creating ? <Spinner data-icon="inline-start" /> : <GraduationCapIcon className="size-4" data-icon="inline-start" />}<span className="max-sm:hidden">{creating ? <Trans message="Creating course..." /> : <Trans message="Create course" />}</span></Button></div>
+        {creationUncertain && <Button variant="outline" size="sm" aria-label={trans({message: 'Check My Items'})} render={<Link to="/dashboard/items" />}><Trans message="Check My Items" /></Button>}<Button size="sm" type="submit" form="course-create-form" aria-label={creating ? trans({message: 'Creating course...'}) : trans({message: 'Create course'})} disabled={creating || creationUncertain}>{creating ? <Spinner data-icon="inline-start" /> : <GraduationCapIcon className="size-4" data-icon="inline-start" />}<span className="max-sm:hidden">{creating ? <Trans message="Creating course..." /> : <Trans message="Create course" />}</span></Button></div>
     </DashboardLayout.SectionHeader>
     <DashboardLayout.SectionContent className="overflow-y-auto"><form id="course-create-form" onSubmit={createCourse} className="mx-auto w-full max-w-3xl py-4 sm:py-5">
-      {error && <Alert.Root variant="destructive" fillStyle="subtleFill" className="mb-5"><TriangleAlertIcon /><Alert.Description>{error}</Alert.Description></Alert.Root>}
+      {error && <Alert.Root role="alert" variant="destructive" fillStyle="subtleFill" className="mb-5"><TriangleAlertIcon /><Alert.Description>{error}</Alert.Description></Alert.Root>}
       {/* Focused Course setup column; customer preview opens only on request. */}
       <div className="flex min-w-0 flex-col gap-5">
         <div className="flex min-w-0 flex-col gap-4">

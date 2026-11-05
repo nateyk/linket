@@ -284,6 +284,35 @@ test('invalid upload is announced and removable without submitting a product', a
   await expect(files.getByRole('alert')).toHaveCount(0);
 });
 
+test('Course creation with an unknown network result never issues a second POST', async ({page}) => {
+  test.skip(
+    process.env.LINKET_ISOLATED_E2E !== '1',
+    'Requires disposable test database and synthetic creator',
+  );
+  await page.setViewportSize({width: 360, height: 800});
+  await loginAsSeededCreator(page);
+  let attempts = 0;
+  await page.route('**/api/v1/items', async route => {
+    if (route.request().method() === 'POST') {
+      attempts++;
+      await route.abort('failed');
+    } else {
+      await route.continue();
+    }
+  });
+
+  await page.goto('/dashboard/items/new/course?billing=free');
+  await page.getByRole('textbox', {name: 'Course title'}).fill('Synthetic QA course');
+  await page.getByRole('button', {name: 'Create course'}).click();
+  await expect(page.getByRole('alert')).toContainText('We could not confirm whether the course was created.');
+  await expect(page.getByRole('button', {name: 'Create course'})).toBeDisabled();
+  await expect(page.getByRole('link', {name: 'Check My Items'})).toBeVisible();
+  await page.locator('#course-create-form').evaluate(element => {
+    (element as HTMLFormElement).requestSubmit();
+  });
+  expect(attempts).toBe(1);
+});
+
 test('mobile curriculum returns to unsaved lesson without a false discard prompt', async ({
   page,
 }, testInfo) => {
