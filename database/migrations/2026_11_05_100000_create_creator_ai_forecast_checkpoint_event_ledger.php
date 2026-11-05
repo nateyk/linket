@@ -34,6 +34,8 @@ return new class extends Migration
             $table->char('event_digest', 64);
             $table->string('key_id', 32);
             $table->char('signature_hmac_sha256', 64);
+            $table->string('proof_key_id', 32);
+            $table->string('proof_signature_base64', 128);
             $table->unsignedInteger('verified_sales_count');
             $table->unsignedBigInteger('verified_gross_cents');
             $table->timestamp('source_watermark_at');

@@ -17,6 +17,18 @@ function signedCheckpointFixture(): array
     $workspaceId = (int) $workspace->id;
 
     config()->set('creator_ai.forecast_ingestion.enabled', true);
+    config()->set('creator_ai.forecast_ingestion.public_keys', [
+        'checkout_event_stream' => [
+            'v1' => 'base64:'.base64_encode(sodium_crypto_sign_publickey(
+                sodium_crypto_sign_seed_keypair(str_repeat('c', 32))
+            )),
+        ],
+        'verify_et_reconciliation' => [
+            'v1' => 'base64:'.base64_encode(sodium_crypto_sign_publickey(
+                sodium_crypto_sign_seed_keypair(str_repeat('d', 32))
+            )),
+        ],
+    ]);
     config()->set('creator_ai.forecast_ingestion.signers', [
         'checkout_event_stream' => [
             'v1' => [
@@ -60,8 +72,17 @@ function signedForecastCheckpoint(
         'watermark_at' => $watermark->format('Y-m-d\TH:i:s\Z'),
         'signed_at' => CarbonImmutable::now('UTC')->format('Y-m-d\TH:i:s\Z'),
         'key_id' => 'v1',
+        'proof_key_id' => 'v1',
         ...$overrides,
     ];
+
+    $seed = $source === 'checkout_event_stream'
+        ? str_repeat('c', 32) : str_repeat('d', 32);
+    $privateKey = sodium_crypto_sign_secretkey(sodium_crypto_sign_seed_keypair($seed));
+    $event['proof_signature'] = base64_encode(sodium_crypto_sign_detached(
+        SignedForecastCheckpointIngestor::provenancePayload($event),
+        $privateKey
+    ));
 
     $registration = config('creator_ai.forecast_ingestion.signers.'.$source.'.'.$event['key_id']);
     $secret = base64_decode(substr($registration['key'], 7), true);
@@ -288,4 +309,48 @@ test('a failed projection update rolls back an appended event and cursor in one 
 
     expect(DB::table('creator_ai_forecast_checkpoint_events')->where('workspace_id', $workspace)->count())->toBe(1)
         ->and(DB::table('creator_ai_forecast_checkpoint_streams')->where('workspace_id', $workspace)->value('last_sequence'))->toBe(1);
+});
+
+
+test('an independent reviewer can verify an event with only its pinned Ed25519 public key', function () {
+    [$workspace, $ingestor] = signedCheckpointFixture();
+    $envelope = signedForecastCheckpoint($workspace);
+    $key = config('creator_ai.forecast_ingestion.public_keys.checkout_event_stream.v1');
+    $publicKey = base64_decode(substr($key, 7), true);
+    expect(sodium_crypto_sign_verify_detached(
+        base64_decode($envelope['proof_signature'], true),
+        SignedForecastCheckpointIngestor::provenancePayload($envelope),
+        $publicKey
+    ))->toBeTrue();
+
+    expect($ingestor->ingest($envelope)['status'])->toBe('recorded');
+    $stored = DB::table('creator_ai_forecast_checkpoint_events')
+        ->where('workspace_id', $workspace)->first();
+    expect($stored->proof_signature_base64)->toBe($envelope['proof_signature'])
+        ->and($stored->proof_key_id)->toBe('v1');
+});
+
+test('a valid HMAC cannot substitute for a separately signed source proof', function () {
+    [$workspace, $ingestor] = signedCheckpointFixture();
+    $event = signedForecastCheckpoint($workspace);
+    $event['verified_gross_cents'] = 23000;
+
+    // Attack model: an internal HMAC operator can recompute its own HMAC but
+    // cannot forge the external Ed25519 private key signature.
+    $secret = str_repeat('a', 32);
+    $event['signature'] = hash_hmac('sha256',
+        SignedForecastCheckpointIngestor::canonicalPayload($event), $secret);
+
+    expect(fn () => $ingestor->ingest($event))->toThrow(RuntimeException::class);
+    expect(DB::table('creator_ai_forecast_checkpoint_events')->count())->toBe(0);
+});
+
+test('checkpoint signing public keys must be independent for each source', function () {
+    [$workspace, $ingestor] = signedCheckpointFixture();
+    $event = signedForecastCheckpoint($workspace);
+    config()->set('creator_ai.forecast_ingestion.public_keys.verify_et_reconciliation.v1',
+        config('creator_ai.forecast_ingestion.public_keys.checkout_event_stream.v1'));
+
+    expect(fn () => $ingestor->ingest($event))->toThrow(RuntimeException::class);
+    expect(DB::table('creator_ai_forecast_checkpoint_events')->count())->toBe(0);
 });

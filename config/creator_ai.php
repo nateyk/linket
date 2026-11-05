@@ -45,6 +45,16 @@ return [
     // completeness of any upstream event stream.
     'forecast_ingestion' => [
         'enabled' => env('CREATOR_AI_FORECAST_INGESTION_ENABLED', false),
+        // Pinned public keys of independently managed Ed25519 producers.
+        // Private keys must never enter Linket deployment or the database.
+        'public_keys' => [
+            'checkout_event_stream' => [
+                'v1' => env('CREATOR_AI_FORECAST_CHECKOUT_ED25519_PUBLIC_V1'),
+            ],
+            'verify_et_reconciliation' => [
+                'v1' => env('CREATOR_AI_FORECAST_RECONCILIATION_ED25519_PUBLIC_V1'),
+            ],
+        ],
         'signers' => [
             'checkout_event_stream' => [
                 'v1' => [

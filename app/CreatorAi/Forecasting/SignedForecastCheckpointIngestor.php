@@ -28,6 +28,7 @@ final class SignedForecastCheckpointIngestor
         'previous_digest', 'observed_on', 'verified_sales_count',
         'verified_gross_cents', 'revision', 'supersedes_digest',
         'backfill_reason', 'watermark_at', 'signed_at', 'key_id',
+        'proof_key_id', 'proof_signature',
     ];
 
     /**
@@ -42,6 +43,29 @@ final class SignedForecastCheckpointIngestor
         foreach (self::FIELDS as $field) {
             if (! array_key_exists($field, $event)) {
                 throw new InvalidArgumentException('Signed checkpoint field is missing.');
+            }
+            $payload[$field] = $event[$field];
+        }
+
+        return json_encode(
+            $payload,
+            JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE
+        );
+    }
+
+    /**
+     * Public, reproducible source-origin signing bytes. An auditor holding a
+     * pinned Ed25519 PUBLIC key can verify this without any HMAC secret.
+     * The signature itself is excluded, while the proof key ID is covered.
+     *
+     * @param array<string,mixed> $event
+     */
+    public static function provenancePayload(array $event): string
+    {
+        $payload = [];
+        foreach (array_slice(self::FIELDS, 0, -1) as $field) {
+            if (! array_key_exists($field, $event)) {
+                throw new InvalidArgumentException('Source proof field is missing.');
             }
             $payload[$field] = $event[$field];
         }
@@ -89,6 +113,28 @@ final class SignedForecastCheckpointIngestor
         if (! is_array($allowedWorkspaces)
             || ! in_array($workspace, $allowedWorkspaces, true)) {
             throw new RuntimeException('Checkpoint signer is not authorized for this workspace.');
+        }
+
+        // Producer-private Ed25519 keys must live OUTSIDE Linket. The
+        // application stores only pinned public keys for independent proof
+        // verification. This authenticates a signed record, not completeness
+        // of provider event delivery or provider-origin signatures.
+        if (! function_exists('sodium_crypto_sign_verify_detached')) {
+            throw new RuntimeException('Ed25519 verification is unavailable.');
+        }
+        $publicKeys = config('creator_ai.forecast_ingestion.public_keys', []);
+        $checkoutPublicKey = $this->decodePublicKey($publicKeys['checkout_event_stream']['v1'] ?? null);
+        $reconciliationPublicKey = $this->decodePublicKey($publicKeys['verify_et_reconciliation']['v1'] ?? null);
+        if (hash_equals($checkoutPublicKey, $reconciliationPublicKey)) {
+            throw new RuntimeException('Independent checkpoint sources cannot reuse a public signing key.');
+        }
+        $sourcePublicKey = $this->decodePublicKey($publicKeys[$source][$event['proof_key_id']] ?? null);
+        $proof = base64_decode($event['proof_signature'], true);
+        if ($proof === false || strlen($proof) !== SODIUM_CRYPTO_SIGN_BYTES
+            || ! sodium_crypto_sign_verify_detached(
+                $proof, self::provenancePayload($event), $sourcePublicKey
+            )) {
+            throw new RuntimeException('External checkpoint source signature verification failed.');
         }
 
         $expectedSignature = hash_hmac('sha256', self::canonicalPayload($event), $secret);
@@ -184,6 +230,8 @@ final class SignedForecastCheckpointIngestor
                 'event_digest' => $digest,
                 'key_id' => $event['key_id'],
                 'signature_hmac_sha256' => $event['signature'],
+                'proof_key_id' => $event['proof_key_id'],
+                'proof_signature_base64' => $event['proof_signature'],
                 'verified_sales_count' => $event['verified_sales_count'],
                 'verified_gross_cents' => $event['verified_gross_cents'],
                 'source_watermark_at' => $event['watermark_at'],
@@ -260,6 +308,10 @@ final class SignedForecastCheckpointIngestor
             || ! is_string($event['key_id'])
             || preg_match('/^[a-zA-Z0-9_-]{1,32}$/D', $event['key_id']) !== 1
             || ! is_string($event['signature']) || ! $this->isDigest($event['signature'])
+            || ! is_string($event['proof_key_id'])
+            || preg_match('/^[A-Za-z0-9_-]{1,32}$/D', $event['proof_key_id']) !== 1
+            || ! is_string($event['proof_signature'])
+            || strlen($event['proof_signature']) > 128
             || ! $this->validUtcTimestamp($event['watermark_at'])
             || ! $this->validUtcTimestamp($event['signed_at'])
             || ! $this->validUtcDay($event['observed_on'])) {
@@ -285,6 +337,19 @@ final class SignedForecastCheckpointIngestor
         }
         $stamp = DateTimeImmutable::createFromFormat('!Y-m-d\TH:i:s\Z', $value, new DateTimeZone('UTC'));
         return $stamp !== false && $stamp->format('Y-m-d\TH:i:s\Z') === $value;
+    }
+
+    private function decodePublicKey(mixed $encoded): string
+    {
+        if (! is_string($encoded) || ! str_starts_with($encoded, 'base64:')) {
+            throw new RuntimeException('Checkpoint Ed25519 public key is not provisioned.');
+        }
+        $key = base64_decode(substr($encoded, 7), true);
+        if ($key === false || strlen($key) !== SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES) {
+            throw new RuntimeException('Checkpoint Ed25519 public key is invalid.');
+        }
+
+        return $key;
     }
 
     private function decodeSecret(mixed $encoded): string
