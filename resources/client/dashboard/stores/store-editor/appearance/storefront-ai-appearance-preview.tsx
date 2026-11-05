@@ -60,6 +60,7 @@ export function StorefrontAiAppearancePreview() {
   useEffect(() => {
     if (appearanceIsDirty) {
       requestVersion.current++;
+      setLoading(false);
       setPreview(undefined);
     }
   }, [appearanceIsDirty]);
