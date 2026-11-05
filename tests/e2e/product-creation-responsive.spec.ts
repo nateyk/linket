@@ -284,6 +284,89 @@ test('invalid upload is announced and removable without submitting a product', a
   await expect(files.getByRole('alert')).toHaveCount(0);
 });
 
+async function mockSyntheticDraftEdit(page: Page, productId: number) {
+  const product = {
+    id: productId,
+    title: 'Synthetic creator lifecycle guide',
+    description: 'Isolated browser evidence',
+    price_cents: 1500,
+    currency: 'etb',
+    status: 'draft',
+    type: 'digital',
+    cover: null,
+    cover_file_entry_id: null,
+    files: [{id: 551, name: 'guide.pdf', file_size: 2000, extension: 'pdf'}],
+    samples: [],
+    biolink_ids: [],
+  };
+  let updates = 0;
+  await page.route(`**/api/v1/items/${productId}`, async route => {
+    if (route.request().method() === 'PUT') updates++;
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({data: product}),
+    });
+  });
+  return {get updates() {return updates;}};
+}
+
+test('a saved draft reports submission validation failure and focuses the invalid field', async ({page}) => {
+  test.skip(
+    process.env.LINKET_ISOLATED_E2E !== '1',
+    'Uses isolated creator and synthetic intercepted API responses',
+  );
+  await page.setViewportSize({width: 360, height: 800});
+  await loginAsSeededCreator(page);
+  const id = 999997;
+  const draft = await mockSyntheticDraftEdit(page, id);
+  let submissionPosts = 0;
+  await page.route(`**/api/v1/items/${id}/submit`, async route => {
+    submissionPosts++;
+    await route.fulfill({
+      status: 422,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        message: 'Cannot submit synthetic draft',
+        errors: {title: ['Please correct the title before review.']},
+      }),
+    });
+  });
+  await page.goto(`/dashboard/items/${id}/edit`);
+  await expect(page.getByRole('heading', {name: /Edit digital product/i})).toBeVisible();
+  await page.getByRole('button', {name: 'Submit for review'}).click();
+  await expect(page.getByRole('alert').filter({hasText: 'Draft saved, but submission failed.'})).toBeVisible();
+  await expect(page.getByText('Please correct the title before review.')).toBeVisible();
+  await expect(page.locator('#product-title')).toBeFocused();
+  expect(draft.updates).toBe(1);
+  expect(submissionPosts).toBe(1);
+});
+
+test('unknown submission cannot silently submit a saved draft twice', async ({page}) => {
+  test.skip(
+    process.env.LINKET_ISOLATED_E2E !== '1',
+    'Uses isolated creator and synthetic intercepted API responses',
+  );
+  await loginAsSeededCreator(page);
+  const id = 999996;
+  const draft = await mockSyntheticDraftEdit(page, id);
+  let submissionPosts = 0;
+  await page.route(`**/api/v1/items/${id}/submit`, async route => {
+    submissionPosts++;
+    await route.abort('failed');
+  });
+  await page.goto(`/dashboard/items/${id}/edit`);
+  await page.getByRole('button', {name: 'Submit for review'}).click();
+  await expect(page.getByRole('alert').filter({hasText: 'Draft saved, but we could not confirm submission.'})).toBeVisible();
+  await expect(page.getByRole('button', {name: 'Submit for review'})).toBeDisabled();
+  await expect(page.getByRole('link', {name: 'Check My Items'})).toBeVisible();
+  await page.getByRole('button', {name: 'Submit for review'}).evaluate(button => {
+    button.dispatchEvent(new MouseEvent('click', {bubbles: true}));
+  });
+  expect(draft.updates).toBe(1);
+  expect(submissionPosts).toBe(1);
+});
+
 test('Course creation with an unknown network result never issues a second POST', async ({page}) => {
   test.skip(
     process.env.LINKET_ISOLATED_E2E !== '1',
