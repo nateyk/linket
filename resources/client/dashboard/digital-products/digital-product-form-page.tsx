@@ -480,6 +480,7 @@ function DigitalProductForm() {
           saveResponseUncertain = true;
           throw new Error('Saved product response missing an ID');
         }
+        actions.confirmPersisted(state);
         setProduct(saved);
 
         if (submitAfterSave) {
@@ -550,6 +551,8 @@ function DigitalProductForm() {
     },
     [
       biolinkIds,
+      state,
+      actions.confirmPersisted,
       creationUncertain,
       submissionRecovery,
       convertToEtb,

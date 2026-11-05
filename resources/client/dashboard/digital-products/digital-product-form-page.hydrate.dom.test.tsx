@@ -13,7 +13,7 @@
 import {DashboardLayoutContextProvider} from '@common/ui/dashboard/dashboard-layout-context';
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
 import {AxiosError} from 'axios';
-import {act, render, screen, waitFor} from '@testing-library/react';
+import {act, fireEvent, render, screen, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {createMemoryRouter, RouterProvider} from 'react-router';
 import {beforeAll, beforeEach, expect, test, vi} from 'vitest';
@@ -200,7 +200,7 @@ async function loadProduct(product = serverProduct) {
 
 test('failed submission after a confirmed draft save keeps the save and field errors visible', async () => {
   const user = userEvent.setup();
-  h.updatedProduct = {...serverProduct, status: 'draft'};
+  h.updatedProduct = {...serverProduct, status: 'draft', title: 'Edited guide'};
   h.submitError = new AxiosError(
     'Synthetic rejected submit',
     'ERR_BAD_REQUEST',
@@ -215,10 +215,13 @@ test('failed submission after a confirmed draft save keeps the save and field er
     },
   );
   mount();
-  await loadProduct({...serverProduct, status: 'draft'});
+  const titleInput = await loadProduct({...serverProduct, status: 'draft'});
+  fireEvent.change(titleInput, {target: {value: 'Edited guide'}});
   await user.click(screen.getByRole('button', {name: 'Submit for review'}));
 
   expect(await screen.findByText('Draft saved, but submission failed. Fix the issue and try again.')).toBeTruthy();
+  expect(await screen.findByText('Draft saved')).toBeTruthy();
+  expect(screen.queryByText('Unsaved changes')).toBeNull();
   expect(await screen.findByText('Please correct the title before review.')).toBeTruthy();
   expect(h.putCalls).toBe(1);
   expect(h.submitCalls).toBe(1);

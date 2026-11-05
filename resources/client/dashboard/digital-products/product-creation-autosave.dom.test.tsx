@@ -158,6 +158,8 @@ type Creation = ReturnType<typeof useProductCreation>;
 
 let ctxActions: Creation['actions'] | null = null;
 let latestAutoSaveState: Creation['autoSaveState'] | null = null;
+let latestFormState: Creation['state'] | null = null;
+let latestDirty: Creation['dirty'] | null = null;
 
 /**
  * Test 1 only needs the debounce to be TRIGGERED when the form becomes dirty.
@@ -166,7 +168,7 @@ let latestAutoSaveState: Creation['autoSaveState'] | null = null;
  * this harness deliberately does NOT re-implement that condition.
  */
 function Trigger() {
-  const {actions, dirty, autoSaveState} = useProductCreation();
+  const {actions, dirty, autoSaveState, state} = useProductCreation();
   useEffect(() => {
     if (dirty) actions.autoSave();
   }, [dirty, actions.autoSave]);
@@ -174,6 +176,8 @@ function Trigger() {
   // context (all actions are stable callbacks; the `actions` object is not).
   ctxActions = actions;
   latestAutoSaveState = autoSaveState;
+  latestFormState = state;
+  latestDirty = dirty;
   return null;
 }
 
@@ -260,6 +264,29 @@ test('autosave status reflects confirmed success, failed write, and recovery', a
   await advance(1600);
   expect(h.put).toHaveBeenCalledTimes(2);
   expect(latestAutoSaveState).toBe('saved');
+});
+
+test('manual confirmation clears only the saved revision and cancels its queued autosave', async () => {
+  vi.useFakeTimers();
+  mountProvider();
+  act(() => ctxActions!.hydrate({...DRAFT_FORM}));
+  act(() => ctxActions!.setTitle('Confirmed edit'));
+  const confirmedSnapshot = latestFormState!;
+  expect(latestDirty).toBe(true);
+
+  act(() => ctxActions!.confirmPersisted(confirmedSnapshot));
+  expect(latestDirty).toBe(false);
+  expect(latestAutoSaveState).toBe('saved');
+  await advance(1600);
+  expect(h.put).not.toHaveBeenCalled();
+
+  act(() => ctxActions!.setTitle('Newer local edit'));
+  expect(latestDirty).toBe(true);
+  act(() => ctxActions!.confirmPersisted(confirmedSnapshot));
+  expect(latestDirty).toBe(true);
+  expect(latestAutoSaveState).toBe('idle');
+  await advance(1600);
+  expect(h.put).toHaveBeenCalledTimes(1);
 });
 
 test('saves edits made while an earlier autosave is in flight without overlapping writes', async () => {

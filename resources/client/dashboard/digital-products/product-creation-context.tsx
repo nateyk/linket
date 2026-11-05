@@ -68,6 +68,7 @@ export interface ProductCreationActions {
   clear: () => void;
   setDirty: (dirty: boolean) => void;
   autoSave: () => void;
+  confirmPersisted: (snapshot: ProductFormState) => void;
 }
 
 const EMPTY_STATE: ProductFormState = {
@@ -256,6 +257,16 @@ export function ProductCreationProvider({
     autoSaveRef.current();
   }, []);
 
+  const confirmPersisted = useCallback((snapshot: ProductFormState) => {
+    // Manual Save can finish after further user edits. Only the exact
+    // submitted state may be acknowledged; newer edits must remain dirty.
+    if (mounted.current && latest.current.state === snapshot) {
+      autoSaveRef.current.cancel();
+      setDirty(false);
+      setAutoSaveState('saved');
+    }
+  }, []);
+
   const value = useMemo(
     () => ({
       state,
@@ -274,6 +285,7 @@ export function ProductCreationProvider({
         clear,
         setDirty,
         autoSave,
+        confirmPersisted,
       },
       billing: prefill?.billing ?? null,
     }),
@@ -293,6 +305,7 @@ export function ProductCreationProvider({
       clear,
       setDirty,
       autoSave,
+      confirmPersisted,
       prefill,
     ],
   );
