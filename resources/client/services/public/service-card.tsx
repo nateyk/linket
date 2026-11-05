@@ -5,7 +5,7 @@ import {
   resolveBiolinkButtonAppearance,
 } from '@app/short-links/renderers/biolink-renderer/biolink-appearance';
 import {Badge} from '@shadcn/badge/badge';
-import {Button} from '@shadcn/button/button';
+import {buttonVariants} from '@shadcn/button/button';
 import {message} from '@ui/i18n/message';
 import {Trans} from '@ui/i18n/trans';
 import {useTrans} from '@ui/i18n/use-trans';
@@ -77,11 +77,10 @@ export function ServiceCard({
         )
       }
       action={
-        <Button
-          nativeButton={false}
-          size="sm"
-          variant="ghost"
+        <a
+          href={service.public_url}
           className={cn(
+            buttonVariants({variant: 'ghost', size: 'sm'}),
             buttonAppearance.className,
             'min-h-9 pointer-coarse:min-h-11',
           )}
@@ -89,10 +88,9 @@ export function ServiceCard({
           aria-label={trans(
             message('View :title', {values: {title: service.title}}),
           )}
-          render={<a href={service.public_url} />}
         >
           <Trans message="View" />
-        </Button>
+        </a>
       }
       imageFallback={fallback}
       style={{boxShadow: buttonAppearance.style.boxShadow}}
