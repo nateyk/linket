@@ -26,9 +26,22 @@ grep -Fq 'test-release-gates.sh' "$ci"
 # Cancellation must skip the final join, rather than leaving an obsolete
 # queued verification job blocking the next PR run.
 grep -Fq 'if: ${{ always() && !cancelled() }}' "$ci"
-# CI PR checks must run without requiring an optional third-party runner fleet.
-test "$(grep -cF 'runs-on: ${{ github.event_name == ' "$ci")" -eq 5
-grep -Fq 'group: ci-v2-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}' "$ci"
+# All five required CI jobs must run on available disposable GitHub-hosted
+# runners. Never regress to an optional runner fleet or bypass verification.
+test "$(grep -cE '^[[:space:]]+runs-on: ubuntu-latest[[:space:]]*
+grep -Fq 'test-release-artifact.sh' "$ci"
+grep -Fq 'test-resolve-verified-ci.sh' "$ci"
+grep -Fq 'bash scripts/release/build-release-artifact.sh' "$ci"
+grep -Fq 'bash deploy/verify-release-artifact.sh "${ARTIFACT_NAME}.tar.gz" "$SHA"' "$ci"
+! grep -Fq 'tar -czf' "$ci"
+grep -Fq '${{ env.ARTIFACT_NAME }}.tar.gz' "$ci"
+! grep -Fq '            linket-*.tar.gz' "$ci"
+! grep -Fq 'continue-on-error: true' "$ci"
+echo "PASS: fail-closed release controls static contract"
+ "$ci")" -eq 5
+! grep -Eq '^[[:space:]]+runs-on: .*runzumi' "$ci"
+# Preserve SHA-scoped cancellation for main, without dropping the PR number.
+grep -Fq 'group: ci-v2-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}' "$ci"
 grep -Fq 'test-release-artifact.sh' "$ci"
 grep -Fq 'test-resolve-verified-ci.sh' "$ci"
 grep -Fq 'bash scripts/release/build-release-artifact.sh' "$ci"
