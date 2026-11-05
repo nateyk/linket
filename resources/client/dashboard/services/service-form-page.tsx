@@ -1,7 +1,6 @@
 import {apiClient} from '@common/http/query-client';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {FileUploadProvider} from '@common/uploads/uploader/file-upload-provider';
-import {Accordion} from '@shadcn/accordion/accordion';
 import {Alert} from '@shadcn/alert/alert';
 import {AlertDialog} from '@shadcn/alert-dialog/alert-dialog';
 import {Badge} from '@shadcn/badge/badge';
@@ -18,6 +17,10 @@ import {useTrans} from '@ui/i18n/use-trans';
 import {toast} from '@ui/toast/toast';
 import {
   ArrowLeftIcon,
+  ArrowRightIcon,
+  ChevronLeftIcon,
+  MonitorIcon,
+  SmartphoneIcon,
   CircleAlertIcon,
   CircleHelpIcon,
   EyeIcon,
@@ -45,7 +48,7 @@ import {ServiceContactChannelsField} from './service-form/service-contact-channe
 import {ServiceDescriptionEditor} from './service-form/service-description-editor';
 import {ServiceFaqsField} from './service-form/service-faqs-field';
 import {ServiceFormField} from './service-form/service-form-field';
-import {ServiceFormProgress} from './service-form/service-form-progress';
+import {ServiceBuilderSteps, SERVICE_STEP_ORDER, type ServiceBuilderStepId} from './service-form/service-builder-steps';
 import {ServiceFormSection, type ServiceFormSectionId} from './service-form/service-form-section';
 import {ServiceGalleryField} from './service-form/service-gallery-field';
 import {ServicePackagesField} from './service-form/service-packages-field';
@@ -63,13 +66,16 @@ type CategoryOption = {
 
 type CategoriesResponse = {data?: CategoryOption[]};
 
-const SECTION_ORDER: ServiceFormSectionId[] = [
-  'basics',
-  'media',
-  'packages',
-  'faq',
-  'contact',
-];
+function stepForSection(section: ServiceFormSectionId): ServiceBuilderStepId {
+  if (section === 'basics') return 'details';
+  if (section === 'faq' || section === 'contact') return 'settings';
+  return section;
+}
+
+function headingForStep(step: ServiceBuilderStepId): string {
+  const section = step === 'details' ? 'basics' : step === 'settings' ? 'faq' : step;
+  return `service-step-${section}-heading`;
+}
 
 function sectionForField(field: string): ServiceFormSectionId | null {
   if (field.startsWith('packages')) return 'packages';
@@ -124,9 +130,8 @@ function ServiceFormPage() {
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string>();
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [openSection, setOpenSection] = useState<ServiceFormSectionId | ''>(
-    'basics',
-  );
+  const [activeStep, setActiveStep] = useState<ServiceBuilderStepId>('details');
+  const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [announcement, setAnnouncement] = useState('');
@@ -207,15 +212,48 @@ function ServiceFormPage() {
 
   const requiredSections = useMemo(
     () => ({
-      basics: !!form.title.trim() && !!form.short_description.trim(),
+      basics: !!form.title.trim(),
       media: !!form.cover_url,
       packages: namedPackages.length > 0,
     }),
     [form.title, form.short_description, form.cover_url, namedPackages],
   );
 
-  const completedRequired = Object.values(requiredSections).filter(Boolean)
-    .length;
+  const completedSteps: Record<ServiceBuilderStepId, boolean> = {
+    details: requiredSections.basics,
+    media: requiredSections.media || form.gallery.length > 0 || !!form.video_url.trim() || !!form.live_demo_url.trim(),
+    packages: requiredSections.packages,
+    settings: form.faqs.some(faq => !!faq.question.trim() || !!faq.answer.trim())
+      || form.contact_channels.some(channel => !!channel.value.trim()),
+  };
+
+  const activeStepIndex = SERVICE_STEP_ORDER.indexOf(activeStep);
+  const previousStep = SERVICE_STEP_ORDER[activeStepIndex - 1];
+  const nextStep = SERVICE_STEP_ORDER[activeStepIndex + 1];
+
+  const changeStep = (step: ServiceBuilderStepId) => {
+    setActiveStep(step);
+    setAnnouncement(trans({
+      message: 'Step :current of :total',
+      values: {current: SERVICE_STEP_ORDER.indexOf(step) + 1, total: SERVICE_STEP_ORDER.length},
+    }));
+    requestAnimationFrame(() => {
+      // Switching steps starts at the top of the editor, not at the previous
+      // panel's rich-text editor. The dashboard has its own scroll container;
+      // scrolling the document or using scrollIntoView can target the wrong
+      // ancestor, especially with the sticky mobile app shell.
+      const navigation = document.getElementById('service-builder-steps');
+      let ancestor = navigation?.parentElement;
+      while (ancestor) {
+        const overflow = window.getComputedStyle(ancestor).overflowY;
+        if (/(auto|scroll)/.test(overflow) && ancestor.scrollHeight > ancestor.clientHeight) {
+          ancestor.scrollTop = 0;
+        }
+        ancestor = ancestor.parentElement;
+      }
+      document.getElementById(headingForStep(step))?.focus({preventScroll: true});
+    });
+  };
 
   const sectionError = (id: ServiceFormSectionId) =>
     Object.keys(fieldErrors).some(
@@ -226,7 +264,7 @@ function ServiceFormPage() {
     const firstField = Object.keys(errors)[0];
     if (!firstField) return;
     const section = sectionForField(firstField);
-    if (section) setOpenSection(section);
+    if (section) setActiveStep(stepForSection(section));
     requestAnimationFrame(() => {
       document.getElementById(firstField)?.focus();
     });
@@ -239,7 +277,7 @@ function ServiceFormPage() {
       if (savingRef.current || mutationUncertain.current) return;
       if (statusOverride === 'published' && !form.title.trim()) {
         setFieldErrors({title: trans({message: 'A title is required.'})});
-        setOpenSection('basics');
+        setActiveStep('details');
         requestAnimationFrame(() =>
           document.getElementById('title')?.focus(),
         );
@@ -323,17 +361,18 @@ function ServiceFormPage() {
       }
 
       if (event.altKey && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+        // Let editable controls and selects retain their native Alt shortcuts.
+        if (event.target instanceof HTMLElement
+          && event.target.closest('input, textarea, select, [contenteditable], [role="combobox"]')) {
+          return;
+        }
         event.preventDefault();
-        setOpenSection(current => {
-          const index = Math.max(
-            0,
-            SECTION_ORDER.indexOf(current as ServiceFormSectionId),
-          );
-          const nextIndex =
-            event.key === 'ArrowDown'
-              ? Math.min(SECTION_ORDER.length - 1, index + 1)
-              : Math.max(0, index - 1);
-          return SECTION_ORDER[nextIndex];
+        setActiveStep(current => {
+          const index = SERVICE_STEP_ORDER.indexOf(current);
+          const nextIndex = event.key === 'ArrowDown'
+            ? Math.min(SERVICE_STEP_ORDER.length - 1, index + 1)
+            : Math.max(0, index - 1);
+          return SERVICE_STEP_ORDER[nextIndex];
         });
       }
     };
@@ -386,7 +425,7 @@ function ServiceFormPage() {
           {isEditing ? (
             <Trans message="Edit service" />
           ) : (
-            <Trans message="New service" />
+            <Trans message="Create a service" />
           )}
         </span>
         <Badge
@@ -542,7 +581,7 @@ function ServiceFormPage() {
       {renderHeader(renderActions())}
 
       <DashboardLayout.SectionContent className="overflow-y-auto">
-        <div className="mx-auto w-full max-w-4xl py-4 sm:py-5">
+        <div className="mx-auto w-full max-w-6xl py-4 sm:py-5">
           {creationUncertain && (
             <Alert.Root role="alert" variant="warning" fillStyle="subtleFill" className="mb-5">
               <CircleAlertIcon />
@@ -561,29 +600,29 @@ function ServiceFormPage() {
             </Alert.Root>
           )}
 
-          <Alert.Root className="mb-5 border-note bg-note">
-            <CircleHelpIcon />
-            <Alert.Description>
-              <Trans message="Linket never handles payment for services. Visitors request a quote from your page and you agree the contract directly." />
-            </Alert.Description>
-          </Alert.Root>
+          <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold">
+                <Trans message="Build your service" />
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                <Trans message="One step at a time. You can revisit any section before publishing." />
+              </p>
+            </div>
+            <span className="text-xs text-muted-foreground">
+              <Trans message="Add a title and choose a storefront; media and packages are optional." />
+            </span>
+          </div>
 
-          <div className="min-w-0">
-            <div className="flex min-w-0 flex-col gap-4">
-              <ServiceFormProgress
-                completed={completedRequired}
-                total={3}
-              />
+          <ServiceBuilderSteps
+            active={activeStep}
+            onSelect={changeStep}
+            completed={completedSteps}
+          />
 
-              <Accordion.Root
-                variant="bordered"
-                value={openSection ? [openSection] : []}
-                onValueChange={value =>
-                  setOpenSection(
-                    (value[0] as ServiceFormSectionId | undefined) ?? '',
-                  )
-                }
-              >
+          <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_22rem] xl:gap-6">
+            <div className="min-w-0 space-y-5">
+              {activeStep === 'details' && (
                 <ServiceFormSection
                   id="basics"
                   icon={PenLineIcon}
@@ -817,7 +856,8 @@ function ServiceFormPage() {
                     </ServiceFormField>
                   </div>
                 </ServiceFormSection>
-
+              )}
+              {activeStep === 'media' && (
                 <ServiceFormSection
                   id="media"
                   icon={ImagesIcon}
@@ -886,7 +926,8 @@ function ServiceFormPage() {
                     </div>
                   </div>
                 </ServiceFormSection>
-
+              )}
+              {activeStep === 'packages' && (
                 <ServiceFormSection
                   id="packages"
                   icon={LayersIcon}
@@ -905,8 +946,10 @@ function ServiceFormPage() {
                     onChange={packages => update('packages', packages)}
                   />
                 </ServiceFormSection>
-
-                <ServiceFormSection
+              )}
+              {activeStep === 'settings' && (
+                <div className="space-y-5">
+                  <ServiceFormSection
                   id="faq"
                   icon={MessageSquareQuoteIcon}
                   title={trans({message: 'FAQ'})}
@@ -944,10 +987,101 @@ function ServiceFormPage() {
                       update('contact_channels', channels)
                     }
                   />
-                </ServiceFormSection>
-              </Accordion.Root>
+                  </ServiceFormSection>
+                  <div className="flex items-start gap-2 rounded-card border border-note bg-note px-4 py-3 text-sm text-muted-foreground">
+                    <CircleHelpIcon aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+                    <p>
+                      <Trans message="Customers request a quote and agree contracts directly with you. Linket never receives service payments." />
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-5">
+                {previousStep ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="min-h-11"
+                    onClick={() => changeStep(previousStep)}
+                  >
+                    <ChevronLeftIcon className="size-4" aria-hidden="true" />
+                    <Trans message="Previous step" />
+                  </Button>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    <Trans message="Your changes are saved when you select Save draft or Publish service." />
+                  </p>
+                )}
+                {nextStep ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="ms-auto min-h-11"
+                    onClick={() => changeStep(nextStep)}
+                  >
+                    <Trans message="Continue" />
+                    <ArrowRightIcon className="size-4" aria-hidden="true" />
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="ms-auto min-h-11"
+                    onClick={() => setPreviewOpen(true)}
+                  >
+                    <EyeIcon className="size-4" aria-hidden="true" />
+                    <Trans message="Preview before publishing" />
+                  </Button>
+                )}
+              </div>
             </div>
 
+            <aside aria-label={trans({message: 'Service preview'})} className="hidden min-w-0 xl:block">
+              <div className="sticky top-6 rounded-card border bg-card p-4">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <h2 className="text-sm font-semibold">
+                      <Trans message="Service preview" />
+                    </h2>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      <Trans message="See your unsaved changes." />
+                    </p>
+                  </div>
+                  <div role="group" aria-label={trans({message: 'Preview size'})} className="flex items-center gap-1 rounded-button border bg-muted/40 p-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={previewDevice === 'desktop' ? 'outline' : 'ghost'}
+                      aria-pressed={previewDevice === 'desktop'}
+                      aria-label={trans({message: 'Desktop preview'})}
+                      onClick={() => setPreviewDevice('desktop')}
+                    >
+                      <MonitorIcon aria-hidden="true" className="size-4" />
+                      <span className="hidden 2xl:inline"><Trans message="Desktop" /></span>
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={previewDevice === 'mobile' ? 'outline' : 'ghost'}
+                      aria-pressed={previewDevice === 'mobile'}
+                      aria-label={trans({message: 'Mobile preview'})}
+                      onClick={() => setPreviewDevice('mobile')}
+                    >
+                      <SmartphoneIcon aria-hidden="true" className="size-4" />
+                      <span className="hidden 2xl:inline"><Trans message="Mobile" /></span>
+                    </Button>
+                  </div>
+                </div>
+                <div className="rounded-card-sm bg-muted/30 p-2">
+                  <div className={previewDevice === 'mobile' ? 'mx-auto w-full max-w-64 transition-[max-width]' : 'w-full transition-[max-width]'}>
+                    <ServicePreview state={form} />
+                  </div>
+                </div>
+              </div>
+            </aside>
           </div>
         </div>
       </DashboardLayout.SectionContent>

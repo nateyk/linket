@@ -39,15 +39,14 @@ test.describe('Service Creation — authenticated browser acceptance', () => {
       await signIn(page);
       await page.goto('/dashboard/services/new');
 
-      const heading = page.getByRole('heading', {name: 'New service', level: 1});
+      const heading = page.getByRole('heading', {name: 'Create a service', level: 1});
       await expect(heading).toBeVisible();
-      await expect(page.getByRole('progressbar', {name: 'Service setup progress'})).toBeVisible();
-      await expect(page.getByText(/recommended sections complete/)).toBeVisible();
-
-      for (const title of ['Basics', 'Media and links', 'Packages', 'FAQ', 'Contact buttons']) {
-        const section = page.getByRole('button', {name: title, exact: true});
-        await expect(section).toBeVisible();
+      const steps = page.getByRole('navigation', {name: 'Service creation steps'});
+      await expect(steps).toBeVisible();
+      for (const [i, label] of ['Details', 'Media', 'Packages', 'Settings'].entries()) {
+        await expect(steps.getByRole('button', {name: `${label}, step ${i + 1} of 4`})).toBeVisible();
       }
+      await expect(steps.getByRole('button', {name: 'Details, step 1 of 4'})).toHaveAttribute('aria-current', 'step');
 
       const titleSpan = heading.locator('span').first();
       if (viewport.width <= 375) {
@@ -63,6 +62,21 @@ test.describe('Service Creation — authenticated browser acceptance', () => {
         expect(style.whiteSpace).not.toBe('nowrap');
       }
 
+      // Moving between stages is local-only and retains unsaved details.
+      await page.locator('#title').fill('E2E preview draft');
+      await steps.getByRole('button', {name: 'Media, step 2 of 4'}).click();
+      await expect(page.getByRole('heading', {name: 'Media and links'})).toBeVisible();
+      await steps.getByRole('button', {name: 'Packages, step 3 of 4'}).click();
+      await expect(page.getByRole('heading', {name: 'Packages'})).toBeVisible();
+      await steps.getByRole('button', {name: 'Settings, step 4 of 4'}).click();
+      await expect(page.getByRole('heading', {name: 'FAQ'})).toBeVisible();
+      await steps.getByRole('button', {name: 'Details, step 1 of 4'}).click();
+      await expect(page.locator('#title')).toHaveValue('E2E preview draft');
+      // A stage change must return the creator to visible navigation, even
+      // after the previous long form has been scrolled.
+      await expect(steps).toBeInViewport({ratio: 0.5});
+      await expect(page.getByRole('heading', {name: 'Basics'})).toBeInViewport();
+
       const horizontalOverflow = await page.evaluate(() =>
         Math.max(0, document.documentElement.scrollWidth - document.documentElement.clientWidth),
       );
@@ -73,7 +87,7 @@ test.describe('Service Creation — authenticated browser acceptance', () => {
       await preview.click();
       const dialog = page.getByRole('dialog', {name: 'Customer preview'});
       await expect(dialog).toBeVisible();
-      await expect(dialog.getByText('Untitled service')).toBeVisible();
+      await expect(dialog.getByText('E2E preview draft')).toBeVisible();
       await page.keyboard.press('Escape');
       await expect(dialog).toBeHidden();
       await expect(preview).toBeFocused();
@@ -117,7 +131,7 @@ test.describe('Service Creation — authenticated browser acceptance', () => {
     await expect(page.getByRole('button', {name: 'Try again'})).toBeVisible();
     await expect(page.getByText('Create a storefront first')).toHaveCount(0);
     await page.getByRole('button', {name: 'Try again'}).click();
-    await expect(page.getByRole('heading', {name: 'New service', level: 1})).toBeVisible();
+    await expect(page.getByRole('heading', {name: 'Create a service', level: 1})).toBeVisible();
     await expect(page.getByRole('button', {name: 'Preview', exact: true})).toBeVisible();
     expect(attemptedCreates).toBe(0);
   });
@@ -125,7 +139,7 @@ test.describe('Service Creation — authenticated browser acceptance', () => {
   test('isolated creator publishes an optional-package service then edits and deletes it', async ({page}) => {
     await signIn(page);
     await page.goto('/dashboard/services/new');
-    await expect(page.getByRole('heading', {name: 'New service', level: 1})).toBeVisible();
+    await expect(page.getByRole('heading', {name: 'Create a service', level: 1})).toBeVisible();
     const name = `E2E Service Creation ${Date.now()}`;
     await page.locator('#title').fill(name);
     await page.locator('#short_description').fill('A service supplied directly by the creator.');
