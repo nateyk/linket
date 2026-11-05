@@ -239,6 +239,12 @@ Route::group(['prefix' => 'v1'], function () {
             ->middleware(['auth:sanctum', 'throttle:10,1']);
         Route::get('creator-ai/usage', [\App\CreatorAi\Controllers\CreatorAiUsageController::class, 'show'])
             ->middleware(['auth:sanctum', 'throttle:30,1']);
+        Route::get('creator-ai/products/{digitalProduct}/copy-availability', [\App\CreatorAi\Controllers\CreatorProductCopyController::class, 'availability'])
+            ->middleware(['auth:sanctum', 'throttle:20,1']);
+        Route::post('creator-ai/products/{digitalProduct}/copy-proposals', [\App\CreatorAi\Controllers\CreatorProductCopyController::class, 'propose'])
+            ->middleware(['auth:sanctum', 'throttle:5,1']);
+        Route::post('creator-ai/products/{digitalProduct}/copy-revision', [\App\CreatorAi\Controllers\CreatorProductCopyController::class, 'validateRevision'])
+            ->middleware(['auth:sanctum', 'throttle:20,1']);
         // MCP connection management does not issue OAuth credentials.
         // The future consent callback is a separate, Passport-protected flow.
         Route::get('creator-ai/mcp-connections', [\App\CreatorAi\Controllers\CreatorMcpConnectionsController::class, 'index'])

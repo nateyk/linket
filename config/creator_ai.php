@@ -102,6 +102,13 @@ return [
     'max_orders_per_page' => 20,
     'max_product_results' => 20,
 
+    // Extra deployment gate for the first creator-reviewed writing slice.
+    // Disabled by default even if account feature flags are enabled.
+    'product_copy_provider' => [
+        'enabled' => env('CREATOR_AI_PRODUCT_COPY_PROVIDER_ENABLED', false),
+        'model' => env('CREATOR_AI_PRODUCT_COPY_MODEL', 'gpt-4o-mini'),
+    ],
+
     // Defaults for the separate future generation-quota service, NOT a billing
     // charge for deterministic reports or read-only MCP calls.
     'free_monthly_generation_requests' => 10,
