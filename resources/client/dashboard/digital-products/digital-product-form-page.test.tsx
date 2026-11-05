@@ -451,10 +451,10 @@ describe('P2 header: the page title owns the row', () => {
     expect(source).toMatch(
       /<Breadcrumb[^>]*className="[^"]*\bw-auto\b[^"]*"/,
     );
-    // below 640px the row can only hold the title and the icon actions, so
-    // the breadcrumb steps aside (navigation still lives in the drawer)
+    // Below 1024px, including 200% enlarged text, the breadcrumb steps
+    // aside while the one h1 wraps and icon controls retain their names.
     expect(source).toMatch(
-      /<Breadcrumb[^>]*className="[^"]*max-sm:hidden[^"]*"/,
+      /<Breadcrumb[^>]*className="[^"]*max-lg:hidden[^"]*"/,
     );
   });
 
@@ -466,7 +466,7 @@ describe('P2 header: the page title owns the row', () => {
     // ...but the title itself (and its status badge) stays, and in a tight
     // row the TEXT truncates (min-w-0) so the badge keeps its 36px.
     expect(source).toMatch(
-      /<DashboardLayout\.SectionTitle[^>]*>[\s\S]*?<span className="min-w-0 truncate">\s*\{pageTitle\}\s*<\/span>\s*\{product && <ProductStatus/,
+      /<DashboardLayout\.SectionTitle[^>]*>[\s\S]*?<span className="[^"]*min-w-0 truncate[^"]*">\s*\{pageTitle\}\s*<\/span>\s*\{product && <ProductStatus/,
     );
   });
 
@@ -474,7 +474,7 @@ describe('P2 header: the page title owns the row', () => {
     // Final-fix item 2: the same `render={<h1 />}` mechanism T7 used on the
     // selection page, so the edit page ships exactly one h1 instead of none.
     expect(source).toMatch(
-      /<DashboardLayout\.SectionTitle render=\{<h1 \/>\}>/,
+      /<DashboardLayout\.SectionTitle render=\{<h1 \/>\}[^>]*>/,
     );
   });
 });

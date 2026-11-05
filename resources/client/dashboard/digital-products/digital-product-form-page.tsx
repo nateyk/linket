@@ -229,8 +229,10 @@ function DigitalProductForm() {
   // auto-save must not perform it (Review Focus #1). `product` is null while
   // the GET is in flight, which also keeps auto-save off during load.
   useEffect(() => {
+    // Every draft edit resets the idle debounce, including edits made after
+    // a failed autosave while "dirty" is already true.
     if (dirty && product?.status === 'draft') actions.autoSave();
-  }, [dirty, actions.autoSave, product?.status]);
+  }, [dirty, state, actions.autoSave, product?.status]);
 
   useEffect(() => {
     // The newly created draft is redirected to its saved edit URL if submit

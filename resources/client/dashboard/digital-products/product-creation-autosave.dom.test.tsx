@@ -21,6 +21,8 @@
  * loaded) that only the page can reach. Test 1 drives the context directly
  * and pins only the debounce/current-state contract.
  */
+import fs from 'node:fs';
+import path from 'node:path';
 import {DashboardLayoutContextProvider} from '@common/ui/dashboard/dashboard-layout-context';
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
 import {
@@ -171,7 +173,7 @@ function Trigger() {
   const {actions, dirty, autoSaveState, state} = useProductCreation();
   useEffect(() => {
     if (dirty) actions.autoSave();
-  }, [dirty, actions.autoSave]);
+  }, [dirty, state, actions.autoSave]);
   // Every render commits inside act(), so the test always reads the latest
   // context (all actions are stable callbacks; the `actions` object is not).
   ctxActions = actions;
@@ -244,6 +246,14 @@ test('debounced auto-save sends CURRENT state, not first-render state', async ()
   expect(h.put).toHaveBeenCalledTimes(1);
 
   vi.useRealTimers();
+});
+
+test('the shipped draft autosave effect re-arms on later edits while still dirty', () => {
+  const source = fs.readFileSync(
+    path.resolve('resources/client/dashboard/digital-products/digital-product-form-page.tsx'),
+    'utf8',
+  );
+  expect(source).toContain("[dirty, state, actions.autoSave, product?.status]");
 });
 
 test('autosave status reflects confirmed success, failed write, and recovery', async () => {

@@ -174,9 +174,9 @@ describe('page shell: one h1, and a title that owns the header row', () => {
     const nav = document.querySelector('[data-slot="breadcrumb"]');
     expect(nav).not.toBeNull();
     // `w-auto` overrides the base `w-full` (tailwind-merge) so the slack goes
-    // to the SectionTitle; `max-sm:hidden` keeps the narrow row usable.
+    // to the SectionTitle; `max-lg:hidden` keeps the enlarged-text layout usable.
     expect(nav!.className).toContain('w-auto');
-    expect(nav!.className).toContain('max-sm:hidden');
+    expect(nav!.className).toContain('max-lg:hidden');
     // only the parent link remains — no current-page crumb duplicating the h1
     expect(nav!.textContent).toBe('All products');
     expect(document.querySelector('[data-slot="breadcrumb-page"]')).toBeNull();

@@ -97,7 +97,7 @@ describe('uncertain creation recovery', () => {
 
   test('blocks duplicate POST while creating or after an uncertain response', () => {
     expect(source).toContain('disabled={creating || creationUncertain}');
-    expect(source).toContain('createInFlight.current || creationUncertain');
+    expect(source).toContain('createInFlight.current || uncertainRequest.current || creationUncertain');
     expect(source).toContain('createInFlight.current = true');
     expect(source).toContain('createInFlight.current = false');
   });
