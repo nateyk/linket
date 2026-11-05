@@ -53,7 +53,12 @@ function creatorCopyTestConfiguration(): void
 
 function creatorCopyActAs($test, User $user): void
 {
+    // The real dashboard sends a same-origin Referer. Without it the
+    // existing VerifyApiAccess middleware correctly treats this test request
+    // as a third-party API client and requires a separate api.access grant.
+    // Keep the protection enabled; emulate the authenticated browser instead.
     $test->withSession(['_token' => 'creator-copy-test'])
+        ->withHeader('Referer', config('app.url'))
         ->withHeader('X-CSRF-TOKEN', 'creator-copy-test')
         ->actingAs($user);
 }
