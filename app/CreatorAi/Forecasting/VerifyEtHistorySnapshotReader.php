@@ -5,6 +5,7 @@ namespace App\CreatorAi\Forecasting;
 use Carbon\CarbonImmutable;
 use GuzzleHttp\Client;
 use GuzzleHttp\ClientInterface;
+use GuzzleHttp\Exception\GuzzleException;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -76,21 +77,27 @@ final class VerifyEtHistorySnapshotReader
                 throw new RuntimeException('Provider history exceeds bounded pagination.');
             }
             // Absolute, pinned provider URL. No caller-supplied host or route.
-            $response = $client->request('GET', 'https://verify.et'.self::URI, [
-                'headers' => [
-                    'x-api-key' => $readOnlyApiKey,
-                    'accept' => 'application/json',
-                ],
-                'query' => [
-                    'startDate' => $from->toDateString(),
-                    'endDate' => $to->toDateString(),
-                    'limit' => $pageSize,
-                    'offset' => $offset,
-                ],
-                'allow_redirects' => false,
-                'http_errors' => false,
-                'timeout' => 20,
-            ]);
+            try {
+                $response = $client->request('GET', 'https://verify.et'.self::URI, [
+                    'headers' => [
+                        'x-api-key' => $readOnlyApiKey,
+                        'accept' => 'application/json',
+                    ],
+                    'query' => [
+                        'startDate' => $from->toDateString(),
+                        'endDate' => $to->toDateString(),
+                        'limit' => $pageSize,
+                        'offset' => $offset,
+                    ],
+                    'allow_redirects' => false,
+                    'http_errors' => false,
+                    'timeout' => 20,
+                ]);
+            } catch (GuzzleException) {
+                // Do not bubble exception/request internals containing an
+                // API-key header into operator-facing logs or error reports.
+                throw new RuntimeException('Provider history transport failed.');
+            }
 
             if ($response->getStatusCode() !== 200) {
                 throw new RuntimeException('Provider history is unavailable or access is denied.');
