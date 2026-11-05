@@ -9,10 +9,11 @@ on:
   # Verify an isolated branch manually before opening a PR when needed.
   workflow_dispatch:
 
-# Cancel obsolete CI work per event and PR/branch. Production deployment has
-# its own separate, non-cancelling concurrency group.
+# Cancel obsolete updates to the same PR. Give each main commit its own
+# concurrency slot so a stuck previous main run cannot block later SHA-locked CI.
+# Production deployment has its own separate, non-cancelling concurrency group.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
 
 permissions:
