@@ -134,6 +134,10 @@ jobs:
           echo "::add-mask::$reviewer_password"
           export LINKET_E2E_REVIEWER_PASSWORD="$reviewer_password"
           printf 'LINKET_E2E_REVIEWER_PASSWORD=%s\n' "$reviewer_password" >> "$GITHUB_ENV"
+          # Ordinary buyer fixture setup must not create any administrator.
+          php artisan linket:prepare-buyer-e2e --no-interaction
+          reviewer_count="$(mysql --protocol=tcp -h 127.0.0.1 -P 3306 -u root -proot -N -e "SELECT COUNT(*) FROM users WHERE email = 'e2e-product-reviewer@example.test'" belink_test)"
+          [[ "$reviewer_count" == "0" ]]
           # Fail closed when the opt-in flag or loopback origin is absent.
           if LINKET_ISOLATED_E2E=0 php artisan linket:prepare-buyer-e2e --with-reviewer --no-interaction; then
             echo "Reviewer guard accepted unsafe isolation mode" >&2
