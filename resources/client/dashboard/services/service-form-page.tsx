@@ -7,6 +7,7 @@ import {AlertDialog} from '@shadcn/alert-dialog/alert-dialog';
 import {Badge} from '@shadcn/badge/badge';
 import {Breadcrumb} from '@shadcn/breadcrumb/breadcrumb';
 import {Button} from '@shadcn/button/button';
+import {Dialog} from '@shadcn/dialog/dialog';
 import {Input} from '@shadcn/forms/input/input';
 import {Select} from '@shadcn/forms/select/select';
 import {Spinner} from '@shadcn/spinner/spinner';
@@ -19,6 +20,7 @@ import {
   ArrowLeftIcon,
   CircleAlertIcon,
   CircleHelpIcon,
+  EyeIcon,
   GlobeIcon,
   ImagesIcon,
   LayersIcon,
@@ -28,8 +30,9 @@ import {
   SendIcon,
   Trash2Icon,
 } from 'lucide-react';
-import {useCallback, useEffect, useMemo, useState} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {Link, useNavigate, useParams} from 'react-router';
+import {isUncertainMutationOutcome} from '@app/dashboard/digital-products/request-outcome';
 import {parseServiceErrors, serviceSaveErrorMessage} from './service-save-error';
 import {
   emptyServiceForm,
@@ -113,7 +116,11 @@ function ServiceFormPage() {
   const [stores, setStores] = useState<StoreOption[]>([]);
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
+  const mutationUncertain = useRef(false);
+  const [creationUncertain, setCreationUncertain] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string>();
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -121,10 +128,12 @@ function ServiceFormPage() {
     'basics',
   );
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [announcement, setAnnouncement] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadFailed(false);
     setError(undefined);
 
     try {
@@ -157,6 +166,7 @@ function ServiceFormPage() {
         }));
       }
     } catch (reason) {
+      setLoadFailed(true);
       setError(
         reason instanceof Error
           ? reason.message
@@ -224,6 +234,9 @@ function ServiceFormPage() {
 
   const save = useCallback(
     async (statusOverride?: 'draft' | 'published') => {
+      // Keyboard shortcuts can fire while a save is in flight. Never create a
+      // second service merely because the first response is still pending.
+      if (savingRef.current || mutationUncertain.current) return;
       if (statusOverride === 'published' && !form.title.trim()) {
         setFieldErrors({title: trans({message: 'A title is required.'})});
         setOpenSection('basics');
@@ -233,6 +246,7 @@ function ServiceFormPage() {
         return;
       }
 
+      savingRef.current = true;
       setSaving(true);
       setError(undefined);
       setFieldErrors({});
@@ -252,7 +266,12 @@ function ServiceFormPage() {
             ),
           );
         } else {
-          await apiClient.post('/api/v1/services', payload);
+          const response = await apiClient.post('/api/v1/services', payload);
+          const created = (response.data as {data?: CreatorServiceResource})?.data;
+          if (!created || !Number.isSafeInteger(created.id) || created.id <= 0) {
+            // 2xx without a usable record ID is not proof that creation failed.
+            throw new Error('Service create response missing an ID');
+          }
         }
 
         setAnnouncement(
@@ -270,11 +289,22 @@ function ServiceFormPage() {
           navigate('/dashboard/services');
         }
       } catch (reason) {
+        if (!isEditing && isUncertainMutationOutcome(reason)) {
+          // A network timeout or 5xx can occur after a successful insert.
+          // Do not invite a second POST until the creator checks My Services.
+          mutationUncertain.current = true;
+          setCreationUncertain(true);
+          setAnnouncement(trans({message: 'Service creation outcome unconfirmed'}));
+          setError(undefined);
+          setFieldErrors({});
+          return;
+        }
         const parsed = parseServiceErrors(reason);
         setError(serviceSaveErrorMessage(reason));
         setFieldErrors(parsed.fieldErrors);
         focusFirstError(parsed.fieldErrors);
       } finally {
+        savingRef.current = false;
         setSaving(false);
       }
     },
@@ -329,26 +359,30 @@ function ServiceFormPage() {
   };
 
   const renderHeader = (children: React.ReactNode) => (
-    <DashboardLayout.SectionHeader>
+    <DashboardLayout.SectionHeader className="max-lg:h-auto max-lg:flex-wrap max-lg:py-2">
       <DashboardLayout.SidebarToggle />
       <Button
         variant="ghost"
         size="icon-sm"
+        className="max-lg:size-11"
         nativeButton={false}
         aria-label={trans({message: 'Back to services'})}
         render={<Link to="/dashboard/services" />}
       >
         <ArrowLeftIcon />
       </Button>
-      <Breadcrumb className="w-auto max-sm:hidden">
+      <Breadcrumb className="w-auto max-lg:hidden">
         <Breadcrumb.Item>
           <Breadcrumb.Link to="/dashboard/services">
             <Trans message="My Services" />
           </Breadcrumb.Link>
         </Breadcrumb.Item>
       </Breadcrumb>
-      <DashboardLayout.SectionTitle render={<h1 />}>
-        <span className="min-w-0 truncate">
+      <DashboardLayout.SectionTitle
+        render={<h1 />}
+        className="max-lg:order-3 max-lg:w-full max-lg:basis-full max-lg:flex-none max-lg:overflow-visible max-lg:whitespace-normal max-lg:text-clip"
+      >
+        <span className="min-w-0 truncate max-lg:overflow-visible max-lg:whitespace-normal max-lg:text-clip">
           {isEditing ? (
             <Trans message="Edit service" />
           ) : (
@@ -371,17 +405,30 @@ function ServiceFormPage() {
   );
 
   const renderActions = () => (
-    <div className="flex items-center gap-2">
+    <div className="ml-auto flex max-w-full items-center gap-2">
+      <Button
+        variant="outline"
+        size="sm"
+        className="max-lg:size-11 max-lg:px-0"
+        aria-label={trans({message: 'Preview'})}
+        onClick={() => setPreviewOpen(true)}
+      >
+        <EyeIcon className="size-4" />
+        <span className="max-lg:hidden">
+          <Trans message="Preview" />
+        </span>
+      </Button>
       {isEditing && (
         <Button
           variant="ghost"
           size="sm"
+          className="max-lg:size-11 max-lg:px-0"
           disabled={saving || deleting}
           aria-label={trans({message: 'Delete'})}
           onClick={() => setDeleteOpen(true)}
         >
           <Trash2Icon className="size-4" />
-          <span className="max-sm:hidden">
+          <span className="max-lg:hidden">
             <Trans message="Delete" />
           </span>
         </Button>
@@ -389,18 +436,20 @@ function ServiceFormPage() {
       <Button
         variant="outline"
         size="sm"
-        disabled={saving}
+        className="max-lg:size-11 max-lg:px-0"
+        disabled={saving || creationUncertain}
         aria-label={trans({message: 'Save draft'})}
         onClick={() => void save('draft')}
       >
         <SaveIcon className="size-4" />
-        <span className="max-sm:hidden">
+        <span className="max-lg:hidden">
           <Trans message="Save draft" />
         </span>
       </Button>
       <Button
         size="sm"
-        disabled={saving}
+        className="max-lg:size-11 max-lg:px-0"
+        disabled={saving || creationUncertain}
         aria-label={trans({message: 'Publish service'})}
         onClick={() => void save('published')}
       >
@@ -409,7 +458,7 @@ function ServiceFormPage() {
         ) : (
           <SendIcon className="size-4" />
         )}
-        <span className="max-sm:hidden">
+        <span className="max-lg:hidden">
           {form.status === 'published' ? (
             <Trans message="Save changes" />
           ) : (
@@ -425,13 +474,34 @@ function ServiceFormPage() {
       <DashboardLayout.MainSection>
         {renderHeader(null)}
         <DashboardLayout.SectionContent className="overflow-y-auto">
-          <div className="mx-auto grid w-full max-w-6xl items-start gap-5 py-5 xl:grid-cols-[minmax(0,1fr)_26rem] xl:gap-6">
-            <div className="flex flex-col gap-4">
-              <Skeleton className="h-16 w-full" />
-              <Skeleton className="h-72 w-full rounded-card" />
-              <Skeleton className="h-48 w-full rounded-card" />
-            </div>
-            <Skeleton className="hidden h-96 w-full rounded-card xl:block" />
+          <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 py-5">
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-72 w-full rounded-card" />
+            <Skeleton className="h-48 w-full rounded-card" />
+          </div>
+        </DashboardLayout.SectionContent>
+      </DashboardLayout.MainSection>
+    );
+  }
+
+  if (loadFailed) {
+    return (
+      <DashboardLayout.MainSection>
+        {renderHeader(null)}
+        <DashboardLayout.SectionContent className="overflow-y-auto">
+          <div className="mx-auto w-full max-w-3xl py-8">
+            <Alert.Root variant="destructive" fillStyle="subtleFill" role="alert">
+              <CircleAlertIcon />
+              <Alert.Title>
+                <Trans message="Unable to load service" />
+              </Alert.Title>
+              <Alert.Description>{error}</Alert.Description>
+              <Alert.Action>
+                <Button size="sm" onClick={() => void load()}>
+                  <Trans message="Try again" />
+                </Button>
+              </Alert.Action>
+            </Alert.Root>
           </div>
         </DashboardLayout.SectionContent>
       </DashboardLayout.MainSection>
@@ -472,7 +542,18 @@ function ServiceFormPage() {
       {renderHeader(renderActions())}
 
       <DashboardLayout.SectionContent className="overflow-y-auto">
-        <div className="mx-auto w-full max-w-6xl py-4 sm:py-5">
+        <div className="mx-auto w-full max-w-4xl py-4 sm:py-5">
+          {creationUncertain && (
+            <Alert.Root role="alert" variant="warning" fillStyle="subtleFill" className="mb-5">
+              <CircleAlertIcon />
+              <Alert.Description className="flex flex-col items-start gap-2">
+                <Trans message="We could not confirm whether the service was created. Check My Services before creating it again." />
+                <Button size="sm" variant="outline" render={<Link to="/dashboard/services" />}>
+                  <Trans message="Check My Services" />
+                </Button>
+              </Alert.Description>
+            </Alert.Root>
+          )}
           {error && (
             <Alert.Root variant="destructive" fillStyle="subtleFill">
               <CircleAlertIcon />
@@ -487,7 +568,7 @@ function ServiceFormPage() {
             </Alert.Description>
           </Alert.Root>
 
-          <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_26rem] xl:gap-6">
+          <div className="min-w-0">
             <div className="flex min-w-0 flex-col gap-4">
               <ServiceFormProgress
                 completed={completedRequired}
@@ -573,7 +654,6 @@ function ServiceFormPage() {
                     <ServiceFormField
                       name="short_description"
                       label={trans({message: 'Short description'})}
-                      required
                       description={trans({
                         message:
                           'Shown on the service card and in search results. One or two lines.',
@@ -746,6 +826,7 @@ function ServiceFormPage() {
                     message: 'Show the work before anyone asks.',
                   })}
                   isComplete={requiredSections.media}
+                  optional
                   hasError={sectionError('media')}
                 >
                   <div className="flex flex-col gap-5">
@@ -814,6 +895,7 @@ function ServiceFormPage() {
                     message: 'Give customers clear options to choose from.',
                   })}
                   isComplete={requiredSections.packages}
+                  optional
                   count={namedPackages.length}
                   hasError={sectionError('packages')}
                 >
@@ -866,14 +948,6 @@ function ServiceFormPage() {
               </Accordion.Root>
             </div>
 
-            <aside className="min-w-0 xl:sticky xl:top-6">
-              <div className="flex flex-col gap-2">
-                <p className="text-sm font-medium">
-                  <Trans message="Customer preview" />
-                </p>
-                <ServicePreview state={form} />
-              </div>
-            </aside>
           </div>
         </div>
       </DashboardLayout.SectionContent>
@@ -881,6 +955,30 @@ function ServiceFormPage() {
       <span className="sr-only" role="status">
         {announcement}
       </span>
+
+      <Dialog.Root open={previewOpen} onOpenChange={setPreviewOpen}>
+        <Dialog.Portal>
+          <Dialog.Backdrop />
+          <Dialog.Content className="sm:max-w-2xl">
+            <Dialog.Header>
+              <Dialog.Title>
+                <Trans message="Customer preview" />
+              </Dialog.Title>
+              <Dialog.Description>
+                <Trans message="Preview only. Contact and inquiry actions are unavailable here." />
+              </Dialog.Description>
+            </Dialog.Header>
+            <Dialog.Body className="min-h-0 max-h-[70dvh] overflow-y-auto">
+              <ServicePreview state={form} />
+            </Dialog.Body>
+            <Dialog.Footer>
+              <Dialog.CloseButton render={<Button variant="outline" />}>
+                <Trans message="Close" />
+              </Dialog.CloseButton>
+            </Dialog.Footer>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
 
       <AlertDialog.Root open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialog.Portal>
