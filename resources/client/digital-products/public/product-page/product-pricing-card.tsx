@@ -43,12 +43,13 @@ export function ProductPricingCard({
   const buttonAppearance = resolveBiolinkButtonAppearance(appearance);
   const TypeIcon = productTypeIcon(product.type);
   const isCourse = !!product.is_course;
+  const isFree = product.payment_mode === 'free';
 
   return (
     <Card.Root className={biolinkSurfaceCard}>
       <Card.Content className={biolinkSurfaceContent}>
         <div className="flex items-start justify-between gap-4">
-          <p className="text-4xl leading-none font-semibold tracking-tight tabular-nums">
+          <p className="min-w-0 text-3xl leading-tight font-semibold tracking-tight tabular-nums break-words [overflow-wrap:anywhere] sm:text-4xl">
             {formatPrice(product.price_cents, product.currency)}
           </p>
           <span className="grid size-10 shrink-0 place-items-center rounded-card-sm bg-[var(--biolink-surface)] text-[var(--biolink-muted-text)] ring-1 ring-(color:--biolink-border)">
@@ -68,8 +69,16 @@ export function ProductPricingCard({
             disabled={submitting || product.can_buy === false}
             onClick={onBuy}
           >
-            <LockKeyholeIcon />
-            {product.verification_quota_exhausted ? <Trans message="Creator cannot accept additional verified sales right now" /> : <Trans message={product.can_buy === false ? 'Temporarily unavailable' : 'Buy now'} />}
+            {isFree ? <ShoppingBagIcon aria-hidden="true" /> : <LockKeyholeIcon aria-hidden="true" />}
+            {product.verification_quota_exhausted ? (
+              <Trans message="Creator cannot accept additional verified sales right now" />
+            ) : product.can_buy === false ? (
+              <Trans message="Temporarily unavailable" />
+            ) : isFree ? (
+              <Trans message="Get for free" />
+            ) : (
+              <Trans message="Buy now" />
+            )}
           </Button>
         </div>
 
@@ -162,11 +171,17 @@ export function ProductPricingCard({
             <Trans message="Access anytime from My Portal" />
           </IncludesItem>
           <IncludesItem icon={TimerIcon}>
-            <Trans message="One-time payment, no subscription" />
+            {isFree ? (
+              <Trans message="Free access, no payment required" />
+            ) : (
+              <Trans message="One-time payment, no subscription" />
+            )}
           </IncludesItem>
-          <IncludesItem icon={ReceiptIcon}>
-            <Trans message="Receipt and download links by email" />
-          </IncludesItem>
+          {!isFree && (
+            <IncludesItem icon={ReceiptIcon}>
+              <Trans message="Receipt and download links by email" />
+            </IncludesItem>
+          )}
         </ul>
 
         <div className="flex items-start gap-2 rounded-card bg-[var(--biolink-surface)] p-3 text-base text-[var(--biolink-muted-text)]">
@@ -174,7 +189,11 @@ export function ProductPricingCard({
             className="mt-0.5 size-4 shrink-0 text-positive"
             aria-hidden="true"
           />
-          <Trans message="Secure payment with protected access after confirmation." />
+          {isFree ? (
+            <Trans message="Complete the free checkout to access your purchase." />
+          ) : (
+            <Trans message="Secure payment with protected access after confirmation." />
+          )}
         </div>
       </Card.Content>
     </Card.Root>
