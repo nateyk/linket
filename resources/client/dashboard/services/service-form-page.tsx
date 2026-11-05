@@ -238,18 +238,17 @@ function ServiceFormPage() {
       values: {current: SERVICE_STEP_ORDER.indexOf(step) + 1, total: SERVICE_STEP_ORDER.length},
     }));
     requestAnimationFrame(() => {
-      // The viewport belongs to the dashboard section, not the document.
-      // Resetting scrollTop to zero can leave these steps below the fold when
-      // the header is tall (especially at 320-375px and zoomed layouts).
-      // Align the actual navigation within its own scroll container.
-      const navigation = document.getElementById('service-builder-steps');
-      const scroller = navigation?.closest<HTMLElement>('[data-slot="section-content"]');
-      if (navigation && scroller) {
-        const offset = navigation.getBoundingClientRect().top
-          - scroller.getBoundingClientRect().top - 8;
-        scroller.scrollTop += offset;
-      }
+      // Focus the new step without moving the scroll position. A second frame
+      // follows the committed panel layout, so native focus/child layout
+      // changes cannot leave the step navigator above the viewport.
       document.getElementById(headingForStep(step))?.focus({preventScroll: true});
+      requestAnimationFrame(() => {
+        document.getElementById('service-builder-steps')?.scrollIntoView({
+          block: 'start',
+          inline: 'nearest',
+          behavior: 'instant',
+        });
+      });
     });
   };
 
