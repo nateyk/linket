@@ -2,8 +2,14 @@
 
 use App\CreatorAi\Storefront\StorefrontAppearanceProposalService;
 use App\Models\User;
+use App\Payments\Models\DirectPaymentVerification;
+use App\Payments\Models\ProSubscriptionPayment;
 use App\Stores\Models\Store;
 use Common\Workspaces\Actions\CreateWorkspace;
+use Common\Billing\Models\Product;
+use Common\Billing\Models\Price;
+use Common\Billing\Subscription;
+use Illuminate\Support\Str;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
 
@@ -31,6 +37,44 @@ function storefrontPreviewActAs($test, User $creator): void
         ->actingAs($creator);
 }
 
+function storefrontPreviewVerifiedPro(User $creator): void
+{
+    $plan = Product::query()->where('system_key', 'pro')->firstOrFail();
+    $price = Price::query()->where('product_id', $plan->id)
+        ->where('currency', 'ETB')->firstOrFail();
+
+    Subscription::query()->create([
+        'user_id' => $creator->id,
+        'product_id' => $plan->id,
+        'price_id' => $price->id,
+        'gateway_name' => 'verify_et',
+        'gateway_status' => 'active',
+        'renews_at' => now()->addMonth(),
+    ]);
+    $payment = ProSubscriptionPayment::query()->create([
+        'uuid' => (string) Str::uuid(),
+        'creator_id' => $creator->id,
+        'product_id' => $plan->id,
+        'price_id' => $price->id,
+        'amount_cents' => 50000,
+        'status' => 'paid',
+        'paid_at' => now()->subDay(),
+        'subscription_period_start' => now()->subDay(),
+        'subscription_period_end' => now()->addMonth(),
+    ]);
+    DirectPaymentVerification::query()->create([
+        'reference' => 'AI-STORE-PRO-'.Str::upper(Str::random(12)),
+        'payable_type' => ProSubscriptionPayment::class,
+        'payable_id' => $payment->id,
+        'bank_code' => 'cbe',
+        'settlement_account' => '1000123456789',
+        'amount_cents' => 50000,
+        'currency' => 'ETB',
+        'status' => 'success',
+        'verified_at' => now()->subDay(),
+    ]);
+}
+
 function storefrontPreviewFeatureOn(): void
 {
     config()->set('creator_ai.enabled', true);
@@ -50,7 +94,7 @@ test('PR09 preview is Pro-only: no unverified upgrade or foreign-store leaks', f
     storefrontPreviewFeatureOn();
     [$free, $store] = storefrontPreviewFixture();
     [$other] = storefrontPreviewFixture();
-    creatorAiMcpTestPro($other);
+    storefrontPreviewVerifiedPro($other);
 
     storefrontPreviewActAs($this, $free);
     $this->getJson('/api/v1/creator-ai/stores/'.$store->id.'/appearance-preview?preset=clear')
@@ -67,7 +111,7 @@ test('PR09 preview is Pro-only: no unverified upgrade or foreign-store leaks', f
 test('PR09 preview returns only preset allowlist differences and leaves appearance, store, and AI spending unchanged', function () {
     storefrontPreviewFeatureOn();
     [$creator, $store] = storefrontPreviewFixture();
-    creatorAiMcpTestPro($creator);
+    storefrontPreviewVerifiedPro($creator);
     $store->appearance()->create(['config' => [
         'layout' => 'default',
         'btnConfig' => [
@@ -115,7 +159,7 @@ test('PR09 preview returns only preset allowlist differences and leaves appearan
 test('PR09 rejects arbitrary presets and never allows raw CSS JS or HTML proposal injection', function () {
     storefrontPreviewFeatureOn();
     [$creator, $store] = storefrontPreviewFixture();
-    creatorAiMcpTestPro($creator);
+    storefrontPreviewVerifiedPro($creator);
     storefrontPreviewActAs($this, $creator);
     $path = '/api/v1/creator-ai/stores/'.$store->id.'/appearance-preview';
     $this->getJson($path.'?preset=%3Cscript%3Ealert(1)%3C%2Fscript%3E')
