@@ -43,7 +43,7 @@ jobs:
             --with-all-dependencies --minimal-changes --no-install \
             --no-scripts --no-plugins --no-interaction --no-progress
           composer validate --no-check-publish
-          composer audit --no-dev --no-interaction --format plain
+          composer audit --locked --no-dev --no-interaction --format plain
           git diff --check
 
       - name: Print deterministic lockfile patch for review, not auto-commit
