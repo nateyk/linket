@@ -1,5 +1,5 @@
 /** @vitest-environment jsdom */
-import {render, screen, waitFor} from '@testing-library/react';
+import {render, screen, waitFor, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 import {StorefrontAiAppearancePreview} from './storefront-ai-appearance-preview';
@@ -9,8 +9,9 @@ const fixtures = vi.hoisted(() => ({
     biolink: {id: 18},
     appearanceIsDirty: false,
     appearance: {btnConfig: {variant: 'glass', radius: 'rounded-sm', shadow: 'none'}},
+    applyAppearanceSuggestion: vi.fn(),
   },
-  api: {get: vi.fn()},
+  api: {get: vi.fn(), post: vi.fn()},
 }));
 
 vi.mock('../biolink-editor-store', () => ({
@@ -38,8 +39,8 @@ beforeEach(() => {
   );
 });
 
-describe('PR-09 interactive read-only storefront preview', () => {
-  it('compares Current vs Suggested without a save or publish action', async () => {
+describe('PR-09 creator-reviewed storefront preview', () => {
+  it('compares Current vs Suggested without automatically saving or publishing', async () => {
     const user = userEvent.setup();
     render(<StorefrontAiAppearancePreview />);
     const calm = await screen.findByRole('button', {name: 'Calm'});
@@ -49,12 +50,39 @@ describe('PR-09 interactive read-only storefront preview', () => {
     expect(screen.getByText('Suggested')).toBeTruthy();
     expect(screen.getAllByText('Sample action')).toHaveLength(2);
     expect(calm.getAttribute('aria-pressed')).toBe('true');
-    expect(screen.queryByRole('button', {name: /Apply|Save|Publish/i})).toBeNull();
+    expect(fixtures.api.post).not.toHaveBeenCalled();
+    expect(fixtures.store.applyAppearanceSuggestion).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', {name: 'Review and apply'})).toBeTruthy();
     expect(fixtures.api.get).toHaveBeenCalledWith(
       '/api/v1/creator-ai/stores/18/appearance-preview', {params: {preset: 'calm'}},
     );
-    await user.click(screen.getByRole('button', {name: 'Dismiss preview'}));
+    await user.click(screen.getByRole('button', {name: 'Discard suggestion'}));
+    expect(fixtures.store.applyAppearanceSuggestion).not.toHaveBeenCalled();
     expect(screen.queryByLabelText('Before and after comparison')).toBeNull();
+  });
+
+  it('requires a confirmation before applying safe tokens to the unsaved editor', async () => {
+    const user = userEvent.setup();
+    render(<StorefrontAiAppearancePreview />);
+    await user.click(await screen.findByRole('button', {name: 'Calm'}));
+    await user.click(screen.getByRole('button', {name: 'Review and apply'}));
+
+    const dialog = screen.getByRole('alertdialog', {name: 'Apply suggested button style?'});
+    expect(dialog.textContent).toContain('Nothing is saved or published');
+    expect(fixtures.store.applyAppearanceSuggestion).not.toHaveBeenCalled();
+    expect(fixtures.api.post).not.toHaveBeenCalled();
+
+    await user.click(within(dialog).getByRole('button', {name: 'Cancel'}));
+    expect(fixtures.store.applyAppearanceSuggestion).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', {name: 'Review and apply'}));
+    await user.click(within(screen.getByRole('alertdialog')).getByRole('button', {name: 'Apply to editor'}));
+    expect(fixtures.store.applyAppearanceSuggestion).toHaveBeenCalledWith(
+      {variant: 'outline', radius: 'rounded-sm'},
+      'a'.repeat(64),
+    );
+    expect(fixtures.api.post).not.toHaveBeenCalled();
+    expect(screen.getByRole('status').textContent).toMatch(/review.*save changes/i);
   });
 
   it('fails closed when availability denies Pro access', async () => {
