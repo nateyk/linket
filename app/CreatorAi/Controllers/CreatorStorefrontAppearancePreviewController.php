@@ -13,6 +13,14 @@ final class CreatorStorefrontAppearancePreviewController extends Controller
 {
     public function __construct(private readonly StorefrontAppearanceProposalService $proposals) {}
 
+    public function availability(Request $request, Store $store): JsonResponse
+    {
+        $creator = $request->user();
+        abort_unless($creator instanceof User, 401);
+
+        return $this->privateJson(['available' => $this->proposals->available($creator, $store)]);
+    }
+
     public function show(Request $request, Store $store): JsonResponse
     {
         $creator = $request->user();

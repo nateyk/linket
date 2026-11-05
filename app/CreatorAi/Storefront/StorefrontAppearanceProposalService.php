@@ -43,6 +43,16 @@ final class StorefrontAppearanceProposalService
 
     public function __construct(private readonly CreatorAiAccess $access) {}
 
+    public function available(User $creator, Store $store): bool
+    {
+        // 404 if the store is not this creator's; never disclose existence.
+        $current = Store::query()->findOrFail($store->getKey());
+        abort_unless((int) $current->user_id === (int) $creator->getKey(), 404);
+
+        return (bool) config('creator_ai.storefront_preview.enabled', false)
+            && $this->access->allows($creator, (int) $current->workspace_id, 'storefront_drafts');
+    }
+
     /** @return array{store_id:int,source_fingerprint:string,preset:string,changes:array,requires_review:bool,read_only:bool} */
     public function preview(User $creator, Store $store, string $preset): array
     {
