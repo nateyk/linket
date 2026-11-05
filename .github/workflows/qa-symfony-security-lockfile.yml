@@ -1,0 +1,79 @@
+name: Generate reviewed Symfony security lockfile
+
+on:
+  push:
+    branches: [qa/security-symfony-lockfile-20261105]
+
+permissions:
+  contents: read
+
+jobs:
+  composer-lock:
+    name: Resolve compatible Symfony patch releases (no repository writes)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout synthetic QA branch
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: PHP 8.4 and Composer v2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_mysql, gd, zip, bcmath, exif, redis, curl, openssl, fileinfo
+          coverage: none
+          tools: composer:v2
+
+      - name: Resolve only affected Symfony packages
+        shell: bash
+        env:
+          COMPOSER_AUDIT_ABANDONED: ignore
+          COMPOSER_MEMORY_LIMIT: '-1'
+        run: |
+          set -euo pipefail
+          composer update \
+            symfony/filesystem symfony/html-sanitizer symfony/http-client \
+            symfony/http-foundation symfony/http-kernel symfony/routing \
+            symfony/serializer symfony/yaml \
+            --with-all-dependencies --no-install --no-plugins --no-scripts \
+            --no-interaction --no-progress
+          git diff --exit-code -- composer.json
+          git diff --stat -- composer.lock
+
+      - name: Confirm patched Symfony versions
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -r '
+            $lock = json_decode(file_get_contents("composer.lock"), true, 512, JSON_THROW_ON_ERROR);
+            $packages = array_column($lock["packages"], null, "name");
+            foreach (["filesystem","html-sanitizer","http-client","http-foundation","http-kernel","routing","serializer","yaml"] as $name) {
+              $package = $packages["symfony/".$name] ?? null;
+              if (!$package) {fwrite(STDERR, "Missing Symfony package: ".$name."\n"); exit(1);}
+              $version = ltrim($package["version"], "v");
+              $safe = (str_starts_with($version, "7.4.") && version_compare($version, "7.4.23", ">="))
+                    || (str_starts_with($version, "8.1.") && version_compare($version, "8.1.11", ">="))
+                    || (str_starts_with($version, "6.4.") && version_compare($version, "6.4.50", ">="));
+              echo "symfony/".$name." ".$version.($safe ? " PATCHED" : " UNSAFE")."\n";
+              if (!$safe) exit(1);
+            }
+          '
+
+      - name: Audit production locked dependencies without bypasses
+        shell: bash
+        run: |
+          set -euo pipefail
+          composer audit --no-dev --no-interaction --format plain | tee composer-audit.txt
+
+      - name: Upload proposed lockfile and audit log for review only
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: symfony-security-lockfile
+          path: |
+            composer.lock
+            composer-audit.txt
+          if-no-files-found: error
+          retention-days: 3
