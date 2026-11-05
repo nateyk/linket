@@ -230,3 +230,50 @@ test('read-only sales summaries do not consume generation quota', function () {
     }
     expect(app(CreatorAiUsageService::class)->summary($creator)['remaining'])->toBe(10);
 });
+
+
+test('settlement retries cannot rewrite a completed request with a different provider charge', function () {
+    aiUsageConfig(budgetMicrousd: 200000, requestMicrousd: 100000);
+    [$creator, $workspaceId] = aiUsageCreator();
+    $service = app(CreatorAiUsageService::class);
+    $id = (string) Str::uuid();
+
+    $service->reserve($creator, $workspaceId, 'writing_basic', $id);
+    expect($service->complete($creator, $id, 25000)['status'])->toBe('completed');
+    expect($service->complete($creator, $id, 25000)['status'])->toBe('completed');
+
+    try {
+        $service->complete($creator, $id, 42000);
+        $this->fail('A different charge was incorrectly accepted as an idempotent retry.');
+    } catch (HttpException $exception) {
+        expect($exception->getStatusCode())->toBe(409);
+    }
+
+    $attempt = DB::table('creator_ai_generation_attempts')->where('request_id', $id)->first();
+    $ledger = DB::table('creator_ai_provider_usage_months')->where('provider', 'openai')->first();
+    expect((int) $attempt->charged_microusd)->toBe(25000)
+        ->and((int) $ledger->spent_microusd)->toBe(25000)
+        ->and((int) $ledger->reserved_microusd)->toBe(0)
+        ->and($service->summary($creator)['completed'])->toBe(1);
+});
+
+test('uncertain provider outcomes retain both monthly quota and global budget reservations until reconciled', function () {
+    aiUsageConfig(freeLimit: 1, budgetMicrousd: 100000, requestMicrousd: 100000);
+    [$creator, $workspaceId] = aiUsageCreator();
+    $service = app(CreatorAiUsageService::class);
+    $id = (string) Str::uuid();
+    $service->reserve($creator, $workspaceId, 'writing_basic', $id);
+
+    // A network timeout is NOT proof that the provider did not charge us;
+    // do not invoke fail() automatically for ambiguous outcomes.
+    expect($service->summary($creator)['remaining'])->toBe(0)
+        ->and($service->summary($creator)['reserved'])->toBe(1)
+        ->and((int) DB::table('creator_ai_provider_usage_months')->where('provider', 'openai')->value('reserved_microusd'))->toBe(100000);
+
+    try {
+        $service->reserve($creator, $workspaceId, 'writing_basic', (string) Str::uuid());
+        $this->fail('An unsettled provider request released a quota unexpectedly.');
+    } catch (HttpException $exception) {
+        expect($exception->getStatusCode())->toBe(429);
+    }
+});

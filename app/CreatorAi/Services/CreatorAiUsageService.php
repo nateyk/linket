@@ -181,11 +181,16 @@ final class CreatorAiUsageService
             abort_unless($attempt && (int) $attempt->creator_id === (int) $creator->getKey(), 404);
 
             if ($attempt->status !== 'reserved') {
+                // An idempotent retry must report the exact original charge.
+                // Quietly accepting a different cost would hide discrepancies
+                // from the provider ledger and make reconciliation unreliable.
                 abort_unless(
-                    ($attempt->status === 'completed' && $actual !== null)
+                    ($attempt->status === 'completed'
+                        && $actual !== null
+                        && (int) $attempt->charged_microusd === $actual)
                     || ($attempt->status === 'failed' && $actual === null),
                     409,
-                    'This request is already settled with a different outcome.'
+                    'This request is already settled with a different outcome or cost.'
                 );
 
                 return ['request_id' => $requestId, 'status' => $attempt->status];
