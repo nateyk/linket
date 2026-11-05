@@ -14,7 +14,7 @@ import {
 import {Background} from '@app/short-links/renderers/biolink-renderer/biolink-background';
 import {Accordion} from '@shadcn/accordion/accordion';
 import {Avatar} from '@shadcn/avatar/avatar';
-import {Button} from '@shadcn/button/button';
+import {Button, buttonVariants} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
 import {Tabs} from '@shadcn/tabs/tabs';
 import {loadFonts} from '@ui/fonts/font-picker/load-fonts';
@@ -214,36 +214,26 @@ export function PublicServicePage({data}: {data: PublicServicePageData}) {
                     {(service.video_url || service.live_demo_url) && (
                       <div className="flex flex-wrap gap-2">
                         {service.video_url && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            render={
-                              <a
-                                href={service.video_url}
-                                target="_blank"
-                                rel="noreferrer"
-                              />
-                            }
+                          <a
+                            href={service.video_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className={buttonVariants({variant: 'outline', size: 'sm'})}
                           >
                             <VideoIcon data-icon="inline-start" />
                             <Trans message="Video preview" />
-                          </Button>
+                          </a>
                         )}
                         {service.live_demo_url && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            render={
-                              <a
-                                href={service.live_demo_url}
-                                target="_blank"
-                                rel="noreferrer"
-                              />
-                            }
+                          <a
+                            href={service.live_demo_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className={buttonVariants({variant: 'outline', size: 'sm'})}
                           >
                             <ExternalLinkIcon data-icon="inline-start" />
                             <Trans message="Live demo" />
-                          </Button>
+                          </a>
                         )}
                       </div>
                     )}
@@ -341,23 +331,21 @@ export function PublicServicePage({data}: {data: PublicServicePageData}) {
                   {!!contactChannels.length && (
                     <div className="flex flex-col gap-2">
                       {contactChannels.map(({channel, href}) => (
-                        <Button
+                        <a
                           key={`${channel.type}-${channel.value}`}
-                          variant="outline"
-                          className="h-auto min-h-11 w-full justify-start whitespace-normal text-start"
-                          render={
-                            <a
-                              href={href}
-                              target="_blank"
-                              rel="noreferrer"
-                            />
-                          }
+                          href={href}
+                          target="_blank"
+                          rel="noreferrer"
+                          className={cn(
+                            buttonVariants({variant: 'outline'}),
+                            'h-auto min-h-11 w-full justify-start whitespace-normal text-start',
+                          )}
                         >
                           <ContactIcon type={channel.type} />
                           <span className="min-w-0 break-words [overflow-wrap:anywhere]">
                             {channel.label || channel.value}
                           </span>
-                        </Button>
+                        </a>
                       ))}
                     </div>
                   )}
