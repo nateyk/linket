@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Biolinks\Models\Biolink;
 use App\Models\User;
 use App\Storefront\Models\DigitalProduct;
 use App\Storefront\Models\DigitalProductOrderRecovery;
@@ -45,6 +46,12 @@ class FreeCheckoutPortalJourneyTest extends TestCase
         $workspace = (new CreateWorkspace())->createPersonalWorkspace($creator);
         ActiveWorkspace::clearCache();
 
+        $store = Biolink::query()->create([
+            'back_half' => Str::lower(Str::random(10)),
+            'name' => 'QA public storefront',
+            'user_id' => $creator->id,
+            'workspace_id' => $workspace->id,
+        ]);
         $product = DigitalProduct::query()->create([
             'workspace_id' => $workspace->id,
             'user_id' => $creator->id,
@@ -52,6 +59,7 @@ class FreeCheckoutPortalJourneyTest extends TestCase
             'price_cents' => 0,
             'currency' => 'ETB',
             'status' => 'approved',
+            'approved_at' => now(),
             'type' => 'digital',
         ]);
         $file = FileEntry::query()->create([
@@ -65,10 +73,15 @@ class FreeCheckoutPortalJourneyTest extends TestCase
             'owner_id' => $creator->id,
         ]);
         $product->files()->attach($file->id);
+        $product->biolinks()->attach($store->id);
 
         $buyerEmail = 'qa-buyer-'.Str::lower(Str::random(12)).'@example.test';
+        // This is the actual guest-accessible storefront route. The legacy
+        // /api/v1/digital-products/{id}/checkout route is API-access gated and
+        // returns 401 for an anonymous buyer; testing that one would never
+        // exercise the public /username purchase journey.
         $response = $this->postJson(
-            "/api/v1/digital-products/{$product->id}/checkout",
+            "/api/v1/public/stores/{$store->id}/digital-products/{$product->id}/checkout",
             ['buyer_name' => 'QA Buyer', 'buyer_email' => $buyerEmail],
         )->assertOk()
             ->assertJsonStructure(['order_id', 'status']);
@@ -80,6 +93,7 @@ class FreeCheckoutPortalJourneyTest extends TestCase
         // Eloquent snapshot or asserting a false frontend requirement.
         $order = StorefrontOrder::query()->where('uuid', $orderId)->firstOrFail();
         $this->assertSame('paid', $order->status);
+        $this->assertSame($store->id, $order->biolink_id);
         $this->assertSame(0, (int) $order->gross_amount_cents);
         $this->assertNotNull($order->paid_at);
         $this->assertTrue($order->entitlements()->exists());
