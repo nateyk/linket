@@ -68,7 +68,13 @@ test.describe('SF-09/SF-10 real public pages in isolated Chromium', () => {
         page,
       }, testInfo) => {
         await page.setViewportSize({width, height: 900});
-        await openDetail(page, mode, {long: true, dark: width % 2 === 0});
+        // Deliberately capture both light and dark screenshots: all the
+        // sampled widths below are even, so parity-based dark mode would
+        // accidentally omit the project's default light appearance.
+        await openDetail(page, mode, {
+          long: true,
+          dark: width === 390 || width === 768,
+        });
         await expectNoHorizontalOverflow(page);
         await expect(page.getByRole('heading', {level: 1})).toHaveCount(1);
         if (mode === 'service') {
@@ -84,6 +90,42 @@ test.describe('SF-09/SF-10 real public pages in isolated Chromium', () => {
       });
     }
   }
+
+  test('representative light and dark storefront pages render with normal copy', async ({
+    page,
+  }, testInfo) => {
+    for (const mode of modes) {
+      for (const dark of [false, true]) {
+        const width = dark ? 390 : 1440;
+        await page.setViewportSize({width, height: 860});
+        await openDetail(page, mode, {dark});
+        await expectNoHorizontalOverflow(page);
+        await testInfo.attach(
+          `${mode}-${dark ? 'dark-mobile' : 'light-desktop'}`,
+          {
+            body: await page.screenshot({fullPage: true}),
+            contentType: 'image/png',
+          },
+        );
+      }
+    }
+  });
+
+  test('200% text resize reflows public details without horizontal clipping', async ({
+    page,
+  }) => {
+    // This is a CSS root-text resize check, not a substitute for human
+    // testing of browser toolbar zoom at 200%.
+    for (const mode of modes) {
+      await page.setViewportSize({width: 390, height: 840});
+      await openDetail(page, mode, {long: false});
+      await page.evaluate(() => {
+        document.documentElement.style.fontSize = '200%';
+      });
+      await expectNoHorizontalOverflow(page);
+      await expect(page.getByRole('heading', {level: 1})).toBeVisible();
+    }
+  });
 
   test('keyboard access, selected quote-only tier, and focus return', async ({
     page,
