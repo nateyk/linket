@@ -118,6 +118,12 @@ return [
         'dedicated_project_id' => env('CREATOR_AI_OPENAI_COST_AUDIT_PROJECT_ID'),
     ],
 
+    // Separate PR-09 inference gate, in addition to Creator AI Pro gating.
+    'storefront_proposal' => [
+        'enabled' => env('CREATOR_AI_STOREFRONT_PROPOSAL_ENABLED', false),
+        'model' => env('CREATOR_AI_STOREFRONT_PROPOSAL_MODEL', 'gpt-4o-mini'),
+    ],
+
     // Defaults for the separate future generation-quota service, NOT a billing
     // charge for deterministic reports or read-only MCP calls.
     'free_monthly_generation_requests' => 10,
