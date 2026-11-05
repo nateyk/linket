@@ -402,3 +402,69 @@ test('creator forecast readiness remains nonpublishable even with matching check
         expect(array_key_exists($secretField, $report))->toBeFalse();
     }
 });
+
+
+test('creator local verification inventory hashes only own workspace storefront attempts without exposing request IDs', function () {
+    config()->set('creator_ai.enabled', true);
+    config()->set('creator_ai.features.forecast', true);
+    [$creator, $workspace, $product] = forecastSourceFixture();
+    [$other, , $foreignProduct] = forecastSourceFixture();
+    forecastSourcePro($creator);
+
+    $ownOrder = forecastSourceOrder($creator, $product, 'pending', 12000, 'ETB', false);
+    $ownProof = forecastSourceProof($ownOrder, [
+        'provider_request_id' => 'local-synthetic-req-001',
+        'status' => 'pending',
+        'verified_at' => null,
+    ]);
+
+    $otherOrder = forecastSourceOrder($other, $foreignProduct, 'pending', 12000, 'ETB', false);
+    forecastSourceProof($otherOrder, [
+        'provider_request_id' => 'foreign-req-001',
+        'status' => 'pending',
+        'verified_at' => null,
+    ]);
+
+    $from = CarbonImmutable::now('UTC')->subDays(3)->startOfDay();
+    $to = CarbonImmutable::now('UTC')->subDay()->startOfDay();
+    $ownProof->forceFill(['created_at' => $from->addDay()])->save();
+    \App\Payments\Models\DirectPaymentVerification::query()
+        ->where('provider_request_id', 'foreign-req-001')
+        ->update(['created_at' => $from->addDay()]);
+
+    $inventory = app(\App\CreatorAi\Forecasting\CreatorForecastLocalRequestInventory::class);
+    $hashes = $inventory->hashes($creator, $workspace, $from, $to);
+
+    expect($hashes)->toBe([hash('sha256', 'local-synthetic-req-001')])
+        ->and(json_encode($hashes, JSON_THROW_ON_ERROR))
+        ->not->toContain('local-synthetic-req-001')
+        ->not->toContain('foreign-req-001');
+});
+
+test('local verification inventory denies foreign workspace, non-Pro and incomplete calendar windows', function () {
+    config()->set('creator_ai.enabled', true);
+    config()->set('creator_ai.features.forecast', true);
+    [$creator, $workspace] = forecastSourceFixture();
+    [, $foreignWorkspace] = forecastSourceFixture();
+    $from = CarbonImmutable::now('UTC')->subDays(4)->startOfDay();
+    $to = CarbonImmutable::now('UTC')->subDays(2)->startOfDay();
+    $inventory = app(\App\CreatorAi\Forecasting\CreatorForecastLocalRequestInventory::class);
+
+    try {
+        $inventory->hashes($creator, $workspace, $from, $to);
+        $this->fail('Unverified creator obtained request inventory');
+    } catch (HttpException $exception) {
+        expect($exception->getStatusCode())->toBe(403);
+    }
+
+    forecastSourcePro($creator);
+    try {
+        $inventory->hashes($creator, $foreignWorkspace, $from, $to);
+        $this->fail('Foreign workspace request inventory disclosed');
+    } catch (HttpException $exception) {
+        expect($exception->getStatusCode())->toBe(403);
+    }
+
+    expect(fn () => $inventory->hashes($creator, $workspace, $from, CarbonImmutable::now('UTC')))
+        ->toThrow(InvalidArgumentException::class);
+});
