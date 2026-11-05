@@ -27,6 +27,7 @@ final class CreatorProductCopyDraftService
         private readonly CreatorAiUsageService $usage,
         private readonly CreatorProductCopyAgent $agent,
         private readonly ProductCopyDraftValidator $validator,
+        private readonly CreatorAiGenerationMetering $metering,
     ) {}
 
     public function available(User $creator, DigitalProduct $product): bool
@@ -96,6 +97,19 @@ final class CreatorProductCopyDraftService
                 provider: $provider->name(),
                 model: $model,
                 timeout: 25,
+            );
+            // A successful provider response can still fail our copy policy.
+            // Store its limited token counts before validation, but NEVER
+            // equate this checkpoint with the actual invoiced USD charge.
+            $usage = $response->usage;
+            $this->metering->record(
+                $creator,
+                $requestId,
+                $model,
+                (int) $usage->inputTokens,
+                (int) $usage->outputTokens,
+                (int) ($usage->cacheReadInputTokens ?? 0),
+                (int) ($usage->reasoningTokens ?? 0),
             );
             $draft = $this->validator->clean([
                 'title' => $response['title'] ?? null,
