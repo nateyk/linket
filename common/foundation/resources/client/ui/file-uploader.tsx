@@ -379,7 +379,9 @@ export function SharedFileUploader({
       type="file"
       multiple={multiple}
       accept={acceptAttr(uploadType, accept)}
-      className="sr-only"
+      hidden
+      // The programmatic click must not bubble into the dropzone and open it again.
+      onClick={event => event.stopPropagation()}
       onChange={event => {
         addFiles(event.target.files);
         event.target.value = '';
@@ -427,6 +429,8 @@ export function SharedFileUploader({
           tabIndex={0}
           onClick={() => inputRef.current?.click()}
           onKeyDown={event => {
+            // Let the nested native Browse button handle its own keyboard activation.
+            if (event.target !== event.currentTarget) return;
             if (event.key === 'Enter' || event.key === ' ') {
               event.preventDefault();
               inputRef.current?.click();
@@ -520,7 +524,10 @@ export function SharedFileUploader({
                     </AttachmentMedia>
                     <AttachmentContent>
                       <AttachmentTitle>{item.name}</AttachmentTitle>
-                      <AttachmentDescription className="tabular-nums">
+                      <AttachmentDescription
+                        className="tabular-nums"
+                        role={item.status === 'error' ? 'alert' : undefined}
+                      >
                         {item.status === 'error'
                           ? (item.error ?? <Trans message="Upload failed" />)
                           : item.status === 'done'

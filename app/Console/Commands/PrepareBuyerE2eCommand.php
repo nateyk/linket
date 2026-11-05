@@ -2,6 +2,9 @@
 
 namespace App\Console\Commands;
 
+use App\Courses\Models\Chapter;
+use App\Courses\Models\Course;
+use App\Courses\Models\Lesson;
 use App\Payments\VerifyEt\VerifyEtSettings;
 use App\Models\User;
 use App\Storefront\Models\CreatorPaymentMethod;
@@ -135,6 +138,7 @@ class PrepareBuyerE2eCommand extends Command
                 ]);
             }
             $product->stores()->syncWithoutDetaching([$store->id]);
+            $courseProductId = $this->seedCourseResumeFixture($creator, $workspaceId);
 
             $fileContent = "%PDF-1.4\nE2E buyer delivery\n";
             $file = $product->files()->first();
@@ -200,6 +204,7 @@ class PrepareBuyerE2eCommand extends Command
                 'product_id' => $product->id,
                 'product_url' => '/'.$store->back_half.'/products/'.$product->id,
                 'product_title' => $product->title,
+                'course_product_id' => $courseProductId,
                 'buyer_email' => 'e2e-buyer-'.Str::lower(Str::random(8)).'@example.test',
                 'buyer_name' => 'E2E Buyer',
                 'verify_mock' => true,
@@ -225,6 +230,49 @@ class PrepareBuyerE2eCommand extends Command
         $this->line($absolute);
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Prepare an editable Course lesson in the already-guarded disposable test DB.
+     * The browser route expects the product ID, not the course record ID.
+     */
+    private function seedCourseResumeFixture(User $creator, int $workspaceId): int
+    {
+        $product = DigitalProduct::query()->firstOrCreate(
+            ['user_id' => $creator->id, 'title' => 'E2E Mobile Lesson Resume'],
+            [
+                'workspace_id' => $workspaceId,
+                'description' => 'Synthetic draft for isolated Course browser QA.',
+                'price_cents' => 0,
+                'currency' => 'ETB',
+                'status' => 'draft',
+                'type' => 'course',
+            ],
+        );
+        $product->forceFill([
+            'workspace_id' => $workspaceId,
+            'status' => 'draft',
+            'type' => 'course',
+        ])->save();
+
+        $course = Course::query()->firstOrCreate(
+            ['digital_product_id' => $product->id],
+            ['instructor_user_id' => $creator->id],
+        );
+        $chapter = Chapter::query()->firstOrCreate(
+            ['course_id' => $course->id, 'title' => 'E2E Chapter'],
+            ['sort_order' => 0],
+        );
+        Lesson::query()->firstOrCreate(
+            [
+                'course_id' => $course->id,
+                'chapter_id' => $chapter->id,
+                'title' => 'E2E Resume Lesson',
+            ],
+            ['content_type' => 'readable', 'status' => 'draft', 'sort_order' => 0],
+        );
+
+        return (int) $product->id;
     }
 
     /** @return array<string, mixed> */

@@ -2,6 +2,21 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {describe, expect, test} from 'vitest';
 
+describe('large text responsive header UX-34', () => {
+  test('allows title to wrap below action row before it collapses at enlarged text sizes', () => {
+    const source = fs.readFileSync(
+      path.resolve('resources/client/dashboard/digital-products/digital-product-form-page.tsx'),
+      'utf8',
+    );
+    expect(source).toContain('className="max-lg:h-auto max-lg:flex-wrap max-lg:py-2"');
+    expect(source).toContain('max-lg:order-3 max-lg:basis-full');
+    expect(source).toContain('max-lg:overflow-visible max-lg:whitespace-normal');
+    expect(source).toContain('max-lg:hidden');
+    expect(source).toContain('max-lg:size-11 max-lg:px-0');
+    expect(source).toContain('aria-label={trans({message: \'Preview\'})}');
+  });
+});
+
 describe('digital product form submission', () => {
   test('only enables submission for draft or rejected products', () => {
     const source = fs.readFileSync(
@@ -50,13 +65,11 @@ describe('digital product form submission', () => {
       'utf8',
     );
 
-    expect(selectionPage).toContain('useProductCreateWizard');
-    expect(selectionPage).toContain('finishUrl');
-    expect(flow).toMatch(
-      /state\.type === 'course'[\s\S]*?\/dashboard\/items\/new\/course/,
-    );
-    expect(dialog).toContain('useProductCreateWizard');
-    expect(dialog).toContain('finishUrl');
+    expect(selectionPage).toContain('productTypeCreateUrl(selectedType)');
+    expect(flow).toContain('productTypeCreateUrl');
+    expect(dialog).toContain('ProductTypePicker');
+    expect(dialog).toContain('productTypeCreateUrl(selectedType)');
+    expect(dialog).not.toContain('useProductCreateWizard');
   });
 
   test('existing course edit links redirect to the course builder', () => {
@@ -120,7 +133,7 @@ describe('digital product form submission', () => {
     expect(uploaderSource).toContain('showToastOnRestrictionFail: true');
   });
 
-  test('warns about draft reversion only after an approved product is edited', () => {
+  test('warns that a published product update may require review after an edit', () => {
     const source = fs.readFileSync(
       path.resolve(
         'resources/client/dashboard/digital-products/digital-product-form-page.tsx',
@@ -130,8 +143,58 @@ describe('digital product form submission', () => {
 
     expect(source).toContain("product?.status === 'approved' && dirty");
     expect(source).toContain(
-      'Saving changes will return this approved product to draft.',
+      'Changes to approved products may require review. The published version remains available during review.',
     );
+  });
+});
+
+describe('safe save and submit recovery UX-22', () => {
+  test('retains persisted product ID after a failed submit rather than posting another new item', () => {
+    const source = fs.readFileSync(
+      path.resolve('resources/client/dashboard/digital-products/digital-product-form-page.tsx'),
+      'utf8',
+    );
+    expect(source).toContain('savedBeforeSubmitFailure');
+    expect(source).toContain('productSubmissionRecovery: recovery');
+    expect(source).toContain('productSubmissionErrors: validationErrors');
+    expect(source).toContain('navigate(`/dashboard/items/${saved.id}/edit`');
+    expect(source).toContain('saveInFlight.current');
+  });
+
+  test('unknown new-product creation or submission blocks a second mutation', () => {
+    const source = fs.readFileSync(
+      path.resolve('resources/client/dashboard/digital-products/digital-product-form-page.tsx'),
+      'utf8',
+    );
+    expect(source).toContain('setCreationUncertain(true)');
+    expect(source).toContain("submissionRecovery === 'uncertain'");
+    expect(source).toContain('Check My Items');
+    expect(source).toContain('role="alert"');
+  });
+});
+
+describe('optional Storefront placement UX-21', () => {
+  test('distinguishes selecting Storefronts from publishing or submission requirements', () => {
+    const source = fs.readFileSync(
+      path.resolve('resources/client/dashboard/digital-products/digital-product-form-page.tsx'),
+      'utf8',
+    );
+    expect(source).toContain('Storefront placement is optional and does not block product submission.');
+    expect(source).toContain('Optional. Choose where customers can find this product after approval.');
+    expect(source).toContain('No Storefront selected');
+    expect(source).toContain('[one :count Storefront selected|other :count Storefronts selected]');
+    expect(source).toContain('Selection does not publish the product; approval is handled separately.');
+    expect(source).not.toContain('This product is placed on storefronts, but it will not appear publicly until it is approved.');
+  });
+
+  test('keeps selection associated with existing Storefront checkboxes, not buyer links', () => {
+    const source = fs.readFileSync(
+      path.resolve('resources/client/dashboard/digital-products/digital-product-form-page.tsx'),
+      'utf8',
+    );
+    expect(source).toContain('checked={selectedIds.includes(page.id)}');
+    expect(source).toContain('selectedIds.filter(id => id !== page.id)');
+    expect(source).toContain('selectedIds.includes(page.id) ? selectedIds : [...selectedIds, page.id]');
   });
 });
 
@@ -198,11 +261,8 @@ describe('digital product file capability', () => {
   });
 });
 
-describe('price helper honesty', () => {
-  // crit3-A: `Set ETB 0 to offer this product for free.` rendered on approved
-  // products, where saving already reverts them to draft — a promise the form
-  // cannot keep. The helper is status-gated to non-approved products.
-  test('free-offer helper only renders for products that can still become free', () => {
+describe('inline Free or Paid pricing', () => {
+  test('creator selects free or paid within the editor, not an earlier wizard step', () => {
     const source = fs.readFileSync(
       path.resolve(
         'resources/client/dashboard/digital-products/digital-product-form-page.tsx',
@@ -210,14 +270,11 @@ describe('price helper honesty', () => {
       'utf8',
     );
 
-    expect(source).toContain("isApproved={product?.status === 'approved'}");
-    expect(source).toMatch(
-      /description=\{\s*isApproved\s*\?\s*undefined\s*:\s*'Set ETB 0 to offer this product for free\.'\s*\}/,
-    );
-    // It never renders unconditionally any more.
-    expect(source).not.toContain(
-      'description="Set ETB 0 to offer this product for free."',
-    );
+    expect(source).toContain('<BillingModePicker');
+    expect(source).toContain('effectiveBilling');
+    expect(source).toContain('priceForBillingMode(price, mode)');
+    expect(source).toContain("effectiveBilling === 'paid' && priceCents <= 0");
+    expect(source).not.toContain("isApproved={product?.status === 'approved'}");
   });
 });
 
@@ -409,7 +466,7 @@ describe('P2 header: the page title owns the row', () => {
     // ...but the title itself (and its status badge) stays, and in a tight
     // row the TEXT truncates (min-w-0) so the badge keeps its 36px.
     expect(source).toMatch(
-      /<DashboardLayout\.SectionTitle[^>]*>[\s\S]*?<span className="min-w-0 truncate">\s*<Trans message=\{pageTitle\} \/>\s*<\/span>\s*\{product && <ProductStatus/,
+      /<DashboardLayout\.SectionTitle[^>]*>[\s\S]*?<span className="min-w-0 truncate">\s*\{pageTitle\}\s*<\/span>\s*\{product && <ProductStatus/,
     );
   });
 
