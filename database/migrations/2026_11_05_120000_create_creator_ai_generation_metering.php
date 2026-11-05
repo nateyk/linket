@@ -14,6 +14,7 @@ return new class extends Migration
             $table->unsignedInteger('input_tokens');
             $table->unsignedInteger('output_tokens');
             $table->unsignedInteger('cached_input_tokens')->default(0);
+            $table->unsignedInteger('cache_write_input_tokens')->default(0);
             $table->unsignedInteger('reasoning_tokens')->default(0);
             $table->timestamps();
             $table->foreign('request_id', 'creator_ai_metering_attempt_fk')

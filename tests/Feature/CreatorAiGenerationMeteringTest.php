@@ -31,12 +31,13 @@ test('provider usage checkpoint records only bounded token counts, does not sett
     $usage->reserve($creator, (int) $workspace->id, 'writing_basic', $id);
 
     $metering = app(CreatorAiGenerationMetering::class);
-    $metering->record($creator, $id, 'gpt-4o-mini', 200, 100, 40, 0);
-    $metering->record($creator, $id, 'gpt-4o-mini', 200, 100, 40, 0);
+    $metering->record($creator, $id, 'gpt-4o-mini', 200, 100, 40, 20, 0);
+    $metering->record($creator, $id, 'gpt-4o-mini', 200, 100, 40, 20, 0);
 
     $row = DB::table('creator_ai_generation_metering')->where('request_id', $id)->first();
     expect((int) $row->input_tokens)->toBe(200)
         ->and((int) $row->cached_input_tokens)->toBe(40)
+        ->and((int) $row->cache_write_input_tokens)->toBe(20)
         ->and((int) $row->output_tokens)->toBe(100)
         ->and((array) $row)->not->toHaveKey('api_key')
         ->and((array) $row)->not->toHaveKey('prompt')
@@ -44,7 +45,7 @@ test('provider usage checkpoint records only bounded token counts, does not sett
         ->and((int) DB::table('creator_ai_provider_usage_months')->where('provider', 'openai')->value('spent_microusd'))->toBe(0);
 
     try {
-        $metering->record($creator, $id, 'gpt-4o-mini', 201, 100, 40, 0);
+        $metering->record($creator, $id, 'gpt-4o-mini', 201, 100, 40, 20, 0);
         $this->fail('Conflicting token counts were silently accepted.');
     } catch (HttpException $e) {
         expect($e->getStatusCode())->toBe(409);
@@ -52,7 +53,7 @@ test('provider usage checkpoint records only bounded token counts, does not sett
 
     $foreign = User::factory()->create();
     try {
-        $metering->record($foreign, $id, 'gpt-4o-mini', 200, 100, 40, 0);
+        $metering->record($foreign, $id, 'gpt-4o-mini', 200, 100, 40, 20, 0);
         $this->fail('Foreign creator changed the checkpoint.');
     } catch (HttpException $e) {
         expect($e->getStatusCode())->toBe(404);
@@ -66,7 +67,9 @@ test('provider metering rejects invalid cache/reasoning breakdowns before databa
 
     expect(fn () => $metering->record($creator, $id, 'gpt-4o-mini', 10, 2, 11))
         ->toThrow(InvalidArgumentException::class);
-    expect(fn () => $metering->record($creator, $id, 'gpt-4o-mini', 10, 2, 0, 3))
+    expect(fn () => $metering->record($creator, $id, 'gpt-4o-mini', 10, 2, 0, 0, 3))
+        ->toThrow(InvalidArgumentException::class);
+    expect(fn () => $metering->record($creator, $id, 'gpt-4o-mini', 10, 2, 9, 2))
         ->toThrow(InvalidArgumentException::class);
     expect(fn () => $metering->record($creator, $id, 'gpt-4o-mini', -1, 2))
         ->toThrow(InvalidArgumentException::class);

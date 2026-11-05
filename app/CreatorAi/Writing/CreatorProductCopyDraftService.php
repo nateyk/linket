@@ -109,6 +109,7 @@ final class CreatorProductCopyDraftService
                 (int) $usage->inputTokens,
                 (int) $usage->outputTokens,
                 (int) ($usage->cacheReadInputTokens ?? 0),
+                (int) ($usage->cacheWriteInputTokens ?? 0),
                 (int) ($usage->reasoningTokens ?? 0),
             );
             $draft = $this->validator->clean([

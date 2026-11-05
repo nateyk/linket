@@ -21,6 +21,7 @@ final class CreatorAiGenerationMetering
         int $inputTokens,
         int $outputTokens,
         int $cachedInputTokens = 0,
+        int $cacheWriteTokens = 0,
         int $reasoningTokens = 0,
     ): void {
         if (! Str::isUuid($requestId)
@@ -29,7 +30,8 @@ final class CreatorAiGenerationMetering
         }
 
         if ($inputTokens < 0 || $outputTokens < 0 || $cachedInputTokens < 0
-            || $reasoningTokens < 0 || $cachedInputTokens > $inputTokens
+            || $cacheWriteTokens < 0 || $reasoningTokens < 0
+            || $cachedInputTokens + $cacheWriteTokens > $inputTokens
             || $reasoningTokens > $outputTokens
             || $inputTokens > 10000000 || $outputTokens > 10000000) {
             throw new InvalidArgumentException('Invalid provider token counts.');
@@ -37,7 +39,7 @@ final class CreatorAiGenerationMetering
 
         DB::transaction(function () use (
             $creator, $requestId, $model, $inputTokens, $outputTokens,
-            $cachedInputTokens, $reasoningTokens
+            $cachedInputTokens, $cacheWriteTokens, $reasoningTokens
         ): void {
             // Use the same creator -> attempt lock order as settlement.
             $owner = DB::table('users')->where('id', $creator->getKey())
@@ -53,6 +55,7 @@ final class CreatorAiGenerationMetering
                 'input_tokens' => $inputTokens,
                 'output_tokens' => $outputTokens,
                 'cached_input_tokens' => $cachedInputTokens,
+                'cache_write_input_tokens' => $cacheWriteTokens,
                 'reasoning_tokens' => $reasoningTokens,
             ];
             $prior = DB::table('creator_ai_generation_metering')
