@@ -38,6 +38,8 @@ describe('SF-09 — product pricing and truthful free-access state', () => {
   it('makes free access actionable without describing it as a payment', async () => {
     const onBuy = renderPricingCard();
     expect(screen.getByRole('button', {name: 'Get for free'})).toBeTruthy();
+    expect(screen.getByText('Free', {selector: 'p'})).toBeTruthy();
+    expect(screen.queryByText('0.00 Br')).toBeNull();
     expect(screen.getByText('Free access, no payment required')).toBeTruthy();
     expect(screen.queryByText('One-time payment, no subscription')).toBeNull();
     expect(
