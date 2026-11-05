@@ -18,6 +18,10 @@ describe('PR-09 safe storefront preview boundary', () => {
     expect(source).toContain('appearanceIsDirty');
     expect(source).toContain('aria-pressed={preview?.preset === item.id}');
     expect(source).toContain('role="alert"');
+    expect(source).toContain('Before and after comparison');
+    expect(source).toContain('Illustrative button comparison only.');
+    expect(source).toContain('requestVersion.current');
+    expect(source).toContain('version === requestVersion.current');
     expect(source).not.toContain('updateAppearance(');
     expect(source).not.toContain('appearance-revision');
     expect(source).not.toMatch(/apiClient\.(post|patch|put|delete)\(/);
