@@ -7,9 +7,12 @@ on:
       - 'tests/e2e/product-creation-responsive.spec.ts'
       - 'tests/e2e/buyer-journey.spec.ts'
       - 'tests/e2e/product-creation-moderation-lifecycle.spec.ts'
+      - 'tests/e2e/service-creation-responsive.spec.ts'
       - 'app/Console/Commands/PrepareBuyerE2eCommand.php'
       - 'resources/client/dashboard/digital-products/**'
       - 'resources/client/dashboard/courses/**'
+      - 'resources/client/dashboard/services/**'
+      - 'app/CreatorServices/**'
       - '.github/workflows/product-creation-browser-qa.yml'
   workflow_dispatch:
 
@@ -197,6 +200,19 @@ jobs:
           npx playwright test tests/e2e/product-creation-responsive.spec.ts \
             --project=chromium --workers=1 --retries=0 \
             --grep-invert 'smoke: isolated creator can authenticate' --output=test-results/editors --trace=retain-on-failure
+
+      - name: Verify isolated Service Creation responsive and full creator lifecycle
+        shell: bash
+        env:
+          PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/services
+        run: |
+          set -euo pipefail
+          [[ "$APP_ENV" == "testing" && "$DB_DATABASE" == "belink_test" ]]
+          [[ "$LINKET_ISOLATED_E2E" == "1" && "$E2E_BASE_URL" == "http://127.0.0.1:8081" ]]
+          # Service publishes direct creator-owned offers, not platform checkout.
+          # All writes here use the same synthetic creator and disposable database.
+          npx playwright test tests/e2e/service-creation-responsive.spec.ts \
+            --project=chromium --workers=1 --retries=0 --output=test-results/services --trace=retain-on-failure
 
       - name: Verify real disposable buyer authorization and paid-content recovery
         shell: bash
