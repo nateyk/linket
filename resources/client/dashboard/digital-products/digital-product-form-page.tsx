@@ -739,7 +739,7 @@ function DigitalProductForm() {
 
   return (
     <DashboardLayout.MainSection>
-      <DashboardLayout.SectionHeader className="max-sm:h-auto max-sm:flex-wrap max-sm:py-2">
+      <DashboardLayout.SectionHeader className="max-lg:h-auto max-lg:flex-wrap max-lg:py-2">
         <DashboardLayout.SidebarToggle />
         {/* P2 (crit3-A/3-B): the SectionTitle (page title + status badge)
             measured width 0 at 1280/1440/1920. Root cause is the flex
@@ -748,29 +748,29 @@ function DigitalProductForm() {
             is `flex-1` (flex-basis 0%) — free space for it never exists,
             so it collapses and `overflow:hidden` clips the badge behind
             the action row. `w-auto` gives the slack to the title;
-            `max-sm:hidden` keeps the 360px row for title + icon actions
+            `max-lg:hidden` keeps the narrow row for title + icon actions
             (navigation still lives in the drawer). The current-page crumb
             is dropped on purpose: it repeated the exact string the title
             now shows again (crit3-A, duplicate-title note). */}
-        <Breadcrumb className="w-auto max-sm:hidden">
+        <Breadcrumb className="w-auto max-lg:hidden">
           <Breadcrumb.Item>
             <Breadcrumb.Link to="/dashboard/items">
               <Trans message="All products" />
             </Breadcrumb.Link>
           </Breadcrumb.Item>
         </Breadcrumb>
-        <DashboardLayout.SectionTitle render={<h1 />} className="max-sm:order-3 max-sm:basis-full max-sm:flex-none max-sm:w-full max-sm:text-xl max-sm:overflow-visible max-sm:whitespace-normal max-sm:text-clip">
+        <DashboardLayout.SectionTitle render={<h1 />} className="max-lg:order-3 max-lg:basis-full max-lg:flex-none max-lg:w-full max-lg:text-xl max-lg:overflow-visible max-lg:whitespace-normal max-lg:text-clip">
           {/* P2: in a tight row the TEXT is what truncates (min-w-0), so
               the status badge — the one product-specific fact the chrome
-              carries — keeps its 36px at every width.
+              carries — keeps its 36px without clipping.
               Final-fix item 2: `render={<h1 />}` makes this the page's one
               and only heading (T7's mechanism on the selection page). */}
-          <span className="min-w-0 truncate max-sm:overflow-visible max-sm:whitespace-normal max-sm:text-clip">
+          <span className="min-w-0 truncate max-lg:overflow-visible max-lg:whitespace-normal max-lg:text-clip">
             {pageTitle}
           </span>
           {product && <ProductStatus status={product.status} hasPendingUpdate={product.has_pending_update === true} />}
         </DashboardLayout.SectionTitle>
-        <div className="flex items-center gap-2 max-sm:ml-auto">
+        <div className="flex items-center gap-2 max-lg:ml-auto">
           {effectiveFileType !== 'course' && (
             <Button
               variant="outline"
@@ -779,11 +779,11 @@ function DigitalProductForm() {
               onClick={() => setPreviewOpen(true)}
             >
               <EyeIcon className="size-4" aria-hidden="true" />
-              <span className="max-sm:hidden"><Trans message="Preview" /></span>
+              <span className="max-lg:hidden"><Trans message="Preview" /></span>
             </Button>
           )}
-          {/* P2 (crit3-A): the text labels collapse below 640px
-              (max-sm:hidden), leaving icon-only buttons with no accessible
+          {/* P2 (crit3-A): the text labels collapse below 1024px
+              (max-lg:hidden), leaving icon-only buttons with no accessible
               name. aria-labels match the visible text via trans() — the
               same pattern the course setup page uses. */}
           {product && (
@@ -795,7 +795,7 @@ function DigitalProductForm() {
               onClick={() => setDeleteDialogOpen(true)}
             >
               <Trash2Icon className="size-4" />
-              <span className="max-sm:hidden">
+              <span className="max-lg:hidden">
                 <Trans message="Delete" />
               </span>
             </Button>
@@ -812,7 +812,7 @@ function DigitalProductForm() {
             onClick={() => void save(false)}
           >
             <SaveIcon className="size-4" />
-            <span className="max-sm:hidden">
+            <span className="max-lg:hidden">
               {saving ? (
                 <Trans message="Saving..." />
               ) : (
@@ -831,7 +831,7 @@ function DigitalProductForm() {
             onClick={() => void save(true)}
           >
             <SendIcon className="size-4" />
-            <span className="max-sm:hidden">
+            <span className="max-lg:hidden">
               {submitting ? (
                 <Trans message="Submitting..." />
               ) : (

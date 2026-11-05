@@ -155,32 +155,32 @@ export function Component() {
   // FileUploadContext — same provider wrap as the builder and the
   // digital-product form, or opening the section throws during render.
   return <FileUploadProvider><DashboardLayout.MainSection>
-    <DashboardLayout.SectionHeader className="max-sm:h-auto max-sm:flex-wrap max-sm:py-2">
+    <DashboardLayout.SectionHeader className="max-lg:h-auto max-lg:flex-wrap max-lg:py-2">
       <DashboardLayout.SidebarToggle />
       {/* Final-fix item 1 (same root cause + fix as the edit page, see
           p2-report item 7): the breadcrumb <nav> ships `w-full`, a flex base
           size equal to the whole header row, while SectionTitle is `flex-1`
           (flex-basis 0%) — free space for the title never exists, so it
           measured 0px at ≥1280. `w-auto` hands the slack to the title;
-          `max-sm:hidden` keeps the narrow row for title + icon actions
+          `max-lg:hidden` keeps the narrow row for title + icon actions
           (navigation lives in the drawer). The current-page crumb and its
           separator are dropped: they repeated the exact string the title
           shows (crit3-A duplicate-title note). */}
-      <Breadcrumb className="w-auto max-sm:hidden"><Breadcrumb.Item><Breadcrumb.Link to="/dashboard/items"><Trans message="All products" /></Breadcrumb.Link></Breadcrumb.Item></Breadcrumb>
+      <Breadcrumb className="w-auto max-lg:hidden"><Breadcrumb.Item><Breadcrumb.Link to="/dashboard/items"><Trans message="All products" /></Breadcrumb.Link></Breadcrumb.Item></Breadcrumb>
       {/* Final-fix item 2: the page's single h1 — same mechanism T7 used on
           the selection page; in a tight row the TEXT truncates (min-w-0). */}
-      <DashboardLayout.SectionTitle render={<h1 />} className="max-sm:order-3 max-sm:basis-full max-sm:flex-none max-sm:w-full max-sm:text-xl max-sm:overflow-visible max-sm:whitespace-normal max-sm:text-clip"><span className="min-w-0 truncate max-sm:overflow-visible max-sm:whitespace-normal max-sm:text-clip"><Trans message="Create course" /></span></DashboardLayout.SectionTitle>
+      <DashboardLayout.SectionTitle render={<h1 />} className="max-lg:order-3 max-lg:basis-full max-lg:flex-none max-lg:w-full max-lg:text-xl max-lg:overflow-visible max-lg:whitespace-normal max-lg:text-clip"><span className="min-w-0 truncate max-lg:overflow-visible max-lg:whitespace-normal max-lg:text-clip"><Trans message="Create course" /></span></DashboardLayout.SectionTitle>
       {/* Header actions mirror the digital-product edit page: icon + label
-          that collapses to icon-only below 640px. aria-labels keep the
+          that collapses to icon-only below 1024px. aria-labels keep the
           collapsed buttons named. */}
-      <div className="flex items-center gap-2 max-sm:ml-auto">
+      <div className="flex items-center gap-2 max-lg:ml-auto">
         <Button type="button" variant="outline" size="sm"
           aria-label={trans({message: 'Preview'})}
           onClick={() => setPreviewOpen(true)}>
           <EyeIcon className="size-4" aria-hidden="true" />
-          <span className="max-sm:hidden"><Trans message="Preview" /></span>
+          <span className="max-lg:hidden"><Trans message="Preview" /></span>
         </Button>
-        {creationUncertain && <Button variant="outline" size="sm" aria-label={trans({message: 'Check My Items'})} render={<Link to="/dashboard/items" />}><Trans message="Check My Items" /></Button>}<Button size="sm" type="submit" form="course-create-form" aria-label={creating ? trans({message: 'Creating course...'}) : trans({message: 'Create course'})} disabled={creating || creationUncertain}>{creating ? <Spinner data-icon="inline-start" /> : <GraduationCapIcon className="size-4" data-icon="inline-start" />}<span className="max-sm:hidden">{creating ? <Trans message="Creating course..." /> : <Trans message="Create course" />}</span></Button></div>
+        {creationUncertain && <Button variant="outline" size="sm" aria-label={trans({message: 'Check My Items'})} render={<Link to="/dashboard/items" />}><Trans message="Check My Items" /></Button>}<Button size="sm" type="submit" form="course-create-form" aria-label={creating ? trans({message: 'Creating course...'}) : trans({message: 'Create course'})} disabled={creating || creationUncertain}>{creating ? <Spinner data-icon="inline-start" /> : <GraduationCapIcon className="size-4" data-icon="inline-start" />}<span className="max-lg:hidden">{creating ? <Trans message="Creating course..." /> : <Trans message="Create course" />}</span></Button></div>
     </DashboardLayout.SectionHeader>
     <DashboardLayout.SectionContent className="overflow-y-auto"><form id="course-create-form" onSubmit={createCourse} className="mx-auto w-full max-w-3xl py-4 sm:py-5">
       {error && <Alert.Root role="alert" variant="destructive" fillStyle="subtleFill" className="mb-5"><TriangleAlertIcon /><Alert.Description>{error}</Alert.Description></Alert.Root>}

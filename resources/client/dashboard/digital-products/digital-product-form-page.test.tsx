@@ -2,6 +2,20 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {describe, expect, test} from 'vitest';
 
+describe('large text responsive header UX-34', () => {
+  test('allows title to wrap below action row before it collapses at enlarged text sizes', () => {
+    const source = fs.readFileSync(
+      path.resolve('resources/client/dashboard/digital-products/digital-product-form-page.tsx'),
+      'utf8',
+    );
+    expect(source).toContain('className="max-lg:h-auto max-lg:flex-wrap max-lg:py-2"');
+    expect(source).toContain('max-lg:order-3 max-lg:basis-full');
+    expect(source).toContain('max-lg:overflow-visible max-lg:whitespace-normal');
+    expect(source).toContain('max-lg:hidden');
+    expect(source).toContain('aria-label={trans({message: \'Preview\'})}');
+  });
+});
+
 describe('digital product form submission', () => {
   test('only enables submission for draft or rejected products', () => {
     const source = fs.readFileSync(

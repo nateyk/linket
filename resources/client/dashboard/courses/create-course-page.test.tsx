@@ -17,6 +17,16 @@ const source = fs.readFileSync(
   'utf8',
 );
 
+describe('large text responsive Course header UX-34', () => {
+  test('keeps the heading readable and icon controls named at tablet text sizes', () => {
+    expect(source).toContain('className="max-lg:h-auto max-lg:flex-wrap max-lg:py-2"');
+    expect(source).toContain('max-lg:order-3 max-lg:basis-full');
+    expect(source).toContain('max-lg:overflow-visible max-lg:whitespace-normal');
+    expect(source).toContain('max-lg:hidden');
+    expect(source).toContain('aria-label={trans({message: \'Preview\'})}');
+  });
+});
+
 describe('course creation page', () => {
   test('reads billing and price through the shared prefill parser', () => {
     expect(source).toContain('parseWizardPrefill');
