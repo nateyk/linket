@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'tests/e2e/product-creation-responsive.spec.ts'
+      - 'tests/e2e/buyer-journey.spec.ts'
       - 'resources/client/dashboard/digital-products/**'
       - 'resources/client/dashboard/courses/**'
       - '.github/workflows/product-creation-browser-qa.yml'
@@ -171,6 +172,18 @@ jobs:
           npx playwright test tests/e2e/product-creation-responsive.spec.ts \
             --project=chromium --workers=1 --retries=0 \
             --grep-invert 'smoke: isolated creator can authenticate'
+
+      - name: Verify real disposable buyer authorization and paid-content recovery
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$APP_ENV" == "testing" && "$DB_DATABASE" == "belink_test" ]]
+          [[ "$LINKET_ISOLATED_E2E" == "1" && "$VERIFY_ET_ENABLED" == "true" && "$VERIFY_ET_MOCK" == "true" ]]
+          # Existing browser suite uses the real Laravel test DB and a mocked verifier;
+          # it exercises unpaid/rejected locks, verified delivery and My Portal recovery.
+          # No live provider credentials, production endpoints or payment operations.
+          npx playwright test tests/e2e/buyer-journey.spec.ts \
+            --project=chromium --workers=1 --retries=0
 
       - name: Attach screenshots, trace and browser report
         if: always()
