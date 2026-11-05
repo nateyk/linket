@@ -52,7 +52,11 @@ export function ProductPricingCard({
       <Card.Content className={biolinkSurfaceContent}>
         <div className="flex items-start justify-between gap-4">
           <p className="min-w-0 text-3xl leading-tight font-semibold tracking-tight tabular-nums break-words [overflow-wrap:anywhere] sm:text-4xl">
-            {formatPrice(product.price_cents, product.currency)}
+            {isFree ? (
+              <Trans message="Free" />
+            ) : (
+              formatPrice(product.price_cents, product.currency)
+            )}
           </p>
           <span className="grid size-10 shrink-0 place-items-center rounded-card-sm bg-[var(--biolink-surface)] text-[var(--biolink-muted-text)] ring-1 ring-(color:--biolink-border)">
             <TypeIcon className="size-5" aria-hidden="true" />
