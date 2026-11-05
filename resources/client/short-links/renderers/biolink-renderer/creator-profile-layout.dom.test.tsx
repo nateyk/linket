@@ -468,5 +468,12 @@ describe('public creator card responsive readability (SF-06)', () => {
     expect(message!.className).toContain('min-h-11');
     // The mock router writes "to" rather than resolving it into "href".
     expect(message!.getAttribute('to')).toBe('mailto:hi@example.com');
+
+    const socialActions = [...mobileBranch().querySelectorAll('a[aria-label]')];
+    expect(
+      socialActions.some(link =>
+        link.className.includes('pointer-coarse:min-h-11'),
+      ),
+    ).toBe(true);
   });
 });
