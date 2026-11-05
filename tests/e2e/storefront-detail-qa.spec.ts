@@ -248,7 +248,13 @@ test.describe('SF-09/SF-10 real public pages in isolated Chromium', () => {
           await page.getByRole('button', {name: 'Get for free'}).first().click();
         } else {
           await page.getByRole('tab', {name: /Custom/}).click();
-          await page.getByRole('button', {name: 'Request this package'}).click();
+          // Both tab panels can remain mounted, so disambiguate the
+          // contextual CTA by its active package rather than using a global
+          // role selector that matches the hidden Starter action too.
+          await page
+            .getByRole('tabpanel', {name: 'Custom'})
+            .getByRole('button', {name: 'Request this package'})
+            .click();
         }
         const dialog = page.getByRole('dialog');
         await expect(dialog).toBeVisible();
