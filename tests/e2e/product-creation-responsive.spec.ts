@@ -172,6 +172,57 @@ test.describe('product creation responsive evidence', () => {
   }
 });
 
+test('200% text resize preserves readable editors, Preview and keyboard focus', async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    process.env.LINKET_ISOLATED_E2E !== '1',
+    'Requires the isolated browser QA environment',
+  );
+  // Text resizing is distinct from browser-toolbar zoom. The existing
+  // 320px/720px viewport matrix covers reflow, while this test checks
+  // large root text at a fixed layout width without changing DPR.
+  await page.setViewportSize({width: 720, height: 900});
+  await loginAsSeededCreator(page);
+  for (const item of [
+    {type: 'digital', heading: /create digital product/i},
+    {type: 'ebook', heading: /create e-book/i},
+    {type: 'audio', heading: /create audio/i},
+    {type: 'course', heading: /create course/i},
+  ] as const) {
+    await page.goto(`/dashboard/items/new/${item.type}`);
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = '200%';
+    });
+    const fontSize = await page.evaluate(() =>
+      Number.parseFloat(getComputedStyle(document.documentElement).fontSize),
+    );
+    expect(fontSize, 'Root text must genuinely resize').toBeGreaterThanOrEqual(30);
+    await expect(page.getByRole('heading', {name: item.heading, level: 1})).toBeVisible();
+
+    const overflow = await page.evaluate(() =>
+      Math.max(0, document.documentElement.scrollWidth - document.documentElement.clientWidth),
+    );
+    if (overflow > 1) {
+      console.log('TEXT_RESIZE_OVERFLOW', JSON.stringify({type: item.type, overflow}));
+    }
+    expect(overflow, `${item.type} text resizing must not create horizontal page scroll`).toBeLessThanOrEqual(1);
+    const preview = page.getByRole('button', {name: 'Preview'});
+    await preview.focus();
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('dialog', {name: 'Customer preview'})).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(preview).toBeFocused();
+
+    const shot = testInfo.outputPath(`text-resize-200pct-${item.type}.png`);
+    await page.screenshot({path: shot, fullPage: true});
+    await testInfo.attach(`200% root text ${item.type}`, {
+      path: shot,
+      contentType: 'image/png',
+    });
+  }
+});
+
 test('keyboard-only product choice and Preview support focus return', async ({page}) => {
   test.skip(
     process.env.LINKET_ISOLATED_E2E !== '1',
@@ -437,6 +488,14 @@ test('Course creation with an unknown network result never issues a second POST'
   await page.locator('#course-create-form').evaluate(element => {
     (element as HTMLFormElement).requestSubmit();
   });
+  expect(attempts).toBe(1);
+  // The escape hatch must be reachable without a pointer, even after an
+  // uncertain POST that blocks another create attempt.
+  const recoveryLink = page.getByRole('link', {name: 'Check My Items'});
+  await recoveryLink.focus();
+  await expect(recoveryLink).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\/dashboard\/items$/);
   expect(attempts).toBe(1);
 });
 
