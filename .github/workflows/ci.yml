@@ -297,7 +297,7 @@ jobs:
       # Vitest set: a broken browser harness should fail fast and give traces.
       # Uses only synthetic data and intercepted requests, never provider keys.
       - name: Verify public storefront detail pages in Chromium
-        run: npx playwright test tests/e2e/storefront-detail-qa.spec.ts --project=chromium
+        run: npx playwright test tests/e2e/storefront-detail-qa.spec.ts --project=chromium --max-failures=1 --retries=0 --timeout=25000
         env:
           LARAVEL_BYPASS_ENV_CHECK: '1'
 
