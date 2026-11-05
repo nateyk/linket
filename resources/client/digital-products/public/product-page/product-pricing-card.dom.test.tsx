@@ -40,16 +40,28 @@ describe('SF-09 — product pricing and truthful free-access state', () => {
     expect(screen.getByRole('button', {name: 'Get for free'})).toBeTruthy();
     expect(screen.getByText('Free access, no payment required')).toBeTruthy();
     expect(screen.queryByText('One-time payment, no subscription')).toBeNull();
-    expect(screen.queryByText('Secure payment with protected access after confirmation.')).toBeNull();
+    expect(
+      screen.queryByText(
+        'Secure payment with protected access after confirmation.',
+      ),
+    ).toBeNull();
     await userEvent.click(screen.getByRole('button', {name: 'Get for free'}));
     expect(onBuy).toHaveBeenCalledTimes(1);
   });
 
   it('preserves paid checkout labels, fulfillment notes and the existing action', () => {
-    renderPricingCard({...baseProduct, price_cents: 45000, payment_mode: 'direct'});
+    renderPricingCard({
+      ...baseProduct,
+      price_cents: 45000,
+      payment_mode: 'direct',
+    });
     expect(screen.getByRole('button', {name: 'Buy now'})).toBeTruthy();
     expect(screen.getByText('One-time payment, no subscription')).toBeTruthy();
-    expect(screen.getByText('Secure payment with protected access after confirmation.')).toBeTruthy();
+    expect(
+      screen.getByText(
+        'Secure payment with protected access after confirmation.',
+      ),
+    ).toBeTruthy();
     expect(screen.queryByText('Get for free')).toBeNull();
   });
 
@@ -61,7 +73,9 @@ describe('SF-09 — product pricing and truthful free-access state', () => {
 
   it('still disables the action when the creator cannot sell', () => {
     renderPricingCard({...baseProduct, can_buy: false});
-    expect(screen.getByRole('button', {name: 'Temporarily unavailable'})).toHaveProperty('disabled', true);
+    expect(
+      screen.getByRole('button', {name: 'Temporarily unavailable'}),
+    ).toHaveProperty('disabled', true);
   });
 
   it('prevents duplicate free claims after the first successful checkout', async () => {
