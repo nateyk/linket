@@ -240,7 +240,10 @@ export function PublicServicePage({data}: {data: PublicServicePageData}) {
                         aria-label={trans({message: 'Service information'})}
                         style={segmented.style}
                         indicatorClass={segmented.indicatorClassName}
-                        className={cn('w-max shrink-0', segmented.listClassName)}
+                        className={cn(
+                          'w-max shrink-0',
+                          segmented.listClassName,
+                        )}
                       >
                         <Tabs.Tab
                           value="description"
@@ -248,7 +251,10 @@ export function PublicServicePage({data}: {data: PublicServicePageData}) {
                         >
                           <Trans message="Description" />
                         </Tabs.Tab>
-                        <Tabs.Tab value="faq" className={segmented.tabClassName}>
+                        <Tabs.Tab
+                          value="faq"
+                          className={segmented.tabClassName}
+                        >
                           <Trans message="FAQ" />
                         </Tabs.Tab>
                       </Tabs.List>
@@ -303,9 +309,7 @@ export function PublicServicePage({data}: {data: PublicServicePageData}) {
                       )}
                     >
                       <Avatar.Image src={avatarUrl} alt="" />
-                      <Avatar.ColorFallback>
-                        {displayName}
-                      </Avatar.ColorFallback>
+                      <Avatar.ColorFallback>{displayName}</Avatar.ColorFallback>
                     </Avatar.Root>
                     <div className="flex min-w-0 flex-col">
                       <p className="truncate text-base font-medium">
@@ -336,11 +340,7 @@ export function PublicServicePage({data}: {data: PublicServicePageData}) {
                           variant="outline"
                           className="w-full justify-start"
                           render={
-                            <a
-                              href={href}
-                              target="_blank"
-                              rel="noreferrer"
-                            />
+                            <a href={href} target="_blank" rel="noreferrer" />
                           }
                         >
                           <ContactIcon type={channel.type} />
@@ -361,9 +361,7 @@ export function PublicServicePage({data}: {data: PublicServicePageData}) {
           data-testid="service-mobile-action"
           className={cn(
             'fixed inset-x-0 bottom-0 z-30 border-t border-[var(--biolink-border)] bg-[var(--biolink-surface-strong)] px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] [box-shadow:var(--biolink-surface-shadow,none)] transition-[transform,visibility] duration-150 ease-in-out motion-reduce:transition-none lg:hidden',
-            railInView
-              ? 'invisible translate-y-full'
-              : 'visible translate-y-0',
+            railInView ? 'invisible translate-y-full' : 'visible translate-y-0',
           )}
         >
           <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
@@ -413,7 +411,7 @@ function ServiceDescription({html}: {html?: string | null}) {
 
   return (
     <div
-      className="prose prose-sm max-w-none text-[var(--biolink-text)] prose-headings:text-[var(--biolink-text)] prose-p:text-[var(--biolink-muted-text)] prose-li:text-[var(--biolink-muted-text)] prose-strong:text-[var(--biolink-text)]"
+      className="prose prose-sm max-w-none text-[var(--biolink-text)] prose-headings:text-[var(--biolink-text)] prose-p:text-[var(--biolink-muted-text)] prose-strong:text-[var(--biolink-text)] prose-li:text-[var(--biolink-muted-text)]"
       dangerouslySetInnerHTML={{__html: html}}
     />
   );
