@@ -336,6 +336,38 @@ describe('saving', () => {
     });
   });
 
+  test('unknown create response blocks a second POST and preserves the unsaved form', async () => {
+    const user = userEvent.setup();
+    mountPage('/dashboard/services/new');
+    await waitForForm();
+    await user.type(titleInput(), 'Network uncertainty service');
+    api.post.mockRejectedValueOnce(new Error('Connection ended after submission'));
+
+    await user.click(screen.getByRole('button', {name: 'Save draft'}));
+    expect(await screen.findByText(/We could not confirm whether the service was created/)).toBeTruthy();
+    expect(screen.getByRole('link', {name: 'Check My Services'}).getAttribute('href'))
+      .toBe('/dashboard/services');
+    expect(titleInput().value).toBe('Network uncertainty service');
+    expect(screen.getByRole('button', {name: 'Save draft'}).hasAttribute('disabled')).toBe(true);
+    expect(screen.getByRole('button', {name: 'Publish service'}).hasAttribute('disabled')).toBe(true);
+
+    await pressSaveShortcut();
+    expect(api.post).toHaveBeenCalledTimes(1);
+    expect(api.put).not.toHaveBeenCalled();
+  });
+
+  test('a successful create response missing its ID is not retried blindly', async () => {
+    const user = userEvent.setup();
+    mountPage('/dashboard/services/new');
+    await waitForForm();
+    api.post.mockResolvedValueOnce({data: {data: {status: 'draft'}}});
+
+    await user.click(screen.getByRole('button', {name: 'Save draft'}));
+    expect(await screen.findByText(/We could not confirm whether the service was created/)).toBeTruthy();
+    expect(api.post).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('button', {name: 'Save draft'}).hasAttribute('disabled')).toBe(true);
+  });
+
   test('Cmd+S PUTs the loaded service in edit mode', async () => {
     mountPage('/dashboard/services/3/edit');
     await waitForForm();
