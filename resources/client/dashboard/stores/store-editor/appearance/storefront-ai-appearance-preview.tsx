@@ -1,6 +1,7 @@
 import {useBiolinkEditorStore} from '@app/dashboard/stores/store-editor/biolink-editor-store';
 import {apiClient} from '@common/http/query-client';
 import {Button} from '@shadcn/button/button';
+import {AlertDialog} from '@shadcn/alert-dialog/alert-dialog';
 import {Trans} from '@ui/i18n/trans';
 import {useEffect, useRef, useState} from 'react';
 
@@ -27,18 +28,21 @@ const PRESETS: Array<{id: Preset; label: string}> = [
 ];
 
 /**
- * PR-09 milestone 1: observational preview only.
- * Intentionally no apply/save/publish button until the normal storefront
- * mutation endpoint supports an atomic server-side revision check.
+ * Safe creator-reviewed preset proposals. Applying only stages allowlisted
+ * settings in the editor; the normal Save operation sends the source revision
+ * precondition to the server's atomic appearance transaction.
  */
 export function StorefrontAiAppearancePreview() {
   const storeId = useBiolinkEditorStore(s => s.biolink.id);
   const appearanceIsDirty = useBiolinkEditorStore(s => s.appearanceIsDirty);
   const currentButtons = useBiolinkEditorStore(s => s.appearance?.btnConfig);
+  const applyAppearanceSuggestion = useBiolinkEditorStore(s => s.applyAppearanceSuggestion);
   const [available, setAvailable] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>();
   const [preview, setPreview] = useState<Preview>();
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [appliedNotice, setAppliedNotice] = useState(false);
   const requestVersion = useRef(0);
   const base = '/api/v1/creator-ai/stores/' + storeId;
 
@@ -47,6 +51,8 @@ export function StorefrontAiAppearancePreview() {
     let active = true;
     setAvailable(false);
     setPreview(undefined);
+    setReviewOpen(false);
+    setAppliedNotice(false);
     void apiClient.get(base + '/appearance-availability')
       .then(r => {
         if (active && version === requestVersion.current) setAvailable(r.data?.data?.available === true);
@@ -62,6 +68,7 @@ export function StorefrontAiAppearancePreview() {
       requestVersion.current++;
       setLoading(false);
       setPreview(undefined);
+      setReviewOpen(false);
     }
   }, [appearanceIsDirty]);
 
@@ -71,6 +78,7 @@ export function StorefrontAiAppearancePreview() {
     if (loading || appearanceIsDirty) return;
     setError(undefined);
     setPreview(undefined);
+    setAppliedNotice(false);
     setLoading(true);
     const version = ++requestVersion.current;
     try {
@@ -91,12 +99,30 @@ export function StorefrontAiAppearancePreview() {
     }
   }
 
+  const canStage = preview?.changes?.btnConfig
+    && Object.keys(preview.changes.btnConfig).length > 0;
+
+  function confirmApply() {
+    if (!preview || !canStage || appearanceIsDirty || preview.store_id !== storeId
+      || preview.read_only !== true || preview.requires_review !== true
+      || !/^[a-f0-9]{64}$/.test(preview.source_fingerprint)) {
+      setError('The storefront changed. Request a fresh preview before applying.');
+      setReviewOpen(false);
+      return;
+    }
+
+    applyAppearanceSuggestion(preview.changes.btnConfig!, preview.source_fingerprint);
+    setPreview(undefined);
+    setReviewOpen(false);
+    setAppliedNotice(true);
+  }
+
   return (
     <section className="space-y-3 border-b border-border pb-4" aria-label="Storefront appearance suggestions">
       <div>
         <h3 className="text-sm font-medium"><Trans message="Appearance ideas" /></h3>
         <p className="mt-1 text-xs text-muted-foreground">
-          <Trans message="Compare safe Linket style presets. Preview only — no changes are saved." />
+          <Trans message="Compare safe Linket style presets. Review a suggestion before applying it to your editor." />
         </p>
       </div>
       <div className="flex flex-wrap gap-2" role="group" aria-label="Preview style">
@@ -120,6 +146,7 @@ export function StorefrontAiAppearancePreview() {
         </p>
       )}
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+      {appliedNotice && <p role="status" className="text-xs text-muted-foreground"><Trans message="Review your editor, then select Save changes to publish the update." /></p>}
       {loading && <p role="status" className="text-xs text-muted-foreground">
         <Trans message="Loading preview…" />
       </p>}
@@ -173,11 +200,39 @@ export function StorefrontAiAppearancePreview() {
               </dl>
             </>
           )}
-          <Button size="sm" variant="ghost" type="button" onClick={() => setPreview(undefined)}>
-            <Trans message="Dismiss preview" />
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {canStage && (
+              <Button size="sm" type="button" onClick={() => setReviewOpen(true)}>
+                <Trans message="Review and apply" />
+              </Button>
+            )}
+            <Button size="sm" variant="ghost" type="button" onClick={() => setPreview(undefined)}>
+              <Trans message="Discard suggestion" />
+            </Button>
+          </div>
         </div>
       )}
+      <AlertDialog.Root open={reviewOpen} onOpenChange={setReviewOpen}>
+        <AlertDialog.Portal>
+          <AlertDialog.Backdrop />
+          <AlertDialog.Content size="sm">
+            <AlertDialog.Header>
+              <AlertDialog.Title>
+                <Trans message="Apply suggested button style?" />
+              </AlertDialog.Title>
+              <AlertDialog.Description>
+                <Trans message="Only the reviewed button settings will be added to your editor. Nothing is saved or published until you select Save changes." />
+              </AlertDialog.Description>
+            </AlertDialog.Header>
+            <AlertDialog.Footer>
+              <AlertDialog.Cancel><Trans message="Cancel" /></AlertDialog.Cancel>
+              <AlertDialog.Action onClick={confirmApply}>
+                <Trans message="Apply to editor" />
+              </AlertDialog.Action>
+            </AlertDialog.Footer>
+          </AlertDialog.Content>
+        </AlertDialog.Portal>
+      </AlertDialog.Root>
     </section>
   );
 }
