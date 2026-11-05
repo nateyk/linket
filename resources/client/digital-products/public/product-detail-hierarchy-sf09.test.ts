@@ -3,7 +3,10 @@ import path from 'node:path';
 import {describe, expect, test} from 'vitest';
 
 const read = (filename: string) =>
-  fs.readFileSync(path.resolve('resources/client/digital-products/public', filename), 'utf8');
+  fs.readFileSync(
+    path.resolve('resources/client/digital-products/public', filename),
+    'utf8',
+  );
 
 describe('SF-09 product and course detail content contract', () => {
   test('product names, creator description and learning outcomes wrap long multilingual text', () => {
@@ -17,8 +20,12 @@ describe('SF-09 product and course detail content contract', () => {
 
   test('course chapter and lesson names remain readable at narrow widths', () => {
     const page = read('digital-product-public-pages.tsx');
-    expect(page).not.toContain('truncate text-sm font-medium text-[var(--biolink-text)]');
-    expect(page).not.toContain('min-w-0 flex-1 truncate text-[var(--biolink-text)]');
+    expect(page).not.toContain(
+      'truncate text-sm font-medium text-[var(--biolink-text)]',
+    );
+    expect(page).not.toContain(
+      'min-w-0 flex-1 truncate text-[var(--biolink-text)]',
+    );
     expect(page).toContain('break-words [overflow-wrap:anywhere]');
   });
 
@@ -27,7 +34,9 @@ describe('SF-09 product and course detail content contract', () => {
     const pricing = read('product-page/product-pricing-card.tsx');
     const faq = read('product-page/product-faq.tsx');
     expect(page).toContain("product.payment_mode === 'free'");
-    expect(page).toContain('No payment details are needed for this free product.');
+    expect(page).toContain(
+      'No payment details are needed for this free product.',
+    );
     expect(page).toContain('Continue for free');
     expect(page).toContain("data.product.payment_mode === 'free'");
     expect(pricing).toContain("product.payment_mode === 'free'");
@@ -39,7 +48,7 @@ describe('SF-09 product and course detail content contract', () => {
     const page = read('digital-product-public-pages.tsx');
     expect(page).toContain('<ProductTabs');
     expect(page).toContain('<CourseCurriculum');
-    expect(page).toContain('payment_mode === \'direct\'');
+    expect(page).toContain("payment_mode === 'direct'");
     expect(page).toContain("payment_mode === 'unavailable'");
     expect(page).toContain('onSubmit={() => void beginCheckout()}');
     expect(page).toContain('<MotionConfig reducedMotion="user">');
@@ -47,8 +56,13 @@ describe('SF-09 product and course detail content contract', () => {
 
   test('successful free orders bypass paid payment instructions and present safe portal access', () => {
     const page = read('digital-product-public-pages.tsx');
-    const freeBranch = page.indexOf("if (data.product.payment_mode === 'free') {", page.indexOf('const payload = response.data;'));
-    const paymentInstructions = page.indexOf('if (payload?.reference_endpoint && payload?.access_token)');
+    const freeBranch = page.indexOf(
+      "if (data.product.payment_mode === 'free') {",
+      page.indexOf('const payload = response.data;'),
+    );
+    const paymentInstructions = page.indexOf(
+      'if (payload?.reference_endpoint && payload?.access_token)',
+    );
     expect(freeBranch).toBeGreaterThan(0);
     expect(paymentInstructions).toBeGreaterThan(freeBranch);
     expect(page).toContain('isSuccessfulFreeCheckoutResponse');
