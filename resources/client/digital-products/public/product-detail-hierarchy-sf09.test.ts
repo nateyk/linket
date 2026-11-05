@@ -44,4 +44,20 @@ describe('SF-09 product and course detail content contract', () => {
     expect(page).toContain('onSubmit={() => void beginCheckout()}');
     expect(page).toContain('<MotionConfig reducedMotion="user">');
   });
+
+  test('successful free orders bypass paid payment instructions and present safe portal access', () => {
+    const page = read('digital-product-public-pages.tsx');
+    const freeBranch = page.indexOf("if (data.product.payment_mode === 'free') {", page.indexOf('const payload = response.data;'));
+    const paymentInstructions = page.indexOf('if (payload?.reference_endpoint && payload?.access_token)');
+    expect(freeBranch).toBeGreaterThan(0);
+    expect(paymentInstructions).toBeGreaterThan(freeBranch);
+    expect(page).toContain('isSuccessfulFreeCheckoutResponse');
+    expect(page).toContain('setFreeCheckoutComplete(true)');
+    expect(page).toContain('role="status"');
+    expect(page).toContain('to="/my-portal"');
+    expect(page).toContain('completed={freeCheckoutComplete}');
+    expect(page).toContain('freeCheckoutComplete');
+    // Avoid URL tokens: customers recover their purchases through email sign-in.
+    expect(page).not.toContain('access_token=${payload.access_token}');
+  });
 });
