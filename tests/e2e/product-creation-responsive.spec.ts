@@ -284,7 +284,11 @@ test('invalid upload is announced and removable without submitting a product', a
   await expect(files.getByRole('alert')).toHaveCount(0);
 });
 
-async function mockSyntheticDraftEdit(page: Page, productId: number) {
+async function mockSyntheticDraftEdit(
+  page: Page,
+  productId: number,
+  submitResponse: 'validation' | 'network',
+) {
   const product = {
     id: productId,
     title: 'Synthetic creator lifecycle guide',
@@ -300,15 +304,58 @@ async function mockSyntheticDraftEdit(page: Page, productId: number) {
     biolink_ids: [],
   };
   let updates = 0;
-  await page.route(`**/api/v1/items/${productId}`, async route => {
-    if (route.request().method() === 'PUT') updates++;
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({data: product}),
-    });
+  let submissions = 0;
+  const methods: string[] = [];
+  // Match the entire item API family, then dispatch by pathname and method.
+  // The previous exact-match route covered GET hydration but let a later
+  // write escape to Laravel and produce a synthetic-ID 404.
+  await page.route('**/api/v1/items**', async route => {
+    const request = route.request();
+    const pathname = new URL(request.url()).pathname;
+    const method = request.method();
+    if (!pathname.startsWith(`/api/v1/items/${productId}`)) {
+      await route.continue();
+      return;
+    }
+    methods.push(`${method} ${pathname}`);
+    if (pathname === `/api/v1/items/${productId}` && method === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({data: product}),
+      });
+      return;
+    }
+    if (pathname === `/api/v1/items/${productId}` && method === 'PUT') {
+      updates++;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({data: product}),
+      });
+      return;
+    }
+    if (pathname === `/api/v1/items/${productId}/submit` && method === 'POST') {
+      submissions++;
+      if (submitResponse === 'network') {
+        await route.abort('failed');
+      } else {
+        await route.fulfill({
+          status: 422,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            message: 'Cannot submit synthetic draft',
+            errors: {title: ['Please correct the title before review.']},
+          }),
+        });
+      }
+      return;
+    }
+    // Test failures must not send synthetic item writes to the real test API.
+    console.error('UNEXPECTED_SYNTHETIC_ITEM_REQUEST', method, pathname);
+    await route.abort('failed');
   });
-  return {get updates() {return updates;}};
+  return {get updates() {return updates;}, get submissions() {return submissions;}, methods};
 }
 
 test('a saved draft reports submission validation failure and focuses the invalid field', async ({page}) => {
@@ -319,27 +366,18 @@ test('a saved draft reports submission validation failure and focuses the invali
   await page.setViewportSize({width: 360, height: 800});
   await loginAsSeededCreator(page);
   const id = 999997;
-  const draft = await mockSyntheticDraftEdit(page, id);
-  let submissionPosts = 0;
-  await page.route(`**/api/v1/items/${id}/submit`, async route => {
-    submissionPosts++;
-    await route.fulfill({
-      status: 422,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        message: 'Cannot submit synthetic draft',
-        errors: {title: ['Please correct the title before review.']},
-      }),
-    });
-  });
+  const draft = await mockSyntheticDraftEdit(page, id, 'validation');
   await page.goto(`/dashboard/items/${id}/edit`);
   await expect(page.getByRole('heading', {name: /Edit digital product/i})).toBeVisible();
   await page.getByRole('button', {name: 'Submit for review'}).click();
-  await expect(page.getByRole('alert').filter({hasText: 'Draft saved, but submission failed.'})).toBeVisible();
+  await expect(
+    page.getByRole('alert').filter({hasText: 'Draft saved, but submission failed.'}),
+    'Intercepted requests: ' + draft.methods.join(', '),
+  ).toBeVisible();
   await expect(page.getByText('Please correct the title before review.')).toBeVisible();
   await expect(page.locator('#product-title')).toBeFocused();
   expect(draft.updates).toBe(1);
-  expect(submissionPosts).toBe(1);
+  expect(draft.submissions).toBe(1);
 });
 
 test('unknown submission cannot silently submit a saved draft twice', async ({page}) => {
@@ -349,22 +387,20 @@ test('unknown submission cannot silently submit a saved draft twice', async ({pa
   );
   await loginAsSeededCreator(page);
   const id = 999996;
-  const draft = await mockSyntheticDraftEdit(page, id);
-  let submissionPosts = 0;
-  await page.route(`**/api/v1/items/${id}/submit`, async route => {
-    submissionPosts++;
-    await route.abort('failed');
-  });
+  const draft = await mockSyntheticDraftEdit(page, id, 'network');
   await page.goto(`/dashboard/items/${id}/edit`);
   await page.getByRole('button', {name: 'Submit for review'}).click();
-  await expect(page.getByRole('alert').filter({hasText: 'Draft saved, but we could not confirm submission.'})).toBeVisible();
+  await expect(
+    page.getByRole('alert').filter({hasText: 'Draft saved, but we could not confirm submission.'}),
+    'Intercepted requests: ' + draft.methods.join(', '),
+  ).toBeVisible();
   await expect(page.getByRole('button', {name: 'Submit for review'})).toBeDisabled();
   await expect(page.getByRole('link', {name: 'Check My Items'})).toBeVisible();
   await page.getByRole('button', {name: 'Submit for review'}).evaluate(button => {
     button.dispatchEvent(new MouseEvent('click', {bubbles: true}));
   });
   expect(draft.updates).toBe(1);
-  expect(submissionPosts).toBe(1);
+  expect(draft.submissions).toBe(1);
 });
 
 test('Course creation with an unknown network result never issues a second POST', async ({page}) => {
