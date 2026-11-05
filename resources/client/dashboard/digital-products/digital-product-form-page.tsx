@@ -774,7 +774,7 @@ function DigitalProductForm() {
           {effectiveFileType !== 'course' && (
             <Button
               variant="outline"
-              size="sm"
+              size="sm" className="max-lg:size-11 max-lg:px-0"
               aria-label={trans({message: 'Preview'})}
               onClick={() => setPreviewOpen(true)}
             >
@@ -789,7 +789,7 @@ function DigitalProductForm() {
           {product && (
             <Button
               variant="ghost"
-              size="sm"
+              size="sm" className="max-lg:size-11 max-lg:px-0"
               disabled={saving}
               aria-label={trans({message: 'Delete'})}
               onClick={() => setDeleteDialogOpen(true)}
@@ -802,7 +802,7 @@ function DigitalProductForm() {
           )}
           <Button
             variant="outline"
-            size="sm"
+            size="sm" className="max-lg:size-11 max-lg:px-0"
             disabled={saving || submitting || unavailable || creationUncertain || submissionRecovery === 'uncertain'}
             aria-label={
               saving
@@ -821,7 +821,7 @@ function DigitalProductForm() {
             </span>
           </Button>
           <Button
-            size="sm"
+            size="sm" className="max-lg:size-11 max-lg:px-0"
             disabled={saving || submitting || unavailable || !canSubmit || creationUncertain || submissionRecovery === 'uncertain'}
             aria-label={
               submitting

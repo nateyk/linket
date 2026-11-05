@@ -172,6 +172,29 @@ test.describe('product creation responsive evidence', () => {
   }
 });
 
+test('mobile header action targets reach Linket QA minimum of 44px', async ({page}) => {
+  test.skip(
+    process.env.LINKET_ISOLATED_E2E !== '1',
+    'Requires isolated test database and authenticated creator',
+  );
+  await page.setViewportSize({width: 360, height: 800});
+  await loginAsSeededCreator(page);
+  for (const type of ['digital', 'ebook', 'audio', 'course'] as const) {
+    await page.goto(`/dashboard/items/new/${type}`);
+    const names = type === 'course'
+      ? ['Preview', 'Create course']
+      : ['Preview', 'Save draft', 'Submit for review'];
+    for (const name of names) {
+      const target = page.getByRole('button', {name, exact: true});
+      await expect(target).toBeVisible();
+      const rect = await target.boundingBox();
+      expect(rect, `${type} ${name} target must render`).not.toBeNull();
+      expect(rect!.width, `${type} ${name} width`).toBeGreaterThanOrEqual(44);
+      expect(rect!.height, `${type} ${name} height`).toBeGreaterThanOrEqual(44);
+    }
+  }
+});
+
 test('200% text resize preserves readable editors, Preview and keyboard focus', async ({
   page,
 }, testInfo) => {

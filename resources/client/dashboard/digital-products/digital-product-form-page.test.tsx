@@ -12,6 +12,7 @@ describe('large text responsive header UX-34', () => {
     expect(source).toContain('max-lg:order-3 max-lg:basis-full');
     expect(source).toContain('max-lg:overflow-visible max-lg:whitespace-normal');
     expect(source).toContain('max-lg:hidden');
+    expect(source).toContain('max-lg:size-11 max-lg:px-0');
     expect(source).toContain('aria-label={trans({message: \'Preview\'})}');
   });
 });
