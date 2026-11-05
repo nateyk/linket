@@ -382,7 +382,9 @@ function CreatorCard({
           <div className="flex min-w-0 flex-col justify-end gap-1 pb-0.5">
             <div className="flex min-w-0 items-start gap-1.5">
               <h1 className="min-w-0 text-xl leading-snug font-semibold tracking-tight text-pretty text-[var(--biolink-text)] sm:text-2xl">
-                <span className="line-clamp-2">{profile.display_name}</span>
+                <span className="line-clamp-2 break-words [overflow-wrap:anywhere]">
+                  {profile.display_name}
+                </span>
               </h1>
               {biolink.is_verified && (
                 <>
@@ -414,7 +416,7 @@ function CreatorCard({
                 variant="ghost"
                 className={cn(
                   buttonAppearance.className,
-                  'w-[52%] min-w-40 max-w-56',
+                  'w-full min-h-11 @4xl:w-auto @4xl:min-w-40 @4xl:max-w-56',
                 )}
                 style={buttonAppearance.style}
               >
@@ -426,7 +428,7 @@ function CreatorCard({
 
           {profile.bio && (
             <p
-              className="text-sm leading-relaxed break-words text-[var(--biolink-muted-text)]"
+              className="text-base leading-relaxed break-words text-[var(--biolink-muted-text)]"
             >
               {profile.bio}
             </p>
@@ -469,7 +471,10 @@ function CreatorCard({
                     variant="ghost"
                     size="icon-sm"
                     aria-label={trans(social.name) || type}
-                    className={buttonAppearance.className}
+                    className={cn(
+                      buttonAppearance.className,
+                      'pointer-coarse:min-h-11 pointer-coarse:min-w-11',
+                    )}
                     style={buttonAppearance.style}
                   >
                     {social.icon}

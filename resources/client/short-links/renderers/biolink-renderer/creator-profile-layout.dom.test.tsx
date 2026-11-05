@@ -1,6 +1,8 @@
 /**
  * @vitest-environment jsdom
  */
+import fs from 'node:fs';
+import path from 'node:path';
 import {render, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest';
@@ -431,5 +433,53 @@ describe('the preview follows the editor tab (A-06)', () => {
     );
     expect(section('Profile')).toBeTruthy();
     expect(section('About')).toBeNull();
+  });
+});
+
+
+describe('public creator card responsive readability (SF-06)', () => {
+  test('keeps a long creator name, readable bio and primary action inside the mobile profile', async () => {
+    const longName = 'CreatorWithAnUnbrokenName'.repeat(8);
+    const biolink = makeBiolink() as unknown as {
+      profile_config: Record<string, unknown>;
+    };
+    biolink.profile_config.display_name = longName;
+    const user = userEvent.setup();
+    render(
+      <CreatorProfileLayout
+        biolink={biolink as never}
+        appearance={null}
+        content={[shopWidget]}
+      />,
+    );
+
+    await user.click(within(mobileBranch()).getByRole('button', {name: 'Profile'}));
+
+    const name = within(mobileBranch()).getByRole('heading', {
+      level: 1,
+      name: longName,
+    });
+    expect(name.querySelector('span')?.className).toContain('[overflow-wrap:anywhere]');
+
+    const bio = within(mobileBranch()).getByText('Designs things.');
+    expect(bio.className).toContain('text-base');
+
+    const message = within(mobileBranch()).getByText('Message').closest('a');
+    expect(message).toBeTruthy();
+    expect(message!.className).toContain('w-full');
+    expect(message!.className).toContain('min-h-11');
+    // The mock router writes "to" rather than resolving it into "href".
+    expect(message!.getAttribute('to')).toBe('mailto:hi@example.com');
+
+    // Social links are only rendered for recognized, configured providers.
+    // This fixture's legacy "x" key may not map to SocialsType; assert the
+    // exact production touch-size rule without asserting a phantom social link.
+    const profileSource = fs.readFileSync(
+      path.resolve(
+        'resources/client/short-links/renderers/biolink-renderer/creator-profile-layout.tsx',
+      ),
+      'utf8',
+    );
+    expect(profileSource).toContain('pointer-coarse:min-h-11 pointer-coarse:min-w-11');
   });
 });

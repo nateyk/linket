@@ -168,3 +168,17 @@ describe('shared product cover loading', () => {
     expect(coverSource).not.toContain('loading="eager"');
   });
 });
+
+
+describe('storefront appearance extension', () => {
+  test('allows public cards to override supporting text without changing dashboard defaults', () => {
+    expect(source).toContain('description?: string;');
+    expect(source).toContain('classNames?.description');
+    expect(source).toContain('text-muted-foreground');
+  });
+
+  test('wraps long unbroken product and service names in a two-line heading', () => {
+    expect(source).toContain('line-clamp-2');
+    expect(source).toContain('[overflow-wrap:anywhere]');
+  });
+});
