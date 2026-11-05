@@ -346,13 +346,14 @@ function ServiceFormPage() {
       <Button
         variant="ghost"
         size="icon-sm"
+        className="max-lg:size-11"
         nativeButton={false}
         aria-label={trans({message: 'Back to services'})}
         render={<Link to="/dashboard/services" />}
       >
         <ArrowLeftIcon />
       </Button>
-      <Breadcrumb className="w-auto max-sm:hidden">
+      <Breadcrumb className="w-auto max-lg:hidden">
         <Breadcrumb.Item>
           <Breadcrumb.Link to="/dashboard/services">
             <Trans message="My Services" />
@@ -363,7 +364,7 @@ function ServiceFormPage() {
         render={<h1 />}
         className="max-lg:order-3 max-lg:w-full max-lg:basis-full max-lg:flex-none max-lg:overflow-visible max-lg:whitespace-normal max-lg:text-clip"
       >
-        <span className="min-w-0 truncate">
+        <span className="min-w-0 truncate max-lg:overflow-visible max-lg:whitespace-normal max-lg:text-clip">
           {isEditing ? (
             <Trans message="Edit service" />
           ) : (
@@ -386,15 +387,16 @@ function ServiceFormPage() {
   );
 
   const renderActions = () => (
-    <div className="flex max-w-full items-center gap-2"> 
+    <div className="ml-auto flex max-w-full items-center gap-2">
       <Button
         variant="outline"
         size="sm"
+        className="max-lg:size-11 max-lg:px-0"
         aria-label={trans({message: 'Preview'})}
         onClick={() => setPreviewOpen(true)}
       >
         <EyeIcon className="size-4" />
-        <span className="max-sm:hidden">
+        <span className="max-lg:hidden">
           <Trans message="Preview" />
         </span>
       </Button>
@@ -402,12 +404,13 @@ function ServiceFormPage() {
         <Button
           variant="ghost"
           size="sm"
+        className="max-lg:size-11 max-lg:px-0"
           disabled={saving || deleting}
           aria-label={trans({message: 'Delete'})}
           onClick={() => setDeleteOpen(true)}
         >
           <Trash2Icon className="size-4" />
-          <span className="max-sm:hidden">
+          <span className="max-lg:hidden">
             <Trans message="Delete" />
           </span>
         </Button>
@@ -415,17 +418,19 @@ function ServiceFormPage() {
       <Button
         variant="outline"
         size="sm"
+        className="max-lg:size-11 max-lg:px-0"
         disabled={saving}
         aria-label={trans({message: 'Save draft'})}
         onClick={() => void save('draft')}
       >
         <SaveIcon className="size-4" />
-        <span className="max-sm:hidden">
+        <span className="max-lg:hidden">
           <Trans message="Save draft" />
         </span>
       </Button>
       <Button
         size="sm"
+        className="max-lg:size-11 max-lg:px-0"
         disabled={saving}
         aria-label={trans({message: 'Publish service'})}
         onClick={() => void save('published')}
@@ -435,7 +440,7 @@ function ServiceFormPage() {
         ) : (
           <SendIcon className="size-4" />
         )}
-        <span className="max-sm:hidden">
+        <span className="max-lg:hidden">
           {form.status === 'published' ? (
             <Trans message="Save changes" />
           ) : (
