@@ -16,6 +16,7 @@ import {ProductCreatorCard} from '@app/digital-products/public/product-page/prod
 import {ProductOverview} from '@app/digital-products/public/product-page/product-overview';
 import {ProductPricingCard} from '@app/digital-products/public/product-page/product-pricing-card';
 import {DirectPaymentModal, type DirectCheckout} from '@app/digital-products/public/direct-payment-modal';
+import {isSuccessfulFreeCheckoutResponse} from './free-checkout-response';
 import {ProductSummary} from '@app/digital-products/public/product-page/product-summary';
 import {
   ProductTabs,
@@ -27,7 +28,7 @@ import {
 } from '@app/digital-products/public/product-page/surface';
 import {Accordion} from '@shadcn/accordion/accordion';
 import {Alert} from '@shadcn/alert/alert';
-import {Button} from '@shadcn/button/button';
+import {Button, buttonVariants} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
 import {Dialog} from '@shadcn/dialog/dialog';
 import {Field} from '@shadcn/forms/field';
@@ -64,6 +65,7 @@ import {
   GraduationCapIcon,
   LockKeyholeIcon,
   RefreshCwIcon,
+  ShoppingBagIcon,
   XIcon,
 } from 'lucide-react';
 import {
@@ -171,6 +173,7 @@ export function PublicDigitalProductPage({
 }) {
   const [submitting, setSubmitting] = useState(false);
   const [buyerDialogOpen, setBuyerDialogOpen] = useState(false);
+  const [freeCheckoutComplete, setFreeCheckoutComplete] = useState(false);
   const [buyerName, setBuyerName] = useState('');
   const [buyerEmail, setBuyerEmail] = useState('');
   const [buyerPhone, setBuyerPhone] = useState('');
@@ -222,6 +225,7 @@ export function PublicDigitalProductPage({
     setSubmitting(true);
     setCheckoutFailed(false);
     setBuyerError(undefined);
+    setFreeCheckoutComplete(false);
 
     try {
       const response = await apiClient.post(
@@ -235,6 +239,20 @@ export function PublicDigitalProductPage({
         },
       );
       const payload = response.data;
+
+      // Free orders are fulfilled synchronously by StorefrontCheckout. Their
+      // responses can still contain legacy verification endpoints, but they
+      // must never open the paid payment-instructions modal.
+      if (data.product.payment_mode === 'free') {
+        if (!isSuccessfulFreeCheckoutResponse(data.product.payment_mode, payload)) {
+          throw new Error('Free checkout response missing order id.');
+        }
+        setBuyerDialogOpen(false);
+        setFreeCheckoutComplete(true);
+        setSubmitting(false);
+        return;
+      }
+
       const checkoutUrl = payload?.checkout_url ?? payload?.data?.checkout_url;
 
       if (payload?.reference_endpoint && payload?.access_token) {
@@ -334,6 +352,40 @@ export function PublicDigitalProductPage({
         // very Buy button the dialog sits on.
         inert={buyerDialogOpen || undefined}
       >
+        {freeCheckoutComplete && (
+          <section
+            role="status"
+            aria-live="polite"
+            className={cn(
+              'flex min-w-0 flex-wrap items-center justify-between gap-4 rounded-card bg-[var(--biolink-surface-strong)] p-4 text-[var(--biolink-text)] [box-shadow:var(--biolink-surface-shadow,none)]',
+              biolinkSurfaceEdgeClassName,
+            )}
+          >
+            <div className="flex min-w-0 items-start gap-3">
+              <CheckCircle2Icon
+                className="mt-0.5 size-5 shrink-0 text-positive"
+                aria-hidden="true"
+              />
+              <div className="min-w-0">
+                <p className="text-base font-semibold">
+                  <Trans message="Your free order is ready" />
+                </p>
+                <p className="text-sm text-[var(--biolink-muted-text)] break-words [overflow-wrap:anywhere]">
+                  <Trans message="Use your checkout email in My Portal to access your product." />
+                </p>
+              </div>
+            </div>
+            <Link
+              to="/my-portal"
+              className={cn(
+                buttonVariants({variant: 'outline', size: 'lg'}),
+                'min-h-11 shrink-0',
+              )}
+            >
+              <Trans message="Open My Portal" />
+            </Link>
+          </section>
+        )}
         <ProductSamplePlayer samples={audioSamples}>
         <div className="grid min-w-0 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-6">
           <div className="flex min-w-0 flex-col gap-5 lg:col-start-1 lg:row-start-1">
@@ -362,6 +414,7 @@ export function PublicDigitalProductPage({
               checkoutCancelled={checkoutCancelled}
               checkoutFailed={checkoutFailed}
               submitting={submitting}
+              completed={freeCheckoutComplete}
               onBuy={() => setBuyerDialogOpen(true)}
               actionRef={buyActionRef}
             />
@@ -380,27 +433,45 @@ export function PublicDigitalProductPage({
         <div
           className={cn(
             'fixed inset-x-0 bottom-0 z-30 border-t border-[var(--biolink-border)] bg-[var(--biolink-surface-strong)] px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] [box-shadow:var(--biolink-surface-shadow,none)] transition-[transform,visibility] duration-150 ease-in-out motion-reduce:transition-none lg:hidden',
-            !railInView || checkoutCancelled || checkoutFailed
-              ? buyerDialogOpen
-                ? 'invisible translate-y-full'
-                : 'visible translate-y-0'
-              : 'invisible translate-y-full',
+            freeCheckoutComplete
+              ? 'invisible translate-y-full'
+              : !railInView || checkoutCancelled || checkoutFailed
+                ? buyerDialogOpen
+                  ? 'invisible translate-y-full'
+                  : 'visible translate-y-0'
+                : 'invisible translate-y-full',
           )}
         >
           <div className="flex items-center justify-between gap-4">
-            <span className="text-base font-semibold tabular-nums">
-              {formatPrice(data.product.price_cents, data.product.currency)}
+            <span className="min-w-0 truncate text-base font-semibold tabular-nums">
+              {data.product.payment_mode === 'free' ? (
+                <Trans message="Free" />
+              ) : (
+                formatPrice(data.product.price_cents, data.product.currency)
+              )}
             </span>
             <Button
               variant="ghost"
               className={cn('shrink-0', buttonAppearance.className)}
               style={buttonAppearance.style}
               size="lg"
-              disabled={submitting || data.product.can_buy === false}
+              disabled={submitting || data.product.can_buy === false || freeCheckoutComplete}
               onClick={() => setBuyerDialogOpen(true)}
             >
-              <LockKeyholeIcon />
-              {data.product.verification_quota_exhausted ? <Trans message="Creator cannot accept additional verified sales right now" /> : <Trans message={data.product.can_buy === false ? 'Temporarily unavailable' : 'Buy now'} />}
+              {data.product.payment_mode === 'free' ? (
+                <ShoppingBagIcon aria-hidden="true" />
+              ) : (
+                <LockKeyholeIcon aria-hidden="true" />
+              )}
+              {data.product.verification_quota_exhausted ? (
+                <Trans message="Creator cannot accept additional verified sales right now" />
+              ) : data.product.can_buy === false ? (
+                <Trans message="Temporarily unavailable" />
+              ) : data.product.payment_mode === 'free' ? (
+                <Trans message="Get for free" />
+              ) : (
+                <Trans message="Buy now" />
+              )}
             </Button>
           </div>
         </div>
@@ -696,7 +767,11 @@ function BuyerDetailsDialog({
           <Dialog.Header>
             <Dialog.Title className="pe-11">
               <LockKeyholeIcon />
-              <Trans message="Complete your purchase" />
+              {product.payment_mode === 'free' ? (
+                  <Trans message="Get your free product" />
+                ) : (
+                  <Trans message="Complete your purchase" />
+                )}
             </Dialog.Title>
             <div
               className={cn(
@@ -731,9 +806,13 @@ function BuyerDetailsDialog({
               </div>
             </div>
             <Dialog.Description className="text-[var(--biolink-muted-text)]">
-              {product.payment_mode === 'direct'
-                ? <Trans message="You'll pay the creator directly using their bank or wallet details." />
-                : <Trans message="Checkout is temporarily unavailable." />}
+              {product.payment_mode === 'free' ? (
+                <Trans message="No payment details are needed for this free product." />
+              ) : product.payment_mode === 'direct' ? (
+                <Trans message="You'll pay the creator directly using their bank or wallet details." />
+              ) : (
+                <Trans message="Checkout is temporarily unavailable." />
+              )}
             </Dialog.Description>
           </Dialog.Header>
           <Dialog.Body>
@@ -790,7 +869,11 @@ function BuyerDetailsDialog({
                 />
                 {error === 'email' && (
                   <Field.Error id="digital-product-buyer-email-error">
-                    <Trans message="Enter a valid email address to receive your receipt." />
+                    {product.payment_mode === 'free' ? (
+                      <Trans message="Enter a valid email to access your product." />
+                    ) : (
+                      <Trans message="Enter a valid email address to receive your receipt." />
+                    )}
                   </Field.Error>
                 )}
               </Field.Root>
@@ -807,9 +890,11 @@ function BuyerDetailsDialog({
                   onChange={event => onPhoneChange(event.target.value)}
                 />
                 <Field.Description className="text-[var(--biolink-muted-text)]">
-                  {product.payment_mode === 'direct'
-                    ? <Trans message="Used only to help with your order." />
-                    : <Trans message="Checkout is temporarily unavailable." />}
+                  {product.payment_mode === 'unavailable' ? (
+                    <Trans message="Checkout is temporarily unavailable." />
+                  ) : (
+                    <Trans message="Used only to help with your order." />
+                  )}
                 </Field.Description>
               </Field.Root>
               {product.payment_mode === 'direct' && (product.receiving_accounts?.length ?? 0) > 1 && (
@@ -827,22 +912,32 @@ function BuyerDetailsDialog({
                     className="mt-0.5 size-4 shrink-0 text-positive"
                     aria-hidden="true"
                   />
-                  <Trans message="One-time payment, no subscription." />
+                  {product.payment_mode === 'free' ? (
+                    <Trans message="No payment required." />
+                  ) : (
+                    <Trans message="One-time payment, no subscription." />
+                  )}
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle2Icon
                     className="mt-0.5 size-4 shrink-0 text-positive"
                     aria-hidden="true"
                   />
-                  <Trans message="We email your receipt and protected download links as soon as payment is confirmed." />
+                  {product.payment_mode === 'free' ? (
+                    <Trans message="Use your checkout email to access this product in My Portal." />
+                  ) : (
+                    <Trans message="We email your receipt and protected download links as soon as payment is confirmed." />
+                  )}
                 </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2Icon
-                    className="mt-0.5 size-4 shrink-0 text-positive"
-                    aria-hidden="true"
-                  />
-                  <Trans message="Digital delivery is instant; refunds are at the creator's discretion." />
-                </li>
+                {product.payment_mode !== 'free' && (
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2Icon
+                      className="mt-0.5 size-4 shrink-0 text-positive"
+                      aria-hidden="true"
+                    />
+                    <Trans message="Digital delivery is instant; refunds are at the creator's discretion." />
+                  </li>
+                )}
               </ul>
             </form>
           </Dialog.Body>
@@ -871,7 +966,9 @@ function BuyerDetailsDialog({
                     ? 'Starting checkout...'
                     : product.payment_mode === 'direct'
                       ? 'Show payment details'
-                      : 'Checkout unavailable'
+                      : product.payment_mode === 'free'
+                        ? 'Continue for free'
+                        : 'Checkout unavailable'
                 }
               />
             </Button>
@@ -1399,7 +1496,7 @@ function CourseCurriculum({
                       {index + 1}
                     </span>
                     <span className="flex min-w-0 flex-1 flex-col gap-0.5 text-start sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-                      <span className="truncate text-sm font-medium text-[var(--biolink-text)]">
+                      <span className="text-sm font-medium text-[var(--biolink-text)] break-words [overflow-wrap:anywhere]">
                         {chapter.title}
                       </span>
                       <span className="shrink-0 text-xs font-normal text-[var(--biolink-muted-text)]">
@@ -1429,7 +1526,7 @@ function CourseCurriculum({
                             className="size-4 shrink-0 text-[var(--biolink-muted-text)]"
                             aria-hidden="true"
                           />
-                          <span className="min-w-0 flex-1 truncate text-[var(--biolink-text)]">
+                          <span className="min-w-0 flex-1 text-[var(--biolink-text)] break-words [overflow-wrap:anywhere]">
                             {lesson.title}
                           </span>
                           {(lesson.duration_seconds ?? 0) > 0 && (

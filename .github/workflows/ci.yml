@@ -4,8 +4,11 @@ on:
   pull_request:
     branches: [main]
   push:
-    # One verified build of each main commit; feature PRs use pull_request.
-    branches: [main]
+    # Temporary isolated QA fallback: the PR event is stuck before creating
+    # jobs on this branch. Push verification runs the FULL suite; release and
+    # artifact publishing remain restricted to main. Remove the temporary
+    # branch selector before merging this draft PR.
+    branches: [main, ui/storefront-detail-hierarchy-sf09-sf10-20261105]
   # Verify an isolated branch manually before opening a PR when needed.
   workflow_dispatch:
 
@@ -18,10 +21,17 @@ concurrency:
 permissions:
   contents: read
 
+# Temporary GitHub-hosted fallback while the Runzumi workspace reports
+# execution_paused. Explicitly use hosted labels rather than a repository
+# variable: an existing variable could still point to the paused runner.
+# Restore the original custom labels only after runner health is proven.
+# All original security, test, audit, artifact and release gates remain.
+# Do not set the variable to an unavailable runner label.
+
 jobs:
   changes:
     name: Classify changed files
-    runs-on: runzumi-ubuntu-24.04-x64-8
+    runs-on: ubuntu-24.04
     timeout-minutes: 3
     permissions:
       contents: read
@@ -91,7 +101,7 @@ jobs:
     name: PHP tests and security (8.4 / MySQL 8.0)
     needs: changes
     if: ${{ needs.changes.outputs.run_php == 'true' }}
-    runs-on: runzumi-ubuntu-24.04-x64-8
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     services:
       mysql:
@@ -195,6 +205,12 @@ jobs:
       - name: Seed upload backends
         run: php artisan db:seed --class="Common\\Database\\Seeders\\UploadBackendsSeeder" --force --no-interaction
 
+      # Check the guest storefront → free entitlement → OTP-protected portal
+      # path early, before the longer PHP suite, against CI's isolated MySQL.
+      # Full regressions and release controls still run unchanged below.
+      - name: Free storefront and portal integration regression
+        run: php artisan test tests/Feature/FreeCheckoutPortalJourneyTest.php --compact
+
       # Preserve mandatory fail-closed deployment/security regressions.
       - name: Release-control security regression gates
         shell: bash
@@ -239,7 +255,7 @@ jobs:
     name: TypeScript, browser tests and Vite build (Node 24)
     needs: changes
     if: ${{ needs.changes.outputs.run_node == 'true' }}
-    runs-on: runzumi-ubuntu-24.04-x64-8
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - name: Checkout (shallow)
@@ -276,6 +292,27 @@ jobs:
       # Required: vite.config.ts enables Storybook/Vitest browser projects.
       - name: Install Playwright Chromium and system libraries
         run: npx playwright install --with-deps chromium
+
+      # Render actual product/course/service pages before running the larger
+      # Vitest set: a broken browser harness should fail fast and give traces.
+      # Uses only synthetic data and intercepted requests, never provider keys.
+      - name: Verify public storefront detail pages in Chromium
+        run: npx playwright test tests/e2e/storefront-detail-qa.spec.ts --project=chromium --max-failures=1 --retries=0 --timeout=25000
+        env:
+          LARAVEL_BYPASS_ENV_CHECK: '1'
+
+      # Only these synthetic fixture screenshots can be collected here.
+      # No production customer data, provider secrets or auth cookies.
+      - name: Preserve isolated storefront browser QA evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: storefront-detail-qa-${{ github.run_id }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 2
+          if-no-files-found: ignore
 
       - name: Run frontend tests (Vitest + Storybook browser)
         run: npm test
@@ -322,7 +359,7 @@ jobs:
     name: Verify (PHP 8.4 + Node 24 + MySQL 8.0)
     needs: [changes, php, frontend]
     if: ${{ always() }}
-    runs-on: runzumi-ubuntu-24.04-x64-8
+    runs-on: ubuntu-24.04
     timeout-minutes: 2
     steps:
       - name: Enforce success of every required verification job
@@ -353,7 +390,7 @@ jobs:
     # A deployable main SHA must have BOTH backend and frontend verified.
     needs: [verify, frontend]
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.verify.result == 'success' }}
-    runs-on: runzumi-ubuntu-24.04-x64-8
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - name: Checkout (shallow)
