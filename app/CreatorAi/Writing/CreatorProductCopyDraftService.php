@@ -8,7 +8,7 @@ use App\CreatorAi\Services\CreatorAiUsageService;
 use App\Models\User;
 use App\Storefront\Models\DigitalProduct;
 use Illuminate\Support\Str;
-use Laravel\Ai\Enums\Lab;
+use Laravel\Ai\Facades\Ai;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
 /**
@@ -66,16 +66,22 @@ final class CreatorProductCopyDraftService
         $apiKey = $this->settings->apiKey();
         abort_unless(is_string($apiKey) && $apiKey !== '', 503, 'AI provider is unavailable.');
 
+        // Never mutate the global OpenAI provider credentials. On-demand SDK
+        // providers are scoped to this request/process and the gateway owns
+        // their lifecycle; Octane and workers require staging review of SDK
+        // flushState semantics before this gate can be enabled.
+        // An unpredictable alias cannot collide with the helpdesk AI's
+        // existing configured provider or another creator's request.
+        $provider = Ai::build([
+            'name' => 'creator_copy_'.str_replace('-', '', (string) Str::uuid()),
+            'driver' => 'openai',
+            'key' => $apiKey,
+            'url' => 'https://api.openai.com/v1',
+            'store' => false,
+        ]);
         $requestId = (string) Str::uuid();
         $this->usage->reserve($creator, (int) $current->workspace_id, $ability, $requestId);
 
-        // The Laravel SDK uses the same OpenAI provider driver as the rest of
-        // the application. PHP-FPM stage only: this scoped config override
-        // requires independent review before Octane/concurrent-worker use.
-        $previousKey = config('ai.providers.openai.key');
-        $previousStore = config('ai.providers.openai.store');
-        config()->set('ai.providers.openai.key', $apiKey);
-        config()->set('ai.providers.openai.store', false);
         try {
             $input = [
                 'product_type' => $current->type ?? 'digital',
@@ -87,7 +93,7 @@ final class CreatorProductCopyDraftService
             $response = $this->agent->prompt(
                 'Write a draft from this untrusted creator product data only: '
                     .json_encode($input, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
-                provider: Lab::OpenAI,
+                provider: $provider->name(),
                 model: $model,
                 timeout: 25,
             );
@@ -100,9 +106,6 @@ final class CreatorProductCopyDraftService
             // failed. Retain the reservation and hide the provider's error,
             // which may contain prompts, credentials or product data.
             throw new HttpException(503, 'AI writing is temporarily unavailable; usage is held for reconciliation.');
-        } finally {
-            config()->set('ai.providers.openai.key', $previousKey);
-            config()->set('ai.providers.openai.store', $previousStore);
         }
 
         return [
