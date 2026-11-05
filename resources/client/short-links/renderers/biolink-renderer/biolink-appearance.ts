@@ -528,17 +528,34 @@ export function resolveBiolinkThemeVariables(
   };
 }
 
+/**
+ * One public Appearance context for /username, product/course pages,
+ * service details and portaled checkout/inquiry dialogs. Dashboard chrome
+ * remains on its own --be-* theme outside the public page root.
+ */
+export function resolveBiolinkPublicAppearanceStyle(
+  appearance?: BiolinkAppearanceConfig | null,
+): BiolinkThemeVariables & {'--biolink-surface-shadow': string} {
+  return {
+    ...resolveBiolinkThemeVariables(appearance),
+    color: 'var(--biolink-text)',
+    fontFamily: appearance?.fontConfig?.family,
+    '--biolink-surface-shadow':
+      resolveBiolinkButtonAppearance(appearance).style.boxShadow || 'none',
+  };
+}
+
+/**
+ * Match the brand mark to the *effective* foreground. A light gradient can
+ * carry a stale white text choice; the theme resolver corrects it to dark ink,
+ * and the logo must make the same choice. Unpainted stores keep the site theme.
+ */
 export function shouldUseLightBiolinkLogo(
   appearance: BiolinkAppearanceConfig | null | undefined,
   fallback: boolean,
 ): boolean {
-  const foreground = appearance?.bgConfig?.color;
-  return foreground ? isLightColor(foreground) : fallback;
-}
-
-function isLightColor(color: string): boolean {
-  const parsedColor = parseColor(color);
-  return parsedColor ? isLightSurface(parsedColor) : false;
+  const foreground = resolveBackgroundContext(appearance?.bgConfig).foregroundColor;
+  return foreground ? isLightSurface(foreground) : fallback;
 }
 
 /**
