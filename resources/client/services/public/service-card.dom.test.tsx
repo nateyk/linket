@@ -119,7 +119,7 @@ describe('service card', () => {
   });
 
   it('clamps long untranslated names without introducing a second action', () => {
-    const longTitle = 'የንግድ መለያ ንድፍ '.repeat(20);
+    const longTitle = 'የንግድ መለያ ንድፍ '.repeat(20).trim();
     render(<ServiceCard service={{...service, title: longTitle}} appearance={null} />);
     const heading = screen.getByRole('heading', {level: 3, name: longTitle});
     expect(heading.className).toContain('line-clamp-2');
