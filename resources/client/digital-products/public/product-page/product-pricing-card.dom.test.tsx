@@ -63,4 +63,24 @@ describe('SF-09 — product pricing and truthful free-access state', () => {
     renderPricingCard({...baseProduct, can_buy: false});
     expect(screen.getByRole('button', {name: 'Temporarily unavailable'})).toHaveProperty('disabled', true);
   });
+
+  it('prevents duplicate free claims after the first successful checkout', async () => {
+    const onBuy = vi.fn();
+    render(
+      <ProductPricingCard
+        product={baseProduct}
+        appearance={null}
+        checkoutCancelled={false}
+        checkoutFailed={false}
+        submitting={false}
+        completed
+        onBuy={onBuy}
+      />,
+    );
+
+    const action = screen.getByRole('button', {name: 'Free order complete'});
+    expect(action).toHaveProperty('disabled', true);
+    await userEvent.click(action);
+    expect(onBuy).not.toHaveBeenCalled();
+  });
 });
