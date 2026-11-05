@@ -522,6 +522,143 @@ test('Course creation with an unknown network result never issues a second POST'
   expect(attempts).toBe(1);
 });
 
+test('short mobile RTL, dark mode and long titles preserve all four editor layouts', async ({
+  page,
+}, testInfo) => {
+  test.skip(
+    process.env.LINKET_ISOLATED_E2E !== '1',
+    'Requires isolated test database and authenticated creator',
+  );
+  await page.emulateMedia({reducedMotion: 'reduce'});
+  await loginAsSeededCreator(page);
+  let createRequests = 0;
+  page.on('request', request => {
+    if (request.method() === 'POST' && new URL(request.url()).pathname === '/api/v1/items') {
+      createRequests++;
+    }
+  });
+  const viewports = [
+    {width: 375, height: 667},
+    {width: 430, height: 932},
+  ] as const;
+  const types = [
+    {type: 'digital', title: /create digital product/i, input: '#product-title'},
+    {type: 'ebook', title: /create e-book/i, input: '#product-title'},
+    {type: 'audio', title: /create audio/i, input: '#product-title'},
+    {type: 'course', title: /create course/i, input: '#course-title'},
+  ] as const;
+  for (const viewport of viewports) {
+    await page.setViewportSize(viewport);
+    for (const item of types) {
+      await page.goto(`/dashboard/items/new/${item.type}`);
+      await page.evaluate(() => {
+        document.documentElement.dir = 'rtl';
+        document.documentElement.classList.add('dark');
+      });
+      await expect(page.getByRole('heading', {name: item.title, level: 1})).toBeVisible();
+      await page.locator(item.input).fill(
+        'A long creator product title that must not displace the form actions or make the page scroll horizontally in reduced-motion RTL mode',
+      );
+      const layout = await page.evaluate(() => ({
+        overflow: Math.max(0, document.documentElement.scrollWidth - document.documentElement.clientWidth),
+        rtl: document.documentElement.dir === 'rtl',
+        dark: document.documentElement.classList.contains('dark'),
+      }));
+      expect(layout.rtl && layout.dark).toBe(true);
+      expect(layout.overflow, `${item.type} at ${viewport.width}px in RTL/dark`).toBeLessThanOrEqual(1);
+      const preview = page.getByRole('button', {name: 'Preview'});
+      await preview.focus();
+      await page.keyboard.press('Enter');
+      const dialog = page.getByRole('dialog', {name: 'Customer preview'});
+      await expect(dialog).toBeVisible();
+      await expect(dialog.locator('button').filter({hasText: 'Buy now'})).toBeDisabled();
+      await page.keyboard.press('Escape');
+      await expect(preview).toBeFocused();
+      if (item.type === 'digital' || item.type === 'course') {
+        const shot = testInfo.outputPath(`rtl-dark-${item.type}-${viewport.width}.png`);
+        await page.screenshot({path: shot, fullPage: true});
+        await testInfo.attach(`RTL dark ${item.type} ${viewport.width}px`, {
+          path: shot,
+          contentType: 'image/png',
+        });
+      }
+    }
+  }
+  expect(createRequests).toBe(0);
+});
+
+test('approval lifecycle and customer Preview never expose private file details', async ({page}) => {
+  test.skip(
+    process.env.LINKET_ISOLATED_E2E !== '1',
+    'All synthetic product responses are intercepted and read-only',
+  );
+  await loginAsSeededCreator(page);
+  const id = 999995;
+  let state: 'approved' | 'pending_approval' | 'rejected' = 'approved';
+  let pendingUpdate = true;
+  let attemptedMutations = 0;
+  const secret = 'creator-private-secret-qa.pdf';
+  await page.route('**/api/v1/items/**', async route => {
+    const request = route.request();
+    const pathname = new URL(request.url()).pathname;
+    if (pathname !== `/api/v1/items/${id}`) {
+      await route.continue();
+      return;
+    }
+    if (request.method() !== 'GET') {
+      attemptedMutations++;
+      await route.abort('failed');
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        data: {
+          id,
+          title: 'Synthetic reviewed creator product',
+          description: 'Read-only preview audit',
+          price_cents: 2000,
+          currency: 'etb',
+          status: state,
+          has_pending_update: pendingUpdate,
+          type: 'digital',
+          cover: null,
+          cover_file_entry_id: null,
+          files: [{id: 777, name: secret, file_size: 2000, extension: 'pdf', url: 'https://private.example.test/creator-secret'}],
+          samples: [],
+          biolink_ids: [],
+        },
+      }),
+    });
+  });
+
+  await page.goto(`/dashboard/items/${id}/edit`);
+  await expect(page.getByRole('heading', {name: /edit digital product/i, level: 1})).toBeVisible();
+  await expect(page.locator('[aria-label="Approved · update under review"]')).toBeVisible();
+  await expect(page.getByText('This product remains approved while an update is under review.')).toBeVisible();
+  await page.getByRole('button', {name: 'Preview'}).click();
+  const dialog = page.getByRole('dialog', {name: 'Customer preview'});
+  await expect(dialog).toBeVisible();
+  expect(await dialog.innerHTML()).not.toContain(secret);
+  expect(await dialog.innerHTML()).not.toContain('private.example.test');
+  await expect(dialog.locator('button').filter({hasText: 'Buy now'})).toBeDisabled();
+  await page.keyboard.press('Escape');
+
+  for (const row of [
+    {status: 'pending_approval', label: 'In review'},
+    {status: 'rejected', label: 'Needs changes'},
+    {status: 'approved', label: 'Approved'},
+  ] as const) {
+    state = row.status;
+    pendingUpdate = false;
+    await page.reload();
+    await expect(page.getByRole('heading', {name: /edit digital product/i, level: 1})).toBeVisible();
+    await expect(page.locator(`[aria-label="${row.label}"]`)).toBeVisible();
+  }
+  expect(attemptedMutations).toBe(0);
+});
+
 test('mobile curriculum returns to unsaved lesson without a false discard prompt', async ({
   page,
 }, testInfo) => {
