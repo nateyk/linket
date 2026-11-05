@@ -37,6 +37,34 @@ return [
     // HTTPS issuer must be explicitly configured; no fallback to app URL.
     'oauth_issuer' => env('CREATOR_AI_OAUTH_ISSUER'),
 
+
+    // Internal source ingestion is isolated from forecast publication. BOTH
+    // distinct source signing keys and explicit workspace allowlists must be
+    // configured by an operator; no live credentials are bundled or defaulted.
+    // These HMACs authenticate configured producers, not Verify.et itself or
+    // completeness of any upstream event stream.
+    'forecast_ingestion' => [
+        'enabled' => env('CREATOR_AI_FORECAST_INGESTION_ENABLED', false),
+        'signers' => [
+            'checkout_event_stream' => [
+                'v1' => [
+                    'key' => env('CREATOR_AI_FORECAST_CHECKOUT_HMAC_V1'),
+                    'workspace_ids' => array_values(array_filter(array_map(
+                        'intval', explode(',', (string) env('CREATOR_AI_FORECAST_CHECKOUT_WORKSPACES', ''))
+                    ))),
+                ],
+            ],
+            'verify_et_reconciliation' => [
+                'v1' => [
+                    'key' => env('CREATOR_AI_FORECAST_RECONCILIATION_HMAC_V1'),
+                    'workspace_ids' => array_values(array_filter(array_map(
+                        'intval', explode(',', (string) env('CREATOR_AI_FORECAST_RECONCILIATION_WORKSPACES', ''))
+                    ))),
+                ],
+            ],
+        ],
+    ],
+
     'max_report_days' => 366,
     'max_orders_per_page' => 20,
     'max_product_results' => 20,
