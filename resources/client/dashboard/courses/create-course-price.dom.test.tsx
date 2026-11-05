@@ -174,9 +174,9 @@ describe('page shell: one h1, and a title that owns the header row', () => {
     const nav = document.querySelector('[data-slot="breadcrumb"]');
     expect(nav).not.toBeNull();
     // `w-auto` overrides the base `w-full` (tailwind-merge) so the slack goes
-    // to the SectionTitle; `max-sm:hidden` keeps the narrow row usable.
+    // to the SectionTitle; `max-lg:hidden` keeps the enlarged-text layout usable.
     expect(nav!.className).toContain('w-auto');
-    expect(nav!.className).toContain('max-sm:hidden');
+    expect(nav!.className).toContain('max-lg:hidden');
     // only the parent link remains — no current-page crumb duplicating the h1
     expect(nav!.textContent).toBe('All products');
     expect(document.querySelector('[data-slot="breadcrumb-page"]')).toBeNull();
@@ -191,5 +191,32 @@ describe('page shell: one h1, and a title that owns the header row', () => {
     const bar = screen.getByRole('progressbar');
     // routed through trans() (final-fix item 3) but unchanged for English
     expect(bar.getAttribute('aria-label')).toBe('Product setup progress');
+  });
+});
+
+describe('course setup customer preview on demand', () => {
+  test('keeps buyer preview hidden until opened, and Escape returns to the editor', async () => {
+    const user = userEvent.setup();
+    mount('/dashboard/items/new/course?billing=free');
+    expect(screen.queryByRole('dialog', {name: 'Customer preview'})).toBeNull();
+    expect(screen.queryByText('Your course title')).toBeNull();
+
+    const preview = screen.getByRole('button', {name: 'Preview'});
+    await user.click(preview);
+    expect(screen.getByRole('dialog', {name: 'Customer preview'})).not.toBeNull();
+    expect(screen.getByText('Your course title')).not.toBeNull();
+
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog', {name: 'Customer preview'})).toBeNull();
+    expect(document.activeElement).toBe(preview);
+  });
+
+  test('previews the current course title without creating a course', async () => {
+    const user = userEvent.setup();
+    mount('/dashboard/items/new/course?billing=paid&price_cents=1000');
+    await typeTitle(user);
+    await user.click(screen.getByRole('button', {name: 'Preview'}));
+    expect(screen.getByText('Ethiopian coffee course')).not.toBeNull();
+    expect(mockPost).not.toHaveBeenCalled();
   });
 });

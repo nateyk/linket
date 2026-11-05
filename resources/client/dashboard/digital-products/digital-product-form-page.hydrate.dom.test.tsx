@@ -12,7 +12,8 @@
  */
 import {DashboardLayoutContextProvider} from '@common/ui/dashboard/dashboard-layout-context';
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
-import {act, render, screen, waitFor} from '@testing-library/react';
+import {AxiosError} from 'axios';
+import {act, fireEvent, render, screen, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {createMemoryRouter, RouterProvider} from 'react-router';
 import {beforeAll, beforeEach, expect, test, vi} from 'vitest';
@@ -53,6 +54,14 @@ const h = vi.hoisted(() => {
   return {
     pending,
     itemUrls: [] as string[],
+    mutationCalls: 0,
+    submitCalls: 0,
+    putCalls: 0,
+    submitError: null as Error | null,
+    updatedProduct: null as unknown,
+    storefrontGetCount: 0,
+    storefrontFail: false,
+    storefrontRecords: [] as {id: number; name: string; short_url?: string}[],
     get(url: string): Promise<unknown> {
       if (url.startsWith('/api/v1/items/')) {
         this.itemUrls.push(url);
@@ -61,7 +70,10 @@ const h = vi.hoisted(() => {
         });
       }
       if (url.startsWith('/api/v1/biolinks')) {
-        return Promise.resolve({data: {data: []}});
+        this.storefrontGetCount++;
+        return this.storefrontFail
+          ? Promise.reject(new Error('Synthetic Storefront list outage'))
+          : Promise.resolve({data: {data: this.storefrontRecords}});
       }
       return Promise.resolve({data: {data: []}});
     },
@@ -71,6 +83,14 @@ const h = vi.hoisted(() => {
     reset() {
       this.itemUrls.length = 0;
       pending.length = 0;
+      this.mutationCalls = 0;
+      this.submitCalls = 0;
+      this.putCalls = 0;
+      this.submitError = null;
+      this.updatedProduct = null;
+      this.storefrontGetCount = 0;
+      this.storefrontFail = false;
+      this.storefrontRecords = [];
     },
     /** Complete every in-flight product request with the server payload. */
     resolvePendingItems(product: unknown) {
@@ -102,8 +122,19 @@ vi.mock('@common/http/query-client', async () => {
     queryClient: new QueryClient({defaultOptions: {queries: {retry: false}}}),
     apiClient: {
       get: (url: string) => h.get(url),
-      post: () => Promise.resolve({data: {data: {}}}),
-      put: () => Promise.resolve({data: {data: {}}}),
+      post: (url: string) => {
+        h.mutationCalls++;
+        if (url.endsWith('/submit')) {
+          h.submitCalls++;
+          if (h.submitError) return Promise.reject(h.submitError);
+        }
+        return Promise.resolve({data: {data: h.updatedProduct ?? {}}});
+      },
+      put: () => {
+        h.mutationCalls++;
+        h.putCalls++;
+        return Promise.resolve({data: {data: h.updatedProduct ?? {}}});
+      },
       delete: () => Promise.resolve({data: {data: {}}}),
       request: () => Promise.resolve({data: {data: {}}}),
     },
@@ -121,7 +152,7 @@ const serverProduct = {
   cover: null,
   cover_file_entry_id: null,
   files: [{id: 5, name: 'guide.pdf', file_size: 2048, extension: 'pdf'}],
-  biolink_ids: [],
+  biolink_ids: [] as number[],
 };
 
 beforeEach(() => {
@@ -155,17 +186,121 @@ async function flushTasks(iterations = 4) {
 }
 
 /** Resolve the pending product request and wait for the hydrated form. */
-async function loadProduct() {
+async function loadProduct(product = serverProduct) {
   await waitFor(() => expect(h.itemGetCount).toBe(1));
   await act(async () => {
-    h.resolvePendingItems(serverProduct);
+    h.resolvePendingItems(product);
   });
   const input = (await screen.findByRole('textbox', {
     name: /product title/i,
   })) as HTMLInputElement;
-  expect(input.value).toBe(serverProduct.title);
+  expect(input.value).toBe(product.title);
   return input;
 }
+
+test('failed submission after a confirmed draft save keeps the save and field errors visible', async () => {
+  const user = userEvent.setup();
+  h.updatedProduct = {...serverProduct, status: 'draft', title: 'Edited guide'};
+  h.submitError = new AxiosError(
+    'Synthetic rejected submit',
+    'ERR_BAD_REQUEST',
+    undefined,
+    undefined,
+    {
+      status: 422,
+      data: {errors: {title: ['Please correct the title before review.']}},
+      statusText: 'Unprocessable Content',
+      headers: {},
+      config: {} as never,
+    },
+  );
+  mount();
+  const titleInput = await loadProduct({...serverProduct, status: 'draft'});
+  fireEvent.change(titleInput, {target: {value: 'Edited guide'}});
+  await user.click(screen.getByRole('button', {name: 'Submit for review'}));
+
+  expect(await screen.findByText('Draft saved, but submission failed. Fix the issue and try again.')).toBeTruthy();
+  expect(await screen.findByText('Draft saved')).toBeTruthy();
+  expect(screen.queryByText('Unsaved changes')).toBeNull();
+  expect(await screen.findByText('Please correct the title before review.')).toBeTruthy();
+  expect(h.putCalls).toBe(1);
+  expect(h.submitCalls).toBe(1);
+  expect(screen.getByRole('textbox', {name: /product title/i}).getAttribute('aria-invalid')).toBe('true');
+});
+
+test('a 503 after a draft save is uncertain, not a confirmed failed submission', async () => {
+  const user = userEvent.setup();
+  h.updatedProduct = {...serverProduct, status: 'draft'};
+  h.submitError = new AxiosError(
+    'Synthetic unavailable',
+    'ERR_BAD_RESPONSE',
+    undefined,
+    undefined,
+    {
+      status: 503,
+      data: {message: 'Synthetic unavailable'},
+      statusText: 'Service Unavailable',
+      headers: {},
+      config: {} as never,
+    },
+  );
+  mount();
+  await loadProduct({...serverProduct, status: 'draft'});
+  await user.click(screen.getByRole('button', {name: 'Submit for review'}));
+
+  expect(await screen.findByText('Draft saved, but we could not confirm submission. Check My Items before submitting again.')).toBeTruthy();
+  await waitFor(() => expect((screen.getByRole('button', {name: 'Submit for review'}) as HTMLButtonElement).disabled).toBe(true));
+  expect(h.putCalls).toBe(1);
+  expect(h.submitCalls).toBe(1);
+});
+
+test('unknown submit result blocks another mutation and offers accessible reconciliation', async () => {
+  const user = userEvent.setup();
+  h.updatedProduct = {...serverProduct, status: 'draft'};
+  h.submitError = new AxiosError('Synthetic network failure', 'ERR_NETWORK');
+  mount();
+  await loadProduct({...serverProduct, status: 'draft'});
+  await user.click(screen.getByRole('button', {name: 'Submit for review'}));
+
+  expect(await screen.findByText('Draft saved, but we could not confirm submission. Check My Items before submitting again.')).toBeTruthy();
+  await waitFor(() => {
+    expect((screen.getByRole('button', {name: 'Submit for review'}) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', {name: 'Save draft'}) as HTMLButtonElement).disabled).toBe(true);
+  });
+  expect(screen.getByRole('link', {name: 'Check My Items'})).toBeTruthy();
+  expect(h.putCalls).toBe(1);
+  expect(h.submitCalls).toBe(1);
+});
+
+test('Storefront outage remains recoverable and does not discard existing placement', async () => {
+  const user = userEvent.setup();
+  h.storefrontFail = true;
+  mount();
+  await loadProduct({...serverProduct, biolink_ids: [42]});
+
+  expect(await screen.findByText(/Unable to load Storefronts\. Your product can still be saved or submitted\./)).toBeTruthy();
+  expect(screen.queryByText(/Create a Storefront later if you want to display it there/)).toBeNull();
+  expect((screen.getByRole('button', {name: 'Save draft'}) as HTMLButtonElement).disabled).toBe(false);
+  expect(h.itemGetCount).toBe(1);
+  expect(h.storefrontGetCount).toBe(1);
+
+  h.storefrontFail = false;
+  h.storefrontRecords = [{id: 42, name: 'My Existing Storefront', short_url: 'my-store'}];
+  await user.click(screen.getByRole('button', {name: 'Retry Storefront loading'}));
+  expect(await screen.findByText('My Existing Storefront')).toBeTruthy();
+  expect(screen.queryByText(/Unable to load Storefronts/)).toBeNull();
+  expect(screen.getByRole('checkbox', {name: /My Existing Storefront/}).getAttribute('aria-checked')).toBe('true');
+  expect(h.itemGetCount).toBe(1); // A retry must not rehydrate the product or lose edits.
+  expect(h.storefrontGetCount).toBe(2);
+});
+
+test('a successful empty Storefront lookup is not misrepresented as an outage', async () => {
+  mount();
+  await loadProduct();
+  expect(await screen.findByText(/Create a Storefront later if you want to display it there/)).toBeTruthy();
+  expect(screen.queryByRole('button', {name: 'Retry Storefront loading'})).toBeNull();
+  expect(h.storefrontGetCount).toBe(1);
+});
 
 test('fetches the product exactly once and typed input survives context re-renders', async () => {
   const user = userEvent.setup();
@@ -190,7 +325,7 @@ test('fetches the product exactly once and typed input survives context re-rende
   expect(input.value).toBe('MY DRAFT TITLE');
 });
 
-test('approved→draft banner never flashes on load and stays after a real edit', async () => {
+test('approved-update review banner never flashes on load and stays after a real edit', async () => {
   const user = userEvent.setup();
   mount();
 
@@ -199,7 +334,7 @@ test('approved→draft banner never flashes on load and stays after a real edit'
   // Loading never sets `dirty`, so the moderation banner must not flash while
   // the page hydrates (it used to appear and vanish with every refetch).
   expect(
-    screen.queryByText(/Saving changes will return this approved product to draft/i),
+    screen.queryByText(/Changes to approved products may require review\. The published version remains available during review\./i),
   ).toBeNull();
 
   await user.type(input, '!');
@@ -214,7 +349,7 @@ test('approved→draft banner never flashes on load and stays after a real edit'
 
   expect(input.value).toBe(`${serverProduct.title}!`);
   expect(
-    screen.getByText(/Saving changes will return this approved product to draft/i),
+    screen.getByText(/Changes to approved products may require review\. The published version remains available during review\./i),
   ).toBeTruthy();
 });
 
@@ -244,6 +379,26 @@ test('disables editing and saving when an existing product cannot be loaded', as
   expect((screen.getByRole('button', {name: /save draft/i}) as HTMLButtonElement).disabled).toBe(true);
   expect((screen.getByRole('button', {name: /submit for review/i}) as HTMLButtonElement).disabled).toBe(true);
   expect(screen.queryByRole('textbox', {name: /product title/i})).toBeNull();
+});
+
+test('failed existing-product load can be retried without creating or saving a product', async () => {
+  const user = userEvent.setup();
+  mount();
+  await waitFor(() => expect(h.itemGetCount).toBe(1));
+  await act(async () => {
+    h.pending.splice(0).forEach(request => request.reject(new Error('Synthetic product load outage')));
+  });
+  expect(await screen.findByText('Synthetic product load outage')).toBeTruthy();
+  expect(screen.queryByRole('textbox', {name: /product title/i})).toBeNull();
+  expect((screen.getByRole('button', {name: 'Save draft'}) as HTMLButtonElement).disabled).toBe(true);
+
+  await user.click(screen.getByRole('button', {name: 'Retry loading product'}));
+  await waitFor(() => expect(h.itemGetCount).toBe(2));
+  await act(async () => { h.resolvePendingItems(serverProduct); });
+  const title = await screen.findByRole('textbox', {name: /product title/i}) as HTMLInputElement;
+  expect(title.value).toBe(serverProduct.title);
+  expect(screen.queryByText('Synthetic product load outage')).toBeNull();
+  expect(h.mutationCalls).toBe(0);
 });
 
 test('a stale response for a previous product never hydrates the current one', async () => {
