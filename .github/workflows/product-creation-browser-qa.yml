@@ -161,24 +161,30 @@ jobs:
 
       - name: Smoke-check accessible synthetic creator login first
         shell: bash
+        env:
+          PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/login-smoke
         run: |
           set -euo pipefail
           [[ "$APP_ENV" == "testing" && "$DB_DATABASE" == "belink_test" ]]
           npx playwright test tests/e2e/product-creation-responsive.spec.ts \
             --project=chromium --workers=1 --retries=0 \
-            --grep 'smoke: isolated creator can authenticate' --timeout=30000
+            --grep 'smoke: isolated creator can authenticate' --timeout=30000 --output=test-results/login-smoke --trace=retain-on-failure
 
       - name: Run isolated authenticated editor browser matrix
         shell: bash
+        env:
+          PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/editors
         run: |
           set -euo pipefail
           [[ "$APP_ENV" == "testing" && "$DB_DATABASE" == "belink_test" ]]
           npx playwright test tests/e2e/product-creation-responsive.spec.ts \
             --project=chromium --workers=1 --retries=0 \
-            --grep-invert 'smoke: isolated creator can authenticate'
+            --grep-invert 'smoke: isolated creator can authenticate' --output=test-results/editors --trace=retain-on-failure
 
       - name: Verify real disposable buyer authorization and paid-content recovery
         shell: bash
+        env:
+          PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/buyer-journey
         run: |
           set -euo pipefail
           [[ "$APP_ENV" == "testing" && "$DB_DATABASE" == "belink_test" ]]
@@ -187,10 +193,12 @@ jobs:
           # it exercises unpaid/rejected locks, verified delivery and My Portal recovery.
           # No live provider credentials, production endpoints or payment operations.
           npx playwright test tests/e2e/buyer-journey.spec.ts \
-            --project=chromium --workers=1 --retries=0
+            --project=chromium --workers=1 --retries=0 --output=test-results/buyer-journey --trace=retain-on-failure
 
       - name: Verify real isolated creator and admin moderation lifecycle
         shell: bash
+        env:
+          PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/moderation
         run: |
           set -euo pipefail
           [[ "$APP_ENV" == "testing" && "$DB_DATABASE" == "belink_test" ]]
@@ -198,7 +206,7 @@ jobs:
           # Real Laravel creator/admin HTTP transitions and auth, only synthetic users.
           # This stage exercises reject, resubmit, approve, update and revert.
           npx playwright test tests/e2e/product-creation-moderation-lifecycle.spec.ts \
-            --project=chromium --workers=1 --retries=0
+            --project=chromium --workers=1 --retries=0 --output=test-results/moderation --trace=retain-on-failure
 
       - name: Attach screenshots, trace and browser report
         if: always()
@@ -209,7 +217,7 @@ jobs:
             playwright-report/
             test-results/
           if-no-files-found: warn
-          retention-days: 5
+          retention-days: 14
 
       - name: Explain failing synthetic server if tests failed
         if: failure()
