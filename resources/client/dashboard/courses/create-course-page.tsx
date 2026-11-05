@@ -18,6 +18,7 @@ import {FormEvent, useRef, useState} from 'react';
 import {Link, useNavigate, useSearchParams} from 'react-router';
 import {parseEtbToCents, parseWizardPrefill, priceForBillingMode, type BillingMode} from '../digital-products/product-create-flow';
 import {BillingModePicker} from '../digital-products/billing-mode-picker';
+import {isUncertainMutationOutcome} from '../digital-products/request-outcome';
 import {ProductFormField} from '../digital-products/product-form-field';
 import {ProductFormProgress} from '../digital-products/product-form-progress';
 import {ProductFormSection} from '../digital-products/product-form-section';
@@ -134,7 +135,7 @@ export function Component() {
     } catch (reason) {
       // Only an actual HTTP rejection confirms that a create POST failed.
       // Network errors and malformed success payloads require reconciliation.
-      const requestUncertain = !isAxiosError(reason) || !reason.response;
+      const requestUncertain = isUncertainMutationOutcome(reason);
       if (requestUncertain) uncertainRequest.current = true;
       setCreationUncertain(requestUncertain);
       setError(

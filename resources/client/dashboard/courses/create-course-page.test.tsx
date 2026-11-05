@@ -317,6 +317,31 @@ describe('Course creation uncertainty and duplicate prevention', () => {
     expect(mockPost).toHaveBeenCalledTimes(2);
   });
 
+  test('a 503 response stays uncertain and does not invite duplicate creation', async () => {
+    mockPost.mockRejectedValueOnce(new AxiosError(
+      'Service unavailable',
+      'ERR_BAD_RESPONSE',
+      undefined,
+      undefined,
+      {
+        status: 503,
+        data: {message: 'Temporary server error'},
+        statusText: 'Service Unavailable',
+        headers: {},
+        config: {} as never,
+      },
+    ));
+    mount();
+    typeTitle('Synthetic course');
+    submitForm();
+    expect((await screen.findByRole('alert')).textContent).toContain('We could not confirm whether the course was created.');
+    await vi.waitFor(() => {
+      expect((screen.getByRole('button', {name: 'Create course'}) as HTMLButtonElement).disabled).toBe(true);
+    });
+    submitForm();
+    expect(mockPost).toHaveBeenCalledTimes(1);
+  });
+
   test('malformed success payload cannot cause a second create POST', async () => {
     mockPost.mockResolvedValueOnce({data: {data: {}}});
     mount();

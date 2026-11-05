@@ -201,9 +201,19 @@ async function loadProduct(product = serverProduct) {
 test('failed submission after a confirmed draft save keeps the save and field errors visible', async () => {
   const user = userEvent.setup();
   h.updatedProduct = {...serverProduct, status: 'draft'};
-  h.submitError = Object.assign(new Error('Synthetic rejected submit'), {
-    response: {data: {errors: {title: ['Please correct the title before review.']}}},
-  });
+  h.submitError = new AxiosError(
+    'Synthetic rejected submit',
+    'ERR_BAD_REQUEST',
+    undefined,
+    undefined,
+    {
+      status: 422,
+      data: {errors: {title: ['Please correct the title before review.']}},
+      statusText: 'Unprocessable Content',
+      headers: {},
+      config: {} as never,
+    },
+  );
   mount();
   await loadProduct({...serverProduct, status: 'draft'});
   await user.click(screen.getByRole('button', {name: 'Submit for review'}));
@@ -213,6 +223,32 @@ test('failed submission after a confirmed draft save keeps the save and field er
   expect(h.putCalls).toBe(1);
   expect(h.submitCalls).toBe(1);
   expect(screen.getByRole('textbox', {name: /product title/i}).getAttribute('aria-invalid')).toBe('true');
+});
+
+test('a 503 after a draft save is uncertain, not a confirmed failed submission', async () => {
+  const user = userEvent.setup();
+  h.updatedProduct = {...serverProduct, status: 'draft'};
+  h.submitError = new AxiosError(
+    'Synthetic unavailable',
+    'ERR_BAD_RESPONSE',
+    undefined,
+    undefined,
+    {
+      status: 503,
+      data: {message: 'Synthetic unavailable'},
+      statusText: 'Service Unavailable',
+      headers: {},
+      config: {} as never,
+    },
+  );
+  mount();
+  await loadProduct({...serverProduct, status: 'draft'});
+  await user.click(screen.getByRole('button', {name: 'Submit for review'}));
+
+  expect(await screen.findByText('Draft saved, but we could not confirm submission. Check My Items before submitting again.')).toBeTruthy();
+  await waitFor(() => expect((screen.getByRole('button', {name: 'Submit for review'}) as HTMLButtonElement).disabled).toBe(true));
+  expect(h.putCalls).toBe(1);
+  expect(h.submitCalls).toBe(1);
 });
 
 test('unknown submit result blocks another mutation and offers accessible reconciliation', async () => {

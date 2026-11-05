@@ -57,7 +57,7 @@ import {
 } from 'lucide-react';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {Link, useLocation, useNavigate, useParams, useSearchParams} from 'react-router';
-import {isAxiosError} from 'axios';
+import {isUncertainMutationOutcome} from './request-outcome';
 import {parseWizardPrefill, firstInvalidFieldId, parseEtbToCents, priceForBillingMode, resolveCreateType, type BillingMode} from './product-create-flow';
 import {DigitalProductEditor} from './digital-product-editor';
 import {EbookEditor} from './ebook-editor';
@@ -498,7 +498,7 @@ function DigitalProductForm() {
       } catch (reason) {
         const validationErrors = getValidationErrors(reason);
         const savedBeforeSubmitFailure = Boolean(saved && submitAfterSave);
-        const unconfirmedNetworkResponse = isAxiosError(reason) && !reason.response;
+        const unconfirmedNetworkResponse = isUncertainMutationOutcome(reason);
         if (savedBeforeSubmitFailure && saved) {
           const recovery: SubmissionRecovery = unconfirmedNetworkResponse
             ? 'uncertain'
