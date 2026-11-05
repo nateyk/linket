@@ -197,6 +197,7 @@ describe('the service form shell', () => {
       screen.getByRole('progressbar', {name: 'Service setup progress'}),
     ).toBeTruthy();
     expect(screen.getByText('Service setup')).toBeTruthy();
+    expect(screen.getByText('0 of 3 recommended sections complete')).toBeTruthy();
     expect(screen.getByRole('button', {name: 'Preview'})).toBeTruthy();
     // The product and service creators both keep buyer previews on-demand.
     expect(screen.queryByText('Customer preview')).toBeNull();
