@@ -169,3 +169,48 @@ test('PR09 rejects arbitrary presets and never allows raw CSS JS or HTML proposa
         ->assertOk()->assertDontSee('display:none');
     expect(DB::table('creator_ai_generation_attempts')->count())->toBe(0);
 });
+
+test('PR09 appearance saving checks the preview revision before mutation and rejects stale writes', function () {
+    storefrontPreviewFeatureOn();
+    [$creator, $store] = storefrontPreviewFixture();
+    storefrontPreviewVerifiedPro($creator);
+    $store->appearance()->create(['config' => [
+        'layout' => 'default',
+        'btnConfig' => ['variant' => 'outline', 'radius' => 'rounded-sm'],
+    ]]);
+    storefrontPreviewActAs($this, $creator);
+
+    $fingerprint = $this->getJson(
+        '/api/v1/creator-ai/stores/'.$store->id.'/appearance-preview?preset=clear'
+    )->assertOk()->json('data.source_fingerprint');
+
+    $saveUrl = '/api/v1/stores/'.$store->id.'/appearance';
+    $applied = [
+        'layout' => 'default',
+        'btnConfig' => ['variant' => 'solid', 'radius' => 'rounded-lg', 'shadow' => 'none'],
+    ];
+    $this->postJson($saveUrl, [
+        'config' => $applied,
+        'source_fingerprint' => $fingerprint,
+    ])->assertOk();
+
+    $this->postJson($saveUrl, [
+        'config' => ['layout' => 'default', 'btnConfig' => ['variant' => 'outline']],
+        'source_fingerprint' => $fingerprint,
+    ])->assertStatus(409);
+
+    expect($store->fresh()->appearance->config)->toBe($applied);
+});
+
+test('PR09 revision-checked appearance writes fail closed for Free creators', function () {
+    storefrontPreviewFeatureOn();
+    [$creator, $store] = storefrontPreviewFixture();
+    storefrontPreviewActAs($this, $creator);
+
+    $this->postJson('/api/v1/stores/'.$store->id.'/appearance', [
+        'config' => ['btnConfig' => ['variant' => 'solid']],
+        'source_fingerprint' => str_repeat('a', 64),
+    ])->assertForbidden();
+
+    expect($store->fresh()->appearance)->toBeNull();
+});
