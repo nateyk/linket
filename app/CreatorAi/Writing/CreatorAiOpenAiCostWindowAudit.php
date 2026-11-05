@@ -91,7 +91,7 @@ final class CreatorAiOpenAiCostWindowAudit
             $costMicro += $lineMicrousd;
             $lineItem = $item['line_item'] ?? null;
             if ($lineItem !== null && (! is_string($lineItem) || strlen($lineItem) > 256
-                || $lineItem === '' || preg_match('/[\\x00-\\x1F\\x7F]/', $lineItem))) {
+                || $lineItem === '' || preg_match('/[\x00-\x1F\x7F]/', $lineItem))) {
                 throw new RuntimeException('Malformed OpenAI cost line item.');
             }
             if ($lineItem === null) {
