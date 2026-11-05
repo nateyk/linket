@@ -1,0 +1,72 @@
+name: Composer Advisory Lock Refresh (temporary QA)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/composer-advisory-refresh.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  refresh:
+    name: Resolve compatible Composer security patches
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'security/composer-advisory-refresh-20261105' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - name: Checkout unprivileged dependency branch
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Install PHP 8.4 and Composer 2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_mysql, gd, zip, bcmath, exif, redis, curl, openssl, fileinfo
+          coverage: none
+          tools: composer:v2
+
+      - name: Resolve minimal compatible Symfony security patches
+        shell: bash
+        env:
+          COMPOSER_AUDIT_ABANDONED: ignore
+        run: |
+          set -euo pipefail
+          cp composer.lock /tmp/linket-composer-before.lock
+          composer update \
+            symfony/filesystem symfony/html-sanitizer symfony/http-client \
+            symfony/http-foundation symfony/http-kernel symfony/routing \
+            symfony/serializer symfony/yaml \
+            --with-all-dependencies --minimal-changes --no-install \
+            --no-scripts --no-plugins --no-interaction --no-progress
+          composer validate --no-check-publish
+          composer audit --no-dev --no-interaction --format plain
+          git diff --check
+
+      - name: Print deterministic lockfile patch for review, not auto-commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          before = json.load(open('/tmp/linket-composer-before.lock', encoding='utf-8'))
+          after = json.load(open('composer.lock', encoding='utf-8'))
+          patch = {'sections':{}, 'top':{}}
+          for sec in ('packages','packages-dev'):
+              a = {p['name']: p for p in before.get(sec, [])}
+              b = {p['name']: p for p in after.get(sec, [])}
+              changed = {name: p for name, p in b.items() if a.get(name) != p}
+              removed = [name for name in a if name not in b]
+              patch['sections'][sec] = {'changed':changed,'removed':removed,'order':list(b)}
+          for key in set(before) | set(after):
+              if key not in ('packages','packages-dev') and before.get(key) != after.get(key):
+                  patch['top'][key] = after.get(key)
+          print('LINKET_COMPOSER_PATCH_BEGIN')
+          print(json.dumps(patch, ensure_ascii=False, separators=(',', ':')))
+          print('LINKET_COMPOSER_PATCH_END')
+          print('Changed production packages:', len(patch['sections']['packages']['changed']))
+          print('Changed dev packages:', len(patch['sections']['packages-dev']['changed']))
+          PY
