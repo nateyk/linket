@@ -5,7 +5,7 @@
  * and `/dashboard/services/:serviceId/edit` — so the create/edit split lives in
  * `useParams`, not in the component tree. These tests mount the real route
  * paths through a memory router and drive the page the way a creator does:
- * read the shell (breadcrumb, progress, the five sections, the live preview),
+ * read the shell (breadcrumb, progress, five sections and on-demand preview),
  * type a title, and save with the keyboard shortcut.
  *
  * Everything the page fetches goes through the mocked `apiClient`, so the tests
@@ -197,7 +197,9 @@ describe('the service form shell', () => {
       screen.getByRole('progressbar', {name: 'Service setup progress'}),
     ).toBeTruthy();
     expect(screen.getByText('Service setup')).toBeTruthy();
-    expect(screen.getByText('Customer preview')).toBeTruthy();
+    expect(screen.getByRole('button', {name: 'Preview'})).toBeTruthy();
+    // The product and service creators both keep buyer previews on-demand.
+    expect(screen.queryByText('Customer preview')).toBeNull();
   });
 
   test('all five sections are reachable as accordion triggers', async () => {
@@ -218,6 +220,7 @@ describe('the service form shell', () => {
   });
 
   test('edit mode loads the service and hydrates the form from it', async () => {
+    const user = userEvent.setup();
     mountPage('/dashboard/services/3/edit');
     await waitForForm();
 
@@ -229,7 +232,9 @@ describe('the service form shell', () => {
     await waitFor(() =>
       expect(titleInput().value).toBe('Brand identity sprint'),
     );
-    // The hydrated state is the same one the preview reads.
+    // The preview reads hydrated state only when the creator requests it.
+    expect(screen.queryByText('Starter')).toBeNull();
+    await user.click(screen.getByRole('button', {name: 'Preview'}));
     expect(screen.getByText('Brand identity sprint')).toBeTruthy();
     expect(screen.getByText('Starter')).toBeTruthy();
   });
@@ -263,23 +268,73 @@ describe('the service form shell', () => {
   });
 });
 
-describe('the preview is live', () => {
-  test('typing the title updates the preview title, no save required', async () => {
+describe('the preview is on-demand and live', () => {
+  test('typing updates the preview when opened, without saving or publishing', async () => {
     const user = userEvent.setup();
     mountPage('/dashboard/services/new');
     await waitForForm();
 
-    // Nothing typed yet: the preview shows its placeholder, not a blank.
+    expect(screen.queryByText('Untitled service')).toBeNull();
+    await user.click(screen.getByRole('button', {name: 'Preview'}));
+    expect(screen.getByRole('dialog')).toBeTruthy();
     expect(screen.getByText('Untitled service')).toBeTruthy();
+    expect(api.post).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', {name: 'Close'}));
+    expect(screen.queryByRole('dialog')).toBeNull();
 
     await user.type(titleInput(), 'Logo design');
+    await user.click(screen.getByRole('button', {name: 'Preview'}));
 
     expect(screen.getByText('Logo design')).toBeTruthy();
     expect(screen.queryByText('Untitled service')).toBeNull();
+    expect(api.post).not.toHaveBeenCalled();
+    expect(api.put).not.toHaveBeenCalled();
+  });
+});
+
+describe('load failure recovery', () => {
+  test('a network failure shows retry rather than incorrectly demanding a new storefront', async () => {
+    const user = userEvent.setup();
+    api.get.mockRejectedValueOnce(new Error('Network unavailable'));
+    mountPage('/dashboard/services/new');
+
+    expect(await screen.findByRole('alert')).toBeTruthy();
+    expect(screen.getByText('Unable to load service')).toBeTruthy();
+    expect(screen.getByText('Network unavailable')).toBeTruthy();
+    expect(screen.queryByText('Create a storefront first')).toBeNull();
+    expect(screen.queryByRole('button', {name: 'Publish service'})).toBeNull();
+
+    await user.click(screen.getByRole('button', {name: 'Try again'}));
+    await waitForForm();
+    expect(screen.getByRole('button', {name: 'Preview'})).toBeTruthy();
   });
 });
 
 describe('saving', () => {
+  test('rapid keyboard shortcuts cannot create duplicate services while saving', async () => {
+    mountPage('/dashboard/services/new');
+    await waitForForm();
+
+    let finishRequest: ((value: {data: {data: CreatorServiceResource}}) => void) | undefined;
+    api.post.mockImplementation(() => new Promise(resolve => {
+      finishRequest = resolve;
+    }));
+
+    await act(async () => {
+      const event = () => new KeyboardEvent('keydown', {
+        key: 's', metaKey: true, bubbles: true, cancelable: true,
+      });
+      window.dispatchEvent(event());
+      window.dispatchEvent(event());
+    });
+
+    expect(api.post).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      finishRequest?.({data: {data: serverService}});
+    });
+  });
+
   test('Cmd+S PUTs the loaded service in edit mode', async () => {
     mountPage('/dashboard/services/3/edit');
     await waitForForm();
