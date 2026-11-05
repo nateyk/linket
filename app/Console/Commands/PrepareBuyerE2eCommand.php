@@ -44,19 +44,6 @@ class PrepareBuyerE2eCommand extends Command
             return self::FAILURE;
         }
 
-        // Isolated E2E reuses one client IP; clear stale API throttles between runs.
-        RateLimiter::clear('illuminate:throttle');
-        $this->call('db:seed', [
-            '--class' => \Database\Seeders\SupportDefaultsSeeder::class,
-            '--force' => true,
-            '--no-interaction' => true,
-        ]);
-        $this->call('db:seed', [
-            '--class' => \Common\Database\Seeders\RolesTableSeeder::class,
-            '--force' => true,
-            '--no-interaction' => true,
-        ]);
-
         $withReviewer = (bool) $this->option('with-reviewer');
         $reviewerPassword = null;
         if ($withReviewer) {
@@ -80,6 +67,19 @@ class PrepareBuyerE2eCommand extends Command
                 'product.updating_requires_review' => 1,
             ]);
         }
+
+        // Isolated E2E reuses one client IP; clear stale API throttles between runs.
+        RateLimiter::clear('illuminate:throttle');
+        $this->call('db:seed', [
+            '--class' => \Database\Seeders\SupportDefaultsSeeder::class,
+            '--force' => true,
+            '--no-interaction' => true,
+        ]);
+        $this->call('db:seed', [
+            '--class' => \Common\Database\Seeders\RolesTableSeeder::class,
+            '--force' => true,
+            '--no-interaction' => true,
+        ]);
 
         $fixture = DB::transaction(function () use ($withReviewer, $reviewerPassword): array {
             DirectPaymentMethod::query()->updateOrCreate(
@@ -202,7 +202,7 @@ class PrepareBuyerE2eCommand extends Command
                 $reviewer->permissions()->syncWithoutDetaching([
                     Permission::query()->firstOrCreate(['name' => 'admin'])->id,
                 ]);
-    
+
                 $reviewFixtureDescription = 'Synthetic private moderation lifecycle fixture';
                 $reviewProduct = DigitalProduct::query()
                     ->where('user_id', $creator->id)
