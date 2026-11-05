@@ -238,13 +238,19 @@ function ServiceFormPage() {
       values: {current: SERVICE_STEP_ORDER.indexOf(step) + 1, total: SERVICE_STEP_ORDER.length},
     }));
     requestAnimationFrame(() => {
-      // Returning from a long stage should not strand the next step above the
-      // scroll viewport. Keep the step navigation visible and focus the new
-      // heading without scrolling it back out of view.
-      document.getElementById('service-builder-steps')?.scrollIntoView?.({
-        block: 'start',
-        behavior: 'auto',
-      });
+      // Switching steps starts at the top of the editor, not at the previous
+      // panel's rich-text editor. The dashboard has its own scroll container;
+      // scrolling the document or using scrollIntoView can target the wrong
+      // ancestor, especially with the sticky mobile app shell.
+      const navigation = document.getElementById('service-builder-steps');
+      let ancestor = navigation?.parentElement;
+      while (ancestor) {
+        const overflow = window.getComputedStyle(ancestor).overflowY;
+        if (/(auto|scroll)/.test(overflow) && ancestor.scrollHeight > ancestor.clientHeight) {
+          ancestor.scrollTop = 0;
+        }
+        ancestor = ancestor.parentElement;
+      }
       document.getElementById(headingForStep(step))?.focus({preventScroll: true});
     });
   };
