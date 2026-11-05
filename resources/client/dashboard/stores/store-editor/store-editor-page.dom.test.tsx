@@ -625,6 +625,11 @@ test('Appearance save does not clear a newer edit made while the request is in f
   );
   const status = screen.getAllByRole('status').find(el => el.classList.contains('sr-only'));
   expect(status?.textContent).not.toContain('Changes saved');
-  const save = screen.getByRole('button', {name: 'Save changes'}) as HTMLButtonElement;
-  expect(save.disabled).toBe(false);
+  // The responsive control has distinct desktop/mobile visible labels;
+  // assert its stable keyboard shortcut instead of assuming one label.
+  const save = document.querySelector<HTMLButtonElement>(
+    'button[aria-keyshortcuts="Control+S Meta+S"]',
+  );
+  expect(save).toBeTruthy();
+  expect(save?.disabled).toBe(false);
 });
