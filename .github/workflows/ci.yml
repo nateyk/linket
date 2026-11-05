@@ -18,10 +18,16 @@ concurrency:
 permissions:
   contents: read
 
+# Avoid a hard dependency on a paused third-party runner. Default to a
+# GitHub-hosted image; administrators can opt back into a compatible custom
+# runner by setting the LINKET_CI_RUNNER repository variable once healthy.
+# All test, audit, build, and release-security jobs keep their original gates.
+# Do not set the variable to an unavailable runner label.
+
 jobs:
   changes:
     name: Classify changed files
-    runs-on: runzumi-ubuntu-24.04-x64-8
+    runs-on: ${{ vars.LINKET_CI_RUNNER || 'ubuntu-24.04' }}
     timeout-minutes: 3
     permissions:
       contents: read
@@ -91,7 +97,7 @@ jobs:
     name: PHP tests and security (8.4 / MySQL 8.0)
     needs: changes
     if: ${{ needs.changes.outputs.run_php == 'true' }}
-    runs-on: runzumi-ubuntu-24.04-x64-8
+    runs-on: ${{ vars.LINKET_CI_RUNNER || 'ubuntu-24.04' }}
     timeout-minutes: 20
     services:
       mysql:
@@ -239,7 +245,7 @@ jobs:
     name: TypeScript, browser tests and Vite build (Node 24)
     needs: changes
     if: ${{ needs.changes.outputs.run_node == 'true' }}
-    runs-on: runzumi-ubuntu-24.04-x64-8
+    runs-on: ${{ vars.LINKET_CI_RUNNER || 'ubuntu-24.04' }}
     timeout-minutes: 20
     steps:
       - name: Checkout (shallow)
@@ -322,7 +328,7 @@ jobs:
     name: Verify (PHP 8.4 + Node 24 + MySQL 8.0)
     needs: [changes, php, frontend]
     if: ${{ always() }}
-    runs-on: runzumi-ubuntu-24.04-x64-8
+    runs-on: ${{ vars.LINKET_CI_RUNNER || 'ubuntu-24.04' }}
     timeout-minutes: 2
     steps:
       - name: Enforce success of every required verification job
@@ -353,7 +359,7 @@ jobs:
     # A deployable main SHA must have BOTH backend and frontend verified.
     needs: [verify, frontend]
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.verify.result == 'success' }}
-    runs-on: runzumi-ubuntu-24.04-x64-8
+    runs-on: ${{ vars.LINKET_CI_RUNNER || 'ubuntu-24.04' }}
     timeout-minutes: 15
     steps:
       - name: Checkout (shallow)
