@@ -66,6 +66,7 @@ import {
   UnsavedChangesGuard,
 } from './unsaved-changes-guard';
 import {SaveErrorSummary} from './save-error-summary';
+import {appearanceWasEditedAfterSubmission} from './appearance-save-state';
 
 export function Component() {
   const {routeType} = useDatatableRouteType();
@@ -269,16 +270,32 @@ function useStoreEditorSave() {
 
   // Every save clears the previous feedback first: the summary disappears
   // while the request runs and reappears only if this attempt fails (A-07).
+  // Keep the shared mutation's cache update: a local onSuccess would
+  // otherwise shadow its onSuccess and leave the editor's next load stale.
+  const appearanceSaveOptions = updateStoreAppearanceOptions(String(biolink.id));
   const saveAppearance = useMutation({
-    ...updateStoreAppearanceOptions(String(biolink.id)),
+    ...appearanceSaveOptions,
     onMutate: () => {
       setSaveError(null);
       setSaveStatus(null);
     },
-    onSuccess: () => {
-      setAppearanceIsDirty(false);
-      setSaveStatus('saved');
-      toast.success(<Trans message="Changes saved" />);
+    onSuccess: (response, variables, onMutateResult, context) => {
+      // Preserve the canonical query-cache reconciliation from stores-queries
+      // (including the current-user list) before acknowledging the save.
+      appearanceSaveOptions.onSuccess?.(
+        response,
+        variables,
+        onMutateResult,
+        context,
+      );
+      // A creator can change buttons/fonts/background while an HTTP request
+      // is pending. Do not clear their new unsaved edits just because an
+      // earlier request succeeded.
+      if (!appearanceWasEditedAfterSubmission(getState().appearance, variables.config)) {
+        setAppearanceIsDirty(false);
+        setSaveStatus('saved');
+        toast.success(<Trans message="Changes saved" />);
+      }
     },
     onError: error => {
       setSaveError({tab: 'appearance', parsed: parseApiError(error)});
@@ -341,6 +358,11 @@ function useStoreEditorSave() {
       pending.push(saveProfile.mutateAsync(saveProfilePayload()));
     }
     await Promise.all(pending);
+    // Prevent "Save & leave" from navigating away if the creator kept
+    // editing during the requests. The guard retains its dialog on rejection.
+    if (getState().hasUnsavedChanges()) {
+      throw new Error('Store editor still has unsaved edits after saving.');
+    }
   };
 
   return {

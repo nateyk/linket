@@ -205,6 +205,12 @@ jobs:
       - name: Free storefront and portal integration regression
         run: php artisan test tests/Feature/FreeCheckoutPortalJourneyTest.php --compact
 
+      # The real authenticated /stores/{id}/appearance save must be
+      # reflected in public /username, its preview, and product/service
+      # page bootstrap data. All records are disposable; no external HTTP.
+      - name: Storefront saved-to-public Appearance parity
+        run: php artisan test tests/Feature/StorefrontAppearancePersistenceTest.php --compact
+
       # Preserve mandatory fail-closed deployment/security regressions.
       - name: Release-control security regression gates
         shell: bash
