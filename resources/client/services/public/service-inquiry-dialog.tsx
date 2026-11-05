@@ -1,6 +1,6 @@
 import {apiClient} from '@common/http/query-client';
 import type {BiolinkAppearanceConfig} from '@app/gen/schemas/biolink-appearance-config';
-import {resolveBiolinkButtonAppearance, resolveBiolinkThemeVariables} from '@app/short-links/renderers/biolink-renderer/biolink-appearance';
+import {resolveBiolinkButtonAppearance, resolveBiolinkPublicAppearanceStyle} from '@app/short-links/renderers/biolink-renderer/biolink-appearance';
 import {Alert} from '@shadcn/alert/alert';
 import {Button} from '@shadcn/button/button';
 import {Dialog} from '@shadcn/dialog/dialog';
@@ -12,7 +12,7 @@ import {Trans} from '@ui/i18n/trans';
 import {useTrans} from '@ui/i18n/use-trans';
 import {cn} from '@ui/utils/cn';
 import {CheckCircle2Icon, CircleAlertIcon} from 'lucide-react';
-import {useEffect, useRef, useState, type CSSProperties, type ReactNode} from 'react';
+import {useEffect, useRef, useState, type ReactNode} from 'react';
 import {
   buildInquiryPayload,
   emptyInquiryForm,
@@ -38,7 +38,6 @@ export function ServiceInquiryDialog({
 }) {
   const {trans} = useTrans();
   const buttonAppearance = resolveBiolinkButtonAppearance(appearance);
-  const themeVariables = resolveBiolinkThemeVariables(appearance);
   const nameInputRef = useRef<HTMLInputElement | null>(null);
 
   // The dialog is portaled outside the page, so it has to carry the store's
@@ -103,14 +102,7 @@ export function ServiceInquiryDialog({
         <Dialog.Backdrop />
         <Dialog.Content
           className="bg-[var(--biolink-surface-strong)] text-[var(--biolink-text)] sm:max-w-md"
-          style={
-            {
-              ...themeVariables,
-              fontFamily: appearance?.fontConfig?.family,
-              '--biolink-surface-shadow':
-                buttonAppearance.style.boxShadow || 'none',
-            } as CSSProperties
-          }
+          style={resolveBiolinkPublicAppearanceStyle(appearance)}
         >
           <Dialog.Header>
             <Dialog.Title>
