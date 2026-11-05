@@ -5,7 +5,6 @@ namespace App\CreatorAi\Storefront;
 use App\CreatorAi\Services\CreatorAiAccess;
 use App\Models\User;
 use App\Stores\Models\Store;
-use Illuminate\Support\Arr;
 
 /**
  * PR-09 preview ONLY. No AI provider, budget spend, publication, or mutation.
@@ -16,7 +15,6 @@ final class StorefrontAppearanceProposalService
 {
     private const PRESETS = [
         'calm' => [
-            'layout' => 'default',
             'btnConfig' => [
                 'variant' => 'outline',
                 'radius' => 'rounded-sm',
@@ -24,7 +22,6 @@ final class StorefrontAppearanceProposalService
             ],
         ],
         'clear' => [
-            'layout' => 'default',
             'btnConfig' => [
                 'variant' => 'solid',
                 'radius' => 'rounded-lg',
@@ -32,7 +29,6 @@ final class StorefrontAppearanceProposalService
             ],
         ],
         'profile' => [
-            'layout' => 'profile-sidebar',
             'btnConfig' => [
                 'variant' => 'solid',
                 'radius' => 'rounded-sm',
@@ -67,10 +63,6 @@ final class StorefrontAppearanceProposalService
         $priorButtons = $config['btnConfig'] ?? [];
         $priorButtons = is_array($priorButtons) ? $priorButtons : [];
         $changes = [];
-
-        if (($config['layout'] ?? 'default') !== $selection['layout']) {
-            $changes['layout'] = $selection['layout'];
-        }
 
         foreach ($selection['btnConfig'] as $field => $value) {
             if (($priorButtons[$field] ?? null) !== $value) {
