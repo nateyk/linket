@@ -388,8 +388,12 @@ export function PublicDigitalProductPage({
           )}
         >
           <div className="flex items-center justify-between gap-4">
-            <span className="text-base font-semibold tabular-nums">
-              {formatPrice(data.product.price_cents, data.product.currency)}
+            <span className="min-w-0 truncate text-base font-semibold tabular-nums">
+              {data.product.payment_mode === 'free' ? (
+                <Trans message="Free" />
+              ) : (
+                formatPrice(data.product.price_cents, data.product.currency)
+              )}
             </span>
             <Button
               variant="ghost"
@@ -399,8 +403,20 @@ export function PublicDigitalProductPage({
               disabled={submitting || data.product.can_buy === false}
               onClick={() => setBuyerDialogOpen(true)}
             >
-              <LockKeyholeIcon />
-              {data.product.verification_quota_exhausted ? <Trans message="Creator cannot accept additional verified sales right now" /> : <Trans message={data.product.can_buy === false ? 'Temporarily unavailable' : 'Buy now'} />}
+              {data.product.payment_mode === 'free' ? (
+                <ShoppingBagIcon aria-hidden="true" />
+              ) : (
+                <LockKeyholeIcon aria-hidden="true" />
+              )}
+              {data.product.verification_quota_exhausted ? (
+                <Trans message="Creator cannot accept additional verified sales right now" />
+              ) : data.product.can_buy === false ? (
+                <Trans message="Temporarily unavailable" />
+              ) : data.product.payment_mode === 'free' ? (
+                <Trans message="Get for free" />
+              ) : (
+                <Trans message="Buy now" />
+              )}
             </Button>
           </div>
         </div>
@@ -1399,7 +1415,7 @@ function CourseCurriculum({
                       {index + 1}
                     </span>
                     <span className="flex min-w-0 flex-1 flex-col gap-0.5 text-start sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-                      <span className="truncate text-sm font-medium text-[var(--biolink-text)]">
+                      <span className="text-sm font-medium text-[var(--biolink-text)] break-words [overflow-wrap:anywhere]">
                         {chapter.title}
                       </span>
                       <span className="shrink-0 text-xs font-normal text-[var(--biolink-muted-text)]">
@@ -1429,7 +1445,7 @@ function CourseCurriculum({
                             className="size-4 shrink-0 text-[var(--biolink-muted-text)]"
                             aria-hidden="true"
                           />
-                          <span className="min-w-0 flex-1 truncate text-[var(--biolink-text)]">
+                          <span className="min-w-0 flex-1 text-[var(--biolink-text)] break-words [overflow-wrap:anywhere]">
                             {lesson.title}
                           </span>
                           {(lesson.duration_seconds ?? 0) > 0 && (
