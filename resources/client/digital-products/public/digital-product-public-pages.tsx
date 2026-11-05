@@ -16,6 +16,7 @@ import {ProductCreatorCard} from '@app/digital-products/public/product-page/prod
 import {ProductOverview} from '@app/digital-products/public/product-page/product-overview';
 import {ProductPricingCard} from '@app/digital-products/public/product-page/product-pricing-card';
 import {DirectPaymentModal, type DirectCheckout} from '@app/digital-products/public/direct-payment-modal';
+import {isSuccessfulFreeCheckoutResponse} from './free-checkout-response';
 import {ProductSummary} from '@app/digital-products/public/product-page/product-summary';
 import {
   ProductTabs,
@@ -27,7 +28,7 @@ import {
 } from '@app/digital-products/public/product-page/surface';
 import {Accordion} from '@shadcn/accordion/accordion';
 import {Alert} from '@shadcn/alert/alert';
-import {Button} from '@shadcn/button/button';
+import {Button, buttonVariants} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
 import {Dialog} from '@shadcn/dialog/dialog';
 import {Field} from '@shadcn/forms/field';
@@ -172,6 +173,7 @@ export function PublicDigitalProductPage({
 }) {
   const [submitting, setSubmitting] = useState(false);
   const [buyerDialogOpen, setBuyerDialogOpen] = useState(false);
+  const [freeCheckoutComplete, setFreeCheckoutComplete] = useState(false);
   const [buyerName, setBuyerName] = useState('');
   const [buyerEmail, setBuyerEmail] = useState('');
   const [buyerPhone, setBuyerPhone] = useState('');
@@ -223,6 +225,7 @@ export function PublicDigitalProductPage({
     setSubmitting(true);
     setCheckoutFailed(false);
     setBuyerError(undefined);
+    setFreeCheckoutComplete(false);
 
     try {
       const response = await apiClient.post(
@@ -236,6 +239,20 @@ export function PublicDigitalProductPage({
         },
       );
       const payload = response.data;
+
+      // Free orders are fulfilled synchronously by StorefrontCheckout. Their
+      // responses can still contain legacy verification endpoints, but they
+      // must never open the paid payment-instructions modal.
+      if (data.product.payment_mode === 'free') {
+        if (!isSuccessfulFreeCheckoutResponse(data.product.payment_mode, payload)) {
+          throw new Error('Free checkout response missing order id.');
+        }
+        setBuyerDialogOpen(false);
+        setFreeCheckoutComplete(true);
+        setSubmitting(false);
+        return;
+      }
+
       const checkoutUrl = payload?.checkout_url ?? payload?.data?.checkout_url;
 
       if (payload?.reference_endpoint && payload?.access_token) {
@@ -335,6 +352,40 @@ export function PublicDigitalProductPage({
         // very Buy button the dialog sits on.
         inert={buyerDialogOpen || undefined}
       >
+        {freeCheckoutComplete && (
+          <section
+            role="status"
+            aria-live="polite"
+            className={cn(
+              'flex min-w-0 flex-wrap items-center justify-between gap-4 rounded-card bg-[var(--biolink-surface-strong)] p-4 text-[var(--biolink-text)] [box-shadow:var(--biolink-surface-shadow,none)]',
+              biolinkSurfaceEdgeClassName,
+            )}
+          >
+            <div className="flex min-w-0 items-start gap-3">
+              <CheckCircle2Icon
+                className="mt-0.5 size-5 shrink-0 text-positive"
+                aria-hidden="true"
+              />
+              <div className="min-w-0">
+                <p className="text-base font-semibold">
+                  <Trans message="Your free order is ready" />
+                </p>
+                <p className="text-sm text-[var(--biolink-muted-text)] break-words [overflow-wrap:anywhere]">
+                  <Trans message="Use your checkout email in My Portal to access your product." />
+                </p>
+              </div>
+            </div>
+            <Link
+              to="/my-portal"
+              className={cn(
+                buttonVariants({variant: 'outline', size: 'lg'}),
+                'min-h-11 shrink-0',
+              )}
+            >
+              <Trans message="Open My Portal" />
+            </Link>
+          </section>
+        )}
         <ProductSamplePlayer samples={audioSamples}>
         <div className="grid min-w-0 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-6">
           <div className="flex min-w-0 flex-col gap-5 lg:col-start-1 lg:row-start-1">
@@ -363,6 +414,7 @@ export function PublicDigitalProductPage({
               checkoutCancelled={checkoutCancelled}
               checkoutFailed={checkoutFailed}
               submitting={submitting}
+              completed={freeCheckoutComplete}
               onBuy={() => setBuyerDialogOpen(true)}
               actionRef={buyActionRef}
             />
@@ -381,11 +433,13 @@ export function PublicDigitalProductPage({
         <div
           className={cn(
             'fixed inset-x-0 bottom-0 z-30 border-t border-[var(--biolink-border)] bg-[var(--biolink-surface-strong)] px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] [box-shadow:var(--biolink-surface-shadow,none)] transition-[transform,visibility] duration-150 ease-in-out motion-reduce:transition-none lg:hidden',
-            !railInView || checkoutCancelled || checkoutFailed
-              ? buyerDialogOpen
-                ? 'invisible translate-y-full'
-                : 'visible translate-y-0'
-              : 'invisible translate-y-full',
+            freeCheckoutComplete
+              ? 'invisible translate-y-full'
+              : !railInView || checkoutCancelled || checkoutFailed
+                ? buyerDialogOpen
+                  ? 'invisible translate-y-full'
+                  : 'visible translate-y-0'
+                : 'invisible translate-y-full',
           )}
         >
           <div className="flex items-center justify-between gap-4">
@@ -401,7 +455,7 @@ export function PublicDigitalProductPage({
               className={cn('shrink-0', buttonAppearance.className)}
               style={buttonAppearance.style}
               size="lg"
-              disabled={submitting || data.product.can_buy === false}
+              disabled={submitting || data.product.can_buy === false || freeCheckoutComplete}
               onClick={() => setBuyerDialogOpen(true)}
             >
               {data.product.payment_mode === 'free' ? (
