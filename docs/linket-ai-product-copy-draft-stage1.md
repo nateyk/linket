@@ -6,12 +6,12 @@ Status: In Progress, behind three default-OFF feature flags. NOT READY FOR PRODU
 - Laravel AI SDK structured Agent returns title and description with strict plain-text validation. Source facts are restricted to creator-owned product type/title/current description; no buyer information, payment references, receiving accounts or order history are transmitted.
 - Creator/Pro/workspace authorization, Free clear vs Pro advanced tones, draft/rejected-only status, private no-store API and source fingerprint revision checks before creator use. No direct product writes or publication.
 - Usage quota and provider budget reserve before an OpenAI SDK prompt. An additional provider deployment flag defaults OFF. Tests use a faked SDK agent; no live provider calls.
-- The admin-stored encrypted API key temporarily overrides SDK provider configuration in a try/finally block and disables OpenAI storage. This approach requires PHP-FPM-only review and should be replaced by scoped provider credential injection before concurrent long-lived workers.
+- The encrypted admin-managed API key is supplied to an isolated on-demand Laravel AI v1.3 provider (commit f93b4641) instead of overriding global OpenAI configuration. The real SDK facade import was verified in commit 624482da. PHP-FPM/worker credential lifecycle still requires production-like staging and independent AppSec verification.
 
 ## Release blockers
 1. Implement true provider cost reconciliation, pricing and reservation settlement. Successful and uncertain calls stay RESERVED; do not fabricate spend or auto-refund a possibly charged request.
 2. Prove model support, token bounds, safe staging SDK credential binding and full provider outage/retry handling.
-3. Build and independently test creator preview/edit/explicit-use UI. The backend only returns private drafts and checks revisions; it never publishes.
+3. Creator preview/edit/explicit-use UI is implemented with focused tests, but authenticated device-level keyboard/200% zoom/contrast and error-recovery QA remain open. The service never publishes.
 4. Add broader concurrency, prompt-injection, quota, XSS and error-recovery tests; require full exact-head CI, independent AppSec and deployment approval.
 
 Feature flags stay OFF and the existing Verify.et, storefront review and paid-content fulfillment flows remain unchanged.
