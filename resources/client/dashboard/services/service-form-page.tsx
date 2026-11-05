@@ -238,7 +238,14 @@ function ServiceFormPage() {
       values: {current: SERVICE_STEP_ORDER.indexOf(step) + 1, total: SERVICE_STEP_ORDER.length},
     }));
     requestAnimationFrame(() => {
-      document.getElementById(headingForStep(step))?.focus();
+      // Returning from a long stage should not strand the next step above the
+      // scroll viewport. Keep the step navigation visible and focus the new
+      // heading without scrolling it back out of view.
+      document.getElementById('service-builder-steps')?.scrollIntoView?.({
+        block: 'start',
+        behavior: 'auto',
+      });
+      document.getElementById(headingForStep(step))?.focus({preventScroll: true});
     });
   };
 
