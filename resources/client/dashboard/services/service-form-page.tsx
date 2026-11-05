@@ -654,7 +654,6 @@ function ServiceFormPage() {
                     <ServiceFormField
                       name="short_description"
                       label={trans({message: 'Short description'})}
-                      required
                       description={trans({
                         message:
                           'Shown on the service card and in search results. One or two lines.',
