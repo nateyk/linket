@@ -46,7 +46,7 @@ describe('copy review accessible and safe error recovery contract', () => {
     expect(source).toContain('htmlFor={suggestionId}');
     expect(source).toContain('aria-describedby={hintId}');
     expect(source).toContain("event.key === 'Escape'");
-    expect(source).toContain('textareaRef.current?.focus()');
+    expect(source).toContain('document.getElementById(suggestionId)?.focus()');
     expect(source).toContain('triggerRef.current?.focus()');
     expect(source).toContain('<Textarea');
     expect(source).toContain('role="alert"');

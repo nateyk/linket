@@ -40,7 +40,6 @@ export function ProductAiCopyReview({
   const latestSource = useRef({title: currentTitle, description: currentDescription});
   latestSource.current = {title: currentTitle, description: currentDescription};
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const mounted = useRef(true);
   const sectionId = useId();
   const titleId = sectionId + '-title';
@@ -73,8 +72,8 @@ export function ProductAiCopyReview({
   }, [base]);
 
   useEffect(() => {
-    if (draft) textareaRef.current?.focus();
-  }, [draft]);
+    if (draft) document.getElementById(suggestionId)?.focus();
+  }, [draft, suggestionId]);
 
   if (checking || !available) return null;
 
@@ -188,7 +187,6 @@ export function ProductAiCopyReview({
               <Trans message="Suggested description — edit before use" />
             </label>
             <Textarea
-              ref={textareaRef}
               id={suggestionId}
               bindToHookForm={false}
               className="min-h-32 resize-y bg-background text-sm"
