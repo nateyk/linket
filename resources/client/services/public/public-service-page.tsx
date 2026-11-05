@@ -51,6 +51,9 @@ export function PublicServicePage({data}: {data: PublicServicePageData}) {
   const selectedPackage = service.packages.find(
     packageItem => packageItem.id === packageId,
   );
+  // Seller links are secondary contact options, not a second quote path.
+  // Repeated destinations should not create duplicate focusable links.
+  const seenContactHrefs = new Set<string>();
   const contactChannels = service.contact_channels
     .map(channel => ({channel, href: contactChannelHref(channel)}))
     .filter(
@@ -60,7 +63,12 @@ export function PublicServicePage({data}: {data: PublicServicePageData}) {
         channel: (typeof service.contact_channels)[number];
         href: string;
       } => !!item.href,
-    );
+    )
+    .filter(({href}) => {
+      if (seenContactHrefs.has(href)) return false;
+      seenContactHrefs.add(href);
+      return true;
+    });
 
   const [passwordValid, setPasswordValid] = useState(!store.password);
   const packagePanelRef = useRef<HTMLDivElement | null>(null);
@@ -156,12 +164,12 @@ export function PublicServicePage({data}: {data: PublicServicePageData}) {
                 />
 
                 <Card.Content className={biolinkSurfaceContent}>
-                  <h1 className="max-w-3xl text-3xl leading-tight font-semibold tracking-tight text-balance sm:text-4xl">
+                  <h1 className="max-w-3xl text-3xl leading-tight font-semibold tracking-tight text-balance break-words [overflow-wrap:anywhere] sm:text-4xl">
                     {service.title}
                   </h1>
 
                   {service.short_description && (
-                    <p className="max-w-[70ch] text-base leading-6 text-[var(--biolink-muted-text)]">
+                    <p className="max-w-[70ch] text-base leading-6 text-[var(--biolink-muted-text)] break-words [overflow-wrap:anywhere]">
                       {service.short_description}
                     </p>
                   )}
@@ -270,11 +278,11 @@ export function PublicServicePage({data}: {data: PublicServicePageData}) {
                         <Accordion.Root variant="separated">
                           {service.faqs.map(faq => (
                             <Accordion.Item key={faq.id}>
-                              <Accordion.Trigger>
-                                {faq.question}
-                              </Accordion.Trigger>
+                              <Accordion.Trigger className="min-w-0 text-start break-words [overflow-wrap:anywhere]">
+                                  {faq.question}
+                                </Accordion.Trigger>
                               <Accordion.Content>
-                                <p className="text-sm leading-relaxed text-[var(--biolink-muted-text)]">
+                                <p className="text-sm leading-relaxed text-[var(--biolink-muted-text)] break-words [overflow-wrap:anywhere]">
                                   {faq.answer}
                                 </p>
                               </Accordion.Content>
@@ -319,25 +327,16 @@ export function PublicServicePage({data}: {data: PublicServicePageData}) {
                       </Avatar.ColorFallback>
                     </Avatar.Root>
                     <div className="flex min-w-0 flex-col">
-                      <p className="truncate text-base font-medium">
+                      <p className="text-base font-medium break-words [overflow-wrap:anywhere]">
                         {displayName}
                       </p>
                       {profile.profile_title && (
-                        <p className="truncate text-sm text-[var(--biolink-muted-text)]">
+                        <p className="text-sm text-[var(--biolink-muted-text)] break-words [overflow-wrap:anywhere]">
                           {profile.profile_title}
                         </p>
                       )}
                     </div>
                   </div>
-
-                  <Button
-                    variant="ghost"
-                    className={cn('w-full', buttonAppearance.className)}
-                    style={buttonAppearance.style}
-                    onClick={() => requestQuote()}
-                  >
-                    <Trans message="Send inquiry" />
-                  </Button>
 
                   {!!contactChannels.length && (
                     <div className="flex flex-col gap-2">
@@ -345,7 +344,7 @@ export function PublicServicePage({data}: {data: PublicServicePageData}) {
                         <Button
                           key={`${channel.type}-${channel.value}`}
                           variant="outline"
-                          className="w-full justify-start"
+                          className="h-auto min-h-11 w-full justify-start whitespace-normal text-start"
                           render={
                             <a
                               href={href}
@@ -355,7 +354,9 @@ export function PublicServicePage({data}: {data: PublicServicePageData}) {
                           }
                         >
                           <ContactIcon type={channel.type} />
-                          {channel.label || channel.value}
+                          <span className="min-w-0 break-words [overflow-wrap:anywhere]">
+                            {channel.label || channel.value}
+                          </span>
                         </Button>
                       ))}
                     </div>
@@ -424,7 +425,7 @@ function ServiceDescription({html}: {html?: string | null}) {
 
   return (
     <div
-      className="prose prose-sm max-w-none text-[var(--biolink-text)] prose-headings:text-[var(--biolink-text)] prose-p:text-[var(--biolink-muted-text)] prose-li:text-[var(--biolink-muted-text)] prose-strong:text-[var(--biolink-text)]"
+      className="prose prose-sm max-w-none text-[var(--biolink-text)] break-words [overflow-wrap:anywhere] prose-headings:text-[var(--biolink-text)] prose-p:text-[var(--biolink-muted-text)] prose-li:text-[var(--biolink-muted-text)] prose-strong:text-[var(--biolink-text)]"
       dangerouslySetInnerHTML={{__html: html}}
     />
   );
