@@ -65,7 +65,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          composer audit --no-dev --no-interaction --format plain | tee composer-audit.txt
+          composer audit --locked --no-dev --no-interaction --format plain | tee composer-audit.txt
 
       - name: Upload proposed lockfile and audit log for review only
         if: always()
