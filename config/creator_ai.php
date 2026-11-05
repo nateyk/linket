@@ -75,6 +75,19 @@ return [
         ],
     ],
 
+
+    // External WORM evidence is an independent READ-ONLY verification path.
+    // No S3 credentials, bucket, endpoints, or production access are defaulted.
+    'forecast_evidence' => [
+        'enabled' => env('CREATOR_AI_FORECAST_EVIDENCE_ENABLED', false),
+        'region' => env('CREATOR_AI_FORECAST_EVIDENCE_REGION'),
+        'bucket' => env('CREATOR_AI_FORECAST_EVIDENCE_BUCKET'),
+        'expected_bucket_owner' => env('CREATOR_AI_FORECAST_EVIDENCE_OWNER'),
+        'prefix' => 'creator-ai/forecast-closed-windows/',
+        'minimum_remaining_retention_days' => 365,
+        'max_manifest_bytes' => 32768,
+    ],
+
     'max_report_days' => 366,
     'max_orders_per_page' => 20,
     'max_product_results' => 20,
