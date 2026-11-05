@@ -27,10 +27,12 @@ describe('create modal distill: one decision per step', () => {
     expect(source).toContain('You can change it later.');
   });
 
-  test('dialog only renders a description when the step has one', () => {
+  test('dialog uses one concise description and no second wizard decision', () => {
     const dialog = read('create-product-dialog.tsx');
-    expect(dialog).toContain('{meta.description ? (');
     expect(dialog).toContain('<Dialog.Description>');
+    expect(dialog).toContain('Choose a type to open its editor.');
+    expect(dialog).not.toContain('WizardStepDots');
+    expect(dialog).not.toContain('WizardStepBody');
   });
 
   test('picker cards stay flat — no resting shadow', () => {

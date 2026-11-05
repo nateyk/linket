@@ -33,6 +33,12 @@ describe('productSaveErrorMessage', () => {
     );
   });
 
+  test('does not claim submission failed when its network response is unknown', () => {
+    expect(productSaveErrorMessage(new Error('No response'), true, true)).toBe(
+      'Draft saved, but we could not confirm submission. Check My Items before submitting again.',
+    );
+  });
+
   test('falls back to the error message when the response has no API message', () => {
     expect(productSaveErrorMessage(new Error('Network down'), false)).toBe(
       'Network down',

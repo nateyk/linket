@@ -156,7 +156,30 @@ describe('course product creation', () => {
         url: 'http://localhost/dashboard/items/new/details?type=ebook',
       },
     });
-    expect(passthrough).toBeNull();
+    expect(passthrough.headers.get('Location')).toBe(
+      '/dashboard/items/new/ebook',
+    );
+  });
+
+  test('legacy invalid product types return to the one-step selector', async () => {
+    const details = dashboardRoutes[0].children!.find(
+      (r: any) => r.path === 'items/new/details',
+    ) as any;
+    const response = await details.loader({
+      request: {url: 'http://localhost/dashboard/items/new/details?type=invalid'},
+    });
+    expect(response.headers.get('Location')).toBe('/dashboard/items/new');
+  });
+
+  test('typed create route exists and rejects unsupported type', async () => {
+    const route = dashboardRoutes[0].children!.find(
+      (r: any) => r.path === 'items/new/:creationType',
+    ) as any;
+    expect(route).toBeDefined();
+    const invalid = await route.loader({params: {creationType: 'unknown'}});
+    expect(invalid.headers.get('Location')).toBe('/dashboard/items/new');
+    const valid = await route.loader({params: {creationType: 'audio'}});
+    expect(valid).toBeNull();
   });
 });
 

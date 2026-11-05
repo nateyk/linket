@@ -21,6 +21,8 @@
  * loaded) that only the page can reach. Test 1 drives the context directly
  * and pins only the debounce/current-state contract.
  */
+import fs from 'node:fs';
+import path from 'node:path';
 import {DashboardLayoutContextProvider} from '@common/ui/dashboard/dashboard-layout-context';
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
 import {
@@ -157,6 +159,9 @@ async function advance(ms: number) {
 type Creation = ReturnType<typeof useProductCreation>;
 
 let ctxActions: Creation['actions'] | null = null;
+let latestAutoSaveState: Creation['autoSaveState'] | null = null;
+let latestFormState: Creation['state'] | null = null;
+let latestDirty: Creation['dirty'] | null = null;
 
 /**
  * Test 1 only needs the debounce to be TRIGGERED when the form becomes dirty.
@@ -165,13 +170,16 @@ let ctxActions: Creation['actions'] | null = null;
  * this harness deliberately does NOT re-implement that condition.
  */
 function Trigger() {
-  const {actions, dirty} = useProductCreation();
+  const {actions, dirty, autoSaveState, state} = useProductCreation();
   useEffect(() => {
     if (dirty) actions.autoSave();
-  }, [dirty, actions]);
+  }, [dirty, state, actions.autoSave]);
   // Every render commits inside act(), so the test always reads the latest
   // context (all actions are stable callbacks; the `actions` object is not).
   ctxActions = actions;
+  latestAutoSaveState = autoSaveState;
+  latestFormState = state;
+  latestDirty = dirty;
   return null;
 }
 
@@ -238,6 +246,57 @@ test('debounced auto-save sends CURRENT state, not first-render state', async ()
   expect(h.put).toHaveBeenCalledTimes(1);
 
   vi.useRealTimers();
+});
+
+test('the shipped draft autosave effect re-arms on later edits while still dirty', () => {
+  const source = fs.readFileSync(
+    path.resolve('resources/client/dashboard/digital-products/digital-product-form-page.tsx'),
+    'utf8',
+  );
+  expect(source).toContain("[dirty, state, actions.autoSave, product?.status]");
+});
+
+test('autosave status reflects confirmed success, failed write, and recovery', async () => {
+  vi.useFakeTimers();
+  mountProvider();
+  act(() => ctxActions!.hydrate({...DRAFT_FORM}));
+  expect(latestAutoSaveState).toBe('saved');
+  h.put.mockRejectedValueOnce(new Error('Synthetic network failure'));
+
+  act(() => ctxActions!.setTitle('First unsaved edit'));
+  expect(latestAutoSaveState).toBe('idle');
+  await advance(1600);
+  expect(h.put).toHaveBeenCalledTimes(1);
+  expect(latestAutoSaveState).toBe('failed');
+
+  act(() => ctxActions!.setTitle('Recovered draft'));
+  expect(latestAutoSaveState).toBe('idle');
+  await advance(1600);
+  expect(h.put).toHaveBeenCalledTimes(2);
+  expect(latestAutoSaveState).toBe('saved');
+});
+
+test('manual confirmation clears only the saved revision and cancels its queued autosave', async () => {
+  vi.useFakeTimers();
+  mountProvider();
+  act(() => ctxActions!.hydrate({...DRAFT_FORM}));
+  act(() => ctxActions!.setTitle('Confirmed edit'));
+  const confirmedSnapshot = latestFormState!;
+  expect(latestDirty).toBe(true);
+
+  act(() => ctxActions!.confirmPersisted(confirmedSnapshot));
+  expect(latestDirty).toBe(false);
+  expect(latestAutoSaveState).toBe('saved');
+  await advance(1600);
+  expect(h.put).not.toHaveBeenCalled();
+
+  act(() => ctxActions!.setTitle('Newer local edit'));
+  expect(latestDirty).toBe(true);
+  act(() => ctxActions!.confirmPersisted(confirmedSnapshot));
+  expect(latestDirty).toBe(true);
+  expect(latestAutoSaveState).toBe('idle');
+  await advance(1600);
+  expect(h.put).toHaveBeenCalledTimes(1);
 });
 
 test('saves edits made while an earlier autosave is in flight without overlapping writes', async () => {
