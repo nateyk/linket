@@ -152,7 +152,7 @@ const serverProduct = {
   cover: null,
   cover_file_entry_id: null,
   files: [{id: 5, name: 'guide.pdf', file_size: 2048, extension: 'pdf'}],
-  biolink_ids: [],
+  biolink_ids: [] as number[],
 };
 
 beforeEach(() => {
