@@ -1,4 +1,6 @@
 /** @vitest-environment jsdom */
+import fs from 'node:fs';
+import path from 'node:path';
 import {render, screen} from '@testing-library/react';
 import {describe, expect, it} from 'vitest';
 import {formatMoney} from '@ui/i18n/format-money';
@@ -87,5 +89,52 @@ describe('service card', () => {
     expect(
       screen.getByRole('link', {name: 'View Brand identity sprint'}),
     ).toBeTruthy();
+  });
+
+  it('composes the existing ProductCard rather than maintaining a second card layout', () => {
+    const source = fs.readFileSync(
+      path.resolve('resources/client/services/public/service-card.tsx'),
+      'utf8',
+    );
+    expect(source).toContain("import {ProductCard} from '@app/digital-products/shared/product-card'");
+    expect(source).toContain('<ProductCard');
+    expect(source).not.toContain('<ProductCover');
+  });
+
+  it('keeps the same media and card edge anatomy with one View link', () => {
+    const {container} = render(<ServiceCard service={service} appearance={null} />);
+    const card = container.firstElementChild as HTMLElement;
+    expect(card.className).toContain('rounded-card');
+    expect(card.className).toContain('isolate');
+    expect(card.className).toContain('bg-[var(--biolink-surface)]');
+    expect(card.querySelector('.aspect-video')).toBeTruthy();
+    expect(card.querySelector('h3')?.className).toContain('line-clamp-2');
+    expect(screen.getAllByRole('link')).toHaveLength(1);
+  });
+
+  it('uses creator Appearance text tokens for supporting descriptions', () => {
+    render(<ServiceCard service={service} appearance={null} />);
+    const summary = screen.getByText('A complete identity for your business.');
+    expect(summary.className).toContain('text-[var(--biolink-muted-text)]');
+  });
+
+  it('clamps long untranslated names without introducing a second action', () => {
+    const longTitle = 'የንግድ መለያ ንድፍ '.repeat(20);
+    render(<ServiceCard service={{...service, title: longTitle}} appearance={null} />);
+    const heading = screen.getByRole('heading', {level: 3, name: longTitle});
+    expect(heading.className).toContain('line-clamp-2');
+    expect(heading.className).toContain('[overflow-wrap:anywhere]');
+    expect(screen.getAllByRole('link')).toHaveLength(1);
+  });
+
+  it('preserves a real zero price rather than treating it as unpriced', () => {
+    render(
+      <ServiceCard
+        service={{...service, starting_price_cents: 0}}
+        appearance={null}
+      />,
+    );
+    expect(screen.getByText('Starting at')).toBeTruthy();
+    expect(screen.getByText(formatMoney(0, 'ETB'))).toBeTruthy();
   });
 });
