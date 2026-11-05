@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {Link, useNavigate, useParams} from 'react-router';
+import {isUncertainMutationOutcome} from '@app/dashboard/digital-products/request-outcome';
 import {parseServiceErrors, serviceSaveErrorMessage} from './service-save-error';
 import {
   emptyServiceForm,
@@ -118,6 +119,8 @@ function ServiceFormPage() {
   const [loadFailed, setLoadFailed] = useState(false);
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
+  const mutationUncertain = useRef(false);
+  const [creationUncertain, setCreationUncertain] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string>();
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -233,7 +236,7 @@ function ServiceFormPage() {
     async (statusOverride?: 'draft' | 'published') => {
       // Keyboard shortcuts can fire while a save is in flight. Never create a
       // second service merely because the first response is still pending.
-      if (savingRef.current) return;
+      if (savingRef.current || mutationUncertain.current) return;
       if (statusOverride === 'published' && !form.title.trim()) {
         setFieldErrors({title: trans({message: 'A title is required.'})});
         setOpenSection('basics');
@@ -263,7 +266,12 @@ function ServiceFormPage() {
             ),
           );
         } else {
-          await apiClient.post('/api/v1/services', payload);
+          const response = await apiClient.post('/api/v1/services', payload);
+          const created = (response.data as {data?: CreatorServiceResource})?.data;
+          if (!created || !Number.isSafeInteger(created.id) || created.id <= 0) {
+            // 2xx without a usable record ID is not proof that creation failed.
+            throw new Error('Service create response missing an ID');
+          }
         }
 
         setAnnouncement(
@@ -281,6 +289,16 @@ function ServiceFormPage() {
           navigate('/dashboard/services');
         }
       } catch (reason) {
+        if (!isEditing && isUncertainMutationOutcome(reason)) {
+          // A network timeout or 5xx can occur after a successful insert.
+          // Do not invite a second POST until the creator checks My Services.
+          mutationUncertain.current = true;
+          setCreationUncertain(true);
+          setAnnouncement(trans({message: 'Service creation outcome unconfirmed'}));
+          setError(undefined);
+          setFieldErrors({});
+          return;
+        }
         const parsed = parseServiceErrors(reason);
         setError(serviceSaveErrorMessage(reason));
         setFieldErrors(parsed.fieldErrors);
@@ -419,7 +437,7 @@ function ServiceFormPage() {
         variant="outline"
         size="sm"
         className="max-lg:size-11 max-lg:px-0"
-        disabled={saving}
+        disabled={saving || creationUncertain}
         aria-label={trans({message: 'Save draft'})}
         onClick={() => void save('draft')}
       >
@@ -431,7 +449,7 @@ function ServiceFormPage() {
       <Button
         size="sm"
         className="max-lg:size-11 max-lg:px-0"
-        disabled={saving}
+        disabled={saving || creationUncertain}
         aria-label={trans({message: 'Publish service'})}
         onClick={() => void save('published')}
       >
@@ -525,6 +543,17 @@ function ServiceFormPage() {
 
       <DashboardLayout.SectionContent className="overflow-y-auto">
         <div className="mx-auto w-full max-w-4xl py-4 sm:py-5">
+          {creationUncertain && (
+            <Alert.Root role="alert" variant="warning" fillStyle="subtleFill" className="mb-5">
+              <CircleAlertIcon />
+              <Alert.Description className="flex flex-col items-start gap-2">
+                <Trans message="We could not confirm whether the service was created. Check My Services before creating it again." />
+                <Button size="sm" variant="outline" render={<Link to="/dashboard/services" />}>
+                  <Trans message="Check My Services" />
+                </Button>
+              </Alert.Description>
+            </Alert.Root>
+          )}
           {error && (
             <Alert.Root variant="destructive" fillStyle="subtleFill">
               <CircleAlertIcon />
