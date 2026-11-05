@@ -47,7 +47,7 @@ export function ServiceBuilderSteps({
     <nav
       id="service-builder-steps"
       aria-label={trans({message: 'Service creation steps'})}
-      className="mb-5 scroll-mt-2 rounded-card border bg-card px-3 py-4 sm:px-5"
+      className="sticky top-0 z-10 mb-5 scroll-mt-2 rounded-card border bg-card px-3 py-4 sm:px-5"
     >
       <ol className="grid grid-cols-4 gap-1 sm:gap-3">
         {steps.map((step, index) => {
