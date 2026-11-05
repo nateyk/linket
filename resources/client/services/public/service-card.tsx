@@ -78,6 +78,7 @@ export function ServiceCard({
       }
       action={
         <Button
+          nativeButton={false}
           size="sm"
           variant="ghost"
           className={cn(
