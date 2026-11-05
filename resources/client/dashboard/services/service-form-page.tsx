@@ -597,7 +597,7 @@ function ServiceFormPage() {
               </p>
             </div>
             <span className="text-xs text-muted-foreground">
-              <Trans message="Only the title is required; other details can be added later." />
+              <Trans message="Add a title and choose a storefront; media and packages are optional." />
             </span>
           </div>
 
