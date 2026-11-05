@@ -159,10 +159,15 @@ test.describe('Service Creation — authenticated browser acceptance', () => {
 
     // Exercise the owner-scoped delete UI; all writes are on disposable belink_test.
     await page.getByRole('button', {name: 'Delete', exact: true}).click();
-    const deletion = page.waitForResponse(response =>
-      new URL(response.url()).pathname === `/api/v1/services/${id}`
-      && response.request().method() === 'DELETE',
-    );
+    const deletion = page.waitForResponse(response => {
+      const url = new URL(response.url());
+      const method = response.request().method();
+      // Linket's shared HTTP client uses Laravel method override for DELETE:
+      // POST /api/v1/services/:id?_method=DELETE (204), not native DELETE.
+      return url.pathname === `/api/v1/services/${id}`
+        && (method === 'DELETE'
+          || (method === 'POST' && url.searchParams.get('_method')?.toUpperCase() === 'DELETE'));
+    });
     await page.getByRole('button', {name: 'Delete service'}).click();
     expect((await deletion).status()).toBe(204);
     await expect(page).toHaveURL(/\/dashboard\/services(?:\?.*)?$/);
