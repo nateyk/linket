@@ -41,7 +41,7 @@ export function Component() {
     <div className="mx-auto flex max-w-2xl flex-col gap-4">
       <SectionHeading
         title={<Trans message="Appearance" />}
-        description={<Trans message="Customize the look of your creator profile." />}
+        description={<Trans message="Customize your public storefront, products, and services." />}
       />
       {/* Default (divider list), not separated: this accordion sits inside
           the section's card pane, and separated items would be cards inside
@@ -71,7 +71,7 @@ export function Component() {
               icon={MousePointerClickIcon}
               title={<Trans message="Buttons" />}
               description={
-                <Trans message="Style profile actions, social links, and link buttons." />
+                <Trans message="Style storefront buttons and customer actions." />
               }
             />
           </SectionAccordionTrigger>
@@ -86,7 +86,7 @@ export function Component() {
               icon={TypeIcon}
               title={<Trans message="Text" />}
               description={
-                <Trans message="Choose the typeface and foreground color." />
+                <Trans message="Choose the storefront font and text color." />
               }
             />
           </SectionAccordionTrigger>
