@@ -75,6 +75,7 @@ import {
   type ProductSetupSection,
 } from './product-form-section';
 import {ProductPreview, ProductStatus} from './product-preview';
+import {ProductAiCopyReview} from './product-ai-copy-review';
 import type {ProductType} from './product-type-picker';
 
 type Biolink = {id: number; name: string; short_url?: string};
@@ -778,6 +779,7 @@ function DigitalProductForm() {
                           <DetailsPanel
                             title={title}
                             description={description}
+                            productId={product?.id}
                             price={price}
                             coverUrl={coverUrl}
                             onTitleChange={actions.setTitle}
@@ -883,6 +885,7 @@ function DigitalProductForm() {
 function DetailsPanel({
   title,
   description,
+  productId,
   price,
   coverUrl,
   onTitleChange,
@@ -897,6 +900,7 @@ function DetailsPanel({
 }: {
   title: string;
   description: string;
+  productId?: number;
   price: string;
   coverUrl: string;
   onTitleChange: (value: string) => void;
@@ -914,6 +918,7 @@ function DetailsPanel({
 }) {
   const {validateField} = arguments[0] as {validateField: (field: string, value: string) => void};
   const {trans} = useTrans();
+  const [copyRevision, setCopyRevision] = useState(0);
   return (
     <div className="flex flex-col gap-4">
       <ProductFormField
@@ -986,8 +991,19 @@ function DetailsPanel({
         htmlFor="product-description"
         onBlur={() => validateField('description', description)}
       >
-        <DescriptionEditor value={description} onChange={onDescriptionChange} />
+        <DescriptionEditor key={copyRevision} value={description} onChange={onDescriptionChange} />
       </ProductFormField>
+      {productId != null && (
+        <ProductAiCopyReview
+          productId={productId}
+          currentTitle={title}
+          currentDescription={description}
+          onUseDescription={candidate => {
+            onDescriptionChange(candidate);
+            setCopyRevision(current => current + 1);
+          }}
+        />
+      )}
 
       <ProductFormField
         label="Cover image"

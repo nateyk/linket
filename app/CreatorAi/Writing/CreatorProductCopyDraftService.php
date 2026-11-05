@@ -35,6 +35,7 @@ final class CreatorProductCopyDraftService
             && $this->access->allows($creator, (int) $product->workspace_id, 'writing_basic')
             && $product->deleted_at === null
             && in_array($product->status, ['draft', 'rejected'], true)
+            && in_array($product->type ?? 'digital', ['digital', 'ebook', 'audio'], true)
             && (bool) config('creator_ai.product_copy_provider.enabled', false)
             && $this->settings->policy()['enabled']
             && $this->settings->policy()['api_key_configured'];
