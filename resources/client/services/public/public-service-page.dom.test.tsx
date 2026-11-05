@@ -205,6 +205,10 @@ describe('public service page', () => {
     expect(screen.queryByRole('button', {name: 'Send inquiry'})).toBeNull();
     expect(screen.getByRole('link', {name: 'WhatsApp'})).toBeTruthy();
     expect(screen.getByRole('link', {name: 'Email'})).toBeTruthy();
+    const directContact = screen.getByRole('link', {name: 'WhatsApp'});
+    expect(directContact.tagName).toBe('A');
+    expect(directContact.getAttribute('data-slot')).toBeNull();
+    expect(directContact.className).toContain('min-h-11');
   });
 
   it('deduplicates identical seller destinations without removing other channels', () => {
