@@ -1,4 +1,5 @@
 import type {BiolinkAppearanceConfig} from '@app/gen/schemas/biolink-appearance-config';
+import {ProductCard} from '@app/digital-products/shared/product-card';
 import {
   biolinkSurfaceEdgeClassName,
   resolveBiolinkButtonAppearance,
@@ -7,7 +8,6 @@ import {Badge} from '@shadcn/badge/badge';
 import {Button} from '@shadcn/button/button';
 import {message} from '@ui/i18n/message';
 import {Trans} from '@ui/i18n/trans';
-import {ProductCover} from '@ui/product-cover';
 import {useTrans} from '@ui/i18n/use-trans';
 import {cn} from '@ui/utils/cn';
 import {BriefcaseBusinessIcon, PackageIcon} from 'lucide-react';
@@ -15,12 +15,10 @@ import {serviceStartingPrice} from './service-price';
 import type {PublicService} from './service-types';
 
 /**
- * The storefront's service card. It uses the same rhythm as the product card
- * beside it in the shop: cover with the category as an overlay, title,
- * two-line summary, the package count, then the starting price (or a quote
- * request when no package has a price) and one Appearance-styled action on
- * the bottom row. Surfaces and shadow come from the store, so the two card
- * kinds sit in one grid without a seam.
+ * Services and digital products are both public store catalog items. Reuse the
+ * shared ProductCard anatomy so the cover, title, description, metadata, price
+ * and one View action align without a parallel service-only card implementation.
+ * The service-only content (packages / starting price / quote) is still distinct.
  */
 export function ServiceCard({
   service,
@@ -40,47 +38,22 @@ export function ServiceCard({
   );
 
   return (
-    <div
-      className={cn(
-        'group flex h-full w-full flex-col overflow-hidden isolate rounded-card bg-[var(--biolink-surface)] text-[var(--biolink-text)]',
-        biolinkSurfaceEdgeClassName,
-      )}
-      // The store's own Appearance → Shadow, exactly as the product and
-      // creator cards take it.
-      style={{boxShadow: buttonAppearance.style.boxShadow}}
-    >
-      <div className="relative aspect-video w-full overflow-hidden">
-        <ProductCover
-          cover={service.cover}
-          alt={service.title}
-          aspect=""
-          className="h-full w-full bg-[var(--biolink-surface-muted)]"
-          fallback={fallback}
-        />
-
-        {service.category && (
-          <div className="absolute start-3 top-3 z-10">
-            <Badge
-              variant="secondary"
-              className="bg-[var(--biolink-surface-strong)] text-[var(--biolink-text)]"
-            >
-              {service.category}
-            </Badge>
-          </div>
-        )}
-      </div>
-
-      <div className="flex flex-1 flex-col gap-3 p-4">
-        <h3 className="line-clamp-2 min-w-0 text-base leading-snug font-semibold sm:text-lg">
-          {service.title}
-        </h3>
-
-        {service.short_description && (
-          <p className="line-clamp-2 text-sm leading-relaxed text-[var(--biolink-muted-text)]">
-            {service.short_description}
-          </p>
-        )}
-
+    <ProductCard
+      quiet
+      images={service.cover?.url ? [service.cover.url] : []}
+      title={service.title}
+      description={service.short_description}
+      mediaOverlay={
+        service.category ? (
+          <Badge
+            variant="secondary"
+            className="bg-[var(--biolink-surface-strong)] text-[var(--biolink-text)]"
+          >
+            {service.category}
+          </Badge>
+        ) : undefined
+      }
+      meta={
         <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--biolink-muted-text)]">
           <PackageIcon className="size-4 shrink-0" aria-hidden="true" />
           <Trans
@@ -88,40 +61,54 @@ export function ServiceCard({
             values={{count: service.packages_count}}
           />
         </span>
-
-        <div className="mt-auto flex items-end justify-between gap-3 pt-1">
-          {price ? (
-            <span className="flex min-w-0 flex-col gap-0.5">
-              <span className="text-xs font-medium text-[var(--biolink-muted-text)]">
-                <Trans message="Starting at" />
-              </span>
-              <span className="text-base leading-none font-semibold tracking-tight tabular-nums sm:text-lg">
-                {price}
-              </span>
+      }
+      price={
+        price ? (
+          <span className="flex min-w-0 flex-col gap-0.5">
+            <span className="text-xs font-medium leading-snug text-[var(--biolink-muted-text)]">
+              <Trans message="Starting at" />
             </span>
-          ) : (
-            <span className="text-base leading-none font-semibold tracking-tight sm:text-lg">
-              <Trans message="Request a quote" />
+            <span className="text-base leading-tight font-semibold tracking-tight tabular-nums sm:text-lg">
+              {price}
             </span>
+          </span>
+        ) : (
+          <Trans message="Request a quote" />
+        )
+      }
+      action={
+        <Button
+          size="sm"
+          variant="ghost"
+          className={cn(
+            buttonAppearance.className,
+            'min-h-9 pointer-coarse:min-h-11',
           )}
-
-          <Button
-            size="sm"
-            variant="ghost"
-            className={cn(
-              buttonAppearance.className,
-              'min-h-9 pointer-coarse:min-h-11',
-            )}
-            style={buttonAppearance.style}
-            aria-label={trans(
-              message('View :title', {values: {title: service.title}}),
-            )}
-            render={<a href={service.public_url} />}
-          >
-            <Trans message="View" />
-          </Button>
-        </div>
-      </div>
-    </div>
+          style={buttonAppearance.style}
+          aria-label={trans(
+            message('View :title', {values: {title: service.title}}),
+          )}
+          render={<a href={service.public_url} />}
+        >
+          <Trans message="View" />
+        </Button>
+      }
+      imageFallback={fallback}
+      style={{boxShadow: buttonAppearance.style.boxShadow}}
+      classNames={{
+        root: cn(
+          'bg-[var(--biolink-surface)] text-[var(--biolink-text)]',
+          biolinkSurfaceEdgeClassName,
+        ),
+        media: 'bg-[var(--biolink-surface-muted)]',
+        body: 'gap-3 p-4',
+        title:
+          'line-clamp-2 text-base leading-snug font-semibold text-[var(--biolink-text)] sm:text-lg',
+        description: 'text-[var(--biolink-muted-text)]',
+        price:
+          'min-w-0 text-base leading-snug font-semibold tracking-tight text-[var(--biolink-text)] tabular-nums sm:text-lg',
+        footer: 'gap-3 pt-1',
+      }}
+    />
   );
 }
