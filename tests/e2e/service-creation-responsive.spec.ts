@@ -42,7 +42,6 @@ test.describe('Service Creation — authenticated browser acceptance', () => {
       const heading = page.getByRole('heading', {name: 'New service', level: 1});
       await expect(heading).toBeVisible();
       await expect(page.getByRole('progressbar', {name: 'Service setup progress'})).toBeVisible();
-      await expect(page.getByText('recommended sections complete')).toHaveCount(0);
       await expect(page.getByText(/recommended sections complete/)).toBeVisible();
 
       for (const title of ['Basics', 'Media and links', 'Packages', 'FAQ', 'Contact buttons']) {
