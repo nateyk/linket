@@ -33,7 +33,7 @@ import {
   SendIcon,
   Trash2Icon,
 } from 'lucide-react';
-import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import {Link, useNavigate, useParams} from 'react-router';
 import {isUncertainMutationOutcome} from '@app/dashboard/digital-products/request-outcome';
 import {parseServiceErrors, serviceSaveErrorMessage} from './service-save-error';
@@ -131,6 +131,7 @@ function ServiceFormPage() {
   const [error, setError] = useState<string>();
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [activeStep, setActiveStep] = useState<ServiceBuilderStepId>('details');
+  const lastVisibleStep = useRef<ServiceBuilderStepId>('details');
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -237,23 +238,23 @@ function ServiceFormPage() {
       message: 'Step :current of :total',
       values: {current: SERVICE_STEP_ORDER.indexOf(step) + 1, total: SERVICE_STEP_ORDER.length},
     }));
-    requestAnimationFrame(() => {
-      // Switching steps starts at the top of the editor, not at the previous
-      // panel's rich-text editor. The dashboard has its own scroll container;
-      // scrolling the document or using scrollIntoView can target the wrong
-      // ancestor, especially with the sticky mobile app shell.
-      const navigation = document.getElementById('service-builder-steps');
-      let ancestor = navigation?.parentElement;
-      while (ancestor) {
-        const overflow = window.getComputedStyle(ancestor).overflowY;
-        if (/(auto|scroll)/.test(overflow) && ancestor.scrollHeight > ancestor.clientHeight) {
-          ancestor.scrollTop = 0;
-        }
-        ancestor = ancestor.parentElement;
-      }
-      document.getElementById(headingForStep(step))?.focus({preventScroll: true});
-    });
   };
+
+  // Stage changes can be initiated by the step navigation, keyboard shortcuts,
+  // or validation. Reset the real dashboard scroller AFTER React commits the
+  // newly selected panel instead of relying on the button event's RAF timing.
+  // The old event-based resets failed in the authenticated browser at mobile
+  // sizes: the section retained scrollTop ~465 while the nav moved above view.
+  useLayoutEffect(() => {
+    if (lastVisibleStep.current === activeStep) return;
+    lastVisibleStep.current = activeStep;
+    const nav = document.getElementById('service-builder-steps');
+    const scroller = nav?.closest<HTMLElement>('[data-slot="section-content"]');
+    if (scroller) {
+      scroller.scrollTop = 0;
+    }
+    document.getElementById(headingForStep(activeStep))?.focus({preventScroll: true});
+  }, [activeStep]);
 
   const sectionError = (id: ServiceFormSectionId) =>
     Object.keys(fieldErrors).some(

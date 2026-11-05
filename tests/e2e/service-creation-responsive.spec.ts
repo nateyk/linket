@@ -74,6 +74,26 @@ test.describe('Service Creation — authenticated browser acceptance', () => {
       await expect(page.locator('#title')).toHaveValue('E2E preview draft');
       // A stage change must return the creator to visible navigation, even
       // after the previous long form has been scrolled.
+      // Diagnostics for the authenticated browser regression. Report the
+      // actual scroll container, nav geometry, and scroll limits.
+      const geometry = await steps.evaluate(node => {
+        const section = node.closest('[data-slot="section-content"]');
+        const navRect = node.getBoundingClientRect();
+        const sectionRect = section?.getBoundingClientRect();
+        return {
+          viewportHeight: window.innerHeight,
+          navTop: navRect.top,
+          navHeight: navRect.height,
+          sectionTop: sectionRect?.top ?? null,
+          sectionHeight: sectionRect?.height ?? null,
+          sectionScrollTop: section?.scrollTop ?? null,
+          sectionScrollHeight: section?.scrollHeight ?? null,
+          sectionClientHeight: section?.clientHeight ?? null,
+          documentScrollTop: document.scrollingElement?.scrollTop ?? null,
+          focusedId: document.activeElement?.id ?? null,
+        };
+      });
+      console.log('[service-stage-scroll]', JSON.stringify(geometry));
       await expect(steps).toBeInViewport({ratio: 0.5});
       await expect(page.getByRole('heading', {name: 'Basics'})).toBeInViewport();
 
