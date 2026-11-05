@@ -14,7 +14,7 @@ import {message} from '@ui/i18n/message';
 import {useTrans} from '@ui/i18n/use-trans';
 import {formatMoney} from '@ui/i18n/format-money';
 import {cn} from '@ui/utils/cn';
-import {PackageIcon} from 'lucide-react';
+import {PackageIcon, RefreshCwIcon} from 'lucide-react';
 import {useEffect, useState} from 'react';
 import type {ReactNode} from 'react';
 
@@ -58,6 +58,8 @@ export function ShopWidgetRenderer({
   const storeId = biolink?.id;
   const [products, setProducts] = useState<Product[]>([]);
   const [loadState, setLoadState] = useState<ShopLoadState>('loading');
+  // Incrementing the key reuses the same scoped GET and cancellable effect.
+  const [retryKey, setRetryKey] = useState(0);
   const {trans} = useTrans();
 
   useEffect(() => {
@@ -104,7 +106,7 @@ export function ShopWidgetRenderer({
     return () => {
       cancelled = true;
     };
-  }, [variant, storeId, productIdsKey]);
+  }, [variant, storeId, productIdsKey, retryKey]);
 
   if (variant === 'editor') {
     return (
@@ -190,7 +192,7 @@ export function ShopWidgetRenderer({
         {...sectionLabelProps}
       >
         {heading}
-        <Empty.Root className={emptySurfaceClassName}>
+        <Empty.Root role="status" className={emptySurfaceClassName}>
           <Empty.Header>
             <Empty.Media
               variant="icon"
@@ -202,9 +204,23 @@ export function ShopWidgetRenderer({
               <Trans message="Couldn't load products" />
             </Empty.Title>
             <Empty.Description className="text-[var(--biolink-muted-text)]">
-              <Trans message="Refresh the page and try again." />
+              <Trans message="Please try again." />
             </Empty.Description>
           </Empty.Header>
+          <Empty.Content>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className={cn(buttonAppearance.className, 'min-h-11')}
+              style={buttonAppearance.style}
+              aria-label={trans(message('Retry loading products'))}
+              onClick={() => setRetryKey(key => key + 1)}
+            >
+              <RefreshCwIcon data-icon="inline-start" aria-hidden="true" />
+              <Trans message="Try again" />
+            </Button>
+          </Empty.Content>
         </Empty.Root>
       </section>
     );

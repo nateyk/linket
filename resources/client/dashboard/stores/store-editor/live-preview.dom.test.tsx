@@ -296,6 +296,79 @@ describe('LivePreview follows the editor tab (A-06)', () => {
   });
 });
 
+describe('expanded desktop storefront preview (SF-04)', () => {
+  beforeEach(() => {
+    location.pathname = '/dashboard/stores/demo';
+    store.openSection = 'profile';
+    store.profileConfig = null;
+  });
+
+  test('opens a larger live preview in an accessible dialog without changing the existing panel', async () => {
+    const {container} = render(<LivePreview />);
+    const trigger = screen.getByRole('button', {name: 'Expand preview'});
+
+    expect(container.querySelectorAll('iframe')).toHaveLength(1);
+    expect(panelOf(container).className).toContain('lg:h-full');
+    fireEvent.click(trigger);
+
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Expanded live preview',
+    });
+    expect(dialog.getAttribute('aria-modal')).toBe('true');
+    expect(dialog.className).toContain('92dvh');
+    await waitFor(() => expect(document.querySelectorAll('iframe')).toHaveLength(2));
+    expect(dialog.querySelector('iframe')?.getAttribute('src')).toBe('/demo?preview=1');
+  });
+
+  test('closing the expanded preview with Escape restores focus to its trigger', async () => {
+    render(<LivePreview />);
+    const trigger = screen.getByRole('button', {name: 'Expand preview'});
+    trigger.focus();
+    fireEvent.click(trigger);
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Expanded live preview',
+    });
+    await waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true));
+
+    fireEvent.keyDown(document.activeElement as Element, {key: 'Escape'});
+
+    await waitFor(() => expect(screen.queryByRole('dialog', {
+      name: 'Expanded live preview',
+    })).toBeNull());
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  test('the expanded preview receives the draft and section after its iframe handshake', async () => {
+    render(<LivePreview />);
+    fireEvent.click(screen.getByRole('button', {name: 'Expand preview'}));
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Expanded live preview',
+    });
+    const iframe = dialog.querySelector('iframe')!;
+    const send = vi.fn();
+    Object.defineProperty(iframe, 'contentWindow', {
+      configurable: true,
+      value: {postMessage: send},
+    });
+
+    window.dispatchEvent(new MessageEvent('message', {
+      origin: window.location.origin,
+      data: {type: 'linket:store-preview-ready'},
+    }));
+
+    await waitFor(() => {
+      expect(send).toHaveBeenCalledWith(
+        expect.objectContaining({type: 'linket:store-preview'}),
+        window.location.origin,
+      );
+      expect(send).toHaveBeenCalledWith(
+        {type: 'linket:store-preview-tab', activeTab: 'content', section: 'profile'},
+        window.location.origin,
+      );
+    });
+  });
+});
+
 describe('preview sheet below lg (A-19)', () => {
   beforeEach(() => {
     location.pathname = '/dashboard/stores/demo';

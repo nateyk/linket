@@ -19,7 +19,7 @@ import {
 } from '@shadcn/sheet/sheet';
 import {Trans} from '@ui/i18n/trans';
 import {cn} from '@ui/utils/cn';
-import {SmartphoneIcon, XIcon} from 'lucide-react';
+import {Maximize2Icon, SmartphoneIcon, XIcon} from 'lucide-react';
 import {
   Activity,
   useCallback,
@@ -178,6 +178,7 @@ export function LivePreview() {
   const {pathname} = useLocation();
   const isInsightsTab = pathname.split('/').pop() === 'insights';
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [expandedOpen, setExpandedOpen] = useState(false);
   // True once the sheet has been opened: its frame then stays mounted
   // behind the hidden popup instead of being torn down and rebuilt.
   const [sheetVisited, setSheetVisited] = useState(false);
@@ -185,7 +186,10 @@ export function LivePreview() {
   // Insights hides the panel and its trigger; an open sheet must go with
   // them, or returning could resurrect a modal whose trigger never came back.
   useEffect(() => {
-    if (isInsightsTab) setSheetOpen(false);
+    if (isInsightsTab) {
+      setSheetOpen(false);
+      setExpandedOpen(false);
+    }
   }, [isInsightsTab]);
 
   return (
@@ -203,8 +207,41 @@ export function LivePreview() {
           isInsightsTab && 'hidden',
         )}
       >
-        <div className="inline-flex h-6 shrink-0 items-center rounded-full border border-border/60 bg-background px-2.5 text-xs font-medium text-muted-foreground select-none">
-          <Trans message="Live preview" />
+        <div className="flex w-full shrink-0 items-center justify-between gap-3">
+          <span className="inline-flex h-6 items-center rounded-full border border-border/60 bg-background px-2.5 text-xs font-medium text-muted-foreground select-none">
+            <Trans message="Live preview" />
+          </span>
+          <Dialog.Root open={expandedOpen} onOpenChange={setExpandedOpen}>
+            <Dialog.Trigger
+              render={
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="min-h-9"
+                />
+              }
+            >
+              <Maximize2Icon data-icon="inline-start" />
+              <Trans message="Expand preview" />
+            </Dialog.Trigger>
+            <Dialog.Portal>
+              <Dialog.Backdrop />
+              <Dialog.Content
+                className="h-[min(92dvh,56rem)] w-[min(96vw,56rem)] max-w-none sm:max-w-none"
+                aria-modal="true"
+              >
+                <Dialog.Header>
+                  <Dialog.Title>
+                    <Trans message="Expanded live preview" />
+                  </Dialog.Title>
+                </Dialog.Header>
+                <Dialog.Body className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                  <PreviewDevice />
+                </Dialog.Body>
+              </Dialog.Content>
+            </Dialog.Portal>
+          </Dialog.Root>
         </div>
 
         <PreviewDevice />
