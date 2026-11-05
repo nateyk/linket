@@ -111,11 +111,9 @@ describe('painted-panel colors and locale safety', () => {
     expect(page).not.toContain('shadow-xs');
     expect(page).not.toContain('bg-primary/10');
     // Soft-pop for every surface card is one CSS var from Appearance Shadow.
-    expect(page).toContain("'--biolink-surface-shadow': surfaceShadow");
+    expect(page).toContain('resolveBiolinkPublicAppearanceStyle(appearance)');
     expect(page).toContain('biolinkSurfaceEdgeClassName');
-    expect(page).toContain(
-      '[box-shadow:var(--biolink-surface-shadow,none)]',
-    );
+    expect(page).toContain('[box-shadow:var(--biolink-surface-shadow,none)]');
     // The phone bar tracks the buy button, not the whole rail, so the
     // action returns as soon as the button scrolls away.
     expect(page).toContain('observer.observe(action)');

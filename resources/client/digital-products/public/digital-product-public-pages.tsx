@@ -2,9 +2,10 @@ import {BiolinkAppearanceConfig} from '@app/gen/schemas/biolink-appearance-confi
 import {
   biolinkSurfaceEdgeClassName,
   resolveBiolinkButtonAppearance,
-  resolveBiolinkThemeVariables,
+  resolveBiolinkPublicAppearanceStyle,
   shouldUseLightBiolinkLogo,
 } from '@app/short-links/renderers/biolink-renderer/biolink-appearance';
+import {Background} from '@app/short-links/renderers/biolink-renderer/biolink-background';
 import {ProductGallery} from '@app/digital-products/public/product-page/product-gallery';
 import {ProductSamplePdf} from '@app/digital-products/public/product-page/product-sample-pdf';
 import {
@@ -34,15 +35,6 @@ import {Dialog} from '@shadcn/dialog/dialog';
 import {Field} from '@shadcn/forms/field';
 import {Input} from '@shadcn/forms/input/input';
 import {Spinner} from '@shadcn/spinner/spinner';
-import {
-  getImageBackgroundEffectStyle,
-  ImageBackgroundEffectOverlay,
-} from '@common/background-selector/image-background-effect';
-import {NoiseFilter} from '@common/background-selector/images/noise-filter';
-import {
-  cssPropsFromBgConfig,
-  getBgTintStyle,
-} from '@common/background-selector/utils/css-props-from-bg-config';
 import {apiClient} from '@common/http/query-client';
 import {loadFonts} from '@ui/fonts/font-picker/load-fonts';
 import {FormattedDate} from '@ui/i18n/formatted-date';
@@ -73,7 +65,6 @@ import {
   useEffect,
   useRef,
   useState,
-  type CSSProperties,
   type ReactNode,
 } from 'react';
 import {Link} from 'react-router';
@@ -692,7 +683,6 @@ function BuyerDetailsDialog({
   onSubmit: () => void;
 }) {
   const buttonAppearance = resolveBiolinkButtonAppearance(appearance);
-  const themeVariables = resolveBiolinkThemeVariables(appearance);
   const {trans} = useTrans();
   const TypeIcon = productTypeIcon(product.type);
   // Store identity for the payment moment: the buyer sees who takes the
@@ -742,14 +732,7 @@ function BuyerDetailsDialog({
         <Dialog.Content
           showCloseButton={false}
           className="bg-[var(--biolink-surface-strong)] text-[var(--biolink-text)] sm:max-w-md"
-          style={
-            {
-              ...themeVariables,
-              fontFamily: appearance?.fontConfig?.family,
-              '--biolink-surface-shadow':
-                buttonAppearance.style.boxShadow || 'none',
-            } as CSSProperties
-          }
+          style={resolveBiolinkPublicAppearanceStyle(appearance)}
         >
           <Dialog.CloseButton
             render={
@@ -1071,24 +1054,13 @@ function PublicProductShell({
     });
   }, [appearance?.fontConfig]);
 
-  // One soft-pop for every product-page surface (gallery card, pricing rail,
-  // overview, creator…) — same Appearance → Shadow as the storefront cards.
-  const surfaceShadow =
-    resolveBiolinkButtonAppearance(appearance).style.boxShadow || 'none';
-
   return (
     <MotionConfig reducedMotion="user">
       <div
         className="relative isolate min-h-screen px-4 py-5 text-[var(--biolink-text)] sm:px-6 sm:py-10"
-        style={
-          {
-            ...resolveBiolinkThemeVariables(appearance),
-            fontFamily: appearance?.fontConfig?.family,
-            '--biolink-surface-shadow': surfaceShadow,
-          } as CSSProperties
-        }
+        style={resolveBiolinkPublicAppearanceStyle(appearance)}
       >
-        <ProductBackground appearance={appearance ?? null} />
+        <Background appearance={appearance ?? null} className="inset-0 -z-10" />
         <main
           className={cn(
             'relative mx-auto flex w-full flex-col gap-4',
@@ -1564,32 +1536,6 @@ function CurriculumStateCard({children}: {children: ReactNode}) {
         {children}
       </Card.Content>
     </Card.Root>
-  );
-}
-
-function ProductBackground({
-  appearance,
-}: {
-  appearance: BiolinkAppearanceConfig | null;
-}) {
-  const tintStyle = getBgTintStyle(appearance?.bgConfig?.tint);
-  const effectStyle = getImageBackgroundEffectStyle(
-    appearance?.bgConfig?.imageEffect,
-    appearance?.bgConfig?.noise,
-  );
-
-  return (
-    <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-      <div
-        className="absolute inset-0"
-        style={{...cssPropsFromBgConfig(appearance?.bgConfig), ...effectStyle}}
-      />
-      <ImageBackgroundEffectOverlay
-        effect={appearance?.bgConfig?.imageEffect}
-      />
-      {tintStyle && <div className="absolute inset-0" style={tintStyle} />}
-      {appearance?.bgConfig?.noise && <NoiseFilter />}
-    </div>
   );
 }
 
