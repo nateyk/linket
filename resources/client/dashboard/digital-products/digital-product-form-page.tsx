@@ -56,7 +56,8 @@ import {
   TriangleAlertIcon,
 } from 'lucide-react';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import {useNavigate, useParams, useSearchParams} from 'react-router';
+import {Link, useLocation, useNavigate, useParams, useSearchParams} from 'react-router';
+import {isAxiosError} from 'axios';
 import {parseWizardPrefill, firstInvalidFieldId, parseEtbToCents, priceForBillingMode, resolveCreateType, type BillingMode} from './product-create-flow';
 import {DigitalProductEditor} from './digital-product-editor';
 import {EbookEditor} from './ebook-editor';
@@ -113,6 +114,7 @@ type Product = {
 };
 
 type FieldErrors = Record<string, string>;
+type SubmissionRecovery = 'failed' | 'uncertain';
 
 // Each message is a static literal so the translation extractor finds it.
 const PRODUCT_PAGE_TITLES = {
@@ -174,6 +176,11 @@ export function Component() {
 function DigitalProductForm() {
   const {productId} = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const routeRecovery = location.state as {
+    productSubmissionRecovery?: SubmissionRecovery;
+    productSubmissionErrors?: FieldErrors;
+  } | null;
   const {trans} = useTrans();
   const {state, actions, dirty, autoSaveState, billing} = useProductCreation();
   const title = state.title;
@@ -196,8 +203,19 @@ function DigitalProductForm() {
   const [productLoadRetry, setProductLoadRetry] = useState(0);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  // A confirmed save followed by failed submission must not create again.
+  const saveInFlight = useRef(false);
+  const [creationUncertain, setCreationUncertain] = useState(false);
+  const [submissionRecovery, setSubmissionRecovery] = useState<SubmissionRecovery | null>(
+    routeRecovery?.productSubmissionRecovery === 'uncertain'
+      ? 'uncertain'
+      : routeRecovery?.productSubmissionRecovery === 'failed' ? 'failed' : null,
+  );
   const [error, setError] = useState<string>();
-  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>(
+    routeRecovery?.productSubmissionErrors ?? {},
+  );
+  const recoveryFocusDone = useRef(false);
   const [convertToEtb, setConvertToEtb] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -212,6 +230,21 @@ function DigitalProductForm() {
   useEffect(() => {
     if (dirty && product?.status === 'draft') actions.autoSave();
   }, [dirty, actions.autoSave, product?.status]);
+
+  useEffect(() => {
+    // The newly created draft is redirected to its saved edit URL if submit
+    // fails. Restore server validation errors and keyboard focus after GET.
+    if (loading || !productId || recoveryFocusDone.current) return;
+    const recoveryErrors = routeRecovery?.productSubmissionErrors;
+    if (!recoveryErrors || !Object.keys(recoveryErrors).length) return;
+    const focusId = firstInvalidFieldId(recoveryErrors);
+    if (!focusId) return;
+    recoveryFocusDone.current = true;
+    const frame = requestAnimationFrame(() => {
+      document.getElementById(focusId)?.focus({preventScroll: false});
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [loading, productId]);
 
   const validateField = useCallback(
     (field: string, value: string) => {
@@ -372,6 +405,7 @@ function DigitalProductForm() {
 
   const save = useCallback(
     async (submitAfterSave = false) => {
+      if (saveInFlight.current || creationUncertain || submissionRecovery === 'uncertain') return;
       if (productId && (!product || String(product.id) !== productId)) return;
       const priceCents = effectiveBilling === 'free' ? 0 : Math.round(Number(price) * 100);
       const effectiveType = product?.type ?? productType ?? 'digital';
@@ -413,10 +447,13 @@ function DigitalProductForm() {
         return;
       }
 
+      saveInFlight.current = true;
       setSaving(true);
       setError(undefined);
       setFieldErrors({});
+      setSubmissionRecovery(null);
       let saved: Product | undefined;
+      let saveResponseUncertain = false;
 
       try {
         const body: Record<string, unknown> = {
@@ -435,6 +472,13 @@ function DigitalProductForm() {
           ? await apiClient.put(`/api/v1/items/${product.id}`, body)
           : await apiClient.post('/api/v1/items', body);
         saved = response.data.data as Product;
+        if (!saved || !Number.isSafeInteger(saved.id) || saved.id <= 0) {
+          // A 2xx response without a usable ID is not proof that a POST did
+          // not create a record; never blindly repeat it.
+          saved = undefined;
+          saveResponseUncertain = true;
+          throw new Error('Saved product response missing an ID');
+        }
         setProduct(saved);
 
         if (submitAfterSave) {
@@ -452,6 +496,33 @@ function DigitalProductForm() {
         if (submitAfterSave) navigate('/dashboard/items');
       } catch (reason) {
         const validationErrors = getValidationErrors(reason);
+        const savedBeforeSubmitFailure = Boolean(saved && submitAfterSave);
+        const unconfirmedNetworkResponse = isAxiosError(reason) && !reason.response;
+        if (savedBeforeSubmitFailure && saved) {
+          const recovery: SubmissionRecovery = unconfirmedNetworkResponse
+            ? 'uncertain'
+            : 'failed';
+          if (!productId) {
+            // The product already has a server ID. Move from /new to /edit
+            // before a refresh or retry could issue a second create POST.
+            navigate(`/dashboard/items/${saved.id}/edit`, {
+              replace: true,
+              state: {
+                productSubmissionRecovery: recovery,
+                productSubmissionErrors: validationErrors,
+              },
+            });
+            return;
+          }
+          setSubmissionRecovery(recovery);
+        } else if (!productId && !product && (unconfirmedNetworkResponse || saveResponseUncertain)) {
+          // An unacknowledged create POST may have committed. Block another
+          // POST until the creator checks the server's item list.
+          setCreationUncertain(true);
+        } else if (!Object.keys(validationErrors).length) {
+          setError(productSaveErrorMessage(reason, false));
+        }
+
         if (Object.keys(validationErrors).length) {
           setFieldErrors(validationErrors);
           setOpenSection(
@@ -467,16 +538,17 @@ function DigitalProductForm() {
               document.getElementById(focusId)?.focus({preventScroll: false});
             });
           }
-        } else {
-          setError(productSaveErrorMessage(reason, Boolean(saved && submitAfterSave)));
         }
       } finally {
+        saveInFlight.current = false;
         setSaving(false);
         setSubmitting(false);
       }
     },
     [
       biolinkIds,
+      creationUncertain,
+      submissionRecovery,
       convertToEtb,
       coverFileId,
       description,
@@ -725,7 +797,7 @@ function DigitalProductForm() {
           <Button
             variant="outline"
             size="sm"
-            disabled={saving || submitting || unavailable}
+            disabled={saving || submitting || unavailable || creationUncertain || submissionRecovery === 'uncertain'}
             aria-label={
               saving
                 ? trans({message: 'Saving...'})
@@ -744,7 +816,7 @@ function DigitalProductForm() {
           </Button>
           <Button
             size="sm"
-            disabled={saving || submitting || unavailable || !canSubmit}
+            disabled={saving || submitting || unavailable || !canSubmit || creationUncertain || submissionRecovery === 'uncertain'}
             aria-label={
               submitting
                 ? trans({message: 'Submitting...'})
@@ -771,6 +843,8 @@ function DigitalProductForm() {
               <span>
                 {saving ? (
                   <Trans message="Saving changes..." />
+                ) : creationUncertain ? (
+                  <Trans message="Creation outcome unconfirmed" />
                 ) : !product ? (
                   <Trans message="Not saved yet" />
                 ) : product.status === 'draft' && autoSaveState === 'saving' ? (
@@ -792,8 +866,28 @@ function DigitalProductForm() {
               )}
             </div>
           )}
+          {(creationUncertain || submissionRecovery) && (
+            <Alert.Root variant="warning" role="alert" fillStyle="subtleFill" className="mb-5">
+              <TriangleAlertIcon aria-hidden="true" />
+              <Alert.Description className="flex flex-col items-start gap-2">
+                {creationUncertain ? (
+                  <Trans message="We could not confirm whether the product was created. Check My Items before creating it again." />
+                ) : submissionRecovery === 'uncertain' ? (
+                  <Trans message="Draft saved, but we could not confirm submission. Check My Items before submitting again." />
+                ) : (
+                  <Trans message="Draft saved, but submission failed. Fix the issue and try again." />
+                )}
+                {(creationUncertain || submissionRecovery === 'uncertain') && (
+                  <Button type="button" size="sm" variant="outline" render={<Link to="/dashboard/items" />}>
+                    <Trans message="Check My Items" />
+                  </Button>
+                )}
+              </Alert.Description>
+            </Alert.Root>
+          )}
           {error && (
             <Alert.Root
+              role="alert"
               variant="destructive"
               fillStyle="subtleFill"
               className="mb-5"

@@ -133,6 +133,31 @@ describe('digital product form submission', () => {
   });
 });
 
+describe('safe save and submit recovery UX-22', () => {
+  test('retains persisted product ID after a failed submit rather than posting another new item', () => {
+    const source = fs.readFileSync(
+      path.resolve('resources/client/dashboard/digital-products/digital-product-form-page.tsx'),
+      'utf8',
+    );
+    expect(source).toContain('savedBeforeSubmitFailure');
+    expect(source).toContain('productSubmissionRecovery: recovery');
+    expect(source).toContain('productSubmissionErrors: validationErrors');
+    expect(source).toContain('navigate(`/dashboard/items/${saved.id}/edit`');
+    expect(source).toContain('saveInFlight.current');
+  });
+
+  test('unknown new-product creation or submission blocks a second mutation', () => {
+    const source = fs.readFileSync(
+      path.resolve('resources/client/dashboard/digital-products/digital-product-form-page.tsx'),
+      'utf8',
+    );
+    expect(source).toContain('setCreationUncertain(true)');
+    expect(source).toContain("submissionRecovery === 'uncertain'");
+    expect(source).toContain('Check My Items');
+    expect(source).toContain('role="alert"');
+  });
+});
+
 describe('optional Storefront placement UX-21', () => {
   test('distinguishes selecting Storefronts from publishing or submission requirements', () => {
     const source = fs.readFileSync(
