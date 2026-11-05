@@ -3,9 +3,9 @@ import {Trans} from '@ui/i18n/trans';
 import {useTrans} from '@ui/i18n/use-trans';
 
 /**
- * Progress for the service form counts only the sections a published service
- * needs; optional sections (FAQ, contact buttons) never move the bar, so a
- * creator is never told they are unfinished for leaving something out.
+ * Progress measures recommended service-setup sections, not publishing
+ * requirements: a valid service can be published without a cover or package.
+ * FAQ and contact buttons do not change this optional setup guidance.
  */
 export function ServiceFormProgress({
   completed,
@@ -25,7 +25,7 @@ export function ServiceFormProgress({
         </p>
         <p className="mt-1 text-sm text-muted-foreground">
           <Trans
-            message=":completed of :total required sections complete"
+            message=":completed of :total recommended sections complete"
             values={{completed, total}}
           />
         </p>
