@@ -8,7 +8,7 @@ use App\CreatorAi\Services\CreatorAiUsageService;
 use App\Models\User;
 use App\Storefront\Models\DigitalProduct;
 use Illuminate\Support\Str;
-use Laravel\Ai\Facades\Ai;
+use Laravel\Ai\Ai;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
 /**
