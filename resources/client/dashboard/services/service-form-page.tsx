@@ -793,6 +793,7 @@ function ServiceFormPage() {
                     message: 'Show the work before anyone asks.',
                   })}
                   isComplete={requiredSections.media}
+                  optional
                   hasError={sectionError('media')}
                 >
                   <div className="flex flex-col gap-5">
@@ -861,6 +862,7 @@ function ServiceFormPage() {
                     message: 'Give customers clear options to choose from.',
                   })}
                   isComplete={requiredSections.packages}
+                  optional
                   count={namedPackages.length}
                   hasError={sectionError('packages')}
                 >
