@@ -6,6 +6,8 @@ on:
     paths:
       - 'tests/e2e/product-creation-responsive.spec.ts'
       - 'tests/e2e/buyer-journey.spec.ts'
+      - 'tests/e2e/product-creation-moderation-lifecycle.spec.ts'
+      - 'app/Console/Commands/PrepareBuyerE2eCommand.php'
       - 'resources/client/dashboard/digital-products/**'
       - 'resources/client/dashboard/courses/**'
       - '.github/workflows/product-creation-browser-qa.yml'
@@ -45,6 +47,8 @@ jobs:
       LINKET_ISOLATED_E2E: '1'
       LINKET_E2E_CREATOR_EMAIL: e2e-buyer-creator@example.test
       LINKET_E2E_CREATOR_PASSWORD: 'E2eBuyerCreator!23'
+      LINKET_E2E_REVIEWER_EMAIL: e2e-product-reviewer@example.test
+      LINKET_E2E_REVIEWER_PASSWORD: 'E2eProductReview!23'
       E2E_NO_SERVER: '1'
       E2E_BASE_URL: http://127.0.0.1:8081
 
@@ -183,6 +187,17 @@ jobs:
           # it exercises unpaid/rejected locks, verified delivery and My Portal recovery.
           # No live provider credentials, production endpoints or payment operations.
           npx playwright test tests/e2e/buyer-journey.spec.ts \
+            --project=chromium --workers=1 --retries=0
+
+      - name: Verify real isolated creator and admin moderation lifecycle
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$APP_ENV" == "testing" && "$DB_DATABASE" == "belink_test" ]]
+          [[ "$LINKET_ISOLATED_E2E" == "1" && "$VERIFY_ET_MOCK" == "true" ]]
+          # Real Laravel creator/admin HTTP transitions and auth, only synthetic users.
+          # This stage exercises reject, resubmit, approve, update and revert.
+          npx playwright test tests/e2e/product-creation-moderation-lifecycle.spec.ts \
             --project=chromium --workers=1 --retries=0
 
       - name: Attach screenshots, trace and browser report
