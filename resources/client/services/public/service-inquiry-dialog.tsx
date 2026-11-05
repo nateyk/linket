@@ -1,6 +1,9 @@
 import {apiClient} from '@common/http/query-client';
 import type {BiolinkAppearanceConfig} from '@app/gen/schemas/biolink-appearance-config';
-import {resolveBiolinkButtonAppearance, resolveBiolinkPublicAppearanceStyle} from '@app/short-links/renderers/biolink-renderer/biolink-appearance';
+import {
+  resolveBiolinkButtonAppearance,
+  resolveBiolinkPublicAppearanceStyle,
+} from '@app/short-links/renderers/biolink-renderer/biolink-appearance';
 import {Alert} from '@shadcn/alert/alert';
 import {Button} from '@shadcn/button/button';
 import {Dialog} from '@shadcn/dialog/dialog';
