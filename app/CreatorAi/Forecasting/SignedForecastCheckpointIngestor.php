@@ -154,7 +154,7 @@ final class SignedForecastCheckpointIngestor
             throw new InvalidArgumentException('Checkpoint watermark, signature time or observed day is invalid.');
         }
 
-        return DB::transaction(function () use ($event, $source, $workspace, $digest, $now): array {
+        return DB::transaction(function () use ($event, $source, $workspace, $digest, $now, $watermark, $signedAt): array {
             $streams = DB::table('creator_ai_forecast_checkpoint_streams');
             $streams->insertOrIgnore([
                 'workspace_id' => $workspace,
@@ -234,8 +234,8 @@ final class SignedForecastCheckpointIngestor
                 'proof_signature_base64' => $event['proof_signature'],
                 'verified_sales_count' => $event['verified_sales_count'],
                 'verified_gross_cents' => $event['verified_gross_cents'],
-                'source_watermark_at' => $event['watermark_at'],
-                'source_signed_at' => $event['signed_at'],
+                'source_watermark_at' => $watermark,
+                'source_signed_at' => $signedAt,
                 'captured_at' => $now,
                 'backfill_reason' => $event['backfill_reason'],
                 'created_at' => $now,
@@ -251,7 +251,7 @@ final class SignedForecastCheckpointIngestor
                 'verified_sales_count' => $event['verified_sales_count'],
                 'verified_gross_cents' => $event['verified_gross_cents'],
                 'source_cursor_sha256' => $digest,
-                'source_watermark_at' => $event['watermark_at'],
+                'source_watermark_at' => $watermark,
                 'captured_at' => $now,
                 'sealed_at' => $now,
                 'updated_at' => $now,
