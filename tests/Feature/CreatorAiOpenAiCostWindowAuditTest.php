@@ -41,9 +41,10 @@ function creatorAiAuditWindow(string $day, array $costRows, array $usageRows): v
         'has_more' => false,
         'next_page' => null,
     ];
+    Http::preventStrayRequests();
     Http::fake([
-        'api.openai.com/v1/organization/costs*' => Http::response($cost, 200),
-        'api.openai.com/v1/organization/usage/completions*' => Http::response($usage, 200),
+        'https://api.openai.com/v1/organization/costs*' => Http::response($cost, 200),
+        'https://api.openai.com/v1/organization/usage/completions*' => Http::response($usage, 200),
     ]);
 }
 
