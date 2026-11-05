@@ -88,6 +88,16 @@ return [
         'max_manifest_bytes' => 32768,
     ],
 
+
+    // Separate, READ-ONLY external history adapter. This is only a client for
+    // a separately managed verification:read source; it has NO scheduled job,
+    // HTTP route, privileged checkout key or live invocation in Linket.
+    'forecast_verify_et_history' => [
+        'enabled' => env('CREATOR_AI_FORECAST_VERIFYET_HISTORY_ENABLED', false),
+        'max_snapshot_requests' => 10000,
+        'page_size' => 50,
+    ],
+
     'max_report_days' => 366,
     'max_orders_per_page' => 20,
     'max_product_results' => 20,
