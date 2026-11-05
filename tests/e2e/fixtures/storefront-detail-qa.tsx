@@ -19,6 +19,7 @@ const params = new URLSearchParams(window.location.search);
 const mode = params.get('mode') ?? 'service';
 const long = params.get('long') === '1';
 const dark = params.get('theme') === 'dark';
+const appearancePreset = params.get('appearance');
 
 document.documentElement.classList.toggle('dark', dark);
 document.documentElement.classList.toggle('light', !dark);
@@ -47,9 +48,39 @@ const titleLong =
 const bodyLong =
   'በጥራት እና በጊዜ እንሰራለን። '.repeat(14) +
   'WhatIsIncludedInTheExtendedPackage'.repeat(7);
-const appearance: BiolinkAppearanceConfig | null = dark
-  ? {bgConfig: {backgroundColor: '#111827', color: '#f8fafc'}}
-  : null;
+// Use actual serialized creator Appearance values. They never come from
+// production: these deterministic QA fixtures cover contrasting gradient
+// palettes, roundness and button shadows in both public pages and portals.
+const appearance: BiolinkAppearanceConfig | null =
+  appearancePreset === 'bright-gradient'
+    ? ({
+        bgConfig: {
+          backgroundImage: 'linear-gradient(90deg, #56ab2f, #a8e063)',
+          color: '#ffffff',
+        },
+        btnConfig: {
+          radius: 'rounded-lg',
+          shadow: 'strong',
+          variant: 'outline',
+          color: '#193452',
+        },
+        fontConfig: {family: 'Inter'},
+      } as BiolinkAppearanceConfig)
+    : appearancePreset === 'dark-gradient'
+      ? ({
+          bgConfig: {
+            backgroundImage: 'linear-gradient(90deg, #29323c, #485563)',
+          },
+          btnConfig: {
+            radius: 'rounded-full',
+            shadow: 'soft',
+            variant: 'solid',
+          },
+          fontConfig: {family: 'Oswald'},
+        } as BiolinkAppearanceConfig)
+      : dark
+        ? {bgConfig: {backgroundColor: '#111827', color: '#f8fafc'}}
+        : null;
 
 const service: PublicServicePageData = {
   store: {

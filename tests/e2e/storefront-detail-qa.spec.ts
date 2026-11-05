@@ -12,11 +12,16 @@ test.use({userAgent: browserUA, reducedMotion: 'reduce'});
 async function openDetail(
   page: Page,
   mode: 'free' | 'paid' | 'course' | 'service' | 'unavailable',
-  options: {long?: boolean; dark?: boolean} = {},
+  options: {
+    long?: boolean;
+    dark?: boolean;
+    appearance?: 'bright-gradient' | 'dark-gradient';
+  } = {},
 ) {
   const params = new URLSearchParams({mode});
   if (options.long) params.set('long', '1');
   if (options.dark) params.set('theme', 'dark');
+  if (options.appearance) params.set('appearance', options.appearance);
   await page.goto(`${fixture}?${params}`);
   await expect(page.getByRole('heading', {level: 1})).toBeVisible();
 }
@@ -204,6 +209,67 @@ test.describe('SF-09/SF-10 real public pages in isolated Chromium', () => {
           ratios.muted,
           `${mode} ${dark ? 'dark' : 'light'} muted text/surface contrast`,
         ).toBeGreaterThanOrEqual(4.5);
+      }
+    }
+  });
+
+  test('SF-05+09+10: portaled buyer and service dialogs preserve public Appearance tokens', async ({
+    page,
+  }, testInfo) => {
+    for (const appearance of ['bright-gradient', 'dark-gradient'] as const) {
+      for (const mode of ['free', 'service'] as const) {
+        const dark = appearance === 'dark-gradient';
+        await page.setViewportSize({width: 390, height: 844});
+        await openDetail(page, mode, {appearance, dark});
+        await expectNoHorizontalOverflow(page);
+
+        // Both the in-page surface and the Base UI portal must receive the
+        // SAME creator-selected tokens, rather than inheriting the admin UI.
+        const tokens = [
+          '--biolink-text',
+          '--biolink-muted-text',
+          '--biolink-surface-strong',
+          '--biolink-border',
+          '--biolink-surface-shadow',
+          '--be-radius-card',
+        ];
+        const pageTokens = await page.locator('main').evaluate((main, keys) => {
+          const root = main.parentElement;
+          if (!root) throw new Error('Storefront root missing');
+          const style = getComputedStyle(root);
+          return Object.fromEntries(
+            keys.map(key => [key, style.getPropertyValue(key).trim()]),
+          );
+        }, tokens);
+        expect(pageTokens['--biolink-text']).toBeTruthy();
+        expect(pageTokens['--biolink-surface-shadow']).toBeTruthy();
+
+        if (mode === 'free') {
+          await page.getByRole('button', {name: 'Get for free'}).first().click();
+        } else {
+          await page.getByRole('tab', {name: /Custom/}).click();
+          await page.getByRole('button', {name: 'Request this package'}).click();
+        }
+        const dialog = page.getByRole('dialog');
+        await expect(dialog).toBeVisible();
+        const portalTokens = await dialog.evaluate((element, keys) => {
+          const style = getComputedStyle(element);
+          return Object.fromEntries(
+            keys.map(key => [key, style.getPropertyValue(key).trim()]),
+          );
+        }, tokens);
+        for (const key of tokens) {
+          expect(
+            portalTokens[key],
+            `${mode} ${appearance} portal must keep ${key}`,
+          ).toBe(pageTokens[key]);
+        }
+        await testInfo.attach(`${mode}-${appearance}-portal`, {
+          body: await page.screenshot({fullPage: true}),
+          contentType: 'image/png',
+        });
+        await page.keyboard.press('Escape');
+        await expect(dialog).not.toBeVisible();
       }
     }
   });
