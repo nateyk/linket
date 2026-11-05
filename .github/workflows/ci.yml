@@ -21,7 +21,9 @@ permissions:
 jobs:
   changes:
     name: Classify changed files
-    runs-on: runzumi-ubuntu-24.04-x64-8
+    # PRs use ephemeral GitHub runners when dedicated runners have no capacity.
+    # Main pushes retain the configured dedicated runner; no release change.
+    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || 'runzumi-ubuntu-24.04-x64-8' }}
     timeout-minutes: 3
     permissions:
       contents: read
@@ -91,7 +93,9 @@ jobs:
     name: PHP tests and security (8.4 / MySQL 8.0)
     needs: changes
     if: ${{ needs.changes.outputs.run_php == 'true' }}
-    runs-on: runzumi-ubuntu-24.04-x64-8
+    # PRs use ephemeral GitHub runners when dedicated runners have no capacity.
+    # Main pushes retain the configured dedicated runner; no release change.
+    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || 'runzumi-ubuntu-24.04-x64-8' }}
     timeout-minutes: 20
     services:
       mysql:
@@ -239,7 +243,9 @@ jobs:
     name: TypeScript, browser tests and Vite build (Node 24)
     needs: changes
     if: ${{ needs.changes.outputs.run_node == 'true' }}
-    runs-on: runzumi-ubuntu-24.04-x64-8
+    # PRs use ephemeral GitHub runners when dedicated runners have no capacity.
+    # Main pushes retain the configured dedicated runner; no release change.
+    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || 'runzumi-ubuntu-24.04-x64-8' }}
     timeout-minutes: 20
     steps:
       - name: Checkout (shallow)
@@ -322,7 +328,9 @@ jobs:
     name: Verify (PHP 8.4 + Node 24 + MySQL 8.0)
     needs: [changes, php, frontend]
     if: ${{ always() }}
-    runs-on: runzumi-ubuntu-24.04-x64-8
+    # PRs use ephemeral GitHub runners when dedicated runners have no capacity.
+    # Main pushes retain the configured dedicated runner; no release change.
+    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || 'runzumi-ubuntu-24.04-x64-8' }}
     timeout-minutes: 2
     steps:
       - name: Enforce success of every required verification job

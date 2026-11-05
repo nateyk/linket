@@ -5,7 +5,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {DashboardLayoutContextProvider} from '@common/ui/dashboard/dashboard-layout-context';
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
-import {fireEvent, render, screen} from '@testing-library/react';
+import {act, fireEvent, render, screen} from '@testing-library/react';
+import {AxiosError} from 'axios';
 import userEvent from '@testing-library/user-event';
 import {createMemoryRouter, RouterProvider} from 'react-router';
 import {beforeAll, beforeEach, describe, expect, test, vi} from 'vitest';
@@ -15,6 +16,17 @@ const source = fs.readFileSync(
   path.resolve('resources/client/dashboard/courses/create-course-page.tsx'),
   'utf8',
 );
+
+describe('large text responsive Course header UX-34', () => {
+  test('keeps the heading readable and icon controls named at tablet text sizes', () => {
+    expect(source).toContain('className="max-lg:h-auto max-lg:flex-wrap max-lg:py-2"');
+    expect(source).toContain('max-lg:order-3 max-lg:basis-full');
+    expect(source).toContain('max-lg:overflow-visible max-lg:whitespace-normal');
+    expect(source).toContain('max-lg:hidden');
+    expect(source).toContain('max-lg:size-11 max-lg:px-0');
+    expect(source).toContain('aria-label={trans({message: \'Preview\'})}');
+  });
+});
 
 describe('course creation page', () => {
   test('reads billing and price through the shared prefill parser', () => {
@@ -31,7 +43,7 @@ describe('course creation page', () => {
   });
 
   test('shows a Free badge instead of a price field for free billing', () => {
-    expect(source).toContain('const isFree = prefill.billing === \'free\'');
+    expect(source).toContain("const isFree = billingMode === 'free'");
     expect(source).toContain('<Trans message="Free" />');
     expect(source).toContain('Badge');
     // Price field only for paid — free renders the badge, not the ETB input.
@@ -64,10 +76,12 @@ describe('wizard handoff continuity', () => {
     expect(source).not.toContain('From previous step');
   });
 
-  test('customer preview reuses the shared product-form preview shell', () => {
+  test('customer preview opens through the shared read-only dialog', () => {
     expect(source).toContain('ProductFormCustomerPreview');
     expect(source).not.toContain('<Card.Root>');
-    expect(source).not.toContain('<Trans message="Preview" />');
+    expect(source).toContain('<ProductPreviewDialog');
+    expect(source).toContain('<Trans message="Preview" />');
+    expect(source).not.toContain('<aside className="min-w-0 lg:sticky lg:top-6">');
   });
 
   test('course settings uses a non-price icon', () => {
@@ -81,9 +95,11 @@ describe('uncertain creation recovery', () => {
     'utf8',
   );
 
-  test('keeps submit enabled for direct retry', () => {
-    expect(source).toContain('disabled={creating}>');
-    expect(source).not.toContain('disabled={creating || creationUncertain}');
+  test('blocks duplicate POST while creating or after an uncertain response', () => {
+    expect(source).toContain('disabled={creating || creationUncertain}');
+    expect(source).toContain('createInFlight.current || uncertainRequest.current || creationUncertain');
+    expect(source).toContain('createInFlight.current = true');
+    expect(source).toContain('createInFlight.current = false');
   });
 
   test('keeps the items escape hatch', () => {
@@ -266,6 +282,106 @@ beforeEach(() => {
   mockToastDanger.mockReset();
 });
 
+describe('Course creation uncertainty and duplicate prevention', () => {
+  test('an unacknowledged POST blocks further creates and keeps Check My Items accessible', async () => {
+    mockPost.mockRejectedValueOnce(new AxiosError('Network error', 'ERR_NETWORK'));
+    mount();
+    typeTitle('Synthetic course');
+
+    submitForm();
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toContain('We could not confirm whether the course was created.');
+    await vi.waitFor(() => {
+      expect((screen.getByRole('button', {name: 'Create course'}) as HTMLButtonElement).disabled).toBe(true);
+    });
+    expect(screen.getByRole('link', {name: 'Check My Items'})).toBeTruthy();
+
+    submitForm(); // Even a programmatic submit must not issue another POST.
+    expect(mockPost).toHaveBeenCalledTimes(1);
+    expect(mockPut).not.toHaveBeenCalled();
+  });
+
+  test('a definite HTTP rejection permits a deliberate user retry', async () => {
+    mockPost.mockRejectedValueOnce(new AxiosError(
+      'Unprocessable',
+      'ERR_BAD_REQUEST',
+      undefined,
+      undefined,
+      {
+        status: 422,
+        data: {message: 'Course cannot be created yet.'},
+        statusText: 'Unprocessable Content',
+        headers: {},
+        config: {} as never,
+      },
+    ));
+    mount();
+    typeTitle('Synthetic course');
+
+    submitForm();
+    expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'Course cannot be created yet.');
+    await vi.waitFor(() => {
+      expect((screen.getByRole('button', {name: 'Create course'}) as HTMLButtonElement).disabled).toBe(false);
+    });
+    submitForm();
+    expect(await screen.findByText('course builder')).toBeTruthy();
+    expect(mockPost).toHaveBeenCalledTimes(2);
+  });
+
+  test('a 503 response stays uncertain and does not invite duplicate creation', async () => {
+    mockPost.mockRejectedValueOnce(new AxiosError(
+      'Service unavailable',
+      'ERR_BAD_RESPONSE',
+      undefined,
+      undefined,
+      {
+        status: 503,
+        data: {message: 'Temporary server error'},
+        statusText: 'Service Unavailable',
+        headers: {},
+        config: {} as never,
+      },
+    ));
+    mount();
+    typeTitle('Synthetic course');
+    submitForm();
+    expect((await screen.findByRole('alert')).textContent).toContain('We could not confirm whether the course was created.');
+    await vi.waitFor(() => {
+      expect((screen.getByRole('button', {name: 'Create course'}) as HTMLButtonElement).disabled).toBe(true);
+    });
+    submitForm();
+    expect(mockPost).toHaveBeenCalledTimes(1);
+  });
+
+  test('malformed success payload cannot cause a second create POST', async () => {
+    mockPost.mockResolvedValueOnce({data: {data: {}}});
+    mount();
+    typeTitle('Synthetic course');
+    submitForm();
+    expect((await screen.findByRole('alert')).textContent).toContain('We could not confirm whether the course was created.');
+    await vi.waitFor(() => {
+      expect((screen.getByRole('button', {name: 'Create course'}) as HTMLButtonElement).disabled).toBe(true);
+    });
+    submitForm();
+    expect(mockPost).toHaveBeenCalledTimes(1);
+    expect(mockPut).not.toHaveBeenCalled();
+  });
+
+  test('synchronous repeated submissions share one in-flight POST', async () => {
+    let resolvePost: ((payload: unknown) => void) | undefined;
+    mockPost.mockImplementationOnce(() => new Promise(resolve => { resolvePost = resolve; }));
+    mount();
+    typeTitle('Synthetic course');
+    submitForm();
+    submitForm();
+    expect(mockPost).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      resolvePost!({data: {data: {id: 900, course: {id: 77}}}});
+    });
+    expect(await screen.findByText('course builder')).toBeTruthy();
+  });
+});
+
 describe('inline course settings', () => {
   test('settings section renders the three shared fields with the helper copy below them', async () => {
     const user = userEvent.setup();
@@ -314,10 +430,14 @@ describe('inline course settings', () => {
         'Add a short description to show learners what to expect.',
       ),
     ).toBeNull();
+    expect(screen.queryByText('Your course title')).toBeNull();
+    await user.click(screen.getByRole('button', {name: 'Preview'}));
     expect(screen.getByText('Your course title')).toBeTruthy();
+    await user.keyboard('{Escape}');
 
     await openSettingsSection(user);
     await typeDescription(user, 'Cafe basics');
+    await user.click(screen.getByRole('button', {name: 'Preview'}));
 
     // The preview shows the typed text — the TipTap value is tag-stripped and
     // rendered as a plain text node (the editor itself also holds the text,

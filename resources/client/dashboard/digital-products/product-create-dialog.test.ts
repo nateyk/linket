@@ -3,66 +3,52 @@ import path from 'node:path';
 import {describe, expect, test} from 'vitest';
 
 const dir = 'resources/client/dashboard/digital-products';
-
 function read(name: string): string {
   return fs.readFileSync(path.resolve(dir, name), 'utf8');
 }
 
-describe('create product dialog wizard', () => {
-  test('renders the shared wizard steps and finishes via buildCreateUrl', () => {
+describe('one-step Add Product dialog', () => {
+  test('shows the accessible type picker without the billing/price wizard', () => {
     const source = read('create-product-dialog.tsx');
-    expect(source).toContain('useProductCreateWizard');
-    expect(source).toContain('WizardStepBody');
-    expect(source).toContain('WizardStepDots');
-    expect(source).toContain('finishUrl');
+    expect(source).toContain('ProductTypePicker');
+    expect(source).toContain('productTypeCreateUrl(selectedType)');
+    expect(source).toContain('disabled={!selectedType}');
+    expect(source).not.toContain('WizardStepBody');
+    expect(source).not.toContain('WizardStepDots');
+    expect(source).not.toContain('useProductCreateWizard');
   });
-  test('resets wizard state when dismissed', () => {
+  test('resets a selected type on cancel or navigation', () => {
     const source = read('create-product-dialog.tsx');
-    expect(source).toMatch(/wizard\.reset\(\)|reset\(\)/);
+    expect(source).toContain('if (!nextOpen) setSelectedType(null)');
+    expect(source).toContain('setSelectedType(null)');
+    expect(source).not.toContain('Discard this product?');
   });
 });
 
-describe('product type selection page wizard', () => {
-  test('reuses the shared wizard and finishes via buildCreateUrl', () => {
+describe('standalone type selection fallback', () => {
+  test('navigates directly to a selected editor', () => {
     const source = read('product-type-selection-page.tsx');
-    expect(source).toContain('useProductCreateWizard');
-    expect(source).toContain('WizardStepBody');
-    expect(source).toContain('finishUrl');
-    expect(source).not.toContain('selectedType');
-  });
-  test('clears wizard state when finishing', () => {
-    const source = read('product-type-selection-page.tsx');
-    expect(source).toContain('wizard.reset()');
+    expect(source).toContain('ProductTypePicker');
+    expect(source).toContain('productTypeCreateUrl(selectedType)');
+    expect(source).toContain('disabled={!selectedType}');
+    expect(source).not.toContain('WizardStepBody');
   });
 });
 
-describe('wizard price prefill', () => {
-  test('details form initializes price from wizard prefill via context', () => {
+describe('legacy price prefill', () => {
+  test('existing bookmarked file creation links still parse pricing', () => {
     const source = read('digital-product-form-page.tsx');
     expect(source).toContain('parseWizardPrefill');
+    expect(source).toContain('resolveCreateType(creationType)');
     expect(source).toContain('<ProductCreationProvider');
-    expect(source).toContain('useProductCreation');
   });
-  test('course form reads billing and price through the shared prefill parser', () => {
-    const course = fs.readFileSync(
-      path.resolve(
-        'resources/client/dashboard/courses/create-course-page.tsx',
-      ),
+  test('course form reads old pricing links and now offers inline choice', () => {
+    const source = fs.readFileSync(
+      path.resolve('resources/client/dashboard/courses/create-course-page.tsx'),
       'utf8',
     );
-    expect(course).toContain('parseWizardPrefill');
-    expect(course).toContain("billing === 'free'");
-  });
-
-  test('paid course setup preserves the paid choice without offering free pricing copy', () => {
-    const course = fs.readFileSync(
-      path.resolve(
-        'resources/client/dashboard/courses/create-course-page.tsx',
-      ),
-      'utf8',
-    );
-
-    expect(course).not.toContain('Set ETB 0 to offer this course for free.');
-    expect(course).toContain('This course is paid. Update the price if needed.');
+    expect(source).toContain('parseWizardPrefill');
+    expect(source).toContain('BillingModePicker');
+    expect(source).toContain("billingMode === 'free'");
   });
 });

@@ -21,12 +21,13 @@ test('a creator uploads a product and sees updated checklist progress on mobile'
   await page.getByRole('link', {name: 'Home'}).click();
   await expect(page.getByText('1 of 7 setup steps complete')).toBeVisible();
   await page.getByRole('link', {name: 'Add digital product'}).click();
-  await page.getByText('Digital product', {exact: true}).click();
+  await page.getByRole('radio', {name: /digital product/i}).click();
   await page.getByRole('button', {name: 'Continue'}).click();
-  await page.getByText('Free access', {exact: true}).click();
-  await page.getByRole('button', {name: 'Continue'}).click();
+  await expect(page).toHaveURL(/\/dashboard\/items\/new\/digital$/);
   await page.getByPlaceholder('My digital guide').fill('Mobile test guide');
-  await page.getByText('Product files', {exact: true}).first().click();
+  // The editor owns Free/Paid pricing now; there is no billing wizard.
+  await page.getByRole('radio', {name: /free access/i}).click();
+  await expect(page.getByRole('heading', {name: 'Files buyers receive'})).toBeVisible();
   await page.locator('input[type=file][multiple]').setInputFiles({
     name: 'guide.txt', mimeType: 'text/plain', buffer: Buffer.from('Test product content'),
   });

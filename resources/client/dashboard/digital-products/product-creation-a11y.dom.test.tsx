@@ -231,41 +231,35 @@ function renderDialog(onOpenChange = vi.fn()) {
   return onOpenChange;
 }
 
-describe('R08 dialog close confirmation', () => {  beforeEach(() => {
+describe('R08 one-step dialog dismissal', () => {
+  beforeEach(() => {
     localStorage.clear();
   });
 
-  test('closing with selections prompts before discarding', async () => {
+  test('cancel closes even after selecting a type, without a false unsaved-product warning', async () => {
     const user = userEvent.setup();
     const onOpenChange = renderDialog();
     await user.click(screen.getByRole('radio', {name: /digital product/i}));
     await user.click(screen.getByRole('button', {name: /^cancel$/i}));
-    expect(screen.getByText('Discard this product?')).not.toBeNull();
-    expect(onOpenChange).not.toHaveBeenCalled();
-  });
-
-  test('confirming discards state and closes', async () => {
-    const user = userEvent.setup();
-    const onOpenChange = renderDialog();
-    await user.click(screen.getByRole('radio', {name: /digital product/i}));
-    await user.click(screen.getByRole('button', {name: /^cancel$/i}));
-    await user.click(screen.getByRole('button', {name: /^discard$/i}));
+    expect(screen.queryByText('Discard this product?')).toBeNull();
     expect(onOpenChange).toHaveBeenCalledWith(false);
-    // State is back to a fresh wizard (persist effect may rewrite the
-    // initial state after reset clears it — behaviorally equivalent).
-    const stored = localStorage.getItem('productCreateWizard');
-    expect(
-      stored === null ||
-        JSON.parse(stored).state.type === null,
-    ).toBe(true);
   });
 
-  test('closing with no input resets silently', async () => {
+  test('close without a selection needs no discard confirmation', async () => {
     const user = userEvent.setup();
     const onOpenChange = renderDialog();
     await user.click(screen.getByRole('button', {name: /^cancel$/i}));
     expect(screen.queryByText('Discard this product?')).toBeNull();
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  test('Continue is disabled until a product type is selected', async () => {
+    const user = userEvent.setup();
+    renderDialog();
+    const continueButton = screen.getByRole('button', {name: /continue/i});
+    expect(continueButton.hasAttribute('disabled')).toBe(true);
+    await user.click(screen.getByRole('radio', {name: /audio/i}));
+    expect(continueButton.hasAttribute('disabled')).toBe(false);
   });
 });
 
@@ -292,6 +286,33 @@ describe('P2 nested-cards: the wizard dialog has no card inside its panel', () =
 });
 
 describe('R09 picker strings are translatable', () => {
+  test('editor create/edit page headings are static extractable translations', () => {
+    const source = readSource('digital-product-form-page.tsx');
+    const catalog = JSON.parse(
+      fs.readFileSync(path.resolve('resources/client-translations.json'), 'utf8'),
+    ) as Record<string, string>;
+    for (const literal of [
+      'Create digital product',
+      'Create e-book',
+      'Create audio',
+      'Create course',
+      'Edit digital product',
+      'Edit e-book',
+      'Edit audio',
+      'Edit course',
+    ]) {
+      expectExtractable(source, literal);
+      expect(catalog[literal], `missing catalog key: ${literal}`).toBe(literal);
+    }
+    expect(source).not.toContain('<Trans message={pageTitle} />');
+  });
+
+  test('validation errors on product files are announced and associated with the focus target', () => {
+    const source = readSource('digital-product-form-page.tsx');
+    expect(source).toContain("aria-describedby={error ? 'product-files-error' : undefined}");
+    expect(source).toContain('id="product-files-error" role="alert"');
+  });
+
   test('every type option title, description and group label is an extractable Trans/trans literal', () => {
     const source = readSource('product-type-picker.tsx');
     for (const literal of [
@@ -327,17 +348,12 @@ describe('R09 picker strings are translatable', () => {
     expect(source).not.toContain('Anyone can access it for free.');
   });
 
-  test('step navigation label and discard confirmation are extractable literals', () => {
-    const wizard = readSource('product-create-wizard.tsx');
-    expectExtractable(wizard, 'Product creation steps');
+  test('single type-picker instructions are extractable and do not imply a product is saved', () => {
     const dialog = readSource('create-product-dialog.tsx');
-    for (const literal of [
-      'Discard this product?',
-      'Your progress in this wizard will be lost. This action cannot be undone.',
-      'Discard',
-    ]) {
+    for (const literal of ['What are you selling?', 'Choose a type to open its editor.', 'Cancel', 'Continue']) {
       expectExtractable(dialog, literal);
     }
+    expect(dialog).not.toContain('Discard this product?');
   });
 
   test('progress bar screen-reader labels are extractable and phase-correct', () => {
@@ -350,6 +366,16 @@ describe('R09 picker strings are translatable', () => {
     expectExtractable(progress, 'Product creation progress');
     expect(progress).toContain("message: 'Product setup progress'");
     expect(progress).toContain("message: 'Product creation progress'");
+  });
+
+  test('optional Preview section never increases required setup progress', () => {
+    // Reconcile the legacy #97 progress assertion with current editor semantics.
+    // An optional sample/Preview step must never block a valid product submission.
+    const form = readSource('digital-product-form-page.tsx');
+    expect(form).toContain("const progressSections: ProductSetupSection[] = ['details', 'files', 'pricing'];");
+    expect(form).toContain('const completedSections = progressSections.filter(isSectionComplete).length;');
+    expect(form).toContain('total={progressSections.length}');
+    expect(form).not.toContain("const progressSections = sectionOrder.filter(section => section !== 'previews');");
   });
 
   test('wizard steps progress omits the Product setup heading', () => {
@@ -377,7 +403,8 @@ describe('R13 progress total is derived', () => {
   test('form passes the actual section count, not a hardcoded total', () => {
     const source = readSource('digital-product-form-page.tsx');
     expect(source).toContain('total={progressSections.length}');
-    expect(source).toContain("const progressSections = sectionOrder.filter(section => section !== 'previews');");
+    expect(source).toContain("const progressSections: ProductSetupSection[] = ['details', 'files', 'pricing'];");
+    expect(source).not.toContain("section !== 'previews' && section !== 'bio-pages'");
     expect(source).not.toMatch(/total=\{[0-9]+\}/);
   });
 });
@@ -577,114 +604,30 @@ describe('T1 focus styling is distinct from selection styling', () => {
   });
 });
 
-// T3: a successful finish must not leave the wizard resumable mid-flow.
-// Reopening "New product" has to start at step 1 with an empty store, and the
-// persisted copy in localStorage must not survive with a stale price.
-const WIZARD_STORAGE_KEY = 'productCreateWizard';
+// The type-picker is a single transient decision. Navigating clears its selection
+// instead of storing wizard billing/price data between visits.
+describe('single-step selection navigation', () => {
+  beforeEach(() => localStorage.clear());
 
-type StoredWizard = {
-  step?: string;
-  state?: {type: string | null; billing: string | null; price: string};
-};
-
-function readStoredWizard(): StoredWizard | null {
-  const raw = localStorage.getItem(WIZARD_STORAGE_KEY);
-  return raw ? (JSON.parse(raw) as StoredWizard) : null;
-}
-
-/** Store is either fully cleared or rewritten with the initial (empty) state. */
-function expectWizardStoreEmpty() {
-  const stored = readStoredWizard();
-  if (stored === null) return;
-  expect(stored.step).toBe('type');
-  expect(stored.state?.type).toBeNull();
-  expect(stored.state?.billing).toBeNull();
-  expect(stored.state?.price).toBe('');
-}
-
-async function walkWizardToFinish(
-  user: ReturnType<typeof userEvent.setup>,
-) {
-  await user.click(screen.getByRole('radio', {name: /digital product/i}));
-  await user.click(screen.getByRole('button', {name: /continue/i}));
-  await user.click(screen.getByRole('radio', {name: /paid/i}));
-  await user.click(screen.getByRole('button', {name: /continue/i}));
-  await user.type(screen.getByLabelText('Price'), '25');
-  await user.click(screen.getByRole('button', {name: /continue/i}));
-}
-
-describe('T3 wizard resets after a successful create', () => {
-  beforeEach(() => {
-    localStorage.clear();
-  });
-
-  test('next open starts at step 1 with empty state', async () => {
+  test('Continue navigates after selecting Digital product and closes the dialog', async () => {
     const user = userEvent.setup();
-    const onOpenChange = vi.fn();
-    const {unmount} = render(
-      <MemoryRouter>
-        <CreateProductDialog open onOpenChange={onOpenChange} />
-      </MemoryRouter>,
-    );
-
-    await walkWizardToFinish(user);
-
-    // finish closes the dialog (success path)…
-    expect(onOpenChange).toHaveBeenCalledWith(false);
-    // …and empties the wizard store.
-    expectWizardStoreEmpty();
-
-    // Simulate the next "New product" open: a fresh mount over the storage
-    // that survived the previous flow.
-    unmount();
-    render(
-      <MemoryRouter>
-        <CreateProductDialog open onOpenChange={vi.fn()} />
-      </MemoryRouter>,
-    );
-
-    expect(screen.getByText('Step 1 of 2')).not.toBeNull();
-    expect(screen.queryByText('Step 3 of 3')).toBeNull();
-    expect(screen.getByRole('radio', {name: /digital product/i})).not.toBeNull();
-    expect(screen.queryByPlaceholderText('0.00')).toBeNull();
-  });
-
-  test('localStorage persistence key is cleared/reset on success', async () => {
-    const user = userEvent.setup();
-    render(
-      <MemoryRouter>
-        <CreateProductDialog open onOpenChange={vi.fn()} />
-      </MemoryRouter>,
-    );
-
-    await walkWizardToFinish(user);
-
-    expectWizardStoreEmpty();
-    // A stale mid-flow snapshot must never be readable from storage.
-    const stored = readStoredWizard();
-    if (stored) {
-      expect(stored.step).not.toBe('price');
-      expect(stored.state?.price).not.toBe('25');
-    }
-  });
-});
-
-describe('focus management', () => {
-  beforeEach(() => {
-    localStorage.clear();
-  });
-
-  test('advancing steps moves focus into the new step', async () => {
-    const user = userEvent.setup();
-    render(
-      <MemoryRouter>
-        <CreateProductDialog open onOpenChange={() => {}} />
-      </MemoryRouter>,
-    );
-    await user.click(screen.getByRole('radio', {name: /course/i}));
+    const close = vi.fn();
+    const {unmount} = render(<MemoryRouter><CreateProductDialog open onOpenChange={close} /></MemoryRouter>);
+    await user.click(screen.getByRole('radio', {name: /digital product/i}));
     await user.click(screen.getByRole('button', {name: /continue/i}));
-    const active = document.activeElement as HTMLElement | null;
-    expect(active?.getAttribute('role')).toBe('radio');
+    expect(close).toHaveBeenCalledWith(false);
+    expect(localStorage.getItem('productCreateWizard')).toBeNull();
+    unmount();
+    render(<MemoryRouter><CreateProductDialog open onOpenChange={vi.fn()} /></MemoryRouter>);
+    expect(screen.getByRole('button', {name: /continue/i}).hasAttribute('disabled')).toBe(true);
+    expect(screen.getAllByRole('radio')).toHaveLength(4);
+  });
+
+  test('type-only selection does not introduce a price or billing step', () => {
+    render(<MemoryRouter><CreateProductDialog open onOpenChange={vi.fn()} /></MemoryRouter>);
+    expect(screen.queryByText('Step 1 of 2')).toBeNull();
+    expect(screen.queryByRole('radiogroup', {name: /billing/i})).toBeNull();
+    expect(screen.queryByLabelText('Price')).toBeNull();
   });
 });
 
@@ -805,31 +748,14 @@ describe('T7 page shell: single h1, question before the action row', () => {
     ).toBeTruthy();
   });
 
-  test('omits the step description when there is none, and shows it when present', () => {
-    const {unmount} = renderSelectionPage();
-    const question = screen.getByRole('heading', {
-      level: 2,
-      name: 'What are you selling?',
-    });
-    // The type step deliberately has no description; options carry the meaning.
-    expect(question.parentElement?.querySelector('p')).toBeNull();
-    unmount();
-
-    localStorage.setItem(
-      'productCreateWizard',
-      JSON.stringify({
-        step: 'price',
-        state: {type: 'digital', billing: 'paid', price: ''},
-      }),
-    );
+  test('keeps a single concise instruction and does not resurrect a stored wizard step', () => {
+    localStorage.setItem('productCreateWizard', JSON.stringify({
+      step: 'price', state: {type: 'digital', billing: 'paid', price: '25'},
+    }));
     renderSelectionPage();
-    const priceQuestion = screen.getByRole('heading', {
-      level: 2,
-      name: 'Set your price',
-    });
-    expect(priceQuestion.parentElement?.querySelector('p')?.textContent).toBe(
-      'You can change it later.',
-    );
+    const title = screen.getByRole('heading', {level: 2, name: 'What are you selling?'});
+    expect(title.parentElement?.querySelector('p')?.textContent).toBe('Choose a type to open its editor.');
+    expect(screen.queryByText('Set your price')).toBeNull();
   });
 
   test('the question precedes the Back and Continue actions in DOM order', () => {
@@ -853,161 +779,23 @@ describe('T7 page shell: single h1, question before the action row', () => {
   });
 });
 
-// T5: on the page shell the progress rule must span the whole content
-// column, so it reads as the flow's progress (not step 1's). It used to nest
-// inside the header's min-w-0 text block, which made the rule stop at the
-// text column edge and sit visually "under" the first step's title.
-describe('T5 page-shell progress bar placement', () => {
-  beforeEach(() => {
-    localStorage.clear();
-  });
+describe('one-step page shell', () => {
+  beforeEach(() => localStorage.clear());
 
-  function renderSelectionPage() {
+  test('the picker has no misleading wizard progress and Continue requires a selected type', async () => {
     const router = createMemoryRouter(
-      [
-        {
-          path: '/dashboard/items/new',
-          element: <ProductTypeSelectionPage />,
-        },
-      ],
+      [{path: '/dashboard/items/new', element: <ProductTypeSelectionPage />}],
       {initialEntries: ['/dashboard/items/new']},
     );
-    return render(
-      <DashboardLayoutContextProvider name="test">
-        {() => <RouterProvider router={router} />}
-      </DashboardLayoutContextProvider>,
-    );
-  }
-
-  test('page-shell progress bar is outside the header text column', () => {
-    renderSelectionPage();
-
-    // Labeled as progress for the whole flow, not for a step.
-    const bar = screen.getByRole('progressbar', {
-      name: 'Product creation progress',
-    });
-    expect(screen.getByText('Step 1 of 2')).not.toBeNull();
-    // Wizard must not claim "Product setup" — that label is the form phase.
-    expect(screen.queryByText('Product setup')).toBeNull();
-
-    const title = screen.getByRole('heading', {
-      level: 2,
-      name: 'What are you selling?',
-    });
-    // The h2's text block (the min-w-0 column) must not contain the bar.
-    const textColumn = title.closest('.min-w-0');
-    expect(textColumn).not.toBeNull();
-    expect(textColumn!.contains(bar)).toBe(false);
-
-    // Instead, the bar renders as a sibling AFTER the whole header row
-    // (icon + text block), so its bottom rule spans the content column and
-    // aligns with the card column below.
-    const headerRow = title.closest('div.flex.items-start');
-    expect(headerRow).not.toBeNull();
-    expect(headerRow!.contains(bar)).toBe(false);
-    expect(headerRow!.nextElementSibling?.contains(bar)).toBe(true);
-  });
-});
-
-// T7 (crit1-A P1): an empty price greyed out Continue with zero feedback —
-// a silent dead end at the last gate of the funnel. The paid price step must
-// show the same inline Field.Error the course setup page uses.
-// P2 (T7 review): the Field.Error mounts on step entry over an autofocused
-// empty field, so screen readers announce a validation error before any
-// input. The error is deferred until the field has been interacted with
-// (typed into or blurred); once interacted, it stays visible whenever
-// Continue is blocked by an invalid amount.
-describe('T7 empty price shows a visible error', () => {
-  beforeEach(() => {
-    localStorage.clear();
-  });
-
-  async function walkToPriceStep(user: ReturnType<typeof userEvent.setup>) {
-    render(
-      <MemoryRouter>
-        <CreateProductDialog open onOpenChange={vi.fn()} />
-      </MemoryRouter>,
-    );
-    await user.click(screen.getByRole('radio', {name: /digital product/i}));
-    await user.click(screen.getByRole('button', {name: /continue/i}));
-    await user.click(screen.getByRole('radio', {name: /paid/i}));
-    await user.click(screen.getByRole('button', {name: /continue/i}));
-  }
-
-  test('entering the price step does not announce an error before interaction', async () => {
+    render(<DashboardLayoutContextProvider name="test">
+      {() => <RouterProvider router={router} />}
+    </DashboardLayoutContextProvider>);
+    expect(screen.queryByRole('progressbar')).toBeNull();
+    const next = screen.getByRole('button', {name: /continue/i});
+    expect(next.hasAttribute('disabled')).toBe(true);
     const user = userEvent.setup();
-    await walkToPriceStep(user);
-
-    // The field is autofocused and empty — no error may mount yet.
-    expect(screen.queryByRole('alert')).toBeNull();
-    const priceInput = screen.getByLabelText('Price') as HTMLInputElement;
-    expect(priceInput.getAttribute('aria-invalid')).not.toBe('true');
-
-    // Continue is still blocked (the gate is unchanged).
-    const next = screen.getByRole('button', {
-      name: /continue/i,
-    }) as HTMLButtonElement;
-    expect(next.disabled).toBe(true);
-  });
-
-  test('empty price blocks Continue with a visible Field.Error after interaction', async () => {
-    const user = userEvent.setup();
-    await walkToPriceStep(user);
-
-    // Blur without entering a value: the field has been interacted with
-    // and Continue is blocked, so the error must be visible.
-    const priceInput = screen.getByLabelText('Price') as HTMLInputElement;
-    fireEvent.blur(priceInput);
-
-    const error = screen.getByRole('alert');
-    expect(error.textContent).toContain('Enter an amount greater than ETB 0.');
-
-    expect(priceInput.getAttribute('aria-invalid')).toBe('true');
-
-    const next = screen.getByRole('button', {
-      name: /continue/i,
-    }) as HTMLButtonElement;
-    expect(next.disabled).toBe(true);
-
-    // A valid price clears the error and re-enables Continue.
-    await user.type(priceInput, '25');
-    await waitFor(() => expect(screen.queryByRole('alert')).toBeNull());
-    expect(priceInput.getAttribute('aria-invalid')).not.toBe('true');
-    expect(
-      (screen.getByRole('button', {name: /continue/i}) as HTMLButtonElement)
-        .disabled,
-    ).toBe(false);
-  });
-
-  test('typing an invalid amount surfaces the error immediately', async () => {
-    const user = userEvent.setup();
-    await walkToPriceStep(user);
-
-    const priceInput = screen.getByLabelText('Price') as HTMLInputElement;
-    await user.type(priceInput, '0');
-
-    const error = screen.getByRole('alert');
-    expect(error.textContent).toContain('Enter an amount greater than ETB 0.');
-    expect(
-      (screen.getByRole('button', {name: /continue/i}) as HTMLButtonElement)
-        .disabled,
-    ).toBe(true);
-  });
-
-  test('free billing never reaches the price step or its error', async () => {
-    const user = userEvent.setup();
-    render(
-      <MemoryRouter>
-        <CreateProductDialog open onOpenChange={vi.fn()} />
-      </MemoryRouter>,
-    );
-    await user.click(screen.getByRole('radio', {name: /digital product/i}));
-    await user.click(screen.getByRole('button', {name: /continue/i}));
-    await user.click(screen.getByRole('radio', {name: /free/i}));
-    await user.click(screen.getByRole('button', {name: /continue/i}));
-
-    expect(screen.queryByLabelText('Price')).toBeNull();
-    expect(screen.queryByRole('alert')).toBeNull();
+    await user.click(screen.getByRole('radio', {name: /e-book/i}));
+    expect(next.hasAttribute('disabled')).toBe(false);
   });
 });
 
@@ -1101,14 +889,15 @@ describe('T4 heading hierarchy: sections are h2 under the page h1', () => {
 
     // The section list mounts after the product GET resolves.
     const sections = await screen.findAllByRole('heading', {level: 2});
-    expect(sections).toHaveLength(4);
+    expect(sections).toHaveLength(5);
 
     const {h1} = expectHeadingHierarchy();
     expect(h1.textContent).toContain('Edit digital product');
     expect(sections.map(h => h.textContent)).toEqual([
       expect.stringContaining('Product details'),
-      expect.stringContaining('Product files'),
+      expect.stringContaining('Files buyers receive'),
       expect.stringContaining('Sample PDF'),
+      expect.stringContaining('Price'),
       expect.stringContaining('Storefront placement'),
     ]);
   });
