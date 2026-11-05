@@ -201,7 +201,9 @@ describe('public service page', () => {
   it('keeps inquiry on the offer rail and does not repeat it in seller contacts', () => {
     render(<PublicServicePage data={data} />);
 
-    expect(screen.getByRole('button', {name: 'Request this package'})).toBeTruthy();
+    expect(
+      screen.getByRole('button', {name: 'Request this package'}),
+    ).toBeTruthy();
     expect(screen.queryByRole('button', {name: 'Send inquiry'})).toBeNull();
     expect(screen.getByRole('link', {name: 'WhatsApp'})).toBeTruthy();
     expect(screen.getByRole('link', {name: 'Email'})).toBeTruthy();
@@ -258,7 +260,9 @@ describe('public service page', () => {
     expect(title.className).toContain('[overflow-wrap:anywhere]');
     const list = screen.getByRole('tablist', {name: 'Packages'});
     expect(list.parentElement?.className).toContain('overflow-x-auto');
-    expect(screen.getByRole('tab', {name: longPackage}).className).toContain('[overflow-wrap:anywhere]');
+    expect(screen.getByRole('tab', {name: longPackage}).className).toContain(
+      '[overflow-wrap:anywhere]',
+    );
 
     await userEvent.click(screen.getByRole('tab', {name: 'FAQ'}));
     const question = screen.getByRole('button', {name: longQuestion});
@@ -270,9 +274,10 @@ describe('public service page', () => {
     render(<PublicServicePage data={data} />);
 
     await userEvent.click(screen.getByRole('tab', {name: 'Premium'}));
-    await userEvent.click(screen.getByRole('button', {name: 'Request this package'}));
+    await userEvent.click(
+      screen.getByRole('button', {name: 'Request this package'}),
+    );
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText(/Premium package/)).toBeTruthy();
   });
-
 });
