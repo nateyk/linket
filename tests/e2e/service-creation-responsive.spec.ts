@@ -72,6 +72,9 @@ test.describe('Service Creation — authenticated browser acceptance', () => {
       await expect(page.getByRole('heading', {name: 'FAQ'})).toBeVisible();
       await steps.getByRole('button', {name: 'Details, step 1 of 4'}).click();
       await expect(page.locator('#title')).toHaveValue('E2E preview draft');
+      // A stage change must return the creator to visible navigation, even
+      // after the previous long form has been scrolled.
+      await expect(steps).toBeInViewport({ratio: 0.5});
 
       const horizontalOverflow = await page.evaluate(() =>
         Math.max(0, document.documentElement.scrollWidth - document.documentElement.clientWidth),
