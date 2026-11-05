@@ -313,12 +313,20 @@ async function mockSyntheticDraftEdit(
     const request = route.request();
     const pathname = new URL(request.url()).pathname;
     const method = request.method();
+    // Linket's shared apiClient deliberately transports PUT as a POST with
+    // X-HTTP-Method-Override: PUT (and _method=PUT in query parameters).
+    // Match the logical Laravel operation, not just the wire verb.
+    const override = request.headers()['x-http-method-override'] ??
+      new URL(request.url()).searchParams.get('_method');
+    const effectiveMethod = method === 'POST' && override?.toUpperCase() === 'PUT'
+      ? 'PUT'
+      : method;
     if (!pathname.startsWith(`/api/v1/items/${productId}`)) {
       await route.continue();
       return;
     }
-    methods.push(`${method} ${pathname}`);
-    if (pathname === `/api/v1/items/${productId}` && method === 'GET') {
+    methods.push(`${method}${override ? ` [${override}]` : ''} ${pathname}`);
+    if (pathname === `/api/v1/items/${productId}` && effectiveMethod === 'GET') {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -326,7 +334,7 @@ async function mockSyntheticDraftEdit(
       });
       return;
     }
-    if (pathname === `/api/v1/items/${productId}` && method === 'PUT') {
+    if (pathname === `/api/v1/items/${productId}` && effectiveMethod === 'PUT') {
       updates++;
       await route.fulfill({
         status: 200,
@@ -352,7 +360,7 @@ async function mockSyntheticDraftEdit(
       return;
     }
     // Test failures must not send synthetic item writes to the real test API.
-    console.error('UNEXPECTED_SYNTHETIC_ITEM_REQUEST', method, pathname);
+    console.error('UNEXPECTED_SYNTHETIC_ITEM_REQUEST', method, override, pathname);
     await route.abort('failed');
   });
   return {get updates() {return updates;}, get submissions() {return submissions;}, methods};
