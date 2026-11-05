@@ -39,15 +39,14 @@ test.describe('Service Creation — authenticated browser acceptance', () => {
       await signIn(page);
       await page.goto('/dashboard/services/new');
 
-      const heading = page.getByRole('heading', {name: 'New service', level: 1});
+      const heading = page.getByRole('heading', {name: 'Create a service', level: 1});
       await expect(heading).toBeVisible();
-      await expect(page.getByRole('progressbar', {name: 'Service setup progress'})).toBeVisible();
-      await expect(page.getByText(/recommended sections complete/)).toBeVisible();
-
-      for (const title of ['Basics', 'Media and links', 'Packages', 'FAQ', 'Contact buttons']) {
-        const section = page.getByRole('button', {name: title, exact: true});
-        await expect(section).toBeVisible();
+      const steps = page.getByRole('navigation', {name: 'Service creation steps'});
+      await expect(steps).toBeVisible();
+      for (const [i, label] of ['Details', 'Media', 'Packages', 'Settings'].entries()) {
+        await expect(steps.getByRole('button', {name: `${label}, step ${i + 1} of 4`})).toBeVisible();
       }
+      await expect(steps.getByRole('button', {name: 'Details, step 1 of 4'})).toHaveAttribute('aria-current', 'step');
 
       const titleSpan = heading.locator('span').first();
       if (viewport.width <= 375) {
