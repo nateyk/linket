@@ -1,7 +1,6 @@
 import {apiClient} from '@common/http/query-client';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {FileUploadProvider} from '@common/uploads/uploader/file-upload-provider';
-import {Accordion} from '@shadcn/accordion/accordion';
 import {Alert} from '@shadcn/alert/alert';
 import {AlertDialog} from '@shadcn/alert-dialog/alert-dialog';
 import {Badge} from '@shadcn/badge/badge';
@@ -18,6 +17,10 @@ import {useTrans} from '@ui/i18n/use-trans';
 import {toast} from '@ui/toast/toast';
 import {
   ArrowLeftIcon,
+  ArrowRightIcon,
+  ChevronLeftIcon,
+  MonitorIcon,
+  SmartphoneIcon,
   CircleAlertIcon,
   CircleHelpIcon,
   EyeIcon,
@@ -45,7 +48,7 @@ import {ServiceContactChannelsField} from './service-form/service-contact-channe
 import {ServiceDescriptionEditor} from './service-form/service-description-editor';
 import {ServiceFaqsField} from './service-form/service-faqs-field';
 import {ServiceFormField} from './service-form/service-form-field';
-import {ServiceFormProgress} from './service-form/service-form-progress';
+import {ServiceBuilderSteps, SERVICE_STEP_ORDER, type ServiceBuilderStepId} from './service-form/service-builder-steps';
 import {ServiceFormSection, type ServiceFormSectionId} from './service-form/service-form-section';
 import {ServiceGalleryField} from './service-form/service-gallery-field';
 import {ServicePackagesField} from './service-form/service-packages-field';
@@ -63,13 +66,16 @@ type CategoryOption = {
 
 type CategoriesResponse = {data?: CategoryOption[]};
 
-const SECTION_ORDER: ServiceFormSectionId[] = [
-  'basics',
-  'media',
-  'packages',
-  'faq',
-  'contact',
-];
+function stepForSection(section: ServiceFormSectionId): ServiceBuilderStepId {
+  if (section === 'basics') return 'details';
+  if (section === 'faq' || section === 'contact') return 'settings';
+  return section;
+}
+
+function headingForStep(step: ServiceBuilderStepId): string {
+  const section = step === 'details' ? 'basics' : step === 'settings' ? 'faq' : step;
+  return `service-step-${section}-heading`;
+}
 
 function sectionForField(field: string): ServiceFormSectionId | null {
   if (field.startsWith('packages')) return 'packages';
@@ -124,9 +130,8 @@ function ServiceFormPage() {
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string>();
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [openSection, setOpenSection] = useState<ServiceFormSectionId | ''>(
-    'basics',
-  );
+  const [activeStep, setActiveStep] = useState<ServiceBuilderStepId>('details');
+  const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [announcement, setAnnouncement] = useState('');
@@ -207,15 +212,35 @@ function ServiceFormPage() {
 
   const requiredSections = useMemo(
     () => ({
-      basics: !!form.title.trim() && !!form.short_description.trim(),
+      basics: !!form.title.trim(),
       media: !!form.cover_url,
       packages: namedPackages.length > 0,
     }),
     [form.title, form.short_description, form.cover_url, namedPackages],
   );
 
-  const completedRequired = Object.values(requiredSections).filter(Boolean)
-    .length;
+  const completedSteps: Record<ServiceBuilderStepId, boolean> = {
+    details: requiredSections.basics,
+    media: requiredSections.media || form.gallery.length > 0 || !!form.video_url.trim() || !!form.live_demo_url.trim(),
+    packages: requiredSections.packages,
+    settings: form.faqs.some(faq => !!faq.question.trim() || !!faq.answer.trim())
+      || form.contact_channels.some(channel => !!channel.value.trim()),
+  };
+
+  const activeStepIndex = SERVICE_STEP_ORDER.indexOf(activeStep);
+  const previousStep = SERVICE_STEP_ORDER[activeStepIndex - 1];
+  const nextStep = SERVICE_STEP_ORDER[activeStepIndex + 1];
+
+  const changeStep = (step: ServiceBuilderStepId) => {
+    setActiveStep(step);
+    setAnnouncement(trans({
+      message: 'Step :current of :total',
+      values: {current: SERVICE_STEP_ORDER.indexOf(step) + 1, total: SERVICE_STEP_ORDER.length},
+    }));
+    requestAnimationFrame(() => {
+      document.getElementById(headingForStep(step))?.focus();
+    });
+  };
 
   const sectionError = (id: ServiceFormSectionId) =>
     Object.keys(fieldErrors).some(
@@ -226,7 +251,7 @@ function ServiceFormPage() {
     const firstField = Object.keys(errors)[0];
     if (!firstField) return;
     const section = sectionForField(firstField);
-    if (section) setOpenSection(section);
+    if (section) setActiveStep(stepForSection(section));
     requestAnimationFrame(() => {
       document.getElementById(firstField)?.focus();
     });
@@ -239,7 +264,7 @@ function ServiceFormPage() {
       if (savingRef.current || mutationUncertain.current) return;
       if (statusOverride === 'published' && !form.title.trim()) {
         setFieldErrors({title: trans({message: 'A title is required.'})});
-        setOpenSection('basics');
+        setActiveStep('details');
         requestAnimationFrame(() =>
           document.getElementById('title')?.focus(),
         );
@@ -323,17 +348,18 @@ function ServiceFormPage() {
       }
 
       if (event.altKey && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+        // Let editable controls and selects retain their native Alt shortcuts.
+        if (event.target instanceof HTMLElement
+          && event.target.closest('input, textarea, select, [contenteditable], [role="combobox"]')) {
+          return;
+        }
         event.preventDefault();
-        setOpenSection(current => {
-          const index = Math.max(
-            0,
-            SECTION_ORDER.indexOf(current as ServiceFormSectionId),
-          );
-          const nextIndex =
-            event.key === 'ArrowDown'
-              ? Math.min(SECTION_ORDER.length - 1, index + 1)
-              : Math.max(0, index - 1);
-          return SECTION_ORDER[nextIndex];
+        setActiveStep(current => {
+          const index = SERVICE_STEP_ORDER.indexOf(current);
+          const nextIndex = event.key === 'ArrowDown'
+            ? Math.min(SERVICE_STEP_ORDER.length - 1, index + 1)
+            : Math.max(0, index - 1);
+          return SERVICE_STEP_ORDER[nextIndex];
         });
       }
     };
@@ -386,7 +412,7 @@ function ServiceFormPage() {
           {isEditing ? (
             <Trans message="Edit service" />
           ) : (
-            <Trans message="New service" />
+            <Trans message="Create a service" />
           )}
         </span>
         <Badge
