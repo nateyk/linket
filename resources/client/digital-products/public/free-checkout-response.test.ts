@@ -8,7 +8,8 @@ describe('zero-price storefront checkout response', () => {
         order_id: 'order-uuid-1',
         status: 'pending_payment',
         access_token: 'private-value',
-        reference_endpoint: '/api/v1/public/direct-orders/order-uuid-1/reference',
+        reference_endpoint:
+          '/api/v1/public/direct-orders/order-uuid-1/reference',
       }),
     ).toBe(true);
   });
@@ -18,13 +19,20 @@ describe('zero-price storefront checkout response', () => {
       isSuccessfulFreeCheckoutResponse('direct', {
         order_id: 'order-uuid-2',
         access_token: 'private-value',
-        reference_endpoint: '/api/v1/public/direct-orders/order-uuid-2/reference',
+        reference_endpoint:
+          '/api/v1/public/direct-orders/order-uuid-2/reference',
       }),
     ).toBe(false);
   });
 
   it('rejects empty or malformed response bodies rather than showing false success', () => {
-    for (const payload of [null, undefined, {}, {order_id: ''}, {order_id: 123}]) {
+    for (const payload of [
+      null,
+      undefined,
+      {},
+      {order_id: ''},
+      {order_id: 123},
+    ]) {
       expect(isSuccessfulFreeCheckoutResponse('free', payload)).toBe(false);
     }
   });
