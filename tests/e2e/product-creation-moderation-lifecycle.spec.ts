@@ -84,10 +84,13 @@ test('isolated real creator ↔ admin review, rejection, resubmission and approv
     expect([401, 403], 'Creator cannot access admin moderation API')
       .toContain(ownerAdminAccess.status());
 
+    const reviewerPassword = process.env.LINKET_E2E_REVIEWER_PASSWORD;
+    expect(reviewerPassword, 'Moderation QA requires a temporary reviewer credential')
+      .toBeTruthy();
     await signIn(
       admin,
       process.env.LINKET_E2E_REVIEWER_EMAIL ?? 'e2e-product-reviewer@example.test',
-      process.env.LINKET_E2E_REVIEWER_PASSWORD ?? 'E2eProductReview!23',
+      reviewerPassword!,
     );
     await admin.goto(`/admin/items/${id}`);
     await expect(admin.getByText(originalTitle).first()).toBeVisible();
