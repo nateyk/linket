@@ -48,7 +48,6 @@ jobs:
       LINKET_E2E_CREATOR_EMAIL: e2e-buyer-creator@example.test
       LINKET_E2E_CREATOR_PASSWORD: 'E2eBuyerCreator!23'
       LINKET_E2E_REVIEWER_EMAIL: e2e-product-reviewer@example.test
-      LINKET_E2E_REVIEWER_PASSWORD: 'E2eProductReview!23'
       E2E_NO_SERVER: '1'
       E2E_BASE_URL: http://127.0.0.1:8081
 
@@ -129,8 +128,22 @@ jobs:
           php artisan migrate --force --no-interaction
           php artisan db:seed --force --no-interaction
           php artisan db:seed --class="Common\\Database\\Seeders\\UploadBackendsSeeder" --force --no-interaction
-          # This command checks APP_ENV and DB name itself and uses mocked Verify.et.
-          php artisan linket:prepare-buyer-e2e --no-interaction
+          # Only the opt-in moderation stage can provision a synthetic admin.
+          # Generate a per-run credential, never a checked-in admin password.
+          reviewer_password="$(openssl rand -hex 24)"
+          echo "::add-mask::$reviewer_password"
+          export LINKET_E2E_REVIEWER_PASSWORD="$reviewer_password"
+          printf 'LINKET_E2E_REVIEWER_PASSWORD=%s\n' "$reviewer_password" >> "$GITHUB_ENV"
+          # Fail closed when the opt-in flag or loopback origin is absent.
+          if LINKET_ISOLATED_E2E=0 php artisan linket:prepare-buyer-e2e --with-reviewer --no-interaction; then
+            echo "Reviewer guard accepted unsafe isolation mode" >&2
+            exit 1
+          fi
+          if APP_URL=https://public-review.invalid php artisan linket:prepare-buyer-e2e --with-reviewer --no-interaction; then
+            echo "Reviewer guard accepted non-loopback app URL" >&2
+            exit 1
+          fi
+          php artisan linket:prepare-buyer-e2e --with-reviewer --no-interaction
           # The seeded course is required so Course mobile QA cannot silently skip.
           COURSE_ID="$(php -r '$data = json_decode(file_get_contents("storage/app/e2e/buyer-fixture.json"), true, 512, JSON_THROW_ON_ERROR); $id = $data["course_product_id"] ?? null; if (!is_int($id) || $id < 1) {fwrite(STDERR, "Missing course fixture\\n"); exit(1);} echo $id;')"
           [[ "$COURSE_ID" =~ ^[0-9]+$ ]]
