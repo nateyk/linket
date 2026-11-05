@@ -4,8 +4,11 @@ on:
   pull_request:
     branches: [main]
   push:
-    # One verified build of each main commit; feature PRs use pull_request.
-    branches: [main]
+    # Temporary isolated QA fallback: the PR event is stuck before creating
+    # jobs on this branch. Push verification runs the FULL suite; release and
+    # artifact publishing remain restricted to main. Remove the temporary
+    # branch selector before merging this draft PR.
+    branches: [main, ui/storefront-detail-hierarchy-sf09-sf10-20261105]
   # Verify an isolated branch manually before opening a PR when needed.
   workflow_dispatch:
 
