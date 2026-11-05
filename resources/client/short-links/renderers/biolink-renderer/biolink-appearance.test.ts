@@ -232,7 +232,9 @@ describe('Appearance editor → storefront contract', () => {
     expect(layout).toContain('loadFonts([');
     expect(layout).toContain('resolveBiolinkPublicAppearanceStyle(appearance)');
     const appearanceResolver = readSource('biolink-appearance.ts');
-    expect(appearanceResolver).toContain('fontFamily: appearance?.fontConfig?.family');
+    expect(appearanceResolver).toContain(
+      'fontFamily: appearance?.fontConfig?.family',
+    );
     expect(appearanceResolver).toContain("color: 'var(--biolink-text)'");
   });
 
