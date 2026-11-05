@@ -320,10 +320,23 @@ function useStoreEditorSave() {
     } as Parameters<typeof updateStoreCreatorProfile>[1];
   };
 
+  const saveAppearancePayload = () => {
+    const state = getState();
+    // A reviewed suggestion must be saved with the exact source revision:
+    // the controller checks this fingerprint atomically under a store lock.
+    // Normal creator edits retain their existing, unconditional save path.
+    return {
+      config: state.appearance as any,
+      ...(state.appearanceSuggestionFingerprint
+        ? {source_fingerprint: state.appearanceSuggestionFingerprint}
+        : {}),
+    };
+  };
+
   const saveCurrentTab = () => {
     const state = getState();
     if (isAppearanceTab && state.appearanceIsDirty) {
-      saveAppearance.mutate({config: state.appearance as any});
+      saveAppearance.mutate(saveAppearancePayload());
     } else if (isProfileTab && state.profileIsDirty) {
       saveProfile.mutate(saveProfilePayload());
     }
@@ -334,7 +347,7 @@ function useStoreEditorSave() {
     const pending: Promise<unknown>[] = [];
     if (state.appearanceIsDirty) {
       pending.push(
-        saveAppearance.mutateAsync({config: state.appearance as any}),
+        saveAppearance.mutateAsync(saveAppearancePayload()),
       );
     }
     if (state.profileIsDirty) {
