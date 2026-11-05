@@ -71,6 +71,26 @@ describe('product preview wiring', () => {
     expect(source).not.toContain('message=":count characters"');
   });
 
+  test('on-demand buyer preview excludes creator-only metadata', () => {
+    const source = fs.readFileSync(
+      path.resolve('resources/client/dashboard/digital-products/product-preview.tsx'),
+      'utf8',
+    );
+    expect(source).toContain('buyerOnly?: boolean');
+    expect(source).toContain('description={buyerOnly ? description : undefined}');
+    expect(source).toContain('fileCount={buyerOnly ? undefined : files.length}');
+  });
+
+  test('approved update review state is read from the API flag, not inferred from draft status', () => {
+    const source = fs.readFileSync(
+      path.resolve('resources/client/dashboard/digital-products/digital-product-form-page.tsx'),
+      'utf8',
+    );
+    expect(source).toContain('hasPendingUpdate={product.has_pending_update === true}');
+    expect(source).toContain('product.has_pending_update === true');
+    expect(source).toContain('This product remains approved while an update is under review.');
+  });
+
   test('status tones use semantic warning tokens, not raw amber', () => {
     const source = fs.readFileSync(
       path.resolve(

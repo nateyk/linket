@@ -53,6 +53,8 @@ export function sampleRequestPayload(samples: ProductSampleDraft[]) {
   };
 }
 
+export type AutoSaveState = 'idle' | 'saving' | 'saved' | 'failed';
+
 export interface ProductCreationActions {
   setTitle: (value: string) => void;
   setDescription: (value: string) => void;
@@ -66,6 +68,7 @@ export interface ProductCreationActions {
   clear: () => void;
   setDirty: (dirty: boolean) => void;
   autoSave: () => void;
+  confirmPersisted: (snapshot: ProductFormState) => void;
 }
 
 const EMPTY_STATE: ProductFormState = {
@@ -94,6 +97,7 @@ export function resolveInitialFormState(
 const ProductCreationContext = createContext<{
   state: ProductFormState;
   dirty: boolean;
+  autoSaveState: AutoSaveState;
   actions: ProductCreationActions;
   billing: BillingMode | null;
 } | null>(null);
@@ -111,27 +115,32 @@ export function ProductCreationProvider({
     resolveInitialFormState(prefill),
   );
   const [dirty, setDirty] = useState(false);
+  const [autoSaveState, setAutoSaveState] = useState<AutoSaveState>('idle');
+  const markDirty = useCallback(() => {
+    setDirty(true);
+    setAutoSaveState('idle');
+  }, []);
 
   const setTitle = useCallback(
     (title: string) => {
       setState(current => ({...current, title}));
-      setDirty(true);
+      markDirty();
     },
-    [],
+    [markDirty],
   );
   const setDescription = useCallback(
     (description: string) => {
       setState(current => ({...current, description}));
-      setDirty(true);
+      markDirty();
     },
-    [],
+    [markDirty],
   );
   const setPrice = useCallback(
     (price: string) => {
       setState(current => ({...current, price}));
-      setDirty(true);
+      markDirty();
     },
-    [],
+    [markDirty],
   );
   const setCover = useCallback(
     (coverUrl: string, entry?: {id: number}) => {
@@ -140,45 +149,47 @@ export function ProductCreationProvider({
         coverUrl,
         coverFileId: entry?.id ?? null,
       }));
-      setDirty(true);
+      markDirty();
     },
-    [],
+    [markDirty],
   );
   const setFiles = useCallback(
     (files: FileEntry[]) => {
       setState(current => ({...current, files}));
-      setDirty(true);
+      markDirty();
     },
-    [],
+    [markDirty],
   );
   const setSamples = useCallback(
     (samples: ProductSampleDraft[]) => {
       setState(current => ({...current, samples}));
-      setDirty(true);
+      markDirty();
     },
-    [],
+    [markDirty],
   );
   const setBiolinkIds = useCallback(
     (biolinkIds: number[]) => {
       setState(current => ({...current, biolinkIds}));
-      setDirty(true);
+      markDirty();
     },
-    [],
+    [markDirty],
   );
   const setProductType = useCallback(
     (productType: ProductType) => {
       setState(current => ({...current, productType}));
-      setDirty(true);
+      markDirty();
     },
-    [],
+    [markDirty],
   );
   const hydrate = useCallback((nextState: ProductFormState) => {
     setState(nextState);
     setDirty(false);
+    setAutoSaveState('saved');
   }, []);
   const clear = useCallback(() => {
     setState({...EMPTY_STATE});
     setDirty(false);
+    setAutoSaveState('idle');
   }, []);
 
   // The debounced body is created exactly once (useRef keeps the first
@@ -197,6 +208,7 @@ export function ProductCreationProvider({
       const {state, dirty, productId} = latest.current;
       if (!productId || !dirty || autoSaveInFlight.current) return;
       autoSaveInFlight.current = true;
+      if (mounted.current) setAutoSaveState('saving');
       try {
         const {apiClient} = await import('@common/http/query-client');
         await apiClient.put(`/api/v1/items/${productId}/draft`, {
@@ -215,9 +227,13 @@ export function ProductCreationProvider({
         });
         if (mounted.current && latest.current.state === state && latest.current.productId === productId) {
           setDirty(false);
+          setAutoSaveState('saved');
         }
       } catch {
-        // Silent fail - auto-save is best effort
+        // Never claim persistence after an error; leave the edited form dirty.
+        if (mounted.current && latest.current.state === state && latest.current.productId === productId) {
+          setAutoSaveState('failed');
+        }
       } finally {
         autoSaveInFlight.current = false;
         if (mounted.current && latest.current.dirty && latest.current.state !== state && latest.current.productId === productId) {
@@ -241,10 +257,21 @@ export function ProductCreationProvider({
     autoSaveRef.current();
   }, []);
 
+  const confirmPersisted = useCallback((snapshot: ProductFormState) => {
+    // Manual Save can finish after further user edits. Only the exact
+    // submitted state may be acknowledged; newer edits must remain dirty.
+    if (mounted.current && latest.current.state === snapshot) {
+      autoSaveRef.current.cancel();
+      setDirty(false);
+      setAutoSaveState('saved');
+    }
+  }, []);
+
   const value = useMemo(
     () => ({
       state,
       dirty,
+      autoSaveState,
       actions: {
         setTitle,
         setDescription,
@@ -258,12 +285,14 @@ export function ProductCreationProvider({
         clear,
         setDirty,
         autoSave,
+        confirmPersisted,
       },
       billing: prefill?.billing ?? null,
     }),
     [
       state,
       dirty,
+      autoSaveState,
       setTitle,
       setDescription,
       setPrice,
@@ -276,6 +305,7 @@ export function ProductCreationProvider({
       clear,
       setDirty,
       autoSave,
+      confirmPersisted,
       prefill,
     ],
   );
