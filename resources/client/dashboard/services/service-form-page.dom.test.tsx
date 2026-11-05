@@ -5,7 +5,7 @@
  * and `/dashboard/services/:serviceId/edit` — so the create/edit split lives in
  * `useParams`, not in the component tree. These tests mount the real route
  * paths through a memory router and drive the page the way a creator does:
- * read the shell (breadcrumb, progress, five sections and on-demand preview),
+ * read the shell (breadcrumb, four steps and desktop/modal preview),
  * type a title, and save with the keyboard shortcut.
  *
  * Everything the page fetches goes through the mocked `apiClient`, so the tests
@@ -13,7 +13,7 @@
  * preview tracks the same state the form writes.
  */
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
-import {act, render, screen, waitFor} from '@testing-library/react';
+import {act, render, screen, waitFor, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {createMemoryRouter, RouterProvider} from 'react-router';
 import {
@@ -105,13 +105,7 @@ const serverService: CreatorServiceResource = {
   public_url: 'https://linket.test/mystore/services/brand-identity-sprint',
 };
 
-const SECTION_TITLES = [
-  'Basics',
-  'Media and links',
-  'Packages',
-  'FAQ',
-  'Contact buttons',
-];
+const STEP_TITLES = ['Details', 'Media', 'Packages', 'Settings'];
 
 beforeEach(() => {
   api.get.mockReset();
@@ -163,7 +157,8 @@ function mountPage(path: '/dashboard/services/new' | '/dashboard/services/3/edit
 
 /** The loading skeleton is replaced once the stores + service GETs settle. */
 async function waitForForm() {
-  return screen.findByRole('button', {name: 'Basics'});
+  await screen.findByRole('navigation', {name: 'Service creation steps'});
+  return screen.findByRole('button', {name: 'Details, step 1 of 4'});
 }
 
 function titleInput(): HTMLInputElement {
@@ -191,33 +186,54 @@ describe('the service form shell', () => {
 
     expect(screen.getByRole('link', {name: 'My Services'})).toBeTruthy();
     expect(
-      screen.getByRole('heading', {level: 1, name: /New service/}),
+      screen.getByRole('heading', {level: 1, name: /Create a service/}),
     ).toBeTruthy();
-    expect(
-      screen.getByRole('progressbar', {name: 'Service setup progress'}),
-    ).toBeTruthy();
-    expect(screen.getByText('Service setup')).toBeTruthy();
-    expect(screen.getByText('0 of 3 recommended sections complete')).toBeTruthy();
+    expect(screen.getByRole('navigation', {name: 'Service creation steps'})).toBeTruthy();
+    expect(screen.getByText('Step 1 of 4')).toBeTruthy();
     expect(screen.getByRole('button', {name: 'Preview'})).toBeTruthy();
-    // The product and service creators both keep buyer previews on-demand.
-    expect(screen.queryByText('Customer preview')).toBeNull();
+    // On larger screens the same unsaved state is previewed alongside the form.
+    expect(screen.getByRole('complementary', {name: 'Service preview'})).toBeTruthy();
   });
 
-  test('all five sections are reachable as accordion triggers', async () => {
+  test('all four service stages are accessible, navigable and retain unsaved fields', async () => {
+    const user = userEvent.setup();
     mountPage('/dashboard/services/new');
     await waitForForm();
 
-    SECTION_TITLES.forEach(title => {
-      const trigger = screen.getByRole('button', {name: title});
-      // A real trigger: it reports and toggles the open state of its panel.
-      expect(trigger.getAttribute('aria-expanded')).not.toBeNull();
+    STEP_TITLES.forEach((title, index) => {
+      expect(screen.getByRole('button', {name: `${title}, step ${index + 1} of 4`})).toBeTruthy();
     });
-    // Basics is the section open on arrival, so the title field is already there.
-    expect(
-      screen
-        .getByRole('button', {name: 'Basics'})
-        .getAttribute('aria-expanded'),
-    ).toBe('true');
+    expect(screen.getByRole('button', {name: 'Details, step 1 of 4'}).getAttribute('aria-current')).toBe('step');
+    await user.type(titleInput(), 'Custom brand consulting');
+
+    await user.click(screen.getByRole('button', {name: 'Media, step 2 of 4'}));
+    expect(screen.getByRole('button', {name: 'Media, step 2 of 4'}).getAttribute('aria-current')).toBe('step');
+    expect(screen.queryByRole('textbox', {name: 'Title'})).toBeNull();
+    expect(screen.getByRole('heading', {name: 'Media and links'})).toBeTruthy();
+
+    await user.click(screen.getByRole('button', {name: 'Packages, step 3 of 4'}));
+    expect(screen.getByRole('heading', {name: 'Packages'})).toBeTruthy();
+
+    await user.click(screen.getByRole('button', {name: 'Settings, step 4 of 4'}));
+    expect(screen.getByRole('heading', {name: 'FAQ'})).toBeTruthy();
+    expect(screen.getByRole('heading', {name: 'Contact buttons'})).toBeTruthy();
+
+    await user.click(screen.getByRole('button', {name: 'Details, step 1 of 4'}));
+    expect(titleInput().value).toBe('Custom brand consulting');
+    expect(api.post).not.toHaveBeenCalled();
+    expect(api.put).not.toHaveBeenCalled();
+  });
+
+  test('Continue and Previous step move through the same stage sequence', async () => {
+    const user = userEvent.setup();
+    mountPage('/dashboard/services/new');
+    await waitForForm();
+
+    await user.click(screen.getByRole('button', {name: 'Continue'}));
+    expect(screen.getByRole('button', {name: 'Media, step 2 of 4'}).getAttribute('aria-current')).toBe('step');
+    await user.click(screen.getByRole('button', {name: 'Previous step'}));
+    expect(screen.getByRole('button', {name: 'Details, step 1 of 4'}).getAttribute('aria-current')).toBe('step');
+    expect(api.post).not.toHaveBeenCalled();
   });
 
   test('edit mode loads the service and hydrates the form from it', async () => {
@@ -233,11 +249,12 @@ describe('the service form shell', () => {
     await waitFor(() =>
       expect(titleInput().value).toBe('Brand identity sprint'),
     );
-    // The preview reads hydrated state only when the creator requests it.
-    expect(screen.queryByText('Starter')).toBeNull();
+    // Sidebar and modal use the same hydrated, unsaved form state.
+    expect(within(screen.getByRole('complementary', {name: 'Service preview'})).getByText('Starter')).toBeTruthy();
     await user.click(screen.getByRole('button', {name: 'Preview'}));
-    expect(screen.getByText('Brand identity sprint')).toBeTruthy();
-    expect(screen.getByText('Starter')).toBeTruthy();
+    const dialog = screen.getByRole('dialog', {name: 'Customer preview'});
+    expect(within(dialog).getByText('Brand identity sprint')).toBeTruthy();
+    expect(within(dialog).getByText('Starter')).toBeTruthy();
   });
 
   test('the header carries both save actions, named for screen readers too', async () => {
@@ -275,10 +292,10 @@ describe('the preview is on-demand and live', () => {
     mountPage('/dashboard/services/new');
     await waitForForm();
 
-    expect(screen.queryByText('Untitled service')).toBeNull();
+    expect(within(screen.getByRole('complementary', {name: 'Service preview'})).getByText('Untitled service')).toBeTruthy();
     await user.click(screen.getByRole('button', {name: 'Preview'}));
-    expect(screen.getByRole('dialog')).toBeTruthy();
-    expect(screen.getByText('Untitled service')).toBeTruthy();
+    const dialog = screen.getByRole('dialog', {name: 'Customer preview'});
+    expect(within(dialog).getByText('Untitled service')).toBeTruthy();
     expect(api.post).not.toHaveBeenCalled();
 
     // Both the footer action and the dialog's accessible X are named Close.
@@ -289,8 +306,8 @@ describe('the preview is on-demand and live', () => {
     await user.type(titleInput(), 'Logo design');
     await user.click(screen.getByRole('button', {name: 'Preview'}));
 
-    expect(screen.getByText('Logo design')).toBeTruthy();
-    expect(screen.queryByText('Untitled service')).toBeNull();
+    expect(within(screen.getByRole('dialog', {name: 'Customer preview'})).getByText('Logo design')).toBeTruthy();
+    expect(within(screen.getByRole('complementary', {name: 'Service preview'})).queryByText('Untitled service')).toBeNull();
     expect(api.post).not.toHaveBeenCalled();
     expect(api.put).not.toHaveBeenCalled();
   });
