@@ -281,7 +281,9 @@ describe('the preview is on-demand and live', () => {
     expect(screen.getByText('Untitled service')).toBeTruthy();
     expect(api.post).not.toHaveBeenCalled();
 
-    await user.click(screen.getByRole('button', {name: 'Close'}));
+    // Both the footer action and the dialog's accessible X are named Close.
+    // Choose the visible footer action deliberately.
+    await user.click(screen.getAllByRole('button', {name: 'Close'})[0]);
     expect(screen.queryByRole('dialog')).toBeNull();
 
     await user.type(titleInput(), 'Logo design');
