@@ -1,5 +1,7 @@
 <?php
 
+use App\CreatorAi\Forecasting\CreatorForecastReadinessReport;
+use App\CreatorAi\Forecasting\ForecastObservationCheckpointAudit;
 use App\CreatorAi\Forecasting\RollingRevenueBacktest;
 use App\CreatorAi\Forecasting\VerifiedRevenueDailySeries;
 use App\Models\User;
@@ -225,4 +227,178 @@ test('rolling origin comparison uses two independent holdouts and rejects histor
     }
     $result = (new RollingRevenueBacktest())->evaluate($history, 7);
     expect($result['all_folds_pass'])->toBeFalse();
+});
+
+
+/** @return array<string,mixed> */
+function forecastCheckpointFixture(
+    int $workspaceId,
+    string $date,
+    string $source,
+    int $sales = 0,
+    int $revenueCents = 0,
+    array $overrides = [],
+): array {
+    $watermark = CarbonImmutable::parse($date, 'UTC')->addDays(3)->startOfDay();
+
+    return [
+        'workspace_id' => $workspaceId,
+        'observed_on' => $date,
+        'source_kind' => $source,
+        'verified_sales_count' => $sales,
+        'verified_gross_cents' => $revenueCents,
+        'source_cursor_sha256' => hash('sha256', $workspaceId.'|'.$date.'|'.$source),
+        'source_watermark_at' => $watermark->toDateTimeString(),
+        'captured_at' => $watermark->addHour()->toDateTimeString(),
+        'sealed_at' => $watermark->addHours(2)->toDateTimeString(),
+        'created_at' => now()->toDateTimeString(),
+        'updated_at' => now()->toDateTimeString(),
+        ...$overrides,
+    ];
+}
+
+test('forecast checkpoint audit fails closed on missing sources and refuses to trust matching local projections', function () {
+    config()->set('creator_ai.enabled', true);
+    config()->set('creator_ai.features.forecast', true);
+    [$creator, $workspaceId] = forecastSourceFixture();
+    forecastSourcePro($creator);
+    $daily = [['date' => '2026-10-12', 'verified_sales_count' => 0, 'verified_revenue_cents' => 0]];
+    $audit = app(ForecastObservationCheckpointAudit::class);
+
+    $missing = $audit->assess($creator, $workspaceId, $daily);
+    expect($missing['independent_observation_coverage_verified'])->toBeFalse()
+        ->and($missing['reason'])->toBe('checkpoint_evidence_missing');
+
+    \Illuminate\Support\Facades\DB::table('creator_ai_forecast_coverage_checkpoints')
+        ->insert(forecastCheckpointFixture($workspaceId, '2026-10-12', 'checkout_event_stream'));
+
+    $partial = $audit->assess($creator, $workspaceId, $daily);
+    expect($partial['reason'])->toBe('checkpoint_source_missing');
+
+    \Illuminate\Support\Facades\DB::table('creator_ai_forecast_coverage_checkpoints')
+        ->insert(forecastCheckpointFixture($workspaceId, '2026-10-12', 'verify_et_reconciliation'));
+
+    $reconciled = $audit->assess($creator, $workspaceId, $daily);
+    expect($reconciled['independent_observation_coverage_verified'])->toBeFalse()
+        ->and($reconciled['external_source_authenticity_verified'])->toBeFalse()
+        ->and($reconciled['locally_reconciled_checkpoint_days'])->toBe(1)
+        ->and($reconciled['reason'])->toBe('checkpoint_lineage_not_independently_attested');
+
+    $encoded = json_encode($reconciled, JSON_THROW_ON_ERROR);
+    expect($encoded)->not->toContain('buyer')
+        ->not->toContain('settlement_account')
+        ->not->toContain('estimated_total_gross_cents');
+});
+
+test('forecast audit detects conflicting amounts, suspicious cursor reuse and incomplete source watermarks', function () {
+    config()->set('creator_ai.enabled', true);
+    config()->set('creator_ai.features.forecast', true);
+    [$creator, $workspaceId] = forecastSourceFixture();
+    forecastSourcePro($creator);
+    $daily = [['date' => '2026-10-12', 'verified_sales_count' => 1, 'verified_revenue_cents' => 10000]];
+    $table = \Illuminate\Support\Facades\DB::table('creator_ai_forecast_coverage_checkpoints');
+
+    $table->insert(forecastCheckpointFixture($workspaceId, '2026-10-12', 'checkout_event_stream', 1, 10000));
+    $table->insert(forecastCheckpointFixture($workspaceId, '2026-10-12', 'verify_et_reconciliation', 1, 9999));
+
+    $audit = app(ForecastObservationCheckpointAudit::class);
+    expect($audit->assess($creator, $workspaceId, $daily)['reason'])
+        ->toBe('checkpoint_aggregate_mismatch');
+
+    $table->where('workspace_id', $workspaceId)
+        ->where('source_kind', 'verify_et_reconciliation')
+        ->update(['verified_gross_cents' => 10000, 'source_cursor_sha256' =>
+            hash('sha256', $workspaceId.'|2026-10-12|checkout_event_stream')]);
+
+    expect($audit->assess($creator, $workspaceId, $daily)['reason'])
+        ->toBe('checkpoint_source_cursor_collision');
+
+    $table->where('workspace_id', $workspaceId)
+        ->where('source_kind', 'verify_et_reconciliation')
+        ->update(['source_cursor_sha256' => hash('sha256', 'distinct-synthetic-verify-et-checkpoint'),
+            'sealed_at' => null]);
+
+    expect($audit->assess($creator, $workspaceId, $daily)['reason'])
+        ->toBe('checkpoint_not_sealed');
+
+    $table->where('workspace_id', $workspaceId)
+        ->where('source_kind', 'verify_et_reconciliation')
+        ->update([
+            'sealed_at' => '2026-10-15 02:00:00',
+            'captured_at' => '2026-10-15 01:00:00',
+            'source_watermark_at' => '2026-10-13 00:00:00',
+        ]);
+
+    expect($audit->assess($creator, $workspaceId, $daily)['reason'])
+        ->toBe('checkpoint_watermark_incomplete');
+});
+
+test('checkpoint lookups are workspace-scoped and require live verified Pro and forecast flag', function () {
+    config()->set('creator_ai.enabled', true);
+    config()->set('creator_ai.features.forecast', true);
+    [$creator, $workspaceId] = forecastSourceFixture();
+    [$other, $foreignWorkspace] = forecastSourceFixture();
+    forecastSourcePro($creator);
+    forecastSourcePro($other);
+
+    $daily = [['date' => '2026-10-12', 'verified_sales_count' => 0, 'verified_revenue_cents' => 0]];
+    \Illuminate\Support\Facades\DB::table('creator_ai_forecast_coverage_checkpoints')->insert([
+        forecastCheckpointFixture($foreignWorkspace, '2026-10-12', 'checkout_event_stream'),
+        forecastCheckpointFixture($foreignWorkspace, '2026-10-12', 'verify_et_reconciliation'),
+    ]);
+
+    $audit = app(ForecastObservationCheckpointAudit::class);
+    expect($audit->assess($creator, $workspaceId, $daily)['reason'])
+        ->toBe('checkpoint_evidence_missing');
+
+    try {
+        $audit->assess($creator, $foreignWorkspace, $daily);
+        $this->fail('Creator could audit a foreign workspace');
+    } catch (HttpException $exception) {
+        expect($exception->getStatusCode())->toBe(403);
+    }
+
+    config()->set('creator_ai.features.forecast', false);
+    try {
+        $audit->assess($creator, $workspaceId, $daily);
+        $this->fail('Disabled forecast capability was bypassed');
+    } catch (HttpException $exception) {
+        expect($exception->getStatusCode())->toBe(403);
+    }
+});
+
+test('checkpoint audit rejects fabricated missing calendar dates before querying source data', function () {
+    config()->set('creator_ai.enabled', true);
+    config()->set('creator_ai.features.forecast', true);
+    [$creator, $workspaceId] = forecastSourceFixture();
+    forecastSourcePro($creator);
+    $daily = [
+        ['date' => '2026-10-12', 'verified_sales_count' => 0, 'verified_revenue_cents' => 0],
+        ['date' => '2026-10-14', 'verified_sales_count' => 0, 'verified_revenue_cents' => 0],
+    ];
+    expect(fn () => app(ForecastObservationCheckpointAudit::class)->assess($creator, $workspaceId, $daily))
+        ->toThrow(InvalidArgumentException::class, 'Invalid or incomplete checkpoint calendar.');
+});
+
+test('creator forecast readiness remains nonpublishable even with matching checkpoint records', function () {
+    config()->set('creator_ai.enabled', true);
+    config()->set('creator_ai.features.forecast', true);
+    [$creator, $workspaceId] = forecastSourceFixture();
+    forecastSourcePro($creator);
+
+    $report = app(CreatorForecastReadinessReport::class)->assess(
+        $creator,
+        $workspaceId,
+        CarbonImmutable::parse('2026-10-11', 'UTC'),
+        CarbonImmutable::parse('2026-10-13', 'UTC'),
+    );
+
+    expect($report['eligible'])->toBeFalse()
+        ->and($report['reason'])->toBe('insufficient_history')
+        ->and($report['checkpoint_audit_reason'])->toBe('checkpoint_evidence_missing')
+        ->and($report['independent_observation_coverage_verified'])->toBeFalse();
+
+    foreach (['estimated_total_gross_cents', 'indicative_upper_gross_cents'] as $secretField) {
+        expect(array_key_exists($secretField, $report))->toBeFalse();
+    }
 });
