@@ -50,6 +50,7 @@ export function Component() {
   const [error, setError] = useState<string>();
   const [creating, setCreating] = useState(false);
   const createInFlight = useRef(false);
+  const uncertainRequest = useRef(false);
   const [creationUncertain, setCreationUncertain] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [openSection, setOpenSection] = useState<string | null>('details');
@@ -81,7 +82,7 @@ export function Component() {
     event.preventDefault();
     // A missing response may mean the server already created the Course.
     // Never repeat a POST in the same form after an uncertain outcome.
-    if (createInFlight.current || creationUncertain) return;
+    if (createInFlight.current || uncertainRequest.current || creationUncertain) return;
     const next: Errors = {};
     if (!title.trim()) next.title = 'Add a course title.';
     if (!billingMode) next.price = trans({message: 'Choose Free access or Paid.'});
@@ -134,6 +135,7 @@ export function Component() {
       // Only an actual HTTP rejection confirms that a create POST failed.
       // Network errors and malformed success payloads require reconciliation.
       const requestUncertain = !isAxiosError(reason) || !reason.response;
+      if (requestUncertain) uncertainRequest.current = true;
       setCreationUncertain(requestUncertain);
       setError(
         requestUncertain

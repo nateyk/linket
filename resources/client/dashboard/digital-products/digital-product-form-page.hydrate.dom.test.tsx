@@ -12,6 +12,7 @@
  */
 import {DashboardLayoutContextProvider} from '@common/ui/dashboard/dashboard-layout-context';
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
+import {AxiosError} from 'axios';
 import {act, render, screen, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {createMemoryRouter, RouterProvider} from 'react-router';
@@ -54,6 +55,10 @@ const h = vi.hoisted(() => {
     pending,
     itemUrls: [] as string[],
     mutationCalls: 0,
+    submitCalls: 0,
+    putCalls: 0,
+    submitError: null as Error | null,
+    updatedProduct: null as unknown,
     storefrontGetCount: 0,
     storefrontFail: false,
     storefrontRecords: [] as {id: number; name: string; short_url?: string}[],
@@ -79,6 +84,10 @@ const h = vi.hoisted(() => {
       this.itemUrls.length = 0;
       pending.length = 0;
       this.mutationCalls = 0;
+      this.submitCalls = 0;
+      this.putCalls = 0;
+      this.submitError = null;
+      this.updatedProduct = null;
       this.storefrontGetCount = 0;
       this.storefrontFail = false;
       this.storefrontRecords = [];
@@ -113,8 +122,19 @@ vi.mock('@common/http/query-client', async () => {
     queryClient: new QueryClient({defaultOptions: {queries: {retry: false}}}),
     apiClient: {
       get: (url: string) => h.get(url),
-      post: () => {h.mutationCalls++; return Promise.resolve({data: {data: {}}});},
-      put: () => {h.mutationCalls++; return Promise.resolve({data: {data: {}}});},
+      post: (url: string) => {
+        h.mutationCalls++;
+        if (url.endsWith('/submit')) {
+          h.submitCalls++;
+          if (h.submitError) return Promise.reject(h.submitError);
+        }
+        return Promise.resolve({data: {data: h.updatedProduct ?? {}}});
+      },
+      put: () => {
+        h.mutationCalls++;
+        h.putCalls++;
+        return Promise.resolve({data: {data: h.updatedProduct ?? {}}});
+      },
       delete: () => Promise.resolve({data: {data: {}}}),
       request: () => Promise.resolve({data: {data: {}}}),
     },
@@ -177,6 +197,41 @@ async function loadProduct(product = serverProduct) {
   expect(input.value).toBe(product.title);
   return input;
 }
+
+test('failed submission after a confirmed draft save keeps the save and field errors visible', async () => {
+  const user = userEvent.setup();
+  h.updatedProduct = {...serverProduct, status: 'draft'};
+  h.submitError = Object.assign(new Error('Synthetic rejected submit'), {
+    response: {data: {errors: {title: ['Please correct the title before review.']}}},
+  });
+  mount();
+  await loadProduct({...serverProduct, status: 'draft'});
+  await user.click(screen.getByRole('button', {name: 'Submit for review'}));
+
+  expect(await screen.findByText('Draft saved, but submission failed. Fix the issue and try again.')).toBeTruthy();
+  expect(await screen.findByText('Please correct the title before review.')).toBeTruthy();
+  expect(h.putCalls).toBe(1);
+  expect(h.submitCalls).toBe(1);
+  expect(screen.getByRole('textbox', {name: /product title/i}).getAttribute('aria-invalid')).toBe('true');
+});
+
+test('unknown submit result blocks another mutation and offers accessible reconciliation', async () => {
+  const user = userEvent.setup();
+  h.updatedProduct = {...serverProduct, status: 'draft'};
+  h.submitError = new AxiosError('Synthetic network failure', 'ERR_NETWORK');
+  mount();
+  await loadProduct({...serverProduct, status: 'draft'});
+  await user.click(screen.getByRole('button', {name: 'Submit for review'}));
+
+  expect(await screen.findByText('Draft saved, but we could not confirm submission. Check My Items before submitting again.')).toBeTruthy();
+  await waitFor(() => {
+    expect((screen.getByRole('button', {name: 'Submit for review'}) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', {name: 'Save draft'}) as HTMLButtonElement).disabled).toBe(true);
+  });
+  expect(screen.getByRole('link', {name: 'Check My Items'})).toBeTruthy();
+  expect(h.putCalls).toBe(1);
+  expect(h.submitCalls).toBe(1);
+});
 
 test('Storefront outage remains recoverable and does not discard existing placement', async () => {
   const user = userEvent.setup();

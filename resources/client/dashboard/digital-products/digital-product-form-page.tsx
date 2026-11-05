@@ -205,6 +205,7 @@ function DigitalProductForm() {
   const [submitting, setSubmitting] = useState(false);
   // A confirmed save followed by failed submission must not create again.
   const saveInFlight = useRef(false);
+  const mutationUncertain = useRef(false);
   const [creationUncertain, setCreationUncertain] = useState(false);
   const [submissionRecovery, setSubmissionRecovery] = useState<SubmissionRecovery | null>(
     routeRecovery?.productSubmissionRecovery === 'uncertain'
@@ -405,7 +406,7 @@ function DigitalProductForm() {
 
   const save = useCallback(
     async (submitAfterSave = false) => {
-      if (saveInFlight.current || creationUncertain || submissionRecovery === 'uncertain') return;
+      if (saveInFlight.current || mutationUncertain.current || creationUncertain || submissionRecovery === 'uncertain') return;
       if (productId && (!product || String(product.id) !== productId)) return;
       const priceCents = effectiveBilling === 'free' ? 0 : Math.round(Number(price) * 100);
       const effectiveType = product?.type ?? productType ?? 'digital';
@@ -502,6 +503,7 @@ function DigitalProductForm() {
           const recovery: SubmissionRecovery = unconfirmedNetworkResponse
             ? 'uncertain'
             : 'failed';
+          if (recovery === 'uncertain') mutationUncertain.current = true;
           if (!productId) {
             // The product already has a server ID. Move from /new to /edit
             // before a refresh or retry could issue a second create POST.
@@ -518,6 +520,7 @@ function DigitalProductForm() {
         } else if (!productId && !product && (unconfirmedNetworkResponse || saveResponseUncertain)) {
           // An unacknowledged create POST may have committed. Block another
           // POST until the creator checks the server's item list.
+          mutationUncertain.current = true;
           setCreationUncertain(true);
         } else if (!Object.keys(validationErrors).length) {
           setError(productSaveErrorMessage(reason, false));
