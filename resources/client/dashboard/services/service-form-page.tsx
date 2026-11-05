@@ -404,7 +404,7 @@ function ServiceFormPage() {
         <Button
           variant="ghost"
           size="sm"
-        className="max-lg:size-11 max-lg:px-0"
+          className="max-lg:size-11 max-lg:px-0"
           disabled={saving || deleting}
           aria-label={trans({message: 'Delete'})}
           onClick={() => setDeleteOpen(true)}
