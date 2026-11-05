@@ -238,18 +238,16 @@ function ServiceFormPage() {
       values: {current: SERVICE_STEP_ORDER.indexOf(step) + 1, total: SERVICE_STEP_ORDER.length},
     }));
     requestAnimationFrame(() => {
-      // Switching steps starts at the top of the editor, not at the previous
-      // panel's rich-text editor. The dashboard has its own scroll container;
-      // scrolling the document or using scrollIntoView can target the wrong
-      // ancestor, especially with the sticky mobile app shell.
+      // The viewport belongs to the dashboard section, not the document.
+      // Resetting scrollTop to zero can leave these steps below the fold when
+      // the header is tall (especially at 320-375px and zoomed layouts).
+      // Align the actual navigation within its own scroll container.
       const navigation = document.getElementById('service-builder-steps');
-      let ancestor = navigation?.parentElement;
-      while (ancestor) {
-        const overflow = window.getComputedStyle(ancestor).overflowY;
-        if (/(auto|scroll)/.test(overflow) && ancestor.scrollHeight > ancestor.clientHeight) {
-          ancestor.scrollTop = 0;
-        }
-        ancestor = ancestor.parentElement;
+      const scroller = navigation?.closest<HTMLElement>('[data-slot="section-content"]');
+      if (navigation && scroller) {
+        const offset = navigation.getBoundingClientRect().top
+          - scroller.getBoundingClientRect().top - 8;
+        scroller.scrollTop += offset;
       }
       document.getElementById(headingForStep(step))?.focus({preventScroll: true});
     });
