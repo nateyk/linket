@@ -3,9 +3,12 @@ import {getApiErrorMessage} from '@common/http/errors/parsed-api-error';
 export function productSaveErrorMessage(
   reason: unknown,
   savedAndSubmitFailed: boolean,
+  submissionUncertain = false,
 ): string {
   if (savedAndSubmitFailed) {
-    return 'Draft saved, but submission failed. Fix the issue and try again.';
+    return submissionUncertain
+      ? 'Draft saved, but we could not confirm submission. Check My Items before submitting again.'
+      : 'Draft saved, but submission failed. Fix the issue and try again.';
   }
 
   const apiMessage = getApiErrorMessage(reason);

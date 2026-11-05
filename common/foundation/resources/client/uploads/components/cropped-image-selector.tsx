@@ -175,7 +175,7 @@ export function CroppedImageSelector({
         ref={inputRef}
         type="file"
         accept={FileInputType.image}
-        className="sr-only"
+        hidden
         aria-label={label}
         onChange={handleInputChange}
         disabled={isUploading}

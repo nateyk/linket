@@ -1,0 +1,188 @@
+name: Product Creation Browser QA
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'tests/e2e/product-creation-responsive.spec.ts'
+      - 'resources/client/dashboard/digital-products/**'
+      - 'resources/client/dashboard/courses/**'
+      - '.github/workflows/product-creation-browser-qa.yml'
+  workflow_dispatch:
+
+# Tests only. Never read production secrets or invoke a deployment workflow.
+permissions:
+  contents: read
+
+concurrency:
+  group: product-creation-browser-qa-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  authenticated-ui:
+    name: Authenticated UI viewport and keyboard QA
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      APP_ENV: testing
+      APP_DEBUG: 'false'
+      APP_URL: http://127.0.0.1:8081
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: '3306'
+      DB_DATABASE: belink_test
+      DB_USERNAME: root
+      DB_PASSWORD: root
+      CACHE_STORE: array
+      SESSION_DRIVER: file
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+      SCOUT_DRIVER: 'null'
+      VERIFY_ET_ENABLED: 'true'
+      VERIFY_ET_MOCK: 'true'
+      VERIFY_ET_API_KEY: synthetic-e2e-key
+      LINKET_ISOLATED_E2E: '1'
+      LINKET_E2E_CREATOR_EMAIL: e2e-buyer-creator@example.test
+      LINKET_E2E_CREATOR_PASSWORD: 'E2eBuyerCreator!23'
+      E2E_NO_SERVER: '1'
+      E2E_BASE_URL: http://127.0.0.1:8081
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: belink_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - name: Checkout isolated QA branch
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up PHP 8.4
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_mysql, gd, zip, bcmath, exif, redis, curl, openssl, fileinfo
+          coverage: none
+          tools: composer:v2
+
+      - name: Prepare synthetic app config and fail-closed database guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$APP_ENV" == "testing" && "$DB_DATABASE" == *test* ]]
+          [[ "$APP_URL" == "http://127.0.0.1:8081" ]]
+          cp env.example .env
+          sed -i 's/^INSTALLED=.*/INSTALLED=true/' .env
+          grep -q '^INSTALLED=true' .env || echo 'INSTALLED=true' >> .env
+          printf 'APP_KEY=base64:%s\n' "$(php -r 'echo base64_encode(random_bytes(32));')" >> .env
+          # The job uses only a disposable service DB, never a production credential.
+          printf '%s\n' 'Synthetic environment ready'
+
+      - name: Install PHP dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+        env:
+          COMPOSER_AUDIT_ABANDONED: ignore
+
+      - name: Set up Node 24 and npm cache
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24.19.0'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install locked frontend dependencies
+        run: npm ci --prefer-offline --no-audit --no-fund
+
+      - name: Verify test DB is the only writable DB
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$DB_DATABASE" == "belink_test" && "$APP_ENV" == "testing" ]]
+          for i in {1..30}; do
+            if mysql --protocol=tcp -h 127.0.0.1 -P 3306 -u root -proot \
+              -N -e 'SELECT 1' belink_test >/dev/null 2>&1; then exit 0; fi
+            sleep 2
+          done
+          echo "Disposable MySQL service did not become ready" >&2
+          exit 1
+
+      - name: Migrate and seed only the synthetic test database
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$DB_DATABASE" == *test* && "$APP_ENV" == "testing" ]]
+          php artisan migrate --force --no-interaction
+          php artisan db:seed --force --no-interaction
+          php artisan db:seed --class="Common\\Database\\Seeders\\UploadBackendsSeeder" --force --no-interaction
+          # This command checks APP_ENV and DB name itself and uses mocked Verify.et.
+          php artisan linket:prepare-buyer-e2e --no-interaction
+          # The seeded course is required so Course mobile QA cannot silently skip.
+          COURSE_ID="$(php -r '$data = json_decode(file_get_contents("storage/app/e2e/buyer-fixture.json"), true, 512, JSON_THROW_ON_ERROR); $id = $data["course_product_id"] ?? null; if (!is_int($id) || $id < 1) {fwrite(STDERR, "Missing course fixture\\n"); exit(1);} echo $id;')"
+          [[ "$COURSE_ID" =~ ^[0-9]+$ ]]
+          echo "LINKET_E2E_COURSE_ID=$COURSE_ID" >> "$GITHUB_ENV"
+
+      - name: Build browser assets and install Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run build
+          npx playwright install --with-deps chromium
+
+      - name: Start local-only Laravel server
+        shell: bash
+        run: |
+          set -euo pipefail
+          php artisan config:clear
+          nohup php artisan serve --host=127.0.0.1 --port=8081 > /tmp/linket-qa-serve.log 2>&1 &
+          for i in {1..45}; do
+            if curl -fsS -o /dev/null "http://127.0.0.1:8081/login"; then
+              echo "Synthetic Linket server ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          cat /tmp/linket-qa-serve.log >&2
+          exit 1
+
+      - name: Smoke-check accessible synthetic creator login first
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$APP_ENV" == "testing" && "$DB_DATABASE" == "belink_test" ]]
+          npx playwright test tests/e2e/product-creation-responsive.spec.ts \
+            --project=chromium --workers=1 --retries=0 \
+            --grep 'smoke: isolated creator can authenticate' --timeout=30000
+
+      - name: Run isolated authenticated editor browser matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$APP_ENV" == "testing" && "$DB_DATABASE" == "belink_test" ]]
+          npx playwright test tests/e2e/product-creation-responsive.spec.ts \
+            --project=chromium --workers=1 --retries=0 \
+            --grep-invert 'smoke: isolated creator can authenticate'
+
+      - name: Attach screenshots, trace and browser report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: product-creation-browser-qa-${{ github.sha }}
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: warn
+          retention-days: 5
+
+      - name: Explain failing synthetic server if tests failed
+        if: failure()
+        run: tail -n 110 /tmp/linket-qa-serve.log 2>/dev/null || true
