@@ -9,7 +9,9 @@ import {
 import {PublicServicePage} from '@app/services/public/public-service-page';
 import type {PublicServicePageData} from '@app/services/public/service-types';
 import {ColorSchemeContext} from '@common/core/color-scheme-provider';
-import {setBootstrapData} from '@ui/bootstrap-data/bootstrap-data-store';
+// This fixture lives outside tsconfig's app include glob; use a relative
+// import for the bootstrap store instead of a tsconfig-only @ui alias.
+import {setBootstrapData} from '../../../common/foundation/resources/client/ui/library/bootstrap-data/bootstrap-data-store';
 import {createRoot} from 'react-dom/client';
 import {BrowserRouter} from 'react-router';
 
