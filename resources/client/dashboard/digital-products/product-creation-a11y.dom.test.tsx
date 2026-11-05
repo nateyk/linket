@@ -368,6 +368,16 @@ describe('R09 picker strings are translatable', () => {
     expect(progress).toContain("message: 'Product creation progress'");
   });
 
+  test('optional Preview section never increases required setup progress', () => {
+    // Reconcile the legacy #97 progress assertion with current editor semantics.
+    // An optional sample/Preview step must never block a valid product submission.
+    const form = readSource('digital-product-form-page.tsx');
+    expect(form).toContain("const progressSections: ProductSetupSection[] = ['details', 'files', 'pricing'];");
+    expect(form).toContain('const completedSections = progressSections.filter(isSectionComplete).length;');
+    expect(form).toContain('total={progressSections.length}');
+    expect(form).not.toContain("const progressSections = sectionOrder.filter(section => section !== 'previews');");
+  });
+
   test('wizard steps progress omits the Product setup heading', () => {
     const progress = readSource('product-form-progress.tsx');
     // Distill: steps variant shows only "Step X of Y" — "Product setup"
