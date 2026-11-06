@@ -896,13 +896,12 @@ function ServiceFormPage() {
                     <ServiceGalleryField
                       coverUrl={form.cover_url}
                       gallery={form.gallery}
-                      onCoverChange={(url, entryId) =>
-                        setForm(current => ({
-                          ...current,
-                          cover_url: url,
-                          cover_file_entry_id: entryId,
-                        }))
-                      }
+                      coverError={fieldErrors.cover_file_entry_id}
+                      galleryError={fieldErrors.gallery}
+                      onCoverChange={(url, entryId) => {
+                        update('cover_url', url);
+                        update('cover_file_entry_id', entryId);
+                      }}
                       onGalleryChange={gallery => update('gallery', gallery)}
                     />
 
