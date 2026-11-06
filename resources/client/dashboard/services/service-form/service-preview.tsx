@@ -143,7 +143,7 @@ export function ServicePreview({state}: {state: ServiceFormState}) {
 
         {!!namedPackages.length && (
           <ul
-            key={namedPackages.length}
+            key={`packages-${namedPackages.length}`}
             className="animate-in fade-in divide-y border-y duration-200"
           >
             {namedPackages.slice(0, 4).map((item, index) => {
@@ -193,7 +193,7 @@ export function ServicePreview({state}: {state: ServiceFormState}) {
 
         {!!filledChannels.length && (
           <div
-            key={filledChannels.length}
+            key={`channels-${filledChannels.length}`}
             className="animate-in fade-in flex flex-wrap gap-1.5 duration-200"
           >
             {filledChannels.slice(0, 4).map(channel => {
