@@ -72,7 +72,7 @@ test.describe('Service Creation — authenticated browser acceptance', () => {
       // Three fixed tiers, never an unbounded Add Package form. The matrix
       // must be operable with touch and keyboard at every mobile breakpoint.
       for (const tier of ['Basic', 'Standard', 'Premium']) {
-        await expect(page.getByRole('region', {name: tier + ' package'})).toBeVisible();
+        await expect(page.getByRole('region', {name: tier + ' package', exact: true})).toBeVisible();
       }
       await expect(page.getByRole('button', {name: 'Add package'})).toHaveCount(0);
       await expect(page.getByRole('textbox', {name: 'Package name'})).toHaveCount(0);
