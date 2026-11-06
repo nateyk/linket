@@ -199,7 +199,8 @@ describe('the service form shell', () => {
     expect(steps.className).not.toContain('border-b');
     expect(steps.querySelectorAll('ol > li button > span[aria-hidden="true"]')).toHaveLength(4);
     expect(screen.queryByText('Service setup')).toBeNull();
-    expect(steps.parentElement?.className).toContain('max-w-4xl');
+    expect(steps.parentElement?.className).toContain('max-w-6xl');
+    expect(steps.parentElement?.className).not.toContain('mx-auto');
     expect(steps.querySelectorAll('ol > li')).toHaveLength(4);
     const selected = screen.getByRole('button', {name: 'Details, step 1 of 4'});
     expect(selected.getAttribute('data-step-state')).toBe('current');
