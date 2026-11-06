@@ -76,7 +76,12 @@ function sectionForField(field: string): ServiceFormSectionId | null {
   if (field.startsWith('packages')) return 'packages';
   if (field.startsWith('faqs')) return 'faq';
   if (field.startsWith('contact_channels')) return 'contact';
-  if (field.startsWith('gallery') || field === 'cover_file_entry_id') {
+  if (
+    field.startsWith('gallery') ||
+    field === 'cover_file_entry_id' ||
+    field === 'video_url' ||
+    field === 'live_demo_url'
+  ) {
     return 'media';
   }
   if (
@@ -624,7 +629,7 @@ function ServiceFormPage() {
             completed={completedSteps}
           />
 
-          <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_22rem] xl:gap-6">
+          <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_26rem] xl:gap-6">
             <div className="min-w-0 space-y-5">
               {/* Keep the rich-text editor mounted between steps. Unmounting and
                   remounting it can restore editor focus/selection after the
