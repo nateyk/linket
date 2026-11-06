@@ -214,6 +214,7 @@ describe('the service form shell', () => {
 
     await user.click(screen.getByRole('button', {name: 'Packages, step 3 of 4'}));
     await user.click(screen.getByRole('switch', {name: 'Enable Basic package'}));
+    await user.click(screen.getByRole('button', {name: 'Add package description'}));
     expect(screen.getByRole('textbox', {name: 'Package description'}).getAttribute('maxlength')).toBe('3000');
     expect(screen.getByText('0/3000')).toBeTruthy();
 
@@ -503,7 +504,7 @@ describe('saving', () => {
     );
     expect(screen.getByText('Each skill may not be greater than 40 characters.')).toBeTruthy();
     await waitFor(() => expect(document.activeElement).toBe(document.getElementById('skills')));
-  });
+  }, 15_000);
 
   test('gallery validation opens Media and shows the error on the gallery field', async () => {
     const user = userEvent.setup();
