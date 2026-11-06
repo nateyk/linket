@@ -1,3 +1,4 @@
+import type {CopyDraftIdentity} from './product-ai-copy-review-state';
 import {articleEditorTipTapExtensions} from '@common/article-editor/article-editor-tiptap-extensions';
 import {apiClient} from '@common/http/query-client';
 import {productSaveErrorMessage} from './product-save-error';
@@ -475,7 +476,12 @@ function DigitalProductForm() {
           biolink_ids: biolinkIds,
           type: effectiveType,
           ...(product && aiCopyApproval?.productId === product.id
-            ? {ai_copy_source_fingerprint: aiCopyApproval.sourceFingerprint}
+            ? {ai_copy_source_fingerprint: aiCopyApproval.sourceFingerprint,
+                ...(aiCopyApproval.draft ? {
+                  ai_copy_draft_id: aiCopyApproval.draft.draftId,
+                  ai_copy_draft_version: aiCopyApproval.draft.draftVersion,
+                } : {}),
+              }
             : {}),
         };
         // For courses, file_ids is optional — send empty array as-is, backend allows it
@@ -1297,7 +1303,7 @@ function DetailsPanel({
   coverUrl: string;
   onTitleChange: (value: string) => void;
   onDescriptionChange: (value: string) => void;
-  onAiDescriptionApproved: (description: string, fingerprint: string) => void;
+  onAiDescriptionApproved: (description: string, fingerprint: string, draft?: CopyDraftIdentity) => void;
   onPriceChange: (value: string) => void;
   legacyCurrency?: string;
   convertToEtb: boolean;
@@ -1358,8 +1364,8 @@ function DetailsPanel({
           productId={productId}
           currentTitle={title}
           currentDescription={description}
-          onUseDescription={(candidate, sourceFingerprint) => {
-            onAiDescriptionApproved(candidate, sourceFingerprint);
+          onUseDescription={(candidate, sourceFingerprint, draft) => {
+            onAiDescriptionApproved(candidate, sourceFingerprint, draft);
             setCopyRevision(current => current + 1);
           }}
         />

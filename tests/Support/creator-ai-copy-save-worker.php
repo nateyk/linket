@@ -8,6 +8,7 @@ $app = require $input['base'].'/bootstrap/app.php';
 $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 
 config([
+    'app.key' => $input['app_key'],
     'database.default' => 'copy_race_test',
     'database.connections.copy_race_test' => $input['connection'],
     'creator_ai.enabled' => true,
@@ -35,6 +36,11 @@ try {
             'type' => 'digital',
             'file_ids' => [],
             'biolink_ids' => [],
+            ...($input['draft_id'] ? [
+                'ai_copy_draft_id' => $input['draft_id'],
+                'ai_copy_draft_version' => 1,
+                'ai_copy_source_fingerprint' => $input['fingerprint'],
+            ] : []),
         ],
         null,
         $creator,

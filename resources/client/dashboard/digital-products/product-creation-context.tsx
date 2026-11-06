@@ -1,3 +1,4 @@
+import type {CopyDraftIdentity} from './product-ai-copy-review-state';
 // resources/client/dashboard/digital-products/product-creation-context.tsx
 import {
   useRef,
@@ -55,12 +56,17 @@ export function sampleRequestPayload(samples: ProductSampleDraft[]) {
 
 export type AutoSaveState = 'idle' | 'saving' | 'saved' | 'failed' | 'conflict';
 
-type ApprovedAiCopy = {productId: number; sourceFingerprint: string};
+type ApprovedAiCopy = {
+  productId: number;
+  sourceFingerprint: string;
+  draft?: CopyDraftIdentity;
+};
 
 export interface ProductCreationActions {
   approveAiDescription: (
     description: string,
     sourceFingerprint: string,
+    draft?: CopyDraftIdentity,
   ) => void;
   markAiCopyConflict: () => void;
   setTitle: (value: string) => void;
@@ -154,10 +160,14 @@ export function ProductCreationProvider({
     [markDirty],
   );
   const approveAiDescription = useCallback(
-    (description: string, sourceFingerprint: string) => {
+    (
+      description: string,
+      sourceFingerprint: string,
+      draft?: CopyDraftIdentity,
+    ) => {
       if (productId === null || !/^[a-f0-9]{64}$/.test(sourceFingerprint))
         return;
-      setAiCopyApproval({productId, sourceFingerprint});
+      setAiCopyApproval({productId, sourceFingerprint, draft});
       setState(current => ({...current, description}));
       markDirty();
     },
@@ -276,7 +286,15 @@ export function ProductCreationProvider({
           biolink_ids: state.biolinkIds,
           type: state.productType,
           ...(aiCopyApproval?.productId === productId
-            ? {ai_copy_source_fingerprint: aiCopyApproval.sourceFingerprint}
+            ? {
+                ai_copy_source_fingerprint: aiCopyApproval.sourceFingerprint,
+                ...(aiCopyApproval.draft
+                  ? {
+                      ai_copy_draft_id: aiCopyApproval.draft.draftId,
+                      ai_copy_draft_version: aiCopyApproval.draft.draftVersion,
+                    }
+                  : {}),
+              }
             : {}),
         });
         if (mounted.current && latest.current.productId === productId) {

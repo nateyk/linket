@@ -311,6 +311,7 @@ test('explicitly approved AI copy carries its source revision into draft autosav
     ctxActions!.approveAiDescription(
       'Creator approved wording.',
       'b'.repeat(64),
+      {draftId: '8ab61a95-2f37-4ae0-86ed-17e2d76d6933', draftVersion: 2},
     ),
   );
   expect(latestFormState!.description).toBe('Creator approved wording.');
@@ -321,6 +322,8 @@ test('explicitly approved AI copy carries its source revision into draft autosav
     expect.objectContaining({
       description: 'Creator approved wording.',
       ai_copy_source_fingerprint: 'b'.repeat(64),
+      ai_copy_draft_id: '8ab61a95-2f37-4ae0-86ed-17e2d76d6933',
+      ai_copy_draft_version: 2,
     }),
   );
   expect(latestAutoSaveState).toBe('saved');

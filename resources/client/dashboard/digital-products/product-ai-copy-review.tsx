@@ -9,13 +9,18 @@ import {useEffect, useId, useRef, useState} from 'react';
 import {
   canUseProductCopyDraft,
   type ProductCopyDraft,
+  type CopyDraftIdentity,
 } from './product-ai-copy-review-state';
 
 interface Props {
   productId: number;
   currentTitle: string;
   currentDescription: string;
-  onUseDescription: (description: string, sourceFingerprint: string) => void;
+  onUseDescription: (
+    description: string,
+    sourceFingerprint: string,
+    draft?: CopyDraftIdentity,
+  ) => void;
 }
 
 function copyError(
@@ -31,8 +36,10 @@ function copyError(
     return message('AI writing is unavailable for your account or product.');
   if (status === 409)
     return message(
-      'This product changed. Refresh it and request a new suggestion.',
+      'This product or draft changed. Your text is preserved. Save the private draft, copy any text you want to keep, then refresh and generate a new suggestion.',
     );
+  if (status === 422)
+    return message('Could not save this suggestion. Use plain text without links or unverified claims. Your edits are preserved.');
   if (status === 503)
     return message(
       'AI writing is temporarily unavailable. Usage may be held for billing reconciliation.',
@@ -95,8 +102,36 @@ export function ProductAiCopyReview({
     setNotice(undefined);
     void apiClient
       .get(base + '/copy-availability')
-      .then(response => {
-        if (active) setAvailable(response.data?.data?.available === true);
+      .then(async response => {
+        if (!active) return;
+        const enabled = response.data?.data?.available === true;
+        setAvailable(enabled);
+        if (enabled) {
+          await apiClient
+            .get(base + '/copy-drafts')
+            .then(saved => {
+              const result = saved.data?.data as ProductCopyDraft;
+              if (active && result?.draft_id) {
+                setDraft({
+                  ...result,
+                  local_title: latestSource.current.title,
+                  local_description: latestSource.current.description,
+                });
+                setText(result.description);
+                setNotice(
+                  message('Private draft reopened. Review it before applying.'),
+                );
+              }
+            })
+            .catch(() => {
+              if (active)
+                setError(
+                  message(
+                    'Could not reopen your private draft. Refresh to try again.',
+                  ),
+                );
+            });
+        }
       })
       .catch(() => {
         if (active) setAvailable(false);
@@ -111,13 +146,62 @@ export function ProductAiCopyReview({
     };
   }, [base, requests]);
 
+  const draftFocusKey = draft?.draft_id ?? draft?.source_fingerprint;
   useEffect(() => {
-    if (draft) document.getElementById(suggestionId)?.focus();
-  }, [draft, suggestionId]);
+    if (draftFocusKey && !checking) document.getElementById(suggestionId)?.focus();
+  }, [draftFocusKey, suggestionId, checking]);
 
   useEffect(() => {
-    if (notice && !busy) triggerRef.current?.focus();
-  }, [notice, busy]);
+    if (notice && !busy && !draft) triggerRef.current?.focus();
+  }, [notice, busy, draft]);
+
+  const saveReviewRef = useRef(saveReview);
+  saveReviewRef.current = saveReview;
+  useEffect(() => {
+    if (!draft?.draft_id || text === draft.description || busy || error) return;
+    const timer = window.setTimeout(() => void saveReviewRef.current(), 800);
+    return () => window.clearTimeout(timer);
+  }, [text, draft, busy, error]);
+
+  useEffect(() => {
+    if (!draft?.draft_id || (text === draft.description && !busy)) return;
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [text, draft, busy]);
+
+  async function saveReview() {
+    if (!draft?.draft_id || requests.inFlight) return;
+    requests.inFlight = true;
+    const version = ++requests.version;
+    setBusy(true);
+    setError(undefined);
+    try {
+      const response = await apiClient.patch(
+        base + '/copy-drafts/' + draft.draft_id,
+        {
+          version: draft.draft_version,
+          description: text,
+        },
+      );
+      if (!isCurrentRequest(version)) return;
+      setDraft({...draft, ...response.data.data});
+      if (latestText.current === text) setText(response.data.data.description);
+      setNotice(
+        message('Private review saved. Product content has not changed.'),
+      );
+    } catch (reason) {
+      if (isCurrentRequest(version)) setError(copyError(reason, 'apply'));
+    } finally {
+      if (isCurrentRequest(version)) {
+        requests.inFlight = false;
+        setBusy(false);
+      }
+    }
+  }
 
   if (checking || !available) return null;
 
@@ -187,6 +271,27 @@ export function ProductAiCopyReview({
     setError(undefined);
     setNotice(undefined);
     try {
+      let reviewed = draft;
+      if (draft.draft_id) {
+        const response = await apiClient.patch(
+          base + '/copy-drafts/' + draft.draft_id,
+          {
+            version: draft.draft_version,
+            description: approvedText,
+          },
+        );
+        reviewed = {...draft, ...response.data.data};
+        if (!isCurrentRequest(version)) return;
+        setDraft(reviewed);
+        if (reviewed.state !== 'reviewed') {
+          setError(
+            message(
+              'This private draft is expired or based on an older product. Your text is saved. Copy any text you want to keep, then refresh and generate a new suggestion.',
+            ),
+          );
+          return;
+        }
+      }
       await apiClient.post(base + '/copy-revision', {
         source_fingerprint: draft.source_fingerprint,
       });
@@ -208,12 +313,21 @@ export function ProductAiCopyReview({
         );
         return;
       }
-      onUseDescription(text.trim(), draft.source_fingerprint);
+      onUseDescription(
+        (reviewed.draft_id ? reviewed.description : text).trim(),
+        draft.source_fingerprint,
+        reviewed.draft_id
+          ? {
+              draftId: reviewed.draft_id,
+              draftVersion: reviewed.draft_version!,
+            }
+          : undefined,
+      );
       setDraft(undefined);
       setText('');
       setNotice(
         message(
-          'Description added to the editor. Normal saving and review still apply.',
+          'Approved description added to the editor. Await the product Saved confirmation; failed saves leave your private draft available.',
         ),
       );
       triggerRef.current?.focus();
@@ -227,7 +341,28 @@ export function ProductAiCopyReview({
     }
   }
 
-  function discard() {
+  async function discard() {
+    if (draft?.draft_id) {
+      if (requests.inFlight) return;
+      requests.inFlight = true;
+      const version = ++requests.version;
+      setBusy(true);
+      try {
+        await apiClient.post(
+          base + '/copy-drafts/' + draft.draft_id + '/discard',
+          {version: draft.draft_version},
+        );
+        if (!isCurrentRequest(version)) return;
+      } catch (reason) {
+        if (isCurrentRequest(version)) setError(copyError(reason, 'apply'));
+        return;
+      } finally {
+        if (isCurrentRequest(version)) {
+          requests.inFlight = false;
+          setBusy(false);
+        }
+      }
+    }
     ++requests.version;
     requests.inFlight = false;
     setBusy(false);
@@ -244,7 +379,7 @@ export function ProductAiCopyReview({
 
   return (
     <section
-      className="flex flex-col gap-3 rounded-card-sm border border-border bg-muted/20 p-3 sm:p-4"
+      className="flex min-w-0 flex-col gap-3 rounded-card-sm border border-border bg-muted/20 p-3 sm:p-4"
       aria-labelledby={titleId}
       aria-busy={busy}
     >
@@ -258,10 +393,11 @@ export function ProductAiCopyReview({
           </p>
         </div>
         <Button
+          className="h-auto min-h-9 max-w-full whitespace-normal"
           ref={triggerRef}
           size="sm"
           variant="outline"
-          disabled={busy}
+          disabled={busy || !!draft}
           onClick={() => void generate()}
         >
           <SparklesIcon className="size-4" aria-hidden="true" />
@@ -283,7 +419,7 @@ export function ProductAiCopyReview({
           <Trans {...error} />
         </p>
       )}
-      {notice && (
+      {notice && !busy && (
         <p
           role="status"
           aria-live="polite"
@@ -308,11 +444,19 @@ export function ProductAiCopyReview({
             <Textarea
               id={suggestionId}
               bindToHookForm={false}
-              className="min-h-32 resize-y bg-background text-sm"
+              className="min-h-32 min-w-0 resize-y bg-background text-sm"
               value={text}
               maxLength={5000}
               aria-describedby={hintId}
-              onChange={event => setText(event.target.value)}
+              onBlur={event => {
+                if (!event.currentTarget.closest('section')?.contains(event.relatedTarget) && text !== draft.description) {
+                  void saveReview();
+                }
+              }}
+              onChange={event => {
+                setText(event.target.value);
+                setError(undefined);
+              }}
               onKeyDown={event => {
                 if (event.key === 'Escape') {
                   event.preventDefault();
@@ -330,9 +474,25 @@ export function ProductAiCopyReview({
               disabled={busy || !text.trim()}
               onClick={() => void applyDescription()}
             >
-              <Trans message="Use description" />
+              <Trans message="Apply" />
             </Button>
-            <Button size="sm" variant="outline" onClick={discard}>
+            {draft.draft_id && (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={busy || !text.trim()}
+                className="h-auto min-h-9 max-w-full whitespace-normal"
+                onClick={() => void saveReview()}
+              >
+                <Trans message="Save private draft" />
+              </Button>
+            )}
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={busy}
+              onClick={() => void discard()}
+            >
               <XIcon className="size-4" aria-hidden="true" />
               <Trans message="Discard" />
             </Button>

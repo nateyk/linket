@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 import {ProductAiCopyReview} from './product-ai-copy-review';
 
-const api = vi.hoisted(() => ({get: vi.fn(), post: vi.fn()}));
+const api = vi.hoisted(() => ({get: vi.fn(), post: vi.fn(), patch: vi.fn()}));
 vi.mock('@common/http/query-client', () => ({apiClient: api}));
 
 const productId = 212;
@@ -67,7 +67,7 @@ describe('AI product-copy review interaction', () => {
       );
       if (phase === 'verification') {
         await user.click(
-          await screen.findByRole('button', {name: /Use description/i}),
+          await screen.findByRole('button', {name: /^Apply$/i}),
         );
       }
       result.rerender(
@@ -101,7 +101,7 @@ describe('AI product-copy review interaction', () => {
       );
       if (phase === 'verification') {
         await user.click(
-          await screen.findByRole('button', {name: /Use description/i}),
+          await screen.findByRole('button', {name: /^Apply$/i}),
         );
       }
       result.rerender(
@@ -159,7 +159,7 @@ describe('AI product-copy review interaction', () => {
       await screen.findByRole('button', {name: /Suggest copy/i}),
     );
     await user.click(
-      await screen.findByRole('button', {name: /Use description/i}),
+      await screen.findByRole('button', {name: /^Apply$/i}),
     );
     result.rerender(
       <ProductAiCopyReview
@@ -186,7 +186,7 @@ describe('AI product-copy review interaction', () => {
       await screen.findByRole('button', {name: /Suggest copy/i}),
     );
     const textbox = await screen.findByRole('textbox');
-    await user.click(screen.getByRole('button', {name: /Use description/i}));
+    await user.click(screen.getByRole('button', {name: /^Apply$/i}));
     await user.click(textbox);
     await user.keyboard('{Escape}');
     await act(async () => pending.resolve({data: {data: {unchanged: true}}}));
@@ -208,7 +208,7 @@ describe('AI product-copy review interaction', () => {
       await screen.findByRole('button', {name: /Suggest copy/i}),
     );
     const textbox = await screen.findByRole('textbox');
-    await user.click(screen.getByRole('button', {name: /Use description/i}));
+    await user.click(screen.getByRole('button', {name: /^Apply$/i}));
     await user.type(textbox, ' New text not approved yet.');
     await act(async () => pending.resolve({data: {data: {unchanged: true}}}));
     expect(onUse).not.toHaveBeenCalled();
@@ -255,11 +255,12 @@ describe('AI product-copy review interaction', () => {
       await screen.findByRole('button', {name: /Suggest copy/i}),
     );
     await user.dblClick(
-      await screen.findByRole('button', {name: /Use description/i}),
+      await screen.findByRole('button', {name: /^Apply$/i}),
     );
     expect(onUse).toHaveBeenCalledExactlyOnceWith(
       suggested.description,
       suggested.source_fingerprint,
+      undefined,
     );
     expect((await screen.findByRole('status')).textContent).toMatch(
       /added to the editor/i,
@@ -309,11 +310,12 @@ describe('AI product-copy review interaction', () => {
     });
     await user.clear(input);
     await user.type(input, 'Updated local wording');
-    await user.click(screen.getByRole('button', {name: /Use description/i}));
+    await user.click(screen.getByRole('button', {name: /^Apply$/i}));
     await waitFor(() =>
       expect(onUse).toHaveBeenCalledWith(
         'Updated local wording',
         suggested.source_fingerprint,
+      undefined,
       ),
     );
     expect(api.post).toHaveBeenNthCalledWith(1, path + '/copy-proposals', {
@@ -322,6 +324,7 @@ describe('AI product-copy review interaction', () => {
     });
     expect(api.post).toHaveBeenNthCalledWith(2, path + '/copy-revision', {
       source_fingerprint: suggested.source_fingerprint,
+      undefined,
     });
     expect(
       screen.queryByRole('textbox', {name: /Suggested description/i}),
@@ -362,7 +365,7 @@ describe('AI product-copy review interaction', () => {
         onUseDescription={onUse}
       />,
     );
-    await user.click(screen.getByRole('button', {name: /Use description/i}));
+    await user.click(screen.getByRole('button', {name: /^Apply$/i}));
     expect((await screen.findByRole('alert')).textContent).toMatch(/changed/i);
     expect(api.post).toHaveBeenCalledTimes(1);
     expect(onUse).not.toHaveBeenCalled();
@@ -378,7 +381,7 @@ describe('AI product-copy review interaction', () => {
       await screen.findByRole('button', {name: /Suggest copy/i}),
     );
     await screen.findByRole('textbox', {name: /Suggested description/i});
-    await user.click(screen.getByRole('button', {name: /Use description/i}));
+    await user.click(screen.getByRole('button', {name: /^Apply$/i}));
     expect((await screen.findByRole('alert')).textContent).toMatch(/changed/i);
     expect(
       screen.getByRole('textbox', {name: /Suggested description/i}),
@@ -394,4 +397,69 @@ describe('AI product-copy review interaction', () => {
     );
     expect(screen.queryByRole('button', {name: /Suggest copy/i})).toBeNull();
   });
+});
+
+function persistedDraft() {
+  return {...suggested, draft_id: '8ab61a95-2f37-4ae0-86ed-17e2d76d6933', draft_version: 0, state: 'proposed'};
+}
+
+it('reopens private review edits after remount without generating again', async () => {
+  const saved = {...persistedDraft(), description: 'Previously saved creator text.'};
+  api.get.mockImplementation((url: string) => Promise.resolve({data: {data: url.endsWith('/copy-drafts') ? saved : {available: true}}}));
+  const first = mount();
+  expect((await screen.findByRole('textbox') as HTMLTextAreaElement).value).toBe(saved.description);
+  first.unmount();
+  mount();
+  expect((await screen.findByRole('textbox') as HTMLTextAreaElement).value).toBe(saved.description);
+  expect(api.post).not.toHaveBeenCalled();
+});
+
+it('saves edited private text and passes its version to normal product saving only after Apply', async () => {
+  const user = userEvent.setup();
+  const saved = persistedDraft();
+  api.get.mockImplementation((url: string) => Promise.resolve({data: {data: url.endsWith('/copy-drafts') ? saved : {available: true}}}));
+  api.patch.mockImplementation((_url: string, body: {description: string; version: number}) => Promise.resolve({data: {data: {...saved, description: body.description, draft_version: body.version + 1, state: 'reviewed'}}}));
+  api.post.mockResolvedValue({data: {data: {unchanged: true}}});
+  const {onUse} = mount();
+  const textarea = await screen.findByRole('textbox');
+  await user.clear(textarea);
+  await user.type(textarea, 'My edited suggestion.');
+  await user.click(screen.getByRole('button', {name: 'Save private draft'}));
+  await waitFor(() => expect(screen.getByRole('status').textContent).toMatch(/Private review saved/));
+  expect(onUse).not.toHaveBeenCalled();
+  await user.click(screen.getByRole('button', {name: 'Apply'}));
+  await waitFor(() => expect(onUse).toHaveBeenCalledExactlyOnceWith('My edited suggestion.', suggested.source_fingerprint, {draftId: saved.draft_id, draftVersion: 2}));
+  expect(screen.getByRole('status').textContent).toMatch(/Await the product Saved confirmation/);
+});
+
+it.each(['review', 'discard'] as const)('keeps creator text and announces a failed %s request', async action => {
+  const user = userEvent.setup();
+  const saved = persistedDraft();
+  api.get.mockImplementation((url: string) => Promise.resolve({data: {data: url.endsWith('/copy-drafts') ? saved : {available: true}}}));
+  api.patch.mockRejectedValue({response: {status: 409}});
+  api.post.mockRejectedValue({response: {status: 503}});
+  const {onUse} = mount();
+  const textarea = await screen.findByRole('textbox');
+  await user.clear(textarea);
+  await user.type(textarea, 'Keep my local text.');
+  await user.click(screen.getByRole('button', {name: action === 'review' ? 'Save private draft' : 'Discard'}));
+  await screen.findByRole('alert');
+  expect((screen.getByRole('textbox') as HTMLTextAreaElement).value).toBe('Keep my local text.');
+  expect(onUse).not.toHaveBeenCalled();
+});
+
+it('supports keyboard discard, announces persistence and restores trigger focus', async () => {
+  const user = userEvent.setup();
+  const saved = persistedDraft();
+  api.get.mockImplementation((url: string) => Promise.resolve({data: {data: url.endsWith('/copy-drafts') ? saved : {available: true}}}));
+  api.post.mockResolvedValue({data: {data: {...saved, state: 'discarded'}}});
+  const {onUse} = mount();
+  const textarea = await screen.findByRole('textbox');
+  expect(document.activeElement).toBe(textarea);
+  await user.keyboard('{Escape}');
+  await waitFor(() => expect(screen.queryByRole('textbox')).toBeNull());
+  expect(screen.getByRole('status').textContent).toMatch(/discarded/);
+  expect(document.activeElement).toBe(screen.getByRole('button', {name: 'Suggest copy'}));
+  expect(api.post).toHaveBeenCalledWith(path + '/copy-drafts/' + saved.draft_id + '/discard', {version: 0});
+  expect(onUse).not.toHaveBeenCalled();
 });

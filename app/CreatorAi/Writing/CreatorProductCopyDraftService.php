@@ -8,6 +8,8 @@ use App\CreatorAi\Services\CreatorAiUsageService;
 use App\Models\User;
 use App\Storefront\Models\DigitalProduct;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Crypt;
 use Laravel\Ai\Ai;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
@@ -43,7 +45,7 @@ final class CreatorProductCopyDraftService
     }
 
     /**
-     * @return array{title:string,description:string,source_fingerprint:string,request_id:string,requires_review:bool,cost_state:string}
+     * @return array<string, mixed>
      */
     public function propose(User $creator, DigitalProduct $product, string $tone = 'clear', string $language = 'en'): array
     {
@@ -124,18 +126,170 @@ final class CreatorProductCopyDraftService
             throw new HttpException(503, 'AI writing is temporarily unavailable; usage is held for reconciliation.');
         }
 
-        /** Provider latency may outlive ownership, access or content changes. */
-        $latest = $this->currentProduct($creator, $product, $ability);
-        abort_unless(hash_equals($sourceFingerprint, $this->fingerprint($latest)), 409,
-            'The product changed. Generate a fresh suggestion.');
+        return DB::transaction(function () use ($creator, $product, $ability, $sourceFingerprint, $requestId, $draft): array {
+            $latest = DigitalProduct::query()->whereKey($product->getKey())->lockForUpdate()->firstOrFail();
+            $this->currentProduct($creator, $latest, $ability);
+            abort_unless(hash_equals($sourceFingerprint, $this->fingerprint($latest)), 409,
+                'The product changed. Generate a fresh suggestion.');
+            DB::table('creator_ai_copy_drafts')->insert([
+                'id' => $requestId,
+                'creator_id' => $creator->getKey(),
+                'workspace_id' => $latest->workspace_id,
+                'digital_product_id' => $latest->id,
+                'source_fingerprint' => $sourceFingerprint,
+                'state' => 'proposed',
+                'version' => 0,
+                'encrypted_content' => Crypt::encryptString(json_encode([...$draft, 'generated_description' => $draft['description']], JSON_THROW_ON_ERROR)),
+                'expires_at' => now()->addDays(7),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
 
-        return [
-            ...$draft,
-            'source_fingerprint' => $sourceFingerprint,
-            'request_id' => $requestId,
-            'requires_review' => true,
-            'cost_state' => 'reserved_pending_reconciliation',
-        ];
+            return [...$draft, 'draft_id' => $requestId, 'draft_version' => 0, 'state' => 'proposed',
+                'source_fingerprint' => $sourceFingerprint, 'request_id' => $requestId,
+                'requires_review' => true, 'cost_state' => 'reserved_pending_reconciliation'];
+        });
+    }
+
+    /** @return array<string, mixed> */
+    public function read(User $creator, DigitalProduct $product, ?string $id = null): array
+    {
+        return DB::transaction(function () use ($creator, $product, $id): array {
+            $locked = $this->lockOwnedProduct($creator, $product);
+            $query = $this->draftQuery($creator, $locked);
+            if ($id === null) {
+                $row = $query->whereIn('state', ['proposed', 'reviewed', 'expired', 'invalidated'])
+                    ->latest('created_at')->orderByDesc('id')->lockForUpdate()->first();
+            } else {
+                $row = $query->where('id', $id)->lockForUpdate()->first();
+                abort_unless($row, 404);
+            }
+            if (! $row) {
+                return [];
+            }
+            $this->refreshState($row, $locked);
+
+            return $this->serialize($row);
+        });
+    }
+
+    /** @return array<string, mixed> */
+    public function review(User $creator, DigitalProduct $product, string $id, int $version, string $description, bool $discard = false): array
+    {
+        return DB::transaction(function () use ($creator, $product, $id, $version, $description, $discard): array {
+            $locked = $this->lockOwnedProduct($creator, $product);
+            $row = $this->draftQuery($creator, $locked)->where('id', $id)->lockForUpdate()->first();
+            abort_unless($row, 404);
+            $content = $this->serialize($row);
+            if ($discard && $row->state === 'discarded') {
+                return $content;
+            }
+            if (! $discard && $row->state === 'reviewed' && (int) $row->version === $version + 1
+                && $content['description'] === trim($description)) {
+                return $content;
+            }
+            abort_unless((int) $row->version === $version && ! in_array($row->state, ['applied', 'discarded'], true), 409,
+                'This draft changed in another tab. Your text is preserved; reopen the saved draft.');
+            if ($discard) {
+                $row->state = 'discarded';
+            } else {
+                $safe = $this->validator->clean(['title' => $content['title'], 'description' => $description]);
+                $row->encrypted_content = Crypt::encryptString(json_encode([...$safe, 'generated_description' => $content['generated_description'] ?? $content['description']], JSON_THROW_ON_ERROR));
+                $row->state = 'reviewed';
+                $this->refreshState($row, $locked);
+            }
+            $row->version++;
+            DB::table('creator_ai_copy_drafts')->where('id', $id)->update([
+                'state' => $row->state, 'version' => $row->version,
+                'encrypted_content' => $row->encrypted_content, 'updated_at' => now(),
+            ]);
+
+            return $this->serialize($row);
+        });
+    }
+
+    /** The caller owns the product lock and transaction. Returns true for an identical committed retry.
+     * @param array<string, mixed> $data
+     */
+    public function prepareApply(User $creator, DigitalProduct $product, array $data): bool
+    {
+        $this->authorizeOwner($creator, $product);
+        $row = $this->draftQuery($creator, $product)->where('id', $data['ai_copy_draft_id'])->lockForUpdate()->first();
+        abort_unless($row, 404);
+        abort_unless((int) $row->version === (int) $data['ai_copy_draft_version']
+            && hash_equals($row->source_fingerprint, $data['ai_copy_source_fingerprint']), 409);
+        if ($row->state === 'applied') {
+            abort_unless(hash_equals($row->applied_payload_hash, $this->payloadHash($data))
+                && (int) $product->content_revision === (int) $row->applied_product_revision, 409,
+                'This product changed after the draft was applied. Refresh before saving again.');
+
+            return true;
+        }
+        abort_unless($row->state === 'reviewed' && now()->lt($row->expires_at), 409,
+            'This draft is no longer available to apply. Your private text is preserved.');
+        abort_unless($this->serialize($row)['description'] === ($data['description'] ?? null), 409,
+            'Review and save the edited suggestion before applying it.');
+        $this->verifyLockedRevision($creator, $product, $row->source_fingerprint);
+
+        return false;
+    }
+
+    /** @param array<string, mixed> $data */
+    public function finishApply(DigitalProduct $product, array $data): void
+    {
+        DB::table('creator_ai_copy_drafts')->where('id', $data['ai_copy_draft_id'])->update([
+            'state' => 'applied', 'applied_product_revision' => $product->content_revision,
+            'applied_payload_hash' => $this->payloadHash($data), 'updated_at' => now(),
+        ]);
+    }
+
+    /** @param array<string, mixed> $data */
+    private function payloadHash(array $data): string
+    {
+        ksort($data);
+
+        return hash('sha256', json_encode($data, JSON_THROW_ON_ERROR));
+    }
+
+    private function authorizeOwner(User $creator, DigitalProduct $product): void
+    {
+        abort_unless((int) $product->user_id === (int) $creator->getKey(), 404);
+        $this->access->authorize($creator, (int) $product->workspace_id, 'writing_basic');
+    }
+
+    private function lockOwnedProduct(User $creator, DigitalProduct $product): DigitalProduct
+    {
+        $locked = DigitalProduct::query()->whereKey($product->getKey())->lockForUpdate()->firstOrFail();
+        $this->authorizeOwner($creator, $locked);
+
+        return $locked;
+    }
+
+    private function draftQuery(User $creator, DigitalProduct $product): \Illuminate\Database\Query\Builder
+    {
+        return DB::table('creator_ai_copy_drafts')->where('creator_id', $creator->getKey())
+            ->where('workspace_id', $product->workspace_id)->where('digital_product_id', $product->id);
+    }
+
+    private function refreshState(object $row, DigitalProduct $product): void
+    {
+        if (! in_array($row->state, ['proposed', 'reviewed'], true)) {
+            return;
+        }
+        if (now()->gte($row->expires_at)) {
+            $row->state = 'expired';
+        } elseif (! hash_equals($row->source_fingerprint, $this->fingerprint($product))) {
+            $row->state = 'invalidated';
+        }
+        DB::table('creator_ai_copy_drafts')->where('id', $row->id)->update(['state' => $row->state]);
+    }
+
+    /** @return array<string, mixed> */
+    private function serialize(object $row): array
+    {
+        return [...json_decode(Crypt::decryptString($row->encrypted_content), true, 512, JSON_THROW_ON_ERROR),
+            'draft_id' => $row->id, 'draft_version' => (int) $row->version, 'state' => $row->state,
+            'source_fingerprint' => $row->source_fingerprint];
     }
 
     public function verifyRevision(User $creator, DigitalProduct $product, string $fingerprint): void

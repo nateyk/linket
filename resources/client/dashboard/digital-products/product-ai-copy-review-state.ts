@@ -1,4 +1,18 @@
+export interface CopyDraftIdentity {
+  draftId: string;
+  draftVersion: number;
+}
+
 export interface ProductCopyDraft {
+  draft_id?: string;
+  draft_version?: number;
+  state?:
+    | 'proposed'
+    | 'reviewed'
+    | 'applied'
+    | 'discarded'
+    | 'expired'
+    | 'invalidated';
   title: string;
   description: string;
   source_fingerprint: string;

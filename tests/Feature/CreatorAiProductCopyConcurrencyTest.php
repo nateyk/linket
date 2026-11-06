@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\DB;
  * No DatabaseTransactions: child processes need committed rows and separate
  * MySQL connections. Fixtures are deleted by this test on every exit path.
  */
-test('independent MySQL writers cannot both consume the same approved AI copy revision', function (): void {
+test('independent MySQL writers cannot both consume the same approved AI copy revision', function (bool $durable): void {
     $database = config('database.connections.'.config('database.default'));
     expect((string) ($database['database'] ?? ''))->toContain('test');
     expect(DB::transactionLevel())->toBe(0);
@@ -32,6 +32,18 @@ test('independent MySQL writers cannot both consume the same approved AI copy re
     ]);
     $fingerprint = (new ReflectionMethod(CreatorProductCopyDraftService::class, 'fingerprint'))
         ->invoke(app(CreatorProductCopyDraftService::class), $product->fresh());
+    $draftId = (string) Illuminate\Support\Str::uuid();
+    if ($durable) {
+        DB::table('creator_ai_copy_drafts')->insert([
+            'id' => $draftId, 'creator_id' => $creator->id, 'workspace_id' => $workspace->id,
+            'digital_product_id' => $product->id, 'source_fingerprint' => $fingerprint,
+            'state' => 'reviewed', 'version' => 1,
+            'encrypted_content' => Illuminate\Support\Facades\Crypt::encryptString(json_encode([
+                'title' => 'Parallel title', 'description' => 'Parallel reviewed copy.',
+            ], JSON_THROW_ON_ERROR)),
+            'expires_at' => now()->addDay(), 'created_at' => now(), 'updated_at' => now(),
+        ]);
+    }
     $processes = [];
     try {
         DB::beginTransaction();
@@ -52,6 +64,8 @@ test('independent MySQL writers cannot both consume the same approved AI copy re
                     'creator' => $creator->id,
                     'product' => $product->id,
                     'fingerprint' => $fingerprint,
+                    'draft_id' => $durable ? $draftId : null,
+                    'app_key' => config('app.key'),
                 ], JSON_THROW_ON_ERROR)."\n");
                 fflush($pipes[0]);
                 $processes[] = [$process, $pipes];
@@ -86,7 +100,10 @@ test('independent MySQL writers cannot both consume the same approved AI copy re
         }
         $processes = [];
         sort($codes);
-        expect($codes)->toBe([0, 10]);
+        expect($codes)->toBe($durable ? [0, 0] : [0, 10]);
+        if ($durable) {
+            expect(DB::table('creator_ai_copy_drafts')->where('id', $draftId)->value('state'))->toBe('applied');
+        }
         expect($product->fresh()->description)->toBe('Parallel reviewed copy.')
             ->and($product->fresh()->content_revision)->toBe(1);
         expect($product->reviewEvents()->count())->toBe(1);
@@ -111,4 +128,4 @@ test('independent MySQL writers cannot both consume the same approved AI copy re
         $workspace->delete();
         $creator->delete();
     }
-});
+})->with(['legacy revision' => false, 'durable idempotent draft' => true]);

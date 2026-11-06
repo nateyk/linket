@@ -72,6 +72,13 @@ final class DigitalProductMutationService
             // verification cannot protect against changes made after it.
             $product = DigitalProduct::query()->whereKey($product->getKey())->lockForUpdate()->firstOrFail();
             $coverBefore = $product->cover_file_entry_id;
+            $copyDrafts = app(\App\CreatorAi\Writing\CreatorProductCopyDraftService::class);
+            if (isset($data['ai_copy_draft_id'])) {
+                abort_unless($actor !== null && $aiCopySourceFingerprint !== null, 403);
+                if ($copyDrafts->prepareApply($actor, $product, $data)) {
+                    return $product->load(['files', 'cover', 'biolinks', 'course', 'samples.file']);
+                }
+            }
             if ($aiCopySourceFingerprint !== null) {
                 abort_unless($actor !== null && array_key_exists('description', $data), 403);
                 app(\App\CreatorAi\Writing\CreatorProductCopyDraftService::class)
@@ -85,7 +92,7 @@ final class DigitalProductMutationService
                 ? app(\App\Storefront\ApprovedContentSnapshot::class)->capture($product)
                 : null;
             $product->update([
-                ...Arr::except($data, ['file_ids', 'biolink_ids', 'type', 'sample_file_ids', 'sample_titles', 'sample_durations', 'ai_copy_source_fingerprint']),
+                ...Arr::except($data, ['file_ids', 'biolink_ids', 'type', 'sample_file_ids', 'sample_titles', 'sample_durations', 'ai_copy_source_fingerprint', 'ai_copy_draft_id', 'ai_copy_draft_version']),
                 'type' => $type,
                 'currency' => $data['currency'] ?? $product->currency,
             ]);
@@ -139,6 +146,9 @@ final class DigitalProductMutationService
             // AI precondition is single-use and timestamps may lack subsecond
             // precision. The entire update and version change are atomic.
             $product->increment('content_revision');
+            if (isset($data['ai_copy_draft_id'])) {
+                $copyDrafts->finishApply($product, $data);
+            }
 
             return $product->fresh()->load(['files', 'cover', 'biolinks', 'course', 'samples.file']);
         });
