@@ -133,6 +133,7 @@ function ServiceFormPage() {
   const [activeStep, setActiveStep] = useState<ServiceBuilderStepId>('details');
   const contentScrollerRef = useRef<HTMLDivElement>(null);
   const pendingStepScrollRef = useRef<ServiceBuilderStepId | null>(null);
+  const pendingErrorFocusRef = useRef<string | null>(null);
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -250,23 +251,40 @@ function ServiceFormPage() {
   }, [activeStep, trans]);
 
   useLayoutEffect(() => {
+    const resetStageScroll = () => {
+      if (contentScrollerRef.current) contentScrollerRef.current.scrollTop = 0;
+      if (document.scrollingElement) document.scrollingElement.scrollTop = 0;
+    };
+
+    const pendingErrorField = pendingErrorFocusRef.current;
+    if (pendingErrorField) {
+      const section = sectionForField(pendingErrorField);
+      const targetStep = section ? stepForSection(section) : null;
+
+      // Wait until React has committed the stage that owns the invalid field.
+      if (!targetStep || targetStep === activeStep) {
+        pendingErrorFocusRef.current = null;
+        resetStageScroll();
+        document.getElementById(pendingErrorField)?.focus();
+      }
+      return;
+    }
+
     if (pendingStepScrollRef.current !== activeStep) return;
     pendingStepScrollRef.current = null;
 
     // SectionContent is the canonical scroll owner for this dashboard screen.
     // A stage change can shorten the panel and leave its former scroll offset;
     // resetting the actual element after React commits avoids scroll anchoring.
-    if (contentScrollerRef.current) contentScrollerRef.current.scrollTop = 0;
-    if (document.scrollingElement) document.scrollingElement.scrollTop = 0;
+    resetStageScroll();
 
-    // The step control is the correct focus destination: focusing the newly
-    // mounted rich editor heading can scroll the viewport back down, hiding
-    // the navigator. Keep keyboard focus with the selected navigation button.
+    // Normal navigation keeps keyboard focus with the selected step. Validation
+    // recovery uses the branch above instead, so the invalid field owns focus.
     const navigation = document.getElementById('service-builder-steps');
     navigation?.scrollIntoView?.({block: 'start', behavior: 'auto'});
     navigation?.querySelector<HTMLButtonElement>('button[aria-current="step"]')
       ?.focus({preventScroll: true});
-  }, [activeStep]);
+  }, [activeStep, fieldErrors]);
 
   const sectionError = (id: ServiceFormSectionId) =>
     Object.keys(fieldErrors).some(
@@ -276,11 +294,28 @@ function ServiceFormPage() {
   const focusFirstError = (errors: Record<string, string>) => {
     const firstField = Object.keys(errors)[0];
     if (!firstField) return;
+
+    pendingErrorFocusRef.current = firstField;
     const section = sectionForField(firstField);
-    if (section) setActiveStep(stepForSection(section));
-    requestAnimationFrame(() => {
-      document.getElementById(firstField)?.focus();
-    });
+    if (!section) {
+      requestAnimationFrame(() => {
+        pendingErrorFocusRef.current = null;
+        document.getElementById(firstField)?.focus();
+      });
+      return;
+    }
+
+    const targetStep = stepForSection(section);
+    if (targetStep !== activeStep) {
+      setActiveStep(targetStep);
+      setAnnouncement(trans({
+        message: 'Step :current of :total',
+        values: {
+          current: SERVICE_STEP_ORDER.indexOf(targetStep) + 1,
+          total: SERVICE_STEP_ORDER.length,
+        },
+      }));
+    }
   };
 
   const save = useCallback(
@@ -289,11 +324,9 @@ function ServiceFormPage() {
       // second service merely because the first response is still pending.
       if (savingRef.current || mutationUncertain.current) return;
       if (statusOverride === 'published' && !form.title.trim()) {
-        setFieldErrors({title: trans({message: 'A title is required.'})});
-        setActiveStep('details');
-        requestAnimationFrame(() =>
-          document.getElementById('title')?.focus(),
-        );
+        const errors = {title: trans({message: 'A title is required.'})};
+        setFieldErrors(errors);
+        focusFirstError(errors);
         return;
       }
 
