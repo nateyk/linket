@@ -195,7 +195,12 @@ function ServiceFormPage() {
     setForm(current => ({...current, [key]: value}));
     setFieldErrors(current => {
       const next = {...current};
-      delete next[key];
+      const keyPrefix = `${String(key)}.`;
+      for (const field of Object.keys(next)) {
+        if (field === key || field.startsWith(keyPrefix)) {
+          delete next[field];
+        }
+      }
       return next;
     });
   };
