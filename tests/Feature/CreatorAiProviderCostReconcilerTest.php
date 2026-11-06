@@ -152,7 +152,7 @@ test('multiple creators share one provider aggregate without invented per-reques
             ->where('status', 'aggregate_reconciled')->count())->toBe(2);
 });
 
-test('a second day's hold is never consumed by the audited day settlement', function () {
+test('a separate calendar day hold is never consumed by the audited day settlement', function () {
     aiCostSetup();
     [$first] = aiCostReserve();
     [$second, $otherId] = aiCostReserve('2026-11-06');
