@@ -282,6 +282,8 @@ class AppServiceProvider extends ServiceProvider
 
     public function register()
     {
+        $this->app->bind(\App\CreatorAi\Forecasting\ImmutableForecastManifestReader::class,
+            \App\CreatorAi\Forecasting\S3ComplianceForecastManifestReader::class);
         $this->app->register(ChapaServiceProvider::class);
         Scramble::ignoreDefaultRoutes();
 

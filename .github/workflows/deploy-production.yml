@@ -19,8 +19,6 @@ permissions:
 jobs:
   resolve:
     if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
-    # Manual deployment runs on an ephemeral GitHub-hosted runner; still gated
-    # by exact-main CI, the production environment and verified SSH host keys.
     runs-on: ubuntu-latest
     outputs:
       sha: ${{ steps.ci.outputs.sha }}
@@ -49,8 +47,6 @@ jobs:
   deploy:
     if: github.ref == 'refs/heads/main' && needs.resolve.result == 'success'
     needs: resolve
-    # Production deploy requires a separately approved environment and a
-    # reachable cPanel SSH endpoint from this short-lived hosted runner.
     runs-on: ubuntu-latest
     environment:
       name: production
@@ -126,7 +122,7 @@ jobs:
           set -euo pipefail
           ssh cpanel 'mkdir -p ~/linket/releases ~/linket/deploy'
           scp "$ARTIFACT_FILE" "${ARTIFACT_FILE}.sha256" 'cpanel:~/linket/releases/'
-          scp deploy/deploy.sh deploy/verify-release-artifact.sh 'cpanel:~/linket/deploy/'
+          scp deploy/deploy.sh deploy/verify-release-artifact.sh deploy/release-artifact-secrets.php deploy/secure-storage.php 'cpanel:~/linket/deploy/'
           ssh cpanel 'chmod +x ~/linket/deploy/deploy.sh ~/linket/deploy/verify-release-artifact.sh'
       - name: Deploy exact approved release
         env:

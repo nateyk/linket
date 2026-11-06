@@ -62,6 +62,28 @@ afterEach(() => {
   vi.resetAllMocks();
 });
 
+/**
+ * Telegram and ChatGPT both request their own integration state on mount.
+ * Delivery tests must mock the Telegram endpoint only, not count unrelated
+ * integrations or let another endpoint consume a one-shot response.
+ */
+function mockTelegramSequence(...responses: Array<{data: unknown} | Error>) {
+  let index = 0;
+  api.get.mockImplementation((url: string) => {
+    if (url === '/api/v1/integrations/telegram') {
+      const next = responses[Math.min(index++, responses.length - 1)];
+      return next instanceof Error ? Promise.reject(next) : Promise.resolve(next);
+    }
+    if (url === '/api/v1/creator-ai/mcp-connections') {
+      return Promise.resolve({
+        data: {data: {connections: [], oauth_connection_available: false}},
+      });
+    }
+    return Promise.reject(new Error('Unexpected API endpoint'));
+  });
+}
+
+
 it('shows the connected Telegram integration and notification preferences', async () => {
   render(<Component />);
 
@@ -189,18 +211,22 @@ it('does not call an untested connection healthy', async () => {
 });
 
 it('refreshes delivery status after sending a test', async () => {
-  api.get.mockResolvedValueOnce({data: {telegram: {...connected, delivery_status: 'unknown'}}})
-    .mockResolvedValueOnce({data: {telegram: {...connected, delivery_status: 'healthy', last_delivery_at: '2026-11-02T02:00:00+00:00'}}});
+  mockTelegramSequence(
+    {data: {telegram: {...connected, delivery_status: 'unknown'}}},
+    {data: {telegram: {...connected, delivery_status: 'healthy', last_delivery_at: '2026-11-02T02:00:00+00:00'}}},
+  );
   render(<Component />);
   fireEvent.click(await screen.findByRole('button', {name: 'Send test'}));
 
   expect(await screen.findByText('Last recorded delivery succeeded')).toBeTruthy();
-  expect(api.get).toHaveBeenCalledTimes(2);
+  expect(api.get.mock.calls.filter(([url]) => url === '/api/v1/integrations/telegram')).toHaveLength(2);
 });
 
 it('refreshes delivery status after a failed test without hiding the error', async () => {
-  api.get.mockResolvedValueOnce({data: {telegram: {...connected, delivery_status: 'healthy'}}})
-    .mockResolvedValueOnce({data: {telegram: {...connected, delivery_status: 'attention_required'}}});
+  mockTelegramSequence(
+    {data: {telegram: {...connected, delivery_status: 'healthy'}}},
+    {data: {telegram: {...connected, delivery_status: 'attention_required'}}},
+  );
   api.post.mockRejectedValueOnce(new Error('delivery failed'));
   render(<Component />);
   fireEvent.click(await screen.findByRole('button', {name: 'Send test'}));
@@ -210,10 +236,163 @@ it('refreshes delivery status after a failed test without hiding the error', asy
 });
 
 it('explains when a sent test could not refresh the delivery status', async () => {
-  api.get.mockResolvedValueOnce({data: {telegram: connected}})
-    .mockRejectedValueOnce(new Error('refresh failed'));
+  mockTelegramSequence({data: {telegram: connected}}, new Error('refresh failed'));
   render(<Component />);
   fireEvent.click(await screen.findByRole('button', {name: 'Send test'}));
 
   expect(await screen.findByText('Test sent, but delivery status could not be refreshed.')).toBeTruthy();
+});
+
+
+const chatGptConnection = {
+  id: '11111111-2222-4333-8444-555555555555',
+  workspace_id: 42,
+  client_id: 'chatgpt-oauth-client',
+  status: 'active',
+  consented_at: '2026-11-04T09:00:00+00:00',
+  expires_at: '2026-12-04T09:00:00+00:00',
+  revoked_at: null,
+  last_accessed_at: null,
+};
+
+it('shows ChatGPT connection availability without offering an unimplemented OAuth shortcut', async () => {
+  api.get.mockImplementation(async (url: string) => {
+    if (url === '/api/v1/integrations/telegram') return {data: {telegram: connected}};
+    if (url === '/api/v1/creator-ai/mcp-connections') {
+      return {data: {data: {connections: [], oauth_connection_available: false}}};
+    }
+    throw new Error('Unexpected API endpoint');
+  });
+
+  render(<Component />);
+
+  expect(await screen.findByText('ChatGPT')).toBeTruthy();
+  expect(screen.getByText('New ChatGPT connections are not available yet.')).toBeTruthy();
+  expect(screen.getByText('No ChatGPT connections yet.')).toBeTruthy();
+  expect(screen.queryByRole('button', {name: 'Connect ChatGPT'})).toBeNull();
+});
+
+it('shows the creator-owned ChatGPT consent grant and revokes it only after confirmation', async () => {
+  let connections = [chatGptConnection];
+  api.get.mockImplementation(async (url: string) => {
+    if (url === '/api/v1/integrations/telegram') return {data: {telegram: connected}};
+    if (url === '/api/v1/creator-ai/mcp-connections') {
+      return {data: {data: {connections, oauth_connection_available: false}}};
+    }
+    throw new Error('Unexpected API endpoint');
+  });
+  api.delete.mockImplementation(async (url: string) => {
+    if (url !== '/api/v1/creator-ai/mcp-connections/' + chatGptConnection.id) {
+      throw new Error('Unexpected revoke target');
+    }
+    connections = [{...chatGptConnection, status: 'revoked'}];
+    return {data: {}};
+  });
+
+  render(<Component />);
+
+  expect(await screen.findByText('chatgpt-oauth-client')).toBeTruthy();
+  expect(screen.getByText('Workspace #42')).toBeTruthy();
+  expect(screen.getByText('Active')).toBeTruthy();
+
+  fireEvent.click(screen.getByRole('button', {name: 'Disconnect ChatGPT connection'}));
+  expect(api.delete).not.toHaveBeenCalled();
+  fireEvent.click(await screen.findByRole('button', {name: 'Disconnect connection'}));
+
+  await waitFor(() => expect(api.delete).toHaveBeenCalledWith(
+    '/api/v1/creator-ai/mcp-connections/' + chatGptConnection.id,
+  ));
+  expect(await screen.findByText('Revoked')).toBeTruthy();
+  expect(screen.queryByRole('button', {name: 'Disconnect ChatGPT connection'})).toBeNull();
+  expect(screen.getByText('ChatGPT connection disconnected.')).toBeTruthy();
+});
+
+it('shows a retry state for ChatGPT API errors without hiding Telegram settings', async () => {
+  api.get.mockImplementation(async (url: string) => {
+    if (url === '/api/v1/integrations/telegram') return {data: {telegram: connected}};
+    if (url === '/api/v1/creator-ai/mcp-connections') throw new Error('Unavailable');
+    throw new Error('Unexpected API endpoint');
+  });
+
+  render(<Component />);
+
+  expect(await screen.findByText('Unable to load ChatGPT connections.')).toBeTruthy();
+  expect(screen.getByText('@creator_test')).toBeTruthy();
+  expect(screen.getByRole('button', {name: 'Retry ChatGPT connections'})).toBeTruthy();
+});
+
+
+it('explains verified Pro eligibility without exposing the MCP URL to ineligible creators', async () => {
+  api.get.mockImplementation(async (url: string) => {
+    if (url === '/api/v1/integrations/telegram') return {data: {telegram: connected}};
+    if (url === '/api/v1/creator-ai/mcp-connections') {
+      return {data: {data: {
+        connections: [],
+        oauth_connection_available: false,
+        connection_setup: {status: 'verified_pro_required', resource_url: null},
+      }}};
+    }
+    throw new Error('Unexpected endpoint');
+  });
+
+  render(<Component />);
+
+  expect(await screen.findByText('Verified Linket Pro is required to connect ChatGPT.')).toBeTruthy();
+  expect(screen.queryByText('New ChatGPT connections are not available yet.')).toBeNull();
+  expect(screen.queryByText('https://linket.example.test/mcp')).toBeNull();
+});
+
+it('shows the approved MCP URL and consent steps only when the creator is eligible', async () => {
+  api.get.mockImplementation(async (url: string) => {
+    if (url === '/api/v1/integrations/telegram') return {data: {telegram: connected}};
+    if (url === '/api/v1/creator-ai/mcp-connections') {
+      return {data: {data: {
+        connections: [],
+        oauth_connection_available: true,
+        connection_setup: {status: 'ready', resource_url: 'https://linket.example.test/mcp'},
+      }}};
+    }
+    throw new Error('Unexpected endpoint');
+  });
+
+  render(<Component />);
+
+  expect(await screen.findByText('https://linket.example.test/mcp')).toBeTruthy();
+  expect(screen.getByText('Connect from ChatGPT')).toBeTruthy();
+  expect(screen.getByText('Approve access to the workspace you select in Linket.')).toBeTruthy();
+  expect(screen.queryByRole('button', {name: 'Connect ChatGPT'})).toBeNull();
+});
+
+it('explains when an eligible Pro creator has no workspace available', async () => {
+  api.get.mockImplementation(async (url: string) => {
+    if (url === '/api/v1/integrations/telegram') return {data: {telegram: connected}};
+    if (url === '/api/v1/creator-ai/mcp-connections') {
+      return {data: {data: {
+        connections: [],
+        oauth_connection_available: false,
+        connection_setup: {status: 'workspace_required', resource_url: null},
+      }}};
+    }
+    throw new Error('Unexpected endpoint');
+  });
+
+  render(<Component />);
+  expect(await screen.findByText('Create or join a Linket workspace before connecting ChatGPT.')).toBeTruthy();
+});
+
+it('explains that ChatGPT requires an approved registered OAuth client', async () => {
+  api.get.mockImplementation(async (url: string) => {
+    if (url === '/api/v1/integrations/telegram') return {data: {telegram: connected}};
+    if (url === '/api/v1/creator-ai/mcp-connections') {
+      return {data: {data: {
+        connections: [],
+        oauth_connection_available: false,
+        connection_setup: {status: 'admin_setup_required', resource_url: null},
+      }}};
+    }
+    throw new Error('Unexpected endpoint');
+  });
+
+  render(<Component />);
+  expect(await screen.findByText('A Linket administrator must approve the ChatGPT OAuth client before connections are available.')).toBeTruthy();
 });

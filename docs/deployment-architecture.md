@@ -12,8 +12,8 @@
 
 | Layer | Evidence | Value |
 |---|---|---|
-| PHP | `composer.json:11` `php >=8.2` ; `.ddev/config.yaml` php_version 8.4 ; `ddev exec php -v` 8.4.22 | **Require >=8.2, CI pins 8.4** |
-| Laravel | `composer.json:34` `laravel/framework ^12.0`; `php artisan --version` 12.67.0 | **12.x** |
+| PHP | `composer.json` requires `php >=8.3`; CI pins PHP 8.4 | **Require >=8.3, CI pins 8.4** |
+| Laravel | `composer.json` requires `laravel/framework ^13.0`; locked baseline 13.38.0 | **13.x** |
 | Node | `.ddev/config.yaml` nodejs_version 24; `package.json` engines `^22.22.2 \|\| ^24.15.0 \|\| >=26.0.0`, vite 8 | **Node 24, Vite 8, `npm ci` + `vite build`** (jsdom 30 requires >=22.22.2) |
 | DB | `common/foundation/config/database.php` mysql/mariadb, migrations 81 files under `database/migrations` | MySQL 8.0, `DB_PREFIX` empty by default |
 | Cache / Queue | `env.example:32-42` `CACHE_STORE=file`, `QUEUE_CONNECTION=sync` locally ; `docs/production-operations.md:25-37` production `redis` + `HORIZON_PREFIX=linket_horizon:` ; `config/horizon.php:5-48` | Production must be `redis`; local sync is dev-only |
@@ -261,13 +261,18 @@ cPanel cron (shared, not per-release)
 
 ### 6.4 Permissions
 
-```bash
-chmod 750 ~/linket/shared/storage      # owner=rwx, group=rx, other=---
-chmod 750 ~/linket/shared/storage/app
-chmod 640 ~/linket/shared/.env
-# deploy.sh enforces 775 on storage, 775 on bootstrap/cache per Laravel requirement,
-# least-privilege otherwise, matching docs/production-operations.md § Deployment gate.
-```
+Task 5 (`f6e409ac`) removed recursive permission changes. Laravel requires access
+by its runtime account, not a particular blanket `775` mode. Deployment CLI,
+PHP-FPM/LiteSpeed, queues, and scheduler must use the verified cPanel account:
+private keys retain `0400`/`0600`, `.env` and optimized configuration use `0600`,
+and private runtime/cache directories use `0700`. No ownership changes occur.
+Public media uses a separate canonical public tree with traversal/read access
+for the actual web-server identity; all home/deployment ancestors matter.
+
+Use the read-only metadata preflight and operator evidence procedure in
+[the runtime security audit](linket-ai-cpanel-runtime-security-audit.md).
+Different application UIDs are incompatible with the owner-only policy. Do not
+restore recursive chmod or loosen private keys to work around that mismatch.
 
 ---
 
@@ -593,11 +598,11 @@ Each `releases/<id>` contains:
 
 ### 15.1 Pre-deploy (read-only)
 
-- [ ] Run `bash deploy/cpanel-discovery.sh` on cPanel — paste output to cutover log, resolve any REQUIRED FAIL.
+- [ ] Have a human review and run the scoped metadata procedure in [the runtime audit](linket-ai-cpanel-runtime-security-audit.md). Resolve every FAIL and collect independent evidence for every UNKNOWN. Do not paste unreviewed process arguments, cron entries, environment files, or general discovery-script output into the cutover log.
 - [ ] Confirm `shared/.env` on server matches `docs/production-operations.md` HTTPS/ trusted proxy / redis / horizon block; `TRUSTED_PROXIES` is exact, not `*`; `APP_DEBUG=false`.
-- [ ] Verify `~/linket/shared/storage` is writable, `shared/storage/app/digital-products` exists, `bootstrap/cache` writable (least-privilege 775/640).
-- [ ] Confirm Cron entry exists: `* * * * * cd ~/linket/current && $PHP_BINARY artisan schedule:run …` (check `crontab -l`).
-- [ ] Confirm Supervisor (or cron fallback) shows `linket-horizon RUNNING` (`supervisorctl status` / `ps aux | grep horizon`).
+- [ ] Verify storage/cache ownership and access for the actual application UIDs using Task 5's owner-only policy; verify public-media traversal separately. No blanket 775/640 permission recipe applies.
+- [ ] Confirm the scheduler entry through an authorized configuration review; record only its UID, approved PHP binary, working directory, and heartbeat result. Do not paste raw cron entries that may contain secrets.
+- [ ] Confirm Supervisor (or cron fallback) shows `linket-horizon RUNNING` and the correct effective UID (`supervisorctl status` / `ps -eo pid,euid,egid,comm` without command arguments).
 - [ ] Record current production `RELEASE_SHA` (`cat ~/linket/current/RELEASE_SHA` or doc prior hash).
 
 ### 15.2 CI gate (must be green on `main` HEAD SHA)

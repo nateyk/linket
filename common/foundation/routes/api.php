@@ -230,6 +230,42 @@ Route::group(['prefix' => 'v1'], function () {
         Route::post('billing/direct/invoices/{invoice}/reference', [DirectBillingController::class, 'submitInvoiceReference'])->middleware(['auth:sanctum', 'throttle:10,1']);
         Route::get('billing/chapa/transactions/{txRef}', [ChapaController::class, 'status'])->middleware('throttle:60,1');
 
+        // CREATOR AI: deny by default, independently authorized per service.
+        // Settings can be read/changed only by an admin with settings.update.
+        // Credentials are write-only; all responses are private and no-store.
+        Route::get('admin/creator-ai/settings', [\App\CreatorAi\Controllers\AdminCreatorAiSettingsController::class, 'show'])
+            ->middleware(['auth:sanctum', 'throttle:20,1']);
+        Route::patch('admin/creator-ai/settings', [\App\CreatorAi\Controllers\AdminCreatorAiSettingsController::class, 'update'])
+            ->middleware(['auth:sanctum', 'throttle:10,1']);
+        Route::get('creator-ai/usage', [\App\CreatorAi\Controllers\CreatorAiUsageController::class, 'show'])
+            ->middleware(['auth:sanctum', 'throttle:30,1']);
+        Route::get('creator-ai/stores/{store}/appearance-availability', [\App\CreatorAi\Controllers\CreatorStorefrontAppearancePreviewController::class, 'availability'])
+            ->middleware(['auth:sanctum', 'throttle:20,1']);
+        // PR-09: Pro-only storefront appearance preview, never an update route.
+        Route::get('creator-ai/stores/{store}/appearance-preview', [\App\CreatorAi\Controllers\CreatorStorefrontAppearancePreviewController::class, 'show'])
+            ->middleware(['auth:sanctum', 'throttle:20,1']);
+        Route::post('creator-ai/stores/{store}/appearance-revision', [\App\CreatorAi\Controllers\CreatorStorefrontAppearancePreviewController::class, 'verifyRevision'])
+            ->middleware(['auth:sanctum', 'throttle:20,1']);
+        Route::get('creator-ai/products/{digitalProduct}/copy-availability', [\App\CreatorAi\Controllers\CreatorProductCopyController::class, 'availability'])
+            ->middleware(['auth:sanctum', 'throttle:20,1']);
+        Route::post('creator-ai/products/{digitalProduct}/copy-proposals', [\App\CreatorAi\Controllers\CreatorProductCopyController::class, 'propose'])
+            ->middleware(['auth:sanctum', 'throttle:5,1']);
+        Route::post('creator-ai/products/{digitalProduct}/copy-revision', [\App\CreatorAi\Controllers\CreatorProductCopyController::class, 'validateRevision'])
+            ->middleware(['auth:sanctum', 'throttle:20,1']);
+        // MCP connection management does not issue OAuth credentials.
+        // The future consent callback is a separate, Passport-protected flow.
+        Route::get('creator-ai/mcp-connections', [\App\CreatorAi\Controllers\CreatorMcpConnectionsController::class, 'index'])
+            ->middleware(['auth:sanctum', 'throttle:20,1']);
+        Route::delete('creator-ai/mcp-connections/{connectionId}', [\App\CreatorAi\Controllers\CreatorMcpConnectionsController::class, 'destroy'])
+            ->whereUuid('connectionId')
+            ->middleware(['auth:sanctum', 'throttle:20,1']);
+        Route::get('creator-ai/sales-summary', [\App\CreatorAi\Controllers\CreatorAiReportsController::class, 'salesSummary'])
+            ->middleware(['auth:sanctum', 'throttle:30,1']);
+        Route::get('creator-ai/order-insights', [\App\CreatorAi\Controllers\CreatorAiReportsController::class, 'orderInsights'])
+            ->middleware(['auth:sanctum', 'throttle:30,1']);
+        Route::get('creator-ai/product-performance', [\App\CreatorAi\Controllers\CreatorAiReportsController::class, 'productPerformance'])
+            ->middleware(['auth:sanctum', 'throttle:30,1']);
+
         // CREATOR STOREFRONT
         Route::post('storefront/products/{digitalProduct}/duplicate', [DigitalProductsController::class, 'duplicate']);
         Route::post('storefront/products/{digitalProduct}/archive', [DigitalProductsController::class, 'archive']);
