@@ -29,6 +29,7 @@ export function ProductPricingCard({
   checkoutCancelled,
   checkoutFailed,
   submitting,
+  completed = false,
   onBuy,
   actionRef,
 }: {
@@ -37,19 +38,25 @@ export function ProductPricingCard({
   checkoutCancelled: boolean;
   checkoutFailed: boolean;
   submitting: boolean;
+  completed?: boolean;
   onBuy: () => void;
   actionRef?: Ref<HTMLDivElement>;
 }) {
   const buttonAppearance = resolveBiolinkButtonAppearance(appearance);
   const TypeIcon = productTypeIcon(product.type);
   const isCourse = !!product.is_course;
+  const isFree = product.payment_mode === 'free';
 
   return (
     <Card.Root className={biolinkSurfaceCard}>
       <Card.Content className={biolinkSurfaceContent}>
         <div className="flex items-start justify-between gap-4">
-          <p className="text-4xl leading-none font-semibold tracking-tight tabular-nums">
-            {formatPrice(product.price_cents, product.currency)}
+          <p className="min-w-0 text-3xl leading-tight font-semibold tracking-tight tabular-nums break-words [overflow-wrap:anywhere] sm:text-4xl">
+            {isFree ? (
+              <Trans message="Free" />
+            ) : (
+              formatPrice(product.price_cents, product.currency)
+            )}
           </p>
           <span className="grid size-10 shrink-0 place-items-center rounded-card-sm bg-[var(--biolink-surface)] text-[var(--biolink-muted-text)] ring-1 ring-(color:--biolink-border)">
             <TypeIcon className="size-5" aria-hidden="true" />
@@ -65,11 +72,21 @@ export function ProductPricingCard({
             className={cn('w-full', buttonAppearance.className)}
             style={buttonAppearance.style}
             size="lg"
-            disabled={submitting || product.can_buy === false}
+            disabled={submitting || product.can_buy === false || completed}
             onClick={onBuy}
           >
-            <LockKeyholeIcon />
-            {product.verification_quota_exhausted ? <Trans message="Creator cannot accept additional verified sales right now" /> : <Trans message={product.can_buy === false ? 'Temporarily unavailable' : 'Buy now'} />}
+            {isFree ? <ShoppingBagIcon aria-hidden="true" /> : <LockKeyholeIcon aria-hidden="true" />}
+            {completed && isFree ? (
+              <Trans message="Free order complete" />
+            ) : product.verification_quota_exhausted ? (
+              <Trans message="Creator cannot accept additional verified sales right now" />
+            ) : product.can_buy === false ? (
+              <Trans message="Temporarily unavailable" />
+            ) : isFree ? (
+              <Trans message="Get for free" />
+            ) : (
+              <Trans message="Buy now" />
+            )}
           </Button>
         </div>
 
@@ -162,11 +179,17 @@ export function ProductPricingCard({
             <Trans message="Access anytime from My Portal" />
           </IncludesItem>
           <IncludesItem icon={TimerIcon}>
-            <Trans message="One-time payment, no subscription" />
+            {isFree ? (
+              <Trans message="Free access, no payment required" />
+            ) : (
+              <Trans message="One-time payment, no subscription" />
+            )}
           </IncludesItem>
-          <IncludesItem icon={ReceiptIcon}>
-            <Trans message="Receipt and download links by email" />
-          </IncludesItem>
+          {!isFree && (
+            <IncludesItem icon={ReceiptIcon}>
+              <Trans message="Receipt and download links by email" />
+            </IncludesItem>
+          )}
         </ul>
 
         <div className="flex items-start gap-2 rounded-card bg-[var(--biolink-surface)] p-3 text-base text-[var(--biolink-muted-text)]">
@@ -174,7 +197,11 @@ export function ProductPricingCard({
             className="mt-0.5 size-4 shrink-0 text-positive"
             aria-hidden="true"
           />
-          <Trans message="Secure payment with protected access after confirmation." />
+          {isFree ? (
+            <Trans message="Complete the free checkout to access your purchase." />
+          ) : (
+            <Trans message="Secure payment with protected access after confirmation." />
+          )}
         </div>
       </Card.Content>
     </Card.Root>

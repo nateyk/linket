@@ -197,4 +197,87 @@ describe('public service page', () => {
       within(await screen.findByRole('dialog')).getByText('Request a quote'),
     ).toBeTruthy();
   });
+
+  it('keeps inquiry on the offer rail and does not repeat it in seller contacts', () => {
+    render(<PublicServicePage data={data} />);
+
+    expect(
+      screen.getByRole('button', {name: 'Request this package'}),
+    ).toBeTruthy();
+    expect(screen.queryByRole('button', {name: 'Send inquiry'})).toBeNull();
+    expect(screen.getByRole('link', {name: 'WhatsApp'})).toBeTruthy();
+    expect(screen.getByRole('link', {name: 'Email'})).toBeTruthy();
+    const directContact = screen.getByRole('link', {name: 'WhatsApp'});
+    expect(directContact.tagName).toBe('A');
+    expect(directContact.getAttribute('data-slot')).toBeNull();
+    expect(directContact.className).toContain('min-h-11');
+  });
+
+  it('deduplicates identical seller destinations without removing other channels', () => {
+    render(
+      <PublicServicePage
+        data={{
+          ...data,
+          service: {
+            ...data.service,
+            contact_channels: [
+              ...data.service.contact_channels,
+              {...data.service.contact_channels[0]},
+            ],
+          },
+        }}
+      />,
+    );
+
+    expect(screen.getAllByRole('link', {name: 'WhatsApp'})).toHaveLength(1);
+    expect(screen.getAllByRole('link', {name: 'Email'})).toHaveLength(1);
+  });
+
+  it('wraps long Amharic and Latin content and scrolls package tabs on phones', async () => {
+    const {default: userEvent} = await import('@testing-library/user-event');
+    const longTitle = 'አገልግሎት'.repeat(28);
+    const longPackage = 'BrandIdentityFullPackage'.repeat(10);
+    const longQuestion = 'HowDoIStartTheService'.repeat(10);
+    render(
+      <PublicServicePage
+        data={{
+          ...data,
+          service: {
+            ...data.service,
+            title: longTitle,
+            short_description: longTitle,
+            packages: [
+              {...data.service.packages[0], name: longPackage},
+              data.service.packages[1],
+            ],
+            faqs: [{id: 30, question: longQuestion, answer: longPackage}],
+          },
+        }}
+      />,
+    );
+
+    const title = screen.getByRole('heading', {level: 1, name: longTitle});
+    expect(title.className).toContain('[overflow-wrap:anywhere]');
+    const list = screen.getByRole('tablist', {name: 'Packages'});
+    expect(list.parentElement?.className).toContain('overflow-x-auto');
+    expect(screen.getByRole('tab', {name: longPackage}).className).toContain(
+      '[overflow-wrap:anywhere]',
+    );
+
+    await userEvent.click(screen.getByRole('tab', {name: 'FAQ'}));
+    const question = screen.getByRole('button', {name: longQuestion});
+    expect(question.className).toContain('[overflow-wrap:anywhere]');
+  });
+
+  it('retains the chosen tier when launching the quote request', async () => {
+    const {default: userEvent} = await import('@testing-library/user-event');
+    render(<PublicServicePage data={data} />);
+
+    await userEvent.click(screen.getByRole('tab', {name: 'Premium'}));
+    await userEvent.click(
+      screen.getByRole('button', {name: 'Request this package'}),
+    );
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText(/Premium package/)).toBeTruthy();
+  });
 });

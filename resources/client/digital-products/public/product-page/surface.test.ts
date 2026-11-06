@@ -41,8 +41,10 @@ describe('product page surface chrome', () => {
     );
   });
 
-  test('nested chips and badges share biolinkSurfaceEdgeClassName', () => {
-    expect(summary).toContain('biolinkSurfaceEdgeClassName');
+  test('public surfaces share edges while course metrics avoid nested framed cards', () => {
+    expect(summary).toContain('<dl');
+    expect(summary).toContain('border-t border-[var(--biolink-border)]');
+    expect(summary).not.toContain('biolinkSurfaceEdgeClassName');
     expect(gallery).toContain('biolinkSurfaceEdgeClassName');
     expect(page).toMatch(
       /rounded-card-xs bg-\[var\(--biolink-surface\)\][\s\S]{0,80}?biolinkSurfaceEdgeClassName/,

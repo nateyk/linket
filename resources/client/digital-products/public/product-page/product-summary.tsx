@@ -1,4 +1,3 @@
-import {biolinkSurfaceEdgeClassName} from '@app/short-links/renderers/biolink-renderer/biolink-appearance';
 import {Trans} from '@ui/i18n/trans';
 import {cn} from '@ui/utils/cn';
 import type {ReactNode} from 'react';
@@ -92,12 +91,12 @@ export function ProductSummary({
 
   return (
     <div className="flex min-w-0 flex-col gap-4">
-      <h1 className="max-w-3xl text-3xl leading-tight font-semibold tracking-tight text-balance sm:text-4xl">
+      <h1 className="max-w-3xl text-3xl leading-tight font-semibold tracking-tight text-balance break-words [overflow-wrap:anywhere] sm:text-4xl">
         {product.title}
       </h1>
 
       {deck && (
-        <p className="max-w-[70ch] text-base leading-6 text-[var(--biolink-muted-text)]">
+        <p className="max-w-[70ch] text-base leading-6 text-[var(--biolink-muted-text)] break-words [overflow-wrap:anywhere]">
           {deck}
         </p>
       )}
@@ -121,26 +120,24 @@ export function ProductSummary({
       {stats.length > 0 && (
         <dl
           className={cn(
-            'grid grid-cols-2 gap-3',
+            'grid grid-cols-2 gap-x-4 gap-y-3 border-t border-[var(--biolink-border)] pt-4',
             stats.length > 2 && 'sm:grid-cols-3',
           )}
         >
           {stats.map(stat => (
-            <div
-              key={stat.id}
-              className={cn(
-                'rounded-card bg-[var(--biolink-surface)] p-4',
-                biolinkSurfaceEdgeClassName,
-              )}
-            >
+            <div key={stat.id} className="flex min-w-0 items-start gap-2.5">
               <stat.icon
-                className="size-4 text-[var(--biolink-muted-text)]"
+                className="mt-0.5 size-4 shrink-0 text-[var(--biolink-muted-text)]"
                 aria-hidden="true"
               />
-              <dt className="mt-2 text-xs text-[var(--biolink-muted-text)]">
-                {stat.label}
-              </dt>
-              <dd className="text-sm font-semibold">{stat.value}</dd>
+              <div className="flex min-w-0 flex-col gap-0.5">
+                <dt className="text-xs text-[var(--biolink-muted-text)]">
+                  {stat.label}
+                </dt>
+                <dd className="text-base font-semibold tabular-nums">
+                  {stat.value}
+                </dd>
+              </div>
             </div>
           ))}
         </dl>

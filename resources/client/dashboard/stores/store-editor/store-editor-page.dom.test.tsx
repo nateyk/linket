@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
-import {fireEvent, render, screen, waitFor, within} from '@testing-library/react';
+import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react';
 import {Suspense} from 'react';
 import {beforeEach, expect, test, vi} from 'vitest';
 import {createMemoryRouter, RouterProvider} from 'react-router';
@@ -45,6 +45,12 @@ vi.mock('@common/admin/ads/ad-host', () => ({
   AdHost: () => null,
 }));
 
+vi.mock('@app/gen/store-appearance', () => ({
+  updateStoreAppearance: vi.fn(async (_id: string, body: {config: unknown}) => ({
+    data: {...BIOLINK, appearance: {config: body.config}},
+  })),
+}));
+
 vi.mock('@app/gen/stores', async importOriginal => ({
   ...(await importOriginal<typeof import('@app/gen/stores')>()),
   updateStoreCreatorProfile: vi.fn(async () => ({data: {}})),
@@ -78,7 +84,9 @@ vi.mock('@app/dashboard/stores/store-editor/live-preview', () => ({
   LivePreview: () => null,
 }));
 
+import {updateStoreAppearance} from '@app/gen/store-appearance';
 import {updateStoreCreatorProfile} from '@app/gen/stores';
+import {queryClient as appQueryClient} from '@common/http/query-client';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 
 import {useBiolinkEditorStore} from './biolink-editor-store';
@@ -97,6 +105,35 @@ function ProfileProbe() {
         make dirty
       </button>
       <input aria-label="text field" name="bio" />
+    </div>
+  );
+}
+
+/**
+ * Real editor-store mutations without opening the media/color picker widget:
+ * proves that a save can't discard a newer storefront Appearance draft.
+ */
+function AppearanceProbe() {
+  const appearance = useBiolinkEditorStore(s => s.appearance);
+  const dirty = useBiolinkEditorStore(s => s.appearanceIsDirty);
+  const updateAppearance = useBiolinkEditorStore(s => s.updateAppearance);
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => updateAppearance({bgConfig: {backgroundColor: '#fefefe', color: '#202020'}})}
+      >
+        set appearance A
+      </button>
+      <button
+        type="button"
+        onClick={() => updateAppearance({bgConfig: {backgroundColor: '#303030', color: '#ffffff'}})}
+      >
+        set appearance B
+      </button>
+      <output data-testid="appearance-draft">
+        {`${appearance?.bgConfig?.backgroundColor ?? ''}|${dirty ? 'dirty' : 'clean'}`}
+      </output>
     </div>
   );
 }
@@ -140,7 +177,10 @@ function renderEditor(opts: {form?: boolean} = {}) {
             ),
           },
           {path: 'about', element: <div>about panel</div>},
-          {path: 'appearance', element: <div>appearance panel</div>},
+          {
+            path: 'appearance',
+            element: <div>appearance panel<AppearanceProbe /></div>,
+          },
         ],
       },
     ],
@@ -170,6 +210,10 @@ function markDirty() {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(updateStoreCreatorProfile).mockResolvedValue({data: {}} as any);
+  vi.mocked(updateStoreAppearance).mockImplementation(
+    async (_id, body) =>
+      ({data: {...BIOLINK, appearance: {config: body.config}}}) as any,
+  );
 });
 
 test('editor page has exactly one h1, the store name (A-09)', async () => {
@@ -531,4 +575,61 @@ test('Save & leave shares the failure states and stays in the editor (A-07)', as
   expect(
     screen.getByRole('button', {name: /Save changes/}).hasAttribute('disabled'),
   ).toBe(false);
+});
+
+
+test('Appearance save updates the store cache and clears only the persisted draft', async () => {
+  const {router} = await renderLoadedEditor();
+  await router.navigate('/dashboard/stores/5/appearance');
+  await screen.findByText('appearance panel');
+
+  fireEvent.click(screen.getByRole('button', {name: 'set appearance A'}));
+  expect(screen.getByTestId('appearance-draft').textContent).toContain('#fefefe|dirty');
+  fireEvent.keyDown(window, {key: 's', ctrlKey: true});
+
+  await waitFor(() => expect(updateStoreAppearance).toHaveBeenCalledTimes(1));
+  await waitFor(() => expect(screen.getByTestId('appearance-draft').textContent).toContain('#fefefe|clean'));
+
+  // The actual shared mutation's onSuccess must still run. A local override
+  // once skipped this, leaving stale Appearance on editor remount.
+  const cached = appQueryClient.getQueryData<any>(['stores', '5']);
+  expect(cached?.data?.appearance?.config?.bgConfig?.backgroundColor).toBe('#fefefe');
+
+  const status = screen.getAllByRole('status').find(el => el.classList.contains('sr-only'));
+  expect(status?.textContent).toContain('Changes saved');
+});
+
+test('Appearance save does not clear a newer edit made while the request is in flight', async () => {
+  let finishSave: ((response: unknown) => void) | undefined;
+  vi.mocked(updateStoreAppearance).mockImplementationOnce(
+    () => new Promise(resolve => { finishSave = resolve; }) as any,
+  );
+  const {router} = await renderLoadedEditor();
+  await router.navigate('/dashboard/stores/5/appearance');
+  await screen.findByText('appearance panel');
+
+  fireEvent.click(screen.getByRole('button', {name: 'set appearance A'}));
+  fireEvent.keyDown(window, {key: 's', ctrlKey: true});
+  await waitFor(() => expect(updateStoreAppearance).toHaveBeenCalledTimes(1));
+
+  fireEvent.click(screen.getByRole('button', {name: 'set appearance B'}));
+  expect(screen.getByTestId('appearance-draft').textContent).toContain('#303030|dirty');
+
+  await act(async () => {
+    finishSave?.({
+      data: {...BIOLINK, appearance: {config: {bgConfig: {backgroundColor: '#fefefe'}}}},
+    });
+  });
+  await waitFor(() =>
+    expect(screen.getByTestId('appearance-draft').textContent).toContain('#303030|dirty'),
+  );
+  const status = screen.getAllByRole('status').find(el => el.classList.contains('sr-only'));
+  expect(status?.textContent).not.toContain('Changes saved');
+  // The responsive control has distinct desktop/mobile visible labels;
+  // assert its stable keyboard shortcut instead of assuming one label.
+  const save = document.querySelector<HTMLButtonElement>(
+    'button[aria-keyshortcuts="Control+S Meta+S"]',
+  );
+  expect(save).toBeTruthy();
+  expect(save?.disabled).toBe(false);
 });

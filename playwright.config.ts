@@ -15,7 +15,8 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
   use: {
-    baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:5173',
+    // Vite binds IPv4; localhost can resolve to ::1 on hosted Linux runners.
+    baseURL: process.env.E2E_BASE_URL ?? 'http://127.0.0.1:5173',
     trace: 'on-first-retry',
     extraHTTPHeaders: process.env.E2E_HOST_HEADER
       ? {Host: process.env.E2E_HOST_HEADER}
@@ -30,8 +31,13 @@ export default defineConfig({
   webServer: process.env.E2E_NO_SERVER
     ? undefined
     : {
-        command: 'npm run dev',
-        url: 'http://localhost:5173',
+        command: 'npm run dev -- --host 127.0.0.1 --port 5173 --strictPort',
+        // This is a Laravel Vite project, not a root-index.html SPA. Checking
+        // "/" returns 404 even when Vite is healthy; probe an actual HTML
+        // fixture and use the same IPv4 host as the dev server instead.
+        url: 'http://127.0.0.1:5173/tests/e2e/fixtures/storefront-detail-qa.html',
+        stdout: 'pipe',
+        stderr: 'pipe',
         reuseExistingServer: !process.env.CI,
         timeout: 120000,
       },
