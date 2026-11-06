@@ -518,6 +518,10 @@ describe('saving', () => {
     await user.type(titleInput(), 'Consulting with demo');
     await user.click(screen.getByRole('button', {name: 'Settings, step 4 of 4'}));
 
+    const navigation = screen.getByRole('navigation', {name: 'Service creation steps'});
+    const scroller = navigation.closest('[data-slot="section-content"]') as HTMLDivElement;
+    scroller.scrollTop = 260;
+
     api.post.mockRejectedValueOnce(
       new AxiosError(
         'Request failed with status code 422',
@@ -545,6 +549,7 @@ describe('saving', () => {
       ).toBe('step'),
     );
     expect(screen.getByText('Enter a valid video URL.')).toBeTruthy();
+    expect(scroller.scrollTop).toBe(0);
     await waitFor(() => expect(document.activeElement).toBe(document.getElementById('video_url')));
   });
 
