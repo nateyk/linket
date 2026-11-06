@@ -351,6 +351,42 @@ describe('load failure recovery', () => {
 });
 
 describe('saving', () => {
+  test('editing a package clears its indexed server validation error', async () => {
+    const user = userEvent.setup();
+    mountPage('/dashboard/services/new');
+    await waitForForm();
+    await user.click(screen.getByRole('button', {name: 'Packages, step 3 of 4'}));
+    await user.click(screen.getByRole('button', {name: 'Add Starter package'}));
+
+    api.post.mockRejectedValueOnce(
+      new AxiosError(
+        'Request failed with status code 422',
+        'ERR_BAD_REQUEST',
+        undefined,
+        undefined,
+        {
+          status: 422,
+          data: {
+            message: 'The given data was invalid.',
+            errors: {'packages.0.name': ['Choose another package name.']},
+          },
+          statusText: 'Unprocessable Content',
+          headers: {},
+          config: {} as never,
+        },
+      ),
+    );
+
+    await user.click(screen.getByRole('button', {name: 'Save draft'}));
+    expect(await screen.findByText('Choose another package name.')).toBeTruthy();
+
+    const packageName = screen.getByRole('textbox', {name: 'Package name'});
+    await user.clear(packageName);
+    await user.type(packageName, 'Essentials');
+
+    expect(screen.queryByText('Choose another package name.')).toBeNull();
+  });
+
   test('server URL validation opens Media and focuses the invalid field', async () => {
     const user = userEvent.setup();
     mountPage('/dashboard/services/new');
