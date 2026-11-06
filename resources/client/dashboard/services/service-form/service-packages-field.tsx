@@ -50,7 +50,7 @@ function assignPackages(packages: ServiceFormPackage[]): Assignment {
   const used = new Set<number>();
 
   packages.forEach((item, sourceIndex) => {
-    if (!meaningful(item)) return;
+    if (!meaningful(item) || item.legacy) return;
     const name = item.name.trim().toLowerCase();
     const tierIndex = name === 'basic' || name === 'starter' ? 0
       : name === 'standard' ? 1 : name === 'premium' ? 2 : -1;
@@ -61,10 +61,13 @@ function assignPackages(packages: ServiceFormPackage[]): Assignment {
   });
 
   const legacy: Assignment['legacy'] = [];
+  // An unmatched older package is never allowed to occupy a deliberately
+  // disabled tier. Only all-custom legacy services use positional migration.
+  const canAssignCustomByPosition = used.size === 0;
   packages.forEach((item, sourceIndex) => {
     if (!meaningful(item) || used.has(sourceIndex)) return;
     const available = slots.findIndex(slot => !slot);
-    if (available >= 0) {
+    if (!item.legacy && canAssignCustomByPosition && available >= 0) {
       slots[available] = {item, sourceIndex};
     } else {
       legacy.push({item, sourceIndex});
@@ -113,7 +116,7 @@ export function ServicePackagesField({
   const emit = (next: Slot[], nextLegacy = legacy) => {
     onChange([
       ...next.flatMap((slot, index) => slot ? [{...slot.item, name: TIERS[index].name}] : []),
-      ...nextLegacy.map(entry => entry.item),
+      ...nextLegacy.map(entry => ({...entry.item, legacy: true as const})),
     ]);
   };
 
