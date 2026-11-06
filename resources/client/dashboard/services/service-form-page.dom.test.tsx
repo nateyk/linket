@@ -455,7 +455,9 @@ describe('saving', () => {
     api.post.mockRejectedValueOnce(new Error('Connection ended after submission'));
 
     await user.click(screen.getByRole('button', {name: 'Save draft'}));
-    expect(await screen.findByRole('link', {name: 'Check My Services'})).toBeTruthy();
+    const recoveryAction = await screen.findByRole('button', {name: 'Check My Services'});
+    expect(recoveryAction.tagName).toBe('A');
+    expect(recoveryAction.getAttribute('href')).toBe('/dashboard/services');
 
     const messages = errorSpy.mock.calls.flat().map(String);
     expect(messages.some(message => message.includes('expected a native <button>'))).toBe(false);
@@ -470,8 +472,9 @@ describe('saving', () => {
 
     await user.click(screen.getByRole('button', {name: 'Save draft'}));
     expect(await screen.findByText(/We could not confirm whether the service was created/)).toBeTruthy();
-    expect(screen.getByRole('link', {name: 'Check My Services'}).getAttribute('href'))
-      .toBe('/dashboard/services');
+    const recoveryAction = screen.getByRole('button', {name: 'Check My Services'});
+    expect(recoveryAction.tagName).toBe('A');
+    expect(recoveryAction.getAttribute('href')).toBe('/dashboard/services');
     expect(titleInput().value).toBe('Network uncertainty service');
     expect(screen.getByRole('button', {name: 'Save draft'}).hasAttribute('disabled')).toBe(true);
     expect(screen.getByRole('button', {name: 'Publish service'}).hasAttribute('disabled')).toBe(true);
