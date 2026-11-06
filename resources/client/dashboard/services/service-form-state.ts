@@ -9,6 +9,8 @@ export type ServiceContactChannelType =
 
 export type ServiceFormPackage = {
   id?: number;
+  /** Editor-only: protect older extra packages from filling disabled fixed tiers. */
+  legacy?: true;
   name: string;
   description: string;
   price: string;
@@ -197,6 +199,92 @@ export function fromServiceResource(
       value: channel.value,
     })),
   };
+}
+
+export function serviceFormClientErrors(
+  form: ServiceFormState,
+): Record<string, string> {
+  const errors: Record<string, string> = {};
+
+  form.packages.forEach((item, index) => {
+    const name = item.name.trim();
+    const hasUnfinishedContent = [
+      item.description,
+      item.price,
+      item.delivery_days,
+      item.revisions,
+      item.features,
+    ].some(value => value.trim());
+
+    if (!name && hasUnfinishedContent) {
+      errors[`packages.${index}.name`] =
+        'Add a package name or remove this unfinished package.';
+      return;
+    }
+    if (!name) return;
+
+    if (item.price.trim()) {
+      const cents = parseEtbToCents(item.price);
+      if (cents === null || cents > 1_000_000_000) {
+        errors[`packages.${index}.price_cents`] =
+          'Enter a valid price from 0 to 10,000,000 ETB.';
+      }
+    }
+
+    if (
+      item.delivery_days.trim() &&
+      !integerInRange(item.delivery_days, 0, 365)
+    ) {
+      errors[`packages.${index}.delivery_days`] =
+        'Delivery days must be a whole number from 0 to 365.';
+    }
+
+    if (
+      item.revisions.trim() &&
+      !integerInRange(item.revisions, 0, 100)
+    ) {
+      errors[`packages.${index}.revisions`] =
+        'Revisions must be a whole number from 0 to 100.';
+    }
+
+    const features = item.features
+      .split('\n')
+      .map(feature => feature.trim())
+      .filter(Boolean);
+    if (
+      features.length > 20 ||
+      features.some(feature => feature.length > 200)
+    ) {
+      errors[`packages.${index}.features`] =
+        'Use no more than 20 features, with 200 characters or fewer per feature.';
+    }
+  });
+
+  form.faqs.forEach((faq, index) => {
+    const question = faq.question.trim();
+    const answer = faq.answer.trim();
+    if (question && !answer) {
+      errors[`faqs.${index}.answer`] =
+        'Add an answer or remove this unfinished FAQ.';
+    } else if (!question && answer) {
+      errors[`faqs.${index}.question`] =
+        'Add a question or remove this unfinished FAQ.';
+    }
+  });
+
+  form.contact_channels.forEach((channel, index) => {
+    if (channel.label.trim() && !channel.value.trim()) {
+      errors[`contact_channels.${index}.value`] =
+        'Add a contact value or remove this unfinished contact button.';
+    }
+  });
+
+  return errors;
+}
+
+function integerInRange(value: string, min: number, max: number): boolean {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= min && parsed <= max;
 }
 
 export function toServicePayload(form: ServiceFormState): ServicePayload {

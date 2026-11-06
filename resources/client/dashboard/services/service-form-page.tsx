@@ -1,7 +1,6 @@
 import {apiClient} from '@common/http/query-client';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {FileUploadProvider} from '@common/uploads/uploader/file-upload-provider';
-import {Accordion} from '@shadcn/accordion/accordion';
 import {Alert} from '@shadcn/alert/alert';
 import {AlertDialog} from '@shadcn/alert-dialog/alert-dialog';
 import {Badge} from '@shadcn/badge/badge';
@@ -18,6 +17,8 @@ import {useTrans} from '@ui/i18n/use-trans';
 import {toast} from '@ui/toast/toast';
 import {
   ArrowLeftIcon,
+  ArrowRightIcon,
+  ChevronLeftIcon,
   CircleAlertIcon,
   CircleHelpIcon,
   EyeIcon,
@@ -30,22 +31,24 @@ import {
   SendIcon,
   Trash2Icon,
 } from 'lucide-react';
-import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import {Link, useNavigate, useParams} from 'react-router';
 import {isUncertainMutationOutcome} from '@app/dashboard/digital-products/request-outcome';
 import {parseServiceErrors, serviceSaveErrorMessage} from './service-save-error';
 import {
   emptyServiceForm,
   fromServiceResource,
+  serviceFormClientErrors,
   toServicePayload,
   type CreatorServiceResource,
   type ServiceFormState,
+  type ServiceFormPackage,
 } from './service-form-state';
 import {ServiceContactChannelsField} from './service-form/service-contact-channels-field';
 import {ServiceDescriptionEditor} from './service-form/service-description-editor';
 import {ServiceFaqsField} from './service-form/service-faqs-field';
 import {ServiceFormField} from './service-form/service-form-field';
-import {ServiceFormProgress} from './service-form/service-form-progress';
+import {ServiceBuilderSteps, SERVICE_STEP_ORDER, type ServiceBuilderStepId} from './service-form/service-builder-steps';
 import {ServiceFormSection, type ServiceFormSectionId} from './service-form/service-form-section';
 import {ServiceGalleryField} from './service-form/service-gallery-field';
 import {ServicePackagesField} from './service-form/service-packages-field';
@@ -63,19 +66,22 @@ type CategoryOption = {
 
 type CategoriesResponse = {data?: CategoryOption[]};
 
-const SECTION_ORDER: ServiceFormSectionId[] = [
-  'basics',
-  'media',
-  'packages',
-  'faq',
-  'contact',
-];
+function stepForSection(section: ServiceFormSectionId): ServiceBuilderStepId {
+  if (section === 'basics') return 'details';
+  if (section === 'faq' || section === 'contact') return 'settings';
+  return section;
+}
 
 function sectionForField(field: string): ServiceFormSectionId | null {
   if (field.startsWith('packages')) return 'packages';
   if (field.startsWith('faqs')) return 'faq';
   if (field.startsWith('contact_channels')) return 'contact';
-  if (field.startsWith('gallery') || field === 'cover_file_entry_id') {
+  if (
+    field.startsWith('gallery') ||
+    field === 'cover_file_entry_id' ||
+    field === 'video_url' ||
+    field === 'live_demo_url'
+  ) {
     return 'media';
   }
   if (
@@ -124,9 +130,11 @@ function ServiceFormPage() {
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string>();
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [openSection, setOpenSection] = useState<ServiceFormSectionId | ''>(
-    'basics',
-  );
+  const [activeStep, setActiveStep] = useState<ServiceBuilderStepId>('details');
+  const contentScrollerRef = useRef<HTMLDivElement>(null);
+  const pendingStepScrollRef = useRef<ServiceBuilderStepId | null>(null);
+  const pendingErrorFocusRef = useRef<string | null>(null);
+  const packageDraftCacheRef = useRef<Record<string, ServiceFormPackage>>({});
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [announcement, setAnnouncement] = useState('');
@@ -188,7 +196,12 @@ function ServiceFormPage() {
     setForm(current => ({...current, [key]: value}));
     setFieldErrors(current => {
       const next = {...current};
-      delete next[key];
+      const keyPrefix = `${String(key)}.`;
+      for (const field of Object.keys(next)) {
+        if (field === key || field.startsWith(keyPrefix)) {
+          delete next[field];
+        }
+      }
       return next;
     });
   };
@@ -207,15 +220,73 @@ function ServiceFormPage() {
 
   const requiredSections = useMemo(
     () => ({
-      basics: !!form.title.trim() && !!form.short_description.trim(),
+      basics: !!form.title.trim(),
       media: !!form.cover_url,
       packages: namedPackages.length > 0,
     }),
     [form.title, form.short_description, form.cover_url, namedPackages],
   );
 
-  const completedRequired = Object.values(requiredSections).filter(Boolean)
-    .length;
+  const completedSteps: Record<ServiceBuilderStepId, boolean> = {
+    details: requiredSections.basics,
+    media: requiredSections.media || form.gallery.length > 0 || !!form.video_url.trim() || !!form.live_demo_url.trim(),
+    packages: requiredSections.packages,
+    settings: form.faqs.some(faq => !!faq.question.trim() || !!faq.answer.trim())
+      || form.contact_channels.some(channel => !!channel.value.trim()),
+  };
+
+  const activeStepIndex = SERVICE_STEP_ORDER.indexOf(activeStep);
+  const previousStep = SERVICE_STEP_ORDER[activeStepIndex - 1];
+  const nextStep = SERVICE_STEP_ORDER[activeStepIndex + 1];
+
+  const changeStep = useCallback((step: ServiceBuilderStepId) => {
+    if (step === activeStep) return;
+    // Schedule focus/scroll for the committed new panel, not the old DOM.
+    pendingStepScrollRef.current = step;
+    setActiveStep(step);
+    setAnnouncement(trans({
+      message: 'Step :current of :total',
+      values: {current: SERVICE_STEP_ORDER.indexOf(step) + 1, total: SERVICE_STEP_ORDER.length},
+    }));
+  }, [activeStep, trans]);
+
+  useLayoutEffect(() => {
+    const resetStageScroll = () => {
+      if (contentScrollerRef.current) contentScrollerRef.current.scrollTop = 0;
+      if (document.scrollingElement) document.scrollingElement.scrollTop = 0;
+    };
+
+    const pendingErrorField = pendingErrorFocusRef.current;
+    if (pendingErrorField) {
+      const section = sectionForField(pendingErrorField);
+      const targetStep = section ? stepForSection(section) : null;
+
+      // Wait until React has committed the stage that owns the invalid field.
+      if (!targetStep || targetStep === activeStep) {
+        pendingErrorFocusRef.current = null;
+        resetStageScroll();
+        requestAnimationFrame(() => {
+          document.getElementById(pendingErrorField)?.focus();
+        });
+      }
+      return;
+    }
+
+    if (pendingStepScrollRef.current !== activeStep) return;
+    pendingStepScrollRef.current = null;
+
+    // SectionContent is the canonical scroll owner for this dashboard screen.
+    // A stage change can shorten the panel and leave its former scroll offset;
+    // resetting the actual element after React commits avoids scroll anchoring.
+    resetStageScroll();
+
+    // Normal navigation keeps keyboard focus with the selected step. Validation
+    // recovery uses the branch above instead, so the invalid field owns focus.
+    const navigation = document.getElementById('service-builder-steps');
+    navigation?.scrollIntoView?.({block: 'start', behavior: 'auto'});
+    navigation?.querySelector<HTMLButtonElement>('button[aria-current="step"]')
+      ?.focus({preventScroll: true});
+  }, [activeStep, fieldErrors]);
 
   const sectionError = (id: ServiceFormSectionId) =>
     Object.keys(fieldErrors).some(
@@ -225,11 +296,29 @@ function ServiceFormPage() {
   const focusFirstError = (errors: Record<string, string>) => {
     const firstField = Object.keys(errors)[0];
     if (!firstField) return;
+
+    pendingErrorFocusRef.current = firstField;
     const section = sectionForField(firstField);
-    if (section) setOpenSection(section);
-    requestAnimationFrame(() => {
-      document.getElementById(firstField)?.focus();
-    });
+    if (!section) {
+      requestAnimationFrame(() => {
+        pendingErrorFocusRef.current = null;
+        document.getElementById(firstField)?.focus();
+      });
+      return;
+    }
+
+    const targetStep = stepForSection(section);
+    // Always set the derived stage. save() deliberately does not depend on
+    // activeStep, so comparing against its closure can use the stage from the
+    // last form edit rather than the stage currently visible at submit time.
+    setActiveStep(targetStep);
+    setAnnouncement(trans({
+      message: 'Step :current of :total',
+      values: {
+        current: SERVICE_STEP_ORDER.indexOf(targetStep) + 1,
+        total: SERVICE_STEP_ORDER.length,
+      },
+    }));
   };
 
   const save = useCallback(
@@ -238,11 +327,17 @@ function ServiceFormPage() {
       // second service merely because the first response is still pending.
       if (savingRef.current || mutationUncertain.current) return;
       if (statusOverride === 'published' && !form.title.trim()) {
-        setFieldErrors({title: trans({message: 'A title is required.'})});
-        setOpenSection('basics');
-        requestAnimationFrame(() =>
-          document.getElementById('title')?.focus(),
-        );
+        const errors = {title: trans({message: 'A title is required.'})};
+        setFieldErrors(errors);
+        focusFirstError(errors);
+        return;
+      }
+
+      const clientErrors = serviceFormClientErrors(form);
+      if (Object.keys(clientErrors).length) {
+        setError(undefined);
+        setFieldErrors(clientErrors);
+        focusFirstError(clientErrors);
         return;
       }
 
@@ -323,24 +418,23 @@ function ServiceFormPage() {
       }
 
       if (event.altKey && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
+        // Let editable controls and selects retain their native Alt shortcuts.
+        if (event.target instanceof HTMLElement
+          && event.target.closest('input, textarea, select, [contenteditable], [role="combobox"]')) {
+          return;
+        }
         event.preventDefault();
-        setOpenSection(current => {
-          const index = Math.max(
-            0,
-            SECTION_ORDER.indexOf(current as ServiceFormSectionId),
-          );
-          const nextIndex =
-            event.key === 'ArrowDown'
-              ? Math.min(SECTION_ORDER.length - 1, index + 1)
-              : Math.max(0, index - 1);
-          return SECTION_ORDER[nextIndex];
-        });
+        const index = SERVICE_STEP_ORDER.indexOf(activeStep);
+        const nextIndex = event.key === 'ArrowDown'
+          ? Math.min(SERVICE_STEP_ORDER.length - 1, index + 1)
+          : Math.max(0, index - 1);
+        changeStep(SERVICE_STEP_ORDER[nextIndex]);
       }
     };
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [save]);
+  }, [save, changeStep, activeStep]);
 
   const remove = async () => {
     if (!serviceId) return;
@@ -386,7 +480,7 @@ function ServiceFormPage() {
           {isEditing ? (
             <Trans message="Edit service" />
           ) : (
-            <Trans message="New service" />
+            <Trans message="Create a service" />
           )}
         </span>
         <Badge
@@ -474,7 +568,7 @@ function ServiceFormPage() {
       <DashboardLayout.MainSection>
         {renderHeader(null)}
         <DashboardLayout.SectionContent className="overflow-y-auto">
-          <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 py-5">
+          <div className="flex w-full max-w-6xl flex-col gap-4 py-5">
             <Skeleton className="h-16 w-full" />
             <Skeleton className="h-72 w-full rounded-card" />
             <Skeleton className="h-48 w-full rounded-card" />
@@ -489,7 +583,7 @@ function ServiceFormPage() {
       <DashboardLayout.MainSection>
         {renderHeader(null)}
         <DashboardLayout.SectionContent className="overflow-y-auto">
-          <div className="mx-auto w-full max-w-3xl py-8">
+          <div className="w-full max-w-3xl py-8">
             <Alert.Root variant="destructive" fillStyle="subtleFill" role="alert">
               <CircleAlertIcon />
               <Alert.Title>
@@ -513,7 +607,7 @@ function ServiceFormPage() {
       <DashboardLayout.MainSection>
         {renderHeader(null)}
         <DashboardLayout.SectionContent className="overflow-y-auto">
-          <div className="mx-auto w-full max-w-3xl py-8">
+          <div className="w-full max-w-3xl py-8">
             <Alert.Root>
               <CircleAlertIcon />
               <Alert.Title>
@@ -525,6 +619,7 @@ function ServiceFormPage() {
               <Alert.Action>
                 <Button
                   size="sm"
+                  nativeButton={false}
                   render={<Link to="/dashboard/stores" />}
                 >
                   <Trans message="Go to My Store" />
@@ -541,49 +636,45 @@ function ServiceFormPage() {
     <DashboardLayout.MainSection>
       {renderHeader(renderActions())}
 
-      <DashboardLayout.SectionContent className="overflow-y-auto">
-        <div className="mx-auto w-full max-w-4xl py-4 sm:py-5">
+      <DashboardLayout.SectionContent
+        ref={contentScrollerRef}
+        className="overflow-y-auto [overflow-anchor:none]"
+      >
+        <div className="w-full max-w-6xl py-4 sm:py-5">
           {creationUncertain && (
             <Alert.Root role="alert" variant="warning" fillStyle="subtleFill" className="mb-5">
               <CircleAlertIcon />
               <Alert.Description className="flex flex-col items-start gap-2">
                 <Trans message="We could not confirm whether the service was created. Check My Services before creating it again." />
-                <Button size="sm" variant="outline" render={<Link to="/dashboard/services" />}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  nativeButton={false}
+                  render={<Link to="/dashboard/services" />}
+                >
                   <Trans message="Check My Services" />
                 </Button>
               </Alert.Description>
             </Alert.Root>
           )}
           {error && (
-            <Alert.Root variant="destructive" fillStyle="subtleFill">
+            <Alert.Root variant="destructive" fillStyle="subtleFill" className="mb-5">
               <CircleAlertIcon />
               <Alert.Description>{error}</Alert.Description>
             </Alert.Root>
           )}
 
-          <Alert.Root className="mb-5 border-note bg-note">
-            <CircleHelpIcon />
-            <Alert.Description>
-              <Trans message="Linket never handles payment for services. Visitors request a quote from your page and you agree the contract directly." />
-            </Alert.Description>
-          </Alert.Root>
+          <ServiceBuilderSteps
+            active={activeStep}
+            onSelect={changeStep}
+            completed={completedSteps}
+          />
 
-          <div className="min-w-0">
-            <div className="flex min-w-0 flex-col gap-4">
-              <ServiceFormProgress
-                completed={completedRequired}
-                total={3}
-              />
-
-              <Accordion.Root
-                variant="bordered"
-                value={openSection ? [openSection] : []}
-                onValueChange={value =>
-                  setOpenSection(
-                    (value[0] as ServiceFormSectionId | undefined) ?? '',
-                  )
-                }
-              >
+          <div className="min-w-0 space-y-4 sm:space-y-5">
+              {/* Keep the rich-text editor mounted between steps. Unmounting and
+                  remounting it can restore editor focus/selection after the
+                  navigator changes, moving both document and panel scroll. */}
+              <div hidden={activeStep !== 'details'} inert={activeStep !== 'details'}>
                 <ServiceFormSection
                   id="basics"
                   icon={PenLineIcon}
@@ -817,7 +908,8 @@ function ServiceFormPage() {
                     </ServiceFormField>
                   </div>
                 </ServiceFormSection>
-
+              </div>
+              {activeStep === 'media' && (
                 <ServiceFormSection
                   id="media"
                   icon={ImagesIcon}
@@ -833,13 +925,12 @@ function ServiceFormPage() {
                     <ServiceGalleryField
                       coverUrl={form.cover_url}
                       gallery={form.gallery}
-                      onCoverChange={(url, entryId) =>
-                        setForm(current => ({
-                          ...current,
-                          cover_url: url,
-                          cover_file_entry_id: entryId,
-                        }))
-                      }
+                      coverError={fieldErrors.cover_file_entry_id}
+                      galleryError={fieldErrors.gallery}
+                      onCoverChange={(url, entryId) => {
+                        update('cover_url', url);
+                        update('cover_file_entry_id', entryId);
+                      }}
                       onGalleryChange={gallery => update('gallery', gallery)}
                     />
 
@@ -886,7 +977,8 @@ function ServiceFormPage() {
                     </div>
                   </div>
                 </ServiceFormSection>
-
+              )}
+              {activeStep === 'packages' && (
                 <ServiceFormSection
                   id="packages"
                   icon={LayersIcon}
@@ -902,11 +994,14 @@ function ServiceFormPage() {
                   <ServicePackagesField
                     packages={form.packages}
                     errors={fieldErrors}
+                    draftCache={packageDraftCacheRef}
                     onChange={packages => update('packages', packages)}
                   />
                 </ServiceFormSection>
-
-                <ServiceFormSection
+              )}
+              {activeStep === 'settings' && (
+                <div className="space-y-4 sm:space-y-5">
+                  <ServiceFormSection
                   id="faq"
                   icon={MessageSquareQuoteIcon}
                   title={trans({message: 'FAQ'})}
@@ -944,10 +1039,56 @@ function ServiceFormPage() {
                       update('contact_channels', channels)
                     }
                   />
-                </ServiceFormSection>
-              </Accordion.Root>
-            </div>
+                  </ServiceFormSection>
+                  <div className="flex items-start gap-2 rounded-card border border-note bg-note px-4 py-3 text-sm text-muted-foreground">
+                    <CircleHelpIcon aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+                    <p>
+                      <Trans message="Customers request a quote and agree contracts directly with you. Linket never receives service payments." />
+                    </p>
+                  </div>
+                </div>
+              )}
 
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4 sm:pt-5">
+                {previousStep ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="min-h-11"
+                    onClick={() => changeStep(previousStep)}
+                  >
+                    <ChevronLeftIcon className="size-4" aria-hidden="true" />
+                    <Trans message="Previous step" />
+                  </Button>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    <Trans message="Your changes are saved when you select Save draft or Publish service." />
+                  </p>
+                )}
+                {nextStep ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="ms-auto min-h-11"
+                    onClick={() => changeStep(nextStep)}
+                  >
+                    <Trans message="Continue" />
+                    <ArrowRightIcon className="size-4" aria-hidden="true" />
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="ms-auto min-h-11"
+                    onClick={() => setPreviewOpen(true)}
+                  >
+                    <EyeIcon className="size-4" aria-hidden="true" />
+                    <Trans message="Preview before publishing" />
+                  </Button>
+                )}
+              </div>
           </div>
         </div>
       </DashboardLayout.SectionContent>
