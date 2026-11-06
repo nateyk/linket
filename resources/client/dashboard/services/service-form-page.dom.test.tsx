@@ -253,6 +253,16 @@ describe('the service form shell', () => {
     expect(api.post).not.toHaveBeenCalled();
   });
 
+  test('edit preview does not emit duplicate React key warnings', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    mountPage('/dashboard/services/3/edit');
+    await waitForForm();
+    await waitFor(() => expect(titleInput().value).toBe('Brand identity sprint'));
+
+    const messages = errorSpy.mock.calls.flat().map(String);
+    expect(messages.some(message => message.includes('same key'))).toBe(false);
+  });
+
   test('edit mode loads the service and hydrates the form from it', async () => {
     const user = userEvent.setup();
     mountPage('/dashboard/services/3/edit');
