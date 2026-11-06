@@ -72,11 +72,6 @@ function stepForSection(section: ServiceFormSectionId): ServiceBuilderStepId {
   return section;
 }
 
-function headingForStep(step: ServiceBuilderStepId): string {
-  const section = step === 'details' ? 'basics' : step === 'settings' ? 'faq' : step;
-  return `service-step-${section}-heading`;
-}
-
 function sectionForField(field: string): ServiceFormSectionId | null {
   if (field.startsWith('packages')) return 'packages';
   if (field.startsWith('faqs')) return 'faq';
@@ -252,9 +247,15 @@ function ServiceFormPage() {
     // A stage change can shorten the panel and leave its former scroll offset;
     // resetting the actual element after React commits avoids scroll anchoring.
     if (contentScrollerRef.current) contentScrollerRef.current.scrollTop = 0;
-    // Some narrow/zoomed layouts can also scroll the document itself.
     if (document.scrollingElement) document.scrollingElement.scrollTop = 0;
-    document.getElementById(headingForStep(activeStep))?.focus({preventScroll: true});
+
+    // The step control is the correct focus destination: focusing the newly
+    // mounted rich editor heading can scroll the viewport back down, hiding
+    // the navigator. Keep keyboard focus with the selected navigation button.
+    const navigation = document.getElementById('service-builder-steps');
+    navigation?.scrollIntoView?.({block: 'start', behavior: 'auto'});
+    navigation?.querySelector<HTMLButtonElement>('button[aria-current="step"]')
+      ?.focus({preventScroll: true});
   }, [activeStep]);
 
   const sectionError = (id: ServiceFormSectionId) =>
