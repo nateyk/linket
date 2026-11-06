@@ -206,7 +206,14 @@ describe('the service form shell', () => {
     expect(screen.getByRole('button', {name: 'Details, step 1 of 4'}).getAttribute('aria-current')).toBe('step');
     await user.type(titleInput(), 'Custom brand consulting');
 
+    const navigation = screen.getByRole('navigation', {name: 'Service creation steps'});
+    const scroller = navigation.closest('[data-slot="section-content"]') as HTMLDivElement;
+    expect(scroller).toBeTruthy();
+    // The stage may be scrolled far down in the previous form; its own scroll
+    // owner must reset after React commits the next stage, not in a stale rAF.
+    scroller.scrollTop = 320;
     await user.click(screen.getByRole('button', {name: 'Media, step 2 of 4'}));
+    expect(scroller.scrollTop).toBe(0);
     expect(screen.getByRole('button', {name: 'Media, step 2 of 4'}).getAttribute('aria-current')).toBe('step');
     expect(screen.queryByRole('textbox', {name: 'Title'})).toBeNull();
     expect(screen.getByRole('heading', {name: 'Media and links'})).toBeTruthy();
@@ -218,7 +225,9 @@ describe('the service form shell', () => {
     expect(screen.getByRole('heading', {name: 'FAQ'})).toBeTruthy();
     expect(screen.getByRole('heading', {name: 'Contact buttons'})).toBeTruthy();
 
+    scroller.scrollTop = 280;
     await user.click(screen.getByRole('button', {name: 'Details, step 1 of 4'}));
+    expect(scroller.scrollTop).toBe(0);
     expect(titleInput().value).toBe('Custom brand consulting');
     expect(api.post).not.toHaveBeenCalled();
     expect(api.put).not.toHaveBeenCalled();
