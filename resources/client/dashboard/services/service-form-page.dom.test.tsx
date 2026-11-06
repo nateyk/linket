@@ -5,7 +5,7 @@
  * and `/dashboard/services/:serviceId/edit` — so the create/edit split lives in
  * `useParams`, not in the component tree. These tests mount the real route
  * paths through a memory router and drive the page the way a creator does:
- * read the shell (breadcrumb, four steps and desktop/modal preview),
+ * read the shell (breadcrumb, responsive four-stage rail and on-demand preview),
  * type a title, and save with the keyboard shortcut.
  *
  * Everything the page fetches goes through the mocked `apiClient`, so the tests
@@ -192,8 +192,12 @@ describe('the service form shell', () => {
     expect(screen.getByRole('navigation', {name: 'Service creation steps'})).toBeTruthy();
     expect(screen.getByText('Step 1 of 4')).toBeTruthy();
     expect(screen.getByRole('button', {name: 'Preview'})).toBeTruthy();
-    // On larger screens the same unsaved state is previewed alongside the form.
-    expect(screen.getByRole('complementary', {name: 'Service preview'})).toBeTruthy();
+    // The form owns the width; preview is available only on demand.
+    expect(screen.queryByRole('complementary', {name: 'Service preview'})).toBeNull();
+    expect(screen.queryByRole('dialog', {name: 'Customer preview'})).toBeNull();
+    const steps = screen.getByRole('navigation', {name: 'Service creation steps'});
+    expect(steps.className).toContain('xl:sticky');
+    expect(steps.parentElement?.className).toContain('xl:grid-cols-[15rem_minmax(0,1fr)]');
     // Step changes are announced once by the page-level status region.
     expect(screen.getAllByRole('status')).toHaveLength(1);
   });
@@ -315,8 +319,7 @@ describe('the service form shell', () => {
     await waitFor(() =>
       expect(titleInput().value).toBe('Brand identity sprint'),
     );
-    // Sidebar and modal use the same hydrated, unsaved form state.
-    expect(within(screen.getByRole('complementary', {name: 'Service preview'})).getByText('Starter')).toBeTruthy();
+    // The on-demand dialog uses the same hydrated form state.
     await user.click(screen.getByRole('button', {name: 'Preview'}));
     const dialog = screen.getByRole('dialog', {name: 'Customer preview'});
     expect(within(dialog).getByText('Brand identity sprint')).toBeTruthy();
@@ -358,7 +361,7 @@ describe('the preview is on-demand and live', () => {
     mountPage('/dashboard/services/new');
     await waitForForm();
 
-    expect(within(screen.getByRole('complementary', {name: 'Service preview'})).getByText('Untitled service')).toBeTruthy();
+    expect(screen.queryByRole('dialog', {name: 'Customer preview'})).toBeNull();
     await user.click(screen.getByRole('button', {name: 'Preview'}));
     const dialog = screen.getByRole('dialog', {name: 'Customer preview'});
     expect(within(dialog).getByText('Untitled service')).toBeTruthy();
@@ -370,9 +373,8 @@ describe('the preview is on-demand and live', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
 
     await user.type(titleInput(), 'Logo design');
-    // The modal correctly makes background content inert. Inspect the sidebar
-    // before opening it, then verify the focused dialog's own content.
-    expect(within(screen.getByRole('complementary', {name: 'Service preview'})).queryByText('Untitled service')).toBeNull();
+    // Reopening the single preview reflects edits made after closing it.
+    expect(screen.queryByRole('complementary', {name: 'Service preview'})).toBeNull();
     await user.click(screen.getByRole('button', {name: 'Preview'}));
 
     expect(within(screen.getByRole('dialog', {name: 'Customer preview'})).getByText('Logo design')).toBeTruthy();
