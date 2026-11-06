@@ -241,7 +241,7 @@ export function ServicePackagesField({
         </p>
       </div>
 
-      <div className="grid min-w-0 grid-cols-3 gap-2 sm:gap-3" role="group" aria-label={trans({message: 'Package tiers'})}>
+      <div className="grid min-w-0 grid-cols-3 divide-x border-b" role="group" aria-label={trans({message: 'Package tiers'})}>
         {TIERS.map((tier, index) => {
           const slot = slots[index];
           const tierName = trans(tier.label);
@@ -255,9 +255,9 @@ export function ServicePackagesField({
               key={tier.key}
               aria-label={tier.name + ' package'}
               className={cn(
-                'min-w-0 rounded-card-sm border bg-card p-2 sm:p-3',
-                selectedIndex === index && 'border-primary/50',
-                tierHasError && 'border-destructive/70',
+                'min-w-0 border-b-2 border-transparent px-2 py-2.5 sm:px-3',
+                selectedIndex === index && 'border-primary',
+                tierHasError && 'border-destructive',
               )}
             >
               <button
@@ -276,7 +276,7 @@ export function ServicePackagesField({
                     formatMoney(priceCents, 'ETB')}
                 </span>
               </button>
-              <div className="mt-2 flex min-h-8 items-center justify-between gap-1 border-t pt-2">
+              <div className="mt-2 flex min-h-8 items-center justify-between gap-1">
                 <span className="text-xs text-muted-foreground">
                   {item ? <Trans message="On" /> : <Trans message="Off" />}
                 </span>
@@ -294,9 +294,9 @@ export function ServicePackagesField({
 
       <section
         aria-label={trans({message: ':name package details', values: {name: trans(selectedTier.label)}})}
-        className="min-w-0 overflow-hidden rounded-card-sm border bg-card"
+        className="min-w-0 space-y-4"
       >
-        <header className="flex items-center justify-between gap-3 border-b px-4 py-3 sm:px-5">
+        <header className="flex items-center justify-between gap-3 border-b pb-3">
           <div className="min-w-0">
             <h3 className="text-sm font-semibold">
               <Trans message=":name details" values={{name: trans(selectedTier.label)}} />
@@ -314,7 +314,7 @@ export function ServicePackagesField({
           )}
         </header>
         {selectedItem ? (
-          <div className="space-y-4 p-4 sm:p-5">
+          <div className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <ServiceFormField
                 name={selectedField + 'price_cents'}
@@ -403,14 +403,14 @@ export function ServicePackagesField({
             )}
           </div>
         ) : (
-          <p className="px-4 py-4 text-sm text-muted-foreground sm:px-5">
+          <p className="py-1 text-sm text-muted-foreground">
             <Trans message="Turn on this package to add its price and delivery details." />
           </p>
         )}
       </section>
 
-      <section aria-label={trans({message: 'Included features'})} className="min-w-0 overflow-hidden rounded-card-sm border bg-card">
-        <div className="flex items-center justify-between gap-3 border-b px-4 py-3 sm:px-5">
+      <section aria-label={trans({message: 'Included features'})} className="min-w-0 border-t pt-5">
+        <div className="flex items-center justify-between gap-3 pb-4">
           <div>
             <h3 className="text-sm font-semibold"><Trans message="Included features" /></h3>
             <p className="mt-1 text-xs leading-5 text-muted-foreground">
@@ -425,7 +425,7 @@ export function ServicePackagesField({
         </div>
 
         {featureRows.length > 0 && (
-          <div className="divide-y px-4 sm:px-5">
+          <div className="divide-y">
             {featureRows.map(feature => (
               <div key={feature.toLocaleLowerCase()} className="grid gap-2 py-3 sm:grid-cols-[minmax(0,1fr)_minmax(15rem,1fr)] sm:items-center">
                 <div className="flex min-w-0 items-center justify-between gap-2">
@@ -468,7 +468,7 @@ export function ServicePackagesField({
           </div>
         )}
 
-        <div className={cn('p-4 sm:p-5', featureRows.length > 0 && 'border-t')}>
+        <div className={cn('pt-4', featureRows.length > 0 && 'border-t')}>
           <label htmlFor="service-new-package-feature" className="mb-2 block text-sm font-medium">
             <Trans message="Add an included feature" />
           </label>
@@ -527,7 +527,7 @@ export function ServicePackagesField({
       </section>
 
       {legacy.length > 0 && (
-        <section className="rounded-card-sm border border-warning/40 p-4" aria-label={trans({message: 'Older packages'})}>
+        <section className="border-t pt-5" aria-label={trans({message: 'Older packages'})}>
           <h3 className="text-sm font-semibold"><Trans message="Older packages" /></h3>
           <p className="mt-1 text-sm leading-5 text-muted-foreground">
             <Trans message="This service has additional packages from the previous editor. They remain saved until you remove them explicitly." />

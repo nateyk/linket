@@ -89,6 +89,12 @@ test.describe('Service Creation — authenticated browser acceptance', () => {
       await steps.getByRole('button', {name: 'Packages, step 3 of 4'}).click();
       await expect(page.getByRole('heading', {name: 'Packages'})).toBeVisible();
 
+      // The outer Packages panel owns the visual surface. Inner tier choices,
+      // details and features must not become their own cards again.
+      await expect(
+        page.locator('#service-step-packages section.bg-card, #service-step-packages section.rounded-card-sm'),
+      ).toHaveCount(0);
+
       // Three fixed tiers, never an unbounded Add Package form. The matrix
       // must be operable with touch and keyboard at every mobile breakpoint.
       for (const tier of ['Basic', 'Standard', 'Premium']) {
