@@ -56,6 +56,35 @@ describe('Service Creation fixed package tiers', () => {
     expect(changes).toHaveLength(0);
   });
 
+  it('shows three quiet summaries but only one editable tier at a time', async () => {
+    const user = userEvent.setup();
+    renderField([
+      pkg({name: 'Basic', price: '150'}),
+      pkg({name: 'Standard', price: '300'}),
+      pkg({name: 'Premium', price: '550'}),
+    ]);
+    expect(screen.getByRole('region', {name: 'Basic package details'})).toBeTruthy();
+    expect(screen.queryByRole('region', {name: 'Standard package details'})).toBeNull();
+    expect(screen.getByRole('button', {name: 'Edit Basic package'}).getAttribute('aria-pressed')).toBe('true');
+
+    await user.click(screen.getByRole('button', {name: 'Edit Premium package'}));
+    expect(screen.getByRole('region', {name: 'Premium package details'})).toBeTruthy();
+    expect(screen.queryByRole('region', {name: 'Basic package details'})).toBeNull();
+    expect(screen.getByRole('button', {name: 'Edit Premium package'}).getAttribute('aria-pressed')).toBe('true');
+    expect(screen.getAllByRole('textbox', {name: 'Price'})).toHaveLength(1);
+  });
+
+  it('keeps optional description hidden until requested, without losing existing text', async () => {
+    const user = userEvent.setup();
+    renderField([pkg({name: 'Basic'})]);
+    expect(screen.queryByRole('textbox', {name: 'Package description'})).toBeNull();
+    await user.click(screen.getByRole('button', {name: 'Add package description'}));
+    await user.type(screen.getByRole('textbox', {name: 'Package description'}), 'Includes source files');
+    await user.click(screen.getByRole('button', {name: 'Edit Standard package'}));
+    await user.click(screen.getByRole('button', {name: 'Edit Basic package'}));
+    expect(screen.getByRole('textbox', {name: 'Package description'})).toHaveProperty('value', 'Includes source files');
+  });
+
   it('enables Standard directly with its fixed name, without adding Basic', async () => {
     const {changes} = renderField([]);
     await userEvent.click(screen.getByRole('switch', {name: 'Enable Standard package'}));
@@ -68,10 +97,11 @@ describe('Service Creation fixed package tiers', () => {
     const user = userEvent.setup();
     const {changes} = renderField([]);
     await user.click(screen.getByRole('switch', {name: 'Enable Basic package'}));
-    const basic = screen.getByRole('region', {name: 'Basic package'});
+    const basic = screen.getByRole('region', {name: 'Basic package details'});
     await user.type(within(basic).getByRole('textbox', {name: 'Price'}), '299');
     await user.type(within(basic).getByRole('textbox', {name: 'Delivery days'}), '5');
     await user.type(within(basic).getByRole('textbox', {name: 'Revisions'}), '2');
+    await user.click(within(basic).getByRole('button', {name: 'Add package description'}));
     await user.type(within(basic).getByRole('textbox', {name: 'Package description'}), 'One logo concept');
 
     expect(changes.at(-1)?.[0]).toMatchObject({
@@ -88,7 +118,7 @@ describe('Service Creation fixed package tiers', () => {
     const user = userEvent.setup();
     const {changes} = renderField([pkg({name: 'Basic', price: '120'})]);
     await user.click(screen.getByRole('switch', {name: 'Enable Standard package'}));
-    const standard = screen.getByRole('region', {name: 'Standard package'});
+    const standard = screen.getByRole('region', {name: 'Standard package details'});
     await user.type(within(standard).getByRole('textbox', {name: 'Price'}), '399');
     await user.click(screen.getByRole('switch', {name: 'Enable Standard package'}));
     expect(changes.at(-1)).toEqual([pkg({name: 'Basic', price: '120'})]);
@@ -144,11 +174,35 @@ describe('Service Creation fixed package tiers', () => {
     expect(screen.getByRole('button', {name: 'Add feature'}).hasAttribute('disabled')).toBe(true);
   });
 
+  it('shows the tier with a validation error even when another tier was selected', async () => {
+    const user = userEvent.setup();
+    function Host() {
+      const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+      return (
+        <>
+          <button type="button" onClick={() => setFieldErrors({'packages.1.delivery_days': 'Delivery is invalid.'})}>
+            Trigger validation
+          </button>
+          <ServicePackagesField
+            packages={[pkg({name: 'Basic'}), pkg({name: 'Standard'})]}
+            errors={fieldErrors}
+            onChange={() => {}}
+          />
+        </>
+      );
+    }
+    render(<Host />);
+    expect(screen.getByRole('region', {name: 'Basic package details'})).toBeTruthy();
+    await user.click(screen.getByRole('button', {name: 'Trigger validation'}));
+    expect(screen.getByRole('region', {name: 'Standard package details'})).toBeTruthy();
+    expect(screen.getByText('Delivery is invalid.')).toBeTruthy();
+  });
+
   it('shows backend price validation on the correct enabled tier', () => {
     renderField([pkg({name: 'Standard', price: 'invalid'})], {
       'packages.0.price_cents': 'Enter a valid price.',
     });
-    const standard = screen.getByRole('region', {name: 'Standard package'});
+    const standard = screen.getByRole('region', {name: 'Standard package details'});
     expect(within(standard).getByText('Enter a valid price.')).toBeTruthy();
     expect(within(standard).getByRole('textbox', {name: 'Price'}).getAttribute('id')).toBe('packages.0.price_cents');
   });
@@ -156,7 +210,7 @@ describe('Service Creation fixed package tiers', () => {
   it('maps older Starter packages to Basic without deleting their saved ID or fields', async () => {
     const user = userEvent.setup();
     const {changes} = renderField([pkg({id: 18, name: 'Starter', price: '249', features: 'Logo files'})]);
-    const basic = screen.getByRole('region', {name: 'Basic package'});
+    const basic = screen.getByRole('region', {name: 'Basic package details'});
     expect(within(basic).getByText('Previously: Starter')).toBeTruthy();
     await user.click(screen.getByRole('switch', {name: 'Enable Premium package'}));
     expect(changes.at(-1)?.[0]).toMatchObject({id: 18, name: 'Basic', price: '249', features: 'Logo files'});
