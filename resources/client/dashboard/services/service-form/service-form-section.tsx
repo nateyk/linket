@@ -46,7 +46,7 @@ export function ServiceFormSection({
         hasError && 'border-destructive/60',
       )}
     >
-      <header className="flex items-start gap-3 border-b px-4 py-4 sm:px-6">
+      <header className="flex items-start gap-3 border-b px-4 py-4 sm:px-6 sm:py-5">
         <span
           aria-hidden="true"
           className={cn(
@@ -64,7 +64,7 @@ export function ServiceFormSection({
           >
             {title}
           </h2>
-          <p className="mt-0.5 text-sm leading-5 text-muted-foreground">
+          <p className="mt-1 text-sm leading-5 text-muted-foreground">
             {description}
           </p>
         </div>
