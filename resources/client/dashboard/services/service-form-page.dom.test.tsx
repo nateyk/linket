@@ -216,6 +216,27 @@ describe('the service form shell', () => {
     expect(screen.getByRole('textbox', {name: 'Value'}).getAttribute('maxlength')).toBe('300');
   });
 
+  test('FAQ and contact repeaters stop at the API maximums', async () => {
+    const user = userEvent.setup();
+    mountPage('/dashboard/services/new');
+    await waitForForm();
+    await user.click(screen.getByRole('button', {name: 'Settings, step 4 of 4'}));
+
+    const addFaq = screen.getByRole('button', {name: 'Add FAQ'});
+    for (let index = 0; index < 20; index += 1) {
+      await user.click(addFaq);
+    }
+    expect(addFaq).toHaveProperty('disabled', true);
+    expect(screen.getByText('Maximum 20 FAQs reached.')).toBeTruthy();
+
+    const addContact = screen.getByRole('button', {name: 'Add contact button'});
+    for (let index = 0; index < 6; index += 1) {
+      await user.click(addContact);
+    }
+    expect(addContact).toHaveProperty('disabled', true);
+    expect(screen.getByText('Maximum 6 contact buttons reached.')).toBeTruthy();
+  });
+
   test('all four service stages are accessible, navigable and retain unsaved fields', async () => {
     const user = userEvent.setup();
     mountPage('/dashboard/services/new');
