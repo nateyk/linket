@@ -435,6 +435,43 @@ describe('saving', () => {
     await waitFor(() => expect(document.activeElement).toBe(document.getElementById('skills')));
   });
 
+  test('gallery validation opens Media and shows the error on the gallery field', async () => {
+    const user = userEvent.setup();
+    mountPage('/dashboard/services/new');
+    await waitForForm();
+    await user.type(titleInput(), 'Portfolio review');
+    await user.click(screen.getByRole('button', {name: 'Settings, step 4 of 4'}));
+
+    api.post.mockRejectedValueOnce(
+      new AxiosError(
+        'Request failed with status code 422',
+        'ERR_BAD_REQUEST',
+        undefined,
+        undefined,
+        {
+          status: 422,
+          data: {
+            message: 'The given data was invalid.',
+            errors: {'gallery_file_entry_ids.0': ['Select an image from this workspace.']},
+          },
+          statusText: 'Unprocessable Content',
+          headers: {},
+          config: {} as never,
+        },
+      ),
+    );
+
+    await user.click(screen.getByRole('button', {name: 'Publish service'}));
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', {name: 'Media, step 2 of 4'}).getAttribute('aria-current'),
+      ).toBe('step'),
+    );
+    expect(screen.getByText('Select an image from this workspace.')).toBeTruthy();
+    await waitFor(() => expect(document.activeElement).toBe(document.getElementById('gallery')));
+  });
+
   test('server URL validation opens Media and focuses the invalid field', async () => {
     const user = userEvent.setup();
     mountPage('/dashboard/services/new');
