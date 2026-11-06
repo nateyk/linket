@@ -231,7 +231,7 @@ export function ServicePackagesField({
   };
 
   return (
-    <div className="min-w-0 space-y-5">
+    <div className="min-w-0 space-y-4 sm:space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-muted-foreground">
           <Trans message="Choose a tier to edit its details." />
@@ -255,7 +255,7 @@ export function ServicePackagesField({
               key={tier.key}
               aria-label={tier.name + ' package'}
               className={cn(
-                'min-w-0 rounded-card-sm border bg-card p-2.5 sm:p-3',
+                'min-w-0 rounded-card-sm border bg-card p-2 sm:p-3',
                 selectedIndex === index && 'border-primary/50',
                 tierHasError && 'border-destructive/70',
               )}
