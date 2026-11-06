@@ -16,7 +16,7 @@ import {Trans} from '@ui/i18n/trans';
 import {useTrans} from '@ui/i18n/use-trans';
 import {cn} from '@ui/utils/cn';
 import {PlusIcon, Trash2Icon} from 'lucide-react';
-import {useRef, useState, type RefObject} from 'react';
+import {useLayoutEffect, useRef, useState, type RefObject} from 'react';
 import {ServiceFormField} from './service-form-field';
 import type {ServiceFormPackage} from '../service-form-state';
 
@@ -107,12 +107,36 @@ export function ServicePackagesField({
   const cache = draftCache?.current ?? localCache.current;
   const [newFeature, setNewFeature] = useState('');
   const [featureError, setFeatureError] = useState('');
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [descriptionOpen, setDescriptionOpen] = useState<number | null>(null);
   const {slots, legacy} = assignPackages(packages);
   const enabledCount = slots.filter(Boolean).length;
   const featureLists = slots.map(slot => slot ? lines(slot.item.features) : []);
   const featureRows = Array.from(new Map(
     featureLists.flat().map(value => [value.toLocaleLowerCase(), value]),
   ).values());
+
+  const firstErrorIndex = slots.findIndex(slot =>
+    Boolean(slot && Object.keys(errors).some(key =>
+      key.startsWith('packages.' + slot.sourceIndex + '.'),
+    )),
+  );
+  const errorSignature = Object.keys(errors).sort().join('|');
+  useLayoutEffect(() => {
+    if (firstErrorIndex >= 0) setSelectedIndex(firstErrorIndex);
+  }, [firstErrorIndex, errorSignature]);
+
+  const selectedTier = TIERS[selectedIndex];
+  const selectedSlot = slots[selectedIndex];
+  const selectedItem = selectedSlot?.item;
+  const selectedField = 'packages.' + (selectedSlot?.sourceIndex ?? -1) + '.';
+  const selectedDescriptionVisible = Boolean(
+    selectedItem && (
+      selectedItem.description.trim() ||
+      descriptionOpen === selectedIndex ||
+      errors[selectedField + 'description']
+    ),
+  );
 
   const emit = (next: Slot[], nextLegacy = legacy) => {
     onChange([
@@ -135,6 +159,7 @@ export function ServicePackagesField({
       };
     }
     emit(next);
+    if (checked) setSelectedIndex(index);
     setFeatureError('');
   };
 
@@ -175,9 +200,11 @@ export function ServicePackagesField({
       setFeatureError(trans({message: 'This feature already exists.'}));
       return;
     }
-    const index = slots.findIndex((slot, slotIndex) =>
-      Boolean(slot && featureLists[slotIndex].length < 20),
-    );
+    const index = slots[selectedIndex] && featureLists[selectedIndex].length < 20
+      ? selectedIndex
+      : slots.findIndex((slot, slotIndex) =>
+          Boolean(slot && featureLists[slotIndex].length < 20),
+        );
     if (index < 0) {
       setFeatureError(trans({message: 'Enable a package with room for a feature first.'}));
       return;
@@ -205,244 +232,243 @@ export function ServicePackagesField({
 
   return (
     <div className="min-w-0 space-y-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-sm font-medium">
-            <Trans message="Choose your packages" />
-          </p>
-          <p className="mt-1 text-sm leading-5 text-muted-foreground">
-            <Trans message="Turn on any of the three tiers. Only enabled packages are included when you save." />
-          </p>
-        </div>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm text-muted-foreground">
+          <Trans message="Choose a tier to edit its details." />
+        </p>
         <p className="text-xs font-medium tabular-nums text-muted-foreground">
           <Trans message=":count of 3 enabled" values={{count: enabledCount}} />
         </p>
       </div>
 
-      <div className="grid min-w-0 gap-3 lg:grid-cols-3">
+      <div className="grid min-w-0 grid-cols-3 gap-2 sm:gap-3" role="group" aria-label={trans({message: 'Package tiers'})}>
         {TIERS.map((tier, index) => {
           const slot = slots[index];
-          const tierLabel = trans(tier.label);
+          const tierName = trans(tier.label);
           const item = slot?.item;
-          const sourceIndex = slot?.sourceIndex ?? -1;
-          const idPrefix = 'packages.' + sourceIndex + '.';
           const priceCents = item ? parseEtbToCents(item.price) : null;
-          const tierErrors = slot
-            ? Object.keys(errors).filter(key => key.startsWith('packages.' + sourceIndex + '.'))
-            : [];
+          const tierHasError = Boolean(slot && Object.keys(errors).some(
+            key => key.startsWith('packages.' + slot.sourceIndex + '.'),
+          ));
           return (
             <section
               key={tier.key}
               aria-label={tier.name + ' package'}
               className={cn(
-                'min-w-0 overflow-hidden rounded-card-sm border bg-card',
-                item ? 'border-border' : 'border-border/70',
-                tierErrors.length > 0 && 'border-destructive/60',
+                'min-w-0 rounded-card-sm border bg-card p-2.5 sm:p-3',
+                selectedIndex === index && 'border-primary/50',
+                tierHasError && 'border-destructive/70',
               )}
             >
-              <div className="flex items-center justify-between gap-3 border-b px-4 py-4">
-                <div className="min-w-0">
-                  <h3 className="text-base font-semibold">{tierLabel}</h3>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    {item ? <Trans message="Enabled" /> : <Trans message="Disabled" />}
-                  </p>
-                  {item && item.name.trim().toLowerCase() !== tier.name.toLowerCase() && (
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      <Trans message="Previously: :name" values={{name: item.name}} />
-                    </p>
-                  )}
-                </div>
+              <button
+                type="button"
+                aria-pressed={selectedIndex === index}
+                aria-label={trans({message: 'Edit :name package', values: {name: tierName}})}
+                onClick={() => setSelectedIndex(index)}
+                className="flex min-h-12 w-full min-w-0 flex-col justify-start gap-1 rounded-button text-start outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              >
+                <span className={cn('text-sm font-semibold', !item && 'text-muted-foreground')}>
+                  {tierName}
+                </span>
+                <span className="min-w-0 break-words text-xs leading-4 text-muted-foreground tabular-nums">
+                  {!item ? <Trans message="Not offered" /> :
+                    priceCents === null ? <Trans message="Quote only" /> :
+                    formatMoney(priceCents, 'ETB')}
+                </span>
+              </button>
+              <div className="mt-2 flex min-h-8 items-center justify-between gap-1 border-t pt-2">
+                <span className="text-xs text-muted-foreground">
+                  {item ? <Trans message="On" /> : <Trans message="Off" />}
+                </span>
                 <Switch
                   size="sm"
                   checked={Boolean(item)}
                   onCheckedChange={checked => setEnabled(index, checked)}
-                  aria-label={trans({
-                    message: 'Enable :name package',
-                    values: {name: tierLabel},
-                  })}
+                  aria-label={trans({message: 'Enable :name package', values: {name: tierName}})}
                 />
               </div>
-
-              {item ? (
-                <div className="space-y-4 p-4">
-                  <ServiceFormField
-                    name={idPrefix + 'price_cents'}
-                    label={trans({message: 'Price'})}
-                    error={errors[idPrefix + 'price_cents']}
-                    description={trans({message: 'Leave empty for a custom quote.'})}
-                  >
-                    <InputGroup>
-                      <InputGroupAddon align="inline-start">
-                        <InputGroupText>ETB</InputGroupText>
-                      </InputGroupAddon>
-                      <InputGroupInput
-                        id={idPrefix + 'price_cents'}
-                        inputMode="decimal"
-                        value={item.price}
-                        onChange={event => updateTier(index, {price: event.target.value})}
-                        placeholder={trans({message: 'Amount'})}
-                        aria-invalid={!!errors[idPrefix + 'price_cents']}
-                      />
-                    </InputGroup>
-                  </ServiceFormField>
-
-                  <div className="grid grid-cols-2 gap-3 lg:grid-cols-1 xl:grid-cols-2">
-                    <ServiceFormField
-                      name={idPrefix + 'delivery_days'}
-                      label={trans({message: 'Delivery days'})}
-                      error={errors[idPrefix + 'delivery_days']}
-                    >
-                      <Input
-                        id={idPrefix + 'delivery_days'}
-                        inputMode="numeric"
-                        value={item.delivery_days}
-                        onChange={event => updateTier(index, {delivery_days: event.target.value})}
-                        placeholder="5"
-                        aria-invalid={!!errors[idPrefix + 'delivery_days']}
-                      />
-                    </ServiceFormField>
-                    <ServiceFormField
-                      name={idPrefix + 'revisions'}
-                      label={trans({message: 'Revisions'})}
-                      error={errors[idPrefix + 'revisions']}
-                    >
-                      <Input
-                        id={idPrefix + 'revisions'}
-                        inputMode="numeric"
-                        value={item.revisions}
-                        onChange={event => updateTier(index, {revisions: event.target.value})}
-                        placeholder="2"
-                        aria-invalid={!!errors[idPrefix + 'revisions']}
-                      />
-                    </ServiceFormField>
-                  </div>
-
-                  <ServiceFormField
-                    name={idPrefix + 'description'}
-                    label={trans({message: 'Package description'})}
-                    error={errors[idPrefix + 'description']}
-                    counter={{current: item.description.length, max: 3000}}
-                  >
-                    <Textarea
-                      id={idPrefix + 'description'}
-                      rows={3}
-                      maxLength={3000}
-                      value={item.description}
-                      onChange={event => updateTier(index, {description: event.target.value})}
-                      placeholder={trans({message: 'What the customer receives'})}
-                      aria-invalid={!!errors[idPrefix + 'description']}
-                    />
-                  </ServiceFormField>
-
-                  <p className="text-sm font-medium tabular-nums">
-                    {priceCents === null
-                      ? <Trans message="Quote only" />
-                      : formatMoney(priceCents, 'ETB')}
-                  </p>
-                  {errors[idPrefix + 'name'] && (
-                    <p className="text-sm text-destructive" role="alert">
-                      {errors[idPrefix + 'name']}
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <div className="flex min-h-28 items-center p-4 text-sm leading-5 text-muted-foreground">
-                  <Trans message="Enable this tier to set pricing, delivery and revisions." />
-                </div>
-              )}
             </section>
           );
         })}
       </div>
 
-      <section aria-label={trans({message: 'Included features'})} className="min-w-0 rounded-card-sm border bg-card">
-        <div className="flex flex-wrap items-start justify-between gap-3 border-b px-4 py-4">
+      <section
+        aria-label={trans({message: ':name package details', values: {name: trans(selectedTier.label)}})}
+        className="min-w-0 overflow-hidden rounded-card-sm border bg-card"
+      >
+        <header className="flex items-center justify-between gap-3 border-b px-4 py-3 sm:px-5">
+          <div className="min-w-0">
+            <h3 className="text-sm font-semibold">
+              <Trans message=":name details" values={{name: trans(selectedTier.label)}} />
+            </h3>
+            {selectedItem && selectedItem.name.trim().toLowerCase() !== selectedTier.name.toLowerCase() && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                <Trans message="Previously: :name" values={{name: selectedItem.name}} />
+              </p>
+            )}
+          </div>
+          {selectedItem && (
+            <p className="shrink-0 text-xs font-medium text-muted-foreground">
+              <Trans message="Editing" />
+            </p>
+          )}
+        </header>
+        {selectedItem ? (
+          <div className="space-y-4 p-4 sm:p-5">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <ServiceFormField
+                name={selectedField + 'price_cents'}
+                label={trans({message: 'Price'})}
+                error={errors[selectedField + 'price_cents']}
+                description={trans({message: 'Leave blank for a quote.'})}
+              >
+                <InputGroup>
+                  <InputGroupAddon align="inline-start">
+                    <InputGroupText>ETB</InputGroupText>
+                  </InputGroupAddon>
+                  <InputGroupInput
+                    id={selectedField + 'price_cents'}
+                    inputMode="decimal"
+                    value={selectedItem.price}
+                    onChange={event => updateTier(selectedIndex, {price: event.target.value})}
+                    placeholder={trans({message: 'Amount'})}
+                    aria-invalid={!!errors[selectedField + 'price_cents']}
+                  />
+                </InputGroup>
+              </ServiceFormField>
+              <div className="grid grid-cols-2 gap-3">
+                <ServiceFormField
+                  name={selectedField + 'delivery_days'}
+                  label={trans({message: 'Delivery days'})}
+                  error={errors[selectedField + 'delivery_days']}
+                >
+                  <Input
+                    id={selectedField + 'delivery_days'}
+                    inputMode="numeric"
+                    value={selectedItem.delivery_days}
+                    onChange={event => updateTier(selectedIndex, {delivery_days: event.target.value})}
+                    placeholder="5"
+                    aria-invalid={!!errors[selectedField + 'delivery_days']}
+                  />
+                </ServiceFormField>
+                <ServiceFormField
+                  name={selectedField + 'revisions'}
+                  label={trans({message: 'Revisions'})}
+                  error={errors[selectedField + 'revisions']}
+                >
+                  <Input
+                    id={selectedField + 'revisions'}
+                    inputMode="numeric"
+                    value={selectedItem.revisions}
+                    onChange={event => updateTier(selectedIndex, {revisions: event.target.value})}
+                    placeholder="2"
+                    aria-invalid={!!errors[selectedField + 'revisions']}
+                  />
+                </ServiceFormField>
+              </div>
+            </div>
+            {selectedDescriptionVisible ? (
+              <ServiceFormField
+                name={selectedField + 'description'}
+                label={trans({message: 'Package description'})}
+                error={errors[selectedField + 'description']}
+                counter={{current: selectedItem.description.length, max: 3000}}
+              >
+                <Textarea
+                  id={selectedField + 'description'}
+                  rows={3}
+                  maxLength={3000}
+                  value={selectedItem.description}
+                  onChange={event => updateTier(selectedIndex, {description: event.target.value})}
+                  placeholder={trans({message: 'What the customer receives'})}
+                  aria-invalid={!!errors[selectedField + 'description']}
+                />
+              </ServiceFormField>
+            ) : (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="px-0"
+                onClick={() => setDescriptionOpen(selectedIndex)}
+              >
+                <PlusIcon data-icon="inline-start" />
+                <Trans message="Add package description" />
+              </Button>
+            )}
+            {errors[selectedField + 'name'] && (
+              <p id={selectedField + 'name'} tabIndex={-1} role="alert" className="text-sm text-destructive">
+                {errors[selectedField + 'name']}
+              </p>
+            )}
+          </div>
+        ) : (
+          <p className="px-4 py-4 text-sm text-muted-foreground sm:px-5">
+            <Trans message="Turn on this package to add its price and delivery details." />
+          </p>
+        )}
+      </section>
+
+      <section aria-label={trans({message: 'Included features'})} className="min-w-0 overflow-hidden rounded-card-sm border bg-card">
+        <div className="flex items-center justify-between gap-3 border-b px-4 py-3 sm:px-5">
           <div>
             <h3 className="text-sm font-semibold"><Trans message="Included features" /></h3>
             <p className="mt-1 text-xs leading-5 text-muted-foreground">
-              <Trans message="Add each deliverable once, then choose which tiers include it." />
+              <Trans message="Select which packages include each feature." />
             </p>
           </div>
-          <span className="text-xs tabular-nums text-muted-foreground">
+          <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
             {featureRows.length === 1
               ? <Trans message="1 feature" />
               : <Trans message=":count features" values={{count: featureRows.length}} />}
           </span>
         </div>
 
-        {featureRows.length ? (
-          <div className="min-w-0 px-3 py-3 sm:px-4">
-            <table className="w-full table-fixed border-separate border-spacing-0 text-sm">
-              <thead>
-                <tr className="text-xs font-medium text-muted-foreground">
-                  <th scope="col" className="w-2/5 border-b px-2 py-2 text-start">
-                    <Trans message="Feature" />
-                  </th>
-                  {TIERS.map(tier => (
-                    <th
+        {featureRows.length > 0 && (
+          <div className="divide-y px-4 sm:px-5">
+            {featureRows.map(feature => (
+              <div key={feature.toLocaleLowerCase()} className="grid gap-2 py-3 sm:grid-cols-[minmax(0,1fr)_minmax(15rem,1fr)] sm:items-center">
+                <div className="flex min-w-0 items-center justify-between gap-2">
+                  <span className="min-w-0 break-words text-sm">{feature}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    className="shrink-0"
+                    aria-label={trans({message: 'Remove feature :name', values: {name: feature}})}
+                    onClick={() => removeFeature(feature)}
+                  >
+                    <Trash2Icon className="size-4" />
+                  </Button>
+                </div>
+                <div className="grid grid-cols-3 gap-1" role="group" aria-label={trans({message: 'Packages including :feature', values: {feature}})}>
+                  {TIERS.map((tier, index) => (
+                    <label
                       key={tier.key}
-                      scope="col"
-                      aria-label={trans(tier.label)}
-                      className="w-1/5 border-b px-1 py-2 text-center"
+                      className={cn(
+                        'flex min-h-11 min-w-0 cursor-pointer flex-col items-center justify-center gap-1 rounded-button px-1 py-1.5 text-xs hover:bg-muted/60 sm:flex-row sm:gap-2',
+                        !slots[index] && 'cursor-not-allowed opacity-50',
+                      )}
                     >
-                      <abbr title={trans(tier.label)} className="sm:hidden no-underline" aria-hidden="true">
+                      <Checkbox
+                        bindToHookForm={false}
+                        checked={included(featureLists[index], feature)}
+                        disabled={!slots[index]}
+                        onCheckedChange={next => toggleFeature(index, feature, next === true)}
+                        aria-label={trans({message: 'Include :feature in :tier', values: {feature, tier: trans(tier.label)}})}
+                      />
+                      <span className="text-xs text-muted-foreground" aria-hidden="true">
                         {trans(tier.shortLabel)}
-                      </abbr>
-                      <span className="hidden sm:inline" aria-hidden="true">{trans(tier.label)}</span>
-                    </th>
+                      </span>
+                    </label>
                   ))}
-                </tr>
-              </thead>
-              <tbody>
-                {featureRows.map(feature => (
-                  <tr key={feature.toLocaleLowerCase()} className="group/feature">
-                    <th scope="row" className="break-words border-b px-2 py-3 text-start font-normal">
-                      <span>{feature}</span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-xs"
-                        className="ms-1 align-middle"
-                        aria-label={trans({
-                          message: 'Remove feature :name',
-                          values: {name: feature},
-                        })}
-                        onClick={() => removeFeature(feature)}
-                      >
-                        <Trash2Icon className="size-3.5" />
-                      </Button>
-                    </th>
-                    {TIERS.map((tier, index) => {
-                      const slot = slots[index];
-                      const checked = included(featureLists[index], feature);
-                      return (
-                        <td key={tier.key} className="border-b px-1 py-3 text-center">
-                          <Checkbox
-                            bindToHookForm={false}
-                            checked={checked}
-                            disabled={!slot}
-                            onCheckedChange={next => toggleFeature(index, feature, next === true)}
-                            aria-label={trans({
-                              message: 'Include :feature in :tier',
-                              values: {feature, tier: trans(tier.label)},
-                            })}
-                            className="mx-auto"
-                          />
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                </div>
+              </div>
+            ))}
           </div>
-        ) : (
-          <p className="px-4 py-4 text-sm text-muted-foreground">
-            <Trans message="No features yet. Add a deliverable to compare across tiers." />
-          </p>
         )}
 
-        <div className="border-t px-4 py-4">
+        <div className={cn('p-4 sm:p-5', featureRows.length > 0 && 'border-t')}>
           <label htmlFor="service-new-package-feature" className="mb-2 block text-sm font-medium">
             <Trans message="Add an included feature" />
           </label>
