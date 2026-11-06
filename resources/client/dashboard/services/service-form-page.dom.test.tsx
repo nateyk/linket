@@ -239,7 +239,9 @@ describe('the service form shell', () => {
     await waitForForm();
 
     await user.click(screen.getByRole('button', {name: 'Continue'}));
-    expect(screen.getByRole('button', {name: 'Media, step 2 of 4'}).getAttribute('aria-current')).toBe('step');
+    const mediaStep = screen.getByRole('button', {name: 'Media, step 2 of 4'});
+    expect(mediaStep.getAttribute('aria-current')).toBe('step');
+    expect(document.activeElement).toBe(mediaStep);
     await user.click(screen.getByRole('button', {name: 'Previous step'}));
     expect(screen.getByRole('button', {name: 'Details, step 1 of 4'}).getAttribute('aria-current')).toBe('step');
     expect(api.post).not.toHaveBeenCalled();
