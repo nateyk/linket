@@ -1,4 +1,3 @@
-import {CheckIcon} from 'lucide-react';
 import {useTrans} from '@ui/i18n/use-trans';
 import {cn} from '@ui/utils/cn';
 
@@ -12,9 +11,8 @@ interface ServiceBuilderStepsProps {
 }
 
 /**
- * A four-segment navigation control, not a completion gate. Stages may be
- * revisited in any order, and the creator can publish without optional media,
- * packages, FAQs, or contact buttons.
+ * A quiet four-segment navigator, not a completion gate. Optional steps can be
+ * visited in any order; only genuinely completed earlier steps look completed.
  */
 export function ServiceBuilderSteps({
   active,
@@ -34,21 +32,16 @@ export function ServiceBuilderSteps({
     <nav
       id="service-builder-steps"
       aria-label={trans({message: 'Service creation steps'})}
-      className="mb-5 scroll-mt-3 border-b pb-4"
+      className="mb-5 scroll-mt-20 sm:mb-6"
     >
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <p className="text-sm font-medium text-foreground">
-          {trans({message: 'Service setup'})}
-        </p>
-        <p className="text-xs font-medium tabular-nums text-muted-foreground">
-          {trans({
-            message: 'Step :current of :total',
-            values: {current: activeIndex + 1, total: steps.length},
-          })}
-        </p>
-      </div>
+      <span className="sr-only">
+        {trans({
+          message: 'Step :current of :total',
+          values: {current: activeIndex + 1, total: steps.length},
+        })}
+      </span>
 
-      <ol className="grid grid-cols-4 gap-2 sm:gap-3">
+      <ol className="grid grid-cols-4 gap-3 sm:gap-5">
         {steps.map((step, index) => {
           const current = active === step.id;
           const earlier = index < activeIndex;
@@ -65,27 +58,26 @@ export function ServiceBuilderSteps({
                   values: {name: step.title, index: index + 1, total: steps.length},
                 })}
                 onClick={() => onSelect(step.id)}
-                className="group flex min-h-11 w-full cursor-pointer flex-col items-stretch gap-2 rounded-card-xs px-1 py-1.5 text-start outline-none transition-colors motion-reduce:transition-none hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                className="group flex min-h-11 w-full min-w-0 cursor-pointer flex-col items-stretch gap-2 rounded-card-xs py-1.5 text-start outline-none transition-colors motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               >
                 <span
                   aria-hidden="true"
                   className={cn(
-                    'h-1 w-full rounded-sm transition-colors motion-reduce:transition-none',
-                    current
-                      ? 'bg-primary'
-                      : earlier
-                        ? 'bg-primary/65'
+                    'h-1 w-full shrink-0 rounded-full transition-colors motion-reduce:transition-none',
+                    current ? 'bg-primary'
+                      : done ? 'bg-primary/80'
                         : 'bg-border group-hover:bg-muted-foreground/40',
                   )}
                 />
                 <span
                   className={cn(
-                    'flex min-w-0 items-center gap-1 text-sm font-medium leading-5',
-                    current ? 'text-foreground' : 'text-muted-foreground group-hover:text-foreground',
+                    'block min-w-0 text-xs leading-4 sm:text-sm sm:leading-5',
+                    current || done
+                      ? 'font-semibold text-foreground'
+                      : 'font-medium text-muted-foreground group-hover:text-foreground',
                   )}
                 >
                   {step.title}
-                  {done && <CheckIcon aria-hidden="true" className="size-3.5 shrink-0 text-primary" />}
                 </span>
               </button>
             </li>

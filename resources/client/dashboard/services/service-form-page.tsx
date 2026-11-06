@@ -42,6 +42,7 @@ import {
   toServicePayload,
   type CreatorServiceResource,
   type ServiceFormState,
+  type ServiceFormPackage,
 } from './service-form-state';
 import {ServiceContactChannelsField} from './service-form/service-contact-channels-field';
 import {ServiceDescriptionEditor} from './service-form/service-description-editor';
@@ -133,6 +134,7 @@ function ServiceFormPage() {
   const contentScrollerRef = useRef<HTMLDivElement>(null);
   const pendingStepScrollRef = useRef<ServiceBuilderStepId | null>(null);
   const pendingErrorFocusRef = useRef<string | null>(null);
+  const packageDraftCacheRef = useRef<Record<string, ServiceFormPackage>>({});
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [announcement, setAnnouncement] = useState('');
@@ -566,7 +568,7 @@ function ServiceFormPage() {
       <DashboardLayout.MainSection>
         {renderHeader(null)}
         <DashboardLayout.SectionContent className="overflow-y-auto">
-          <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 py-5">
+          <div className="flex w-full max-w-6xl flex-col gap-4 py-5">
             <Skeleton className="h-16 w-full" />
             <Skeleton className="h-72 w-full rounded-card" />
             <Skeleton className="h-48 w-full rounded-card" />
@@ -581,7 +583,7 @@ function ServiceFormPage() {
       <DashboardLayout.MainSection>
         {renderHeader(null)}
         <DashboardLayout.SectionContent className="overflow-y-auto">
-          <div className="mx-auto w-full max-w-3xl py-8">
+          <div className="w-full max-w-3xl py-8">
             <Alert.Root variant="destructive" fillStyle="subtleFill" role="alert">
               <CircleAlertIcon />
               <Alert.Title>
@@ -605,7 +607,7 @@ function ServiceFormPage() {
       <DashboardLayout.MainSection>
         {renderHeader(null)}
         <DashboardLayout.SectionContent className="overflow-y-auto">
-          <div className="mx-auto w-full max-w-3xl py-8">
+          <div className="w-full max-w-3xl py-8">
             <Alert.Root>
               <CircleAlertIcon />
               <Alert.Title>
@@ -638,7 +640,7 @@ function ServiceFormPage() {
         ref={contentScrollerRef}
         className="overflow-y-auto [overflow-anchor:none]"
       >
-        <div className="mx-auto w-full max-w-4xl py-4 sm:py-5">
+        <div className="w-full max-w-6xl py-4 sm:py-5">
           {creationUncertain && (
             <Alert.Root role="alert" variant="warning" fillStyle="subtleFill" className="mb-5">
               <CircleAlertIcon />
@@ -656,7 +658,7 @@ function ServiceFormPage() {
             </Alert.Root>
           )}
           {error && (
-            <Alert.Root variant="destructive" fillStyle="subtleFill">
+            <Alert.Root variant="destructive" fillStyle="subtleFill" className="mb-5">
               <CircleAlertIcon />
               <Alert.Description>{error}</Alert.Description>
             </Alert.Root>
@@ -668,7 +670,7 @@ function ServiceFormPage() {
             completed={completedSteps}
           />
 
-          <div className="min-w-0 space-y-5">
+          <div className="min-w-0 space-y-4 sm:space-y-5">
               {/* Keep the rich-text editor mounted between steps. Unmounting and
                   remounting it can restore editor focus/selection after the
                   navigator changes, moving both document and panel scroll. */}
@@ -992,12 +994,13 @@ function ServiceFormPage() {
                   <ServicePackagesField
                     packages={form.packages}
                     errors={fieldErrors}
+                    draftCache={packageDraftCacheRef}
                     onChange={packages => update('packages', packages)}
                   />
                 </ServiceFormSection>
               )}
               {activeStep === 'settings' && (
-                <div className="space-y-5">
+                <div className="space-y-4 sm:space-y-5">
                   <ServiceFormSection
                   id="faq"
                   icon={MessageSquareQuoteIcon}
@@ -1046,7 +1049,7 @@ function ServiceFormPage() {
                 </div>
               )}
 
-              <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-5">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4 sm:pt-5">
                 {previousStep ? (
                   <Button
                     type="button"

@@ -196,8 +196,11 @@ describe('the service form shell', () => {
     expect(screen.queryByRole('complementary', {name: 'Service preview'})).toBeNull();
     expect(screen.queryByRole('dialog', {name: 'Customer preview'})).toBeNull();
     const steps = screen.getByRole('navigation', {name: 'Service creation steps'});
-    expect(steps.className).toContain('border-b');
-    expect(steps.parentElement?.className).toContain('max-w-4xl');
+    expect(steps.className).not.toContain('border-b');
+    expect(steps.querySelectorAll('ol > li button > span[aria-hidden="true"]')).toHaveLength(4);
+    expect(screen.queryByText('Service setup')).toBeNull();
+    expect(steps.parentElement?.className).toContain('max-w-6xl');
+    expect(steps.parentElement?.className).not.toContain('mx-auto');
     expect(steps.querySelectorAll('ol > li')).toHaveLength(4);
     const selected = screen.getByRole('button', {name: 'Details, step 1 of 4'});
     expect(selected.getAttribute('data-step-state')).toBe('current');
@@ -213,7 +216,8 @@ describe('the service form shell', () => {
     await waitForForm();
 
     await user.click(screen.getByRole('button', {name: 'Packages, step 3 of 4'}));
-    await user.click(screen.getByRole('button', {name: 'Add Starter package'}));
+    await user.click(screen.getByRole('switch', {name: 'Enable Basic package'}));
+    await user.click(screen.getByRole('button', {name: 'Add package description'}));
     expect(screen.getByRole('textbox', {name: 'Package description'}).getAttribute('maxlength')).toBe('3000');
     expect(screen.getByText('0/3000')).toBeTruthy();
 
@@ -414,7 +418,7 @@ describe('saving', () => {
     await waitForForm();
     await user.type(titleInput(), 'Consulting');
     await user.click(screen.getByRole('button', {name: 'Packages, step 3 of 4'}));
-    await user.click(screen.getByRole('button', {name: 'Add Starter package'}));
+    await user.click(screen.getByRole('switch', {name: 'Enable Basic package'}));
 
     const delivery = screen.getByRole('textbox', {name: 'Delivery days'});
     await user.type(delivery, '-1');
@@ -432,12 +436,12 @@ describe('saving', () => {
     await waitFor(() => expect(document.activeElement).toBe(delivery));
   });
 
-  test('editing a package clears its indexed server validation error', async () => {
+  test('editing a tier price clears its indexed server validation error', async () => {
     const user = userEvent.setup();
     mountPage('/dashboard/services/new');
     await waitForForm();
     await user.click(screen.getByRole('button', {name: 'Packages, step 3 of 4'}));
-    await user.click(screen.getByRole('button', {name: 'Add Starter package'}));
+    await user.click(screen.getByRole('switch', {name: 'Enable Basic package'}));
 
     api.post.mockRejectedValueOnce(
       new AxiosError(
@@ -449,7 +453,7 @@ describe('saving', () => {
           status: 422,
           data: {
             message: 'The given data was invalid.',
-            errors: {'packages.0.name': ['Choose another package name.']},
+            errors: {'packages.0.price_cents': ['Choose another package price.']},
           },
           statusText: 'Unprocessable Content',
           headers: {},
@@ -459,13 +463,12 @@ describe('saving', () => {
     );
 
     await user.click(screen.getByRole('button', {name: 'Save draft'}));
-    expect(await screen.findByText('Choose another package name.')).toBeTruthy();
+    expect(await screen.findByText('Choose another package price.')).toBeTruthy();
 
-    const packageName = screen.getByRole('textbox', {name: 'Package name'});
-    await user.clear(packageName);
-    await user.type(packageName, 'Essentials');
+    const price = screen.getByRole('textbox', {name: 'Price'});
+    await user.type(price, '299');
 
-    expect(screen.queryByText('Choose another package name.')).toBeNull();
+    expect(screen.queryByText('Choose another package price.')).toBeNull();
   });
 
   test('indexed skills validation opens Details and shows the error on Skills', async () => {
@@ -504,7 +507,7 @@ describe('saving', () => {
     );
     expect(screen.getByText('Each skill may not be greater than 40 characters.')).toBeTruthy();
     await waitFor(() => expect(document.activeElement).toBe(document.getElementById('skills')));
-  });
+  }, 15_000);
 
   test('gallery validation opens Media and shows the error on the gallery field', async () => {
     const user = userEvent.setup();

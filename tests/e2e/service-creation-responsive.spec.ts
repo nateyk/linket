@@ -48,6 +48,26 @@ test.describe('Service Creation — authenticated browser acceptance', () => {
       }
       await expect(steps.getByRole('button', {name: 'Details, step 1 of 4'})).toHaveAttribute('aria-current', 'step');
 
+      // The dashboard owns the page gutter. The builder must not add a second,
+      // centered inset that misaligns the stepper and form at desktop widths.
+      const builderAlignment = await steps.evaluate(navigation => {
+        const content = navigation.closest('[data-slot="section-content"]');
+        const basics = document.getElementById('service-step-basics');
+        if (!content || !basics) return null;
+        return {
+          gutterLeft: content.getBoundingClientRect().left + Number.parseFloat(getComputedStyle(content).paddingLeft),
+          stepperLeft: navigation.getBoundingClientRect().left,
+          formLeft: basics.getBoundingClientRect().left,
+        };
+      });
+      expect(builderAlignment).not.toBeNull();
+      if (builderAlignment) {
+        expect(Math.abs(builderAlignment.stepperLeft - builderAlignment.gutterLeft),
+          'Stepper begins at the dashboard content gutter').toBeLessThanOrEqual(2);
+        expect(Math.abs(builderAlignment.formLeft - builderAlignment.stepperLeft),
+          'Form panel and stepper share the same alignment').toBeLessThanOrEqual(2);
+      }
+
       const titleSpan = heading.locator('span').first();
       if (viewport.width <= 375) {
         const style = await titleSpan.evaluate(node => {
@@ -68,10 +88,52 @@ test.describe('Service Creation — authenticated browser acceptance', () => {
       await expect(page.getByRole('heading', {name: 'Media and links'})).toBeVisible();
       await steps.getByRole('button', {name: 'Packages, step 3 of 4'}).click();
       await expect(page.getByRole('heading', {name: 'Packages'})).toBeVisible();
+
+      // Three fixed tiers, never an unbounded Add Package form. The matrix
+      // must be operable with touch and keyboard at every mobile breakpoint.
+      for (const tier of ['Basic', 'Standard', 'Premium']) {
+        await expect(page.getByRole('region', {name: tier + ' package', exact: true})).toBeVisible();
+      }
+      await expect(page.getByRole('button', {name: 'Add package'})).toHaveCount(0);
+      await expect(page.getByRole('textbox', {name: 'Package name'})).toHaveCount(0);
+
+      const basic = page.getByRole('switch', {name: 'Enable Basic package'});
+      await basic.click();
+      await expect(basic).toHaveAttribute('aria-checked', 'true');
+      await page.getByRole('region', {name: 'Basic package details'})
+        .getByRole('textbox', {name: 'Delivery days'}).fill('5');
+
+      await page.getByRole('textbox', {name: 'Add an included feature'}).fill('Vector source files');
+      await page.getByRole('button', {name: 'Add feature'}).click();
+      const basicFeature = page.getByRole('checkbox', {name: 'Include Vector source files in Basic'});
+      await expect(basicFeature).toHaveAttribute('aria-checked', 'true');
+
+      await page.getByRole('switch', {name: 'Enable Standard package'}).click();
+      await expect(page.getByRole('region', {name: 'Standard package details'})).toBeVisible();
+      await expect(page.getByRole('textbox', {name: 'Price'})).toHaveCount(1);
+      await page.getByRole('button', {name: 'Edit Basic package'}).click();
+      await expect(page.getByRole('region', {name: 'Basic package details'})).toBeVisible();
+      await page.getByRole('checkbox', {name: 'Include Vector source files in Standard'}).click();
+      await expect(page.getByRole('checkbox', {name: 'Include Vector source files in Standard'}))
+        .toHaveAttribute('aria-checked', 'true');
+
+      const packageScreenshot = testInfo.outputPath('service-packages-' + viewport.width + 'px.png');
+      await page.screenshot({path: packageScreenshot, fullPage: true});
+      await testInfo.attach('Service packages ' + viewport.width + 'px', {
+        path: packageScreenshot,
+        contentType: 'image/png',
+      });
+
       await steps.getByRole('button', {name: 'Settings, step 4 of 4'}).click();
       await expect(page.getByRole('heading', {name: 'FAQ'})).toBeVisible();
       await steps.getByRole('button', {name: 'Details, step 1 of 4'}).click();
       await expect(page.locator('#title')).toHaveValue('E2E preview draft');
+      await steps.getByRole('button', {name: 'Packages, step 3 of 4'}).click();
+      await expect(page.getByRole('region', {name: 'Basic package details'})
+        .getByRole('textbox', {name: 'Delivery days'})).toHaveValue('5');
+      await expect(page.getByRole('checkbox', {name: 'Include Vector source files in Standard'}))
+        .toHaveAttribute('aria-checked', 'true');
+      await steps.getByRole('button', {name: 'Details, step 1 of 4'}).click();
       // Capture scroll ownership if this assertion fails. Do not scroll the
       // page from the test: that would conceal a real navigation regression.
       if (viewport.width === 320) {

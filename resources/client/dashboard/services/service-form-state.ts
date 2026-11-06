@@ -9,6 +9,8 @@ export type ServiceContactChannelType =
 
 export type ServiceFormPackage = {
   id?: number;
+  /** Editor-only: protect older extra packages from filling disabled fixed tiers. */
+  legacy?: true;
   name: string;
   description: string;
   price: string;
