@@ -29,6 +29,45 @@ function mcpBrowserRoutes(): void
     require base_path('routes/creator-ai-mcp-oauth.php');
 }
 
+/**
+ * Workspace owner without verified Pro — for eligibility negative paths.
+ *
+ * @return array{0:User,1:int,2:array<string,string>}
+ */
+function mcpBrowserFreeCreator(): array
+{
+    $user = User::factory()->create(['email_verified_at' => now()]);
+    $workspace = (new CreateWorkspace)->createPersonalWorkspace($user);
+
+    $clientId = (string) Str::uuid();
+    DB::table('oauth_clients')->insert([
+        'id' => $clientId,
+        'owner_type' => null,
+        'owner_id' => null,
+        'name' => 'Registered MCP Client',
+        'secret' => null,
+        'provider' => 'creator_mcp_users',
+        'redirect_uris' => json_encode(['https://client.example.test/oauth/callback']),
+        'grant_types' => json_encode(['authorization_code', 'refresh_token']),
+        'revoked' => false,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $verifier = str_repeat('x', 43);
+
+    return [$user, (int) $workspace->getKey(), [
+        'client_id' => $clientId,
+        'redirect_uri' => 'https://client.example.test/oauth/callback',
+        'response_type' => 'code',
+        'scope' => 'mcp:use',
+        'state' => str_repeat('s', 40),
+        'code_challenge' => rtrim(strtr(base64_encode(hash('sha256', $verifier, true)), '+/', '-_'), '='),
+        'code_challenge_method' => 'S256',
+        'resource' => 'https://linket.example.test/mcp',
+    ]];
+}
+
 /** @return array{0:User,1:int,2:array<string,string>} */
 function mcpBrowserCreator(): array
 {
@@ -139,6 +178,18 @@ test('guarded browser route rejects insecure transport and unauthenticated reque
     }
     $this->get('https://linket.example.test/oauth/linket/authorize?'.http_build_query($parameters))
         ->assertRedirect('https://linket.example.test/login');
+
+    expect(DB::table('creator_ai_mcp_connections')->count())->toBe(0);
+    expect(DB::table('oauth_auth_codes')->count())->toBe(0);
+});
+
+test('authenticated creator without verified Pro cannot open the ChatGPT OAuth consent screen', function () {
+    mcpBrowserRoutes();
+    [$free, , $parameters] = mcpBrowserFreeCreator();
+    $this->actingAs($free, 'web');
+
+    $this->get('https://linket.example.test/oauth/linket/authorize?'.http_build_query($parameters))
+        ->assertForbidden();
 
     expect(DB::table('creator_ai_mcp_connections')->count())->toBe(0);
     expect(DB::table('oauth_auth_codes')->count())->toBe(0);

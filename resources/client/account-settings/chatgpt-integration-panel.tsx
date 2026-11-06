@@ -240,6 +240,11 @@ export function ChatGptIntegrationPanel() {
                         <FormattedDate date={connection.last_accessed_at} preset="timestamp" />
                       </p>
                     ) : null}
+                    {connection.status === 'expired' ? (
+                      <p role="status" className="text-xs text-muted-foreground">
+                        <Trans message="This authorization expired. Connect again from ChatGPT with a new workspace approval when you are ready." />
+                      </p>
+                    ) : null}
                   </div>
                   {connection.status === 'active' ? (
                     <Button
