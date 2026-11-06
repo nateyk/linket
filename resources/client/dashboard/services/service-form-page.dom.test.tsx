@@ -15,6 +15,7 @@
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
 import {act, render, screen, waitFor, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import {AxiosError} from 'axios';
 import {createMemoryRouter, RouterProvider} from 'react-router';
 import {
   afterEach,
@@ -193,6 +194,8 @@ describe('the service form shell', () => {
     expect(screen.getByRole('button', {name: 'Preview'})).toBeTruthy();
     // On larger screens the same unsaved state is previewed alongside the form.
     expect(screen.getByRole('complementary', {name: 'Service preview'})).toBeTruthy();
+    // Step changes are announced once by the page-level status region.
+    expect(screen.getAllByRole('status')).toHaveLength(1);
   });
 
   test('all four service stages are accessible, navigable and retain unsaved fields', async () => {
@@ -348,6 +351,43 @@ describe('load failure recovery', () => {
 });
 
 describe('saving', () => {
+  test('server URL validation opens Media and focuses the invalid field', async () => {
+    const user = userEvent.setup();
+    mountPage('/dashboard/services/new');
+    await waitForForm();
+    await user.type(titleInput(), 'Consulting with demo');
+    await user.click(screen.getByRole('button', {name: 'Settings, step 4 of 4'}));
+
+    api.post.mockRejectedValueOnce(
+      new AxiosError(
+        'Request failed with status code 422',
+        'ERR_BAD_REQUEST',
+        undefined,
+        undefined,
+        {
+          status: 422,
+          data: {
+            message: 'The given data was invalid.',
+            errors: {video_url: ['Enter a valid video URL.']},
+          },
+          statusText: 'Unprocessable Content',
+          headers: {},
+          config: {} as never,
+        },
+      ),
+    );
+
+    await user.click(screen.getByRole('button', {name: 'Publish service'}));
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', {name: 'Media, step 2 of 4'}).getAttribute('aria-current'),
+      ).toBe('step'),
+    );
+    expect(screen.getByText('Enter a valid video URL.')).toBeTruthy();
+    await waitFor(() => expect(document.activeElement).toBe(document.getElementById('video_url')));
+  });
+
   test('rapid keyboard shortcuts cannot create duplicate services while saving', async () => {
     mountPage('/dashboard/services/new');
     await waitForForm();
