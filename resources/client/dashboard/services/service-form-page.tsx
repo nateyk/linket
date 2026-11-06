@@ -233,7 +233,7 @@ function ServiceFormPage() {
   const previousStep = SERVICE_STEP_ORDER[activeStepIndex - 1];
   const nextStep = SERVICE_STEP_ORDER[activeStepIndex + 1];
 
-  const changeStep = (step: ServiceBuilderStepId) => {
+  const changeStep = useCallback((step: ServiceBuilderStepId) => {
     if (step === activeStep) return;
     // Schedule focus/scroll for the committed new panel, not the old DOM.
     pendingStepScrollRef.current = step;
@@ -242,7 +242,7 @@ function ServiceFormPage() {
       message: 'Step :current of :total',
       values: {current: SERVICE_STEP_ORDER.indexOf(step) + 1, total: SERVICE_STEP_ORDER.length},
     }));
-  };
+  }, [activeStep, trans]);
 
   useLayoutEffect(() => {
     if (pendingStepScrollRef.current !== activeStep) return;
@@ -369,19 +369,17 @@ function ServiceFormPage() {
           return;
         }
         event.preventDefault();
-        setActiveStep(current => {
-          const index = SERVICE_STEP_ORDER.indexOf(current);
-          const nextIndex = event.key === 'ArrowDown'
-            ? Math.min(SERVICE_STEP_ORDER.length - 1, index + 1)
-            : Math.max(0, index - 1);
-          return SERVICE_STEP_ORDER[nextIndex];
-        });
+        const index = SERVICE_STEP_ORDER.indexOf(activeStep);
+        const nextIndex = event.key === 'ArrowDown'
+          ? Math.min(SERVICE_STEP_ORDER.length - 1, index + 1)
+          : Math.max(0, index - 1);
+        changeStep(SERVICE_STEP_ORDER[nextIndex]);
       }
     };
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [save]);
+  }, [save, changeStep, activeStep]);
 
   const remove = async () => {
     if (!serviceId) return;
