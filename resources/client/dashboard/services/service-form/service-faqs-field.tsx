@@ -8,10 +8,12 @@ import {PlusIcon, Trash2Icon} from 'lucide-react';
 import {ServiceFormField} from './service-form-field';
 import type {ServiceFormFaq} from '../service-form-state';
 
+export const SERVICE_FAQS_MAX = 20;
+
 /**
- * FAQ repeater. Questions are optional for the listing, so an unfinished row
- * is simply not published — the section keeps the creator's work visible
- * instead of hiding it behind a validation wall.
+ * FAQ repeater. Empty rows remain optional, while a row with meaningful
+ * creator input is kept visible and the page-level pre-save validation asks
+ * the creator to complete or remove it instead of silently dropping the work.
  */
 export function ServiceFaqsField({
   faqs,
@@ -23,6 +25,7 @@ export function ServiceFaqsField({
   onChange: (faqs: ServiceFormFaq[]) => void;
 }) {
   const {trans} = useTrans();
+  const atLimit = faqs.length >= SERVICE_FAQS_MAX;
 
   const update = (index: number, patch: Partial<ServiceFormFaq>) => {
     onChange(
@@ -84,6 +87,7 @@ export function ServiceFaqsField({
             <Textarea
               id={`faqs.${index}.answer`}
               rows={3}
+              maxLength={3000}
               value={faq.answer}
               onChange={event => update(index, {answer: event.target.value})}
               aria-invalid={!!errors[`faqs.${index}.answer`]}
@@ -97,11 +101,23 @@ export function ServiceFaqsField({
         variant="outline"
         size="sm"
         className="self-start"
-        onClick={() => onChange([...faqs, {question: '', answer: ''}])}
+        disabled={atLimit}
+        onClick={() => {
+          if (faqs.length >= SERVICE_FAQS_MAX) return;
+          onChange([...faqs, {question: '', answer: ''}]);
+        }}
       >
         <PlusIcon data-icon="inline-start" />
         <Trans message="Add FAQ" />
       </Button>
+      {atLimit && (
+        <p className="text-xs leading-5 text-muted-foreground">
+          <Trans
+            message="Maximum :count FAQs reached."
+            values={{count: SERVICE_FAQS_MAX}}
+          />
+        </p>
+      )}
     </div>
   );
 }

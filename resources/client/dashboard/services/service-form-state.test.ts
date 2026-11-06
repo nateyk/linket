@@ -4,6 +4,7 @@ import {parseServiceErrors, serviceSaveErrorMessage} from './service-save-error'
 import {
   emptyServiceForm,
   fromServiceResource,
+  serviceFormClientErrors,
   toServicePayload,
   type CreatorServiceResource,
 } from './service-form-state';
@@ -86,6 +87,79 @@ describe('service form state', () => {
     expect(payload.contact_channels).toEqual([
       {type: 'whatsapp', label: 'WhatsApp', value: '+251911234567'},
     ]);
+  });
+
+  test('client validation prevents package values from being silently converted or dropped', () => {
+    const form = emptyServiceForm();
+    form.packages = [
+      {
+        name: 'Starter',
+        description: '',
+        price: '-5',
+        delivery_days: '1.5',
+        revisions: '101',
+        features: `${'x'.repeat(201)}\n${Array.from({length: 20}, (_, index) => `Feature ${index + 1}`).join('\n')}`,
+      },
+      {
+        name: '',
+        description: 'Work already typed here',
+        price: '',
+        delivery_days: '',
+        revisions: '',
+        features: '',
+      },
+    ];
+
+    expect(serviceFormClientErrors(form)).toEqual({
+      'packages.0.price_cents': 'Enter a valid price from 0 to 10,000,000 ETB.',
+      'packages.0.delivery_days': 'Delivery days must be a whole number from 0 to 365.',
+      'packages.0.revisions': 'Revisions must be a whole number from 0 to 100.',
+      'packages.0.features': 'Use no more than 20 features, with 200 characters or fewer per feature.',
+      'packages.1.name': 'Add a package name or remove this unfinished package.',
+    });
+  });
+
+  test('client validation prevents partially completed FAQ and contact rows from disappearing', () => {
+    const form = emptyServiceForm();
+    form.faqs = [
+      {question: 'How long does it take?', answer: ''},
+      {question: '', answer: 'Usually five days.'},
+    ];
+    form.contact_channels = [
+      {type: 'telegram', label: 'Message me', value: ''},
+    ];
+
+    expect(serviceFormClientErrors(form)).toEqual({
+      'faqs.0.answer': 'Add an answer or remove this unfinished FAQ.',
+      'faqs.1.question': 'Add a question or remove this unfinished FAQ.',
+      'contact_channels.0.value': 'Add a contact value or remove this unfinished contact button.',
+    });
+  });
+
+  test('blank optional rows and valid quote-only packages remain saveable', () => {
+    const form = emptyServiceForm();
+    form.packages = [
+      {
+        name: 'Custom',
+        description: '',
+        price: '',
+        delivery_days: '',
+        revisions: '',
+        features: '',
+      },
+      {
+        name: '',
+        description: '',
+        price: '',
+        delivery_days: '',
+        revisions: '',
+        features: '',
+      },
+    ];
+    form.faqs = [{question: '', answer: ''}];
+    form.contact_channels = [{type: 'whatsapp', label: '', value: ''}];
+
+    expect(serviceFormClientErrors(form)).toEqual({});
   });
 
   test('blank price becomes a quote-only package', () => {
