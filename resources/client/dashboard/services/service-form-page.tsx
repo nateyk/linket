@@ -33,7 +33,7 @@ import {
   SendIcon,
   Trash2Icon,
 } from 'lucide-react';
-import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import {Link, useNavigate, useParams} from 'react-router';
 import {isUncertainMutationOutcome} from '@app/dashboard/digital-products/request-outcome';
 import {parseServiceErrors, serviceSaveErrorMessage} from './service-save-error';
@@ -131,6 +131,8 @@ function ServiceFormPage() {
   const [error, setError] = useState<string>();
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [activeStep, setActiveStep] = useState<ServiceBuilderStepId>('details');
+  const contentScrollerRef = useRef<HTMLDivElement>(null);
+  const pendingStepScrollRef = useRef<ServiceBuilderStepId | null>(null);
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -232,28 +234,28 @@ function ServiceFormPage() {
   const nextStep = SERVICE_STEP_ORDER[activeStepIndex + 1];
 
   const changeStep = (step: ServiceBuilderStepId) => {
+    if (step === activeStep) return;
+    // Schedule focus/scroll for the committed new panel, not the old DOM.
+    pendingStepScrollRef.current = step;
     setActiveStep(step);
     setAnnouncement(trans({
       message: 'Step :current of :total',
       values: {current: SERVICE_STEP_ORDER.indexOf(step) + 1, total: SERVICE_STEP_ORDER.length},
     }));
-    requestAnimationFrame(() => {
-      // Switching steps starts at the top of the editor, not at the previous
-      // panel's rich-text editor. The dashboard has its own scroll container;
-      // scrolling the document or using scrollIntoView can target the wrong
-      // ancestor, especially with the sticky mobile app shell.
-      const navigation = document.getElementById('service-builder-steps');
-      let ancestor = navigation?.parentElement;
-      while (ancestor) {
-        const overflow = window.getComputedStyle(ancestor).overflowY;
-        if (/(auto|scroll)/.test(overflow) && ancestor.scrollHeight > ancestor.clientHeight) {
-          ancestor.scrollTop = 0;
-        }
-        ancestor = ancestor.parentElement;
-      }
-      document.getElementById(headingForStep(step))?.focus({preventScroll: true});
-    });
   };
+
+  useLayoutEffect(() => {
+    if (pendingStepScrollRef.current !== activeStep) return;
+    pendingStepScrollRef.current = null;
+
+    // SectionContent is the canonical scroll owner for this dashboard screen.
+    // A stage change can shorten the panel and leave its former scroll offset;
+    // resetting the actual element after React commits avoids scroll anchoring.
+    if (contentScrollerRef.current) contentScrollerRef.current.scrollTop = 0;
+    // Some narrow/zoomed layouts can also scroll the document itself.
+    if (document.scrollingElement) document.scrollingElement.scrollTop = 0;
+    document.getElementById(headingForStep(activeStep))?.focus({preventScroll: true});
+  }, [activeStep]);
 
   const sectionError = (id: ServiceFormSectionId) =>
     Object.keys(fieldErrors).some(
@@ -580,7 +582,10 @@ function ServiceFormPage() {
     <DashboardLayout.MainSection>
       {renderHeader(renderActions())}
 
-      <DashboardLayout.SectionContent className="overflow-y-auto">
+      <DashboardLayout.SectionContent
+        ref={contentScrollerRef}
+        className="overflow-y-auto [overflow-anchor:none]"
+      >
         <div className="mx-auto w-full max-w-6xl py-4 sm:py-5">
           {creationUncertain && (
             <Alert.Root role="alert" variant="warning" fillStyle="subtleFill" className="mb-5">
