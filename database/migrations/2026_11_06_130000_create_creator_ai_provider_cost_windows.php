@@ -3,6 +3,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -44,7 +45,7 @@ return new class extends Migration
         });
         // Existing per-request history has non-null charges. Map only the
         // aggregate-unknown NULL back to legacy 0 during an explicit rollback.
-        IlluminateSupportFacadesDB::table('creator_ai_generation_attempts')
+        DB::table('creator_ai_generation_attempts')
             ->whereNull('charged_microusd')->update(['charged_microusd' => 0]);
         Schema::table('creator_ai_generation_attempts', function (Blueprint $table): void {
             $table->unsignedBigInteger('charged_microusd')->default(0)->change();
