@@ -568,7 +568,7 @@ function ServiceFormPage() {
       <DashboardLayout.MainSection>
         {renderHeader(null)}
         <DashboardLayout.SectionContent className="overflow-y-auto">
-          <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 py-5">
+          <div className="flex w-full max-w-6xl flex-col gap-4 py-5">
             <Skeleton className="h-16 w-full" />
             <Skeleton className="h-72 w-full rounded-card" />
             <Skeleton className="h-48 w-full rounded-card" />
@@ -583,7 +583,7 @@ function ServiceFormPage() {
       <DashboardLayout.MainSection>
         {renderHeader(null)}
         <DashboardLayout.SectionContent className="overflow-y-auto">
-          <div className="mx-auto w-full max-w-3xl py-8">
+          <div className="w-full max-w-3xl py-8">
             <Alert.Root variant="destructive" fillStyle="subtleFill" role="alert">
               <CircleAlertIcon />
               <Alert.Title>
@@ -607,7 +607,7 @@ function ServiceFormPage() {
       <DashboardLayout.MainSection>
         {renderHeader(null)}
         <DashboardLayout.SectionContent className="overflow-y-auto">
-          <div className="mx-auto w-full max-w-3xl py-8">
+          <div className="w-full max-w-3xl py-8">
             <Alert.Root>
               <CircleAlertIcon />
               <Alert.Title>
@@ -640,7 +640,7 @@ function ServiceFormPage() {
         ref={contentScrollerRef}
         className="overflow-y-auto [overflow-anchor:none]"
       >
-        <div className="mx-auto w-full max-w-4xl py-4 sm:py-5">
+        <div className="w-full max-w-6xl py-4 sm:py-5">
           {creationUncertain && (
             <Alert.Root role="alert" variant="warning" fillStyle="subtleFill" className="mb-5">
               <CircleAlertIcon />
