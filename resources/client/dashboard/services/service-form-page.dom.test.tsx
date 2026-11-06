@@ -205,6 +205,8 @@ describe('the service form shell', () => {
     });
     expect(screen.getByRole('button', {name: 'Details, step 1 of 4'}).getAttribute('aria-current')).toBe('step');
     await user.type(titleInput(), 'Custom brand consulting');
+    const descriptionEditor = document.getElementById('description');
+    expect(descriptionEditor).not.toBeNull();
 
     const navigation = screen.getByRole('navigation', {name: 'Service creation steps'});
     const scroller = navigation.closest('[data-slot="section-content"]') as HTMLDivElement;
@@ -216,6 +218,7 @@ describe('the service form shell', () => {
     expect(scroller.scrollTop).toBe(0);
     expect(screen.getByRole('button', {name: 'Media, step 2 of 4'}).getAttribute('aria-current')).toBe('step');
     expect(screen.queryByRole('textbox', {name: 'Title'})).toBeNull();
+    expect(document.getElementById('description')).toBe(descriptionEditor);
     expect(screen.getByRole('heading', {name: 'Media and links'})).toBeTruthy();
 
     await user.click(screen.getByRole('button', {name: 'Packages, step 3 of 4'}));
