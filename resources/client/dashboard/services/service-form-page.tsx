@@ -42,6 +42,7 @@ import {
   toServicePayload,
   type CreatorServiceResource,
   type ServiceFormState,
+  type ServiceFormPackage,
 } from './service-form-state';
 import {ServiceContactChannelsField} from './service-form/service-contact-channels-field';
 import {ServiceDescriptionEditor} from './service-form/service-description-editor';
@@ -133,6 +134,7 @@ function ServiceFormPage() {
   const contentScrollerRef = useRef<HTMLDivElement>(null);
   const pendingStepScrollRef = useRef<ServiceBuilderStepId | null>(null);
   const pendingErrorFocusRef = useRef<string | null>(null);
+  const packageDraftCacheRef = useRef<Record<string, ServiceFormPackage>>({});
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [announcement, setAnnouncement] = useState('');
@@ -992,6 +994,7 @@ function ServiceFormPage() {
                   <ServicePackagesField
                     packages={form.packages}
                     errors={fieldErrors}
+                    draftCache={packageDraftCacheRef}
                     onChange={packages => update('packages', packages)}
                   />
                 </ServiceFormSection>
