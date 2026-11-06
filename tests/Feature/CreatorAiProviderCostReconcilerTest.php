@@ -30,6 +30,10 @@ function aiCostFakeProvider(
     ?int $groupedCost = null,
 ): void {
     $start = (new DateTimeImmutable(AI_COST_DAY.' 00:00:00', new DateTimeZone('UTC')))->getTimestamp();
+    // Http::fake() registrations accumulate for the lifetime of the Facade.
+    // Replace the test-only client between independent provider observations;
+    // otherwise the first fake masks a later provider billing correction.
+    Http::swap(new \Illuminate\Http\Client\Factory());
     Http::preventStrayRequests();
     Http::fake(function ($request) use ($cost, $requests, $input, $output, $foreignKey, $groupedCost, $start) {
         $url = $request->url();
