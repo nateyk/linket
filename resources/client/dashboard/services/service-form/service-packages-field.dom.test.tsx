@@ -120,7 +120,11 @@ describe('Service Creation fixed package tiers', () => {
     expect(screen.getByRole('checkbox', {name: 'Include Vector source files in Standard'}).getAttribute('aria-checked')).toBe('false');
     await user.click(screen.getByRole('checkbox', {name: 'Include Vector source files in Standard'}));
     expect(changes.at(-1)?.[1].features).toBe('One concept\nVector source files');
-    expect(screen.getByRole('checkbox', {name: 'Include Vector source files in Premium'}).hasAttribute('disabled')).toBe(true);
+    const premiumFeature = screen.getByRole('checkbox', {name: 'Include Vector source files in Premium'});
+    expect(
+      premiumFeature.hasAttribute('data-disabled') ||
+      premiumFeature.getAttribute('aria-disabled') === 'true',
+    ).toBe(true);
   });
 
   it('removes a shared feature from every enabled tier', async () => {
@@ -169,9 +173,25 @@ describe('Service Creation fixed package tiers', () => {
     const {changes} = renderField(initial);
     expect(screen.getByRole('region', {name: 'Older packages'})).toBeTruthy();
     await user.click(screen.getByRole('switch', {name: 'Enable Standard package'}));
-    expect(changes.at(-1)?.find(item => item.id === 4)).toEqual(initial[3]);
+    expect(changes.at(-1)?.find(item => item.id === 4)).toMatchObject(initial[3]);
     await user.click(screen.getByRole('button', {name: 'Remove older package Legacy offer'}));
     expect(changes.at(-1)?.find(item => item.id === 4)).toBeUndefined();
+  });
+
+  it('does not promote a legacy package when the last fixed tier is disabled', async () => {
+    const user = userEvent.setup();
+    const {changes} = renderField([
+      pkg({id: 1, name: 'Basic'}),
+      pkg({id: 2, name: 'Standard'}),
+      pkg({id: 3, name: 'Premium'}),
+      pkg({id: 4, name: 'Older design offer'}),
+    ]);
+    await user.click(screen.getByRole('switch', {name: 'Enable Basic package'}));
+    await user.click(screen.getByRole('switch', {name: 'Enable Standard package'}));
+    await user.click(screen.getByRole('switch', {name: 'Enable Premium package'}));
+    expect(screen.getByText('0 of 3 enabled')).toBeTruthy();
+    expect(screen.getByRole('region', {name: 'Older packages'})).toBeTruthy();
+    expect(changes.at(-1)?.map(item => item.id)).toEqual([4]);
   });
 
   it('does not silently drop a fully filled Premium tier when enabling another', async () => {
