@@ -111,7 +111,7 @@ describe('Service Creation fixed package tiers', () => {
       revisions: '2',
       description: 'One logo concept',
     });
-    expect(within(basic).getByText(formatMoney(29900, 'ETB'))).toBeTruthy();
+    expect(within(screen.getByRole('region', {name: 'Basic package'})).getByText(formatMoney(29900, 'ETB'))).toBeTruthy();
   });
 
   it('removes only the disabled tier and restores its unsaved inputs on reenable', async () => {
