@@ -1,0 +1,9 @@
+# Linket AI OAuth2 real authorization-code issuance — design
+
+Scope: internal-only, verified creator workspace consent -> Laravel Passport v13.7.6 / league/oauth2-server 9.4.1 AUTHORIZATION CODE issuance. Public OAuth and MCP endpoints remain disabled, as do real token exchanges. Release NO-GO.
+
+Architecture alternatives: default Passport AuthorizationController is rejected because previously granted scopes can bypass Linket workspace consent. A new custom OAuth2 protocol server is rejected due to cryptographic/protocol maintenance risk. Chosen: reuse Passport AuthorizationServer and signed/encrypted authorization code grant, but always invoke fresh Linket creator web-session consent first. Persist exact auth_code_id to creator/client/workspace grant with a custom Passport AuthCodeRepository and request-scoped issuance context. A code without a matching explicit grant is not redeemable in the future token controller. No latest-row or timestamp-only matching.
+
+On successful approval, original OAuth request is revalidated by Passport and LINKET policy (exact redirect, S256, only mcp:use, configured HTTPS resource). Code and code->consent mapping save atomically. A CSRF-protected single-use browser nonce is mandatory; previous Passport access tokens never authorize another workspace. No bearer or refresh token plaintext is stored. No public route is registered. Unit/feature tests generate ephemeral RSA signing keys only in process memory.
+
+Next slices: signed authorization code exchange + refresh rotation, crypto-verified issuer/audience with resource aud, token->connection binding and all token family revocation, two-creator E2E and HTTP session locking. Do not enable public token/authorization registration/discovery/HTTPS MCP until these and independent AppSec review pass, and GitHub PR #94 conflicts with main are reconciled.

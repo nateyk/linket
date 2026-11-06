@@ -1,4 +1,5 @@
 import {BackgroundStyle} from '@app/dashboard/stores/store-editor/appearance/background-style';
+import {StorefrontAiAppearancePreview} from './storefront-ai-appearance-preview';
 import {ButtonStyle} from '@app/dashboard/stores/store-editor/appearance/button-style';
 import {appearanceHeaderClassnames} from '@app/dashboard/stores/store-editor/appearance/header-classnames';
 import {useBiolinkEditorStore} from '@app/dashboard/stores/store-editor/biolink-editor-store';
@@ -43,6 +44,7 @@ export function Component() {
         title={<Trans message="Appearance" />}
         description={<Trans message="Customize the look of your creator profile." />}
       />
+      <StorefrontAiAppearancePreview />
       {/* Default (divider list), not separated: this accordion sits inside
           the section's card pane, and separated items would be cards inside
           a card. */}

@@ -81,6 +81,7 @@ import {
   type ProductSetupSection,
 } from './product-form-section';
 import {ProductPreview, ProductStatus} from './product-preview';
+import {ProductAiCopyReview} from './product-ai-copy-review';
 import {missingProductRequirements} from './product-authoring-status';
 import type {ProductType} from './product-type-picker';
 
@@ -673,6 +674,7 @@ function DigitalProductForm() {
     <DetailsPanel
       title={title}
       description={description}
+      productId={product?.id}
       price={price}
       billingMode={effectiveBilling}
       onBillingModeChange={handleBillingChange}
@@ -1120,6 +1122,7 @@ function DigitalProductForm() {
                           <DetailsPanel
                             title={title}
                             description={description}
+                            productId={product?.id}
                             price={price}
                             billingMode={effectiveBilling}
                             onBillingModeChange={mode => {
@@ -1236,6 +1239,7 @@ function DigitalProductForm() {
 function DetailsPanel({
   title,
   description,
+  productId,
   price,
   billingMode,
   onBillingModeChange,
@@ -1252,6 +1256,7 @@ function DetailsPanel({
 }: {
   title: string;
   description: string;
+  productId?: number;
   price: string;
   billingMode: BillingMode | null;
   onBillingModeChange: (mode: BillingMode) => void;
@@ -1269,6 +1274,7 @@ function DetailsPanel({
 }) {
   const {validateField} = arguments[0] as {validateField: (field: string, value: string) => void};
   const {trans} = useTrans();
+  const [copyRevision, setCopyRevision] = useState(0);
   return (
     <div className="flex flex-col gap-4">
       <ProductFormField
@@ -1310,8 +1316,19 @@ function DetailsPanel({
         htmlFor="product-description"
         onBlur={() => validateField('description', description)}
       >
-        <DescriptionEditor value={description} onChange={onDescriptionChange} />
+        <DescriptionEditor key={copyRevision} value={description} onChange={onDescriptionChange} />
       </ProductFormField>
+      {productId != null && (
+        <ProductAiCopyReview
+          productId={productId}
+          currentTitle={title}
+          currentDescription={description}
+          onUseDescription={candidate => {
+            onDescriptionChange(candidate);
+            setCopyRevision(current => current + 1);
+          }}
+        />
+      )}
 
       <ProductFormField
         label="Cover image"

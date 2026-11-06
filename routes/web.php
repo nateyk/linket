@@ -80,5 +80,9 @@ Route::get('{storeSlug}/services', function (string $storeSlug) {
 Route::get('{storeSlug}/services/{service}', [PublicServicePageController::class, 'show'])
     ->name('services.public.show');
 
+// Explicit Linket OAuth browser consent is separately default OFF.
+// This inclusion must occur before the storefront fallback.
+require __DIR__.'/creator-ai-mcp-oauth.php';
+
 // CATCH ALL ROUTES AND REDIRECT TO HOME
 Route::fallback(FallbackRouteController::class);

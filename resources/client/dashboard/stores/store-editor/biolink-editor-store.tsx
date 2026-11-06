@@ -12,6 +12,11 @@ import {useStoreWithEqualityFn} from 'zustand/traditional';
 
 type StoreBiolink = Biolink | Store;
 type Appearance = Required<StoreBiolink>['appearance']['config'];
+export type SuggestedButtonTokens = {
+  variant?: 'outline' | 'solid';
+  radius?: 'rounded-sm' | 'rounded-lg';
+  shadow?: 'none';
+};
 
 /**
  * The failure of the last save attempt, tagged with the form it belongs to
@@ -25,6 +30,10 @@ export type StoreSaveError = {
 interface BiolinkEditorState {
   appearance: Appearance;
   appearanceIsDirty: boolean;
+  /** Revision precondition for a creator-reviewed AI suggestion, cleared after save. */
+  appearanceSuggestionFingerprint: string | null;
+  /** Stage allowlisted button tokens locally; never save or publish here. */
+  applyAppearanceSuggestion: (buttons: SuggestedButtonTokens, fingerprint: string) => void;
   content: NonNullable<StoreBiolink['content']>;
   profileConfig: CreatorProfileConfig;
   /**
@@ -87,6 +96,7 @@ const createBiolinkEditorStore = (biolink: StoreBiolink) => {
       layout: 'profile-sidebar',
     },
     appearanceIsDirty: false,
+    appearanceSuggestionFingerprint: null,
     profileConfig: getCreatorProfileConfig(biolink as any),
     savedProfileConfig: getCreatorProfileConfig(biolink as any),
     profileIsDirty: false,
@@ -98,7 +108,40 @@ const createBiolinkEditorStore = (biolink: StoreBiolink) => {
     saveError: null,
     saveStatus: null,
     setAppearanceIsDirty: (isDirty: boolean) => {
-      set(() => ({appearanceIsDirty: isDirty}));
+      set(state => ({
+        appearanceIsDirty: isDirty,
+        appearanceSuggestionFingerprint: isDirty ? state.appearanceSuggestionFingerprint : null,
+      }));
+    },
+    applyAppearanceSuggestion: (buttons, fingerprint) => {
+      // Only the safe preset schema can enter the existing manual editor.
+      // Server-side authorization and the revision compare-and-swap remain
+      // mandatory on the subsequent creator-controlled Save action.
+      if (!/^[a-f0-9]{64}$/.test(fingerprint)) return;
+      const valid: SuggestedButtonTokens = {};
+      for (const [key, value] of Object.entries(buttons)) {
+        if (key === 'variant' && (value === 'solid' || value === 'outline')) {
+          valid.variant = value;
+        } else if (key === 'radius' && (value === 'rounded-sm' || value === 'rounded-lg')) {
+          valid.radius = value;
+        } else if (key === 'shadow' && value === 'none') {
+          valid.shadow = value;
+        } else {
+          return;
+        }
+      }
+      if (!Object.keys(valid).length) return;
+      set(state => {
+        if (state.appearanceIsDirty) return state;
+        return {
+          appearanceIsDirty: true,
+          appearanceSuggestionFingerprint: fingerprint,
+          appearance: {
+            ...state.appearance,
+            btnConfig: {...state.appearance.btnConfig, ...valid},
+          },
+        };
+      });
     },
     setProfileIsDirty: (isDirty: boolean) => {
       set(() => ({profileIsDirty: isDirty}));
