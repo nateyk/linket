@@ -113,6 +113,25 @@ return [
         'model' => env('CREATOR_AI_PRODUCT_COPY_MODEL', 'gpt-4o-mini'),
     ],
 
+    /**
+     * PromptPHP Intercept middleware on CreatorProductCopyAgent (Laravel AI SDK).
+     * Disabled by default. Tune in staging (log + redact) before enforcing block
+     * in production. Never sends prompts off-site; detection is local heuristics.
+     */
+    'product_copy_intercept' => [
+        'enabled' => env('CREATOR_AI_PRODUCT_COPY_INTERCEPT_ENABLED', false),
+        'injection_action' => env('CREATOR_AI_PRODUCT_COPY_INTERCEPT_INJECTION_ACTION', 'log'),
+        'pii_action' => env('CREATOR_AI_PRODUCT_COPY_INTERCEPT_PII_ACTION', 'redact'),
+        /**
+         * When true, high-risk patterns (API keys, bearer tokens, cards) block the
+         * prompt. When false, block_entities is set to [] so `redact`/`log` can handle
+         * them without stopping the run (staging / false-positive review).
+         */
+        'pii_block_high_risk_entities' => env('CREATOR_AI_PRODUCT_COPY_INTERCEPT_PII_BLOCK_HIGH_RISK', false),
+        'log_prompt_preview' => env('CREATOR_AI_PRODUCT_COPY_INTERCEPT_LOG_PROMPT_PREVIEW', false),
+        'pii_log_preview' => env('CREATOR_AI_PRODUCT_COPY_INTERCEPT_PII_LOG_PREVIEW', false),
+    ],
+
     // Organization billing evidence is read-only and restricted to a dedicated
     // OpenAI project with an independently provisioned admin credential.
     // Disabled by default. Aggregated daily costs are NOT per-request receipts.

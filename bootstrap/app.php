@@ -7,6 +7,7 @@ return Application::create(
     providers: [
         App\CreatorAi\Auth\CreatorMcpOAuthServiceProvider::class,
         App\Providers\SupportServiceProvider::class,
+        \PromptPHP\Intercept\Support\InterceptServiceProvider::class,
     ],
     middleware: [
         App\CreatorAi\Auth\CreatorMcpOAuthEarlyTransportGate::class,
