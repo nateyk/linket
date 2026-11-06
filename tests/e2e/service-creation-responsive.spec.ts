@@ -68,10 +68,48 @@ test.describe('Service Creation — authenticated browser acceptance', () => {
       await expect(page.getByRole('heading', {name: 'Media and links'})).toBeVisible();
       await steps.getByRole('button', {name: 'Packages, step 3 of 4'}).click();
       await expect(page.getByRole('heading', {name: 'Packages'})).toBeVisible();
+
+      // Three fixed tiers, never an unbounded Add Package form. The matrix
+      // must be operable with touch and keyboard at every mobile breakpoint.
+      for (const tier of ['Basic', 'Standard', 'Premium']) {
+        await expect(page.getByRole('region', {name: tier + ' package'})).toBeVisible();
+      }
+      await expect(page.getByRole('button', {name: 'Add package'})).toHaveCount(0);
+      await expect(page.getByRole('textbox', {name: 'Package name'})).toHaveCount(0);
+
+      const basic = page.getByRole('switch', {name: 'Enable Basic package'});
+      await basic.click();
+      await expect(basic).toHaveAttribute('aria-checked', 'true');
+      await page.getByRole('region', {name: 'Basic package'})
+        .getByRole('textbox', {name: 'Delivery days'}).fill('5');
+
+      await page.getByRole('textbox', {name: 'Add an included feature'}).fill('Vector source files');
+      await page.getByRole('button', {name: 'Add feature'}).click();
+      const basicFeature = page.getByRole('checkbox', {name: 'Include Vector source files in Basic'});
+      await expect(basicFeature).toHaveAttribute('aria-checked', 'true');
+
+      await page.getByRole('switch', {name: 'Enable Standard package'}).click();
+      await page.getByRole('checkbox', {name: 'Include Vector source files in Standard'}).click();
+      await expect(page.getByRole('checkbox', {name: 'Include Vector source files in Standard'}))
+        .toHaveAttribute('aria-checked', 'true');
+
+      const packageScreenshot = testInfo.outputPath('service-packages-' + viewport.width + 'px.png');
+      await page.screenshot({path: packageScreenshot, fullPage: true});
+      await testInfo.attach('Service packages ' + viewport.width + 'px', {
+        path: packageScreenshot,
+        contentType: 'image/png',
+      });
+
       await steps.getByRole('button', {name: 'Settings, step 4 of 4'}).click();
       await expect(page.getByRole('heading', {name: 'FAQ'})).toBeVisible();
       await steps.getByRole('button', {name: 'Details, step 1 of 4'}).click();
       await expect(page.locator('#title')).toHaveValue('E2E preview draft');
+      await steps.getByRole('button', {name: 'Packages, step 3 of 4'}).click();
+      await expect(page.getByRole('region', {name: 'Basic package'})
+        .getByRole('textbox', {name: 'Delivery days'})).toHaveValue('5');
+      await expect(page.getByRole('checkbox', {name: 'Include Vector source files in Standard'}))
+        .toHaveAttribute('aria-checked', 'true');
+      await steps.getByRole('button', {name: 'Details, step 1 of 4'}).click();
       // Capture scroll ownership if this assertion fails. Do not scroll the
       // page from the test: that would conceal a real navigation regression.
       if (viewport.width === 320) {
