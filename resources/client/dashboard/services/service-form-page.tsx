@@ -658,7 +658,7 @@ function ServiceFormPage() {
             </Alert.Root>
           )}
           {error && (
-            <Alert.Root variant="destructive" fillStyle="subtleFill">
+            <Alert.Root variant="destructive" fillStyle="subtleFill" className="mb-5">
               <CircleAlertIcon />
               <Alert.Description>{error}</Alert.Description>
             </Alert.Root>
@@ -670,7 +670,7 @@ function ServiceFormPage() {
             completed={completedSteps}
           />
 
-          <div className="min-w-0 space-y-5">
+          <div className="min-w-0 space-y-4 sm:space-y-5">
               {/* Keep the rich-text editor mounted between steps. Unmounting and
                   remounting it can restore editor focus/selection after the
                   navigator changes, moving both document and panel scroll. */}
@@ -1000,7 +1000,7 @@ function ServiceFormPage() {
                 </ServiceFormSection>
               )}
               {activeStep === 'settings' && (
-                <div className="space-y-5">
+                <div className="space-y-4 sm:space-y-5">
                   <ServiceFormSection
                   id="faq"
                   icon={MessageSquareQuoteIcon}
@@ -1049,7 +1049,7 @@ function ServiceFormPage() {
                 </div>
               )}
 
-              <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-5">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4 sm:pt-5">
                 {previousStep ? (
                   <Button
                     type="button"
