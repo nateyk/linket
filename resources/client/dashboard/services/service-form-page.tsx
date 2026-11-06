@@ -638,7 +638,7 @@ function ServiceFormPage() {
         ref={contentScrollerRef}
         className="overflow-y-auto [overflow-anchor:none]"
       >
-        <div className="mx-auto w-full max-w-6xl py-4 sm:py-5">
+        <div className="mx-auto w-full max-w-4xl py-4 sm:py-5">
           {creationUncertain && (
             <Alert.Root role="alert" variant="warning" fillStyle="subtleFill" className="mb-5">
               <CircleAlertIcon />
@@ -662,17 +662,13 @@ function ServiceFormPage() {
             </Alert.Root>
           )}
 
-          <p className="mb-5 text-sm leading-6 text-muted-foreground">
-            <Trans message="Add a title and choose a storefront. Media, packages and contact details are optional." />
-          </p>
+          <ServiceBuilderSteps
+            active={activeStep}
+            onSelect={changeStep}
+            completed={completedSteps}
+          />
 
-          <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[15rem_minmax(0,1fr)] xl:gap-6">
-            <ServiceBuilderSteps
-              active={activeStep}
-              onSelect={changeStep}
-              completed={completedSteps}
-            />
-            <div className="min-w-0 space-y-5">
+          <div className="min-w-0 space-y-5">
               {/* Keep the rich-text editor mounted between steps. Unmounting and
                   remounting it can restore editor focus/selection after the
                   navigator changes, moving both document and panel scroll. */}
@@ -1090,9 +1086,6 @@ function ServiceFormPage() {
                   </Button>
                 )}
               </div>
-            </div>
-
-
           </div>
         </div>
       </DashboardLayout.SectionContent>

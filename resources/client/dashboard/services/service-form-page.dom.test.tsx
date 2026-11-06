@@ -5,7 +5,7 @@
  * and `/dashboard/services/:serviceId/edit` — so the create/edit split lives in
  * `useParams`, not in the component tree. These tests mount the real route
  * paths through a memory router and drive the page the way a creator does:
- * read the shell (breadcrumb, responsive four-stage rail and on-demand preview),
+ * read the shell (breadcrumb, segmented four-stage navigation and on-demand preview),
  * type a title, and save with the keyboard shortcut.
  *
  * Everything the page fetches goes through the mocked `apiClient`, so the tests
@@ -196,8 +196,13 @@ describe('the service form shell', () => {
     expect(screen.queryByRole('complementary', {name: 'Service preview'})).toBeNull();
     expect(screen.queryByRole('dialog', {name: 'Customer preview'})).toBeNull();
     const steps = screen.getByRole('navigation', {name: 'Service creation steps'});
-    expect(steps.className).toContain('xl:sticky');
-    expect(steps.parentElement?.className).toContain('xl:grid-cols-[15rem_minmax(0,1fr)]');
+    expect(steps.className).toContain('border-b');
+    expect(steps.parentElement?.className).toContain('max-w-4xl');
+    expect(steps.querySelectorAll('ol > li')).toHaveLength(4);
+    const selected = screen.getByRole('button', {name: 'Details, step 1 of 4'});
+    expect(selected.getAttribute('data-step-state')).toBe('current');
+    expect(selected.querySelector('[aria-hidden="true"]')?.className).toContain('bg-primary');
+    expect(selected.className).not.toContain('bg-primary/5');
     // Step changes are announced once by the page-level status region.
     expect(screen.getAllByRole('status')).toHaveLength(1);
   });
@@ -263,6 +268,7 @@ describe('the service form shell', () => {
     await user.click(screen.getByRole('button', {name: 'Media, step 2 of 4'}));
     expect(scroller.scrollTop).toBe(0);
     expect(screen.getByRole('button', {name: 'Media, step 2 of 4'}).getAttribute('aria-current')).toBe('step');
+    expect(screen.getByRole('button', {name: 'Details, step 1 of 4'}).getAttribute('data-step-state')).toBe('previous');
     expect(screen.queryByRole('textbox', {name: 'Title'})).toBeNull();
     expect(document.getElementById('description')).toBe(descriptionEditor);
     expect(screen.getByRole('heading', {name: 'Media and links'})).toBeTruthy();

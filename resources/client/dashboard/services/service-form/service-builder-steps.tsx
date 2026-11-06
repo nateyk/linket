@@ -12,9 +12,9 @@ interface ServiceBuilderStepsProps {
 }
 
 /**
- * A compact four-stage navigator: horizontal above the form on narrow screens
- * and a vertical progress rail alongside it on wide screens. All stages remain
- * selectable because media, packages and contact details are optional.
+ * A four-segment navigation control, not a completion gate. Stages may be
+ * revisited in any order, and the creator can publish without optional media,
+ * packages, FAQs, or contact buttons.
  */
 export function ServiceBuilderSteps({
   active,
@@ -23,105 +23,69 @@ export function ServiceBuilderSteps({
 }: ServiceBuilderStepsProps) {
   const {trans} = useTrans();
   const steps = [
-    {
-      id: 'details',
-      title: trans({message: 'Details'}),
-      description: trans({message: 'Describe your offer'}),
-    },
-    {
-      id: 'media',
-      title: trans({message: 'Media'}),
-      description: trans({message: 'Show your work'}),
-    },
-    {
-      id: 'packages',
-      title: trans({message: 'Packages'}),
-      description: trans({message: 'Pricing or quote'}),
-    },
-    {
-      id: 'settings',
-      title: trans({message: 'Settings'}),
-      description: trans({message: 'Questions and contact'}),
-    },
+    {id: 'details', title: trans({message: 'Details'})},
+    {id: 'media', title: trans({message: 'Media'})},
+    {id: 'packages', title: trans({message: 'Packages'})},
+    {id: 'settings', title: trans({message: 'Settings'})},
   ] as const;
+  const activeIndex = SERVICE_STEP_ORDER.indexOf(active);
 
   return (
     <nav
       id="service-builder-steps"
       aria-label={trans({message: 'Service creation steps'})}
-      className="scroll-mt-3 xl:sticky xl:top-5 xl:rounded-card xl:border xl:bg-card xl:p-4"
+      className="mb-5 scroll-mt-3 border-b pb-4"
     >
-      <div className="mb-3 flex items-center justify-between gap-3 px-1 xl:mb-4 xl:px-0">
-        <p className="text-xs font-semibold text-foreground">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <p className="text-sm font-medium text-foreground">
           {trans({message: 'Service setup'})}
         </p>
-        <p className="text-xs tabular-nums text-muted-foreground">
+        <p className="text-xs font-medium tabular-nums text-muted-foreground">
           {trans({
             message: 'Step :current of :total',
-            values: {
-              current: SERVICE_STEP_ORDER.indexOf(active) + 1,
-              total: steps.length,
-            },
+            values: {current: activeIndex + 1, total: steps.length},
           })}
         </p>
       </div>
-      <ol className="grid grid-cols-4 gap-1.5 xl:flex xl:flex-col xl:gap-1">
+
+      <ol className="grid grid-cols-4 gap-2 sm:gap-3">
         {steps.map((step, index) => {
           const current = active === step.id;
-          const done = completed[step.id] && !current;
+          const earlier = index < activeIndex;
+          const done = earlier && completed[step.id];
 
           return (
-            <li key={step.id} className="relative min-w-0">
-              {index < steps.length - 1 && (
-                <span
-                  aria-hidden="true"
-                  className="absolute -bottom-3 left-7 top-11 hidden w-px bg-border xl:block"
-                />
-              )}
+            <li key={step.id} className="min-w-0">
               <button
                 type="button"
+                data-step-state={current ? 'current' : earlier ? 'previous' : 'upcoming'}
                 aria-current={current ? 'step' : undefined}
                 aria-label={trans({
                   message: ':name, step :index of :total',
-                  values: {
-                    name: step.title,
-                    index: index + 1,
-                    total: steps.length,
-                  },
+                  values: {name: step.title, index: index + 1, total: steps.length},
                 })}
                 onClick={() => onSelect(step.id)}
-                className={cn(
-                  'relative z-10 flex min-h-16 w-full cursor-pointer flex-col items-center gap-1.5 rounded-card-sm border border-transparent px-1 py-2 text-center transition-colors motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring xl:min-h-20 xl:flex-row xl:items-start xl:gap-3 xl:px-3 xl:py-3 xl:text-left',
-                  current
-                    ? 'border-primary/15 bg-primary/5'
-                    : 'hover:bg-muted/60',
-                )}
+                className="group flex min-h-11 w-full cursor-pointer flex-col items-stretch gap-2 rounded-card-xs px-1 py-1.5 text-start outline-none transition-colors motion-reduce:transition-none hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               >
                 <span
                   aria-hidden="true"
                   className={cn(
-                    'relative z-10 flex size-8 shrink-0 items-center justify-center rounded-full border text-xs font-semibold tabular-nums',
+                    'h-1 w-full rounded-sm transition-colors motion-reduce:transition-none',
                     current
-                      ? 'border-primary bg-primary text-primary-foreground'
-                      : done
-                        ? 'border-primary/25 bg-primary/10 text-primary'
-                        : 'border-border bg-card text-muted-foreground',
+                      ? 'bg-primary'
+                      : earlier
+                        ? 'bg-primary/65'
+                        : 'bg-border group-hover:bg-muted-foreground/40',
+                  )}
+                />
+                <span
+                  className={cn(
+                    'flex min-w-0 items-center gap-1 text-sm font-medium leading-5',
+                    current ? 'text-foreground' : 'text-muted-foreground group-hover:text-foreground',
                   )}
                 >
-                  {done ? <CheckIcon className="size-4" strokeWidth={2.5} /> : index + 1}
-                </span>
-                <span className="min-w-0 xl:flex-1">
-                  <span
-                    className={cn(
-                      'block text-xs font-medium leading-4 xl:text-sm',
-                      current ? 'text-foreground' : 'text-muted-foreground',
-                    )}
-                  >
-                    {step.title}
-                  </span>
-                  <span className="mt-1 hidden text-xs leading-4 text-muted-foreground xl:block">
-                    {step.description}
-                  </span>
+                  {step.title}
+                  {done && <CheckIcon aria-hidden="true" className="size-3.5 shrink-0 text-primary" />}
                 </span>
               </button>
             </li>
