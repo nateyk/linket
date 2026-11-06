@@ -80,7 +80,7 @@ test.describe('Service Creation — authenticated browser acceptance', () => {
       const basic = page.getByRole('switch', {name: 'Enable Basic package'});
       await basic.click();
       await expect(basic).toHaveAttribute('aria-checked', 'true');
-      await page.getByRole('region', {name: 'Basic package'})
+      await page.getByRole('region', {name: 'Basic package details'})
         .getByRole('textbox', {name: 'Delivery days'}).fill('5');
 
       await page.getByRole('textbox', {name: 'Add an included feature'}).fill('Vector source files');
@@ -89,6 +89,10 @@ test.describe('Service Creation — authenticated browser acceptance', () => {
       await expect(basicFeature).toHaveAttribute('aria-checked', 'true');
 
       await page.getByRole('switch', {name: 'Enable Standard package'}).click();
+      await expect(page.getByRole('region', {name: 'Standard package details'})).toBeVisible();
+      await expect(page.getByRole('textbox', {name: 'Price'})).toHaveCount(1);
+      await page.getByRole('button', {name: 'Edit Basic package'}).click();
+      await expect(page.getByRole('region', {name: 'Basic package details'})).toBeVisible();
       await page.getByRole('checkbox', {name: 'Include Vector source files in Standard'}).click();
       await expect(page.getByRole('checkbox', {name: 'Include Vector source files in Standard'}))
         .toHaveAttribute('aria-checked', 'true');
@@ -105,7 +109,7 @@ test.describe('Service Creation — authenticated browser acceptance', () => {
       await steps.getByRole('button', {name: 'Details, step 1 of 4'}).click();
       await expect(page.locator('#title')).toHaveValue('E2E preview draft');
       await steps.getByRole('button', {name: 'Packages, step 3 of 4'}).click();
-      await expect(page.getByRole('region', {name: 'Basic package'})
+      await expect(page.getByRole('region', {name: 'Basic package details'})
         .getByRole('textbox', {name: 'Delivery days'})).toHaveValue('5');
       await expect(page.getByRole('checkbox', {name: 'Include Vector source files in Standard'}))
         .toHaveAttribute('aria-checked', 'true');
