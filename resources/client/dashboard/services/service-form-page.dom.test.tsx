@@ -5,7 +5,7 @@
  * and `/dashboard/services/:serviceId/edit` — so the create/edit split lives in
  * `useParams`, not in the component tree. These tests mount the real route
  * paths through a memory router and drive the page the way a creator does:
- * read the shell (breadcrumb, progress, five sections and on-demand preview),
+ * read the shell (breadcrumb, segmented four-stage navigation and on-demand preview),
  * type a title, and save with the keyboard shortcut.
  *
  * Everything the page fetches goes through the mocked `apiClient`, so the tests
@@ -13,8 +13,9 @@
  * preview tracks the same state the form writes.
  */
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
-import {act, render, screen, waitFor} from '@testing-library/react';
+import {act, render, screen, waitFor, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import {AxiosError} from 'axios';
 import {createMemoryRouter, RouterProvider} from 'react-router';
 import {
   afterEach,
@@ -105,13 +106,7 @@ const serverService: CreatorServiceResource = {
   public_url: 'https://linket.test/mystore/services/brand-identity-sprint',
 };
 
-const SECTION_TITLES = [
-  'Basics',
-  'Media and links',
-  'Packages',
-  'FAQ',
-  'Contact buttons',
-];
+const STEP_TITLES = ['Details', 'Media', 'Packages', 'Settings'];
 
 beforeEach(() => {
   api.get.mockReset();
@@ -163,7 +158,8 @@ function mountPage(path: '/dashboard/services/new' | '/dashboard/services/3/edit
 
 /** The loading skeleton is replaced once the stores + service GETs settle. */
 async function waitForForm() {
-  return screen.findByRole('button', {name: 'Basics'});
+  await screen.findByRole('navigation', {name: 'Service creation steps'});
+  return screen.findByRole('button', {name: 'Details, step 1 of 4'});
 }
 
 function titleInput(): HTMLInputElement {
@@ -191,33 +187,133 @@ describe('the service form shell', () => {
 
     expect(screen.getByRole('link', {name: 'My Services'})).toBeTruthy();
     expect(
-      screen.getByRole('heading', {level: 1, name: /New service/}),
+      screen.getByRole('heading', {level: 1, name: /Create a service/}),
     ).toBeTruthy();
-    expect(
-      screen.getByRole('progressbar', {name: 'Service setup progress'}),
-    ).toBeTruthy();
-    expect(screen.getByText('Service setup')).toBeTruthy();
-    expect(screen.getByText('0 of 3 recommended sections complete')).toBeTruthy();
+    expect(screen.getByRole('navigation', {name: 'Service creation steps'})).toBeTruthy();
+    expect(screen.getByText('Step 1 of 4')).toBeTruthy();
     expect(screen.getByRole('button', {name: 'Preview'})).toBeTruthy();
-    // The product and service creators both keep buyer previews on-demand.
-    expect(screen.queryByText('Customer preview')).toBeNull();
+    // The form owns the width; preview is available only on demand.
+    expect(screen.queryByRole('complementary', {name: 'Service preview'})).toBeNull();
+    expect(screen.queryByRole('dialog', {name: 'Customer preview'})).toBeNull();
+    const steps = screen.getByRole('navigation', {name: 'Service creation steps'});
+    expect(steps.className).not.toContain('border-b');
+    expect(steps.querySelectorAll('ol > li button > span[aria-hidden="true"]')).toHaveLength(4);
+    expect(screen.queryByText('Service setup')).toBeNull();
+    expect(steps.parentElement?.className).toContain('max-w-6xl');
+    expect(steps.parentElement?.className).not.toContain('mx-auto');
+    expect(steps.querySelectorAll('ol > li')).toHaveLength(4);
+    const selected = screen.getByRole('button', {name: 'Details, step 1 of 4'});
+    expect(selected.getAttribute('data-step-state')).toBe('current');
+    expect(selected.querySelector('[aria-hidden="true"]')?.className).toContain('bg-primary');
+    expect(selected.className).not.toContain('bg-primary/5');
+    // Step changes are announced once by the page-level status region.
+    expect(screen.getAllByRole('status')).toHaveLength(1);
   });
 
-  test('all five sections are reachable as accordion triggers', async () => {
+  test('package, FAQ and contact length guidance matches the Laravel contract', async () => {
+    const user = userEvent.setup();
     mountPage('/dashboard/services/new');
     await waitForForm();
 
-    SECTION_TITLES.forEach(title => {
-      const trigger = screen.getByRole('button', {name: title});
-      // A real trigger: it reports and toggles the open state of its panel.
-      expect(trigger.getAttribute('aria-expanded')).not.toBeNull();
+    await user.click(screen.getByRole('button', {name: 'Packages, step 3 of 4'}));
+    await user.click(screen.getByRole('switch', {name: 'Enable Basic package'}));
+    await user.click(screen.getByRole('button', {name: 'Add package description'}));
+    expect(screen.getByRole('textbox', {name: 'Package description'}).getAttribute('maxlength')).toBe('3000');
+    expect(screen.getByText('0/3000')).toBeTruthy();
+
+    await user.click(screen.getByRole('button', {name: 'Settings, step 4 of 4'}));
+    await user.click(screen.getByRole('button', {name: 'Add FAQ'}));
+    expect(screen.getByRole('textbox', {name: 'Answer'}).getAttribute('maxlength')).toBe('3000');
+
+    await user.click(screen.getByRole('button', {name: 'Add contact button'}));
+    expect(screen.getByRole('textbox', {name: 'Value'}).getAttribute('maxlength')).toBe('300');
+  });
+
+  test('FAQ and contact repeaters stop at the API maximums', async () => {
+    const user = userEvent.setup();
+    mountPage('/dashboard/services/new');
+    await waitForForm();
+    await user.click(screen.getByRole('button', {name: 'Settings, step 4 of 4'}));
+
+    const addFaq = screen.getByRole('button', {name: 'Add FAQ'});
+    for (let index = 0; index < 20; index += 1) {
+      await user.click(addFaq);
+    }
+    expect(addFaq).toHaveProperty('disabled', true);
+    expect(screen.getByText('Maximum 20 FAQs reached.')).toBeTruthy();
+
+    const addContact = screen.getByRole('button', {name: 'Add contact button'});
+    for (let index = 0; index < 6; index += 1) {
+      await user.click(addContact);
+    }
+    expect(addContact).toHaveProperty('disabled', true);
+    expect(screen.getByText('Maximum 6 contact buttons reached.')).toBeTruthy();
+  }, 15_000);
+
+  test('all four service stages are accessible, navigable and retain unsaved fields', async () => {
+    const user = userEvent.setup();
+    mountPage('/dashboard/services/new');
+    await waitForForm();
+
+    STEP_TITLES.forEach((title, index) => {
+      expect(screen.getByRole('button', {name: `${title}, step ${index + 1} of 4`})).toBeTruthy();
     });
-    // Basics is the section open on arrival, so the title field is already there.
-    expect(
-      screen
-        .getByRole('button', {name: 'Basics'})
-        .getAttribute('aria-expanded'),
-    ).toBe('true');
+    expect(screen.getByRole('button', {name: 'Details, step 1 of 4'}).getAttribute('aria-current')).toBe('step');
+    await user.type(titleInput(), 'Custom brand consulting');
+    const descriptionEditor = document.getElementById('description');
+    expect(descriptionEditor).not.toBeNull();
+
+    const navigation = screen.getByRole('navigation', {name: 'Service creation steps'});
+    const scroller = navigation.closest('[data-slot="section-content"]') as HTMLDivElement;
+    expect(scroller).toBeTruthy();
+    // The stage may be scrolled far down in the previous form; its own scroll
+    // owner must reset after React commits the next stage, not in a stale rAF.
+    scroller.scrollTop = 320;
+    await user.click(screen.getByRole('button', {name: 'Media, step 2 of 4'}));
+    expect(scroller.scrollTop).toBe(0);
+    expect(screen.getByRole('button', {name: 'Media, step 2 of 4'}).getAttribute('aria-current')).toBe('step');
+    expect(screen.getByRole('button', {name: 'Details, step 1 of 4'}).getAttribute('data-step-state')).toBe('previous');
+    expect(screen.queryByRole('textbox', {name: 'Title'})).toBeNull();
+    expect(document.getElementById('description')).toBe(descriptionEditor);
+    expect(screen.getByRole('heading', {name: 'Media and links'})).toBeTruthy();
+
+    await user.click(screen.getByRole('button', {name: 'Packages, step 3 of 4'}));
+    expect(screen.getByRole('heading', {name: 'Packages'})).toBeTruthy();
+
+    await user.click(screen.getByRole('button', {name: 'Settings, step 4 of 4'}));
+    expect(screen.getByRole('heading', {name: 'FAQ'})).toBeTruthy();
+    expect(screen.getByRole('heading', {name: 'Contact buttons'})).toBeTruthy();
+
+    scroller.scrollTop = 280;
+    await user.click(screen.getByRole('button', {name: 'Details, step 1 of 4'}));
+    expect(scroller.scrollTop).toBe(0);
+    expect(titleInput().value).toBe('Custom brand consulting');
+    expect(api.post).not.toHaveBeenCalled();
+    expect(api.put).not.toHaveBeenCalled();
+  });
+
+  test('Continue and Previous step move through the same stage sequence', async () => {
+    const user = userEvent.setup();
+    mountPage('/dashboard/services/new');
+    await waitForForm();
+
+    await user.click(screen.getByRole('button', {name: 'Continue'}));
+    const mediaStep = screen.getByRole('button', {name: 'Media, step 2 of 4'});
+    expect(mediaStep.getAttribute('aria-current')).toBe('step');
+    expect(document.activeElement).toBe(mediaStep);
+    await user.click(screen.getByRole('button', {name: 'Previous step'}));
+    expect(screen.getByRole('button', {name: 'Details, step 1 of 4'}).getAttribute('aria-current')).toBe('step');
+    expect(api.post).not.toHaveBeenCalled();
+  });
+
+  test('edit preview does not emit duplicate React key warnings', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    mountPage('/dashboard/services/3/edit');
+    await waitForForm();
+    await waitFor(() => expect(titleInput().value).toBe('Brand identity sprint'));
+
+    const messages = errorSpy.mock.calls.flat().map(String);
+    expect(messages.some(message => message.includes('same key'))).toBe(false);
   });
 
   test('edit mode loads the service and hydrates the form from it', async () => {
@@ -233,11 +329,11 @@ describe('the service form shell', () => {
     await waitFor(() =>
       expect(titleInput().value).toBe('Brand identity sprint'),
     );
-    // The preview reads hydrated state only when the creator requests it.
-    expect(screen.queryByText('Starter')).toBeNull();
+    // The on-demand dialog uses the same hydrated form state.
     await user.click(screen.getByRole('button', {name: 'Preview'}));
-    expect(screen.getByText('Brand identity sprint')).toBeTruthy();
-    expect(screen.getByText('Starter')).toBeTruthy();
+    const dialog = screen.getByRole('dialog', {name: 'Customer preview'});
+    expect(within(dialog).getByText('Brand identity sprint')).toBeTruthy();
+    expect(within(dialog).getByText('Starter')).toBeTruthy();
   });
 
   test('the header carries both save actions, named for screen readers too', async () => {
@@ -275,10 +371,10 @@ describe('the preview is on-demand and live', () => {
     mountPage('/dashboard/services/new');
     await waitForForm();
 
-    expect(screen.queryByText('Untitled service')).toBeNull();
+    expect(screen.queryByRole('dialog', {name: 'Customer preview'})).toBeNull();
     await user.click(screen.getByRole('button', {name: 'Preview'}));
-    expect(screen.getByRole('dialog')).toBeTruthy();
-    expect(screen.getByText('Untitled service')).toBeTruthy();
+    const dialog = screen.getByRole('dialog', {name: 'Customer preview'});
+    expect(within(dialog).getByText('Untitled service')).toBeTruthy();
     expect(api.post).not.toHaveBeenCalled();
 
     // Both the footer action and the dialog's accessible X are named Close.
@@ -287,10 +383,11 @@ describe('the preview is on-demand and live', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
 
     await user.type(titleInput(), 'Logo design');
+    // Reopening the single preview reflects edits made after closing it.
+    expect(screen.queryByRole('complementary', {name: 'Service preview'})).toBeNull();
     await user.click(screen.getByRole('button', {name: 'Preview'}));
 
-    expect(screen.getByText('Logo design')).toBeTruthy();
-    expect(screen.queryByText('Untitled service')).toBeNull();
+    expect(within(screen.getByRole('dialog', {name: 'Customer preview'})).getByText('Logo design')).toBeTruthy();
     expect(api.post).not.toHaveBeenCalled();
     expect(api.put).not.toHaveBeenCalled();
   });
@@ -315,6 +412,182 @@ describe('load failure recovery', () => {
 });
 
 describe('saving', () => {
+  test('invalid package values are blocked before lossy payload conversion', async () => {
+    const user = userEvent.setup();
+    mountPage('/dashboard/services/new');
+    await waitForForm();
+    await user.type(titleInput(), 'Consulting');
+    await user.click(screen.getByRole('button', {name: 'Packages, step 3 of 4'}));
+    await user.click(screen.getByRole('switch', {name: 'Enable Basic package'}));
+
+    const delivery = screen.getByRole('textbox', {name: 'Delivery days'});
+    await user.type(delivery, '-1');
+    await user.click(screen.getByRole('button', {name: 'Save draft'}));
+
+    expect(api.post).not.toHaveBeenCalled();
+    expect(api.put).not.toHaveBeenCalled();
+    expect(delivery).toHaveProperty('value', '-1');
+    expect(
+      screen.getByText('Delivery days must be a whole number from 0 to 365.'),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('button', {name: 'Packages, step 3 of 4'}).getAttribute('aria-current'),
+    ).toBe('step');
+    await waitFor(() => expect(document.activeElement).toBe(delivery));
+  });
+
+  test('editing a tier price clears its indexed server validation error', async () => {
+    const user = userEvent.setup();
+    mountPage('/dashboard/services/new');
+    await waitForForm();
+    await user.click(screen.getByRole('button', {name: 'Packages, step 3 of 4'}));
+    await user.click(screen.getByRole('switch', {name: 'Enable Basic package'}));
+
+    api.post.mockRejectedValueOnce(
+      new AxiosError(
+        'Request failed with status code 422',
+        'ERR_BAD_REQUEST',
+        undefined,
+        undefined,
+        {
+          status: 422,
+          data: {
+            message: 'The given data was invalid.',
+            errors: {'packages.0.price_cents': ['Choose another package price.']},
+          },
+          statusText: 'Unprocessable Content',
+          headers: {},
+          config: {} as never,
+        },
+      ),
+    );
+
+    await user.click(screen.getByRole('button', {name: 'Save draft'}));
+    expect(await screen.findByText('Choose another package price.')).toBeTruthy();
+
+    const price = screen.getByRole('textbox', {name: 'Price'});
+    await user.type(price, '299');
+
+    expect(screen.queryByText('Choose another package price.')).toBeNull();
+  });
+
+  test('indexed skills validation opens Details and shows the error on Skills', async () => {
+    const user = userEvent.setup();
+    mountPage('/dashboard/services/new');
+    await waitForForm();
+    await user.type(titleInput(), 'Brand strategy');
+    await user.type(screen.getByRole('textbox', {name: 'Skills'}), 'A very long skill name that exceeds the server limit');
+    await user.click(screen.getByRole('button', {name: 'Settings, step 4 of 4'}));
+
+    api.post.mockRejectedValueOnce(
+      new AxiosError(
+        'Request failed with status code 422',
+        'ERR_BAD_REQUEST',
+        undefined,
+        undefined,
+        {
+          status: 422,
+          data: {
+            message: 'The given data was invalid.',
+            errors: {'skills.0': ['Each skill may not be greater than 40 characters.']},
+          },
+          statusText: 'Unprocessable Content',
+          headers: {},
+          config: {} as never,
+        },
+      ),
+    );
+
+    await user.click(screen.getByRole('button', {name: 'Publish service'}));
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', {name: 'Details, step 1 of 4'}).getAttribute('aria-current'),
+      ).toBe('step'),
+    );
+    expect(screen.getByText('Each skill may not be greater than 40 characters.')).toBeTruthy();
+    await waitFor(() => expect(document.activeElement).toBe(document.getElementById('skills')));
+  }, 15_000);
+
+  test('gallery validation opens Media and shows the error on the gallery field', async () => {
+    const user = userEvent.setup();
+    mountPage('/dashboard/services/new');
+    await waitForForm();
+    await user.type(titleInput(), 'Portfolio review');
+    await user.click(screen.getByRole('button', {name: 'Settings, step 4 of 4'}));
+
+    api.post.mockRejectedValueOnce(
+      new AxiosError(
+        'Request failed with status code 422',
+        'ERR_BAD_REQUEST',
+        undefined,
+        undefined,
+        {
+          status: 422,
+          data: {
+            message: 'The given data was invalid.',
+            errors: {'gallery_file_entry_ids.0': ['Select an image from this workspace.']},
+          },
+          statusText: 'Unprocessable Content',
+          headers: {},
+          config: {} as never,
+        },
+      ),
+    );
+
+    await user.click(screen.getByRole('button', {name: 'Publish service'}));
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', {name: 'Media, step 2 of 4'}).getAttribute('aria-current'),
+      ).toBe('step'),
+    );
+    expect(screen.getByText('Select an image from this workspace.')).toBeTruthy();
+    await waitFor(() => expect(document.activeElement).toBe(document.getElementById('gallery')));
+  });
+
+  test('server URL validation opens Media and focuses the invalid field', async () => {
+    const user = userEvent.setup();
+    mountPage('/dashboard/services/new');
+    await waitForForm();
+    await user.type(titleInput(), 'Consulting with demo');
+    await user.click(screen.getByRole('button', {name: 'Settings, step 4 of 4'}));
+
+    const navigation = screen.getByRole('navigation', {name: 'Service creation steps'});
+    const scroller = navigation.closest('[data-slot="section-content"]') as HTMLDivElement;
+    scroller.scrollTop = 260;
+
+    api.post.mockRejectedValueOnce(
+      new AxiosError(
+        'Request failed with status code 422',
+        'ERR_BAD_REQUEST',
+        undefined,
+        undefined,
+        {
+          status: 422,
+          data: {
+            message: 'The given data was invalid.',
+            errors: {video_url: ['Enter a valid video URL.']},
+          },
+          statusText: 'Unprocessable Content',
+          headers: {},
+          config: {} as never,
+        },
+      ),
+    );
+
+    await user.click(screen.getByRole('button', {name: 'Publish service'}));
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', {name: 'Media, step 2 of 4'}).getAttribute('aria-current'),
+      ).toBe('step'),
+    );
+    expect(screen.getByText('Enter a valid video URL.')).toBeTruthy();
+    expect(scroller.scrollTop).toBe(0);
+    await waitFor(() => expect(document.activeElement).toBe(document.getElementById('video_url')));
+  });
+
   test('rapid keyboard shortcuts cannot create duplicate services while saving', async () => {
     mountPage('/dashboard/services/new');
     await waitForForm();
@@ -338,6 +611,22 @@ describe('saving', () => {
     });
   });
 
+  test('uncertain create recovery uses link semantics without Base UI button warnings', async () => {
+    const user = userEvent.setup();
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    mountPage('/dashboard/services/new');
+    await waitForForm();
+    api.post.mockRejectedValueOnce(new Error('Connection ended after submission'));
+
+    await user.click(screen.getByRole('button', {name: 'Save draft'}));
+    const recoveryAction = await screen.findByRole('button', {name: 'Check My Services'});
+    expect(recoveryAction.tagName).toBe('A');
+    expect(recoveryAction.getAttribute('href')).toBe('/dashboard/services');
+
+    const messages = errorSpy.mock.calls.flat().map(String);
+    expect(messages.some(message => message.includes('expected a native <button>'))).toBe(false);
+  });
+
   test('unknown create response blocks a second POST and preserves the unsaved form', async () => {
     const user = userEvent.setup();
     mountPage('/dashboard/services/new');
@@ -347,8 +636,9 @@ describe('saving', () => {
 
     await user.click(screen.getByRole('button', {name: 'Save draft'}));
     expect(await screen.findByText(/We could not confirm whether the service was created/)).toBeTruthy();
-    expect(screen.getByRole('link', {name: 'Check My Services'}).getAttribute('href'))
-      .toBe('/dashboard/services');
+    const recoveryAction = screen.getByRole('button', {name: 'Check My Services'});
+    expect(recoveryAction.tagName).toBe('A');
+    expect(recoveryAction.getAttribute('href')).toBe('/dashboard/services');
     expect(titleInput().value).toBe('Network uncertainty service');
     expect(screen.getByRole('button', {name: 'Save draft'}).hasAttribute('disabled')).toBe(true);
     expect(screen.getByRole('button', {name: 'Publish service'}).hasAttribute('disabled')).toBe(true);

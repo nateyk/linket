@@ -21,11 +21,15 @@ type GalleryImage = {id: number; file_entry_id: number; url: string};
 export function ServiceGalleryField({
   coverUrl,
   gallery,
+  coverError,
+  galleryError,
   onCoverChange,
   onGalleryChange,
 }: {
   coverUrl: string;
   gallery: GalleryImage[];
+  coverError?: string;
+  galleryError?: string;
   onCoverChange: (url: string, entryId: number | null) => void;
   onGalleryChange: (gallery: GalleryImage[]) => void;
 }) {
@@ -46,6 +50,7 @@ export function ServiceGalleryField({
       <ServiceFormField
         name="cover_file_entry_id"
         label={trans({message: 'Cover image'})}
+        error={coverError}
       >
         <CroppedCover
           value={coverUrl}
@@ -62,6 +67,7 @@ export function ServiceGalleryField({
       <ServiceFormField
         name="gallery"
         label={trans({message: 'Gallery images'})}
+        error={galleryError}
         trailing={
           <span className="text-xs tabular-nums text-muted-foreground">
             <Trans
@@ -71,7 +77,11 @@ export function ServiceGalleryField({
           </span>
         }
       >
-        <div className="flex flex-col gap-3">
+        <div
+          id="gallery"
+          tabIndex={-1}
+          className="flex flex-col gap-3 focus-visible:outline-2 focus-visible:outline-ring"
+        >
           {!!gallery.length && (
             <ul className="grid grid-cols-4 gap-2 sm:grid-cols-6">
               {gallery.map((item, index) => (

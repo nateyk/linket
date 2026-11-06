@@ -1,6 +1,3 @@
-import {SectionAccordionTrigger} from '@app/dashboard/stores/store-editor/section-accordion-trigger';
-import {BuilderSectionHeader} from '@app/dashboard/stores/store-editor/builder-section-header';
-import {Accordion} from '@shadcn/accordion/accordion';
 import {Badge} from '@shadcn/badge/badge';
 import {useTrans} from '@ui/i18n/use-trans';
 import {cn} from '@ui/utils/cn';
@@ -19,21 +16,14 @@ interface ServiceFormSectionProps {
   title: string;
   description: string;
   icon: LucideIcon;
-  /** Absent on optional sections: their header icon stays muted. */
   isComplete?: boolean;
-  /** Repeater length shown as a count chip in the header. */
   count?: number;
-  /** Optional sections say so instead of pretending to be required. */
   optional?: boolean;
   hasError?: boolean;
   children: ReactNode;
 }
 
-/**
- * One bordered accordion section of the service form. The trigger's
- * accessible name is the section title alone; the description and the
- * optional/count phrase ride along as its accessible description.
- */
+/** One focused panel in the guided Service Creation experience. */
 export function ServiceFormSection({
   id,
   title,
@@ -48,33 +38,44 @@ export function ServiceFormSection({
   const {trans} = useTrans();
 
   return (
-    <Accordion.Item
-      value={id}
-      className={cn(hasError && 'border-destructive/40')}
+    <section
+      id={`service-step-${id}`}
+      aria-labelledby={`service-step-${id}-heading`}
+      className={cn(
+        'min-w-0 overflow-hidden rounded-card border bg-card',
+        hasError && 'border-destructive/60',
+      )}
     >
-      <SectionAccordionTrigger
-        descriptionPhrase={optional ? trans({message: 'Optional section'}) : undefined}
-      >
-        <BuilderSectionHeader
-          icon={Icon}
-          isComplete={isComplete}
-          title={title}
-          description={description}
-          trailing={
-            <span className="flex items-center gap-1.5">
-              {optional && <Badge variant="ghost">{trans({message: 'Optional'})}</Badge>}
-              {count !== undefined && count > 0 && (
-                <Badge variant="secondary" className="min-w-[18px] px-1.5">
-                  {count}
-                </Badge>
-              )}
-            </span>
-          }
-        />
-      </SectionAccordionTrigger>
-      <Accordion.Content className="border-t pt-4">
-        <div className="max-w-2xl">{children}</div>
-      </Accordion.Content>
-    </Accordion.Item>
+      <header className="flex items-start gap-3 border-b px-4 py-4 sm:px-6 sm:py-5">
+        <span
+          aria-hidden="true"
+          className={cn(
+            'flex size-9 shrink-0 items-center justify-center rounded-card-sm bg-muted/70 text-muted-foreground',
+            isComplete && 'bg-muted text-foreground',
+          )}
+        >
+          <Icon className="size-4" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <h2
+            id={`service-step-${id}-heading`}
+            tabIndex={-1}
+            className="text-base leading-6 font-semibold focus-visible:outline-2 focus-visible:outline-ring"
+          >
+            {title}
+          </h2>
+          <p className="mt-1 text-sm leading-5 text-muted-foreground">
+            {description}
+          </p>
+        </div>
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+          {optional && <Badge variant="ghost">{trans({message: 'Optional'})}</Badge>}
+          {count !== undefined && count > 0 && (
+            <Badge variant="secondary" className="min-w-5 px-1.5">{count}</Badge>
+          )}
+        </div>
+      </header>
+      <div className="min-w-0 p-4 sm:p-6">{children}</div>
+    </section>
   );
 }
