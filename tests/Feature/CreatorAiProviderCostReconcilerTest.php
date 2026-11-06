@@ -118,7 +118,7 @@ test('closed day requires two unchanged provider observations before the exact a
     $window = DB::table('creator_ai_provider_cost_windows')->first();
     expect($attempt->status)->toBe('aggregate_reconciled')
         ->and((int) $attempt->cost_window_id)->toBe((int) $window->id)
-        ->and((int) $attempt->charged_microusd)->toBe(0)
+        ->and($attempt->charged_microusd)->toBeNull()
         ->and((int) $provider->reserved_microusd)->toBe(0)
         ->and((int) $provider->spent_microusd)->toBe(25000)
         ->and($window->status)->toBe('settled')

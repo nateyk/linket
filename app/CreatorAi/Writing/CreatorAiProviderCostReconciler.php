@@ -263,8 +263,9 @@ final class CreatorAiProviderCostReconciler
                 ->whereIn('request_id', $ids)->where('status', 'reserved')->update([
                     'status' => 'aggregate_reconciled',
                     'cost_window_id' => $window->id,
-                    // charged_microusd remains 0: it is NOT an actual
-                    // per-request cost for this aggregate settlement.
+                    // Aggregate cost is real, but there is NO independently
+                    // verified per-request cost. NULL is not a $0 charge.
+                    'charged_microusd' => null,
                     'updated_at' => now('UTC'),
                 ]);
             if ($changed !== count($ids)) {

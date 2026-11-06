@@ -17,7 +17,7 @@ The existing read-only audit remains unchanged. The settlement path is strictly 
 4. Independently lock every creator and generation attempt in the window. Every attempt must be reserved in the same UTC month and have immutable local model/token checkpoints. Request and token totals must match the provider exactly. Incomplete/uncertain responses or mixed states block the entire day.
 5. Aggregate provider cost must fit inside the sum of those reserved maximums. Never silently overdraw or refund a possibly billable timeout.
 6. Record a provider evidence digest and a local attempt manifest digest. At least 24 hours later, require a **second unchanged provider observation** and exact locked local identity. A changed billing snapshot resets the observation window and retains every hold.
-7. Only an explicit operator settlement command updates quotas, the provider budget, attempts and the day audit in **one MySQL transaction**. All covered attempts move to aggregate_reconciled and link the day. Their charged_microusd remains zero only as a legacy placeholder: it is **not** a verified zero-dollar per-request charge; the actual cost lives exclusively on the provider-day ledger.
+7. Only an explicit operator settlement command updates quotas, the provider budget, attempts and the day audit in **one MySQL transaction**. All covered attempts move to aggregate_reconciled and link the day. Their charged_microusd is explicitly NULL (unknown), not zero: the actual charge lives only on the provider-day ledger.
 8. Retrying is idempotent. Later provider evidence drift is detected without duplicating or silently rewriting the financial ledger.
 
 ## Operator commands (isolated staging only)

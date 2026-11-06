@@ -26,6 +26,9 @@ return new class extends Migration
         });
 
         Schema::table('creator_ai_generation_attempts', function (Blueprint $table): void {
+            // Leave existing reserved/failed default as zero, but represent
+            // UNKNOWN per-request aggregate charges as NULL, never $0.
+            $table->unsignedBigInteger('charged_microusd')->nullable()->default(0)->change();
             // One aggregate day can cover multiple generations, but does NOT
             // attribute any invented cost to a particular request.
             $table->foreignId('cost_window_id')->nullable()
@@ -38,6 +41,13 @@ return new class extends Migration
     {
         Schema::table('creator_ai_generation_attempts', function (Blueprint $table): void {
             $table->dropConstrainedForeignId('cost_window_id');
+        });
+        // Existing per-request history has non-null charges. Map only the
+        // aggregate-unknown NULL back to legacy 0 during an explicit rollback.
+        IlluminateSupportFacadesDB::table('creator_ai_generation_attempts')
+            ->whereNull('charged_microusd')->update(['charged_microusd' => 0]);
+        Schema::table('creator_ai_generation_attempts', function (Blueprint $table): void {
+            $table->unsignedBigInteger('charged_microusd')->default(0)->change();
         });
         Schema::dropIfExists('creator_ai_provider_cost_windows');
     }
