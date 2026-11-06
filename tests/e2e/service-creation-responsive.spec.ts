@@ -48,6 +48,26 @@ test.describe('Service Creation — authenticated browser acceptance', () => {
       }
       await expect(steps.getByRole('button', {name: 'Details, step 1 of 4'})).toHaveAttribute('aria-current', 'step');
 
+      // The dashboard owns the page gutter. The builder must not add a second,
+      // centered inset that misaligns the stepper and form at desktop widths.
+      const builderAlignment = await steps.evaluate(navigation => {
+        const content = navigation.closest('[data-slot="section-content"]');
+        const basics = document.getElementById('service-step-basics');
+        if (!content || !basics) return null;
+        return {
+          gutterLeft: content.getBoundingClientRect().left + Number.parseFloat(getComputedStyle(content).paddingLeft),
+          stepperLeft: navigation.getBoundingClientRect().left,
+          formLeft: basics.getBoundingClientRect().left,
+        };
+      });
+      expect(builderAlignment).not.toBeNull();
+      if (builderAlignment) {
+        expect(Math.abs(builderAlignment.stepperLeft - builderAlignment.gutterLeft),
+          'Stepper begins at the dashboard content gutter').toBeLessThanOrEqual(2);
+        expect(Math.abs(builderAlignment.formLeft - builderAlignment.stepperLeft),
+          'Form panel and stepper share the same alignment').toBeLessThanOrEqual(2);
+      }
+
       const titleSpan = heading.locator('span').first();
       if (viewport.width <= 375) {
         const style = await titleSpan.evaluate(node => {
