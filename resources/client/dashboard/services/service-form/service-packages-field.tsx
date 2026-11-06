@@ -31,6 +31,8 @@ const PACKAGE_PRESETS = [
   message('Premium'),
 ] as const;
 
+export const SERVICE_PACKAGES_MAX = 6;
+
 function blankPackage(): ServiceFormPackage {
   return {
     name: '',
@@ -63,6 +65,7 @@ export function ServicePackagesField({
 }) {
   const {trans} = useTrans();
   const [openIndex, setOpenIndex] = useState<number | null>(null);
+  const atLimit = packages.length >= SERVICE_PACKAGES_MAX;
 
   const firstErrorIndex = packages.findIndex((_item, index) =>
     Object.keys(errors).some(key => key.startsWith(`packages.${index}.`)),
@@ -72,6 +75,7 @@ export function ServicePackagesField({
   const activeIndex = openIndex ?? (firstErrorIndex >= 0 ? firstErrorIndex : null);
 
   const add = (name = '') => {
+    if (packages.length >= SERVICE_PACKAGES_MAX) return;
     onChange([...packages, {...blankPackage(), name}]);
     setOpenIndex(packages.length);
   };
@@ -417,11 +421,20 @@ export function ServicePackagesField({
         variant="outline"
         size="sm"
         className="self-start"
+        disabled={atLimit}
         onClick={() => add()}
       >
         <PlusIcon data-icon="inline-start" />
         <Trans message="Add package" />
       </Button>
+      {atLimit && (
+        <p className="text-xs leading-5 text-muted-foreground">
+          <Trans
+            message="Maximum :count packages reached."
+            values={{count: SERVICE_PACKAGES_MAX}}
+          />
+        </p>
+      )}
     </div>
   );
 }
