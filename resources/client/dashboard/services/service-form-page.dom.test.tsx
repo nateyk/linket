@@ -198,6 +198,24 @@ describe('the service form shell', () => {
     expect(screen.getAllByRole('status')).toHaveLength(1);
   });
 
+  test('package, FAQ and contact length guidance matches the Laravel contract', async () => {
+    const user = userEvent.setup();
+    mountPage('/dashboard/services/new');
+    await waitForForm();
+
+    await user.click(screen.getByRole('button', {name: 'Packages, step 3 of 4'}));
+    await user.click(screen.getByRole('button', {name: 'Add Starter package'}));
+    expect(screen.getByRole('textbox', {name: 'Package description'}).getAttribute('maxlength')).toBe('3000');
+    expect(screen.getByText('0 / 3000')).toBeTruthy();
+
+    await user.click(screen.getByRole('button', {name: 'Settings, step 4 of 4'}));
+    await user.click(screen.getByRole('button', {name: 'Add FAQ'}));
+    expect(screen.getByRole('textbox', {name: 'Answer'}).getAttribute('maxlength')).toBe('3000');
+
+    await user.click(screen.getByRole('button', {name: 'Add contact button'}));
+    expect(screen.getByRole('textbox', {name: 'Value'}).getAttribute('maxlength')).toBe('300');
+  });
+
   test('all four service stages are accessible, navigable and retain unsaved fields', async () => {
     const user = userEvent.setup();
     mountPage('/dashboard/services/new');
