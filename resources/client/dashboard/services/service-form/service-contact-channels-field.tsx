@@ -120,6 +120,7 @@ export function ServiceContactChannelsField({
                 <Input
                   id={`contact_channels.${index}.value`}
                   value={channel.value}
+                  maxLength={300}
                   onChange={event =>
                     update(index, {value: event.target.value})
                   }
