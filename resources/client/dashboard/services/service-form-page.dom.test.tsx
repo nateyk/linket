@@ -397,6 +397,44 @@ describe('saving', () => {
     expect(screen.queryByText('Choose another package name.')).toBeNull();
   });
 
+  test('indexed skills validation opens Details and shows the error on Skills', async () => {
+    const user = userEvent.setup();
+    mountPage('/dashboard/services/new');
+    await waitForForm();
+    await user.type(titleInput(), 'Brand strategy');
+    await user.type(screen.getByRole('textbox', {name: 'Skills'}), 'A very long skill name that exceeds the server limit');
+    await user.click(screen.getByRole('button', {name: 'Settings, step 4 of 4'}));
+
+    api.post.mockRejectedValueOnce(
+      new AxiosError(
+        'Request failed with status code 422',
+        'ERR_BAD_REQUEST',
+        undefined,
+        undefined,
+        {
+          status: 422,
+          data: {
+            message: 'The given data was invalid.',
+            errors: {'skills.0': ['Each skill may not be greater than 40 characters.']},
+          },
+          statusText: 'Unprocessable Content',
+          headers: {},
+          config: {} as never,
+        },
+      ),
+    );
+
+    await user.click(screen.getByRole('button', {name: 'Publish service'}));
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', {name: 'Details, step 1 of 4'}).getAttribute('aria-current'),
+      ).toBe('step'),
+    );
+    expect(screen.getByText('Each skill may not be greater than 40 characters.')).toBeTruthy();
+    await waitFor(() => expect(document.activeElement).toBe(document.getElementById('skills')));
+  });
+
   test('server URL validation opens Media and focuses the invalid field', async () => {
     const user = userEvent.setup();
     mountPage('/dashboard/services/new');
