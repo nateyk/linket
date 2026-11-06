@@ -206,7 +206,7 @@ describe('the service form shell', () => {
     await user.click(screen.getByRole('button', {name: 'Packages, step 3 of 4'}));
     await user.click(screen.getByRole('button', {name: 'Add Starter package'}));
     expect(screen.getByRole('textbox', {name: 'Package description'}).getAttribute('maxlength')).toBe('3000');
-    expect(screen.getByText('0 / 3000')).toBeTruthy();
+    expect(screen.getByText('0/3000')).toBeTruthy();
 
     await user.click(screen.getByRole('button', {name: 'Settings, step 4 of 4'}));
     await user.click(screen.getByRole('button', {name: 'Add FAQ'}));
