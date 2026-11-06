@@ -23,7 +23,8 @@ export function parseServiceErrors(reason: unknown): {
   for (const [field, errors] of Object.entries(parsed.errors)) {
     const first = Array.isArray(errors) ? errors[0] : errors;
     if (first) {
-      fieldErrors[field] = first;
+      const formField = field.startsWith('skills.') ? 'skills' : field;
+      fieldErrors[formField] ??= first;
     }
   }
 
