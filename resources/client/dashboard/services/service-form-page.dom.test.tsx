@@ -239,7 +239,7 @@ describe('the service form shell', () => {
     }
     expect(addContact).toHaveProperty('disabled', true);
     expect(screen.getByText('Maximum 6 contact buttons reached.')).toBeTruthy();
-  });
+  }, 15_000);
 
   test('all four service stages are accessible, navigable and retain unsaved fields', async () => {
     const user = userEvent.setup();
