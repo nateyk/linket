@@ -13,6 +13,8 @@ import type {
   ServiceFormContactChannel,
 } from '../service-form-state';
 
+export const SERVICE_CONTACT_CHANNELS_MAX = 6;
+
 const CHANNEL_TYPES: {value: ServiceContactChannelType; label: ReturnType<typeof message>}[] = [
   {value: 'whatsapp', label: message('WhatsApp')},
   {value: 'telegram', label: message('Telegram')},
@@ -36,6 +38,7 @@ export function ServiceContactChannelsField({
   onChange: (channels: ServiceFormContactChannel[]) => void;
 }) {
   const {trans} = useTrans();
+  const atLimit = channels.length >= SERVICE_CONTACT_CHANNELS_MAX;
 
   const update = (
     index: number,
@@ -120,6 +123,7 @@ export function ServiceContactChannelsField({
                 <Input
                   id={`contact_channels.${index}.value`}
                   value={channel.value}
+                  maxLength={300}
                   onChange={event =>
                     update(index, {value: event.target.value})
                   }
@@ -166,18 +170,27 @@ export function ServiceContactChannelsField({
           variant="outline"
           size="sm"
           className="self-start"
-          onClick={() =>
-            onChange([...channels, {type: 'whatsapp', label: '', value: ''}])
-          }
+          disabled={atLimit}
+          onClick={() => {
+            if (channels.length >= SERVICE_CONTACT_CHANNELS_MAX) return;
+            onChange([...channels, {type: 'whatsapp', label: '', value: ''}]);
+          }}
         >
           <PlusIcon data-icon="inline-start" />
           <Trans message="Add contact button" />
         </Button>
-        {!channels.length && (
+        {atLimit ? (
+          <p className="text-xs leading-5 text-muted-foreground">
+            <Trans
+              message="Maximum :count contact buttons reached."
+              values={{count: SERVICE_CONTACT_CHANNELS_MAX}}
+            />
+          </p>
+        ) : !channels.length ? (
           <p className="text-xs leading-5 text-muted-foreground">
             <Trans message="No contact buttons yet. Visitors can always send an inquiry instead." />
           </p>
-        )}
+        ) : null}
       </div>
     </div>
   );
