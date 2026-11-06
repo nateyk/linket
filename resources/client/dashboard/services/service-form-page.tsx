@@ -626,7 +626,10 @@ function ServiceFormPage() {
 
           <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_22rem] xl:gap-6">
             <div className="min-w-0 space-y-5">
-              {activeStep === 'details' && (
+              {/* Keep the rich-text editor mounted between steps. Unmounting and
+                  remounting it can restore editor focus/selection after the
+                  navigator changes, moving both document and panel scroll. */}
+              <div hidden={activeStep !== 'details'} inert={activeStep !== 'details'}>
                 <ServiceFormSection
                   id="basics"
                   icon={PenLineIcon}
@@ -860,7 +863,7 @@ function ServiceFormPage() {
                     </ServiceFormField>
                   </div>
                 </ServiceFormSection>
-              )}
+              </div>
               {activeStep === 'media' && (
                 <ServiceFormSection
                   id="media"
