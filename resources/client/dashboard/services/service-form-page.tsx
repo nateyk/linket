@@ -19,8 +19,6 @@ import {
   ArrowLeftIcon,
   ArrowRightIcon,
   ChevronLeftIcon,
-  MonitorIcon,
-  SmartphoneIcon,
   CircleAlertIcon,
   CircleHelpIcon,
   EyeIcon,
@@ -135,7 +133,6 @@ function ServiceFormPage() {
   const contentScrollerRef = useRef<HTMLDivElement>(null);
   const pendingStepScrollRef = useRef<ServiceBuilderStepId | null>(null);
   const pendingErrorFocusRef = useRef<string | null>(null);
-  const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [announcement, setAnnouncement] = useState('');
@@ -665,27 +662,16 @@ function ServiceFormPage() {
             </Alert.Root>
           )}
 
-          <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold">
-                <Trans message="Build your service" />
-              </p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                <Trans message="One step at a time. You can revisit any section before publishing." />
-              </p>
-            </div>
-            <span className="text-xs text-muted-foreground">
-              <Trans message="Add a title and choose a storefront; media and packages are optional." />
-            </span>
-          </div>
+          <p className="mb-5 text-sm leading-6 text-muted-foreground">
+            <Trans message="Add a title and choose a storefront. Media, packages and contact details are optional." />
+          </p>
 
-          <ServiceBuilderSteps
-            active={activeStep}
-            onSelect={changeStep}
-            completed={completedSteps}
-          />
-
-          <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_26rem] xl:gap-6">
+          <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[15rem_minmax(0,1fr)] xl:gap-6">
+            <ServiceBuilderSteps
+              active={activeStep}
+              onSelect={changeStep}
+              completed={completedSteps}
+            />
             <div className="min-w-0 space-y-5">
               {/* Keep the rich-text editor mounted between steps. Unmounting and
                   remounting it can restore editor focus/selection after the
@@ -1106,49 +1092,7 @@ function ServiceFormPage() {
               </div>
             </div>
 
-            <aside aria-label={trans({message: 'Service preview'})} className="hidden min-w-0 xl:block">
-              <div className="sticky top-6 rounded-card border bg-card p-4">
-                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <h2 className="text-sm font-semibold">
-                      <Trans message="Service preview" />
-                    </h2>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      <Trans message="See your unsaved changes." />
-                    </p>
-                  </div>
-                  <div role="group" aria-label={trans({message: 'Preview size'})} className="flex items-center gap-1 rounded-button border bg-muted/40 p-1">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant={previewDevice === 'desktop' ? 'outline' : 'ghost'}
-                      aria-pressed={previewDevice === 'desktop'}
-                      aria-label={trans({message: 'Desktop preview'})}
-                      onClick={() => setPreviewDevice('desktop')}
-                    >
-                      <MonitorIcon aria-hidden="true" className="size-4" />
-                      <span className="hidden 2xl:inline"><Trans message="Desktop" /></span>
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant={previewDevice === 'mobile' ? 'outline' : 'ghost'}
-                      aria-pressed={previewDevice === 'mobile'}
-                      aria-label={trans({message: 'Mobile preview'})}
-                      onClick={() => setPreviewDevice('mobile')}
-                    >
-                      <SmartphoneIcon aria-hidden="true" className="size-4" />
-                      <span className="hidden 2xl:inline"><Trans message="Mobile" /></span>
-                    </Button>
-                  </div>
-                </div>
-                <div className="rounded-card-sm bg-muted/30 p-2">
-                  <div className={previewDevice === 'mobile' ? 'mx-auto w-full max-w-64 transition-[max-width]' : 'w-full transition-[max-width]'}>
-                    <ServicePreview state={form} />
-                  </div>
-                </div>
-              </div>
-            </aside>
+
           </div>
         </div>
       </DashboardLayout.SectionContent>
