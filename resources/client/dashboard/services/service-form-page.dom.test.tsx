@@ -447,6 +447,20 @@ describe('saving', () => {
     });
   });
 
+  test('uncertain create recovery uses link semantics without Base UI button warnings', async () => {
+    const user = userEvent.setup();
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    mountPage('/dashboard/services/new');
+    await waitForForm();
+    api.post.mockRejectedValueOnce(new Error('Connection ended after submission'));
+
+    await user.click(screen.getByRole('button', {name: 'Save draft'}));
+    expect(await screen.findByRole('link', {name: 'Check My Services'})).toBeTruthy();
+
+    const messages = errorSpy.mock.calls.flat().map(String);
+    expect(messages.some(message => message.includes('expected a native <button>'))).toBe(false);
+  });
+
   test('unknown create response blocks a second POST and preserves the unsaved form', async () => {
     const user = userEvent.setup();
     mountPage('/dashboard/services/new');
