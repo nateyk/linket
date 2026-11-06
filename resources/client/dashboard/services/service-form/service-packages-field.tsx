@@ -344,12 +344,13 @@ export function ServicePackagesField({
                 <ServiceFormField
                   name={`packages.${index}.description`}
                   label={trans({message: 'Package description'})}
-                  counter={{current: item.description.length, max: 300}}
+                  counter={{current: item.description.length, max: 3000}}
                   error={errors[`packages.${index}.description`]}
                 >
                   <Textarea
                     id={`packages.${index}.description`}
                     rows={2}
+                    maxLength={3000}
                     value={item.description}
                     onChange={event =>
                       update(index, {description: event.target.value})
