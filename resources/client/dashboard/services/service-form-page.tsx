@@ -265,7 +265,9 @@ function ServiceFormPage() {
       if (!targetStep || targetStep === activeStep) {
         pendingErrorFocusRef.current = null;
         resetStageScroll();
-        document.getElementById(pendingErrorField)?.focus();
+        requestAnimationFrame(() => {
+          document.getElementById(pendingErrorField)?.focus();
+        });
       }
       return;
     }
