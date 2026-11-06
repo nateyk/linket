@@ -308,16 +308,17 @@ function ServiceFormPage() {
     }
 
     const targetStep = stepForSection(section);
-    if (targetStep !== activeStep) {
-      setActiveStep(targetStep);
-      setAnnouncement(trans({
-        message: 'Step :current of :total',
-        values: {
-          current: SERVICE_STEP_ORDER.indexOf(targetStep) + 1,
-          total: SERVICE_STEP_ORDER.length,
-        },
-      }));
-    }
+    // Always set the derived stage. save() deliberately does not depend on
+    // activeStep, so comparing against its closure can use the stage from the
+    // last form edit rather than the stage currently visible at submit time.
+    setActiveStep(targetStep);
+    setAnnouncement(trans({
+      message: 'Step :current of :total',
+      values: {
+        current: SERVICE_STEP_ORDER.indexOf(targetStep) + 1,
+        total: SERVICE_STEP_ORDER.length,
+      },
+    }));
   };
 
   const save = useCallback(
