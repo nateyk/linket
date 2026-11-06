@@ -400,6 +400,30 @@ describe('load failure recovery', () => {
 });
 
 describe('saving', () => {
+  test('invalid package values are blocked before lossy payload conversion', async () => {
+    const user = userEvent.setup();
+    mountPage('/dashboard/services/new');
+    await waitForForm();
+    await user.type(titleInput(), 'Consulting');
+    await user.click(screen.getByRole('button', {name: 'Packages, step 3 of 4'}));
+    await user.click(screen.getByRole('button', {name: 'Add Starter package'}));
+
+    const delivery = screen.getByRole('textbox', {name: 'Delivery days'});
+    await user.type(delivery, '-1');
+    await user.click(screen.getByRole('button', {name: 'Save draft'}));
+
+    expect(api.post).not.toHaveBeenCalled();
+    expect(api.put).not.toHaveBeenCalled();
+    expect(delivery).toHaveProperty('value', '-1');
+    expect(
+      screen.getByText('Delivery days must be a whole number from 0 to 365.'),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('button', {name: 'Packages, step 3 of 4'}).getAttribute('aria-current'),
+    ).toBe('step');
+    await waitFor(() => expect(document.activeElement).toBe(delivery));
+  });
+
   test('editing a package clears its indexed server validation error', async () => {
     const user = userEvent.setup();
     mountPage('/dashboard/services/new');
