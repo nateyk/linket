@@ -27,6 +27,35 @@ describe('serviceSaveErrorMessage', () => {
     );
   });
 
+  test('normalizes transformed collection errors to visible service fields', () => {
+    const reason = new AxiosError(
+      'Request failed with status code 422',
+      'ERR_BAD_REQUEST',
+      undefined,
+      undefined,
+      {
+        status: 422,
+        data: {
+          message: 'The given data was invalid.',
+          errors: {
+            'skills.0': ['Skill is too long.'],
+            'gallery_file_entry_ids.1': ['Select an image from this workspace.'],
+            'packages.0.features.2': ['Feature is too long.'],
+          },
+        },
+        statusText: 'Unprocessable Content',
+        headers: {},
+        config: {} as never,
+      },
+    );
+
+    expect(parseServiceErrors(reason).fieldErrors).toEqual({
+      skills: 'Skill is too long.',
+      gallery: 'Select an image from this workspace.',
+      'packages.0.features': 'Feature is too long.',
+    });
+  });
+
   test('parseServiceErrors returns a flat field map', () => {
     const reason = new AxiosError(
       'Request failed with status code 422',
