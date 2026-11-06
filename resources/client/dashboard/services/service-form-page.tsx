@@ -40,6 +40,7 @@ import {parseServiceErrors, serviceSaveErrorMessage} from './service-save-error'
 import {
   emptyServiceForm,
   fromServiceResource,
+  serviceFormClientErrors,
   toServicePayload,
   type CreatorServiceResource,
   type ServiceFormState,
@@ -330,6 +331,14 @@ function ServiceFormPage() {
         const errors = {title: trans({message: 'A title is required.'})};
         setFieldErrors(errors);
         focusFirstError(errors);
+        return;
+      }
+
+      const clientErrors = serviceFormClientErrors(form);
+      if (Object.keys(clientErrors).length) {
+        setError(undefined);
+        setFieldErrors(clientErrors);
+        focusFirstError(clientErrors);
         return;
       }
 
