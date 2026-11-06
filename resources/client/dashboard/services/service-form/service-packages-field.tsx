@@ -11,6 +11,7 @@ import {
 import {Switch} from '@shadcn/forms/switch/switch';
 import {Textarea} from '@shadcn/forms/textarea/textarea';
 import {formatMoney} from '@ui/i18n/format-money';
+import {message} from '@ui/i18n/message';
 import {Trans} from '@ui/i18n/trans';
 import {useTrans} from '@ui/i18n/use-trans';
 import {cn} from '@ui/utils/cn';
@@ -20,9 +21,9 @@ import {ServiceFormField} from './service-form-field';
 import type {ServiceFormPackage} from '../service-form-state';
 
 const TIERS = [
-  {key: 'basic', name: 'Basic'},
-  {key: 'standard', name: 'Standard'},
-  {key: 'premium', name: 'Premium'},
+  {key: 'basic', name: 'Basic', label: message('Basic'), shortLabel: message('Basic')},
+  {key: 'standard', name: 'Standard', label: message('Standard'), shortLabel: message('Std.')},
+  {key: 'premium', name: 'Premium', label: message('Premium'), shortLabel: message('Prem.')},
 ] as const;
 
 export const SERVICE_PACKAGES_MAX = 3;
@@ -221,6 +222,7 @@ export function ServicePackagesField({
       <div className="grid min-w-0 gap-3 lg:grid-cols-3">
         {TIERS.map((tier, index) => {
           const slot = slots[index];
+          const tierLabel = trans(tier.label);
           const item = slot?.item;
           const sourceIndex = slot?.sourceIndex ?? -1;
           const idPrefix = 'packages.' + sourceIndex + '.';
@@ -240,7 +242,7 @@ export function ServicePackagesField({
             >
               <div className="flex items-center justify-between gap-3 border-b px-4 py-4">
                 <div className="min-w-0">
-                  <h3 className="text-base font-semibold">{tier.name}</h3>
+                  <h3 className="text-base font-semibold">{tierLabel}</h3>
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     {item ? <Trans message="Enabled" /> : <Trans message="Disabled" />}
                   </p>
@@ -256,7 +258,7 @@ export function ServicePackagesField({
                   onCheckedChange={checked => setEnabled(index, checked)}
                   aria-label={trans({
                     message: 'Enable :name package',
-                    values: {name: tier.name},
+                    values: {name: tierLabel},
                   })}
                 />
               </div>
@@ -278,7 +280,7 @@ export function ServicePackagesField({
                         inputMode="decimal"
                         value={item.price}
                         onChange={event => updateTier(index, {price: event.target.value})}
-                        placeholder="299"
+                        placeholder={trans({message: 'Amount'})}
                         aria-invalid={!!errors[idPrefix + 'price_cents']}
                       />
                     </InputGroup>
@@ -362,7 +364,9 @@ export function ServicePackagesField({
             </p>
           </div>
           <span className="text-xs tabular-nums text-muted-foreground">
-            <Trans message=":count features" values={{count: featureRows.length}} />
+            {featureRows.length === 1
+              ? <Trans message="1 feature" />
+              : <Trans message=":count features" values={{count: featureRows.length}} />}
           </span>
         </div>
 
@@ -375,8 +379,16 @@ export function ServicePackagesField({
                     <Trans message="Feature" />
                   </th>
                   {TIERS.map(tier => (
-                    <th key={tier.key} scope="col" className="w-1/5 border-b px-1 py-2 text-center">
-                      {tier.name}
+                    <th
+                      key={tier.key}
+                      scope="col"
+                      aria-label={trans(tier.label)}
+                      className="w-1/5 border-b px-1 py-2 text-center"
+                    >
+                      <abbr title={trans(tier.label)} className="sm:hidden no-underline" aria-hidden="true">
+                        {trans(tier.shortLabel)}
+                      </abbr>
+                      <span className="hidden sm:inline" aria-hidden="true">{trans(tier.label)}</span>
                     </th>
                   ))}
                 </tr>
@@ -412,7 +424,7 @@ export function ServicePackagesField({
                             onCheckedChange={next => toggleFeature(index, feature, next === true)}
                             aria-label={trans({
                               message: 'Include :feature in :tier',
-                              values: {feature, tier: tier.name},
+                              values: {feature, tier: trans(tier.label)},
                             })}
                             className="mx-auto"
                           />
@@ -434,10 +446,10 @@ export function ServicePackagesField({
           <label htmlFor="service-new-package-feature" className="mb-2 block text-sm font-medium">
             <Trans message="Add an included feature" />
           </label>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <Input
               id="service-new-package-feature"
-              className="min-w-0 flex-1"
+              className="min-w-0 w-full sm:flex-1"
               value={newFeature}
               maxLength={200}
               disabled={!enabledCount}
@@ -458,6 +470,7 @@ export function ServicePackagesField({
               type="button"
               variant="outline"
               size="sm"
+              className="w-full sm:w-auto"
               disabled={!enabledCount || !newFeature.trim()}
               onClick={addFeature}
             >
@@ -479,7 +492,7 @@ export function ServicePackagesField({
               <div key={TIERS[index].key} id={fieldId} tabIndex={-1}
                 className="mt-2 text-sm focus-visible:outline-2 focus-visible:outline-ring">
                 {error && <p className="text-destructive" role="alert">
-                  {TIERS[index].name}: {error}
+                  {trans(TIERS[index].label)}: {error}
                 </p>}
               </div>
             );
