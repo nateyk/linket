@@ -56,6 +56,34 @@ describe('Service Creation fixed package tiers', () => {
     expect(changes).toHaveLength(0);
   });
 
+  it('keeps tier selectors, details and features flat within the single Packages section', () => {
+    renderField([
+      pkg({id: 1, name: 'Basic', price: '200', features: 'Source files'}),
+      pkg({id: 2, name: 'Standard', price: '400'}),
+      pkg({id: 3, name: 'Premium', price: '800'}),
+      pkg({id: 4, name: 'Legacy offer'}),
+    ]);
+
+    const root = screen.getByRole('group', {name: 'Package tiers'}).parentElement;
+    expect(root).toBeTruthy();
+    const sections = root?.querySelectorAll('section') ?? [];
+    // The ServiceFormSection itself is the one card. Its inner regions use
+    // proximity and dividers instead of decorating each region as a card.
+    expect(sections).toHaveLength(6);
+    sections.forEach(section => {
+      expect(section.classList.contains('bg-card')).toBe(false);
+      expect(section.classList.contains('rounded-card-sm')).toBe(false);
+    });
+
+    expect(screen.getByRole('region', {name: 'Basic package'})).toBeTruthy();
+    expect(screen.getByRole('region', {name: 'Standard package'})).toBeTruthy();
+    expect(screen.getByRole('region', {name: 'Premium package'})).toBeTruthy();
+    expect(screen.getByRole('region', {name: 'Basic package details'})).toBeTruthy();
+    expect(screen.getByRole('region', {name: 'Included features'})).toBeTruthy();
+    expect(screen.getByRole('region', {name: 'Older packages'})).toBeTruthy();
+    expect(screen.getByRole('checkbox', {name: 'Include Source files in Basic'})).toBeTruthy();
+  });
+
   it('shows three quiet summaries but only one editable tier at a time', async () => {
     const user = userEvent.setup();
     renderField([
