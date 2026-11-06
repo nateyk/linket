@@ -52,6 +52,7 @@ final class CreatorProductCopyDraftService
         $ability = $tone === 'clear' ? 'writing_basic' : 'writing_advanced';
 
         $current = $this->currentProduct($creator, $product, $ability);
+        $sourceFingerprint = $this->fingerprint($current);
         abort_unless((bool) config('creator_ai.product_copy_provider.enabled', false), 503,
             'Product writing is not enabled for this deployment.');
 
@@ -123,9 +124,14 @@ final class CreatorProductCopyDraftService
             throw new HttpException(503, 'AI writing is temporarily unavailable; usage is held for reconciliation.');
         }
 
+        /** Provider latency may outlive ownership, access or content changes. */
+        $latest = $this->currentProduct($creator, $product, $ability);
+        abort_unless(hash_equals($sourceFingerprint, $this->fingerprint($latest)), 409,
+            'The product changed. Generate a fresh suggestion.');
+
         return [
             ...$draft,
-            'source_fingerprint' => $this->fingerprint($current),
+            'source_fingerprint' => $sourceFingerprint,
             'request_id' => $requestId,
             'requires_review' => true,
             'cost_state' => 'reserved_pending_reconciliation',
@@ -135,8 +141,22 @@ final class CreatorProductCopyDraftService
     public function verifyRevision(User $creator, DigitalProduct $product, string $fingerprint): void
     {
         $current = $this->currentProduct($creator, $product, 'writing_basic');
-        abort_unless(hash_equals($this->fingerprint($current), $fingerprint), 409,
-            'The product changed. Generate a fresh suggestion.');
+        $this->verifyLockedRevision($creator, $current, $fingerprint);
+    }
+
+    /**
+     * Called while DigitalProductMutationService owns the product's MySQL
+     * FOR UPDATE lock. Do not query a separate unlocked model here: checking
+     * before the transaction would allow another writer to win the race.
+     */
+    public function verifyLockedRevision(User $creator, DigitalProduct $locked, string $fingerprint): void
+    {
+        $this->access->authorize($creator, (int) $locked->workspace_id, 'writing_basic');
+        abort_unless((int) $locked->user_id === (int) $creator->getKey()
+            && in_array($locked->status, ['draft', 'rejected'], true)
+            && in_array($locked->type ?? 'digital', ['digital', 'ebook', 'audio'], true), 403);
+        abort_unless(hash_equals($this->fingerprint($locked), $fingerprint), 409,
+            'This product changed since the suggestion was reviewed. Refresh and generate a new suggestion.');
     }
 
     private function currentProduct(User $creator, DigitalProduct $product, string $ability): DigitalProduct
@@ -157,8 +177,16 @@ final class CreatorProductCopyDraftService
             (int) $product->workspace_id,
             (int) $product->user_id,
             (string) $product->status,
+            (string) ($product->type ?? 'digital'),
             (string) $product->title,
             (string) $product->description,
+            (int) $product->price_cents,
+            (string) $product->currency,
+            (int) $product->cover_file_entry_id,
+            // A dedicated monotonic version prevents two writers from
+            // consuming the same review when the DB timestamp has seconds
+            // precision or the approved copy equals the original text.
+            (int) $product->content_revision,
             (string) $product->updated_at,
         ], JSON_THROW_ON_ERROR));
     }

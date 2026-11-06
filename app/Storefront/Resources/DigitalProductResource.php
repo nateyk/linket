@@ -64,6 +64,7 @@ class DigitalProductResource extends JsonResource
             'review_requested_at' => $this->review_requested_at,
             'has_pending_update' => $this->resource->hasPendingUpdate(),
             'created_at' => $this->created_at,
+            'content_revision' => (int) $this->content_revision,
             'updated_at' => $this->updated_at,
         ];
     }

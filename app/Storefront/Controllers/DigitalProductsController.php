@@ -106,6 +106,7 @@ class DigitalProductsController extends Controller
             $data,
             $entitlements->limit($creator, 'max_upload_bytes'),
             $creator,
+            $data['ai_copy_source_fingerprint'] ?? null,
         );
 
         return new DigitalProductResource($product);
@@ -127,6 +128,7 @@ class DigitalProductsController extends Controller
             $data,
             $entitlements->limit($creator, 'max_upload_bytes'),
             $creator,
+            $data['ai_copy_source_fingerprint'] ?? null,
         );
 
         return new DigitalProductResource($product);
@@ -306,6 +308,7 @@ class DigitalProductsController extends Controller
             'title' => 'required|string|max:160', 'description' => 'nullable|string|max:20000', 'price_cents' => 'required|integer|min:0',
             'currency' => 'nullable|in:etb,ETB', 'cover_file_entry_id' => 'nullable|integer|exists:file_entries,id',
             'type' => 'nullable|in:digital,ebook,audio,course',
+            'ai_copy_source_fingerprint' => ['sometimes', 'string', 'regex:/\\A[a-f0-9]{64}\\z/'],
             'biolink_ids' => 'nullable|array', 'biolink_ids.*' => 'integer|distinct|exists:biolinks,id',
             'sample_file_ids' => 'sometimes|array',
             'sample_file_ids.*' => 'integer|distinct|exists:file_entries,id',
@@ -339,6 +342,7 @@ class DigitalProductsController extends Controller
             'currency' => 'sometimes|nullable|in:etb,ETB',
             'cover_file_entry_id' => 'sometimes|nullable|integer|exists:file_entries,id',
             'type' => 'sometimes|nullable|in:digital,ebook,audio,course',
+            'ai_copy_source_fingerprint' => ['sometimes', 'string', 'regex:/\\A[a-f0-9]{64}\\z/'],
             'file_ids' => 'sometimes|nullable|array',
             'file_ids.*' => 'integer|distinct|exists:file_entries,id',
             'biolink_ids' => 'sometimes|nullable|array',

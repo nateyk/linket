@@ -58,18 +58,34 @@ final class DigitalProductMutationService
         return $product;
     }
 
-    public function update(DigitalProduct $product, array $data, ?int $maxUploadBytes, ?User $actor = null): DigitalProduct
-    {
+    public function update(
+        DigitalProduct $product,
+        array $data,
+        ?int $maxUploadBytes,
+        ?User $actor = null,
+        ?string $aiCopySourceFingerprint = null,
+    ): DigitalProduct {
         $coverBefore = $product->cover_file_entry_id;
-        $this->abortUnlessTypeChangeIsSafe($product, $data);
 
-        $updated = DB::transaction(function () use ($product, $data, $maxUploadBytes, $actor): DigitalProduct {
+        $updated = DB::transaction(function () use ($product, $data, $maxUploadBytes, $actor, $aiCopySourceFingerprint, &$coverBefore): DigitalProduct {
+            // Every form writer shares this row lock. A separate pre-save AI
+            // verification cannot protect against changes made after it.
+            $product = DigitalProduct::query()->whereKey($product->getKey())->lockForUpdate()->firstOrFail();
+            $coverBefore = $product->cover_file_entry_id;
+            if ($aiCopySourceFingerprint !== null) {
+                abort_unless($actor !== null && array_key_exists('description', $data), 403);
+                app(\App\CreatorAi\Writing\CreatorProductCopyDraftService::class)
+                    ->verifyLockedRevision($actor, $product, $aiCopySourceFingerprint);
+                abort_unless(($data['type'] ?? $product->type) === $product->type, 409,
+                    'The product type changed. Generate a new AI suggestion.');
+            }
+            $this->abortUnlessTypeChangeIsSafe($product, $data);
             $type = $data['type'] ?? $product->type ?? 'digital';
             $snapshot = $product->status === 'approved'
                 ? app(\App\Storefront\ApprovedContentSnapshot::class)->capture($product)
                 : null;
             $product->update([
-                ...Arr::except($data, ['file_ids', 'biolink_ids', 'type', 'sample_file_ids', 'sample_titles', 'sample_durations']),
+                ...Arr::except($data, ['file_ids', 'biolink_ids', 'type', 'sample_file_ids', 'sample_titles', 'sample_durations', 'ai_copy_source_fingerprint']),
                 'type' => $type,
                 'currency' => $data['currency'] ?? $product->currency,
             ]);
@@ -118,6 +134,11 @@ final class DigitalProductMutationService
                     $meta,
                 );
             }
+
+            // Increment even for an identical submitted payload: an approved
+            // AI precondition is single-use and timestamps may lack subsecond
+            // precision. The entire update and version change are atomic.
+            $product->increment('content_revision');
 
             return $product->fresh()->load(['files', 'cover', 'biolinks', 'course', 'samples.file']);
         });

@@ -130,6 +130,72 @@ test('drafts are stale after product edits and cannot be applied against a new r
     ])->assertStatus(409);
 });
 
+test('a product type change invalidates a copy revision even within the same timestamp', function () {
+    $this->freezeTime();
+    creatorCopyTestConfiguration();
+    [$creator, , $product] = creatorCopyFixture();
+    creatorCopyActAs($this, $creator);
+    CreatorProductCopyAgent::fake([[
+        'title' => 'A suggested title',
+        'description' => 'Practice worksheets suitable for printing.',
+    ]])->preventStrayPrompts();
+    $path = '/api/v1/creator-ai/products/'.$product->id;
+    $proposal = $this->postJson($path.'/copy-proposals', [])->assertOk()->json('data');
+    $product->update(['type' => 'audio']);
+
+    $this->postJson($path.'/copy-revision', [
+        'source_fingerprint' => $proposal['source_fingerprint'],
+    ])->assertConflict();
+});
+
+test('generation rechecks the product after provider latency without releasing a possibly billable hold', function (array $change, int $status) {
+    $this->freezeTime();
+    creatorCopyTestConfiguration();
+    [$creator, , $product] = creatorCopyFixture();
+    creatorCopyActAs($this, $creator);
+    CreatorProductCopyAgent::fake(function () use ($product, $change): array {
+        $product->update($change);
+
+        return [
+            'title' => 'A private suggestion',
+            'description' => 'Printable exercises for practice.',
+        ];
+    })->preventStrayPrompts();
+
+    $response = $this->postJson('/api/v1/creator-ai/products/'.$product->id.'/copy-proposals', [])
+        ->assertStatus($status);
+
+    expect($response->getContent())->not->toContain('A private suggestion', 'sk-synthetic-copy-fixture');
+    expect($product->fresh()->only(array_keys($change)))->toBe($change);
+    expect(app(CreatorAiUsageService::class)->summary($creator)['reserved'])->toBe(1);
+    expect(app(CreatorAiUsageService::class)->summary($creator)['completed'])->toBe(0);
+    expect(DB::table('creator_ai_provider_usage_months')->sum('spent_microusd'))->toBe(0);
+    CreatorProductCopyAgent::assertPromptedTimes(1);
+})->with([
+    'edited description' => [['description' => 'Creator edited during generation.'], 409],
+    'changed type with unchanged clock' => [['type' => 'audio'], 409],
+    'submitted for moderation' => [['status' => 'pending_approval'], 403],
+]);
+
+test('a creator loses access to an in-flight suggestion after product ownership changes', function () {
+    creatorCopyTestConfiguration();
+    [$creator, , $product] = creatorCopyFixture();
+    [$other] = creatorCopyFixture();
+    creatorCopyActAs($this, $creator);
+    CreatorProductCopyAgent::fake(function () use ($product, $other): array {
+        $product->update(['user_id' => $other->id]);
+
+        return ['title' => 'Private copy', 'description' => 'Printable practice exercises.'];
+    })->preventStrayPrompts();
+
+    $response = $this->postJson('/api/v1/creator-ai/products/'.$product->id.'/copy-proposals', [])
+        ->assertForbidden();
+
+    expect($response->getContent())->not->toContain('Private copy');
+    expect(app(CreatorAiUsageService::class)->summary($creator)['reserved'])->toBe(1);
+    CreatorProductCopyAgent::assertPromptedTimes(1);
+});
+
 test('cross-creator product copy attempts do not leak information or debit quota', function () {
     creatorCopyTestConfiguration();
     [, , $product] = creatorCopyFixture();
@@ -174,6 +240,63 @@ test('unsafe copy is rejected and an uncertain provider charge stays reserved', 
     $this->postJson('/api/v1/creator-ai/products/'.$product->id.'/copy-proposals', [])
         ->assertStatus(503);
     expect(app(CreatorAiUsageService::class)->summary($creator)['reserved'])->toBe(1);
+});
+
+
+test('approved AI copy is saved only once through the ordinary draft endpoint', function () {
+    creatorCopyTestConfiguration();
+    [$creator, , $product] = creatorCopyFixture();
+    creatorCopyActAs($this, $creator);
+    CreatorProductCopyAgent::fake([[
+        'title' => 'Updated workbook title',
+        'description' => 'Creator-reviewed exercise details.',
+    ]])->preventStrayPrompts();
+
+    $proposal = $this->postJson('/api/v1/creator-ai/products/'.$product->id.'/copy-proposals', [])
+        ->assertOk()->json('data');
+    $payload = [
+        'title' => $product->title,
+        'description' => 'Creator-reviewed exercise details.',
+        'type' => 'digital',
+        'file_ids' => [],
+        'biolink_ids' => [],
+        'ai_copy_source_fingerprint' => $proposal['source_fingerprint'],
+    ];
+    $path = '/api/v1/items/'.$product->id.'/draft';
+    $this->putJson($path, $payload)->assertOk()
+        ->assertJsonPath('data.description', 'Creator-reviewed exercise details.')
+        ->assertJsonPath('data.content_revision', 1);
+
+    // Timestamp precision and a byte-for-byte identical replay must never
+    // make the previously approved fingerprint reusable.
+    $this->putJson($path, $payload)->assertConflict();
+    expect($product->fresh()->description)->toBe('Creator-reviewed exercise details.');
+    expect($product->fresh()->content_revision)->toBe(1);
+});
+
+test('stale AI copy is rejected by the normal save before any product mutation', function () {
+    creatorCopyTestConfiguration();
+    [$creator, , $product] = creatorCopyFixture();
+    creatorCopyActAs($this, $creator);
+    CreatorProductCopyAgent::fake([[
+        'title' => 'Private recommendation',
+        'description' => 'Safer practice worksheets.',
+    ]])->preventStrayPrompts();
+
+    $proposal = $this->postJson('/api/v1/creator-ai/products/'.$product->id.'/copy-proposals', [])
+        ->assertOk()->json('data');
+    $product->update(['title' => 'Fresh creator title']);
+    $this->putJson('/api/v1/items/'.$product->id.'/draft', [
+        'title' => 'Stale AI title',
+        'description' => 'Safer practice worksheets.',
+        'type' => 'digital',
+        'file_ids' => [],
+        'biolink_ids' => [],
+        'ai_copy_source_fingerprint' => $proposal['source_fingerprint'],
+    ])->assertConflict();
+
+    expect($product->fresh()->title)->toBe('Fresh creator title');
+    expect($product->fresh()->description)->toBe('<p>Printable exercise worksheets.</p>');
 });
 
 test('strict structured copy validator rejects script tags and excessive length', function () {

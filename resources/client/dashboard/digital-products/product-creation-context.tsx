@@ -53,9 +53,16 @@ export function sampleRequestPayload(samples: ProductSampleDraft[]) {
   };
 }
 
-export type AutoSaveState = 'idle' | 'saving' | 'saved' | 'failed';
+export type AutoSaveState = 'idle' | 'saving' | 'saved' | 'failed' | 'conflict';
+
+type ApprovedAiCopy = {productId: number; sourceFingerprint: string};
 
 export interface ProductCreationActions {
+  approveAiDescription: (
+    description: string,
+    sourceFingerprint: string,
+  ) => void;
+  markAiCopyConflict: () => void;
   setTitle: (value: string) => void;
   setDescription: (value: string) => void;
   setPrice: (value: string) => void;
@@ -68,7 +75,10 @@ export interface ProductCreationActions {
   clear: () => void;
   setDirty: (dirty: boolean) => void;
   autoSave: () => void;
-  confirmPersisted: (snapshot: ProductFormState) => void;
+  confirmPersisted: (
+    snapshot: ProductFormState,
+    approvedFingerprint?: string,
+  ) => void;
 }
 
 const EMPTY_STATE: ProductFormState = {
@@ -98,6 +108,8 @@ const ProductCreationContext = createContext<{
   state: ProductFormState;
   dirty: boolean;
   autoSaveState: AutoSaveState;
+  aiCopyApproval: ApprovedAiCopy | null;
+  aiCopySaveConflict: boolean;
   actions: ProductCreationActions;
   billing: BillingMode | null;
 } | null>(null);
@@ -116,6 +128,10 @@ export function ProductCreationProvider({
   );
   const [dirty, setDirty] = useState(false);
   const [autoSaveState, setAutoSaveState] = useState<AutoSaveState>('idle');
+  const [aiCopyApproval, setAiCopyApproval] = useState<ApprovedAiCopy | null>(
+    null,
+  );
+  const [aiCopySaveConflict, setAiCopySaveConflict] = useState(false);
   const markDirty = useCallback(() => {
     setDirty(true);
     setAutoSaveState('idle');
@@ -130,10 +146,22 @@ export function ProductCreationProvider({
   );
   const setDescription = useCallback(
     (description: string) => {
+      // Keep the review precondition even when the creator edits the copy
+      // after insertion. It remains AI-assisted until a confirmed save.
       setState(current => ({...current, description}));
       markDirty();
     },
     [markDirty],
+  );
+  const approveAiDescription = useCallback(
+    (description: string, sourceFingerprint: string) => {
+      if (productId === null || !/^[a-f0-9]{64}$/.test(sourceFingerprint))
+        return;
+      setAiCopyApproval({productId, sourceFingerprint});
+      setState(current => ({...current, description}));
+      markDirty();
+    },
+    [markDirty, productId],
   );
   const setPrice = useCallback(
     (price: string) => {
@@ -183,11 +211,15 @@ export function ProductCreationProvider({
   );
   const hydrate = useCallback((nextState: ProductFormState) => {
     setState(nextState);
+    setAiCopyApproval(null);
+    setAiCopySaveConflict(false);
     setDirty(false);
     setAutoSaveState('saved');
   }, []);
   const clear = useCallback(() => {
     setState({...EMPTY_STATE});
+    setAiCopyApproval(null);
+    setAiCopySaveConflict(false);
     setDirty(false);
     setAutoSaveState('idle');
   }, []);
@@ -198,15 +230,34 @@ export function ProductCreationProvider({
   // a forced call would have sent the initial (empty) form. Read through a
   // ref that is refreshed on every render instead: the body always sees the
   // current state at the moment the idle window elapses.
-  const latest = useRef({state, dirty, productId});
-  latest.current = {state, dirty, productId};
+  const latest = useRef({
+    state,
+    dirty,
+    productId,
+    aiCopyApproval,
+    aiCopySaveConflict,
+  });
+  latest.current = {
+    state,
+    dirty,
+    productId,
+    aiCopyApproval,
+    aiCopySaveConflict,
+  };
   const autoSaveInFlight = useRef(false);
   const mounted = useRef(true);
 
   const autoSaveRef = useRef(
     debounce(async () => {
-      const {state, dirty, productId} = latest.current;
-      if (!productId || !dirty || autoSaveInFlight.current) return;
+      const {state, dirty, productId, aiCopyApproval, aiCopySaveConflict} =
+        latest.current;
+      if (
+        !productId ||
+        !dirty ||
+        autoSaveInFlight.current ||
+        aiCopySaveConflict
+      )
+        return;
       autoSaveInFlight.current = true;
       if (mounted.current) setAutoSaveState('saving');
       try {
@@ -224,19 +275,50 @@ export function ProductCreationProvider({
           ...sampleRequestPayload(state.samples),
           biolink_ids: state.biolinkIds,
           type: state.productType,
+          ...(aiCopyApproval?.productId === productId
+            ? {ai_copy_source_fingerprint: aiCopyApproval.sourceFingerprint}
+            : {}),
         });
-        if (mounted.current && latest.current.state === state && latest.current.productId === productId) {
-          setDirty(false);
-          setAutoSaveState('saved');
+        if (mounted.current && latest.current.productId === productId) {
+          // The approval was consumed even if the creator made more edits
+          // while this request was in flight. Those newer edits must save
+          // normally rather than replaying the single-use precondition.
+          if (aiCopyApproval) {
+            setAiCopyApproval(current =>
+              current?.sourceFingerprint === aiCopyApproval.sourceFingerprint
+                ? null
+                : current,
+            );
+          }
+          if (latest.current.state === state) {
+            setDirty(false);
+            setAutoSaveState('saved');
+          }
         }
-      } catch {
-        // Never claim persistence after an error; leave the edited form dirty.
-        if (mounted.current && latest.current.state === state && latest.current.productId === productId) {
-          setAutoSaveState('failed');
+      } catch (reason) {
+        // A revision conflict is not a transient network error. Keep every
+        // local edit and block automatic retries until a fresh server load.
+        if (mounted.current && latest.current.productId === productId) {
+          if (
+            aiCopyApproval &&
+            latest.current.aiCopyApproval?.sourceFingerprint ===
+              aiCopyApproval.sourceFingerprint &&
+            (reason as {response?: {status?: number}})?.response?.status === 409
+          ) {
+            setAiCopySaveConflict(true);
+            setAutoSaveState('conflict');
+          } else if (latest.current.state === state) {
+            setAutoSaveState('failed');
+          }
         }
       } finally {
         autoSaveInFlight.current = false;
-        if (mounted.current && latest.current.dirty && latest.current.state !== state && latest.current.productId === productId) {
+        if (
+          mounted.current &&
+          latest.current.dirty &&
+          latest.current.state !== state &&
+          latest.current.productId === productId
+        ) {
           autoSaveRef.current();
         }
       }
@@ -257,22 +339,42 @@ export function ProductCreationProvider({
     autoSaveRef.current();
   }, []);
 
-  const confirmPersisted = useCallback((snapshot: ProductFormState) => {
-    // Manual Save can finish after further user edits. Only the exact
-    // submitted state may be acknowledged; newer edits must remain dirty.
-    if (mounted.current && latest.current.state === snapshot) {
-      autoSaveRef.current.cancel();
-      setDirty(false);
-      setAutoSaveState('saved');
-    }
+  const markAiCopyConflict = useCallback(() => {
+    setAiCopySaveConflict(true);
+    setAutoSaveState('conflict');
   }, []);
+
+  const confirmPersisted = useCallback(
+    (snapshot: ProductFormState, approvedFingerprint?: string) => {
+      if (!mounted.current) return;
+      // Manual Save consumes its approved revision even when the creator has
+      // already typed newer local edits during the request.
+      if (approvedFingerprint) {
+        setAiCopyApproval(current =>
+          current?.sourceFingerprint === approvedFingerprint ? null : current,
+        );
+      }
+      // Only the exact submitted state may be acknowledged; newer edits stay
+      // dirty and will be persisted in a subsequent ordinary save.
+      if (latest.current.state === snapshot) {
+        autoSaveRef.current.cancel();
+        setDirty(false);
+        setAutoSaveState('saved');
+      }
+    },
+    [],
+  );
 
   const value = useMemo(
     () => ({
       state,
       dirty,
       autoSaveState,
+      aiCopyApproval,
+      aiCopySaveConflict,
       actions: {
+        approveAiDescription,
+        markAiCopyConflict,
         setTitle,
         setDescription,
         setPrice,
@@ -293,6 +395,10 @@ export function ProductCreationProvider({
       state,
       dirty,
       autoSaveState,
+      aiCopyApproval,
+      aiCopySaveConflict,
+      approveAiDescription,
+      markAiCopyConflict,
       setTitle,
       setDescription,
       setPrice,

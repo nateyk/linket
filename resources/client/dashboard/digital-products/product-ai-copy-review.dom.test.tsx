@@ -1,5 +1,5 @@
 /** @vitest-environment jsdom */
-import {render, screen, waitFor} from '@testing-library/react';
+import {act, render, screen, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 import {ProductAiCopyReview} from './product-ai-copy-review';
@@ -15,10 +15,22 @@ const suggested = {
   source_fingerprint: 'a'.repeat(64),
 };
 
-function mount(props: {
-  description?: string;
-  use?: (text: string) => void;
-} = {}) {
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason: unknown) => void;
+  const promise = new Promise<T>((yes, no) => {
+    resolve = yes;
+    reject = no;
+  });
+  return {promise, resolve, reject};
+}
+
+function mount(
+  props: {
+    description?: string;
+    use?: (text: string) => void;
+  } = {},
+) {
   const onUse = props.use ?? vi.fn();
   const currentDescription = props.description ?? 'Existing copy';
   return {
@@ -40,6 +52,223 @@ beforeEach(() => {
 });
 
 describe('AI product-copy review interaction', () => {
+  it.each(['generation', 'verification'] as const)(
+    'ignores a rejected %s request after switching products',
+    async phase => {
+      const user = userEvent.setup();
+      const pending = deferred<unknown>();
+      if (phase === 'verification') {
+        api.post.mockResolvedValueOnce({data: {data: suggested}});
+      }
+      api.post.mockReturnValueOnce(pending.promise);
+      const result = mount();
+      await user.click(
+        await screen.findByRole('button', {name: /Suggest copy/i}),
+      );
+      if (phase === 'verification') {
+        await user.click(
+          await screen.findByRole('button', {name: /Use description/i}),
+        );
+      }
+      result.rerender(
+        <ProductAiCopyReview
+          productId={213}
+          currentTitle="Existing title"
+          currentDescription="Existing copy"
+          onUseDescription={result.onUse}
+        />,
+      );
+      await screen.findByRole('button', {name: /Suggest copy/i});
+      await act(async () => pending.reject({response: {status: 503}}));
+      expect(screen.queryByRole('alert')).toBeNull();
+      expect(screen.queryByRole('textbox')).toBeNull();
+      expect(result.onUse).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(['generation', 'verification'] as const)(
+    'preserves source edits made while %s is pending',
+    async phase => {
+      const user = userEvent.setup();
+      const pending = deferred<unknown>();
+      if (phase === 'verification') {
+        api.post.mockResolvedValueOnce({data: {data: suggested}});
+      }
+      api.post.mockReturnValueOnce(pending.promise);
+      const result = mount();
+      await user.click(
+        await screen.findByRole('button', {name: /Suggest copy/i}),
+      );
+      if (phase === 'verification') {
+        await user.click(
+          await screen.findByRole('button', {name: /Use description/i}),
+        );
+      }
+      result.rerender(
+        <ProductAiCopyReview
+          productId={productId}
+          currentTitle="Edited title"
+          currentDescription="Edited description"
+          onUseDescription={result.onUse}
+        />,
+      );
+      await act(async () =>
+        pending.resolve({
+          data: {data: phase === 'generation' ? suggested : {unchanged: true}},
+        }),
+      );
+      expect(result.onUse).not.toHaveBeenCalled();
+      expect((await screen.findByRole('alert')).textContent).toMatch(/edited/i);
+    },
+  );
+  it('ignores a generation response from a previous product and lets the new product generate', async () => {
+    const user = userEvent.setup();
+    const pending = deferred<{data: {data: typeof suggested}}>();
+    api.post.mockReturnValueOnce(pending.promise);
+    const result = mount();
+    await user.click(
+      await screen.findByRole('button', {name: /Suggest copy/i}),
+    );
+    result.rerender(
+      <ProductAiCopyReview
+        productId={213}
+        currentTitle="Existing title"
+        currentDescription="Existing copy"
+        onUseDescription={result.onUse}
+      />,
+    );
+    await screen.findByRole('button', {name: /Suggest copy/i});
+    await act(async () => pending.resolve({data: {data: suggested}}));
+    expect(screen.queryByRole('textbox')).toBeNull();
+    expect(
+      screen
+        .getByRole('button', {name: /Suggest copy/i})
+        .hasAttribute('disabled'),
+    ).toBe(false);
+    expect(result.onUse).not.toHaveBeenCalled();
+  });
+
+  it('does not apply a verified suggestion after switching products', async () => {
+    const user = userEvent.setup();
+    const pending = deferred<unknown>();
+    api.post
+      .mockResolvedValueOnce({data: {data: suggested}})
+      .mockReturnValueOnce(pending.promise);
+    const result = mount();
+    await user.click(
+      await screen.findByRole('button', {name: /Suggest copy/i}),
+    );
+    await user.click(
+      await screen.findByRole('button', {name: /Use description/i}),
+    );
+    result.rerender(
+      <ProductAiCopyReview
+        productId={213}
+        currentTitle="Existing title"
+        currentDescription="Existing copy"
+        onUseDescription={result.onUse}
+      />,
+    );
+    await screen.findByRole('button', {name: /Suggest copy/i});
+    await act(async () => pending.resolve({data: {data: {unchanged: true}}}));
+    expect(result.onUse).not.toHaveBeenCalled();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('keeps a discarded suggestion discarded when revision verification finishes', async () => {
+    const user = userEvent.setup();
+    const pending = deferred<unknown>();
+    api.post
+      .mockResolvedValueOnce({data: {data: suggested}})
+      .mockReturnValueOnce(pending.promise);
+    const {onUse} = mount();
+    await user.click(
+      await screen.findByRole('button', {name: /Suggest copy/i}),
+    );
+    const textbox = await screen.findByRole('textbox');
+    await user.click(screen.getByRole('button', {name: /Use description/i}));
+    await user.click(textbox);
+    await user.keyboard('{Escape}');
+    await act(async () => pending.resolve({data: {data: {unchanged: true}}}));
+    expect(onUse).not.toHaveBeenCalled();
+    expect(screen.queryByRole('textbox')).toBeNull();
+    expect((await screen.findByRole('status')).textContent).toMatch(
+      /discarded/i,
+    );
+  });
+
+  it('refuses text edited after the creator clicked Use description', async () => {
+    const user = userEvent.setup();
+    const pending = deferred<unknown>();
+    api.post
+      .mockResolvedValueOnce({data: {data: suggested}})
+      .mockReturnValueOnce(pending.promise);
+    const {onUse} = mount();
+    await user.click(
+      await screen.findByRole('button', {name: /Suggest copy/i}),
+    );
+    const textbox = await screen.findByRole('textbox');
+    await user.click(screen.getByRole('button', {name: /Use description/i}));
+    await user.type(textbox, ' New text not approved yet.');
+    await act(async () => pending.resolve({data: {data: {unchanged: true}}}));
+    expect(onUse).not.toHaveBeenCalled();
+    expect((await screen.findByRole('alert')).textContent).toMatch(
+      /changed|edited/i,
+    );
+  });
+
+  it('cancels a pending generation and ignores its response without unlocking a newer request', async () => {
+    const user = userEvent.setup();
+    const first = deferred<{data: {data: typeof suggested}}>();
+    const second = deferred<{data: {data: typeof suggested}}>();
+    api.post
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise);
+    mount();
+    await user.click(
+      await screen.findByRole('button', {name: /Suggest copy/i}),
+    );
+    await user.click(screen.getByRole('button', {name: /Cancel request/i}));
+    await user.click(screen.getByRole('button', {name: /Suggest copy/i}));
+    await act(async () => first.resolve({data: {data: suggested}}));
+    expect(screen.queryByRole('textbox')).toBeNull();
+    expect(
+      screen.getByRole('button', {name: /Working/i}).hasAttribute('disabled'),
+    ).toBe(true);
+    await act(async () =>
+      second.resolve({
+        data: {data: {...suggested, description: 'Current suggestion.'}},
+      }),
+    );
+    expect(
+      ((await screen.findByRole('textbox')) as HTMLTextAreaElement).value,
+    ).toBe('Current suggestion.');
+  });
+
+  it('reports successful insertion and prevents duplicate use of the same suggestion', async () => {
+    const user = userEvent.setup();
+    api.post
+      .mockResolvedValueOnce({data: {data: suggested}})
+      .mockResolvedValueOnce({data: {data: {unchanged: true}}});
+    const {onUse} = mount();
+    await user.click(
+      await screen.findByRole('button', {name: /Suggest copy/i}),
+    );
+    await user.dblClick(
+      await screen.findByRole('button', {name: /Use description/i}),
+    );
+    expect(onUse).toHaveBeenCalledExactlyOnceWith(
+      suggested.description,
+      suggested.source_fingerprint,
+    );
+    expect((await screen.findByRole('status')).textContent).toMatch(
+      /added to the editor/i,
+    );
+    expect(screen.getByRole('button', {name: /Suggest copy/i})).toBe(
+      document.activeElement,
+    );
+    expect(api.post).toHaveBeenCalledTimes(2);
+  });
   it('supports explicit preview, editable text, keyboard dismissal and focus return', async () => {
     const user = userEvent.setup();
     api.post.mockResolvedValueOnce({data: {data: suggested}});
@@ -47,14 +276,20 @@ describe('AI product-copy review interaction', () => {
     mount({use: onUse});
     const generate = await screen.findByRole('button', {name: /Suggest copy/i});
     await user.click(generate);
-    const textbox = await screen.findByRole('textbox', {name: /Suggested description/i});
+    const textbox = await screen.findByRole('textbox', {
+      name: /Suggested description/i,
+    });
     expect(textbox.getAttribute('aria-describedby')).toBeTruthy();
     expect(document.activeElement).toBe(textbox);
 
     await user.clear(textbox);
     await user.type(textbox, 'Edited by the creator.');
     await user.keyboard('{Escape}');
-    await waitFor(() => expect(screen.queryByRole('textbox', {name: /Suggested description/i})).toBeNull());
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('textbox', {name: /Suggested description/i}),
+      ).toBeNull(),
+    );
     expect(document.activeElement).toBe(generate);
     expect(onUse).not.toHaveBeenCalled();
     expect(api.post).toHaveBeenCalledTimes(1);
@@ -66,12 +301,21 @@ describe('AI product-copy review interaction', () => {
     api.post.mockResolvedValueOnce({data: {data: {unchanged: true}}});
     const onUse = vi.fn();
     mount({use: onUse});
-    await user.click(await screen.findByRole('button', {name: /Suggest copy/i}));
-    const input = await screen.findByRole('textbox', {name: /Suggested description/i});
+    await user.click(
+      await screen.findByRole('button', {name: /Suggest copy/i}),
+    );
+    const input = await screen.findByRole('textbox', {
+      name: /Suggested description/i,
+    });
     await user.clear(input);
     await user.type(input, 'Updated local wording');
     await user.click(screen.getByRole('button', {name: /Use description/i}));
-    await waitFor(() => expect(onUse).toHaveBeenCalledWith('Updated local wording'));
+    await waitFor(() =>
+      expect(onUse).toHaveBeenCalledWith(
+        'Updated local wording',
+        suggested.source_fingerprint,
+      ),
+    );
     expect(api.post).toHaveBeenNthCalledWith(1, path + '/copy-proposals', {
       tone: 'clear',
       language: 'en',
@@ -79,7 +323,9 @@ describe('AI product-copy review interaction', () => {
     expect(api.post).toHaveBeenNthCalledWith(2, path + '/copy-revision', {
       source_fingerprint: suggested.source_fingerprint,
     });
-    expect(screen.queryByRole('textbox', {name: /Suggested description/i})).toBeNull();
+    expect(
+      screen.queryByRole('textbox', {name: /Suggested description/i}),
+    ).toBeNull();
   });
 
   it('announces quota errors without losing the ability to retry', async () => {
@@ -93,7 +339,9 @@ describe('AI product-copy review interaction', () => {
     expect(error.textContent).toMatch(/quota|budget/i);
     expect(generate.hasAttribute('disabled')).toBe(false);
     await user.click(generate);
-    expect(await screen.findByRole('textbox', {name: /Suggested description/i})).toBeTruthy();
+    expect(
+      await screen.findByRole('textbox', {name: /Suggested description/i}),
+    ).toBeTruthy();
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
@@ -102,7 +350,9 @@ describe('AI product-copy review interaction', () => {
     api.post.mockResolvedValueOnce({data: {data: suggested}});
     const onUse = vi.fn();
     const renderResult = mount({use: onUse});
-    await user.click(await screen.findByRole('button', {name: /Suggest copy/i}));
+    await user.click(
+      await screen.findByRole('button', {name: /Suggest copy/i}),
+    );
     await screen.findByRole('textbox', {name: /Suggested description/i});
     renderResult.rerender(
       <ProductAiCopyReview
@@ -124,18 +374,24 @@ describe('AI product-copy review interaction', () => {
     api.post.mockRejectedValueOnce({response: {status: 409}});
     const onUse = vi.fn();
     mount({use: onUse});
-    await user.click(await screen.findByRole('button', {name: /Suggest copy/i}));
+    await user.click(
+      await screen.findByRole('button', {name: /Suggest copy/i}),
+    );
     await screen.findByRole('textbox', {name: /Suggested description/i});
     await user.click(screen.getByRole('button', {name: /Use description/i}));
     expect((await screen.findByRole('alert')).textContent).toMatch(/changed/i);
-    expect(screen.getByRole('textbox', {name: /Suggested description/i})).toBeTruthy();
+    expect(
+      screen.getByRole('textbox', {name: /Suggested description/i}),
+    ).toBeTruthy();
     expect(onUse).not.toHaveBeenCalled();
   });
 
   it('does not show an action when API availability is denied', async () => {
     api.get.mockResolvedValueOnce({data: {data: {available: false}}});
     mount();
-    await waitFor(() => expect(api.get).toHaveBeenCalledWith(path + '/copy-availability'));
+    await waitFor(() =>
+      expect(api.get).toHaveBeenCalledWith(path + '/copy-availability'),
+    );
     expect(screen.queryByRole('button', {name: /Suggest copy/i})).toBeNull();
   });
 });
