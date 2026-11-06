@@ -84,6 +84,7 @@ export function ServiceFaqsField({
             <Textarea
               id={`faqs.${index}.answer`}
               rows={3}
+              maxLength={3000}
               value={faq.answer}
               onChange={event => update(index, {answer: event.target.value})}
               aria-invalid={!!errors[`faqs.${index}.answer`]}
