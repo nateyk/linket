@@ -188,6 +188,6 @@ describe('Service Creation fixed package tiers', () => {
     renderField([pkg({name: 'Basic', features: 'PNG files'})]);
     await user.type(screen.getByRole('textbox', {name: 'Add an included feature'}), 'png files');
     await user.click(screen.getByRole('button', {name: 'Add feature'}));
-    expect(screen.getByRole('alert')).toHaveTextContent('This feature already exists.');
+    expect(screen.getByRole('alert').textContent).toContain('This feature already exists.');
   });
 });
