@@ -80,7 +80,7 @@ export function ServiceBuilderSteps({
                 >
                   {index + 1}
                 </span>
-                <span className={cn('max-w-full text-[11px] font-medium leading-4 sm:text-sm', current ? 'text-foreground' : 'text-muted-foreground')}>
+                <span className={cn('max-w-full text-xs font-medium leading-4 sm:text-sm', current ? 'text-foreground' : 'text-muted-foreground')}>
                   {step.title}
                 </span>
                 <span className="hidden max-w-full text-xs leading-4 text-muted-foreground lg:block">
@@ -91,7 +91,7 @@ export function ServiceBuilderSteps({
           );
         })}
       </ol>
-      <p className="mt-2 text-center text-xs text-muted-foreground" aria-live="polite">
+      <p className="mt-2 text-center text-xs text-muted-foreground">
         {trans({
           message: 'Step :current of :total',
           values: {current: SERVICE_STEP_ORDER.indexOf(active) + 1, total: steps.length},

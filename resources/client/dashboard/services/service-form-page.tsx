@@ -33,13 +33,14 @@ import {
   SendIcon,
   Trash2Icon,
 } from 'lucide-react';
-import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import {Link, useNavigate, useParams} from 'react-router';
 import {isUncertainMutationOutcome} from '@app/dashboard/digital-products/request-outcome';
 import {parseServiceErrors, serviceSaveErrorMessage} from './service-save-error';
 import {
   emptyServiceForm,
   fromServiceResource,
+  serviceFormClientErrors,
   toServicePayload,
   type CreatorServiceResource,
   type ServiceFormState,
@@ -72,16 +73,16 @@ function stepForSection(section: ServiceFormSectionId): ServiceBuilderStepId {
   return section;
 }
 
-function headingForStep(step: ServiceBuilderStepId): string {
-  const section = step === 'details' ? 'basics' : step === 'settings' ? 'faq' : step;
-  return `service-step-${section}-heading`;
-}
-
 function sectionForField(field: string): ServiceFormSectionId | null {
   if (field.startsWith('packages')) return 'packages';
   if (field.startsWith('faqs')) return 'faq';
   if (field.startsWith('contact_channels')) return 'contact';
-  if (field.startsWith('gallery') || field === 'cover_file_entry_id') {
+  if (
+    field.startsWith('gallery') ||
+    field === 'cover_file_entry_id' ||
+    field === 'video_url' ||
+    field === 'live_demo_url'
+  ) {
     return 'media';
   }
   if (
@@ -131,6 +132,9 @@ function ServiceFormPage() {
   const [error, setError] = useState<string>();
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [activeStep, setActiveStep] = useState<ServiceBuilderStepId>('details');
+  const contentScrollerRef = useRef<HTMLDivElement>(null);
+  const pendingStepScrollRef = useRef<ServiceBuilderStepId | null>(null);
+  const pendingErrorFocusRef = useRef<string | null>(null);
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -193,7 +197,12 @@ function ServiceFormPage() {
     setForm(current => ({...current, [key]: value}));
     setFieldErrors(current => {
       const next = {...current};
-      delete next[key];
+      const keyPrefix = `${String(key)}.`;
+      for (const field of Object.keys(next)) {
+        if (field === key || field.startsWith(keyPrefix)) {
+          delete next[field];
+        }
+      }
       return next;
     });
   };
@@ -231,29 +240,54 @@ function ServiceFormPage() {
   const previousStep = SERVICE_STEP_ORDER[activeStepIndex - 1];
   const nextStep = SERVICE_STEP_ORDER[activeStepIndex + 1];
 
-  const changeStep = (step: ServiceBuilderStepId) => {
+  const changeStep = useCallback((step: ServiceBuilderStepId) => {
+    if (step === activeStep) return;
+    // Schedule focus/scroll for the committed new panel, not the old DOM.
+    pendingStepScrollRef.current = step;
     setActiveStep(step);
     setAnnouncement(trans({
       message: 'Step :current of :total',
       values: {current: SERVICE_STEP_ORDER.indexOf(step) + 1, total: SERVICE_STEP_ORDER.length},
     }));
-    requestAnimationFrame(() => {
-      // Switching steps starts at the top of the editor, not at the previous
-      // panel's rich-text editor. The dashboard has its own scroll container;
-      // scrolling the document or using scrollIntoView can target the wrong
-      // ancestor, especially with the sticky mobile app shell.
-      const navigation = document.getElementById('service-builder-steps');
-      let ancestor = navigation?.parentElement;
-      while (ancestor) {
-        const overflow = window.getComputedStyle(ancestor).overflowY;
-        if (/(auto|scroll)/.test(overflow) && ancestor.scrollHeight > ancestor.clientHeight) {
-          ancestor.scrollTop = 0;
-        }
-        ancestor = ancestor.parentElement;
+  }, [activeStep, trans]);
+
+  useLayoutEffect(() => {
+    const resetStageScroll = () => {
+      if (contentScrollerRef.current) contentScrollerRef.current.scrollTop = 0;
+      if (document.scrollingElement) document.scrollingElement.scrollTop = 0;
+    };
+
+    const pendingErrorField = pendingErrorFocusRef.current;
+    if (pendingErrorField) {
+      const section = sectionForField(pendingErrorField);
+      const targetStep = section ? stepForSection(section) : null;
+
+      // Wait until React has committed the stage that owns the invalid field.
+      if (!targetStep || targetStep === activeStep) {
+        pendingErrorFocusRef.current = null;
+        resetStageScroll();
+        requestAnimationFrame(() => {
+          document.getElementById(pendingErrorField)?.focus();
+        });
       }
-      document.getElementById(headingForStep(step))?.focus({preventScroll: true});
-    });
-  };
+      return;
+    }
+
+    if (pendingStepScrollRef.current !== activeStep) return;
+    pendingStepScrollRef.current = null;
+
+    // SectionContent is the canonical scroll owner for this dashboard screen.
+    // A stage change can shorten the panel and leave its former scroll offset;
+    // resetting the actual element after React commits avoids scroll anchoring.
+    resetStageScroll();
+
+    // Normal navigation keeps keyboard focus with the selected step. Validation
+    // recovery uses the branch above instead, so the invalid field owns focus.
+    const navigation = document.getElementById('service-builder-steps');
+    navigation?.scrollIntoView?.({block: 'start', behavior: 'auto'});
+    navigation?.querySelector<HTMLButtonElement>('button[aria-current="step"]')
+      ?.focus({preventScroll: true});
+  }, [activeStep, fieldErrors]);
 
   const sectionError = (id: ServiceFormSectionId) =>
     Object.keys(fieldErrors).some(
@@ -263,11 +297,29 @@ function ServiceFormPage() {
   const focusFirstError = (errors: Record<string, string>) => {
     const firstField = Object.keys(errors)[0];
     if (!firstField) return;
+
+    pendingErrorFocusRef.current = firstField;
     const section = sectionForField(firstField);
-    if (section) setActiveStep(stepForSection(section));
-    requestAnimationFrame(() => {
-      document.getElementById(firstField)?.focus();
-    });
+    if (!section) {
+      requestAnimationFrame(() => {
+        pendingErrorFocusRef.current = null;
+        document.getElementById(firstField)?.focus();
+      });
+      return;
+    }
+
+    const targetStep = stepForSection(section);
+    // Always set the derived stage. save() deliberately does not depend on
+    // activeStep, so comparing against its closure can use the stage from the
+    // last form edit rather than the stage currently visible at submit time.
+    setActiveStep(targetStep);
+    setAnnouncement(trans({
+      message: 'Step :current of :total',
+      values: {
+        current: SERVICE_STEP_ORDER.indexOf(targetStep) + 1,
+        total: SERVICE_STEP_ORDER.length,
+      },
+    }));
   };
 
   const save = useCallback(
@@ -276,11 +328,17 @@ function ServiceFormPage() {
       // second service merely because the first response is still pending.
       if (savingRef.current || mutationUncertain.current) return;
       if (statusOverride === 'published' && !form.title.trim()) {
-        setFieldErrors({title: trans({message: 'A title is required.'})});
-        setActiveStep('details');
-        requestAnimationFrame(() =>
-          document.getElementById('title')?.focus(),
-        );
+        const errors = {title: trans({message: 'A title is required.'})};
+        setFieldErrors(errors);
+        focusFirstError(errors);
+        return;
+      }
+
+      const clientErrors = serviceFormClientErrors(form);
+      if (Object.keys(clientErrors).length) {
+        setError(undefined);
+        setFieldErrors(clientErrors);
+        focusFirstError(clientErrors);
         return;
       }
 
@@ -367,19 +425,17 @@ function ServiceFormPage() {
           return;
         }
         event.preventDefault();
-        setActiveStep(current => {
-          const index = SERVICE_STEP_ORDER.indexOf(current);
-          const nextIndex = event.key === 'ArrowDown'
-            ? Math.min(SERVICE_STEP_ORDER.length - 1, index + 1)
-            : Math.max(0, index - 1);
-          return SERVICE_STEP_ORDER[nextIndex];
-        });
+        const index = SERVICE_STEP_ORDER.indexOf(activeStep);
+        const nextIndex = event.key === 'ArrowDown'
+          ? Math.min(SERVICE_STEP_ORDER.length - 1, index + 1)
+          : Math.max(0, index - 1);
+        changeStep(SERVICE_STEP_ORDER[nextIndex]);
       }
     };
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [save]);
+  }, [save, changeStep, activeStep]);
 
   const remove = async () => {
     if (!serviceId) return;
@@ -564,6 +620,7 @@ function ServiceFormPage() {
               <Alert.Action>
                 <Button
                   size="sm"
+                  nativeButton={false}
                   render={<Link to="/dashboard/stores" />}
                 >
                   <Trans message="Go to My Store" />
@@ -580,14 +637,22 @@ function ServiceFormPage() {
     <DashboardLayout.MainSection>
       {renderHeader(renderActions())}
 
-      <DashboardLayout.SectionContent className="overflow-y-auto">
+      <DashboardLayout.SectionContent
+        ref={contentScrollerRef}
+        className="overflow-y-auto [overflow-anchor:none]"
+      >
         <div className="mx-auto w-full max-w-6xl py-4 sm:py-5">
           {creationUncertain && (
             <Alert.Root role="alert" variant="warning" fillStyle="subtleFill" className="mb-5">
               <CircleAlertIcon />
               <Alert.Description className="flex flex-col items-start gap-2">
                 <Trans message="We could not confirm whether the service was created. Check My Services before creating it again." />
-                <Button size="sm" variant="outline" render={<Link to="/dashboard/services" />}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  nativeButton={false}
+                  render={<Link to="/dashboard/services" />}
+                >
                   <Trans message="Check My Services" />
                 </Button>
               </Alert.Description>
@@ -620,9 +685,12 @@ function ServiceFormPage() {
             completed={completedSteps}
           />
 
-          <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_22rem] xl:gap-6">
+          <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_26rem] xl:gap-6">
             <div className="min-w-0 space-y-5">
-              {activeStep === 'details' && (
+              {/* Keep the rich-text editor mounted between steps. Unmounting and
+                  remounting it can restore editor focus/selection after the
+                  navigator changes, moving both document and panel scroll. */}
+              <div hidden={activeStep !== 'details'} inert={activeStep !== 'details'}>
                 <ServiceFormSection
                   id="basics"
                   icon={PenLineIcon}
@@ -856,7 +924,7 @@ function ServiceFormPage() {
                     </ServiceFormField>
                   </div>
                 </ServiceFormSection>
-              )}
+              </div>
               {activeStep === 'media' && (
                 <ServiceFormSection
                   id="media"
@@ -873,13 +941,12 @@ function ServiceFormPage() {
                     <ServiceGalleryField
                       coverUrl={form.cover_url}
                       gallery={form.gallery}
-                      onCoverChange={(url, entryId) =>
-                        setForm(current => ({
-                          ...current,
-                          cover_url: url,
-                          cover_file_entry_id: entryId,
-                        }))
-                      }
+                      coverError={fieldErrors.cover_file_entry_id}
+                      galleryError={fieldErrors.gallery}
+                      onCoverChange={(url, entryId) => {
+                        update('cover_url', url);
+                        update('cover_file_entry_id', entryId);
+                      }}
                       onGalleryChange={gallery => update('gallery', gallery)}
                     />
 
