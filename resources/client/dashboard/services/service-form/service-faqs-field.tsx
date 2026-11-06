@@ -11,9 +11,9 @@ import type {ServiceFormFaq} from '../service-form-state';
 export const SERVICE_FAQS_MAX = 20;
 
 /**
- * FAQ repeater. Questions are optional for the listing, so an unfinished row
- * is simply not published — the section keeps the creator's work visible
- * instead of hiding it behind a validation wall.
+ * FAQ repeater. Empty rows remain optional, while a row with meaningful
+ * creator input is kept visible and the page-level pre-save validation asks
+ * the creator to complete or remove it instead of silently dropping the work.
  */
 export function ServiceFaqsField({
   faqs,
