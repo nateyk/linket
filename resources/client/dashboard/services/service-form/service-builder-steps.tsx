@@ -1,3 +1,4 @@
+import {CheckIcon} from 'lucide-react';
 import {useTrans} from '@ui/i18n/use-trans';
 import {cn} from '@ui/utils/cn';
 
@@ -11,8 +12,9 @@ interface ServiceBuilderStepsProps {
 }
 
 /**
- * Four choices in the creator's own sequence, not a validation gate: services
- * can publish without media, packages, FAQs or extra contact buttons.
+ * A compact four-stage navigator: horizontal above the form on narrow screens
+ * and a vertical progress rail alongside it on wide screens. All stages remain
+ * selectable because media, packages and contact details are optional.
  */
 export function ServiceBuilderSteps({
   active,
@@ -47,56 +49,85 @@ export function ServiceBuilderSteps({
     <nav
       id="service-builder-steps"
       aria-label={trans({message: 'Service creation steps'})}
-      className="mb-5 scroll-mt-2 rounded-card border bg-card px-3 py-4 sm:px-5"
+      className="scroll-mt-3 xl:sticky xl:top-5 xl:rounded-card xl:border xl:bg-card xl:p-4"
     >
-      <ol className="grid grid-cols-4 gap-1 sm:gap-3">
+      <div className="mb-3 flex items-center justify-between gap-3 px-1 xl:mb-4 xl:px-0">
+        <p className="text-xs font-semibold text-foreground">
+          {trans({message: 'Service setup'})}
+        </p>
+        <p className="text-xs tabular-nums text-muted-foreground">
+          {trans({
+            message: 'Step :current of :total',
+            values: {
+              current: SERVICE_STEP_ORDER.indexOf(active) + 1,
+              total: steps.length,
+            },
+          })}
+        </p>
+      </div>
+      <ol className="grid grid-cols-4 gap-1.5 xl:flex xl:flex-col xl:gap-1">
         {steps.map((step, index) => {
           const current = active === step.id;
+          const done = completed[step.id] && !current;
+
           return (
-            <li key={step.id} className="min-w-0">
+            <li key={step.id} className="relative min-w-0">
+              {index < steps.length - 1 && (
+                <span
+                  aria-hidden="true"
+                  className="absolute -bottom-3 left-7 top-11 hidden w-px bg-border xl:block"
+                />
+              )}
               <button
                 type="button"
                 aria-current={current ? 'step' : undefined}
                 aria-label={trans({
                   message: ':name, step :index of :total',
-                  values: {name: step.title, index: index + 1, total: steps.length},
+                  values: {
+                    name: step.title,
+                    index: index + 1,
+                    total: steps.length,
+                  },
                 })}
                 onClick={() => onSelect(step.id)}
                 className={cn(
-                  'group flex min-h-16 w-full cursor-pointer flex-col items-center gap-1 rounded-card-sm px-1 py-1.5 text-center transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:min-h-20 sm:gap-2',
-                  current ? 'bg-primary/5' : 'hover:bg-muted/70',
+                  'relative z-10 flex min-h-16 w-full cursor-pointer flex-col items-center gap-1.5 rounded-card-sm border border-transparent px-1 py-2 text-center transition-colors motion-reduce:transition-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring xl:min-h-20 xl:flex-row xl:items-start xl:gap-3 xl:px-3 xl:py-3 xl:text-left',
+                  current
+                    ? 'border-primary/15 bg-primary/5'
+                    : 'hover:bg-muted/60',
                 )}
               >
                 <span
                   aria-hidden="true"
                   className={cn(
-                    'flex size-8 shrink-0 items-center justify-center rounded-full border text-xs font-semibold tabular-nums transition-colors sm:size-9',
+                    'relative z-10 flex size-8 shrink-0 items-center justify-center rounded-full border text-xs font-semibold tabular-nums',
                     current
                       ? 'border-primary bg-primary text-primary-foreground'
-                      : completed[step.id]
-                        ? 'border-foreground/30 bg-secondary text-foreground'
+                      : done
+                        ? 'border-primary/25 bg-primary/10 text-primary'
                         : 'border-border bg-card text-muted-foreground',
                   )}
                 >
-                  {index + 1}
+                  {done ? <CheckIcon className="size-4" strokeWidth={2.5} /> : index + 1}
                 </span>
-                <span className={cn('max-w-full text-xs font-medium leading-4 sm:text-sm', current ? 'text-foreground' : 'text-muted-foreground')}>
-                  {step.title}
-                </span>
-                <span className="hidden max-w-full text-xs leading-4 text-muted-foreground lg:block">
-                  {step.description}
+                <span className="min-w-0 xl:flex-1">
+                  <span
+                    className={cn(
+                      'block text-xs font-medium leading-4 xl:text-sm',
+                      current ? 'text-foreground' : 'text-muted-foreground',
+                    )}
+                  >
+                    {step.title}
+                  </span>
+                  <span className="mt-1 hidden text-xs leading-4 text-muted-foreground xl:block">
+                    {step.description}
+                  </span>
                 </span>
               </button>
             </li>
           );
         })}
       </ol>
-      <p className="mt-2 text-center text-xs text-muted-foreground">
-        {trans({
-          message: 'Step :current of :total',
-          values: {current: SERVICE_STEP_ORDER.indexOf(active) + 1, total: steps.length},
-        })}
-      </p>
     </nav>
   );
 }
