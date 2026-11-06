@@ -276,14 +276,14 @@ function ServiceFormPage() {
     pendingStepScrollRef.current = null;
 
     // SectionContent is the canonical scroll owner for this dashboard screen.
-    // A stage change can shorten the panel and leave its former scroll offset;
-    // resetting the actual element after React commits avoids scroll anchoring.
+    // A stage change can shorten the panel and leave its former scroll offset.
+    // Reset that element directly. scrollIntoView also scrolls the window and
+    // the dashboard shell, which pushes the stepper above the visible pane.
     resetStageScroll();
 
     // Normal navigation keeps keyboard focus with the selected step. Validation
     // recovery uses the branch above instead, so the invalid field owns focus.
     const navigation = document.getElementById('service-builder-steps');
-    navigation?.scrollIntoView?.({block: 'start', behavior: 'auto'});
     navigation?.querySelector<HTMLButtonElement>('button[aria-current="step"]')
       ?.focus({preventScroll: true});
   }, [activeStep, fieldErrors]);
