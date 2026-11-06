@@ -202,6 +202,14 @@ describe('service packages field', () => {
     expect(changes[0]).toEqual([pkg({name: 'Starter'})]);
   });
 
+  it('stops adding packages at the API maximum', async () => {
+    renderField(Array.from({length: 6}, (_, index) => pkg({name: `Package ${index + 1}`})));
+
+    const addButton = screen.getByRole('button', {name: 'Add package'});
+    expect(addButton).toHaveProperty('disabled', true);
+    expect(screen.getByText('Maximum 6 packages reached.')).toBeTruthy();
+  });
+
   it('drops the paragraph that used to explain the whole section', () => {
     renderField([pkg({name: 'Starter'})]);
 
