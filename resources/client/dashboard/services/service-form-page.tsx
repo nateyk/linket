@@ -575,6 +575,7 @@ function ServiceFormPage() {
               <Alert.Action>
                 <Button
                   size="sm"
+                  nativeButton={false}
                   render={<Link to="/dashboard/stores" />}
                 >
                   <Trans message="Go to My Store" />
@@ -601,7 +602,12 @@ function ServiceFormPage() {
               <CircleAlertIcon />
               <Alert.Description className="flex flex-col items-start gap-2">
                 <Trans message="We could not confirm whether the service was created. Check My Services before creating it again." />
-                <Button size="sm" variant="outline" render={<Link to="/dashboard/services" />}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  nativeButton={false}
+                  render={<Link to="/dashboard/services" />}
+                >
                   <Trans message="Check My Services" />
                 </Button>
               </Alert.Description>
