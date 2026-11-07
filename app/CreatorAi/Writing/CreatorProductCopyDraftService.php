@@ -7,10 +7,16 @@ use App\CreatorAi\Services\CreatorAiSettings;
 use App\CreatorAi\Services\CreatorAiUsageService;
 use App\Models\User;
 use App\Storefront\Models\DigitalProduct;
+use Illuminate\Auth\AuthenticationException;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Validation\ValidationException;
 use Laravel\Ai\Ai;
+use PromptPHP\Intercept\InjectionGuard\Exceptions\PromptInjectionGuardException;
+use PromptPHP\Intercept\PIIRedactor\Exceptions\PIIRedactorException;
+use PromptPHP\Intercept\Support\Exceptions\InterceptException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
 /**
@@ -120,6 +126,16 @@ final class CreatorProductCopyDraftService
                 'description' => $response['description'] ?? null,
             ]);
         } catch (\Throwable $error) {
+            if ($error instanceof ValidationException
+                || $error instanceof AuthenticationException
+                || $error instanceof HttpResponseException) {
+                throw $error;
+            }
+            if ($intercept = $this->interceptBlockedMessage($error)) {
+                $this->usage->fail($creator, $requestId);
+
+                throw new HttpException(422, $intercept);
+            }
             // A provider might have billed even if transport or validation
             // failed. Retain the reservation and hide the provider's error,
             // which may contain prompts, credentials or product data.
@@ -343,5 +359,29 @@ final class CreatorProductCopyDraftService
             (int) $product->content_revision,
             (string) $product->updated_at,
         ], JSON_THROW_ON_ERROR));
+    }
+
+    /**
+     * Laravel AI may wrap the original throwable; unwrap the chain so a local
+     * Intercept block before the provider still maps to HTTP 422 + fail().
+     */
+    private function interceptBlockedMessage(\Throwable $error): ?string
+    {
+        $current = $error;
+
+        for ($depth = 0; $depth < 16 && $current !== null; $depth++) {
+            if ($current instanceof PromptInjectionGuardException) {
+                return 'This suggestion request could not be sent because it looks like it contains unsafe instructions.';
+            }
+            if ($current instanceof PIIRedactorException) {
+                return 'This suggestion request could not be sent because it appears to contain sensitive data that must not be processed here.';
+            }
+            if ($current instanceof InterceptException) {
+                return 'This suggestion request could not be sent for automated safety review.';
+            }
+            $current = $current->getPrevious();
+        }
+
+        return null;
     }
 }
