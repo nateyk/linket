@@ -11,5 +11,7 @@ nodejs_version: "24"
 hooks:
   post-start:
     - exec: composer install --no-interaction --prefer-dist
-    - exec: php artisan config:cache
+    # Avoid config:cache here: a cached config locks DB_* to .env and ignores
+    # APP_ENV=testing / .env.testing (tests would hit `db` instead of `db_test`).
+    - exec: php artisan config:clear
     - exec: php artisan event:cache

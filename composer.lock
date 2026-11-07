@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "b9571b1fecedaf6a6a786a6c1253d867",
+    "content-hash": "4a327df58a64a78b8021c025e19c0155",
     "packages": [
         {
             "name": "ably/ably-php",
@@ -9110,6 +9110,169 @@
             "time": "2025-11-12T18:00:11+00:00"
         },
         {
+            "name": "promptphp/intercept-injection-guard",
+            "version": "v1.1.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/promptphp/intercept-injection-guard.git",
+                "reference": "c8a4602c8f71109889241a32ae890f8596f1b1ad"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/promptphp/intercept-injection-guard/zipball/c8a4602c8f71109889241a32ae890f8596f1b1ad",
+                "reference": "c8a4602c8f71109889241a32ae890f8596f1b1ad",
+                "shasum": ""
+            },
+            "require": {
+                "laravel/ai": "^1.0",
+                "php": "^8.3",
+                "promptphp/intercept-support": "*"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "PromptPHP\\Intercept\\InjectionGuard\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Victor Ukam",
+                    "email": "victorjohnukam@gmail.com",
+                    "homepage": "https://github.com/veeqtoh",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Prompt injection guard middleware for Laravel AI agents.",
+            "homepage": "https://intercept.promptphp.com",
+            "keywords": [
+                "ai",
+                "laravel",
+                "middleware",
+                "prompt",
+                "prompt-injection",
+                "security"
+            ],
+            "support": {
+                "source": "https://github.com/promptphp/intercept-injection-guard/tree/v1.1.1"
+            },
+            "time": "2026-09-27T00:21:43+00:00"
+        },
+        {
+            "name": "promptphp/intercept-pii-redactor",
+            "version": "v1.1.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/promptphp/intercept-pii-redactor.git",
+                "reference": "0d718f66d29fc3347ba1a9584448d3a565e3894b"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/promptphp/intercept-pii-redactor/zipball/0d718f66d29fc3347ba1a9584448d3a565e3894b",
+                "reference": "0d718f66d29fc3347ba1a9584448d3a565e3894b",
+                "shasum": ""
+            },
+            "require": {
+                "laravel/ai": "^1.0",
+                "php": "^8.3",
+                "promptphp/intercept-support": "*"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "PromptPHP\\Intercept\\PIIRedactor\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Victor Ukam",
+                    "email": "victorjohnukam@gmail.com",
+                    "homepage": "https://github.com/veeqtoh",
+                    "role": "Developer"
+                }
+            ],
+            "description": "PII redaction middleware for Laravel AI agents.",
+            "homepage": "https://intercept.promptphp.com",
+            "keywords": [
+                "ai",
+                "laravel",
+                "middleware",
+                "prompt",
+                "prompt-injection",
+                "security"
+            ],
+            "support": {
+                "source": "https://github.com/promptphp/intercept-pii-redactor/tree/v1.1.1"
+            },
+            "time": "2026-09-27T00:21:43+00:00"
+        },
+        {
+            "name": "promptphp/intercept-support",
+            "version": "v1.1.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/promptphp/intercept-support.git",
+                "reference": "f73279a0e303a592a382157a4b1a965a426d14a7"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/promptphp/intercept-support/zipball/f73279a0e303a592a382157a4b1a965a426d14a7",
+                "reference": "f73279a0e303a592a382157a4b1a965a426d14a7",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/support": "^12.0|^13.0",
+                "laravel/ai": "^1.0",
+                "php": "^8.3"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "PromptPHP\\Intercept\\Support\\InterceptServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "PromptPHP\\Intercept\\Support\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Victor Ukam",
+                    "email": "victorjohnukam@gmail.com",
+                    "homepage": "https://github.com/veeqtoh",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Shared support utilities and configuration for Intercept middleware packages.",
+            "homepage": "https://intercept.promptphp.com",
+            "keywords": [
+                "ai",
+                "laravel",
+                "middleware",
+                "prompt",
+                "prompt-injection",
+                "security"
+            ],
+            "support": {
+                "source": "https://github.com/promptphp/intercept-support/tree/v1.1.1"
+            },
+            "time": "2026-10-18T19:55:20+00:00"
+        },
+        {
             "name": "psr/cache",
             "version": "3.0.0",
             "source": {
@@ -10180,7 +10343,8 @@
                     "React\\EventLoop\\": "src/"
                 }
             },
-            "notification-url": "https://packagist.org/downloads/","license": [
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
                 "MIT"
             ],
             "authors": [

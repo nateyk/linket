@@ -61,6 +61,8 @@
     "pda/pheanstalk": "^5.0",
     "phpseclib/phpseclib": "^3.0.57",
     "predis/predis": "^2.3",
+    "promptphp/intercept-injection-guard": "^1.1",
+    "promptphp/intercept-pii-redactor": "^1.1",
     "pusher/pusher-php-server": "^7.2",
     "react/promise": "^2.3",
     "sentry/sentry-laravel": "^4.1",
