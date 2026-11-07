@@ -7,6 +7,28 @@ use Illuminate\Validation\ValidationException;
 
 final class TelegramBotAdminService
 {
+    public function ensureWebhook(): void
+    {
+        $this->syncWebhook();
+    }
+
+    public function reply(int $chatId, string $text): void
+    {
+        if ($chatId <= 0 || $text === '') {
+            return;
+        }
+
+        try {
+            $this->request('sendMessage', [
+                'chat_id' => $chatId,
+                'text' => $text,
+                'disable_web_page_preview' => true,
+            ]);
+        } catch (\Throwable) {
+            // The /start update is already stored. A failed reply must not make Telegram retry it.
+        }
+    }
+
     /** @return array<string, mixed> */
     public function syncWebhook(): array
     {

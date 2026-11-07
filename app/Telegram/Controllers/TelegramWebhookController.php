@@ -4,6 +4,7 @@ namespace App\Telegram\Controllers;
 
 use App\Telegram\Models\TelegramConnection;
 use App\Telegram\Services\TelegramAccountLinker;
+use App\Telegram\Services\TelegramBotAdminService;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
@@ -13,6 +14,7 @@ final class TelegramWebhookController extends Controller
 {
     public function __construct(
         private readonly TelegramAccountLinker $accountLinker,
+        private readonly TelegramBotAdminService $telegram,
     ) {}
 
     public function handle(Request $request): Response
@@ -42,7 +44,9 @@ final class TelegramWebhookController extends Controller
             return response()->noContent();
         }
 
-        DB::transaction(function () use ($payload, $updateId): void {
+        $reply = null;
+
+        DB::transaction(function () use ($payload, $updateId, &$reply): void {
             $inserted = DB::table('telegram_webhook_updates')->insertOrIgnore([
                 'update_id' => (int) $updateId,
                 'processed_at' => now(),
@@ -82,17 +86,33 @@ final class TelegramWebhookController extends Controller
 
             $plainToken = $matches[1] ?? '';
             if ($plainToken === '') {
+                $reply = [
+                    'chat_id' => $telegramChatId,
+                    'text' => __('Welcome to Linket. To connect this chat, open Account Settings, then Integrations, and press Connect Telegram.'),
+                ];
+
                 return;
             }
 
-            $this->accountLinker->link(
+            $connection = $this->accountLinker->link(
                 $plainToken,
                 $telegramUserId,
                 $telegramChatId,
                 data_get($message, 'from.username'),
                 data_get($message, 'from.language_code'),
             );
+
+            $reply = [
+                'chat_id' => $telegramChatId,
+                'text' => $connection
+                    ? __('Welcome to Linket. This chat is connected. Choose which notifications you receive in Account Settings.')
+                    : __('Welcome to Linket. This connection link has expired. Press Connect Telegram in Account Settings, then Integrations, to get a new one.'),
+            ];
         });
+
+        if (is_array($reply)) {
+            $this->telegram->reply((int) $reply['chat_id'], (string) $reply['text']);
+        }
 
         return response()->noContent();
     }

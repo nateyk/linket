@@ -382,19 +382,26 @@ export function Component() {
                 </div>
               </>
             ) : (
-              <div className="flex flex-col gap-4 rounded-card-sm border bg-secondary/30 p-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm font-semibold">
-                    <Trans message="Connect your Telegram account" />
+              <div className="space-y-3">
+                {error ? (
+                  <p role="alert" className="text-sm text-destructive">
+                    <Trans message="Unable to open Telegram right now. Try again." />
                   </p>
-                  <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-                    <Trans message="Link your private Telegram chat to receive verified sale, inquiry, moderation, dispute and Pro billing notifications." />
-                  </p>
+                ) : null}
+                <div className="flex flex-col gap-4 rounded-card-sm border bg-secondary/30 p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm font-semibold">
+                      <Trans message="Connect your Telegram account" />
+                    </p>
+                    <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+                      <Trans message="Link your private Telegram chat to receive verified sale, inquiry, moderation, dispute and Pro billing notifications." />
+                    </p>
+                  </div>
+                  <Button disabled={busy} onClick={() => void connect()}>
+                    <SendIcon />
+                    <Trans message="Connect Telegram" />
+                  </Button>
                 </div>
-                <Button disabled={busy} onClick={() => void connect()}>
-                  <SendIcon />
-                  <Trans message="Connect Telegram" />
-                </Button>
               </div>
             )}
           </div>
