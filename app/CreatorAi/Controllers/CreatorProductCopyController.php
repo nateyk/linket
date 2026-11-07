@@ -50,6 +50,30 @@ final class CreatorProductCopyController extends Controller
         return $this->privateJson(['unchanged' => true]);
     }
 
+    public function show(Request $request, DigitalProduct $digitalProduct, ?string $draftId = null): JsonResponse
+    {
+        return $this->privateJson($this->drafts->read($request->user(), $digitalProduct, $draftId));
+    }
+
+    public function review(Request $request, DigitalProduct $digitalProduct, string $draftId): JsonResponse
+    {
+        $data = $request->validate([
+            'version' => ['required', 'integer', 'min:0'],
+            'description' => ['required', 'string', 'max:5000'],
+        ]);
+
+        return $this->privateJson($this->drafts->review($request->user(), $digitalProduct,
+            $draftId, $data['version'], $data['description']));
+    }
+
+    public function discard(Request $request, DigitalProduct $digitalProduct, string $draftId): JsonResponse
+    {
+        $data = $request->validate(['version' => ['required', 'integer', 'min:0']]);
+
+        return $this->privateJson($this->drafts->review($request->user(), $digitalProduct,
+            $draftId, $data['version'], '', true));
+    }
+
     /** @param array<string, mixed> $value */
     private function privateJson(array $value): JsonResponse
     {

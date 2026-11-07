@@ -25,16 +25,18 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {DashboardLayoutContextProvider} from '@common/ui/dashboard/dashboard-layout-context';
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
-import {
-  act,
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-} from '@testing-library/react';
+import {act, cleanup, fireEvent, render, screen} from '@testing-library/react';
 import {useEffect} from 'react';
 import {createMemoryRouter, RouterProvider} from 'react-router';
-import {afterAll, afterEach, beforeAll, beforeEach, expect, test, vi} from 'vitest';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  expect,
+  test,
+  vi,
+} from 'vitest';
 import {Component} from './digital-product-form-page';
 import {
   ProductCreationProvider,
@@ -250,10 +252,12 @@ test('debounced auto-save sends CURRENT state, not first-render state', async ()
 
 test('the shipped draft autosave effect re-arms on later edits while still dirty', () => {
   const source = fs.readFileSync(
-    path.resolve('resources/client/dashboard/digital-products/digital-product-form-page.tsx'),
+    path.resolve(
+      'resources/client/dashboard/digital-products/digital-product-form-page.tsx',
+    ),
     'utf8',
   );
-  expect(source).toContain("[dirty, state, actions.autoSave, product?.status]");
+  expect(source).toContain('[dirty, state, actions.autoSave, product?.status]');
 });
 
 test('autosave status reflects confirmed success, failed write, and recovery', async () => {
@@ -299,10 +303,111 @@ test('manual confirmation clears only the saved revision and cancels its queued 
   expect(h.put).toHaveBeenCalledTimes(1);
 });
 
+test('explicitly approved AI copy carries its source revision into draft autosave', async () => {
+  vi.useFakeTimers();
+  mountProvider();
+  act(() => ctxActions!.hydrate({...DRAFT_FORM}));
+  act(() =>
+    ctxActions!.approveAiDescription(
+      'Creator approved wording.',
+      'b'.repeat(64),
+      {draftId: '8ab61a95-2f37-4ae0-86ed-17e2d76d6933', draftVersion: 2},
+    ),
+  );
+  expect(latestFormState!.description).toBe('Creator approved wording.');
+
+  await advance(1600);
+  expect(h.put).toHaveBeenCalledExactlyOnceWith(
+    '/api/v1/items/1/draft',
+    expect.objectContaining({
+      description: 'Creator approved wording.',
+      ai_copy_source_fingerprint: 'b'.repeat(64),
+      ai_copy_draft_id: '8ab61a95-2f37-4ae0-86ed-17e2d76d6933',
+      ai_copy_draft_version: 2,
+    }),
+  );
+  expect(latestAutoSaveState).toBe('saved');
+
+  // Once the guarded save succeeds, future ordinary edits no longer carry
+  // the consumed revision. There is no silent replay of the AI approval.
+  act(() => ctxActions!.setTitle('Later creator edit'));
+  await advance(1600);
+  expect(h.put).toHaveBeenCalledTimes(2);
+  expect(h.put.mock.calls[1][1]).not.toHaveProperty(
+    'ai_copy_source_fingerprint',
+  );
+});
+
+test('later edits after an in-flight AI save do not replay its consumed revision', async () => {
+  vi.useFakeTimers();
+  let finishFirst!: (value: unknown) => void;
+  h.put.mockImplementationOnce(
+    () =>
+      new Promise(resolve => {
+        finishFirst = resolve;
+      }),
+  );
+  mountProvider();
+  act(() => ctxActions!.hydrate({...DRAFT_FORM}));
+  act(() =>
+    ctxActions!.approveAiDescription('Approved wording.', 'd'.repeat(64)),
+  );
+  await advance(1600);
+  expect(h.put).toHaveBeenCalledTimes(1);
+  expect(h.put.mock.calls[0][1]).toHaveProperty(
+    'ai_copy_source_fingerprint',
+    'd'.repeat(64),
+  );
+
+  act(() => ctxActions!.setTitle('Edited while AI save was pending'));
+  await advance(1600);
+  expect(h.put).toHaveBeenCalledTimes(1);
+
+  await act(async () => finishFirst({data: {data: {}}}));
+  expect(latestDirty).toBe(true);
+  await advance(1600);
+  expect(h.put).toHaveBeenCalledTimes(2);
+  expect(h.put.mock.calls[1][1]).not.toHaveProperty(
+    'ai_copy_source_fingerprint',
+  );
+  expect(h.put.mock.calls[1][1]).toHaveProperty(
+    'title',
+    'Edited while AI save was pending',
+  );
+  expect(latestAutoSaveState).toBe('saved');
+});
+
+test('stale AI copy autosave retains local edits and blocks retries after 409', async () => {
+  vi.useFakeTimers();
+  h.put.mockRejectedValueOnce({response: {status: 409}});
+  mountProvider();
+  act(() => ctxActions!.hydrate({...DRAFT_FORM}));
+  act(() =>
+    ctxActions!.approveAiDescription('Approved but stale.', 'c'.repeat(64)),
+  );
+  await advance(1600);
+
+  expect(h.put).toHaveBeenCalledTimes(1);
+  expect(latestAutoSaveState).toBe('conflict');
+  expect(latestDirty).toBe(true);
+  expect(latestFormState!.description).toBe('Approved but stale.');
+
+  act(() => ctxActions!.setTitle('Further local edits kept'));
+  await advance(3200);
+  expect(h.put).toHaveBeenCalledTimes(1);
+  expect(latestFormState!.title).toBe('Further local edits kept');
+  expect(latestDirty).toBe(true);
+});
+
 test('saves edits made while an earlier autosave is in flight without overlapping writes', async () => {
   vi.useFakeTimers();
   let resolveFirst!: (value: unknown) => void;
-  h.put.mockImplementationOnce(() => new Promise(resolve => { resolveFirst = resolve; }));
+  h.put.mockImplementationOnce(
+    () =>
+      new Promise(resolve => {
+        resolveFirst = resolve;
+      }),
+  );
   mountProvider();
   act(() => ctxActions!.hydrate({...DRAFT_FORM}));
   act(() => ctxActions!.setTitle('First edit'));
@@ -316,7 +421,10 @@ test('saves edits made while an earlier autosave is in flight without overlappin
   await act(async () => resolveFirst({data: {data: {}}}));
   await advance(1600);
   expect(h.put).toHaveBeenCalledTimes(2);
-  expect(h.put).toHaveBeenLastCalledWith('/api/v1/items/1/draft', expect.objectContaining({title: 'Latest edit'}));
+  expect(h.put).toHaveBeenLastCalledWith(
+    '/api/v1/items/1/draft',
+    expect.objectContaining({title: 'Latest edit'}),
+  );
 });
 
 test(
@@ -335,9 +443,7 @@ test(
     // `product` stays null and the form must remain unavailable.
     renderEditPage();
     expect(h.pending).toHaveLength(1);
-    expect(
-      screen.queryByRole('textbox', {name: /product title/i}),
-    ).toBeNull(); // still loading
+    expect(screen.queryByRole('textbox', {name: /product title/i})).toBeNull(); // still loading
 
     vi.useFakeTimers();
     await advance(1600);

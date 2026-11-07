@@ -1,3 +1,4 @@
+import type {CopyDraftIdentity} from './product-ai-copy-review-state';
 import {articleEditorTipTapExtensions} from '@common/article-editor/article-editor-tiptap-extensions';
 import {apiClient} from '@common/http/query-client';
 import {productSaveErrorMessage} from './product-save-error';
@@ -183,7 +184,7 @@ function DigitalProductForm() {
     productSubmissionErrors?: FieldErrors;
   } | null;
   const {trans} = useTrans();
-  const {state, actions, dirty, autoSaveState, billing} = useProductCreation();
+  const {state, actions, dirty, autoSaveState, aiCopyApproval, aiCopySaveConflict, billing} = useProductCreation();
   const title = state.title;
   const description = state.description;
   const price = state.price;
@@ -411,6 +412,10 @@ function DigitalProductForm() {
     async (submitAfterSave = false) => {
       if (saveInFlight.current || mutationUncertain.current || creationUncertain || submissionRecovery === 'uncertain') return;
       if (productId && (!product || String(product.id) !== productId)) return;
+      if (aiCopySaveConflict) {
+        setError('This product changed since the AI copy was approved. Your edits remain here. Copy them before refreshing and generate a new suggestion.');
+        return;
+      }
       const priceCents = effectiveBilling === 'free' ? 0 : Math.round(Number(price) * 100);
       const effectiveType = product?.type ?? productType ?? 'digital';
       const isCourse = effectiveType === 'course';
@@ -470,6 +475,14 @@ function DigitalProductForm() {
           ...sampleRequestPayload(samples),
           biolink_ids: biolinkIds,
           type: effectiveType,
+          ...(product && aiCopyApproval?.productId === product.id
+            ? {ai_copy_source_fingerprint: aiCopyApproval.sourceFingerprint,
+                ...(aiCopyApproval.draft ? {
+                  ai_copy_draft_id: aiCopyApproval.draft.draftId,
+                  ai_copy_draft_version: aiCopyApproval.draft.draftVersion,
+                } : {}),
+              }
+            : {}),
         };
         // For courses, file_ids is optional — send empty array as-is, backend allows it
         const response = product
@@ -483,7 +496,7 @@ function DigitalProductForm() {
           saveResponseUncertain = true;
           throw new Error('Saved product response missing an ID');
         }
-        actions.confirmPersisted(state);
+        actions.confirmPersisted(state, aiCopyApproval?.sourceFingerprint);
         setProduct(saved);
 
         if (submitAfterSave) {
@@ -500,6 +513,12 @@ function DigitalProductForm() {
         }
         if (submitAfterSave) navigate('/dashboard/items');
       } catch (reason) {
+        if (
+          aiCopyApproval &&
+          (reason as {response?: {status?: number}})?.response?.status === 409
+        ) {
+          actions.markAiCopyConflict();
+        }
         const validationErrors = getValidationErrors(reason);
         const savedBeforeSubmitFailure = Boolean(saved && submitAfterSave);
         const unconfirmedNetworkResponse = isUncertainMutationOutcome(reason);
@@ -527,7 +546,12 @@ function DigitalProductForm() {
           mutationUncertain.current = true;
           setCreationUncertain(true);
         } else if (!Object.keys(validationErrors).length) {
-          setError(productSaveErrorMessage(reason, false));
+          setError(
+            aiCopyApproval &&
+              (reason as {response?: {status?: number}})?.response?.status === 409
+              ? 'This product changed after you approved AI copy. Your local edits are preserved. Copy them before refreshing, then generate a new suggestion.'
+              : productSaveErrorMessage(reason, false),
+          );
         }
 
         if (Object.keys(validationErrors).length) {
@@ -556,6 +580,9 @@ function DigitalProductForm() {
       biolinkIds,
       state,
       actions.confirmPersisted,
+      actions.markAiCopyConflict,
+      aiCopyApproval,
+      aiCopySaveConflict,
       creationUncertain,
       submissionRecovery,
       convertToEtb,
@@ -681,6 +708,7 @@ function DigitalProductForm() {
       coverUrl={coverUrl}
       onTitleChange={actions.setTitle}
       onDescriptionChange={actions.setDescription}
+      onAiDescriptionApproved={actions.approveAiDescription}
       onPriceChange={actions.setPrice}
       legacyCurrency={product?.currency}
       convertToEtb={convertToEtb}
@@ -857,6 +885,8 @@ function DigitalProductForm() {
                   <Trans message="Creation outcome unconfirmed" />
                 ) : !product ? (
                   <Trans message="Not saved yet" />
+                ) : product.status === 'draft' && aiCopySaveConflict ? (
+                  <Trans message="Product changed — AI copy was not saved." />
                 ) : product.status === 'draft' && autoSaveState === 'saving' ? (
                   <Trans message="Saving draft..." />
                 ) : product.status === 'draft' && autoSaveState === 'failed' ? (
@@ -875,6 +905,14 @@ function DigitalProductForm() {
                 </Button>
               )}
             </div>
+          )}
+          {aiCopySaveConflict && (
+            <Alert.Root variant="warning" role="alert" fillStyle="subtleFill" className="mb-5">
+              <TriangleAlertIcon aria-hidden="true" />
+              <Alert.Description>
+                <Trans message="The product changed after AI copy approval. Autosave is stopped and your edits are still here. Copy your wording before refreshing, then generate a fresh suggestion." />
+              </Alert.Description>
+            </Alert.Root>
           )}
           {(creationUncertain || submissionRecovery) && (
             <Alert.Root variant="warning" role="alert" fillStyle="subtleFill" className="mb-5">
@@ -1133,6 +1171,7 @@ function DigitalProductForm() {
                             coverUrl={coverUrl}
                             onTitleChange={actions.setTitle}
                             onDescriptionChange={actions.setDescription}
+                            onAiDescriptionApproved={actions.approveAiDescription}
                             onPriceChange={actions.setPrice}
                             legacyCurrency={product?.currency}
                             convertToEtb={convertToEtb}
@@ -1246,6 +1285,7 @@ function DetailsPanel({
   coverUrl,
   onTitleChange,
   onDescriptionChange,
+  onAiDescriptionApproved,
   onPriceChange,
   legacyCurrency,
   convertToEtb,
@@ -1263,6 +1303,7 @@ function DetailsPanel({
   coverUrl: string;
   onTitleChange: (value: string) => void;
   onDescriptionChange: (value: string) => void;
+  onAiDescriptionApproved: (description: string, fingerprint: string, draft?: CopyDraftIdentity) => void;
   onPriceChange: (value: string) => void;
   legacyCurrency?: string;
   convertToEtb: boolean;
@@ -1323,8 +1364,8 @@ function DetailsPanel({
           productId={productId}
           currentTitle={title}
           currentDescription={description}
-          onUseDescription={candidate => {
-            onDescriptionChange(candidate);
+          onUseDescription={(candidate, sourceFingerprint, draft) => {
+            onAiDescriptionApproved(candidate, sourceFingerprint, draft);
             setCopyRevision(current => current + 1);
           }}
         />
