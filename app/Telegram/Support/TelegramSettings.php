@@ -35,6 +35,17 @@ final class TelegramSettings
             : config("services.telegram.{$key}", $default);
     }
 
+    public static function isOperational(): bool
+    {
+        if ((bool) self::get('enabled') && filled(self::get('token'))) {
+            return true;
+        }
+
+        return filled(self::get('token'))
+            && filled(self::get('webhook_secret'))
+            && ltrim((string) self::get('bot_username'), '@') !== '';
+    }
+
     /** @param array<string, mixed> $data */
     public static function update(array $data): void
     {

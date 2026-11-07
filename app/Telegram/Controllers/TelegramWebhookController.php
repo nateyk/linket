@@ -18,7 +18,7 @@ final class TelegramWebhookController extends Controller
     public function handle(Request $request): Response
     {
         abort_unless(
-            \App\Telegram\Support\TelegramSettings::get('enabled'),
+            \App\Telegram\Support\TelegramSettings::isOperational(),
             Response::HTTP_NOT_FOUND,
         );
 

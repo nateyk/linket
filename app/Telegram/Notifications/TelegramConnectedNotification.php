@@ -37,8 +37,7 @@ final class TelegramConnectedNotification extends Notification implements Should
     public function shouldSend(object $notifiable, string $channel): bool
     {
         return $channel === 'telegram'
-            && (bool) \App\Telegram\Support\TelegramSettings::get('enabled')
-            && filled(\App\Telegram\Support\TelegramSettings::get('token'))
+            && \App\Telegram\Support\TelegramSettings::isOperational()
             && method_exists($notifiable, 'getKey')
             && TelegramConnection::query()
                 ->where('user_id', $notifiable->getKey())

@@ -7,6 +7,7 @@
     "extract": "node ./resources/scripts/extract-translations.js --write",
     "lint": "oxlint",
     "test": "vitest run",
+    "test:telegram": "vitest run resources/client/account-settings/integrations-page.dom.test.tsx resources/client/admin/settings/integrations-settings.dom.test.tsx",
     "test:e2e": "playwright test"
   },
   "dependencies": {

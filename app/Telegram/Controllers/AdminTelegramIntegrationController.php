@@ -112,7 +112,6 @@ final class AdminTelegramIntegrationController extends Controller
     /** @return array<string, mixed> */
     private function health(Request $request): array
     {
-        $enabled = (bool) \App\Telegram\Support\TelegramSettings::get('enabled');
         $tokenConfigured = filled(\App\Telegram\Support\TelegramSettings::get('token'));
         $secretConfigured = filled(\App\Telegram\Support\TelegramSettings::get('webhook_secret'));
         $botUsername = ltrim(
@@ -120,13 +119,11 @@ final class AdminTelegramIntegrationController extends Controller
             '@',
         );
         $botUsernameConfigured = $botUsername !== '';
+        $operational = \App\Telegram\Support\TelegramSettings::isOperational();
 
         return [
-            'enabled' => $enabled,
-            'ready' => $enabled
-                && $tokenConfigured
-                && $secretConfigured
-                && $botUsernameConfigured,
+            'enabled' => (bool) \App\Telegram\Support\TelegramSettings::get('enabled') || $operational,
+            'ready' => $operational,
             'bot_token_configured' => $tokenConfigured,
             'webhook_secret_configured' => $secretConfigured,
             'bot_username_configured' => $botUsernameConfigured,
