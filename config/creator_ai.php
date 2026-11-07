@@ -37,6 +37,11 @@ return [
     // HTTPS issuer must be explicitly configured; no fallback to app URL.
     'oauth_issuer' => env('CREATOR_AI_OAUTH_ISSUER'),
 
+    // Optional dedicated ChatGPT test creator. Both stay empty unless set in
+    // the server environment, so a normal deploy creates no account.
+    'test_pro_email' => env('LINKET_TEST_PRO_EMAIL'),
+    'test_pro_password' => env('LINKET_TEST_PRO_PASSWORD'),
+
 
     // Internal source ingestion is isolated from forecast publication. BOTH
     // distinct source signing keys and explicit workspace allowlists must be
