@@ -44,6 +44,7 @@ final class CreatorPaymentMethodsController extends Controller
                     'checkout_blocker' => $creatorBlocker ?? ($availability->accountIsReady($method, $catalog->get($method->provider)) ? null : 'account_unavailable'),
                 ])->all(),
             'available_methods' => DirectPaymentMethod::query()
+                ->whereIn('code', DirectPaymentMethod::SELLER_RECEIVING_BANKS)
                 ->where('creator_setup_enabled', true)
                 ->where('operationally_suspended', false)
                 ->orderBy('sort_order')
@@ -63,6 +64,7 @@ final class CreatorPaymentMethodsController extends Controller
         ]);
         $account = preg_replace('/[\s-]+/', '', $data['account_number']);
         $provider = $data['provider'];
+        abort_unless(in_array($provider, DirectPaymentMethod::SELLER_RECEIVING_BANKS, true), 422, __('Only CBE, Telebirr, and Bank of Abyssinia can be added.'));
         abort_unless(DirectPaymentMethod::query()->where('code', $provider)->where('creator_setup_enabled', true)->where('operationally_suspended', false)->exists(), 422, __('This payment method is unavailable.'));
         if (($provider === 'awash' && !preg_match('/^\d{14}$/', $account))
             || ($provider === 'boa' && !preg_match('/^(?:\d{8}|\d{16})$/', $account))
@@ -329,6 +331,12 @@ final class CreatorPaymentMethodsController extends Controller
             'checkout_enabled' => ['sometimes', 'boolean'],
             'operationally_suspended' => ['sometimes', 'boolean'],
         ]);
+        $offering = ($data['creator_setup_enabled'] ?? false) === true || ($data['checkout_enabled'] ?? false) === true;
+        abort_if(
+            $offering && !in_array($paymentMethod->code, DirectPaymentMethod::SELLER_RECEIVING_BANKS, true),
+            422,
+            __('Only CBE, Telebirr, and Bank of Abyssinia can be offered.'),
+        );
         $paymentMethod->update($data);
         return ['data' => $paymentMethod->fresh()];
     }

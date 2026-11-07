@@ -15,6 +15,7 @@ use Common\Permissions\Models\Permission;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
@@ -549,20 +550,17 @@ class PayoutSystemTest extends TestCase
             'type' => 'telebirr',
             'destination' => $destination,
         ]);
-        $this->instance(\Chapa\Chapa\Chapa::class, new class($responseSecret) extends \Chapa\Chapa\Chapa {
-            public function __construct(private readonly string $responseSecret) {}
-
-            public function createTransfer(array $data): array
-            {
-                return [
-                    'data' => [
-                        'id' => 'safe-transfer-id',
-                        'status' => 'success',
-                        'account_number' => $this->responseSecret,
-                    ],
-                ];
-            }
-        });
+        config(['services.chapa.secret' => 'platform-secret']);
+        Http::fake([
+            'https://api.chapa.global/v2/payouts' => Http::response([
+                'status' => 'success',
+                'data' => [
+                    'chapa_reference' => 'CP_T_safe',
+                    'status' => 'PENDING',
+                    'account_number' => $responseSecret,
+                ],
+            ]),
+        ]);
         $logger = new class extends AbstractLogger {
             public array $records = [];
 
@@ -664,24 +662,22 @@ class PayoutSystemTest extends TestCase
     private function mockChapaTransfer(): void
     {
         Cache::flush();
-        $this->instance(\Chapa\Chapa\Chapa::class, new class extends \Chapa\Chapa\Chapa {
-            public function getBanks(): array
-            {
-                return [
-                    'data' => [
-                        ['id' => 946, 'slug' => 'cbe_bank', 'swift' => 'CBETETAA', 'name' => 'Commercial Bank of Ethiopia', 'active' => 1, 'currency' => 'ETB'],
-                        ['id' => 880, 'slug' => 'dashen_bank', 'swift' => 'DASHETAA', 'name' => 'Dashen Bank', 'active' => 1, 'currency' => 'ETB'],
-                        ['id' => 130, 'slug' => 'abay_bank', 'swift' => 'ABAYETAA', 'name' => 'Abay Bank', 'active' => 1, 'currency' => 'ETB'],
-                        ['id' => 0, 'slug' => 'telebirr', 'swift' => 'TELEBIRR', 'name' => 'Telebirr', 'active' => 1, 'currency' => 'ETB'],
-                    ],
-                ];
-            }
-
-            public function createTransfer(array $data): array
-            {
-                return ['data' => ['id' => 'chapa_transfer_' . uniqid(), 'status' => 'success']];
-            }
-        });
+        config(['services.chapa.secret' => 'platform-secret']);
+        Http::fake([
+            'https://api.chapa.global/v2/payouts/banks' => Http::response([
+                'status' => 'success',
+                'data' => [
+                    ['id' => 946, 'slug' => 'cbe_bank', 'swift' => 'CBETETAA', 'name' => 'Commercial Bank of Ethiopia', 'active' => 1, 'currency' => 'ETB'],
+                    ['id' => 880, 'slug' => 'dashen_bank', 'swift' => 'DASHETAA', 'name' => 'Dashen Bank', 'active' => 1, 'currency' => 'ETB'],
+                    ['id' => 130, 'slug' => 'abay_bank', 'swift' => 'ABAYETAA', 'name' => 'Abay Bank', 'active' => 1, 'currency' => 'ETB'],
+                    ['id' => 0, 'slug' => 'telebirr', 'swift' => 'TELEBIRR', 'name' => 'Telebirr', 'active' => 1, 'currency' => 'ETB'],
+                ],
+            ]),
+            'https://api.chapa.global/v2/payouts' => Http::response([
+                'status' => 'success',
+                'data' => ['chapa_reference' => 'CP_T_test', 'status' => 'PENDING'],
+            ]),
+        ]);
     }
 
     /**
@@ -868,35 +864,26 @@ public function testChapaServiceCanValidateBankCodes(): void
      */
     public function testChapaServiceCanVerifyTransfer(): void
     {
-        $this->instance(\Chapa\Chapa\Chapa::class, new class extends \Chapa\Chapa\Chapa {
-            public function verifyTransfer($id): array
-            {
-                return [
-                    'message' => 'Transfer details',
-                    'status' => 'success',
-                    'data' => [
-                        'status' => 'success',
-                        'chapa_transfer_id' => 'transfer_123',
-                        'amount' => '100.00',
-                        'currency' => 'ETB',
-                        'reference' => $id,
-                        'bank_name' => 'Commercial Bank of Ethiopia',
-                    ],
-                ];
-            }
-
-            public function createTransfer(array $data): array
-            {
-                return ['data' => ['id' => 'chapa_transfer_' . uniqid(), 'status' => 'success']];
-            }
-        });
+        config(['services.chapa.secret' => 'platform-secret']);
+        Http::fake([
+            'https://api.chapa.global/v2/payouts/test_ref_123/verify' => Http::response([
+                'status' => 'success',
+                'data' => [
+                    'status' => 'SUCCESS',
+                    'chapa_reference' => 'CP_T_123',
+                    'merchant_reference' => 'test_ref_123',
+                    'amount' => 10000,
+                    'currency' => 'ETB',
+                ],
+            ]),
+        ]);
 
         $service = app(ChapaPayoutService::class);
 
         $result = $service->verifyTransfer('test_ref_123');
 
-        $this->assertSame('success', $result['status']);
-        $this->assertSame('test_ref_123', $result['reference']);
+        $this->assertSame('SUCCESS', $result['status']);
+        $this->assertSame('test_ref_123', $result['merchant_reference']);
     }
 
     /**
@@ -941,58 +928,52 @@ public function testChapaServiceCanValidateBankCodes(): void
     private function mockChapaBanks(): void
     {
         Cache::flush();
-        $this->instance(\Chapa\Chapa\Chapa::class, new class extends \Chapa\Chapa\Chapa {
-            public function getBanks(): array
-            {
-                return [
-                    'data' => [
-                        [
-                            'id' => 946,
-                            'slug' => 'cbe_bank',
-                            'swift' => 'CBETETAA',
-                            'name' => 'Commercial Bank of Ethiopia',
-                            'acct_length' => 13,
-                            'country_id' => 1,
-                            'is_mobilemoney' => null,
-                            'is_active' => 1,
-                            'is_rtgs' => 1,
-                            'active' => 1,
-                            'currency' => 'ETB',
-                        ],
-                        [
-                            'id' => 880,
-                            'slug' => 'dashen_bank',
-                            'swift' => 'DASHETAA',
-                            'name' => 'Dashen Bank',
-                            'acct_length' => 13,
-                            'country_id' => 1,
-                            'is_mobilemoney' => null,
-                            'is_active' => 1,
-                            'is_rtgs' => 1,
-                            'active' => 1,
-                            'currency' => 'ETB',
-                        ],
-                        [
-                            'id' => 130,
-                            'slug' => 'abay_bank',
-                            'swift' => 'ABAYETAA',
-                            'name' => 'Abay Bank',
-                            'acct_length' => 16,
-                            'country_id' => 1,
-                            'is_mobilemoney' => null,
-                            'is_active' => 1,
-                            'is_rtgs' => 1,
-                            'active' => 1,
-                            'currency' => 'ETB',
-                        ],
+        config(['services.chapa.secret' => 'platform-secret']);
+        Http::fake([
+            'https://api.chapa.global/v2/payouts/banks' => Http::response([
+                'status' => 'success',
+                'data' => [
+                    [
+                        'id' => 946,
+                        'slug' => 'cbe_bank',
+                        'swift' => 'CBETETAA',
+                        'name' => 'Commercial Bank of Ethiopia',
+                        'acct_length' => 13,
+                        'country_id' => 1,
+                        'is_mobilemoney' => null,
+                        'is_active' => 1,
+                        'is_rtgs' => 1,
+                        'active' => 1,
+                        'currency' => 'ETB',
                     ],
-                ];
-            }
-
-            public function createTransfer(array $data): array
-            {
-                return ['data' => ['id' => 'chapa_transfer_' . uniqid(), 'status' => 'success']];
-            }
-        });
+                    [
+                        'id' => 880,
+                        'slug' => 'dashen_bank',
+                        'swift' => 'DASHETAA',
+                        'name' => 'Dashen Bank',
+                        'acct_length' => 13,
+                        'country_id' => 1,
+                        'is_mobilemoney' => null,
+                        'is_active' => 1,
+                        'is_rtgs' => 1,
+                        'active' => 1,
+                        'currency' => 'ETB',
+                    ],
+                    [
+                        'id' => 130,
+                        'slug' => 'abay_bank',
+                        'swift' => 'ABAYETAA',
+                        'name' => 'Abay Bank',
+                        'acct_length' => 16,
+                        'country_id' => 1,
+                        'is_mobilemoney' => null,
+                        'is_active' => 1,
+                        'is_rtgs' => 1,
+                        'active' => 1,
+                        'currency' => 'ETB',
+                    ],
+                ],
+            ]),
+        ]);
     }
 }

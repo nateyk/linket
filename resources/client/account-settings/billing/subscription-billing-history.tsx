@@ -26,7 +26,8 @@ type ProPayment = {
 };
 
 type BillingHistory = {
-  pro_plan?: {monthly_price_cents: number | null; currency: string};
+  subscription_gateway?: 'verify_et' | 'chapa';
+  pro_plan?: {monthly_price_cents: number | null; currency: string; product_id?: number; price_id?: number};
   pro_subscription?: {
     status: string;
     renews_at?: string | null;
@@ -59,6 +60,14 @@ export function SubscriptionBillingHistory() {
   const startRenewal = async () => {
     setBusy(true);
     try {
+      if (query.data?.subscription_gateway === 'chapa') {
+        const response = await apiClient.post('/api/v1/billing/chapa/checkout', {
+          product_id: query.data.pro_plan?.product_id,
+          price_id: query.data.pro_plan?.price_id,
+        });
+        window.location.assign(response.data.checkout_url);
+        return;
+      }
       const response = await apiClient.post('/api/v1/billing/direct/pro');
       setStartedAmountCents(response.data.amount_cents);
       setStartedPaymentId(response.data.payment_id);
@@ -114,6 +123,7 @@ export function SubscriptionBillingHistory() {
     subscriptionStatus === 'inactive' ||
     subscriptionStatus === 'expired' ||
     subscriptionStatus === 'cancelled';
+  const usesChapa = query.data?.subscription_gateway === 'chapa';
 
   return (
     <Card.Root size="sm" className="rounded-card-sm">
@@ -122,7 +132,11 @@ export function SubscriptionBillingHistory() {
           <Trans message="Pro subscription" />
         </Card.Title>
         <Card.Description>
-          <Trans message="Upgrade or renew Pro with a verified direct payment." />
+          {usesChapa ? (
+            <Trans message="Upgrade or renew Pro with Chapa." />
+          ) : (
+            <Trans message="Upgrade or renew Pro with a verified direct payment." />
+          )}
         </Card.Description>
         <Card.Action>
           <Link
@@ -255,7 +269,7 @@ export function SubscriptionBillingHistory() {
               </Link>
             </div>
 
-            {query.data?.corporate_account?.account_number && (
+            {query.data?.corporate_account?.account_number && !usesChapa && (
               <div className="border-t pt-4 text-sm">
                 <p className="font-medium">
                   <Trans message="Payment instructions" />
@@ -273,7 +287,7 @@ export function SubscriptionBillingHistory() {
               </div>
             )}
 
-            {pendingPaymentId && (
+            {pendingPaymentId && !usesChapa && (
               <div className="flex flex-col gap-2 border-t pt-4 sm:flex-row sm:items-end">
                 <label className="flex min-w-0 flex-1 flex-col gap-1.5 text-sm">
                   <Trans message="Pro payment reference" />

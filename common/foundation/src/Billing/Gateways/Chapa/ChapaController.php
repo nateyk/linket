@@ -3,6 +3,7 @@
 namespace Common\Billing\Gateways\Chapa;
 
 use App\Payments\ChapaGateway;
+use App\Payments\SubscriptionPaymentGateway;
 use App\Payments\Models\PaymentTransaction;
 use Common\API\ExcludeRoutesFromPublicDocs;
 use Common\Billing\Models\Price;
@@ -29,7 +30,11 @@ class ChapaController extends Controller
             'price_id' => 'required|integer|exists:prices,id',
         ]);
         $product = Product::findOrFail($data['product_id']);
-        abort_if($product->system_key === 'pro', 409, 'New Pro payments must use direct Verify.et billing.');
+        abort_if(
+            $product->system_key === 'pro' && SubscriptionPaymentGateway::current() !== 'chapa',
+            409,
+            'New Pro payments must use direct Verify.et billing.',
+        );
         abort_unless($product->active, 422, __('This plan is not accepting new subscriptions.'));
         $price = Price::query()
             ->where('id', $data['price_id'])

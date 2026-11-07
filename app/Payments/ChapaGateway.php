@@ -2,8 +2,8 @@
 
 namespace App\Payments;
 
+use App\Payments\Chapa\ChapaV2Client;
 use App\Payments\Models\PaymentTransaction;
-use Chapa\Chapa\Chapa;
 use Common\Settings\Settings;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -16,7 +16,7 @@ class ChapaGateway
     public function isEnabled(): bool
     {
         return (bool) app(Settings::class)->get('billing.chapa.enable', true)
-            && filled(config('services.chapa.secret'));
+            && filled($this->platformSecret());
     }
 
     public function createTransaction(
@@ -34,7 +34,7 @@ class ChapaGateway
             'payable_type' => $payable::class,
             'payable_id' => $payable->getKey(),
             'purpose' => $purpose,
-            'tx_ref' => 'linket_' . Str::lower(Str::random(32)),
+            'tx_ref' => 'lk'.Str::lower(Str::random(16)),
             'amount' => $amount,
             'currency' => 'ETB',
             'buyer_name' => $buyer['name'] ?? null,
@@ -43,22 +43,24 @@ class ChapaGateway
 
         try {
             [$firstName, $lastName] = $this->splitBuyerName($buyer['name'] ?? null);
-            $payload = app(Chapa::class)->initializePayment([
-                'amount' => number_format((float) $amount, 2, '.', ''),
+            $customer = array_filter([
+                'email' => $buyer['email'] ?? null,
+                'phone_number' => $buyer['phone'] ?? null,
+                'first_name' => $firstName,
+                'last_name' => $lastName,
+            ], fn (mixed $value): bool => filled($value));
+            $payload = app(ChapaV2Client::class)->createHostedPayment($this->platformSecret(), [
+                'amount_cents' => ChapaV2Client::centsFromMajor($amount),
                 'currency' => 'ETB',
-                'tx_ref' => $transaction->tx_ref,
+                'merchant_reference' => $transaction->tx_ref,
+                'idempotency_key' => $transaction->uuid,
                 'return_url' => str_replace('{tx_ref}', $transaction->tx_ref, $returnUrl),
                 'callback_url' => url("billing/chapa/callback/{$transaction->tx_ref}"),
+                'customer' => $customer === [] ? null : $customer,
                 'customization' => [
-                    'title' => config('app.name'),
+                    'title' => (string) config('app.name'),
                     'description' => Str::limit($description, 150),
                 ],
-                ...array_filter([
-                    'email' => $buyer['email'] ?? null,
-                    'phone_number' => $buyer['phone'] ?? null,
-                    'first_name' => $firstName,
-                    'last_name' => $lastName,
-                ]),
             ]);
         } catch (Throwable $e) {
             $transaction->update([
@@ -71,7 +73,7 @@ class ChapaGateway
             throw $e;
         }
 
-        $checkoutUrl = data_get($payload, 'data.checkout_url') ?? data_get($payload, 'checkout_url');
+        $checkoutUrl = $payload['checkout_url'] ?? null;
         if (!is_string($checkoutUrl) || blank($checkoutUrl)) {
             $transaction->update([
                 'status' => 'failed',
@@ -101,8 +103,34 @@ class ChapaGateway
 
     public function verify(PaymentTransaction $transaction): array
     {
-        config(['chapa.secretKey' => config('services.chapa.secret')]);
-        return (array) app(Chapa::class)->verifyTransaction($transaction->tx_ref);
+        $data = app(ChapaV2Client::class)->verifyPayment(
+            $this->platformSecret(),
+            $transaction->tx_ref,
+        );
+
+        return ['data' => $this->normalizeVerifiedPayment($data)];
+    }
+
+    /** @param array<string, mixed> $data
+     * @return array<string, mixed>
+     */
+    private function normalizeVerifiedPayment(array $data): array
+    {
+        $customer = (array) ($data['customer'] ?? []);
+        $amount = $data['amount'] ?? 0;
+
+        return [
+            'status' => $data['status'] ?? null,
+            'amount' => is_int($amount) || (is_string($amount) && ctype_digit($amount))
+                ? ChapaV2Client::majorFromCents((int) $amount)
+                : $amount,
+            'currency' => $data['currency'] ?? null,
+            'tx_ref' => $data['merchant_reference'] ?? ($data['tx_ref'] ?? null),
+            'id' => $data['chapa_reference'] ?? ($data['id'] ?? null),
+            'email' => $customer['email'] ?? ($data['email'] ?? null),
+            'first_name' => $customer['first_name'] ?? ($data['first_name'] ?? null),
+            'last_name' => $customer['last_name'] ?? ($data['last_name'] ?? null),
+        ];
     }
 
     public function verifiedData(array $response): array
@@ -113,6 +141,13 @@ class ChapaGateway
     public function isSuccessful(array $data): bool
     {
         return strtolower((string) Arr::get($data, 'status')) === 'success';
+    }
+
+    public function platformSecret(): string
+    {
+        $stored = app(Settings::class)->get('billing.chapa.secret_key');
+
+        return filled($stored) ? (string) $stored : (string) config('services.chapa.secret');
     }
 
     public function webhookSecret(): ?string

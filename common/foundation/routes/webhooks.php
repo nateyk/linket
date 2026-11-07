@@ -7,6 +7,7 @@ use App\Payments\Controllers\ChapaCallbackController;
 use App\Payments\Controllers\VerifyEtWebhookController;
 use App\Payments\Controllers\VerifyEtExperimentWebhookController;
 use Illuminate\Support\Facades\Route;
+use App\Storefront\Controllers\ChapaStorefrontReturnController;
 use App\Storefront\Controllers\DownloadController;
 use App\Storefront\Controllers\StorefrontCheckoutController;
 use App\Telegram\Controllers\TelegramWebhookController;
@@ -33,6 +34,10 @@ Route::post('billing/verify-et/experiment-webhook', [VerifyEtExperimentWebhookCo
 Route::post('integrations/telegram/webhook', [TelegramWebhookController::class, 'handle']);
 Route::match(['get', 'post'], 'billing/chapa/callback/{txRef}', [
     ChapaCallbackController::class,
+    'handle',
+]);
+Route::match(['get', 'post'], 'storefront/chapa/return/{txRef}', [
+    ChapaStorefrontReturnController::class,
     'handle',
 ]);
 

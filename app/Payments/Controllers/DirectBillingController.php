@@ -2,6 +2,7 @@
 
 namespace App\Payments\Controllers;
 
+use App\Payments\SubscriptionPaymentGateway;
 use App\Payments\VerifyEt\VerifyEtSettings;
 use App\Payments\Models\DirectPaymentVerification;
 use App\Payments\Models\ProSubscriptionPayment;
@@ -80,11 +81,14 @@ final class DirectBillingController extends Controller
 
         return response()->json([
             'verification_allowance' => app(\App\Storefront\Services\CreatorVerificationAllowance::class)->summary($request->user()),
+            'subscription_gateway' => SubscriptionPaymentGateway::current(),
             'pro_plan' => [
                 'monthly_price_cents' => $proPrice
                     ? app(\App\Payments\VerifyEt\VerifyEtMoney::class)->cents((string) $proPrice->getRawOriginal('amount'))
                     : null,
                 'currency' => 'ETB',
+                'product_id' => $proPlan?->id,
+                'price_id' => $proPrice?->id,
             ],
             'pro_subscription' => [
                 'status' => $subscription?->gateway_status ?? 'inactive',
@@ -156,6 +160,7 @@ final class DirectBillingController extends Controller
 
     public function startPro(Request $request): \Illuminate\Http\JsonResponse
     {
+        abort_unless(SubscriptionPaymentGateway::current() === 'verify_et', 409, __('Pro upgrades use Chapa.'));
         abort_unless(VerifyEtSettings::get('enabled'), 503);
         $instructions = $this->corporateInstructions();
         abort_unless($instructions['account_number'], 503, __('Linket payment account is unavailable.'));

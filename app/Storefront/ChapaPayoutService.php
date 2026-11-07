@@ -2,19 +2,16 @@
 
 namespace App\Storefront;
 
-use App\Storefront\Models\DigitalProductPayoutMethod;
-use App\Storefront\Models\DigitalProductWithdrawalMethod;
+use App\Payments\Chapa\ChapaV2Client;
+use App\Payments\ChapaGateway;
 use App\Storefront\Models\PayoutRequest;
-use Chapa\Chapa\Chapa;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use RuntimeException;
 
 class ChapaPayoutService
 {
-    public function __construct(
-        private \Chapa\Chapa\Chapa $chapa,
-    ) {}
 
     public function createTransfer(PayoutRequest $payout): string
     {
@@ -41,31 +38,29 @@ class ChapaPayoutService
     {
         Log::info('Verifying Chapa transfer', ['reference' => $reference]);
 
-        $response = $this->chapa->verifyTransfer($reference);
+        $data = app(ChapaV2Client::class)->verifyPayout(
+            app(ChapaGateway::class)->platformSecret(),
+            $reference,
+        );
 
         Log::info('Chapa transfer verification response', [
             'reference' => $reference,
-            'status' => data_get($response, 'data.status') ?? data_get($response, 'status'),
+            'status' => $data['status'] ?? null,
         ]);
 
-        if (!isset($response['data']['status'])) {
+        if (!isset($data['status'])) {
             throw new RuntimeException('Chapa transfer verification failed.');
         }
 
-        return $response['data'];
+        return $data;
     }
 
     public function getBanks(): array
     {
         return Cache::remember('chapa:banks', 3600, function () {
             Log::info('Fetching Chapa banks list');
-            $response = $this->chapa->getBanks();
 
-            if (!isset($response['data']) || !is_array($response['data'])) {
-                throw new RuntimeException('Chapa banks fetch failed.');
-            }
-
-            return $response['data'];
+            return app(ChapaV2Client::class)->payoutBanks(app(ChapaGateway::class)->platformSecret());
         });
     }
 
@@ -104,75 +99,55 @@ class ChapaPayoutService
             throw new RuntimeException("Invalid bank code: {$bankCode}. Please use a valid bank code from Chapa's bank list.");
         }
 
-        $transferReference = 'CHAPA-TX-' . strtoupper(substr(md5($payout->id . time()), 0, 12));
-
-        $data = [
-            'account_name' => $payout->payoutMethod?->account_holder ?? 'Unknown',
-            'account_number' => $this->extractAccountNumber($destination),
-            'bank_code' => $bankCode,
-            'amount' => number_format($payout->amount_cents / 100, 2, '.', ''),
-            'currency' => $payout->currency,
-            'reference' => $transferReference,
-            'narration' => "Payout #{$payout->id} for {$payout->creator?->name}",
-        ];
+        $transferReference = $this->transferReference($payout);
+        $bank = $this->findBankByCode($bankCode);
 
         Log::info('Initiating Chapa bank transfer', [
             'payout_id' => $payout->id,
             'reference' => $transferReference,
-            'amount' => $data['amount'],
-            'currency' => $data['currency'],
+            'amount' => number_format($payout->amount_cents / 100, 2, '.', ''),
+            'currency' => $payout->currency,
             'bank_code' => $bankCode,
         ]);
 
-        $response = $this->chapa->createTransfer($data);
+        $result = $this->sendPayout($payout, $transferReference, [
+            'account_name' => $payout->payoutMethod?->account_holder ?? 'Unknown',
+            'account_number' => $this->extractAccountNumber($destination),
+            'bank_slug' => (string) ($bank['slug'] ?? $bankCode),
+        ], "Payout #{$payout->id}");
 
         Log::info('Chapa bank transfer response', [
             'payout_id' => $payout->id,
             'reference' => $transferReference,
-            'status' => data_get($response, 'data.status') ?? data_get($response, 'status'),
+            'status' => $result['status'] ?? null,
         ]);
-
-        if (!isset($response['data']['id']) && !isset($response['data']['transfer_id'])) {
-            throw new RuntimeException('Chapa transfer failed.');
-        }
 
         return $transferReference;
     }
 
     private function createTelebirrTransfer(PayoutRequest $payout, string $destination): string
     {
-        // Telebirr transfers via Chapa use phone number as account_number
-        $transferReference = 'CHAPA-TX-' . strtoupper(substr(md5($payout->id . time()), 0, 12));
-
-        $data = [
-            'account_name' => $payout->payoutMethod?->account_holder ?? 'Unknown',
-            'account_number' => $this->extractPhoneNumber($destination),
-            'bank_code' => 'TELEBIRR',
-            'amount' => number_format($payout->amount_cents / 100, 2, '.', ''),
-            'currency' => $payout->currency,
-            'reference' => $transferReference,
-            'narration' => "Telebirr payout #{$payout->id} for {$payout->creator?->name}",
-        ];
+        $transferReference = $this->transferReference($payout);
 
         Log::info('Initiating Chapa Telebirr transfer', [
             'payout_id' => $payout->id,
             'reference' => $transferReference,
-            'amount' => $data['amount'],
-            'currency' => $data['currency'],
-            'bank_code' => $data['bank_code'],
+            'amount' => number_format($payout->amount_cents / 100, 2, '.', ''),
+            'currency' => $payout->currency,
+            'bank_code' => 'TELEBIRR',
         ]);
 
-        $response = $this->chapa->createTransfer($data);
+        $result = $this->sendPayout($payout, $transferReference, [
+            'account_name' => $payout->payoutMethod?->account_holder ?? 'Unknown',
+            'account_number' => $this->extractPhoneNumber($destination),
+            'bank_slug' => 'telebirr',
+        ], "Telebirr payout #{$payout->id}");
 
         Log::info('Chapa Telebirr transfer response', [
             'payout_id' => $payout->id,
             'reference' => $transferReference,
-            'status' => data_get($response, 'data.status') ?? data_get($response, 'status'),
+            'status' => $result['status'] ?? null,
         ]);
-
-        if (!isset($response['data']['id']) && !isset($response['data']['transfer_id'])) {
-            throw new RuntimeException('Chapa Telebirr transfer failed.');
-        }
 
         return $transferReference;
     }
@@ -187,6 +162,26 @@ class ChapaPayoutService
         ]);
 
         return $transferReference;
+    }
+
+    /** @param array{account_name: string, account_number: string, bank_slug: string} $account
+     * @return array<string, mixed>
+     */
+    private function sendPayout(PayoutRequest $payout, string $reference, array $account, string $reason): array
+    {
+        return app(ChapaV2Client::class)->createPayout(app(ChapaGateway::class)->platformSecret(), [
+            'amount_cents' => (int) $payout->amount_cents,
+            'currency' => (string) $payout->currency,
+            'merchant_reference' => $reference,
+            'idempotency_key' => (string) Str::uuid(),
+            'account' => $account,
+            'reason' => $reason,
+        ]);
+    }
+
+    private function transferReference(PayoutRequest $payout): string
+    {
+        return 'CHAPA-TX-'.strtoupper(substr(md5($payout->id.time()), 0, 11));
     }
 
     private function extractBankCode(string $destination): ?string

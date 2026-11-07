@@ -21,7 +21,7 @@ type Method = {
   status_label?: string;
 };
 
-const supported = ['cbe', 'telebirr', 'cbebirr', 'boa', 'awash', 'dashen'];
+const supported = ['cbe', 'telebirr', 'boa'];
 
 export function VerifyEtMethodCatalog() {
   const [methods, setMethods] = useState<Method[]>([]);
@@ -77,7 +77,7 @@ export function VerifyEtMethodCatalog() {
           <Trans message="Banks and wallets" />
         </h2>
         <p className="text-sm text-muted-foreground">
-          <Trans message="Choose which methods creators can set up and buyers can use. Suspending a method pauses both without changing account approval." />
+          <Trans message="Creators can add CBE, Telebirr, and Bank of Abyssinia. Suspending one pauses new setup and checkout without changing account approval." />
         </p>
       </div>
       {loading && (

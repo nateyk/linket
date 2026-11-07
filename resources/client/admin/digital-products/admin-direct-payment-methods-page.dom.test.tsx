@@ -12,6 +12,7 @@ vi.mock('react-router', () => ({
   useSearchParams: () => [params, vi.fn()],
   useNavigate: () => navigate,
 }));
+vi.mock('./subscription-gateway-card', () => ({SubscriptionGatewayCard: () => <div>Pro subscription payments</div>}));
 vi.mock('./verify-et-settings-panel', () => ({VerifyEtSettingsPanel: () => <div>Verify.et connection</div>}));
 vi.mock('./verify-et-method-catalog', () => ({VerifyEtMethodCatalog: () => <div>Methods catalog</div>}));
 

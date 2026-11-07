@@ -20,6 +20,13 @@ class StorefrontCheckout
         ?int $paymentMethodId = null,
     ): StorefrontOrder
     {
+        $collector = \Common\Workspaces\Models\Workspace::query()
+            ->whereKey($product->workspace_id)
+            ->value('active_payment_collector') ?? 'verify_et';
+        if ($collector === 'chapa' && (int) $product->price_cents > 0) {
+            return app(\App\Storefront\Services\ChapaStorefrontCheckout::class)->create($product, $biolink, $buyer);
+        }
+
         if (VerifyEtSettings::get('enabled')) {
             return app(\App\Storefront\Services\DirectStorefrontCheckout::class)->create($product, $biolink, $buyer, $paymentMethodId);
         }

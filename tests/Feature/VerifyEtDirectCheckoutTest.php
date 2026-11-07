@@ -381,10 +381,31 @@ class VerifyEtDirectCheckoutTest extends TestCase
     }
 
     public function testCbeHttpCheckoutFromAdminSetupToFulfillment(): void { $this->runBankHttpFlow('cbe'); }
-    public function testCbeBirrHttpCheckoutFromAdminSetupToFulfillment(): void { $this->runBankHttpFlow('cbebirr'); }
+    public function testCbeBirrHttpCheckoutFromAdminSetupToFulfillment(): void { $this->assertSellerCannotAddReceivingBank('cbebirr'); }
     public function testBoaHttpCheckoutFromAdminSetupToFulfillment(): void { $this->runBankHttpFlow('boa'); }
-    public function testAwashHttpCheckoutFromAdminSetupToFulfillment(): void { $this->runBankHttpFlow('awash'); }
-    public function testDashenHttpCheckoutFromAdminSetupToFulfillment(): void { $this->runBankHttpFlow('dashen'); }
+    public function testAwashHttpCheckoutFromAdminSetupToFulfillment(): void { $this->assertSellerCannotAddReceivingBank('awash'); }
+    public function testDashenHttpCheckoutFromAdminSetupToFulfillment(): void { $this->assertSellerCannotAddReceivingBank('dashen'); }
+
+    private function assertSellerCannotAddReceivingBank(string $bank): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('local');
+        $creator = User::factory()->create();
+        $admin = User::factory()->create();
+        $admin->permissions()->attach(\Common\Permissions\Models\Permission::query()->firstOrCreate(['name' => 'admin.access']));
+        $catalog = \App\Storefront\Models\DirectPaymentMethod::query()->where('code', $bank)->firstOrFail();
+        $this->withSession(['_token' => 'test-token'])->withHeader('Referer', config('app.url'))->withHeader('X-CSRF-TOKEN', 'test-token');
+        $this->actingAs($admin)->patchJson('/api/v1/admin/storefront/payment-method-catalog/'.$catalog->id, [
+            'creator_setup_enabled' => true,
+            'checkout_enabled' => true,
+            'operationally_suspended' => false,
+        ])->assertUnprocessable();
+        $this->actingAs($creator)->postJson('/api/v1/storefront/payment-methods', [
+            'provider' => $bank,
+            'account_number' => '0912345678',
+            'account_name' => 'Test Recipient',
+            'proof' => \Illuminate\Http\UploadedFile::fake()->create('proof.pdf', 10, 'application/pdf'),
+        ])->assertUnprocessable();
+    }
 
     private function runBankHttpFlow(string $bank): void
     {
