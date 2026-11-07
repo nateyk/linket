@@ -238,7 +238,8 @@ class AdminTelegramIntegrationTest extends TestCase
 
         $this->patchJson('/api/v1/admin/integrations/telegram', [
             'enabled' => false, 'token' => '', 'webhook_secret' => '',
-        ])->assertOk()->assertJsonPath('telegram.enabled', false)
+        ])->assertOk()->assertJsonPath('telegram.enabled', true)
+            ->assertJsonPath('telegram.ready', true)
             ->assertJsonPath('telegram.bot_token_configured', true);
         $saved = \App\Telegram\Support\TelegramSettings::stored();
         $this->assertSame('123456:synthetic_saved_token', $saved['token']);

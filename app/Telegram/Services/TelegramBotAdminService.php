@@ -97,12 +97,7 @@ final class TelegramBotAdminService
 
     private function assertConfigured(): void
     {
-        if (
-            ! \App\Telegram\Support\TelegramSettings::get('enabled') ||
-            blank(\App\Telegram\Support\TelegramSettings::get('token')) ||
-            blank(\App\Telegram\Support\TelegramSettings::get('bot_username')) ||
-            blank(\App\Telegram\Support\TelegramSettings::get('webhook_secret'))
-        ) {
+        if (! \App\Telegram\Support\TelegramSettings::isOperational()) {
             throw ValidationException::withMessages([
                 'telegram' => __('Telegram server configuration is incomplete.'),
             ]);

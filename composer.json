@@ -209,6 +209,9 @@
       "php artisan scramble:export --path=resources/client/api.json --api=internal",
       "php artisan scramble:export --path=resources/client/api-public.json --api=public",
       "npx orval"
+    ],
+    "test:telegram": [
+      "@php artisan test --compact --filter=Telegram"
     ]
   }
 }

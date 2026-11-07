@@ -80,6 +80,21 @@ After deploying the code:
 
 Do not use a production payment reference merely to test Telegram.
 
+## Automated verification (local and CI)
+
+Synthetic tests exercise connect tokens, webhook linking, the creator `/start` deep link (`https://t.me/<bot>?start=<token>`), admin operations, and UI states **without** calling the live Telegram Bot API. Opening `https://t.me/<bot>` or sending `/start` with no Linket token does not connect an account.
+
+```bash
+# One command (DDEV when available): PHPUnit + DOM tests
+./scripts/verify-telegram-integration.sh
+
+# Or separately
+ddev artisan linket:verify-telegram
+ddev composer test:telegram
+npm run test:telegram
+```
+
+`linket:verify-telegram` prints a **secret-free** readiness table for the current environment—use it to see why creators see “Unavailable” (disabled integration, missing token, secret, or bot username).
 
 ## Account settings integration
 
