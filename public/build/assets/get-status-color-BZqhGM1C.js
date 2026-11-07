@@ -1,0 +1,2 @@
+import{R as e}from"./client-CJL9GIje.js";import{nc as t,rc as n}from"./icons-DQz5vrUS.js";var r=n(),i=t=>{switch(t){case e.locked:return{bg:`bg-chip`,text:`text-chip`,button:`chip`};case e.pending:return{bg:`bg-danger`,text:`text-danger`,button:`danger`};case e.closed:return{bg:`bg-positive`,text:`text-positive`,button:`positive`};default:return{bg:`bg-primary`,text:`text-primary`,button:`primary`}}};function a({category:e}){return(0,r.jsx)(`div`,{className:t(`h-8 w-8 rounded-full`,i(e).bg)})}export{i as n,a as t};
+//# sourceMappingURL=get-status-color-BZqhGM1C.js.map

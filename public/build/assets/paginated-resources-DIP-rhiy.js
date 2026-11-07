@@ -1,2 +1,0 @@
-import"./rolldown-runtime-BWaJ3C7D.js";import{ic as e}from"./icons-DQz5vrUS.js";import"./client-CPpYik2Q.js";e();var t=(e,t,n)=>{let r=n?[...n]:e.split(`/`);return t&&r.push(t),r};export{t};
-//# sourceMappingURL=paginated-resources-DIP-rhiy.js.map

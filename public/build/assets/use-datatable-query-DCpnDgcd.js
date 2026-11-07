@@ -1,0 +1,2 @@
+import{ea as e}from"./client-CJL9GIje.js";function t(t){let n=e(t);return{...n,items:n.data?.pagination.data??[],isEmpty:(n.isFetched||n.isPlaceholderData||t.enabled===!1)&&!n.data?.pagination.data.length}}export{t};
+//# sourceMappingURL=use-datatable-query-DCpnDgcd.js.map

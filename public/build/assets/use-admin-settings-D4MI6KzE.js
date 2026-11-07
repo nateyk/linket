@@ -1,0 +1,2 @@
+import{Tt as e}from"./main-BbDYORPE.js";import{d as t}from"./custom-menu-BcpdSqpV.js";function n(){return t({...e(),select:r})}function r(e){for(let t in e)if(t===`themes`||t===`defaults`)continue;else Array.isArray(e[t])?e[t]=e[t].map(r):typeof e[t]==`object`?e[t]=r(e[t]):typeof e[t]==`number`?e[t]=e[t].toString():e[t]??(e[t]=``);return e}export{n as t};
+//# sourceMappingURL=use-admin-settings-D4MI6KzE.js.map

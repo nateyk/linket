@@ -1,0 +1,2 @@
+import{a as e}from"./rolldown-runtime-BWaJ3C7D.js";import{y as t}from"./main-BbDYORPE.js";import{ic as n}from"./icons-DQz5vrUS.js";var r=e(n());function i({query:e}){let[n]=(0,r.useState)(()=>new t),i=e.isFetching;return(0,r.useEffect)(()=>(i?n.show():n.hide(),()=>{i||n.hide()}),[i,n]),null}export{i as t};
+//# sourceMappingURL=global-loading-progress-Cp0qURNg.js.map

@@ -1,6 +1,6 @@
 import {AdminDocsUrls} from '@app/admin/admin-config';
+import {SubscriptionGatewayCard} from '@app/admin/digital-products/subscription-gateway-card';
 import {AdminSettings} from '@common/admin/settings/admin-settings';
-import {SettingsErrorGroup} from '@common/admin/settings/layout/settings-error-group';
 import {AdminSettingsLayout} from '@common/admin/settings/layout/settings-layout';
 import {DocsLink} from '@common/admin/settings/layout/settings-links';
 import {SettingsPanel} from '@common/admin/settings/layout/settings-panel';
@@ -10,10 +10,8 @@ import {FormSwitch} from '@ui/forms/toggle/switch';
 import {Select} from '@shadcn/forms/select/select';
 import {HookForm} from '@shadcn/forms/form/hook-form';
 import {Field} from '@shadcn/forms/field';
-import {Alert} from '@shadcn/alert/alert';
 import {Trans} from '@ui/i18n/trans';
-import {Fragment} from 'react';
-import {useForm, useFormContext} from 'react-hook-form';
+import {useForm} from 'react-hook-form';
 
 export function Component() {
   const {data} = useAdminSettings();
@@ -49,8 +47,6 @@ export function Component() {
         stripe_key: data.server?.stripe_key ?? '',
         stripe_secret: data.server?.stripe_secret ?? '',
         stripe_webhook_secret: data.server?.stripe_webhook_secret ?? '',
-        chapa_secret_key: data.server?.chapa_secret_key ?? '',
-        chapa_webhook_secret: data.server?.chapa_webhook_secret ?? '',
       },
     },
   });
@@ -58,8 +54,10 @@ export function Component() {
   return (
     <AdminSettingsLayout form={form} title={<Trans message="Subscriptions" />}>
       <GeneralSection />
+      <div className="mb-6">
+        <SubscriptionGatewayCard />
+      </div>
       <CurrencySection />
-      <ChapaSection />
       <InvoiceAddressSection />
       <InvoiceNotesSection />
     </AdminSettingsLayout>
@@ -115,63 +113,6 @@ const symbolPositionOptions = [
   {label: 'After amount (234.00 Br)', value: 'after'},
   {label: 'Before amount (Br 234.00)', value: 'before'},
 ];
-
-function ChapaSection() {
-  const {watch} = useFormContext<AdminSettings>();
-  const chapaIsEnabled = watch('client.billing.chapa.enable');
-
-  return (
-    <SettingsPanel
-      className="mb-6"
-      title={<Trans message="Chapa Gateway" />}
-      description={
-        <Trans message="Accept ETB payments for subscriptions and Digital Products through Chapa." />
-      }
-      link={
-        <DocsLink link="https://developer.chapa.co/laravel-sdk/">
-          <Trans message="How to set up Chapa" />
-        </DocsLink>
-      }
-    >
-      <FormSwitch name="client.billing.chapa.enable">
-        <Trans message="Enable Chapa" />
-      </FormSwitch>
-      {chapaIsEnabled && (
-        <SettingsErrorGroup
-          name="chapa_group"
-          separatorTop={false}
-          separatorBottom={false}
-        >
-          {isInvalid => (
-            <Fragment>
-              <FormTextField
-                size="sm"
-                name="server.chapa_secret_key"
-                label={<Trans message="Chapa secret key" />}
-                required
-                invalid={isInvalid}
-                className="mt-5"
-              />
-              <FormTextField
-                size="sm"
-                name="server.chapa_webhook_secret"
-                label={<Trans message="Chapa webhook signing secret" />}
-                invalid={isInvalid}
-                className="mt-5"
-              />
-              <Alert className="mt-5" variant="default" fillStyle="subtleFill">
-                <Alert.Title><Trans message="Webhook setup" /></Alert.Title>
-                <Alert.Description>
-                  <Trans message="In Chapa, send payment.authorized webhooks to /billing/chapa/webhook on your public HTTPS Linket URL. Paste the signing secret here; it is stored encrypted and is never shown again." />
-                </Alert.Description>
-              </Alert>
-            </Fragment>
-          )}
-        </SettingsErrorGroup>
-      )}
-    </SettingsPanel>
-  );
-}
 
 function GeneralSection() {
   return (

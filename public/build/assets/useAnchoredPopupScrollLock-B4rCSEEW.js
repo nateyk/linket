@@ -1,2 +1,0 @@
-import{a as e}from"./rolldown-runtime-BWaJ3C7D.js";import{ic as t}from"./icons-DQz5vrUS.js";import{Ir as n,Vr as r}from"./client-CPpYik2Q.js";import{t as i}from"./useScrollLock-Dznq6M0U.js";var a=e(t(),1),o=20;function s(e,t,s,c){let[l,u]=a.useState(!1);r(()=>{if(!e||!t||s==null){u(!1);return}let r=n(s).documentElement.clientWidth,i=s.offsetWidth;u(r>0&&i>0&&i>=r-o)},[e,t,s]),i(e&&(!t||l),c)}export{s as t};
-//# sourceMappingURL=useAnchoredPopupScrollLock-B4rCSEEW.js.map

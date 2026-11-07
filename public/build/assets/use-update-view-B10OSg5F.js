@@ -1,2 +1,0 @@
-import{Ki as e,Qi as t,Yi as n,xi as r}from"./client-CPpYik2Q.js";import{t as i}from"./on-form-query-error-D2nJCOw4.js";import{t as a}from"./show-http-error-toast-bf-tn0Kl.js";function o(o,s){return t({mutationFn:t=>e.put(`helpdesk/views/${o}`,t).then(e=>e.data),onSuccess:async()=>{await n.invalidateQueries({queryKey:r.views.invalidateKey})},onError:e=>s?i(e,s,[],!0):a(e)})}export{o as t};
-//# sourceMappingURL=use-update-view-B10OSg5F.js.map

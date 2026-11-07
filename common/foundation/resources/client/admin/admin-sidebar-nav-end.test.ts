@@ -1,5 +1,8 @@
 import {describe, expect, test} from 'vitest';
-import {shouldEndMatchSidebarItem} from './admin-sidebar-nav-end';
+import {
+  isSettingsNavOnlyAdminItem,
+  shouldEndMatchSidebarItem,
+} from './admin-sidebar-nav-end';
 
 const siblings = [
   {action: '/admin/insights'},
@@ -7,6 +10,14 @@ const siblings = [
   {action: '/admin/settings/hc'},
   {action: '/admin/blog'},
 ];
+
+describe('isSettingsNavOnlyAdminItem', () => {
+  test('keeps Livechat and AI Agent inside Settings', () => {
+    expect(isSettingsNavOnlyAdminItem('/admin/settings/livechat')).toBe(true);
+    expect(isSettingsNavOnlyAdminItem('/admin/settings/ai')).toBe(true);
+    expect(isSettingsNavOnlyAdminItem('/admin/settings')).toBe(false);
+  });
+});
 
 describe('shouldEndMatchSidebarItem', () => {
   test('keeps /admin exact-only', () => {

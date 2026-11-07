@@ -1,0 +1,2 @@
+import{n as e}from"./visible-to-field-hwxoBZP8.js";import{t}from"./item-AWQz8TVX.js";import{t as n}from"./trans-CRItcigO.js";import{rc as r}from"./icons-DQz5vrUS.js";var i=r();function a({className:r,description:a}){return(0,i.jsx)(e,{className:r,name:`managed_by_role`,label:(0,i.jsx)(n,{message:`Managed by`}),description:a,defaultItem:(0,i.jsx)(t,{value:``,children:(0,i.jsx)(n,{message:`Anyone with permissions`})},`anyone-default`)})}export{a as t};
+//# sourceMappingURL=managed-by-field-BGOdGdbi.js.map
