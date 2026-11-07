@@ -4,6 +4,7 @@ namespace App\Telegram\Controllers;
 
 use App\Telegram\Models\TelegramConnection;
 use App\Telegram\Services\TelegramAccountLinker;
+use App\Telegram\Services\TelegramBotAdminService;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\DB;
@@ -13,6 +14,7 @@ final class TelegramWebhookController extends Controller
 {
     public function __construct(
         private readonly TelegramAccountLinker $accountLinker,
+        private readonly TelegramBotAdminService $telegram,
     ) {}
 
     public function handle(Request $request): Response
@@ -42,7 +44,9 @@ final class TelegramWebhookController extends Controller
             return response()->noContent();
         }
 
-        DB::transaction(function () use ($payload, $updateId): void {
+        $reply = null;
+
+        DB::transaction(function () use ($payload, $updateId, &$reply): void {
             $inserted = DB::table('telegram_webhook_updates')->insertOrIgnore([
                 'update_id' => (int) $updateId,
                 'processed_at' => now(),
@@ -82,17 +86,33 @@ final class TelegramWebhookController extends Controller
 
             $plainToken = $matches[1] ?? '';
             if ($plainToken === '') {
+                $reply = [
+                    'chat_id' => $telegramChatId,
+                    'text' => __('To connect this chat, open Linket, go to Account Settings, then Integrations, and press Connect Telegram.'),
+                ];
+
                 return;
             }
 
-            $this->accountLinker->link(
+            $connection = $this->accountLinker->link(
                 $plainToken,
                 $telegramUserId,
                 $telegramChatId,
                 data_get($message, 'from.username'),
                 data_get($message, 'from.language_code'),
             );
+
+            $reply = [
+                'chat_id' => $telegramChatId,
+                'text' => $connection
+                    ? __('Telegram is connected to Linket. Return to Account Settings to choose which notifications you receive.')
+                    : __('This connection link is no longer valid. In Linket, open Account Settings, then Integrations, and press Connect Telegram again.'),
+            ];
         });
+
+        if (is_array($reply)) {
+            $this->telegram->reply((int) $reply['chat_id'], (string) $reply['text']);
+        }
 
         return response()->noContent();
     }
