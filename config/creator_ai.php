@@ -139,6 +139,12 @@ return [
         'enabled' => env('CREATOR_AI_OPENAI_COST_AUDIT_ENABLED', false),
         'admin_api_key' => env('CREATOR_AI_OPENAI_COST_AUDIT_ADMIN_KEY'),
         'dedicated_project_id' => env('CREATOR_AI_OPENAI_COST_AUDIT_PROJECT_ID'),
+        // Official Costs API is daily aggregate, never a per-request price.
+        // Both additional settlement gates default OFF. Operators must attest
+        // the project/key are exclusively used by Linket generation.
+        'exclusive_project' => env('CREATOR_AI_OPENAI_COST_EXCLUSIVE_PROJECT', false),
+        'generation_api_key_id' => env('CREATOR_AI_OPENAI_COST_GENERATION_KEY_ID'),
+        'settlement_enabled' => env('CREATOR_AI_OPENAI_COST_SETTLEMENT_ENABLED', false),
     ],
 
     // Defaults for the separate future generation-quota service, NOT a billing
