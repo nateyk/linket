@@ -45,6 +45,11 @@ vi.mock('@common/admin/ads/ad-host', () => ({
   AdHost: () => null,
 }));
 
+vi.mock('@app/gen/store-appearance', async importOriginal => ({
+  ...(await importOriginal<typeof import('@app/gen/store-appearance')>()),
+  updateStoreAppearance: vi.fn(async () => ({data: {}})),
+}));
+
 vi.mock('@app/gen/stores', async importOriginal => ({
   ...(await importOriginal<typeof import('@app/gen/stores')>()),
   updateStoreCreatorProfile: vi.fn(async () => ({data: {}})),
@@ -79,6 +84,7 @@ vi.mock('@app/dashboard/stores/store-editor/live-preview', () => ({
 }));
 
 import {updateStoreCreatorProfile} from '@app/gen/stores';
+import {updateStoreAppearance} from '@app/gen/store-appearance';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 
 import {useBiolinkEditorStore} from './biolink-editor-store';
@@ -102,6 +108,15 @@ function ProfileProbe() {
 }
 
 /** The phone preview's data source: the profile config pushed by the form. */
+function AppearanceSuggestionProbe() {
+  const apply = useBiolinkEditorStore(s => s.applyAppearanceSuggestion);
+  return (
+    <button type="button" onClick={() => apply({variant: 'outline'}, 'a'.repeat(64))}>
+      Stage a reviewed suggestion
+    </button>
+  );
+}
+
 function PreviewProbe() {
   const bio = useBiolinkEditorStore(s => s.profileConfig.bio);
   const dirty = useBiolinkEditorStore(s => s.profileIsDirty);
@@ -140,7 +155,7 @@ function renderEditor(opts: {form?: boolean} = {}) {
             ),
           },
           {path: 'about', element: <div>about panel</div>},
-          {path: 'appearance', element: <div>appearance panel</div>},
+          {path: 'appearance', element: <AppearanceSuggestionProbe />},
         ],
       },
     ],
@@ -170,6 +185,22 @@ function markDirty() {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(updateStoreCreatorProfile).mockResolvedValue({data: {}} as any);
+});
+
+test('saving a creator-reviewed preset sends the source fingerprint through the normal appearance endpoint', async () => {
+  await renderLoadedEditor();
+  fireEvent.click(screen.getByRole('tab', {name: 'Appearance'}));
+  await screen.findByRole('button', {name: 'Stage a reviewed suggestion'});
+  fireEvent.click(screen.getByRole('button', {name: 'Stage a reviewed suggestion'}));
+  const save = screen.getByRole('button', {name: /Save changes/});
+  await waitFor(() => expect(save.hasAttribute('disabled')).toBe(false));
+  fireEvent.click(save);
+  await waitFor(() => expect(updateStoreAppearance).toHaveBeenCalled());
+  expect(vi.mocked(updateStoreAppearance).mock.calls[0][0]).toBe('5');
+  expect(vi.mocked(updateStoreAppearance).mock.calls[0][1]).toMatchObject({
+    source_fingerprint: 'a'.repeat(64),
+    config: {btnConfig: {variant: 'outline'}},
+  });
 });
 
 test('editor page has exactly one h1, the store name (A-09)', async () => {

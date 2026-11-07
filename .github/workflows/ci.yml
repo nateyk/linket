@@ -9,11 +9,12 @@ on:
   # Verify an isolated branch manually before opening a PR when needed.
   workflow_dispatch:
 
-# Cancel obsolete updates to the same PR. Give each main commit its own
-# concurrency slot so a stuck previous main run cannot block later SHA-locked CI.
-# Production deployment has its own separate, non-cancelling concurrency group.
+# Cancel obsolete CI work per event and PR/branch. Production deployment has
+# its own separate, non-cancelling concurrency group.
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
+  # Move to a fresh concurrency namespace after a cancelled legacy verify join
+  # remained queued and blocked the current PR. Keep cancellation for future SHAs.
+  group: ci-v2-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
 
 permissions:
@@ -22,8 +23,6 @@ permissions:
 jobs:
   changes:
     name: Classify changed files
-    # Verify both PRs and main on disposable hosted runners.
-    # The external runner workspace is paused; avoid indefinite queues.
     runs-on: ubuntu-latest
     timeout-minutes: 3
     permissions:
@@ -55,9 +54,14 @@ jobs:
           # GitHub CLI is preinstalled on github-hosted Ubuntu runners.
           # --paginate covers PRs changing more than 100 files. Fail closed
           # if the API fails: never silently declare code changes docs-only.
-          files="$(gh api --paginate \
+          if ! files="$(gh api --paginate \
             "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/files?per_page=100" \
-            --jq '.[].filename')"
+            --jq '.[].filename')"; then
+            # A disabled/unavailable PR API must never skip required checks.
+            echo '::warning::PR file list unavailable; verifying full PHP and Node suites'
+            printf 'run_php=true\nrun_node=true\n' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           run_php=false
           run_node=false
           if [[ -z "$files" ]]; then
@@ -94,8 +98,6 @@ jobs:
     name: PHP tests and security (8.4 / MySQL 8.0)
     needs: changes
     if: ${{ needs.changes.outputs.run_php == 'true' }}
-    # Verify both PRs and main on disposable hosted runners.
-    # The external runner workspace is paused; avoid indefinite queues.
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
@@ -208,6 +210,7 @@ jobs:
           bash scripts/tests/test-release-artifact.sh
           bash scripts/tests/test-resolve-verified-ci.sh
           bash scripts/tests/test-release-gates.sh
+          bash scripts/tests/test-chatgpt-staging-preflight.sh
 
       - name: PHP tests - zero failures required
         run: php artisan test --compact
@@ -244,8 +247,6 @@ jobs:
     name: TypeScript, browser tests and Vite build (Node 24)
     needs: changes
     if: ${{ needs.changes.outputs.run_node == 'true' }}
-    # Verify both PRs and main on disposable hosted runners.
-    # The external runner workspace is paused; avoid indefinite queues.
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -328,9 +329,8 @@ jobs:
     # Preserve the original required GitHub branch-protection check name.
     name: Verify (PHP 8.4 + Node 24 + MySQL 8.0)
     needs: [changes, php, frontend]
-    if: ${{ always() }}
-    # Verify both PRs and main on disposable hosted runners.
-    # The external runner workspace is paused; avoid indefinite queues.
+    # Cancelled PR runs must not queue the final join and block newer SHA checks.
+    if: ${{ always() && !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
@@ -362,7 +362,6 @@ jobs:
     # A deployable main SHA must have BOTH backend and frontend verified.
     needs: [verify, frontend]
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.verify.result == 'success' }}
-    # The SHA-locked artifact builder must also remain runnable without an external runner.
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -457,47 +456,15 @@ jobs:
           date -u +%Y-%m-%dT%H:%M:%SZ > BUILD_AT
           echo "CI_SHA=$SHA" > CI_META
           echo "CI_RELEASE_ID=$RELEASE_ID" >> CI_META
-          tar -czf "/tmp/${ARTIFACT_NAME}.tar.gz" \
-            --exclude='.git' \
-            --exclude='.github' \
-            --exclude='.gitignore' \
-            --exclude='tests' \
-            --exclude='scripts/tests' \
-            --exclude='node_modules' \
-            --exclude='storage/app/*' \
-            --exclude='storage/framework/cache/*' \
-            --exclude='storage/framework/sessions/*' \
-            --exclude='storage/framework/views/*' \
-            --exclude='storage/logs/*' \
-            --exclude='storage/tus/*' \
-            --exclude='storage/clockwork/*' \
-            --exclude='storage/pail/*' \
-            --exclude='bootstrap/cache/*.php' \
-            --exclude='.env' --exclude='.env.*' \
-            --exclude='public/hot' \
-            --exclude='.phpunit.cache' \
-            --exclude='coverage' \
-            --exclude='*.sql' --exclude='*.sql.gz' \
-            --exclude='.ddev' \
-            --exclude='.agents' \
-            --exclude='.superpowers' \
-            --exclude='.cursor' \
-            --exclude='.bootstrap-admin.json' \
-            --exclude='linket codex.md' \
-            --exclude='NUL' \
-            --exclude='linket-*.tar.gz' \
-            --exclude='*.tar.gz' \
-            --exclude='public/storage/*' \
-            .
+          # Reuse the independently tested producer and consumer gates.
+          # Never package raw storage, cached configuration or signing keys.
+          bash scripts/release/build-release-artifact.sh "$PWD" "/tmp/${ARTIFACT_NAME}.tar.gz" "$SHA"
           mv "/tmp/${ARTIFACT_NAME}.tar.gz" "./${ARTIFACT_NAME}.tar.gz"
-          # Avoid tar -> grep -q SIGPIPE under pipefail for large releases.
-          tar -tzf "${ARTIFACT_NAME}.tar.gz" > /tmp/linket-release-members.txt
-          grep -Eq '^(\./)?RELEASE_SHA$' /tmp/linket-release-members.txt || { echo 'RELEASE_SHA missing'; exit 1; }
-          grep -Eq '^(\./)?public/build/manifest.json$' /tmp/linket-release-members.txt || { echo 'manifest missing'; exit 1; }
-          grep -Eq '^(\./)?vendor/autoload.php$' /tmp/linket-release-members.txt || { echo 'vendor missing'; exit 1; }
-          sha256sum "${ARTIFACT_NAME}.tar.gz" > "${ARTIFACT_NAME}.tar.gz.sha256"
+          mv "/tmp/${ARTIFACT_NAME}.tar.gz.sha256" "./${ARTIFACT_NAME}.tar.gz.sha256"
+          bash deploy/verify-release-artifact.sh "${ARTIFACT_NAME}.tar.gz" "$SHA"
           cat "${ARTIFACT_NAME}.tar.gz.sha256"
           ls -lh "${ARTIFACT_NAME}.tar.gz"*
+          echo "ARTIFACT_NAME=${ARTIFACT_NAME}" >> "$GITHUB_ENV"
 
       # Keep upload-artifact@v4 for the final CD artifact until the separate
       # deploy-production.yml download-artifact@v4 is upgraded together.
@@ -506,8 +473,8 @@ jobs:
         with:
           name: linket-ci-${{ github.sha }}
           path: |
-            linket-*.tar.gz
-            linket-*.tar.gz.sha256
+            ${{ env.ARTIFACT_NAME }}.tar.gz
+            ${{ env.ARTIFACT_NAME }}.tar.gz.sha256
             RELEASE_SHA
             RELEASE_ID
             CI_META
