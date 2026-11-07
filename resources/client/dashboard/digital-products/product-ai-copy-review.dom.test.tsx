@@ -265,8 +265,10 @@ describe('AI product-copy review interaction', () => {
     expect((await screen.findByRole('status')).textContent).toMatch(
       /added to the editor/i,
     );
-    expect(screen.getByRole('button', {name: /Suggest copy/i})).toBe(
-      document.activeElement,
+    await waitFor(() =>
+      expect(screen.getByRole('button', {name: /Suggest copy/i})).toBe(
+        document.activeElement,
+      ),
     );
     expect(api.post).toHaveBeenCalledTimes(2);
   });

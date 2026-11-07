@@ -152,7 +152,13 @@ export function ProductAiCopyReview({
   }, [draftFocusKey, suggestionId, checking]);
 
   useEffect(() => {
-    if (notice && !busy && !draft) triggerRef.current?.focus();
+    if (!notice || busy || draft) return;
+    // Apply removes its button. A second click in the same double-click can
+    // then land on the document and steal focus. Restore the trigger after that.
+    const focusTrigger = () => triggerRef.current?.focus();
+    focusTrigger();
+    const timer = window.setTimeout(focusTrigger, 0);
+    return () => window.clearTimeout(timer);
   }, [notice, busy, draft]);
 
   const saveReviewRef = useRef(saveReview);
