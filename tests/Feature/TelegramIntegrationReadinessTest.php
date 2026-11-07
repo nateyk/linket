@@ -95,7 +95,7 @@ class TelegramIntegrationReadinessTest extends TestCase
 
             return ($data['chat_id'] ?? null) === 512_127_001
                 && is_string($data['text'] ?? null)
-                && str_contains($data['text'], 'connected to Linket')
+                && str_contains($data['text'], 'Welcome to Linket')
                 && ! str_contains($data['text'], 'CMltyChmYFBUvVP24Fnt7lhNaSL5zhHYCwmNu24RXoSl89mk');
         });
     }

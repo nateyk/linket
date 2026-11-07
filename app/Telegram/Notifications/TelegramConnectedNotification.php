@@ -50,8 +50,8 @@ final class TelegramConnectedNotification extends Notification implements Should
         return TelegramMessage::create()
             ->to($this->chatId)
             ->normal()
-            ->content(__('Telegram connected to Linket'))
-            ->line(__('Your private Telegram chat is now connected to your Linket account.'))
+            ->content(__('Welcome to Linket'))
+            ->line(__('This chat is connected. Choose which notifications you receive in Account Settings.'))
             ->line(__('Manage notification preferences in Account Settings.'))
             ->button(__('Notification settings'), url('/account-settings/integrations'));
     }

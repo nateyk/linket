@@ -88,7 +88,7 @@ final class TelegramWebhookController extends Controller
             if ($plainToken === '') {
                 $reply = [
                     'chat_id' => $telegramChatId,
-                    'text' => __('To connect this chat, open Linket, go to Account Settings, then Integrations, and press Connect Telegram.'),
+                    'text' => __('Welcome to Linket. To connect this chat, open Account Settings, then Integrations, and press Connect Telegram.'),
                 ];
 
                 return;
@@ -105,8 +105,8 @@ final class TelegramWebhookController extends Controller
             $reply = [
                 'chat_id' => $telegramChatId,
                 'text' => $connection
-                    ? __('Telegram is connected to Linket. Return to Account Settings to choose which notifications you receive.')
-                    : __('This connection link is no longer valid. In Linket, open Account Settings, then Integrations, and press Connect Telegram again.'),
+                    ? __('Welcome to Linket. This chat is connected. Choose which notifications you receive in Account Settings.')
+                    : __('Welcome to Linket. This connection link has expired. Press Connect Telegram in Account Settings, then Integrations, to get a new one.'),
             ];
         });
 
