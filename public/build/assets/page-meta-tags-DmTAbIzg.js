@@ -1,2 +1,0 @@
-import{t as e}from"./default-meta-tags--uJ-1IRr.js";import{t}from"./helmet-D_VAJyYv.js";import{tc as n}from"./icons-CIjNMVMP.js";var r=n();function i({query:n,data:i}){return i||=n?.data,i?.seoTags?(0,r.jsx)(t,{tags:i.seoTags}):(0,r.jsx)(e,{})}export{i as t};
-//# sourceMappingURL=page-meta-tags-DmTAbIzg.js.map

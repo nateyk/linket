@@ -1,2 +1,0 @@
-import{L as e}from"./ReactStore-_v4JyCm7.js";import{i as t}from"./stateAttributesMapping-0r95ET3n.js";var n=e(function(e){return t(`dialog`,e)});export{n as t};
-//# sourceMappingURL=DialogRoot-lztpezCm.js.map

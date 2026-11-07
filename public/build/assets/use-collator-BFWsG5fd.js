@@ -1,0 +1,2 @@
+import{r as e}from"./trans-CRItcigO.js";var t=new Map;function n(n){let{localeCode:r}=e(),i=r+(n?Object.entries(n).sort((e,t)=>e[0]<t[0]?-1:1).join():``);if(t.has(i))return t.get(i);let a=new Intl.Collator(r,n);return t.set(i,a),a}export{n as t};
+//# sourceMappingURL=use-collator-BFWsG5fd.js.map

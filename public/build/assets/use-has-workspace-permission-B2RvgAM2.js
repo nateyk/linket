@@ -1,0 +1,2 @@
+import{Bi as e}from"./client-CPpYik2Q.js";function t(t,n){let{user:r}=e(),i=t.members?.find(e=>e.id===r?.id);return i?i.is_owner||!!i.permissions?.find(e=>e.name===n):!1}export{t};
+//# sourceMappingURL=use-has-workspace-permission-B2RvgAM2.js.map

@@ -1,0 +1,2 @@
+import{a as e}from"./rolldown-runtime-BWaJ3C7D.js";import{ic as t,nc as n,rc as r}from"./icons-DQz5vrUS.js";var i=e(t()),a=r();function o({children:e,className:t}){let r=i.Children.toArray(e);return(0,a.jsx)(`div`,{className:n(`flex items-center gap-1 overflow-hidden`,t),children:r.map((e,t)=>(0,a.jsxs)(i.Fragment,{children:[(0,a.jsx)(`div`,{children:e}),t<r.length-1?(0,a.jsx)(`div`,{children:`•`}):null]},t))})}export{o as t};
+//# sourceMappingURL=bullet-seprated-items-CQ4qm4Jt.js.map

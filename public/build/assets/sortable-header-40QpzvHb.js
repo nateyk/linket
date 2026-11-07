@@ -1,0 +1,2 @@
+import{br as e}from"./client-CPpYik2Q.js";import{t}from"./cn-l3sarDCX.js";import{Js as n,rc as r}from"./icons-DQz5vrUS.js";var i=r();function a({column:r,children:a,className:o}){let s=r.getIsSorted(),c=()=>{s===!1?r.toggleSorting(!1):s===`asc`?r.toggleSorting(!0):r.clearSorting()};return(0,i.jsxs)(e,{variant:`link`,className:t(`px-0`,o),onClick:()=>c(),children:[a,(0,i.jsx)(n,{className:t(!s&&`invisible`,s===`asc`&&`rotate-180`)})]})}export{a as t};
+//# sourceMappingURL=sortable-header-40QpzvHb.js.map

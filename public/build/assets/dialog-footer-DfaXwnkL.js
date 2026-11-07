@@ -1,2 +1,0 @@
-import{ec as e,tc as t}from"./icons-CIjNMVMP.js";var n=t();function r(t){let{children:r,startAction:a,className:o,dividerTop:s}=t;return(0,n.jsxs)(`div`,{className:e(o,s&&`border-t`,i(t),`flex flex-shrink-0 items-center gap-2.5`),children:[(0,n.jsx)(`div`,{children:a}),(0,n.jsx)(`div`,{className:`ml-auto flex items-center gap-2.5`,children:r})]})}function i({padding:e,size:t}){if(e)return e;switch(t){case`xs`:return`p-3.5`;case`sm`:return`p-4.5`;default:return`px-6 py-4`}}export{r as t};
-//# sourceMappingURL=dialog-footer-DfaXwnkL.js.map

@@ -1,0 +1,2 @@
+import{a as e}from"./rolldown-runtime-BWaJ3C7D.js";import{ic as t}from"./icons-DQz5vrUS.js";var n=e(t());function r(e){let t=(0,n.useRef)(null);return(0,n.useEffect)(()=>{t.current=e},[e]),t.current}export{r as t};
+//# sourceMappingURL=use-previous-C3KyVMYk.js.map

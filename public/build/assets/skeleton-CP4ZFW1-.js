@@ -1,0 +1,2 @@
+import{t as e}from"./cn-l3sarDCX.js";import{rc as t}from"./icons-DQz5vrUS.js";var n=t();function r({className:t,...r}){return(0,n.jsx)(`div`,{"data-slot":`skeleton`,className:e(`animate-pulse rounded-card-sm bg-muted`,t),...r})}export{r as t};
+//# sourceMappingURL=skeleton-CP4ZFW1-.js.map

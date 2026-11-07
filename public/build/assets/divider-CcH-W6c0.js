@@ -1,0 +1,2 @@
+import{rc as e}from"./icons-DQz5vrUS.js";var t=e();function n(){return(0,t.jsx)(`div`,{className:`self-stretch mx-1 w-px bg-border flex-shrink-0`})}export{n as t};
+//# sourceMappingURL=divider-CcH-W6c0.js.map

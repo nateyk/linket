@@ -1,2 +1,0 @@
-import{Pi as e}from"./client-DDuoGab_.js";import{v as t}from"./chunk-62JRHF6Z-BMYGeZpM.js";function n(){let n=t(),r=e(e=>e.activeWorkspace),i=n.some(e=>e.handle?.linketRoutesType===`dashboard`)?`dashboard`:`admin`;return{routeType:i,isForCurrentUser:i===`dashboard`?!r||r.is_personal:!1}}export{n as t};
-//# sourceMappingURL=use-datatable-route-type-DJss5Dc8.js.map

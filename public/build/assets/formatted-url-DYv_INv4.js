@@ -1,0 +1,2 @@
+import{a as e}from"./rolldown-runtime-BWaJ3C7D.js";import{t}from"./remove-protocol-thgeqZv_.js";import{ic as n}from"./icons-DQz5vrUS.js";var r=(0,e(n()).memo)(({url:e})=>t(e));export{r as t};
+//# sourceMappingURL=formatted-url-DYv_INv4.js.map

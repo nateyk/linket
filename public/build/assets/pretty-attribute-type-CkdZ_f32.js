@@ -1,0 +1,2 @@
+import{t as e}from"./trans-CRItcigO.js";import{rc as t}from"./icons-DQz5vrUS.js";var n=t();function r({type:t}){switch(t){case`conversation`:return(0,n.jsx)(e,{message:`Conversation`});case`user`:return(0,n.jsx)(e,{message:`User`});case`aiAgentSession`:return(0,n.jsx)(e,{message:`AI agent`});default:return null}}export{r as t};
+//# sourceMappingURL=pretty-attribute-type-CkdZ_f32.js.map

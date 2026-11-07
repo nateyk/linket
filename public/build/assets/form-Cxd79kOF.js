@@ -1,2 +1,0 @@
-import{t as e}from"./index.esm-BNJv9mud.js";import{tc as t}from"./icons-CIjNMVMP.js";var n=t();function r({children:t,onBeforeSubmit:r,onSubmit:i,form:a,className:o,id:s,onBlur:c,disableNativeValidation:l}){return(0,n.jsx)(e,{...a,children:(0,n.jsx)(`form`,{noValidate:l,id:s,onBlur:c,className:o,onSubmit:e=>{e.stopPropagation(),r?.(),a.handleSubmit(i)(e)},children:t})})}export{r as t};
-//# sourceMappingURL=form-Cxd79kOF.js.map

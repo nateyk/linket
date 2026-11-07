@@ -1,0 +1,2 @@
+import{t as e}from"./default-meta-tags-CPgUe2nm.js";import{t}from"./helmet-BmUvNuek.js";import{rc as n}from"./icons-DQz5vrUS.js";var r=n();function i({query:n,data:i}){return i||=n?.data,i?.seoTags?(0,r.jsx)(t,{tags:i.seoTags}):(0,r.jsx)(e,{})}export{i as t};
+//# sourceMappingURL=page-meta-tags-CL6XKB6e.js.map
