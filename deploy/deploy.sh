@@ -263,6 +263,12 @@ if [[ $MIGRATE_RC -eq 0 ]]; then
   # Run UploadBackendsSeeder to ensure all upload types have backends configured
   log "Running UploadBackendsSeeder to configure upload type backends"
   (cd "$RELEASE_DIR" && $PHP_BIN artisan db:seed --class=UploadBackendsSeeder --force --no-interaction 2>&1 | tail -n 10)
+  log "Ensuring the ChatGPT verified Pro test creator when configured"
+  (cd "$RELEASE_DIR" && $PHP_BIN artisan creator-ai:seed-test-pro --no-interaction)
+  SEED_RC=$?
+  if [[ $SEED_RC -ne 0 ]]; then
+    MIGRATE_RC=$SEED_RC
+  fi
   # Clear settings cache again after seeder updates settings
   (cd "$RELEASE_DIR" && $PHP_BIN artisan cache:forget settings.public 2>&1 | tail -n 3 || true)
 fi
