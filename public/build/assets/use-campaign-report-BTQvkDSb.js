@@ -1,2 +1,0 @@
-import{Gi as e,_a as t,ea as n}from"./client-DDuoGab_.js";import{t as r}from"./use-required-params-ynZWe8Lp.js";function i(i,a){let{campaignId:o}=r([`campaignId`]),s={startDate:i.start.toAbsoluteString(),endDate:i.end.toAbsoluteString(),timezone:i.start.timeZone,country:a};return n({queryKey:[`campaigns`,`${o}`,`report`,s],placeholderData:t,queryFn:()=>e.get(`lc/campaigns/${o}/report`,{params:s}).then(e=>e.data)})}export{i as t};
-//# sourceMappingURL=use-campaign-report-BTQvkDSb.js.map

@@ -1,0 +1,2 @@
+import{a as e}from"./rolldown-runtime-BWaJ3C7D.js";import{ic as t,nc as n,rc as r}from"./icons-DQz5vrUS.js";var i=e(t()),a=r();function o({className:e,children:t,size:r,color:o,radius:s,selectable:c,wrap:l=!0,startButton:u}){return(0,a.jsxs)(`div`,{className:n(`flex items-center gap-2`,l&&`flex-wrap`,e),children:[u,i.Children.map(t,e=>{if((0,i.isValidElement)(e))return(0,i.cloneElement)(e,{size:r,color:o,selectable:c,radius:s})})]})}export{o as t};
+//# sourceMappingURL=chip-list-BMuxhtwd.js.map

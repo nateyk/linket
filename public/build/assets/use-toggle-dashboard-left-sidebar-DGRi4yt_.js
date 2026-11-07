@@ -1,0 +1,2 @@
+import{a as e}from"./rolldown-runtime-BWaJ3C7D.js";import{G as t}from"./main-BqoYyKop.js";import{Ui as n}from"./client-CPpYik2Q.js";import{ic as r}from"./icons-DQz5vrUS.js";var i=e(r());function a(){let{leftSidenavStatus:e,setLeftSidenavStatus:r,name:a,isMobileMode:o}=(0,i.useContext)(t);return{leftSidenavStatus:e,toggleLeftSidenav:(0,i.useCallback)(()=>{let t=e===`open`?`compact`:`open`;r(t),n(`${a}.sidenav.compact`,t===`compact`)},[e,r,a]),isMobileMode:o}}export{a as t};
+//# sourceMappingURL=use-toggle-dashboard-left-sidebar-DGRi4yt_.js.map

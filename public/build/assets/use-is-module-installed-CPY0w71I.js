@@ -1,0 +1,2 @@
+import{gi as e}from"./client-CPpYik2Q.js";function t(t){let{modules:n}=e();return!!n?.[t]?.installed}function n(t){let{modules:n}=e();return!!(n?.[t]?.setup&&n?.[t]?.installed)}export{n,t};
+//# sourceMappingURL=use-is-module-installed-CPY0w71I.js.map

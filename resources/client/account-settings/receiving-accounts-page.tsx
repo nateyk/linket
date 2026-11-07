@@ -1,4 +1,10 @@
 import {AccountSettingsPageLayout} from '@app/account-settings/account-settings-page-layout';
+import {
+  ChapaConnectionCard,
+  type ChapaConnectionError,
+  type ChapaGatewayState,
+  readChapaGateway,
+} from '@app/account-settings/chapa-connection-card';
 import {apiClient} from '@common/http/query-client';
 import {Badge} from '@shadcn/badge/badge';
 import {Button} from '@shadcn/button/button';
@@ -87,6 +93,17 @@ function BankLogo({
       )}
     </span>
   );
+}
+
+function chapaErrorFromStatus(error: unknown): ChapaConnectionError {
+  const status = (error as {response?: {status?: number}}).response?.status;
+  if (status === 422) {
+    return 'rejected';
+  }
+  if (status === 403) {
+    return 'pro';
+  }
+  return 'save';
 }
 
 function isValidAccountNumber(number: string, provider: string): boolean {
@@ -321,6 +338,11 @@ export function Component() {
   const [number, setNumber] = useState('');
   const [name, setName] = useState('');
   const [proof, setProof] = useState<File>();
+  const [gateway, setGateway] = useState<ChapaGatewayState | null>(null);
+  const [publicKey, setPublicKey] = useState('');
+  const [secretKey, setSecretKey] = useState('');
+  const [chapaBusy, setChapaBusy] = useState(false);
+  const [chapaError, setChapaError] = useState<ChapaConnectionError | null>(null);
 
   const selectedMethod =
     providers.find(method => method.code === provider) ??
@@ -341,6 +363,13 @@ export function Component() {
       setLoadError(false);
     } catch {
       setLoadError(true);
+    }
+    try {
+      const response = await apiClient.get('/api/v1/storefront/chapa-gateway');
+      setGateway(readChapaGateway(response.data?.data));
+    } catch {
+      setGateway(readChapaGateway(null));
+      setChapaError('load');
     } finally {
       setLoading(false);
     }
@@ -402,6 +431,46 @@ export function Component() {
     }
   };
 
+  const saveChapa = async () => {
+    if (!gateway?.pro || chapaBusy || publicKey.trim() === '' || secretKey.trim() === '') {
+      return;
+    }
+    setChapaBusy(true);
+    setChapaError(null);
+    try {
+      const response = await apiClient.put('/api/v1/storefront/chapa-gateway', {
+        public_key: publicKey.trim(),
+        secret_key: secretKey,
+      });
+      setGateway(readChapaGateway(response.data?.data));
+      setPublicKey('');
+      setSecretKey('');
+    } catch (error) {
+      setChapaError(chapaErrorFromStatus(error));
+    } finally {
+      setChapaBusy(false);
+    }
+  };
+
+  const selectCollector = async (collector: ChapaGatewayState['collector']) => {
+    if (!gateway || gateway.collector === collector || chapaBusy) {
+      return;
+    }
+    if (collector === 'chapa' && (!gateway.pro || !gateway.has_secret)) {
+      return;
+    }
+    setChapaBusy(true);
+    setChapaError(null);
+    try {
+      const response = await apiClient.put('/api/v1/storefront/payment-collector', {collector});
+      setGateway(readChapaGateway(response.data?.data));
+    } catch {
+      setChapaError('collector');
+    } finally {
+      setChapaBusy(false);
+    }
+  };
+
   const toggle = async (account: Account) => {
     if (busy) return;
     setBusy(true);
@@ -438,6 +507,19 @@ export function Component() {
       }
     >
       <div className="flex flex-col gap-5">
+        {gateway && (
+          <ChapaConnectionCard
+            gateway={gateway}
+            publicKey={publicKey}
+            secretKey={secretKey}
+            busy={chapaBusy}
+            error={chapaError}
+            onPublicKey={setPublicKey}
+            onSecretKey={setSecretKey}
+            onSave={() => void saveChapa()}
+            onSelect={collector => void selectCollector(collector)}
+          />
+        )}
 
         {loading && <Spinner />}
         {loadError && (

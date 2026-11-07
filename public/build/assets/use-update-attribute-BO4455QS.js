@@ -1,0 +1,2 @@
+import{Ki as e,Qi as t,Yi as n,xi as r}from"./client-CPpYik2Q.js";import{t as i}from"./on-form-query-error-D2nJCOw4.js";import{t as a}from"./show-http-error-toast-bf-tn0Kl.js";function o(o,s){return t({mutationFn:t=>e.put(`helpdesk/attributes/${o}`,t),onSuccess:()=>{n.invalidateQueries({queryKey:r.attributes.invalidateKey})},onError:e=>s?i(e,s):a(e)})}export{o as t};
+//# sourceMappingURL=use-update-attribute-BO4455QS.js.map

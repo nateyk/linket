@@ -1,2 +1,0 @@
-import{Gi as e,Ji as t,Zi as n,bi as r}from"./client-DDuoGab_.js";import{t as i}from"./on-form-query-error-B6lLDUlP.js";import{t as a}from"./show-http-error-toast-uKJ9NAUV.js";function o(o,s){return n({mutationFn:t=>e.put(`helpdesk/attributes/${o}`,t),onSuccess:()=>{t.invalidateQueries({queryKey:r.attributes.invalidateKey})},onError:e=>s?i(e,s):a(e)})}export{o as t};
-//# sourceMappingURL=use-update-attribute-CaDFhnpU.js.map

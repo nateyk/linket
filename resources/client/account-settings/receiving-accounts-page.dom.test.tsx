@@ -3,7 +3,7 @@ import {cleanup, fireEvent, render, screen, waitFor} from '@testing-library/reac
 import {afterEach, expect, it, vi} from 'vitest';
 import {Component} from './receiving-accounts-page';
 
-const api = vi.hoisted(() => ({get: vi.fn(), post: vi.fn()}));
+const api = vi.hoisted(() => ({get: vi.fn(), post: vi.fn(), put: vi.fn()}));
 vi.mock('@common/http/query-client', () => ({apiClient: api}));
 vi.mock('@ui/i18n/trans', () => ({Trans: ({message}: {message: string}) => message}));
 vi.mock('@ui/i18n/message', () => ({message: (message: string) => ({message})}));
@@ -27,7 +27,6 @@ vi.mock('@app/account-settings/account-settings-page-layout', () => ({
     </main>
   ),
 }));
-vi.mock('@shadcn/button/button', () => ({Button: 'button'}));
 vi.mock('@shadcn/forms/input/input', () => ({Input: ({bindToHookForm: _ignored, ...props}: Record<string, unknown>) => <input {...props} />}));
 vi.mock('@shadcn/spinner/spinner', () => ({Spinner: () => <span>Loading</span>}));
 vi.mock('@shadcn/forms/select/select', () => ({Select: {Root: ({children, onValueChange}: {children: React.ReactNode; onValueChange: (value: string) => void}) => <select aria-label="Payment method" onChange={event => onValueChange(event.target.value)}>{children}</select>, Trigger: () => null, Value: () => null, Content: ({children}: {children: React.ReactNode}) => children, Group: ({children}: {children: React.ReactNode}) => children, Item: ({children, value}: {children: React.ReactNode; value: string}) => <option value={value}>{children}</option>}}));
@@ -152,6 +151,94 @@ it('explains a platform verification pause without changing the approved account
   expect(screen.getByRole('button', {name: 'Account actions'})).toBeTruthy();
   expect(screen.getByText('Approved')).toBeTruthy();
   expect(screen.getByText('Unavailable')).toBeTruthy();
+});
+
+it('connects Chapa on the receiving accounts page and switches the collector', async () => {
+  api.get.mockImplementation((url: string) => {
+    if (url === '/api/v1/storefront/chapa-gateway') {
+      return Promise.resolve({data: {data: {
+        collector: 'verify_et',
+        has_secret: false,
+        public_key_masked: null,
+        chapa_checkout_available: false,
+        pro: true,
+      }}});
+    }
+    return Promise.resolve({data: {data: [], available_methods: [{code: 'cbe', name: 'Commercial Bank of Ethiopia'}]}});
+  });
+  api.put.mockImplementation((url: string) => {
+    if (url === '/api/v1/storefront/chapa-gateway') {
+      return Promise.resolve({data: {data: {
+        collector: 'verify_et',
+        has_secret: true,
+        public_key_masked: '••••blic',
+        chapa_checkout_available: false,
+        pro: true,
+      }}});
+    }
+    return Promise.resolve({data: {data: {
+      collector: 'chapa',
+      has_secret: true,
+      public_key_masked: '••••blic',
+      chapa_checkout_available: true,
+      pro: true,
+    }}});
+  });
+  render(<Component />);
+  fireEvent.change(await screen.findByLabelText('Public key'), {target: {value: 'CHAPUBK-test-public'}});
+  fireEvent.change(screen.getByLabelText('Secret key'), {target: {value: 'seller-secret'}});
+  fireEvent.click(screen.getByRole('button', {name: 'Save Chapa keys'}));
+  expect(await screen.findByText('••••blic')).toBeTruthy();
+  expect(screen.getByText('A secret key is stored.')).toBeTruthy();
+  expect(screen.getByLabelText('Secret key')).toHaveProperty('value', '');
+  fireEvent.click(screen.getByRole('button', {name: 'Chapa'}));
+  await waitFor(() => expect(api.put).toHaveBeenCalledWith('/api/v1/storefront/payment-collector', {collector: 'chapa'}));
+  expect(await screen.findByText('New checkouts use Chapa.')).toBeTruthy();
+  expect(screen.queryByRole('option', {name: /Chapa/})).toBeNull();
+});
+
+it('hides Chapa keys and asks a free seller to upgrade when they choose Chapa', async () => {
+  api.get.mockImplementation((url: string) => {
+    if (url === '/api/v1/storefront/chapa-gateway') {
+      return Promise.resolve({data: {data: {
+        collector: 'verify_et',
+        has_secret: false,
+        public_key_masked: null,
+        chapa_checkout_available: false,
+        pro: false,
+      }}});
+    }
+    return Promise.resolve({data: {data: [], available_methods: [{code: 'cbe', name: 'CBE'}]}});
+  });
+  render(<Component />);
+  expect(await screen.findByRole('button', {name: 'Chapa'})).toBeTruthy();
+  expect(screen.queryByLabelText('Public key')).toBeNull();
+  expect(screen.queryByLabelText('Secret key')).toBeNull();
+  expect(screen.queryByRole('button', {name: 'Save Chapa keys'})).toBeNull();
+  expect(screen.queryByText('You need to upgrade to Pro to use Chapa.')).toBeNull();
+  fireEvent.click(screen.getByRole('button', {name: 'Chapa'}));
+  expect(await screen.findByText('You need to upgrade to Pro to use Chapa.')).toBeTruthy();
+  expect(api.put).not.toHaveBeenCalled();
+  expect(screen.getByRole('button', {name: 'Bank accounts'})).toHaveProperty('ariaPressed', 'true');
+});
+
+it('says Chapa checkout is paused when Pro is inactive and Chapa stays selected', async () => {
+  api.get.mockImplementation((url: string) => {
+    if (url === '/api/v1/storefront/chapa-gateway') {
+      return Promise.resolve({data: {data: {
+        collector: 'chapa',
+        has_secret: true,
+        public_key_masked: '••••blic',
+        chapa_checkout_available: false,
+        pro: false,
+      }}});
+    }
+    return Promise.resolve({data: {data: [], available_methods: []}});
+  });
+  render(<Component />);
+  expect(await screen.findByText('Chapa checkout is paused until Pro is active.')).toBeTruthy();
+  expect(screen.queryByDisplayValue('seller-secret')).toBeNull();
+  expect(screen.getByRole('button', {name: 'Bank accounts'})).toBeTruthy();
 });
 
 it('explains exhausted sales capacity without changing account approval', async () => {

@@ -1,2 +1,0 @@
-import{Bi as e}from"./client-DDuoGab_.js";var t={};function n(n,r){if(e(`${r}-chatSoundsDisabled`,!1))return null;let i=n.replace(/([A-Z])/g,`-$1`).toLowerCase(),a=t[i]??new Audio(`/sounds/${i}.mp3`);t[i]=a,a.currentTime=0,a.volume=.4;try{a.play()}catch{}}export{n as t};
-//# sourceMappingURL=play-conversation-sound-IoKbvI5R.js.map

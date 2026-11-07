@@ -1,2 +1,0 @@
-import{yr as e}from"./client-DDuoGab_.js";import{t}from"./cn-1lwumymQ.js";import{Ks as n,tc as r}from"./icons-CIjNMVMP.js";var i=r();function a({column:r,children:a,className:o}){let s=r.getIsSorted(),c=()=>{s===!1?r.toggleSorting(!1):s===`asc`?r.toggleSorting(!0):r.clearSorting()};return(0,i.jsxs)(e,{variant:`link`,className:t(`px-0`,o),onClick:()=>c(),children:[a,(0,i.jsx)(n,{className:t(!s&&`invisible`,s===`asc`&&`rotate-180`)})]})}export{a as t};
-//# sourceMappingURL=sortable-header-DZ2w_lQC.js.map

@@ -1,2 +1,0 @@
-import{a as e}from"./rolldown-runtime-BWaJ3C7D.js";import{t}from"./NumberFormatter-CHYrjPj-.js";import{nc as n}from"./icons-CIjNMVMP.js";import{r}from"./trans-DLdXWXX-.js";var i=e(n());function a(e={}){let{localeCode:n}=r();return(0,i.useMemo)(()=>new t(n,e),[n,e])}export{a as t};
-//# sourceMappingURL=use-number-formatter-BmbXbJUa.js.map

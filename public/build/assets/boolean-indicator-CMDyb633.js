@@ -1,0 +1,2 @@
+import{fr as e,rc as t,us as n}from"./icons-DQz5vrUS.js";var r=t();function i({value:t}){return t?(0,r.jsx)(n,{className:`size-4 text-positive`}):(0,r.jsx)(e,{className:`size-4 text-destructive`})}export{i as t};
+//# sourceMappingURL=boolean-indicator-CMDyb633.js.map

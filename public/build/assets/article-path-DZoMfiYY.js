@@ -1,2 +1,0 @@
-import{t as e}from"./category-link-yWcS8wLP.js";import{tc as t}from"./icons-CIjNMVMP.js";var n=t();function r({path:t,className:r,noLinks:i}){if(!t||!t.length)return null;let a,o;return t[0]&&(a=i?t[0].name:(0,n.jsx)(e,{category:t[0]})),t[1]&&(o=i?t[1].name:(0,n.jsx)(e,{category:t[1]})),(0,n.jsxs)(`div`,{className:r,children:[a,` `,!!a&&!!o&&`/`,` `,o]})}export{r as t};
-//# sourceMappingURL=article-path-DZoMfiYY.js.map

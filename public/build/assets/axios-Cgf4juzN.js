@@ -1,2 +1,0 @@
-import{Oa as e}from"./client-DDuoGab_.js";var{Axios:t,AxiosError:n,CanceledError:r,isCancel:i,CancelToken:a,VERSION:o,all:s,Cancel:c,isAxiosError:l,spread:u,toFormData:d,AxiosHeaders:f,HttpStatusCode:p,formToJSON:m,getAdapter:h,mergeConfig:g,create:_}=e;export{l as n,n as t};
-//# sourceMappingURL=axios-Cgf4juzN.js.map

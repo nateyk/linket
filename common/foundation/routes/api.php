@@ -278,6 +278,9 @@ Route::group(['prefix' => 'v1'], function () {
         Route::post('storefront/products/{digitalProduct}/unarchive', [DigitalProductsController::class, 'unarchive']);
         Route::apiResource('storefront/products', DigitalProductsController::class)
             ->names('storefront.products');
+        Route::get('storefront/chapa-gateway', [\App\Storefront\Controllers\CreatorChapaGatewayController::class, 'show'])->middleware('auth:sanctum');
+        Route::put('storefront/chapa-gateway', [\App\Storefront\Controllers\CreatorChapaGatewayController::class, 'update'])->middleware('auth:sanctum');
+        Route::put('storefront/payment-collector', [\App\Storefront\Controllers\CreatorChapaGatewayController::class, 'updateCollector'])->middleware('auth:sanctum');
         Route::get('storefront/payment-methods', [CreatorPaymentMethodsController::class, 'index'])->middleware('auth:sanctum');
         Route::get('storefront/payment-methods/{method}/details', [CreatorPaymentMethodsController::class, 'details'])->middleware(['auth:sanctum', 'throttle:20,1']);
         Route::post('storefront/payment-methods', [CreatorPaymentMethodsController::class, 'store'])->middleware('auth:sanctum');
@@ -302,6 +305,8 @@ Route::group(['prefix' => 'v1'], function () {
         Route::get('admin/storefront/creators/{user}', [\App\Storefront\Controllers\AdminCreatorManagementController::class, 'show'])->middleware('auth:sanctum');
         Route::get('admin/storefront/payment-methods', [CreatorPaymentMethodsController::class, 'adminIndex'])->middleware('auth:sanctum');
         Route::get('admin/storefront/payment-methods/{method}', [CreatorPaymentMethodsController::class, 'adminShow'])->middleware('auth:sanctum');
+        Route::get('admin/billing/subscription-gateway', [\App\Payments\Controllers\AdminSubscriptionGatewayController::class, 'show'])->middleware('auth:sanctum');
+        Route::put('admin/billing/subscription-gateway', [\App\Payments\Controllers\AdminSubscriptionGatewayController::class, 'update'])->middleware('auth:sanctum');
         Route::get('admin/storefront/verify-et-settings', [\App\Payments\Controllers\AdminVerifyEtSettingsController::class, 'show'])->middleware('auth:sanctum');
         Route::patch('admin/storefront/verify-et-settings', [\App\Payments\Controllers\AdminVerifyEtSettingsController::class, 'update'])->middleware('auth:sanctum');
         Route::get('admin/storefront/payment-method-catalog', [CreatorPaymentMethodsController::class, 'catalog'])->middleware('auth:sanctum');

@@ -1,0 +1,2 @@
+import{Bi as e,zi as t}from"./client-CPpYik2Q.js";function n(t){let{user:n,hasPermission:r}=e();return n?.id===t||r(`users.update`)}function r(e){return t.user?.id===e||t.hasPermission(`users.update`)}export{n,r as t};
+//# sourceMappingURL=use-agent-permissions-QwFWY6qm.js.map

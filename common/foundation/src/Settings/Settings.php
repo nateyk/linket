@@ -72,6 +72,7 @@ class Settings
         'incoming_email',
         'uploading',
         'billing.chapa.webhook_secret',
+        'billing.chapa.secret_key',
     ];
 
     public function __construct()

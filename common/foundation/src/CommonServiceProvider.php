@@ -4,7 +4,10 @@ namespace Common;
 
 use App\Models\Channel;
 use App\Payments\Commands\ProcessChapaSubscriptionRenewals;
+use App\Payments\Models\ProSubscriptionPayment;
 use App\Models\User;
+use App\Storefront\Models\CommissionInvoice;
+use App\Storefront\Models\StorefrontOrder;
 use App\Policies\ChannelPolicy;
 use Clockwork\Support\Laravel\ClockworkServiceProvider;
 use Common\Auth\Models\BaseUser;
@@ -723,6 +726,10 @@ class CommonServiceProvider extends ServiceProvider
         Relation::enforceMorphMap([
             Workspace::MODEL_TYPE => Workspace::class,
             User::MODEL_TYPE => User::class,
+            Subscription::class => Subscription::class,
+            StorefrontOrder::class => StorefrontOrder::class,
+            ProSubscriptionPayment::class => ProSubscriptionPayment::class,
+            CommissionInvoice::class => CommissionInvoice::class,
         ]);
     }
 }

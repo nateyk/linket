@@ -1,2 +1,0 @@
-import{a as e}from"./rolldown-runtime-BWaJ3C7D.js";import{l as t}from"./use-field-CQFLPBx_.js";import{nc as n}from"./icons-CIjNMVMP.js";var r=e(n(),1),i=r.useInsertionEffect??t;function a(e){let t=(0,r.useRef)(null);return i(()=>{t.current=e},[e]),(0,r.useCallback)((...e)=>{let n=t.current;return n?.(...e)},[])}export{a as t};
-//# sourceMappingURL=useEffectEvent-YOSbkrXc.js.map

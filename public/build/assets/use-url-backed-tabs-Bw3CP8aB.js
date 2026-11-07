@@ -1,2 +1,0 @@
-import{a as e}from"./rolldown-runtime-BWaJ3C7D.js";import{nc as t}from"./icons-CIjNMVMP.js";import{v as n}from"./chunk-62JRHF6Z-BMYGeZpM.js";var r=e(t());function i(e){let t=n();return(0,r.useState)(()=>{let n=e.findIndex(e=>t.some(t=>t.pathname.endsWith(e.uri)));return n===-1?0:n})}export{i as t};
-//# sourceMappingURL=use-url-backed-tabs-Bw3CP8aB.js.map

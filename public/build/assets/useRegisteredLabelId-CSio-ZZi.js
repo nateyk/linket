@@ -1,0 +1,2 @@
+import{Vr as e,qt as t}from"./client-CPpYik2Q.js";function n(n,r){let i=t(n);return e(()=>(r(i),()=>{r(e=>e===i?void 0:e)}),[i,r]),i}export{n as t};
+//# sourceMappingURL=useRegisteredLabelId-CSio-ZZi.js.map

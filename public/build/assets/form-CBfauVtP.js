@@ -1,0 +1,2 @@
+import{t as e}from"./index.esm-DKrFRt_y.js";import{rc as t}from"./icons-DQz5vrUS.js";var n=t();function r({children:t,onBeforeSubmit:r,onSubmit:i,form:a,className:o,id:s,onBlur:c,disableNativeValidation:l}){return(0,n.jsx)(e,{...a,children:(0,n.jsx)(`form`,{noValidate:l,id:s,onBlur:c,className:o,onSubmit:e=>{e.stopPropagation(),r?.(),a.handleSubmit(i)(e)},children:t})})}export{r as t};
+//# sourceMappingURL=form-CBfauVtP.js.map

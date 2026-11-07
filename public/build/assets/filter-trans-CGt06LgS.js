@@ -1,2 +1,0 @@
-import{t as e}from"./trans-DLdXWXX-.js";import{tc as t}from"./icons-CIjNMVMP.js";var n=t();function r(e){return typeof e==`object`&&!!e&&`message`in e&&!(`props`in e)}function i(t){return typeof t==`string`?t:r(t)?(0,n.jsx)(e,{...t}):t}function a({label:e}){return(0,n.jsx)(n.Fragment,{children:i(e)})}export{r as n,i as r,a as t};
-//# sourceMappingURL=filter-trans-CGt06LgS.js.map

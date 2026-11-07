@@ -1,2 +1,0 @@
-import{t as e}from"./access-token-panel-DOJYAk8w.js";import{x as t}from"./chunk-62JRHF6Z-BMYGeZpM.js";import{tc as n}from"./icons-CIjNMVMP.js";var r=n();function i(){let n=t();return(0,r.jsx)(e,{user:n})}export{i as Component};
-//# sourceMappingURL=update-user-api-tab-ZuidRPHO.js.map

@@ -24,9 +24,7 @@ class ChapaWebhookController extends Controller
             return response()->json(['message' => 'Invalid Chapa signature.'], 403);
         }
 
-        $txRef = $request->input('tx_ref')
-            ?? $request->input('trx_ref')
-            ?? data_get($request->input('data'), 'tx_ref');
+        $txRef = $this->transactionReference($request);
         if (!is_string($txRef) || blank($txRef)) {
             $deliveryLogger->record(null, true, 'rejected', 'missing_tx_ref');
             return response()->json(['message' => 'Missing Chapa transaction reference.'], 422);
@@ -61,5 +59,22 @@ class ChapaWebhookController extends Controller
         $deliveryLogger->record($txRef, true, 'fulfilled');
 
         return response()->json(['message' => 'Payment processed.']);
+    }
+
+    private function transactionReference(Request $request): ?string
+    {
+        foreach ([
+            $request->input('merchant_reference'),
+            $request->input('tx_ref'),
+            $request->input('trx_ref'),
+            data_get($request->input('data'), 'merchant_reference'),
+            data_get($request->input('data'), 'tx_ref'),
+        ] as $reference) {
+            if (is_string($reference) && filled($reference)) {
+                return $reference;
+            }
+        }
+
+        return null;
     }
 }

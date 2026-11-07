@@ -1,2 +1,0 @@
-import{t as e}from"./bootstrap-data-store-VbxJ2ePj.js";import{Xi as t}from"./client-DDuoGab_.js";function n(n){if(t(n))return n;let r=e().settings.asset_url||e().settings.base_url;return n=n.replace(/^\/+/g,``),n.startsWith(`assets/`)?`${r}/build/${n}`:`${r}/${n}`}export{n as t};
-//# sourceMappingURL=get-asset-url-PK4wb3Z2.js.map
