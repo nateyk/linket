@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Telegram\Models\TelegramLinkToken;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\URL;
 use Tests\TestCase;
 
 class TelegramIntegrationReadinessTest extends TestCase
@@ -16,6 +17,7 @@ class TelegramIntegrationReadinessTest extends TestCase
     {
         parent::setUp();
 
+        URL::forceScheme('https');
         Http::fake([
             'https://api.telegram.org/*' => Http::response(['ok' => true, 'result' => true]),
         ]);

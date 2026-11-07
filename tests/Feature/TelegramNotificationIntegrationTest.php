@@ -8,6 +8,7 @@ use App\Storefront\Notifications\VerifiedSaleNotification;
 use App\Telegram\Models\TelegramLinkToken;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\URL;
 use Tests\TestCase;
 
 class TelegramNotificationIntegrationTest extends TestCase
@@ -18,6 +19,7 @@ class TelegramNotificationIntegrationTest extends TestCase
     {
         parent::setUp();
 
+        URL::forceScheme('https');
         config()->set('services.telegram.enabled', true);
         config()->set('services.telegram.token', 'synthetic-bot-token');
         config()->set('services.telegram.bot_username', 'LinketTestBot');
