@@ -85,7 +85,7 @@ export function ChapaConnectionCard({
             <span className="text-sm font-medium">
               <Trans message="Active collector" />
             </span>
-            <ToggleGroup variant="segmented" value={[gateway.collector]} disabled={busy}>
+            <ToggleGroup variant="segmented" buttonVariant="ghost" value={[gateway.collector]} disabled={busy}>
               <Toggle value="verify_et" disabled={busy} onClick={() => choose('verify_et')}>
                 <Trans message="Bank accounts" />
               </Toggle>
@@ -124,7 +124,7 @@ export function ChapaConnectionCard({
           <span className="text-sm font-medium">
             <Trans message="Active collector" />
           </span>
-          <ToggleGroup variant="segmented" value={[gateway.collector]} disabled={busy}>
+          <ToggleGroup variant="segmented" buttonVariant="ghost" value={[gateway.collector]} disabled={busy}>
             <Toggle value="verify_et" disabled={busy} onClick={() => choose('verify_et')}>
               <Trans message="Bank accounts" />
             </Toggle>

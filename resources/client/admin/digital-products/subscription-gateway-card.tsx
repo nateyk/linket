@@ -147,7 +147,7 @@ export function SubscriptionGatewayCard() {
           </p>
         )}
         {!loading && (
-          <ToggleGroup variant="segmented" value={[gateway]} disabled={busy}>
+          <ToggleGroup variant="segmented" buttonVariant="ghost" value={[gateway]} disabled={busy}>
             <Toggle value="verify_et" disabled={busy} onClick={() => void save('verify_et')}>
               <Trans message="Verify.et" />
             </Toggle>
@@ -157,13 +157,7 @@ export function SubscriptionGatewayCard() {
           </ToggleGroup>
         )}
         {!loading && (
-          <form
-            className="flex flex-col gap-4"
-            onSubmit={event => {
-              event.preventDefault();
-              void saveKeys();
-            }}
-          >
+          <div className="flex flex-col gap-4">
             <Field.Root>
               <Field.Label htmlFor="platform-chapa-public-key">
                 <Trans message="Public key" />
@@ -239,11 +233,15 @@ export function SubscriptionGatewayCard() {
               </Field.Root>
             )}
             <div>
-              <Button type="submit" disabled={busy || !canSaveChapaSettings(publicKey, secretKey, webhookSecret)}>
+              <Button
+                type="button"
+                disabled={busy || !canSaveChapaSettings(publicKey, secretKey, webhookSecret)}
+                onClick={() => void saveKeys()}
+              >
                 <Trans message="Save Chapa keys" />
               </Button>
             </div>
-          </form>
+          </div>
         )}
         {saved && (
           <p role="status" className="text-sm text-muted-foreground">
@@ -251,7 +249,7 @@ export function SubscriptionGatewayCard() {
           </p>
         )}
         {error && !loading && (
-          <Button variant="outline" onClick={() => void load()}>
+          <Button type="button" variant="outline" onClick={() => void load()}>
             <Trans message="Retry" />
           </Button>
         )}

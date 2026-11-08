@@ -1,0 +1,3 @@
+const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["./highlight-Bc0c2-qD.js","./core-DwFY1LKq.js","./rolldown-runtime-BWaJ3C7D.js","./highlight-Cc1wsfsM.css"])))=>i.map(i=>d[i]);
+import{vi as e}from"./client-CJL9GIje.js";function t(e,t=`dark`){e.querySelectorAll(`pre code`).forEach(e=>{n(e,t)})}async function n(t,n=`dark`,r=!1){let{hljs:i}=await e(async()=>{let{hljs:e}=await import(`./highlight-Bc0c2-qD.js`);return{hljs:e}},__vite__mapDeps([0,1,2,3]),import.meta.url);t.dataset.highlighted||(t.classList.add(n===`dark`?`hljs-dark`:`hljs-light`),r&&i.configure({ignoreUnescapedHTML:!0}),i.highlightElement(t))}export{n,t};
+//# sourceMappingURL=highlight-code-B-eKpFEA.js.map

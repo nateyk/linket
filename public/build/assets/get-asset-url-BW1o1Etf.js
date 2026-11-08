@@ -1,0 +1,2 @@
+import{t as e}from"./bootstrap-data-store-Wyy9GBEl.js";import{Xi as t}from"./client-CJL9GIje.js";function n(n){if(t(n))return n;let r=e().settings.asset_url||e().settings.base_url;return n=n.replace(/^\/+/g,``),n.startsWith(`assets/`)?`${r}/build/${n}`:`${r}/${n}`}export{n as t};
+//# sourceMappingURL=get-asset-url-BW1o1Etf.js.map

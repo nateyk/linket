@@ -69,8 +69,8 @@ export const AppSettingsNavConfig: SettingsNavItem[] = [
   {label: message('Product'), to: 'product', position: 2},
   {label: message('Landing page'), to: 'landing-page', position: 2},
   {label: message('Help center'), to: 'hc', position: 3},
-  {label: message('AI agent'), to: 'ai', position: 4},
-  {label: message('Livechat'), to: 'livechat', position: 4},
+  {label: message('Livechat'), to: 'livechat', position: 3.1},
+  {label: message('AI agent'), to: 'ai', position: 3.2},
   {label: message('Ads'), to: 'ads', position: 20},
 ];
 

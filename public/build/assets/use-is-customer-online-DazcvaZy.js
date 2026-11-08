@@ -1,0 +1,2 @@
+import{t as e}from"./helpdesk-channel-CmaVI30t.js";import{r as t}from"./online-status-circle-xoqgyeO5.js";import{hi as n}from"./client-CJL9GIje.js";var r=[1,2,3,4,5,6,7,8,9,10,11,12];function i(i){let{site:a}=n();return!!t(t=>a.demo&&r.includes(+i)?!0:t.presence[e.name]?.find(e=>e.modelType===`user`&&e.modelId===+i))}export{i as t};
+//# sourceMappingURL=use-is-customer-online-DazcvaZy.js.map

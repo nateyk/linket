@@ -1,2 +1,0 @@
-import{Ki as e,ta as t,va as n}from"./client-CPpYik2Q.js";function r(e){return t({queryKey:[`tags`,e],queryFn:({signal:t})=>i(e,t),placeholderData:n})}async function i(t,n){return t.query&&await new Promise(e=>setTimeout(e,300)),e.get(`tags`,{params:{paginate:`simple`,...t},signal:t.query?n:void 0}).then(e=>e.data)}export{r as t};
-//# sourceMappingURL=use-tags-CjF_UjER.js.map

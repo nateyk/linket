@@ -1,0 +1,2 @@
+import{t as e}from"./tracked-events-filters-Ded41Ck_.js";import{t}from"./tracked-events-insights-BzXoNV3C.js";import{x as n}from"./chunk-62JRHF6Z-CSUpuO6-.js";import{rc as r}from"./icons-DQz5vrUS.js";var i=r();function a(){let r=n(),a=e();return(0,i.jsx)(t,{dateRange:r,allFilters:a})}export{a as Component};
+//# sourceMappingURL=workspace-insights-page-DdwPb0cg.js.map

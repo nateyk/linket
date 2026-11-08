@@ -3,6 +3,15 @@ export type SidebarNavActionItem = {
   action: string;
 };
 
+const settingsNavOnlyActions = new Set([
+  '/admin/settings/ai',
+  '/admin/settings/livechat',
+]);
+
+export function isSettingsNavOnlyAdminItem(action: string | undefined): boolean {
+  return action != null && settingsNavOnlyActions.has(action);
+}
+
 /**
  * Decide whether a sidebar NavLink should use exact (`end`) matching.
  *

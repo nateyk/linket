@@ -1,2 +1,0 @@
-import{Un as e}from"./main-BqoYyKop.js";function t(t){let{data:n}=e();return{disabled:n?!n.data.links[t]:!1}}function n(t){let{data:n}=e();return{disabled:n?!n.data.qr_codes[t]:!1}}export{n,t};
-//# sourceMappingURL=use-feature-status-DTZ9Wp6d.js.map

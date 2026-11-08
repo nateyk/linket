@@ -1,0 +1,2 @@
+import"./rolldown-runtime-BWaJ3C7D.js";import{ic as e,rc as t}from"./icons-DQz5vrUS.js";import{Ar as n,Zt as r}from"./client-CJL9GIje.js";import{t as i}from"./CSPContext-CYTm9KFQ.js";e();var a=r();function o(){return n}function s(){return!1}function c(){return!0}function l(){return(0,a.useSyncExternalStore)(o,s,c)}var u=t();function d(e){let{script:t}=e,{nonce:n}=i();return l()?(0,u.jsx)(`script`,{nonce:n,dangerouslySetInnerHTML:{__html:t},suppressHydrationWarning:!0}):null}export{l as n,d as t};
+//# sourceMappingURL=PrehydrationScript-Cg8ty_yD.js.map
