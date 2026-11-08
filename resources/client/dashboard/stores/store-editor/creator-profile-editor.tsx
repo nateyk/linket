@@ -29,7 +29,6 @@ import {
   CroppedAvatar,
   CroppedCover,
 } from '@common/uploads/components/cropped-image-selector';
-import {uploadMaxFileSize} from '@common/uploads/utils/encode-cropped-image';
 import {FileUploadProvider} from '@common/uploads/uploader/file-upload-provider';
 import {Badge} from '@shadcn/badge/badge';
 import {Accordion} from '@shadcn/accordion/accordion';
@@ -56,7 +55,6 @@ import {message} from '@ui/i18n/message';
 import {FormattedCurrency} from '@ui/i18n/formatted-currency';
 import {Trans} from '@ui/i18n/trans';
 import {useTrans} from '@ui/i18n/use-trans';
-import {prettyBytes} from '@ui/utils/files/pretty-bytes';
 import {
   AtSignIcon,
   CameraIcon,
@@ -422,14 +420,6 @@ export function CreatorProfileEditor({
                         <h3 className="text-sm font-medium">
                           <Trans message="Profile media" />
                         </h3>
-                        <InfoTrigger>
-                          <Trans
-                            message="JPG, PNG, or WebP up to :size. Large images are compressed to WebP automatically."
-                            values={{
-                              size: prettyBytes(uploadMaxFileSize('linkImages')),
-                            }}
-                          />
-                        </InfoTrigger>
                       </div>
 
                       <div>

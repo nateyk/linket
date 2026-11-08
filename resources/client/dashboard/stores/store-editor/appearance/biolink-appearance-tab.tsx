@@ -45,10 +45,8 @@ export function Component() {
         description={<Trans message="Customize the look of your creator profile." />}
       />
       <StorefrontAiAppearancePreview />
-      {/* Default (divider list), not separated: this accordion sits inside
-          the section's card pane, and separated items would be cards inside
-          a card. */}
       <Accordion.Root
+        variant="separated"
         value={openSection ? [openSection] : []}
         onValueChange={value => setOpenSection((value[0] as string) ?? null)}
       >

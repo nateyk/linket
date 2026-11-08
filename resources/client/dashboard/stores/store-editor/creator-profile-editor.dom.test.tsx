@@ -455,7 +455,7 @@ test('empty cover shows a rectangular banner placeholder', () => {
   expect(button.querySelector('svg')).not.toBeNull();
 });
 
-test('profile fields keep one media group and flow directly into editable fields', async () => {
+test('profile fields keep one media group and flow directly into editable fields', () => {
   renderProfileEditor('content', REAL_BIOLINK);
   fireEvent.click(triggerByName('Profile'));
 
@@ -481,19 +481,6 @@ test('profile fields keep one media group and flow directly into editable fields
       1,
     );
   }
-
-  const mediaHeading = screen.getByRole('heading', {
-    level: 3,
-    name: 'Profile media',
-  });
-  const mediaSection = mediaHeading.closest('section')!;
-  const uploadHelp = mediaSection.querySelector(
-    '[data-slot="popover-trigger"]',
-  )!;
-  fireEvent.click(uploadHelp);
-  await waitFor(() => {
-    expect(screen.getByText(/JPG, PNG, or WebP/)).toBeTruthy();
-  });
 });
 
 test('the Content heading carries a muted description', () => {

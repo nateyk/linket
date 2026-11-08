@@ -41,13 +41,10 @@ function renderAppearanceTab() {
 
 const trigger = (name: string) => screen.getByRole('button', {name});
 
-test('appearance accordion uses the divider-list variant, not separated cards', () => {
+test('appearance accordion uses separated rows with clear card boundaries', () => {
   renderAppearanceTab();
   const root = document.querySelector('[data-slot="accordion"]');
-  // The accordion sits inside the section's card pane: separated items would
-  // be rounded bordered cards inside that card (nested cards). The default
-  // variant renders divider rows instead.
-  expect(root?.getAttribute('data-variant')).toBe('default');
+  expect(root?.getAttribute('data-variant')).toBe('separated');
 });
 
 test('appearance sections start collapsed (single-open default is closed)', () => {
