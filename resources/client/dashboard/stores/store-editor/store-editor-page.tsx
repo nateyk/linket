@@ -103,8 +103,8 @@ export function Component() {
       <DashboardLayout.MainSection>
         <h1 className="sr-only">{biolink.name}</h1>
         <EditorHeaderWithGuard baseUrl={baseUrl} />
-        <section className="flex min-h-0 flex-auto flex-col overflow-x-hidden overflow-y-auto lg:flex-row lg:overflow-hidden">
-          <div className="flex min-w-0 shrink-0 flex-col lg:min-h-0 lg:flex-auto lg:overflow-hidden">
+        <section className="flex min-h-0 flex-auto flex-col overflow-x-hidden overflow-y-auto bg-muted/30 lg:flex-row lg:overflow-hidden">
+          <div className="flex min-w-0 shrink-0 flex-col bg-card lg:min-h-0 lg:flex-auto lg:overflow-hidden lg:border-r lg:border-border/60">
             {!isInsightsTab && (
               <Tabs.Root
                 value={selectedTab}
@@ -116,16 +116,18 @@ export function Component() {
                   }
                 }}
               >
-                <div className="w-full max-w-3xl px-4 sm:px-6 lg:px-8">
+                <div className="w-full max-w-3xl px-4 py-2 sm:px-6 lg:px-8">
                   <Tabs.List
-                    variant="line"
-                    className="w-full justify-start"
+                    variant="default"
+                    className="w-full justify-start rounded-card-sm"
                     activateOnFocus
                   >
                     <Tabs.LinkTab value="content" to={baseUrl} replace>
+                      <LayoutPanelTop />
                       <Trans message="Content" />
                     </Tabs.LinkTab>
                     <Tabs.LinkTab value="about" to={`${baseUrl}/about`} replace>
+                      <UserRoundPenIcon />
                       <Trans message="About" />
                     </Tabs.LinkTab>
                     <Tabs.LinkTab
@@ -133,6 +135,7 @@ export function Component() {
                       to={`${baseUrl}/appearance`}
                       replace
                     >
+                      <SettingsIcon />
                       <Trans message="Appearance" />
                     </Tabs.LinkTab>
                   </Tabs.List>

@@ -373,13 +373,12 @@ test('opening the About tab on a pristine form keeps it clean (rebase vs mount r
   );
 });
 
-test('content sections use the divider-list variant, not separated cards', () => {
+test('content sections use separated rows with clear card boundaries', () => {
   renderProfileEditor();
   const root = document.querySelector('[data-slot="accordion"]');
-  // The accordion sits inside the section's card pane: separated items would
-  // be rounded bordered cards inside that card (nested cards). The default
-  // variant renders divider rows instead.
-  expect(root?.getAttribute('data-variant')).toBe('default');
+  // Separated rows keep each editing area scannable against the raised work
+  // surface, especially in dark mode.
+  expect(root?.getAttribute('data-variant')).toBe('separated');
 });
 
 test('content sections start collapsed (nothing open by default)', () => {
@@ -456,7 +455,7 @@ test('empty cover shows a rectangular banner placeholder', () => {
   expect(button.querySelector('svg')).not.toBeNull();
 });
 
-test('profile fields keep one media group and flow directly into editable fields', async () => {
+test('profile fields keep one media group and flow directly into editable fields', () => {
   renderProfileEditor('content', REAL_BIOLINK);
   fireEvent.click(triggerByName('Profile'));
 
@@ -478,23 +477,8 @@ test('profile fields keep one media group and flow directly into editable fields
     'available_for_work',
   ]) {
     const field = document.querySelector(`[data-field-name="${fieldName}"]`)!;
-    expect(field.querySelectorAll('[data-slot="popover-trigger"]').length).toBe(
-      1,
-    );
+    expect(field.querySelector('[data-slot="popover-trigger"]')).toBeNull();
   }
-
-  const mediaHeading = screen.getByRole('heading', {
-    level: 3,
-    name: 'Profile media',
-  });
-  const mediaSection = mediaHeading.closest('section')!;
-  const uploadHelp = mediaSection.querySelector(
-    '[data-slot="popover-trigger"]',
-  )!;
-  fireEvent.click(uploadHelp);
-  await waitFor(() => {
-    expect(screen.getByText(/JPG, PNG, or WebP/)).toBeTruthy();
-  });
 });
 
 test('the Content heading carries a muted description', () => {

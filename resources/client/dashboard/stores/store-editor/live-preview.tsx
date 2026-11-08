@@ -18,6 +18,7 @@ import {
   SheetTitle,
 } from '@shadcn/sheet/sheet';
 import {Trans} from '@ui/i18n/trans';
+import {useTrans} from '@ui/i18n/use-trans';
 import {cn} from '@ui/utils/cn';
 import {SmartphoneIcon, XIcon} from 'lucide-react';
 import {
@@ -46,6 +47,7 @@ const SYNC_DEBOUNCE_MS = 150;
  * same store snapshot into its own frame, so two frames never disagree.
  */
 function PreviewDevice() {
+  const {trans} = useTrans();
   const biolink = useBiolinkEditorStore(s => s.biolink);
   const appearance = useBiolinkEditorStore(s => s.appearance);
   const content = useBiolinkEditorStore(s => s.content);
@@ -162,7 +164,9 @@ function PreviewDevice() {
             ref={iframeRef}
             key={backHalf}
             src={`/${backHalf}?preview=1`}
-            title="Live preview of the store page on an iPhone 14 Pro"
+            title={trans({
+              message: 'Live preview of the store page on an iPhone 14 Pro',
+            })}
             width={PHONE_GEOMETRY.viewport.width}
             height={PHONE_GEOMETRY.viewport.height}
             scrolling="auto"
@@ -198,7 +202,7 @@ export function LivePreview() {
           running off the bottom. */}
       <div
         className={cn(
-          'flex w-full min-w-0 shrink-0 flex-col items-center gap-2.5 overflow-hidden border-t bg-background px-4 py-5 lg:h-full lg:w-[min(36vw,28rem)] lg:min-w-88 lg:border-t-0 lg:border-l lg:px-6',
+          'flex w-full min-w-0 shrink-0 flex-col items-center gap-2.5 overflow-hidden border-t bg-muted/30 px-4 py-5 lg:h-full lg:w-[min(36vw,28rem)] lg:min-w-88 lg:border-t-0 lg:border-l lg:border-border/60 lg:px-6',
           'max-lg:hidden',
           isInsightsTab && 'hidden',
         )}

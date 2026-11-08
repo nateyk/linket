@@ -250,11 +250,20 @@ export function ProductCard({
         <div className="flex items-start justify-between gap-2">
           <h3
             className={cn(
-              'line-clamp-2 min-w-0 flex-1 text-sm leading-snug font-semibold',
+              'line-clamp-2 min-w-0 flex-1 text-base leading-6 font-medium',
               classNames?.title,
             )}
           >
-            {titleHref ? <a href={titleHref}>{title}</a> : title}
+            {titleHref ? (
+              <a
+                href={titleHref}
+                className="rounded-sm outline-offset-2 focus-visible:outline-2 focus-visible:outline-primary"
+              >
+                {title}
+              </a>
+            ) : (
+              title
+            )}
           </h3>
           {topRated && (
             <Badge variant="outline" className="shrink-0">

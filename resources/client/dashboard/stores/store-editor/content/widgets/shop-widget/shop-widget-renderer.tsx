@@ -15,7 +15,7 @@ import {useTrans} from '@ui/i18n/use-trans';
 import {formatMoney} from '@ui/i18n/format-money';
 import {cn} from '@ui/utils/cn';
 import {PackageIcon} from 'lucide-react';
-import {useEffect, useState} from 'react';
+import {useCallback, useEffect, useState} from 'react';
 import type {ReactNode} from 'react';
 
 type Product = {
@@ -60,7 +60,7 @@ export function ShopWidgetRenderer({
   const [loadState, setLoadState] = useState<ShopLoadState>('loading');
   const {trans} = useTrans();
 
-  useEffect(() => {
+  const loadProducts = useCallback(() => {
     if (variant !== 'biolinkPage' || !storeId) {
       return;
     }
@@ -105,6 +105,10 @@ export function ShopWidgetRenderer({
       cancelled = true;
     };
   }, [variant, storeId, productIdsKey]);
+
+  useEffect(() => {
+    return loadProducts();
+  }, [loadProducts]);
 
   if (variant === 'editor') {
     return (
@@ -202,8 +206,13 @@ export function ShopWidgetRenderer({
               <Trans message="Couldn't load products" />
             </Empty.Title>
             <Empty.Description className="text-[var(--biolink-muted-text)]">
-              <Trans message="Refresh the page and try again." />
+              <Trans message="Try loading the products again." />
             </Empty.Description>
+            <Empty.Content>
+              <Button type="button" variant="outline" onClick={loadProducts}>
+                <Trans message="Retry" />
+              </Button>
+            </Empty.Content>
           </Empty.Header>
         </Empty.Root>
       </section>

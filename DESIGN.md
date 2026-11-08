@@ -292,6 +292,66 @@ sanctioned 15px in the system; never copy that value into working UI.
 are both 16px; they differ by 100 weight. Reserve size jumps for genuine section
 breaks.
 
+## Public storefront contract
+
+The public storefront uses the same component language as the dashboard, but its
+creator appearance is resolved through a separate semantic token realm. The
+appearance resolver maps creator settings to these `--biolink-*` values and then
+remaps the shared `--be-*` primitives inside the storefront:
+
+| Concern | Storefront token | Shared primitive mapping |
+| --- | --- | --- |
+| Primary text | `--biolink-text` | `--be-foreground` |
+| Muted text | `--biolink-muted-text` | `--be-muted-foreground` |
+| Main surface | `--biolink-surface` / `--biolink-surface-strong` | `--be-background` / `--be-card` |
+| Quiet surface | `--biolink-surface-muted` | `--be-muted` / `--be-secondary` |
+| Hairline edge | `--biolink-border` | `--be-border` / `--be-input` |
+| Action accent | `--biolink-accent` | `--be-primary` |
+| Action foreground | `--biolink-accent-foreground` | `--be-primary-foreground` |
+
+Creator appearance must not repaint the dashboard globally. Storefront surfaces
+use one shared ring (`biolinkSurfaceEdgeClassName`) instead of stacking borders
+and shadows. Resting creator, About, product and service surfaces stay flat;
+appearance-controlled button depth is applied only where an action or preset
+explicitly calls for it.
+
+### Shared buyer-card anatomy
+
+`ProductCard` is the canonical catalog card for public digital products and
+services. Implementations preserve this order:
+
+1. 16:9 media, with an optional type/category overlay.
+2. Two-line title, followed by optional description and metadata.
+3. Price, free, or quote semantics in the footer.
+4. Exactly one primary View/Buy/Inquiry action.
+
+Cards use `rounded-card`, semantic foreground/background tokens, and a visible
+focus ring for interactive content. On small screens the catalog remains a
+single-column flow; at larger widths the existing responsive grid may expand
+without changing card anatomy. Do not introduce a second public card component
+for a route-specific variant.
+
+### Component and state handoff
+
+The executable [`ProductCard` Storybook fixture](resources/client/digital-products/shared/product-card.stories.tsx)
+is the review surface for the shared card contract. It covers the reusable
+published, carousel/metadata, and missing-cover/quote states without creating
+route-specific card markup.
+
+| State | Required behavior |
+| --- | --- |
+| Published | Show the 16:9 cover, two-line title, optional description/meta, price, and one primary action. |
+| Carousel | Keep previous/next and image-position controls keyboard reachable; reveal controls for coarse pointers and focus. |
+| Missing cover | Preserve card anatomy and provide the shopping-bag fallback instead of collapsing the media region. |
+| Quote/free | Keep the footer action singular while allowing `Free` or `Request a quote` price semantics. |
+| Focused | Title links and carousel controls expose a visible semantic-token focus outline. |
+
+Review the fixture at 360, 375, 430, 768, 1024, and 1440px. At 360–430px
+the card stays one column with no horizontal overflow; at 768px and above the
+parent grid may add columns but the card anatomy and action order do not change.
+At 200% zoom and keyboard-only navigation, all actions remain reachable and
+the title remains readable without clipping beyond its two-line limit.
+
 ## Layout
 
 The dashboard is a viewport, not a document. `DashboardLayout` renders a `h-screen h-dvh`
@@ -332,6 +392,14 @@ right. The narrower measure keeps the field column readable while the rail holds
 real preview bound to form state. The rail sticks at the same `xl` breakpoint the
 grid splits at (`xl:sticky xl:top-6`) — a sticky that begins earlier than the grid
 column is a promise the layout does not keep.
+
+**The Builder Surface Rule.** The store editor uses `bg-card` for the working form
+surface and `bg-muted/30` for the surrounding preview rail. A visible
+`border-border/60` split keeps the two jobs distinct in dark mode, where
+`bg-background` alone would flatten the editor into one black plane. Content/About/
+Appearance navigation uses the default segmented tabs variant so the active state
+has a card surface in both themes; icons clarify the section without replacing its
+text label.
 
 ## Elevation & Depth
 

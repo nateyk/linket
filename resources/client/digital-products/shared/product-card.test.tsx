@@ -26,6 +26,8 @@ describe('shared product card integration', () => {
 describe('shared product card consistency', () => {
   test('uses theme tokens and app conventions, not hardcoded values', () => {
     expect(source).toContain('rounded-card');
+    expect(source).toContain('text-base leading-6 font-medium');
+    expect(source).toContain('focus-visible:outline-primary');
     expect(source).not.toContain('rounded-2xl');
     expect(source).toContain('fill-current text-warning');
     expect(source).not.toContain('text-amber-500');
