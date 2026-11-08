@@ -7,6 +7,8 @@ use App\Models\User;
 use App\Storefront\Notifications\VerifiedSaleNotification;
 use App\Telegram\Models\TelegramLinkToken;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\URL;
 use Tests\TestCase;
 
 class TelegramNotificationIntegrationTest extends TestCase
@@ -17,11 +19,15 @@ class TelegramNotificationIntegrationTest extends TestCase
     {
         parent::setUp();
 
+        URL::forceScheme('https');
         config()->set('services.telegram.enabled', true);
         config()->set('services.telegram.token', 'synthetic-bot-token');
         config()->set('services.telegram.bot_username', 'LinketTestBot');
         config()->set('services.telegram.webhook_secret', 'synthetic-webhook-secret');
         config()->set('services.telegram.link_token_ttl_minutes', 10);
+        Http::fake([
+            'https://api.telegram.org/*' => Http::response(['ok' => true, 'result' => true]),
+        ]);
     }
 
     public function test_creator_can_generate_one_time_hashed_connection_token(): void

@@ -4,6 +4,7 @@ namespace App\Telegram\Controllers;
 
 use App\Telegram\Models\TelegramConnection;
 use App\Telegram\Models\TelegramLinkToken;
+use App\Telegram\Services\TelegramBotAdminService;
 use App\Telegram\Support\TelegramNotificationPreferences;
 use App\Telegram\Notifications\TelegramIntegrationTestNotification;
 use Illuminate\Support\Facades\Notification;
@@ -32,6 +33,8 @@ final class TelegramConnectionController extends Controller
             Response::HTTP_SERVICE_UNAVAILABLE,
             __('Telegram notifications are not available right now.'),
         );
+
+        app(TelegramBotAdminService::class)->ensureWebhook();
 
         $plainToken = Str::random(48);
         $ttl = max(

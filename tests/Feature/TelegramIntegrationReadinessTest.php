@@ -5,11 +5,23 @@ namespace Tests\Feature;
 use App\Models\User;
 use App\Telegram\Models\TelegramLinkToken;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\URL;
 use Tests\TestCase;
 
 class TelegramIntegrationReadinessTest extends TestCase
 {
     use DatabaseTransactions;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        URL::forceScheme('https');
+        Http::fake([
+            'https://api.telegram.org/*' => Http::response(['ok' => true, 'result' => true]),
+        ]);
+    }
 
     public function test_saved_bot_credentials_make_telegram_available_when_the_enabled_flag_is_off(): void
     {
@@ -44,6 +56,50 @@ class TelegramIntegrationReadinessTest extends TestCase
             'https://t.me/linketnotifybot?start=',
             (string) $connect->json('telegram.connect_url'),
         );
+        Http::assertSent(fn ($request): bool => str_ends_with($request->url(), '/setWebhook')
+            && ($request->data()['url'] ?? null) === url('integrations/telegram/webhook')
+            && ($request->data()['secret_token'] ?? null) === 'synthetic_saved_secret'
+            && ($request->data()['allowed_updates'] ?? null) === ['message']);
+    }
+
+    public function test_start_deep_link_replies_in_the_private_chat(): void
+    {
+        \Illuminate\Support\Facades\Notification::fake();
+        config()->set('services.telegram.enabled', true);
+        config()->set('services.telegram.token', '123456:synthetic_saved_token');
+        config()->set('services.telegram.bot_username', 'linketnotifybot');
+        config()->set('services.telegram.webhook_secret', 'synthetic_saved_secret');
+
+        $user = User::factory()->create(['email_verified_at' => now()]);
+        $plainToken = 'CMltyChmYFBUvVP24Fnt7lhNaSL5zhHYCwmNu24RXoSl89mk';
+        TelegramLinkToken::query()->create([
+            'user_id' => $user->id,
+            'token_hash' => hash('sha256', $plainToken),
+            'expires_at' => now()->addMinutes(10),
+        ]);
+
+        $this->withHeader('X-Telegram-Bot-Api-Secret-Token', 'synthetic_saved_secret')
+            ->postJson('/integrations/telegram/webhook', [
+                'update_id' => 990_220,
+                'message' => [
+                    'text' => '/start '.$plainToken,
+                    'from' => ['id' => 512_127_001, 'username' => 'Kpc127'],
+                    'chat' => ['id' => 512_127_001, 'type' => 'private'],
+                ],
+            ])->assertNoContent();
+
+        Http::assertSent(function ($request): bool {
+            if (! str_ends_with($request->url(), '/sendMessage')) {
+                return false;
+            }
+
+            $data = $request->data();
+
+            return ($data['chat_id'] ?? null) === 512_127_001
+                && is_string($data['text'] ?? null)
+                && str_contains($data['text'], 'Welcome to Linket')
+                && ! str_contains($data['text'], 'CMltyChmYFBUvVP24Fnt7lhNaSL5zhHYCwmNu24RXoSl89mk');
+        });
     }
 
     public function test_unconfigured_telegram_reports_unavailable_to_creators(): void
