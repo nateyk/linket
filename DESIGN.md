@@ -393,6 +393,14 @@ real preview bound to form state. The rail sticks at the same `xl` breakpoint th
 grid splits at (`xl:sticky xl:top-6`) — a sticky that begins earlier than the grid
 column is a promise the layout does not keep.
 
+**The Builder Surface Rule.** The store editor uses `bg-card` for the working form
+surface and `bg-muted/30` for the surrounding preview rail. A visible
+`border-border/60` split keeps the two jobs distinct in dark mode, where
+`bg-background` alone would flatten the editor into one black plane. Content/About/
+Appearance navigation uses the default segmented tabs variant so the active state
+has a card surface in both themes; icons clarify the section without replacing its
+text label.
+
 ## Elevation & Depth
 
 The system is flat by default and separates surfaces with a hairline ring, not with

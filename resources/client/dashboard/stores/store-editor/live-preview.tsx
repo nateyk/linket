@@ -202,7 +202,7 @@ export function LivePreview() {
           running off the bottom. */}
       <div
         className={cn(
-          'flex w-full min-w-0 shrink-0 flex-col items-center gap-2.5 overflow-hidden border-t bg-background px-4 py-5 lg:h-full lg:w-[min(36vw,28rem)] lg:min-w-88 lg:border-t-0 lg:border-l lg:px-6',
+          'flex w-full min-w-0 shrink-0 flex-col items-center gap-2.5 overflow-hidden border-t bg-muted/30 px-4 py-5 lg:h-full lg:w-[min(36vw,28rem)] lg:min-w-88 lg:border-t-0 lg:border-l lg:border-border/60 lg:px-6',
           'max-lg:hidden',
           isInsightsTab && 'hidden',
         )}
