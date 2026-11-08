@@ -373,13 +373,12 @@ test('opening the About tab on a pristine form keeps it clean (rebase vs mount r
   );
 });
 
-test('content sections use the divider-list variant, not separated cards', () => {
+test('content sections use separated rows with clear card boundaries', () => {
   renderProfileEditor();
   const root = document.querySelector('[data-slot="accordion"]');
-  // The accordion sits inside the section's card pane: separated items would
-  // be rounded bordered cards inside that card (nested cards). The default
-  // variant renders divider rows instead.
-  expect(root?.getAttribute('data-variant')).toBe('default');
+  // Separated rows keep each editing area scannable against the raised work
+  // surface, especially in dark mode.
+  expect(root?.getAttribute('data-variant')).toBe('separated');
 });
 
 test('content sections start collapsed (nothing open by default)', () => {
