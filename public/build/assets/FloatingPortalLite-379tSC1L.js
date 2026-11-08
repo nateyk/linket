@@ -1,2 +1,0 @@
-import{a as e}from"./rolldown-runtime-BWaJ3C7D.js";import{ic as t,rc as n}from"./icons-DQz5vrUS.js";import{t as r}from"./react-dom-BA21OB9g.js";import{r as i}from"./ReactStore-BNKRI6HJ.js";var a=e(t(),1),o=e(r(),1),s=n(),c=a.forwardRef(function(e,t){let{children:n,container:r,className:c,render:l,style:u,...d}=e,{node:f,subtree:p}=i({container:r,ref:t,componentProps:e,elementProps:d});return!p&&!f?null:(0,s.jsxs)(a.Fragment,{children:[p,f&&o.createPortal(n,f)]})});export{c as t};
-//# sourceMappingURL=FloatingPortalLite-379tSC1L.js.map

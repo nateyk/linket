@@ -1,0 +1,2 @@
+import{a as e}from"./rolldown-runtime-BWaJ3C7D.js";import{t}from"./guest-route-BoFRJGnn.js";import{n,t as r}from"./login-page-B364uOAm.js";import{ic as i,rc as a}from"./icons-DQz5vrUS.js";var o=e(i()),s=a();function c({bottomMessages:e}){let[i,a]=(0,o.useState)(!1);return(0,s.jsx)(t,{children:i?(0,s.jsx)(n,{}):(0,s.jsx)(r,{onTwoFactorChallenge:()=>a(!0),bottomMessages:e})})}export{c as LoginPageWrapper};
+//# sourceMappingURL=login-page-wrapper-tWkgraki.js.map

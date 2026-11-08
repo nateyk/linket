@@ -1,2 +1,0 @@
-import{Ji as e}from"./client-CPpYik2Q.js";var t=t=>e({url:`/account-settings`,method:`GET`},t),n=(t,n)=>e({url:`/access-tokens`,method:`POST`,headers:{"Content-Type":`application/json`},data:t},n),r=(t,n)=>e({url:`/access-tokens/${t}`,method:`DELETE`},n),i=t=>e({url:`/user-sessions`,method:`GET`},t),a=(t,n)=>e({url:`/user-sessions/logout-other`,method:`POST`,headers:{"Content-Type":`application/json`},data:t},n),o=t=>e({url:`/usage`,method:`GET`},t);export{i as a,o as i,r as n,a as o,t as r,n as t};
-//# sourceMappingURL=account-B4BtgLq4.js.map

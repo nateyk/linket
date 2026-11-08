@@ -1,2 +1,0 @@
-import{Ar as e,Dr as t,kr as n}from"./client-CPpYik2Q.js";import{t as r}from"./useCompositeItem-Dn0LLEAN.js";function i(i){let{render:a,className:o,style:s,state:c=e,props:l=n,refs:u=n,metadata:d,stateAttributesMapping:f,tag:p=`div`,...m}=i,{compositeProps:h,compositeRef:g}=r({metadata:d});return t(p,i,{state:c,ref:[g,...u],props:[h,...l,m],stateAttributesMapping:f})}export{i as t};
-//# sourceMappingURL=CompositeItem-C5GgrJOe.js.map

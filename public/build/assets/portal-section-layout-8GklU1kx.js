@@ -1,2 +1,0 @@
-import{t as e}from"./dashboard-layout-BunmNWXE.js";import{rc as t}from"./icons-DQz5vrUS.js";var n=t();function r({title:t,children:r,headerRightContent:i}){return(0,n.jsxs)(e.MainSection,{children:[(0,n.jsxs)(e.SectionHeader,{children:[(0,n.jsx)(e.SidebarToggle,{}),(0,n.jsx)(e.SectionTitle,{children:(0,n.jsx)(`h1`,{children:t})}),i]}),(0,n.jsx)(`div`,{className:`w-full flex-auto overflow-y-auto`,children:(0,n.jsx)(`div`,{className:`mx-auto w-full max-w-6xl p-6`,children:r})})]})}export{r as t};
-//# sourceMappingURL=portal-section-layout-8GklU1kx.js.map

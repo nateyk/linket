@@ -1,0 +1,2 @@
+import{Vn as e}from"./main-BbDYORPE.js";import{t}from"./show-http-error-toast-CfsFzq2A.js";import{Gi as n,Ji as r,Zi as i}from"./client-CJL9GIje.js";import{t as a}from"./message-BCKcasPr.js";import{t as o}from"./toast-DWKNKBu9.js";function s(s){return i({mutationFn:()=>n.delete(`users/unban/${s.join(`,`)}`).then(e=>e.data),onSuccess:()=>{o(a(`[one User|other :count Users] unsuspended`,{values:{count:s.length}})),r.invalidateQueries({queryKey:e})},onError:e=>t(e)})}export{s as t};
+//# sourceMappingURL=use-unban-users-BJ8Ch9jV.js.map

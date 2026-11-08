@@ -1,5 +1,8 @@
 import {AdminSidebarIcons} from '@app/admin/admin-config';
-import {shouldEndMatchSidebarItem} from '@common/admin/admin-sidebar-nav-end';
+import {
+  isSettingsNavOnlyAdminItem,
+  shouldEndMatchSidebarItem,
+} from '@common/admin/admin-sidebar-nav-end';
 import {UserAvatar, UserAvatarProps} from '@common/auth/user-avatar';
 import {useAuth} from '@common/auth/use-auth';
 import {useCustomMenu} from '@common/menus/use-custom-menu';
@@ -53,6 +56,9 @@ export function AdminSidebar() {
   const hasWithdrawalMethods = adminMenu?.items.some(
     item => item.action === '/admin/financial/withdrawal-methods',
   );
+  const visibleMenuItems = (adminMenu?.items ?? []).filter(
+    item => !isSettingsNavOnlyAdminItem(item.action),
+  );
 
   return (
     <Sidebar.Root
@@ -78,13 +84,12 @@ export function AdminSidebar() {
               position="admin-sidebar"
               defaultIcons={AdminSidebarIcons}
               end={item =>
-                shouldEndMatchSidebarItem(
-                  item,
-                  pathname,
-                  adminMenu?.items ?? [],
-                )
+                shouldEndMatchSidebarItem(item, pathname, visibleMenuItems)
               }
-              filter={item => item.action !== DIGITAL_PRODUCTS_PATH}
+              filter={item =>
+                item.action !== DIGITAL_PRODUCTS_PATH &&
+                !isSettingsNavOnlyAdminItem(item.action)
+              }
             />
             {isCompactMode ? (
               <Sidebar.Menu>

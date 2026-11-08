@@ -1,0 +1,2 @@
+import{hi as e}from"./client-CJL9GIje.js";function t(t){let{modules:n}=e();return!!n?.[t]?.installed}function n(t){let{modules:n}=e();return!!(n?.[t]?.setup&&n?.[t]?.installed)}export{n,t};
+//# sourceMappingURL=use-is-module-installed-9FKSfHYq.js.map

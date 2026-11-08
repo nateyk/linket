@@ -1,2 +1,0 @@
-import{Ki as e,ta as t,va as n}from"./client-CPpYik2Q.js";import{t as r}from"./use-required-params-DY0487Tp.js";function i(i,a){let{campaignId:o}=r([`campaignId`]),s={startDate:i.start.toAbsoluteString(),endDate:i.end.toAbsoluteString(),timezone:i.start.timeZone,country:a};return t({queryKey:[`campaigns`,`${o}`,`report`,s],placeholderData:n,queryFn:()=>e.get(`lc/campaigns/${o}/report`,{params:s}).then(e=>e.data)})}export{i as t};
-//# sourceMappingURL=use-campaign-report-09-mlVjk.js.map

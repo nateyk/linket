@@ -1,0 +1,2 @@
+import{xr as e,zi as t}from"./client-CJL9GIje.js";import{t as n}from"./trans-CRItcigO.js";import{rc as r}from"./icons-DQz5vrUS.js";var i=r();function a(r){let{isSubscribed:a}=t();return(0,i.jsx)(e,{to:a?`/account-settings/billing/change-plan`:`/pricing`,variant:`outline`,color:`primary`,...r,children:(0,i.jsx)(n,{message:`Upgrade`})})}export{a as t};
+//# sourceMappingURL=upgrade-button-BlQVsbUC.js.map

@@ -1,0 +1,2 @@
+import{Gi as e,Ji as t,Zi as n,bi as r}from"./client-CJL9GIje.js";import{t as i}from"./show-http-error-toast-CfsFzq2A.js";function a(a){return n({mutationFn:t=>e.put(`lc/campaigns/${a}`,t).then(e=>e.data),onSuccess:async()=>{await t.invalidateQueries({queryKey:r.campaigns.invalidateKey})},onError:e=>i(e)})}var o=new URL(`email-campaign-tj20yXPm.svg`,import.meta.url).href;export{a as n,o as t};
+//# sourceMappingURL=email-campaign--6dQAztH.js.map

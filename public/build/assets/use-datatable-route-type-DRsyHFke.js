@@ -1,0 +1,2 @@
+import{Pi as e}from"./client-CJL9GIje.js";import{v as t}from"./chunk-62JRHF6Z-CSUpuO6-.js";function n(){let n=t(),r=e(e=>e.activeWorkspace),i=n.some(e=>e.handle?.linketRoutesType===`dashboard`)?`dashboard`:`admin`;return{routeType:i,isForCurrentUser:i===`dashboard`?!r||r.is_personal:!1}}export{n as t};
+//# sourceMappingURL=use-datatable-route-type-DRsyHFke.js.map

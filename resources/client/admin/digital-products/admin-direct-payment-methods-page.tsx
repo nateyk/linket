@@ -2,7 +2,6 @@ import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {Trans} from '@ui/i18n/trans';
 import {useEffect} from 'react';
 import {useNavigate, useSearchParams} from 'react-router';
-import {SubscriptionGatewayCard} from './subscription-gateway-card';
 import {VerifyEtSettingsPanel} from './verify-et-settings-panel';
 import {VerifyEtMethodCatalog} from './verify-et-method-catalog';
 
@@ -45,9 +44,8 @@ export function Component() {
       <DashboardLayout.SectionContent className="overflow-y-auto">
         <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-5">
           <p className="text-sm text-muted-foreground">
-            <Trans message="Manage Verify.et and the banks and wallets offered at checkout in one place." />
+            <Trans message="Configure the Verify.et connection sellers use for bank and wallet checkout." />
           </p>
-          <SubscriptionGatewayCard />
           <VerifyEtSettingsPanel />
           <VerifyEtMethodCatalog />
           <a href="/admin/financial/withdrawal-methods" className="text-sm text-primary underline"><Trans message="Review creator receiving accounts" /></a>

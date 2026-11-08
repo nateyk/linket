@@ -1,2 +1,0 @@
-import{gi as e}from"./client-CPpYik2Q.js";import{t}from"./helmet-BmUvNuek.js";import{rc as n}from"./icons-DQz5vrUS.js";var r=n();function i({children:n}){let{branding:{site_name:i}}=e();return(0,r.jsx)(t,{children:n?(0,r.jsxs)(`title`,{children:[n,` - `,i]}):void 0})}export{i as t};
-//# sourceMappingURL=static-page-title-DCFOgMv0.js.map

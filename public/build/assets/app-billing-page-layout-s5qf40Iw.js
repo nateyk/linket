@@ -1,0 +1,2 @@
+import{t as e}from"./account-settings-page-layout-D2tYiizk.js";import{k as t}from"./main-BbDYORPE.js";import{t as n}from"./billing-page-breadcrumb-CAy6UQ7g.js";import{d as r}from"./custom-menu-BcpdSqpV.js";import{a as i}from"./chunk-62JRHF6Z-CSUpuO6-.js";import{rc as a}from"./icons-DQz5vrUS.js";var o=a();function s(){let a=r(t());return(0,o.jsx)(e,{title:(0,o.jsx)(n,{className:`text-xl`}),children:(0,o.jsx)(i,{context:a.data.data})})}export{s as Component};
+//# sourceMappingURL=app-billing-page-layout-s5qf40Iw.js.map
