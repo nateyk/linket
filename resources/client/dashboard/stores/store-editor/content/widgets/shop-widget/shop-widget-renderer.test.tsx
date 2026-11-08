@@ -78,6 +78,13 @@ describe('ShopWidgetRenderer product action appearance', () => {
     );
   });
 
+  test('exposes an inline retry action for load failures', () => {
+    expect(source).toContain('const loadProducts = useCallback');
+    expect(source).toContain('<Trans message="Retry" />');
+    expect(source).toContain('onClick={loadProducts}');
+    expect(source).not.toContain('Refresh the page and try again.');
+  });
+
   test('labels the products section for assistive tech', () => {
     expect(source).toContain('aria-labelledby');
     expect(source).toContain("message('Products')");

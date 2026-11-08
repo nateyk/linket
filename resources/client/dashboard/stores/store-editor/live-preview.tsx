@@ -18,6 +18,7 @@ import {
   SheetTitle,
 } from '@shadcn/sheet/sheet';
 import {Trans} from '@ui/i18n/trans';
+import {useTrans} from '@ui/i18n/use-trans';
 import {cn} from '@ui/utils/cn';
 import {SmartphoneIcon, XIcon} from 'lucide-react';
 import {
@@ -46,6 +47,7 @@ const SYNC_DEBOUNCE_MS = 150;
  * same store snapshot into its own frame, so two frames never disagree.
  */
 function PreviewDevice() {
+  const {trans} = useTrans();
   const biolink = useBiolinkEditorStore(s => s.biolink);
   const appearance = useBiolinkEditorStore(s => s.appearance);
   const content = useBiolinkEditorStore(s => s.content);
@@ -162,7 +164,9 @@ function PreviewDevice() {
             ref={iframeRef}
             key={backHalf}
             src={`/${backHalf}?preview=1`}
-            title="Live preview of the store page on an iPhone 14 Pro"
+            title={trans({
+              message: 'Live preview of the store page on an iPhone 14 Pro',
+            })}
             width={PHONE_GEOMETRY.viewport.width}
             height={PHONE_GEOMETRY.viewport.height}
             scrolling="auto"

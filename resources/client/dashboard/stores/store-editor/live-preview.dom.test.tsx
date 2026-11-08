@@ -37,6 +37,12 @@ vi.mock('@ui/i18n/trans', () => ({
   Trans: ({message}: {message: string}) => <span>{message}</span>,
 }));
 
+vi.mock('@ui/i18n/use-trans', () => ({
+  useTrans: () => ({
+    trans: ({message}: {message: string}) => message,
+  }),
+}));
+
 const {LivePreview} = await import('./live-preview');
 
 /** The panel is the outermost div LivePreview renders. */
