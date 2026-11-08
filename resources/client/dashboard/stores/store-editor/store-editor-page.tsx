@@ -123,9 +123,11 @@ export function Component() {
                     activateOnFocus
                   >
                     <Tabs.LinkTab value="content" to={baseUrl} replace>
+                      <LayoutPanelTop />
                       <Trans message="Content" />
                     </Tabs.LinkTab>
                     <Tabs.LinkTab value="about" to={`${baseUrl}/about`} replace>
+                      <UserRoundPenIcon />
                       <Trans message="About" />
                     </Tabs.LinkTab>
                     <Tabs.LinkTab
@@ -133,6 +135,7 @@ export function Component() {
                       to={`${baseUrl}/appearance`}
                       replace
                     >
+                      <SettingsIcon />
                       <Trans message="Appearance" />
                     </Tabs.LinkTab>
                   </Tabs.List>
