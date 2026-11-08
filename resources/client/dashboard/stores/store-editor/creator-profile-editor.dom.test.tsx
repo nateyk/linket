@@ -477,9 +477,7 @@ test('profile fields keep one media group and flow directly into editable fields
     'available_for_work',
   ]) {
     const field = document.querySelector(`[data-field-name="${fieldName}"]`)!;
-    expect(field.querySelectorAll('[data-slot="popover-trigger"]').length).toBe(
-      1,
-    );
+    expect(field.querySelector('[data-slot="popover-trigger"]')).toBeNull();
   }
 });
 

@@ -47,7 +47,6 @@ import {
 } from '@shadcn/forms/input-group/input-group';
 import {Switch} from '@shadcn/forms/switch/switch';
 import {Textarea} from '@shadcn/forms/textarea/textarea';
-import {Popover} from '@shadcn/popover/popover';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {toast} from '@shadcn/toast/toast';
 import {useQuery} from '@tanstack/react-query';
@@ -58,7 +57,6 @@ import {useTrans} from '@ui/i18n/use-trans';
 import {
   AtSignIcon,
   CameraIcon,
-  CircleQuestionMarkIcon,
   ImagePlusIcon,
   LinkIcon,
   MailIcon,
@@ -493,12 +491,9 @@ export function CreatorProfileEditor({
                         <Field.Error />
                       </HookForm.Field>
                       <HookForm.Field name="profile_title">
-                        <FieldHelpLabel
-                          label={<Trans message="Profile title" />}
-                          help={
-                            <Trans message="Choose the professional title shown below your name." />
-                          }
-                        />
+                        <Field.Label>
+                          <Trans message="Profile title" />
+                        </Field.Label>
                         <Combobox.Root<ProfessionOption>
                           bindToHookForm={false}
                           items={professionItems}
@@ -542,12 +537,9 @@ export function CreatorProfileEditor({
                     </div>
 
                     <HookForm.Field name="bio">
-                      <FieldHelpLabel
-                        label={<Trans message="Short bio" />}
-                        help={
-                          <Trans message="A short introduction to your work and audience." />
-                        }
-                      />
+                      <Field.Label>
+                        <Trans message="Short bio" />
+                      </Field.Label>
                       <Textarea rows={4} maxLength={BIO_MAX_LENGTH} />
                       <Field.Description className="flex items-start justify-between gap-3">
                         <CharacterCounter
@@ -559,12 +551,9 @@ export function CreatorProfileEditor({
                     </HookForm.Field>
 
                     <HookForm.Field name="skills">
-                      <FieldHelpLabel
-                        label={<Trans message="Skills" />}
-                        help={
-                          <Trans message="Separate skills with commas. The first eight are shown." />
-                        }
-                      />
+                      <Field.Label>
+                        <Trans message="Skills" />
+                      </Field.Label>
                       <SkillsChipsField
                         placeholder={trans(
                           message('Design, Photography, Coaching'),
@@ -584,12 +573,9 @@ export function CreatorProfileEditor({
                           data-slot="field-content"
                           className="flex min-w-0 flex-1 flex-col gap-1"
                         >
-                          <FieldHelpLabel
-                            label={<Trans message="Available for work" />}
-                            help={
-                              <Trans message="Show a small availability badge on your profile." />
-                            }
-                          />
+                          <Field.Label>
+                            <Trans message="Available for work" />
+                          </Field.Label>
                         </div>
                         <Switch />
                       </Field.Root>
@@ -1054,43 +1040,4 @@ function sameProductSelection(first: number[], second: number[]): boolean {
   const sortedFirst = [...first].sort((a, b) => a - b);
   const sortedSecond = [...second].sort((a, b) => a - b);
   return sortedFirst.every((id, index) => id === sortedSecond[index]);
-}
-
-/**
- * A field label with a hover/focus help popover. The section's explanations
- * live at the label instead of as long muted description lines, which kept
- * the form visually noisy. Popover pattern matches the admin InfoTrigger.
- */
-function FieldHelpLabel({
-  label,
-  help,
-}: {
-  label: ReactNode;
-  help: ReactNode;
-}) {
-  return (
-    <div className="flex items-center gap-1">
-      <Field.Label>{label}</Field.Label>
-      <InfoTrigger>{help}</InfoTrigger>
-    </div>
-  );
-}
-
-function InfoTrigger({children}: {children: ReactNode}) {
-  const {trans} = useTrans();
-  return (
-    <Popover.Root>
-      <Popover.Trigger
-        render={<Button variant="ghost" size="icon-sm" />}
-        className="text-muted-foreground"
-        aria-label={trans(message('Help'))}
-        openOnHover
-      >
-        <CircleQuestionMarkIcon />
-      </Popover.Trigger>
-      <Popover.Portal>
-        <Popover.Content>{children}</Popover.Content>
-      </Popover.Portal>
-    </Popover.Root>
-  );
 }
