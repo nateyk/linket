@@ -291,6 +291,19 @@ final class VerifyEtEvidenceValidator
         return is_bool($match['ambiguous'] ?? null);
     }
 
+    private function matchIsDecisive(mixed $match): bool
+    {
+        if (!is_array($match)) {
+            return false;
+        }
+
+        if (($match['matched'] ?? false) !== true) {
+            return false;
+        }
+
+        return ($match['ambiguous'] ?? true) !== true;
+    }
+
     private function matchIsAmbiguous(array $match): bool
     {
         if ($match['ambiguous']) {
@@ -392,8 +405,15 @@ final class VerifyEtEvidenceValidator
             return true;
         }
 
-        $httpStatus = (int) ($result['_http_status'] ?? 0);
-        return $httpStatus === 200 && ($requestId === null || $requestId === '');
+        if ((int) ($result['_http_status'] ?? 0) !== 200) {
+            return false;
+        }
+
+        if ($requestId === null) {
+            return true;
+        }
+
+        return $requestId === '';
     }
 
     private function hasWebhookRequestIdConflict(DirectPaymentVerification $verification, array $result, ?string $requestId): bool
@@ -411,7 +431,7 @@ final class VerifyEtEvidenceValidator
 
     private function isSettlementAccountEvidenceValid(DirectPaymentVerification $verification, mixed $match): bool
     {
-        if (!is_array($match) || ($match['matched'] ?? false) !== true || ($match['ambiguous'] ?? true) === true) {
+        if (!$this->matchIsDecisive($match)) {
             return false;
         }
 

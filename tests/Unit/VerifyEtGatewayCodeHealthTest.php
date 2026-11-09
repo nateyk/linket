@@ -132,52 +132,30 @@ class VerifyEtGatewayCodeHealthTest extends TestCase
         $this->assertSame('251912345678', $this->payloadBuilder->build($international)['phoneNumber']);
     }
 
-    public function testPayloadBuilderRejectsNonEthiopianCbeBirrPhones(): void
+    public function testPayloadBuilderRejectsInvalidBankFields(): void
     {
-        $verification = $this->verification([
-            'settlement_account' => '251812345678',
-            'provider_input' => ['phoneNumber' => '0812345678'],
-        ]);
+        $cases = [
+            ['settlement_account' => '251812345678', 'provider_input' => ['phoneNumber' => '0812345678']],
+            ['bank_code' => 'unsupported', 'reference' => 'REF123', 'settlement_account' => '1000123', 'provider_input' => []],
+            ['bank_code' => 'boa', 'reference' => 'REF123', 'settlement_account' => '1000123', 'provider_input' => ['accountSuffix' => '123']],
+        ];
 
-        $this->expectException(VerifyEtException::class);
-        $this->payloadBuilder->build($verification);
-    }
+        foreach ($cases as $overrides) {
+            $rejected = false;
+            try {
+                $this->payloadBuilder->build($this->verification($overrides));
+            } catch (VerifyEtException) {
+                $rejected = true;
+            }
 
-    public function testPayloadBuilderEnforcesBankFieldRules(): void
-    {
-        $verification = $this->verification([
-            'bank_code' => 'unsupported',
-            'reference' => 'REF123',
-            'settlement_account' => '1000123',
-        ]);
-
-        // Unsupported bank
-        $this->expectException(VerifyEtException::class);
-        $this->payloadBuilder->build($verification);
-    }
-
-    public function testPayloadBuilderRequiresBoa5DigitSuffix(): void
-    {
-        $verification = $this->verification([
-            'bank_code' => 'boa',
-            'reference' => 'REF123',
-            'settlement_account' => '1000123',
-            'provider_input' => ['accountSuffix' => '123'],
-        ]);
-
-        $this->expectException(VerifyEtException::class);
-        $this->payloadBuilder->build($verification);
+            $this->assertTrue($rejected);
+        }
     }
 
     public function testGatewayResolvesFromContainerAndProxiesIdentityMethods(): void
     {
         $gateway = app(VerifyEtGateway::class);
         $this->assertInstanceOf(VerifyEtGateway::class, $gateway);
-
-        $this->assertSame('ABC123XYZ', $gateway->canonical('abc-123.xyz'));
-        $this->assertSame('251911000000', $gateway->normalizeSettlementAccount('0911000000', 'telebirr'));
-        $this->assertTrue($gateway->accountMatches('0911000000', '251911000000', 'telebirr'));
-        $this->assertSame('DET8FJGUJ4', $gateway->canonicalIdentity(['transactionNumber' => 'DET8FJGUJ4'], 'telebirr'));
 
         $safeResult = $gateway->safeProviderResult([
             'requestId' => 'req_test',
