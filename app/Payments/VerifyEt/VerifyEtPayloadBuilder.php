@@ -77,13 +77,19 @@ final class VerifyEtPayloadBuilder
     private function validateCbeFields(string $reference, array $input): void
     {
         $suffix = $input['accountSuffix'] ?? null;
-        $isFt = (bool) preg_match('/^FT/i', $reference);
+        $legacyFt = preg_match('/^FT[0-9A-Z]{8,12}$/i', $reference) === 1;
+        $isFt = preg_match('/^FT/i', $reference) === 1;
+        $suffixProvided = $suffix !== null && $suffix !== '';
 
-        if ($isFt && !preg_match('/^\d{8}$/', (string) $suffix)) {
+        if ($legacyFt && !preg_match('/^\d{8}$/', (string) $suffix)) {
             throw new VerifyEtException(422, 'invalid_bank_fields', 'INVALID_CBE_SUFFIX');
         }
 
-        if (!$isFt && $suffix !== null) {
+        if ($isFt && !$legacyFt && $suffixProvided && !preg_match('/^\d{8}$/', (string) $suffix)) {
+            throw new VerifyEtException(422, 'invalid_bank_fields', 'INVALID_CBE_SUFFIX');
+        }
+
+        if (!$isFt && $suffixProvided) {
             throw new VerifyEtException(422, 'invalid_bank_fields', 'INVALID_CBE_SUFFIX');
         }
     }

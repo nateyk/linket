@@ -63,13 +63,14 @@ final class ReceiptReference
         // Bank-specific format checking
         switch ($bank) {
             case 'cbe':
+                $legacyFt = preg_match('/^FT[0-9A-Z]{8,12}$/i', $reference) === 1;
                 if (preg_match('/^FT/i', $reference)) {
-                    if (!preg_match('/^FT[0-9A-Z]{8,14}$/i', $reference)) {
+                    if (!preg_match('/^FT[0-9A-Z]{8,148}$/i', $reference)) {
                         throw ValidationException::withMessages([
                             'reference' => __('Enter a valid CBE FT reference number (e.g. FT25356LL011).'),
                         ]);
                     }
-                    if (!$accountSuffix || !preg_match('/^\d{8}$/', $accountSuffix)) {
+                    if ($legacyFt && (!$accountSuffix || !preg_match('/^\d{8}$/', $accountSuffix))) {
                         throw ValidationException::withMessages([
                             'account_suffix' => __('Older CBE FT references require the eight-digit transaction account suffix.'),
                         ]);

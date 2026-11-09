@@ -15,11 +15,14 @@ class PublicStorefrontOrderResource extends JsonResource
     public function toArray(Request $request): array
     {
         $isPaid = $this->resource->isCompleted();
-        $deliveryStatus = $this->delivery_status ?? ($isPaid ? 'delivered' : 'awaiting_payment');
+        $deliveryStatus = $this->delivery_status ?: ($isPaid ? 'delivered' : 'awaiting_payment');
+        $hasEntitlements = $this->relationLoaded('entitlements') && $this->entitlements->isNotEmpty();
+        if ($isPaid && $hasEntitlements && $deliveryStatus === StorefrontOrder::DELIVERY_AWAITING_PAYMENT) {
+            $deliveryStatus = StorefrontOrder::DELIVERY_DELIVERED;
+        }
         $downloadsReady = $isPaid
             && $deliveryStatus === StorefrontOrder::DELIVERY_DELIVERED
-            && $this->relationLoaded('entitlements')
-            && $this->entitlements->isNotEmpty();
+            && $hasEntitlements;
         $attemptsRemaining = method_exists($this->resource, 'attemptsRemaining')
             ? $this->resource->attemptsRemaining()
             : max(0, 5 - (int) ($this->verification_attempts ?? 0));

@@ -360,7 +360,7 @@ export function DirectPaymentModal({
     <Dialog.Root open={!!checkout} onOpenChange={open => !open && onClose()}>
       <Dialog.Portal>
         <Dialog.Backdrop />
-        <Dialog.Content className="max-h-[min(100dvh,42rem)] w-[calc(100vw-1.5rem)] overflow-y-auto sm:max-w-md">
+        <Dialog.Content className="max-h-[min(100dvh,40rem)] w-[calc(100vw-1.5rem)] overflow-y-auto sm:max-w-md">
           <Dialog.Header>
             <Dialog.Title>
               <Trans message="Pay the creator directly" />
@@ -613,7 +613,7 @@ export function DirectPaymentModal({
                 {/* Status Guidance Messages */}
                 {(status === 'pending_payment' || status === 'pending') && !sessionLocked && (
                   <p className="text-xs text-muted-foreground">
-                    <Trans message="Awaiting payment. Transfer the exact amount shown above before submitting your transaction reference." />
+                    <Trans message="Awaiting payment. Transfer the exact amount shown above before submitting your transaction reference. Access stays locked until verification is complete." />
                   </p>
                 )}
 

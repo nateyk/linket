@@ -8,6 +8,7 @@ use App\Storefront\Services\CreatorVerificationAllowance;
 use App\Storefront\Services\StorefrontVerificationSession;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 final class VerifyEtGateway
 {
@@ -25,6 +26,12 @@ final class VerifyEtGateway
     public function submit(DirectPaymentVerification $verification): string
     {
         $verification->refresh();
+        if (!is_string($verification->idempotency_key) || $verification->idempotency_key === '') {
+            $verification->update([
+                'idempotency_key' => 'linket_verify_'.$verification->id.'_'.Str::uuid(),
+            ]);
+            $verification->refresh();
+        }
         if ($verification->provider_request_id) {
             return $this->reconcile($verification);
         }
@@ -60,7 +67,9 @@ final class VerifyEtGateway
         $proLifecycle = null;
         try {
             $outcome = DB::transaction(
-                fn (): string => $this->evaluateResultTransaction($verification, $result, $proLifecycle),
+                function () use ($verification, $result, &$proLifecycle): string {
+                    return $this->evaluateResultTransaction($verification, $result, $proLifecycle);
+                },
                 3,
             );
 

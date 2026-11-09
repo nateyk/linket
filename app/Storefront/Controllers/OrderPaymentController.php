@@ -238,10 +238,11 @@ final class OrderPaymentController extends Controller
 
                 $suffixLength = $provider === 'cbe' ? 8 : 5;
                 if (in_array($provider, ['boa', 'cbe'], true)) {
-                    abort_if(isset($data['account_suffix']) && !preg_match('/^\\d{' . $suffixLength . '}$/', $data['account_suffix']), 422, __('Enter a valid transaction account suffix.'));
+                    $legacyCbeFt = $provider === 'cbe' && preg_match('/^FT[0-9A-Z]{8,12}$/i', $data['reference']) === 1;
+                    abort_if(isset($data['account_suffix']) && $data['account_suffix'] !== '' && !preg_match('/^\\d{' . $suffixLength . '}$/', $data['account_suffix']), 422, __('Enter a valid transaction account suffix.'));
                     abort_if($provider === 'boa' && !isset($data['account_suffix']), 422, __('Bank of Abyssinia requires the five-digit transaction account suffix.'));
-                    abort_if($provider === 'cbe' && preg_match('/^FT/i', $data['reference']) && !isset($data['account_suffix']), 422, __('Older CBE FT references require the eight-digit transaction account suffix.'));
-                    abort_if($provider === 'cbe' && !preg_match('/^FT/i', $data['reference']) && isset($data['account_suffix']), 422, __('CBE receipt IDs do not use an account suffix.'));
+                    abort_if($legacyCbeFt && !isset($data['account_suffix']), 422, __('Older CBE FT references require the eight-digit transaction account suffix.'));
+                    abort_if($provider === 'cbe' && !$legacyCbeFt && !preg_match('/^FT/i', $data['reference']) && isset($data['account_suffix']) && $data['account_suffix'] !== '', 422, __('CBE receipt IDs do not use an account suffix.'));
                 }
 
                 $providerInput = match ($provider) {

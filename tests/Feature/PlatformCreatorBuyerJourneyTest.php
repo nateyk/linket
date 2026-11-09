@@ -327,21 +327,21 @@ test('a synthetic creator can sell a telebirr product to a synthetic buyer witho
     };
 
     $wrongRecipient = $start();
-    $submit($wrongRecipient, 'WRONGDEST01')->assertOk()->assertJsonPath('status', 'failed_verification');
+    $submit($wrongRecipient, 'WRONGDEST01')->assertUnprocessable()->assertJsonPath('status', 'failed_verification');
     expect(StorefrontOrder::query()->where('uuid', $wrongRecipient['order_id'])->value('status'))->not->toBe('paid');
 
     $wrongAmount = $start();
-    $submit($wrongAmount, 'WRONGAMT0001')->assertOk()->assertJsonPath('status', 'failed_verification');
+    $submit($wrongAmount, 'WRONGAMT0001')->assertUnprocessable()->assertJsonPath('status', 'failed_verification');
 
     $missingCurrency = $start();
-    $submit($missingCurrency, 'NOCURREN0001')->assertOk()->assertJsonPath('status', 'failed_verification');
+    $submit($missingCurrency, 'NOCURREN0001')->assertUnprocessable()->assertJsonPath('status', 'failed_verification');
 
     $lowConfidence = $start();
     $submit($lowConfidence, 'LOWCONF00001')->assertOk()->assertJsonPath('status', 'manual_review');
     expect(StorefrontOrder::query()->where('uuid', $lowConfidence['order_id'])->value('status'))->toBe('manual_review');
 
     $historical = $start();
-    $submit($historical, $historicalReference)->assertOk()->assertJsonPath('status', 'failed_verification');
+    $submit($historical, $historicalReference)->assertUnprocessable()->assertJsonPath('status', 'failed_verification');
     expect(StorefrontOrder::query()->where('uuid', $historical['order_id'])->value('status'))->not->toBe('paid');
 
     $paid = $start();
