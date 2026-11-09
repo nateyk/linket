@@ -56,7 +56,14 @@ import {
   Trash2Icon,
   TriangleAlertIcon,
 } from 'lucide-react';
-import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import {Link, useLocation, useNavigate, useParams, useSearchParams} from 'react-router';
 import {isUncertainMutationOutcome} from './request-outcome';
 import {parseWizardPrefill, firstInvalidFieldId, parseEtbToCents, priceForBillingMode, resolveCreateType, type BillingMode} from './product-create-flow';
@@ -155,6 +162,39 @@ const SECTION_META: Record<
     description: 'Optional. Show this product on one or more Storefronts.',
   },
 };
+
+/** Shared shell for digital / ebook / audio: status band above section cards. */
+function NonCourseAuthoringLayout({
+  completedSections,
+  totalSections,
+  readinessHint,
+  children,
+}: {
+  completedSections: number;
+  totalSections: number;
+  readinessHint: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      className="flex min-w-0 flex-col gap-6"
+      data-testid="product-authoring-layout"
+    >
+      <div
+        data-testid="product-setup-status"
+        className="rounded-card-sm border border-border bg-muted/40 px-4 py-3 sm:px-5"
+      >
+        <ProductFormProgress
+          completed={completedSections}
+          total={totalSections}
+          className="border-b-0 pb-0"
+        />
+        {readinessHint ? <div className="mt-3">{readinessHint}</div> : null}
+      </div>
+      {children}
+    </div>
+  );
+}
 
 export function Component() {
   const [searchParams] = useSearchParams();
@@ -875,7 +915,7 @@ function DigitalProductForm() {
       </DashboardLayout.SectionHeader>
 
       <DashboardLayout.SectionContent className="overflow-y-auto">
-        <div className={effectiveFileType !== 'course' ? 'mx-auto w-full max-w-3xl py-4 sm:py-5' : 'mx-auto w-full max-w-6xl py-4 sm:py-5'}>
+        <div className={effectiveFileType !== 'course' ? 'mx-auto w-full max-w-5xl py-4 sm:py-5' : 'mx-auto w-full max-w-6xl py-4 sm:py-5'}>
           {!loading && !unavailable && (
             <div role="status" aria-live="polite" className="mb-4 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               <span>
@@ -1024,9 +1064,11 @@ function DigitalProductForm() {
               )}
             </>
           ) : unavailable ? null : effectiveFileType === 'digital' ? (
-            <div className="flex min-w-0 flex-col gap-5">
-              <ProductFormProgress completed={completedSections} total={progressSections.length} />
-              {readinessHint}
+            <NonCourseAuthoringLayout
+              completedSections={completedSections}
+              totalSections={progressSections.length}
+              readinessHint={readinessHint}
+            >
               <DigitalProductEditor
                 details={detailsFields}
                 files={privateFileFields}
@@ -1034,11 +1076,13 @@ function DigitalProductForm() {
                 pricing={pricingFields}
                 storefront={storefrontFields}
               />
-            </div>
+            </NonCourseAuthoringLayout>
           ) : effectiveFileType === 'ebook' ? (
-            <div className="flex min-w-0 flex-col gap-5">
-              <ProductFormProgress completed={completedSections} total={progressSections.length} />
-              {readinessHint}
+            <NonCourseAuthoringLayout
+              completedSections={completedSections}
+              totalSections={progressSections.length}
+              readinessHint={readinessHint}
+            >
               <EbookEditor
                 details={detailsFields}
                 files={privateFileFields}
@@ -1046,10 +1090,13 @@ function DigitalProductForm() {
                 pricing={pricingFields}
                 storefront={storefrontFields}
               />
-            </div>          ) : effectiveFileType === 'audio' ? (
-            <div className="flex min-w-0 flex-col gap-5">
-              <ProductFormProgress completed={completedSections} total={progressSections.length} />
-              {readinessHint}
+            </NonCourseAuthoringLayout>
+          ) : effectiveFileType === 'audio' ? (
+            <NonCourseAuthoringLayout
+              completedSections={completedSections}
+              totalSections={progressSections.length}
+              readinessHint={readinessHint}
+            >
               <AudioEditor
                 details={detailsFields}
                 files={privateFileFields}
@@ -1057,7 +1104,8 @@ function DigitalProductForm() {
                 pricing={pricingFields}
                 storefront={storefrontFields}
               />
-            </div>          ) : (
+            </NonCourseAuthoringLayout>
+          ) : (
             <div className="grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1fr)_26rem] xl:gap-6">
               <div className="flex min-w-0 flex-col gap-4">
                 <ProductFormProgress

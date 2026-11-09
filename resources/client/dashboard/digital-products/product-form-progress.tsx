@@ -2,6 +2,7 @@
 import {Progress} from '@shadcn/progress/progress';
 import {Trans} from '@ui/i18n/trans';
 import {useTrans} from '@ui/i18n/use-trans';
+import {cn} from '@ui/utils/cn';
 
 /**
  * Shared progress pattern for product create → setup → edit.
@@ -13,6 +14,7 @@ export function ProductFormProgress({
   completed,
   total,
   messageVariant = 'sections',
+  className,
 }: {
   /**
    * How much is actually done: completed sections (edit/course pages) or
@@ -26,6 +28,8 @@ export function ProductFormProgress({
    * required-sections wording; the create wizard asks for steps.
    */
   messageVariant?: 'sections' | 'steps';
+  /** Optional chrome overrides (e.g. drop the page divider inside a status panel). */
+  className?: string;
 }) {
   const {trans} = useTrans();
   const isSteps = messageVariant === 'steps';
@@ -34,7 +38,12 @@ export function ProductFormProgress({
     : trans({message: 'Product setup progress'});
 
   return (
-    <div className="flex flex-col gap-3 border-b pb-4 lg:flex-row lg:items-end lg:justify-between">
+    <div
+      className={cn(
+        'flex flex-col gap-3 border-b pb-4 lg:flex-row lg:items-end lg:justify-between',
+        className,
+      )}
+    >
       <div className="min-w-0">
         {isSteps ? (
           // Distill: one line — position only. No "Product setup" heading.

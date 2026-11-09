@@ -324,6 +324,16 @@ describe('product form reassembly', () => {
     expect(source).toContain('<ProductFormField');
     expect(source).toContain('aria-invalid');
   });
+
+  test('non-course authoring uses a wider shell with a distinct setup status band', () => {
+    // Ebook/digital/audio were cramped at max-w-3xl with progress sharing
+    // weight with the first section. Course keeps its own max-w-6xl grid.
+    expect(source).toContain("effectiveFileType !== 'course' ? 'mx-auto w-full max-w-5xl");
+    expect(source).toContain("effectiveFileType !== 'course' ? 'mx-auto w-full max-w-5xl py-4 sm:py-5' : 'mx-auto w-full max-w-6xl py-4 sm:py-5'");
+    expect(source).not.toContain("effectiveFileType !== 'course' ? 'mx-auto w-full max-w-3xl");
+    expect(source).toContain('data-testid="product-authoring-layout"');
+    expect(source).toContain('data-testid="product-setup-status"');
+  });
 });
 
 describe('product form error focus and skeletons', () => {
