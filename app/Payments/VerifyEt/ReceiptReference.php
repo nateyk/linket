@@ -57,95 +57,90 @@ final class ReceiptReference
      */
     public function validateFormat(string $bank, string $reference, ?string $accountSuffix = null, ?string $phoneNumber = null): void
     {
-        $bank = strtolower($bank);
         $reference = trim($reference);
 
-        // Bank-specific format checking
-        switch ($bank) {
-            case 'cbe':
-                $legacyFt = preg_match('/^FT[0-9A-Z]{8,12}$/i', $reference) === 1;
-                if (preg_match('/^FT/i', $reference)) {
-                    if (!preg_match('/^FT[0-9A-Z]{8,148}$/i', $reference)) {
-                        throw ValidationException::withMessages([
-                            'reference' => __('Enter a valid CBE FT reference number (e.g. FT25356LL011).'),
-                        ]);
-                    }
-                    if ($legacyFt && (!$accountSuffix || !preg_match('/^\d{8}$/', $accountSuffix))) {
-                        throw ValidationException::withMessages([
-                            'account_suffix' => __('Older CBE FT references require the eight-digit transaction account suffix.'),
-                        ]);
-                    }
-                } else {
-                    if (!preg_match('/^[A-Za-z0-9_-]{6,150}$/', $reference)) {
-                        throw ValidationException::withMessages([
-                            'reference' => __('Enter a valid CBE receipt ID (e.g. fHCxyTVljBclm6Yk4C) or receipt URL.'),
-                        ]);
-                    }
-                    if ($accountSuffix !== null && $accountSuffix !== '') {
-                        throw ValidationException::withMessages([
-                            'account_suffix' => __('CBE receipt IDs do not use an account suffix.'),
-                        ]);
-                    }
-                }
-                break;
+        match (strtolower($bank)) {
+            'cbe' => $this->validateCbeReference($reference, $accountSuffix),
+            'boa' => $this->validateBoaReference($reference, $accountSuffix),
+            'telebirr' => $this->assertReference($reference, '/^[A-Za-z0-9]{8,30}$/', __('Enter a valid Telebirr transaction number (e.g. DET8FJGUJ4).')),
+            'mpesa' => $this->assertReference($reference, '/^[A-Za-z0-9]{8,30}$/', __('Enter a valid M-Pesa transaction number (e.g. QAB12CD34).')),
+            'cbebirr' => $this->validateCbeBirrReference($reference, $phoneNumber),
+            'dashen' => $this->assertReference($reference, '/^[A-Za-z0-9]{6,30}$/', __('Enter a valid Dashen Bank transaction reference.')),
+            default => $this->assertReference($reference, '/^[A-Za-z0-9._-]{6,150}$/', __('Enter a valid transaction reference or supported receipt URL.')),
+        };
+    }
 
-            case 'boa':
-                if (!preg_match('/^(?:FT[0-9A-Z]{8,14}|[A-Za-z0-9]{6,30})$/i', $reference)) {
-                    throw ValidationException::withMessages([
-                        'reference' => __('Enter a valid Bank of Abyssinia transaction reference.'),
-                    ]);
-                }
-                if (!$accountSuffix || !preg_match('/^\d{5}$/', $accountSuffix)) {
-                    throw ValidationException::withMessages([
-                        'account_suffix' => __('Bank of Abyssinia requires the five-digit transaction account suffix.'),
-                    ]);
-                }
-                break;
+    private function validateCbeReference(string $reference, ?string $accountSuffix): void
+    {
+        if (preg_match('/^FT/i', $reference) === 1) {
+            $this->validateCbeFtReference($reference, $accountSuffix);
 
-            case 'telebirr':
-                if (!preg_match('/^[A-Za-z0-9]{8,30}$/', $reference)) {
-                    throw ValidationException::withMessages([
-                        'reference' => __('Enter a valid Telebirr transaction number (e.g. DET8FJGUJ4).'),
-                    ]);
-                }
-                break;
-
-            case 'mpesa':
-                if (!preg_match('/^[A-Za-z0-9]{8,30}$/', $reference)) {
-                    throw ValidationException::withMessages([
-                        'reference' => __('Enter a valid M-Pesa transaction number (e.g. QAB12CD34).'),
-                    ]);
-                }
-                break;
-
-            case 'cbebirr':
-                if (!preg_match('/^[A-Za-z0-9]{6,30}$/', $reference)) {
-                    throw ValidationException::withMessages([
-                        'reference' => __('Enter a valid CBE Birr receipt or transaction reference.'),
-                    ]);
-                }
-                if (!$phoneNumber || !preg_match('/^(?:0[79]\d{8}|\+?251[79]\d{8})$/', $phoneNumber)) {
-                    throw ValidationException::withMessages([
-                        'phone_number' => __('CBE Birr requires a valid wallet phone number (e.g. 0912345678 or 0712345678).'),
-                    ]);
-                }
-                break;
-
-            case 'dashen':
-                if (!preg_match('/^[A-Za-z0-9]{6,30}$/', $reference)) {
-                    throw ValidationException::withMessages([
-                        'reference' => __('Enter a valid Dashen Bank transaction reference.'),
-                    ]);
-                }
-                break;
-
-            default:
-                if (!preg_match('/^[A-Za-z0-9._-]{6,150}$/', $reference)) {
-                    throw ValidationException::withMessages([
-                        'reference' => __('Enter a valid transaction reference or supported receipt URL.'),
-                    ]);
-                }
-                break;
+            return;
         }
+
+        $this->validateCbeReceiptId($reference, $accountSuffix);
+    }
+
+    private function validateCbeFtReference(string $reference, ?string $accountSuffix): void
+    {
+        $this->assertReference($reference, '/^FT[0-9A-Z]{8,148}$/i', __('Enter a valid CBE FT reference number (e.g. FT25356LL011).'));
+        if (preg_match('/^FT[0-9A-Z]{8,12}$/i', $reference) !== 1) {
+            return;
+        }
+
+        if ($accountSuffix && preg_match('/^\d{8}$/', $accountSuffix) === 1) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'account_suffix' => __('Older CBE FT references require the eight-digit transaction account suffix.'),
+        ]);
+    }
+
+    private function validateCbeReceiptId(string $reference, ?string $accountSuffix): void
+    {
+        $this->assertReference($reference, '/^[A-Za-z0-9_-]{6,150}$/', __('Enter a valid CBE receipt ID (e.g. fHCxyTVljBclm6Yk4C) or receipt URL.'));
+        if ($accountSuffix === null || $accountSuffix === '') {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'account_suffix' => __('CBE receipt IDs do not use an account suffix.'),
+        ]);
+    }
+
+    private function validateBoaReference(string $reference, ?string $accountSuffix): void
+    {
+        $this->assertReference($reference, '/^(?:FT[0-9A-Z]{8,14}|[A-Za-z0-9]{6,30})$/i', __('Enter a valid Bank of Abyssinia transaction reference.'));
+        if ($accountSuffix && preg_match('/^\d{5}$/', $accountSuffix) === 1) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'account_suffix' => __('Bank of Abyssinia requires the five-digit transaction account suffix.'),
+        ]);
+    }
+
+    private function validateCbeBirrReference(string $reference, ?string $phoneNumber): void
+    {
+        $this->assertReference($reference, '/^[A-Za-z0-9]{6,30}$/', __('Enter a valid CBE Birr receipt or transaction reference.'));
+        if ($phoneNumber && preg_match('/^(?:0[79]\d{8}|\+?251[79]\d{8})$/', $phoneNumber) === 1) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'phone_number' => __('CBE Birr requires a valid wallet phone number (e.g. 0912345678 or 0712345678).'),
+        ]);
+    }
+
+    private function assertReference(string $reference, string $pattern, string $message): void
+    {
+        if (preg_match($pattern, $reference) === 1) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'reference' => $message,
+        ]);
     }
 }

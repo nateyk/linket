@@ -138,7 +138,7 @@ final class VerifyEtGateway
             return $this->holdForManualReview($verification, $matchError);
         }
 
-        $identity = $this->identityResolver->canonicalIdentity($item, $verification->bank_code);
+        $identity = $this->identityResolver->canonicalIdentity($item, (string) $verification->bank_code);
         if ($identity === null) {
             return $this->holdForManualReview($verification, 'conflicting_or_missing_transaction_identity');
         }
@@ -333,11 +333,18 @@ final class VerifyEtGateway
 
     public function accountMatches(string $expected, string $actual, string $bank): bool
     {
-        return $this->identityResolver->accountMatches($expected, $actual, $bank);
+        return $this->identityResolver->accountMatches([
+            'expected' => $expected,
+            'actual' => $actual,
+            'bank' => $bank,
+        ]);
     }
 
     public function normalizeSettlementAccount(string $account, string $bank): string
     {
-        return $this->identityResolver->normalizeSettlementAccount($account, $bank);
+        return $this->identityResolver->normalizeSettlementAccount([
+            'number' => $account,
+            'bank' => $bank,
+        ]);
     }
 }

@@ -36,17 +36,17 @@ class VerifyEtGatewayCodeHealthTest extends TestCase
 
     public function testNormalizeSettlementAccountFormatsEthiopianMobileNumbers(): void
     {
-        $this->assertSame('251912345678', $this->identityResolver->normalizeSettlementAccount('0912345678', 'telebirr'));
-        $this->assertSame('251712345678', $this->identityResolver->normalizeSettlementAccount('0712345678', 'cbebirr'));
-        $this->assertSame('251912345678', $this->identityResolver->normalizeSettlementAccount('+251912345678', 'mpesa'));
-        $this->assertSame('1000123456789', $this->identityResolver->normalizeSettlementAccount('1000123456789', 'cbe'));
+        $this->assertSame('251912345678', $this->identityResolver->normalizeSettlementAccount(['number' => '0912345678', 'bank' => 'telebirr']));
+        $this->assertSame('251712345678', $this->identityResolver->normalizeSettlementAccount(['number' => '0712345678', 'bank' => 'cbebirr']));
+        $this->assertSame('251912345678', $this->identityResolver->normalizeSettlementAccount(['number' => '+251912345678', 'bank' => 'mpesa']));
+        $this->assertSame('1000123456789', $this->identityResolver->normalizeSettlementAccount(['number' => '1000123456789', 'bank' => 'cbe']));
     }
 
     public function testAccountMatchesRejectsMaskedAccounts(): void
     {
-        $this->assertFalse($this->identityResolver->accountMatches('1000123456789', '10001****6789', 'cbe'));
-        $this->assertFalse($this->identityResolver->accountMatches('10001••••6789', '1000123456789', 'cbe'));
-        $this->assertTrue($this->identityResolver->accountMatches('0912345678', '251912345678', 'telebirr'));
+        $this->assertFalse($this->identityResolver->accountMatches(['expected' => '1000123456789', 'actual' => '10001****6789', 'bank' => 'cbe']));
+        $this->assertFalse($this->identityResolver->accountMatches(['expected' => '10001••••6789', 'actual' => '1000123456789', 'bank' => 'cbe']));
+        $this->assertTrue($this->identityResolver->accountMatches(['expected' => '0912345678', 'actual' => '251912345678', 'bank' => 'telebirr']));
     }
 
     public function testCanonicalIdentityExtractsBankSpecificFields(): void
@@ -132,16 +132,8 @@ class VerifyEtGatewayCodeHealthTest extends TestCase
 
     public function testPayloadBuilderNormalizesCbeBirrPhones(): void
     {
-        $local = new DirectPaymentVerification();
-        $local->bank_code = 'cbebirr';
-        $local->reference = 'RCPT123456';
-        $local->settlement_account = '251912345678';
-        $local->provider_input = ['phoneNumber' => '0712345678'];
-        $international = new DirectPaymentVerification();
-        $international->bank_code = 'cbebirr';
-        $international->reference = 'RCPT123456';
-        $international->settlement_account = '251912345678';
-        $international->provider_input = ['phoneNumber' => '+251912345678'];
+        $local = $this->verification(['provider_input' => ['phoneNumber' => '0712345678']]);
+        $international = $this->verification(['provider_input' => ['phoneNumber' => '+251912345678']]);
 
         $this->assertSame('251712345678', $this->payloadBuilder->build($local)['phoneNumber']);
         $this->assertSame('251912345678', $this->payloadBuilder->build($international)['phoneNumber']);
@@ -149,11 +141,10 @@ class VerifyEtGatewayCodeHealthTest extends TestCase
 
     public function testPayloadBuilderRejectsNonEthiopianCbeBirrPhones(): void
     {
-        $verification = new DirectPaymentVerification();
-        $verification->bank_code = 'cbebirr';
-        $verification->reference = 'RCPT123456';
-        $verification->settlement_account = '251812345678';
-        $verification->provider_input = ['phoneNumber' => '0812345678'];
+        $verification = $this->verification([
+            'settlement_account' => '251812345678',
+            'provider_input' => ['phoneNumber' => '0812345678'],
+        ]);
 
         $this->expectException(VerifyEtException::class);
         $this->payloadBuilder->build($verification);
@@ -161,10 +152,11 @@ class VerifyEtGatewayCodeHealthTest extends TestCase
 
     public function testPayloadBuilderEnforcesBankFieldRules(): void
     {
-        $verification = new DirectPaymentVerification();
-        $verification->bank_code = 'unsupported';
-        $verification->reference = 'REF123';
-        $verification->settlement_account = '1000123';
+        $verification = $this->verification([
+            'bank_code' => 'unsupported',
+            'reference' => 'REF123',
+            'settlement_account' => '1000123',
+        ]);
 
         // Unsupported bank
         $this->expectException(VerifyEtException::class);
@@ -173,11 +165,12 @@ class VerifyEtGatewayCodeHealthTest extends TestCase
 
     public function testPayloadBuilderRequiresBoa5DigitSuffix(): void
     {
-        $verification = new DirectPaymentVerification();
-        $verification->bank_code = 'boa';
-        $verification->reference = 'REF123';
-        $verification->settlement_account = '1000123';
-        $verification->provider_input = ['accountSuffix' => '123']; // 3 digits instead of 5
+        $verification = $this->verification([
+            'bank_code' => 'boa',
+            'reference' => 'REF123',
+            'settlement_account' => '1000123',
+            'provider_input' => ['accountSuffix' => '123'],
+        ]);
 
         $this->expectException(VerifyEtException::class);
         $this->payloadBuilder->build($verification);
@@ -217,5 +210,19 @@ class VerifyEtGatewayCodeHealthTest extends TestCase
         ]);
         $this->assertSame('req_test', $safeResult['requestId']);
         $this->assertSame('cbe', $safeResult['transactionEvidence']['bank']);
+    }
+
+    /**
+     * @param array<string, mixed> $overrides
+     */
+    private function verification(array $overrides = []): DirectPaymentVerification
+    {
+        $verification = new DirectPaymentVerification();
+        $verification->bank_code = $overrides['bank_code'] ?? 'cbebirr';
+        $verification->reference = $overrides['reference'] ?? 'RCPT123456';
+        $verification->settlement_account = $overrides['settlement_account'] ?? '251912345678';
+        $verification->provider_input = $overrides['provider_input'] ?? [];
+
+        return $verification;
     }
 }

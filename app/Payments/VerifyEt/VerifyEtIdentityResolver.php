@@ -40,34 +40,56 @@ final class VerifyEtIdentityResolver
     }
 
     /**
-     * Check whether actual received settlement account matches expected account.
+     * @param array{expected: string, actual: string, bank: string} $accounts
      */
-    public function accountMatches(string $expected, string $actual, string $bank): bool
+    public function accountMatches(array $accounts): bool
     {
+        $expected = (string) ($accounts['expected'] ?? '');
+        $actual = (string) ($accounts['actual'] ?? '');
         if ($this->isMaskedAccount($actual) || $this->isMaskedAccount($expected)) {
             return false;
         }
 
-        $normalizedExpected = $this->normalizeSettlementAccount($expected, $bank);
-        $normalizedActual = $this->normalizeSettlementAccount($actual, $bank);
+        $normalizedExpected = $this->normalizeSettlementAccount([
+            'number' => $expected,
+            'bank' => (string) ($accounts['bank'] ?? ''),
+        ]);
+        $normalizedActual = $this->normalizeSettlementAccount([
+            'number' => $actual,
+            'bank' => (string) ($accounts['bank'] ?? ''),
+        ]);
 
-        return $normalizedExpected !== '' && hash_equals($normalizedExpected, $normalizedActual);
+        if ($normalizedExpected === '') {
+            return false;
+        }
+
+        return hash_equals($normalizedExpected, $normalizedActual);
     }
 
     /**
      * Normalize settlement phone number or account number.
+     *
+     * @param array{number: string, bank: string} $account
      */
-    public function normalizeSettlementAccount(string $account, string $bank): string
+    public function normalizeSettlementAccount(array $account): string
     {
-        $cleaned = strtoupper((string) preg_replace('/[^A-Za-z0-9]/', '', $account));
+        $cleaned = strtoupper((string) preg_replace('/[^A-Za-z0-9]/', '', (string) ($account['number'] ?? '')));
+        $bank = strtolower((string) ($account['bank'] ?? ''));
+        if (!in_array($bank, ['telebirr', 'mpesa', 'cbebirr'], true)) {
+            return $cleaned;
+        }
 
-        if (in_array(strtolower($bank), ['telebirr', 'mpesa', 'cbebirr'], true)) {
-            if (preg_match('/^0([79][0-9]{8})$/', $cleaned, $parts)) {
-                return '251' . $parts[1];
-            }
-            if (preg_match('/^251([79][0-9]{8})$/', $cleaned, $parts)) {
-                return '251' . $parts[1];
-            }
+        return $this->normalizeEthiopianMobile($cleaned);
+    }
+
+    private function normalizeEthiopianMobile(string $cleaned): string
+    {
+        if (preg_match('/^0([79][0-9]{8})$/', $cleaned, $parts) === 1) {
+            return '251'.$parts[1];
+        }
+
+        if (preg_match('/^251([79][0-9]{8})$/', $cleaned, $parts) === 1) {
+            return '251'.$parts[1];
         }
 
         return $cleaned;

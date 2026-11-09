@@ -57,23 +57,7 @@ final class VerifyEtSettlementHandler
             ->lockForUpdate()
             ->first();
 
-        if ($order === null) {
-            return false;
-        }
-
-        if ($order->status === 'expired' && $order->monetization_policy === null) {
-            return false;
-        }
-
-        if ($order->payment_gateway !== 'verify_et' || $order->gross_amount_cents !== $verification->amount_cents) {
-            return false;
-        }
-
-        if (strtoupper((string) $order->currency) !== strtoupper($verification->currency)) {
-            return false;
-        }
-
-        if (strtolower((string) $order->payment_provider_snapshot) !== strtolower($verification->bank_code)) {
+        if ($order === null || !$this->orderCanBeSettled($order, $verification)) {
             return false;
         }
 
@@ -90,11 +74,32 @@ final class VerifyEtSettlementHandler
             return false;
         }
 
-        return $this->identityResolver->accountMatches(
-            $order->payment_account_snapshot,
-            $verification->settlement_account,
-            $verification->bank_code,
-        );
+        return $this->identityResolver->accountMatches([
+            'expected' => $order->payment_account_snapshot,
+            'actual' => $verification->settlement_account,
+            'bank' => $verification->bank_code,
+        ]);
+    }
+
+    private function orderCanBeSettled(StorefrontOrder $order, DirectPaymentVerification $verification): bool
+    {
+        if ($order->status === 'expired' && $order->monetization_policy === null) {
+            return false;
+        }
+
+        if ($order->payment_gateway !== 'verify_et') {
+            return false;
+        }
+
+        if ($order->gross_amount_cents !== $verification->amount_cents) {
+            return false;
+        }
+
+        if (strtoupper((string) $order->currency) !== strtoupper($verification->currency)) {
+            return false;
+        }
+
+        return strtolower((string) $order->payment_provider_snapshot) === strtolower($verification->bank_code);
     }
 
     private function isEligibleInvoice(DirectPaymentVerification $verification): bool

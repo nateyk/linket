@@ -32,47 +32,76 @@ class DeliverStorefrontOrder implements ShouldBeUnique, ShouldQueue
 
     public function handle(): void
     {
-        $order = StorefrontOrder::query()->find($this->orderId);
-        if (!$order || !$order->isCompleted() || $order->isDelivered()) {
+        if (!$this->orderNeedsDelivery()) {
             return;
         }
 
         try {
-            DB::transaction(function (): void {
-                $order = StorefrontOrder::query()->whereKey($this->orderId)->lockForUpdate()->firstOrFail();
-                if (!$order->isCompleted() || $order->isDelivered()) {
-                    return;
-                }
-
-                $order->loadMissing('product.files', 'product.course');
-                foreach ($order->product->files as $file) {
-                    DownloadEntitlement::query()->firstOrCreate(
-                        ['storefront_order_id' => $order->id, 'file_entry_id' => $file->id],
-                        [
-                            'token' => (string) Str::uuid(),
-                            'download_limit' => config('storefront.download_limit'),
-                            'expires_at' => now()->addDays((int) config('storefront.download_days')),
-                        ],
-                    );
-                }
-
-                if ($order->product->isCourse() && $order->product->course) {
-                    app(EnrollmentService::class)->grantFromOrder($order->fresh('product.course'));
-                }
-
-                $order->update([
-                    'delivery_status' => StorefrontOrder::DELIVERY_DELIVERED,
-                    'delivered_at' => now(),
-                    'delivery_error' => null,
-                ]);
-
-                SendStorefrontReceipt::dispatch($order->id)->afterCommit();
-            });
+            $this->deliverLockedOrder();
         } catch (Throwable $exception) {
-            StorefrontOrder::query()->whereKey($this->orderId)->whereIn('status', ['paid', 'completed', 'fulfilled'])->update([
-                'delivery_status' => StorefrontOrder::DELIVERY_FAILED,
-                'delivery_error' => Str::limit($exception->getMessage(), 255, ''),
-            ]);
+            $this->recordDeliveryFailure($exception);
         }
+    }
+
+    private function orderNeedsDelivery(): bool
+    {
+        $order = StorefrontOrder::query()->find($this->orderId);
+        if ($order === null || !$order->isCompleted()) {
+            return false;
+        }
+
+        return !$order->isDelivered();
+    }
+
+    private function deliverLockedOrder(): void
+    {
+        DB::transaction(function (): void {
+            $order = StorefrontOrder::query()->whereKey($this->orderId)->lockForUpdate()->firstOrFail();
+            if (!$order->isCompleted() || $order->isDelivered()) {
+                return;
+            }
+
+            $this->grantDownloads($order);
+            $this->grantCourse($order);
+            $order->update([
+                'delivery_status' => StorefrontOrder::DELIVERY_DELIVERED,
+                'delivered_at' => now(),
+                'delivery_error' => null,
+            ]);
+            SendStorefrontReceipt::dispatch($order->id)->afterCommit();
+        });
+    }
+
+    private function grantDownloads(StorefrontOrder $order): void
+    {
+        $order->loadMissing('product.files');
+        foreach ($order->product->files as $file) {
+            DownloadEntitlement::query()->firstOrCreate(
+                ['storefront_order_id' => $order->id, 'file_entry_id' => $file->id],
+                [
+                    'token' => (string) Str::uuid(),
+                    'download_limit' => config('storefront.download_limit'),
+                    'expires_at' => now()->addDays((int) config('storefront.download_days')),
+                ],
+            );
+        }
+    }
+
+    private function grantCourse(StorefrontOrder $order): void
+    {
+        $order->loadMissing('product.course');
+        if (!$order->product->isCourse() || !$order->product->course) {
+            return;
+        }
+
+        app(EnrollmentService::class)->grantFromOrder($order->fresh('product.course'));
+    }
+
+    private function recordDeliveryFailure(Throwable $exception): void
+    {
+        StorefrontOrder::query()->whereKey($this->orderId)->whereIn('status', ['paid', 'completed', 'fulfilled'])->update([
+            'delivery_status' => StorefrontOrder::DELIVERY_FAILED,
+            'delivery_error' => Str::limit($exception->getMessage(), 255, ''),
+        ]);
     }
 }

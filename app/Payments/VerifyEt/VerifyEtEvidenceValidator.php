@@ -55,16 +55,15 @@ final class VerifyEtEvidenceValidator
     {
         $items = $result['data'] ?? null;
         if (($result['event'] ?? null) === 'verification.completed') {
-            return is_array($items) && !array_is_list($items) ? $items : null;
+            return $this->objectPayload($items);
         }
 
-        if (is_array($items) && !array_is_list($items) && is_array($items['result'] ?? null) && !array_is_list($items['result'])) {
-            return $items['result'];
+        $nested = $this->nestedResult($items);
+        if ($nested !== null) {
+            return $nested;
         }
 
-        return is_array($items) && array_is_list($items) && count($items) === 1 && is_array($items[0] ?? null)
-            ? $items[0]
-            : null;
+        return $this->singleListItem($items);
     }
 
     /**
@@ -87,8 +86,7 @@ final class VerifyEtEvidenceValidator
             return true;
         }
 
-        return (int) ($result['_http_status'] ?? 0) === 200
-            && !in_array($processing, ['queued', 'running', 'pending'], true);
+        return $this->httpOkAndNotQueued($result, $processing);
     }
 
     /**
@@ -98,24 +96,12 @@ final class VerifyEtEvidenceValidator
      */
     public function resolveUnfinishedStatus(array $result, ?string $requestId, ?array $item): string
     {
-        $httpStatus = (int) ($result['_http_status'] ?? 0);
-        $processing = data_get($result, 'verification.processingStatus') ?? data_get($result, 'data.processingStatus');
-
         if (!$this->isFinishedResult($result)) {
-            if ($httpStatus === 202 && $requestId === null) {
-                return 'manual_review';
-            }
-
-            return ($httpStatus === 202 || in_array($processing, ['queued', 'running', 'pending'], true))
-                ? 'verifying'
-                : 'manual_review';
+            return $this->statusWhileProcessing($result, $requestId);
         }
 
         if ($item === null) {
-            $status = data_get($result, 'verification.status') ?? data_get($result, 'data.status');
-            return in_array($processing, ['queued', 'running'], true) || $status === 'pending'
-                ? 'verifying'
-                : 'manual_review';
+            return $this->statusWithoutItem($result);
         }
 
         return 'verifying';
@@ -126,20 +112,19 @@ final class VerifyEtEvidenceValidator
      */
     public function validateSettlementAccountMatch(mixed $match): ?string
     {
-        if (!is_array($match) || !is_bool($match['matched'] ?? null) || !is_bool($match['ambiguous'] ?? null)) {
+        if (!$this->matchBooleansArePresent($match)) {
             return 'recipient_evidence_missing';
         }
 
-        if ($match['ambiguous'] || ($match['candidateCount'] ?? null) !== 1) {
+        if ($this->matchIsAmbiguous($match)) {
             return 'recipient_evidence_missing';
         }
 
-        if (in_array($match['reason'] ?? null, ['no_registered_accounts', 'missing_receiver_account'], true)) {
+        if ($this->matchReasonBlocksSettlement($match)) {
             return 'recipient_evidence_missing';
         }
 
-        if ($match['matched'] && (!is_string($match['matchedSettlementAccount'] ?? null)
-            || !in_array($match['matchConfidence'] ?? null, ['high', 'exact'], true))) {
+        if ($this->matchedAccountIsWeak($match)) {
             return 'recipient_evidence_missing';
         }
 
@@ -190,31 +175,11 @@ final class VerifyEtEvidenceValidator
             return 'confirmation_history_review';
         }
 
-        $confirmedBefore = $history['confirmedBefore'] ?? null;
-        $isFirstConfirmation = $history['isFirstConfirmation'] ?? null;
-        $count = $history['confirmationCount'] ?? null;
-
-        if (isset($history['confirmedBefore']) && !is_bool($confirmedBefore)) {
+        if ($this->historyShapeIsInvalid($history)) {
             return 'confirmation_history_review';
         }
 
-        if (isset($history['isFirstConfirmation']) && !is_bool($isFirstConfirmation)) {
-            return 'confirmation_history_review';
-        }
-
-        if ($count !== null && (!is_int($count) || $count < 1)) {
-            return 'confirmation_history_review';
-        }
-
-        if ($confirmedBefore === true && $verification->canonical_transaction_identity !== $identity) {
-            return 'confirmation_history_review';
-        }
-
-        if ($confirmedBefore === true && $isFirstConfirmation === true) {
-            return 'confirmation_history_review';
-        }
-
-        return null;
+        return $this->historyContradictsIdentity($history, $verification, $identity);
     }
 
     /**
@@ -236,6 +201,176 @@ final class VerifyEtEvidenceValidator
             'errorCode' => data_get($result, 'error.code') ?? data_get($result, 'data.error.code'),
             'transactionEvidence' => $evidence,
         ], static fn (mixed $value): bool => $value !== null);
+    }
+
+    private function objectPayload(mixed $items): ?array
+    {
+        if (!is_array($items) || array_is_list($items)) {
+            return null;
+        }
+
+        return $items;
+    }
+
+    private function nestedResult(mixed $items): ?array
+    {
+        if (!is_array($items) || array_is_list($items)) {
+            return null;
+        }
+
+        $result = $items['result'] ?? null;
+        if (!is_array($result) || array_is_list($result)) {
+            return null;
+        }
+
+        return $result;
+    }
+
+    private function singleListItem(mixed $items): ?array
+    {
+        if (!is_array($items) || !array_is_list($items)) {
+            return null;
+        }
+
+        if (count($items) !== 1 || !is_array($items[0] ?? null)) {
+            return null;
+        }
+
+        return $items[0];
+    }
+
+    private function httpOkAndNotQueued(array $result, mixed $processing): bool
+    {
+        if ((int) ($result['_http_status'] ?? 0) !== 200) {
+            return false;
+        }
+
+        return !in_array($processing, ['queued', 'running', 'pending'], true);
+    }
+
+    private function statusWhileProcessing(array $result, ?string $requestId): string
+    {
+        $httpStatus = (int) ($result['_http_status'] ?? 0);
+        if ($httpStatus === 202) {
+            return $requestId === null ? 'manual_review' : 'verifying';
+        }
+
+        $processing = data_get($result, 'verification.processingStatus') ?? data_get($result, 'data.processingStatus');
+        if (in_array($processing, ['queued', 'running', 'pending'], true)) {
+            return 'verifying';
+        }
+
+        return 'manual_review';
+    }
+
+    private function statusWithoutItem(array $result): string
+    {
+        $processing = data_get($result, 'verification.processingStatus') ?? data_get($result, 'data.processingStatus');
+        if (in_array($processing, ['queued', 'running'], true)) {
+            return 'verifying';
+        }
+
+        $status = data_get($result, 'verification.status') ?? data_get($result, 'data.status');
+        if ($status === 'pending') {
+            return 'verifying';
+        }
+
+        return 'manual_review';
+    }
+
+    private function matchBooleansArePresent(mixed $match): bool
+    {
+        if (!is_array($match)) {
+            return false;
+        }
+
+        if (!is_bool($match['matched'] ?? null)) {
+            return false;
+        }
+
+        return is_bool($match['ambiguous'] ?? null);
+    }
+
+    private function matchIsAmbiguous(array $match): bool
+    {
+        if ($match['ambiguous']) {
+            return true;
+        }
+
+        return ($match['candidateCount'] ?? null) !== 1;
+    }
+
+    /**
+     * @param array<string, mixed> $match
+     */
+    private function matchReasonBlocksSettlement(array $match): bool
+    {
+        return in_array($match['reason'] ?? null, ['no_registered_accounts', 'missing_receiver_account'], true);
+    }
+
+    /**
+     * @param array<string, mixed> $match
+     */
+    private function matchedAccountIsWeak(array $match): bool
+    {
+        if (!$match['matched']) {
+            return false;
+        }
+
+        if (!is_string($match['matchedSettlementAccount'] ?? null)) {
+            return true;
+        }
+
+        return !in_array($match['matchConfidence'] ?? null, ['high', 'exact'], true);
+    }
+
+    /**
+     * @param array<string, mixed> $history
+     */
+    private function historyShapeIsInvalid(array $history): bool
+    {
+        if (isset($history['confirmedBefore']) && !is_bool($history['confirmedBefore'])) {
+            return true;
+        }
+
+        if (isset($history['isFirstConfirmation']) && !is_bool($history['isFirstConfirmation'])) {
+            return true;
+        }
+
+        return $this->confirmationCountIsInvalid($history['confirmationCount'] ?? null);
+    }
+
+    private function confirmationCountIsInvalid(mixed $count): bool
+    {
+        if ($count === null) {
+            return false;
+        }
+
+        if (!is_int($count)) {
+            return true;
+        }
+
+        return $count < 1;
+    }
+
+    /**
+     * @param array<string, mixed> $history
+     */
+    private function historyContradictsIdentity(array $history, DirectPaymentVerification $verification, string $identity): ?string
+    {
+        if (($history['confirmedBefore'] ?? null) !== true) {
+            return null;
+        }
+
+        if ($verification->canonical_transaction_identity !== $identity) {
+            return 'confirmation_history_review';
+        }
+
+        if (($history['isFirstConfirmation'] ?? null) === true) {
+            return 'confirmation_history_review';
+        }
+
+        return null;
     }
 
     private function isExplicitFailureEnvelope(array $result, ?string $requestId): bool
@@ -276,7 +411,11 @@ final class VerifyEtEvidenceValidator
             return false;
         }
 
-        return $this->identityResolver->accountMatches($verification->settlement_account, $matchedAccount, $verification->bank_code);
+        return $this->identityResolver->accountMatches([
+            'expected' => $verification->settlement_account,
+            'actual' => $matchedAccount,
+            'bank' => $verification->bank_code,
+        ]);
     }
 
     /**
@@ -307,7 +446,10 @@ final class VerifyEtEvidenceValidator
         $bank = (string) ($item['bank'] ?? '');
         $matchedAccount = $match['matchedSettlementAccount'] ?? null;
         $fingerprint = is_string($matchedAccount)
-            ? hash_hmac('sha256', $this->identityResolver->normalizeSettlementAccount($matchedAccount, $bank), (string) config('app.key'))
+            ? hash_hmac('sha256', $this->identityResolver->normalizeSettlementAccount([
+                'number' => $matchedAccount,
+                'bank' => $bank,
+            ]), (string) config('app.key'))
             : null;
 
         return array_filter([

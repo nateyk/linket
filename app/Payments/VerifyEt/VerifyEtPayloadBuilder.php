@@ -76,22 +76,44 @@ final class VerifyEtPayloadBuilder
      */
     private function validateCbeFields(string $reference, array $input): void
     {
-        $suffix = $input['accountSuffix'] ?? null;
-        $legacyFt = preg_match('/^FT[0-9A-Z]{8,12}$/i', $reference) === 1;
-        $isFt = preg_match('/^FT/i', $reference) === 1;
-        $suffixProvided = $suffix !== null && $suffix !== '';
-
-        if ($legacyFt && !preg_match('/^\d{8}$/', (string) $suffix)) {
-            throw new VerifyEtException(422, 'invalid_bank_fields', 'INVALID_CBE_SUFFIX');
+        if ($this->cbeSuffixAccepted($reference, $input['accountSuffix'] ?? null)) {
+            return;
         }
 
-        if ($isFt && !$legacyFt && $suffixProvided && !preg_match('/^\d{8}$/', (string) $suffix)) {
-            throw new VerifyEtException(422, 'invalid_bank_fields', 'INVALID_CBE_SUFFIX');
+        throw new VerifyEtException(422, 'invalid_bank_fields', 'INVALID_CBE_SUFFIX');
+    }
+
+    private function cbeSuffixAccepted(string $reference, mixed $suffix): bool
+    {
+        if ($this->isLegacyCbeFt($reference)) {
+            return $this->isEightDigitSuffix($suffix);
         }
 
-        if (!$isFt && $suffixProvided) {
-            throw new VerifyEtException(422, 'invalid_bank_fields', 'INVALID_CBE_SUFFIX');
+        if (!$this->suffixWasProvided($suffix)) {
+            return true;
         }
+
+        return $this->isCbeFt($reference) && $this->isEightDigitSuffix($suffix);
+    }
+
+    private function isLegacyCbeFt(string $reference): bool
+    {
+        return preg_match('/^FT[0-9A-Z]{8,12}$/i', $reference) === 1;
+    }
+
+    private function isCbeFt(string $reference): bool
+    {
+        return preg_match('/^FT/i', $reference) === 1;
+    }
+
+    private function suffixWasProvided(mixed $suffix): bool
+    {
+        return is_string($suffix) && $suffix !== '';
+    }
+
+    private function isEightDigitSuffix(mixed $suffix): bool
+    {
+        return is_string($suffix) && preg_match('/^\d{8}$/', $suffix) === 1;
     }
 
     /**

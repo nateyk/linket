@@ -26,42 +26,121 @@ final class ProcessVerifyEtWebhook implements ShouldQueue
     public function handle(): void
     {
         $delivery = VerifyEtWebhookDelivery::query()->find($this->deliveryId);
-        if (!$delivery || !in_array($delivery->status, ['received', 'unmatched'], true) || !$delivery->provider_request_id) {
+        if (!$this->deliveryIsActionable($delivery)) {
             return;
         }
+
         $verification = DirectPaymentVerification::query()->where('provider_request_id', $delivery->provider_request_id)->first();
         if (!$verification) {
-            // Mitigate race condition when webhook arrives before synchronous request saves provider_request_id
-            if ($this->attempts() < $this->tries) {
-                $this->release(3);
-                return;
-            }
-            $delivery->update(['status' => 'unmatched']);
+            $this->releaseUnmatched($delivery);
+
             return;
         }
+
+        $payload = $this->completedPayload($delivery);
+        if ($payload === null) {
+            return;
+        }
+
+        $status = $this->applyResult($verification, $payload);
+        $delivery->update(['status' => $status]);
+        $this->notifyManualReview($verification, $status);
+    }
+
+    private function deliveryIsActionable(?VerifyEtWebhookDelivery $delivery): bool
+    {
+        if ($delivery === null || !$delivery->provider_request_id) {
+            return false;
+        }
+
+        return in_array($delivery->status, ['received', 'unmatched'], true);
+    }
+
+    private function releaseUnmatched(VerifyEtWebhookDelivery $delivery): void
+    {
+        if ($this->attempts() < $this->tries) {
+            $this->release(3);
+
+            return;
+        }
+
+        $delivery->update(['status' => 'unmatched']);
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function completedPayload(VerifyEtWebhookDelivery $delivery): ?array
+    {
+        $payload = $this->decryptPayload($delivery);
+        if (!$this->isCompletedEvent($payload, $delivery)) {
+            $delivery->update(['status' => 'invalid_payload']);
+
+            return null;
+        }
+
+        return $payload;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function decryptPayload(VerifyEtWebhookDelivery $delivery): ?array
+    {
         try {
             $encrypted = $delivery->payload['encrypted'] ?? null;
-            $payload = is_string($encrypted) ? json_decode(Crypt::decryptString($encrypted), true, 512, JSON_THROW_ON_ERROR) : null;
+            if (!is_string($encrypted)) {
+                return null;
+            }
+
+            $payload = json_decode(Crypt::decryptString($encrypted), true, 512, JSON_THROW_ON_ERROR);
         } catch (\Throwable) {
-            $delivery->update(['status' => 'invalid_payload']);
-            return;
+            return null;
         }
-        if (!is_array($payload) || ($payload['event'] ?? null) !== 'verification.completed'
-            || ($payload['requestId'] ?? null) !== $delivery->provider_request_id) {
-            $delivery->update(['status' => 'invalid_payload']);
-            return;
+
+        return is_array($payload) ? $payload : null;
+    }
+
+    private function isCompletedEvent(mixed $payload, VerifyEtWebhookDelivery $delivery): bool
+    {
+        if (!is_array($payload)) {
+            return false;
         }
+
+        if (($payload['event'] ?? null) !== 'verification.completed') {
+            return false;
+        }
+
+        return ($payload['requestId'] ?? null) === $delivery->provider_request_id;
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     */
+    private function applyResult(DirectPaymentVerification $verification, array $payload): string
+    {
         try {
-            $status = app(VerifyEtGateway::class)->processResult($verification, $payload);
+            return app(VerifyEtGateway::class)->processResult($verification, $payload);
         } catch (\Throwable) {
             throw new \RuntimeException('Verify.et webhook processing failed.');
         }
-        $delivery->update(['status' => $status]);
-        if ($status === 'manual_review' && $verification->payable_type === StorefrontOrder::class) {
-            $order = StorefrontOrder::query()->find($verification->payable_id);
-            if ($order && $order->status === 'manual_review') {
-                app(CreatorPaymentReviewNotifier::class)->notify($order, $verification->id);
-            }
+    }
+
+    private function notifyManualReview(DirectPaymentVerification $verification, string $status): void
+    {
+        if ($status !== 'manual_review') {
+            return;
         }
+
+        if ($verification->payable_type !== StorefrontOrder::class) {
+            return;
+        }
+
+        $order = StorefrontOrder::query()->find($verification->payable_id);
+        if ($order === null || $order->status !== 'manual_review') {
+            return;
+        }
+
+        app(CreatorPaymentReviewNotifier::class)->notify($order, $verification->id);
     }
 }
