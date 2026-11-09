@@ -38,7 +38,7 @@ final class VerifyEtEvidenceValidator
             return 'webhook_request_id_conflict';
         }
 
-        if ($requestId !== null && $verification->provider_request_id && $verification->provider_request_id !== $requestId) {
+        if ($this->requestIdsConflict($verification, $requestId)) {
             return 'request_id_conflict';
         }
 
@@ -371,6 +371,19 @@ final class VerifyEtEvidenceValidator
         }
 
         return null;
+    }
+
+    private function requestIdsConflict(DirectPaymentVerification $verification, ?string $requestId): bool
+    {
+        if ($requestId === null || !is_string($verification->provider_request_id)) {
+            return false;
+        }
+
+        if ($verification->provider_request_id === '') {
+            return false;
+        }
+
+        return $verification->provider_request_id !== $requestId;
     }
 
     private function isExplicitFailureEnvelope(array $result, ?string $requestId): bool

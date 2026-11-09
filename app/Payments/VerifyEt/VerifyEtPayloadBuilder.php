@@ -19,42 +19,42 @@ final class VerifyEtPayloadBuilder
      */
     public function build(DirectPaymentVerification $verification): array
     {
-        $this->ensureSupportedBank($verification->bank_code);
-        $input = $verification->provider_input ?? [];
-        $this->validateBankSpecificFields($verification->bank_code, $verification->reference, $input);
+        $this->ensureSupportedBank($verification);
+        $this->validateBankSpecificFields($verification);
 
         $payload = [
             'bank' => $verification->bank_code,
             'settlementAccount' => $verification->settlement_account,
         ];
 
-        $payload = array_merge($payload, $this->resolveBankPayloadFields(
-            $verification->bank_code,
-            $verification->reference,
-            $input,
-        ));
+        $payload = array_merge($payload, $this->resolveBankPayloadFields($verification));
 
         return array_filter($payload, static fn (mixed $value): bool => $value !== null && $value !== '');
     }
 
-    private function ensureSupportedBank(string $bankCode): void
+    private function ensureSupportedBank(DirectPaymentVerification $verification): void
     {
-        if (!in_array($bankCode, self::SUPPORTED_BANKS, true)) {
+        if (!in_array($verification->bank_code, self::SUPPORTED_BANKS, true)) {
             throw new VerifyEtException(422, 'unsupported_bank');
         }
     }
 
-    /**
-     * @param array<string, mixed> $input
-     * @throws VerifyEtException
-     */
-    private function validateBankSpecificFields(string $bank, string $reference, array $input): void
+    private function validateBankSpecificFields(DirectPaymentVerification $verification): void
     {
-        if ($bank === 'boa') {
+        $input = $verification->provider_input ?? [];
+        if ($verification->bank_code === 'boa') {
             $this->validateBoaFields($input);
-        } elseif ($bank === 'cbe') {
-            $this->validateCbeFields($reference, $input);
-        } elseif ($bank === 'cbebirr') {
+
+            return;
+        }
+
+        if ($verification->bank_code === 'cbe') {
+            $this->validateCbeFields($verification);
+
+            return;
+        }
+
+        if ($verification->bank_code === 'cbebirr') {
             $this->validateCbeBirrFields($input);
         }
     }
@@ -74,18 +74,20 @@ final class VerifyEtPayloadBuilder
      * @param array<string, mixed> $input
      * @throws VerifyEtException
      */
-    private function validateCbeFields(string $reference, array $input): void
+    private function validateCbeFields(DirectPaymentVerification $verification): void
     {
-        if ($this->cbeSuffixAccepted($reference, $input['accountSuffix'] ?? null)) {
+        if ($this->cbeSuffixAccepted($verification)) {
             return;
         }
 
         throw new VerifyEtException(422, 'invalid_bank_fields', 'INVALID_CBE_SUFFIX');
     }
 
-    private function cbeSuffixAccepted(string $reference, mixed $suffix): bool
+    private function cbeSuffixAccepted(DirectPaymentVerification $verification): bool
     {
-        if ($this->isLegacyCbeFt($reference)) {
+        $reference = $verification->reference;
+        $suffix = ($verification->provider_input ?? [])['accountSuffix'] ?? null;
+        if (preg_match('/^FT[0-9A-Z]{8,12}$/i', $reference) === 1) {
             return $this->isEightDigitSuffix($suffix);
         }
 
@@ -93,17 +95,11 @@ final class VerifyEtPayloadBuilder
             return true;
         }
 
-        return $this->isCbeFt($reference) && $this->isEightDigitSuffix($suffix);
-    }
+        if (preg_match('/^FT/i', $reference) !== 1) {
+            return false;
+        }
 
-    private function isLegacyCbeFt(string $reference): bool
-    {
-        return preg_match('/^FT[0-9A-Z]{8,12}$/i', $reference) === 1;
-    }
-
-    private function isCbeFt(string $reference): bool
-    {
-        return preg_match('/^FT/i', $reference) === 1;
+        return $this->isEightDigitSuffix($suffix);
     }
 
     private function suffixWasProvided(mixed $suffix): bool
@@ -148,12 +144,14 @@ final class VerifyEtPayloadBuilder
     }
 
     /**
-     * @param array<string, mixed> $input
      * @return array<string, mixed>
      */
-    private function resolveBankPayloadFields(string $bank, string $reference, array $input): array
+    private function resolveBankPayloadFields(DirectPaymentVerification $verification): array
     {
-        return match ($bank) {
+        $reference = $verification->reference;
+        $input = $verification->provider_input ?? [];
+
+        return match ($verification->bank_code) {
             'telebirr', 'mpesa' => [
                 'transactionNumber' => $reference,
             ],
@@ -165,13 +163,26 @@ final class VerifyEtPayloadBuilder
                 'referenceNumber' => $reference,
                 'accountSuffix' => $input['accountSuffix'] ?? null,
             ],
-            'cbe' => array_merge(
-                ['reference' => $reference],
-                ($input['accountSuffix'] ?? null) ? ['accountSuffix' => $input['accountSuffix']] : [],
-            ),
+            'cbe' => $this->cbePayload($verification),
             default => [
                 'referenceNumber' => $reference,
             ],
         };
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function cbePayload(DirectPaymentVerification $verification): array
+    {
+        $payload = ['reference' => $verification->reference];
+        $suffix = ($verification->provider_input ?? [])['accountSuffix'] ?? null;
+        if (!$this->suffixWasProvided($suffix)) {
+            return $payload;
+        }
+
+        $payload['accountSuffix'] = $suffix;
+
+        return $payload;
     }
 }

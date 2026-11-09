@@ -13,11 +13,11 @@ final class VerifyEtIdentityResolver
     {
         $bank = strtolower($bank);
 
-        if (!$this->hasRequiredCbeReceiptIdentity($item, $bank)) {
+        if (!$this->hasRequiredCbeReceiptIdentity($item, ['code' => $bank])) {
             return null;
         }
 
-        $fields = $this->candidateFieldsForBank($bank);
+        $fields = $this->candidateFieldsForBank(['code' => $bank]);
         $identities = $this->extractCanonicalIdentities($item, $fields);
 
         if ($identities === null) {
@@ -46,7 +46,11 @@ final class VerifyEtIdentityResolver
     {
         $expected = (string) ($accounts['expected'] ?? '');
         $actual = (string) ($accounts['actual'] ?? '');
-        if ($this->isMaskedAccount($actual) || $this->isMaskedAccount($expected)) {
+        if (str_contains($actual, '*') || str_contains($actual, '•')) {
+            return false;
+        }
+
+        if (str_contains($expected, '*') || str_contains($expected, '•')) {
             return false;
         }
 
@@ -79,11 +83,6 @@ final class VerifyEtIdentityResolver
             return $cleaned;
         }
 
-        return $this->normalizeEthiopianMobile($cleaned);
-    }
-
-    private function normalizeEthiopianMobile(string $cleaned): string
-    {
         if (preg_match('/^0([79][0-9]{8})$/', $cleaned, $parts) === 1) {
             return '251'.$parts[1];
         }
@@ -97,10 +96,11 @@ final class VerifyEtIdentityResolver
 
     /**
      * @param array<string, mixed> $item
+     * @param array{code: string} $bank
      */
-    private function hasRequiredCbeReceiptIdentity(array $item, string $bank): bool
+    private function hasRequiredCbeReceiptIdentity(array $item, array $bank): bool
     {
-        if ($bank !== 'cbe') {
+        if (($bank['code'] ?? '') !== 'cbe') {
             return true;
         }
 
@@ -114,11 +114,12 @@ final class VerifyEtIdentityResolver
     }
 
     /**
+     * @param array{code: string} $bank
      * @return list<string>
      */
-    private function candidateFieldsForBank(string $bank): array
+    private function candidateFieldsForBank(array $bank): array
     {
-        return match ($bank) {
+        return match ($bank['code']) {
             'telebirr', 'mpesa' => ['transactionNumber', 'referenceNumber', 'receiptNumber', 'reference'],
             'cbe', 'cbebirr' => ['receiptNumber', 'referenceNumber', 'transactionNumber', 'reference'],
             default => ['referenceNumber', 'receiptNumber', 'transactionNumber', 'reference'],
@@ -145,10 +146,5 @@ final class VerifyEtIdentityResolver
         }
 
         return $identities;
-    }
-
-    private function isMaskedAccount(string $value): bool
-    {
-        return str_contains($value, '*') || str_contains($value, '•');
     }
 }
