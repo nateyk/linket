@@ -19,7 +19,7 @@ final class VerifyEtClient
         }
         RateLimiter::hit('verify-et:write', 60);
 
-        return $this->request('post', '/api/verify', $payload, $idempotencyKey);
+        return $this->request('post', '/api/verify?waitMs=5000', $payload, $idempotencyKey);
     }
 
     /** @return array<string, mixed> */

@@ -42,7 +42,7 @@ class BuyerDownloadAndRecoveryTest extends TestCase
         [$order, $token, $fileContent] = $this->createPendingCheckoutWithFile();
         $reference = 'FT26'.Str::upper(Str::random(14));
 
-        Http::fake(['verify.et/api/verify' => Http::response([
+        Http::fake(['verify.et/api/verify?*' => Http::response([
             'requestId' => 'buyer-journey-request',
             'verification' => ['processingStatus' => 'completed'],
             'data' => [[
@@ -167,7 +167,7 @@ class BuyerDownloadAndRecoveryTest extends TestCase
             'bank' => 'cbe',
             'status' => 'success',
             'verified' => true,
-            'amount' => 10000,
+            'amount' => 100,
             'currency' => 'ETB',
             'receiptNumber' => $verification->reference,
             'referenceNumber' => $verification->reference,
@@ -179,11 +179,15 @@ class BuyerDownloadAndRecoveryTest extends TestCase
                 'matchedSettlementAccount' => '1000123456789',
             ],
         ];
-        Http::fake(['verify.et/api/verify' => Http::response([
+        Http::fake(['verify.et/api/verify?*' => Http::response([
             'requestId' => 'synthetic',
             'verification' => ['processingStatus' => 'completed'],
             'data' => [$item],
         ], 200)]);
+
+        $transport = \Mockery::mock(\App\Payments\VerifyEt\VerifyEtHttp::class);
+        $transport->shouldReceive('factory')->andReturn(Http::getFacadeRoot());
+        app()->instance(\App\Payments\VerifyEt\VerifyEtHttp::class, $transport);
 
         $this->withHeader('X-Order-Access-Token', $token)
             ->postJson('/api/v1/public/direct-orders/'.$order->uuid.'/reference', ['reference' => $verification->reference])
@@ -208,7 +212,7 @@ class BuyerDownloadAndRecoveryTest extends TestCase
         [$order, $token] = $this->createPendingCheckoutWithFile();
         $reference = 'FT26'.Str::upper(Str::random(14));
 
-        Http::fake(['verify.et/api/verify' => Http::response([
+        Http::fake(['verify.et/api/verify?*' => Http::response([
             'requestId' => 'wrong-recipient',
             'verification' => ['processingStatus' => 'completed'],
             'data' => [[
@@ -237,7 +241,7 @@ class BuyerDownloadAndRecoveryTest extends TestCase
                 'reference' => $reference,
                 'account_suffix' => '12345678',
             ])
-            ->assertOk()
+            ->assertUnprocessable()
             ->assertJsonPath('status', 'failed_verification');
 
         $payload = $this->withHeader('X-Order-Access-Token', $token)

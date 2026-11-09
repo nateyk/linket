@@ -40,6 +40,27 @@ class PublicDigitalProductResource extends JsonResource
         if ($this->price_cents > 0 && ! $blocker && $accounts->isEmpty()) {
             $blocker = 'no_eligible_receiving_account';
         }
+        $catalog = \App\Storefront\Models\DirectPaymentMethod::query()->get()->keyBy('code');
+        $receivingAccounts = $accounts->map(fn (CreatorPaymentMethod $method) => [
+            'id' => $method->id,
+            'provider' => $method->provider,
+            'bank_name' => $catalog->get($method->provider)?->display_name ?? strtoupper($method->provider),
+            'account_ending' => substr($method->account_number, -4),
+            'account_name' => $method->account_name_raw,
+            'instructions' => match (strtolower($method->provider)) {
+                'cbe' => __('Transfer the exact amount to Commercial Bank of Ethiopia. Submit your CBE Receipt ID (or older FT reference with 8-digit suffix).'),
+                'telebirr' => __('Transfer the exact amount via Telebirr. Submit your 10-character transaction number.'),
+                'boa' => __('Transfer the exact amount to Bank of Abyssinia. Submit your reference and 5-digit transaction account suffix.'),
+                'dashen' => __('Transfer the exact amount to Dashen Bank. Submit your transaction reference.'),
+                'cbebirr' => __('Transfer the exact amount via CBE Birr. Submit your receipt number and wallet phone number.'),
+                'mpesa' => __('Transfer the exact amount via M-Pesa. Submit your transaction number.'),
+                'awash' => __('Transfer the exact amount to Awash Bank. Submit your receipt reference or receipt URL.'),
+                'siinqee' => __('Transfer the exact amount to Siinqee Bank. Submit your receipt reference.'),
+                'kaafiebirr' => __('Transfer the exact amount to Kaafie Birr. Submit your receipt reference or receipt URL.'),
+                default => __('Transfer the exact amount to the account shown, then submit your transaction reference.'),
+            },
+        ])->values();
+
         return [
             'id' => $this->id,
             'title' => $this->title,
@@ -51,7 +72,7 @@ class PublicDigitalProductResource extends JsonResource
             'checkout_blocker' => $blocker,
             'verification_quota_exhausted' => $blocker === 'verification_quota_exhausted',
             'payment_mode' => $this->price_cents === 0 ? 'free' : (VerifyEtSettings::get('enabled') ? 'direct' : 'unavailable'),
-            'receiving_accounts' => $accounts->map(fn (CreatorPaymentMethod $method) => ['id' => $method->id, 'provider' => $method->provider, 'account_ending' => substr($method->account_number, -4), 'account_name' => $method->account_name_raw])->values(),
+            'receiving_accounts' => $receivingAccounts,
             'type' => $this->type ?? 'digital',
             'is_course' => $isCourse,
             'course_id' => $courseId,

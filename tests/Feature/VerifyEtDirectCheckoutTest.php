@@ -7,6 +7,10 @@ use App\Payments\Models\DirectPaymentVerification;
 use App\Payments\VerifyEt\VerifyEtGateway;
 use App\Payments\Models\VerifyEtWebhookDelivery;
 use App\Jobs\ProcessVerifyEtWebhook;
+use App\Payments\VerifyEt\ReceiptReference;
+use App\Storefront\Jobs\DeliverStorefrontOrder;
+use App\Storefront\Models\DownloadEntitlement;
+use App\Storefront\Services\StorefrontVerificationSession;
 use App\Storefront\Models\CommissionAccrual;
 use App\Storefront\Models\CreatorPaymentMethod;
 use App\Storefront\Models\DigitalProduct;
@@ -17,6 +21,7 @@ use Common\Billing\Models\Product;
 use Common\Files\FileEntry;
 use Common\Workspaces\Actions\CreateWorkspace;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -283,7 +288,7 @@ class VerifyEtDirectCheckoutTest extends TestCase
             'buyer_name' => 'Buyer', 'buyer_email' => 'buyer@example.test', 'creator_payment_method_id' => $methodId,
         ])->assertOk();
         $reference = 'SYNTHETIC123456';
-        \Illuminate\Support\Facades\Http::fake(['verify.et/api/verify' => \Illuminate\Support\Facades\Http::response([
+        \Illuminate\Support\Facades\Http::fake(['verify.et/api/verify?*' => \Illuminate\Support\Facades\Http::response([
             'requestId' => 'synthetic-request', 'verification' => ['processingStatus' => 'completed'], 'data' => [[
                 'bank' => 'telebirr', 'status' => 'success', 'verified' => true, 'amount' => 100, 'currency' => 'ETB',
                 'transactionNumber' => $reference, 'settlementAccountMatch' => ['matched' => true, 'ambiguous' => false, 'matchConfidence' => 'high', 'candidateCount' => 1, 'matchedSettlementAccount' => '0912345678'],
@@ -328,9 +333,9 @@ class VerifyEtDirectCheckoutTest extends TestCase
             $reference = $case === 'duplicate' ? $existing->reference : 'SYNTHETIC'.strtoupper(Str::random(12));
             $item = ['bank' => 'cbe', 'status' => 'success', 'verified' => true, 'amount' => $case === 'amount' ? 101 : 100, 'currency' => 'ETB', 'receiptNumber' => $reference, 'settlementAccountMatch' => ['matched' => true, 'ambiguous' => false, 'matchConfidence' => 'high', 'candidateCount' => 1, 'matchedSettlementAccount' => $case === 'recipient' ? '9999999999999' : '1000123456789']];
             if ($case === 'currency') { unset($item['currency']); }
-            \Illuminate\Support\Facades\Http::fake(['verify.et/api/verify' => \Illuminate\Support\Facades\Http::response(['requestId' => 'synthetic-'.$case, 'verification' => ['processingStatus' => 'completed'], 'data' => [$item]], 200)]);
+            \Illuminate\Support\Facades\Http::fake(['verify.et/api/verify?*' => \Illuminate\Support\Facades\Http::response(['requestId' => 'synthetic-'.$case, 'verification' => ['processingStatus' => 'completed'], 'data' => [$item]], 200)]);
             $response = $this->withHeader('X-Order-Access-Token', $checkout->json('access_token'))->postJson($checkout->json('reference_endpoint'), ['reference' => $reference, ...($case === 'duplicate' ? ['account_suffix' => '01234567'] : [])]);
-            if ($case === 'duplicate') { $response->assertUnprocessable(); } else { $response->assertOk(); }
+            $response->assertUnprocessable();
             $this->assertNotSame('paid', \App\Storefront\Models\StorefrontOrder::query()->where('uuid', $checkout->json('order_id'))->value('status'), $case);
         }
     }
@@ -434,7 +439,7 @@ class VerifyEtDirectCheckoutTest extends TestCase
         $input = match ($bank) { 'cbe' => ['account_suffix' => '01234567'], 'boa' => ['account_suffix' => '01234'], 'cbebirr' => ['phone_number' => '0911111111'], default => [] };
         $providerItem = ['bank' => $bank, 'status' => 'success', 'verified' => true, 'amount' => 100, 'currency' => 'ETB', 'settlementAccountMatch' => ['matched' => true, 'ambiguous' => false, 'matchConfidence' => $bank === 'dashen' ? 'low' : 'high', 'candidateCount' => 1, 'matchedSettlementAccount' => $account]];
         if ($bank !== 'awash') { $providerItem[$bank === 'cbebirr' || $bank === 'cbe' ? 'receiptNumber' : 'referenceNumber'] = $reference; }
-        \Illuminate\Support\Facades\Http::fake(['verify.et/api/verify' => \Illuminate\Support\Facades\Http::response(['requestId' => 'synthetic-request', 'verification' => ['processingStatus' => 'completed'], 'data' => [$providerItem]], 200)]);
+        \Illuminate\Support\Facades\Http::fake(['verify.et/api/verify?*' => \Illuminate\Support\Facades\Http::response(['requestId' => 'synthetic-request', 'verification' => ['processingStatus' => 'completed'], 'data' => [$providerItem]], 200)]);
         $transport = \Mockery::mock(\App\Payments\VerifyEt\VerifyEtHttp::class);
         $transport->shouldReceive('factory')->andReturn(\Illuminate\Support\Facades\Http::getFacadeRoot());
         app()->instance(\App\Payments\VerifyEt\VerifyEtHttp::class, $transport);
@@ -508,7 +513,7 @@ class VerifyEtDirectCheckoutTest extends TestCase
             };
 
             $this->assertSame(in_array($scenario, ['missing_match', 'ambiguous_match'], true) ? 'manual_review' : 'mismatch', app(VerifyEtGateway::class)->processResult($verification, $result), $scenario);
-            $this->assertNotSame('paid', $order->fresh()->status, $scenario);
+            $this->assertSame(in_array($scenario, ['missing_match', 'ambiguous_match'], true) ? 'manual_review' : 'failed_verification', $order->fresh()->status, $scenario);
             $this->assertSame(0, $order->entitlements()->count(), $scenario);
         }
     }
@@ -530,7 +535,7 @@ class VerifyEtDirectCheckoutTest extends TestCase
         [$order, $verification] = $this->orderAndVerification();
         $result = ['_http_status' => 202, 'data' => [], 'verification' => ['processingStatus' => 'queued']];
         $this->assertSame('manual_review', app(VerifyEtGateway::class)->processResult($verification, $result));
-        $this->assertNotSame('paid', $order->fresh()->status);
+        $this->assertSame('manual_review', $order->fresh()->status);
     }
 
     public function testAuthenticatedCompleteWebhookIsEncryptedAndFulfillsTheCorrelatedOrder(): void
@@ -689,13 +694,13 @@ class VerifyEtDirectCheckoutTest extends TestCase
         $this->assertSame('paid', $order->fresh()->status);
     }
 
-    public function testCbeLegacyFtReferenceWithoutReceiptIdRequiresReview(): void
+    public function testCbeLegacyFtReferenceWithoutReceiptIdIsFulfilled(): void
     {
         [$order, $verification] = $this->orderAndVerification();
         $result = $this->matchedResult($verification);
         unset($result['data'][0]['receiptNumber']);
-        $this->assertSame('manual_review', app(VerifyEtGateway::class)->processResult($verification, $result));
-        $this->assertNotSame('paid', $order->fresh()->status);
+        $this->assertSame('success', app(VerifyEtGateway::class)->processResult($verification, $result));
+        $this->assertSame('paid', $order->fresh()->status);
     }
 
     public function testConflictingTelebirrIdentifiersRequireReview(): void
@@ -1002,6 +1007,162 @@ class VerifyEtDirectCheckoutTest extends TestCase
         $this->assertSame('paid', $order->fresh()->status);
         $this->assertFalse(DB::table('creator_verification_allowances')->where('storefront_order_id', $order->id)->exists());
         $this->assertSame(0, CommissionAccrual::query()->where('storefront_order_id', $order->id)->count());
+    }
+
+    public function testReceiptUrlIsNormalizedBeforeBankFormatChecks(): void
+    {
+        $normalized = app(ReceiptReference::class)->prepare(
+            'cbe',
+            '  https://mbreciept.cbe.com.et/URLTOKEN123456  ',
+        );
+
+        $this->assertSame('URLTOKEN123456', $normalized);
+    }
+
+    public function testMismatchAttemptIsCountedOnceAndLocksOnTheFifth(): void
+    {
+        [$order, $verification] = $this->orderAndVerification();
+        $verification->update(['attempt' => 1, 'status' => 'mismatch']);
+        $session = app(StorefrontVerificationSession::class);
+
+        $session->recordMismatch($order, $verification);
+        $session->recordMismatch($order->fresh(), $verification->fresh());
+
+        $this->assertSame(1, $order->fresh()->verification_attempts);
+        $this->assertSame('failed_verification', $order->fresh()->status);
+        $this->assertSame('failed', $order->fresh()->statusLabel());
+
+        $invoiceVerification = $verification->replicate();
+        $invoiceVerification->payable_type = \App\Payments\Models\ProSubscriptionPayment::class;
+        $session->recordMismatch($order->fresh(), $invoiceVerification);
+        $this->assertSame(1, $order->fresh()->verification_attempts);
+
+        for ($attempt = 2; $attempt <= 5; $attempt++) {
+            $verification->update(['attempt' => $attempt]);
+            $session->recordMismatch($order->fresh(), $verification->fresh());
+        }
+
+        $locked = $order->fresh();
+        $this->assertSame(5, $locked->verification_attempts);
+        $this->assertSame('expired', $locked->status);
+        $this->assertSame('cancelled', $locked->statusLabel());
+        $this->assertSame(0, $locked->attemptsRemaining());
+    }
+
+    public function testReconcileExpiresAbandonedVerifyingOrders(): void
+    {
+        [$order] = $this->orderAndVerification();
+        $order->offsetUnset('paymentAccessToken');
+        $order->update(['status' => 'verifying', 'payment_expires_at' => now()->subMinute()]);
+
+        $this->artisan('billing:reconcile-pending-verifications')->assertSuccessful();
+
+        $this->assertSame('expired', $order->fresh()->status);
+    }
+
+    public function testBuyerCanSelectAnotherActiveReceivingAccountUntilPaymentCompletes(): void
+    {
+        [$order] = $this->orderAndVerification();
+        $token = $order->getAttribute('paymentAccessToken');
+        $order->offsetUnset('paymentAccessToken');
+        $other = \App\Storefront\Models\CreatorPaymentMethod::query()->create([
+            'workspace_id' => $order->product->workspace_id,
+            'user_id' => $order->creator_id,
+            'provider' => 'dashen',
+            'account_number' => '0012862182001',
+            'account_fingerprint' => hash('sha256', 'dashen-'.$order->id),
+            'account_name_raw' => 'Abebe Kebede Wolde',
+            'account_name_normalized' => 'abebe kebede wolde',
+            'status' => 'approved',
+            'provider_registration_status' => 'registered',
+            'is_active' => true,
+        ]);
+
+        $this->withHeader('X-Order-Access-Token', $token)
+            ->postJson('/api/v1/public/direct-orders/'.$order->uuid.'/select-account', ['receiving_account_id' => $other->id])
+            ->assertOk()
+            ->assertJsonPath('data.receiving_account_id', $other->id)
+            ->assertJsonPath('data.status_label', 'pending');
+
+        $order->refresh();
+        $this->assertSame($other->id, $order->creator_payment_method_id);
+        $this->assertSame('dashen', $order->payment_provider_snapshot);
+        $this->assertSame('0012862182001', $order->payment_account_snapshot);
+        $this->assertSame('Abebe Kebede Wolde', $order->payment_account_name_snapshot);
+
+        $order->update(['status' => 'paid']);
+        $this->withHeader('X-Order-Access-Token', $token)
+            ->postJson('/api/v1/public/direct-orders/'.$order->uuid.'/select-account', ['receiving_account_id' => $order->creator_payment_method_id])
+            ->assertConflict();
+    }
+
+    public function testPaidSettlementShowsDeliveringUntilTheDeliveryJobFinishes(): void
+    {
+        Mail::fake();
+        Queue::fake();
+        \App\Storefront\Services\DirectStorefrontFulfillment::$runDeliveryInlineInTests = false;
+        try {
+        [$order, $verification] = $this->orderAndVerification();
+        $token = $order->getAttribute('paymentAccessToken');
+
+        $this->assertSame('success', app(VerifyEtGateway::class)->processResult($verification, $this->matchedResult($verification)));
+
+        $order->refresh();
+        $this->assertSame('paid', $order->status);
+        $this->assertSame('completed', $order->statusLabel());
+        $this->assertSame('delivering', $order->delivery_status, (string) $order->delivery_error);
+        $this->assertSame(0, $order->entitlements()->count());
+
+        (new DeliverStorefrontOrder($order->id))->handle();
+
+        $order->refresh();
+        $this->assertSame('delivered', $order->delivery_status);
+        $shown = $this->withHeader('X-Order-Access-Token', $token)
+            ->getJson('/api/v1/public/direct-orders/'.$order->uuid)
+            ->assertOk()
+            ->assertJsonPath('data.status_label', 'completed')
+            ->assertJsonPath('data.delivery_status', 'delivered');
+        $this->assertStringContainsString('signature=', (string) $shown->json('data.downloads.0.url'));
+        } finally {
+            \App\Storefront\Services\DirectStorefrontFulfillment::$runDeliveryInlineInTests = true;
+        }
+    }
+
+    public function testDeliveryFailureLeavesTheOrderPaid(): void
+    {
+        [$order] = $this->orderAndVerification();
+        $order->offsetUnset('paymentAccessToken');
+        $order->update([
+            'status' => 'paid',
+            'paid_at' => now(),
+            'delivery_status' => 'delivering',
+        ]);
+        DownloadEntitlement::creating(function (): void {
+            throw new \RuntimeException('delivery broke');
+        });
+
+        try {
+            (new DeliverStorefrontOrder($order->id))->handle();
+        } finally {
+            DownloadEntitlement::flushEventListeners();
+        }
+
+        $order->refresh();
+        $this->assertSame('paid', $order->status);
+        $this->assertSame('failed', $order->delivery_status);
+        $this->assertSame('delivery broke', $order->delivery_error);
+    }
+
+    public function testManualReviewRejectsAnotherReference(): void
+    {
+        [$order] = $this->orderAndVerification();
+        $token = $order->getAttribute('paymentAccessToken');
+        $order->offsetUnset('paymentAccessToken');
+        $order->update(['status' => 'manual_review']);
+
+        $this->withHeader('X-Order-Access-Token', $token)
+            ->postJson('/api/v1/public/direct-orders/'.$order->uuid.'/reference', ['reference' => 'URLTOKEN123456'])
+            ->assertConflict();
     }
 
     private function orderAndVerification(): array

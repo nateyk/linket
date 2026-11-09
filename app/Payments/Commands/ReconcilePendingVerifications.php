@@ -35,8 +35,11 @@ final class ReconcilePendingVerifications extends Command
 
         StorefrontOrder::query()
             ->where('payment_gateway', 'verify_et')
-            ->where('status', 'pending_payment')
-            ->where('payment_expires_at', '<', now())
+            ->whereIn('status', ['pending_payment', 'pending', 'verifying', 'failed_verification', 'failed'])
+            ->where(function ($q): void {
+                $q->where('payment_expires_at', '<', now())
+                  ->orWhere('verification_attempts', '>=', 5);
+            })
             ->update(['status' => 'expired']);
 
         DirectPaymentVerification::query()
@@ -69,12 +72,9 @@ final class ReconcilePendingVerifications extends Command
                     $status = $verification->provider_request_id
                         ? app(VerifyEtGateway::class)->reconcile($verification)
                         : app(VerifyEtGateway::class)->submit($verification);
-                    if ($status === 'mismatch' && $verification->payable_type === StorefrontOrder::class) {
-                        StorefrontOrder::query()->whereKey($verification->payable_id)->whereIn('status', ['pending_payment', 'verifying'])->update(['status' => 'failed_verification']);
-                    } elseif ($status === 'manual_review' && $verification->payable_type === StorefrontOrder::class) {
-                        StorefrontOrder::query()->whereKey($verification->payable_id)->whereIn('status', ['pending_payment', 'verifying'])->update(['status' => 'manual_review']);
+                    if ($status === 'manual_review' && $verification->payable_type === StorefrontOrder::class) {
                         $order = StorefrontOrder::query()->find($verification->payable_id);
-                        if ($order) {
+                        if ($order && $order->status === 'manual_review') {
                             app(CreatorPaymentReviewNotifier::class)->notify($order, $verification->id);
                         }
                     }

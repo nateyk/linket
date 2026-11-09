@@ -25,7 +25,7 @@ final class VerifyEtWebhookController extends Controller
         $signature = $request->header('X-Webhook-Signature');
         $eventId = $request->header('X-Webhook-Event-Id');
         abort_unless(is_string($timestamp) && is_string($signature) && is_string($eventId) && $this->timestampIsFresh($timestamp) && $this->signatureIsValid($timestamp, $request->getContent(), $signature), 401);
-        abort_unless(preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i', $eventId) === 1, 400);
+        abort_unless(preg_match('/^[A-Za-z0-9_-]{1,128}$/', $eventId) === 1, 400);
         try {
             $payload = app(VerifyEtJson::class)->decode($request->getContent());
         } catch (\JsonException) {
@@ -62,9 +62,14 @@ final class VerifyEtWebhookController extends Controller
     private function safePayload(array $payload): array
     {
         $data = $payload['data'] ?? null;
-        $allowed = ['processingStatus', 'status', 'verified', 'bank', 'amount', 'currency', 'transactionNumber', 'referenceNumber', 'receiptNumber', 'settlementAccountMatch', 'confirmationHistory', 'durationMs', 'completedAt'];
+        $allowed = ['processingStatus', 'status', 'verified', 'bank', 'amount', 'currency', 'transactionNumber', 'referenceNumber', 'receiptNumber', 'reference', 'error', 'settlementAccountMatch', 'confirmationHistory', 'durationMs', 'completedAt'];
         if (is_array($data)) {
             $data = array_intersect_key($data, array_flip($allowed));
+            if (is_array($data['error'] ?? null)) {
+                $data['error'] = array_intersect_key($data['error'], array_flip([
+                    'code', 'message', 'retryable',
+                ]));
+            }
             if (is_array($data['settlementAccountMatch'] ?? null)) {
                 $data['settlementAccountMatch'] = array_intersect_key($data['settlementAccountMatch'], array_flip([
                     'matched', 'ambiguous', 'matchConfidence', 'matchType', 'matchedSettlementAccount', 'candidateCount', 'reason',
