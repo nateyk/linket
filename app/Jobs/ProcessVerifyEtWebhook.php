@@ -31,6 +31,11 @@ final class ProcessVerifyEtWebhook implements ShouldQueue
         }
         $verification = DirectPaymentVerification::query()->where('provider_request_id', $delivery->provider_request_id)->first();
         if (!$verification) {
+            // Mitigate race condition when webhook arrives before synchronous request saves provider_request_id
+            if ($this->attempts() < $this->tries) {
+                $this->release(3);
+                return;
+            }
             $delivery->update(['status' => 'unmatched']);
             return;
         }
@@ -52,16 +57,10 @@ final class ProcessVerifyEtWebhook implements ShouldQueue
             throw new \RuntimeException('Verify.et webhook processing failed.');
         }
         $delivery->update(['status' => $status]);
-        if ($verification->payable_type === StorefrontOrder::class && in_array($status, ['manual_review', 'mismatch'], true)) {
-            StorefrontOrder::query()->whereKey($verification->payable_id)->whereIn('status', ['verifying', 'pending_payment'])->update([
-                'status' => $status === 'mismatch' ? 'failed_verification' : 'manual_review',
-            ]);
-
-            if ($status === 'manual_review') {
-                $order = StorefrontOrder::query()->find($verification->payable_id);
-                if ($order) {
-                    app(CreatorPaymentReviewNotifier::class)->notify($order, $verification->id);
-                }
+        if ($status === 'manual_review' && $verification->payable_type === StorefrontOrder::class) {
+            $order = StorefrontOrder::query()->find($verification->payable_id);
+            if ($order && $order->status === 'manual_review') {
+                app(CreatorPaymentReviewNotifier::class)->notify($order, $verification->id);
             }
         }
     }

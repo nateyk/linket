@@ -19,6 +19,7 @@
     <env name="CACHE_STORE" value="array" force="true"/>
     <env name="SESSION_DRIVER" value="array"/>
     <env name="QUEUE_DRIVER" value="sync"/>
+    <env name="MAIL_MAILER" value="array"/>
     <!--
       DB_* is intentionally absent. PHPUnit writes <env> into putenv/$_ENV before
       Laravel boots, and phpdotenv will not overwrite externally defined values,

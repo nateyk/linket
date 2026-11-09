@@ -223,23 +223,75 @@ final class DirectBillingController extends Controller
     private function submitReference(Request $request, CommissionInvoice|ProSubscriptionPayment $payable, int $amountCents): array
     {
         abort_unless(VerifyEtSettings::get('enabled'), 503);
-        $data = $request->validate(['reference' => ['required', 'string', 'min:6', 'max:150', 'regex:/^[A-Za-z0-9._-]+$/']]);
+        $data = $request->validate([
+            'reference' => ['required', 'string', 'min:6', 'max:255'],
+            'account_suffix' => ['nullable', 'string'],
+            'phone_number' => ['nullable', 'string', 'max:32', 'regex:/^(?:0[79]\d{8}|\+?251[79]\d{8})$/'],
+        ]);
         $instructions = $this->corporateInstructions();
         abort_unless($instructions['account_number'], 503);
 
+        $provider = $instructions['provider'];
+        $cleanRef = trim($data['reference']);
+
+        $data['reference'] = app(\App\Payments\VerifyEt\ReceiptReference::class)->prepare($provider, $cleanRef, $data['account_suffix'] ?? null, $data['phone_number'] ?? null);
+
+        // Reject duplicates immediately if already completed or under review on another payable
+        $alreadyClaimed = DirectPaymentVerification::query()
+            ->where('reference', $data['reference'])
+            ->where(function ($q) use ($payable): void {
+                $q->where('payable_type', '!=', $payable::class)
+                  ->orWhere('payable_id', '!=', $payable->id);
+            })
+            ->where(function ($q): void {
+                $q->whereIn('status', ['success', 'manual_approved', 'manual_review', 'verifying'])
+                  ->orWhereNotNull('canonical_transaction_identity');
+            })
+            ->exists();
+
+        if ($alreadyClaimed) {
+            throw ValidationException::withMessages(['reference' => __('This payment reference is already under review or has already been used.')]);
+        }
+
+        $providerInput = match ($provider) {
+            'boa' => ['accountSuffix' => $data['account_suffix'] ?? null],
+            'cbebirr' => ['phoneNumber' => $data['phone_number'] ?? null],
+            'cbe' => ['accountSuffix' => $data['account_suffix'] ?? null],
+            default => [],
+        };
+
         try {
-            $verification = DB::transaction(function () use ($payable, $data, $instructions, $amountCents): DirectPaymentVerification {
+            $verification = DB::transaction(function () use ($payable, $data, $instructions, $amountCents, $providerInput): DirectPaymentVerification {
                 $existing = DirectPaymentVerification::query()
                     ->where('payable_type', $payable::class)->where('payable_id', $payable->id)
                     ->latest('id')->lockForUpdate()->first();
-                if ($existing && $existing->reference === $data['reference']) {
+                if ($existing && $existing->reference === $data['reference'] && in_array($existing->status, ['verifying', 'pending'], true)) {
                     return $existing;
                 }
                 if ($existing && !in_array($existing->status, ['mismatch', 'manual_review'], true)) {
                     throw ValidationException::withMessages(['reference' => __('A payment reference is already being verified.')]);
                 }
-                if (DirectPaymentVerification::query()->where('reference', $data['reference'])->exists()) {
-                    throw ValidationException::withMessages(['reference' => __('This payment reference was already used.')]);
+                if ($existing && $existing->reference === $data['reference'] && $existing->status === 'mismatch') {
+                    $existing = DirectPaymentVerification::query()->whereKey($existing->id)->lockForUpdate()->firstOrFail();
+                    $existing->update([
+                        'status' => 'pending',
+                        'bank_code' => $instructions['provider'],
+                        'settlement_account' => $instructions['account_number'],
+                        'amount_cents' => $amountCents,
+                        'provider_input' => array_filter($providerInput),
+                        'provider_request_id' => null,
+                        'provider_status_url' => null,
+                        'provider_processing_status' => null,
+                        'provider_result' => null,
+                        'latest_error' => null,
+                        'latest_error_code' => null,
+                        'canonical_transaction_identity' => null,
+                        'verified_at' => null,
+                        'attempt' => ((int) $existing->attempt) + 1,
+                        'idempotency_key' => 'linket_billing_'.$payable->uuid.'_attempt_'.Str::uuid(),
+                    ]);
+
+                    return $existing;
                 }
 
                 return DirectPaymentVerification::query()->create([
@@ -253,6 +305,7 @@ final class DirectBillingController extends Controller
                     'attempt' => ($existing?->attempt ?? 0) + 1,
                     'attempt_uuid' => (string) Str::uuid(),
                     'idempotency_key' => 'linket_billing_' . $payable->uuid . '_attempt_' . Str::uuid(),
+                    'provider_input' => array_filter($providerInput),
                 ]);
             });
         } catch (QueryException) {

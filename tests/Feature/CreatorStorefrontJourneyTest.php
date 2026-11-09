@@ -296,7 +296,7 @@ test('creator uploads a product for approval and a buyer receives the approved d
         config()->set('services.verify_et.api_key', 'synthetic-test-key');
         \Illuminate\Support\Facades\Queue::fake();
         \Illuminate\Support\Facades\Http::preventStrayRequests();
-        \Illuminate\Support\Facades\Http::fake(['verify.et/api/verify' => \Illuminate\Support\Facades\Http::response([
+        \Illuminate\Support\Facades\Http::fake(['verify.et/api/verify?*' => \Illuminate\Support\Facades\Http::response([
             'requestId' => 'synthetic-journey-request',
             'verification' => ['processingStatus' => 'completed'],
             'data' => [[

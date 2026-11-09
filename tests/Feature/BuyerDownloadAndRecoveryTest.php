@@ -42,7 +42,7 @@ class BuyerDownloadAndRecoveryTest extends TestCase
         [$order, $token, $fileContent] = $this->createPendingCheckoutWithFile();
         $reference = 'FT26'.Str::upper(Str::random(14));
 
-        Http::fake(['verify.et/api/verify' => Http::response([
+        Http::fake(['verify.et/api/verify?*' => Http::response([
             'requestId' => 'buyer-journey-request',
             'verification' => ['processingStatus' => 'completed'],
             'data' => [[
@@ -179,7 +179,7 @@ class BuyerDownloadAndRecoveryTest extends TestCase
                 'matchedSettlementAccount' => '1000123456789',
             ],
         ];
-        Http::fake(['verify.et/api/verify' => Http::response([
+        Http::fake(['verify.et/api/verify?*' => Http::response([
             'requestId' => 'synthetic',
             'verification' => ['processingStatus' => 'completed'],
             'data' => [$item],
@@ -208,7 +208,7 @@ class BuyerDownloadAndRecoveryTest extends TestCase
         [$order, $token] = $this->createPendingCheckoutWithFile();
         $reference = 'FT26'.Str::upper(Str::random(14));
 
-        Http::fake(['verify.et/api/verify' => Http::response([
+        Http::fake(['verify.et/api/verify?*' => Http::response([
             'requestId' => 'wrong-recipient',
             'verification' => ['processingStatus' => 'completed'],
             'data' => [[

@@ -468,6 +468,13 @@ Route::group(['prefix' => 'v1'], function () {
             VerifyCsrfToken::class,
             VerifyApiAccessMiddleware::class,
         ]);
+    Route::post('public/direct-orders/{order}/select-account', [OrderPaymentController::class, 'selectAccount'])
+        ->middleware('throttle:20,1')
+        ->withoutMiddleware([
+            EnsureFrontendRequestsAreStateful::class,
+            VerifyCsrfToken::class,
+            VerifyApiAccessMiddleware::class,
+        ]);
     Route::get('public/stores/{biolink}/digital-products/{digitalProduct}/orders/{order}', [PublicDigitalProductsController::class, 'order'])->middleware('throttle:60,1');
     Route::get('public/stores/{biolink}/digital-products/{digitalProduct}/reviews', [ProductReviewsController::class, 'index']);
     Route::get('public/stores/{biolink}/digital-products/{digitalProduct}/reviews/{order}', [ProductReviewsController::class, 'show']);

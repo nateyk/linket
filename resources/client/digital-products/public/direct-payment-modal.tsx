@@ -7,7 +7,14 @@ import {Spinner} from '@shadcn/spinner/spinner';
 import {apiClient} from '@common/http/query-client';
 import {formatMoney} from '@ui/i18n/format-money';
 import {Trans} from '@ui/i18n/trans';
-import {CheckCircle2Icon, CopyIcon} from 'lucide-react';
+import {
+  AlertCircleIcon,
+  CheckCircle2Icon,
+  CopyIcon,
+  DownloadIcon,
+  LockIcon,
+  RefreshCwIcon,
+} from 'lucide-react';
 import {ReactNode, useCallback, useEffect, useState} from 'react';
 import {Link} from 'react-router';
 
@@ -20,15 +27,39 @@ export type DirectCheckout = {
   instructions_endpoint: string;
 };
 
-type PaymentInstructions = {
+export type ReceivingAccount = {
+  id: number;
   provider: string;
+  bank_name?: string;
+  account_number: string;
+  account_ending: string;
+  account_name: string;
+  instructions?: string;
+};
+
+type PaymentInstructions = {
+  receiving_account_id?: number;
+  provider: string;
+  bank_name?: string;
   account_number: string;
   account_name: string;
   amount_cents: number;
   currency: string;
+  instructions?: string;
+  available_accounts?: ReceivingAccount[];
+  verification_attempts?: number;
+  attempts_remaining?: number;
+  session_locked?: boolean;
 };
 
-type PaidDownload = {name: string; remaining_downloads: number; url: string};
+type PaidDownload = {
+  name: string;
+  remaining_downloads: number;
+  download_limit?: number;
+  download_count?: number;
+  expires_at?: string;
+  url: string;
+};
 
 export function DirectPaymentModal({
   checkout,
@@ -42,21 +73,31 @@ export function DirectPaymentModal({
   const [accountSuffix, setAccountSuffix] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [status, setStatus] = useState(checkout?.status ?? '');
+  const [deliveryStatus, setDeliveryStatus] = useState<'awaiting_payment' | 'delivering' | 'delivered' | 'failed'>('awaiting_payment');
   const [downloads, setDownloads] = useState<PaidDownload[]>([]);
   const [busy, setBusy] = useState(false);
   const [rechecking, setRechecking] = useState(false);
-  const [error, setError] = useState(false);
+  const [switchingAccount, setSwitchingAccount] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
   const [instructionsError, setInstructionsError] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [attemptsRemaining, setAttemptsRemaining] = useState<number>(5);
+  const [sessionLocked, setSessionLocked] = useState(false);
 
   useEffect(() => {
     setInstructions(null);
     setStatus(checkout?.status ?? '');
+    setDeliveryStatus('awaiting_payment');
     setReference('');
     setAccountSuffix('');
     setPhoneNumber('');
-    setError(false);
+    setErrorMessage(null);
+    setValidationError(null);
     setInstructionsError(false);
     setDownloads([]);
+    setAttemptsRemaining(5);
+    setSessionLocked(false);
   }, [checkout]);
 
   const refreshOrder = useCallback(async () => {
@@ -65,16 +106,25 @@ export function DirectPaymentModal({
       `/api/v1/public/direct-orders/${checkout.order_id}`,
       {headers: {'X-Order-Access-Token': checkout.access_token, 'Cache-Control': 'no-store'}},
     );
-    const order = response.data.data;
-    setStatus(order?.status ?? response.data.status);
+    const order = response.data.data ?? response.data;
+    const orderStatus = order?.status ?? response.data.status;
+    setStatus(orderStatus);
+    setDeliveryStatus(order?.delivery_status ?? (orderStatus === 'paid' ? 'delivered' : 'awaiting_payment'));
     setDownloads(order?.downloads ?? []);
+    if (typeof order?.attempts_remaining === 'number') {
+      setAttemptsRemaining(order.attempts_remaining);
+    }
+    if (typeof order?.session_locked === 'boolean') {
+      setSessionLocked(order.session_locked);
+    }
   }, [checkout]);
 
   useEffect(() => {
     if (checkout?.status !== 'paid') return;
-    void refreshOrder().catch(() => setError(true));
+    void refreshOrder().catch(() => setErrorMessage('Failed to load order access details.'));
   }, [checkout, refreshOrder]);
 
+  // Load instructions and available receiving accounts
   useEffect(() => {
     if (!checkout || checkout.status === 'paid') return;
     let active = true;
@@ -83,7 +133,16 @@ export function DirectPaymentModal({
         const response = await apiClient.get(checkout.instructions_endpoint, {
           headers: {'X-Order-Access-Token': checkout.access_token, 'Cache-Control': 'no-store'},
         });
-        if (active) setInstructions(response.data.data);
+        if (active) {
+          const data: PaymentInstructions = response.data.data ?? response.data;
+          setInstructions(data);
+          if (typeof data.attempts_remaining === 'number') {
+            setAttemptsRemaining(data.attempts_remaining);
+          }
+          if (typeof data.session_locked === 'boolean') {
+            setSessionLocked(data.session_locked);
+          }
+        }
       } catch {
         if (!active) return;
         if (attempt < 3) {
@@ -98,47 +157,160 @@ export function DirectPaymentModal({
     return () => { active = false; };
   }, [checkout]);
 
+  // Polling for verifying, manual review, or delivering state
   useEffect(() => {
-    if (!checkout || !['verifying', 'manual_review'].includes(status)) return;
+    if (!checkout) return;
+    const isVerifying = ['verifying', 'manual_review'].includes(status);
+    const isDelivering = (status === 'paid' || status === 'completed') && deliveryStatus === 'delivering';
+    if (!isVerifying && !isDelivering) return;
+
     const refresh = async () => {
       try {
         await refreshOrder();
       } catch {
-        setError(true);
+        // silent background poll error
       }
     };
-    const interval = window.setInterval(() => void refresh(), 10000);
+
+    const intervalMs = isDelivering ? 2000 : 8000;
+    const interval = window.setInterval(() => void refresh(), intervalMs);
     return () => window.clearInterval(interval);
-  }, [checkout, refreshOrder, status]);
+  }, [checkout, refreshOrder, status, deliveryStatus]);
+
+  // Switch receiving account dynamically
+  const selectReceivingAccount = async (accountId: number) => {
+    if (!checkout || busy || switchingAccount) return;
+    setSwitchingAccount(true);
+    setErrorMessage(null);
+    try {
+      const response = await apiClient.post(
+        `/api/v1/public/direct-orders/${checkout.order_id}/select-account`,
+        {receiving_account_id: accountId},
+        {headers: {'X-Order-Access-Token': checkout.access_token}},
+      );
+      const data: PaymentInstructions = response.data.data ?? response.data;
+      setInstructions(data);
+      setAccountSuffix('');
+      setPhoneNumber('');
+    } catch {
+      setErrorMessage('Failed to switch receiving account. Please try again.');
+    } finally {
+      setSwitchingAccount(false);
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    void navigator.clipboard.writeText(text);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 2000);
+  };
+
+  // Pre-verification validation
+  const validateBeforeSubmit = (): boolean => {
+    setValidationError(null);
+    const cleanRef = reference.trim();
+    if (!cleanRef) {
+      setValidationError('Please enter your transaction reference.');
+      return false;
+    }
+
+    const provider = instructions?.provider?.toLowerCase();
+    const isCbeFt = provider === 'cbe' && /^FT/i.test(cleanRef);
+
+    if (provider === 'boa') {
+      if (!accountSuffix.trim()) {
+        setValidationError('Bank of Abyssinia requires your 5-digit transaction account suffix.');
+        return false;
+      }
+      if (!/^\d{5}$/.test(accountSuffix.trim())) {
+        setValidationError('Account suffix must be exactly 5 digits for Bank of Abyssinia.');
+        return false;
+      }
+    }
+
+    if (isCbeFt) {
+      if (!accountSuffix.trim()) {
+        setValidationError('CBE FT references require your 8-digit transaction account suffix.');
+        return false;
+      }
+      if (!/^\d{8}$/.test(accountSuffix.trim())) {
+        setValidationError('Account suffix must be exactly 8 digits for CBE FT transactions.');
+        return false;
+      }
+    }
+
+    if (provider === 'cbebirr') {
+      const cleanPhone = phoneNumber.trim();
+      if (!cleanPhone) {
+        setValidationError('CBE Birr requires the wallet phone number used for the payment.');
+        return false;
+      }
+      if (!/^(?:0[79]\d{8}|\+?251[79]\d{8})$/.test(cleanPhone)) {
+        setValidationError('Please enter a valid Ethiopian phone number (e.g. 0912345678 or 0712345678).');
+        return false;
+      }
+    }
+
+    return true;
+  };
 
   const submitReference = async () => {
-    if (!checkout || !instructions || !reference.trim()) return;
-    const needsSuffix = instructions?.provider === 'boa'
-      || (instructions?.provider === 'cbe' && /^FT/i.test(reference.trim()));
-    if ((needsSuffix && !/^\d{5}$/.test(accountSuffix) && instructions?.provider === 'boa')
-      || (needsSuffix && !/^\d{8}$/.test(accountSuffix) && instructions?.provider === 'cbe')
-      || (instructions?.provider === 'cbebirr' && !/^(?:0\d{9}|\+251\d{9})$/.test(phoneNumber))) {
-      setError(true);
-      return;
-    }
+    if (!checkout || !instructions || sessionLocked || busy) return;
+    if (!validateBeforeSubmit()) return;
+
+    const provider = instructions.provider?.toLowerCase();
+    const cleanRef = reference.trim();
+    const isCbeFt = provider === 'cbe' && /^FT/i.test(cleanRef);
+    const needsSuffix = provider === 'boa' || isCbeFt;
+
     setBusy(true);
-    setError(false);
+    setErrorMessage(null);
+    setValidationError(null);
+
     try {
       const response = await apiClient.post(
         checkout.reference_endpoint,
         {
-          reference: reference.trim(),
-          account_suffix: needsSuffix ? accountSuffix : undefined,
-          phone_number: instructions.provider === 'cbebirr' ? phoneNumber : undefined,
+          reference: cleanRef,
+          account_suffix: needsSuffix ? accountSuffix.trim() : undefined,
+          phone_number: provider === 'cbebirr' ? phoneNumber.trim() : undefined,
         },
         {headers: {'X-Order-Access-Token': checkout.access_token}},
       );
-      setStatus(response.data.status);
-      if (response.data.status === 'paid') {
+
+      const respData = response.data;
+      const newStatus = respData.status ?? 'verifying';
+      setStatus(newStatus);
+
+      if (typeof respData.attempts_remaining === 'number') {
+        setAttemptsRemaining(respData.attempts_remaining);
+      }
+      if (typeof respData.session_locked === 'boolean') {
+        setSessionLocked(respData.session_locked);
+      }
+      if (respData.delivery_status) {
+        setDeliveryStatus(respData.delivery_status);
+      }
+
+      if (newStatus === 'paid' || newStatus === 'completed') {
         await refreshOrder();
       }
-    } catch {
-      setError(true);
+    } catch (err: any) {
+      const res = err?.response?.data;
+      if (res) {
+        if (typeof res.attempts_remaining === 'number') {
+          setAttemptsRemaining(res.attempts_remaining);
+        }
+        if (typeof res.session_locked === 'boolean') {
+          setSessionLocked(res.session_locked);
+        }
+        if (res.status) {
+          setStatus(res.status);
+        }
+        setErrorMessage(res.message || res.errors?.reference?.[0] || 'Verification failed. Please check your reference and try again.');
+      } else {
+        setErrorMessage('A network error occurred while verifying payment. Please retry.');
+      }
     } finally {
       setBusy(false);
     }
@@ -147,52 +319,113 @@ export function DirectPaymentModal({
   const recheckStatus = async () => {
     if (!checkout || rechecking) return;
     setRechecking(true);
-    setError(false);
+    setErrorMessage(null);
     try {
       const response = await apiClient.post(
         `/api/v1/public/direct-orders/${checkout.order_id}/recheck`,
         {},
         {headers: {'X-Order-Access-Token': checkout.access_token}},
       );
-      setStatus(response.data.status);
-      if (response.data.status === 'paid') {
+      const data = response.data;
+      setStatus(data.status);
+      if (data.delivery_status) {
+        setDeliveryStatus(data.delivery_status);
+      }
+      if (typeof data.attempts_remaining === 'number') {
+        setAttemptsRemaining(data.attempts_remaining);
+      }
+      if (typeof data.session_locked === 'boolean') {
+        setSessionLocked(data.session_locked);
+      }
+      if (data.status === 'paid' || data.status === 'completed') {
         await refreshOrder();
       }
     } catch {
-      setError(true);
+      setErrorMessage('Could not check status right now. Please try again shortly.');
     } finally {
       setRechecking(false);
     }
   };
 
-  const canSubmitReference = status === 'pending_payment'
-    || status === 'failed_verification'
-    || status === 'expired';
+  const canSubmitReference = !sessionLocked
+    && (status === 'pending_payment'
+      || status === 'pending'
+      || status === 'failed_verification'
+      || status === 'failed'
+      || (status === 'expired' && attemptsRemaining > 0));
+
+  const availableAccounts = instructions?.available_accounts ?? [];
 
   return (
     <Dialog.Root open={!!checkout} onOpenChange={open => !open && onClose()}>
       <Dialog.Portal>
         <Dialog.Backdrop />
-        <Dialog.Content className="max-h-[min(100dvh,40rem)] w-[calc(100vw-1.5rem)] overflow-y-auto sm:max-w-md">
+        <Dialog.Content className="max-h-[min(100dvh,42rem)] w-[calc(100vw-1.5rem)] overflow-y-auto sm:max-w-md">
           <Dialog.Header>
             <Dialog.Title>
               <Trans message="Pay the creator directly" />
             </Dialog.Title>
             <Dialog.Description>
-              <Trans message="Transfer the exact amount to this account, then enter your transaction reference." />
+              <Trans message="Transfer the exact amount to the selected account, then enter your transaction reference." />
             </Dialog.Description>
           </Dialog.Header>
+
           <Dialog.Body className="flex flex-col gap-4">
+            {/* Status & Attempt Indicator */}
             {status && (
-              <div className="flex flex-wrap items-center gap-2" data-testid="buyer-payment-status">
+              <div className="flex flex-wrap items-center justify-between gap-2" data-testid="buyer-payment-status">
                 <Badge variant={statusBadgeVariant(status)}>{buyerPaymentStatusLabel(status)}</Badge>
+                {status !== 'paid' && status !== 'completed' && (
+                  <span className="text-xs text-muted-foreground tabular-nums">
+                    {sessionLocked ? (
+                      <span className="flex items-center gap-1 text-destructive font-medium">
+                        <LockIcon className="size-3" />
+                        <Trans message="Session locked (0 attempts left)" />
+                      </span>
+                    ) : (
+                      <Trans message="Attempts remaining: :count of 5" values={{count: attemptsRemaining}} />
+                    )}
+                  </span>
+                )}
               </div>
             )}
-            {instructions && status !== 'paid' && (
-              <div className="flex flex-col gap-2 rounded-card bg-muted p-4 text-sm">
+
+            {/* Dynamic Receiving Account Selector */}
+            {instructions && status !== 'paid' && status !== 'completed' && (
+              <div className="flex flex-col gap-3 rounded-card bg-muted/70 p-4 text-sm border border-border">
+                {availableAccounts.length > 1 && canSubmitReference && (
+                  <div className="flex flex-col gap-1.5 pb-3 border-b border-border">
+                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      <Trans message="Select receiving bank / account" />
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {availableAccounts.map(acc => {
+                        const isSelected = acc.id === instructions.receiving_account_id
+                          || (!instructions.receiving_account_id && acc.provider === instructions.provider);
+                        return (
+                          <button
+                            key={acc.id}
+                            type="button"
+                            disabled={switchingAccount || busy}
+                            onClick={() => void selectReceivingAccount(acc.id)}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-card-sm text-xs font-medium border transition-colors ${
+                              isSelected
+                                ? 'bg-primary text-primary-foreground border-primary'
+                                : 'bg-background hover:bg-muted text-foreground border-border'
+                            }`}
+                          >
+                            <span>{acc.bank_name || acc.provider.toUpperCase()}</span>
+                            <span className="opacity-75">(*{acc.account_ending})</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex justify-between gap-4">
                   <span className="text-muted-foreground"><Trans message="Bank or wallet" /></span>
-                  <span className="font-medium uppercase">{instructions.provider}</span>
+                  <span className="font-medium">{instructions.bank_name || instructions.provider.toUpperCase()}</span>
                 </div>
                 <div className="flex justify-between gap-4">
                   <span className="text-muted-foreground"><Trans message="Account name" /></span>
@@ -206,51 +439,105 @@ export function DirectPaymentModal({
                       variant="ghost"
                       size="icon-sm"
                       aria-label="Copy account number"
-                      onClick={() => void navigator.clipboard.writeText(instructions!.account_number)}
-                    ><CopyIcon /></Button>
+                      onClick={() => copyToClipboard(instructions.account_number)}
+                    >
+                      <CopyIcon className="size-3.5" />
+                    </Button>
+                    {copied && <span className="text-xs text-positive font-medium"><Trans message="Copied!" /></span>}
                   </span>
                 </div>
                 <div className="flex justify-between gap-4 border-t border-border pt-2">
                   <span className="text-muted-foreground"><Trans message="Exact amount" /></span>
-                  <span className="font-semibold tabular-nums">
+                  <span className="font-semibold tabular-nums text-base">
                     {formatMoney(instructions.amount_cents, instructions.currency)}
                   </span>
                 </div>
+
+                {instructions.instructions && (
+                  <p className="text-xs text-muted-foreground pt-1 border-t border-border/50 italic">
+                    {instructions.instructions}
+                  </p>
+                )}
               </div>
             )}
-            {status === 'paid' ? (
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center gap-2 text-positive">
-                  <CheckCircle2Icon className="size-5" />
-                  <Trans message="Payment confirmed. Your purchased files are ready to download." />
-                </div>
-                {downloads.map(download => (
-                  <a
-                    key={download.url}
-                    className="flex min-h-11 items-center justify-between gap-3 rounded-card-sm border border-border px-3 py-2 text-sm font-medium underline-offset-4 hover:underline"
-                    href={download.url}
-                  >
-                    <span className="break-all">{download.name}</span>
-                    <span className="shrink-0 text-muted-foreground">{download.remaining_downloads} <Trans message="downloads left" /></span>
-                  </a>
-                ))}
-                <p className="text-sm text-muted-foreground">
-                  <Trans message="You can also retrieve these files later from My Purchases. If a download is interrupted, return here or to your purchase library and try again." />
-                </p>
-                <Link className="text-sm text-primary underline" to="/my-portal">
-                  <Trans message="Open My Purchases" />
-                </Link>
+
+            {/* Post-Payment Digital Delivery State */}
+            {status === 'paid' || status === 'completed' ? (
+              <div className="flex flex-col gap-4">
+                {deliveryStatus === 'delivering' ? (
+                  <div className="flex items-center gap-3 rounded-card bg-muted p-4 text-sm">
+                    <Spinner className="size-5 text-primary shrink-0" />
+                    <div>
+                      <p className="font-medium text-foreground">
+                        <Trans message="Payment confirmed! Preparing your digital download..." />
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        <Trans message="Access links are being generated. This takes only a moment." />
+                      </p>
+                    </div>
+                  </div>
+                ) : deliveryStatus === 'failed' ? (
+                  <div className="flex items-start gap-3 rounded-card bg-destructive/10 p-4 text-sm text-destructive">
+                    <AlertCircleIcon className="size-5 shrink-0" />
+                    <p>
+                      <Trans message="Payment received. Your files are not ready yet. Return to this checkout or My Purchases shortly." />
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-center gap-2 text-positive font-medium">
+                      <CheckCircle2Icon className="size-5 shrink-0" />
+                      <Trans message="Payment confirmed. Your purchased files are ready to download." />
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span><Trans message="Delivery status:" /> <strong className="text-positive uppercase">Delivered</strong></span>
+                      {downloads.length > 0 && <span>{downloads.length} <Trans message="file(s) available" /></span>}
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                      {downloads.map(download => (
+                        <a
+                          key={download.url}
+                          className="flex min-h-12 items-center justify-between gap-3 rounded-card border border-border bg-card px-3.5 py-2.5 text-sm font-medium hover:bg-muted transition-colors"
+                          href={download.url}
+                          download
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <DownloadIcon className="size-4 shrink-0 text-primary" />
+                            <span className="truncate">{download.name}</span>
+                          </div>
+                          <span className="shrink-0 text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                            {download.remaining_downloads} <Trans message="downloads left" />
+                          </span>
+                        </a>
+                      ))}
+                    </div>
+
+                    <p className="text-xs text-muted-foreground">
+                      <Trans message="You can also retrieve these files later from My Purchases. If a download is interrupted, return here or to your purchase library and try again." />
+                    </p>
+                    <Link className="text-sm text-primary underline font-medium" to="/my-portal">
+                      <Trans message="Open My Purchases" />
+                    </Link>
+                  </div>
+                )}
               </div>
             ) : (
               <>
+                {/* Reference Input Form */}
                 {canSubmitReference && (
-                  <>
+                  <div className="flex flex-col gap-3">
                     <Field.Root>
                       <Field.Label><Trans message="Transaction reference" /></Field.Label>
                       <Input
                         bindToHookForm={false}
                         value={reference}
-                        onChange={event => setReference(event.target.value)}
+                        onChange={event => {
+                          setReference(event.target.value);
+                          setValidationError(null);
+                        }}
+                        placeholder="e.g. fHCxyTVljBclm6Yk4C or FT..."
                         disabled={busy}
                         autoComplete="off"
                       />
@@ -258,67 +545,119 @@ export function DirectPaymentModal({
                         <Trans message="Find this reference in your bank or wallet confirmation." />
                       </Field.Description>
                     </Field.Root>
+
                     {(instructions?.provider === 'boa'
                       || (instructions?.provider === 'cbe' && /^FT/i.test(reference.trim()))) && (
                       <Field.Root>
-                        <Field.Label>{instructions.provider === 'boa' ? <Trans message="Five-digit transaction account suffix" /> : <Trans message="Eight-digit CBE FT suffix" />}</Field.Label>
-                        <Input bindToHookForm={false} inputMode="numeric" value={accountSuffix} onChange={event => setAccountSuffix(event.target.value.replace(/\D/g, ''))} maxLength={instructions.provider === 'boa' ? 5 : 8} disabled={busy} />
+                        <Field.Label>
+                          {instructions.provider === 'boa'
+                            ? <Trans message="Five-digit transaction account suffix" />
+                            : <Trans message="Eight-digit CBE FT suffix" />}
+                        </Field.Label>
+                        <Input
+                          bindToHookForm={false}
+                          inputMode="numeric"
+                          value={accountSuffix}
+                          onChange={event => {
+                            setAccountSuffix(event.target.value.replace(/\D/g, ''));
+                            setValidationError(null);
+                          }}
+                          placeholder={instructions.provider === 'boa' ? '12345' : '12345678'}
+                          maxLength={instructions.provider === 'boa' ? 5 : 8}
+                          disabled={busy}
+                        />
                       </Field.Root>
                     )}
+
                     {instructions?.provider === 'cbebirr' && (
                       <Field.Root>
                         <Field.Label><Trans message="CBE Birr phone number" /></Field.Label>
-                        <Input bindToHookForm={false} inputMode="tel" value={phoneNumber} onChange={event => setPhoneNumber(event.target.value)} disabled={busy} />
+                        <Input
+                          bindToHookForm={false}
+                          inputMode="tel"
+                          value={phoneNumber}
+                          onChange={event => {
+                            setPhoneNumber(event.target.value);
+                            setValidationError(null);
+                          }}
+                          placeholder="0912345678 or 0712345678"
+                          disabled={busy}
+                        />
                       </Field.Root>
                     )}
-                  </>
+                  </div>
                 )}
-                {status === 'pending_payment' && (
-                  <p className="text-sm text-muted-foreground">
+
+                {/* Validation and Error Alerts */}
+                {validationError && (
+                  <div className="flex items-center gap-2 rounded-card bg-destructive/10 p-3 text-xs text-destructive">
+                    <AlertCircleIcon className="size-4 shrink-0" />
+                    <span>{validationError}</span>
+                  </div>
+                )}
+
+                {errorMessage && (
+                  <div className="flex items-center gap-2 rounded-card bg-destructive/10 p-3 text-xs text-destructive">
+                    <AlertCircleIcon className="size-4 shrink-0" />
+                    <span>{errorMessage}</span>
+                  </div>
+                )}
+
+                {sessionLocked && (
+                  <div className="flex items-center gap-2 rounded-card bg-destructive/10 p-3 text-xs text-destructive font-medium">
+                    <LockIcon className="size-4 shrink-0" />
+                    <span><Trans message="Maximum verification attempts exceeded. This checkout session has been cancelled." /></span>
+                  </div>
+                )}
+
+                {/* Status Guidance Messages */}
+                {(status === 'pending_payment' || status === 'pending') && !sessionLocked && (
+                  <p className="text-xs text-muted-foreground">
                     <Trans message="Awaiting payment. Transfer the exact amount shown above before submitting your transaction reference." />
                   </p>
                 )}
+
                 {status === 'verifying' && (
-                  <p className="text-sm text-muted-foreground">
-                    <Trans message="Verifying your payment with the provider. Access stays locked until verification is complete." />
-                  </p>
+                  <div className="flex flex-col gap-1.5 text-xs text-muted-foreground">
+                    <p className="flex items-center gap-1.5 font-medium text-foreground">
+                      <Spinner className="size-3.5 text-primary" />
+                      <Trans message="Verifying your payment with the provider." />
+                    </p>
+                    <p>
+                      <Trans message="Bank confirmations can take a few minutes. Keep this page open or use Check payment status. Do not pay again for the same order." />
+                    </p>
+                  </div>
                 )}
-                {status === 'verifying' && (
-                  <p className="text-sm text-muted-foreground">
-                    <Trans message="Bank confirmations can take a few minutes. Keep this page open or use Check payment status. Do not pay again for the same order." />
-                  </p>
-                )}
+
                 {status === 'manual_review' && (
-                  <p className="text-sm text-muted-foreground">
-                    <Trans message="Needs review. The provider has not supplied enough evidence yet, so your order remains unpaid and locked." />
-                  </p>
+                  <div className="flex flex-col gap-1 text-xs text-muted-foreground">
+                    <p className="font-medium text-foreground">
+                      <Trans message="Needs review. The provider has not supplied enough evidence yet, so your order remains unpaid and locked." />
+                    </p>
+                    <p>
+                      <Trans message="You do not need to pay again. We will unlock downloads automatically once review finishes." />
+                    </p>
+                  </div>
                 )}
-                {status === 'manual_review' && (
-                  <p className="text-sm text-muted-foreground">
-                    <Trans message="You do not need to pay again. We will unlock downloads automatically once review finishes." />
-                  </p>
+
+                {(status === 'failed_verification' || status === 'failed') && !sessionLocked && (
+                  <div className="flex flex-col gap-1 text-xs text-destructive">
+                    <p className="font-medium">
+                      <Trans message="Payment was not verified. Check that the reference is correct and the exact amount was sent to the account shown. You can submit corrected details." />
+                    </p>
+                    <p className="text-muted-foreground">
+                      <Trans message="Common causes: wrong recipient account, incorrect reference, or a delayed bank posting. Fix details above, then verify again." />
+                    </p>
+                  </div>
                 )}
-                {status === 'failed_verification' && (
-                  <p className="text-sm text-destructive">
-                    <Trans message="Payment was not verified. Check that the reference is correct and the exact amount was sent to the account shown. You can submit corrected details." />
-                  </p>
-                )}
-                {status === 'failed_verification' && (
-                  <p className="text-sm text-muted-foreground">
-                    <Trans message="Common causes: wrong recipient account, incorrect reference, or a delayed bank posting. Fix the details above, then verify again." />
-                  </p>
-                )}
+
                 {instructionsError && !instructions && (
-                  <p className="text-sm text-destructive">
+                  <p className="text-xs text-destructive">
                     <Trans message="Payment details could not be loaded. Close this window and start checkout again." />
                   </p>
                 )}
-                {error && (
-                  <p className="text-sm text-destructive">
-                    <Trans message="Check the reference and any required bank details, then try again. If this reference was already used, request a new payment confirmation from your bank." />
-                  </p>
-                )}
-                <p className="text-sm text-muted-foreground">
+
+                <p className="text-xs text-muted-foreground">
                   <Trans message="Lost this page? Recover paid downloads later from" />{' '}
                   <Link className="text-primary underline" to="/my-portal">
                     <Trans message="My Purchases" />
@@ -328,17 +667,23 @@ export function DirectPaymentModal({
               </>
             )}
           </Dialog.Body>
+
           <Dialog.Footer className="flex flex-wrap gap-2">
             <Button variant="ghost" onClick={onClose}><Trans message="Close" /></Button>
+
             {status === 'verifying' && (
               <Button variant="outline" onClick={() => void recheckStatus()} disabled={rechecking}>
-                {rechecking && <Spinner />}
+                {rechecking ? <Spinner className="size-4" /> : <RefreshCwIcon className="size-3.5" />}
                 <Trans message="Check payment status" />
               </Button>
             )}
+
             {canSubmitReference && (
-              <Button onClick={() => void submitReference()} disabled={busy || !instructions || !reference.trim()}>
-                {busy && <Spinner />}
+              <Button
+                onClick={() => void submitReference()}
+                disabled={busy || !instructions || !reference.trim() || sessionLocked}
+              >
+                {busy && <Spinner className="size-4" />}
                 <Trans message="Verify payment" />
               </Button>
             )}
@@ -352,17 +697,21 @@ export function DirectPaymentModal({
 function buyerPaymentStatusLabel(status: string): ReactNode {
   switch (status) {
     case 'pending_payment':
+    case 'pending':
       return <Trans message="Pending payment" />;
     case 'verifying':
       return <Trans message="Verifying" />;
     case 'manual_review':
       return <Trans message="Manual review" />;
     case 'failed_verification':
+    case 'failed':
       return <Trans message="Rejected" />;
     case 'paid':
+    case 'completed':
     case 'fulfilled':
       return <Trans message="Paid" />;
     case 'expired':
+    case 'cancelled':
       return <Trans message="Expired" />;
     default:
       return <Trans message="Status unavailable" />;
@@ -372,9 +721,11 @@ function buyerPaymentStatusLabel(status: string): ReactNode {
 function statusBadgeVariant(status: string): 'positive' | 'secondary' | 'destructive' | 'outline' {
   switch (status) {
     case 'paid':
+    case 'completed':
     case 'fulfilled':
       return 'positive';
     case 'failed_verification':
+    case 'failed':
       return 'destructive';
     case 'manual_review':
     case 'verifying':

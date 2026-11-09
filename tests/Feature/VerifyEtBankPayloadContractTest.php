@@ -24,7 +24,8 @@ class VerifyEtBankPayloadContractTest extends TestCase
             ['boa', 'FT26005678', ['accountSuffix' => '12345'], ['bank' => 'boa', 'referenceNumber' => 'FT26005678', 'accountSuffix' => '12345', 'settlementAccount' => '1234567890']],
             ['telebirr', 'DET8FJGUJ4', [], ['bank' => 'telebirr', 'transactionNumber' => 'DET8FJGUJ4', 'settlementAccount' => '1234567890']],
             ['mpesa', 'QAB12CD34', [], ['bank' => 'mpesa', 'transactionNumber' => 'QAB12CD34', 'settlementAccount' => '1234567890']],
-            ['cbebirr', 'RCPT123456', ['phoneNumber' => '0912345678'], ['bank' => 'cbebirr', 'receiptNumber' => 'RCPT123456', 'phoneNumber' => '0912345678', 'settlementAccount' => '1234567890']],
+            ['cbebirr', 'RCPT123456', ['phoneNumber' => '0912345678'], ['bank' => 'cbebirr', 'receiptNumber' => 'RCPT123456', 'phoneNumber' => '251912345678', 'settlementAccount' => '1234567890']],
+            ['cbebirr', 'RCPT654321', ['phoneNumber' => '251712345678'], ['bank' => 'cbebirr', 'receiptNumber' => 'RCPT654321', 'phoneNumber' => '251712345678', 'settlementAccount' => '1234567890']],
             ['dashen', 'DSH123456', [], ['bank' => 'dashen', 'referenceNumber' => 'DSH123456', 'settlementAccount' => '1234567890']],
             ['awash', 'AWS123456', [], ['bank' => 'awash', 'referenceNumber' => 'AWS123456', 'settlementAccount' => '1234567890']],
             ['siinqee', 'SIN123456', [], ['bank' => 'siinqee', 'referenceNumber' => 'SIN123456', 'settlementAccount' => '1234567890']],
@@ -43,7 +44,7 @@ class VerifyEtBankPayloadContractTest extends TestCase
                 'verification' => ['processingStatus' => 'queued', 'status' => 'pending', 'verified' => false],
             ], 202);
         }
-        Http::fake(['verify.et/api/verify' => $responses]);
+        Http::fake(['verify.et/api/verify?*' => $responses]);
         $http = \Mockery::mock(VerifyEtHttp::class);
         $http->shouldReceive('factory')->andReturn(Http::getFacadeRoot());
         app()->instance(VerifyEtHttp::class, $http);
@@ -64,7 +65,7 @@ class VerifyEtBankPayloadContractTest extends TestCase
 
             app(VerifyEtGateway::class)->submit($verification);
 
-            Http::assertSent(fn ($request): bool => $request->url() === 'https://verify.et/api/verify'
+            Http::assertSent(fn ($request): bool => $request->url() === 'https://verify.et/api/verify?waitMs=5000'
                 && $request->data() == $expected);
         }
     }

@@ -53,6 +53,8 @@ final class DirectStorefrontCheckout
             'platform_fee_cents' => 0,
             'creator_earnings_cents' => $product->price_cents,
             'status' => 'pending_payment',
+            'delivery_status' => $product->price_cents === 0 ? StorefrontOrder::DELIVERY_DELIVERED : StorefrontOrder::DELIVERY_AWAITING_PAYMENT,
+            'verification_attempts' => 0,
             'payment_gateway' => 'verify_et',
             'creator_payment_method_id' => $method?->id,
             'payment_provider_snapshot' => $method?->provider,
