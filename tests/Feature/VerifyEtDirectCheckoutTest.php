@@ -20,8 +20,10 @@ use App\Storefront\StorefrontCheckout;
 use Common\Billing\Models\Product;
 use Common\Files\FileEntry;
 use Common\Workspaces\Actions\CreateWorkspace;
+use App\Storefront\Notifications\PaymentReviewNeededNotification;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -1153,6 +1155,114 @@ class VerifyEtDirectCheckoutTest extends TestCase
         $this->assertSame('delivery broke', $order->delivery_error);
     }
 
+    public function testFalseReceiptReferenceReturnsMismatchAndDecrementsAttempts(): void
+    {
+        Notification::fake();
+        $shapes = [
+            'provider_not_found' => [
+                'success' => false,
+                'requestId' => 'req_missing',
+                '_http_status' => 200,
+                'error' => ['code' => 'not_found', 'retryable' => false],
+                'data' => [],
+            ],
+            'status_not_found' => [
+                'requestId' => 'req_status_missing',
+                '_http_status' => 200,
+                'verification' => ['processingStatus' => 'completed', 'status' => 'not_found'],
+                'data' => [],
+            ],
+            'verification_not_successful' => [
+                'requestId' => 'req_unsuccessful',
+                '_http_status' => 200,
+                'verification' => ['processingStatus' => 'completed', 'status' => 'failed'],
+                'data' => [[
+                    'bank' => 'cbe',
+                    'status' => 'failed',
+                    'verified' => false,
+                    'amount' => 100,
+                    'currency' => 'ETB',
+                    'settlementAccountMatch' => [
+                        'matched' => false,
+                        'ambiguous' => false,
+                        'reason' => 'verification_not_successful',
+                    ],
+                ]],
+            ],
+        ];
+
+        foreach ($shapes as $name => $result) {
+            [$order, $verification] = $this->orderAndVerification();
+            $this->assertSame('mismatch', app(VerifyEtGateway::class)->processResult($verification, $result), $name);
+            $order->refresh();
+            $this->assertSame('failed_verification', $order->status, $name);
+            $this->assertSame(1, $order->verification_attempts, $name);
+            $this->assertSame('mismatch', $verification->fresh()->status, $name);
+            $this->assertNotSame('manual_review', $order->status, $name);
+        }
+
+        [$order, $verification] = $this->orderAndVerification();
+        $this->fakeProviderHttp(404, ['success' => false, 'error' => ['code' => 'not_found']]);
+
+        $this->assertSame('mismatch', app(VerifyEtGateway::class)->submit($verification));
+        $this->assertSame('failed_verification', $order->fresh()->status);
+        $this->assertSame(1, $order->fresh()->verification_attempts);
+        Notification::assertNotSentTo($order->creator, PaymentReviewNeededNotification::class);
+    }
+
+    public function testCandidateAccountMismatchReturnsMismatchWithoutManualReview(): void
+    {
+        Notification::fake();
+        [$order, $verification] = $this->orderAndVerification();
+        $result = $this->matchedResult($verification);
+        $result['data'][0]['settlementAccountMatch'] = [
+            'matched' => false,
+            'ambiguous' => false,
+            'candidateCount' => 0,
+            'reason' => 'candidate_account_mismatch',
+        ];
+
+        $this->assertSame('mismatch', app(VerifyEtGateway::class)->processResult($verification, $result));
+        $order->refresh();
+        $this->assertSame('failed_verification', $order->status);
+        $this->assertSame(1, $order->verification_attempts);
+        $this->assertSame('candidate_account_mismatch', $verification->fresh()->latest_error_code);
+        Notification::assertNotSentTo($order->creator, PaymentReviewNeededNotification::class);
+    }
+
+    public function testRateLimitedRequestStaysVerifyingWithoutDecrementingAttempts(): void
+    {
+        Notification::fake();
+        [$order, $verification] = $this->orderAndVerification();
+        $this->fakeProviderHttp(429, ['error' => ['code' => 'upstream_rate_limited']]);
+
+        $this->assertSame('verifying', app(VerifyEtGateway::class)->submit($verification));
+        $order->refresh();
+        $verification->refresh();
+        $this->assertSame('verifying', $verification->status);
+        $this->assertSame('pending_payment', $order->status);
+        $this->assertSame(0, (int) $order->verification_attempts);
+        Notification::assertNotSentTo($order->creator, PaymentReviewNeededNotification::class);
+    }
+
+    public function testAmbiguousSettlementMatchHoldsForManualReview(): void
+    {
+        [$order, $verification] = $this->orderAndVerification();
+        $result = $this->matchedResult($verification);
+        $result['data'][0]['settlementAccountMatch'] = [
+            'matched' => false,
+            'ambiguous' => true,
+            'candidateCount' => 2,
+            'reason' => 'ambiguous_registered_accounts',
+        ];
+
+        $this->assertSame('manual_review', app(VerifyEtGateway::class)->processResult($verification, $result));
+        $order->refresh();
+        $this->assertSame('manual_review', $order->status);
+        $this->assertSame(0, (int) $order->verification_attempts);
+        $this->assertSame('manual_review', $verification->fresh()->status);
+    }
+
     public function testManualReviewRejectsAnotherReference(): void
     {
         [$order] = $this->orderAndVerification();
@@ -1163,6 +1273,21 @@ class VerifyEtDirectCheckoutTest extends TestCase
         $this->withHeader('X-Order-Access-Token', $token)
             ->postJson('/api/v1/public/direct-orders/'.$order->uuid.'/reference', ['reference' => 'URLTOKEN123456'])
             ->assertConflict();
+    }
+
+    /**
+     * @param array<string, mixed> $body
+     */
+    private function fakeProviderHttp(int $status, array $body): void
+    {
+        config()->set('services.verify_et.api_key', 'synthetic-test-key');
+        \Illuminate\Support\Facades\Http::preventStrayRequests();
+        \Illuminate\Support\Facades\Http::fake([
+            'verify.et/*' => \Illuminate\Support\Facades\Http::response($body, $status, ['Retry-After' => '0']),
+        ]);
+        $transport = \Mockery::mock(\App\Payments\VerifyEt\VerifyEtHttp::class);
+        $transport->shouldReceive('factory')->andReturn(\Illuminate\Support\Facades\Http::getFacadeRoot());
+        app()->instance(\App\Payments\VerifyEt\VerifyEtHttp::class, $transport);
     }
 
     private function orderAndVerification(): array

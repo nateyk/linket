@@ -77,6 +77,10 @@ final class VerifyEtEvidenceValidator
             return false;
         }
 
+        if ($this->terminalBuyerSignal($result, null)) {
+            return true;
+        }
+
         $processing = data_get($result, 'verification.processingStatus') ?? data_get($result, 'data.processingStatus');
         if (($result['event'] ?? null) === 'verification.completed') {
             return $processing === 'completed';
@@ -105,6 +109,26 @@ final class VerifyEtEvidenceValidator
         }
 
         return 'verifying';
+    }
+
+    /**
+     * A finished negative outcome the buyer must correct. Null when the result is not a buyer rejection.
+     *
+     * @param array<string, mixed> $result
+     * @param array<string, mixed>|null $item
+     */
+    public function buyerRejectionCode(array $result, ?array $item): ?string
+    {
+        $reason = $this->settlementReason($item);
+        if (in_array($reason, ['candidate_account_mismatch', 'verification_not_successful'], true)) {
+            return $reason;
+        }
+
+        if ($this->terminalBuyerSignal($result, $item)) {
+            return 'receipt_not_found';
+        }
+
+        return null;
     }
 
     /**
@@ -265,6 +289,10 @@ final class VerifyEtEvidenceValidator
 
     private function statusWithoutItem(array $result): string
     {
+        if ($this->terminalBuyerSignal($result, null)) {
+            return 'mismatch';
+        }
+
         $processing = data_get($result, 'verification.processingStatus') ?? data_get($result, 'data.processingStatus');
         if (in_array($processing, ['queued', 'running'], true)) {
             return 'verifying';
@@ -401,6 +429,10 @@ final class VerifyEtEvidenceValidator
 
     private function isExplicitFailureEnvelope(array $result, ?string $requestId): bool
     {
+        if ($this->terminalBuyerSignal($result, null)) {
+            return false;
+        }
+
         if (array_key_exists('success', $result) && $result['success'] !== true) {
             return true;
         }
@@ -414,6 +446,80 @@ final class VerifyEtEvidenceValidator
         }
 
         return $requestId === '';
+    }
+
+    /**
+     * @param array<string, mixed>|null $item
+     */
+    private function settlementReason(?array $item): ?string
+    {
+        $reason = $item['settlementAccountMatch']['reason'] ?? null;
+
+        return is_string($reason) ? $reason : null;
+    }
+
+    private function reasonHoldsForReview(?string $reason): bool
+    {
+        return in_array($reason, [
+            'ambiguous_registered_accounts',
+            'no_registered_accounts',
+            'missing_receiver_account',
+        ], true);
+    }
+
+    /**
+     * @param array<string, mixed> $result
+     * @param array<string, mixed>|null $item
+     */
+    private function terminalBuyerSignal(array $result, ?array $item): bool
+    {
+        if ($this->reasonHoldsForReview($this->settlementReason($item))) {
+            return false;
+        }
+
+        if ($this->providerErrorRejectsBuyer($result)) {
+            return true;
+        }
+
+        return $this->providerStatusRejectsBuyer($result, $item);
+    }
+
+    /**
+     * @param array<string, mixed> $result
+     */
+    private function providerErrorRejectsBuyer(array $result): bool
+    {
+        return in_array($this->providerErrorCode($result), ['not_found', 'invalid_input'], true);
+    }
+
+    /**
+     * @param array<string, mixed> $result
+     * @param array<string, mixed>|null $item
+     */
+    private function providerStatusRejectsBuyer(array $result, ?array $item): bool
+    {
+        return in_array($this->providerStatus($result, $item), ['not_found', 'failed'], true);
+    }
+
+    /**
+     * @param array<string, mixed> $result
+     */
+    private function providerErrorCode(array $result): ?string
+    {
+        $code = data_get($result, 'error.code') ?? data_get($result, 'data.error.code');
+
+        return is_string($code) ? $code : null;
+    }
+
+    /**
+     * @param array<string, mixed> $result
+     * @param array<string, mixed>|null $item
+     */
+    private function providerStatus(array $result, ?array $item): ?string
+    {
+        $status = $item['status'] ?? data_get($result, 'verification.status') ?? data_get($result, 'data.status') ?? data_get($result, 'status');
+
+        return is_string($status) ? $status : null;
     }
 
     private function hasWebhookRequestIdConflict(DirectPaymentVerification $verification, array $result, ?string $requestId): bool

@@ -62,7 +62,7 @@ final class VerifyEtClient
 
                 return min(4000, 250 * (2 ** ($attempt - 1)) + random_int(0, 150));
             }, fn (mixed $exception): bool => $exception instanceof ConnectionException
-                || (method_exists($exception, 'response') && ($exception->response()?->serverError() || $exception->response()?->status() === 429)));
+                || (method_exists($exception, 'response') && ($exception->response()?->serverError() || $exception->response()?->status() === 429)), false);
 
         if ($idempotencyKey !== null) {
             $request = $request->withHeaders(['Idempotency-Key' => $idempotencyKey]);

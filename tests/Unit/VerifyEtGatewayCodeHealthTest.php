@@ -152,7 +152,7 @@ class VerifyEtGatewayCodeHealthTest extends TestCase
         }
     }
 
-    public function testGatewayResolvesFromContainerAndProxiesIdentityMethods(): void
+    public function testGatewayResolvesFromContainerAndScrubsProviderResults(): void
     {
         $gateway = app(VerifyEtGateway::class);
         $this->assertInstanceOf(VerifyEtGateway::class, $gateway);
