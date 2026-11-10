@@ -427,7 +427,7 @@ class VerifyEtDirectCheckoutTest extends TestCase
         $admin->permissions()->attach(\Common\Permissions\Models\Permission::query()->firstOrCreate(['name' => 'admin.access']));
         $this->withSession(['_token' => 'test-token'])->withHeader('Referer', config('app.url'))->withHeader('X-CSRF-TOKEN', 'test-token');
         $this->actingAs($admin)->patchJson('/api/v1/admin/storefront/payment-method-catalog/'.$catalog->id, ['creator_setup_enabled' => true, 'checkout_enabled' => true, 'operationally_suspended' => false])->assertOk();
-        $account = match ($bank) { 'cbebirr' => '0912345678', 'boa' => '12345678', 'awash' => '12345678901234', default => '1234567890123' };
+        $account = match ($bank) { 'telebirr' => '0912345678', 'boa' => '1234567890', default => '1234567890123' };
         \Common\Workspaces\ActiveWorkspace::clearCache();
         $created = $this->actingAs($creator)->postJson('/api/v1/storefront/payment-methods', ['provider' => $bank, 'account_number' => $account, 'account_name' => 'Test Recipient', 'proof' => \Illuminate\Http\UploadedFile::fake()->create('proof.pdf', 10, 'application/pdf')])->assertCreated();
         $methodId = $created->json('data.id');
@@ -436,17 +436,17 @@ class VerifyEtDirectCheckoutTest extends TestCase
         \Common\Workspaces\ActiveWorkspace::clearCache();
         $this->actingAs($creator)->postJson('/api/v1/storefront/payment-methods/'.$methodId.'/activate')->assertOk();
         $checkout = $this->postJson('/api/v1/storefront/products/'.$seedOrder->digital_product_id.'/checkout', ['buyer_name' => 'Buyer', 'buyer_email' => 'buyer@example.test', 'creator_payment_method_id' => $methodId])->assertOk();
-        $reference = $bank === 'cbe' ? 'FT2600001234' : 'SYNTHETIC123456';
-        $field = match ($bank) { 'cbe' => 'reference', 'cbebirr' => 'receiptNumber', default => 'referenceNumber' };
-        $input = match ($bank) { 'cbe' => ['account_suffix' => '01234567'], 'boa' => ['account_suffix' => '01234'], 'cbebirr' => ['phone_number' => '0911111111'], default => [] };
-        $providerItem = ['bank' => $bank, 'status' => 'success', 'verified' => true, 'amount' => 100, 'currency' => 'ETB', 'settlementAccountMatch' => ['matched' => true, 'ambiguous' => false, 'matchConfidence' => $bank === 'dashen' ? 'low' : 'high', 'candidateCount' => 1, 'matchedSettlementAccount' => $account]];
-        if ($bank !== 'awash') { $providerItem[$bank === 'cbebirr' || $bank === 'cbe' ? 'receiptNumber' : 'referenceNumber'] = $reference; }
+        $reference = $bank === 'cbe' ? 'FT2600001234' : ($bank === 'telebirr' ? 'DET8FJGUJ4' : 'BOA123456789');
+        $field = match ($bank) { 'cbe' => 'reference', 'telebirr' => 'transactionNumber', default => 'referenceNumber' };
+        $input = match ($bank) { 'cbe' => ['account_suffix' => '01234567'], 'boa' => ['account_suffix' => '01234'], default => [] };
+        $providerItem = ['bank' => $bank, 'status' => 'success', 'verified' => true, 'amount' => 100, 'currency' => 'ETB', 'settlementAccountMatch' => ['matched' => true, 'ambiguous' => false, 'matchConfidence' => 'high', 'candidateCount' => 1, 'matchedSettlementAccount' => $account]];
+        $providerItem[$field] = $reference;
         \Illuminate\Support\Facades\Http::fake(['verify.et/api/verify?*' => \Illuminate\Support\Facades\Http::response(['requestId' => 'synthetic-request', 'verification' => ['processingStatus' => 'completed'], 'data' => [$providerItem]], 200)]);
         $transport = \Mockery::mock(\App\Payments\VerifyEt\VerifyEtHttp::class);
         $transport->shouldReceive('factory')->andReturn(\Illuminate\Support\Facades\Http::getFacadeRoot());
         app()->instance(\App\Payments\VerifyEt\VerifyEtHttp::class, $transport);
-        $this->withHeader('X-Order-Access-Token', $checkout->json('access_token'))->postJson($checkout->json('reference_endpoint'), ['reference' => $reference, ...$input])->assertOk()->assertJsonPath('status', in_array($bank, ['awash', 'dashen'], true) ? 'manual_review' : 'paid');
-        \Illuminate\Support\Facades\Http::assertSent(fn ($request): bool => $request['bank'] === $bank && $request[$field] === $reference && $request['settlementAccount'] === $account && ($bank !== 'boa' || $request['accountSuffix'] === '01234') && ($bank !== 'cbe' || $request['accountSuffix'] === '01234567') && ($bank !== 'cbebirr' || $request['phoneNumber'] === '0911111111'));
+        $this->withHeader('X-Order-Access-Token', $checkout->json('access_token'))->postJson($checkout->json('reference_endpoint'), ['reference' => $reference, ...$input])->assertOk()->assertJsonPath('status', 'paid');
+        \Illuminate\Support\Facades\Http::assertSent(fn ($request): bool => $request['bank'] === $bank && $request[$field] === $reference && $request['settlementAccount'] === $account && ($bank !== 'boa' || $request['accountSuffix'] === '01234') && ($bank !== 'cbe' || $request['accountSuffix'] === '01234567'));
     }
 
     public function testCompletedStatusResultCanFulfillWithCompleteEvidence(): void

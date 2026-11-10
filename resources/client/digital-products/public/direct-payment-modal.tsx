@@ -71,7 +71,6 @@ export function DirectPaymentModal({
   const [instructions, setInstructions] = useState<PaymentInstructions | null>(null);
   const [reference, setReference] = useState('');
   const [accountSuffix, setAccountSuffix] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
   const [status, setStatus] = useState(checkout?.status ?? '');
   const [deliveryStatus, setDeliveryStatus] = useState<'awaiting_payment' | 'delivering' | 'delivered' | 'failed'>('awaiting_payment');
   const [downloads, setDownloads] = useState<PaidDownload[]>([]);
@@ -91,7 +90,6 @@ export function DirectPaymentModal({
     setDeliveryStatus('awaiting_payment');
     setReference('');
     setAccountSuffix('');
-    setPhoneNumber('');
     setErrorMessage(null);
     setValidationError(null);
     setInstructionsError(false);
@@ -191,7 +189,6 @@ export function DirectPaymentModal({
       const data: PaymentInstructions = response.data.data ?? response.data;
       setInstructions(data);
       setAccountSuffix('');
-      setPhoneNumber('');
     } catch {
       setErrorMessage('Failed to switch receiving account. Please try again.');
     } finally {
@@ -239,18 +236,6 @@ export function DirectPaymentModal({
       }
     }
 
-    if (provider === 'cbebirr') {
-      const cleanPhone = phoneNumber.trim();
-      if (!cleanPhone) {
-        setValidationError('CBE Birr requires the wallet phone number used for the payment.');
-        return false;
-      }
-      if (!/^(?:0[79]\d{8}|\+?251[79]\d{8})$/.test(cleanPhone)) {
-        setValidationError('Please enter a valid Ethiopian phone number (e.g. 0912345678 or 0712345678).');
-        return false;
-      }
-    }
-
     return true;
   };
 
@@ -273,7 +258,6 @@ export function DirectPaymentModal({
         {
           reference: cleanRef,
           account_suffix: needsSuffix ? accountSuffix.trim() : undefined,
-          phone_number: provider === 'cbebirr' ? phoneNumber.trim() : undefined,
         },
         {headers: {'X-Order-Access-Token': checkout.access_token}},
       );
@@ -564,23 +548,6 @@ export function DirectPaymentModal({
                           }}
                           placeholder={instructions.provider === 'boa' ? '12345' : '12345678'}
                           maxLength={instructions.provider === 'boa' ? 5 : 8}
-                          disabled={busy}
-                        />
-                      </Field.Root>
-                    )}
-
-                    {instructions?.provider === 'cbebirr' && (
-                      <Field.Root>
-                        <Field.Label><Trans message="CBE Birr phone number" /></Field.Label>
-                        <Input
-                          bindToHookForm={false}
-                          inputMode="tel"
-                          value={phoneNumber}
-                          onChange={event => {
-                            setPhoneNumber(event.target.value);
-                            setValidationError(null);
-                          }}
-                          placeholder="0912345678 or 0712345678"
                           disabled={busy}
                         />
                       </Field.Root>

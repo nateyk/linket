@@ -66,9 +66,9 @@ final class CreatorPaymentMethodsController extends Controller
         $provider = $data['provider'];
         abort_unless(in_array($provider, DirectPaymentMethod::SELLER_RECEIVING_BANKS, true), 422, __('Only CBE, Telebirr, and Bank of Abyssinia can be added.'));
         abort_unless(DirectPaymentMethod::query()->where('code', $provider)->where('creator_setup_enabled', true)->where('operationally_suspended', false)->exists(), 422, __('This payment method is unavailable.'));
-        if (($provider === 'awash' && !preg_match('/^\d{14}$/', $account))
-            || ($provider === 'boa' && !preg_match('/^(?:\d{8}|\d{16})$/', $account))
-            || ($provider === 'telebirr' && !preg_match('/^(?:0\d{9}|\+251\d{9})$/', $account))) {
+        if (($provider === 'boa' && !preg_match('/^(?:\d{8}|\d{10}|\d{16})$/', $account))
+            || ($provider === 'telebirr' && !preg_match('/^(?:0\d{9}|\+251\d{9})$/', $account))
+            || ($provider === 'cbe' && !preg_match('/^\d{13}$/', $account))) {
             throw \Illuminate\Validation\ValidationException::withMessages([
                 'account_number' => __('Enter a valid account or wallet number for this provider.'),
             ]);

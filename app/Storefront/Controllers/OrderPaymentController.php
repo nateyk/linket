@@ -162,7 +162,6 @@ final class OrderPaymentController extends Controller
         $data = $request->validate([
             'reference' => ['required', 'string', 'min:6', 'max:255'],
             'account_suffix' => ['nullable', 'string'],
-            'phone_number' => ['nullable', 'string', 'max:32', 'regex:/^(?:0[79]\d{8}|\+?251[79]\d{8})$/'],
         ]);
 
         $order = StorefrontOrder::query()->where('uuid', $order)->firstOrFail();
@@ -198,7 +197,6 @@ final class OrderPaymentController extends Controller
             $provider,
             $data['reference'],
             $data['account_suffix'] ?? null,
-            $data['phone_number'] ?? null,
         );
 
         // Pre-Verification 4: Reject duplicate references immediately if already completed or under review
@@ -247,11 +245,9 @@ final class OrderPaymentController extends Controller
 
                 $providerInput = match ($provider) {
                     'boa' => ['accountSuffix' => $data['account_suffix'] ?? null],
-                    'cbebirr' => ['phoneNumber' => $data['phone_number'] ?? null],
                     'cbe' => ['accountSuffix' => $data['account_suffix'] ?? null],
                     default => [],
                 };
-                abort_if($provider === 'cbebirr' && !isset($providerInput['phoneNumber']), 422, __('CBE Birr requires the wallet phone number.'));
 
                 if ($existing && $existing->reference === $data['reference'] && $existing->status === 'mismatch') {
                     $existing = DirectPaymentVerification::query()->whereKey($existing->id)->lockForUpdate()->firstOrFail();
@@ -364,15 +360,9 @@ final class OrderPaymentController extends Controller
     private function bankSpecificInstructions(string $provider): string
     {
         return match (strtolower($provider)) {
-            'cbe' => __('Transfer the exact amount to Commercial Bank of Ethiopia. Submit your CBE Receipt ID (or older FT reference with 8-digit suffix).'),
+            'cbe' => __('Transfer the exact amount to Commercial Bank of Ethiopia. Submit your CBE Receipt ID or FT reference.'),
             'telebirr' => __('Transfer the exact amount via Telebirr. Submit your 10-character transaction number.'),
             'boa' => __('Transfer the exact amount to Bank of Abyssinia. Submit your reference and 5-digit transaction account suffix.'),
-            'dashen' => __('Transfer the exact amount to Dashen Bank. Submit your transaction reference.'),
-            'cbebirr' => __('Transfer the exact amount via CBE Birr. Submit your receipt number and wallet phone number.'),
-            'mpesa' => __('Transfer the exact amount via M-Pesa. Submit your transaction number.'),
-            'awash' => __('Transfer the exact amount to Awash Bank. Submit your receipt reference or receipt URL.'),
-            'siinqee' => __('Transfer the exact amount to Siinqee Bank. Submit your receipt reference.'),
-            'kaafiebirr' => __('Transfer the exact amount to Kaafie Birr. Submit your receipt reference or receipt URL.'),
             default => __('Transfer the exact amount to the account shown, then submit your transaction reference.'),
         };
     }

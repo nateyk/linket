@@ -9,9 +9,9 @@ use Illuminate\Support\Facades\DB;
 
 final class StorefrontVerificationSession
 {
-    public function prepareReference(string $bank, string $reference, ?string $accountSuffix = null, ?string $phoneNumber = null): string
+    public function prepareReference(string $bank, string $reference, ?string $accountSuffix = null): string
     {
-        return app(ReceiptReference::class)->prepare($bank, $reference, $accountSuffix, $phoneNumber);
+        return app(ReceiptReference::class)->prepare($bank, $reference, $accountSuffix);
     }
 
     public function expireIfDue(StorefrontOrder $order): StorefrontOrder

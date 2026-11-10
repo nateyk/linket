@@ -79,7 +79,7 @@ final class VerifyEtIdentityResolver
     {
         $cleaned = strtoupper((string) preg_replace('/[^A-Za-z0-9]/', '', (string) ($account['number'] ?? '')));
         $bank = strtolower((string) ($account['bank'] ?? ''));
-        if (!in_array($bank, ['telebirr', 'mpesa', 'cbebirr'], true)) {
+        if ($bank !== 'telebirr') {
             return $cleaned;
         }
 
@@ -120,8 +120,8 @@ final class VerifyEtIdentityResolver
     private function candidateFieldsForBank(array $bank): array
     {
         return match ($bank['code']) {
-            'telebirr', 'mpesa' => ['transactionNumber', 'referenceNumber', 'receiptNumber', 'reference'],
-            'cbe', 'cbebirr' => ['receiptNumber', 'referenceNumber', 'transactionNumber', 'reference'],
+            'telebirr' => ['transactionNumber', 'referenceNumber', 'receiptNumber', 'reference'],
+            'cbe' => ['receiptNumber', 'referenceNumber', 'transactionNumber', 'reference'],
             default => ['referenceNumber', 'receiptNumber', 'transactionNumber', 'reference'],
         };
     }
