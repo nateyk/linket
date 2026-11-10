@@ -38,8 +38,8 @@ class VerifyEtGatewayCodeHealthTest extends TestCase
     {
         $cases = [
             ['0912345678', 'telebirr', '251912345678'],
-            ['0712345678', 'cbebirr', '251712345678'],
-            ['+251912345678', 'mpesa', '251912345678'],
+            ['0712345678', 'telebirr', '251712345678'],
+            ['+251912345678', 'telebirr', '251912345678'],
             ['1000123456789', 'cbe', '1000123456789'],
         ];
         foreach ($cases as [$number, $bank, $expected]) {
@@ -123,21 +123,26 @@ class VerifyEtGatewayCodeHealthTest extends TestCase
         $this->assertNull($this->evidenceValidator->validateConfirmationHistory($validHistory, $verification, 'TXN123'));
     }
 
-    public function testPayloadBuilderNormalizesCbeBirrPhones(): void
+    public function testPayloadBuilderBuildsTelebirrPayload(): void
     {
-        $local = $this->verification(['provider_input' => ['phoneNumber' => '0712345678']]);
-        $international = $this->verification(['provider_input' => ['phoneNumber' => '+251912345678']]);
+        $verification = $this->verification([
+            'bank_code' => 'telebirr',
+            'reference' => 'DET8FJGUJ4',
+            'settlement_account' => '251912345678',
+        ]);
 
-        $this->assertSame('251712345678', $this->payloadBuilder->build($local)['phoneNumber']);
-        $this->assertSame('251912345678', $this->payloadBuilder->build($international)['phoneNumber']);
+        $payload = $this->payloadBuilder->build($verification);
+        $this->assertSame('telebirr', $payload['bank']);
+        $this->assertSame('DET8FJGUJ4', $payload['transactionNumber']);
+        $this->assertSame('251912345678', $payload['settlementAccount']);
     }
 
     public function testPayloadBuilderRejectsInvalidBankFields(): void
     {
         $cases = [
-            ['settlement_account' => '251812345678', 'provider_input' => ['phoneNumber' => '0812345678']],
             ['bank_code' => 'unsupported', 'reference' => 'REF123', 'settlement_account' => '1000123', 'provider_input' => []],
             ['bank_code' => 'boa', 'reference' => 'REF123', 'settlement_account' => '1000123', 'provider_input' => ['accountSuffix' => '123']],
+            ['bank_code' => 'cbe', 'reference' => 'FT12345678', 'settlement_account' => '1000123', 'provider_input' => ['accountSuffix' => '123']],
         ];
 
         foreach ($cases as $overrides) {
@@ -200,7 +205,7 @@ class VerifyEtGatewayCodeHealthTest extends TestCase
     private function verification(array $overrides = []): DirectPaymentVerification
     {
         $verification = new DirectPaymentVerification();
-        $verification->bank_code = $overrides['bank_code'] ?? 'cbebirr';
+        $verification->bank_code = $overrides['bank_code'] ?? 'telebirr';
         $verification->reference = $overrides['reference'] ?? 'RCPT123456';
         $verification->settlement_account = $overrides['settlement_account'] ?? '251912345678';
         $verification->provider_input = $overrides['provider_input'] ?? [];

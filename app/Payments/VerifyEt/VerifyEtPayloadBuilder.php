@@ -7,8 +7,7 @@ use App\Payments\Models\DirectPaymentVerification;
 final class VerifyEtPayloadBuilder
 {
     private const SUPPORTED_BANKS = [
-        'cbe', 'boa', 'telebirr', 'mpesa', 'cbebirr',
-        'dashen', 'awash', 'siinqee', 'kaafiebirr', 'coopayebirr',
+        'cbe', 'telebirr', 'boa',
     ];
 
     /**
@@ -50,12 +49,6 @@ final class VerifyEtPayloadBuilder
 
         if ($verification->bank_code === 'cbe') {
             $this->validateCbeFields($verification);
-
-            return;
-        }
-
-        if ($verification->bank_code === 'cbebirr') {
-            $this->validateCbeBirrFields($input);
         }
     }
 
@@ -113,37 +106,6 @@ final class VerifyEtPayloadBuilder
     }
 
     /**
-     * @param array<string, mixed> $input
-     * @throws VerifyEtException
-     */
-    private function validateCbeBirrFields(array $input): void
-    {
-        if ($this->cbeBirrPhone($input) === null) {
-            throw new VerifyEtException(422, 'invalid_bank_fields', 'INVALID_CBEBIRR_PHONE');
-        }
-    }
-
-    /**
-     * Accept local 07/09 numbers and 251 numbers, then send the 251 form Verify.et prefers.
-     *
-     * @param array<string, mixed> $input
-     */
-    private function cbeBirrPhone(array $input): ?string
-    {
-        $digits = preg_replace('/\D/', '', (string) ($input['phoneNumber'] ?? '')) ?? '';
-
-        if (preg_match('/^0([79]\d{8})$/', $digits, $parts) === 1) {
-            return '251'.$parts[1];
-        }
-
-        if (preg_match('/^251([79]\d{8})$/', $digits, $parts) === 1) {
-            return '251'.$parts[1];
-        }
-
-        return null;
-    }
-
-    /**
      * @return array<string, mixed>
      */
     private function resolveBankPayloadFields(DirectPaymentVerification $verification): array
@@ -152,12 +114,8 @@ final class VerifyEtPayloadBuilder
         $input = $verification->provider_input ?? [];
 
         return match ($verification->bank_code) {
-            'telebirr', 'mpesa' => [
+            'telebirr' => [
                 'transactionNumber' => $reference,
-            ],
-            'cbebirr' => [
-                'receiptNumber' => $reference,
-                'phoneNumber' => $this->cbeBirrPhone($input),
             ],
             'boa' => [
                 'referenceNumber' => $reference,

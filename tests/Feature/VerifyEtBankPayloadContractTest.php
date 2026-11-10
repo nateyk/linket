@@ -23,16 +23,7 @@ class VerifyEtBankPayloadContractTest extends TestCase
             ['cbe', 'FT26001234', ['accountSuffix' => '12345678'], ['bank' => 'cbe', 'reference' => 'FT26001234', 'accountSuffix' => '12345678', 'settlementAccount' => '1234567890']],
             ['boa', 'FT26005678', ['accountSuffix' => '12345'], ['bank' => 'boa', 'referenceNumber' => 'FT26005678', 'accountSuffix' => '12345', 'settlementAccount' => '1234567890']],
             ['telebirr', 'DET8FJGUJ4', [], ['bank' => 'telebirr', 'transactionNumber' => 'DET8FJGUJ4', 'settlementAccount' => '1234567890']],
-            ['mpesa', 'QAB12CD34', [], ['bank' => 'mpesa', 'transactionNumber' => 'QAB12CD34', 'settlementAccount' => '1234567890']],
-            ['cbebirr', 'RCPT123456', ['phoneNumber' => '0912345678'], ['bank' => 'cbebirr', 'receiptNumber' => 'RCPT123456', 'phoneNumber' => '251912345678', 'settlementAccount' => '1234567890']],
-            ['cbebirr', 'RCPT654321', ['phoneNumber' => '251712345678'], ['bank' => 'cbebirr', 'receiptNumber' => 'RCPT654321', 'phoneNumber' => '251712345678', 'settlementAccount' => '1234567890']],
-            ['dashen', 'DSH123456', [], ['bank' => 'dashen', 'referenceNumber' => 'DSH123456', 'settlementAccount' => '1234567890']],
-            ['awash', 'AWS123456', [], ['bank' => 'awash', 'referenceNumber' => 'AWS123456', 'settlementAccount' => '1234567890']],
-            ['siinqee', 'SIN123456', [], ['bank' => 'siinqee', 'referenceNumber' => 'SIN123456', 'settlementAccount' => '1234567890']],
-            ['kaafiebirr', 'KFB123456', [], ['bank' => 'kaafiebirr', 'referenceNumber' => 'KFB123456', 'settlementAccount' => '1234567890']],
-            ['coopayebirr', 'COO123456', [], ['bank' => 'coopayebirr', 'referenceNumber' => 'COO123456', 'settlementAccount' => '1234567890']],
             ['telebirr', 'SYNTHETICTELEBIRR1', [], ['bank' => 'telebirr', 'transactionNumber' => 'SYNTHETICTELEBIRR1', 'settlementAccount' => '0912345678']],
-            ['dashen', 'SYNTHETICDASHEN1', [], ['bank' => 'dashen', 'referenceNumber' => 'SYNTHETICDASHEN1', 'settlementAccount' => '0012862182001']],
         ];
 
         $responses = Http::sequence();

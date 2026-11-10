@@ -234,7 +234,7 @@ final class DirectBillingController extends Controller
         $provider = $instructions['provider'];
         $cleanRef = trim($data['reference']);
 
-        $data['reference'] = app(\App\Payments\VerifyEt\ReceiptReference::class)->prepare($provider, $cleanRef, $data['account_suffix'] ?? null, $data['phone_number'] ?? null);
+        $data['reference'] = app(\App\Payments\VerifyEt\ReceiptReference::class)->prepare($provider, $cleanRef, $data['account_suffix'] ?? null);
 
         // Reject duplicates immediately if already completed or under review on another payable
         $alreadyClaimed = DirectPaymentVerification::query()
@@ -255,7 +255,6 @@ final class DirectBillingController extends Controller
 
         $providerInput = match ($provider) {
             'boa' => ['accountSuffix' => $data['account_suffix'] ?? null],
-            'cbebirr' => ['phoneNumber' => $data['phone_number'] ?? null],
             'cbe' => ['accountSuffix' => $data['account_suffix'] ?? null],
             default => [],
         };

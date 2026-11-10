@@ -10,10 +10,10 @@ final class ReceiptReference
      * Normalize first, then check the selected bank's format.
      * Receipt URLs must be reduced to their token before the format regex runs.
      */
-    public function prepare(string $bank, string $reference, ?string $accountSuffix = null, ?string $phoneNumber = null): string
+    public function prepare(string $bank, string $reference, ?string $accountSuffix = null): string
     {
         $normalized = $this->normalize($bank, $reference);
-        $this->validateFormat($bank, $normalized, $accountSuffix, $phoneNumber);
+        $this->validateFormat($bank, $normalized, $accountSuffix);
 
         return $normalized;
     }
@@ -25,12 +25,10 @@ final class ReceiptReference
     {
         $reference = trim($reference);
 
-        // Check supported bank receipt URLs
+        // Supported Linket bank receipt URLs
         $urlPatterns = [
-            'cbe' => '~^https://mbreciept\.cbe\.com\.et/([A-Za-z0-9_-]{6,150})/?$~iD',
-            'awash' => '~^https://awashpay\.awashbank\.com(?::\d+)?/(-?[A-Za-z0-9_-]{6,140})/?$~iD',
-            'kaafiebirr' => '~^https://receipt\.ebirr\.com/kaafimf/([A-Za-z0-9_-]{6,150})/?$~iD',
-            'siinqee' => '~^https://(?:receipt|pay)\.siinqeebank\.com(?::\d+)?/([A-Za-z0-9_-]{6,150})/?$~iD',
+            'cbe' => '~^https://(?:mbreciept\.|www\.)?cbe\.com\.et/(?:receipt/)?([A-Za-z0-9_-]{6,150})/?$~iD',
+            'telebirr' => '~^https://apps\.ethiotelecom\.et/receipt/(?:.*[?&]transactionNo=)?([A-Za-z0-9]{8,30})~iD',
         ];
 
         if (isset($urlPatterns[$bank]) && preg_match($urlPatterns[$bank], $reference, $matches)) {
@@ -39,8 +37,7 @@ final class ReceiptReference
 
         // Standard alphanumeric transaction reference
         if (preg_match('/^[A-Za-z0-9._-]{6,150}$/D', $reference)) {
-            // Providers with uppercase convention
-            if (in_array(strtolower($bank), ['telebirr', 'boa', 'mpesa', 'dashen'], true) || preg_match('/^FT/i', $reference)) {
+            if (in_array(strtolower($bank), ['telebirr', 'boa'], true) || preg_match('/^FT/i', $reference)) {
                 return strtoupper($reference);
             }
 
@@ -55,7 +52,7 @@ final class ReceiptReference
      *
      * @throws ValidationException
      */
-    public function validateFormat(string $bank, string $reference, ?string $accountSuffix = null, ?string $phoneNumber = null): void
+    public function validateFormat(string $bank, string $reference, ?string $accountSuffix = null): void
     {
         $reference = trim($reference);
 
@@ -63,10 +60,7 @@ final class ReceiptReference
             'cbe' => $this->validateCbeReference($reference, $accountSuffix),
             'boa' => $this->validateBoaReference($reference, $accountSuffix),
             'telebirr' => $this->assertReference($reference, '/^[A-Za-z0-9]{8,30}$/', __('Enter a valid Telebirr transaction number (e.g. DET8FJGUJ4).')),
-            'mpesa' => $this->assertReference($reference, '/^[A-Za-z0-9]{8,30}$/', __('Enter a valid M-Pesa transaction number (e.g. QAB12CD34).')),
-            'cbebirr' => $this->validateCbeBirrReference($reference, $phoneNumber),
-            'dashen' => $this->assertReference($reference, '/^[A-Za-z0-9]{6,30}$/', __('Enter a valid Dashen Bank transaction reference.')),
-            default => $this->assertReference($reference, '/^[A-Za-z0-9._-]{6,150}$/', __('Enter a valid transaction reference or supported receipt URL.')),
+            default => throw ValidationException::withMessages(['reference' => __('Unsupported bank provider. Linket supports CBE, Telebirr, and Bank of Abyssinia.')]),
         };
     }
 
@@ -118,18 +112,6 @@ final class ReceiptReference
 
         throw ValidationException::withMessages([
             'account_suffix' => __('Bank of Abyssinia requires the five-digit transaction account suffix.'),
-        ]);
-    }
-
-    private function validateCbeBirrReference(string $reference, ?string $phoneNumber): void
-    {
-        $this->assertReference($reference, '/^[A-Za-z0-9]{6,30}$/', __('Enter a valid CBE Birr receipt or transaction reference.'));
-        if ($phoneNumber && preg_match('/^(?:0[79]\d{8}|\+?251[79]\d{8})$/', $phoneNumber) === 1) {
-            return;
-        }
-
-        throw ValidationException::withMessages([
-            'phone_number' => __('CBE Birr requires a valid wallet phone number (e.g. 0912345678 or 0712345678).'),
         ]);
     }
 

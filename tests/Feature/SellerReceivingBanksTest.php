@@ -28,7 +28,7 @@ class SellerReceivingBanksTest extends TestCase
         $codes = collect($this->getJson('/api/v1/storefront/payment-methods')->assertOk()->json('available_methods'))->pluck('code')->all();
         $this->assertEqualsCanonicalizing(['cbe', 'telebirr', 'boa'], $codes);
 
-        foreach (['telebirr' => '0912345678', 'cbe' => '1000123456789', 'boa' => '12345678'] as $bank => $account) {
+        foreach (['telebirr' => '0912345678', 'cbe' => '1000123456789', 'boa' => '1000290172'] as $bank => $account) {
             $this->postJson('/api/v1/storefront/payment-methods', [
                 'provider' => $bank,
                 'account_number' => $account,

@@ -113,8 +113,8 @@ function isValidAccountNumber(number: string, provider: string): boolean {
   if (provider === 'telebirr') {
     return /^(?:0\d{9}|\+251\d{9})$/.test(normalized);
   }
-  if (provider === 'awash') return /^\d{14}$/.test(normalized);
-  if (provider === 'boa') return /^(?:\d{8}|\d{16})$/.test(normalized);
+  if (provider === 'cbe') return /^\d{13}$/.test(normalized);
+  if (provider === 'boa') return /^(?:\d{8}|\d{10}|\d{16})$/.test(normalized);
   return true;
 }
 
@@ -662,7 +662,7 @@ export function Component() {
 
                 <div className="flex flex-col gap-1.5">
                   <label htmlFor="receiving-number" className="text-sm font-medium">
-                    {provider === 'telebirr' || provider === 'cbebirr' ? (
+                    {provider === 'telebirr' ? (
                       <Trans message="Wallet phone number" />
                     ) : (
                       <Trans message="Account number" />
