@@ -123,6 +123,16 @@ final class VerifyEtGateway
         $this->persistProviderEnvelopeMeta($verification, $result, $requestId);
 
         $item = $this->evidenceValidator->completedItem($result);
+        $rejection = $this->evidenceValidator->buyerRejectionCode($result, $item);
+        if ($rejection !== null && $this->evidenceValidator->isFinishedResult($result)) {
+            $verification->update([
+                'status' => 'mismatch',
+                'latest_error_code' => $rejection,
+            ]);
+
+            return 'mismatch';
+        }
+
         if (!$this->evidenceValidator->isFinishedResult($result) || $item === null) {
             $status = $this->evidenceValidator->resolveUnfinishedStatus($result, $requestId, $item);
             $verification->update(['status' => $status]);

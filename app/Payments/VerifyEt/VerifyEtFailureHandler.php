@@ -22,7 +22,7 @@ final class VerifyEtFailureHandler
     {
         $this->health->reportFailure();
 
-        $status = $this->resolveFailureStatus($exception->httpStatus);
+        $status = $this->resolveFailureStatus($exception->httpStatus, $exception->providerCode);
 
         $verification->update([
             'status' => $status,
@@ -46,9 +46,9 @@ final class VerifyEtFailureHandler
         return $status;
     }
 
-    private function resolveFailureStatus(int $httpStatus): string
+    private function resolveFailureStatus(int $httpStatus, ?string $providerCode): string
     {
-        if (in_array($httpStatus, [400, 422], true)) {
+        if ($this->buyerHttpRejection($httpStatus, $providerCode)) {
             return 'mismatch';
         }
 
@@ -57,6 +57,15 @@ final class VerifyEtFailureHandler
         }
 
         return 'verifying';
+    }
+
+    private function buyerHttpRejection(int $httpStatus, ?string $providerCode): bool
+    {
+        if (in_array($providerCode, ['not_found', 'invalid_input', 'verification_not_successful'], true)) {
+            return true;
+        }
+
+        return in_array($httpStatus, [400, 404, 422], true);
     }
 
     private function handleCreditExhaustion(int|string $verificationId, ?string $providerCode): void
