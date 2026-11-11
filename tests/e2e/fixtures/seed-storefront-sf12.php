@@ -101,4 +101,85 @@ ServiceFaq::query()->updateOrCreate(
     ],
 );
 
+// Exercise *persisted* creator Appearance, not only OS color preferences.
+// These three public stores share only synthetic owner/products with the
+// disposable buyer fixture. Never create these records in a non-test DB.
+$appearanceVariants = [
+    'light' => [
+        'bgConfig' => ['backgroundColor' => '#f8fafc', 'color' => '#1e293b'],
+        'btnConfig' => ['variant' => 'solid', 'color' => '#1e293b', 'textColor' => '#ffffff'],
+        'fontConfig' => ['family' => 'Inter'],
+    ],
+    'dark' => [
+        'bgConfig' => ['backgroundColor' => '#111827', 'color' => '#f9fafb'],
+        'btnConfig' => ['variant' => 'solid', 'color' => '#2563eb', 'textColor' => '#ffffff'],
+        'fontConfig' => ['family' => 'Inter'],
+    ],
+    'gradient' => [
+        'bgConfig' => [
+            'backgroundImage' => 'linear-gradient(135deg, #e0f2fe 0%, #c7d2fe 100%)',
+            'color' => '#111827',
+        ],
+        'btnConfig' => ['variant' => 'solid', 'color' => '#1d4ed8', 'textColor' => '#ffffff'],
+        'fontConfig' => ['family' => 'Inter'],
+    ],
+];
+
+foreach ($appearanceVariants as $variant => $config) {
+    $variantStore = Store::query()->updateOrCreate(
+        ['back_half' => 'sf12-appearance-'.$variant],
+        [
+            'name' => 'Synthetic Appearance '.$variant,
+            'user_id' => $store->user_id,
+            'workspace_id' => $store->workspace_id,
+            'builder_mode' => Store::BUILDER_MODE_CREATOR_PROFILE,
+            'profile_config' => [
+                'display_name' => 'አማርኛ English Creator '.$variant,
+                'profile_title' => 'Synthetic multilingual Appearance fixture',
+                'bio' => 'የንግድ መለያ MultilingualCardDescriptionWithoutSpaces',
+            ],
+        ],
+    );
+    $variantStore->appearance()->updateOrCreate([], ['config' => $config]);
+    $product->stores()->syncWithoutDetaching([$variantStore->id]);
+    $variantStore->widgets()->updateOrCreate(
+        ['type' => 'shop'],
+        [
+            'active' => true,
+            'position' => 0,
+            'config' => [
+                'source' => 'digital-products',
+                'product_ids' => [$product->id],
+            ],
+        ],
+    );
+    $variantService = CreatorService::query()->updateOrCreate(
+        ['store_id' => $variantStore->id, 'slug' => 'sf12-qa-service'],
+        [
+            'workspace_id' => $variantStore->workspace_id,
+            'user_id' => $variantStore->user_id,
+            'title' => 'የንግድ መለያ Brand Design '.$variant,
+            'short_description' => 'አማርኛ and English for saved Appearance QA.',
+            'description' => '<p>Test-only published creator service.</p>',
+            'status' => 'published',
+            'currency' => 'ETB',
+            'contact_channels' => [
+                ['type' => 'email', 'label' => 'Email creator', 'value' => 'qa-creator@example.test'],
+            ],
+        ],
+    );
+    ServicePackage::query()->updateOrCreate(
+        ['creator_service_id' => $variantService->id, 'position' => 0],
+        [
+            'name' => 'Synthetic Package '.$variant,
+            'description' => 'Test-only package',
+            'price_cents' => 9900,
+            'currency' => 'ETB',
+            'delivery_days' => 3,
+            'revisions' => 1,
+            'features' => ['English', 'አማርኛ'],
+        ],
+    );
+}
+
 echo rtrim($appUrl, '/').'/'.$store->back_half.'/services/'.$service->slug.PHP_EOL;
