@@ -213,7 +213,7 @@ describe('Appearance editor → storefront contract', () => {
 
   test('Background paints through biolink Background + theme tokens', () => {
     expect(layout).toContain('<Background');
-    expect(layout).toContain('resolveBiolinkThemeVariables(appearance)');
+    expect(layout).toContain('resolveBiolinkPublicAppearanceStyle(appearance)');
     expect(background).toContain('cssPropsFromBgConfig(appearance?.bgConfig)');
   });
 
@@ -231,8 +231,10 @@ describe('Appearance editor → storefront contract', () => {
   test('Text typeface and foreground flow from fontConfig + bgConfig.color', () => {
     expect(layout).toContain('appearance?.fontConfig');
     expect(layout).toContain('loadFonts([');
-    expect(layout).toContain('fontFamily: appearance?.fontConfig?.family');
-    expect(layout).toContain("color: 'var(--biolink-text)'");
+    expect(layout).toContain('resolveBiolinkPublicAppearanceStyle(appearance)');
+    const resolver = readSource('biolink-appearance.ts');
+    expect(resolver).toContain('fontFamily: appearance?.fontConfig?.family');
+    expect(resolver).toContain("color: 'var(--biolink-text)'");
   });
 
   test('Branding hideBranding is honored on creator and sidebar lockups', () => {
