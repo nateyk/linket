@@ -15,6 +15,10 @@ const creatorEmail = process.env.LINKET_E2E_CREATOR_EMAIL ?? 'e2e-buyer-creator@
 const creatorPassword = process.env.LINKET_E2E_CREATOR_PASSWORD ?? 'E2eBuyerCreator!23';
 const reviewerEmail = process.env.LINKET_E2E_REVIEWER_EMAIL ?? 'e2e-product-reviewer@example.test';
 
+type AccountCredentials = {email: string; password: string};
+type CreatedItem = {id: number; title: string};
+const creatorAccount: AccountCredentials = {email: creatorEmail, password: creatorPassword};
+
 function guardIsolatedEnvironment() {
   test.skip(
     process.env.LINKET_ISOLATED_E2E !== '1' ||
@@ -29,25 +33,25 @@ function guardIsolatedEnvironment() {
   expect(process.env.LINKET_E2E_REVIEWER_PASSWORD).toBeTruthy();
 }
 
-async function signIn(page: Page, email: string, password: string) {
+async function signIn(page: Page, account: AccountCredentials) {
   await page.goto('/login');
   await expect(page.getByRole('heading', {name: 'Login to your account'})).toBeVisible();
-  await page.getByRole('textbox', {name: 'Email Address'}).fill(email);
-  await page.getByRole('textbox', {name: 'Password'}).fill(password);
+  await page.getByRole('textbox', {name: 'Email Address'}).fill(account.email);
+  await page.getByRole('textbox', {name: 'Password'}).fill(account.password);
   await page.getByRole('button', {name: 'Login', exact: true}).click();
   await expect(page).toHaveURL(/\/dashboard(?:\/|$)/, {timeout: 20000});
 }
 
-function isItemResponse(response: Response, itemId?: number) {
+function isItemResponse(response: Response, item?: CreatedItem) {
   const pathname = new URL(response.url()).pathname;
-  return pathname === (itemId ? '/api/v1/items/' + itemId : '/api/v1/items') &&
+  return pathname === (item ? '/api/v1/items/' + item.id : '/api/v1/items') &&
     response.request().method() === 'POST' &&
-    (itemId ? response.request().headers()['x-http-method-override']?.toUpperCase() === 'PUT'
+    (item ? response.request().headers()['x-http-method-override']?.toUpperCase() === 'PUT'
       : !response.request().headers()['x-http-method-override']);
 }
 
-function isSubmitResponse(response: Response, id: number) {
-  return new URL(response.url()).pathname === '/api/v1/items/' + id + '/submit' &&
+function isSubmitResponse(response: Response, item: CreatedItem) {
+  return new URL(response.url()).pathname === '/api/v1/items/' + item.id + '/submit' &&
     response.request().method() === 'POST';
 }
 
@@ -94,19 +98,18 @@ function makeWav(): Buffer {
   return bytes;
 }
 
-async function approveRealProduct(browser: Browser, id: number, expectedTitle: string) {
+async function approveRealProduct(browser: Browser, item: CreatedItem) {
   const context = await browser.newContext({baseURL, viewport: {width: 1280, height: 900}});
   try {
     const reviewer = await context.newPage();
     await signIn(
       reviewer,
-      reviewerEmail,
-      process.env.LINKET_E2E_REVIEWER_PASSWORD!,
+      {email: reviewerEmail, password: process.env.LINKET_E2E_REVIEWER_PASSWORD!},
     );
-    await reviewer.goto('/admin/items/' + id);
-    await expect(reviewer.getByText(expectedTitle).first()).toBeVisible();
+    await reviewer.goto('/admin/items/' + item.id);
+    await expect(reviewer.getByText(item.title).first()).toBeVisible();
     const responsePromise = reviewer.waitForResponse(response =>
-      new URL(response.url()).pathname === '/api/v1/admin/items/' + id + '/approve' &&
+      new URL(response.url()).pathname === '/api/v1/admin/items/' + item.id + '/approve' &&
       response.request().method() === 'POST',
     );
     await reviewer.getByRole('button', {name: 'Approve', exact: true}).click();
@@ -153,6 +156,7 @@ const uploadScenarios = [
 
 
 type UploadScenario = (typeof uploadScenarios)[number];
+type UploadedItem = CreatedItem & {scenario: UploadScenario};
 
 async function uploadPrivateFile(page: Page, scenario: UploadScenario) {
   const files = page.getByRole('region', {name: scenario.section});
@@ -172,8 +176,8 @@ async function uploadPrivateFile(page: Page, scenario: UploadScenario) {
 async function createUploadedProduct(
   page: Page,
   scenario: UploadScenario,
-  title: string,
-): Promise<number> {
+): Promise<UploadedItem> {
+  const title = 'UX35 new ' + scenario.label + ' creator E2E';
   await page.goto('/dashboard/items/new/' + scenario.type + '?billing=' + scenario.billing);
   await expect(page.getByRole('heading', {
     name: new RegExp('create ' + scenario.label, 'i'),
@@ -207,39 +211,38 @@ async function createUploadedProduct(
   expect(posted.file_ids[0]).toBeGreaterThan(0);
   expect(creates, 'No duplicate product POST').toHaveLength(1);
   await expect(page).toHaveURL(new RegExp('/dashboard/items/' + body.data.id + '/edit$'));
-  return body.data.id;
+  return {id: body.data.id, title, scenario};
 }
 
 async function editAndSubmitNewProduct(
   page: Page,
-  id: number,
-  scenario: UploadScenario,
-  title: string,
-): Promise<string> {
+  item: UploadedItem,
+): Promise<UploadedItem> {
+  const {id, scenario, title} = item;
   await page.reload();
   await expect(page.locator('#product-title')).toHaveValue(title);
   await expect(page.getByRole('button', {name: 'Remove ' + scenario.name})).toBeVisible();
 
   const updatedTitle = title + ' revised';
   await page.locator('#product-title').fill(updatedTitle);
-  const update = page.waitForResponse(res => isItemResponse(res, id));
+  const update = page.waitForResponse(res => isItemResponse(res, item));
   await page.getByRole('button', {name: 'Save draft'}).click();
   expect((await update).ok(), 'Actual persisted edit').toBe(true);
-  const submission = page.waitForResponse(res => isSubmitResponse(res, id));
+  const submission = page.waitForResponse(res => isSubmitResponse(res, item));
   await page.getByRole('button', {name: 'Submit for review'}).click();
   const result = await submission;
   expect(result.status()).toBe(200);
   expect(((await result.json()) as {data: {status: string}}).data.status)
     .toBe('pending_approval');
-  return updatedTitle;
+  return {...item, title: updatedTitle};
 }
 
 async function screenshotApprovedProduct(
   page: Page,
-  id: number,
-  scenario: UploadScenario,
+  item: UploadedItem,
   testInfo: TestInfo,
 ) {
+  const {id, scenario} = item;
   await page.goto('/dashboard/items/' + id + '/edit');
   await expect(page.locator('[aria-label="Approved"]')).toBeVisible();
   const screenshot = testInfo.outputPath('created-' + scenario.type + '-approved-375.png');
@@ -259,19 +262,19 @@ for (const scenario of uploadScenarios) {
     const context = await browser.newContext({baseURL, viewport: {width: 375, height: 812}});
     try {
       const creator = await context.newPage();
-      await signIn(creator, creatorEmail, creatorPassword);
-      const title = 'UX35 new ' + scenario.label + ' creator E2E';
-      const itemId = await createUploadedProduct(creator, scenario, title);
-      const revisedTitle = await editAndSubmitNewProduct(creator, itemId, scenario, title);
-      await approveRealProduct(browser, itemId, revisedTitle);
-      await screenshotApprovedProduct(creator, itemId, scenario, testInfo);
+      await signIn(creator, creatorAccount);
+      const created = await createUploadedProduct(creator, scenario);
+      const reviewed = await editAndSubmitNewProduct(creator, created);
+      await approveRealProduct(browser, reviewed);
+      await screenshotApprovedProduct(creator, reviewed, testInfo);
     } finally {
       await context.close();
     }
   });
 }
 
-async function createRealCourse(page: Page, title: string): Promise<number> {
+async function createRealCourse(page: Page): Promise<CreatedItem> {
+  const title = 'UX35 new Course curriculum E2E';
   await page.goto('/dashboard/items/new/course?billing=free');
   await expect(page.getByRole('heading', {name: 'Create course', level: 1})).toBeVisible();
   await page.locator('#course-title').fill(title);
@@ -290,7 +293,7 @@ async function createRealCourse(page: Page, title: string): Promise<number> {
   expect(posted, 'Course creation must not duplicate POST').toHaveLength(1);
   await expect(page).toHaveURL(new RegExp('/dashboard/items/' + body.data.id + '/course$'));
   await expect(page.getByRole('heading', {name: 'Course Builder', level: 1})).toBeVisible();
-  return body.data.id;
+  return {id: body.data.id, title};
 }
 
 async function addRealPublishedCourseLesson(page: Page) {
@@ -324,24 +327,24 @@ async function addRealPublishedCourseLesson(page: Page) {
   expect((await save).ok(), 'Published lesson persisted').toBe(true);
 }
 
-async function submitRealCourse(page: Page, id: number) {
+async function submitRealCourse(page: Page, item: CreatedItem) {
   const button = page.getByRole('button', {name: 'Submit for review'});
   await expect(button).toBeEnabled();
-  const response = page.waitForResponse(res => isSubmitResponse(res, id));
+  const response = page.waitForResponse(res => isSubmitResponse(res, item));
   await button.click();
   expect((await response).status(), 'Real Course submission must succeed').toBe(200);
 }
 
 async function captureApprovedMobileCourse(
   browser: Browser,
-  itemId: number,
+  item: CreatedItem,
   testInfo: TestInfo,
 ) {
   const context = await browser.newContext({baseURL, viewport: {width: 375, height: 812}});
   try {
     const page = await context.newPage();
-    await signIn(page, creatorEmail, creatorPassword);
-    await page.goto('/dashboard/items/' + itemId + '/course');
+    await signIn(page, creatorAccount);
+    await page.goto('/dashboard/items/' + item.id + '/course');
     await expect(page.getByRole('heading', {name: 'Course Builder', level: 1})).toBeVisible();
     await expect(page.getByText('Published', {exact: true}).first()).toBeVisible();
     const screenshot = testInfo.outputPath('created-course-approved-375.png');
@@ -363,13 +366,12 @@ test('UX-35 real Course new → chapter → published lesson → review → appr
   const context = await browser.newContext({baseURL, viewport: {width: 1280, height: 900}});
   try {
     const creator = await context.newPage();
-    await signIn(creator, creatorEmail, creatorPassword);
-    const title = 'UX35 new Course curriculum E2E';
-    const id = await createRealCourse(creator, title);
+    await signIn(creator, creatorAccount);
+    const item = await createRealCourse(creator);
     await addRealPublishedCourseLesson(creator);
-    await submitRealCourse(creator, id);
-    await approveRealProduct(browser, id, title);
-    await captureApprovedMobileCourse(browser, id, testInfo);
+    await submitRealCourse(creator, item);
+    await approveRealProduct(browser, item);
+    await captureApprovedMobileCourse(browser, item, testInfo);
   } finally {
     await context.close();
   }
