@@ -8,7 +8,7 @@ import {CreatorProfileLayout} from '@app/short-links/renderers/biolink-renderer/
 import {
   biolinkSurfaceEdgeClassName,
   resolveBiolinkButtonAppearance,
-  resolveBiolinkThemeVariables,
+  resolveBiolinkPublicAppearanceStyle,
   shouldUseLightBiolinkLogo,
 } from '@app/short-links/renderers/biolink-renderer/biolink-appearance';
 import {Background} from '@app/short-links/renderers/biolink-renderer/biolink-background';
@@ -75,12 +75,7 @@ export function BiolinkLayout({
 
   return (
     <div className="@container">
-      <div
-        className={cn('isolate', className)}
-        style={{
-          fontFamily: appearance?.fontConfig?.family,
-        }}
-      >
+      <div className={cn('isolate', className)}>
         <div className="fixed inset-0 z-1">
           {/* Creator profiles paint the same background again inside the
               sticky tab strip, so both copies anchor to the viewport
@@ -97,10 +92,7 @@ export function BiolinkLayout({
             the sticky CreatorCard inside. */}
         <div
           className="relative z-2 min-h-screen overflow-x-clip"
-          style={{
-            ...resolveBiolinkThemeVariables(appearance),
-            color: 'var(--biolink-text)',
-          }}
+          style={resolveBiolinkPublicAppearanceStyle(appearance)}
         >
           {isCreatorProfileBiolink(biolink) ? (
             <CreatorProfileLayout
