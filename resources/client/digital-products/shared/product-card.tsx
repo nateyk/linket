@@ -22,6 +22,7 @@ export interface ProductCardClassNames {
   media?: string;
   body?: string;
   title?: string;
+  description?: string;
   footer?: string;
   price?: string;
 }
@@ -250,7 +251,7 @@ export function ProductCard({
         <div className="flex items-start justify-between gap-2">
           <h3
             className={cn(
-              'line-clamp-2 min-w-0 flex-1 text-base leading-6 font-medium',
+              'line-clamp-2 min-w-0 flex-1 text-base leading-6 font-medium break-words [overflow-wrap:anywhere]',
               classNames?.title,
             )}
           >
@@ -273,7 +274,12 @@ export function ProductCard({
         </div>
 
         {description ? (
-          <p className="line-clamp-2 text-sm leading-relaxed text-muted-foreground">
+          <p
+            className={cn(
+              'line-clamp-2 text-sm leading-relaxed text-muted-foreground',
+              classNames?.description,
+            )}
+          >
             {description}
           </p>
         ) : null}
