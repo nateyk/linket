@@ -240,7 +240,9 @@ export function LivePreview() {
                     <Trans message="Expanded live preview" />
                   </Dialog.Title>
                   <Dialog.CloseButton
-                    render={<Button type="button" size="icon-sm" variant="ghost" />}
+                    render={
+                      <Button type="button" size="icon-sm" variant="ghost" />
+                    }
                   >
                     <XIcon aria-hidden="true" />
                     <span className="sr-only">
