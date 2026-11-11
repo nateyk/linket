@@ -16,6 +16,7 @@ import {
 import {ProductCreatorCard} from '@app/digital-products/public/product-page/product-creator-card';
 import {ProductOverview} from '@app/digital-products/public/product-page/product-overview';
 import {ProductPricingCard} from '@app/digital-products/public/product-page/product-pricing-card';
+import {isSuccessfulFreeCheckoutResponse} from './free-checkout-response';
 import {DirectPaymentModal, type DirectCheckout} from '@app/digital-products/public/direct-payment-modal';
 import {ProductSummary} from '@app/digital-products/public/product-page/product-summary';
 import {
@@ -28,7 +29,7 @@ import {
 } from '@app/digital-products/public/product-page/surface';
 import {Accordion} from '@shadcn/accordion/accordion';
 import {Alert} from '@shadcn/alert/alert';
-import {Button} from '@shadcn/button/button';
+import {Button, buttonVariants} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
 import {Dialog} from '@shadcn/dialog/dialog';
 import {Field} from '@shadcn/forms/field';
@@ -56,6 +57,7 @@ import {
   GraduationCapIcon,
   LockKeyholeIcon,
   RefreshCwIcon,
+  ShoppingBagIcon,
   XIcon,
 } from 'lucide-react';
 import {
@@ -162,6 +164,7 @@ export function PublicDigitalProductPage({
 }) {
   const [submitting, setSubmitting] = useState(false);
   const [buyerDialogOpen, setBuyerDialogOpen] = useState(false);
+  const [freeCheckoutComplete, setFreeCheckoutComplete] = useState(false);
   const [buyerName, setBuyerName] = useState('');
   const [buyerEmail, setBuyerEmail] = useState('');
   const [buyerPhone, setBuyerPhone] = useState('');
@@ -193,6 +196,9 @@ export function PublicDigitalProductPage({
   }, []);
 
   const beginCheckout = async () => {
+    // A completed free claim must never be re-submitted (also guard rapid
+    // double-clicks while the first checkout request is in flight).
+    if (submitting || freeCheckoutComplete) return;
     if (buyerName.trim().length < 2) {
       setBuyerError('name');
       return;
@@ -226,8 +232,21 @@ export function PublicDigitalProductPage({
         },
       );
       const payload = response.data;
-      const checkoutUrl = payload?.checkout_url ?? payload?.data?.checkout_url;
 
+      // The server fulfills free orders before returning HTTP 200, even if
+      // Verify.et response fields still contain legacy "pending_payment"
+      // instructions. Free buyers should not enter the paid verification UI.
+      if (data.product.payment_mode === 'free') {
+        if (!isSuccessfulFreeCheckoutResponse(data.product.payment_mode, payload)) {
+          throw new Error('Free checkout response missing order id.');
+        }
+        setBuyerDialogOpen(false);
+        setFreeCheckoutComplete(true);
+        setSubmitting(false);
+        return;
+      }
+
+      const checkoutUrl = payload?.checkout_url ?? payload?.data?.checkout_url;
       if (payload?.reference_endpoint && payload?.access_token) {
         setDirectCheckout(payload as DirectCheckout);
         setBuyerDialogOpen(false);
