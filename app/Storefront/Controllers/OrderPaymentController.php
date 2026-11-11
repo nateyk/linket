@@ -219,6 +219,9 @@ final class OrderPaymentController extends Controller
             $order->payment_account_snapshot,
         );
 
+        $expectedRecipient = $order->payment_account_snapshot;
+        $expectedMethodId = $order->creator_payment_method_id;
+
         // Pre-Verification 4: Reject duplicate references immediately if already completed or under review
         $alreadyClaimed = DirectPaymentVerification::query()
             ->where('reference', $data['reference'])
@@ -236,8 +239,17 @@ final class OrderPaymentController extends Controller
         }
 
         try {
-            $verification = DB::transaction(function () use ($order, $data, $provider): DirectPaymentVerification {
+            $verification = DB::transaction(function () use ($order, $data, $provider, $expectedRecipient, $expectedMethodId): DirectPaymentVerification {
                 $order = StorefrontOrder::query()->whereKey($order->id)->lockForUpdate()->firstOrFail();
+                // Account selection and reference submission share this lock: never verify
+                // a receipt against a recipient that changed since the buyer submitted it.
+                abort_unless(
+                    $order->payment_account_snapshot === $expectedRecipient
+                        && (int) $order->creator_payment_method_id === (int) $expectedMethodId
+                        && (string) $order->payment_provider_snapshot === $provider,
+                    409,
+                    __('The receiving account changed. Reload payment details before submitting a reference.'),
+                );
                 abort_unless(in_array($order->status, ['pending_payment', 'pending', 'verifying', 'failed_verification', 'failed', 'expired'], true), 409);
                 abort_if($order->status === 'expired' && $order->monetization_policy === null, 410);
 
