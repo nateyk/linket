@@ -1,5 +1,5 @@
 /** @vitest-environment jsdom */
-import {cleanup, render, screen, waitFor} from '@testing-library/react';
+import {cleanup, fireEvent, render, screen, waitFor} from '@testing-library/react';
 import {afterEach, expect, it, vi} from 'vitest';
 import {MemoryRouter} from 'react-router';
 import {DirectPaymentModal, type DirectCheckout} from './direct-payment-modal';
@@ -128,66 +128,109 @@ it('renders pending, verifying, manual review, rejected and paid states clearly 
   expect(screen.getByRole('link', {name: /Open My Purchases|My Purchases/})).toBeTruthy();
 });
 
-it('supports switching dynamic receiving accounts', async () => {
-  api.get.mockResolvedValueOnce({
+it('rejects a pasted receiving account number without calling the verification provider', async () => {
+  api.get.mockResolvedValue({
     data: {
       data: {
         provider: 'cbe',
-        receiving_account_id: 1,
-        bank_name: 'Commercial Bank of Ethiopia',
         account_number: '1000123456789',
-        account_name: 'Abebe Kebede',
-        amount_cents: 10000,
+        account_name: 'Test Recipient',
+        amount_cents: 46000,
         currency: 'ETB',
-        available_accounts: [
-          {
-            id: 1,
-            provider: 'cbe',
-            bank_name: 'Commercial Bank of Ethiopia',
-            account_number: '1000123456789',
-            account_ending: '6789',
-            account_name: 'Abebe Kebede',
-          },
-          {
-            id: 2,
-            provider: 'dashen',
-            bank_name: 'Dashen Bank',
-            account_number: '5000987654321',
-            account_ending: '4321',
-            account_name: 'Abebe Kebede',
-          },
-        ],
       },
     },
   });
 
-  api.post.mockResolvedValueOnce({
+  render(
+    <MemoryRouter>
+      <DirectPaymentModal checkout={checkout} onClose={() => undefined} />
+    </MemoryRouter>,
+  );
+
+  await screen.findByText('Account number');
+  const referenceInput = await screen.findByPlaceholderText('e.g. fHCxyTVljBclm6Yk4C or FT...');
+  fireEvent.change(referenceInput, {target: {value: '1000123456789'}});
+  fireEvent.click(screen.getByRole('button', {name: 'Verify payment'}));
+
+  expect(await screen.findByRole('alert')).toHaveProperty('textContent', expect.stringContaining('receiving account number'));
+  expect(api.post).not.toHaveBeenCalled();
+
+  fireEvent.change(referenceInput, {target: {value: 'fHCxyTVljBclm6Yk4C'}});
+  expect(screen.queryByRole('alert')).toBeNull();
+});
+
+it('hides payment destination details while waiting for verification rather than asking to pay again', async () => {
+  api.get.mockResolvedValue({
     data: {
       data: {
-        provider: 'dashen',
+        provider: 'cbe',
+        account_number: '1000123456789',
+        account_name: 'Test Recipient',
+        amount_cents: 46000,
+        currency: 'ETB',
+        status: 'verifying',
+      },
+    },
+  });
+
+  render(
+    <MemoryRouter>
+      <DirectPaymentModal checkout={{...checkout, status: 'verifying'}} onClose={() => undefined} />
+    </MemoryRouter>,
+  );
+
+  expect(await screen.findByText('Verifying')).toBeTruthy();
+  expect(screen.getByText('Track the verification of your existing payment. Do not transfer again.')).toBeTruthy();
+  expect(screen.queryByText('Account number')).toBeNull();
+  expect(screen.queryByRole('button', {name: 'Verify payment'})).toBeNull();
+});
+
+it('does not require a suffix on modern long CBE FT references', async () => {
+  api.get.mockResolvedValue({
+    data: {
+      data: {
+        provider: 'cbe',
+        account_number: '1000123456789',
+        account_name: 'Test Recipient',
+        amount_cents: 46000,
+        currency: 'ETB',
+      },
+    },
+  });
+  api.post.mockResolvedValueOnce({data: {status: 'verifying'}});
+
+  render(
+    <MemoryRouter>
+      <DirectPaymentModal checkout={checkout} onClose={() => undefined} />
+    </MemoryRouter>,
+  );
+
+  await screen.findByText('Account number');
+  const referenceInput = await screen.findByPlaceholderText('e.g. fHCxyTVljBclm6Yk4C or FT...');
+  fireEvent.change(referenceInput, {target: {value: 'FT1234567890123456'}});
+  expect(screen.queryByText('Eight-digit CBE FT suffix')).toBeNull();
+  fireEvent.click(screen.getByRole('button', {name: 'Verify payment'}));
+  await waitFor(() => expect(api.post).toHaveBeenCalledWith(
+    checkout.reference_endpoint,
+    {reference: 'FT1234567890123456', account_suffix: undefined},
+    {headers: {'X-Order-Access-Token': 'token'}},
+  ));
+});
+
+it('keeps the chosen payment destination stable without a second bank picker', async () => {
+  api.get.mockResolvedValueOnce({
+    data: {
+      data: {
+        provider: 'telebirr',
         receiving_account_id: 2,
-        bank_name: 'Dashen Bank',
-        account_number: '5000987654321',
-        account_name: 'Abebe Kebede',
-        amount_cents: 10000,
+        bank_name: 'Telebirr',
+        account_number: '0912345678',
+        account_name: 'Test Recipient',
+        amount_cents: 46000,
         currency: 'ETB',
         available_accounts: [
-          {
-            id: 1,
-            provider: 'cbe',
-            bank_name: 'Commercial Bank of Ethiopia',
-            account_number: '1000123456789',
-            account_ending: '6789',
-            account_name: 'Abebe Kebede',
-          },
-          {
-            id: 2,
-            provider: 'dashen',
-            bank_name: 'Dashen Bank',
-            account_number: '5000987654321',
-            account_ending: '4321',
-            account_name: 'Abebe Kebede',
-          },
+          {id: 1, provider: 'cbe', account_number: '1000123456789', account_ending: '6789', account_name: 'Test Recipient'},
+          {id: 2, provider: 'telebirr', account_number: '0912345678', account_ending: '5678', account_name: 'Test Recipient'},
         ],
       },
     },
@@ -199,19 +242,58 @@ it('supports switching dynamic receiving accounts', async () => {
     </MemoryRouter>,
   );
 
-  expect(await screen.findByRole('button', {name: /Commercial Bank of Ethiopia/})).toBeTruthy();
-  const dashenButton = screen.getByRole('button', {name: /Dashen Bank/});
-  expect(dashenButton).toBeTruthy();
+  expect(await screen.findByText('Bank or wallet')).toBeTruthy();
+  expect(screen.getByText('Telebirr')).toBeTruthy();
+  expect(screen.getByText('0912345678')).toBeTruthy();
+  expect(screen.queryByText('Select receiving bank / account')).toBeNull();
+  expect(api.post).not.toHaveBeenCalled();
+});
 
-  dashenButton.click();
-
-  await waitFor(() => {
-    expect(api.post).toHaveBeenCalledWith(
-      '/api/v1/public/direct-orders/order-1/select-account',
-      {receiving_account_id: 2},
-      {headers: {'X-Order-Access-Token': 'token'}},
-    );
+it('extracts a CBE receipt from pasted SMS and never posts the original message', async () => {
+  api.get.mockResolvedValue({
+    data: {data: {provider: 'cbe', account_number: '1000123456789', account_name: 'Test Recipient', amount_cents: 46000, currency: 'ETB'}},
   });
+  api.post.mockResolvedValueOnce({data: {status: 'verifying'}});
+
+  render(
+    <MemoryRouter>
+      <DirectPaymentModal checkout={checkout} onClose={() => undefined} />
+    </MemoryRouter>,
+  );
+  await screen.findByText('Account number');
+  const input = screen.getByPlaceholderText('e.g. fHCxyTVljBclm6Yk4C or FT...');
+  fireEvent.paste(input, {clipboardData: {getData: () =>
+    'Transfer of 460 ETB to account 1000123456789 completed. Receipt: https://mbreciept.cbe.com.et/fHCxyTVljBclm6Yk4C'}});
+  expect(input).toHaveProperty('value', 'fHCxyTVljBclm6Yk4C');
+  expect(screen.getByText('Receipt ID extracted. Check it before selecting Verify payment.')).toBeTruthy();
+  expect(api.post).not.toHaveBeenCalled();
+
+  fireEvent.click(screen.getByRole('button', {name: 'Verify payment'}));
+  await waitFor(() => expect(api.post).toHaveBeenCalledWith(
+    checkout.reference_endpoint,
+    {reference: 'fHCxyTVljBclm6Yk4C', account_suffix: undefined},
+    {headers: {'X-Order-Access-Token': 'token'}},
+  ));
+});
+
+it('keeps ambiguous pasted wallet SMS out of verification', async () => {
+  api.get.mockResolvedValue({
+    data: {data: {provider: 'telebirr', account_number: '0912345678', account_name: 'Test Recipient', amount_cents: 46000, currency: 'ETB'}},
+  });
+
+  render(
+    <MemoryRouter>
+      <DirectPaymentModal checkout={checkout} onClose={() => undefined} />
+    </MemoryRouter>,
+  );
+  await screen.findByText('Account number');
+  const input = screen.getByPlaceholderText('e.g. fHCxyTVljBclm6Yk4C or FT...');
+  fireEvent.paste(input, {clipboardData: {getData: () =>
+    'Transaction No: DET8FJGUJ4\nTransaction No: CHQ1234567'}});
+  expect(input).toHaveProperty('value', '');
+  expect(screen.getByRole('alert').textContent).toContain('Multiple receipt IDs');
+  expect(screen.getByRole('button', {name: 'Verify payment'}).hasAttribute('disabled')).toBe(true);
+  expect(api.post).not.toHaveBeenCalled();
 });
 
 it('renders attempt counter and session locked state when attempts are exceeded', async () => {

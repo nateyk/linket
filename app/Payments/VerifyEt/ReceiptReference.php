@@ -19,6 +19,26 @@ final class ReceiptReference
     }
 
     /**
+     * A receiving account number is a payment destination, never proof of a transfer.
+     * Reject an accidental paste before spending a verification attempt or provider call.
+     */
+    public function assertNotReceivingAccount(string $reference, ?string $receivingAccount): void
+    {
+        if (!$receivingAccount) {
+            return;
+        }
+
+        $cleanReference = strtolower((string) preg_replace('/[\\s-]+/', '', trim($reference)));
+        $cleanAccount = strtolower((string) preg_replace('/[\\s-]+/', '', trim($receivingAccount)));
+
+        if ($cleanReference !== '' && $cleanReference === $cleanAccount) {
+            throw ValidationException::withMessages([
+                'reference' => __('You entered the receiving account number. Enter the receipt ID or transaction reference from your completed transfer instead.'),
+            ]);
+        }
+    }
+
+    /**
      * Normalize the user's reference input (trimming whitespace and extracting URL tokens).
      */
     public function normalize(string $bank, string $reference): string
