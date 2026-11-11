@@ -40,6 +40,10 @@ Route::match(['get', 'post'], 'storefront/chapa/return/{txRef}', [
     ChapaStorefrontReturnController::class,
     'handle',
 ]);
+Route::get('storefront/chapa/checkout-return/{txRef}', [
+    ChapaStorefrontReturnController::class,
+    'buyerReturn',
+])->name('storefront.chapa.buyer-return');
 
 Route::get('storefront/downloads/{token}', [DownloadController::class, 'show'])->name('storefront.download');
 Route::get('storefront/orders/{order}/success', [StorefrontCheckoutController::class, 'success'])->name('storefront.order.success');
