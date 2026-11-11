@@ -162,15 +162,33 @@ async function uploadPrivateFile(page: Page, scenario: UploadScenario) {
   const files = page.getByRole('region', {name: scenario.section});
   const input = files.locator('input[type="file"]');
   await expect(input).toHaveCount(1);
+  // A failed upload has a *different* Remove button in the retry row.
+  // Previous QA accidentally treated that error-state button as success,
+  // waited for a nonexistent product POST and timed out. Require a real
+  // successful file-entry response AND an attached-file list entry.
+  const uploaded = page.waitForResponse(response => {
+    const pathname = new URL(response.url()).pathname;
+    return response.request().method() === 'POST' &&
+      (pathname === '/api/v1/file-entries' || pathname === '/api/v1/tus/entries');
+  }, {timeout: 45000});
   await input.setInputFiles({
     name: scenario.name,
     mimeType: scenario.mimeType,
     buffer: scenario.file(),
   });
+  const response = await uploaded;
+  expect(
+    response.ok(),
+    'Private upload must finish successfully before creating a product; ' +
+      'upload endpoint returned HTTP ' + response.status(),
+  ).toBe(true);
   await expect(
-    files.getByRole('button', {name: 'Remove ' + scenario.name}),
-    'Real TUS upload must persist the private file before creating an item',
-  ).toBeVisible({timeout: 65000});
+    files.locator('#product-files > ul').getByRole('button', {
+      name: 'Remove ' + scenario.name,
+    }),
+    'Private file must be attached by the FilesPanel, not an error-state uploader row',
+  ).toBeVisible({timeout: 15000});
+  await expect(files.getByRole('alert')).toHaveCount(0);
 }
 
 async function createUploadedProduct(
