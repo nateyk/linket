@@ -5,6 +5,9 @@ namespace App\Storefront\Resources;
 use App\Payments\VerifyEt\VerifyEtSettings;
 use App\Storefront\Models\DigitalProduct;
 use App\Storefront\Models\CreatorPaymentMethod;
+use App\Storefront\Models\CreatorChapaGateway;
+use App\Storefront\Services\CreatorVerificationAllowance;
+use Common\Workspaces\Models\Workspace;
 use App\Storefront\ProductSampleUrl;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -31,13 +34,35 @@ class PublicDigitalProductResource extends JsonResource
         }
         $courseId = $isCourse && $this->relationLoaded('course') && $this->course ? $this->course->id : null;
         $availability = app(\App\Storefront\Services\CheckoutAvailability::class);
-        $blocker = $this->price_cents > 0 ? $availability->creatorBlocker($this->creator) : null;
-        $accounts = VerifyEtSettings::get('enabled')
+        $paid = (int) $this->price_cents > 0;
+        $collector = Workspace::query()->whereKey($this->workspace_id)
+            ->value('active_payment_collector') ?: 'verify_et';
+        $usesChapa = $paid && $collector === 'chapa';
+
+        // Chapa is an independent seller-hosted collector: its availability
+        // must not be gated by Verify.et or the seller's bank account list.
+        if ($usesChapa) {
+            $blocker = !app(\App\Storefront\Services\AccountMonetizationStatus::class)->canSell($this->creator)
+                ? 'creator_restricted'
+                : (!app(CreatorVerificationAllowance::class)->isPro($this->creator)
+                    ? 'chapa_requires_pro'
+                    : (!CreatorChapaGateway::query()->where('workspace_id', $this->workspace_id)->exists()
+                        ? 'chapa_not_connected'
+                        : null));
+        } else {
+            $blocker = $paid ? $availability->creatorBlocker($this->creator) : null;
+        }
+
+        $accounts = !$usesChapa && VerifyEtSettings::get('enabled')
             ? $availability->eligibleAccounts($this->user_id, $this->workspace_id) : collect();
-        if ($this->price_cents > 0 && ! $blocker && strtoupper($this->currency) !== 'ETB') {
+
+        if ($paid && ! $blocker && strtoupper((string) $this->currency) !== 'ETB') {
             $blocker = 'unsupported_currency';
         }
-        if ($this->price_cents > 0 && ! $blocker && $accounts->isEmpty()) {
+        if ($usesChapa && $paid && ! $blocker && (int) $this->price_cents < 100) {
+            $blocker = 'amount_below_chapa_minimum';
+        }
+        if ($paid && ! $usesChapa && ! $blocker && $accounts->isEmpty()) {
             $blocker = 'no_eligible_receiving_account';
         }
         $catalog = \App\Storefront\Models\DirectPaymentMethod::query()->get()->keyBy('code');
@@ -65,7 +90,9 @@ class PublicDigitalProductResource extends JsonResource
             'can_buy' => app(\App\Storefront\Services\AccountMonetizationStatus::class)->canSell($this->creator) && ! $blocker,
             'checkout_blocker' => $blocker,
             'verification_quota_exhausted' => $blocker === 'verification_quota_exhausted',
-            'payment_mode' => $this->price_cents === 0 ? 'free' : (VerifyEtSettings::get('enabled') ? 'direct' : 'unavailable'),
+            'payment_mode' => ! $paid ? 'free'
+                : ($usesChapa ? ($blocker ? 'unavailable' : 'chapa')
+                    : (VerifyEtSettings::get('enabled') ? 'direct' : 'unavailable')),
             'receiving_accounts' => $receivingAccounts,
             'type' => $this->type ?? 'digital',
             'is_course' => $isCourse,
