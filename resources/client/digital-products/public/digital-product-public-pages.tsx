@@ -344,6 +344,40 @@ export function PublicDigitalProductPage({
         // very Buy button the dialog sits on.
         inert={buyerDialogOpen || undefined}
       >
+        {freeCheckoutComplete && (
+          <section
+            role="status"
+            aria-live="polite"
+            className={cn(
+              'flex min-w-0 flex-wrap items-center justify-between gap-4 rounded-card bg-[var(--biolink-surface-strong)] p-4 text-[var(--biolink-text)] [box-shadow:var(--biolink-surface-shadow,none)]',
+              biolinkSurfaceEdgeClassName,
+            )}
+          >
+            <div className="flex min-w-0 items-start gap-3">
+              <CheckCircle2Icon
+                className="mt-0.5 size-5 shrink-0 text-positive"
+                aria-hidden="true"
+              />
+              <div className="min-w-0">
+                <p className="text-base font-semibold">
+                  <Trans message="Your free order is ready" />
+                </p>
+                <p className="text-sm text-[var(--biolink-muted-text)] break-words [overflow-wrap:anywhere]">
+                  <Trans message="Use your checkout email in My Portal to access your product." />
+                </p>
+              </div>
+            </div>
+            <Link
+              to="/my-portal"
+              className={cn(
+                buttonVariants({variant: 'outline', size: 'lg'}),
+                'min-h-11 shrink-0',
+              )}
+            >
+              <Trans message="Open My Portal" />
+            </Link>
+          </section>
+        )}
         <ProductSamplePlayer samples={audioSamples}>
         <div className="grid min-w-0 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-6">
           <div className="flex min-w-0 flex-col gap-5 lg:col-start-1 lg:row-start-1">
@@ -372,6 +406,7 @@ export function PublicDigitalProductPage({
               checkoutCancelled={checkoutCancelled}
               checkoutFailed={checkoutFailed}
               submitting={submitting}
+              completed={freeCheckoutComplete}
               onBuy={() => setBuyerDialogOpen(true)}
               actionRef={buyActionRef}
             />
@@ -390,27 +425,45 @@ export function PublicDigitalProductPage({
         <div
           className={cn(
             'fixed inset-x-0 bottom-0 z-30 border-t border-[var(--biolink-border)] bg-[var(--biolink-surface-strong)] px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] [box-shadow:var(--biolink-surface-shadow,none)] transition-[transform,visibility] duration-150 ease-in-out motion-reduce:transition-none lg:hidden',
-            !railInView || checkoutCancelled || checkoutFailed
-              ? buyerDialogOpen
-                ? 'invisible translate-y-full'
-                : 'visible translate-y-0'
-              : 'invisible translate-y-full',
+            freeCheckoutComplete
+              ? 'invisible translate-y-full'
+              : !railInView || checkoutCancelled || checkoutFailed
+                ? buyerDialogOpen
+                  ? 'invisible translate-y-full'
+                  : 'visible translate-y-0'
+                : 'invisible translate-y-full',
           )}
         >
           <div className="flex items-center justify-between gap-4">
-            <span className="text-base font-semibold tabular-nums">
-              {formatPrice(data.product.price_cents, data.product.currency)}
+            <span className="min-w-0 truncate text-base font-semibold tabular-nums">
+              {data.product.payment_mode === 'free' ? (
+                <Trans message="Free" />
+              ) : (
+                formatPrice(data.product.price_cents, data.product.currency)
+              )}
             </span>
             <Button
               variant="ghost"
               className={cn('shrink-0', buttonAppearance.className)}
               style={buttonAppearance.style}
               size="lg"
-              disabled={submitting || data.product.can_buy === false}
+              disabled={submitting || data.product.can_buy === false || freeCheckoutComplete}
               onClick={() => setBuyerDialogOpen(true)}
             >
-              <LockKeyholeIcon />
-              {data.product.verification_quota_exhausted ? <Trans message="Creator cannot accept additional verified sales right now" /> : <Trans message={data.product.can_buy === false ? 'Temporarily unavailable' : 'Buy now'} />}
+              {data.product.payment_mode === 'free' ? (
+                <ShoppingBagIcon aria-hidden="true" />
+              ) : (
+                <LockKeyholeIcon aria-hidden="true" />
+              )}
+              {data.product.verification_quota_exhausted ? (
+                <Trans message="Creator cannot accept additional verified sales right now" />
+              ) : data.product.can_buy === false ? (
+                <Trans message="Temporarily unavailable" />
+              ) : data.product.payment_mode === 'free' ? (
+                <Trans message="Get for free" />
+              ) : (
+                <Trans message="Buy now" />
+              )}
             </Button>
           </div>
         </div>
