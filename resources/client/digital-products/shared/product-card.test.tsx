@@ -44,6 +44,7 @@ describe('SF-12 multilingual reflow and Storybook review coverage', () => {
     for (const width of [320, 360, 375, 430, 768, 1024, 1440]) {
       expect(story).toContain(`width: ${width}`);
     }
+    expect(story).toContain("tags: ['ai-generated', 'autodocs']");
     expect(story).toContain("scenario: 'multilingual-quote'");
     expect(story).toContain('await userEvent.keyboard');
     expect(story).toContain('frame.scrollWidth > frame.clientWidth + 1');
