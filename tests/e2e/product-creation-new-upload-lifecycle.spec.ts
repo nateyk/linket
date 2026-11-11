@@ -151,6 +151,105 @@ const uploadScenarios = [
   },
 ] as const;
 
+
+type UploadScenario = (typeof uploadScenarios)[number];
+
+async function uploadPrivateFile(page: Page, scenario: UploadScenario) {
+  const files = page.getByRole('region', {name: scenario.section});
+  const input = files.locator('input[type="file"]');
+  await expect(input).toHaveCount(1);
+  await input.setInputFiles({
+    name: scenario.name,
+    mimeType: scenario.mimeType,
+    buffer: scenario.file(),
+  });
+  await expect(
+    files.getByRole('button', {name: 'Remove ' + scenario.name}),
+    'Real TUS upload must persist the private file before creating an item',
+  ).toBeVisible({timeout: 65000});
+}
+
+async function createUploadedProduct(
+  page: Page,
+  scenario: UploadScenario,
+  title: string,
+): Promise<number> {
+  await page.goto('/dashboard/items/new/' + scenario.type + '?billing=' + scenario.billing);
+  await expect(page.getByRole('heading', {
+    name: new RegExp('create ' + scenario.label, 'i'),
+    level: 1,
+  })).toBeVisible();
+  await page.locator('#product-title').fill(title);
+  if (scenario.billing === 'paid') {
+    await page.locator('#product-price, input[type="number"]').first()
+      .fill((scenario.cents / 100).toFixed(2));
+  }
+  await uploadPrivateFile(page, scenario);
+
+  const creates: string[] = [];
+  page.on('request', request => {
+    if (new URL(request.url()).pathname === '/api/v1/items' &&
+        request.method() === 'POST') creates.push(request.url());
+  });
+  const creation = page.waitForResponse(response => isItemResponse(response));
+  await page.getByRole('button', {name: 'Save draft'}).click();
+  const saved = await creation;
+  expect(saved.ok(), 'Server accepted real product creation').toBe(true);
+  const body = (await saved.json()) as {data: {id: number; type: string}};
+  const posted = saved.request().postDataJSON() as {
+    type: string; price_cents: number; file_ids: number[];
+  };
+  expect(body.data.id).toBeGreaterThan(0);
+  expect(body.data.type).toBe(scenario.type);
+  expect(posted.type).toBe(scenario.type);
+  expect(posted.price_cents).toBe(scenario.cents);
+  expect(posted.file_ids).toHaveLength(1);
+  expect(posted.file_ids[0]).toBeGreaterThan(0);
+  expect(creates, 'No duplicate product POST').toHaveLength(1);
+  await expect(page).toHaveURL(new RegExp('/dashboard/items/' + body.data.id + '/edit$'));
+  return body.data.id;
+}
+
+async function editAndSubmitNewProduct(
+  page: Page,
+  id: number,
+  scenario: UploadScenario,
+  title: string,
+): Promise<string> {
+  await page.reload();
+  await expect(page.locator('#product-title')).toHaveValue(title);
+  await expect(page.getByRole('button', {name: 'Remove ' + scenario.name})).toBeVisible();
+
+  const updatedTitle = title + ' revised';
+  await page.locator('#product-title').fill(updatedTitle);
+  const update = page.waitForResponse(res => isItemResponse(res, id));
+  await page.getByRole('button', {name: 'Save draft'}).click();
+  expect((await update).ok(), 'Actual persisted edit').toBe(true);
+  const submission = page.waitForResponse(res => isSubmitResponse(res, id));
+  await page.getByRole('button', {name: 'Submit for review'}).click();
+  const result = await submission;
+  expect(result.status()).toBe(200);
+  expect(((await result.json()) as {data: {status: string}}).data.status)
+    .toBe('pending_approval');
+  return updatedTitle;
+}
+
+async function screenshotApprovedProduct(
+  page: Page,
+  id: number,
+  scenario: UploadScenario,
+  testInfo: TestInfo,
+) {
+  await page.goto('/dashboard/items/' + id + '/edit');
+  await expect(page.locator('[aria-label="Approved"]')).toBeVisible();
+  const screenshot = testInfo.outputPath('created-' + scenario.type + '-approved-375.png');
+  await page.screenshot({path: screenshot, fullPage: true});
+  await testInfo.attach('UX35 ' + scenario.type + ' real upload-to-approved (375px)', {
+    path: screenshot,
+    contentType: 'image/png',
+  });
+}
+
 for (const scenario of uploadScenarios) {
   test('UX-35 real ' + scenario.type + ' upload → new item → edit → review → approve', async ({
     browser,
@@ -158,87 +257,19 @@ for (const scenario of uploadScenarios) {
     guardIsolatedEnvironment();
     test.setTimeout(180_000);
     const context = await browser.newContext({baseURL, viewport: {width: 375, height: 812}});
-    const creator = await context.newPage();
-    const title = 'UX35 new ' + scenario.label + ' creator E2E';
-    let itemId = 0;
-    const creates: string[] = [];
     try {
+      const creator = await context.newPage();
       await signIn(creator, creatorEmail, creatorPassword);
-      await creator.goto('/dashboard/items/new/' + scenario.type + '?billing=' + scenario.billing);
-      await expect(creator.getByRole('heading', {name: new RegExp('create ' + scenario.label, 'i'), level: 1})).toBeVisible();
-      await creator.locator('#product-title').fill(title);
-      if (scenario.billing === 'paid') {
-        await creator.locator('#course-price, #product-price, input[type="number"]').first().fill((scenario.cents / 100).toFixed(2));
-      }
-
-      const files = creator.getByRole('region', {name: scenario.section});
-      const uploadInput = files.locator('input[type="file"]');
-      await expect(uploadInput).toHaveCount(1);
-      await uploadInput.setInputFiles({
-        name: scenario.name,
-        mimeType: scenario.mimeType,
-        buffer: scenario.file(),
-      });
-      await expect(
-        files.getByRole('button', {name: 'Remove ' + scenario.name}),
-        'Real TUS upload must persist the private file before product creation',
-      ).toBeVisible({timeout: 65000});
-
-      creator.on('request', request => {
-        if (new URL(request.url()).pathname === '/api/v1/items' &&
-            request.method() === 'POST') creates.push(request.url());
-      });
-      const creation = creator.waitForResponse(response => isItemResponse(response));
-      await creator.getByRole('button', {name: 'Save draft'}).click();
-      const saved = await creation;
-      expect(saved.ok(), 'Server accepted real product create').toBe(true);
-      const payload = (await saved.json()) as {data: {id: number; type: string}};
-      itemId = payload.data.id;
-      expect(itemId).toBeGreaterThan(0);
-      expect(payload.data.type).toBe(scenario.type);
-      const posted = saved.request().postDataJSON() as {
-        type: string;
-        price_cents: number;
-        file_ids: number[];
-      };
-      expect(posted.type).toBe(scenario.type);
-      expect(posted.price_cents).toBe(scenario.cents);
-      expect(posted.file_ids).toHaveLength(1);
-      expect(posted.file_ids[0]).toBeGreaterThan(0);
-      expect(creates, 'No duplicate create POST on a successful response').toHaveLength(1);
-
-      await expect(creator).toHaveURL(new RegExp('/dashboard/items/' + itemId + '/edit$'));
-      await creator.reload();
-      await expect(creator.locator('#product-title')).toHaveValue(title);
-      await expect(creator.getByRole('button', {name: 'Remove ' + scenario.name})).toBeVisible();
-
-      const updatedTitle = title + ' revised';
-      await creator.locator('#product-title').fill(updatedTitle);
-      const update = creator.waitForResponse(response => isItemResponse(response, itemId));
-      await creator.getByRole('button', {name: 'Save draft'}).click();
-      expect((await update).ok(), 'Persisted edit to a newly created item').toBe(true);
-
-      const submission = creator.waitForResponse(response => isSubmitResponse(response, itemId));
-      await creator.getByRole('button', {name: 'Submit for review'}).click();
-      const submitted = await submission;
-      expect(submitted.status()).toBe(200);
-      expect(((await submitted.json()) as {data: {status: string}}).data.status).toBe('pending_approval');
-      await approveRealProduct(browser, itemId, updatedTitle);
-      await creator.goto('/dashboard/items/' + itemId + '/edit');
-      await expect(creator.locator('[aria-label="Approved"]')).toBeVisible();
-
-      const screenshot = testInfo.outputPath('created-' + scenario.type + '-approved-375.png');
-      await creator.screenshot({path: screenshot, fullPage: true});
-      await testInfo.attach('UX35 ' + scenario.type + ' real upload-to-approved (375px)', {
-        path: screenshot,
-        contentType: 'image/png',
-      });
+      const title = 'UX35 new ' + scenario.label + ' creator E2E';
+      const itemId = await createUploadedProduct(creator, scenario, title);
+      const revisedTitle = await editAndSubmitNewProduct(creator, itemId, scenario, title);
+      await approveRealProduct(browser, itemId, revisedTitle);
+      await screenshotApprovedProduct(creator, itemId, scenario, testInfo);
     } finally {
       await context.close();
     }
   });
 }
-
 
 async function createRealCourse(page: Page, title: string): Promise<number> {
   await page.goto('/dashboard/items/new/course?billing=free');
