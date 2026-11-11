@@ -528,17 +528,35 @@ export function resolveBiolinkThemeVariables(
   };
 }
 
+/**
+ * Shared Appearance context for the public storefront, product/course and
+ * service pages, plus their portaled checkout and inquiry dialogs.
+ * Dashboard styling is deliberately unaffected.
+ */
+export function resolveBiolinkPublicAppearanceStyle(
+  appearance?: BiolinkAppearanceConfig | null,
+): BiolinkThemeVariables & {'--biolink-surface-shadow': string} {
+  return {
+    ...resolveBiolinkThemeVariables(appearance),
+    color: 'var(--biolink-text)',
+    fontFamily: appearance?.fontConfig?.family,
+    '--biolink-surface-shadow':
+      resolveBiolinkButtonAppearance(appearance).style.boxShadow || 'none',
+  };
+}
+
+/**
+ * Choose a logo from the effective foreground after background contrast
+ * correction. Preserve the site's theme fallback for unpainted storefronts.
+ */
 export function shouldUseLightBiolinkLogo(
   appearance: BiolinkAppearanceConfig | null | undefined,
   fallback: boolean,
 ): boolean {
-  const foreground = appearance?.bgConfig?.color;
-  return foreground ? isLightColor(foreground) : fallback;
-}
-
-function isLightColor(color: string): boolean {
-  const parsedColor = parseColor(color);
-  return parsedColor ? isLightSurface(parsedColor) : false;
+  const foreground = resolveBackgroundContext(
+    appearance?.bgConfig,
+  ).foregroundColor;
+  return foreground ? isLightSurface(foreground) : fallback;
 }
 
 /**
