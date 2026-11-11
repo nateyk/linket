@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import {expect, test, type Browser, type Page, type Response} from '@playwright/test';
+import {expect, test, type Browser, type Page, type Response, type TestInfo} from '@playwright/test';
 
 /**
  * UX-35: REAL browser upload/create flows, not synthetic API fixtures.
@@ -239,86 +239,106 @@ for (const scenario of uploadScenarios) {
   });
 }
 
+
+async function createRealCourse(page: Page, title: string): Promise<number> {
+  await page.goto('/dashboard/items/new/course?billing=free');
+  await expect(page.getByRole('heading', {name: 'Create course', level: 1})).toBeVisible();
+  await page.locator('#course-title').fill(title);
+  const posted: string[] = [];
+  page.on('request', request => {
+    if (new URL(request.url()).pathname === '/api/v1/items' &&
+        request.method() === 'POST') posted.push(request.url());
+  });
+  const create = page.waitForResponse(response => isItemResponse(response));
+  await page.getByRole('button', {name: 'Create course'}).click();
+  const response = await create;
+  expect(response.ok(), 'Real Course creation must succeed').toBe(true);
+  const body = (await response.json()) as {data: {id: number; type: string}};
+  expect(body.data.id).toBeGreaterThan(0);
+  expect(body.data.type).toBe('course');
+  expect(posted, 'Course creation must not duplicate POST').toHaveLength(1);
+  await expect(page).toHaveURL(new RegExp('/dashboard/items/' + body.data.id + '/course$'));
+  await expect(page.getByRole('heading', {name: 'Course Builder', level: 1})).toBeVisible();
+  return body.data.id;
+}
+
+async function addRealPublishedCourseLesson(page: Page) {
+  const chapter = page.waitForResponse(response =>
+    /^\/api\/v1\/courses\/\d+\/chapters$/.test(new URL(response.url()).pathname) &&
+    response.request().method() === 'POST',
+  );
+  await page.getByRole('button', {name: 'New chapter'}).click();
+  expect((await chapter).ok(), 'New course chapter saved').toBe(true);
+
+  await expect(page.getByRole('button', {name: 'New lesson'})).toBeVisible();
+  const lesson = page.waitForResponse(response =>
+    /^\/api\/v1\/course-chapters\/\d+\/lessons$/.test(new URL(response.url()).pathname) &&
+    response.request().method() === 'POST',
+  );
+  await page.getByRole('button', {name: 'New lesson'}).click();
+  expect((await lesson).ok(), 'New course lesson saved').toBe(true);
+
+  const statusSwitch = page.getByRole('switch').last();
+  await expect(statusSwitch).toBeVisible();
+  await statusSwitch.click();
+  await expect(statusSwitch).toHaveAttribute('aria-checked', 'true');
+
+  const save = page.waitForResponse(response =>
+    /^\/api\/v1\/course-lessons\/\d+$/.test(new URL(response.url()).pathname) &&
+    ['PUT', 'POST'].includes(response.request().method()) &&
+    (response.request().method() === 'PUT' ||
+      response.request().headers()['x-http-method-override']?.toUpperCase() === 'PUT'),
+  );
+  await page.getByRole('button', {name: 'Save changes'}).click();
+  expect((await save).ok(), 'Published lesson persisted').toBe(true);
+}
+
+async function submitRealCourse(page: Page, id: number) {
+  const button = page.getByRole('button', {name: 'Submit for review'});
+  await expect(button).toBeEnabled();
+  const response = page.waitForResponse(res => isSubmitResponse(res, id));
+  await button.click();
+  expect((await response).status(), 'Real Course submission must succeed').toBe(200);
+}
+
+async function captureApprovedMobileCourse(
+  browser: Browser,
+  itemId: number,
+  testInfo: TestInfo,
+) {
+  const context = await browser.newContext({baseURL, viewport: {width: 375, height: 812}});
+  try {
+    const page = await context.newPage();
+    await signIn(page, creatorEmail, creatorPassword);
+    await page.goto('/dashboard/items/' + itemId + '/course');
+    await expect(page.getByRole('heading', {name: 'Course Builder', level: 1})).toBeVisible();
+    await expect(page.getByText('Published', {exact: true}).first()).toBeVisible();
+    const screenshot = testInfo.outputPath('created-course-approved-375.png');
+    await page.screenshot({path: screenshot, fullPage: true});
+    await testInfo.attach('UX35 Course new-to-approved 375px', {
+      path: screenshot,
+      contentType: 'image/png',
+    });
+  } finally {
+    await context.close();
+  }
+}
+
 test('UX-35 real Course new → chapter → published lesson → review → approve', async ({
   browser,
 }, testInfo) => {
   guardIsolatedEnvironment();
   test.setTimeout(180_000);
   const context = await browser.newContext({baseURL, viewport: {width: 1280, height: 900}});
-  const creator = await context.newPage();
-  const title = 'UX35 new Course curriculum E2E';
-  let id = 0;
-  const createPosts: string[] = [];
   try {
+    const creator = await context.newPage();
     await signIn(creator, creatorEmail, creatorPassword);
-    await creator.goto('/dashboard/items/new/course?billing=free');
-    await expect(creator.getByRole('heading', {name: 'Create course', level: 1})).toBeVisible();
-    await creator.locator('#course-title').fill(title);
-    creator.on('request', request => {
-      if (new URL(request.url()).pathname === '/api/v1/items' &&
-          request.method() === 'POST') createPosts.push(request.url());
-    });
-    const creation = creator.waitForResponse(response => isItemResponse(response));
-    await creator.getByRole('button', {name: 'Create course'}).click();
-    const saved = await creation;
-    expect(saved.ok()).toBe(true);
-    const responseData = (await saved.json()) as {data: {id: number; type: string}};
-    id = responseData.data.id;
-    expect(id).toBeGreaterThan(0);
-    expect(responseData.data.type).toBe('course');
-    expect(createPosts, 'Course setup must create exactly once').toHaveLength(1);
-    await expect(creator).toHaveURL(new RegExp('/dashboard/items/' + id + '/course$'));
-    await expect(creator.getByRole('heading', {name: 'Course Builder', level: 1})).toBeVisible();
-
-    const chapter = creator.waitForResponse(response =>
-      new URL(response.url()).pathname.match(/\/api\/v1\/courses\/\d+\/chapters$/) !== null &&
-      response.request().method() === 'POST',
-    );
-    await creator.getByRole('button', {name: 'New chapter'}).click();
-    expect((await chapter).ok(), 'Real first chapter create').toBe(true);
-    await expect(creator.getByRole('button', {name: 'New lesson'})).toBeVisible();
-
-    const lesson = creator.waitForResponse(response =>
-      new URL(response.url()).pathname.match(/\/api\/v1\/course-chapters\/\d+\/lessons$/) !== null &&
-      response.request().method() === 'POST',
-    );
-    await creator.getByRole('button', {name: 'New lesson'}).click();
-    expect((await lesson).ok(), 'Real first lesson create').toBe(true);
-    const published = creator.getByRole('switch').last();
-    await expect(published).toBeVisible();
-    await published.click();
-    await expect(published).toHaveAttribute('aria-checked', 'true');
-    const saveLesson = creator.waitForResponse(response =>
-      new URL(response.url()).pathname.match(/\/api\/v1\/course-lessons\/\d+$/) !== null &&
-      ['PUT', 'POST'].includes(response.request().method()) &&
-      (response.request().method() === 'PUT' ||
-        response.request().headers()['x-http-method-override']?.toUpperCase() === 'PUT'),
-    );
-    await creator.getByRole('button', {name: 'Save changes'}).click();
-    expect((await saveLesson).ok(), 'Published lesson persisted').toBe(true);
-
-    await expect(creator.getByRole('button', {name: 'Submit for review'})).toBeEnabled();
-    const submission = creator.waitForResponse(response => isSubmitResponse(response, id));
-    await creator.getByRole('button', {name: 'Submit for review'}).click();
-    expect((await submission).status()).toBe(200);
+    const title = 'UX35 new Course curriculum E2E';
+    const id = await createRealCourse(creator, title);
+    await addRealPublishedCourseLesson(creator);
+    await submitRealCourse(creator, id);
     await approveRealProduct(browser, id, title);
-
-    const mobile = await browser.newContext({baseURL, viewport: {width: 375, height: 812}});
-    try {
-      const mobilePage = await mobile.newPage();
-      await signIn(mobilePage, creatorEmail, creatorPassword);
-      await mobilePage.goto('/dashboard/items/' + id + '/course');
-      await expect(mobilePage.getByRole('heading', {name: 'Course Builder', level: 1})).toBeVisible();
-      await expect(mobilePage.getByText('Published', {exact: true}).first()).toBeVisible();
-      const screenshot = testInfo.outputPath('created-course-approved-375.png');
-      await mobilePage.screenshot({path: screenshot, fullPage: true});
-      await testInfo.attach('UX35 Course new-to-approved 375px', {
-        path: screenshot,
-        contentType: 'image/png',
-      });
-    } finally {
-      await mobile.close();
-    }
+    await captureApprovedMobileCourse(browser, id, testInfo);
   } finally {
     await context.close();
   }
