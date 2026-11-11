@@ -47,7 +47,7 @@ describe('SF-12 multilingual reflow and Storybook review coverage', () => {
     expect(story).toContain("scenario: 'multilingual-quote'");
     expect(story).toContain('await userEvent.keyboard');
     expect(story).toContain('frame.scrollWidth > frame.clientWidth + 1');
-    expect(story).toContain('reducedMotion');
+    expect(story).toContain("args.scenario === 'carousel'");
   });
 });
 
