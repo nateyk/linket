@@ -47,6 +47,8 @@ test.describe('product creation responsive evidence', () => {
     {name: 'reflow-320', width: 320, height: 900},
     {name: 'mobile-small', width: 360, height: 800},
     {name: 'mobile', width: 375, height: 812},
+    // UX-34 / Notion QA matrix: cover larger phones as well as compact 360/375px screens.
+    {name: 'mobile-large', width: 430, height: 932},
     {name: 'zoom-200pct-equivalent', width: 720, height: 900},
     {name: 'tablet', width: 768, height: 1024},
     {name: 'tablet-wide', width: 1024, height: 768},
@@ -273,6 +275,21 @@ test('keyboard-only product choice and Preview support focus return', async ({pa
   const dialog = page.getByRole('dialog', {name: 'Customer preview'});
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole('button', {name: 'Close', exact: true}).first()).toBeVisible();
+  // The customer preview is modal: keyboard focus must remain inside it.
+  for (let i = 0; i < 8; i++) {
+    await page.keyboard.press('Tab');
+    // Base UI may restore the trapped focus on the next microtask after Tab.
+    // Keep the containment contract: persistent focus outside the dialog fails.
+    await expect.poll(
+      () => dialog.evaluate(node => node.contains(document.activeElement)),
+      {message: `Preview focus escaped the dialog after Tab ${i + 1}`, timeout: 2000},
+    ).toBe(true);
+  }
+  await page.keyboard.press('Shift+Tab');
+  await expect.poll(
+    () => dialog.evaluate(node => node.contains(document.activeElement)),
+    {message: 'Preview focus escaped the dialog after Shift+Tab', timeout: 2000},
+  ).toBe(true);
   await page.keyboard.press('Escape');
   await expect(dialog).toBeHidden();
   await expect(preview).toBeFocused();
@@ -574,14 +591,13 @@ test('short mobile RTL, dark mode and long titles preserve all four editor layou
       await expect(dialog.locator('button').filter({hasText: 'Buy now'})).toBeDisabled();
       await page.keyboard.press('Escape');
       await expect(preview).toBeFocused();
-      if (item.type === 'digital' || item.type === 'course') {
-        const shot = testInfo.outputPath(`rtl-dark-${item.type}-${viewport.width}.png`);
-        await page.screenshot({path: shot, fullPage: true});
-        await testInfo.attach(`RTL dark ${item.type} ${viewport.width}px`, {
-          path: shot,
-          contentType: 'image/png',
-        });
-      }
+      // Preserve screenshot evidence for every specialist editor, not only Digital/Course.
+      const shot = testInfo.outputPath(`rtl-dark-${item.type}-${viewport.width}.png`);
+      await page.screenshot({path: shot, fullPage: true});
+      await testInfo.attach(`RTL dark ${item.type} ${viewport.width}px`, {
+        path: shot,
+        contentType: 'image/png',
+      });
     }
   }
   expect(createRequests).toBe(0);
