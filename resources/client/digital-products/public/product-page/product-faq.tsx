@@ -22,6 +22,7 @@ type FaqEntry = {
  */
 export function ProductFaq({product}: {product: PublicDigitalProduct}) {
   const isCourse = !!product.is_course;
+  const isFree = product.payment_mode === 'free';
   const formats = getBootstrapData()?.product_file_formats;
   const formatHint = formats
     ? isCourse
@@ -32,7 +33,9 @@ export function ProductFaq({product}: {product: PublicDigitalProduct}) {
   const entries: FaqEntry[] = [
     {
       question: <Trans message="How do I receive my purchase?" />,
-      answer: isCourse ? (
+      answer: isFree ? (
+        <Trans message="Complete the free checkout, then use your email to access the product in My Portal." />
+      ) : isCourse ? (
         <Trans message="As soon as your payment is confirmed, we email your receipt to the address you used at checkout." />
       ) : (
         <Trans message="As soon as your payment is confirmed, we email a receipt with your protected download links to the address you used at checkout." />
@@ -78,12 +81,14 @@ export function ProductFaq({product}: {product: PublicDigitalProduct}) {
     ),
   });
 
-  entries.push({
-    question: <Trans message="What is the refund policy?" />,
-    answer: (
-      <Trans message="Digital delivery is instant; refunds are at the creator's discretion. Contact the creator through their store if something is wrong with your purchase." />
-    ),
-  });
+  if (!isFree) {
+    entries.push({
+      question: <Trans message="What is the refund policy?" />,
+      answer: (
+        <Trans message="Digital delivery is instant; refunds are at the creator's discretion. Contact the creator through their store if something is wrong with your purchase." />
+      ),
+    });
+  }
 
   return (
     <section className="flex min-w-0 flex-col gap-3 border-t border-[var(--biolink-border)] pt-5">
@@ -93,10 +98,10 @@ export function ProductFaq({product}: {product: PublicDigitalProduct}) {
       <dl className="flex flex-col gap-4">
         {entries.map((entry, index) => (
           <div key={index} className="flex min-w-0 flex-col gap-1">
-            <dt className="text-sm font-medium text-[var(--biolink-text)]">
+            <dt className="text-sm font-medium text-[var(--biolink-text)] break-words [overflow-wrap:anywhere]">
               {entry.question}
             </dt>
-            <dd className="text-base leading-7 text-[var(--biolink-muted-text)]">
+            <dd className="text-base leading-7 text-[var(--biolink-muted-text)] break-words [overflow-wrap:anywhere]">
               {entry.answer}
             </dd>
           </div>
