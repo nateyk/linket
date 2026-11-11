@@ -603,9 +603,9 @@ function CourseBuilder() {
   if (loading) {
     return (
       <DashboardLayout.MainSection>
-        <DashboardLayout.SectionHeader>
+        <DashboardLayout.SectionHeader className="max-lg:h-auto max-lg:flex-wrap max-lg:py-2">
           <DashboardLayout.SidebarToggle />
-          <DashboardLayout.SectionTitle>
+          <DashboardLayout.SectionTitle render={<h1 />} className="max-lg:order-3 max-lg:basis-full max-lg:flex-none max-lg:w-full max-lg:overflow-visible max-lg:whitespace-normal max-lg:text-clip max-lg:text-xl">
             <Trans message="Course Builder" />
           </DashboardLayout.SectionTitle>
         </DashboardLayout.SectionHeader>
@@ -654,9 +654,9 @@ function CourseBuilder() {
 
   return (
     <DashboardLayout.MainSection>
-      <DashboardLayout.SectionHeader>
+      <DashboardLayout.SectionHeader className="max-lg:h-auto max-lg:flex-wrap max-lg:py-2">
         <DashboardLayout.SidebarToggle />
-        <DashboardLayout.SectionTitle>
+        <DashboardLayout.SectionTitle render={<h1 />} className="max-lg:order-3 max-lg:basis-full max-lg:flex-none max-lg:w-full max-lg:overflow-visible max-lg:whitespace-normal max-lg:text-clip max-lg:text-xl">
           <Trans message="Course Builder" />
           {course.product.status === 'approved' && (
             <Badge variant="positive" className="ml-2">
@@ -669,7 +669,7 @@ function CourseBuilder() {
             </Badge>
           )}
         </DashboardLayout.SectionTitle>
-        <div className="flex min-w-0 items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2 max-lg:ml-auto">
           <div className="hidden items-center gap-2 lg:flex">
             <Button
               variant="outline"
