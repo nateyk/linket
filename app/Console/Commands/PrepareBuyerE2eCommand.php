@@ -8,6 +8,7 @@ use App\Courses\Models\Lesson;
 use App\Payments\VerifyEt\VerifyEtSettings;
 use App\Models\User;
 use Common\Permissions\Models\Permission;
+use Common\Roles\Models\Role;
 use App\Storefront\Models\CreatorPaymentMethod;
 use App\Storefront\Models\DigitalProduct;
 use App\Storefront\Models\DirectPaymentMethod;
@@ -107,6 +108,24 @@ class PrepareBuyerE2eCommand extends Command
                     'password' => Hash::make('E2eBuyerCreator!23'),
                     'email_verified_at' => now(),
                 ])->save();
+            }
+
+            if ($withReviewer) {
+                // A query-created E2E creator does not pass through standard
+                // registration, so attach the NORMAL Users role rather than
+                // granting a special upload bypass. Only the guarded local
+                // belink_test reviewer fixture can execute this block.
+                $creatorRole = Role::query()
+                    ->where('name', 'Users')
+                    ->where('type', 'users')
+                    ->firstOrFail();
+                $creator->roles()->syncWithoutDetaching([$creatorRole->id]);
+                $creator->unsetRelation('roles');
+                if (! $creator->hasPermission('files.create')) {
+                    throw new \RuntimeException(
+                        'The disposable creator lacks standard Users files.create permission.',
+                    );
+                }
             }
 
             $workspace = DB::table('workspace_user')
