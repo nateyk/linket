@@ -60,13 +60,10 @@ async function mountRealPreviewFrame(page: Page, slug: string) {
     iframe.height = '844';
     iframe.src = `/${value}?preview=1`;
     window.addEventListener('message', event => {
-      if (
-        event.origin === location.origin &&
-        event.source === iframe.contentWindow &&
-        event.data?.type === 'linket:store-preview-ready'
-      ) {
-        iframe.dataset.sf12Ready = 'true';
-      }
+      if (event.origin !== location.origin) return;
+      if (event.source !== iframe.contentWindow) return;
+      if (event.data?.type !== 'linket:store-preview-ready') return;
+      iframe.dataset.sf12Ready = 'true';
     });
     document.body.appendChild(iframe);
   }, slug);
