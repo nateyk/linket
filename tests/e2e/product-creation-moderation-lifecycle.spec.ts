@@ -2,9 +2,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {expect, test, type Page} from '@playwright/test';
 
+type ReviewType = 'digital' | 'ebook' | 'audio' | 'course';
+
 type ReviewFixture = {
   database: string;
   review_product_id: number;
+  review_product_ids: Record<ReviewType, number>;
 };
 
 const baseURL = process.env.E2E_BASE_URL ?? 'http://localhost:5173';
@@ -159,3 +162,161 @@ test('isolated real creator ↔ admin review, rejection, resubmission and approv
     await creatorContext.close();
   }
 });
+
+/**
+ * Unlike the responsive-only mocks, these journeys use authenticated real
+ * creator/admin requests against the disposable belink_test fixture.
+ * Every product type has an independent review record; none is production data.
+ */
+for (const scenario of [
+  {type: 'ebook', title: 'E2E Moderation E-book', editorTitle: 'Edit e-book'},
+  {type: 'audio', title: 'E2E Moderation Audio', editorTitle: 'Edit audio'},
+  {type: 'course', title: 'E2E Moderation Course', editorTitle: 'Course Builder'},
+] as const) {
+  test(`isolated ${scenario.type}: creator edit, rejection, resubmission and admin approval`, async ({
+    browser,
+  }, testInfo) => {
+    test.skip(
+      process.env.LINKET_ISOLATED_E2E !== '1',
+      'Real review mutations require the guarded disposable belink_test database',
+    );
+    test.setTimeout(180_000);
+
+    const entry = fixture();
+    const id = entry.review_product_ids?.[scenario.type];
+    expect(id, `Missing independent ${scenario.type} moderation fixture`)
+      .toBeGreaterThan(0);
+    expect(
+      Object.values(entry.review_product_ids).filter(value => value === id),
+      'Each product type must have its own fixture; never reuse a product id',
+    ).toHaveLength(1);
+
+    const adminContext = await browser.newContext({
+      baseURL,
+      viewport: {width: 1280, height: 900},
+    });
+    const creatorContext = await browser.newContext({
+      baseURL,
+      viewport: scenario.type === 'course'
+        ? {width: 1280, height: 900}
+        : {width: 375, height: 812},
+    });
+    const admin = await adminContext.newPage();
+    const creator = await creatorContext.newPage();
+    let approvedTitle = scenario.title;
+    const editPath = scenario.type === 'course'
+      ? `/dashboard/items/${id}/course`
+      : `/dashboard/items/${id}/edit`;
+
+    try {
+      await signIn(
+        creator,
+        process.env.LINKET_E2E_CREATOR_EMAIL ?? 'e2e-buyer-creator@example.test',
+        process.env.LINKET_E2E_CREATOR_PASSWORD ?? 'E2eBuyerCreator!23',
+      );
+      await creator.goto(editPath);
+      await expect(creator.getByRole('heading', {name: scenario.editorTitle, level: 1}))
+        .toBeVisible();
+      const forbidden = await creator.request.get(`/api/v1/admin/items/${id}`);
+      expect([401, 403], 'Creator must not access admin review details')
+        .toContain(forbidden.status());
+
+      const reviewerPassword = process.env.LINKET_E2E_REVIEWER_PASSWORD;
+      expect(reviewerPassword, 'Reviewer credential must be per-run and isolated')
+        .toBeTruthy();
+      await signIn(
+        admin,
+        process.env.LINKET_E2E_REVIEWER_EMAIL ?? 'e2e-product-reviewer@example.test',
+        reviewerPassword!,
+      );
+      await admin.goto(`/admin/items/${id}`);
+      await expect(admin.getByText(scenario.title).first()).toBeVisible();
+
+      const rejected = await rejectInAdmin(
+        admin, id, `Please clarify the ${scenario.type} content for review.`,
+      );
+      expect(rejected.status).toBe('rejected');
+      await creator.reload();
+
+      // Make an actual creator edit before resubmitting, not a mocked change.
+      approvedTitle = `${scenario.title} — creator revision`;
+      if (scenario.type === 'course') {
+        const configure = creator.getByRole('button', {name: 'Configure'});
+        await expect(configure).toBeVisible();
+        await configure.click();
+        const settings = creator.getByRole('dialog', {name: 'Course Settings'});
+        await expect(settings).toBeVisible();
+        await settings.getByRole('textbox', {name: 'Course Name'}).fill(approvedTitle);
+        const updated = creator.waitForResponse(response =>
+          new URL(response.url()).pathname.startsWith('/api/v1/courses/')
+          && response.request().method() === 'PUT',
+        );
+        await settings.getByRole('button', {name: 'Save', exact: true}).click();
+        expect((await updated).status(), 'Real Course settings edit').toBe(200);
+        await expect(settings).toBeHidden();
+      } else {
+        await expect(creator.locator('[aria-label="Needs changes"]')).toBeVisible();
+        await creator.locator('#product-title').fill(approvedTitle);
+        const updated = creator.waitForResponse(response =>
+          new URL(response.url()).pathname === `/api/v1/items/${id}`
+          && ['POST', 'PUT'].includes(response.request().method())
+          && (response.request().method() === 'PUT'
+            || response.request().headers()['x-http-method-override']?.toUpperCase() === 'PUT'),
+        );
+        await creator.getByRole('button', {name: 'Save draft'}).click();
+        expect((await updated).status(), 'Real creator draft edit').toBe(200);
+      }
+
+      // The Course fixture has a real chapter and published lesson. The
+      // other types each have a workspace-owned private sellable file.
+      const submit = creator.getByRole('button', {name: 'Submit for review'});
+      await expect(submit).toBeEnabled();
+      const responsePromise = creator.waitForResponse(response =>
+        new URL(response.url()).pathname === `/api/v1/items/${id}/submit`
+        && response.request().method() === 'POST',
+      );
+      await submit.click();
+      const submitted = await responsePromise;
+      expect(submitted.status(), 'Real per-type submission').toBe(200);
+      expect(((await submitted.json()) as {data: {status: string}}).data.status)
+        .toBe('pending_approval');
+
+      await admin.reload();
+      await expect(admin.getByText(approvedTitle).first()).toBeVisible();
+      const approvalPromise = admin.waitForResponse(response =>
+        reviewRequest(response, id, 'approve'),
+      );
+      await admin.getByRole('button', {name: 'Approve', exact: true}).click();
+      const approved = await approvalPromise;
+      expect(approved.status(), 'Real admin approval').toBe(200);
+      expect(((await approved.json()) as {status: string}).status).toBe('approved');
+
+      await creator.goto(editPath);
+      if (scenario.type === 'course') {
+        await expect(creator.getByText('Published', {exact: true}).first()).toBeVisible();
+        // A mobile snapshot captures the actual curriculum header after approval.
+        await creator.setViewportSize({width: 375, height: 812});
+        await expect(creator.getByRole('heading', {name: 'Course Builder'})).toBeVisible();
+      } else {
+        await expect(creator.locator('[aria-label="Approved"]')).toBeVisible();
+        await expect(creator.locator('#product-title')).toHaveValue(approvedTitle);
+        await creator.getByRole('button', {name: 'Preview'}).click();
+        const preview = creator.getByRole('dialog', {name: 'Customer preview'});
+        await expect(preview).toBeVisible();
+        await expect(preview.getByRole('button', {name: 'Buy now'})).toBeDisabled();
+        await creator.keyboard.press('Escape');
+        await expect(preview).toBeHidden();
+      }
+
+      const shot = testInfo.outputPath(`reviewed-${scenario.type}-mobile-375.png`);
+      await creator.screenshot({path: shot, fullPage: true});
+      await testInfo.attach(`Real ${scenario.type} creator state approved — 375px`, {
+        path: shot,
+        contentType: 'image/png',
+      });
+    } finally {
+      await adminContext.close();
+      await creatorContext.close();
+    }
+  });
+}
