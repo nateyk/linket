@@ -24,7 +24,7 @@ export function ProductOverview({product}: {product: PublicDigitalProduct}) {
               <Trans message="About this product" />
             </h2>
             {text ? (
-              <p className="text-base leading-7 whitespace-pre-line text-[var(--biolink-muted-text)]">
+              <p className="text-base leading-7 whitespace-pre-line text-[var(--biolink-muted-text)] break-words [overflow-wrap:anywhere]">
                 {text}
               </p>
             ) : (
@@ -54,7 +54,7 @@ export function ProductOverview({product}: {product: PublicDigitalProduct}) {
                       aria-hidden="true"
                     />
                   </span>
-                  <span className="text-[var(--biolink-muted-text)]">
+                  <span className="min-w-0 text-[var(--biolink-muted-text)] break-words [overflow-wrap:anywhere]">
                     {outcome}
                   </span>
                 </li>
