@@ -80,20 +80,23 @@ export function extractReceiptReference(providerInput: string, input: string): R
   if (uniqueUrls.length > 1) return {kind: 'ambiguous'};
   if (uniqueUrls.length === 1) return {kind: 'found', reference: uniqueUrls[0]};
 
+  // Untrusted URLs must not produce an apparent reference by token matching.
+  const messageOnly = text.replace(/https?:\/\/[^\s<>"']+/gi, ' ');
+
   const candidates: string[] = [];
   const labelPattern = /(?:receipt\s*(?:id|number|no\.?)?|transaction\s*(?:id|number|no\.?|reference)|reference\s*(?:number|no\.?|id)?|ref\s*(?:number|no\.?|id)?|የሂሳብ\s*እንቅስቃሴ\s*ቁጥርዎ|የደረሰኝ\s*ቁጥር)\s*[:#=\-፡：]?\s*([a-z0-9_-]{6,150})/gi;
-  for (const match of text.matchAll(labelPattern)) {
+  for (const match of messageOnly.matchAll(labelPattern)) {
     const value = validReference(provider, match[1]);
     if (value) candidates.push(value);
   }
 
   if (provider === 'cbe') {
-    for (const match of text.matchAll(/\bFT[A-Z0-9]{8,148}\b/gi)) {
+    for (const match of messageOnly.matchAll(/\bFT[A-Z0-9]{8,148}\b/gi)) {
       const value = validReference(provider, match[0]);
       if (value) candidates.push(value);
     }
   } else if (provider === 'telebirr') {
-    for (const match of text.matchAll(/\b(?:DET|CHQ|DAB|DJA|DEL|ADQ|DEP|CHG|DF)[A-Z0-9]{6,12}\b/gi)) {
+    for (const match of messageOnly.matchAll(/\b(?:DET|CHQ|DAB|DJA|DEL|ADQ|DEP|CHG|DF)[A-Z0-9]{6,12}\b/gi)) {
       const value = validReference(provider, match[0]);
       if (value) candidates.push(value);
     }
