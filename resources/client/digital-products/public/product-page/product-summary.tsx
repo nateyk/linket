@@ -125,19 +125,14 @@ export function ProductSummary({
           )}
         >
           {stats.map(stat => (
-            <div key={stat.id} className="flex min-w-0 items-start gap-2.5">
-              <stat.icon
-                className="mt-0.5 size-4 shrink-0 text-[var(--biolink-muted-text)]"
-                aria-hidden="true"
-              />
-              <div className="flex min-w-0 flex-col gap-0.5">
-                <dt className="text-xs text-[var(--biolink-muted-text)]">
-                  {stat.label}
-                </dt>
-                <dd className="text-base font-semibold tabular-nums">
-                  {stat.value}
-                </dd>
-              </div>
+            <div key={stat.id} className="flex min-w-0 flex-col gap-1">
+              <dt className="flex min-w-0 items-center gap-2 text-xs text-[var(--biolink-muted-text)]">
+                <stat.icon className="size-4 shrink-0" aria-hidden="true" />
+                {stat.label}
+              </dt>
+              <dd className="ps-6 text-base font-semibold tabular-nums">
+                {stat.value}
+              </dd>
             </div>
           ))}
         </dl>
