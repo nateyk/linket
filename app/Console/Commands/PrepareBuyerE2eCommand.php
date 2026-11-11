@@ -111,21 +111,9 @@ class PrepareBuyerE2eCommand extends Command
             }
 
             if ($withReviewer) {
-                // A query-created E2E creator does not pass through standard
-                // registration, so attach the NORMAL Users role rather than
-                // granting a special upload bypass. Only the guarded local
-                // belink_test reviewer fixture can execute this block.
-                $creatorRole = Role::query()
-                    ->where('name', 'Users')
-                    ->where('type', 'users')
-                    ->firstOrFail();
-                $creator->roles()->syncWithoutDetaching([$creatorRole->id]);
-                $creator->unsetRelation('roles');
-                if (! $creator->hasPermission('files.create')) {
-                    throw new \RuntimeException(
-                        'The disposable creator lacks standard Users files.create permission.',
-                    );
-                }
+                // The caller already verified the disposable DB, loopback URL
+                // and reviewer-only opt-in before any seeded mutations.
+                $this->ensureDisposableCreatorUploadRole($creator);
             }
 
             $workspace = DB::table('workspace_user')
@@ -328,6 +316,26 @@ class PrepareBuyerE2eCommand extends Command
         $this->line($absolute);
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Match the standard creator role after query-based E2E seeding. Never
+     * grant elevated file permission or change production role policies.
+     * Called exclusively from the guarded --with-reviewer path.
+     */
+    private function ensureDisposableCreatorUploadRole(User $creator): void
+    {
+        $usersRole = Role::query()
+            ->where('name', 'Users')
+            ->where('type', 'users')
+            ->firstOrFail();
+        $creator->roles()->syncWithoutDetaching([$usersRole->id]);
+        $creator->unsetRelation('roles');
+        if (! $creator->hasPermission('files.create')) {
+            throw new \RuntimeException(
+                'The disposable creator lacks standard Users files.create permission.',
+            );
+        }
     }
 
     /**
