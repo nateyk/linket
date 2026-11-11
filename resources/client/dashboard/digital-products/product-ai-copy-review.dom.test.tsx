@@ -461,7 +461,11 @@ it('supports keyboard discard, announces persistence and restores trigger focus'
   await user.keyboard('{Escape}');
   await waitFor(() => expect(screen.queryByRole('textbox')).toBeNull());
   expect(screen.getByRole('status').textContent).toMatch(/discarded/);
-  expect(document.activeElement).toBe(screen.getByRole('button', {name: 'Suggest copy'}));
+  // Discard uses an asynchronous mutation. Preserve the focus contract while
+  // allowing the React state commit and focus restoration to complete.
+  await waitFor(() =>
+    expect(document.activeElement).toBe(screen.getByRole('button', {name: 'Suggest copy'})),
+  );
   expect(api.post).toHaveBeenCalledWith(path + '/copy-drafts/' + saved.draft_id + '/discard', {version: 0});
   expect(onUse).not.toHaveBeenCalled();
 });
