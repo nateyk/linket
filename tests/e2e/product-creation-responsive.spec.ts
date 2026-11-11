@@ -275,6 +275,15 @@ test('keyboard-only product choice and Preview support focus return', async ({pa
   const dialog = page.getByRole('dialog', {name: 'Customer preview'});
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole('button', {name: 'Close', exact: true}).first()).toBeVisible();
+  // The customer preview is modal: keyboard focus must remain inside it.
+  for (let i = 0; i < 8; i++) {
+    await page.keyboard.press('Tab');
+    expect(await dialog.evaluate(node => node.contains(document.activeElement)),
+      `Preview focus escaped the dialog after Tab ${i + 1}`).toBe(true);
+  }
+  await page.keyboard.press('Shift+Tab');
+  expect(await dialog.evaluate(node => node.contains(document.activeElement)),
+    'Preview focus escaped the dialog after Shift+Tab').toBe(true);
   await page.keyboard.press('Escape');
   await expect(dialog).toBeHidden();
   await expect(preview).toBeFocused();
@@ -576,14 +585,13 @@ test('short mobile RTL, dark mode and long titles preserve all four editor layou
       await expect(dialog.locator('button').filter({hasText: 'Buy now'})).toBeDisabled();
       await page.keyboard.press('Escape');
       await expect(preview).toBeFocused();
-      if (item.type === 'digital' || item.type === 'course') {
-        const shot = testInfo.outputPath(`rtl-dark-${item.type}-${viewport.width}.png`);
-        await page.screenshot({path: shot, fullPage: true});
-        await testInfo.attach(`RTL dark ${item.type} ${viewport.width}px`, {
-          path: shot,
-          contentType: 'image/png',
-        });
-      }
+      // Preserve screenshot evidence for every specialist editor, not only Digital/Course.
+      const shot = testInfo.outputPath(`rtl-dark-${item.type}-${viewport.width}.png`);
+      await page.screenshot({path: shot, fullPage: true});
+      await testInfo.attach(`RTL dark ${item.type} ${viewport.width}px`, {
+        path: shot,
+        contentType: 'image/png',
+      });
     }
   }
   expect(createRequests).toBe(0);
