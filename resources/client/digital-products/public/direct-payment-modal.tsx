@@ -501,16 +501,25 @@ export function DirectPaymentModal({
                       <Input
                         bindToHookForm={false}
                         value={reference}
-                         onPaste={handleReferencePaste}
+                        onPaste={handleReferencePaste}
                         onChange={event => {
-                          setReference(event.target.value);
-                           setExtractionHint(null);
-                           setErrorMessage(null);
+                          const entered = event.target.value;
+                          // Mobile keyboards can inject SMS text through input events.
+                          // Never forward the entire message to our API.
+                          if (entered.length > 24 && /\s/.test(entered)) {
+                            const extracted = extractReceiptReference(instructions?.provider ?? '', entered);
+                            setReference(extracted.kind === 'found' ? extracted.reference : '');
+                            setExtractionHint(extracted.kind);
+                          } else {
+                            setReference(entered);
+                            setExtractionHint(null);
+                          }
+                          setErrorMessage(null);
                           setValidationError(null);
                         }}
                         placeholder="e.g. fHCxyTVljBclm6Yk4C or FT..."
-                         aria-invalid={!!validationError}
-                         aria-describedby="buyer-payment-reference-help"
+                        aria-invalid={!!validationError}
+                        aria-describedby="buyer-payment-reference-help"
                         disabled={busy}
                         autoComplete="off"
                       />
