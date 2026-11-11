@@ -81,6 +81,14 @@ describe('buyer payment dialog', () => {
     expect(page).not.toMatch(/money-back|guarantee|refund window/i);
   });
 
+  test('names the creator-owned Chapa hosted redirect instead of requesting Verify.et bank instructions', () => {
+    const page = readPage();
+    expect(page).toContain("payment_mode?: 'direct' | 'chapa' | 'free' | 'unavailable'");
+    expect(page).toContain("You'll complete payment securely on Chapa using the creator's own connected account.");
+    expect(page).toContain("'Continue to Chapa'");
+    expect(page).toContain("product.payment_mode === 'direct'");
+  });
+
   test('keeps a visible, translated close control and the mid-submit guard', () => {
     const page = readPage();
 
