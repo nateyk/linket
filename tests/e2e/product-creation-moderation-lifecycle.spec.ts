@@ -247,9 +247,13 @@ for (const scenario of [
         const settings = creator.getByRole('dialog', {name: 'Course Settings'});
         await expect(settings).toBeVisible();
         await settings.getByRole('textbox', {name: 'Course Name'}).fill(approvedTitle);
+        // Linket transports logical PUT via POST + method override.
+        // Wait for the real persisted response, not an impossible wire PUT.
         const updated = creator.waitForResponse(response =>
           new URL(response.url()).pathname.startsWith('/api/v1/courses/')
-          && response.request().method() === 'PUT',
+          && ['PUT', 'POST'].includes(response.request().method())
+          && (response.request().method() === 'PUT'
+            || response.request().headers()['x-http-method-override']?.toUpperCase() === 'PUT'),
         );
         await settings.getByRole('button', {name: 'Save', exact: true}).click();
         expect((await updated).status(), 'Real Course settings edit').toBe(200);
