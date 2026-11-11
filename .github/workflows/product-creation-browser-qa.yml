@@ -241,6 +241,20 @@ jobs:
           npx playwright test tests/e2e/product-creation-moderation-lifecycle.spec.ts \
             --project=chromium --workers=1 --retries=0 --output=test-results/moderation --trace=retain-on-failure
 
+      - name: Verify isolated new-product uploads, creation and approval for all four types
+        shell: bash
+        env:
+          PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/new-product-creation
+        run: |
+          set -euo pipefail
+          [[ "$APP_ENV" == "testing" && "$DB_DATABASE" == "belink_test" ]]
+          [[ "$LINKET_ISOLATED_E2E" == "1" && "$VERIFY_ET_MOCK" == "true" ]]
+          [[ "$APP_URL" == "http://127.0.0.1:8081" ]]
+          # Real private TXT/PDF/WAV uploads via the UI, not mocked file entries.
+          # Includes the new Course setup/curriculum, followed by reviewer approval.
+          npx playwright test tests/e2e/product-creation-new-upload-lifecycle.spec.ts \
+            --project=chromium --workers=1 --retries=0 --output=test-results/new-product-creation --trace=retain-on-failure
+
       - name: Attach screenshots, trace and browser report
         if: always()
         uses: actions/upload-artifact@v6
