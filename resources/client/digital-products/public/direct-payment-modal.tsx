@@ -217,8 +217,8 @@ export function DirectPaymentModal({
     }
 
     if (instructions?.account_number
-      && cleanRef.replace(/[\\s-]+/g, '').toLowerCase()
-        === instructions.account_number.replace(/[\\s-]+/g, '').toLowerCase()) {
+      && cleanRef.replace(/[\s-]+/g, '').toLowerCase()
+        === instructions.account_number.replace(/[\s-]+/g, '').toLowerCase()) {
       setValidationError('This is the receiving account number, not a payment reference. Find the receipt ID on your completed bank or wallet transfer.');
       return false;
     }
@@ -257,7 +257,7 @@ export function DirectPaymentModal({
 
     const provider = instructions.provider?.toLowerCase();
     const cleanRef = reference.trim();
-    const isCbeFt = provider === 'cbe' && /^FT/i.test(cleanRef);
+    const isCbeFt = provider === 'cbe' && /^FT[0-9A-Z]{8,12}$/i.test(cleanRef);
     const needsSuffix = provider === 'boa' || isCbeFt;
 
     setBusy(true);
@@ -650,7 +650,7 @@ export function DirectPaymentModal({
                        <RefreshCwIcon className="size-4" />
                        <Trans message="Retry loading payment details" />
                      </Button>
-                  </p>
+                  </div>
                 )}
 
                 <p className="text-xs text-muted-foreground">
