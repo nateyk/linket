@@ -605,7 +605,7 @@ function CourseBuilder() {
       <DashboardLayout.MainSection>
         <DashboardLayout.SectionHeader>
           <DashboardLayout.SidebarToggle />
-          <DashboardLayout.SectionTitle>
+          <DashboardLayout.SectionTitle render={<h1 />}>
             <Trans message="Course Builder" />
           </DashboardLayout.SectionTitle>
         </DashboardLayout.SectionHeader>
@@ -656,7 +656,7 @@ function CourseBuilder() {
     <DashboardLayout.MainSection>
       <DashboardLayout.SectionHeader>
         <DashboardLayout.SidebarToggle />
-        <DashboardLayout.SectionTitle>
+        <DashboardLayout.SectionTitle render={<h1 />}>
           <Trans message="Course Builder" />
           {course.product.status === 'approved' && (
             <Badge variant="positive" className="ml-2">
