@@ -645,12 +645,12 @@ export function DirectPaymentModal({
                 )}
 
                 {instructionsError && !instructions && (
-                  <p className="text-xs text-destructive">
+                  <div role="alert" className="flex flex-col gap-2 rounded-card border border-destructive/20 p-3 text-sm text-destructive">
                     <Trans message="Payment details could not be loaded. Your order is still available." />
-                     <Button variant="outline" onClick={() => { setInstructionsError(false); setInstructionsRetry(value => value + 1); }}>
-                       <RefreshCwIcon className="size-4" />
-                       <Trans message="Retry loading payment details" />
-                     </Button>
+                    <Button variant="outline" onClick={() => { setInstructionsError(false); setInstructionsRetry(value => value + 1); }}>
+                      <RefreshCwIcon className="size-4" />
+                      <Trans message="Retry loading payment details" />
+                    </Button>
                   </div>
                 )}
 
