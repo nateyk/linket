@@ -23,6 +23,34 @@ describe('shared product card integration', () => {
   });
 });
 
+describe('SF-12 multilingual reflow and Storybook review coverage', () => {
+  test('both title and supporting description wrap unbroken scripts and URLs', () => {
+    expect(source).toContain(
+      'line-clamp-2 min-w-0 flex-1 text-base leading-6 font-medium break-words [overflow-wrap:anywhere]',
+    );
+    expect(source).toContain(
+      'line-clamp-2 min-w-0 text-sm leading-relaxed text-muted-foreground break-words [overflow-wrap:anywhere]',
+    );
+    expect(source).toContain('focus-visible:outline-2');
+  });
+
+  test('Storybook includes every acceptance width, carousel keyboard and mixed-script quote cases', () => {
+    const story = fs.readFileSync(
+      path.resolve(
+        'resources/client/digital-products/shared/product-card.stories.tsx',
+      ),
+      'utf8',
+    );
+    for (const width of [320, 360, 375, 430, 768, 1024, 1440]) {
+      expect(story).toContain(`width: ${width}`);
+    }
+    expect(story).toContain("scenario: 'multilingual-quote'");
+    expect(story).toContain('await userEvent.keyboard');
+    expect(story).toContain('frame.scrollWidth > frame.clientWidth + 1');
+    expect(story).toContain('reducedMotion');
+  });
+});
+
 describe('shared product card consistency', () => {
   test('uses theme tokens and app conventions, not hardcoded values', () => {
     expect(source).toContain('rounded-card');
