@@ -209,6 +209,10 @@ jobs:
           set -euo pipefail
           [[ "$APP_ENV" == "testing" && "$DB_DATABASE" == "belink_test" ]]
           [[ "$LINKET_ISOLATED_E2E" == "1" && "$E2E_BASE_URL" == "http://127.0.0.1:8081" ]]
+          # The standard DatabaseSeeder omits the standalone LocalizationsTableSeeder.
+          # Seed its real default English catalog ONLY in disposable belink_test;
+          # do not manufacture an Amharic/RTL catalog for acceptance.
+          php artisan db:seed --class="Common\\Database\\Seeders\\LocalizationsTableSeeder" --force --no-interaction
           # Supplementary measured text-pair audit; human real locale/AT gates remain.
           npx playwright test tests/e2e/product-creation-contrast-locales.spec.ts \
             --project=chromium --workers=1 --retries=0 --output=test-results/contrast-locales --trace=retain-on-failure
