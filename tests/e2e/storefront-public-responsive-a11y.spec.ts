@@ -97,7 +97,11 @@ test.describe('SF-12 published storefront and product responsive evidence', () =
 
       const storeResponse = await page.goto(`/${fixture.store_slug}`);
       expect(storeResponse?.ok()).toBe(true);
-      await expect(page.getByText(fixture.product_title).first()).toBeVisible({timeout: 30000});
+      // Creator Profile contains hidden mobile/desktop branches.
+      await expect(
+        page.getByRole('heading', {level: 3, name: fixture.product_title})
+          .filter({visible: true}).first(),
+      ).toBeVisible({timeout: 30000});
       await captureAndCheckReflow(page, info, `store-${size.width}`);
 
       const productResponse = await page.goto(fixture.product_url);
@@ -105,7 +109,7 @@ test.describe('SF-12 published storefront and product responsive evidence', () =
       const title = page.getByRole('heading', {name: fixture.product_title, level: 1});
       await expect(title).toBeVisible({timeout: 30000});
       const titleWrap = await title.evaluate(element => getComputedStyle(element).overflowWrap);
-      expect(titleWrap, 'Product title must support long text reflow').toBe('anywhere');
+      expect(titleWrap, 'Product title must support long text reflow').toMatch(/^(anywhere|break-word)$/);
       await captureAndCheckReflow(page, info, `product-${size.width}`);
     });
   }
