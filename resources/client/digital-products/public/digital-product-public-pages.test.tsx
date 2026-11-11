@@ -81,6 +81,18 @@ describe('buyer payment dialog', () => {
     expect(page).not.toMatch(/money-back|guarantee|refund window/i);
   });
 
+  test('offers one accessible receiving bank or wallet choice only when multiple are active', () => {
+    const page = readPage();
+    expect(page).toContain('Choose how to pay');
+    expect(page).toContain('name="creator-payment-method"');
+    expect(page).toContain('checked={paymentMethodId === account.id}');
+    expect(page).toContain('onChange={() => onPaymentMethodChange(account.id)}');
+    expect(page).toContain('Choose a bank or wallet to continue.');
+    expect(page).toContain("setBuyerError('payment_method')");
+    expect(page).toContain('creator_payment_method_id: paymentMethodId');
+    expect(page).not.toContain('<select className="h-10 rounded-input');
+  });
+
   test('keeps a visible, translated close control and the mid-submit guard', () => {
     const page = readPage();
 
