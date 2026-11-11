@@ -9,7 +9,7 @@ import {
   resolveBiolinkButtonAppearance,
   resolveBiolinkContainerRadius,
   resolveBiolinkSegmentedTabsAppearance,
-  resolveBiolinkThemeVariables,
+  resolveBiolinkPublicAppearanceStyle,
 } from '@app/short-links/renderers/biolink-renderer/biolink-appearance';
 import {Background} from '@app/short-links/renderers/biolink-renderer/biolink-background';
 import {Accordion} from '@shadcn/accordion/accordion';
@@ -33,7 +33,7 @@ import {
   SendIcon,
   VideoIcon,
 } from 'lucide-react';
-import {useEffect, useRef, useState, type CSSProperties} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import {contactChannelHref} from './service-contact-links';
 import {ServiceGallery} from './service-gallery';
 import {ServiceInquiryDialog} from './service-inquiry-dialog';
@@ -84,11 +84,6 @@ export function PublicServicePage({data}: {data: PublicServicePageData}) {
   const containerRadius = resolveBiolinkContainerRadius(appearance);
   const segmented = resolveBiolinkSegmentedTabsAppearance(appearance);
 
-  // One soft-pop for every surface on the page, the same Appearance → Shadow
-  // the storefront cards and the product page use.
-  const surfaceShadow =
-    buttonAppearance.style.boxShadow || 'none';
-
   useEffect(() => {
     if (!appearance?.fontConfig) return;
     loadFonts([appearance.fontConfig], {
@@ -122,13 +117,7 @@ export function PublicServicePage({data}: {data: PublicServicePageData}) {
     <MotionConfig reducedMotion="user">
       <div
         className="relative isolate min-h-screen px-4 py-5 text-[var(--biolink-text)] sm:px-6 sm:py-10"
-        style={
-          {
-            ...resolveBiolinkThemeVariables(appearance),
-            fontFamily: appearance?.fontConfig?.family,
-            '--biolink-surface-shadow': surfaceShadow,
-          } as CSSProperties
-        }
+        style={resolveBiolinkPublicAppearanceStyle(appearance)}
       >
         <div className="fixed inset-0 z-0">
           <Background appearance={appearance} />
