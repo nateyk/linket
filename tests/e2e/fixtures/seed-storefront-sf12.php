@@ -13,6 +13,7 @@ use App\CreatorServices\Models\CreatorService;
 use App\CreatorServices\Models\ServiceFaq;
 use App\CreatorServices\Models\ServicePackage;
 use App\Stores\Models\Store;
+use App\Storefront\Models\DigitalProduct;
 use Illuminate\Support\Facades\DB;
 
 $database = (string) DB::connection()->getDatabaseName();
@@ -31,6 +32,32 @@ if (
 }
 
 $store = Store::query()->where('back_half', 'e2e-buyer-store')->firstOrFail();
+$product = DigitalProduct::query()
+    ->where('user_id', $store->user_id)
+    ->where('title', 'E2E Buyer Digital Guide')
+    ->firstOrFail();
+
+// The buyer E2E seed links the product to the store, but does not create the
+// visual Shop widget. A published creator profile hides Products without it.
+$store->forceFill([
+    'builder_mode' => Store::BUILDER_MODE_CREATOR_PROFILE,
+    'profile_config' => [
+        'display_name' => 'E2E Buyer Creator',
+        'profile_title' => 'Synthetic QA storefront',
+        'bio' => 'Test-only shop and service profile',
+    ],
+])->save();
+$store->widgets()->updateOrCreate(
+    ['type' => 'shop'],
+    [
+        'active' => true,
+        'position' => 0,
+        'config' => [
+            'source' => 'digital-products',
+            'product_ids' => [$product->id],
+        ],
+    ],
+);
 $service = CreatorService::query()->updateOrCreate(
     ['store_id' => $store->id, 'slug' => 'sf12-qa-service'],
     [
