@@ -61,7 +61,8 @@ function ResponsiveProductCardFixture({
 const meta = {
   title: 'Storefront/SF-12 Product Card Responsive QA',
   component: ResponsiveProductCardFixture,
-  tags: ['autodocs'],
+  // vite.config.ts only runs stories tagged ai-generated in Chromium CI.
+  tags: ['ai-generated', 'autodocs'],
   parameters: {
     layout: 'centered',
   },
