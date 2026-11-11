@@ -135,6 +135,8 @@ jobs:
           SERVICE_URL="$(tail -n 1 /tmp/sf12-seed-url.txt)"
           if [[ "$SERVICE_URL" != http://127.0.0.1:8081/* ]]; then
             echo "SF-12 fixture did not return a local service URL; output lines: $(wc -l < /tmp/sf12-seed-url.txt)" >&2
+            echo 'Sanitized first 25 lines of synthetic seeder output:' >&2
+            sed -n '1,25p' /tmp/sf12-seed-url.txt | sed -E 's/[[:alnum:]_.+-]+@[[:alnum:]_.-]+/[redacted-email]/g' >&2
             exit 1
           fi
           printf 'LINKET_E2E_PUBLIC_SERVICE_URL=%s\n' "$SERVICE_URL" >> "$GITHUB_ENV"
