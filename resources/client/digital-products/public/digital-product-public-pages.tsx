@@ -660,7 +660,7 @@ function BuyerDetailsDialog({
         <Dialog.Backdrop />
         <Dialog.Content
           showCloseButton={false}
-          className="bg-[var(--biolink-surface-strong)] text-[var(--biolink-text)] sm:max-w-md"
+          className="max-h-[calc(100dvh-1.5rem)] overflow-y-auto bg-[var(--biolink-surface-strong)] text-[var(--biolink-text)] sm:max-w-md"
           style={resolveBiolinkPublicAppearanceStyle(appearance)}
         >
           <Dialog.CloseButton
@@ -681,6 +681,7 @@ function BuyerDetailsDialog({
               <LockKeyholeIcon />
               <Trans message="Complete your purchase" />
             </Dialog.Title>
+            <p className="text-xs font-medium text-[var(--biolink-muted-text)]"><Trans message="Step 1 of 2 · Buyer information" /></p>
             <div
               className={cn(
                 'flex items-center gap-3 rounded-card-xs bg-[var(--biolink-surface)] px-3 py-2.5',
@@ -804,7 +805,7 @@ function BuyerDetailsDialog({
                   </select>
                 </Field.Root>
               )}
-              <ul className="flex flex-col gap-2 border-t border-[var(--biolink-border)] pt-4 text-sm text-[var(--biolink-muted-text)]">
+              <ul className="flex flex-col gap-1.5 border-t border-[var(--biolink-border)] pt-3 text-xs text-[var(--biolink-muted-text)]">
                 <li className="flex items-start gap-2">
                   <CheckCircle2Icon
                     className="mt-0.5 size-4 shrink-0 text-positive"
