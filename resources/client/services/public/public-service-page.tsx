@@ -328,8 +328,10 @@ export function PublicServicePage({data}: {data: PublicServicePageData}) {
                         <a
                           key={href}
                           href={href}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                          // mailto: and tel: should launch their handlers without
+                          // opening an unnecessary blank browser tab.
+                          target={/^https?:/.test(href) ? '_blank' : undefined}
+                          rel={/^https?:/.test(href) ? 'noopener noreferrer' : undefined}
                           className={cn(
                             buttonVariants({variant: 'outline'}),
                             'h-auto min-h-11 w-full justify-start gap-2 whitespace-normal text-start',
