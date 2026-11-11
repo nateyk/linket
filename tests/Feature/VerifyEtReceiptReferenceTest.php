@@ -13,6 +13,17 @@ it('normalizes supported references and receipt URLs', function (string $bank, s
     ['boa', 'SYNTHETIC123', 'SYNTHETIC123'],
 ]);
 
+it('rejects the receiving account number as a receipt ID without consulting the provider', function (): void {
+    try {
+        app(ReceiptReference::class)->assertNotReceivingAccount('1000 1234-56789', '1000123456789');
+        test()->fail('Expected receiving account confusion to be rejected.');
+    } catch (ValidationException $e) {
+        expect($e->errors())->toHaveKey('reference');
+    }
+
+    app(ReceiptReference::class)->assertNotReceivingAccount('fHCxyTVljBclm6Yk4C', '1000123456789');
+});
+
 it('rejects unrelated and deceptive receipt URLs', function (string $bank, string $input): void {
     expect(fn () => app(ReceiptReference::class)->normalize($bank, $input))->toThrow(ValidationException::class);
 })->with([
