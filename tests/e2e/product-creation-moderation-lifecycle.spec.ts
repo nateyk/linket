@@ -314,8 +314,23 @@ for (const scenario of [
           process.env.LINKET_E2E_CREATOR_PASSWORD ?? 'E2eBuyerCreator!23',
         );
         await screenshotPage.goto(editPath);
-        await expect(screenshotPage.getByRole('heading', {name: 'Course Builder', level: 1})).toBeVisible();
+        const title = screenshotPage.getByRole('heading', {name: 'Course Builder', level: 1});
+        await expect(title).toBeVisible();
         await expect(screenshotPage.getByText('Published', {exact: true}).first()).toBeVisible();
+        // A successful screenshot alone missed a severely clipped mobile H1.
+        // Assert that the title really reflows rather than hiding behind actions.
+        const headingMetrics = await title.evaluate(node => ({
+          hiddenPixels: Math.max(0, node.scrollWidth - node.clientWidth),
+          whiteSpace: getComputedStyle(node).whiteSpace,
+        }));
+        expect(headingMetrics.hiddenPixels, 'Course mobile heading must not clip').toBeLessThanOrEqual(1);
+        expect(headingMetrics.whiteSpace, 'Course mobile heading should allow text reflow').not.toBe('nowrap');
+        expect(
+          await screenshotPage.evaluate(() =>
+            Math.max(0, document.documentElement.scrollWidth - document.documentElement.clientWidth),
+          ),
+          'Course Builder must not overflow mobile viewport',
+        ).toBeLessThanOrEqual(1);
       } else {
         await expect(creator.locator('[aria-label="Approved"]')).toBeVisible();
         await expect(creator.locator('#product-title')).toHaveValue(approvedTitle);
