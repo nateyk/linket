@@ -1,0 +1,325 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import {expect, test, type Browser, type Page, type Response} from '@playwright/test';
+
+/**
+ * UX-35: REAL browser upload/create flows, not synthetic API fixtures.
+ * Guarded by the disposable belink_test reviewer environment. Never run
+ * these persistent writes against staging or production customer data.
+ *
+ * Human native 200% zoom, NVDA/VoiceOver, localization and staging signoff
+ * are separate gates recorded in UX-35 issue #168.
+ */
+const baseURL = process.env.E2E_BASE_URL ?? 'http://127.0.0.1:8081';
+const creatorEmail = process.env.LINKET_E2E_CREATOR_EMAIL ?? 'e2e-buyer-creator@example.test';
+const creatorPassword = process.env.LINKET_E2E_CREATOR_PASSWORD ?? 'E2eBuyerCreator!23';
+const reviewerEmail = process.env.LINKET_E2E_REVIEWER_EMAIL ?? 'e2e-product-reviewer@example.test';
+
+function guardIsolatedEnvironment() {
+  test.skip(
+    process.env.LINKET_ISOLATED_E2E !== '1' ||
+      process.env.VERIFY_ET_MOCK !== 'true' ||
+      !['http://127.0.0.1:8081', 'http://localhost:8081'].includes(baseURL),
+    'Requires opt-in disposable loopback database with mocked verifier',
+  );
+  const fixturePath = path.resolve('storage/app/e2e/buyer-fixture.json');
+  expect(fs.existsSync(fixturePath), 'Guarded buyer fixture must exist').toBe(true);
+  const fixture = JSON.parse(fs.readFileSync(fixturePath, 'utf8')) as {database: string};
+  expect(fixture.database, 'Never write to a non-disposable DB').toBe('belink_test');
+  expect(process.env.LINKET_E2E_REVIEWER_PASSWORD).toBeTruthy();
+}
+
+async function signIn(page: Page, email: string, password: string) {
+  await page.goto('/login');
+  await expect(page.getByRole('heading', {name: 'Login to your account'})).toBeVisible();
+  await page.getByRole('textbox', {name: 'Email Address'}).fill(email);
+  await page.getByRole('textbox', {name: 'Password'}).fill(password);
+  await page.getByRole('button', {name: 'Login', exact: true}).click();
+  await expect(page).toHaveURL(/\/dashboard(?:\/|$)/, {timeout: 20000});
+}
+
+function isItemResponse(response: Response, itemId?: number) {
+  const pathname = new URL(response.url()).pathname;
+  return pathname === (itemId ? '/api/v1/items/' + itemId : '/api/v1/items') &&
+    response.request().method() === 'POST' &&
+    (itemId ? response.request().headers()['x-http-method-override']?.toUpperCase() === 'PUT'
+      : !response.request().headers()['x-http-method-override']);
+}
+
+function isSubmitResponse(response: Response, id: number) {
+  return new URL(response.url()).pathname === '/api/v1/items/' + id + '/submit' &&
+    response.request().method() === 'POST';
+}
+
+function makePdf(): Buffer {
+  // A minimal well-formed, single-page PDF with accurate xref offsets.
+  const objs = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 200] /Resources << >> /Contents 4 0 R >>',
+    '<< /Length 0 >>\nstream\n\nendstream',
+  ];
+  let data = '%PDF-1.4\n';
+  const offsets = [0];
+  for (let i = 0; i < objs.length; i++) {
+    offsets.push(Buffer.byteLength(data, 'utf8'));
+    data += (i + 1) + ' 0 obj\n' + objs[i] + '\nendobj\n';
+  }
+  const xrefOffset = Buffer.byteLength(data, 'utf8');
+  data += 'xref\n0 5\n0000000000 65535 f \n';
+  for (const offset of offsets.slice(1)) {
+    data += String(offset).padStart(10, '0') + ' 00000 n \n';
+  }
+  data += 'trailer\n<< /Size 5 /Root 1 0 R >>\nstartxref\n' + xrefOffset + '\n%%EOF\n';
+  return Buffer.from(data, 'utf8');
+}
+
+function makeWav(): Buffer {
+  // 250 ms of silent 8 kHz mono PCM, with a valid RIFF/WAVE header.
+  const samples = 2000;
+  const payloadBytes = samples * 2;
+  const bytes = Buffer.alloc(44 + payloadBytes);
+  bytes.write('RIFF', 0, 'ascii');
+  bytes.writeUInt32LE(36 + payloadBytes, 4);
+  bytes.write('WAVEfmt ', 8, 'ascii');
+  bytes.writeUInt32LE(16, 16);
+  bytes.writeUInt16LE(1, 20);
+  bytes.writeUInt16LE(1, 22);
+  bytes.writeUInt32LE(8000, 24);
+  bytes.writeUInt32LE(16000, 28);
+  bytes.writeUInt16LE(2, 32);
+  bytes.writeUInt16LE(16, 34);
+  bytes.write('data', 36, 'ascii');
+  bytes.writeUInt32LE(payloadBytes, 40);
+  return bytes;
+}
+
+async function approveRealProduct(browser: Browser, id: number, expectedTitle: string) {
+  const context = await browser.newContext({baseURL, viewport: {width: 1280, height: 900}});
+  try {
+    const reviewer = await context.newPage();
+    await signIn(
+      reviewer,
+      reviewerEmail,
+      process.env.LINKET_E2E_REVIEWER_PASSWORD!,
+    );
+    await reviewer.goto('/admin/items/' + id);
+    await expect(reviewer.getByText(expectedTitle).first()).toBeVisible();
+    const responsePromise = reviewer.waitForResponse(response =>
+      new URL(response.url()).pathname === '/api/v1/admin/items/' + id + '/approve' &&
+      response.request().method() === 'POST',
+    );
+    await reviewer.getByRole('button', {name: 'Approve', exact: true}).click();
+    const response = await responsePromise;
+    expect(response.status(), 'Real reviewer approval').toBe(200);
+    expect(((await response.json()) as {status: string}).status).toBe('approved');
+  } finally {
+    await context.close();
+  }
+}
+
+const uploadScenarios = [
+  {
+    type: 'digital',
+    label: 'Digital product',
+    section: 'Files buyers receive',
+    name: 'creator-guide.txt',
+    mimeType: 'text/plain',
+    file: () => Buffer.from('Linket isolated private product download\n', 'utf8'),
+    billing: 'free',
+    cents: 0,
+  },
+  {
+    type: 'ebook',
+    label: 'E-book',
+    section: 'Book files',
+    name: 'creator-book.pdf',
+    mimeType: 'application/pdf',
+    file: makePdf,
+    billing: 'paid',
+    cents: 1425,
+  },
+  {
+    type: 'audio',
+    label: 'Audio',
+    section: 'Full audio files',
+    name: 'creator-audio.wav',
+    mimeType: 'audio/wav',
+    file: makeWav,
+    billing: 'free',
+    cents: 0,
+  },
+] as const;
+
+for (const scenario of uploadScenarios) {
+  test('UX-35 real ' + scenario.type + ' upload → new item → edit → review → approve', async ({
+    browser,
+  }, testInfo) => {
+    guardIsolatedEnvironment();
+    test.setTimeout(180_000);
+    const context = await browser.newContext({baseURL, viewport: {width: 375, height: 812}});
+    const creator = await context.newPage();
+    const title = 'UX35 new ' + scenario.label + ' creator E2E';
+    let itemId = 0;
+    const creates: string[] = [];
+    try {
+      await signIn(creator, creatorEmail, creatorPassword);
+      await creator.goto('/dashboard/items/new/' + scenario.type + '?billing=' + scenario.billing);
+      await expect(creator.getByRole('heading', {name: new RegExp('create ' + scenario.label, 'i'), level: 1})).toBeVisible();
+      await creator.locator('#product-title').fill(title);
+      if (scenario.billing === 'paid') {
+        await creator.locator('#course-price, #product-price, input[type="number"]').first().fill((scenario.cents / 100).toFixed(2));
+      }
+
+      const files = creator.getByRole('region', {name: scenario.section});
+      const uploadInput = files.locator('input[type="file"]');
+      await expect(uploadInput).toHaveCount(1);
+      await uploadInput.setInputFiles({
+        name: scenario.name,
+        mimeType: scenario.mimeType,
+        buffer: scenario.file(),
+      });
+      await expect(
+        files.getByRole('button', {name: 'Remove ' + scenario.name}),
+        'Real TUS upload must persist the private file before product creation',
+      ).toBeVisible({timeout: 65000});
+
+      creator.on('request', request => {
+        if (new URL(request.url()).pathname === '/api/v1/items' &&
+            request.method() === 'POST') creates.push(request.url());
+      });
+      const creation = creator.waitForResponse(response => isItemResponse(response));
+      await creator.getByRole('button', {name: 'Save draft'}).click();
+      const saved = await creation;
+      expect(saved.ok(), 'Server accepted real product create').toBe(true);
+      const payload = (await saved.json()) as {data: {id: number; type: string}};
+      itemId = payload.data.id;
+      expect(itemId).toBeGreaterThan(0);
+      expect(payload.data.type).toBe(scenario.type);
+      const posted = saved.request().postDataJSON() as {
+        type: string;
+        price_cents: number;
+        file_ids: number[];
+      };
+      expect(posted.type).toBe(scenario.type);
+      expect(posted.price_cents).toBe(scenario.cents);
+      expect(posted.file_ids).toHaveLength(1);
+      expect(posted.file_ids[0]).toBeGreaterThan(0);
+      expect(creates, 'No duplicate create POST on a successful response').toHaveLength(1);
+
+      await expect(creator).toHaveURL(new RegExp('/dashboard/items/' + itemId + '/edit$'));
+      await creator.reload();
+      await expect(creator.locator('#product-title')).toHaveValue(title);
+      await expect(creator.getByRole('button', {name: 'Remove ' + scenario.name})).toBeVisible();
+
+      const updatedTitle = title + ' revised';
+      await creator.locator('#product-title').fill(updatedTitle);
+      const update = creator.waitForResponse(response => isItemResponse(response, itemId));
+      await creator.getByRole('button', {name: 'Save draft'}).click();
+      expect((await update).ok(), 'Persisted edit to a newly created item').toBe(true);
+
+      const submission = creator.waitForResponse(response => isSubmitResponse(response, itemId));
+      await creator.getByRole('button', {name: 'Submit for review'}).click();
+      const submitted = await submission;
+      expect(submitted.status()).toBe(200);
+      expect(((await submitted.json()) as {data: {status: string}}).data.status).toBe('pending_approval');
+      await approveRealProduct(browser, itemId, updatedTitle);
+      await creator.goto('/dashboard/items/' + itemId + '/edit');
+      await expect(creator.locator('[aria-label="Approved"]')).toBeVisible();
+
+      const screenshot = testInfo.outputPath('created-' + scenario.type + '-approved-375.png');
+      await creator.screenshot({path: screenshot, fullPage: true});
+      await testInfo.attach('UX35 ' + scenario.type + ' real upload-to-approved (375px)', {
+        path: screenshot,
+        contentType: 'image/png',
+      });
+    } finally {
+      await context.close();
+    }
+  });
+}
+
+test('UX-35 real Course new → chapter → published lesson → review → approve', async ({
+  browser,
+}, testInfo) => {
+  guardIsolatedEnvironment();
+  test.setTimeout(180_000);
+  const context = await browser.newContext({baseURL, viewport: {width: 1280, height: 900}});
+  const creator = await context.newPage();
+  const title = 'UX35 new Course curriculum E2E';
+  let id = 0;
+  const createPosts: string[] = [];
+  try {
+    await signIn(creator, creatorEmail, creatorPassword);
+    await creator.goto('/dashboard/items/new/course?billing=free');
+    await expect(creator.getByRole('heading', {name: 'Create course', level: 1})).toBeVisible();
+    await creator.locator('#course-title').fill(title);
+    creator.on('request', request => {
+      if (new URL(request.url()).pathname === '/api/v1/items' &&
+          request.method() === 'POST') createPosts.push(request.url());
+    });
+    const creation = creator.waitForResponse(response => isItemResponse(response));
+    await creator.getByRole('button', {name: 'Create course'}).click();
+    const saved = await creation;
+    expect(saved.ok()).toBe(true);
+    const responseData = (await saved.json()) as {data: {id: number; type: string}};
+    id = responseData.data.id;
+    expect(id).toBeGreaterThan(0);
+    expect(responseData.data.type).toBe('course');
+    expect(createPosts, 'Course setup must create exactly once').toHaveLength(1);
+    await expect(creator).toHaveURL(new RegExp('/dashboard/items/' + id + '/course$'));
+    await expect(creator.getByRole('heading', {name: 'Course Builder', level: 1})).toBeVisible();
+
+    const chapter = creator.waitForResponse(response =>
+      new URL(response.url()).pathname.match(/\/api\/v1\/courses\/\d+\/chapters$/) !== null &&
+      response.request().method() === 'POST',
+    );
+    await creator.getByRole('button', {name: 'New chapter'}).click();
+    expect((await chapter).ok(), 'Real first chapter create').toBe(true);
+    await expect(creator.getByRole('button', {name: 'New lesson'})).toBeVisible();
+
+    const lesson = creator.waitForResponse(response =>
+      new URL(response.url()).pathname.match(/\/api\/v1\/course-chapters\/\d+\/lessons$/) !== null &&
+      response.request().method() === 'POST',
+    );
+    await creator.getByRole('button', {name: 'New lesson'}).click();
+    expect((await lesson).ok(), 'Real first lesson create').toBe(true);
+    const published = creator.getByRole('switch').last();
+    await expect(published).toBeVisible();
+    await published.click();
+    await expect(published).toHaveAttribute('aria-checked', 'true');
+    const saveLesson = creator.waitForResponse(response =>
+      new URL(response.url()).pathname.match(/\/api\/v1\/course-lessons\/\d+$/) !== null &&
+      ['PUT', 'POST'].includes(response.request().method()) &&
+      (response.request().method() === 'PUT' ||
+        response.request().headers()['x-http-method-override']?.toUpperCase() === 'PUT'),
+    );
+    await creator.getByRole('button', {name: 'Save changes'}).click();
+    expect((await saveLesson).ok(), 'Published lesson persisted').toBe(true);
+
+    await expect(creator.getByRole('button', {name: 'Submit for review'})).toBeEnabled();
+    const submission = creator.waitForResponse(response => isSubmitResponse(response, id));
+    await creator.getByRole('button', {name: 'Submit for review'}).click();
+    expect((await submission).status()).toBe(200);
+    await approveRealProduct(browser, id, title);
+
+    const mobile = await browser.newContext({baseURL, viewport: {width: 375, height: 812}});
+    try {
+      const mobilePage = await mobile.newPage();
+      await signIn(mobilePage, creatorEmail, creatorPassword);
+      await mobilePage.goto('/dashboard/items/' + id + '/course');
+      await expect(mobilePage.getByRole('heading', {name: 'Course Builder', level: 1})).toBeVisible();
+      await expect(mobilePage.getByText('Published', {exact: true}).first()).toBeVisible();
+      const screenshot = testInfo.outputPath('created-course-approved-375.png');
+      await mobilePage.screenshot({path: screenshot, fullPage: true});
+      await testInfo.attach('UX35 Course new-to-approved 375px', {
+        path: screenshot,
+        contentType: 'image/png',
+      });
+    } finally {
+      await mobile.close();
+    }
+  } finally {
+    await context.close();
+  }
+});
