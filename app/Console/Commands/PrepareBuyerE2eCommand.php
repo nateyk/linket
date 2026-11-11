@@ -114,6 +114,7 @@ class PrepareBuyerE2eCommand extends Command
                 // The caller already verified the disposable DB, loopback URL
                 // and reviewer-only opt-in before any seeded mutations.
                 $this->ensureDisposableCreatorUploadRole($creator);
+                $this->seedNewProductCreationCreator();
             }
 
             $workspace = DB::table('workspace_user')
@@ -335,6 +336,36 @@ class PrepareBuyerE2eCommand extends Command
             throw new \RuntimeException(
                 'The disposable creator lacks standard Users files.create permission.',
             );
+        }
+    }
+
+    /**
+     * Create a separate *ordinary free-tier* user for real new-item browser QA.
+     * The preseeded buyer/moderation creator already occupies five free slots.
+     * This account is used only from the guarded --with-reviewer local fixture;
+     * never relax the creator product limits or grant a special plan.
+     */
+    private function seedNewProductCreationCreator(): void
+    {
+        $email = 'e2e-new-product-creator@example.test';
+        $creator = User::query()->firstOrCreate(
+            ['email' => $email],
+            [
+                'name' => 'E2E New Product Creator',
+                'username' => 'e2e-new-product-'.Str::lower(Str::random(6)),
+                'password' => Hash::make('E2eBuyerCreator!23'),
+                'email_verified_at' => now(),
+            ],
+        );
+        $creator->forceFill([
+            'password' => Hash::make('E2eBuyerCreator!23'),
+            'email_verified_at' => now(),
+        ])->save();
+
+        $this->ensureDisposableCreatorUploadRole($creator);
+
+        if (! DB::table('workspace_user')->where('user_id', $creator->id)->exists()) {
+            (new CreateWorkspace())->createPersonalWorkspace($creator);
         }
     }
 
