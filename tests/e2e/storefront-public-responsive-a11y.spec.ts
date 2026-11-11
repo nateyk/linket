@@ -158,4 +158,94 @@ test.describe('SF-12 optional public service page evidence', () => {
       await captureAndCheckReflow(page, info, `service-${size.width}`);
     });
   }
+  test('mobile package tabs and quote dialog work by keyboard without sending an inquiry', async ({page}) => {
+    const route = new URL(serviceUrl!, baseUrl);
+    expect(route.origin).toBe(new URL(baseUrl).origin);
+    await page.setViewportSize({width: 375, height: 812});
+    await page.goto(route.toString());
+
+    const list = page.getByRole('tablist', {name: 'Packages'});
+    const tabs = list.getByRole('tab');
+    await expect(tabs).toHaveCount(3);
+    await tabs.nth(0).focus();
+    await expect(tabs.nth(0)).toBeFocused();
+    await page.keyboard.press('ArrowRight');
+    await expect(tabs.nth(1)).toBeFocused();
+    await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'true');
+
+    // Opening and dismissing a quote is safe; submitting an inquiry is not.
+    const request = page.getByRole('button', {name: 'Request this package'});
+    await expect(request).toBeVisible();
+    await request.press('Enter');
+
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText('Standard');
+    await expect(dialog.getByRole('textbox', {name: 'Name'})).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(dialog).not.toBeVisible();
+  });
+
+  test('published seller email contact is an accessible, focusable 44px target', async ({page}) => {
+    const route = new URL(serviceUrl!, baseUrl);
+    expect(route.origin).toBe(new URL(baseUrl).origin);
+    await page.setViewportSize({width: 375, height: 812});
+    await page.goto(route.toString());
+
+    const contact = page.getByRole('link', {name: 'Email creator'});
+    await expect(contact).toBeVisible();
+    await expect(contact).toHaveAttribute('href', 'mailto:qa-creator@example.test');
+    await expect(contact).not.toHaveAttribute('target', '_blank');
+    await contact.focus();
+    await expect(contact).toBeFocused();
+    const bounds = await contact.boundingBox();
+    expect(bounds, 'Seller contact link must have a rendered target').not.toBeNull();
+    expect(bounds!.height, 'Seller contact touch target height').toBeGreaterThanOrEqual(44);
+    expect(bounds!.width, 'Seller contact touch target width').toBeGreaterThanOrEqual(44);
+  });
+
+  test('attach system light/dark preference snapshots and theme tokens for human contrast review', async ({page}, info) => {
+    const route = new URL(serviceUrl!, baseUrl);
+    expect(route.origin).toBe(new URL(baseUrl).origin);
+    await page.setViewportSize({width: 375, height: 812});
+
+    for (const colorScheme of ['light', 'dark'] as const) {
+      await page.emulateMedia({colorScheme, reducedMotion: 'reduce'});
+      await page.goto(route.toString());
+      await expect(page.getByRole('heading', {level: 1})).toBeVisible();
+      const file = info.outputPath(`sf12-system-${colorScheme}-service-375.png`);
+      await page.screenshot({path: file, fullPage: true});
+      await info.attach(`system-${colorScheme}-service`, {
+        path: file,
+        contentType: 'image/png',
+      });
+
+      // Diagnostics only: a system color-scheme preference does not override
+      // a creator's stored Appearance and is NOT a WCAG contrast certification.
+      const colors = await page.evaluate(() => {
+        const painted =
+          document.querySelector<HTMLElement>('[style*="--biolink-text"]') ??
+          document.documentElement;
+        const css = getComputedStyle(painted);
+        return {
+          declaredColorScheme: matchMedia('(prefers-color-scheme: dark)').matches
+            ? 'dark'
+            : 'light',
+          reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
+          text: css.getPropertyValue('--biolink-text').trim(),
+          mutedText: css.getPropertyValue('--biolink-muted-text').trim(),
+          surface: css.getPropertyValue('--biolink-surface').trim(),
+          surfaceStrong: css.getPropertyValue('--biolink-surface-strong').trim(),
+          border: css.getPropertyValue('--biolink-border').trim(),
+        };
+      });
+      await info.attach(`system-${colorScheme}-tokens`, {
+        body: Buffer.from(JSON.stringify(colors, null, 2)),
+        contentType: 'application/json',
+      });
+      expect(colors.declaredColorScheme).toBe(colorScheme);
+      expect(colors.reducedMotion).toBe(true);
+    }
+  });
+
 });
