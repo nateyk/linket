@@ -186,10 +186,18 @@ async function verifyInquiryDialogAppearance(
       text: css.color,
       surface: css.backgroundColor,
       savedForeground: css.getPropertyValue('--biolink-text').trim(),
+      reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
+      hasGradient: [...document.querySelectorAll<HTMLElement>('[style]')].some(
+        item => item.style.backgroundImage.includes('linear-gradient(135deg'),
+      ),
     };
   });
   assertSavedTokens(
-    {foreground: colors.savedForeground, reducedMotion: true, hasGradient: variant.name === 'gradient'},
+    {
+      foreground: colors.savedForeground,
+      reducedMotion: colors.reducedMotion,
+      hasGradient: colors.hasGradient,
+    },
     variant,
     'service',
   );
