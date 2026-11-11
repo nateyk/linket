@@ -193,6 +193,7 @@ jobs:
       - name: Verify isolated new-product uploads, creation and approval for all four types
         shell: bash
         env:
+          LINKET_E2E_CREATOR_EMAIL: e2e-new-product-creator@example.test
           PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/new-product-creation
         run: |
           set -euo pipefail
