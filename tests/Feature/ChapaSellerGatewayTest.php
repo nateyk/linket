@@ -180,7 +180,7 @@ class ChapaSellerGatewayTest extends TestCase
 
         $this->get('/storefront/chapa/checkout-return/'.$order->chapa_tx_ref)
             ->assertOk()
-            ->assertHeader('Cache-Control', 'private, no-store')
+            ->assertHeader('Cache-Control', 'no-store, private')
             ->assertSee('Payment confirmation pending')
             ->assertSee('Open My Purchases')
             ->assertDontSee('buyer@example.test');
