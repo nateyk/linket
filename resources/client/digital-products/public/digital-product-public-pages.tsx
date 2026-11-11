@@ -750,8 +750,16 @@ function BuyerDetailsDialog({
           </Dialog.CloseButton>
           <Dialog.Header>
             <Dialog.Title className="pe-11">
-              <LockKeyholeIcon />
-              <Trans message="Complete your purchase" />
+              {product.payment_mode === 'free' ? (
+                <ShoppingBagIcon aria-hidden="true" />
+              ) : (
+                <LockKeyholeIcon aria-hidden="true" />
+              )}
+              {product.payment_mode === 'free' ? (
+                <Trans message="Get your free product" />
+              ) : (
+                <Trans message="Complete your purchase" />
+              )}
             </Dialog.Title>
             <div
               className={cn(
@@ -781,14 +789,22 @@ function BuyerDetailsDialog({
                   <Trans message="Total" />
                 </p>
                 <p className="text-sm font-semibold tabular-nums">
-                  {formatPrice(product.price_cents, product.currency)}
+                  {product.payment_mode === 'free' ? (
+                    <Trans message="Free" />
+                  ) : (
+                    formatPrice(product.price_cents, product.currency)
+                  )}
                 </p>
               </div>
             </div>
             <Dialog.Description className="text-[var(--biolink-muted-text)]">
-              {product.payment_mode === 'direct'
-                ? <Trans message="You'll pay the creator directly using their bank or wallet details." />
-                : <Trans message="Checkout is temporarily unavailable." />}
+              {product.payment_mode === 'free' ? (
+                <Trans message="No payment details are needed for this free product." />
+              ) : product.payment_mode === 'direct' ? (
+                <Trans message="You'll pay the creator directly using their bank or wallet details." />
+              ) : (
+                <Trans message="Checkout is temporarily unavailable." />
+              )}
             </Dialog.Description>
           </Dialog.Header>
           <Dialog.Body>
@@ -845,7 +861,11 @@ function BuyerDetailsDialog({
                 />
                 {error === 'email' && (
                   <Field.Error id="digital-product-buyer-email-error">
-                    <Trans message="Enter a valid email address to receive your receipt." />
+                    {product.payment_mode === 'free' ? (
+                      <Trans message="Enter a valid email to access your product." />
+                    ) : (
+                      <Trans message="Enter a valid email address to receive your receipt." />
+                    )}
                   </Field.Error>
                 )}
               </Field.Root>
@@ -862,9 +882,11 @@ function BuyerDetailsDialog({
                   onChange={event => onPhoneChange(event.target.value)}
                 />
                 <Field.Description className="text-[var(--biolink-muted-text)]">
-                  {product.payment_mode === 'direct'
-                    ? <Trans message="Used only to help with your order." />
-                    : <Trans message="Checkout is temporarily unavailable." />}
+                  {product.payment_mode === 'unavailable' ? (
+                    <Trans message="Checkout is temporarily unavailable." />
+                  ) : (
+                    <Trans message="Used only to help with your order." />
+                  )}
                 </Field.Description>
               </Field.Root>
               {product.payment_mode === 'direct' && (product.receiving_accounts?.length ?? 0) > 1 && (
@@ -882,22 +904,32 @@ function BuyerDetailsDialog({
                     className="mt-0.5 size-4 shrink-0 text-positive"
                     aria-hidden="true"
                   />
-                  <Trans message="One-time payment, no subscription." />
+                  {product.payment_mode === 'free' ? (
+                    <Trans message="No payment required." />
+                  ) : (
+                    <Trans message="One-time payment, no subscription." />
+                  )}
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle2Icon
                     className="mt-0.5 size-4 shrink-0 text-positive"
                     aria-hidden="true"
                   />
-                  <Trans message="We email your receipt and protected download links as soon as payment is confirmed." />
+                  {product.payment_mode === 'free' ? (
+                    <Trans message="Use your checkout email to access this product in My Portal." />
+                  ) : (
+                    <Trans message="We email your receipt and protected download links as soon as payment is confirmed." />
+                  )}
                 </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2Icon
-                    className="mt-0.5 size-4 shrink-0 text-positive"
-                    aria-hidden="true"
-                  />
-                  <Trans message="Digital delivery is instant; refunds are at the creator's discretion." />
-                </li>
+                {product.payment_mode !== 'free' && (
+                  <li className="flex items-start gap-2">
+                    <CheckCircle2Icon
+                      className="mt-0.5 size-4 shrink-0 text-positive"
+                      aria-hidden="true"
+                    />
+                    <Trans message="Digital delivery is instant; refunds are at the creator's discretion." />
+                  </li>
+                )}
               </ul>
             </form>
           </Dialog.Body>
@@ -926,7 +958,9 @@ function BuyerDetailsDialog({
                     ? 'Starting checkout...'
                     : product.payment_mode === 'direct'
                       ? 'Show payment details'
-                      : 'Checkout unavailable'
+                      : product.payment_mode === 'free'
+                        ? 'Continue for free'
+                        : 'Checkout unavailable'
                 }
               />
             </Button>
