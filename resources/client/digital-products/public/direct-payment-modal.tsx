@@ -38,6 +38,7 @@ export type ReceivingAccount = {
 };
 
 type PaymentInstructions = {
+  status?: string;
   receiving_account_id?: number;
   provider: string;
   bank_name?: string;
