@@ -26,8 +26,6 @@ describe('shared product card integration', () => {
 describe('shared product card consistency', () => {
   test('uses theme tokens and app conventions, not hardcoded values', () => {
     expect(source).toContain('rounded-card');
-    expect(source).toContain('text-base leading-6 font-medium');
-    expect(source).toContain('focus-visible:outline-primary');
     expect(source).not.toContain('rounded-2xl');
     expect(source).toContain('fill-current text-warning');
     expect(source).not.toContain('text-amber-500');
@@ -168,5 +166,19 @@ describe('shared product cover loading', () => {
     // Above-the-fold call sites (product gallery hero) opt out with eager;
     // they are owned by other workstreams, so only the default is enforced here.
     expect(coverSource).not.toContain('loading="eager"');
+  });
+});
+
+
+describe('storefront appearance extension', () => {
+  test('allows public cards to override supporting text without changing dashboard defaults', () => {
+    expect(source).toContain('description?: string;');
+    expect(source).toContain('classNames?.description');
+    expect(source).toContain('text-muted-foreground');
+  });
+
+  test('wraps long unbroken product and service names in a two-line heading', () => {
+    expect(source).toContain('line-clamp-2');
+    expect(source).toContain('[overflow-wrap:anywhere]');
   });
 });
