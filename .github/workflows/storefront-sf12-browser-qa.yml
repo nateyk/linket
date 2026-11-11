@@ -126,8 +126,17 @@ jobs:
           php artisan db:seed --class="Common\\Database\\Seeders\\UploadBackendsSeeder" --force --no-interaction
           php artisan linket:prepare-buyer-e2e --no-interaction
           test -s storage/app/e2e/buyer-fixture.json
-          SERVICE_URL="$(php tests/e2e/fixtures/seed-storefront-sf12.php)"
-          [[ "$SERVICE_URL" == http://127.0.0.1:8081/* ]]
+          php -l tests/e2e/fixtures/seed-storefront-sf12.php
+          if ! php -d display_errors=1 -d log_errors=1 tests/e2e/fixtures/seed-storefront-sf12.php > /tmp/sf12-seed-url.txt 2> /tmp/sf12-seed-error.txt; then
+            echo 'SF-12 isolated Appearance/service fixture failed:' >&2
+            sed -n '1,16p' /tmp/sf12-seed-error.txt >&2
+            exit 1
+          fi
+          SERVICE_URL="$(tail -n 1 /tmp/sf12-seed-url.txt)"
+          if [[ "$SERVICE_URL" != http://127.0.0.1:8081/* ]]; then
+            echo "SF-12 fixture did not return a local service URL; output lines: $(wc -l < /tmp/sf12-seed-url.txt)" >&2
+            exit 1
+          fi
           printf 'LINKET_E2E_PUBLIC_SERVICE_URL=%s\n' "$SERVICE_URL" >> "$GITHUB_ENV"
           echo 'Published service fixture created in disposable test DB'
 
