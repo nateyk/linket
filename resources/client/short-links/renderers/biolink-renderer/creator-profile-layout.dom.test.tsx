@@ -470,9 +470,11 @@ describe('public creator card responsive readability (SF-06)', () => {
     // The mock router writes "to" rather than resolving it into "href".
     expect(message!.getAttribute('to')).toBe('mailto:hi@example.com');
 
-    const instagram = within(mobileBranch()).getByRole('link', {
-      name: 'Instagram username',
-    });
+    // The mocked router exposes a raw `to` attribute, not a real href:
+    // select by accessible label rather than role="link" in this DOM fixture.
+    const instagram = within(mobileBranch()).getByLabelText(
+      'Instagram username',
+    );
     expect(instagram.className).toContain('pointer-coarse:min-h-11');
     expect(instagram.className).toContain('pointer-coarse:min-w-11');
   });
