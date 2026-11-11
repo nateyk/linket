@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import {expect, test, type Page} from '@playwright/test';
+import {expect, test, type BrowserContext, type Page} from '@playwright/test';
 
 type ReviewType = 'digital' | 'ebook' | 'audio' | 'course';
 
@@ -203,6 +203,7 @@ for (const scenario of [
     });
     const admin = await adminContext.newPage();
     const creator = await creatorContext.newPage();
+    const extraContexts: BrowserContext[] = [];
     let approvedTitle = scenario.title;
     const editPath = scenario.type === 'course'
       ? `/dashboard/items/${id}/course`
@@ -296,11 +297,25 @@ for (const scenario of [
       expect(((await approved.json()) as {status: string}).status).toBe('approved');
 
       await creator.goto(editPath);
+      let screenshotPage = creator;
       if (scenario.type === 'course') {
         await expect(creator.getByText('Published', {exact: true}).first()).toBeVisible();
-        // A mobile snapshot captures the actual curriculum header after approval.
-        await creator.setViewportSize({width: 375, height: 812});
-        await expect(creator.getByRole('heading', {name: 'Course Builder'})).toBeVisible();
+        // A fresh mobile session avoids carrying desktop sidebar state into
+        // a 375px screenshot; that transition previously obscured the builder.
+        const mobileContext = await browser.newContext({
+          baseURL,
+          viewport: {width: 375, height: 812},
+        });
+        extraContexts.push(mobileContext);
+        screenshotPage = await mobileContext.newPage();
+        await signIn(
+          screenshotPage,
+          process.env.LINKET_E2E_CREATOR_EMAIL ?? 'e2e-buyer-creator@example.test',
+          process.env.LINKET_E2E_CREATOR_PASSWORD ?? 'E2eBuyerCreator!23',
+        );
+        await screenshotPage.goto(editPath);
+        await expect(screenshotPage.getByRole('heading', {name: 'Course Builder', level: 1})).toBeVisible();
+        await expect(screenshotPage.getByText('Published', {exact: true}).first()).toBeVisible();
       } else {
         await expect(creator.locator('[aria-label="Approved"]')).toBeVisible();
         await expect(creator.locator('#product-title')).toHaveValue(approvedTitle);
@@ -313,12 +328,13 @@ for (const scenario of [
       }
 
       const shot = testInfo.outputPath(`reviewed-${scenario.type}-mobile-375.png`);
-      await creator.screenshot({path: shot, fullPage: true});
+      await screenshotPage.screenshot({path: shot, fullPage: true});
       await testInfo.attach(`Real ${scenario.type} creator state approved — 375px`, {
         path: shot,
         contentType: 'image/png',
       });
     } finally {
+      await Promise.all(extraContexts.map(context => context.close()));
       await adminContext.close();
       await creatorContext.close();
     }
