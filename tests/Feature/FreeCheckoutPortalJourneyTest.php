@@ -30,12 +30,26 @@ class FreeCheckoutPortalJourneyTest extends TestCase
 
     public function testFreeCheckoutIsPaidWithoutVerificationAndAvailableThroughAuthorizedPortalRecovery(): void
     {
-        // CI uses its own belink_test database. Never touch a production DB or
-        // real provider. The OTP delivery is represented by a test-only code.
+        // Only an isolated test DB, fake mail and fake HTTP are used here.
         Http::fake();
         Queue::fake();
         config()->set('services.verify_et.mock', false);
 
+        [$store, $product] = $this->createPublicFreeProduct();
+        $buyerEmail = 'qa-buyer-'.Str::lower(Str::random(12)).'@example.test';
+        $order = $this->checkoutAndAssertFulfilled($store, $product, $buyerEmail);
+
+        Http::assertNothingSent();
+        $this->getJson('/api/v1/public/my-portal/library')->assertForbidden();
+
+        $verifiedCookie = $this->verifyEmailRecovery($buyerEmail);
+        $this->assertAuthorizedPortalDownload($order, $verifiedCookie);
+        Http::assertNothingSent();
+    }
+
+    /** @return array{Biolink, DigitalProduct} */
+    private function createPublicFreeProduct(): array
+    {
         $creator = User::query()->forceCreate([
             'name' => 'QA Creator',
             'username' => 'qa-creator-'.Str::lower(Str::random(12)),
@@ -62,6 +76,16 @@ class FreeCheckoutPortalJourneyTest extends TestCase
             'approved_at' => now(),
             'type' => 'digital',
         ]);
+        $this->attachFreeDownload($store, $product, $creator);
+
+        return [$store, $product];
+    }
+
+    private function attachFreeDownload(
+        Biolink $store,
+        DigitalProduct $product,
+        User $creator,
+    ): void {
         $file = FileEntry::query()->create([
             'name' => 'qa-free-file.pdf',
             'file_name' => 'qa-free-file.pdf',
@@ -69,29 +93,28 @@ class FreeCheckoutPortalJourneyTest extends TestCase
             'extension' => 'pdf',
             'type' => 'file',
             'file_size' => 100,
-            'workspace_id' => $workspace->id,
+            'workspace_id' => $product->workspace_id,
             'owner_id' => $creator->id,
         ]);
         $product->files()->attach($file->id);
         $product->biolinks()->attach($store->id);
+    }
 
-        $buyerEmail = 'qa-buyer-'.Str::lower(Str::random(12)).'@example.test';
-        // This is the actual guest-accessible storefront route. The legacy
-        // /api/v1/digital-products/{id}/checkout route is API-access gated and
-        // returns 401 for an anonymous buyer; testing that one would never
-        // exercise the public /username purchase journey.
+    private function checkoutAndAssertFulfilled(
+        Biolink $store,
+        DigitalProduct $product,
+        string $buyerEmail,
+    ): StorefrontOrder {
+        // The real guest-accessible storefront route; the creator API is gated.
         $response = $this->postJson(
             "/api/v1/public/stores/{$store->id}/digital-products/{$product->id}/checkout",
             ['buyer_name' => 'QA Buyer', 'buyer_email' => $buyerEmail],
-        )->assertOk()
-            ->assertJsonStructure(['order_id', 'status']);
+        )->assertOk()->assertJsonStructure(['order_id', 'status']);
 
-        $orderId = (string) $response->json('order_id');
-        // Legacy direct checkout can return the pre-refresh pending status on
-        // the response model even though the synchronous DB fulfillment is
-        // committed. Verify the persisted order rather than trusting a stale
-        // Eloquent snapshot or asserting a false frontend requirement.
-        $order = StorefrontOrder::query()->where('uuid', $orderId)->firstOrFail();
+        // Verify persisted fulfillment, not the legacy response's stale status.
+        $order = StorefrontOrder::query()
+            ->where('uuid', (string) $response->json('order_id'))
+            ->firstOrFail();
         $this->assertSame('paid', $order->status);
         $this->assertSame($store->id, $order->biolink_id);
         $this->assertSame(0, (int) $order->gross_amount_cents);
@@ -101,11 +124,11 @@ class FreeCheckoutPortalJourneyTest extends TestCase
             'storefront_order_id' => $order->id,
         ]);
 
-        // A free order must not start an external payment request, and portal
-        // access is forbidden without a verified buyer-email session.
-        Http::assertNothingSent();
-        $this->getJson('/api/v1/public/my-portal/library')->assertForbidden();
+        return $order;
+    }
 
+    private function verifyEmailRecovery(string $buyerEmail): string
+    {
         $emailHash = hash('sha256', strtolower($buyerEmail));
         RateLimiter::clear("digital-product-recovery:email:{$emailHash}");
         RateLimiter::clear('digital-product-recovery:ip:127.0.0.1');
@@ -117,8 +140,7 @@ class FreeCheckoutPortalJourneyTest extends TestCase
             ->where('email_hash', $emailHash)->latest('id')->firstOrFail();
         $this->assertTrue($recovery->expires_at->isFuture());
 
-        // Mail is deliberately faked: replace the queued challenge's code
-        // hash with the known test OTP, then verify through the real endpoint.
+        // No real OTP is delivered; insert a known test-only hash.
         $code = '246810';
         $recovery->update([
             'token_hash' => hash('sha256', "{$emailHash}.{$code}"),
@@ -138,23 +160,27 @@ class FreeCheckoutPortalJourneyTest extends TestCase
         $cookie = $verified->getCookie(OrderRecoveryService::COOKIE, decrypt: false);
         $this->assertNotNull($cookie);
 
+        return $cookie->getValue();
+    }
+
+    private function assertAuthorizedPortalDownload(
+        StorefrontOrder $order,
+        string $cookieValue,
+    ): void {
         $portal = $this->withCredentials()
             ->withHeader('Referer', 'http://localhost')
             ->withUnencryptedCookies([
-                OrderRecoveryService::COOKIE => $cookie->getValue(),
+                OrderRecoveryService::COOKIE => $cookieValue,
             ]);
-
         $portal->getJson('/api/v1/public/my-portal/library')
             ->assertOk()
-            ->assertJsonPath('orders.0.id', $orderId)
+            ->assertJsonPath('orders.0.id', $order->uuid)
             ->assertJsonPath('orders.0.gross_amount_cents', 0)
             ->assertJsonPath('orders.0.downloads.0.available', true);
 
         $entitlement = $order->entitlements()->firstOrFail();
         $portal->postJson(
-            "/api/v1/public/my-portal/purchases/{$orderId}/downloads/{$entitlement->id}",
+            "/api/v1/public/my-portal/purchases/{$order->uuid}/downloads/{$entitlement->id}",
         )->assertOk()->assertJsonStructure(['url']);
-
-        Http::assertNothingSent();
     }
 }
