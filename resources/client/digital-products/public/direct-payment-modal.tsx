@@ -15,8 +15,9 @@ import {
   LockIcon,
   RefreshCwIcon,
 } from 'lucide-react';
-import {ReactNode, useCallback, useEffect, useState} from 'react';
+import {type ClipboardEvent, ReactNode, useCallback, useEffect, useState} from 'react';
 import {Link} from 'react-router';
+import {extractReceiptReference, type ReceiptExtraction} from './receipt-reference-extractor';
 
 export type DirectCheckout = {
   order_id: string;
@@ -77,7 +78,7 @@ export function DirectPaymentModal({
   const [downloads, setDownloads] = useState<PaidDownload[]>([]);
   const [busy, setBusy] = useState(false);
   const [rechecking, setRechecking] = useState(false);
-  const [switchingAccount, setSwitchingAccount] = useState(false);
+  const [extractionHint, setExtractionHint] = useState<ReceiptExtraction['kind'] | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [instructionsError, setInstructionsError] = useState(false);
@@ -92,6 +93,7 @@ export function DirectPaymentModal({
     setDeliveryStatus('awaiting_payment');
     setReference('');
     setAccountSuffix('');
+    setExtractionHint(null);
     setErrorMessage(null);
     setValidationError(null);
     setInstructionsError(false);
@@ -179,33 +181,23 @@ export function DirectPaymentModal({
     return () => window.clearInterval(interval);
   }, [checkout, refreshOrder, status, deliveryStatus]);
 
-  // Switch receiving account dynamically
-  const selectReceivingAccount = async (accountId: number) => {
-    if (!checkout || busy || switchingAccount) return;
-    setSwitchingAccount(true);
-    setErrorMessage(null);
-    try {
-      const response = await apiClient.post(
-        `/api/v1/public/direct-orders/${checkout.order_id}/select-account`,
-        {receiving_account_id: accountId},
-        {headers: {'X-Order-Access-Token': checkout.access_token}},
-      );
-      const data: PaymentInstructions = response.data.data ?? response.data;
-      setInstructions(data);
-      setReference('');
-      setAccountSuffix('');
-      setValidationError(null);
-    } catch {
-      setErrorMessage('Failed to switch receiving account. Please try again.');
-    } finally {
-      setSwitchingAccount(false);
-    }
-  };
-
   const copyToClipboard = (text: string) => {
     void navigator.clipboard.writeText(text);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 2000);
+  };
+
+  // Extract locally: do not submit the buyer's entire SMS or unrelated PII.
+  const handleReferencePaste = (event: ClipboardEvent<HTMLInputElement>) => {
+    if (!instructions) return;
+    const pasted = event.clipboardData.getData('text');
+    if (!/\s/.test(pasted.trim()) && !/^https:\/\//i.test(pasted.trim())) return;
+    event.preventDefault();
+    const extracted = extractReceiptReference(instructions.provider, pasted);
+    setReference(extracted.kind === 'found' ? extracted.reference : '');
+    setExtractionHint(extracted.kind);
+    setValidationError(null);
+    setErrorMessage(null);
   };
 
   // Pre-verification validation
@@ -357,8 +349,6 @@ export function DirectPaymentModal({
       || status === 'failed'
       || (status === 'expired' && attemptsRemaining > 0));
 
-  const availableAccounts = instructions?.available_accounts ?? [];
-
   return (
     <Dialog.Root open={!!checkout} onOpenChange={open => !open && onClose()}>
       <Dialog.Portal>
@@ -401,36 +391,6 @@ export function DirectPaymentModal({
             {/* Dynamic Receiving Account Selector */}
             {instructions && canSubmitReference && (
               <div className="flex flex-col gap-3 rounded-card bg-muted/70 p-4 text-sm border border-border">
-                {availableAccounts.length > 1 && attemptsRemaining === 5 && (
-                  <div className="flex flex-col gap-1.5 pb-3 border-b border-border">
-                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      <Trans message="Select receiving bank / account" />
-                    </span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {availableAccounts.map(acc => {
-                        const isSelected = acc.id === instructions.receiving_account_id
-                          || (!instructions.receiving_account_id && acc.provider === instructions.provider);
-                        return (
-                          <button
-                            key={acc.id}
-                            type="button"
-                            disabled={switchingAccount || busy}
-                            onClick={() => void selectReceivingAccount(acc.id)}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-card-sm text-xs font-medium border transition-colors ${
-                              isSelected
-                                ? 'bg-primary text-primary-foreground border-primary'
-                                : 'bg-background hover:bg-muted text-foreground border-border'
-                            }`}
-                          >
-                            <span>{acc.bank_name || acc.provider.toUpperCase()}</span>
-                            <span className="opacity-75">(*{acc.account_ending})</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
                 <div className="flex justify-between gap-4">
                   <span className="text-muted-foreground"><Trans message="Bank or wallet" /></span>
                   <span className="font-medium">{instructions.bank_name || instructions.provider.toUpperCase()}</span>
@@ -541,8 +501,10 @@ export function DirectPaymentModal({
                       <Input
                         bindToHookForm={false}
                         value={reference}
+                         onPaste={handleReferencePaste}
                         onChange={event => {
                           setReference(event.target.value);
+                           setExtractionHint(null);
                            setErrorMessage(null);
                           setValidationError(null);
                         }}
@@ -553,11 +515,27 @@ export function DirectPaymentModal({
                         autoComplete="off"
                       />
                       <Field.Description>
-                        <span id="buyer-payment-reference-help"><Trans message="Use the receipt ID from your completed transfer, not the receiving account number above." /></span>
+                        <span id="buyer-payment-reference-help"><Trans message="Enter a receipt ID or paste your bank/wallet confirmation message. We extract the ID here; never paste your PIN or password." /></span>
                       </Field.Description>
                     </Field.Root>
 
-                    {(instructions?.provider === 'boa'
+                    {extractionHint === 'found' && (
+                       <p role="status" className="text-xs text-positive">
+                         <Trans message="Receipt ID extracted. Check it before selecting Verify payment." />
+                       </p>
+                     )}
+                     {extractionHint === 'ambiguous' && (
+                       <p role="alert" className="text-xs text-destructive">
+                         <Trans message="Multiple receipt IDs were found. Please enter the correct transaction reference manually." />
+                       </p>
+                     )}
+                     {extractionHint === 'none' && (
+                       <p role="alert" className="text-xs text-destructive">
+                         <Trans message="No receipt ID was found in that message. Enter the transaction reference manually." />
+                       </p>
+                     )}
+
+                     {(instructions?.provider === 'boa'
                       || (instructions?.provider === 'cbe' && /^FT[0-9A-Z]{8,12}$/i.test(reference.trim()))) && (
                       <Field.Root>
                         <Field.Label>
