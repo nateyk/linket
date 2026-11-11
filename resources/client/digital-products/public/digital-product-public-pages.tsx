@@ -621,6 +621,7 @@ function BuyerDetailsDialog({
     biolink.profile_config?.display_name || creator?.name || biolink.name;
   const nameInputRef = useRef<HTMLInputElement | null>(null);
   const emailInputRef = useRef<HTMLInputElement | null>(null);
+  const paymentMethodRef = useRef<HTMLFieldSetElement | null>(null);
 
   // Validation errors are announced (Field.Error) but focus used to stay on
   // the submit button — move it to the offending field so keyboard and SR
@@ -631,6 +632,8 @@ function BuyerDetailsDialog({
       nameInputRef.current?.focus();
     } else if (error === 'email') {
       emailInputRef.current?.focus();
+    } else if (error === 'payment_method') {
+      paymentMethodRef.current?.focus();
     }
   }, [error, open]);
 
@@ -799,6 +802,8 @@ function BuyerDetailsDialog({
               </Field.Root>
               {product.payment_mode === 'direct' && (product.receiving_accounts?.length ?? 0) > 1 && (
                 <fieldset
+                  ref={paymentMethodRef}
+                  tabIndex={-1}
                   className="flex flex-col gap-2"
                   aria-invalid={error === 'payment_method'}
                   aria-describedby={error === 'payment_method' ? 'buyer-payment-method-error' : undefined}
