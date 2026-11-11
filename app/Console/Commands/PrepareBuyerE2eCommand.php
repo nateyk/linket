@@ -231,7 +231,7 @@ class PrepareBuyerE2eCommand extends Command
                 // Four independent real moderation fixtures, strictly guarded by
                 // --with-reviewer and the loopback disposable belink_test check.
                 // Audio needs its own MP3 metadata, not the PDF buyer fixture.
-                $audioContent = "ID3\\x04\\x00\\x00\\x00\\x00\\x00\\x00";
+                $audioContent = "ID3\x04\x00\x00\x00\x00\x00\x00";
                 $audioFile = FileEntry::query()
                     ->where('workspace_id', $workspaceId)
                     ->where('owner_id', $creator->id)
