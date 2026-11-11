@@ -302,6 +302,132 @@ describe('LivePreview follows the editor tab (A-06)', () => {
   });
 });
 
+describe('expanded desktop storefront preview (SF-04)', () => {
+  beforeEach(() => {
+    location.pathname = '/dashboard/stores/demo';
+    store.openSection = 'profile';
+    store.profileConfig = null;
+  });
+
+  test('opens a fitted preview dialog without replacing the live desktop panel', async () => {
+    const {container} = render(<LivePreview />);
+    const trigger = screen.getByRole('button', {name: 'Expand preview'});
+
+    expect(container.querySelectorAll('iframe')).toHaveLength(1);
+    expect(panelOf(container).className).toContain('lg:h-full');
+    fireEvent.click(trigger);
+
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Expanded live preview',
+    });
+    expect(dialog.getAttribute('aria-modal')).toBe('true');
+    expect(dialog.className).toContain('92dvh');
+    expect(screen.getByRole('button', {name: 'Close preview'})).toBeTruthy();
+    await waitFor(() =>
+      expect(document.querySelectorAll('iframe')).toHaveLength(2),
+    );
+    expect(dialog.querySelector('iframe')?.getAttribute('src')).toBe(
+      '/demo?preview=1',
+    );
+    expect(dialog.querySelector('[class*="container-type"]')).toBeTruthy();
+  });
+
+  test('Escape dismisses the dialog and returns focus to Expand preview', async () => {
+    render(<LivePreview />);
+    const trigger = screen.getByRole('button', {name: 'Expand preview'});
+    trigger.focus();
+    fireEvent.click(trigger);
+
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Expanded live preview',
+    });
+    await waitFor(() =>
+      expect(dialog.contains(document.activeElement)).toBe(true),
+    );
+    fireEvent.keyDown(document.activeElement as Element, {key: 'Escape'});
+
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('dialog', {name: 'Expanded live preview'}),
+      ).toBeNull(),
+    );
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  test('the close control dismisses the expanded dialog', async () => {
+    render(<LivePreview />);
+    const trigger = screen.getByRole('button', {name: 'Expand preview'});
+    fireEvent.click(trigger);
+    expect(
+      await screen.findByRole('dialog', {name: 'Expanded live preview'}),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', {name: 'Close preview'}));
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', {name: 'Expanded live preview'})).toBeNull(),
+    );
+  });
+
+  test('the expanded iframe receives unsaved draft data and the current section', async () => {
+    store.profileConfig = {bio: 'Draft bio not yet published'};
+    render(<LivePreview />);
+    fireEvent.click(screen.getByRole('button', {name: 'Expand preview'}));
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Expanded live preview',
+    });
+    const frame = dialog.querySelector('iframe')!;
+    const send = vi.fn();
+    Object.defineProperty(frame, 'contentWindow', {
+      configurable: true,
+      value: {postMessage: send},
+    });
+
+    window.dispatchEvent(
+      new MessageEvent('message', {
+        origin: window.location.origin,
+        data: {type: 'linket:store-preview-ready'},
+      }),
+    );
+
+    await waitFor(() => {
+      expect(send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'linket:store-preview',
+          payload: expect.objectContaining({
+            profileConfig: {bio: 'Draft bio not yet published'},
+          }),
+        }),
+        window.location.origin,
+      );
+      expect(send).toHaveBeenCalledWith(
+        {
+          type: 'linket:store-preview-tab',
+          activeTab: 'content',
+          section: 'profile',
+        },
+        window.location.origin,
+      );
+    });
+  });
+
+  test('switching to Insights closes the dialog and it does not reopen on return', async () => {
+    const {rerender} = render(<LivePreview />);
+    fireEvent.click(screen.getByRole('button', {name: 'Expand preview'}));
+    expect(
+      await screen.findByRole('dialog', {name: 'Expanded live preview'}),
+    ).toBeTruthy();
+
+    location.pathname = '/dashboard/stores/demo/insights';
+    rerender(<LivePreview />);
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', {name: 'Expanded live preview'})).toBeNull(),
+    );
+
+    location.pathname = '/dashboard/stores/demo';
+    rerender(<LivePreview />);
+    expect(screen.queryByRole('dialog', {name: 'Expanded live preview'})).toBeNull();
+  });
+});
+
 describe('preview sheet below lg (A-19)', () => {
   beforeEach(() => {
     location.pathname = '/dashboard/stores/demo';
