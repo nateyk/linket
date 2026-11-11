@@ -125,6 +125,7 @@ $appearanceVariants = [
     ],
 ];
 
+try {
 foreach ($appearanceVariants as $variant => $config) {
     $variantStore = Store::query()->updateOrCreate(
         ['back_half' => 'sf12-appearance-'.$variant],
@@ -180,6 +181,12 @@ foreach ($appearanceVariants as $variant => $config) {
             'features' => ['English', 'አማርኛ'],
         ],
     );
+}
+} catch (\Throwable $error) {
+    // This is an isolated test run; report the exception rather than letting
+    // the application's console exception handler render HTML to stdout.
+    fwrite(STDERR, 'SF-12 Appearance fixture: '.get_class($error).': '.$error->getMessage().PHP_EOL);
+    exit(1);
 }
 
 echo rtrim($appUrl, '/').'/'.$store->back_half.'/services/'.$service->slug.PHP_EOL;
