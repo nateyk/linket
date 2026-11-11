@@ -1,8 +1,6 @@
 /**
  * @vitest-environment jsdom
  */
-import fs from 'node:fs';
-import path from 'node:path';
 import {render, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest';
@@ -444,6 +442,7 @@ describe('public creator card responsive readability (SF-06)', () => {
       profile_config: Record<string, unknown>;
     };
     biolink.profile_config.display_name = longName;
+    biolink.profile_config.social_links = {instagram: '@linket'};
     const user = userEvent.setup();
     render(
       <CreatorProfileLayout
@@ -471,15 +470,10 @@ describe('public creator card responsive readability (SF-06)', () => {
     // The mock router writes "to" rather than resolving it into "href".
     expect(message!.getAttribute('to')).toBe('mailto:hi@example.com');
 
-    // Social links are only rendered for recognized, configured providers.
-    // This fixture's legacy "x" key may not map to SocialsType; assert the
-    // exact production touch-size rule without asserting a phantom social link.
-    const profileSource = fs.readFileSync(
-      path.resolve(
-        'resources/client/short-links/renderers/biolink-renderer/creator-profile-layout.tsx',
-      ),
-      'utf8',
-    );
-    expect(profileSource).toContain('pointer-coarse:min-h-11 pointer-coarse:min-w-11');
+    const instagram = within(mobileBranch()).getByRole('link', {
+      name: 'Instagram username',
+    });
+    expect(instagram.className).toContain('pointer-coarse:min-h-11');
+    expect(instagram.className).toContain('pointer-coarse:min-w-11');
   });
 });
