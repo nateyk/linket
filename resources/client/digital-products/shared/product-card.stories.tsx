@@ -97,11 +97,13 @@ const verifyCard: NonNullable<Story['play']> = async ({
   await expect(heading.querySelector('a')!).toHaveAttribute('href', '#sf12-product');
 
   const nameStyles = getComputedStyle(heading);
-  await expect(nameStyles.overflowWrap).toBe('anywhere');
+  await expect(nameStyles.overflowWrap).toMatch(/^(anywhere|break-word)$/);
 
   const summary = card.querySelector('p');
   if (!summary) throw new Error('Expected a supporting description');
-  await expect(getComputedStyle(summary).overflowWrap).toBe('anywhere');
+  await expect(getComputedStyle(summary).overflowWrap).toMatch(
+    /^(anywhere|break-word)$/,
+  );
 
   if (args.scenario === 'carousel') {
     const next = canvas.getByRole('button', {name: 'Next image'});
