@@ -48,6 +48,10 @@ export function PublicServicePage({data}: {data: PublicServicePageData}) {
   const avatarUrl = profile.avatar_url || store.user?.image;
   const [inquiryOpen, setInquiryOpen] = useState(false);
   const [packageId, setPackageId] = useState<number>();
+  // The mobile sticky action follows the tier the visitor last selected.
+  const [selectedOfferPackageId, setSelectedOfferPackageId] = useState<
+    number | undefined
+  >(service.packages[0]?.id);
   const selectedPackage = service.packages.find(
     packageItem => packageItem.id === packageId,
   );
@@ -283,6 +287,7 @@ export function PublicServicePage({data}: {data: PublicServicePageData}) {
                   packages={service.packages}
                   appearance={appearance}
                   onRequest={requestQuote}
+                  onSelect={setSelectedOfferPackageId}
                 />
               </div>
 
@@ -371,7 +376,7 @@ export function PublicServicePage({data}: {data: PublicServicePageData}) {
               className={cn('shrink-0', buttonAppearance.className)}
               style={buttonAppearance.style}
               size="lg"
-              onClick={() => requestQuote()}
+              onClick={() => requestQuote(selectedOfferPackageId)}
             >
               <Trans message="Request a quote" />
             </Button>
