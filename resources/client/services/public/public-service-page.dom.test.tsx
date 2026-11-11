@@ -209,9 +209,9 @@ describe('public service page', () => {
     expect(whatsapp.getAttribute('data-slot')).toBeNull();
     expect(whatsapp.getAttribute('rel')).toContain('noopener');
     expect(whatsapp.className).toContain('min-h-11');
-    expect(screen.getByRole('link', {name: 'Email'}).getAttribute('href')).toBe(
-      'mailto:hello@example.test',
-    );
+    const email = screen.getByRole('link', {name: 'Email'});
+    expect(email.getAttribute('href')).toBe('mailto:hello@example.test');
+    expect(email.getAttribute('target')).toBeNull();
   });
 
   it('deduplicates identical contact destinations while keeping different channels', () => {
