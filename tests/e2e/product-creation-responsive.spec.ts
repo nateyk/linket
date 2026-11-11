@@ -47,6 +47,8 @@ test.describe('product creation responsive evidence', () => {
     {name: 'reflow-320', width: 320, height: 900},
     {name: 'mobile-small', width: 360, height: 800},
     {name: 'mobile', width: 375, height: 812},
+    // UX-34 / Notion QA matrix: cover larger phones as well as compact 360/375px screens.
+    {name: 'mobile-large', width: 430, height: 932},
     {name: 'zoom-200pct-equivalent', width: 720, height: 900},
     {name: 'tablet', width: 768, height: 1024},
     {name: 'tablet-wide', width: 1024, height: 768},
