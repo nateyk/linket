@@ -1,5 +1,5 @@
 /** @vitest-environment jsdom */
-import {cleanup, render, screen, waitFor} from '@testing-library/react';
+import {cleanup, fireEvent, render, screen, waitFor} from '@testing-library/react';
 import {afterEach, expect, it, vi} from 'vitest';
 import {MemoryRouter} from 'react-router';
 import {DirectPaymentModal, type DirectCheckout} from './direct-payment-modal';
@@ -126,6 +126,93 @@ it('renders pending, verifying, manual review, rejected and paid states clearly 
   expect(await screen.findByText('Payment confirmed. Your purchased files are ready to download.')).toBeTruthy();
   expect(screen.getByText('guide.pdf')).toBeTruthy();
   expect(screen.getByRole('link', {name: /Open My Purchases|My Purchases/})).toBeTruthy();
+});
+
+it('rejects a pasted receiving account number without calling the verification provider', async () => {
+  api.get.mockResolvedValue({
+    data: {
+      data: {
+        provider: 'cbe',
+        account_number: '1000123456789',
+        account_name: 'Test Recipient',
+        amount_cents: 46000,
+        currency: 'ETB',
+      },
+    },
+  });
+
+  render(
+    <MemoryRouter>
+      <DirectPaymentModal checkout={checkout} onClose={() => undefined} />
+    </MemoryRouter>,
+  );
+
+  const referenceInput = await screen.findByPlaceholderText('e.g. fHCxyTVljBclm6Yk4C or FT...');
+  fireEvent.change(referenceInput, {target: {value: '1000123456789'}});
+  fireEvent.click(screen.getByRole('button', {name: 'Verify payment'}));
+
+  expect(await screen.findByRole('alert')).toHaveProperty('textContent', expect.stringContaining('receiving account number'));
+  expect(api.post).not.toHaveBeenCalled();
+
+  fireEvent.change(referenceInput, {target: {value: 'fHCxyTVljBclm6Yk4C'}});
+  expect(screen.queryByRole('alert')).toBeNull();
+});
+
+it('hides payment destination details while waiting for verification rather than asking to pay again', async () => {
+  api.get.mockResolvedValue({
+    data: {
+      data: {
+        provider: 'cbe',
+        account_number: '1000123456789',
+        account_name: 'Test Recipient',
+        amount_cents: 46000,
+        currency: 'ETB',
+        status: 'verifying',
+      },
+    },
+  });
+
+  render(
+    <MemoryRouter>
+      <DirectPaymentModal checkout={{...checkout, status: 'verifying'}} onClose={() => undefined} />
+    </MemoryRouter>,
+  );
+
+  expect(await screen.findByText('Verifying')).toBeTruthy();
+  expect(screen.getByText('Track the verification of your existing payment. Do not transfer again.')).toBeTruthy();
+  expect(screen.queryByText('Account number')).toBeNull();
+  expect(screen.queryByRole('button', {name: 'Verify payment'})).toBeNull();
+});
+
+it('does not require a suffix on modern long CBE FT references', async () => {
+  api.get.mockResolvedValue({
+    data: {
+      data: {
+        provider: 'cbe',
+        account_number: '1000123456789',
+        account_name: 'Test Recipient',
+        amount_cents: 46000,
+        currency: 'ETB',
+      },
+    },
+  });
+  api.post.mockResolvedValueOnce({data: {status: 'verifying'}});
+
+  render(
+    <MemoryRouter>
+      <DirectPaymentModal checkout={checkout} onClose={() => undefined} />
+    </MemoryRouter>,
+  );
+
+  const referenceInput = await screen.findByPlaceholderText('e.g. fHCxyTVljBclm6Yk4C or FT...');
+  fireEvent.change(referenceInput, {target: {value: 'FT1234567890123456'}});
+  expect(screen.queryByText('Eight-digit CBE FT suffix')).toBeNull();
+  fireEvent.click(screen.getByRole('button', {name: 'Verify payment'}));
+  await waitFor(() => expect(api.post).toHaveBeenCalledWith(
+    checkout.reference_endpoint,
+    {reference: 'FT1234567890123456', account_suffix: undefined},
+    {headers: {'X-Order-Access-Token': 'token'}},
+  ));
 });
 
 it('supports switching dynamic receiving accounts', async () => {
