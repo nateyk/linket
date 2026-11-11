@@ -84,7 +84,7 @@ export function extractReceiptReference(providerInput: string, input: string): R
   const messageOnly = text.replace(/https?:\/\/[^\s<>"']+/gi, ' ');
 
   const candidates: string[] = [];
-  const labelPattern = /(?:receipt\s*(?:id|number|no\.?)?|transaction\s*(?:id|number|no\.?|reference)|reference\s*(?:number|no\.?|id)?|ref\s*(?:number|no\.?|id)?|የሂሳብ\s*እንቅስቃሴ\s*ቁጥርዎ|የደረሰኝ\s*ቁጥር)\s*[:#=\-፡：]?\s*([a-z0-9_-]{6,150})/gi;
+  const labelPattern = /(?:receipt\s*(?:id|number|no\.?)?|transaction\s*(?:id|number|no\.?|reference)|reference\s*(?:number|no\.?|id)?|\bref\b\s*(?:number|no\.?|id)?|የሂሳብ\s*እንቅስቃሴ\s*ቁጥርዎ|የደረሰኝ\s*ቁጥር)\s*[:#=\-፡：]?\s*([a-z0-9_-]{6,150})/gi;
   for (const match of messageOnly.matchAll(labelPattern)) {
     const value = validReference(provider, match[1]);
     if (value) candidates.push(value);
