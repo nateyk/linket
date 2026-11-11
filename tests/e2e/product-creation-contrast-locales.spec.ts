@@ -62,61 +62,92 @@ async function installedLocaleEvidence(page: Page) {
   });
 }
 
-async function measureTextPair(page: Page, selector: string): Promise<Pair> {
+type Rgba = {r: number; g: number; b: number; a: number};
+type SampledColors = {
+  element: string;
+  foreground: Rgba;
+  layers: Array<{color: Rgba; backgroundImage: string}>;
+  fontSize: number;
+  weight: number;
+};
+
+function blend(back: Rgba, front: Rgba): Rgba {
+  const opacity = front.a;
+  return {
+    r: back.r * (1 - opacity) + front.r * opacity,
+    g: back.g * (1 - opacity) + front.g * opacity,
+    b: back.b * (1 - opacity) + front.b * opacity,
+    a: 1,
+  };
+}
+
+function channelLuminance(value: number) {
+  const linear = value / 255;
+  return linear <= 0.04045 ? linear / 12.92 : ((linear + 0.055) / 1.055) ** 2.4;
+}
+
+function luminance(color: Rgba) {
+  return 0.2126 * channelLuminance(color.r) +
+    0.7152 * channelLuminance(color.g) +
+    0.0722 * channelLuminance(color.b);
+}
+
+function ratio(foreground: Rgba, background: Rgba) {
+  const light = Math.max(luminance(foreground), luminance(background));
+  const dark = Math.min(luminance(foreground), luminance(background));
+  return Number(((light + 0.05) / (dark + 0.05)).toFixed(2));
+}
+
+function rgb(color: Rgba) {
+  return 'rgb(' + [color.r, color.g, color.b].map(Math.round).join(', ') + ')';
+}
+
+async function sampleCssColors(page: Page, selector: string): Promise<SampledColors> {
   return page.locator(selector).first().evaluate(node => {
-    type Color = {r: number; g: number; b: number; a: number};
     const canvas = document.createElement('canvas');
-    canvas.width = 1;
-    canvas.height = 1;
+    canvas.width = canvas.height = 1;
     const context = canvas.getContext('2d', {willReadFrequently: true});
     if (!context) throw new Error('Cannot resolve CSS colors without Canvas');
-    const read = (cssColor: string): Color => {
+    const read = (cssColor: string): Rgba => {
       context.clearRect(0, 0, 1, 1);
       context.fillStyle = cssColor;
       context.fillRect(0, 0, 1, 1);
-      const rgba = context.getImageData(0, 0, 1, 1).data;
-      return {r: rgba[0], g: rgba[1], b: rgba[2], a: rgba[3] / 255};
+      const color = context.getImageData(0, 0, 1, 1).data;
+      return {r: color[0], g: color[1], b: color[2], a: color[3] / 255};
     };
-    const blend = (back: Color, front: Color): Color => ({
-      r: back.r * (1 - front.a) + front.r * front.a,
-      g: back.g * (1 - front.a) + front.g * front.a,
-      b: back.b * (1 - front.a) + front.b * front.a,
-      a: 1,
-    });
-    const parents: HTMLElement[] = [];
-    for (let parent: HTMLElement | null = node as HTMLElement; parent; parent = parent.parentElement) {
-      parents.unshift(parent);
-    }
-    let surface: Color = {r: 255, g: 255, b: 255, a: 1};
-    for (const element of parents) {
+    const layers: SampledColors['layers'] = [];
+    for (let element: HTMLElement | null = node as HTMLElement; element; element = element.parentElement) {
       const style = getComputedStyle(element);
-      if (style.backgroundImage !== 'none') {
-        throw new Error('Image-backed surface cannot be assessed as solid-color contrast');
-      }
-      surface = blend(surface, read(style.backgroundColor));
+      layers.unshift({color: read(style.backgroundColor), backgroundImage: style.backgroundImage});
     }
     const style = getComputedStyle(node);
-    const ink = blend(surface, read(style.color));
-    const luminance = (color: Color) => {
-      const channel = (value: number) => {
-        const s = value / 255;
-        return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
-      };
-      return 0.2126 * channel(color.r) + 0.7152 * channel(color.g) + 0.0722 * channel(color.b);
-    };
-    const light = Math.max(luminance(ink), luminance(surface));
-    const dark = Math.min(luminance(ink), luminance(surface));
-    const formatted = (color: Color) =>
-      'rgb(' + [color.r, color.g, color.b].map(Math.round).join(', ') + ')';
     return {
       element: node.tagName.toLowerCase() + (node.id ? '#' + node.id : ''),
-      foreground: formatted(ink),
-      background: formatted(surface),
-      ratio: Number(((light + 0.05) / (dark + 0.05)).toFixed(2)),
+      foreground: read(style.color),
+      layers,
       fontSize: Number.parseFloat(style.fontSize),
       weight: Number.parseInt(style.fontWeight, 10) || 400,
     };
   });
+}
+
+async function measureTextPair(page: Page, selector: string): Promise<Pair> {
+  const sample = await sampleCssColors(page, selector);
+  expect(
+    sample.layers.every(layer => layer.backgroundImage === 'none'),
+    'Image-backed surface cannot be treated as a known solid-color pair',
+  ).toBe(true);
+  const white: Rgba = {r: 255, g: 255, b: 255, a: 1};
+  const surface = sample.layers.reduce((back, layer) => blend(back, layer.color), white);
+  const ink = blend(surface, sample.foreground);
+  return {
+    element: sample.element,
+    foreground: rgb(ink),
+    background: rgb(surface),
+    ratio: ratio(ink, surface),
+    fontSize: sample.fontSize,
+    weight: sample.weight,
+  };
 }
 
 function wcagAaThreshold(pair: Pair): number {
