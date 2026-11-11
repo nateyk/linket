@@ -364,6 +364,7 @@ export function DirectPaymentModal({
         <Dialog.Backdrop />
         <Dialog.Content className="max-h-[min(100dvh,40rem)] w-[calc(100vw-1.5rem)] overflow-y-auto sm:max-w-md">
           <Dialog.Header>
+            <p className="text-xs font-medium text-muted-foreground"><Trans message="Step 2 of 2 · Transfer and verification" /></p>
             <Dialog.Title>
               <Trans message="Pay the creator directly" />
             </Dialog.Title>
