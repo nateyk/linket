@@ -171,6 +171,9 @@ test.describe('SF-12 optional public service page evidence', () => {
     await expect(tabs.nth(0)).toBeFocused();
     await page.keyboard.press('ArrowRight');
     await expect(tabs.nth(1)).toBeFocused();
+    // Base UI tabs support manual activation: arrow keys move focus, then
+    // Enter or Space selects the focused package and announces aria-selected.
+    await page.keyboard.press('Enter');
     await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'true');
 
     // Opening and dismissing a quote is safe; submitting an inquiry is not.
