@@ -183,6 +183,7 @@ class PrepareBuyerE2eCommand extends Command
             $file->getDisk()->put($file->getStoragePath(), $fileContent);
 
             $reviewProductId = null;
+            $reviewProductIds = [];
             if ($withReviewer) {
                 // Real authenticated moderation test fixture. This never runs outside
                 // APP_ENV=testing and a database name containing "test" (guard above).
@@ -225,6 +226,82 @@ class PrepareBuyerE2eCommand extends Command
                 ])->save();
                 $reviewProduct->files()->syncWithoutDetaching([$file->id]);
                 $reviewProductId = (int) $reviewProduct->id;
+                $reviewProductIds['digital'] = $reviewProductId;
+
+                // Four independent real moderation fixtures, strictly guarded by
+                // --with-reviewer and the loopback disposable belink_test check.
+                // Audio needs its own MP3 metadata, not the PDF buyer fixture.
+                $audioContent = "ID3\\x04\\x00\\x00\\x00\\x00\\x00\\x00";
+                $audioFile = FileEntry::query()
+                    ->where('workspace_id', $workspaceId)
+                    ->where('owner_id', $creator->id)
+                    ->where('name', 'e2e-moderation.mp3')
+                    ->first();
+                if (! $audioFile) {
+                    $audioFile = FileEntry::query()->create([
+                        'name' => 'e2e-moderation.mp3',
+                        'file_name' => 'e2e-'.Str::random(16).'.mp3',
+                        'mime' => 'audio/mpeg',
+                        'extension' => 'mp3',
+                        'type' => 'file',
+                        'file_size' => strlen($audioContent),
+                        'workspace_id' => $workspaceId,
+                        'owner_id' => $creator->id,
+                    ]);
+                }
+                $audioFile->getDisk()->put($audioFile->getStoragePath(), $audioContent);
+
+                foreach ([
+                    'ebook' => 'E2E Moderation E-book',
+                    'audio' => 'E2E Moderation Audio',
+                    'course' => 'E2E Moderation Course',
+                ] as $reviewType => $title) {
+                    $description = 'Synthetic private '.$reviewType.' moderation lifecycle fixture';
+                    $typeProduct = DigitalProduct::query()
+                        ->where('user_id', $creator->id)
+                        ->where('description', $description)
+                        ->first() ?? new DigitalProduct();
+                    $typeProduct->forceFill([
+                        'workspace_id' => $workspaceId,
+                        'user_id' => $creator->id,
+                        'title' => $title,
+                        'description' => $description,
+                        'price_cents' => 0,
+                        'currency' => 'ETB',
+                        'status' => 'pending_approval',
+                        'approved_at' => null,
+                        'review_requested_by' => $creator->id,
+                        'review_requested_at' => now(),
+                        'rejection_reason' => null,
+                        'pending_review_snapshot' => null,
+                        'type' => $reviewType,
+                    ])->save();
+
+                    if ($reviewType === 'course') {
+                        $reviewCourse = Course::query()->firstOrCreate(
+                            ['digital_product_id' => $typeProduct->id],
+                            ['instructor_user_id' => $creator->id],
+                        );
+                        $chapter = Chapter::query()->firstOrCreate(
+                            ['course_id' => $reviewCourse->id, 'title' => 'E2E Review Chapter'],
+                            ['sort_order' => 0],
+                        );
+                        $lesson = Lesson::query()->firstOrCreate(
+                            [
+                                'course_id' => $reviewCourse->id,
+                                'chapter_id' => $chapter->id,
+                                'title' => 'E2E Published Review Lesson',
+                            ],
+                            ['content_type' => 'readable', 'status' => 'published', 'sort_order' => 0],
+                        );
+                        $lesson->forceFill(['status' => 'published'])->save();
+                    } else {
+                        $typeProduct->files()->sync([
+                            $reviewType === 'audio' ? $audioFile->id : $file->id,
+                        ]);
+                    }
+                    $reviewProductIds[$reviewType] = (int) $typeProduct->id;
+                }
             }
 
             $method = CreatorPaymentMethod::query()
@@ -276,6 +353,7 @@ class PrepareBuyerE2eCommand extends Command
                 'product_title' => $product->title,
                 'course_product_id' => $courseProductId,
                 'review_product_id' => $reviewProductId,
+                'review_product_ids' => $reviewProductIds,
                 'buyer_email' => 'e2e-buyer-'.Str::lower(Str::random(8)).'@example.test',
                 'buyer_name' => 'E2E Buyer',
                 'verify_mock' => true,
