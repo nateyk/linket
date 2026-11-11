@@ -80,7 +80,7 @@ test.describe('SF-12 actual saved Appearance across published pages', () => {
             ? `/${slug}`
             : surface === 'product'
               ? `/${slug}/products/${fixture.product_id}`
-              : `/${slug}/services/sf12-qa-service`;
+              : `/${slug}/services/sf12-qa-service-${variant.name}`;
 
         await page.setViewportSize({width: 375, height: 812});
         const response = await page.goto(url);
