@@ -3,6 +3,7 @@
 namespace App\Storefront\Controllers;
 
 use App\Payments\Models\DirectPaymentVerification;
+use App\Payments\VerifyEt\ReceiptReference;
 use App\Payments\VerifyEt\VerifyEtGateway;
 use App\Payments\VerifyEt\VerifyEtSettings;
 use App\Storefront\Models\CreatorPaymentMethod;
@@ -74,30 +75,44 @@ final class OrderPaymentController extends Controller
 
     public function selectAccount(Request $request, string $order): JsonResponse
     {
-        $order = StorefrontOrder::query()->with(['product'])->where('uuid', $order)->firstOrFail();
-        $this->assertAccess($request, $order);
-        abort_unless($order->payment_gateway === 'verify_et', 404);
-        abort_unless(in_array($order->status, ['pending_payment', 'pending', 'verifying', 'failed_verification', 'failed'], true), 409, __('Receiving account cannot be changed after payment is completed.'));
-
         $data = $request->validate([
             'receiving_account_id' => ['required', 'integer'],
         ]);
 
-        $method = CreatorPaymentMethod::query()
-            ->whereKey($data['receiving_account_id'])
-            ->where('user_id', $order->creator_id)
-            ->where('workspace_id', $order->product->workspace_id)
-            ->where('status', 'approved')
-            ->where('is_active', true)
-            ->where('is_suspended', false)
-            ->firstOrFail();
+        // Lock the order so changing its recipient cannot race a receipt submission.
+        $order = DB::transaction(function () use ($request, $order, $data): StorefrontOrder {
+            $locked = StorefrontOrder::query()
+                ->with('product')
+                ->where('uuid', $order)
+                ->lockForUpdate()
+                ->firstOrFail();
+            $this->assertAccess($request, $locked);
+            abort_unless($locked->payment_gateway === 'verify_et', 404);
+            abort_unless(
+                in_array($locked->status, ['pending_payment', 'pending'], true)
+                    && ! $locked->directPaymentVerifications()->exists(),
+                409,
+                __('Receiving account cannot be changed after verification has started. Start a new checkout if you need a different recipient.'),
+            );
 
-        $order->update([
-            'creator_payment_method_id' => $method->id,
-            'payment_provider_snapshot' => $method->provider,
-            'payment_account_snapshot' => $method->account_number,
-            'payment_account_name_snapshot' => $method->account_name_raw,
-        ]);
+            $method = CreatorPaymentMethod::query()
+                ->whereKey($data['receiving_account_id'])
+                ->where('user_id', $locked->creator_id)
+                ->where('workspace_id', $locked->product->workspace_id)
+                ->where('status', 'approved')
+                ->where('is_active', true)
+                ->where('is_suspended', false)
+                ->firstOrFail();
+
+            $locked->update([
+                'creator_payment_method_id' => $method->id,
+                'payment_provider_snapshot' => $method->provider,
+                'payment_account_snapshot' => $method->account_number,
+                'payment_account_name_snapshot' => $method->account_name_raw,
+            ]);
+
+            return $locked;
+        }, 3);
 
         return $this->instructions($request, $order->uuid);
     }
@@ -197,6 +212,11 @@ final class OrderPaymentController extends Controller
             $provider,
             $data['reference'],
             $data['account_suffix'] ?? null,
+        );
+
+        app(ReceiptReference::class)->assertNotReceivingAccount(
+            $data['reference'],
+            $order->payment_account_snapshot,
         );
 
         // Pre-Verification 4: Reject duplicate references immediately if already completed or under review
