@@ -80,7 +80,22 @@ async function postUnsavedDraft(page: Page, variant: Variant) {
       fontConfig: {family: 'Inter'},
     },
     content: [],
-    profileConfig: {display_name: 'Unsaved QA preview only'},
+    // Mirror the editor's getCreatorProfileConfig() contract. A partial
+    // profile (especially missing about_html) is not a valid editor payload.
+    profileConfig: {
+      display_name: 'Unsaved QA preview only',
+      profile_title: 'Synthetic multilingual Appearance fixture',
+      headline: '',
+      bio: 'Test-only preview draft',
+      about_html: '',
+      avatar_url: '',
+      cover_url: '',
+      available_for_work: false,
+      skills: [],
+      follow_url: '',
+      contact_url: '',
+      social_links: {},
+    },
   };
   await page.locator(frameSelector).evaluate((element, draft) => {
     (element as HTMLIFrameElement).contentWindow?.postMessage(
