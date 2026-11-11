@@ -8,6 +8,8 @@ use App\Storefront\Models\CreatorPaymentMethod;
 use App\Storefront\Models\DigitalProduct;
 use App\Storefront\Models\DownloadEntitlement;
 use App\Storefront\Models\StorefrontOrder;
+use App\Storefront\Resources\PublicDigitalProductResource;
+use Illuminate\Http\Request;
 use App\Storefront\Services\CreatorVerificationAllowance;
 use App\Storefront\StorefrontCheckout;
 use Common\Billing\Models\Price;
@@ -120,6 +122,43 @@ class ChapaSellerGatewayTest extends TestCase
         }
 
         $this->assertSame(0, StorefrontOrder::query()->where('digital_product_id', $product->id)->count());
+    }
+
+    public function testChapaSellerPublicProductDoesNotRequireVerifyEtOrReceivingBanks(): void
+    {
+        [$creator, $product] = $this->seller();
+        $this->activatePro($creator);
+        $product->workspace->update(['active_payment_collector' => 'chapa']);
+        CreatorChapaGateway::query()->create([
+            'workspace_id' => $product->workspace_id,
+            'user_id' => $creator->id,
+            'public_key' => 'CHAPUBK-test-public',
+            'secret_key' => 'seller-secret',
+        ]);
+
+        // No approved bank or wallet accounts are required for the seller's own Chapa.
+        $this->assertSame(0, CreatorPaymentMethod::query()->where('user_id', $creator->id)->count());
+        $data = (new PublicDigitalProductResource($product->fresh()->load('creator')))
+            ->toArray(Request::create('/'));
+        $this->assertSame('chapa', $data['payment_mode']);
+        $this->assertNull($data['checkout_blocker']);
+        $this->assertTrue($data['can_buy']);
+        $this->assertEmpty($data['receiving_accounts']);
+        $this->assertStringNotContainsString('seller-secret', json_encode($data));
+    }
+
+    public function testChapaSelectedButSellerKeyMissingCannotOfferCheckout(): void
+    {
+        [$creator, $product] = $this->seller();
+        $this->activatePro($creator);
+        $product->workspace->update(['active_payment_collector' => 'chapa']);
+
+        $data = (new PublicDigitalProductResource($product->fresh()->load('creator')))
+            ->toArray(Request::create('/'));
+        $this->assertSame('unavailable', $data['payment_mode']);
+        $this->assertSame('chapa_not_connected', $data['checkout_blocker']);
+        $this->assertFalse($data['can_buy']);
+        $this->assertEmpty($data['receiving_accounts']);
     }
 
     public function testReturnWithTheWrongAmountStaysUnpaid(): void
