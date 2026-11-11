@@ -154,7 +154,7 @@ foreach ($appearanceVariants as $variant => $config) {
         ],
     );
     $variantService = CreatorService::query()->updateOrCreate(
-        ['store_id' => $variantStore->id, 'slug' => 'sf12-qa-service'],
+        ['store_id' => $variantStore->id, 'slug' => 'sf12-qa-service-'.$variant],
         [
             'workspace_id' => $variantStore->workspace_id,
             'user_id' => $variantStore->user_id,
