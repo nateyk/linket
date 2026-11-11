@@ -16,6 +16,8 @@ use App\Storefront\Models\CreatorPaymentMethod;
 use App\Storefront\Models\DigitalProduct;
 use App\Storefront\Models\DigitalProductEarningsLedger;
 use App\Storefront\Services\DirectStorefrontCheckout;
+use App\Storefront\Resources\PublicDigitalProductResource;
+use Illuminate\Http\Request;
 use App\Storefront\StorefrontCheckout;
 use Common\Billing\Models\Product;
 use Common\Files\FileEntry;
@@ -812,6 +814,15 @@ class VerifyEtDirectCheckoutTest extends TestCase
             'recipient_matching_supported' => true,
             'operationally_suspended' => false,
         ]);
+
+        $public = (new PublicDigitalProductResource($existingOrder->product->fresh()->load('creator')))
+            ->toArray(Request::create('/'));
+        $this->assertSame('direct', $public['payment_mode']);
+        $this->assertCount(2, $public['receiving_accounts']);
+        $this->assertEqualsCanonicalizing(
+            ['cbe', 'telebirr'],
+            $public['receiving_accounts']->pluck('provider')->all(),
+        );
 
         $order = app(StorefrontCheckout::class)->create($existingOrder->product, null, [
             'name' => 'Buyer', 'email' => 'other-buyer@example.test',
