@@ -109,9 +109,11 @@ function assertSavedTokens(
 async function verifyPanelContrast(
   page: Page,
   info: TestInfo,
-  variant: Variant,
-  surface: Exclude<Surface, 'store'>,
-  url: string,
+  {variant, surface, url}: {
+    variant: Variant;
+    surface: Exclude<Surface, 'store'>;
+    url: string;
+  },
 ) {
   const card = page.locator('[data-slot="card"]').first();
   await expect(card).toBeVisible();
@@ -135,8 +137,7 @@ async function verifyPanelContrast(
 async function attachPageScreenshot(
   page: Page,
   info: TestInfo,
-  variant: Variant,
-  surface: Surface,
+  {variant, surface}: {variant: Variant; surface: Surface},
 ) {
   const label = `sf12-saved-${variant.name}-${surface}-375`;
   const file = info.outputPath(`${label}.png`);
@@ -147,8 +148,7 @@ async function attachPageScreenshot(
 async function verifyPublishedAppearance(
   page: Page,
   info: TestInfo,
-  variant: Variant,
-  surface: Surface,
+  {variant, surface}: {variant: Variant; surface: Surface},
 ) {
   const url = publicRoute(variant, surface, productIdFromFixture());
   await page.setViewportSize({width: 375, height: 812});
@@ -156,9 +156,9 @@ async function verifyPublishedAppearance(
   expect(response?.ok(), `Expected published ${surface} route ${url}`).toBe(true);
   assertSavedTokens(await readSavedTokens(page), variant, surface);
   if (surface === 'product' || surface === 'service') {
-    await verifyPanelContrast(page, info, variant, surface, url);
+    await verifyPanelContrast(page, info, {variant, surface, url});
   }
-  await attachPageScreenshot(page, info, variant, surface);
+  await attachPageScreenshot(page, info, {variant, surface});
 }
 
 test.describe('SF-12 actual saved Appearance across published pages', () => {
@@ -169,7 +169,7 @@ test.describe('SF-12 actual saved Appearance across published pages', () => {
   for (const variant of variants) {
     for (const surface of ['store', 'product', 'service'] as const) {
       test(`${variant.name} persisted Appearance on ${surface} page`, async ({page}, info) => {
-        await verifyPublishedAppearance(page, info, variant, surface);
+        await verifyPublishedAppearance(page, info, {variant, surface});
       });
     }
   }
