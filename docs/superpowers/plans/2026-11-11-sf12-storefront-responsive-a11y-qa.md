@@ -62,3 +62,40 @@ npx playwright test tests/e2e/storefront-public-responsive-a11y.spec.ts
 - [ ] Capture reviewer, device/browser, evidence links and **explicit human release approval** before closing SF-12 or SF-13.
 
 **Release status: QA / HOLD. No merge or deployment without explicit user approval.**
+
+## New: persisted light/dark/gradient Appearance QA
+
+The isolated seeder now creates three additional, **real database-backed** published
+storefronts (`sf12-appearance-light`, `sf12-appearance-dark`, and
+`sf12-appearance-gradient`) with independent persisted `StoreAppearance`
+configurations. Each has a Shop widget pointing to the synthetic product and
+a published synthetic service. The browser runs nine read-only scenarios:
+three actual saved styles × storefront/product/service.
+
+`tests/e2e/storefront-saved-appearance-sf12.spec.ts` verifies that all
+published roots receive the saved foreground color, that the gradient
+background renderer is present, and measures WCAG 2.2 AA (4.5:1) normal-text
+contrast for the actual computed **opaque/99%-opaque panel** text and fill on
+product and service pages. Semi-transparent panel colors are tested against
+both worst-case black and white underlying opaque seats rather than assuming
+an arbitrary background screenshot color. Source details and measured ratios
+are attached as JSON alongside screenshots.
+
+The exact-head isolated workflow must complete and pass before any contrast
+claim is accepted. These checks are **limited to synthetic saved presets and
+panel surfaces**. They cannot measure every translucent glass/outline button,
+complex background image, brand logo, portaled modal, hover/focus state,
+gradient stop, or user-created Appearance. The manual WCAG/zoom/screen-reader
+checklist remains at
+https://github.com/nateyk/linket/issues/172; do not mark it complete from
+this partial automated matrix.
+
+Run both suites inside disposable MySQL with the existing safety guard:
+
+```bash
+LINKET_ISOLATED_E2E=1 APP_ENV=testing DB_DATABASE=belink_test \
+E2E_NO_SERVER=1 E2E_BASE_URL=http://127.0.0.1:8081 \
+npx playwright test tests/e2e/storefront-public-responsive-a11y.spec.ts \
+  tests/e2e/storefront-saved-appearance-sf12.spec.ts --project=chromium
+```
+
