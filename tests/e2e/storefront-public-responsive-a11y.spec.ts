@@ -124,3 +124,33 @@ test.describe('SF-12 published storefront and product responsive evidence', () =
     }
   });
 });
+
+/**
+ * A published service page is optional until an isolated service fixture is
+ * seeded. Keep this read-only and independent of service inquiry submission.
+ */
+test.describe('SF-12 optional public service page evidence', () => {
+  const serviceUrl = process.env.LINKET_E2E_PUBLIC_SERVICE_URL;
+  test.skip(!isolated || !serviceUrl, 'Requires isolated public service fixture URL');
+  test.use({
+    userAgent:
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    reducedMotion: 'reduce',
+  });
+
+  for (const size of widths) {
+    test(`${size.name}: service details and packages reflow without clipping`, async ({page}, info) => {
+      const route = new URL(serviceUrl!, baseUrl);
+      expect(route.origin).toBe(new URL(baseUrl).origin);
+      await page.setViewportSize({width: size.width, height: size.height});
+      const response = await page.goto(route.toString());
+      expect(response?.ok()).toBe(true);
+      await expect(page.getByRole('heading', {level: 1})).toBeVisible();
+      const packageTabs = page.getByRole('tablist', {name: 'Packages'});
+      if (await packageTabs.count()) {
+        await expect(packageTabs.getByRole('tab').first()).toBeVisible();
+      }
+      await captureAndCheckReflow(page, info, `service-${size.width}`);
+    });
+  }
+});
