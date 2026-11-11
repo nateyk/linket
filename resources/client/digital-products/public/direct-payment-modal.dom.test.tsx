@@ -147,6 +147,7 @@ it('rejects a pasted receiving account number without calling the verification p
     </MemoryRouter>,
   );
 
+  await screen.findByText('Account number');
   const referenceInput = await screen.findByPlaceholderText('e.g. fHCxyTVljBclm6Yk4C or FT...');
   fireEvent.change(referenceInput, {target: {value: '1000123456789'}});
   fireEvent.click(screen.getByRole('button', {name: 'Verify payment'}));
@@ -204,6 +205,7 @@ it('does not require a suffix on modern long CBE FT references', async () => {
     </MemoryRouter>,
   );
 
+  await screen.findByText('Account number');
   const referenceInput = await screen.findByPlaceholderText('e.g. fHCxyTVljBclm6Yk4C or FT...');
   fireEvent.change(referenceInput, {target: {value: 'FT1234567890123456'}});
   expect(screen.queryByText('Eight-digit CBE FT suffix')).toBeNull();
