@@ -62,3 +62,20 @@ npx playwright test tests/e2e/storefront-public-responsive-a11y.spec.ts
 - [ ] Capture reviewer, device/browser, evidence links and **explicit human release approval** before closing SF-12 or SF-13.
 
 **Release status: QA / HOLD. No merge or deployment without explicit user approval.**
+
+## SF-13 pre-merge combined browser rehearsal — 2026-11-11
+
+- Combined draft QA branch contains the separate, unmerged #162 SF-10,
+  #163 free-order recovery and #167 SF-12 changes on main d16a3aed.
+- The initial combined browser run identified test selection/CSSOM assertions,
+  not a regression in published service layout. Seven service widths and the
+  keyboard action already passed.
+- After selecting the visible storefront card and accepting both valid CSS
+  overflow-wrap values, [isolated Playwright run #42981494356]
+  (https://github.com/nateyk/linket/actions/runs/42981494356)
+  **passed all 15 tests**: seven storefront/product viewports, seven service
+  viewports, and keyboard focus. Screenshot/trace [artifact #13838160553]
+  (https://github.com/nateyk/linket/actions/runs/42981494356/artifacts/13838160553).
+- This test is **not** an actual merged-main run, not native toolbar 200% zoom,
+  not a screen-reader or physical-device test, and not an authorization to merge
+  the original feature PRs or this QA-only branch.
