@@ -161,6 +161,63 @@ async function verifyPublishedAppearance(
   await attachPageScreenshot(page, info, {variant, surface});
 }
 
+/**
+ * The inquiry dialog is portaled under body rather than the published
+ * service page root. Verify its own saved Appearance and readable foreground.
+ * The browser only opens and dismisses it; it must never send an inquiry.
+ */
+async function verifyInquiryDialogAppearance(
+  page: Page,
+  info: TestInfo,
+  variant: Variant,
+) {
+  const url = publicRoute(variant, 'service', productIdFromFixture());
+  await page.setViewportSize({width: 375, height: 812});
+  const response = await page.goto(url);
+  expect(response?.ok(), `Expected published service route ${url}`).toBe(true);
+  await page.getByRole('button', {name: 'Request this package'}).click();
+
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('textbox', {name: 'Name'})).toBeFocused();
+  const colors = await dialog.evaluate(node => {
+    const css = getComputedStyle(node);
+    return {
+      text: css.color,
+      surface: css.backgroundColor,
+      savedForeground: css.getPropertyValue('--biolink-text').trim(),
+      reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
+      hasGradient: [...document.querySelectorAll<HTMLElement>('[style]')].some(
+        item => item.style.backgroundImage.includes('linear-gradient(135deg'),
+      ),
+    };
+  });
+  assertSavedTokens(
+    {
+      foreground: colors.savedForeground,
+      reducedMotion: colors.reducedMotion,
+      hasGradient: colors.hasGradient,
+    },
+    variant,
+    'service',
+  );
+  const contrastRatio = worstCasePanelRatio(colors.text, colors.surface);
+  await info.attach(`${variant.name}-service-inquiry-contrast.json`, {
+    body: Buffer.from(JSON.stringify({url, colors, contrastRatio}, null, 2)),
+    contentType: 'application/json',
+  });
+  expect(contrastRatio, `${variant.name} portal dialog text contrast`)
+    .toBeGreaterThanOrEqual(4.5);
+  const file = info.outputPath(`sf12-saved-${variant.name}-service-dialog-375.png`);
+  await page.screenshot({path: file, fullPage: true});
+  await info.attach(`${variant.name}-inquiry-dialog`, {
+    path: file,
+    contentType: 'image/png',
+  });
+  await page.keyboard.press('Escape');
+  await expect(dialog).not.toBeVisible();
+}
+
 test.describe('SF-12 actual saved Appearance across published pages', () => {
   test.skip(!isolated, 'Requires disposable belink_test on loopback');
   test.use({reducedMotion: 'reduce'});
@@ -172,5 +229,10 @@ test.describe('SF-12 actual saved Appearance across published pages', () => {
         await verifyPublishedAppearance(page, info, {variant, surface});
       });
     }
+    test(`${variant.name} saved Appearance reaches inquiry portal and passes dialog text contrast`,
+      async ({page}, info) => {
+        await verifyInquiryDialogAppearance(page, info, variant);
+      },
+    );
   }
 });
