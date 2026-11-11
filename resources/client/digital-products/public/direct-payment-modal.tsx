@@ -80,6 +80,7 @@ export function DirectPaymentModal({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [instructionsError, setInstructionsError] = useState(false);
+  const [instructionsRetry, setInstructionsRetry] = useState(0);
   const [copied, setCopied] = useState(false);
   const [attemptsRemaining, setAttemptsRemaining] = useState<number>(5);
   const [sessionLocked, setSessionLocked] = useState(false);
@@ -134,6 +135,8 @@ export function DirectPaymentModal({
         if (active) {
           const data: PaymentInstructions = response.data.data ?? response.data;
           setInstructions(data);
+          setInstructionsError(false);
+          if (data.status) setStatus(data.status);
           if (typeof data.attempts_remaining === 'number') {
             setAttemptsRemaining(data.attempts_remaining);
           }
@@ -153,7 +156,7 @@ export function DirectPaymentModal({
     };
     void loadInstructions();
     return () => { active = false; };
-  }, [checkout]);
+  }, [checkout, instructionsRetry]);
 
   // Polling for verifying, manual review, or delivering state
   useEffect(() => {
@@ -188,7 +191,9 @@ export function DirectPaymentModal({
       );
       const data: PaymentInstructions = response.data.data ?? response.data;
       setInstructions(data);
+      setReference('');
       setAccountSuffix('');
+      setValidationError(null);
     } catch {
       setErrorMessage('Failed to switch receiving account. Please try again.');
     } finally {
@@ -207,12 +212,19 @@ export function DirectPaymentModal({
     setValidationError(null);
     const cleanRef = reference.trim();
     if (!cleanRef) {
-      setValidationError('Please enter your transaction reference.');
+      setValidationError('Please enter the receipt ID or transaction reference from your completed transfer.');
+      return false;
+    }
+
+    if (instructions?.account_number
+      && cleanRef.replace(/[\\s-]+/g, '').toLowerCase()
+        === instructions.account_number.replace(/[\\s-]+/g, '').toLowerCase()) {
+      setValidationError('This is the receiving account number, not a payment reference. Find the receipt ID on your completed bank or wallet transfer.');
       return false;
     }
 
     const provider = instructions?.provider?.toLowerCase();
-    const isCbeFt = provider === 'cbe' && /^FT/i.test(cleanRef);
+    const isCbeFt = provider === 'cbe' && /^FT[0-9A-Z]{8,12}$/i.test(cleanRef);
 
     if (provider === 'boa') {
       if (!accountSuffix.trim()) {
@@ -291,7 +303,13 @@ export function DirectPaymentModal({
         if (res.status) {
           setStatus(res.status);
         }
-        setErrorMessage(res.message || res.errors?.reference?.[0] || 'Verification failed. Please check your reference and try again.');
+        const fieldError = res.errors?.reference?.[0] || res.errors?.account_suffix?.[0];
+        if (fieldError) {
+          setValidationError(fieldError);
+          setErrorMessage(null);
+        } else {
+          setErrorMessage(res.message || 'Verification failed. Please check your reference and try again.');
+        }
       } else {
         setErrorMessage('A network error occurred while verifying payment. Please retry.');
       }
@@ -350,7 +368,11 @@ export function DirectPaymentModal({
               <Trans message="Pay the creator directly" />
             </Dialog.Title>
             <Dialog.Description>
-              <Trans message="Transfer the exact amount to the selected account, then enter your transaction reference." />
+              {canSubmitReference
+                ? <Trans message="Pay the amount shown below, then enter the receipt ID from your transfer confirmation." />
+                : status === 'paid' || status === 'completed'
+                  ? <Trans message="Your payment is confirmed. Check your download access below." />
+                  : <Trans message="Track the verification of your existing payment. Do not transfer again." />}
             </Dialog.Description>
           </Dialog.Header>
 
@@ -375,9 +397,9 @@ export function DirectPaymentModal({
             )}
 
             {/* Dynamic Receiving Account Selector */}
-            {instructions && status !== 'paid' && status !== 'completed' && (
+            {instructions && canSubmitReference && (
               <div className="flex flex-col gap-3 rounded-card bg-muted/70 p-4 text-sm border border-border">
-                {availableAccounts.length > 1 && canSubmitReference && (
+                {availableAccounts.length > 1 && attemptsRemaining === 5 && (
                   <div className="flex flex-col gap-1.5 pb-3 border-b border-border">
                     <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       <Trans message="Select receiving bank / account" />
@@ -513,25 +535,28 @@ export function DirectPaymentModal({
                 {canSubmitReference && (
                   <div className="flex flex-col gap-3">
                     <Field.Root>
-                      <Field.Label><Trans message="Transaction reference" /></Field.Label>
+                      <Field.Label><Trans message="Receipt ID / transaction reference" /></Field.Label>
                       <Input
                         bindToHookForm={false}
                         value={reference}
                         onChange={event => {
                           setReference(event.target.value);
+                           setErrorMessage(null);
                           setValidationError(null);
                         }}
                         placeholder="e.g. fHCxyTVljBclm6Yk4C or FT..."
+                         aria-invalid={!!validationError}
+                         aria-describedby="buyer-payment-reference-help"
                         disabled={busy}
                         autoComplete="off"
                       />
                       <Field.Description>
-                        <Trans message="Find this reference in your bank or wallet confirmation." />
+                        <span id="buyer-payment-reference-help"><Trans message="Use the receipt ID from your completed transfer, not the receiving account number above." /></span>
                       </Field.Description>
                     </Field.Root>
 
                     {(instructions?.provider === 'boa'
-                      || (instructions?.provider === 'cbe' && /^FT/i.test(reference.trim()))) && (
+                      || (instructions?.provider === 'cbe' && /^FT[0-9A-Z]{8,12}$/i.test(reference.trim()))) && (
                       <Field.Root>
                         <Field.Label>
                           {instructions.provider === 'boa'
@@ -559,14 +584,14 @@ export function DirectPaymentModal({
                 {validationError && (
                   <div className="flex items-center gap-2 rounded-card bg-destructive/10 p-3 text-xs text-destructive">
                     <AlertCircleIcon className="size-4 shrink-0" />
-                    <span>{validationError}</span>
+                    <span role="alert">{validationError}</span>
                   </div>
                 )}
 
                 {errorMessage && (
                   <div className="flex items-center gap-2 rounded-card bg-destructive/10 p-3 text-xs text-destructive">
                     <AlertCircleIcon className="size-4 shrink-0" />
-                    <span>{errorMessage}</span>
+                    <span role="alert">{errorMessage}</span>
                   </div>
                 )}
 
@@ -588,7 +613,7 @@ export function DirectPaymentModal({
                   <div className="flex flex-col gap-1.5 text-xs text-muted-foreground">
                     <p className="flex items-center gap-1.5 font-medium text-foreground">
                       <Spinner className="size-3.5 text-primary" />
-                      <Trans message="Verifying your payment with the provider." />
+                      <span role="status"><Trans message="Verifying your payment with the provider." /></span>
                     </p>
                     <p>
                       <Trans message="Bank confirmations can take a few minutes. Keep this page open or use Check payment status. Do not pay again for the same order." />
@@ -620,7 +645,11 @@ export function DirectPaymentModal({
 
                 {instructionsError && !instructions && (
                   <p className="text-xs text-destructive">
-                    <Trans message="Payment details could not be loaded. Close this window and start checkout again." />
+                    <Trans message="Payment details could not be loaded. Your order is still available." />
+                     <Button variant="outline" onClick={() => { setInstructionsError(false); setInstructionsRetry(value => value + 1); }}>
+                       <RefreshCwIcon className="size-4" />
+                       <Trans message="Retry loading payment details" />
+                     </Button>
                   </p>
                 )}
 
