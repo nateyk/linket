@@ -197,4 +197,164 @@ describe('public service page', () => {
       within(await screen.findByRole('dialog')).getByText('Request a quote'),
     ).toBeTruthy();
   });
+
+  it('keeps the inquiry action in the offer rail without repeating it on the seller card', () => {
+    render(<PublicServicePage data={data} />);
+
+    expect(screen.getByRole('button', {name: 'Request this package'})).toBeTruthy();
+    expect(screen.queryByRole('button', {name: 'Send inquiry'})).toBeNull();
+    const whatsapp = screen.getByRole('link', {name: 'WhatsApp'});
+    expect(whatsapp.tagName).toBe('A');
+    expect(whatsapp.getAttribute('href')).toBe('https://wa.me/251911234567');
+    expect(whatsapp.getAttribute('data-slot')).toBeNull();
+    expect(whatsapp.getAttribute('rel')).toContain('noopener');
+    expect(whatsapp.className).toContain('min-h-11');
+    expect(screen.getByRole('link', {name: 'Email'}).getAttribute('href')).toBe(
+      'mailto:hello@example.test',
+    );
+  });
+
+  it('deduplicates identical contact destinations while keeping different channels', () => {
+    render(
+      <PublicServicePage
+        data={{
+          ...data,
+          service: {
+            ...data.service,
+            contact_channels: [
+              ...data.service.contact_channels,
+              {...data.service.contact_channels[0], label: 'Other WhatsApp'},
+            ],
+          },
+        }}
+      />,
+    );
+
+    expect(screen.getAllByRole('link', {name: 'WhatsApp'})).toHaveLength(1);
+    expect(screen.getAllByRole('link', {name: 'Email'})).toHaveLength(1);
+    expect(screen.queryByRole('link', {name: 'Other WhatsApp'})).toBeNull();
+  });
+
+  it('uses native accessible links for video and live demo external destinations', () => {
+    render(
+      <PublicServicePage
+        data={{
+          ...data,
+          service: {
+            ...data.service,
+            video_url: 'https://videos.example.test/watch',
+            live_demo_url: 'https://demo.example.test/preview',
+          },
+        }}
+      />,
+    );
+
+    const video = screen.getByRole('link', {name: 'Video preview'});
+    const demo = screen.getByRole('link', {name: 'Live demo'});
+    expect(video.tagName).toBe('A');
+    expect(video.getAttribute('href')).toBe('https://videos.example.test/watch');
+    expect(demo.tagName).toBe('A');
+    expect(demo.getAttribute('href')).toBe('https://demo.example.test/preview');
+    for (const link of [video, demo]) {
+      expect(link.getAttribute('target')).toBe('_blank');
+      expect(link.getAttribute('rel')).toContain('noopener');
+    }
+  });
+
+  it('wraps long multilingual service text and makes package tabs horizontally scrollable', async () => {
+    const {default: userEvent} = await import('@testing-library/user-event');
+    const longTitle = 'አገልግሎት'.repeat(28);
+    const longPackage = 'BrandIdentityFullPackage'.repeat(10);
+    const longQuestion = 'HowDoIStartTheService'.repeat(10);
+    render(
+      <PublicServicePage
+        data={{
+          ...data,
+          service: {
+            ...data.service,
+            title: longTitle,
+            short_description: longTitle,
+            packages: [
+              {...data.service.packages[0], name: longPackage},
+              data.service.packages[1],
+            ],
+            faqs: [{id: 30, question: longQuestion, answer: longPackage}],
+          },
+        }}
+      />,
+    );
+
+    const title = screen.getByRole('heading', {level: 1, name: longTitle});
+    expect(title.className).toContain('[overflow-wrap:anywhere]');
+    const list = screen.getByRole('tablist', {name: 'Packages'});
+    expect(list.parentElement?.className).toContain('overflow-x-auto');
+    expect(screen.getByRole('tab', {name: longPackage}).className).toContain(
+      '[overflow-wrap:anywhere]',
+    );
+
+    await userEvent.click(screen.getByRole('tab', {name: 'FAQ'}));
+    const question = screen.getByRole('button', {name: longQuestion});
+    expect(question.className).toContain('[overflow-wrap:anywhere]');
+  });
+
+  it('passes the selected tier through the package quote action', async () => {
+    const {default: userEvent} = await import('@testing-library/user-event');
+    render(<PublicServicePage data={data} />);
+
+    await userEvent.click(screen.getByRole('tab', {name: 'Premium'}));
+    await userEvent.click(
+      screen.getByRole('button', {name: 'Request this package'}),
+    );
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText(/Premium package/)).toBeTruthy();
+  });
+
+  it('keeps the selected tier when the mobile sticky action opens the quote dialog', async () => {
+    const {default: userEvent} = await import('@testing-library/user-event');
+    render(<PublicServicePage data={data} />);
+
+    await userEvent.click(screen.getByRole('tab', {name: 'Premium'}));
+    const mobileAction = screen.getByTestId('service-mobile-action');
+    await userEvent.click(
+      within(mobileAction).getByRole('button', {name: 'Request a quote'}),
+    );
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText(/Premium package/)).toBeTruthy();
+  });
+
+  it('keeps a working inquiry with no packages and a direct action for one package', async () => {
+    const {default: userEvent} = await import('@testing-library/user-event');
+    const {rerender} = render(
+      <PublicServicePage
+        data={{
+          ...data,
+          service: {...data.service, packages: [], packages_count: 0},
+        }}
+      />,
+    );
+    expect(screen.getByRole('button', {name: 'Send inquiry'})).toBeTruthy();
+    expect(screen.queryByRole('tablist', {name: 'Packages'})).toBeNull();
+
+    rerender(
+      <PublicServicePage
+        data={{
+          ...data,
+          service: {
+            ...data.service,
+            packages: [data.service.packages[0]],
+            packages_count: 1,
+          },
+        }}
+      />,
+    );
+    expect(screen.queryByRole('tablist', {name: 'Packages'})).toBeNull();
+    await userEvent.click(
+      screen.getByRole('button', {name: 'Request this package'}),
+    );
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText(/Starter package/)).toBeTruthy();
+  });
+
 });
