@@ -220,7 +220,8 @@ describe('Appearance editor → storefront contract', () => {
   test('Buttons style Message, socials, nav active, and product View', () => {
     expect(creator).toContain('style={buttonAppearance.style}');
     expect(creator).toContain('activeButtonStyle={buttonAppearance.style}');
-    expect(creator).toContain('className={buttonAppearance.className}');
+    expect(creator).toContain('buttonAppearance.className');
+    expect(creator).toContain('pointer-coarse:min-h-11 pointer-coarse:min-w-11');
     // The shop may wrap the action classes in cn(); assert the resolved
     // appearance values reach it rather than one exact JSX shape.
     expect(shop).toContain('buttonAppearance.className');
