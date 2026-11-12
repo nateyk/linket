@@ -1490,6 +1490,7 @@ function PricingFields({
           <InputGroupInput
             id="product-price"
             aria-invalid={!!errors.price_cents}
+            aria-errormessage={errors.price_cents ? "product-price-error" : undefined}
             type="number"
             min="0"
             step="0.01"
