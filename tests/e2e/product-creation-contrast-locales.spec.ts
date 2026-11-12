@@ -208,3 +208,223 @@ test('UX-35 supplementary installed locales and four-editor theme contrast', asy
     contentType: 'application/json',
   });
 });
+
+
+/**
+ * UX-35 automated accessibility follow-up. These checks intentionally use
+ * the real rendered CSS and real client-side validation, but cannot claim
+ * that NVDA or VoiceOver uttered anything: that remains human acceptance.
+ *
+ * WCAG 2.2 AA 1.4.11: a focused outline must contrast >= 3:1 with the
+ * adjacent outer solid surface. We fail closed for gradients/images and
+ * outlines that are not painted, instead of silently counting a CSS token.
+ */
+type FocusOutlineEvidence = {
+  control: string;
+  widthPx: number;
+  offsetPx: number;
+  style: string;
+  outline: string;
+  surroundingSurface: string;
+  ratio: number;
+};
+
+async function measureFocusedOutline(
+  page: Page,
+  selector: string,
+  options: {index?: number; outlineOnParentLabel?: boolean} = {},
+): Promise<FocusOutlineEvidence> {
+  const target = page.locator(selector).nth(options.index ?? 0);
+  await expect(target).toBeVisible();
+  await expect(target).toBeEnabled();
+  // Establish keyboard modality, then focus this specific control without
+  // depending on the dashboard sidebar's variable number of tab stops.
+  await page.keyboard.press('Tab');
+  await target.focus();
+  await expect(target).toBeFocused();
+  expect(await target.evaluate(node => node.matches(':focus-visible')),
+    selector + ' must be keyboard focus-visible').toBe(true);
+  const painted = options.outlineOnParentLabel
+    ? target.locator('xpath=ancestor::label[1]')
+    : target;
+  const computed = await painted.evaluate(node => {
+    const css = getComputedStyle(node);
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 1;
+    const context = canvas.getContext('2d', {willReadFrequently: true});
+    if (!context) throw new Error('Cannot resolve focus color without Canvas');
+    context.fillStyle = css.outlineColor;
+    context.fillRect(0, 0, 1, 1);
+    const data = context.getImageData(0, 0, 1, 1).data;
+    return {
+      visible: node.matches(':focus-visible') || node.matches(':has(:focus-visible)'),
+      widthPx: Number.parseFloat(css.outlineWidth),
+      offsetPx: Number.parseFloat(css.outlineOffset),
+      style: css.outlineStyle,
+      outline: {r: data[0], g: data[1], b: data[2], a: data[3] / 255},
+    };
+  });
+  expect(computed.visible, selector + ' must be keyboard focus-visible').toBe(true);
+  expect(computed.style, selector + ' must paint an outline').not.toBe('none');
+  expect(computed.widthPx, selector + ' outline must be at least 2 CSS px')
+    .toBeGreaterThanOrEqual(2);
+  expect(computed.offsetPx, selector + ' outline must not be hidden inside the control')
+    .toBeGreaterThanOrEqual(0);
+
+  // For nonnegative outline offsets the painted outline sits outside the
+  // element. Resolve the *ancestors'* solid background, not the button's
+  // own fill (an easy false-positive with filled primary buttons).
+  const sample = await sampleCssColors(
+    page,
+    options.outlineOnParentLabel ? 'label:has([role="radio"]:focus-visible)' : selector,
+  );
+  const outerLayers = sample.layers.slice(0, -1);
+  expect(outerLayers.length, 'Focus outline requires a resolvable surrounding surface')
+    .toBeGreaterThan(0);
+  expect(
+    outerLayers.every(layer => layer.backgroundImage === 'none'),
+    selector + ' focus outline is against an image-backed surface: manual audit required',
+  ).toBe(true);
+  const white: Rgba = {r: 255, g: 255, b: 255, a: 1};
+  const surface = outerLayers.reduce((back, layer) => blend(back, layer.color), white);
+  const ink = blend(surface, computed.outline);
+  const measured = ratio(ink, surface);
+  expect(measured, selector + ' ' + rgb(ink) + ' on ' + rgb(surface) + ' (WCAG 2.2 AA 1.4.11)')
+    .toBeGreaterThanOrEqual(3);
+  return {
+    control: options.index == null ? selector : selector + ':nth(' + options.index + ')',
+    widthPx: computed.widthPx,
+    offsetPx: computed.offsetPx,
+    style: computed.style,
+    outline: rgb(ink),
+    surroundingSurface: rgb(surface),
+    ratio: measured,
+  };
+}
+
+test('UX-35 keyboard focus outlines meet 3:1 on all four editors in both themes', async (
+  {page},
+  testInfo: TestInfo,
+) => {
+  requireIsolatedQA();
+  test.setTimeout(180_000);
+  await signInCreator(page);
+  const evidence: Record<string, FocusOutlineEvidence[]> = {};
+  for (const theme of ['light', 'dark'] as const) {
+    for (const type of ['digital', 'ebook', 'audio', 'course'] as const) {
+      await page.goto('/dashboard/items/new/' + type);
+      await expect(page.getByRole('heading', {level: 1})).toBeVisible();
+      await page.evaluate(isDark => {
+        document.documentElement.classList.toggle('dark', isDark);
+      }, theme === 'dark');
+      const actions = type === 'course'
+        ? ['button[aria-label="Preview"]', 'button[aria-label="Create course"]']
+        : ['button[aria-label="Preview"]', 'button[aria-label="Save draft"]'];
+      evidence[theme + '-' + type] = [];
+      for (const selector of actions) {
+        evidence[theme + '-' + type].push(await measureFocusedOutline(page, selector));
+      }
+      // Inputs use a native outline; the billing cards intentionally paint
+      // their outline on the <label> when the nested radio has keyboard focus.
+      evidence[theme + '-' + type].push(await measureFocusedOutline(
+        page, type === 'course' ? '#course-title' : '#product-title',
+      ));
+      const billing = '[role="radiogroup"][aria-label="Billing mode"] [role="radio"]';
+      await expect(page.locator(billing)).toHaveCount(2);
+      for (const index of [0, 1]) {
+        evidence[theme + '-' + type].push(await measureFocusedOutline(
+          page, billing, {index, outlineOnParentLabel: true},
+        ));
+      }
+    }
+  }
+  expect(Object.keys(evidence)).toHaveLength(8);
+  await testInfo.attach('UX35 rendered keyboard focus outline contrast', {
+    body: Buffer.from(JSON.stringify({
+      standard: 'WCAG 2.2 AA 1.4.11, active focus outline on adjacent solid surface >= 3:1',
+      methodology: 'Actual Chromium computed outline, keyboard :focus-visible and composited ancestor backgrounds',
+      limits: 'No native screen-reader acceptance; covers two header buttons, one text input and two billing options per editor/theme',
+      measurements: evidence,
+    }, null, 2)),
+    contentType: 'application/json',
+  });
+});
+
+test('UX-35 required-field errors expose assertive alerts in all four editors without writes', async (
+  {page},
+  testInfo: TestInfo,
+) => {
+  requireIsolatedQA();
+  test.setTimeout(120_000);
+  await signInCreator(page);
+  const posts: string[] = [];
+  page.on('request', request => {
+    if (request.method() === 'POST' && new URL(request.url()).pathname === '/api/v1/items') {
+      posts.push(request.url());
+    }
+  });
+  const evidence: Array<{
+    type: string;
+    message: string;
+    field: string;
+    alertRole: string | null;
+    ariaInvalid: string | null;
+    ariaDescribedBy: string | null;
+    ariaErrorMessage: string | null;
+    errorId: string | null;
+    errorLinked: boolean;
+  }> = [];
+  for (const type of ['digital', 'ebook', 'audio', 'course'] as const) {
+    await page.goto('/dashboard/items/new/' + type);
+    await expect(page.getByRole('heading', {level: 1})).toBeVisible();
+    const selector = type === 'course' ? '#course-title' : '#product-title';
+    const message = type === 'course' ? 'Add a course title.' : 'Title is required';
+    const title = page.locator(selector);
+    await expect(title).toBeVisible();
+    if (type === 'course') {
+      // Prevent default on the empty form: this must NOT call the create API.
+      await page.getByRole('button', {name: 'Create course'}).click();
+      await expect(title).toBeFocused();
+    } else {
+      // Trigger the real per-field blur validator, without Save or network.
+      await title.fill('temporary');
+      await title.fill('');
+      await title.press('Tab');
+    }
+    const field = title.locator('xpath=ancestor::*[@data-slot="field"][1]');
+    const alert = field.locator('[data-slot="field-error"][role="alert"]');
+    await expect(alert).toBeVisible();
+    await expect(alert).toHaveText(message);
+    await expect(title).toHaveAttribute('aria-invalid', 'true');
+    const semantics = await title.evaluate(node => {
+      const error = node.closest('[data-slot="field"]')
+        ?.querySelector<HTMLElement>('[data-slot="field-error"]');
+      return {
+        alertRole: error?.getAttribute('role') ?? null,
+        ariaInvalid: node.getAttribute('aria-invalid'),
+        ariaDescribedBy: node.getAttribute('aria-describedby'),
+        ariaErrorMessage: node.getAttribute('aria-errormessage'),
+        errorId: error?.id ?? null,
+      };
+    });
+    expect(semantics.alertRole, type + ' validation must be an assertive live alert')
+      .toBe('alert');
+    expect(semantics.errorId, type + ' must render an addressable error').toBeTruthy();
+    const errorLinked = [semantics.ariaDescribedBy, semantics.ariaErrorMessage]
+      .some(ids => ids?.split(/\s+/).includes(semantics.errorId!));
+    expect(errorLinked, type + ' title must associate its error via aria-errormessage or aria-describedby')
+      .toBe(true);
+    evidence.push({type, field: selector, message, ...semantics, errorLinked});
+  }
+  expect(posts, 'Client validation must never create a product').toEqual([]);
+  expect(evidence).toHaveLength(4);
+  await testInfo.attach('UX35 four-editor client validation alert semantics', {
+    body: Buffer.from(JSON.stringify({
+      scope: 'Actual client validation on empty title; no network product writes',
+      mechanism: 'A visible role=alert is an assertive live-region announcement; aria-invalid is set',
+      limits: 'Native NVDA/VoiceOver spoken output not tested; field-to-error association asserted by DOM IDs',
+      fields: evidence,
+    }, null, 2)),
+    contentType: 'application/json',
+  });
+});

@@ -1377,6 +1377,7 @@ function DetailsPanel({
         <Input
           id="product-title"
           aria-invalid={!!errors.title}
+          aria-errormessage={errors.title ? "product-title-error" : undefined}
           value={title}
           maxLength={160}
           onChange={event => onTitleChange(event.target.value)}
