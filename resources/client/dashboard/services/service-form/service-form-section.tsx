@@ -9,6 +9,7 @@ export type ServiceFormSectionId =
   | 'media'
   | 'packages'
   | 'faq'
+  | 'buyer-questions'
   | 'contact';
 
 interface ServiceFormSectionProps {
