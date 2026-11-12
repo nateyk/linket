@@ -154,7 +154,7 @@ class ValidateHelpCenterArchive
             $this->reject('An image contains an unsafe file name.');
         }
 
-        $prefix = $entry['public'] ?? false
+        $prefix = ($entry['public'] ?? false)
             ? trim((string) ($entry['disk_prefix'] ?? ''), '/').'/'.$filename
             : $filename.'/'.$filename;
 
