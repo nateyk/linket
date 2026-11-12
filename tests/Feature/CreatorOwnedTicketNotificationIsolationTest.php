@@ -186,7 +186,7 @@ class CreatorOwnedTicketNotificationIsolationTest extends TestCase
             ->withHeader('Referer', config('app.url'))
             ->withHeader('X-CSRF-TOKEN', 'hc-security-test')
             ->actingAs($owner)
-            ->postJson('/api/v1/helpdesk/conversations/group/change', [
+            ->postJson('/api/v1/helpdesk/agent/conversations/group/change', [
                 'conversationIds' => [$conversation->id],
                 'groupId' => 1,
             ])
