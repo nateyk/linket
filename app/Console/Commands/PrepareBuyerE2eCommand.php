@@ -8,6 +8,7 @@ use App\Courses\Models\Lesson;
 use App\Payments\VerifyEt\VerifyEtSettings;
 use App\Models\User;
 use Common\Permissions\Models\Permission;
+use Common\Roles\Models\Role;
 use App\Storefront\Models\CreatorPaymentMethod;
 use App\Storefront\Models\DigitalProduct;
 use App\Storefront\Models\DirectPaymentMethod;
@@ -109,6 +110,13 @@ class PrepareBuyerE2eCommand extends Command
                 ])->save();
             }
 
+            if ($withReviewer) {
+                // The caller already verified the disposable DB, loopback URL
+                // and reviewer-only opt-in before any seeded mutations.
+                $this->ensureDisposableCreatorUploadRole($creator);
+                $this->seedNewProductCreationCreator();
+            }
+
             $workspace = DB::table('workspace_user')
                 ->where('user_id', $creator->id)
                 ->first();
@@ -183,6 +191,7 @@ class PrepareBuyerE2eCommand extends Command
             $file->getDisk()->put($file->getStoragePath(), $fileContent);
 
             $reviewProductId = null;
+            $reviewProductIds = [];
             if ($withReviewer) {
                 // Real authenticated moderation test fixture. This never runs outside
                 // APP_ENV=testing and a database name containing "test" (guard above).
@@ -225,6 +234,12 @@ class PrepareBuyerE2eCommand extends Command
                 ])->save();
                 $reviewProduct->files()->syncWithoutDetaching([$file->id]);
                 $reviewProductId = (int) $reviewProduct->id;
+                $reviewProductIds['digital'] = $reviewProductId;
+
+                $reviewProductIds = array_merge(
+                    $reviewProductIds,
+                    $this->seedAdditionalReviewProducts($creator, $workspaceId, $file),
+                );
             }
 
             $method = CreatorPaymentMethod::query()
@@ -276,6 +291,7 @@ class PrepareBuyerE2eCommand extends Command
                 'product_title' => $product->title,
                 'course_product_id' => $courseProductId,
                 'review_product_id' => $reviewProductId,
+                'review_product_ids' => $reviewProductIds,
                 'buyer_email' => 'e2e-buyer-'.Str::lower(Str::random(8)).'@example.test',
                 'buyer_name' => 'E2E Buyer',
                 'verify_mock' => true,
@@ -301,6 +317,143 @@ class PrepareBuyerE2eCommand extends Command
         $this->line($absolute);
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Match the standard creator role after query-based E2E seeding. Never
+     * grant elevated file permission or change production role policies.
+     * Called exclusively from the guarded --with-reviewer path.
+     */
+    private function ensureDisposableCreatorUploadRole(User $creator): void
+    {
+        $usersRole = Role::query()
+            ->where('name', 'Users')
+            ->where('type', 'users')
+            ->firstOrFail();
+        $creator->roles()->syncWithoutDetaching([$usersRole->id]);
+        $creator->unsetRelation('roles');
+        if (! $creator->hasPermission('files.create')) {
+            throw new \RuntimeException(
+                'The disposable creator lacks standard Users files.create permission.',
+            );
+        }
+    }
+
+    /**
+     * Create a separate *ordinary free-tier* user for real new-item browser QA.
+     * The preseeded buyer/moderation creator already occupies five free slots.
+     * This account is used only from the guarded --with-reviewer local fixture;
+     * never relax the creator product limits or grant a special plan.
+     */
+    private function seedNewProductCreationCreator(): void
+    {
+        $email = 'e2e-new-product-creator@example.test';
+        $creator = User::query()->firstOrCreate(
+            ['email' => $email],
+            [
+                'name' => 'E2E New Product Creator',
+                'username' => 'e2e-new-product-'.Str::lower(Str::random(6)),
+                'password' => Hash::make('E2eBuyerCreator!23'),
+                'email_verified_at' => now(),
+            ],
+        );
+        $creator->forceFill([
+            'password' => Hash::make('E2eBuyerCreator!23'),
+            'email_verified_at' => now(),
+        ])->save();
+
+        $this->ensureDisposableCreatorUploadRole($creator);
+
+        if (! DB::table('workspace_user')->where('user_id', $creator->id)->exists()) {
+            (new CreateWorkspace())->createPersonalWorkspace($creator);
+        }
+    }
+
+    /**
+     * Provision additional product types only after the caller's fail-closed
+     * reviewer guard has verified belink_test and a loopback app origin.
+     *
+     * @return array<string, int>
+     */
+    private function seedAdditionalReviewProducts(User $creator, int $workspaceId, FileEntry $file): array
+    {
+        $ids = [];
+        // Four independent real moderation fixtures, strictly guarded by
+        // --with-reviewer and the loopback disposable belink_test check.
+        // Audio needs its own MP3 metadata, not the PDF buyer fixture.
+        $audioContent = "ID3\x04\x00\x00\x00\x00\x00\x00";
+        $audioFile = FileEntry::query()
+            ->where('workspace_id', $workspaceId)
+            ->where('owner_id', $creator->id)
+            ->where('name', 'e2e-moderation.mp3')
+            ->first();
+        if (! $audioFile) {
+            $audioFile = FileEntry::query()->create([
+                'name' => 'e2e-moderation.mp3',
+                'file_name' => 'e2e-'.Str::random(16).'.mp3',
+                'mime' => 'audio/mpeg',
+                'extension' => 'mp3',
+                'type' => 'file',
+                'file_size' => strlen($audioContent),
+                'workspace_id' => $workspaceId,
+                'owner_id' => $creator->id,
+            ]);
+        }
+        $audioFile->getDisk()->put($audioFile->getStoragePath(), $audioContent);
+
+        foreach ([
+            'ebook' => 'E2E Moderation E-book',
+            'audio' => 'E2E Moderation Audio',
+            'course' => 'E2E Moderation Course',
+        ] as $reviewType => $title) {
+            $description = 'Synthetic private '.$reviewType.' moderation lifecycle fixture';
+            $typeProduct = DigitalProduct::query()
+                ->where('user_id', $creator->id)
+                ->where('description', $description)
+                ->first() ?? new DigitalProduct();
+            $typeProduct->forceFill([
+                'workspace_id' => $workspaceId,
+                'user_id' => $creator->id,
+                'title' => $title,
+                'description' => $description,
+                'price_cents' => 0,
+                'currency' => 'ETB',
+                'status' => 'pending_approval',
+                'approved_at' => null,
+                'review_requested_by' => $creator->id,
+                'review_requested_at' => now(),
+                'rejection_reason' => null,
+                'pending_review_snapshot' => null,
+                'type' => $reviewType,
+            ])->save();
+
+            if ($reviewType === 'course') {
+                $reviewCourse = Course::query()->firstOrCreate(
+                    ['digital_product_id' => $typeProduct->id],
+                    ['instructor_user_id' => $creator->id],
+                );
+                $chapter = Chapter::query()->firstOrCreate(
+                    ['course_id' => $reviewCourse->id, 'title' => 'E2E Review Chapter'],
+                    ['sort_order' => 0],
+                );
+                $lesson = Lesson::query()->firstOrCreate(
+                    [
+                        'course_id' => $reviewCourse->id,
+                        'chapter_id' => $chapter->id,
+                        'title' => 'E2E Published Review Lesson',
+                    ],
+                    ['content_type' => 'readable', 'status' => 'published', 'sort_order' => 0],
+                );
+                $lesson->forceFill(['status' => 'published'])->save();
+            } else {
+                $typeProduct->files()->sync([
+                    $reviewType === 'audio' ? $audioFile->id : $file->id,
+                ]);
+            }
+            $ids[$reviewType] = (int) $typeProduct->id;
+        }
+
+        return $ids;
     }
 
     /**

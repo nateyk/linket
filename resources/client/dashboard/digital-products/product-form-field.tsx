@@ -36,7 +36,7 @@ export function ProductFormField({
           <Trans message={description} />
         </Field.Description>
       )}
-      {error && <Field.Error>{error}</Field.Error>}
+      {error && <Field.Error id={htmlFor ? `${htmlFor}-error` : undefined}>{error}</Field.Error>}
     </Field.Root>
   );
 }

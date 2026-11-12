@@ -14,7 +14,7 @@ import {
 import {Background} from '@app/short-links/renderers/biolink-renderer/biolink-background';
 import {Accordion} from '@shadcn/accordion/accordion';
 import {Avatar} from '@shadcn/avatar/avatar';
-import {Button} from '@shadcn/button/button';
+import {Button, buttonVariants} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
 import {Tabs} from '@shadcn/tabs/tabs';
 import {loadFonts} from '@ui/fonts/font-picker/load-fonts';
@@ -48,9 +48,16 @@ export function PublicServicePage({data}: {data: PublicServicePageData}) {
   const avatarUrl = profile.avatar_url || store.user?.image;
   const [inquiryOpen, setInquiryOpen] = useState(false);
   const [packageId, setPackageId] = useState<number>();
+  // The mobile sticky action follows the tier the visitor last selected.
+  const [selectedOfferPackageId, setSelectedOfferPackageId] = useState<
+    number | undefined
+  >(service.packages[0]?.id);
   const selectedPackage = service.packages.find(
     packageItem => packageItem.id === packageId,
   );
+  // Contact methods are secondary to the package-specific inquiry. Never
+  // repeat the same destination as separate focusable actions.
+  const seenContactHrefs = new Set<string>();
   const contactChannels = service.contact_channels
     .map(channel => ({channel, href: contactChannelHref(channel)}))
     .filter(
@@ -60,7 +67,12 @@ export function PublicServicePage({data}: {data: PublicServicePageData}) {
         channel: (typeof service.contact_channels)[number];
         href: string;
       } => !!item.href,
-    );
+    )
+    .filter(({href}) => {
+      if (seenContactHrefs.has(href)) return false;
+      seenContactHrefs.add(href);
+      return true;
+    });
 
   const [passwordValid, setPasswordValid] = useState(!store.password);
   const packagePanelRef = useRef<HTMLDivElement | null>(null);
@@ -145,12 +157,12 @@ export function PublicServicePage({data}: {data: PublicServicePageData}) {
                 />
 
                 <Card.Content className={biolinkSurfaceContent}>
-                  <h1 className="max-w-3xl text-3xl leading-tight font-semibold tracking-tight text-balance sm:text-4xl">
+                  <h1 className="max-w-3xl text-3xl leading-tight font-semibold tracking-tight text-balance break-words [overflow-wrap:anywhere] sm:text-4xl">
                     {service.title}
                   </h1>
 
                   {service.short_description && (
-                    <p className="max-w-[70ch] text-base leading-6 text-[var(--biolink-muted-text)]">
+                    <p className="max-w-[70ch] text-base leading-6 text-[var(--biolink-muted-text)] break-words [overflow-wrap:anywhere]">
                       {service.short_description}
                     </p>
                   )}
@@ -195,36 +207,26 @@ export function PublicServicePage({data}: {data: PublicServicePageData}) {
                     {(service.video_url || service.live_demo_url) && (
                       <div className="flex flex-wrap gap-2">
                         {service.video_url && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            render={
-                              <a
-                                href={service.video_url}
-                                target="_blank"
-                                rel="noreferrer"
-                              />
-                            }
+                          <a
+                            href={service.video_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={buttonVariants({variant: 'outline', size: 'sm'})}
                           >
-                            <VideoIcon data-icon="inline-start" />
+                            <VideoIcon data-icon="inline-start" aria-hidden="true" />
                             <Trans message="Video preview" />
-                          </Button>
+                          </a>
                         )}
                         {service.live_demo_url && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            render={
-                              <a
-                                href={service.live_demo_url}
-                                target="_blank"
-                                rel="noreferrer"
-                              />
-                            }
+                          <a
+                            href={service.live_demo_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={buttonVariants({variant: 'outline', size: 'sm'})}
                           >
-                            <ExternalLinkIcon data-icon="inline-start" />
+                            <ExternalLinkIcon data-icon="inline-start" aria-hidden="true" />
                             <Trans message="Live demo" />
-                          </Button>
+                          </a>
                         )}
                       </div>
                     )}
@@ -259,11 +261,11 @@ export function PublicServicePage({data}: {data: PublicServicePageData}) {
                         <Accordion.Root variant="separated">
                           {service.faqs.map(faq => (
                             <Accordion.Item key={faq.id}>
-                              <Accordion.Trigger>
+                              <Accordion.Trigger className="min-w-0 text-start break-words [overflow-wrap:anywhere]">
                                 {faq.question}
                               </Accordion.Trigger>
                               <Accordion.Content>
-                                <p className="text-sm leading-relaxed text-[var(--biolink-muted-text)]">
+                                <p className="text-sm leading-relaxed text-[var(--biolink-muted-text)] break-words [overflow-wrap:anywhere]">
                                   {faq.answer}
                                 </p>
                               </Accordion.Content>
@@ -285,6 +287,7 @@ export function PublicServicePage({data}: {data: PublicServicePageData}) {
                   packages={service.packages}
                   appearance={appearance}
                   onRequest={requestQuote}
+                  onSelect={setSelectedOfferPackageId}
                 />
               </div>
 
@@ -308,44 +311,37 @@ export function PublicServicePage({data}: {data: PublicServicePageData}) {
                       </Avatar.ColorFallback>
                     </Avatar.Root>
                     <div className="flex min-w-0 flex-col">
-                      <p className="truncate text-base font-medium">
+                      <p className="text-base font-medium break-words [overflow-wrap:anywhere]">
                         {displayName}
                       </p>
                       {profile.profile_title && (
-                        <p className="truncate text-sm text-[var(--biolink-muted-text)]">
+                        <p className="text-sm text-[var(--biolink-muted-text)] break-words [overflow-wrap:anywhere]">
                           {profile.profile_title}
                         </p>
                       )}
                     </div>
                   </div>
 
-                  <Button
-                    variant="ghost"
-                    className={cn('w-full', buttonAppearance.className)}
-                    style={buttonAppearance.style}
-                    onClick={() => requestQuote()}
-                  >
-                    <Trans message="Send inquiry" />
-                  </Button>
-
                   {!!contactChannels.length && (
                     <div className="flex flex-col gap-2">
                       {contactChannels.map(({channel, href}) => (
-                        <Button
-                          key={`${channel.type}-${channel.value}`}
-                          variant="outline"
-                          className="w-full justify-start"
-                          render={
-                            <a
-                              href={href}
-                              target="_blank"
-                              rel="noreferrer"
-                            />
-                          }
+                        <a
+                          key={href}
+                          href={href}
+                          // mailto: and tel: should launch their handlers without
+                          // opening an unnecessary blank browser tab.
+                          target={/^https?:/.test(href) ? '_blank' : undefined}
+                          rel={/^https?:/.test(href) ? 'noopener noreferrer' : undefined}
+                          className={cn(
+                            buttonVariants({variant: 'outline'}),
+                            'h-auto min-h-11 w-full justify-start gap-2 whitespace-normal text-start',
+                          )}
                         >
                           <ContactIcon type={channel.type} />
-                          {channel.label || channel.value}
-                        </Button>
+                          <span className="min-w-0 break-words [overflow-wrap:anywhere]">
+                            {channel.label || channel.value}
+                          </span>
+                        </a>
                       ))}
                     </div>
                   )}
@@ -382,7 +378,7 @@ export function PublicServicePage({data}: {data: PublicServicePageData}) {
               className={cn('shrink-0', buttonAppearance.className)}
               style={buttonAppearance.style}
               size="lg"
-              onClick={() => requestQuote()}
+              onClick={() => requestQuote(selectedOfferPackageId)}
             >
               <Trans message="Request a quote" />
             </Button>
@@ -413,7 +409,7 @@ function ServiceDescription({html}: {html?: string | null}) {
 
   return (
     <div
-      className="prose prose-sm max-w-none text-[var(--biolink-text)] prose-headings:text-[var(--biolink-text)] prose-p:text-[var(--biolink-muted-text)] prose-li:text-[var(--biolink-muted-text)] prose-strong:text-[var(--biolink-text)]"
+      className="prose prose-sm max-w-none text-[var(--biolink-text)] break-words [overflow-wrap:anywhere] prose-headings:text-[var(--biolink-text)] prose-p:text-[var(--biolink-muted-text)] prose-li:text-[var(--biolink-muted-text)] prose-strong:text-[var(--biolink-text)]"
       dangerouslySetInnerHTML={{__html: html}}
     />
   );

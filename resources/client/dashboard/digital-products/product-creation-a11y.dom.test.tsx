@@ -902,3 +902,21 @@ describe('T4 heading hierarchy: sections are h2 under the page h1', () => {
     ]);
   });
 });
+
+
+describe('UX-35 Course Builder heading semantics', () => {
+  test('renders a real h1 during load and after course data hydrates', () => {
+    const source = fs.readFileSync(
+      path.resolve('resources/client/dashboard/courses/course-builder-page.tsx'),
+      'utf8',
+    );
+    const headings = source.match(/<DashboardLayout\.SectionTitle\s+render={<h1 \/>}[^>]*>/g);
+    expect(headings).toHaveLength(2);
+    // Both loading and ready states must retain mobile reflow styling.
+    for (const heading of headings ?? []) {
+      expect(heading).toContain('max-lg:basis-full');
+      expect(heading).toContain('max-lg:whitespace-normal');
+    }
+    expect(source).toContain('message="Course Builder"');
+  });
+});

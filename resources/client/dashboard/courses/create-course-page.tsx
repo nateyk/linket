@@ -191,7 +191,7 @@ export function Component() {
           <ProductFormProgress completed={sections.filter(s => s.isComplete).length} total={sections.length} />
           <Accordion.Root variant="bordered" value={openSection ? [openSection] : []} onValueChange={value => setOpenSection(value[0] ?? null)}>
             {sections.map(section => <ProductFormSection key={section.id} {...section} hasError={section.id === 'details' && !!(errors.title || errors.price)}>{section.id === 'details' ? <div className="flex flex-col gap-4">
-              <ProductFormField label="Course title" description="Choose a clear title learners can easily understand." error={errors.title} htmlFor="course-title" required><Input id="course-title" aria-invalid={!!errors.title} value={title} maxLength={160} onChange={event => { setTitle(event.target.value); setErrors(current => ({...current, title: undefined})); }} placeholder="Complete course title" autoFocus /></ProductFormField>
+              <ProductFormField label="Course title" description="Choose a clear title learners can easily understand." error={errors.title} htmlFor="course-title" required><Input id="course-title" aria-invalid={!!errors.title} aria-errormessage={errors.title ? "course-title-error" : undefined} value={title} maxLength={160} onChange={event => { setTitle(event.target.value); setErrors(current => ({...current, title: undefined})); }} placeholder="Complete course title" autoFocus /></ProductFormField>
               <div id="course-billing" className="flex flex-col gap-2" tabIndex={-1}>
                 <p className="text-sm font-medium"><Trans message="Free or paid?" /></p>
                 <BillingModePicker
@@ -210,7 +210,7 @@ export function Component() {
                   <Badge variant="secondary"><Trans message="Free" /></Badge>
                 </div>
               ) : billingMode === 'paid' ? (
-                <ProductFormField label="Price (ETB)" description="This course is paid. Update the price if needed." error={errors.price} htmlFor="course-price" required><InputGroup><InputGroupAddon align="inline-start"><InputGroupText>ETB</InputGroupText></InputGroupAddon><InputGroupInput id="course-price" aria-invalid={!!errors.price} type="number" min="0" step="0.01" value={price} onChange={event => { setPrice(event.target.value); setErrors(current => ({...current, price: undefined})); }} placeholder="0.00" /></InputGroup></ProductFormField>
+                <ProductFormField label="Price (ETB)" description="This course is paid. Update the price if needed." error={errors.price} htmlFor="course-price" required><InputGroup><InputGroupAddon align="inline-start"><InputGroupText>ETB</InputGroupText></InputGroupAddon><InputGroupInput id="course-price" aria-invalid={!!errors.price} aria-errormessage={errors.price ? "course-price-error" : undefined} type="number" min="0" step="0.01" value={price} onChange={event => { setPrice(event.target.value); setErrors(current => ({...current, price: undefined})); }} placeholder="0.00" /></InputGroup></ProductFormField>
               ) : null}
             </div> : <div className="flex flex-col gap-4">
               {/* Same shared settings fields as the builder's CourseSettingsDialog; the two-step submit threads them into PUT /courses/{id}. */}

@@ -161,6 +161,7 @@ export function ServiceInquiryDialog({
                   value={form.name}
                   onChange={event => update('name', event.target.value)}
                   aria-invalid={!!errors.name}
+                  aria-describedby={errors.name ? 'inquiry-name-error' : undefined}
                 />
               </InquiryField>
 
@@ -175,6 +176,7 @@ export function ServiceInquiryDialog({
                   value={form.email}
                   onChange={event => update('email', event.target.value)}
                   aria-invalid={!!errors.email}
+                  aria-describedby={errors.email ? 'inquiry-email-error' : undefined}
                 />
               </InquiryField>
 
@@ -202,6 +204,7 @@ export function ServiceInquiryDialog({
                   value={form.message}
                   onChange={event => update('message', event.target.value)}
                   aria-invalid={!!errors.message}
+                  aria-describedby={errors.message ? 'inquiry-message-error' : undefined}
                   placeholder={trans(
                     message(
                       'I need a logo for my business. Here is what I have in mind...',
@@ -254,12 +257,12 @@ function InquiryField({
       </label>
       {children}
       {error === 'required' && (
-        <p className="text-sm text-destructive">
+        <p id={`${id}-error`} role="alert" className="text-sm text-destructive">
           <Trans message="This field is required." />
         </p>
       )}
       {error === 'invalid' && (
-        <p className="text-sm text-destructive">
+        <p id={`${id}-error`} role="alert" className="text-sm text-destructive">
           <Trans message="Enter a valid email address." />
         </p>
       )}
