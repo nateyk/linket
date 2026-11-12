@@ -29,8 +29,15 @@ class HcArticlePolicy extends BasePolicy
         }
 
         if ($resource instanceof HcCategory) {
-            return ! $resource->parent_id ||
-                HcVisibility::canViewRole($user, $resource->parent?->visible_to_role);
+            if (! $resource->parent_id) {
+                return true;
+            }
+
+            // The compact parent relation omits visible_to_role, so load the
+            // actual parent rather than authorizing against a null attribute.
+            $parent = HcCategory::query()->find($resource->parent_id);
+
+            return $parent && HcVisibility::canViewRole($user, $parent->visible_to_role);
         }
 
         if ($resource->draft) {
