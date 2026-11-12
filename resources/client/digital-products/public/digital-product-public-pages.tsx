@@ -166,7 +166,7 @@ export function PublicDigitalProductPage({
   const [buyerEmail, setBuyerEmail] = useState('');
   const [buyerPhone, setBuyerPhone] = useState('');
   const [paymentMethodId, setPaymentMethodId] = useState<number | undefined>();
-  const [buyerError, setBuyerError] = useState<'name' | 'email'>();
+  const [buyerError, setBuyerError] = useState<'name' | 'email' | 'payment_method'>();
   const [checkoutFailed, setCheckoutFailed] = useState(false);
   const [directCheckout, setDirectCheckout] = useState<DirectCheckout | null>(null);
   const [reviewsSummary, setReviewsSummary] = useState<ProductReviewsSummary>();
@@ -206,7 +206,8 @@ export function PublicDigitalProductPage({
       return;
     }
     if (data.product.payment_mode === 'direct' && (data.product.receiving_accounts?.length ?? 0) > 1 && !paymentMethodId) {
-      setCheckoutFailed(true);
+      setBuyerError('payment_method');
+      setCheckoutFailed(false);
       return;
     }
 
@@ -412,7 +413,7 @@ export function PublicDigitalProductPage({
         onNameChange={setBuyerName}
         onEmailChange={setBuyerEmail}
         onPhoneChange={setBuyerPhone}
-        onPaymentMethodChange={setPaymentMethodId}
+        onPaymentMethodChange={next => { setPaymentMethodId(next); if (buyerError === 'payment_method') setBuyerError(undefined); }}
         onSubmit={() => void beginCheckout()}
       />
       <DirectPaymentModal checkout={directCheckout} onClose={() => setDirectCheckout(null)} />
@@ -603,7 +604,7 @@ function BuyerDetailsDialog({
   email: string;
   phone: string;
   paymentMethodId?: number;
-  error?: 'name' | 'email';
+  error?: 'name' | 'email' | 'payment_method';
   onOpenChange: (open: boolean) => void;
   onNameChange: (value: string) => void;
   onEmailChange: (value: string) => void;
@@ -620,6 +621,7 @@ function BuyerDetailsDialog({
     biolink.profile_config?.display_name || creator?.name || biolink.name;
   const nameInputRef = useRef<HTMLInputElement | null>(null);
   const emailInputRef = useRef<HTMLInputElement | null>(null);
+  const paymentMethodRef = useRef<HTMLFieldSetElement | null>(null);
 
   // Validation errors are announced (Field.Error) but focus used to stay on
   // the submit button — move it to the offending field so keyboard and SR
@@ -630,6 +632,8 @@ function BuyerDetailsDialog({
       nameInputRef.current?.focus();
     } else if (error === 'email') {
       emailInputRef.current?.focus();
+    } else if (error === 'payment_method') {
+      paymentMethodRef.current?.focus();
     }
   }, [error, open]);
 
@@ -660,7 +664,7 @@ function BuyerDetailsDialog({
         <Dialog.Backdrop />
         <Dialog.Content
           showCloseButton={false}
-          className="bg-[var(--biolink-surface-strong)] text-[var(--biolink-text)] sm:max-w-md"
+          className="max-h-[calc(100dvh-1.5rem)] overflow-y-auto bg-[var(--biolink-surface-strong)] text-[var(--biolink-text)] sm:max-w-md"
           style={resolveBiolinkPublicAppearanceStyle(appearance)}
         >
           <Dialog.CloseButton
@@ -681,6 +685,7 @@ function BuyerDetailsDialog({
               <LockKeyholeIcon />
               <Trans message="Complete your purchase" />
             </Dialog.Title>
+            <p className="text-xs font-medium text-[var(--biolink-muted-text)]"><Trans message="Step 1 of 2 · Buyer information" /></p>
             <div
               className={cn(
                 'flex items-center gap-3 rounded-card-xs bg-[var(--biolink-surface)] px-3 py-2.5',
@@ -796,15 +801,55 @@ function BuyerDetailsDialog({
                 </Field.Description>
               </Field.Root>
               {product.payment_mode === 'direct' && (product.receiving_accounts?.length ?? 0) > 1 && (
-                <Field.Root>
-                  <Field.Label><Trans message="Payment destination" /></Field.Label>
-                  <select className="h-10 rounded-input border border-[var(--biolink-border)] bg-[var(--biolink-surface)] px-3 text-sm text-[var(--biolink-text)]" value={paymentMethodId ?? ''} onChange={event => onPaymentMethodChange(event.target.value ? Number(event.target.value) : undefined)}>
-                    <option value=""><Trans message="Choose an account" /></option>
-                    {product.receiving_accounts?.map(account => <option key={account.id} value={account.id}>{account.provider.toUpperCase()} · {account.account_name} · {account.account_ending}</option>)}
-                  </select>
-                </Field.Root>
+                <fieldset
+                  ref={paymentMethodRef}
+                  tabIndex={-1}
+                  className="flex flex-col gap-2"
+                  aria-invalid={error === 'payment_method'}
+                  aria-describedby={error === 'payment_method' ? 'buyer-payment-method-error' : undefined}
+                >
+                  <legend className="mb-2 text-sm font-medium">
+                    <Trans message="Choose how to pay" />
+                  </legend>
+                  {product.receiving_accounts?.map(account => (
+                    <label
+                      key={account.id}
+                      className={cn(
+                        'flex min-h-12 cursor-pointer items-center gap-3 rounded-card-xs border px-3 py-2.5 text-sm',
+                        'border-[var(--biolink-border)] bg-[var(--biolink-surface)]',
+                        paymentMethodId === account.id && 'ring-2 ring-[var(--biolink-accent,var(--color-primary))]',
+                      )}
+                    >
+                      <input
+                        type="radio"
+                        name="creator-payment-method"
+                        value={account.id}
+                        checked={paymentMethodId === account.id}
+                        onChange={() => onPaymentMethodChange(account.id)}
+                        className="size-4 shrink-0 accent-[var(--biolink-accent,var(--color-primary))]"
+                      />
+                      <span className="flex min-w-0 flex-1 flex-col">
+                        <span className="font-medium">{account.provider.toLowerCase() === 'cbe'
+                          ? <Trans message="Commercial Bank of Ethiopia (CBE)" />
+                          : account.provider.toLowerCase() === 'telebirr'
+                            ? <Trans message="Telebirr" />
+                            : account.provider.toLowerCase() === 'boa'
+                              ? <Trans message="Bank of Abyssinia" />
+                              : account.provider.toUpperCase()}</span>
+                        <span className="truncate text-xs text-[var(--biolink-muted-text)]">
+                          {account.account_name} · ••••{account.account_ending}
+                        </span>
+                      </span>
+                    </label>
+                  ))}
+                  {error === 'payment_method' && (
+                    <p role="alert" id="buyer-payment-method-error" className="text-xs text-destructive">
+                      <Trans message="Choose a bank or wallet to continue." />
+                    </p>
+                  )}
+                </fieldset>
               )}
-              <ul className="flex flex-col gap-2 border-t border-[var(--biolink-border)] pt-4 text-sm text-[var(--biolink-muted-text)]">
+              <ul className="flex flex-col gap-1.5 border-t border-[var(--biolink-border)] pt-3 text-xs text-[var(--biolink-muted-text)]">
                 <li className="flex items-start gap-2">
                   <CheckCircle2Icon
                     className="mt-0.5 size-4 shrink-0 text-positive"

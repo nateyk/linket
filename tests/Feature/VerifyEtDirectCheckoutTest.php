@@ -16,6 +16,8 @@ use App\Storefront\Models\CreatorPaymentMethod;
 use App\Storefront\Models\DigitalProduct;
 use App\Storefront\Models\DigitalProductEarningsLedger;
 use App\Storefront\Services\DirectStorefrontCheckout;
+use App\Storefront\Resources\PublicDigitalProductResource;
+use Illuminate\Http\Request;
 use App\Storefront\StorefrontCheckout;
 use Common\Billing\Models\Product;
 use Common\Files\FileEntry;
@@ -813,6 +815,15 @@ class VerifyEtDirectCheckoutTest extends TestCase
             'operationally_suspended' => false,
         ]);
 
+        $public = (new PublicDigitalProductResource($existingOrder->product->fresh()->load('creator')))
+            ->toArray(Request::create('/'));
+        $this->assertSame('direct', $public['payment_mode']);
+        $this->assertCount(2, $public['receiving_accounts']);
+        $this->assertEqualsCanonicalizing(
+            ['cbe', 'telebirr'],
+            $public['receiving_accounts']->pluck('provider')->all(),
+        );
+
         $order = app(StorefrontCheckout::class)->create($existingOrder->product, null, [
             'name' => 'Buyer', 'email' => 'other-buyer@example.test',
         ], $secondMethod->id);
@@ -1062,17 +1073,37 @@ class VerifyEtDirectCheckoutTest extends TestCase
         $this->assertSame('expired', $order->fresh()->status);
     }
 
+    public function testRecipientAccountNumberCannotBeSubmittedAsAReceiptReference(): void
+    {
+        [$order, $verification] = $this->orderAndVerification();
+        $verification->delete();
+        $token = $order->getAttribute('paymentAccessToken');
+
+        $this->withHeader('X-Order-Access-Token', $token)
+            ->postJson('/api/v1/public/direct-orders/'.$order->uuid.'/reference', [
+                'reference' => $order->payment_account_snapshot,
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('reference');
+
+        $order->refresh();
+        $this->assertSame('pending_payment', $order->status);
+        $this->assertSame(0, $order->verification_attempts);
+        $this->assertFalse($order->directPaymentVerifications()->exists());
+    }
+
     public function testBuyerCanSelectAnotherActiveReceivingAccountUntilPaymentCompletes(): void
     {
-        [$order] = $this->orderAndVerification();
+        [$order, $verification] = $this->orderAndVerification();
+        $verification->delete();
         $token = $order->getAttribute('paymentAccessToken');
         $order->offsetUnset('paymentAccessToken');
         $other = \App\Storefront\Models\CreatorPaymentMethod::query()->create([
             'workspace_id' => $order->product->workspace_id,
             'user_id' => $order->creator_id,
-            'provider' => 'dashen',
-            'account_number' => '0012862182001',
-            'account_fingerprint' => hash('sha256', 'dashen-'.$order->id),
+            'provider' => 'telebirr',
+            'account_number' => '0912345678',
+            'account_fingerprint' => hash('sha256', 'telebirr-'.$order->id),
             'account_name_raw' => 'Abebe Kebede Wolde',
             'account_name_normalized' => 'abebe kebede wolde',
             'status' => 'approved',
@@ -1088,9 +1119,24 @@ class VerifyEtDirectCheckoutTest extends TestCase
 
         $order->refresh();
         $this->assertSame($other->id, $order->creator_payment_method_id);
-        $this->assertSame('dashen', $order->payment_provider_snapshot);
-        $this->assertSame('0012862182001', $order->payment_account_snapshot);
+        $this->assertSame('telebirr', $order->payment_provider_snapshot);
+        $this->assertSame('0912345678', $order->payment_account_snapshot);
         $this->assertSame('Abebe Kebede Wolde', $order->payment_account_name_snapshot);
+
+        $verification = DirectPaymentVerification::query()->create([
+            'reference' => 'FT26' . Str::upper(Str::random(14)),
+            'payable_type' => $order::class,
+            'payable_id' => $order->id,
+            'bank_code' => 'telebirr',
+            'settlement_account' => '0912345678',
+            'amount_cents' => 10000,
+            'currency' => 'ETB',
+            'status' => 'verifying',
+        ]);
+
+        $this->withHeader('X-Order-Access-Token', $token)
+            ->postJson('/api/v1/public/direct-orders/'.$order->uuid.'/select-account', ['receiving_account_id' => $order->creator_payment_method_id])
+            ->assertConflict();
 
         $order->update(['status' => 'paid']);
         $this->withHeader('X-Order-Access-Token', $token)
