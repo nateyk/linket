@@ -1586,6 +1586,7 @@ function FilesPanel({
       <SharedFileUploader
         uploadType="digitalProductFiles"
         bare
+        className="[&>[role=button]]:p-4"
         onUploaded={entry =>
           onUploaded({
             id: entry.id,
@@ -1681,18 +1682,12 @@ function BioPagesPanel({
         <p>
           <Trans message="You can sell this product directly. Create a Storefront later if you want to display it there." />
         </p>
-        <p className="text-xs">
-          <Trans message="Storefront placement is optional and does not block product submission." />
-        </p>
       </div>
     );
   }
 
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-sm text-muted-foreground">
-        <Trans message="Optional. Choose where customers can find this product after approval." />
-      </p>
       <Dropdown.Root>
         <Dropdown.Trigger
           render={
@@ -1723,7 +1718,7 @@ function BioPagesPanel({
           className="max-h-80 w-[min(28rem,calc(100vw-2rem))] overflow-y-auto"
         >
           <Dropdown.Group>
-            <Dropdown.GroupLabel>
+            <Dropdown.GroupLabel className="sr-only">
               <Trans message="Select one or more Storefronts" />
             </Dropdown.GroupLabel>
             {biolinks.map(page => (
@@ -1752,7 +1747,7 @@ function BioPagesPanel({
           </Dropdown.Group>
         </Dropdown.Content>
       </Dropdown.Root>
-      <p className="text-xs text-muted-foreground" role="status" aria-live="polite">
+      <p className="sr-only" role="status" aria-live="polite">
         {selectedIds.length > 0 ? (
           <Trans
             message="[one :count Storefront selected|other :count Storefronts selected]"
@@ -1763,7 +1758,7 @@ function BioPagesPanel({
         )}
       </p>
       <p className="text-xs text-muted-foreground">
-        <Trans message="Selection does not publish the product; approval is handled separately." />
+        <Trans message="Storefront placement takes effect after approval." />
       </p>
     </div>
   );
