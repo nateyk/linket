@@ -153,7 +153,7 @@ test.describe('product creation responsive evidence', () => {
         }
         expect(overflow, `${item.type} must not overflow at ${viewport.width}px`).toBeLessThanOrEqual(1);
 
-        const preview = page.getByRole('button', {name: 'Preview'});
+        const preview = page.getByRole('button', {name: 'Preview', exact: true});
         await expect(preview).toBeVisible();
         await preview.click();
         await expect(page.getByRole('dialog', {name: 'Customer preview'})).toBeVisible();
@@ -232,7 +232,7 @@ test('200% text resize preserves readable editors, Preview and keyboard focus', 
       console.log('TEXT_RESIZE_OVERFLOW', JSON.stringify({type: item.type, overflow}));
     }
     expect(overflow, `${item.type} text resizing must not create horizontal page scroll`).toBeLessThanOrEqual(1);
-    const preview = page.getByRole('button', {name: 'Preview'});
+    const preview = page.getByRole('button', {name: 'Preview', exact: true});
     await preview.focus();
     await page.keyboard.press('Enter');
     await expect(page.getByRole('dialog', {name: 'Customer preview'})).toBeVisible();
@@ -269,7 +269,7 @@ test('keyboard-only product choice and Preview support focus return', async ({pa
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/\/dashboard\/items\/new\/ebook$/);
 
-  const preview = page.getByRole('button', {name: 'Preview'});
+  const preview = page.getByRole('button', {name: 'Preview', exact: true});
   await preview.focus();
   await page.keyboard.press('Enter');
   const dialog = page.getByRole('dialog', {name: 'Customer preview'});
@@ -583,7 +583,7 @@ test('short mobile RTL, dark mode and long titles preserve all four editor layou
       }));
       expect(layout.rtl && layout.dark).toBe(true);
       expect(layout.overflow, `${item.type} at ${viewport.width}px in RTL/dark`).toBeLessThanOrEqual(1);
-      const preview = page.getByRole('button', {name: 'Preview'});
+      const preview = page.getByRole('button', {name: 'Preview', exact: true});
       await preview.focus();
       await page.keyboard.press('Enter');
       const dialog = page.getByRole('dialog', {name: 'Customer preview'});
@@ -653,7 +653,7 @@ test('approval lifecycle and customer Preview never expose private file details'
   await expect(page.getByRole('heading', {name: /edit digital product/i, level: 1})).toBeVisible();
   await expect(page.locator('[aria-label="Approved · update under review"]')).toBeVisible();
   await expect(page.getByText('This product remains approved while an update is under review.')).toBeVisible();
-  await page.getByRole('button', {name: 'Preview'}).click();
+  await page.getByRole('button', {name: 'Preview', exact: true}).click();
   const dialog = page.getByRole('dialog', {name: 'Customer preview'});
   await expect(dialog).toBeVisible();
   expect(await dialog.innerHTML()).not.toContain(secret);
