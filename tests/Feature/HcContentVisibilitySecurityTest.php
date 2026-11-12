@@ -62,8 +62,10 @@ class HcContentVisibilitySecurityTest extends TestCase
             ->assertForbidden();
         $this->stateful()->getJson('/api/v1/hc/articles')
             ->assertOk()->assertDontSee($term);
+        // The search response intentionally echoes the search query. Only results
+        // are sensitive, so assert against pagination rather than response text.
         $this->stateful()->getJson('/api/v1/search/articles?query='.urlencode($term))
-            ->assertOk()->assertDontSee($term);
+            ->assertOk()->assertJsonCount(0, 'pagination.data');
     }
 
     public function test_article_editor_payload_is_not_public_even_for_published_articles(): void
@@ -141,7 +143,7 @@ class HcContentVisibilitySecurityTest extends TestCase
         $this->stateful()->getJson("/api/v1/hc/sidenav/{$root->id}")
             ->assertOk()->assertDontSee($title);
         $this->stateful()->getJson('/api/v1/search/articles?query='.urlencode($title))
-            ->assertOk()->assertDontSee($title);
+            ->assertOk()->assertJsonCount(0, 'pagination.data');
     }
 
     public function test_tagged_private_content_cannot_bypass_search_visibility_filters(): void
