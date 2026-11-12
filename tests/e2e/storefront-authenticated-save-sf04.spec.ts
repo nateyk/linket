@@ -55,7 +55,7 @@ test('SF-04 logged-in Appearance Save survives reload and updates published page
   test.setTimeout(120_000);
 
   const data = fixture();
-  const visitorContext = await browser.newContext({viewport: {width: 390, height: 844}});
+  const visitorContext = await browser.newContext({viewport: {width: 390, height: 844}, baseURL: process.env.E2E_BASE_URL});
   const visitor = await visitorContext.newPage();
   const target = '#334155';
 
