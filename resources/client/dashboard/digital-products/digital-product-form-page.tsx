@@ -1782,10 +1782,11 @@ function BioPagesPanel({
           align="start"
           className="max-h-80 w-[min(28rem,calc(100vw-2rem))] overflow-y-auto"
         >
-          <Dropdown.GroupLabel>
-            <Trans message="Select one or more Storefronts" />
-          </Dropdown.GroupLabel>
-          {biolinks.map(page => (
+          <Dropdown.Group>
+            <Dropdown.GroupLabel>
+              <Trans message="Select one or more Storefronts" />
+            </Dropdown.GroupLabel>
+            {biolinks.map(page => (
             <Dropdown.CheckboxItem
               key={page.id}
               checked={selectedIds.includes(page.id)}
@@ -1807,7 +1808,8 @@ function BioPagesPanel({
                 )}
               </span>
             </Dropdown.CheckboxItem>
-          ))}
+            ))}
+          </Dropdown.Group>
         </Dropdown.Content>
       </Dropdown.Root>
       <p className="text-xs text-muted-foreground" role="status" aria-live="polite">
