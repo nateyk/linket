@@ -102,6 +102,41 @@ it('renders API-provided verified revenue and recent verification statuses', asy
   expect(screen.queryByText('No verified sales in this period')).toBeNull();
 });
 
+it('presents compact, accessible recent-order table and mobile rows', async () => {
+  fixture.sales.data.data = [
+    {
+      uuid: 'order-1234567890', status: 'paid', gross_amount_cents: 2600,
+      currency: 'ETB', buyer_name: 'First buyer',
+      created_at: '2026-11-12T09:00:00Z', product: {title: 'Creator guide'},
+    },
+    {
+      uuid: 'review-0987654321', status: 'manual_review', gross_amount_cents: 1500,
+      currency: 'ETB', buyer_name: null,
+      created_at: '2026-11-11T09:00:00Z', product: {title: 'Digital workbook'},
+    },
+  ];
+  showDashboard();
+
+  const table = await screen.findByRole('table', {name: 'Recent orders'});
+  expect(table.querySelectorAll('thead th')).toHaveLength(5);
+  expect(table.querySelectorAll('tbody tr')).toHaveLength(2);
+  expect(table.querySelectorAll('thead th[scope="col"]')).toHaveLength(5);
+  expect(table.textContent).toContain('Creator guide');
+  expect(table.textContent).toContain('First buyer');
+  expect(table.textContent).toContain('Manual review needed');
+
+  const mobile = document.querySelector('ol[aria-labelledby="recent-orders-title"]');
+  expect(mobile).not.toBeNull();
+  expect(mobile?.querySelectorAll('li')).toHaveLength(2);
+  expect(mobile?.textContent).toContain('#order-12');
+  expect(mobile?.textContent).toContain('Guest buyer');
+  expect(mobile?.textContent).toContain('2600 ETB cents');
+
+  const action = screen.getByRole('link', {name: 'See all orders'});
+  expect(action.getAttribute('href')).toBe('/dashboard/orders');
+  expect(document.querySelector('[data-slot="card-footer"] a[href="/dashboard/orders"]')).toBeNull();
+});
+
 it('uses a distinct analytics query key when switching workspaces', async () => {
   const client = new QueryClient({defaultOptions: {queries: {retry: false}}});
   const {rerender} = render(<QueryClientProvider client={client}><MemoryRouter><Component /></MemoryRouter></QueryClientProvider>);
