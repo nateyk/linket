@@ -233,6 +233,34 @@ describe('the service form shell', () => {
     expect(screen.getByRole('textbox', {name: 'Value'}).getAttribute('maxlength')).toBe('300');
   });
 
+  test('creator edits up to three optional buyer questions without writes', async () => {
+    const user = userEvent.setup();
+    mountPage('/dashboard/services/new');
+    await waitForForm();
+
+    await user.click(screen.getByRole('button', {name: 'Settings, step 4 of 4'}));
+    const add = screen.getByRole('button', {name: 'Add question'});
+    for (let index = 0; index < 3; index += 1) {
+      await user.click(add);
+    }
+    expect(add).toHaveProperty('disabled', true);
+    expect(screen.getByText('Maximum 3 buyer questions reached.')).toBeTruthy();
+    const first = screen.getByRole('textbox', {name: 'Question 1'});
+    expect(first.getAttribute('maxlength')).toBe('160');
+    await user.type(first, 'What is your deadline?');
+
+    await user.click(screen.getByRole('button', {name: 'Details, step 1 of 4'}));
+    await user.click(screen.getByRole('button', {name: 'Settings, step 4 of 4'}));
+    expect(screen.getByRole('textbox', {name: 'Question 1'})).toHaveProperty(
+      'value', 'What is your deadline?',
+    );
+    expect(api.post).not.toHaveBeenCalled();
+    expect(api.put).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', {name: 'Remove question 2'}));
+    expect(screen.getAllByRole('textbox', {name: /^Question [12]$/})).toHaveLength(2);
+  });
+
   test('FAQ and contact repeaters stop at the API maximums', async () => {
     const user = userEvent.setup();
     mountPage('/dashboard/services/new');
