@@ -234,6 +234,7 @@ function ServiceFormPage() {
     media: requiredSections.media || form.gallery.length > 0 || !!form.video_url.trim() || !!form.live_demo_url.trim(),
     packages: requiredSections.packages,
     settings: form.faqs.some(faq => !!faq.question.trim() || !!faq.answer.trim())
+      || form.buyer_questions.some(question => !!question.trim())
       || form.contact_channels.some(channel => !!channel.value.trim()),
   };
 
