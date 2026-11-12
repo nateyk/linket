@@ -1,5 +1,6 @@
 import {Trans} from '@ui/i18n/trans';
 import type {ReactNode} from 'react';
+import {ProductEditorSection} from './product-editor-section';
 
 /**
  * Dedicated Digital Product editor layout. The parent owns API mutations,
@@ -17,36 +18,6 @@ export interface DigitalProductEditorProps {
   storefront: ReactNode;
 }
 
-function EditorSection({
-  id,
-  title,
-  description,
-  children,
-}: {
-  id: string;
-  title: ReactNode;
-  description: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <section
-      role="region"
-      aria-labelledby={id}
-      className="min-w-0 rounded-card-sm border border-border bg-card p-4 sm:p-6"
-    >
-      <header className="mb-4">
-        <h2 id={id} className="text-base font-semibold text-foreground">
-          {title}
-        </h2>
-        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-          {description}
-        </p>
-      </header>
-      <div className="min-w-0">{children}</div>
-    </section>
-  );
-}
-
 export function DigitalProductEditor({
   details,
   files,
@@ -56,45 +27,45 @@ export function DigitalProductEditor({
 }: DigitalProductEditorProps) {
   return (
     <div className="flex min-w-0 flex-col gap-4" data-testid="digital-product-editor">
-      <EditorSection
+      <ProductEditorSection
         id="digital-product-details"
         title={<Trans message="Product details" />}
         description={<Trans message="Tell customers what is included and show a clear cover image." />}
       >
         {details}
-      </EditorSection>
+      </ProductEditorSection>
 
-      <EditorSection
+      <ProductEditorSection
         id="digital-product-files"
         title={<Trans message="Files buyers receive" />}
         description={<Trans message="These downloadable files stay private until a purchase is verified." />}
       >
         {files}
-      </EditorSection>
+      </ProductEditorSection>
 
-      <EditorSection
+      <ProductEditorSection
         id="digital-product-sample"
         title={<Trans message="Sample PDF (optional)" />}
         description={<Trans message="Offer a PDF preview before purchase. Your full files remain private." />}
       >
         {sample}
-      </EditorSection>
+      </ProductEditorSection>
 
-      <EditorSection
+      <ProductEditorSection
         id="digital-product-pricing"
         title={<Trans message="Price" />}
         description={<Trans message="Choose free access or set a one-time price in ETB." />}
       >
         {pricing}
-      </EditorSection>
+      </ProductEditorSection>
 
-      <EditorSection
+      <ProductEditorSection
         id="digital-product-storefront"
         title={<Trans message="Storefront placement (optional)" />}
         description={<Trans message="Choose where this product appears after approval." />}
       >
         {storefront}
-      </EditorSection>
+      </ProductEditorSection>
     </div>
   );
 }
