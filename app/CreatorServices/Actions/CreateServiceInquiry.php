@@ -18,6 +18,16 @@ class CreateServiceInquiry
                 ? trim((string) $data['phone'])
                 : null,
             'message' => trim((string) $data['message']),
+            // Snapshot the exact question shown to the buyer. Later edits to
+            // the service must not rewrite a historical inquiry.
+            'question_answers' => collect($data['answers'] ?? [])
+                ->map(fn ($answer, $index): array => [
+                    'question' => $service->buyer_questions[$index],
+                    'answer' => trim((string) ($answer ?? '')),
+                ])
+                ->filter(fn (array $item): bool => $item['answer'] !== '')
+                ->values()
+                ->all(),
             'status' => 'new',
         ]);
 
