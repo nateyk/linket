@@ -171,6 +171,8 @@ interface SharedFileUploaderProps {
   initialItems?: UploadItem[];
   className?: string;
   bare?: boolean;
+  /** Compact visual layout with the full progress/error attachment list preserved. */
+  dense?: boolean;
   /**
    * One compact row instead of the full drop zone. Same input, same drag and
    * drop, same validation — for a picker that sits beside content instead of
@@ -194,6 +196,7 @@ export function SharedFileUploader({
   initialItems = [],
   className,
   bare = false,
+  dense = false,
   compact = false,
   ariaLabel,
 }: SharedFileUploaderProps) {
@@ -439,16 +442,17 @@ export function SharedFileUploader({
           {...dropHandlers}
           className={cn(
             'flex cursor-pointer flex-col items-center justify-center gap-2 rounded-card border border-dashed p-6 text-center transition-colors outline-none hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring/20',
+            dense && 'flex-row flex-wrap justify-start gap-3 p-3 text-start',
             isDragging
               ? 'border-primary bg-primary/5'
               : 'border-border bg-muted/40 hover:bg-muted/60',
           )}
         >
           {fileInput}
-          <div className="flex size-9 items-center justify-center rounded-card-sm bg-primary/10 text-primary">
+          <div className={cn('flex size-9 items-center justify-center rounded-card-sm bg-primary/10 text-primary', dense && 'hidden sm:flex')}>
             <UploadIcon className="size-4" aria-hidden="true" />
           </div>
-          <div className="flex flex-col gap-1">
+          <div className={cn('flex flex-col gap-1', dense && 'min-w-0 flex-1')}>
             <p className="text-sm font-medium text-foreground">
               {title ??
                 (isDragging ? (
@@ -467,6 +471,7 @@ export function SharedFileUploader({
             type="button"
             variant="outline"
             size="sm"
+            className={dense ? 'shrink-0' : undefined}
             onClick={event => {
               event.stopPropagation();
               inputRef.current?.click();

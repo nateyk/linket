@@ -35,11 +35,14 @@ test('all five steps form one mobile row and a vertical desktop rail', () => {
   expect(nav.querySelectorAll('[data-slot="separator"]')).toHaveLength(4);
   expect(nav.querySelector('li > span[aria-hidden="true"]')?.className).toContain('start-1/2 -end-1/2');
   expect(PRODUCT_AUTHORING_STEP_ORDER).toEqual(['details', 'files', 'sample', 'pricing', 'storefront']);
+  expect(within(nav).queryByText('Step 2 of 5')).toBeNull();
+  expect(within(nav).queryByText('Product setup')).toBeNull();
 
   const selected = within(nav).getByRole('button', {name: 'Files, step 2 of 5'});
   expect(selected.getAttribute('aria-current')).toBe('step');
   expect(selected.getAttribute('aria-controls')).toBe('ebook-private-files');
   expect(selected.getAttribute('data-step-complete')).toBe('true');
+  expect(selected.getAttribute('aria-description')).toBe('Complete');
   expect(selected.querySelector('span[aria-hidden="true"]')?.className).toContain('bg-positive');
   expect(within(nav).getByRole('button', {name: 'Sample, step 3 of 5'}).getAttribute('data-step-complete')).toBe('false');
 });

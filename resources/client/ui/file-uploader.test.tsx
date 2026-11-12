@@ -111,6 +111,29 @@ describe('SharedFileUploader', () => {
   });
 });
 
+test('dense full uploader keeps visible progress, error feedback and a browse action', () => {
+  const html = renderToStaticMarkup(
+    <SharedFileUploader
+      uploadType="digitalProductFiles"
+      onUploaded={() => {}}
+      bare
+      dense
+      title="Add files"
+      initialItems={[
+        {id: 'u1', name: 'large.pdf', size: 1000, progress: 42, status: 'uploading'},
+        {id: 'e1', name: 'bad.exe', size: 2000, progress: 0, status: 'error', error: 'Unsupported file type'},
+      ]}
+    />,
+  );
+  expect(html).toContain('flex-row');
+  expect(html).toContain('Add files');
+  expect(html).toContain('Browse files');
+  expect(html).toContain('large.pdf');
+  expect(html).toContain('42%');
+  expect(html).toContain('Unsupported file type');
+  expect(html).toContain('Remove large.pdf');
+});
+
 describe('SharedFileUploader bare mode', () => {
   test('renders without a Card wrapper for embedding in existing Cards', () => {
     const html = renderToStaticMarkup(

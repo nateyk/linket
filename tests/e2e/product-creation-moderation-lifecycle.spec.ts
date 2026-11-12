@@ -334,7 +334,7 @@ for (const scenario of [
       } else {
         await expect(creator.locator('[aria-label="Approved"]')).toBeVisible();
         await expect(creator.locator('#product-title')).toHaveValue(approvedTitle);
-        await creator.getByRole('button', {name: 'Preview'}).click();
+        await creator.getByRole('button', {name: 'Preview', exact: true}).click();
         const preview = creator.getByRole('dialog', {name: 'Customer preview'});
         await expect(preview).toBeVisible();
         await expect(preview.getByRole('button', {name: 'Buy now'})).toBeDisabled();

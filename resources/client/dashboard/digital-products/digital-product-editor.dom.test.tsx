@@ -2,7 +2,6 @@
  * @vitest-environment jsdom
  */
 import {render, screen, within} from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import {describe, expect, test} from 'vitest';
 import {DigitalProductEditor} from './digital-product-editor';
 
@@ -45,12 +44,12 @@ describe('dedicated Digital Product editor', () => {
     expect(screen.getByRole('button', {name: 'Choose optional Storefront'})).not.toBeNull();
   });
 
-  test('help controls retain guidance without crowding each section heading', async () => {
-    const user = userEvent.setup();
+  test('section headings are accessible without duplicate help-icon chrome', () => {
     render(<DigitalProductEditor {...contents} />);
     const files = screen.getByRole('region', {name: 'Files buyers receive'});
-    expect(within(files).queryByText(/private until a purchase is verified/)).toBeNull();
-    await user.click(within(files).getByRole('button', {name: 'About this section'}));
-    expect(await screen.findByText(/private until a purchase is verified/)).not.toBeNull();
+    const sample = screen.getByRole('region', {name: 'Sample PDF (optional)'});
+    expect(within(files).getByRole('heading', {name: 'Files buyers receive'})).not.toBeNull();
+    expect(within(sample).getByRole('button', {name: 'Upload optional sample PDF'})).not.toBeNull();
+    expect(screen.queryByRole('button', {name: 'About this section'})).toBeNull();
   });
 });

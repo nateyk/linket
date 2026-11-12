@@ -1,6 +1,5 @@
 /** @vitest-environment jsdom */
 import {render, screen, within} from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import {describe, expect, test} from 'vitest';
 import {EbookEditor} from './ebook-editor';
 
@@ -26,25 +25,21 @@ describe('dedicated E-book editor', () => {
     expect(screen.queryByRole('tablist')).toBeNull();
   });
 
-  test('supports PDF or EPUB without requiring both formats', async () => {
-    const user = userEvent.setup();
+  test('supports PDF or EPUB without repeating instructions in a help popover', () => {
     render(<EbookEditor {...slots} />);
     const bookFiles = screen.getByRole('region', {name: 'Book files'});
-    expect(within(bookFiles).queryByText(/^Upload a PDF or EPUB book file\./)).toBeNull();
-    await user.click(within(bookFiles).getByRole('button', {name: 'About this section'}));
-    expect(await screen.findByText(/^Upload a PDF or EPUB book file\./)).not.toBeNull();
     expect(within(bookFiles).getByRole('button', {name: 'Upload PDF or EPUB'})).not.toBeNull();
     expect(within(bookFiles).queryByText(/both files required/i)).toBeNull();
+    expect(within(bookFiles).queryByRole('button', {name: 'About this section'})).toBeNull();
   });
 
-  test('keeps optional public sample separate from private book files', async () => {
-    const user = userEvent.setup();
+  test('keeps optional public sample separate from private book files', () => {
     render(<EbookEditor {...slots} />);
     const books = screen.getByRole('region', {name: 'Book files'});
     const sample = screen.getByRole('region', {name: 'Sample pages (optional)'});
-    expect(within(books).queryByText('Add optional PDF sample')).toBeNull();
+    expect(within(books).queryByRole('button', {name: 'Add optional PDF sample'})).toBeNull();
     expect(within(sample).getByRole('button', {name: 'Add optional PDF sample'})).not.toBeNull();
-    await user.click(within(sample).getByRole('button', {name: 'About this section'}));
-    expect(await screen.findByText(/Share a separate PDF sample before purchase/)).not.toBeNull();
+    expect(within(sample).queryByRole('button', {name: 'Upload PDF or EPUB'})).toBeNull();
+    expect(screen.queryByRole('button', {name: 'About this section'})).toBeNull();
   });
 });

@@ -69,14 +69,8 @@ export function ProductAuthoringSteps({
     <nav
       aria-label={trans({message: 'Product creation steps'})}
       data-testid="product-authoring-steps"
-      className="min-w-0 scroll-mt-20 border-b pb-3 xl:sticky xl:top-4 xl:self-start xl:border-b-0 xl:border-e xl:pb-0 xl:pe-4"
+      className="min-w-0 scroll-mt-20 border-b pb-2 xl:sticky xl:top-4 xl:self-start xl:border-b-0 xl:border-e xl:pb-0 xl:pe-4"
     >
-      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-        <p className="text-sm font-semibold">{trans({message: 'Product setup'})}</p>
-        <span className="text-xs tabular-nums text-muted-foreground">
-          {trans({message: 'Step :current of :total', values: {current: activeIndex + 1, total: steps.length}})}
-        </span>
-      </div>
       <ol className="grid min-w-0 grid-cols-5 gap-0 xl:grid-cols-1">
         {steps.map((step, index) => {
           const current = active === step.id;
@@ -109,6 +103,7 @@ export function ProductAuthoringSteps({
                 variant="ghost"
                 aria-current={current ? 'step' : undefined}
                 aria-controls={TARGET_IDS[type][step.id]}
+                aria-description={done ? trans({message: 'Complete'}) : undefined}
                 aria-label={trans({
                   message: ':name, step :index of :total',
                   values: {name: step.label, index: index + 1, total: steps.length},
