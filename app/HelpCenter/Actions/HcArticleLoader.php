@@ -9,6 +9,7 @@ use Common\Files\FileEntry;
 use Common\Tags\Tag;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 
 class HcArticleLoader
 {
@@ -35,6 +36,11 @@ class HcArticleLoader
         }
 
         $article = HcArticle::findOrFail($articleId);
+        Gate::authorize('show', $article);
+        if ($loader === 'updateArticle') {
+            Gate::authorize('update', $article);
+        }
+
         $article = (new ArticleCollection([$article]))
             ->loadPath(
                 request()->route('categoryId'),
@@ -151,14 +157,18 @@ class HcArticleLoader
     {
         $isAgent = Auth::user()?->isAgent() ?? false;
 
+        $root = HcCategory::find($categoryId);
+        if (! $root || Gate::denies('show', $root)) {
+            return collect([]);
+        }
+
         return HcCategory::where('parent_id', $categoryId)
             ->filterByVisibleToRole()
             ->orderByPosition()
             ->with([
                 'articles' => function ($q) use ($isAgent) {
-                    $q->filterByVisibleToRole();
                     if (! $isAgent) {
-                        $q->where('draft', false);
+                        $q->visibleToAudience();
                     }
                 },
             ])
