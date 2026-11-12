@@ -103,7 +103,9 @@ export function ServicePackagePanel({
                 'w-max min-w-28 max-w-56 whitespace-normal text-center leading-snug break-words [overflow-wrap:anywhere]',
               )}
             >
-              {packageItem.name}
+              <span className="min-w-0 max-w-full whitespace-normal break-words [overflow-wrap:anywhere]">
+                {packageItem.name}
+              </span>
             </Tabs.Tab>
           ))}
         </Tabs.List>
