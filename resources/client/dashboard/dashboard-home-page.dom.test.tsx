@@ -1,5 +1,6 @@
 /** @vitest-environment jsdom */
-import {cleanup, render, screen} from '@testing-library/react';
+import {cleanup, fireEvent, render, screen, within} from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
 import {MemoryRouter} from 'react-router';
 import {afterEach, beforeEach, expect, it, vi} from 'vitest';
@@ -95,7 +96,7 @@ it('renders API-provided verified revenue and recent verification statuses', asy
   expect(screen.getAllByText('Paid workbook').length).toBeGreaterThan(0);
   expect(screen.getAllByText('Sample buyer').length).toBeGreaterThan(0);
   expect(screen.getAllByText('Guest buyer').length).toBeGreaterThan(0);
-  expect(screen.getByText('Buyer')).toBeTruthy();
+  expect(screen.getByRole('button', {name: 'Choose visible columns'})).toBeTruthy();
   expect(screen.getAllByText('Manual review needed').length).toBeGreaterThan(0);
   expect(screen.getByRole('link', {name: 'See all orders'})).toBeTruthy();
   expect(screen.getAllByText('#paid').length).toBeGreaterThan(0);
@@ -118,9 +119,9 @@ it('presents compact, accessible recent-order table and mobile rows', async () =
   showDashboard();
 
   const table = await screen.findByRole('table', {name: 'Recent orders'});
-  expect(table.querySelectorAll('thead th')).toHaveLength(5);
+  expect(table.querySelectorAll('thead th')).toHaveLength(3);
   expect(table.querySelectorAll('tbody tr')).toHaveLength(2);
-  expect(table.querySelectorAll('thead th[scope="col"]')).toHaveLength(5);
+  expect(table.querySelectorAll('thead th[scope="col"]')).toHaveLength(3);
   expect(table.textContent).toContain('Creator guide');
   expect(table.textContent).toContain('First buyer');
   expect(table.textContent).toContain('Manual review needed');
@@ -135,6 +136,56 @@ it('presents compact, accessible recent-order table and mobile rows', async () =
   const action = screen.getByRole('link', {name: 'See all orders'});
   expect(action.getAttribute('href')).toBe('/dashboard/orders');
   expect(document.querySelector('[data-slot="card-footer"] a[href="/dashboard/orders"]')).toBeNull();
+});
+
+
+it('searches recent orders and sorts amounts within the five loaded records', async () => {
+  fixture.sales.data.data = [
+    {uuid: 'guide-123', status: 'paid', gross_amount_cents: 2600, currency: 'ETB', buyer_name: 'First buyer', created_at: '2026-11-12T09:00:00Z', product: {title: 'Creator guide'}},
+    {uuid: 'workbook-456', status: 'manual_review', gross_amount_cents: 1500, currency: 'ETB', buyer_name: 'Second buyer', created_at: '2026-11-11T09:00:00Z', product: {title: 'Digital workbook'}},
+  ];
+  showDashboard();
+
+  let table = await screen.findByRole('table', {name: 'Recent orders'});
+  expect(table.querySelectorAll('tbody tr')).toHaveLength(2);
+  expect(table.querySelector('tbody tr')?.textContent).toContain('Creator guide');
+
+  fireEvent.click(within(table).getByRole('button', {name: 'Amount'}));
+  expect(table.querySelector('tbody tr')?.textContent).toContain('Digital workbook');
+
+  const search = screen.getByRole('searchbox', {name: 'Search recent orders'});
+  fireEvent.change(search, {target: {value: 'Creator guide'}});
+  table = screen.getByRole('table', {name: 'Recent orders'});
+  expect(table.querySelectorAll('tbody tr')).toHaveLength(1);
+  expect(table.textContent).toContain('Creator guide');
+  expect(document.querySelectorAll('ol[aria-labelledby="recent-orders-title"] li')).toHaveLength(1);
+
+  fireEvent.change(search, {target: {value: 'no such product'}});
+  expect(screen.getByText('No matching orders')).toBeTruthy();
+  fireEvent.click(screen.getByRole('button', {name: 'Clear filters'}));
+  expect(screen.getByRole('table', {name: 'Recent orders'}).querySelectorAll('tbody tr')).toHaveLength(2);
+});
+
+it('filters real payment statuses and lets desktop reveal optional columns', async () => {
+  fixture.sales.data.data = [
+    {uuid: 'paid-1', status: 'paid', gross_amount_cents: 2600, currency: 'ETB', buyer_name: 'Verified buyer', created_at: '2026-11-12T09:00:00Z', product: {title: 'Paid guide'}},
+    {uuid: 'review-2', status: 'manual_review', gross_amount_cents: 1500, currency: 'ETB', buyer_name: 'Review buyer', created_at: '2026-11-11T09:00:00Z', product: {title: 'Review guide'}},
+    {uuid: 'expired-3', status: 'expired', gross_amount_cents: 1200, currency: 'ETB', buyer_name: 'Expired buyer', created_at: '2026-11-10T09:00:00Z', product: {title: 'Expired guide'}},
+  ];
+  showDashboard();
+  const user = userEvent.setup();
+  const table = await screen.findByRole('table', {name: 'Recent orders'});
+  expect(table.querySelectorAll('thead th')).toHaveLength(3);
+
+  await user.click(screen.getByRole('combobox', {name: 'Filter by payment status'}));
+  await user.click(await screen.findByRole('option', {name: 'Needs review'}));
+  expect(screen.getByRole('table', {name: 'Recent orders'}).querySelectorAll('tbody tr')).toHaveLength(1);
+  expect(screen.getByRole('table', {name: 'Recent orders'}).textContent).toContain('Review guide');
+
+  await user.click(screen.getByRole('button', {name: 'Choose visible columns'}));
+  await user.click(await screen.findByRole('menuitemcheckbox', {name: 'Buyer'}));
+  expect(screen.getByRole('table', {name: 'Recent orders'}).querySelectorAll('thead th')).toHaveLength(4);
+  expect(screen.getByRole('table', {name: 'Recent orders'}).textContent).toContain('Review buyer');
 });
 
 it('uses a distinct analytics query key when switching workspaces', async () => {
