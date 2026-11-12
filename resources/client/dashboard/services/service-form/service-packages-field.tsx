@@ -234,14 +234,14 @@ export function ServicePackagesField({
     <div className="min-w-0 space-y-4 sm:space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-muted-foreground">
-          <Trans message="Choose a tier to edit its details." />
+          <Trans message="Enable only the packages you offer. Leave them off to invite quotes." />
         </p>
         <p className="text-xs font-medium tabular-nums text-muted-foreground">
           <Trans message=":count of 3 enabled" values={{count: enabledCount}} />
         </p>
       </div>
 
-      <div className="grid min-w-0 grid-cols-3 divide-x border-b" role="group" aria-label={trans({message: 'Package tiers'})}>
+      <div className="grid min-w-0 grid-cols-3 gap-1 rounded-card-sm bg-muted/40 p-1 sm:gap-2" role="group" aria-label={trans({message: 'Package tiers'})}>
         {TIERS.map((tier, index) => {
           const slot = slots[index];
           const tierName = trans(tier.label);
@@ -255,9 +255,9 @@ export function ServicePackagesField({
               key={tier.key}
               aria-label={tier.name + ' package'}
               className={cn(
-                'min-w-0 border-b-2 border-transparent px-2 py-2.5 sm:px-3',
-                selectedIndex === index && 'border-primary',
-                tierHasError && 'border-destructive',
+                'min-w-0 rounded-card-xs px-1.5 py-2.5 transition-colors motion-reduce:transition-none sm:px-3',
+                selectedIndex === index && 'bg-primary/5 ring-1 ring-primary/60',
+                tierHasError && 'ring-1 ring-destructive',
               )}
             >
               <button
@@ -265,9 +265,9 @@ export function ServicePackagesField({
                 aria-pressed={selectedIndex === index}
                 aria-label={trans({message: 'Edit :name package', values: {name: tierName}})}
                 onClick={() => setSelectedIndex(index)}
-                className="flex min-h-12 w-full min-w-0 flex-col justify-start gap-1 rounded-button text-start outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                className="flex min-h-12 w-full min-w-0 flex-col justify-start gap-1 rounded-card-xs text-start outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               >
-                <span className={cn('text-sm font-semibold', !item && 'text-muted-foreground')}>
+                <span className={cn('text-sm font-semibold', selectedIndex === index ? 'text-primary' : !item ? 'text-muted-foreground' : 'text-foreground')}>
                   {tierName}
                 </span>
                 <span className="min-w-0 break-words text-xs leading-4 text-muted-foreground tabular-nums">
@@ -276,12 +276,13 @@ export function ServicePackagesField({
                     formatMoney(priceCents, 'ETB')}
                 </span>
               </button>
-              <div className="mt-2 flex min-h-8 items-center justify-between gap-1">
+              <div className="mt-2 flex min-h-11 items-center justify-between gap-1">
                 <span className="text-xs text-muted-foreground">
                   {item ? <Trans message="On" /> : <Trans message="Off" />}
                 </span>
                 <Switch
-                  size="sm"
+                  size="default"
+                  className="focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-primary"
                   checked={Boolean(item)}
                   onCheckedChange={checked => setEnabled(index, checked)}
                   aria-label={trans({message: 'Enable :name package', values: {name: tierName}})}

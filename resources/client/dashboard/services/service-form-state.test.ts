@@ -162,6 +162,20 @@ describe('service form state', () => {
     expect(serviceFormClientErrors(form)).toEqual({});
   });
 
+  test('validates the optional buyer questions and preserves them in the payload', () => {
+    const form = emptyServiceForm();
+    expect(form.buyer_questions).toEqual([]);
+    form.buyer_questions = ['  When is your deadline?  ', ''];
+    expect(serviceFormClientErrors(form)).toEqual({
+      'buyer_questions.1': 'Write a question of 160 characters or fewer, or remove it.',
+    });
+    form.buyer_questions = ['  When is your deadline?  ', 'How much is your budget?'];
+    expect(serviceFormClientErrors(form)).toEqual({});
+    expect(toServicePayload(form).buyer_questions).toEqual([
+      'When is your deadline?', 'How much is your budget?',
+    ]);
+  });
+
   test('blank price becomes a quote-only package', () => {
     const form = emptyServiceForm();
     form.store_id = '1';

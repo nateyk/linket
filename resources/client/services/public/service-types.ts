@@ -41,6 +41,7 @@ export type PublicServiceDetail = PublicService & {
   contact_channels: ServiceContactChannel[];
   packages: PublicServicePackage[];
   faqs: PublicServiceFaq[];
+  buyer_questions?: string[];
 };
 
 export type PublicStore = Biolink & {

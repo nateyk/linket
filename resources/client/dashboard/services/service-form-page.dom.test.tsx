@@ -196,16 +196,38 @@ describe('the service form shell', () => {
     expect(screen.queryByRole('complementary', {name: 'Service preview'})).toBeNull();
     expect(screen.queryByRole('dialog', {name: 'Customer preview'})).toBeNull();
     const steps = screen.getByRole('navigation', {name: 'Service creation steps'});
-    expect(steps.className).not.toContain('border-b');
+    expect(steps.className).toContain('xl:border-e');
+    expect(steps.className).not.toContain('rounded-card border bg-card');
     expect(steps.querySelectorAll('ol > li button > span[aria-hidden="true"]')).toHaveLength(4);
-    expect(screen.queryByText('Service setup')).toBeNull();
-    expect(steps.parentElement?.className).toContain('max-w-6xl');
+    expect(screen.getByRole('heading', {name: 'Service setup', level: 2})).toBeTruthy();
+    expect(steps.parentElement?.className).toContain('xl:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]');
     expect(steps.parentElement?.className).not.toContain('mx-auto');
+    expect(steps.querySelector('ol')?.className).toContain('grid-cols-4');
+    expect(steps.querySelector('ol')?.className).not.toContain('grid-cols-2');
+    expect(steps.querySelector('ol')?.className).toContain('xl:grid-cols-1');
+    expect(screen.queryByText('Move between steps anytime. Use Save draft to keep your changes.')).toBeNull();
+    expect(steps.querySelectorAll('li > [data-slot="separator"]')).toHaveLength(3);
+    expect(steps.querySelectorAll('li > span[aria-hidden="true"]')).toHaveLength(3);
+    expect(steps.querySelector('li > [data-slot="separator"]')?.className)
+      .toContain('hidden xl:block');
+    expect(steps.querySelector('li > span[aria-hidden="true"]')?.className)
+      .toContain('h-px xl:hidden');
     expect(steps.querySelectorAll('ol > li')).toHaveLength(4);
     const selected = screen.getByRole('button', {name: 'Details, step 1 of 4'});
     expect(selected.getAttribute('data-step-state')).toBe('current');
     expect(selected.querySelector('[aria-hidden="true"]')?.className).toContain('bg-primary');
-    expect(selected.className).not.toContain('bg-primary/5');
+    expect(selected.getAttribute('data-step-complete')).toBe('false');
+    expect(selected.getAttribute('data-slot')).toBe('button');
+    expect(selected.className).toContain('rounded-card-xs');
+    expect(selected.className).not.toContain('border-primary/40');
+    expect(selected.className).toContain('bg-primary/5');
+    const basicsHeader = screen.getByRole('heading', {name: 'Basics'}).closest('header');
+    expect(basicsHeader?.className).not.toContain('border-b');
+    expect(basicsHeader?.className).toContain('pb-2');
+    expect(basicsHeader?.querySelector('span[aria-hidden="true"]')).toBeNull();
+    const titleField = titleInput().closest('[data-slot="field"]');
+    expect(titleField?.className).toContain('focus-visible:not([aria-invalid=true])');
+    expect(titleField?.className).toContain('outline-primary');
     // Step changes are announced once by the page-level status region.
     expect(screen.getAllByRole('status')).toHaveLength(1);
   });
@@ -227,6 +249,36 @@ describe('the service form shell', () => {
 
     await user.click(screen.getByRole('button', {name: 'Add contact button'}));
     expect(screen.getByRole('textbox', {name: 'Value'}).getAttribute('maxlength')).toBe('300');
+  });
+
+  test('creator edits up to three optional buyer questions without writes', async () => {
+    const user = userEvent.setup();
+    mountPage('/dashboard/services/new');
+    await waitForForm();
+
+    await user.click(screen.getByRole('button', {name: 'Settings, step 4 of 4'}));
+    const add = screen.getByRole('button', {name: 'Add question'});
+    for (let index = 0; index < 3; index += 1) {
+      await user.click(add);
+    }
+    expect(add).toHaveProperty('disabled', true);
+    expect(screen.getByText('Maximum 3 buyer questions reached.')).toBeTruthy();
+    const first = screen.getByRole('textbox', {name: 'Question 1'});
+    expect(first.getAttribute('maxlength')).toBe('160');
+    await user.type(first, 'What is your deadline?');
+
+    await user.click(screen.getByRole('button', {name: 'Details, step 1 of 4'}));
+    await user.click(screen.getByRole('button', {name: 'Settings, step 4 of 4'}));
+    expect(screen.getByRole('textbox', {name: 'Question 1'})).toHaveProperty(
+      'value', 'What is your deadline?',
+    );
+    expect(screen.getByRole('button', {name: 'Settings, step 4 of 4'})
+      .getAttribute('data-step-complete')).toBe('true');
+    expect(api.post).not.toHaveBeenCalled();
+    expect(api.put).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', {name: 'Remove question 2'}));
+    expect(screen.getAllByRole('textbox', {name: /^Question [12]$/})).toHaveLength(2);
   });
 
   test('FAQ and contact repeaters stop at the API maximums', async () => {
@@ -269,10 +321,16 @@ describe('the service form shell', () => {
     // The stage may be scrolled far down in the previous form; its own scroll
     // owner must reset after React commits the next stage, not in a stale rAF.
     scroller.scrollTop = 320;
-    await user.click(screen.getByRole('button', {name: 'Media, step 2 of 4'}));
+    const mediaStep = screen.getByRole('button', {name: 'Media, step 2 of 4'});
+    mediaStep.focus();
+    await user.keyboard('{Enter}');
+    expect(document.activeElement).toBe(mediaStep);
     expect(scroller.scrollTop).toBe(0);
     expect(screen.getByRole('button', {name: 'Media, step 2 of 4'}).getAttribute('aria-current')).toBe('step');
     expect(screen.getByRole('button', {name: 'Details, step 1 of 4'}).getAttribute('data-step-state')).toBe('previous');
+    expect(screen.getByRole('button', {name: 'Details, step 1 of 4'}).getAttribute('data-step-complete')).toBe('true');
+    expect(screen.getByRole('button', {name: 'Details, step 1 of 4'})
+      .querySelector('span[aria-hidden="true"]')?.className).toContain('bg-positive');
     expect(screen.queryByRole('textbox', {name: 'Title'})).toBeNull();
     expect(document.getElementById('description')).toBe(descriptionEditor);
     expect(screen.getByRole('heading', {name: 'Media and links'})).toBeTruthy();

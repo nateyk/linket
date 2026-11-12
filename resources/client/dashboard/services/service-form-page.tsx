@@ -47,6 +47,7 @@ import {
 import {ServiceContactChannelsField} from './service-form/service-contact-channels-field';
 import {ServiceDescriptionEditor} from './service-form/service-description-editor';
 import {ServiceFaqsField} from './service-form/service-faqs-field';
+import {ServiceBuyerQuestionsField} from './service-form/service-buyer-questions-field';
 import {ServiceFormField} from './service-form/service-form-field';
 import {ServiceBuilderSteps, SERVICE_STEP_ORDER, type ServiceBuilderStepId} from './service-form/service-builder-steps';
 import {ServiceFormSection, type ServiceFormSectionId} from './service-form/service-form-section';
@@ -68,13 +69,14 @@ type CategoriesResponse = {data?: CategoryOption[]};
 
 function stepForSection(section: ServiceFormSectionId): ServiceBuilderStepId {
   if (section === 'basics') return 'details';
-  if (section === 'faq' || section === 'contact') return 'settings';
+  if (section === 'faq' || section === 'buyer-questions' || section === 'contact') return 'settings';
   return section;
 }
 
 function sectionForField(field: string): ServiceFormSectionId | null {
   if (field.startsWith('packages')) return 'packages';
   if (field.startsWith('faqs')) return 'faq';
+  if (field.startsWith('buyer_questions')) return 'buyer-questions';
   if (field.startsWith('contact_channels')) return 'contact';
   if (
     field.startsWith('gallery') ||
@@ -232,6 +234,7 @@ function ServiceFormPage() {
     media: requiredSections.media || form.gallery.length > 0 || !!form.video_url.trim() || !!form.live_demo_url.trim(),
     packages: requiredSections.packages,
     settings: form.faqs.some(faq => !!faq.question.trim() || !!faq.answer.trim())
+      || form.buyer_questions.some(question => !!question.trim())
       || form.contact_channels.some(channel => !!channel.value.trim()),
   };
 
@@ -664,13 +667,14 @@ function ServiceFormPage() {
             </Alert.Root>
           )}
 
-          <ServiceBuilderSteps
-            active={activeStep}
-            onSelect={changeStep}
-            completed={completedSteps}
-          />
+          <div className="grid min-w-0 items-start gap-4 sm:gap-5 xl:grid-cols-[minmax(0,14rem)_minmax(0,1fr)] xl:gap-6">
+            <ServiceBuilderSteps
+              active={activeStep}
+              onSelect={changeStep}
+              completed={completedSteps}
+            />
 
-          <div className="min-w-0 space-y-4 sm:space-y-5">
+            <div className="min-w-0 space-y-4 sm:space-y-5">
               {/* Keep the rich-text editor mounted between steps. Unmounting and
                   remounting it can restore editor focus/selection after the
                   navigator changes, moving both document and panel scroll. */}
@@ -915,7 +919,7 @@ function ServiceFormPage() {
                   icon={ImagesIcon}
                   title={trans({message: 'Media and links'})}
                   description={trans({
-                    message: 'Show the work before anyone asks.',
+                    message: 'Show examples that help customers understand your work.',
                   })}
                   isComplete={requiredSections.media}
                   optional
@@ -984,7 +988,7 @@ function ServiceFormPage() {
                   icon={LayersIcon}
                   title={trans({message: 'Packages'})}
                   description={trans({
-                    message: 'Give customers clear options to choose from.',
+                    message: 'Offer clear packages, or let customers request a quote.',
                   })}
                   isComplete={requiredSections.packages}
                   optional
@@ -1017,6 +1021,22 @@ function ServiceFormPage() {
                     faqs={form.faqs}
                     errors={fieldErrors}
                     onChange={faqs => update('faqs', faqs)}
+                  />
+                </ServiceFormSection>
+
+                <ServiceFormSection
+                  id="buyer-questions"
+                  icon={MessageSquareQuoteIcon}
+                  title={trans({message: 'Questions for buyers'})}
+                  description={trans({message: 'Optional. Ask up to three short questions with each service inquiry.'})}
+                  optional
+                  count={form.buyer_questions.length}
+                  hasError={sectionError('buyer-questions')}
+                >
+                  <ServiceBuyerQuestionsField
+                    questions={form.buyer_questions}
+                    errors={fieldErrors}
+                    onChange={questions => update('buyer_questions', questions)}
                   />
                 </ServiceFormSection>
 
@@ -1089,6 +1109,7 @@ function ServiceFormPage() {
                   </Button>
                 )}
               </div>
+            </div>
           </div>
         </div>
       </DashboardLayout.SectionContent>

@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - 'tests/e2e/product-creation-responsive.spec.ts'
+      - 'tests/e2e/product-creation-contrast-locales.spec.ts'
+      - 'tests/e2e/product-creation-focus-visible.spec.ts'
       - 'tests/e2e/buyer-journey.spec.ts'
       - 'tests/e2e/product-creation-moderation-lifecycle.spec.ts'
       - 'tests/e2e/service-creation-responsive.spec.ts'
@@ -190,6 +192,21 @@ jobs:
             --project=chromium --workers=1 --retries=0 \
             --grep 'smoke: isolated creator can authenticate' --timeout=30000 --output=test-results/login-smoke --trace=retain-on-failure
 
+      - name: Verify isolated new-product uploads, creation and approval for all four types
+        shell: bash
+        env:
+          LINKET_E2E_CREATOR_EMAIL: e2e-new-product-creator@example.test
+          PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/new-product-creation
+        run: |
+          set -euo pipefail
+          [[ "$APP_ENV" == "testing" && "$DB_DATABASE" == "belink_test" ]]
+          [[ "$LINKET_ISOLATED_E2E" == "1" && "$VERIFY_ET_MOCK" == "true" ]]
+          [[ "$APP_URL" == "http://127.0.0.1:8081" ]]
+          # Real private TXT/PDF/WAV uploads via the UI, not mocked file entries.
+          # Includes the new Course setup/curriculum, followed by reviewer approval.
+          npx playwright test tests/e2e/product-creation-new-upload-lifecycle.spec.ts \
+            --project=chromium --workers=1 --retries=0 --max-failures=1 --output=test-results/new-product-creation --trace=retain-on-failure
+
       - name: Run isolated authenticated editor browser matrix
         shell: bash
         env:
@@ -200,6 +217,34 @@ jobs:
           npx playwright test tests/e2e/product-creation-responsive.spec.ts \
             --project=chromium --workers=1 --retries=0 \
             --grep-invert 'smoke: isolated creator can authenticate' --output=test-results/editors --trace=retain-on-failure
+
+      - name: Verify keyboard focus visibility and unobscured Preview actions
+        shell: bash
+        env:
+          PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/focus-visible
+        run: |
+          set -euo pipefail
+          [[ "$APP_ENV" == "testing" && "$DB_DATABASE" == "belink_test" ]]
+          [[ "$LINKET_ISOLATED_E2E" == "1" && "$E2E_BASE_URL" == "http://127.0.0.1:8081" ]]
+          # Real Tab, 375px light/dark; neither human AT acceptance nor deployment.
+          npx playwright test tests/e2e/product-creation-focus-visible.spec.ts \
+            --project=chromium --workers=1 --retries=0 --output=test-results/focus-visible --trace=retain-on-failure
+
+      - name: Audit Product Creation locales, text/focus contrast and validation announcements
+        shell: bash
+        env:
+          PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/contrast-locales
+        run: |
+          set -euo pipefail
+          [[ "$APP_ENV" == "testing" && "$DB_DATABASE" == "belink_test" ]]
+          [[ "$LINKET_ISOLATED_E2E" == "1" && "$E2E_BASE_URL" == "http://127.0.0.1:8081" ]]
+          # The standard DatabaseSeeder omits the standalone LocalizationsTableSeeder.
+          # Seed its real default English catalog ONLY in disposable belink_test;
+          # do not manufacture an Amharic/RTL catalog for acceptance.
+          php artisan db:seed --class="Common\\Database\\Seeders\\LocalizationsTableSeeder" --force --no-interaction
+          # Supplementary text/focus measurements and alert semantics; human real locale/AT gates remain.
+          npx playwright test tests/e2e/product-creation-contrast-locales.spec.ts \
+            --project=chromium --workers=1 --retries=0 --output=test-results/contrast-locales --trace=retain-on-failure
 
       - name: Verify isolated Service Creation responsive and full creator lifecycle
         shell: bash

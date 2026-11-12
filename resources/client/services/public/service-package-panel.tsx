@@ -29,10 +29,13 @@ export function ServicePackagePanel({
   packages,
   appearance,
   onRequest,
+  onSelect,
 }: {
   packages: PublicServicePackage[];
   appearance?: BiolinkAppearanceConfig | null;
   onRequest: (packageId?: number) => void;
+  /** Keep the mobile sticky quote action in sync with the visible tier. */
+  onSelect?: (packageId: number) => void;
 }) {
   const {trans} = useTrans();
   const buttonAppearance = resolveBiolinkButtonAppearance(appearance);
@@ -76,23 +79,37 @@ export function ServicePackagePanel({
   }
 
   return (
-    <Tabs.Root defaultValue={String(packages[0].id)} className="gap-3">
-      <Tabs.List
-        aria-label={trans({message: 'Packages'})}
-        style={segmented.style}
-        indicatorClass={segmented.indicatorClassName}
-        className={cn('w-full', segmented.listClassName)}
-      >
-        {packages.map(packageItem => (
-          <Tabs.Tab
-            key={packageItem.id}
-            value={String(packageItem.id)}
-            className={cn(segmented.tabClassName, 'flex-1')}
-          >
-            {packageItem.name}
-          </Tabs.Tab>
-        ))}
-      </Tabs.List>
+    <Tabs.Root
+      defaultValue={String(packages[0].id)}
+      className="min-w-0 gap-3"
+      onValueChange={value => onSelect?.(Number(value))}
+    >
+      {/* Let each label take its own capped width. flex-1 squeezes long
+          translated labels into overlapping tabs even when the outer page
+          reports no horizontal overflow. Keep extra width in this scrollport. */}
+      <div className="min-w-0 max-w-full overflow-x-auto overscroll-x-contain px-1 pt-1 pb-3 scrollbar-none">
+        <Tabs.List
+          aria-label={trans({message: 'Packages'})}
+          style={segmented.style}
+          indicatorClass={segmented.indicatorClassName}
+          className={cn(segmented.listClassName, 'w-max min-w-full max-w-none')}
+        >
+          {packages.map(packageItem => (
+            <Tabs.Tab
+              key={packageItem.id}
+              value={String(packageItem.id)}
+              className={cn(
+                segmented.tabClassName,
+                'w-max min-w-28 max-w-56 whitespace-normal text-center leading-snug break-words [overflow-wrap:anywhere]',
+              )}
+            >
+              <span className="min-w-0 max-w-full whitespace-normal break-words [overflow-wrap:anywhere]">
+                {packageItem.name}
+              </span>
+            </Tabs.Tab>
+          ))}
+        </Tabs.List>
+      </div>
       {packages.map(packageItem => (
         <Tabs.Panel key={packageItem.id} value={String(packageItem.id)}>
           <PackageCard
@@ -120,10 +137,10 @@ function PackageCard({
       <Card.Content className={biolinkSurfaceContent}>
         <div className="flex items-start justify-between gap-4">
           <div className="flex min-w-0 flex-col gap-1">
-            <h2 className="truncate text-sm font-medium text-[var(--biolink-muted-text)]">
+            <h2 className="text-sm font-medium text-[var(--biolink-muted-text)] break-words [overflow-wrap:anywhere]">
               {packageItem.name}
             </h2>
-            <p className="text-4xl leading-none font-semibold tracking-tight tabular-nums">
+            <p className="min-w-0 text-3xl leading-tight font-semibold tracking-tight tabular-nums break-words [overflow-wrap:anywhere] sm:text-4xl">
               {packageItem.price_cents === null ? (
                 <Trans message="Quote only" />
               ) : (
@@ -149,7 +166,7 @@ function PackageCard({
         </Button>
 
         {packageItem.description && (
-          <p className="text-base leading-6 text-[var(--biolink-muted-text)]">
+          <p className="text-base leading-6 text-[var(--biolink-muted-text)] break-words [overflow-wrap:anywhere]">
             {packageItem.description}
           </p>
         )}
@@ -215,7 +232,7 @@ function IncludeItem({
       <span className="grid size-7 shrink-0 place-items-center rounded-card-xs bg-[var(--biolink-surface)] text-[var(--biolink-muted-text)] ring-1 ring-(color:--biolink-border)">
         <Icon className="size-4" aria-hidden="true" />
       </span>
-      <span className="min-w-0 flex-1 pt-1 leading-5">{children}</span>
+      <span className="min-w-0 flex-1 pt-1 leading-5 break-words [overflow-wrap:anywhere]">{children}</span>
     </li>
   );
 }

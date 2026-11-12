@@ -24,12 +24,15 @@ import {
   type InquiryFormState,
 } from './service-inquiry-form';
 
+const EMPTY_BUYER_QUESTIONS: string[] = [];
+
 export function ServiceInquiryDialog({
   open,
   onOpenChange,
   endpoint,
   packageId,
   packageName,
+  buyerQuestions = EMPTY_BUYER_QUESTIONS,
   appearance,
 }: {
   open: boolean;
@@ -37,6 +40,7 @@ export function ServiceInquiryDialog({
   endpoint: string;
   packageId?: number;
   packageName?: string;
+  buyerQuestions?: string[];
   appearance?: BiolinkAppearanceConfig | null;
 }) {
   const {trans} = useTrans();
@@ -51,7 +55,7 @@ export function ServiceInquiryDialog({
     return () => window.clearTimeout(timer);
   }, [open]);
   const [form, setForm] = useState<InquiryFormState>(() =>
-    emptyInquiryForm(packageId),
+    emptyInquiryForm(packageId, buyerQuestions),
   );
   const [errors, setErrors] = useState<InquiryErrors>({});
   const [submitting, setSubmitting] = useState(false);
@@ -60,12 +64,12 @@ export function ServiceInquiryDialog({
 
   useEffect(() => {
     if (open) {
-      setForm(emptyInquiryForm(packageId));
+      setForm(emptyInquiryForm(packageId, buyerQuestions));
       setErrors({});
       setSent(false);
       setServerError(undefined);
     }
-  }, [open, packageId]);
+  }, [open, packageId, buyerQuestions]);
 
   const update = (key: keyof InquiryFormState, value: string) => {
     setForm(current => ({...current, [key]: value}));
@@ -74,6 +78,21 @@ export function ServiceInquiryDialog({
       const next = {...current};
       delete next[key as keyof InquiryErrors];
       return next;
+    });
+  };
+
+  const updateAnswer = (index: number, value: string) => {
+    setForm(current => ({
+      ...current,
+      answers: (current.answers ?? []).map((answer, position) =>
+        position === index ? value : answer
+      ),
+    }));
+    setErrors(current => {
+      if (!current.answers?.[index]) return current;
+      const nextAnswers = {...current.answers};
+      delete nextAnswers[index];
+      return {...current, answers: nextAnswers};
     });
   };
 
@@ -104,7 +123,7 @@ export function ServiceInquiryDialog({
       <Dialog.Portal>
         <Dialog.Backdrop />
         <Dialog.Content
-          className="bg-[var(--biolink-surface-strong)] text-[var(--biolink-text)] sm:max-w-md"
+          className="max-h-[calc(100dvh-1rem)] overflow-y-auto overscroll-contain bg-[var(--biolink-surface-strong)] text-[var(--biolink-text)] sm:max-w-md"
           style={resolveBiolinkPublicAppearanceStyle(appearance)}
         >
           <Dialog.Header>
@@ -161,6 +180,7 @@ export function ServiceInquiryDialog({
                   value={form.name}
                   onChange={event => update('name', event.target.value)}
                   aria-invalid={!!errors.name}
+                  aria-describedby={errors.name ? 'inquiry-name-error' : undefined}
                 />
               </InquiryField>
 
@@ -175,6 +195,7 @@ export function ServiceInquiryDialog({
                   value={form.email}
                   onChange={event => update('email', event.target.value)}
                   aria-invalid={!!errors.email}
+                  aria-describedby={errors.email ? 'inquiry-email-error' : undefined}
                 />
               </InquiryField>
 
@@ -202,6 +223,7 @@ export function ServiceInquiryDialog({
                   value={form.message}
                   onChange={event => update('message', event.target.value)}
                   aria-invalid={!!errors.message}
+                  aria-describedby={errors.message ? 'inquiry-message-error' : undefined}
                   placeholder={trans(
                     message(
                       'I need a logo for my business. Here is what I have in mind...',
@@ -209,6 +231,34 @@ export function ServiceInquiryDialog({
                   )}
                 />
               </InquiryField>
+
+              {buyerQuestions.length > 0 && (
+                <section className="flex min-w-0 flex-col gap-3 border-t pt-4" aria-label={trans({message: 'Questions from the creator'})}>
+                  <p className="text-sm font-semibold"><Trans message="Questions from the creator" /></p>
+                  {buyerQuestions.map((question, index) => {
+                    const id = `inquiry-answer-${index}`;
+                    return (
+                      <InquiryField
+                        key={id}
+                        id={id}
+                        label={question}
+                        optional
+                        error={errors.answers?.[index]}
+                      >
+                        <Textarea
+                          id={id}
+                          rows={2}
+                          maxLength={500}
+                          value={form.answers?.[index] ?? ''}
+                          onChange={event => updateAnswer(index, event.target.value)}
+                          aria-invalid={!!errors.answers?.[index]}
+                          aria-describedby={errors.answers?.[index] ? `${id}-error` : undefined}
+                        />
+                      </InquiryField>
+                    );
+                  })}
+                </section>
+              )}
 
               <Button
                 variant="ghost"
@@ -238,7 +288,7 @@ function InquiryField({
 }: {
   id: string;
   label: ReactNode;
-  error?: 'required' | 'invalid';
+  error?: 'required' | 'invalid' | 'too_long';
   optional?: boolean;
   children: ReactNode;
 }) {
@@ -254,13 +304,18 @@ function InquiryField({
       </label>
       {children}
       {error === 'required' && (
-        <p className="text-sm text-destructive">
+        <p id={`${id}-error`} role="alert" className="text-sm text-destructive">
           <Trans message="This field is required." />
         </p>
       )}
       {error === 'invalid' && (
-        <p className="text-sm text-destructive">
+        <p id={`${id}-error`} role="alert" className="text-sm text-destructive">
           <Trans message="Enter a valid email address." />
+        </p>
+      )}
+      {error === 'too_long' && (
+        <p id={`${id}-error`} role="alert" className="text-sm text-destructive">
+          <Trans message="Keep your answer to 500 characters or fewer." />
         </p>
       )}
     </div>

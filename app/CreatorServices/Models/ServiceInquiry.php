@@ -15,6 +15,7 @@ class ServiceInquiry extends Model
         'creator_service_id' => 'integer',
         'creator_service_package_id' => 'integer',
         'read_at' => 'datetime',
+        'question_answers' => 'array',
     ];
 
     public function service(): BelongsTo

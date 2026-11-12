@@ -283,7 +283,7 @@ jobs:
 
       # Required: vite.config.ts enables Storybook/Vitest browser projects.
       - name: Install Playwright Chromium and system libraries
-        run: npx playwright install --with-deps chromium
+        run: bash .github/scripts/install-playwright-chromium.sh
 
       - name: Run frontend tests (Vitest + Storybook browser)
         run: npm test

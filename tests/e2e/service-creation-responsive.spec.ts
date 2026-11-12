@@ -1,4 +1,4 @@
-import {expect, test, type Page} from '@playwright/test';
+import {expect, test, type Locator, type Page, type TestInfo} from '@playwright/test';
 
 /**
  * Authenticated Service Creation QA against the isolated Laravel test server.
@@ -23,6 +23,63 @@ async function signIn(page: Page) {
   await expect(page).toHaveURL(/\/dashboard(?:\/|$)/, {timeout: 15000});
 }
 
+function expectedServiceStepColumns(width: number): number {
+  return width >= 1280 ? 1 : 4;
+}
+
+async function verifyResponsiveServiceSetup(
+  page: Page,
+  steps: Locator,
+  width: number,
+  testInfo: TestInfo,
+) {
+  // The selected stage is known to be mounted here. Missing DOM owners should
+  // fail the browser test immediately instead of silently skipping layout QA.
+  const layout = await steps.evaluate(navigation => {
+    const content = navigation.closest('[data-slot="section-content"]')!;
+    const basics = document.getElementById('service-step-basics')!;
+    const list = navigation.querySelector('ol')!;
+    const rail = navigation.getBoundingClientRect();
+    const form = basics.getBoundingClientRect();
+    return {
+      gutterLeft: content.getBoundingClientRect().left
+        + Number.parseFloat(getComputedStyle(content).paddingLeft),
+      stepperLeft: rail.left,
+      stepperRight: rail.right,
+      stepperBottom: rail.bottom,
+      formLeft: form.left,
+      formTop: form.top,
+      formWidth: form.width,
+      columns: getComputedStyle(list).gridTemplateColumns.split(' ').length,
+    };
+  });
+
+  expect(Math.abs(layout.stepperLeft - layout.gutterLeft),
+    'Builder rail aligns with the dashboard content gutter').toBeLessThanOrEqual(2);
+  expect(layout.columns,
+    'Step navigation is one row on phones and tablets, and a desktop rail')
+    .toBe(expectedServiceStepColumns(width));
+
+  if (width >= 1280) {
+    expect(layout.formLeft - layout.stepperRight,
+      'Desktop editor starts beside the rail with breathing room').toBeGreaterThanOrEqual(12);
+    expect(layout.formWidth,
+      'The editor still has enough room for a three-tier comparison').toBeGreaterThan(480);
+  } else {
+    expect(Math.abs(layout.formLeft - layout.stepperLeft),
+      'The phone and tablet editor aligns beneath navigation').toBeLessThanOrEqual(2);
+    expect(layout.formTop - layout.stepperBottom,
+      'The editor follows rather than overlaps the navigation').toBeGreaterThanOrEqual(8);
+  }
+
+  const setupScreenshot = testInfo.outputPath(`service-setup-${width}px.png`);
+  await page.screenshot({path: setupScreenshot, fullPage: true});
+  await testInfo.attach(`Service setup ${width}px`, {
+    path: setupScreenshot,
+    contentType: 'image/png',
+  });
+}
+
 test.describe('Service Creation — authenticated browser acceptance', () => {
   test.skip(!isIsolated, 'Requires disposable belink_test and loopback server');
   test.setTimeout(90_000);
@@ -31,7 +88,9 @@ test.describe('Service Creation — authenticated browser acceptance', () => {
     {name: '320px reflow', width: 320, height: 900},
     {name: '360px mobile', width: 360, height: 800},
     {name: '375px mobile', width: 375, height: 812},
+    {name: '430px large phone', width: 430, height: 932},
     {name: '768px tablet', width: 768, height: 1024},
+    {name: '1024px small desktop', width: 1024, height: 768},
     {name: '1440px desktop', width: 1440, height: 900},
   ]) {
     test(`${viewport.name}: readable editor and keyboard-safe customer preview`, async ({page}, testInfo) => {
@@ -48,25 +107,7 @@ test.describe('Service Creation — authenticated browser acceptance', () => {
       }
       await expect(steps.getByRole('button', {name: 'Details, step 1 of 4'})).toHaveAttribute('aria-current', 'step');
 
-      // The dashboard owns the page gutter. The builder must not add a second,
-      // centered inset that misaligns the stepper and form at desktop widths.
-      const builderAlignment = await steps.evaluate(navigation => {
-        const content = navigation.closest('[data-slot="section-content"]');
-        const basics = document.getElementById('service-step-basics');
-        if (!content || !basics) return null;
-        return {
-          gutterLeft: content.getBoundingClientRect().left + Number.parseFloat(getComputedStyle(content).paddingLeft),
-          stepperLeft: navigation.getBoundingClientRect().left,
-          formLeft: basics.getBoundingClientRect().left,
-        };
-      });
-      expect(builderAlignment).not.toBeNull();
-      if (builderAlignment) {
-        expect(Math.abs(builderAlignment.stepperLeft - builderAlignment.gutterLeft),
-          'Stepper begins at the dashboard content gutter').toBeLessThanOrEqual(2);
-        expect(Math.abs(builderAlignment.formLeft - builderAlignment.stepperLeft),
-          'Form panel and stepper share the same alignment').toBeLessThanOrEqual(2);
-      }
+      await verifyResponsiveServiceSetup(page, steps, viewport.width, testInfo);
 
       const titleSpan = heading.locator('span').first();
       if (viewport.width <= 375) {
