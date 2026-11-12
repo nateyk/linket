@@ -12,7 +12,7 @@ final class HcVisibility
      */
     public static function canViewRole(?User $user, int|string|null $roleId): bool
     {
-        if ($user?->isAgent() || $roleId === null || $roleId === '' || (int) $roleId === 0) {
+        if (! $roleId || $user?->isAgent()) {
             return true;
         }
 
