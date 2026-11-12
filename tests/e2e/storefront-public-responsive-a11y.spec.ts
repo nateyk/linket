@@ -189,6 +189,35 @@ test.describe('SF-12 optional public service page evidence', () => {
     await expect(dialog).not.toBeVisible();
   });
 
+
+  test('inquiry errors are announced and linked to each invalid field without posting', async ({page}) => {
+    const route = new URL(serviceUrl!, baseUrl);
+    expect(route.origin).toBe(new URL(baseUrl).origin);
+    await page.setViewportSize({width: 375, height: 812});
+    await page.goto(route.toString());
+
+    const trigger = page.getByRole('button', {name: 'Request this package'});
+    await trigger.click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole('button', {name: 'Send inquiry'}).click();
+
+    for (const label of ['Name', 'Email', 'Message']) {
+      const field = dialog.getByRole('textbox', {name: label});
+      await expect(field).toHaveAttribute('aria-invalid', 'true');
+      const describedBy = await field.getAttribute('aria-describedby');
+      expect(describedBy, `${label} must reference an error description`).toBeTruthy();
+      const error = dialog.locator(`[id="${describedBy}"]`);
+      await expect(error).toBeVisible();
+      await expect(error).toHaveAttribute('role', 'alert');
+      await expect(error).not.toBeEmpty();
+    }
+
+    await page.keyboard.press('Escape');
+    await expect(dialog).not.toBeVisible();
+    await expect(trigger).toBeFocused();
+  });
+
   test('published seller email contact is an accessible, focusable 44px target', async ({page}) => {
     const route = new URL(serviceUrl!, baseUrl);
     expect(route.origin).toBe(new URL(baseUrl).origin);
