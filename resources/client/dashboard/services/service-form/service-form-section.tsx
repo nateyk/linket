@@ -1,7 +1,9 @@
 import {Badge} from '@shadcn/badge/badge';
+import {Button} from '@shadcn/button/button';
+import {Popover} from '@shadcn/popover/popover';
 import {useTrans} from '@ui/i18n/use-trans';
 import {cn} from '@ui/utils/cn';
-import type {LucideIcon} from 'lucide-react';
+import {CircleQuestionMarkIcon, type LucideIcon} from 'lucide-react';
 import type {ReactNode} from 'react';
 
 export type ServiceFormSectionId =
@@ -46,7 +48,7 @@ export function ServiceFormSection({
         hasError && 'border-destructive/60',
       )}
     >
-      <header className="flex min-w-0 flex-wrap items-start gap-x-3 gap-y-1 px-4 pt-4 pb-2 sm:px-5 sm:pt-5">
+      <header className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 px-4 pt-3 pb-1 sm:px-5 sm:pt-4">
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
           <Icon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
           <h2
@@ -57,15 +59,28 @@ export function ServiceFormSection({
             {title}
           </h2>
         </div>
-        <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
           {optional && <Badge variant="ghost">{trans({message: 'Optional'})}</Badge>}
           {count !== undefined && count > 0 && (
             <Badge variant="secondary" className="min-w-5 px-1.5">{count}</Badge>
           )}
+          <Popover.Root>
+            <Popover.Trigger
+              render={<Button type="button" variant="ghost" size="icon-sm" className="size-10 text-muted-foreground" />}
+              aria-label={trans({message: 'About :section', values: {section: title}})}
+            >
+              <CircleQuestionMarkIcon className="size-4" aria-hidden="true" />
+            </Popover.Trigger>
+            <Popover.Portal>
+              <Popover.Content align="end" className="w-72 max-w-[calc(100vw-2rem)]">
+                <Popover.Title className="text-sm">{title}</Popover.Title>
+                <Popover.Description>{description}</Popover.Description>
+              </Popover.Content>
+            </Popover.Portal>
+          </Popover.Root>
         </div>
-        <p className="w-full text-sm leading-5 text-muted-foreground">{description}</p>
       </header>
-      <div className="min-w-0 px-4 pt-2 pb-4 sm:px-5 sm:pt-3 sm:pb-5">{children}</div>
+      <div className="min-w-0 px-4 pt-2 pb-4 sm:px-5 sm:pt-2 sm:pb-5">{children}</div>
     </section>
   );
 }
