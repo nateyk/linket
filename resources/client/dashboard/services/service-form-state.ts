@@ -66,6 +66,7 @@ export type CreatorServiceResource = {
   video_url?: string | null;
   live_demo_url?: string | null;
   contact_channels?: ServiceFormContactChannel[];
+  buyer_questions?: string[];
   cover?: {id: number; url: string} | null;
   gallery?: {id: number; file_entry_id: number; url: string}[];
   packages?: {
