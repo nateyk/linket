@@ -63,13 +63,23 @@ test.each([
   ['ebook', 'ebook-storefront'],
   ['audio', 'audio-storefront'],
 ] as const)('navigating %s focuses its existing Storefront heading', (type, id) => {
+  const editor = document.createElement('div');
+  editor.setAttribute('data-slot', 'section-content');
+  editor.scrollTop = 75;
+  editor.scrollTo = vi.fn();
+  editor.getBoundingClientRect = vi.fn(() => ({top: 100} as DOMRect));
   const heading = document.createElement('h2');
   heading.id = id;
   heading.tabIndex = -1;
   heading.scrollIntoView = vi.fn();
-  document.body.appendChild(heading);
+  heading.getBoundingClientRect = vi.fn(() => ({top: 260} as DOMRect));
+  editor.appendChild(heading);
+  document.body.appendChild(editor);
+
   focusProductAuthoringStep(type as NonCourseProductType, 'storefront');
-  expect(heading.scrollIntoView).toHaveBeenCalledWith({block: 'start', behavior: 'auto'});
+
+  expect(editor.scrollTo).toHaveBeenCalledWith({top: 219, behavior: 'auto'});
+  expect(heading.scrollIntoView).not.toHaveBeenCalled();
   expect(document.activeElement).toBe(heading);
-  heading.remove();
+  editor.remove();
 });
