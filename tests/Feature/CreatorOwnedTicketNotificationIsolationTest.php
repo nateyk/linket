@@ -14,6 +14,7 @@ use App\Conversations\Models\ConversationItem;
 use App\Conversations\Events\ConversationsUpdated;
 use App\Conversations\Models\Conversation;
 use App\Models\User;
+use Common\Permissions\Models\Permission;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Mail;
@@ -145,6 +146,51 @@ class CreatorOwnedTicketNotificationIsolationTest extends TestCase
 
         $this->assertSame($owned->id, $result->id);
         $this->assertNull($result->fresh()->assignee_id);
+    }
+
+    public function test_platform_agent_cannot_bulk_delete_creator_ticket(): void
+    {
+        $owner = User::factory()->create();
+        $customer = User::factory()->create();
+        $agent = User::factory()->create(['type' => 'agent']);
+        $agent->permissions()->syncWithoutDetaching([
+            Permission::query()->firstOrCreate(['name' => 'conversations.destroy'])->id,
+        ]);
+        $conversation = Conversation::query()->create([
+            'user_id' => $customer->id,
+            'type' => 'ticket',
+            'support_owner_id' => $owner->id,
+        ]);
+
+        $this->withSession(['_token' => 'hc-security-test'])
+            ->withHeader('Referer', config('app.url'))
+            ->withHeader('X-CSRF-TOKEN', 'hc-security-test')
+            ->actingAs($agent)
+            ->deleteJson("/api/v1/helpdesk/agent/conversations/{$conversation->id}")
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('conversations', ['id' => $conversation->id]);
+    }
+
+    public function test_creator_cannot_route_ticket_into_platform_groups(): void
+    {
+        $owner = User::factory()->create();
+        $customer = User::factory()->create();
+        $conversation = Conversation::query()->create([
+            'user_id' => $customer->id,
+            'type' => 'ticket',
+            'support_owner_id' => $owner->id,
+        ]);
+
+        $this->withSession(['_token' => 'hc-security-test'])
+            ->withHeader('Referer', config('app.url'))
+            ->withHeader('X-CSRF-TOKEN', 'hc-security-test')
+            ->actingAs($owner)
+            ->postJson('/api/v1/helpdesk/conversations/group/change', [
+                'conversationIds' => [$conversation->id],
+                'groupId' => 1,
+            ])
+            ->assertForbidden();
     }
 
     public function test_cannot_explicitly_assign_creator_ticket_to_a_platform_agent(): void
