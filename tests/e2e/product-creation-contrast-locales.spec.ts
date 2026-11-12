@@ -232,8 +232,9 @@ type FocusOutlineEvidence = {
 async function measureFocusedOutline(
   page: Page,
   selector: string,
+  options: {index?: number; outlineOnParentLabel?: boolean} = {},
 ): Promise<FocusOutlineEvidence> {
-  const target = page.locator(selector).first();
+  const target = page.locator(selector).nth(options.index ?? 0);
   await expect(target).toBeVisible();
   await expect(target).toBeEnabled();
   // Establish keyboard modality, then focus this specific control without
@@ -241,7 +242,12 @@ async function measureFocusedOutline(
   await page.keyboard.press('Tab');
   await target.focus();
   await expect(target).toBeFocused();
-  const computed = await target.evaluate(node => {
+  expect(await target.evaluate(node => node.matches(':focus-visible')),
+    selector + ' must be keyboard focus-visible').toBe(true);
+  const painted = options.outlineOnParentLabel
+    ? target.locator('xpath=ancestor::label[1]')
+    : target;
+  const computed = await painted.evaluate(node => {
     const css = getComputedStyle(node);
     const canvas = document.createElement('canvas');
     canvas.width = canvas.height = 1;
@@ -251,7 +257,7 @@ async function measureFocusedOutline(
     context.fillRect(0, 0, 1, 1);
     const data = context.getImageData(0, 0, 1, 1).data;
     return {
-      visible: node.matches(':focus-visible'),
+      visible: node.matches(':focus-visible') || node.matches(':has(:focus-visible)'),
       widthPx: Number.parseFloat(css.outlineWidth),
       offsetPx: Number.parseFloat(css.outlineOffset),
       style: css.outlineStyle,
@@ -268,7 +274,10 @@ async function measureFocusedOutline(
   // For nonnegative outline offsets the painted outline sits outside the
   // element. Resolve the *ancestors'* solid background, not the button's
   // own fill (an easy false-positive with filled primary buttons).
-  const sample = await sampleCssColors(page, selector);
+  const sample = await sampleCssColors(
+    page,
+    options.outlineOnParentLabel ? 'label:has([role="radio"]:focus-visible)' : selector,
+  );
   const outerLayers = sample.layers.slice(0, -1);
   expect(outerLayers.length, 'Focus outline requires a resolvable surrounding surface')
     .toBeGreaterThan(0);
@@ -283,7 +292,7 @@ async function measureFocusedOutline(
   expect(measured, selector + ' ' + rgb(ink) + ' on ' + rgb(surface) + ' (WCAG 2.2 AA 1.4.11)')
     .toBeGreaterThanOrEqual(3);
   return {
-    control: selector,
+    control: options.index == null ? selector : selector + ':nth(' + options.index + ')',
     widthPx: computed.widthPx,
     offsetPx: computed.offsetPx,
     style: computed.style,
@@ -315,6 +324,18 @@ test('UX-35 keyboard focus outlines meet 3:1 on all four editors in both themes'
       for (const selector of actions) {
         evidence[theme + '-' + type].push(await measureFocusedOutline(page, selector));
       }
+      // Inputs use a native outline; the billing cards intentionally paint
+      // their outline on the <label> when the nested radio has keyboard focus.
+      evidence[theme + '-' + type].push(await measureFocusedOutline(
+        page, type === 'course' ? '#course-title' : '#product-title',
+      ));
+      const billing = '[role="radiogroup"][aria-label="Billing mode"] [role="radio"]';
+      await expect(page.locator(billing)).toHaveCount(2);
+      for (const index of [0, 1]) {
+        evidence[theme + '-' + type].push(await measureFocusedOutline(
+          page, billing, {index, outlineOnParentLabel: true},
+        ));
+      }
     }
   }
   expect(Object.keys(evidence)).toHaveLength(8);
@@ -322,7 +343,7 @@ test('UX-35 keyboard focus outlines meet 3:1 on all four editors in both themes'
     body: Buffer.from(JSON.stringify({
       standard: 'WCAG 2.2 AA 1.4.11, active focus outline on adjacent solid surface >= 3:1',
       methodology: 'Actual Chromium computed outline, keyboard :focus-visible and composited ancestor backgrounds',
-      limits: 'Not native screen-reader acceptance; not every possible focus target, pseudo-element or image-backed surface',
+      limits: 'No native screen-reader acceptance; covers two header buttons, one text input and two billing options per editor/theme',
       measurements: evidence,
     }, null, 2)),
     contentType: 'application/json',
@@ -350,6 +371,8 @@ test('UX-35 required-field errors expose assertive alerts in all four editors wi
     ariaInvalid: string | null;
     ariaDescribedBy: string | null;
     ariaErrorMessage: string | null;
+    errorId: string | null;
+    errorLinked: boolean;
   }> = [];
   for (const type of ['digital', 'ebook', 'audio', 'course'] as const) {
     await page.goto('/dashboard/items/new/' + type);
@@ -381,11 +404,17 @@ test('UX-35 required-field errors expose assertive alerts in all four editors wi
         ariaInvalid: node.getAttribute('aria-invalid'),
         ariaDescribedBy: node.getAttribute('aria-describedby'),
         ariaErrorMessage: node.getAttribute('aria-errormessage'),
+        errorId: error?.id ?? null,
       };
     });
     expect(semantics.alertRole, type + ' validation must be an assertive live alert')
       .toBe('alert');
-    evidence.push({type, field: selector, message, ...semantics});
+    expect(semantics.errorId, type + ' must render an addressable error').toBeTruthy();
+    const errorLinked = [semantics.ariaDescribedBy, semantics.ariaErrorMessage]
+      .some(ids => ids?.split(/\s+/).includes(semantics.errorId!));
+    expect(errorLinked, type + ' title must associate its error via aria-errormessage or aria-describedby')
+      .toBe(true);
+    evidence.push({type, field: selector, message, ...semantics, errorLinked});
   }
   expect(posts, 'Client validation must never create a product').toEqual([]);
   expect(evidence).toHaveLength(4);
@@ -393,7 +422,7 @@ test('UX-35 required-field errors expose assertive alerts in all four editors wi
     body: Buffer.from(JSON.stringify({
       scope: 'Actual client validation on empty title; no network product writes',
       mechanism: 'A visible role=alert is an assertive live-region announcement; aria-invalid is set',
-      limits: 'Native NVDA/VoiceOver spoken output not tested; field-to-error description linkage recorded for review',
+      limits: 'Native NVDA/VoiceOver spoken output not tested; field-to-error association asserted by DOM IDs',
       fields: evidence,
     }, null, 2)),
     contentType: 'application/json',
