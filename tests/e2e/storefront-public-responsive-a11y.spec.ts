@@ -143,6 +143,45 @@ test.describe('SF-12 optional public service page evidence', () => {
     reducedMotion: 'reduce',
   });
 
+  test('real Amharic UI renders on the published storefront, product and service routes', async ({page}, info) => {
+    const fixture = loadFixture();
+    await page.setViewportSize({width: 375, height: 812});
+
+    const storefront = new URL(`/${fixture.store_slug}`, baseUrl);
+    storefront.searchParams.set('lang', 'am');
+    expect((await page.goto(storefront.toString()))?.ok()).toBe(true);
+    await expect(page.locator('html')).toHaveAttribute('lang', 'am');
+    await expect(page.getByText('ምርቶች', {exact: true}).filter({visible: true}).first()).toBeVisible();
+    const storeScreenshot = info.outputPath('sf12-amharic-published-store.png');
+    await page.screenshot({path: storeScreenshot, fullPage: true});
+    await info.attach('amharic-published-store', {path: storeScreenshot, contentType: 'image/png'});
+
+    const product = new URL(fixture.product_url, baseUrl);
+    product.searchParams.set('lang', 'am');
+    expect((await page.goto(product.toString()))?.ok()).toBe(true);
+    await expect(page.locator('html')).toHaveAttribute('lang', 'am');
+    await expect(page.getByRole('tab', {name: 'አጠቃላይ እይታ'})).toBeVisible();
+    await expect(page.getByRole('tablist', {name: 'የምርቱ መረጃ'})).toBeVisible();
+    const productScreenshot = info.outputPath('sf12-amharic-published-product.png');
+    await page.screenshot({path: productScreenshot, fullPage: true});
+    await info.attach('amharic-published-product', {path: productScreenshot, contentType: 'image/png'});
+
+    const service = new URL(serviceUrl!, baseUrl);
+    expect(service.origin).toBe(new URL(baseUrl).origin);
+    service.searchParams.set('lang', 'am');
+    expect((await page.goto(service.toString()))?.ok()).toBe(true);
+    await expect(page.locator('html')).toHaveAttribute('lang', 'am');
+    await expect(page.getByRole('link', {name: 'ወደ አገልግሎቶች ተመለስ'})).toBeVisible();
+    await expect(page.getByRole('tablist', {name: 'ጥቅሎች'})).toBeVisible();
+    await expect(page.getByRole('button', {name: 'ይህን ጥቅል ይጠይቁ'})).toBeVisible();
+
+    // No checkout, mutation or inquiry submission. Content can remain the
+    // creator's own English text; the test asserts translated UI chrome.
+    const serviceScreenshot = info.outputPath('sf12-amharic-published-service.png');
+    await page.screenshot({path: serviceScreenshot, fullPage: true});
+    await info.attach('amharic-published-service', {path: serviceScreenshot, contentType: 'image/png'});
+  });
+
   for (const size of widths) {
     test(`${size.name}: service details and packages reflow without clipping`, async ({page}, info) => {
       const route = new URL(serviceUrl!, baseUrl);

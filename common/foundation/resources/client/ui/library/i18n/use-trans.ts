@@ -39,7 +39,7 @@ const translate = memoize(
       return message;
     }
 
-    message = handlePluralMessage(localeCode, props);
+    message = handlePluralMessage(localeCode, {...props, message});
 
     Object.entries(values).forEach(([key, value]) => {
       message = message.replace(`:${key}`, `${value}`);
