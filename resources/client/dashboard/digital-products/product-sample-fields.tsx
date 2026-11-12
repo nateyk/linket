@@ -92,7 +92,8 @@ export function ProductSampleFields({
         <SharedFileUploader
           uploadType="digitalProductSamples"
           bare
-          className="[&>[role=button]]:p-4"
+          dense
+          title={kind === 'audio' ? <Trans message="Add preview clips" /> : <Trans message="Add sample PDF" />}
           accept={kind === 'audio' ? '.mp3,.m4a,.wav' : '.pdf'}
           hint={
             kind === 'audio'
