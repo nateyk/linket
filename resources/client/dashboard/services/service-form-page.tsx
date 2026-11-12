@@ -571,10 +571,53 @@ function ServiceFormPage() {
       <DashboardLayout.MainSection>
         {renderHeader(null)}
         <DashboardLayout.SectionContent className="overflow-y-auto">
-          <div className="flex w-full max-w-6xl flex-col gap-4 py-5">
-            <Skeleton className="h-16 w-full" />
-            <Skeleton className="h-72 w-full rounded-card" />
-            <Skeleton className="h-48 w-full rounded-card" />
+          <div className="w-full max-w-6xl py-4 sm:py-5" role="status" aria-busy="true">
+            <span className="sr-only"><Trans message="Loading service editor" /></span>
+            <div
+              aria-hidden="true"
+              className="grid min-w-0 items-start gap-4 sm:gap-5 xl:grid-cols-[minmax(0,14rem)_minmax(0,1fr)] xl:gap-6"
+            >
+              <div className="min-w-0 space-y-4 border-b pb-4 xl:border-b-0 xl:border-e xl:pe-4">
+                <div className="flex items-center justify-between gap-3">
+                  <Skeleton className="h-5 w-28 rounded-input" />
+                  <Skeleton className="h-4 w-16 rounded-input" />
+                </div>
+                <div className="grid grid-cols-4 gap-2 xl:grid-cols-1 xl:gap-3">
+                  {SERVICE_STEP_ORDER.map(step => (
+                    <div key={step} className="flex min-w-0 flex-col items-center gap-2 py-2 xl:flex-row xl:gap-3">
+                      <Skeleton className="size-8 shrink-0 rounded-full" />
+                      <Skeleton className="h-4 w-full max-w-16 rounded-input xl:max-w-28" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="min-w-0 space-y-4">
+                <div className="min-w-0 rounded-card border bg-card p-4 sm:p-5">
+                  <div className="mb-6 flex items-center justify-between gap-4">
+                    <Skeleton className="h-5 w-32 rounded-input" />
+                    <Skeleton className="size-8 rounded-full" />
+                  </div>
+                  <div className="space-y-5">
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-24 rounded-input" />
+                      <Skeleton className="h-9 w-full rounded-input" />
+                    </div>
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-36 rounded-input" />
+                      <Skeleton className="h-9 w-full rounded-input" />
+                    </div>
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-28 rounded-input" />
+                      <Skeleton className="h-32 w-full rounded-input" />
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between border-t pt-4">
+                  <Skeleton className="h-9 w-28 rounded-button" />
+                  <Skeleton className="h-9 w-24 rounded-button" />
+                </div>
+              </div>
+            </div>
           </div>
         </DashboardLayout.SectionContent>
       </DashboardLayout.MainSection>

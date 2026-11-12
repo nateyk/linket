@@ -211,7 +211,9 @@ describe('the service form shell', () => {
     expect(steps.querySelector('li > [data-slot="separator"]')?.className)
       .toContain('hidden xl:block');
     expect(steps.querySelector('li > span[aria-hidden="true"]')?.className)
-      .toContain('h-px xl:hidden');
+      .toContain('start-1/2 -end-1/2 top-6');
+    expect(steps.querySelector('li > [data-slot="separator"]')?.className)
+      .toContain('top-7 -bottom-7');
     expect(steps.querySelectorAll('ol > li')).toHaveLength(4);
     const selected = screen.getByRole('button', {name: 'Details, step 1 of 4'});
     expect(selected.getAttribute('data-step-state')).toBe('current');
@@ -220,16 +222,44 @@ describe('the service form shell', () => {
     expect(selected.getAttribute('data-slot')).toBe('button');
     expect(selected.className).toContain('rounded-card-xs');
     expect(selected.className).not.toContain('border-primary/40');
-    expect(selected.className).toContain('bg-primary/5');
+    expect(selected.className).not.toContain('bg-primary/5');
     const basicsHeader = screen.getByRole('heading', {name: 'Basics'}).closest('header');
     expect(basicsHeader?.className).not.toContain('border-b');
-    expect(basicsHeader?.className).toContain('pb-2');
+    expect(basicsHeader?.className).toContain('pb-1');
     expect(basicsHeader?.querySelector('span[aria-hidden="true"]')).toBeNull();
+    expect(screen.queryByText('Name the offer and describe it in one clear line.')).toBeNull();
+    expect(screen.getByRole('button', {name: 'About Basics'})).toBeTruthy();
     const titleField = titleInput().closest('[data-slot="field"]');
     expect(titleField?.className).toContain('focus-visible:not([aria-invalid=true])');
     expect(titleField?.className).toContain('outline-primary');
     // Step changes are announced once by the page-level status region.
     expect(screen.getAllByRole('status')).toHaveLength(1);
+  });
+
+  test('section help reveals the same guidance without persistent header clutter', async () => {
+    const user = userEvent.setup();
+    mountPage('/dashboard/services/new');
+    await waitForForm();
+
+    await user.click(screen.getByRole('button', {name: 'About Basics'}));
+    expect(await screen.findByText('Name the offer and describe it in one clear line.')).toBeTruthy();
+    await user.keyboard('{Escape}');
+
+    await user.click(screen.getByRole('button', {name: 'Packages, step 3 of 4'}));
+    expect(screen.queryByText('Offer clear packages, or let customers request a quote.')).toBeNull();
+    await user.click(screen.getByRole('button', {name: 'About Packages'}));
+    expect(await screen.findByText('Offer clear packages, or let customers request a quote.')).toBeTruthy();
+  });
+
+  test('loading uses an accessible editor-shaped skeleton instead of giant blocks', () => {
+    api.get.mockImplementation(() => new Promise(() => {}));
+    mountPage('/dashboard/services/new');
+    const loading = screen.getByText('Loading service editor').closest('[role="status"]');
+    expect(loading?.getAttribute('aria-busy')).toBe('true');
+    expect(loading?.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(10);
+    expect(loading?.querySelectorAll('.h-72, .h-48')).toHaveLength(0);
+    expect(loading?.querySelector('div[aria-hidden="true"]')?.className)
+      .toContain('xl:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]');
   });
 
   test('package, FAQ and contact length guidance matches the Laravel contract', async () => {

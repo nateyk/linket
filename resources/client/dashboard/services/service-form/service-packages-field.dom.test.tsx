@@ -95,17 +95,19 @@ describe('Service Creation fixed package tiers', () => {
     expect(screen.queryByRole('region', {name: 'Standard package details'})).toBeNull();
     expect(screen.getByRole('button', {name: 'Edit Basic package'}).getAttribute('aria-pressed')).toBe('true');
     const basicTier = screen.getByRole('region', {name: 'Basic package'});
-    expect(basicTier.className).toContain('ring-primary/60');
+    expect(basicTier.className).toContain('border-foreground/40');
+    expect(basicTier.className).not.toContain('ring-primary');
     expect(within(basicTier).getByRole('switch', {name: 'Enable Basic package'})
       .getAttribute('data-size')).toBe('default');
-    expect(screen.getByRole('group', {name: 'Package tiers'}).className).toContain('bg-muted/40');
+    expect(screen.getByRole('group', {name: 'Package tiers'}).className).toContain('gap-2');
+    expect(screen.getByRole('group', {name: 'Package tiers'}).className).not.toContain('bg-muted/40');
 
     await user.click(screen.getByRole('button', {name: 'Edit Premium package'}));
     expect(screen.getByRole('region', {name: 'Premium package details'})).toBeTruthy();
     expect(screen.queryByRole('region', {name: 'Basic package details'})).toBeNull();
     expect(screen.getByRole('button', {name: 'Edit Premium package'}).getAttribute('aria-pressed')).toBe('true');
-    expect(screen.getByRole('region', {name: 'Premium package'}).className).toContain('ring-primary/60');
-    expect(screen.getByRole('region', {name: 'Basic package'}).className).not.toContain('ring-primary/60');
+    expect(screen.getByRole('region', {name: 'Premium package'}).className).toContain('border-foreground/40');
+    expect(screen.getByRole('region', {name: 'Basic package'}).className).not.toContain('border-foreground/40');
     expect(screen.getAllByRole('textbox', {name: 'Price'})).toHaveLength(1);
   });
 
