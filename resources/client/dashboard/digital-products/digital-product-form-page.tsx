@@ -177,19 +177,19 @@ function NonCourseAuthoringLayout({
 }) {
   return (
     <div
-      className="flex min-w-0 flex-col gap-6"
+      className="flex min-w-0 flex-col gap-5"
       data-testid="product-authoring-layout"
     >
       <div
         data-testid="product-setup-status"
-        className="rounded-card-sm border border-border bg-muted/40 px-4 py-3 sm:px-5"
+        className="min-w-0 border-b border-border px-0 pt-1 pb-4"
       >
         <ProductFormProgress
           completed={completedSections}
           total={totalSections}
           className="border-b-0 pb-0"
         />
-        {readinessHint ? <div className="mt-3">{readinessHint}</div> : null}
+        {readinessHint ? <div className="mt-2">{readinessHint}</div> : null}
       </div>
       {children}
     </div>
@@ -1432,7 +1432,7 @@ function DetailsPanel({
           uploadType="linkImages"
           aspect={16 / 9}
           label={trans(message('Cover image'))}
-          className="aspect-video h-auto w-full"
+          className={hidePricing ? 'aspect-video h-auto w-full max-w-lg' : 'aspect-video h-auto w-full'}
         />
       </ProductFormField>
     </div>
