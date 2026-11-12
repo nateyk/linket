@@ -111,6 +111,25 @@ test.describe('Service Creation — authenticated browser acceptance', () => {
 
       await verifyResponsiveServiceSetup(page, steps, viewport.width, testInfo);
 
+      // The rail is a connected step sequence, not another nested card.
+      // Separator visibility follows the actual desktop/tablet layout.
+      const verticalConnector = steps.locator('ol > li > [data-slot="separator"]').first();
+      const horizontalConnector = steps.locator('ol > li > span[aria-hidden="true"]').first();
+      await expect(verticalConnector).toHaveCount(1);
+      await expect(horizontalConnector).toHaveCount(1);
+      if (viewport.width >= 1280) {
+        await expect(verticalConnector).toBeVisible();
+        await expect(horizontalConnector).toBeHidden();
+      } else if (viewport.width >= 640) {
+        await expect(verticalConnector).toBeHidden();
+        await expect(horizontalConnector).toBeVisible();
+      } else {
+        await expect(verticalConnector).toBeHidden();
+        await expect(horizontalConnector).toBeHidden();
+      }
+      await expect(steps.getByRole('button', {name: 'Details, step 1 of 4'}))
+        .toHaveAttribute('data-slot', 'button');
+
       const titleSpan = heading.locator('span').first();
       if (viewport.width <= 375) {
         const style = await titleSpan.evaluate(node => {
@@ -127,7 +146,11 @@ test.describe('Service Creation — authenticated browser acceptance', () => {
 
       // Moving between stages is local-only and retains unsaved details.
       await page.locator('#title').fill('E2E preview draft');
-      await steps.getByRole('button', {name: 'Media, step 2 of 4'}).click();
+      const mediaStep = steps.getByRole('button', {name: 'Media, step 2 of 4'});
+      await mediaStep.focus();
+      await page.keyboard.press('Enter');
+      await expect(mediaStep).toHaveAttribute('aria-current', 'step');
+      await expect(mediaStep).toBeFocused();
       await expect(page.getByRole('heading', {name: 'Media and links'})).toBeVisible();
       await steps.getByRole('button', {name: 'Packages, step 3 of 4'}).click();
       await expect(page.getByRole('heading', {name: 'Packages'})).toBeVisible();
