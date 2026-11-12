@@ -11,7 +11,7 @@ import {
 import {Link} from 'react-router';
 
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center rounded-button border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-button outline-none select-none focus-visible:outline-2 focus-visible:outline-solid active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:outline-1 aria-invalid:outline-destructive aria-invalid:focus-visible:outline-solid [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&:has([data-slot=separator])]:relative",
+  "group/button inline-flex shrink-0 items-center justify-center rounded-button border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-button outline-none select-none focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-foreground active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:outline-1 aria-invalid:outline-destructive aria-invalid:focus-visible:outline-solid [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&:has([data-slot=separator])]:relative",
   {
     variants: {
       variant: {
