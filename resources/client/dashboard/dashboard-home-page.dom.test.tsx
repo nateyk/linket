@@ -190,6 +190,37 @@ it('filters real payment statuses and lets desktop reveal optional columns', asy
   expect(screen.getByRole('table', {name: 'Recent orders'}).textContent).toContain('Review buyer');
 });
 
+
+it('keeps the overview responsive when filters, sorting and columns change repeatedly', async () => {
+  fixture.sales.data.data = [
+    {uuid: 'paid-a', status: 'paid', gross_amount_cents: 2700, currency: 'ETB', buyer_name: 'First', created_at: '2026-11-12T09:00:00Z', product: {title: 'First guide'}},
+    {uuid: 'review-b', status: 'manual_review', gross_amount_cents: 1500, currency: 'ETB', buyer_name: 'Second', created_at: '2026-11-11T09:00:00Z', product: {title: 'Second guide'}},
+    {uuid: 'expired-c', status: 'expired', gross_amount_cents: 900, currency: 'ETB', buyer_name: 'Third', created_at: '2026-11-10T09:00:00Z', product: {title: 'Third guide'}},
+  ];
+  showDashboard();
+  const user = userEvent.setup();
+
+  for (const status of ['Needs review', 'All statuses', 'Failed or expired', 'All statuses']) {
+    await user.click(screen.getByRole('combobox', {name: 'Filter by payment status'}));
+    await user.click(await screen.findByRole('option', {name: status}));
+    expect(screen.getByRole('table', {name: 'Recent orders'}).querySelectorAll('tbody tr').length)
+      .toBe(status === 'All statuses' ? 3 : 1);
+  }
+
+  for (const column of ['Buyer', 'Date', 'Buyer', 'Date']) {
+    await user.click(screen.getByRole('button', {name: 'Choose visible columns'}));
+    await user.click(await screen.findByRole('menuitemcheckbox', {name: column}));
+  }
+  const table = screen.getByRole('table', {name: 'Recent orders'});
+  expect(table.querySelectorAll('thead th')).toHaveLength(3);
+  fireEvent.click(within(table).getByRole('button', {name: 'Amount'}));
+  fireEvent.change(screen.getByRole('searchbox', {name: 'Search recent orders'}), {
+    target: {value: 'Third guide'},
+  });
+  expect(screen.getByRole('table', {name: 'Recent orders'}).querySelectorAll('tbody tr')).toHaveLength(1);
+  expect(screen.getByRole('link', {name: 'See all orders'})).toBeTruthy();
+});
+
 it('uses a distinct analytics query key when switching workspaces', async () => {
   const client = new QueryClient({defaultOptions: {queries: {retry: false}}});
   const {rerender} = render(<QueryClientProvider client={client}><MemoryRouter><Component /></MemoryRouter></QueryClientProvider>);
