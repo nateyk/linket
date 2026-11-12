@@ -1787,27 +1787,27 @@ function BioPagesPanel({
               <Trans message="Select one or more Storefronts" />
             </Dropdown.GroupLabel>
             {biolinks.map(page => (
-            <Dropdown.CheckboxItem
-              key={page.id}
-              checked={selectedIds.includes(page.id)}
-              onCheckedChange={checked =>
-                onChange(
-                  checked
-                    ? selectedIds.includes(page.id) ? selectedIds : [...selectedIds, page.id]
-                    : selectedIds.filter(id => id !== page.id),
-                )
-              }
-              className="min-h-11"
-            >
-              <span className="min-w-0">
-                <span className="block truncate font-medium">{page.name}</span>
-                {page.short_url && (
-                  <span className="block truncate text-xs text-muted-foreground">
-                    {page.short_url}
-                  </span>
-                )}
-              </span>
-            </Dropdown.CheckboxItem>
+              <Dropdown.CheckboxItem
+                key={page.id}
+                checked={selectedIds.includes(page.id)}
+                onCheckedChange={checked =>
+                  onChange(
+                    checked
+                      ? selectedIds.includes(page.id) ? selectedIds : [...selectedIds, page.id]
+                      : selectedIds.filter(id => id !== page.id),
+                  )
+                }
+                className="min-h-11"
+              >
+                <span className="min-w-0">
+                  <span className="block truncate font-medium">{page.name}</span>
+                  {page.short_url && (
+                    <span className="block truncate text-xs text-muted-foreground">
+                      {page.short_url}
+                    </span>
+                  )}
+                </span>
+              </Dropdown.CheckboxItem>
             ))}
           </Dropdown.Group>
         </Dropdown.Content>
