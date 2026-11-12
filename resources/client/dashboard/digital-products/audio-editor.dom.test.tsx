@@ -43,8 +43,8 @@ describe('dedicated Audio editor', () => {
   test('states the existing eight-clip limit without promising full-track streaming', async () => {
     const user = userEvent.setup();
     const {container} = render(<AudioEditor {...slots} />);
-    await user.click(screen.getByRole('region', {name: 'Preview clips (optional)'})
-      .querySelector('button[aria-label="About this section"]') as HTMLButtonElement);
+    await user.click(within(screen.getByRole('region', {name: 'Preview clips (optional)'}))
+      .getByRole('button', {name: 'About this section'}));
     expect(await screen.findByText(/up to 8 short preview clips/i)).not.toBeNull();
     expect(container.textContent).not.toMatch(/stream full tracks/i);
   });
