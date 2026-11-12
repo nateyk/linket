@@ -8,6 +8,7 @@ use App\Courses\Models\Lesson;
 use App\Payments\VerifyEt\VerifyEtSettings;
 use App\Models\User;
 use Common\Permissions\Models\Permission;
+use Common\Roles\Models\Role;
 use App\Storefront\Models\CreatorPaymentMethod;
 use App\Storefront\Models\DigitalProduct;
 use App\Storefront\Models\DirectPaymentMethod;
@@ -107,6 +108,13 @@ class PrepareBuyerE2eCommand extends Command
                     'password' => Hash::make('E2eBuyerCreator!23'),
                     'email_verified_at' => now(),
                 ])->save();
+            }
+
+            if ($withReviewer) {
+                // The caller already verified the disposable DB, loopback URL
+                // and reviewer-only opt-in before any seeded mutations.
+                $this->ensureDisposableCreatorUploadRole($creator);
+                $this->seedNewProductCreationCreator();
             }
 
             $workspace = DB::table('workspace_user')
@@ -309,6 +317,56 @@ class PrepareBuyerE2eCommand extends Command
         $this->line($absolute);
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Match the standard creator role after query-based E2E seeding. Never
+     * grant elevated file permission or change production role policies.
+     * Called exclusively from the guarded --with-reviewer path.
+     */
+    private function ensureDisposableCreatorUploadRole(User $creator): void
+    {
+        $usersRole = Role::query()
+            ->where('name', 'Users')
+            ->where('type', 'users')
+            ->firstOrFail();
+        $creator->roles()->syncWithoutDetaching([$usersRole->id]);
+        $creator->unsetRelation('roles');
+        if (! $creator->hasPermission('files.create')) {
+            throw new \RuntimeException(
+                'The disposable creator lacks standard Users files.create permission.',
+            );
+        }
+    }
+
+    /**
+     * Create a separate *ordinary free-tier* user for real new-item browser QA.
+     * The preseeded buyer/moderation creator already occupies five free slots.
+     * This account is used only from the guarded --with-reviewer local fixture;
+     * never relax the creator product limits or grant a special plan.
+     */
+    private function seedNewProductCreationCreator(): void
+    {
+        $email = 'e2e-new-product-creator@example.test';
+        $creator = User::query()->firstOrCreate(
+            ['email' => $email],
+            [
+                'name' => 'E2E New Product Creator',
+                'username' => 'e2e-new-product-'.Str::lower(Str::random(6)),
+                'password' => Hash::make('E2eBuyerCreator!23'),
+                'email_verified_at' => now(),
+            ],
+        );
+        $creator->forceFill([
+            'password' => Hash::make('E2eBuyerCreator!23'),
+            'email_verified_at' => now(),
+        ])->save();
+
+        $this->ensureDisposableCreatorUploadRole($creator);
+
+        if (! DB::table('workspace_user')->where('user_id', $creator->id)->exists()) {
+            (new CreateWorkspace())->createPersonalWorkspace($creator);
+        }
     }
 
     /**
