@@ -47,13 +47,17 @@ class ConversationsAssigner
             $conversations[0] instanceof Conversation
                 ? $conversations
                 : Conversation::whereIn('id', $conversations)->get();
-        // Never route a creator-owned conversation to an unrelated agent.
-        foreach ($original as $conversation) {
-            if ($conversation->support_owner_id !== null &&
-                $conversation->support_owner_id !== $agentId) {
-                abort(403, 'Creator-owned tickets cannot be assigned to another agent.');
-            }
-        }
+        // Keep this check flat so it cannot change the assignment flow.
+        $invalidAssignment = $original->first(
+            fn (Conversation $conversation) =>
+                $conversation->support_owner_id !== null &&
+                $conversation->support_owner_id !== $agentId,
+        );
+        abort_if(
+            $invalidAssignment !== null,
+            403,
+            'Creator-owned tickets cannot be assigned to another agent.',
+        );
 
         $updatedEvent = new ConversationsUpdated($original);
         $updated = $original;
