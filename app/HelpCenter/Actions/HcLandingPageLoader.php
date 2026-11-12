@@ -43,8 +43,9 @@ class HcLandingPageLoader
                         ->with([
                             'articles' => function ($query) {
                                 $query
+                                    ->where('articles.draft', false)
                                     ->filterByVisibleToRole()
-                                    ->where('articles.draft', false);
+                                    ->hasVisiblePlacement();
                             },
                         ]);
                 },
@@ -109,6 +110,7 @@ class HcLandingPageLoader
 
         return HcArticle::query()
             ->filterByVisibleToRole()
+            ->hasVisiblePlacement()
             ->orderBy('views', 'desc')
             ->where('draft', false)
             ->limit(10)
