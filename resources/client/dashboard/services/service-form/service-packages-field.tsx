@@ -241,7 +241,7 @@ export function ServicePackagesField({
         </p>
       </div>
 
-      <div className="grid min-w-0 grid-cols-3 gap-1 rounded-card-sm bg-muted/40 p-1 sm:gap-2" role="group" aria-label={trans({message: 'Package tiers'})}>
+      <div className="grid min-w-0 grid-cols-3 gap-2 sm:gap-3" role="group" aria-label={trans({message: 'Package tiers'})}>
         {TIERS.map((tier, index) => {
           const slot = slots[index];
           const tierName = trans(tier.label);
@@ -255,9 +255,9 @@ export function ServicePackagesField({
               key={tier.key}
               aria-label={tier.name + ' package'}
               className={cn(
-                'min-w-0 rounded-card-xs px-1.5 py-2.5 transition-colors motion-reduce:transition-none sm:px-3',
-                selectedIndex === index && 'bg-primary/5 ring-1 ring-primary/60',
-                tierHasError && 'ring-1 ring-destructive',
+                'min-w-0 rounded-card-xs border border-border/70 px-2 py-2.5 transition-colors motion-reduce:transition-none sm:px-3',
+                selectedIndex === index && 'border-foreground/40 bg-muted/40',
+                tierHasError && 'border-destructive',
               )}
             >
               <button
@@ -267,7 +267,7 @@ export function ServicePackagesField({
                 onClick={() => setSelectedIndex(index)}
                 className="flex min-h-12 w-full min-w-0 flex-col justify-start gap-1 rounded-card-xs text-start outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               >
-                <span className={cn('text-sm font-semibold', selectedIndex === index ? 'text-primary' : !item ? 'text-muted-foreground' : 'text-foreground')}>
+                <span className={cn('text-sm font-semibold', !item ? 'text-muted-foreground' : 'text-foreground', selectedIndex === index && 'text-foreground')}>
                   {tierName}
                 </span>
                 <span className="min-w-0 break-words text-xs leading-4 text-muted-foreground tabular-nums">

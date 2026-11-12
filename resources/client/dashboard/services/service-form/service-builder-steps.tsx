@@ -19,8 +19,9 @@ interface ServiceBuilderStepsProps {
  * not a tablist: all four optional stages are freely accessible, and choosing
  * a stage never saves or implicitly marks it complete.
  *
- * Phones and tablets: one horizontal connected row without a second tier.
- * Wide screens: vertical rail with connector lines beside the editor.
+ * Phones and tablets: one horizontal line between marker centers.
+ * Wide screens: a vertical spine between marker centers beside the editor.
+ * Connectors extend beneath the opaque circles, so no missing segments appear.
  */
 export function ServiceBuilderSteps({
   active,
@@ -84,7 +85,7 @@ export function ServiceBuilderSteps({
                   <span
                     aria-hidden="true"
                     className={cn(
-                      'pointer-events-none absolute start-[calc(50%+1rem)] end-[calc(-50%+1rem)] top-6 h-px xl:hidden',
+                      'pointer-events-none absolute start-1/2 -end-1/2 top-6 h-px xl:hidden',
                       done ? 'bg-positive/60' : 'bg-border',
                     )}
                   />
@@ -92,7 +93,7 @@ export function ServiceBuilderSteps({
                     orientation="vertical"
                     aria-hidden="true"
                     className={cn(
-                      'pointer-events-none absolute start-6 top-10 -bottom-2 hidden xl:block',
+                      'pointer-events-none absolute start-6 top-7 -bottom-7 hidden xl:block',
                       done ? 'bg-positive/60' : 'bg-border',
                     )}
                   />
@@ -113,9 +114,7 @@ export function ServiceBuilderSteps({
                 onClick={() => onSelect(step.id)}
                 className={cn(
                   'relative flex h-auto min-h-16 w-full min-w-0 flex-col items-center justify-start gap-1 rounded-card-xs px-0.5 py-2 text-center text-foreground whitespace-normal motion-reduce:transition-none sm:px-2 xl:flex-row xl:items-start xl:justify-start xl:gap-3 xl:py-3 xl:text-start',
-                  current
-                    ? 'bg-primary/5 hover:bg-primary/10'
-                    : 'hover:bg-muted/40',
+                  current ? 'hover:bg-muted/30' : 'hover:bg-muted/40',
                 )}
               >
                 <span
