@@ -288,7 +288,11 @@ describe('public service page', () => {
     expect(title.className).toContain('[overflow-wrap:anywhere]');
     const list = screen.getByRole('tablist', {name: 'Packages'});
     expect(list.parentElement?.className).toContain('overflow-x-auto');
-    expect(screen.getByRole('tab', {name: longPackage}).className).toContain(
+    const longTab = screen.getByRole('tab', {name: longPackage});
+    expect(longTab.className).toContain('flex-none');
+    expect(longTab.className).toContain('min-w-36');
+    expect(longTab.className).toContain('[overflow-wrap:anywhere]');
+    expect(longTab.querySelector('span')?.className).toContain(
       '[overflow-wrap:anywhere]',
     );
 

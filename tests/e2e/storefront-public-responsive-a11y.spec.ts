@@ -153,7 +153,38 @@ test.describe('SF-12 optional public service page evidence', () => {
       await expect(page.getByRole('heading', {level: 1})).toBeVisible();
       const packageTabs = page.getByRole('tablist', {name: 'Packages'});
       if (await packageTabs.count()) {
-        await expect(packageTabs.getByRole('tab').first()).toBeVisible();
+        const tabs = packageTabs.getByRole('tab');
+        await expect(tabs.first()).toBeVisible();
+
+        // No page overflow alone is insufficient: adjacent package labels
+        // must not paint into one another at narrow widths.
+        const tabRects = await tabs.evaluateAll(elements =>
+          elements.map(element => {
+            const tab = element.getBoundingClientRect();
+            const label = element.querySelector('span');
+            const text = label?.getBoundingClientRect();
+            return {
+              left: tab.left,
+              right: tab.right,
+              labelLeft: text?.left ?? tab.left,
+              labelRight: text?.right ?? tab.right,
+              labelScrollWidth: label?.scrollWidth ?? 0,
+              labelClientWidth: label?.clientWidth ?? 0,
+            };
+          }),
+        );
+        for (const [index, tab] of tabRects.entries()) {
+          expect(tab.labelLeft, `tab ${index} label begins in its target`)
+            .toBeGreaterThanOrEqual(tab.left - 1);
+          expect(tab.labelRight, `tab ${index} label fits its target`)
+            .toBeLessThanOrEqual(tab.right + 1);
+          expect(tab.labelScrollWidth, `tab ${index} label must wrap`)
+            .toBeLessThanOrEqual(tab.labelClientWidth + 1);
+          if (index < tabRects.length - 1) {
+            expect(tab.right, `tabs ${index} and ${index + 1} do not overlap`)
+              .toBeLessThanOrEqual(tabRects[index + 1].left + 1);
+          }
+        }
       }
       await captureAndCheckReflow(page, info, `service-${size.width}`);
     });
