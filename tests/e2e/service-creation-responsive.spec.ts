@@ -145,6 +145,10 @@ test.describe('Service Creation — authenticated browser acceptance', () => {
       await expect(page.getByRole('heading', {name: 'Media and links'})).toBeVisible();
       await steps.getByRole('button', {name: 'Packages, step 3 of 4'}).click();
       await expect(page.getByRole('heading', {name: 'Packages'})).toBeVisible();
+      await expect(page.getByText('Offer clear packages, or let customers request a quote.')).toHaveCount(0);
+      await page.getByRole('button', {name: 'About Packages'}).click();
+      await expect(page.getByText('Offer clear packages, or let customers request a quote.')).toBeVisible();
+      await page.keyboard.press('Escape');
 
       // The outer Packages panel owns the visual surface. Inner tier choices,
       // details and features must not become their own cards again.
