@@ -29,7 +29,6 @@ import {AlertDialog} from '@shadcn/alert-dialog/alert-dialog';
 import {Breadcrumb} from '@shadcn/breadcrumb/breadcrumb';
 import {Button} from '@shadcn/button/button';
 import {Dropdown} from '@shadcn/dropdown/dropdown';
-import {Progress} from '@shadcn/progress/progress';
 import {Checkbox} from '@shadcn/forms/checkbox/checkbox';
 import {
   InputGroup,
@@ -94,7 +93,6 @@ import {
 } from './product-form-section';
 import {ProductPreview, ProductStatus} from './product-preview';
 import {ProductAiCopyReview} from './product-ai-copy-review';
-import {missingProductRequirements} from './product-authoring-status';
 import type {ProductType} from './product-type-picker';
 
 type Biolink = {id: number; name: string; short_url?: string};
@@ -167,25 +165,17 @@ const SECTION_META: Record<
   },
 };
 
-/** Connected non-course navigation; sections remain mounted for safe uploads and autosave. */
+/** The connected steps are the only non-course progress indicator. */
 function NonCourseAuthoringLayout({
   type,
   completed,
-  completedSections,
-  totalSections,
-  readinessHint,
   children,
 }: {
   type: NonCourseProductType;
   completed: Record<ProductAuthoringStep, boolean>;
-  completedSections: number;
-  totalSections: number;
-  readinessHint: ReactNode;
   children: ReactNode;
 }) {
   const [activeStep, setActiveStep] = useState<ProductAuthoringStep>('details');
-  const {trans} = useTrans();
-
   const selectStep = (step: ProductAuthoringStep) => {
     setActiveStep(step);
     focusProductAuthoringStep(type, step);
@@ -193,37 +183,11 @@ function NonCourseAuthoringLayout({
 
   return (
     <div
-      className="grid min-w-0 items-start gap-4 xl:grid-cols-[minmax(0,14rem)_minmax(0,1fr)] xl:gap-6"
+      className="grid min-w-0 items-start gap-3 xl:grid-cols-[minmax(0,14rem)_minmax(0,1fr)] xl:gap-6"
       data-testid="product-authoring-layout"
     >
-      <ProductAuthoringSteps
-        type={type}
-        active={activeStep}
-        completed={completed}
-        onSelect={selectStep}
-      />
-      <div className="min-w-0">
-        <div
-          data-testid="product-setup-status"
-          className="mb-4 flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2 border-b border-border pb-3"
-        >
-          <p className="text-xs text-muted-foreground">
-            <Trans
-              message=":completed of :total required sections complete"
-              values={{completed: completedSections, total: totalSections}}
-            />
-          </p>
-          <Progress.Root
-            value={(completedSections / totalSections) * 100}
-            className="ms-auto w-28 shrink-0 sm:w-40"
-            aria-label={trans({message: 'Product setup progress'})}
-          >
-            <Progress.Track className="h-2"><Progress.Indicator /></Progress.Track>
-          </Progress.Root>
-          {readinessHint ? <div className="basis-full">{readinessHint}</div> : null}
-        </div>
-        {children}
-      </div>
+      <ProductAuthoringSteps type={type} active={activeStep} completed={completed} onSelect={selectStep} />
+      <div className="min-w-0">{children}</div>
     </div>
   );
 }
@@ -744,26 +708,6 @@ function DigitalProductForm() {
   };
   const canSubmit =
     !product || product.status === 'draft' || product.status === 'rejected';
-  const missingRequirements = missingProductRequirements({
-    title,
-    filesCount: files.length,
-    billing: effectiveBilling,
-    price,
-    type: effectiveFileType,
-  });
-  // Explain the first missing required item without counting optional samples
-  // or storefront placement as mandatory.
-  const readinessHint = canSubmit && missingRequirements.length > 0 ? (
-    <p className="text-xs text-muted-foreground" role="status">
-      {missingRequirements[0] === 'title' ? (
-        <Trans message="Add a title before submitting." />
-      ) : missingRequirements[0] === 'files' ? (
-        <Trans message="Upload at least one private product file before submitting." />
-      ) : (
-        <Trans message="Choose Free access or enter a valid paid price before submitting." />
-      )}
-    </p>
-  ) : null;
   const unavailable = !!productId && (!product || String(product.id) !== productId);
 
   const handleBillingChange = (mode: BillingMode) => {
@@ -810,12 +754,14 @@ function DigitalProductForm() {
       onConvertToEtbChange={setConvertToEtb}
       errors={fieldErrors}
       validateField={validateField}
+      condensed
     />
   );
 
   const privateFileFields = (
     <FilesPanel
       files={files}
+      dense={effectiveFileType !== 'course'}
       accept={fileAccept}
       hint={fileHint}
       onUploaded={file => {
@@ -955,7 +901,7 @@ function DigitalProductForm() {
 
       <DashboardLayout.SectionContent className="overflow-y-auto">
         <div className={effectiveFileType !== 'course' ? 'mx-auto w-full max-w-5xl py-4 sm:py-5' : 'mx-auto w-full max-w-6xl py-4 sm:py-5'}>
-          {!loading && !unavailable && (
+          {!loading && !unavailable && (effectiveFileType === 'course' || !!product || saving || creationUncertain) && (
             <div role="status" aria-live="polite" className="mb-4 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               <span>
                 {saving ? (
@@ -1108,9 +1054,6 @@ function DigitalProductForm() {
             <NonCourseAuthoringLayout
               type="digital"
               completed={nonCourseStepsCompleted}
-              completedSections={completedSections}
-              totalSections={progressSections.length}
-              readinessHint={readinessHint}
             >
               <DigitalProductEditor
                 details={detailsFields}
@@ -1124,9 +1067,6 @@ function DigitalProductForm() {
             <NonCourseAuthoringLayout
               type="ebook"
               completed={nonCourseStepsCompleted}
-              completedSections={completedSections}
-              totalSections={progressSections.length}
-              readinessHint={readinessHint}
             >
               <EbookEditor
                 details={detailsFields}
@@ -1140,9 +1080,6 @@ function DigitalProductForm() {
             <NonCourseAuthoringLayout
               type="audio"
               completed={nonCourseStepsCompleted}
-              completedSections={completedSections}
-              totalSections={progressSections.length}
-              readinessHint={readinessHint}
             >
               <AudioEditor
                 details={detailsFields}
@@ -1415,7 +1352,7 @@ function DetailsPanel({
     <div className="flex flex-col gap-4">
       <ProductFormField
         label="Product title"
-        description="Choose a clear title customers can easily understand."
+        description={hidePricing ? undefined : "Choose a clear title customers can easily understand."}
         error={errors.title}
         htmlFor="product-title"
         required
@@ -1448,7 +1385,7 @@ function DetailsPanel({
 
       <ProductFormField
         label="Description"
-        description="Describe what customers will receive."
+        description={hidePricing ? undefined : "Describe what customers will receive."}
         error={errors.description}
         htmlFor="product-description"
         onBlur={() => validateField('description', description)}
@@ -1469,7 +1406,7 @@ function DetailsPanel({
 
       <ProductFormField
         label="Cover image"
-        description="Shown on your product listing and Storefronts."
+        description={hidePricing ? undefined : "Shown on your product listing and Storefronts."}
         error={errors.cover_file_entry_id}
         htmlFor="product-cover"
       >
@@ -1487,6 +1424,7 @@ function DetailsPanel({
 }
 
 interface PricingFieldsProps {
+  condensed?: boolean;
   price: string;
   billingMode: BillingMode | null;
   onBillingModeChange: (mode: BillingMode) => void;
@@ -1499,6 +1437,7 @@ interface PricingFieldsProps {
 }
 
 function PricingFields({
+  condensed = false,
   price,
   billingMode,
   onBillingModeChange,
@@ -1512,19 +1451,21 @@ function PricingFields({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
-        <p className="text-sm font-medium">
-          <Trans message="Free or paid?" />
-        </p>
+        {!condensed && (
+          <p className="text-sm font-medium">
+            <Trans message="Free or paid?" />
+          </p>
+        )}
         <BillingModePicker value={billingMode} onValueChange={mode => {if (mode) onBillingModeChange(mode);}} />
       </div>
-      {billingMode === 'free' ? (
+      {billingMode === 'free' && !condensed ? (
         <p className="text-sm text-muted-foreground">
           <Trans message="Buyers pay nothing." />
         </p>
       ) : billingMode === 'paid' ? (
       <ProductFormField
         label="Price"
-        description="One-time price in ETB."
+        description={condensed ? undefined : "One-time price in ETB."}
         error={errors.price_cents}
         htmlFor="product-price"
         required
@@ -1623,6 +1564,7 @@ function fileTypeIcon(extension?: string) {
 
 function FilesPanel({
   files,
+  dense = false,
   onUploaded,
   onRemove,
   error,
@@ -1630,6 +1572,7 @@ function FilesPanel({
   hint,
 }: {
   files: FileEntry[];
+  dense?: boolean;
   onUploaded: (file: FileEntry) => void;
   onRemove: (id: number) => void;
   error?: string;
@@ -1646,6 +1589,8 @@ function FilesPanel({
       <SharedFileUploader
         uploadType="digitalProductFiles"
         bare
+        dense={dense}
+        title={dense ? <Trans message="Add files" /> : undefined}
         onUploaded={entry =>
           onUploaded({
             id: entry.id,
@@ -1741,18 +1686,12 @@ function BioPagesPanel({
         <p>
           <Trans message="You can sell this product directly. Create a Storefront later if you want to display it there." />
         </p>
-        <p className="text-xs">
-          <Trans message="Storefront placement is optional and does not block product submission." />
-        </p>
       </div>
     );
   }
 
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-sm text-muted-foreground">
-        <Trans message="Optional. Choose where customers can find this product after approval." />
-      </p>
       <Dropdown.Root>
         <Dropdown.Trigger
           render={
@@ -1783,7 +1722,7 @@ function BioPagesPanel({
           className="max-h-80 w-[min(28rem,calc(100vw-2rem))] overflow-y-auto"
         >
           <Dropdown.Group>
-            <Dropdown.GroupLabel>
+            <Dropdown.GroupLabel className="sr-only">
               <Trans message="Select one or more Storefronts" />
             </Dropdown.GroupLabel>
             {biolinks.map(page => (
@@ -1812,7 +1751,7 @@ function BioPagesPanel({
           </Dropdown.Group>
         </Dropdown.Content>
       </Dropdown.Root>
-      <p className="text-xs text-muted-foreground" role="status" aria-live="polite">
+      <p className="sr-only" role="status" aria-live="polite">
         {selectedIds.length > 0 ? (
           <Trans
             message="[one :count Storefront selected|other :count Storefronts selected]"
@@ -1823,7 +1762,7 @@ function BioPagesPanel({
         )}
       </p>
       <p className="text-xs text-muted-foreground">
-        <Trans message="Selection does not publish the product; approval is handled separately." />
+        <Trans message="Storefront placement takes effect after approval." />
       </p>
     </div>
   );
@@ -1836,12 +1775,10 @@ function NonCourseEditorSkeleton() {
   return (
     <div role="status" aria-busy="true" data-testid="non-course-editor-skeleton" className="min-w-0 space-y-4">
       <span className="sr-only"><Trans message="Loading product editor" /></span>
-      <div aria-hidden="true" className="flex min-w-0 items-center justify-between gap-4 border-b pb-4">
-        <div className="min-w-0 space-y-2">
-          <Skeleton className="h-5 w-28 rounded-input" />
-          <Skeleton className="h-4 w-48 max-w-full rounded-input" />
-        </div>
-        <Skeleton className="h-2 w-28 shrink-0 rounded-full sm:w-40" />
+      <div aria-hidden="true" className="flex items-center justify-between gap-2 border-b pb-3">
+        {Array.from({length: 5}, (_, index) => (
+          <Skeleton key={index} className="size-8 rounded-full" />
+        ))}
       </div>
       <div aria-hidden="true" className="space-y-4">
         <div className="space-y-4 rounded-card-sm border p-4 sm:p-5">
