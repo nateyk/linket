@@ -24,9 +24,7 @@ async function signIn(page: Page) {
 }
 
 function expectedServiceStepColumns(width: number): number {
-  if (width >= 1280) return 1;
-  if (width >= 640) return 4;
-  return 2;
+  return width >= 1280 ? 1 : 4;
 }
 
 async function verifyResponsiveServiceSetup(
@@ -59,7 +57,7 @@ async function verifyResponsiveServiceSetup(
   expect(Math.abs(layout.stepperLeft - layout.gutterLeft),
     'Builder rail aligns with the dashboard content gutter').toBeLessThanOrEqual(2);
   expect(layout.columns,
-    'Step navigation uses two phone columns, four tablet columns or one desktop rail')
+    'Step navigation is one row on phones and tablets, and a desktop rail')
     .toBe(expectedServiceStepColumns(width));
 
   if (width >= 1280) {
