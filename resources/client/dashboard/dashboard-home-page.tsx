@@ -527,18 +527,24 @@ function RecentOrders() {
     date: false,
   });
 
-  const orders = salesData?.data.data.slice(0, 5) ?? [];
+  // TanStack Table requires referentially stable data. Creating fresh slice/filter
+  // arrays during each render makes its sorting/visibility updates re-render forever.
+  const fetchedOrders = salesData?.data.data;
+  const orders = useMemo(() => fetchedOrders?.slice(0, 5) ?? [], [fetchedOrders]);
   const query = search.trim().toLocaleLowerCase();
-  const visibleOrders = orders.filter(order => {
-    if (!recentOrderMatchesStatus(order.status, statusFilter)) return false;
-    if (!query) return true;
-    return [
-      order.uuid,
-      order.product?.title,
-      order.buyer_name,
-      order.status.replaceAll('_', ' '),
-    ].some(value => value?.toLocaleLowerCase().includes(query));
-  });
+  const visibleOrders = useMemo(() => {
+    if (!query && statusFilter === 'all') return orders;
+    return orders.filter(order => {
+      if (!recentOrderMatchesStatus(order.status, statusFilter)) return false;
+      if (!query) return true;
+      return [
+        order.uuid,
+        order.product?.title,
+        order.buyer_name,
+        order.status.replaceAll('_', ' '),
+      ].some(value => value?.toLocaleLowerCase().includes(query));
+    });
+  }, [orders, query, statusFilter]);
 
   const columns = useMemo<ColumnDef<DashboardOrder>[]>(() => [
     {
