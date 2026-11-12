@@ -394,6 +394,49 @@ class CreatorServicesApiTest extends TestCase
     /**
      * @return array{User, \Common\Workspaces\Models\Workspace, Biolink}
      */
+    public function test_optional_buyer_questions_validate_persist_update_and_clear(): void
+    {
+        [$creator, , $store] = $this->context();
+        $url = '/api/v1/services';
+        $data = [
+            'store_id' => $store->id,
+            'title' => 'Illustration consultation',
+            'buyer_questions' => ['  What is your deadline?  ', 'What is your budget?'],
+        ];
+
+        $created = $this->stateful()->actingAs($creator)->postJson($url, $data)
+            ->assertCreated()
+            ->assertJsonPath('data.buyer_questions.0', 'What is your deadline?')
+            ->assertJsonCount(2, 'data.buyer_questions');
+
+        $id = $created->json('data.id');
+        $this->assertSame(['What is your deadline?', 'What is your budget?'],
+            CreatorService::query()->findOrFail($id)->buyer_questions);
+
+        $this->stateful()->actingAs($creator)->putJson("{$url}/{$id}", [
+            'store_id' => $store->id,
+            'title' => 'Illustration consultation',
+        ])->assertOk()->assertJsonCount(2, 'data.buyer_questions');
+
+        $this->stateful()->actingAs($creator)->putJson("{$url}/{$id}", [
+            'store_id' => $store->id,
+            'title' => 'Illustration consultation',
+            'buyer_questions' => [],
+        ])->assertOk()->assertJsonCount(0, 'data.buyer_questions');
+
+        $this->stateful()->actingAs($creator)->postJson($url, [
+            ...$data, 'buyer_questions' => ['One', 'Two', 'Three', 'Four'],
+        ])->assertUnprocessable()->assertJsonValidationErrors('buyer_questions');
+
+        $this->stateful()->actingAs($creator)->postJson($url, [
+            ...$data, 'buyer_questions' => [''],
+        ])->assertUnprocessable()->assertJsonValidationErrors('buyer_questions.0');
+
+        $this->stateful()->actingAs($creator)->postJson($url, [
+            ...$data, 'buyer_questions' => [str_repeat('a', 161)],
+        ])->assertUnprocessable()->assertJsonValidationErrors('buyer_questions.0');
+    }
+
     private function context(): array
     {
         $token = Str::lower(Str::random(12));
