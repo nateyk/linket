@@ -38,7 +38,7 @@ class HcLandingPageLoader
             ->with([
                 'sections' => function (HasMany $query) {
                     $query
-                        ->withCount('articles')
+                        ->withCount(['articles' => fn ($articles) => $articles->visibleToAudience()])
                         ->filterByVisibleToRole()
                         ->with([
                             'articles' => function ($query) {
