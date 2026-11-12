@@ -210,7 +210,7 @@ export function Component() {
                   <Badge variant="secondary"><Trans message="Free" /></Badge>
                 </div>
               ) : billingMode === 'paid' ? (
-                <ProductFormField label="Price (ETB)" description="This course is paid. Update the price if needed." error={errors.price} htmlFor="course-price" required><InputGroup><InputGroupAddon align="inline-start"><InputGroupText>ETB</InputGroupText></InputGroupAddon><InputGroupInput id="course-price" aria-invalid={!!errors.price} type="number" min="0" step="0.01" value={price} onChange={event => { setPrice(event.target.value); setErrors(current => ({...current, price: undefined})); }} placeholder="0.00" /></InputGroup></ProductFormField>
+                <ProductFormField label="Price (ETB)" description="This course is paid. Update the price if needed." error={errors.price} htmlFor="course-price" required><InputGroup><InputGroupAddon align="inline-start"><InputGroupText>ETB</InputGroupText></InputGroupAddon><InputGroupInput id="course-price" aria-invalid={!!errors.price} aria-errormessage={errors.price ? "course-price-error" : undefined} type="number" min="0" step="0.01" value={price} onChange={event => { setPrice(event.target.value); setErrors(current => ({...current, price: undefined})); }} placeholder="0.00" /></InputGroup></ProductFormField>
               ) : null}
             </div> : <div className="flex flex-col gap-4">
               {/* Same shared settings fields as the builder's CourseSettingsDialog; the two-step submit threads them into PUT /courses/{id}. */}
