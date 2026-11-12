@@ -276,7 +276,7 @@ export function ProductCard({
         {description ? (
           <p
             className={cn(
-              'line-clamp-2 text-sm leading-relaxed text-muted-foreground',
+              'line-clamp-2 min-w-0 text-sm leading-relaxed text-muted-foreground break-words [overflow-wrap:anywhere]',
               classNames?.description,
             )}
           >

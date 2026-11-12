@@ -1,0 +1,183 @@
+name: Storefront SF-12 Isolated Browser QA
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'tests/e2e/storefront-public-responsive-a11y.spec.ts'
+      - 'tests/e2e/storefront-saved-appearance-sf12.spec.ts'
+      - 'tests/e2e/storefront-preview-parity-sf12.spec.ts'
+      - '.github/scripts/install-playwright-chromium.sh'
+      - 'tests/e2e/fixtures/seed-storefront-sf12.php'
+      - 'resources/client/digital-products/shared/product-card.stories.tsx'
+      - 'resources/client/digital-products/shared/product-card.tsx'
+      - '.github/workflows/storefront-sf12-browser-qa.yml'
+
+# Local-only test, disposable MySQL, no secrets and no deployment.
+permissions:
+  contents: read
+
+concurrency:
+  group: storefront-sf12-isolated-browser-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  public-readonly-qa:
+    name: Published Storefront Responsive Screenshots
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      APP_ENV: testing
+      APP_DEBUG: 'false'
+      APP_URL: http://127.0.0.1:8081
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: '3306'
+      DB_DATABASE: belink_test
+      DB_USERNAME: root
+      DB_PASSWORD: root
+      CACHE_STORE: array
+      SESSION_DRIVER: file
+      QUEUE_CONNECTION: sync
+      MAIL_MAILER: array
+      SCOUT_DRIVER: 'null'
+      VERIFY_ET_ENABLED: 'true'
+      VERIFY_ET_MOCK: 'true'
+      VERIFY_ET_API_KEY: synthetic-e2e-key
+      LINKET_ISOLATED_E2E: '1'
+      E2E_NO_SERVER: '1'
+      E2E_BASE_URL: http://127.0.0.1:8081
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: belink_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - name: Checkout isolated SF-12 QA branch
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Setup PHP 8.4
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_mysql, gd, zip, bcmath, exif, redis, curl, openssl, fileinfo
+          coverage: none
+          tools: composer:v2
+
+      - name: Prepare test environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$APP_ENV" == "testing" && "$DB_DATABASE" == "belink_test" ]]
+          [[ "$APP_URL" == "http://127.0.0.1:8081" && "$LINKET_ISOLATED_E2E" == "1" ]]
+          cp env.example .env
+          sed -i 's/^INSTALLED=.*/INSTALLED=true/' .env
+          grep -q '^INSTALLED=true' .env || echo 'INSTALLED=true' >> .env
+          printf 'APP_KEY=base64:%s\n' "$(php -r 'echo base64_encode(random_bytes(32));')" >> .env
+
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+        env:
+          COMPOSER_AUDIT_ABANDONED: ignore
+
+      - name: Set up Node 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24.19.0'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install locked npm dependencies
+        run: npm ci --prefer-offline --no-audit --no-fund
+
+      - name: Confirm disposable MySQL
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$DB_DATABASE" == "belink_test" && "$APP_ENV" == "testing" ]]
+          for i in {1..30}; do
+            if mysql --protocol=tcp -h 127.0.0.1 -P 3306 -u root -proot -N -e 'SELECT 1' belink_test >/dev/null 2>&1; then
+              echo 'Isolated MySQL ready'
+              exit 0
+            fi
+            sleep 2
+          done
+          echo 'Disposable MySQL unavailable' >&2
+          exit 1
+
+      - name: Seed synthetic store, product, service and packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$APP_ENV" == "testing" && "$DB_DATABASE" == "belink_test" ]]
+          [[ "$VERIFY_ET_MOCK" == "true" && "$LINKET_ISOLATED_E2E" == "1" ]]
+          php artisan migrate --force --no-interaction
+          php artisan db:seed --force --no-interaction
+          php artisan db:seed --class="Common\\Database\\Seeders\\UploadBackendsSeeder" --force --no-interaction
+          php artisan linket:prepare-buyer-e2e --no-interaction
+          test -s storage/app/e2e/buyer-fixture.json
+          SERVICE_URL="$(php tests/e2e/fixtures/seed-storefront-sf12.php)"
+          [[ "$SERVICE_URL" == http://127.0.0.1:8081/* ]]
+          printf 'LINKET_E2E_PUBLIC_SERVICE_URL=%s\n' "$SERVICE_URL" >> "$GITHUB_ENV"
+          echo 'Published service fixture created in disposable test DB'
+
+      - name: Build frontend assets and install Chromium
+        run: |
+          npm run build
+          bash .github/scripts/install-playwright-chromium.sh
+
+      - name: Start local-only Laravel server
+        shell: bash
+        run: |
+          set -euo pipefail
+          php artisan config:clear
+          nohup php artisan serve --host=127.0.0.1 --port=8081 > /tmp/linket-sf12-serve.log 2>&1 &
+          for i in {1..45}; do
+            if curl -fsS -o /dev/null http://127.0.0.1:8081/login; then
+              echo 'Synthetic server ready'
+              exit 0
+            fi
+            sleep 2
+          done
+          cat /tmp/linket-sf12-serve.log >&2
+          exit 1
+
+      - name: Capture public storefront, product, service and keyboard screenshots
+        shell: bash
+        env:
+          PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/sf12-public
+        run: |
+          set -euo pipefail
+          [[ "$APP_ENV" == "testing" && "$DB_DATABASE" == "belink_test" ]]
+          [[ "$E2E_BASE_URL" == "http://127.0.0.1:8081" ]]
+          [[ "$LINKET_E2E_PUBLIC_SERVICE_URL" == http://127.0.0.1:8081/* ]]
+          npx playwright test tests/e2e/storefront-public-responsive-a11y.spec.ts tests/e2e/storefront-saved-appearance-sf12.spec.ts tests/e2e/storefront-preview-parity-sf12.spec.ts \
+            --project=chromium --workers=1 --retries=0 \
+            --output=test-results/sf12-public --trace=retain-on-failure
+
+      - name: Upload browser screenshots, trace and report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: sf12-public-browser-screenshots
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Surface synthetic server logs after failure
+        if: failure()
+        run: tail -n 120 /tmp/linket-sf12-serve.log 2>/dev/null || true
