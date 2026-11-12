@@ -325,5 +325,19 @@
   "Your free order is ready": "ነፃ ትዕዛዝዎ ዝግጁ ነው",
   "Your payment is safe. Try again in a moment.": "ክፍያዎ ደህንነቱ የተጠበቀ ነው። ከጥቂት ጊዜ በኋላ እንደገና ይሞክሩ።",
   "Your product is still available when you are ready.": "ዝግጁ ሲሆኑ ምርቱ አሁንም ይገኛል።",
-  "Your receipt is being sent to :email.": "ደረሰኝዎ ወደ :email እየተላከ ነው።"
+  "Your receipt is being sent to :email.": "ደረሰኝዎ ወደ :email እየተላከ ነው።",
+  "All statuses": "ሁሉም ሁኔታዎች",
+  "Awaiting payment": "ክፍያ በመጠባበቅ ላይ",
+  "Choose visible columns": "የሚታዩ አምዶችን ምረጥ",
+  "Clear filters": "ማጣሪያዎችን አጽዳ",
+  "Columns": "አምዶች",
+  "Failed or expired": "ያልተሳካ ወይም ጊዜው ያለፈ",
+  "Filter by payment status": "በክፍያ ሁኔታ አጣራ",
+  "Filter recent orders": "የቅርብ ጊዜ ትዕዛዞችን አጣራ",
+  "Loading recent orders": "የቅርብ ጊዜ ትዕዛዞች በመጫን ላይ",
+  "Needs review": "ግምገማ የሚፈልግ",
+  "No matching orders": "የሚዛመዱ ትዕዛዞች የሉም",
+  "Search recent orders": "የቅርብ ጊዜ ትዕዛዞችን ፈልግ",
+  "Show columns": "አምዶችን አሳይ",
+  "Verified": "የተረጋገጠ"
 }
