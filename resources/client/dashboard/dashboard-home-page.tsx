@@ -727,19 +727,21 @@ function RecentOrders() {
                     <span className="hidden sm:inline"><Trans message="Columns" /></span>
                   </Dropdown.Trigger>
                   <Dropdown.Content align="end">
-                    <Dropdown.GroupLabel><Trans message="Show columns" /></Dropdown.GroupLabel>
-                    {(['buyer', 'date'] as const).map(id => {
-                      const column = table.getColumn(id);
-                      return (
-                        <Dropdown.CheckboxItem
-                          key={id}
-                          checked={column?.getIsVisible() ?? false}
-                          onCheckedChange={value => column?.toggleVisibility(!!value)}
-                        >
-                          <Trans message={id === 'buyer' ? 'Buyer' : 'Date'} />
-                        </Dropdown.CheckboxItem>
-                      );
-                    })}
+                    <Dropdown.Group>
+                      <Dropdown.GroupLabel><Trans message="Show columns" /></Dropdown.GroupLabel>
+                      {(['buyer', 'date'] as const).map(id => {
+                        const column = table.getColumn(id);
+                        return (
+                          <Dropdown.CheckboxItem
+                            key={id}
+                            checked={column?.getIsVisible() ?? false}
+                            onCheckedChange={value => column?.toggleVisibility(!!value)}
+                          >
+                            <Trans message={id === 'buyer' ? 'Buyer' : 'Date'} />
+                          </Dropdown.CheckboxItem>
+                        );
+                      })}
+                    </Dropdown.Group>
                   </Dropdown.Content>
                   </Dropdown.Root>
                 </div>
