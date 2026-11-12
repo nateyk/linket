@@ -31,7 +31,9 @@ test.describe('Service Creation — authenticated browser acceptance', () => {
     {name: '320px reflow', width: 320, height: 900},
     {name: '360px mobile', width: 360, height: 800},
     {name: '375px mobile', width: 375, height: 812},
+    {name: '430px large phone', width: 430, height: 932},
     {name: '768px tablet', width: 768, height: 1024},
+    {name: '1024px small desktop', width: 1024, height: 768},
     {name: '1440px desktop', width: 1440, height: 900},
   ]) {
     test(`${viewport.name}: readable editor and keyboard-safe customer preview`, async ({page}, testInfo) => {
@@ -48,25 +50,54 @@ test.describe('Service Creation — authenticated browser acceptance', () => {
       }
       await expect(steps.getByRole('button', {name: 'Details, step 1 of 4'})).toHaveAttribute('aria-current', 'step');
 
-      // The dashboard owns the page gutter. The builder must not add a second,
-      // centered inset that misaligns the stepper and form at desktop widths.
+      // Screenshot-inspired layout: mobile/tablet navigation sits above the
+      // editor; at xl it becomes a left rail. Both keep dashboard gutters and
+      // must never squeeze the actual content into a horizontal scroll.
       const builderAlignment = await steps.evaluate(navigation => {
         const content = navigation.closest('[data-slot="section-content"]');
         const basics = document.getElementById('service-step-basics');
-        if (!content || !basics) return null;
+        const list = navigation.querySelector('ol');
+        if (!content || !basics || !list) return null;
+        const rail = navigation.getBoundingClientRect();
+        const form = basics.getBoundingClientRect();
         return {
-          gutterLeft: content.getBoundingClientRect().left + Number.parseFloat(getComputedStyle(content).paddingLeft),
-          stepperLeft: navigation.getBoundingClientRect().left,
-          formLeft: basics.getBoundingClientRect().left,
+          gutterLeft: content.getBoundingClientRect().left
+            + Number.parseFloat(getComputedStyle(content).paddingLeft),
+          stepperLeft: rail.left,
+          stepperRight: rail.right,
+          stepperBottom: rail.bottom,
+          formLeft: form.left,
+          formTop: form.top,
+          formWidth: form.width,
+          columns: getComputedStyle(list).gridTemplateColumns.split(' ').length,
         };
       });
       expect(builderAlignment).not.toBeNull();
       if (builderAlignment) {
         expect(Math.abs(builderAlignment.stepperLeft - builderAlignment.gutterLeft),
-          'Stepper begins at the dashboard content gutter').toBeLessThanOrEqual(2);
-        expect(Math.abs(builderAlignment.formLeft - builderAlignment.stepperLeft),
-          'Form panel and stepper share the same alignment').toBeLessThanOrEqual(2);
+          'Builder rail aligns with the dashboard content gutter').toBeLessThanOrEqual(2);
+        expect(builderAlignment.columns,
+          'Step navigation uses two phone columns, four tablet columns or one desktop rail')
+          .toBe(viewport.width >= 1280 ? 1 : viewport.width >= 640 ? 4 : 2);
+        if (viewport.width >= 1280) {
+          expect(builderAlignment.formLeft - builderAlignment.stepperRight,
+            'Desktop editor starts beside the rail with breathing room').toBeGreaterThanOrEqual(12);
+          expect(builderAlignment.formWidth,
+            'The editor still has enough room for a three-tier comparison').toBeGreaterThan(480);
+        } else {
+          expect(Math.abs(builderAlignment.formLeft - builderAlignment.stepperLeft),
+            'The phone and tablet editor aligns beneath navigation').toBeLessThanOrEqual(2);
+          expect(builderAlignment.formTop - builderAlignment.stepperBottom,
+            'The editor follows rather than overlaps the navigation').toBeGreaterThanOrEqual(8);
+        }
       }
+
+      const setupScreenshot = testInfo.outputPath(`service-setup-${viewport.width}px.png`);
+      await page.screenshot({path: setupScreenshot, fullPage: true});
+      await testInfo.attach(`Service setup ${viewport.width}px`, {
+        path: setupScreenshot,
+        contentType: 'image/png',
+      });
 
       const titleSpan = heading.locator('span').first();
       if (viewport.width <= 375) {
