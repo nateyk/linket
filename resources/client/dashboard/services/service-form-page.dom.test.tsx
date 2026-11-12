@@ -225,6 +225,9 @@ describe('the service form shell', () => {
     expect(basicsHeader?.className).not.toContain('border-b');
     expect(basicsHeader?.className).toContain('pb-2');
     expect(basicsHeader?.querySelector('span[aria-hidden="true"]')).toBeNull();
+    const titleField = titleInput().closest('[data-slot="field"]');
+    expect(titleField?.className).toContain('focus-visible:not([aria-invalid=true])');
+    expect(titleField?.className).toContain('outline-primary');
     // Step changes are announced once by the page-level status region.
     expect(screen.getAllByRole('status')).toHaveLength(1);
   });
