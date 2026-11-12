@@ -47,7 +47,7 @@ export function ServiceBuilderSteps({
     {
       id: 'settings',
       title: trans({message: 'Settings'}),
-      description: trans({message: 'FAQs and contact options.'}),
+      description: trans({message: 'FAQs, buyer questions and contact.'}),
     },
   ] as const;
   const activeIndex = SERVICE_STEP_ORDER.indexOf(active);
