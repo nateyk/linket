@@ -208,6 +208,10 @@ describe('the service form shell', () => {
     expect(screen.queryByText('Move between steps anytime. Use Save draft to keep your changes.')).toBeNull();
     expect(steps.querySelectorAll('li > [data-slot="separator"]')).toHaveLength(3);
     expect(steps.querySelectorAll('li > span[aria-hidden="true"]')).toHaveLength(3);
+    expect(steps.querySelector('li > [data-slot="separator"]')?.className)
+      .toContain('hidden xl:block');
+    expect(steps.querySelector('li > span[aria-hidden="true"]')?.className)
+      .toContain('sm:block xl:hidden');
     expect(steps.querySelectorAll('ol > li')).toHaveLength(4);
     const selected = screen.getByRole('button', {name: 'Details, step 1 of 4'});
     expect(selected.getAttribute('data-step-state')).toBe('current');
@@ -308,7 +312,10 @@ describe('the service form shell', () => {
     // The stage may be scrolled far down in the previous form; its own scroll
     // owner must reset after React commits the next stage, not in a stale rAF.
     scroller.scrollTop = 320;
-    await user.click(screen.getByRole('button', {name: 'Media, step 2 of 4'}));
+    const mediaStep = screen.getByRole('button', {name: 'Media, step 2 of 4'});
+    mediaStep.focus();
+    await user.keyboard('{Enter}');
+    expect(document.activeElement).toBe(mediaStep);
     expect(scroller.scrollTop).toBe(0);
     expect(screen.getByRole('button', {name: 'Media, step 2 of 4'}).getAttribute('aria-current')).toBe('step');
     expect(screen.getByRole('button', {name: 'Details, step 1 of 4'}).getAttribute('data-step-state')).toBe('previous');
