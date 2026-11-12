@@ -22,6 +22,14 @@ import {Component} from './digital-product-form-page';
 // jsdom has no layout: ProseMirror queries Range rects while its view mounts
 // (same stub as creator-about-editor.dom.test.tsx).
 beforeAll(() => {
+  // Base UI's dropdown ScrollArea checks the Web Animations API after opening.
+  // Browsers implement it; jsdom doesn't, so avoid delayed unhandled timeouts.
+  if (!Element.prototype.getAnimations) {
+    Object.defineProperty(Element.prototype, 'getAnimations', {
+      configurable: true,
+      value: () => [],
+    });
+  }
   const emptyRect: DOMRect = {
     x: 0,
     y: 0,
