@@ -35,7 +35,7 @@ export function ServiceFormField({
     <Field.Root
       name={name}
       invalid={!!error}
-      className="min-w-0 gap-2"
+      className="min-w-0 gap-2 [&_input:focus-visible:not([aria-invalid=true])]:outline-primary [&_textarea:focus-visible:not([aria-invalid=true])]:outline-primary [&_[data-slot=input-group]:has([data-slot=input-group-control]:focus-visible:not([aria-invalid=true]))]:outline-primary"
     >
       <div className="flex items-baseline justify-between gap-3">
         <Field.Label htmlFor={name} className="text-sm font-medium">

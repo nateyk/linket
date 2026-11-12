@@ -19,7 +19,7 @@ interface ServiceBuilderStepsProps {
  * not a tablist: all four optional stages are freely accessible, and choosing
  * a stage never saves or implicitly marks it complete.
  *
- * Phones: quiet 2x2 button list. Tablets: horizontal step sequence.
+ * Phones and tablets: one horizontal connected row without a second tier.
  * Wide screens: vertical rail with connector lines beside the editor.
  */
 export function ServiceBuilderSteps({
@@ -69,11 +69,13 @@ export function ServiceBuilderSteps({
           })}
         </span>
       </div>
-      <ol className="grid min-w-0 grid-cols-2 gap-1 sm:grid-cols-4 xl:grid-cols-1 xl:gap-0">
+      <ol className="grid min-w-0 grid-cols-4 gap-0 xl:grid-cols-1">
         {steps.map((step, index) => {
           const current = active === step.id;
           const earlier = index < activeIndex;
-          const done = earlier && completed[step.id];
+          // Data completion is independent of the user's navigation order.
+          // Returning to a finished stage must not hide its success marker.
+          const done = completed[step.id];
 
           return (
             <li key={step.id} className="relative min-w-0">
@@ -82,7 +84,7 @@ export function ServiceBuilderSteps({
                   <span
                     aria-hidden="true"
                     className={cn(
-                      'pointer-events-none absolute start-[calc(50%+1rem)] end-[calc(-50%+1rem)] top-6 hidden h-px sm:block xl:hidden',
+                      'pointer-events-none absolute start-[calc(50%+1rem)] end-[calc(-50%+1rem)] top-6 h-px xl:hidden',
                       done ? 'bg-positive/60' : 'bg-border',
                     )}
                   />
@@ -110,9 +112,9 @@ export function ServiceBuilderSteps({
                 })}
                 onClick={() => onSelect(step.id)}
                 className={cn(
-                  'relative flex h-auto min-h-16 w-full min-w-0 flex-col items-center justify-start gap-1.5 rounded-card-xs px-1.5 py-2.5 text-center text-foreground whitespace-normal motion-reduce:transition-none sm:px-2 xl:min-h-16 xl:flex-row xl:items-start xl:justify-start xl:gap-3 xl:px-2 xl:text-start',
+                  'relative flex h-auto min-h-16 w-full min-w-0 flex-col items-center justify-start gap-1 rounded-card-xs px-0.5 py-2 text-center text-foreground whitespace-normal motion-reduce:transition-none sm:px-2 xl:flex-row xl:items-start xl:justify-start xl:gap-3 xl:py-3 xl:text-start',
                   current
-                    ? 'bg-muted/60 hover:bg-muted/80'
+                    ? 'bg-primary/5 hover:bg-primary/10'
                     : 'hover:bg-muted/40',
                 )}
               >
@@ -120,10 +122,10 @@ export function ServiceBuilderSteps({
                   aria-hidden="true"
                   className={cn(
                     'relative z-10 flex size-8 shrink-0 items-center justify-center rounded-full border text-xs font-semibold tabular-nums',
-                    current
-                      ? 'border-primary bg-primary text-primary-foreground'
-                      : done
-                        ? 'border-positive/60 bg-positive/10 text-positive'
+                    done
+                      ? 'border-positive bg-positive text-primary-foreground'
+                      : current
+                        ? 'border-primary bg-primary text-primary-foreground'
                         : 'border-border bg-card text-muted-foreground',
                   )}
                 >
@@ -133,9 +135,11 @@ export function ServiceBuilderSteps({
                   <span
                     className={cn(
                       'block break-words text-sm leading-5',
-                      current || done
-                        ? 'font-semibold text-foreground'
-                        : 'font-medium text-muted-foreground group-hover/button:text-foreground',
+                      current
+                        ? 'font-semibold text-primary'
+                        : done
+                          ? 'font-medium text-foreground'
+                          : 'font-medium text-muted-foreground group-hover/button:text-foreground',
                     )}
                   >
                     {step.title}
