@@ -8,16 +8,38 @@ use Illuminate\Database\Seeder;
 use RuntimeException;
 
 /**
- * Register the Ethiopian Amharic UI locale without replacing edited translations.
+ * Install core Amharic UI strings while preserving admin-edited translations.
  *
- * The source catalog is versioned separately from the mutable resources/lang/am.json
- * file. Fresh installs get translated labels; repeated seeds preserve manual edits.
+ * Versioned source: resources/amharic-translations.json.
+ * Mutable runtime copy: resources/lang/am.json.
  */
 class AmharicLocalizationSeeder extends Seeder
 {
     public function run(): void
     {
         $repository = app(LocalizationsRepository::class);
+        $localization = $this->ensureLocale();
+        $merged = $this->mergeLines(
+            $repository->getDefaultTranslationLines(),
+            $repository->getLocalizationLines($localization),
+            $this->readCatalog(),
+        );
+
+        if ($repository->storeLocalizationLines($localization, $merged, true) === false) {
+            throw new RuntimeException('Unable to save Amharic localization lines.');
+        }
+    }
+
+    private function ensureLocale(): Localization
+    {
+        return Localization::query()->firstOrCreate(
+            ['language' => 'am'],
+            ['name' => 'አማርኛ', 'direction' => 'ltr'],
+        );
+    }
+
+    private function readCatalog(): array
+    {
         $catalog = json_decode(
             file_get_contents(resource_path('amharic-translations.json')),
             true,
@@ -29,29 +51,33 @@ class AmharicLocalizationSeeder extends Seeder
             throw new RuntimeException('The Amharic translation catalog must be a JSON object.');
         }
 
-        $localization = Localization::query()->firstOrCreate(
-            ['language' => 'am'],
-            ['name' => 'አማርኛ', 'direction' => 'ltr'],
-        );
+        return $catalog;
+    }
 
-        $defaults = $repository->getDefaultTranslationLines();
-        $existing = $repository->getLocalizationLines($localization);
+    private function mergeLines(
+        array $defaults,
+        array $existing,
+        array $catalog,
+    ): array {
         $merged = array_merge($defaults, $existing);
 
         foreach ($catalog as $source => $translation) {
-            // Do not overwrite a genuine admin-edited translation. Initial
-            // English copies from a prior localization creation are replaced.
-            if (
-                !isset($existing[$source]) ||
-                $existing[$source] === $source ||
-                $existing[$source] === ($defaults[$source] ?? $source)
-            ) {
+            if ($this->isDefaultTranslation($source, $existing, $defaults)) {
                 $merged[$source] = $translation;
             }
         }
 
-        if ($repository->storeLocalizationLines($localization, $merged, true) === false) {
-            throw new RuntimeException('Unable to save Amharic localization lines.');
-        }
+        return $merged;
+    }
+
+    private function isDefaultTranslation(
+        string $source,
+        array $existing,
+        array $defaults,
+    ): bool {
+        // A translation matching the English source is not a custom edit.
+        return !isset($existing[$source])
+            || $existing[$source] === $source
+            || $existing[$source] === ($defaults[$source] ?? $source);
     }
 }
