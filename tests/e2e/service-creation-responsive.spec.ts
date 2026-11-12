@@ -82,6 +82,29 @@ async function verifyResponsiveServiceSetup(
   });
 }
 
+async function verifyConnectedStepNavigation(steps: Locator, width: number) {
+  // Shared Base UI buttons and line connectors form one progress sequence
+  // without wrapping the step rail in another nested card.
+  const vertical = steps.locator('ol > li > [data-slot="separator"]').first();
+  const horizontal = steps.locator('ol > li > span[aria-hidden="true"]').first();
+  await expect(vertical).toHaveCount(1);
+  await expect(horizontal).toHaveCount(1);
+
+  if (width >= 1280) {
+    await expect(vertical).toBeVisible();
+    await expect(horizontal).toBeHidden();
+  } else if (width >= 640) {
+    await expect(vertical).toBeHidden();
+    await expect(horizontal).toBeVisible();
+  } else {
+    await expect(vertical).toBeHidden();
+    await expect(horizontal).toBeHidden();
+  }
+
+  await expect(steps.getByRole('button', {name: 'Details, step 1 of 4'}))
+    .toHaveAttribute('data-slot', 'button');
+}
+
 test.describe('Service Creation — authenticated browser acceptance', () => {
   test.skip(!isIsolated, 'Requires disposable belink_test and loopback server');
   test.setTimeout(90_000);
@@ -111,24 +134,7 @@ test.describe('Service Creation — authenticated browser acceptance', () => {
 
       await verifyResponsiveServiceSetup(page, steps, viewport.width, testInfo);
 
-      // The rail is a connected step sequence, not another nested card.
-      // Separator visibility follows the actual desktop/tablet layout.
-      const verticalConnector = steps.locator('ol > li > [data-slot="separator"]').first();
-      const horizontalConnector = steps.locator('ol > li > span[aria-hidden="true"]').first();
-      await expect(verticalConnector).toHaveCount(1);
-      await expect(horizontalConnector).toHaveCount(1);
-      if (viewport.width >= 1280) {
-        await expect(verticalConnector).toBeVisible();
-        await expect(horizontalConnector).toBeHidden();
-      } else if (viewport.width >= 640) {
-        await expect(verticalConnector).toBeHidden();
-        await expect(horizontalConnector).toBeVisible();
-      } else {
-        await expect(verticalConnector).toBeHidden();
-        await expect(horizontalConnector).toBeHidden();
-      }
-      await expect(steps.getByRole('button', {name: 'Details, step 1 of 4'}))
-        .toHaveAttribute('data-slot', 'button');
+      await verifyConnectedStepNavigation(steps, viewport.width);
 
       const titleSpan = heading.locator('span').first();
       if (viewport.width <= 375) {
