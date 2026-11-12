@@ -33,13 +33,13 @@ describe('SF-12 Amharic locale uses the actual React translation path', () => {
   it('renders translated public, checkout, service and builder controls', () => {
     render(
       <>
-        <Trans message="Products" />
-        <Trans message="Get for free" />
-        <Trans message="Request a quote" />
-        <Trans message="Appearance" />
-        <Trans message="Save changes" />
-        <Trans message="Create a service" />
-        <Trans message="Step :current of :total" values={{current: 2, total: 4}} />
+        <span><Trans message="Products" /></span>
+        <span><Trans message="Get for free" /></span>
+        <span><Trans message="Request a quote" /></span>
+        <span><Trans message="Appearance" /></span>
+        <span><Trans message="Save changes" /></span>
+        <span><Trans message="Create a service" /></span>
+        <span><Trans message="Step :current of :total" values={{current: 2, total: 4}} /></span>
         <InlineTranslation />
       </>,
     );
