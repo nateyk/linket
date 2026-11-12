@@ -63,6 +63,9 @@ test('SF-04 logged-in Appearance Save survives reload and updates published page
     const original = await visitor.goto(`/${data.slug}`);
     expect(original?.ok()).toBe(true);
     const savedBefore = await readTextColor(visitor);
+    // Wait for asynchronous product data, not merely the theme root:
+    // the original pre-Save screenshot could capture loading skeletons.
+    await expect(visitor.getByText('E2E Buyer Digital Guide', {exact: true}).first()).toBeVisible();
     await attach(visitor, info, 'published-before');
 
     await page.setViewportSize({width: 1440, height: 900});
@@ -103,6 +106,7 @@ test('SF-04 logged-in Appearance Save survives reload and updates published page
     await expect(save).toBeDisabled();
     await visitor.reload();
     await expect.poll(async () => isSameColor(await readTextColor(visitor), target)).toBe(true);
+    await expect(visitor.getByText('E2E Buyer Digital Guide', {exact: true}).first()).toBeVisible();
     await attach(visitor, info, 'published-after-save');
 
     await page.reload();
@@ -114,4 +118,34 @@ test('SF-04 logged-in Appearance Save survives reload and updates published page
   } finally {
     await visitorContext.close();
   }
+});
+
+/**
+ * Genuine Amharic interface smoke test in the authenticated store builder.
+ * This checks server-selected locale and rendered controls, not seller text.
+ * No mutation or Save: the independent SF-04 test above covers persistence.
+ */
+test('SF-12 authenticated Appearance builder renders real Amharic controls', async ({page}, info) => {
+  test.skip(!local, 'Requires isolated loopback + disposable belink_test DB');
+  test.setTimeout(90_000);
+  const data = fixture();
+
+  await page.setViewportSize({width: 375, height: 812});
+  await page.goto('/login');
+  await expect(page.getByRole('heading', {name: 'Login to your account'})).toBeVisible();
+  await page.getByRole('textbox', {name: 'Email Address'}).fill('e2e-buyer-creator@example.test');
+  await page.getByRole('textbox', {name: 'Password'}).fill('E2eBuyerCreator!23');
+  await page.getByRole('button', {name: 'Login', exact: true}).click();
+  await expect(page).toHaveURL(/\/dashboard(?:\/|$)/, {timeout: 15000});
+
+  await page.goto(`/dashboard/stores/${data.store_id}/appearance?lang=am`);
+  await expect(page.locator('html')).toHaveAttribute('lang', 'am');
+  await expect(page.getByText('ገጽታ', {exact: true}).first()).toBeVisible();
+  await expect(page.getByText('የሕዝብ መደብር ገጽዎን፣ ምርቶችዎን እና አገልግሎቶችዎን ያብጁ።')).toBeVisible();
+  await expect(page.getByText('ዳራ', {exact: true}).first()).toBeVisible();
+  await page.getByText('የመደብር ገጹን ፊደል ቅርጽና የጽሑፍ ቀለም ይምረጡ።').click();
+  await expect(page.getByRole('textbox', {name: 'ቀለም'})).toBeVisible();
+  await expect(page.getByRole('button', {name: 'አስቀምጥ', exact: true})).toBeDisabled();
+
+  await attach(page, info, 'amharic-authenticated-builder-mobile');
 });
