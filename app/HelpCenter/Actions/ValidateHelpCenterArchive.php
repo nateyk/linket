@@ -2,12 +2,12 @@
 
 namespace App\HelpCenter\Actions;
 
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use ZipArchive;
 
 /**
- * Check the whole archive before the destructive replacement starts.
- * A missing image or malformed JSON must never wipe existing help content.
+ * Verify the entire backup before a destructive Help Center replacement.
  */
 class ValidateHelpCenterArchive
 {
@@ -15,14 +15,7 @@ class ValidateHelpCenterArchive
     {
         $this->validateZipEntries($zip);
         $categories = $this->decodeManifest($zip, 'help-center.json');
-
-        if (! is_array($categories) || ! array_is_list($categories) || count($categories) === 0) {
-            $this->reject('The archive must contain a non-empty list of categories.');
-        }
-
-        foreach ($categories as $category) {
-            $this->validateCategory($category);
-        }
+        $this->validateCategories($categories);
 
         $files = $zip->locateName('file-entries.json') === false
             ? ['entries' => [], 'article_entries' => [], 'category_entries' => []]
@@ -35,23 +28,25 @@ class ValidateHelpCenterArchive
 
     protected function validateZipEntries(ZipArchive $zip): void
     {
-        $total = 0;
-
+        $totalBytes = 0;
         if ($zip->numFiles > 10000) {
-            $this->reject('The archive contains too many files.');
+            $this->reject('The ZIP archive has too many files.');
         }
 
         for ($i = 0; $i < $zip->numFiles; $i++) {
             $stat = $zip->statIndex($i);
             $name = $stat['name'] ?? '';
             $size = $stat['size'] ?? 0;
-            $total += $size;
+            $totalBytes += $size;
 
-            if ($name === '' || str_contains($name, '..') || str_contains($name, '\\') || str_starts_with($name, '/')) {
-                $this->reject('The archive contains an unsafe file path.');
+            if ($name === '' || str_contains($name, '..')) {
+                $this->reject('The ZIP archive has an unsafe file name.');
             }
-            if ($size > 25 * 1024 * 1024 || $total > 250 * 1024 * 1024) {
-                $this->reject('The archive exceeds the Help Center import size limit.');
+            if (str_contains($name, '\\') || str_starts_with($name, '/')) {
+                $this->reject('The ZIP archive has an unsafe file path.');
+            }
+            if ($size > 25 * 1024 * 1024 || $totalBytes > 250 * 1024 * 1024) {
+                $this->reject('The ZIP archive exceeds the allowed size.');
             }
         }
     }
@@ -70,100 +65,85 @@ class ValidateHelpCenterArchive
         }
     }
 
-    protected function validateCategory(mixed $category): void
+    protected function validateCategories(mixed $categories): void
     {
-        $this->requireItem($category, ['id', 'name', 'sections']);
-
-        if (! is_array($category['sections']) || ! array_is_list($category['sections'])) {
-            $this->reject('A Help Center category has invalid sections.');
-        }
-
-        foreach ($category['sections'] as $section) {
-            $this->requireItem($section, ['id', 'name', 'articles']);
-            if (! is_array($section['articles']) || ! array_is_list($section['articles'])) {
-                $this->reject('A Help Center section has invalid articles.');
-            }
-
-            foreach ($section['articles'] as $article) {
-                $this->requireItem($article, ['id', 'title', 'body', 'tags']);
-                if (! is_string($article['body']) || ! is_array($article['tags'])) {
-                    $this->reject('A Help Center article has invalid content or tags.');
-                }
-                foreach ($article['tags'] as $tag) {
-                    if (! is_array($tag) || ! is_string($tag['name'] ?? null)) {
-                        $this->reject('A Help Center article contains an invalid tag.');
-                    }
-                }
-            }
-        }
-    }
-
-    protected function requireItem(mixed $item, array $fields): void
-    {
-        if (! is_array($item)) {
-            $this->reject('The archive has an invalid Help Center record.');
-        }
-
-        foreach ($fields as $field) {
-            if (! array_key_exists($field, $item)) {
-                $this->reject("A Help Center record is missing $field.");
-            }
-        }
-
-        if (! is_numeric($item['id']) || (int) $item['id'] < 1) {
-            $this->reject('A Help Center record has an invalid ID.');
-        }
-
-        $name = $item['name'] ?? $item['title'] ?? null;
-        if (! is_string($name) || trim($name) === '') {
-            $this->reject('A Help Center record must have a name or title.');
+        $rules = [
+            'categories' => 'required|array|min:1',
+            'categories.*.id' => 'required|integer|min:1',
+            'categories.*.name' => 'required|string',
+            'categories.*.sections' => 'present|array',
+            'categories.*.sections.*.id' => 'required|integer|min:1',
+            'categories.*.sections.*.name' => 'required|string',
+            'categories.*.sections.*.articles' => 'present|array',
+            'categories.*.sections.*.articles.*.id' => 'required|integer|min:1',
+            'categories.*.sections.*.articles.*.title' => 'required|string',
+            'categories.*.sections.*.articles.*.body' => 'present|string',
+            'categories.*.sections.*.articles.*.tags' => 'present|array',
+            'categories.*.sections.*.articles.*.tags.*.name' => 'required|string',
+        ];
+        $validator = Validator::make(['categories' => $categories], $rules);
+        if ($validator->fails()) {
+            $this->reject('Invalid Help Center archive: '.$validator->errors()->first());
         }
     }
 
     protected function validateImages(ZipArchive $zip, mixed $files): void
     {
-        if (! is_array($files)) {
+        $validator = Validator::make(['files' => $files], [
+            'files' => 'required|array',
+            'files.entries' => 'required|array',
+            'files.article_entries' => 'required|array',
+            'files.category_entries' => 'required|array',
+        ]);
+
+        if ($validator->fails()) {
             $this->reject('The image manifest is invalid.');
         }
 
-        foreach (['entries', 'article_entries', 'category_entries'] as $key) {
-            if (! is_array($files[$key] ?? null)) {
-                $this->reject("The image manifest is missing $key.");
-            }
+        $groups = array_merge(
+            array_values($files['article_entries']),
+            array_values($files['category_entries']),
+        );
+
+        foreach ($groups as $refs) {
+            $this->validateImageReferences($zip, $refs, $files['entries']);
+        }
+    }
+
+    protected function validateImageReferences(ZipArchive $zip, mixed $refs, array $entries): void
+    {
+        if (! is_array($refs)) {
+            $this->reject('The image manifest has invalid references.');
         }
 
-        foreach (['article_entries', 'category_entries'] as $group) {
-            foreach ($files[$group] as $refs) {
-                if (! is_array($refs)) {
-                    $this->reject('The image manifest has invalid references.');
-                }
-                foreach ($refs as $ref) {
-                    $entry = is_array($ref)
-                        ? $ref
-                        : collect($files['entries'])->firstWhere('id', $ref);
-                    $this->validateImageEntry($zip, $entry);
-                }
-            }
+        foreach ($refs as $ref) {
+            $entry = is_array($ref)
+                ? $ref
+                : collect($entries)->firstWhere('id', $ref);
+            $this->validateImageEntry($zip, $entry);
         }
     }
 
     protected function validateImageEntry(ZipArchive $zip, mixed $entry): void
     {
-        $filename = $entry['file_name'] ?? null;
-        if (! is_string($filename) || $filename === '' || basename($filename) !== $filename) {
+        $name = is_array($entry) ? ($entry['file_name'] ?? null) : null;
+        if (! is_string($name) || $name === '') {
+            $this->reject('An image is missing its file name.');
+        }
+        if (basename($name) !== $name) {
             $this->reject('An image contains an unsafe file name.');
         }
 
-        $prefix = ($entry['public'] ?? false)
-            ? trim((string) ($entry['disk_prefix'] ?? ''), '/').'/'.$filename
-            : $filename.'/'.$filename;
+        $path = ($entry['public'] ?? false)
+            ? trim((string) ($entry['disk_prefix'] ?? ''), '/').'/'.$name
+            : $name.'/'.$name;
 
-        if (str_contains($prefix, '..') || str_contains($prefix, '\\')) {
+        if (str_contains($path, '..') || str_contains($path, '\\')) {
             $this->reject('An image contains an unsafe storage path.');
         }
-
-        if ($zip->locateName('images/'.$prefix) === false && $zip->locateName('images/'.$filename) === false) {
-            $this->reject("The archive is missing image $filename.");
+        if ($zip->locateName('images/'.$path) === false &&
+            $zip->locateName('images/'.$name) === false) {
+            $this->reject("The archive is missing image $name.");
         }
     }
 
