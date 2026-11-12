@@ -27,7 +27,7 @@ export function ProductEditorSection({id, title, description, children}: Product
       className="min-w-0 rounded-card-sm border border-border bg-card p-4 sm:p-5"
     >
       <header className="mb-3 flex min-w-0 items-center justify-between gap-3">
-        <h2 id={id} className="min-w-0 text-base font-semibold leading-6 text-foreground">
+        <h2 id={id} tabIndex={-1} className="min-w-0 scroll-mt-24 text-base font-semibold leading-6 text-foreground focus-visible:outline-2 focus-visible:outline-ring">
           {title}
         </h2>
         <Popover.Root>
