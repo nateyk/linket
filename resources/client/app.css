@@ -8,6 +8,12 @@
 @source '../../common/foundation/resources/views/install/**/*.blade.php';
 @source '../../common/foundation/resources/views/framework.blade.php';
 
+/* Base UI overlays share a stable, isolated app root. Cubby UI may use this
+ * boundary; Linket's existing theme variables remain the source of truth. */
+.root {
+  isolation: isolate;
+}
+
 /* Scrollbars are hidden on every device and page; wheel, touch and
  * keyboard scrolling still work — only the bar is hidden.
  * `.compact-scrollbar`, `.scrollbar-thin` and `.[scrollbar-width:thin]`

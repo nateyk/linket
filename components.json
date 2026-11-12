@@ -26,6 +26,7 @@
     "@shadcnblocks": "https://shadcnblocks.com/r/{name}.json",
     "@7ovr": "https://7ovr.com/r/{name}.json",
     "@basecn": "https://basecn.dev/r/{name}.json",
-    "@kibo-ui": "https://www.kibo-ui.com/r/{name}.json"
+    "@kibo-ui": "https://www.kibo-ui.com/r/{name}.json",
+    "@cubby-ui": "https://cubby-ui.dev/r/{name}.json"
   }
 }
