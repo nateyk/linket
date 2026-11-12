@@ -8,9 +8,9 @@ use Illuminate\Support\Facades\Auth;
 
 trait FiltersByVisibleToRole
 {
-    public function scopeFilterByVisibleToRole(Builder $query): Builder
+    public function scopeFilterByVisibleToRole(Builder $query, bool $forGuest = false): Builder
     {
-        $user = Auth::user();
+        $user = $forGuest ? null : Auth::user();
         if ($user?->isAgent()) {
             return $query;
         }
