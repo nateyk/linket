@@ -84,8 +84,9 @@ export function ServicePackagePanel({
       className="min-w-0 gap-3"
       onValueChange={value => onSelect?.(Number(value))}
     >
-      {/* Allow long and translated tier names to scroll horizontally on phones
-          without clipping the tab indicator or creating page-wide overflow. */}
+      {/* Let each label take its own capped width. flex-1 squeezes long
+          translated labels into overlapping tabs even when the outer page
+          reports no horizontal overflow. Keep extra width in this scrollport. */}
       <div className="min-w-0 max-w-full overflow-x-auto overscroll-x-contain px-1 pt-1 pb-3 scrollbar-none">
         <Tabs.List
           aria-label={trans({message: 'Packages'})}
@@ -99,10 +100,12 @@ export function ServicePackagePanel({
               value={String(packageItem.id)}
               className={cn(
                 segmented.tabClassName,
-                'min-w-28 max-w-56 flex-1 whitespace-normal text-center leading-snug break-words [overflow-wrap:anywhere]',
+                'w-max min-w-28 max-w-56 whitespace-normal text-center leading-snug break-words [overflow-wrap:anywhere]',
               )}
             >
-              {packageItem.name}
+              <span className="min-w-0 max-w-full whitespace-normal break-words [overflow-wrap:anywhere]">
+                {packageItem.name}
+              </span>
             </Tabs.Tab>
           ))}
         </Tabs.List>
