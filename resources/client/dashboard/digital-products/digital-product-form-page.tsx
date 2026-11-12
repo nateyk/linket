@@ -1051,18 +1051,20 @@ function DigitalProductForm() {
           )}
 
           {loading ? (
-            <>
-              <div className="flex flex-col gap-4">
-                <DetailsSkeleton />
-                <FilesSkeleton />
-                <BioPagesSkeleton />
-              </div>
-              {effectiveFileType === 'course' && (
+            effectiveFileType === 'course' ? (
+              <>
+                <div className="flex flex-col gap-4">
+                  <DetailsSkeleton />
+                  <FilesSkeleton />
+                  <BioPagesSkeleton />
+                </div>
                 <aside className="min-w-0 lg:sticky lg:top-6">
                   <PreviewSkeleton />
                 </aside>
-              )}
-            </>
+              </>
+            ) : (
+              <NonCourseEditorSkeleton />
+            )
           ) : unavailable ? null : effectiveFileType === 'digital' ? (
             <NonCourseAuthoringLayout
               completedSections={completedSections}
@@ -1752,6 +1754,42 @@ function BioPagesPanel({
 }
 
 /* ── Skeleton ─── */
+
+/** Approximate the actual non-course sections without giant blank slabs. */
+function NonCourseEditorSkeleton() {
+  return (
+    <div role="status" aria-busy="true" data-testid="non-course-editor-skeleton" className="min-w-0 space-y-4">
+      <span className="sr-only"><Trans message="Loading product editor" /></span>
+      <div aria-hidden="true" className="flex min-w-0 items-center justify-between gap-4 border-b pb-4">
+        <div className="min-w-0 space-y-2">
+          <Skeleton className="h-5 w-28 rounded-input" />
+          <Skeleton className="h-4 w-48 max-w-full rounded-input" />
+        </div>
+        <Skeleton className="h-2 w-28 shrink-0 rounded-full sm:w-40" />
+      </div>
+      <div aria-hidden="true" className="space-y-4">
+        <div className="space-y-4 rounded-card-sm border p-4 sm:p-5">
+          <Skeleton className="h-5 w-40 rounded-input" />
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-24 rounded-input" />
+            <Skeleton className="h-10 w-full rounded-input" />
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-28 rounded-input" />
+            <Skeleton className="h-28 w-full rounded-input" />
+          </div>
+          <Skeleton className="aspect-video w-full max-w-lg rounded-input" />
+        </div>
+        {['files', 'samples', 'price', 'storefront'].map(section => (
+          <div key={section} className="flex min-w-0 items-center justify-between gap-3 rounded-card-sm border p-4 sm:p-5">
+            <Skeleton className="h-5 w-36 max-w-full rounded-input" />
+            <Skeleton className="size-8 shrink-0 rounded-full" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function DetailsSkeleton() {
   return (
