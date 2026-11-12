@@ -256,7 +256,7 @@ export function ServicePackagesField({
               aria-label={tier.name + ' package'}
               className={cn(
                 'min-w-0 rounded-card-xs px-1.5 py-2.5 transition-colors motion-reduce:transition-none sm:px-3',
-                selectedIndex === index && 'bg-card ring-1 ring-primary/60',
+                selectedIndex === index && 'bg-primary/5 ring-1 ring-primary/60',
                 tierHasError && 'ring-1 ring-destructive',
               )}
             >
