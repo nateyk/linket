@@ -47,6 +47,7 @@ import {
 import {ServiceContactChannelsField} from './service-form/service-contact-channels-field';
 import {ServiceDescriptionEditor} from './service-form/service-description-editor';
 import {ServiceFaqsField} from './service-form/service-faqs-field';
+import {ServiceBuyerQuestionsField} from './service-form/service-buyer-questions-field';
 import {ServiceFormField} from './service-form/service-form-field';
 import {ServiceBuilderSteps, SERVICE_STEP_ORDER, type ServiceBuilderStepId} from './service-form/service-builder-steps';
 import {ServiceFormSection, type ServiceFormSectionId} from './service-form/service-form-section';
@@ -68,13 +69,14 @@ type CategoriesResponse = {data?: CategoryOption[]};
 
 function stepForSection(section: ServiceFormSectionId): ServiceBuilderStepId {
   if (section === 'basics') return 'details';
-  if (section === 'faq' || section === 'contact') return 'settings';
+  if (section === 'faq' || section === 'buyer-questions' || section === 'contact') return 'settings';
   return section;
 }
 
 function sectionForField(field: string): ServiceFormSectionId | null {
   if (field.startsWith('packages')) return 'packages';
   if (field.startsWith('faqs')) return 'faq';
+  if (field.startsWith('buyer_questions')) return 'buyer-questions';
   if (field.startsWith('contact_channels')) return 'contact';
   if (
     field.startsWith('gallery') ||
@@ -1018,6 +1020,22 @@ function ServiceFormPage() {
                     faqs={form.faqs}
                     errors={fieldErrors}
                     onChange={faqs => update('faqs', faqs)}
+                  />
+                </ServiceFormSection>
+
+                <ServiceFormSection
+                  id="buyer-questions"
+                  icon={MessageSquareQuoteIcon}
+                  title={trans({message: 'Questions for buyers'})}
+                  description={trans({message: 'Optional. Ask up to three short questions with each service inquiry.'})}
+                  optional
+                  count={form.buyer_questions.length}
+                  hasError={sectionError('buyer-questions')}
+                >
+                  <ServiceBuyerQuestionsField
+                    questions={form.buyer_questions}
+                    errors={fieldErrors}
+                    onChange={questions => update('buyer_questions', questions)}
                   />
                 </ServiceFormSection>
 
