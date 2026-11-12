@@ -154,6 +154,20 @@ test.describe('SF-12 optional public service page evidence', () => {
       const packageTabs = page.getByRole('tablist', {name: 'Packages'});
       if (await packageTabs.count()) {
         await expect(packageTabs.getByRole('tab').first()).toBeVisible();
+
+        // Page-wide overflow can pass while long labels spill over into
+        // adjacent tiers. Measure each rendered text fragment inside its tab.
+        const labelsOutsideTabs = await packageTabs.getByRole('tab').evaluateAll(tabs =>
+          tabs.map(tab => {
+            const bounds = tab.getBoundingClientRect();
+            const text = document.createRange();
+            text.selectNodeContents(tab);
+            return Array.from(text.getClientRects()).some(
+              fragment => fragment.left < bounds.left - 1 || fragment.right > bounds.right + 1,
+            );
+          }),
+        );
+        expect(labelsOutsideTabs, 'Tier labels must not bleed into adjacent tabs').not.toContain(true);
       }
       await captureAndCheckReflow(page, info, `service-${size.width}`);
     });
