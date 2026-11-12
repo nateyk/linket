@@ -23,20 +23,24 @@ async function signIn(page: Page) {
   await expect(page).toHaveURL(/\/dashboard(?:\/|$)/, {timeout: 15000});
 }
 
+function expectedServiceStepColumns(width: number): number {
+  if (width >= 1280) return 1;
+  if (width >= 640) return 4;
+  return 2;
+}
+
 async function verifyResponsiveServiceSetup(
   page: Page,
   steps: Locator,
   width: number,
   testInfo: TestInfo,
 ) {
-  // Screenshot-inspired layout: mobile/tablet navigation sits above the
-  // editor; at xl it becomes a left rail. Both keep dashboard gutters and
-  // must never squeeze the actual content into a horizontal scroll.
-  const builderAlignment = await steps.evaluate(navigation => {
-    const content = navigation.closest('[data-slot="section-content"]');
-    const basics = document.getElementById('service-step-basics');
-    const list = navigation.querySelector('ol');
-    if (!content || !basics || !list) return null;
+  // The selected stage is known to be mounted here. Missing DOM owners should
+  // fail the browser test immediately instead of silently skipping layout QA.
+  const layout = await steps.evaluate(navigation => {
+    const content = navigation.closest('[data-slot="section-content"]')!;
+    const basics = document.getElementById('service-step-basics')!;
+    const list = navigation.querySelector('ol')!;
     const rail = navigation.getBoundingClientRect();
     const form = basics.getBoundingClientRect();
     return {
@@ -51,24 +55,23 @@ async function verifyResponsiveServiceSetup(
       columns: getComputedStyle(list).gridTemplateColumns.split(' ').length,
     };
   });
-  expect(builderAlignment).not.toBeNull();
-  if (builderAlignment) {
-    expect(Math.abs(builderAlignment.stepperLeft - builderAlignment.gutterLeft),
-      'Builder rail aligns with the dashboard content gutter').toBeLessThanOrEqual(2);
-    expect(builderAlignment.columns,
-      'Step navigation uses two phone columns, four tablet columns or one desktop rail')
-      .toBe(width >= 1280 ? 1 : width >= 640 ? 4 : 2);
-    if (width >= 1280) {
-      expect(builderAlignment.formLeft - builderAlignment.stepperRight,
-        'Desktop editor starts beside the rail with breathing room').toBeGreaterThanOrEqual(12);
-      expect(builderAlignment.formWidth,
-        'The editor still has enough room for a three-tier comparison').toBeGreaterThan(480);
-    } else {
-      expect(Math.abs(builderAlignment.formLeft - builderAlignment.stepperLeft),
-        'The phone and tablet editor aligns beneath navigation').toBeLessThanOrEqual(2);
-      expect(builderAlignment.formTop - builderAlignment.stepperBottom,
-        'The editor follows rather than overlaps the navigation').toBeGreaterThanOrEqual(8);
-    }
+
+  expect(Math.abs(layout.stepperLeft - layout.gutterLeft),
+    'Builder rail aligns with the dashboard content gutter').toBeLessThanOrEqual(2);
+  expect(layout.columns,
+    'Step navigation uses two phone columns, four tablet columns or one desktop rail')
+    .toBe(expectedServiceStepColumns(width));
+
+  if (width >= 1280) {
+    expect(layout.formLeft - layout.stepperRight,
+      'Desktop editor starts beside the rail with breathing room').toBeGreaterThanOrEqual(12);
+    expect(layout.formWidth,
+      'The editor still has enough room for a three-tier comparison').toBeGreaterThan(480);
+  } else {
+    expect(Math.abs(layout.formLeft - layout.stepperLeft),
+      'The phone and tablet editor aligns beneath navigation').toBeLessThanOrEqual(2);
+    expect(layout.formTop - layout.stepperBottom,
+      'The editor follows rather than overlaps the navigation').toBeGreaterThanOrEqual(8);
   }
 
   const setupScreenshot = testInfo.outputPath(`service-setup-${width}px.png`);
