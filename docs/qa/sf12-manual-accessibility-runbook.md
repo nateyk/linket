@@ -8,10 +8,10 @@
 
 1. Use an **approved nonproduction staging environment**, a dedicated disposable seller account, a synthetic published product, and a synthetic published service with Basic/Standard/very long Premium package. Avoid customer identities, live money, real contact messages and production API tokens.
 2. Confirm the staging deployment's exact **Git SHA**, base URL, reviewer, date/time, OS/browser/assistive technology version, system font scaling, physical display resolution and browser zoom. Record these *before* testing, in a private evidence index.
-3. Confirm the actual staging **Amharic** localization is enabled and its translated lines exist. The default localization seeder creates **English only** on a fresh installation; the language list containing Amharic does *not* mean an Amharic locale is installed. If `am` is not available in the admin's Localizations area or meaningful text is untranslated, record **BLOCKED**, never PASS. Do not mistake Amharic in product content for translated application UI.
+3. Confirm the actual staging **Amharic** localization is enabled and its translated lines exist. Fresh installs now seed English and Amharic (merged PR #182); **existing staging deployments still require running the dedicated `AmharicLocalizationSeeder`**. A language list containing Amharic does not prove the locale record and translated lines are installed in this environment. If `am` is not available in the admin's Localizations area or meaningful text is untranslated, record **BLOCKED**, never PASS. Do not mistake Amharic in product content for translated application UI.
 4. Keep a fresh Chrome/Firefox profile and a separate NVDA/VoiceOver browser session. No anonymous browser script can substitute for an authenticated seller Save/publish journey.
 5. **Never submit the real inquiry form or paid/free checkout.** Only open/close dialogs, trigger client-side required validation without sending an inquiry, and inspect controls.
-6. **Do not merge** integration [PR #171](https://github.com/nateyk/linket/pull/171). Source PRs #162, #163, #167 need separate approval. Never deploy based on this checklist alone.
+6. PR #171 was closed without merging. Source PRs #162, #163, #167, #182 (Amharic) and #184 (authenticated Appearance parity) have merged. **A successful deployment is not manual accessibility approval**. Verify the actual deployed SHA and environment before acceptance.
 
 ## Evidence record (one row per scenario)
 
@@ -34,7 +34,7 @@ Every numbered case below starts **NOT RUN**. Passing a related Playwright case 
 - **A02** In the builder set *light* Appearance: background, text, heading, button, font and radius, then Save. Reload the builder and the published store/product/service at both a desktop and 375px mobile viewport. Compare **actual saved** values and screenshots with the preview; test background, typography, cards, buttons and portal dialog. Record discrepancies.
 - **A03** Repeat A02 for *dark* Appearance, checking buttons and fields against the dark saved background.
 - **A04** Repeat A02 for *gradient* Appearance. Inspect **multiple gradient stops and overlays** under text and focus elements, not just a single color token.
-- **A05** Modify Appearance **without saving**: expanded preview should update, but a separate published tab must not change. Cancel/reload and verify draft is discarded; Save deliberately and repeat publication comparison. The isolated iframe-postMessage test covers only the transport, **not** this authenticated journey.
+- **A05** Modify Appearance **without saving**: expanded preview should update, but a separate published tab must not change. Cancel/reload and verify draft is discarded; Save deliberately and repeat publication comparison. The merged [SF-04 browser regression PR #184](https://github.com/nateyk/linket/pull/184) now verifies synthetic **authenticated Save and published reload**, but that is not a substitute for human visual acceptance.
 - **A06** Restore the agreed synthetic baseline, capture post-restore published pages and do not modify live seller data.
 
 ## Z — real browser-toolbar zoom and real touch
@@ -77,3 +77,7 @@ Evaluate **real pairs** using computed text/foreground and the effective rendere
 - [ ] Product owner explicitly authorizes SF-13 GO and a separately approved deployment.
 
 Any **FAIL** or **BLOCKED** required case means SF-12 stays QA and SF-13 stays NO-GO. Update issue #172 with evidence and request retest; never infer manual completion from GitHub Actions.
+
+## Verified code versus staging evidence (2026-11-12)
+
+The merged `main` Amharic catalog is undergoing an additional 319-key core-flow coverage pass. Do not mark staging `am` as INSTALLED until the [staging installation runbook](./sf12-amharic-locale.md) is run on the actual nonproduction host and its results are recorded. Existing automated tests prove the local-only `am` locale and translated UI on disposable test data. Automated [SF-04 #184](https://github.com/nateyk/linket/pull/184) validates the actual Save operation in isolated Chromium; reviewer-led light/dark/gradient visual acceptance, physical Chrome/Firefox 200% zoom, NVDA/Chrome and VoiceOver/Safari still start NOT RUN. The [2026-11-12 production GitHub workflow](https://github.com/nateyk/linket/actions/runs/43225258788) succeeded independently; do not infer SF-13 release approval or an installed Amharic database entry from that deployment run.

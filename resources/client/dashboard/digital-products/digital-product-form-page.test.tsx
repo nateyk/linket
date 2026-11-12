@@ -195,6 +195,9 @@ describe('optional Storefront placement UX-21', () => {
     expect(source).toContain('checked={selectedIds.includes(page.id)}');
     expect(source).toContain('selectedIds.filter(id => id !== page.id)');
     expect(source).toContain('selectedIds.includes(page.id) ? selectedIds : [...selectedIds, page.id]');
+    expect(source).toContain('<Dropdown.CheckboxItem');
+    expect(source).toContain('Choose Storefronts');
+    expect(source).not.toContain('className="divide-y" role="group"');
   });
 });
 
@@ -333,6 +336,37 @@ describe('product form reassembly', () => {
     expect(source).not.toContain("effectiveFileType !== 'course' ? 'mx-auto w-full max-w-3xl");
     expect(source).toContain('data-testid="product-authoring-layout"');
     expect(source).toContain('data-testid="product-setup-status"');
+  });
+});
+
+describe('non-course editor visual consistency', () => {
+  const source = fs.readFileSync(
+    path.resolve('resources/client/dashboard/digital-products/digital-product-form-page.tsx'),
+    'utf8',
+  );
+
+  test('non-course setup status is flat and keeps the real completion progress', () => {
+    expect(source).toContain('data-testid="product-authoring-layout"');
+    expect(source).toContain('<ProductAuthoringSteps');
+    expect(source).toContain('xl:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]');
+    expect(source).toContain('data-testid="product-setup-status"');
+    expect(source).toContain('<Progress.Root');
+    expect(source).toContain('<ProductFormProgress');
+    expect(source).not.toContain('className="rounded-card-sm border border-border bg-muted/40 px-4 py-3 sm:px-5"');
+  });
+
+  test('caps only non-course cover dimensions while course cover stays unchanged', () => {
+    expect(source).toContain("hidePricing ? 'aspect-video h-auto w-full max-w-lg' : 'aspect-video h-auto w-full'");
+    expect(source).toContain('hidePricing={effectiveFileType !== \'course\'}');
+    expect(source).toContain('aspect={16 / 9}');
+  });
+
+  test('uses a non-course-specific loading skeleton without replacing course loading', () => {
+    expect(source).toContain('<NonCourseEditorSkeleton />');
+    expect(source).toContain('data-testid="non-course-editor-skeleton"');
+    expect(source).toContain('<DetailsSkeleton />');
+    expect(source).toContain('<PreviewSkeleton />');
+    expect(source).toContain('Loading product editor');
   });
 });
 
