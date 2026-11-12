@@ -198,9 +198,13 @@ describe('the service form shell', () => {
     const steps = screen.getByRole('navigation', {name: 'Service creation steps'});
     expect(steps.className).not.toContain('border-b');
     expect(steps.querySelectorAll('ol > li button > span[aria-hidden="true"]')).toHaveLength(4);
-    expect(screen.queryByText('Service setup')).toBeNull();
-    expect(steps.parentElement?.className).toContain('max-w-6xl');
+    expect(screen.getByRole('heading', {name: 'Service setup', level: 2})).toBeTruthy();
+    expect(steps.parentElement?.className).toContain('xl:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]');
     expect(steps.parentElement?.className).not.toContain('mx-auto');
+    expect(steps.querySelector('ol')?.className).toContain('grid-cols-2');
+    expect(steps.querySelector('ol')?.className).toContain('sm:grid-cols-4');
+    expect(steps.querySelector('ol')?.className).toContain('xl:grid-cols-1');
+    expect(screen.getByText('Move between steps anytime. Use Save draft to keep your changes.')).toBeTruthy();
     expect(steps.querySelectorAll('ol > li')).toHaveLength(4);
     const selected = screen.getByRole('button', {name: 'Details, step 1 of 4'});
     expect(selected.getAttribute('data-step-state')).toBe('current');
