@@ -76,15 +76,15 @@ export function ProductSampleFields({
     <div className="flex flex-col gap-3" id="product-samples" tabIndex={-1}>
       {kind === 'audio' ? (
         <p className="text-sm text-muted-foreground">
-          <Trans message="Short clips buyers can play before purchase. Full tracks stay private." />
+          <Trans message="Full tracks stay private; previews are public." />
         </p>
       ) : productType === 'digital' ? (
         <p className="text-sm text-muted-foreground">
-          <Trans message="Offer a short PDF sample before purchase. Your full product files stay private." />
+          <Trans message="Full product files stay private; the sample is public." />
         </p>
       ) : (
         <p className="text-sm text-muted-foreground">
-          <Trans message="Upload a short PDF of sample pages. Buyers see this on the product page; your full ebook stays private." />
+          <Trans message="Full ebook stays private; sample pages are public." />
         </p>
       )}
 
@@ -92,6 +92,7 @@ export function ProductSampleFields({
         <SharedFileUploader
           uploadType="digitalProductSamples"
           bare
+          className="[&>[role=button]]:p-4"
           accept={kind === 'audio' ? '.mp3,.m4a,.wav' : '.pdf'}
           hint={
             kind === 'audio'
