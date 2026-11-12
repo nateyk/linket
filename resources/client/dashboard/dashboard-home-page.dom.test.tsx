@@ -29,6 +29,8 @@ vi.mock('@shadcn/chart/chart', () => ({Chart: {Container: ({children}: any) => <
 vi.mock('recharts', () => ({Area: () => null, AreaChart: ({children}: any) => <div>{children}</div>, CartesianGrid: () => null, XAxis: () => null, YAxis: () => null}));
 
 beforeEach(() => {
+  // Base UI scroll-area menus inspect Web Animations after closing; jsdom has no implementation.
+  Element.prototype.getAnimations = () => [];
   fixture.fail = false;
   fixture.loading = false;
   fixture.reportParams = [];
