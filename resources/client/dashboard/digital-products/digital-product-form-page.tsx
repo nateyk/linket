@@ -45,7 +45,6 @@ import {useTrans} from '@ui/i18n/use-trans';
 import {getBootstrapData} from '@ui/bootstrap-data/bootstrap-data-store';
 import {FormattedBytes} from '@ui/i18n/formatted-bytes';
 import {
-  CheckIcon,
   ChevronDownIcon,
   Clock3Icon,
   FileArchiveIcon,
@@ -1754,14 +1753,41 @@ function BioPagesPanel({
       <p className="text-sm text-muted-foreground">
         <Trans message="Optional. Choose where customers can find this product after approval." />
       </p>
-      <div className="divide-y" role="group" aria-label={trans({message: 'Storefront placement'})}>
-        {biolinks.map(page => (
-          <label
-            key={page.id}
-            className="flex cursor-pointer items-center gap-3 py-3 text-sm transition-colors hover:bg-muted/40"
-          >
-            <Checkbox
-              bindToHookForm={false}
+      <Dropdown.Root>
+        <Dropdown.Trigger
+          render={
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              className="flex min-h-11 w-full max-w-lg items-center justify-between gap-3 text-start font-normal"
+            />
+          }
+          aria-label={trans({message: 'Choose Storefronts'})}
+        >
+          <span className="min-w-0 flex-1 truncate">
+            <Trans message="Choose Storefronts" />
+          </span>
+          {selectedIds.length > 0 && (
+            <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+              <Trans
+                message="[one :count selected|other :count selected]"
+                values={{count: selectedIds.length}}
+              />
+            </span>
+          )}
+          <ChevronDownIcon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+        </Dropdown.Trigger>
+        <Dropdown.Content
+          align="start"
+          className="max-h-80 w-[min(28rem,calc(100vw-2rem))] overflow-y-auto"
+        >
+          <Dropdown.GroupLabel>
+            <Trans message="Select one or more Storefronts" />
+          </Dropdown.GroupLabel>
+          {biolinks.map(page => (
+            <Dropdown.CheckboxItem
+              key={page.id}
               checked={selectedIds.includes(page.id)}
               onCheckedChange={checked =>
                 onChange(
@@ -1770,18 +1796,20 @@ function BioPagesPanel({
                     : selectedIds.filter(id => id !== page.id),
                 )
               }
-            />
-            <span className="min-w-0">
-              <span className="block truncate font-medium">{page.name}</span>
-              {page.short_url && (
-                <span className="block truncate text-xs text-muted-foreground">
-                  {page.short_url}
-                </span>
-              )}
-            </span>
-          </label>
-        ))}
-      </div>
+              className="min-h-11"
+            >
+              <span className="min-w-0">
+                <span className="block truncate font-medium">{page.name}</span>
+                {page.short_url && (
+                  <span className="block truncate text-xs text-muted-foreground">
+                    {page.short_url}
+                  </span>
+                )}
+              </span>
+            </Dropdown.CheckboxItem>
+          ))}
+        </Dropdown.Content>
+      </Dropdown.Root>
       <p className="text-xs text-muted-foreground" role="status" aria-live="polite">
         {selectedIds.length > 0 ? (
           <Trans
