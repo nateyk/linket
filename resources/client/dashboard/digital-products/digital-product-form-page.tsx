@@ -761,6 +761,7 @@ function DigitalProductForm() {
   const privateFileFields = (
     <FilesPanel
       files={files}
+      dense={effectiveFileType !== 'course'}
       accept={fileAccept}
       hint={fileHint}
       onUploaded={file => {
@@ -1563,6 +1564,7 @@ function fileTypeIcon(extension?: string) {
 
 function FilesPanel({
   files,
+  dense = false,
   onUploaded,
   onRemove,
   error,
@@ -1570,6 +1572,7 @@ function FilesPanel({
   hint,
 }: {
   files: FileEntry[];
+  dense?: boolean;
   onUploaded: (file: FileEntry) => void;
   onRemove: (id: number) => void;
   error?: string;
@@ -1586,7 +1589,8 @@ function FilesPanel({
       <SharedFileUploader
         uploadType="digitalProductFiles"
         bare
-        className="[&>[role=button]]:p-4"
+        dense={dense}
+        title={dense ? <Trans message="Add files" /> : undefined}
         onUploaded={entry =>
           onUploaded({
             id: entry.id,
