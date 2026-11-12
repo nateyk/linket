@@ -195,6 +195,9 @@ describe('optional Storefront placement UX-21', () => {
     expect(source).toContain('checked={selectedIds.includes(page.id)}');
     expect(source).toContain('selectedIds.filter(id => id !== page.id)');
     expect(source).toContain('selectedIds.includes(page.id) ? selectedIds : [...selectedIds, page.id]');
+    expect(source).toContain('<Dropdown.CheckboxItem');
+    expect(source).toContain('Choose Storefronts');
+    expect(source).not.toContain('className="divide-y" role="group"');
   });
 });
 
@@ -344,7 +347,10 @@ describe('non-course editor visual consistency', () => {
 
   test('non-course setup status is flat and keeps the real completion progress', () => {
     expect(source).toContain('data-testid="product-authoring-layout"');
-    expect(source).toContain('className="min-w-0 border-b border-border px-0 pt-1 pb-4"');
+    expect(source).toContain('<ProductAuthoringSteps');
+    expect(source).toContain('xl:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]');
+    expect(source).toContain('data-testid="product-setup-status"');
+    expect(source).toContain('<Progress.Root');
     expect(source).toContain('<ProductFormProgress');
     expect(source).not.toContain('className="rounded-card-sm border border-border bg-muted/40 px-4 py-3 sm:px-5"');
   });
