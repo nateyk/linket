@@ -25,10 +25,10 @@ class ArticleCollection extends Collection
                         $category instanceof HcCategory
                             ? $category->parent_id ?? $category->id
                             : $category;
-                    $q->where('categories.id', $categoryId)->orWhere(
-                        'categories.parent_id',
-                        $categoryId,
-                    );
+                    $q->where(function ($paths) use ($categoryId) {
+                        $paths->where('categories.id', $categoryId)
+                            ->orWhere('categories.parent_id', $categoryId);
+                    });
                 });
             },
         ]);
