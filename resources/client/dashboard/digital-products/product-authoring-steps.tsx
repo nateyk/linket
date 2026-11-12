@@ -146,12 +146,26 @@ export function ProductAuthoringSteps({
   );
 }
 
-/** Move to an already-mounted section without losing form state. */
+/**
+ * Scroll only the dashboard editor. scrollIntoView() also scrolls the document
+ * and can push the entire fixed-height dashboard above the viewport, leaving
+ * a large blank area below it after selecting a step.
+ */
 export function focusProductAuthoringStep(
   type: NonCourseProductType,
   step: ProductAuthoringStep,
 ) {
   const heading = document.getElementById(TARGET_IDS[type][step]);
-  heading?.scrollIntoView({block: 'start', behavior: 'auto'});
-  heading?.focus({preventScroll: true});
+  if (!heading) return;
+
+  const editorScroll = heading.closest<HTMLElement>('[data-slot="section-content"]');
+  if (editorScroll) {
+    const offset = heading.getBoundingClientRect().top -
+      editorScroll.getBoundingClientRect().top;
+    editorScroll.scrollTo({
+      top: editorScroll.scrollTop + offset - 16,
+      behavior: 'auto',
+    });
+  }
+  heading.focus({preventScroll: true});
 }

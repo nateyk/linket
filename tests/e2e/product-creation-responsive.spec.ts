@@ -174,6 +174,34 @@ test.describe('product creation responsive evidence', () => {
   }
 });
 
+test('connected steps scroll within the editor without shifting the dashboard page', async ({page}) => {
+  test.skip(
+    process.env.LINKET_ISOLATED_E2E !== '1',
+    'Requires isolated test database and authenticated creator',
+  );
+  await loginAsSeededCreator(page);
+
+  for (const width of [375, 1440]) {
+    await page.setViewportSize({width, height: 812});
+    await page.goto('/dashboard/items/new/ebook');
+    const navigation = page.getByRole('navigation', {name: 'Product creation steps'});
+    const storefrontStep = navigation.getByRole('button', {name: 'Storefront, step 5 of 5'});
+    const editor = page.locator('[data-slot="section-content"]');
+    await expect(storefrontStep).toBeVisible();
+
+    const documentTop = await page.evaluate(() => window.scrollY);
+    const editorTop = await editor.evaluate(node => node.scrollTop);
+    await storefrontStep.click();
+
+    await expect(storefrontStep).toHaveAttribute('aria-current', 'step');
+    await expect(page.getByRole('heading', {name: 'Storefront placement (optional)'})).toBeFocused();
+    expect(await page.evaluate(() => window.scrollY), `outer document must not move at ${width}px`)
+      .toBe(documentTop);
+    expect(await editor.evaluate(node => node.scrollTop), `editor should scroll at ${width}px`)
+      .toBeGreaterThan(editorTop);
+  }
+});
+
 test('mobile header action targets reach Linket QA minimum of 44px', async ({page}) => {
   test.skip(
     process.env.LINKET_ISOLATED_E2E !== '1',
