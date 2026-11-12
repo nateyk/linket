@@ -1,4 +1,4 @@
-import {expect, test, type Page} from '@playwright/test';
+import {expect, test, type Locator, type Page, type TestInfo} from '@playwright/test';
 
 /**
  * Authenticated Service Creation QA against the isolated Laravel test server.
@@ -21,6 +21,62 @@ async function signIn(page: Page) {
   );
   await page.getByRole('button', {name: 'Login', exact: true}).click();
   await expect(page).toHaveURL(/\/dashboard(?:\/|$)/, {timeout: 15000});
+}
+
+async function verifyResponsiveServiceSetup(
+  page: Page,
+  steps: Locator,
+  width: number,
+  testInfo: TestInfo,
+) {
+  // Screenshot-inspired layout: mobile/tablet navigation sits above the
+  // editor; at xl it becomes a left rail. Both keep dashboard gutters and
+  // must never squeeze the actual content into a horizontal scroll.
+  const builderAlignment = await steps.evaluate(navigation => {
+    const content = navigation.closest('[data-slot="section-content"]');
+    const basics = document.getElementById('service-step-basics');
+    const list = navigation.querySelector('ol');
+    if (!content || !basics || !list) return null;
+    const rail = navigation.getBoundingClientRect();
+    const form = basics.getBoundingClientRect();
+    return {
+      gutterLeft: content.getBoundingClientRect().left
+        + Number.parseFloat(getComputedStyle(content).paddingLeft),
+      stepperLeft: rail.left,
+      stepperRight: rail.right,
+      stepperBottom: rail.bottom,
+      formLeft: form.left,
+      formTop: form.top,
+      formWidth: form.width,
+      columns: getComputedStyle(list).gridTemplateColumns.split(' ').length,
+    };
+  });
+  expect(builderAlignment).not.toBeNull();
+  if (builderAlignment) {
+    expect(Math.abs(builderAlignment.stepperLeft - builderAlignment.gutterLeft),
+      'Builder rail aligns with the dashboard content gutter').toBeLessThanOrEqual(2);
+    expect(builderAlignment.columns,
+      'Step navigation uses two phone columns, four tablet columns or one desktop rail')
+      .toBe(width >= 1280 ? 1 : width >= 640 ? 4 : 2);
+    if (width >= 1280) {
+      expect(builderAlignment.formLeft - builderAlignment.stepperRight,
+        'Desktop editor starts beside the rail with breathing room').toBeGreaterThanOrEqual(12);
+      expect(builderAlignment.formWidth,
+        'The editor still has enough room for a three-tier comparison').toBeGreaterThan(480);
+    } else {
+      expect(Math.abs(builderAlignment.formLeft - builderAlignment.stepperLeft),
+        'The phone and tablet editor aligns beneath navigation').toBeLessThanOrEqual(2);
+      expect(builderAlignment.formTop - builderAlignment.stepperBottom,
+        'The editor follows rather than overlaps the navigation').toBeGreaterThanOrEqual(8);
+    }
+  }
+
+  const setupScreenshot = testInfo.outputPath(`service-setup-${width}px.png`);
+  await page.screenshot({path: setupScreenshot, fullPage: true});
+  await testInfo.attach(`Service setup ${width}px`, {
+    path: setupScreenshot,
+    contentType: 'image/png',
+  });
 }
 
 test.describe('Service Creation — authenticated browser acceptance', () => {
@@ -50,54 +106,7 @@ test.describe('Service Creation — authenticated browser acceptance', () => {
       }
       await expect(steps.getByRole('button', {name: 'Details, step 1 of 4'})).toHaveAttribute('aria-current', 'step');
 
-      // Screenshot-inspired layout: mobile/tablet navigation sits above the
-      // editor; at xl it becomes a left rail. Both keep dashboard gutters and
-      // must never squeeze the actual content into a horizontal scroll.
-      const builderAlignment = await steps.evaluate(navigation => {
-        const content = navigation.closest('[data-slot="section-content"]');
-        const basics = document.getElementById('service-step-basics');
-        const list = navigation.querySelector('ol');
-        if (!content || !basics || !list) return null;
-        const rail = navigation.getBoundingClientRect();
-        const form = basics.getBoundingClientRect();
-        return {
-          gutterLeft: content.getBoundingClientRect().left
-            + Number.parseFloat(getComputedStyle(content).paddingLeft),
-          stepperLeft: rail.left,
-          stepperRight: rail.right,
-          stepperBottom: rail.bottom,
-          formLeft: form.left,
-          formTop: form.top,
-          formWidth: form.width,
-          columns: getComputedStyle(list).gridTemplateColumns.split(' ').length,
-        };
-      });
-      expect(builderAlignment).not.toBeNull();
-      if (builderAlignment) {
-        expect(Math.abs(builderAlignment.stepperLeft - builderAlignment.gutterLeft),
-          'Builder rail aligns with the dashboard content gutter').toBeLessThanOrEqual(2);
-        expect(builderAlignment.columns,
-          'Step navigation uses two phone columns, four tablet columns or one desktop rail')
-          .toBe(viewport.width >= 1280 ? 1 : viewport.width >= 640 ? 4 : 2);
-        if (viewport.width >= 1280) {
-          expect(builderAlignment.formLeft - builderAlignment.stepperRight,
-            'Desktop editor starts beside the rail with breathing room').toBeGreaterThanOrEqual(12);
-          expect(builderAlignment.formWidth,
-            'The editor still has enough room for a three-tier comparison').toBeGreaterThan(480);
-        } else {
-          expect(Math.abs(builderAlignment.formLeft - builderAlignment.stepperLeft),
-            'The phone and tablet editor aligns beneath navigation').toBeLessThanOrEqual(2);
-          expect(builderAlignment.formTop - builderAlignment.stepperBottom,
-            'The editor follows rather than overlaps the navigation').toBeGreaterThanOrEqual(8);
-        }
-      }
-
-      const setupScreenshot = testInfo.outputPath(`service-setup-${viewport.width}px.png`);
-      await page.screenshot({path: setupScreenshot, fullPage: true});
-      await testInfo.attach(`Service setup ${viewport.width}px`, {
-        path: setupScreenshot,
-        contentType: 'image/png',
-      });
+      await verifyResponsiveServiceSetup(page, steps, viewport.width, testInfo);
 
       const titleSpan = heading.locator('span').first();
       if (viewport.width <= 375) {
