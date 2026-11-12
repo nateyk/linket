@@ -1771,12 +1771,10 @@ function NonCourseEditorSkeleton() {
   return (
     <div role="status" aria-busy="true" data-testid="non-course-editor-skeleton" className="min-w-0 space-y-4">
       <span className="sr-only"><Trans message="Loading product editor" /></span>
-      <div aria-hidden="true" className="flex min-w-0 items-center justify-between gap-4 border-b pb-4">
-        <div className="min-w-0 space-y-2">
-          <Skeleton className="h-5 w-28 rounded-input" />
-          <Skeleton className="h-4 w-48 max-w-full rounded-input" />
-        </div>
-        <Skeleton className="h-2 w-28 shrink-0 rounded-full sm:w-40" />
+      <div aria-hidden="true" className="flex items-center justify-between gap-2 border-b pb-3">
+        {Array.from({length: 5}, (_, index) => (
+          <Skeleton key={index} className="size-8 rounded-full" />
+        ))}
       </div>
       <div aria-hidden="true" className="space-y-4">
         <div className="space-y-4 rounded-card-sm border p-4 sm:p-5">
