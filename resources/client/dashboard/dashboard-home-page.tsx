@@ -701,7 +701,7 @@ function RecentOrders() {
               <div className="flex min-w-0 items-center gap-2">
                 <Select.Root
                   value={statusFilter}
-                  onValueChange={value => setStatusFilter(value as RecentOrderFilter)}
+                  onValueChange={value => setStatusFilter((value || 'all') as RecentOrderFilter)}
                 >
                   <Select.Trigger
                     aria-label={trans({message: 'Filter by payment status'})}
@@ -717,8 +717,9 @@ function RecentOrders() {
                     ))}
                   </Select.Content>
                 </Select.Root>
-                <Dropdown.Root>
-                  <Dropdown.Trigger
+                <div className="hidden md:block">
+                  <Dropdown.Root>
+                    <Dropdown.Trigger
                     render={<Button type="button" variant="outline" size="sm" className="h-9 shrink-0 gap-1.5" />}
                     aria-label={trans({message: 'Choose visible columns'})}
                   >
@@ -740,7 +741,8 @@ function RecentOrders() {
                       );
                     })}
                   </Dropdown.Content>
-                </Dropdown.Root>
+                  </Dropdown.Root>
+                </div>
               </div>
             </div>
 
@@ -939,6 +941,7 @@ function OrderStatusBadge({status}: {status: string}) {
     status === 'paid' || status === 'completed' || status === 'fulfilled';
   return (
     <Badge
+      className="h-auto max-w-full min-w-0 shrink whitespace-normal break-words py-1 text-start leading-4"
       variant={
         verified
           ? 'positive'
