@@ -72,8 +72,24 @@ describe('product card visual hierarchy', () => {
     expect(source).not.toContain('shadow-xs transition-shadow');
   });
 
-  test('status lives in product content instead of floating on the cover', () => {
-    expect(source).not.toContain('absolute top-3 left-3');
-    expect(source).toContain('<StatusBadge');
+  test('status appears on the cover like Services, with readable review and draft variants', () => {
+    const card = source.slice(source.indexOf('function ProductCard('), source.indexOf('function SalesLabel('));
+    expect(card).toContain('className="absolute top-3 left-3"');
+    expect(card.indexOf('<StatusBadge')).toBeGreaterThan(card.indexOf('<Card.Header'));
+    expect(card.indexOf('<StatusBadge')).toBeLessThan(card.indexOf('</Card.Header>'));
+    expect(card).toContain('ring-1 ring-foreground/10 transition-shadow hover:shadow-sm');
+    expect(source).toContain('hasPendingUpdate');
+    expect(source).toContain('<Trans message="Update under review" />');
+  });
+
+  test('shows price beneath the title and sales in the footer without repeating price', () => {
+    const card = source.slice(source.indexOf('function ProductCard('), source.indexOf('function SalesLabel('));
+    expect(card).toContain('product.price_cents === 0');
+    expect(card).toContain('<Trans message="Free access" />');
+    expect(card.indexOf('valueInCents={product.price_cents}')).toBeLessThan(card.indexOf('<Card.Footer'));
+    expect(card).toContain('<ShoppingBagIcon className="size-4 shrink-0"');
+    expect(card).toContain('<SalesLabel count={product.sales_count} />');
+    expect(card).toContain('product.gross_revenue_cents');
+    expect(card).toContain('<ProductActions');
   });
 });
