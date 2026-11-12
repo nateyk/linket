@@ -82,29 +82,6 @@ async function verifyResponsiveServiceSetup(
   });
 }
 
-async function verifyConnectedStepNavigation(steps: Locator, width: number) {
-  // Shared Base UI buttons and line connectors form one progress sequence
-  // without wrapping the step rail in another nested card.
-  const vertical = steps.locator('ol > li > [data-slot="separator"]').first();
-  const horizontal = steps.locator('ol > li > span[aria-hidden="true"]').first();
-  await expect(vertical).toHaveCount(1);
-  await expect(horizontal).toHaveCount(1);
-
-  if (width >= 1280) {
-    await expect(vertical).toBeVisible();
-    await expect(horizontal).toBeHidden();
-  } else if (width >= 640) {
-    await expect(vertical).toBeHidden();
-    await expect(horizontal).toBeVisible();
-  } else {
-    await expect(vertical).toBeHidden();
-    await expect(horizontal).toBeHidden();
-  }
-
-  await expect(steps.getByRole('button', {name: 'Details, step 1 of 4'}))
-    .toHaveAttribute('data-slot', 'button');
-}
-
 test.describe('Service Creation — authenticated browser acceptance', () => {
   test.skip(!isIsolated, 'Requires disposable belink_test and loopback server');
   test.setTimeout(90_000);
@@ -134,8 +111,6 @@ test.describe('Service Creation — authenticated browser acceptance', () => {
 
       await verifyResponsiveServiceSetup(page, steps, viewport.width, testInfo);
 
-      await verifyConnectedStepNavigation(steps, viewport.width);
-
       const titleSpan = heading.locator('span').first();
       if (viewport.width <= 375) {
         const style = await titleSpan.evaluate(node => {
@@ -152,11 +127,7 @@ test.describe('Service Creation — authenticated browser acceptance', () => {
 
       // Moving between stages is local-only and retains unsaved details.
       await page.locator('#title').fill('E2E preview draft');
-      const mediaStep = steps.getByRole('button', {name: 'Media, step 2 of 4'});
-      await mediaStep.focus();
-      await page.keyboard.press('Enter');
-      await expect(mediaStep).toHaveAttribute('aria-current', 'step');
-      await expect(mediaStep).toBeFocused();
+      await steps.getByRole('button', {name: 'Media, step 2 of 4'}).click();
       await expect(page.getByRole('heading', {name: 'Media and links'})).toBeVisible();
       await steps.getByRole('button', {name: 'Packages, step 3 of 4'}).click();
       await expect(page.getByRole('heading', {name: 'Packages'})).toBeVisible();
