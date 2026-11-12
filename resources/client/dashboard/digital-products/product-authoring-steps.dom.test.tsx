@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 import {render, screen, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import {afterEach, expect, test, vi} from 'vitest';
+import {expect, test, vi} from 'vitest';
 import {
   focusProductAuthoringStep,
   PRODUCT_AUTHORING_STEP_ORDER,
@@ -17,10 +17,6 @@ const completed: Record<ProductAuthoringStep, boolean> = {
   pricing: true,
   storefront: false,
 };
-
-afterEach(() => {
-  document.body.innerHTML = '';
-});
 
 test('all five steps form one mobile row and a vertical desktop rail', () => {
   const onSelect = vi.fn();
