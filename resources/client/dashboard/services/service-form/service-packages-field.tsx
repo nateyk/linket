@@ -234,7 +234,7 @@ export function ServicePackagesField({
     <div className="min-w-0 space-y-4 sm:space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-muted-foreground">
-          <Trans message="Choose a tier to edit its details." />
+          <Trans message="Enable only the packages you offer. Leave them off to invite quotes." />
         </p>
         <p className="text-xs font-medium tabular-nums text-muted-foreground">
           <Trans message=":count of 3 enabled" values={{count: enabledCount}} />
@@ -255,8 +255,8 @@ export function ServicePackagesField({
               key={tier.key}
               aria-label={tier.name + ' package'}
               className={cn(
-                'min-w-0 border-b-2 border-transparent px-2 py-2.5 sm:px-3',
-                selectedIndex === index && 'border-primary',
+                'min-w-0 border-b-2 border-transparent px-2 py-2.5 transition-colors motion-reduce:transition-none sm:px-3',
+                selectedIndex === index && 'border-primary bg-muted/50',
                 tierHasError && 'border-destructive',
               )}
             >
@@ -276,7 +276,7 @@ export function ServicePackagesField({
                     formatMoney(priceCents, 'ETB')}
                 </span>
               </button>
-              <div className="mt-2 flex min-h-8 items-center justify-between gap-1">
+              <div className="mt-2 flex min-h-11 items-center justify-between gap-1">
                 <span className="text-xs text-muted-foreground">
                   {item ? <Trans message="On" /> : <Trans message="Off" />}
                 </span>
