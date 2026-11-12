@@ -287,11 +287,36 @@ test('Storefront outage remains recoverable and does not discard existing placem
   h.storefrontFail = false;
   h.storefrontRecords = [{id: 42, name: 'My Existing Storefront', short_url: 'my-store'}];
   await user.click(screen.getByRole('button', {name: 'Retry Storefront loading'}));
-  expect(await screen.findByText('My Existing Storefront')).toBeTruthy();
+  expect(await screen.findByRole('button', {name: 'Choose Storefronts'})).toBeTruthy();
   expect(screen.queryByText(/Unable to load Storefronts/)).toBeNull();
-  expect(screen.getByRole('checkbox', {name: /My Existing Storefront/}).getAttribute('aria-checked')).toBe('true');
+  expect(screen.queryByRole('checkbox', {name: /My Existing Storefront/})).toBeNull();
+  await user.click(screen.getByRole('button', {name: 'Choose Storefronts'}));
+  expect(await screen.findByRole('menuitemcheckbox', {name: /My Existing Storefront/})).toHaveAttribute('aria-checked', 'true');
   expect(h.itemGetCount).toBe(1); // A retry must not rehydrate the product or lose edits.
   expect(h.storefrontGetCount).toBe(2);
+});
+
+test('Storefront dropdown preserves multi-selection and uses no inline checkboxes', async () => {
+  const user = userEvent.setup();
+  h.storefrontRecords = [
+    {id: 42, name: 'Main Store', short_url: 'main-store'},
+    {id: 43, name: 'Books Store', short_url: 'books-store'},
+  ];
+  mount();
+  await loadProduct({...serverProduct, status: 'draft', biolink_ids: [42]});
+
+  const trigger = await screen.findByRole('button', {name: 'Choose Storefronts'});
+  expect(trigger.textContent).toContain('1 selected');
+  expect(screen.queryByRole('checkbox', {name: /Main Store/})).toBeNull();
+  await user.click(trigger);
+  expect(screen.getByRole('menuitemcheckbox', {name: /Main Store/}).getAttribute('aria-checked')).toBe('true');
+  await user.click(screen.getByRole('menuitemcheckbox', {name: /Books Store/}));
+  expect(await screen.findByText('2 selected')).toBeTruthy();
+
+  // The dropdown does not replace the existing array-based placement model.
+  await user.click(trigger);
+  expect(screen.getByRole('menuitemcheckbox', {name: /Main Store/}).getAttribute('aria-checked')).toBe('true');
+  expect(screen.getByRole('menuitemcheckbox', {name: /Books Store/}).getAttribute('aria-checked')).toBe('true');
 });
 
 test('a successful empty Storefront lookup is not misrepresented as an outage', async () => {
