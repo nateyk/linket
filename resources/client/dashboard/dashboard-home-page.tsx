@@ -466,79 +466,93 @@ function RecentOrders() {
   const orders = salesData?.data.data.slice(0, 5) ?? [];
 
   return (
-    <Card
-      size="sm"
-      className="min-w-0 gap-0 overflow-hidden lg:col-span-8"
-    >
-      <Card.Header className="pb-4">
+    <Card size="sm" className="min-w-0 gap-0 overflow-hidden lg:col-span-8">
+      <Card.Header className="gap-1 pb-3">
         <Card.Title>
           <Trans message="Recent orders" />
         </Card.Title>
         <Card.Description>
           <Trans message="Latest digital product purchases" />
         </Card.Description>
+        <Card.Action>
+          <LinkButton
+            to="/dashboard/orders"
+            variant="ghost"
+            size="sm"
+            className="min-h-9 gap-1.5"
+          >
+            <Trans message="See all orders" />
+            <ArrowRightIcon className="size-4" data-icon="inline-end" aria-hidden="true" />
+          </LinkButton>
+        </Card.Action>
       </Card.Header>
 
-      <Card.Content className="min-h-64 flex-1 border-t px-0">
+      <Card.Content className="min-w-0 flex-1 border-t px-0 pb-0">
         {isLoading ? (
-          <div className="flex flex-col gap-3 px-4 pt-4" aria-busy="true">
+          <div className="divide-y" aria-busy="true" aria-label="Loading recent orders">
             {[...Array(5)].map((_, index) => (
-              <Skeleton key={index} className="h-14 w-full" />
+              <div key={index} className="flex items-center justify-between gap-3 px-4 py-3">
+                <div className="flex min-w-0 flex-1 flex-col gap-2">
+                  <Skeleton className="h-4 w-2/3 max-w-48" />
+                  <Skeleton className="h-3 w-1/2 max-w-28" />
+                </div>
+                <Skeleton className="h-5 w-20 shrink-0 rounded-pill" />
+              </div>
             ))}
           </div>
         ) : isError ? (
-          <SalesErrorState />
+          <div className="px-4">
+            <SalesErrorState />
+          </div>
         ) : orders.length ? (
           <>
-            <div className="hidden min-w-0 overflow-x-auto lg:block">
+            <div className="hidden min-w-0 overflow-x-auto md:block">
               <Table.Root>
-                <Table.Header>
-                  <Table.Row>
-                    <Table.Head className="ps-5">
+                <Table.Caption className="sr-only">
+                  <Trans message="Recent orders" />
+                </Table.Caption>
+                <Table.Header className="bg-muted/30">
+                  <Table.Row className="hover:bg-transparent">
+                    <Table.Head scope="col" className="h-10 ps-4 text-xs text-muted-foreground">
                       <Trans message="Product" />
                     </Table.Head>
-                    <Table.Head>
+                    <Table.Head scope="col" className="h-10 text-xs text-muted-foreground">
                       <Trans message="Buyer" />
                     </Table.Head>
-                    <Table.Head>
+                    <Table.Head scope="col" className="h-10 text-xs text-muted-foreground">
                       <Trans message="Date" />
                     </Table.Head>
-                    <Table.Head>
+                    <Table.Head scope="col" className="h-10 text-xs text-muted-foreground">
                       <Trans message="Status" />
                     </Table.Head>
-                    <Table.Head className="pe-5 text-end">
+                    <Table.Head scope="col" className="h-10 pe-4 text-end text-xs text-muted-foreground">
                       <Trans message="Amount" />
                     </Table.Head>
                   </Table.Row>
                 </Table.Header>
                 <Table.Body>
                   {orders.map(order => (
-                    <Table.Row key={order.uuid}>
-                      <Table.Cell className="max-w-64 ps-5">
-                        <span
-                          className="block truncate font-medium"
-                          title={order.product?.title ?? undefined}
-                        >
-                          {order.product?.title ?? (
-                            <Trans message="Digital product" />
-                          )}
+                    <Table.Row key={order.uuid} className="hover:bg-muted/30">
+                      <Table.Cell className="max-w-56 py-3 ps-4">
+                        <span className="block truncate font-medium" title={order.product?.title ?? undefined}>
+                          {order.product?.title ?? <Trans message="Digital product" />}
                         </span>
                         <span className="block truncate text-xs text-muted-foreground">
                           #{order.uuid.slice(0, 8)}
                         </span>
                       </Table.Cell>
-                      <Table.Cell className="max-w-44">
+                      <Table.Cell className="max-w-36 py-3">
                         <span className="block truncate">
                           {order.buyer_name || <Trans message="Guest buyer" />}
                         </span>
                       </Table.Cell>
-                      <Table.Cell className="whitespace-nowrap text-muted-foreground">
+                      <Table.Cell className="py-3 text-muted-foreground">
                         <OrderDate order={order} />
                       </Table.Cell>
-                      <Table.Cell>
+                      <Table.Cell className="py-3">
                         <OrderStatusBadge status={order.status} />
                       </Table.Cell>
-                      <Table.Cell className="whitespace-nowrap pe-5 text-end font-medium tabular-nums">
+                      <Table.Cell className="py-3 pe-4 text-end font-medium tabular-nums">
                         <FormattedCurrency
                           valueInCents={order.gross_amount_cents}
                           currency={order.currency}
@@ -550,39 +564,32 @@ function RecentOrders() {
               </Table.Root>
             </div>
 
-            <ol className="divide-y lg:hidden" aria-label="Recent orders">
+            <ol className="divide-y md:hidden" aria-label="Recent orders">
               {orders.map(order => (
-                <li
-                  key={order.uuid}
-                  className="grid min-w-0 grid-cols-[2.5rem_minmax(0,1fr)_auto] gap-x-3 gap-y-1 px-4 py-3.5"
-                >
-                  <span className="row-span-3 flex size-10 items-center justify-center self-start rounded-card-xs bg-muted text-muted-foreground">
-                    <ReceiptTextIcon className="size-4" aria-hidden="true" />
-                  </span>
-
-                  <p className="min-w-0 truncate font-medium">
-                    {order.product?.title ?? (
-                      <Trans message="Digital product" />
-                    )}
-                  </p>
-                  <p className="shrink-0 text-end font-medium tabular-nums">
-                    <FormattedCurrency
-                      valueInCents={order.gross_amount_cents}
-                      currency={order.currency}
-                    />
-                  </p>
-
-                  <p className="min-w-0 truncate text-xs text-muted-foreground">
-                    {order.buyer_name || <Trans message="Guest buyer" />}
-                    <span aria-hidden="true"> · </span>
-                    <span>#{order.uuid.slice(0, 8)}</span>
-                  </p>
-                  <span className="text-end text-xs text-muted-foreground">
-                    <OrderDate order={order} />
-                  </span>
-
-                  <div className="col-span-2 flex min-w-0 items-center pt-1">
+                <li key={order.uuid} className="min-w-0 px-4 py-3.5">
+                  <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium" title={order.product?.title ?? undefined}>
+                        {order.product?.title ?? <Trans message="Digital product" />}
+                      </p>
+                      <p className="mt-1 truncate text-xs text-muted-foreground">
+                        {order.buyer_name || <Trans message="Guest buyer" />}
+                        <span aria-hidden="true"> · </span>
+                        <span>#{order.uuid.slice(0, 8)}</span>
+                      </p>
+                    </div>
+                    <span className="shrink-0 text-end font-medium tabular-nums">
+                      <FormattedCurrency
+                        valueInCents={order.gross_amount_cents}
+                        currency={order.currency}
+                      />
+                    </span>
+                  </div>
+                  <div className="mt-2 flex min-w-0 flex-wrap items-center justify-between gap-2">
                     <OrderStatusBadge status={order.status} />
+                    <span className="text-xs text-muted-foreground">
+                      <OrderDate order={order} />
+                    </span>
                   </div>
                 </li>
               ))}
@@ -593,27 +600,11 @@ function RecentOrders() {
             <OverviewEmptyState
               icon={ReceiptTextIcon}
               title={<Trans message="No orders yet" />}
-              description={
-                <Trans message="Your latest digital product orders will appear here." />
-              }
+              description={<Trans message="Your latest digital product orders will appear here." />}
             />
           </div>
         )}
       </Card.Content>
-
-      {!isLoading && !isError && orders.length > 0 ? (
-        <Card.Footer className="border-t p-0">
-          <LinkButton
-            to="/dashboard/orders"
-            variant="ghost"
-            className="h-11 w-full justify-center rounded-none"
-          >
-            <FileTextIcon aria-hidden="true" />
-            <Trans message="See all orders" />
-            <ArrowRightIcon data-icon="inline-end" aria-hidden="true" />
-          </LinkButton>
-        </Card.Footer>
-      ) : null}
     </Card>
   );
 }
