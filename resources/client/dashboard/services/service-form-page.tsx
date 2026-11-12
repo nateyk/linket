@@ -664,13 +664,14 @@ function ServiceFormPage() {
             </Alert.Root>
           )}
 
-          <ServiceBuilderSteps
-            active={activeStep}
-            onSelect={changeStep}
-            completed={completedSteps}
-          />
+          <div className="grid min-w-0 items-start gap-4 sm:gap-5 xl:grid-cols-[minmax(0,14rem)_minmax(0,1fr)] xl:gap-6">
+            <ServiceBuilderSteps
+              active={activeStep}
+              onSelect={changeStep}
+              completed={completedSteps}
+            />
 
-          <div className="min-w-0 space-y-4 sm:space-y-5">
+            <div className="min-w-0 space-y-4 sm:space-y-5">
               {/* Keep the rich-text editor mounted between steps. Unmounting and
                   remounting it can restore editor focus/selection after the
                   navigator changes, moving both document and panel scroll. */}
@@ -915,7 +916,7 @@ function ServiceFormPage() {
                   icon={ImagesIcon}
                   title={trans({message: 'Media and links'})}
                   description={trans({
-                    message: 'Show the work before anyone asks.',
+                    message: 'Show examples that help customers understand your work.',
                   })}
                   isComplete={requiredSections.media}
                   optional
@@ -984,7 +985,7 @@ function ServiceFormPage() {
                   icon={LayersIcon}
                   title={trans({message: 'Packages'})}
                   description={trans({
-                    message: 'Give customers clear options to choose from.',
+                    message: 'Offer clear packages, or let customers request a quote.',
                   })}
                   isComplete={requiredSections.packages}
                   optional
@@ -1089,6 +1090,7 @@ function ServiceFormPage() {
                   </Button>
                 )}
               </div>
+            </div>
           </div>
         </div>
       </DashboardLayout.SectionContent>
