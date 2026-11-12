@@ -52,6 +52,9 @@ class CrupdateCreatorService
                     ? $data['live_demo_url']
                     : $service?->live_demo_url,
                 'contact_channels' => $channels ?? $service?->contact_channels ?? [],
+                'buyer_questions' => array_key_exists('buyer_questions', $data)
+                    ? array_map(fn (string $question): string => trim($question), array_values($data['buyer_questions'] ?? []))
+                    : ($service?->buyer_questions ?? []),
                 'status' => $data['status'] ?? $service?->status ?? 'draft',
                 'currency' => $service?->currency ?? 'ETB',
             ];
