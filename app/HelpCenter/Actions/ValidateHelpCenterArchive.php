@@ -91,9 +91,9 @@ class ValidateHelpCenterArchive
     {
         $validator = Validator::make(['files' => $files], [
             'files' => 'required|array',
-            'files.entries' => 'required|array',
-            'files.article_entries' => 'required|array',
-            'files.category_entries' => 'required|array',
+            'files.entries' => 'present|array',
+            'files.article_entries' => 'present|array',
+            'files.category_entries' => 'present|array',
         ]);
 
         if ($validator->fails()) {
