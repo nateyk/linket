@@ -24,13 +24,15 @@ import {
   type InquiryFormState,
 } from './service-inquiry-form';
 
+const EMPTY_BUYER_QUESTIONS: string[] = [];
+
 export function ServiceInquiryDialog({
   open,
   onOpenChange,
   endpoint,
   packageId,
   packageName,
-  buyerQuestions = [],
+  buyerQuestions = EMPTY_BUYER_QUESTIONS,
   appearance,
 }: {
   open: boolean;
