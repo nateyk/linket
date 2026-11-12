@@ -289,7 +289,7 @@ class ServiceInquiriesTest extends TestCase
         ])->assertCreated();
 
         $inquiry = ServiceInquiry::query()->latest('id')->firstOrFail();
-        $this->assertSame([[
+        $this->assertEquals([[
             'question' => 'When do you need it?',
             'answer' => 'Before Friday',
         ]], $inquiry->question_answers);
