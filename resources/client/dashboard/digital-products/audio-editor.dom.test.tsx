@@ -1,6 +1,5 @@
 /** @vitest-environment jsdom */
 import {render, screen, within} from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import {describe, expect, test} from 'vitest';
 import {AudioEditor} from './audio-editor';
 
@@ -25,27 +24,20 @@ describe('dedicated Audio editor', () => {
     expect(screen.queryByRole('tablist')).toBeNull();
   });
 
-  test('keeps private full audio separate from public clips', async () => {
-    const user = userEvent.setup();
+  test('keeps private full audio separate from public clips without extra help controls', () => {
     render(<AudioEditor {...slots} />);
     const files = screen.getByRole('region', {name: 'Full audio files'});
     const samples = screen.getByRole('region', {name: 'Preview clips (optional)'});
     expect(within(files).getByRole('button', {name: 'Upload purchased audio'})).not.toBeNull();
-    expect(within(files).queryByText(/private until a purchase is verified/)).toBeNull();
-    await user.click(within(files).getByRole('button', {name: 'About this section'}));
-    expect(await screen.findByText(/private until a purchase is verified/)).not.toBeNull();
-    expect(within(files).queryByText(/before purchase/)).toBeNull();
+    expect(within(files).queryByRole('button', {name: 'Manage public preview clips'})).toBeNull();
     expect(within(samples).getByRole('button', {name: 'Manage public preview clips'})).not.toBeNull();
-    await user.click(within(samples).getByRole('button', {name: 'About this section'}));
-    expect(await screen.findByText(/Offer up to 8 short preview clips before purchase/)).not.toBeNull();
+    expect(within(samples).queryByRole('button', {name: 'Upload purchased audio'})).toBeNull();
+    expect(screen.queryByRole('button', {name: 'About this section'})).toBeNull();
   });
 
-  test('states the existing eight-clip limit without promising full-track streaming', async () => {
-    const user = userEvent.setup();
+  test('keeps optional preview clearly labeled without promising full-track streaming', () => {
     const {container} = render(<AudioEditor {...slots} />);
-    await user.click(within(screen.getByRole('region', {name: 'Preview clips (optional)'}))
-      .getByRole('button', {name: 'About this section'}));
-    expect(await screen.findByText(/up to 8 short preview clips/i)).not.toBeNull();
+    expect(screen.getByRole('heading', {name: 'Preview clips (optional)'})).not.toBeNull();
     expect(container.textContent).not.toMatch(/stream full tracks/i);
   });
 });
