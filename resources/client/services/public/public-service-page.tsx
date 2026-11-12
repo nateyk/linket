@@ -391,7 +391,7 @@ export function PublicServicePage({data}: {data: PublicServicePageData}) {
           endpoint={inquiry_endpoint}
           packageId={packageId}
           packageName={selectedPackage?.name}
-          buyerQuestions={service.buyer_questions ?? []}
+          buyerQuestions={service.buyer_questions}
           appearance={appearance}
         />
       </div>
