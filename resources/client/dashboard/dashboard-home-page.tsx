@@ -33,7 +33,6 @@ import {
   ChartNoAxesCombinedIcon,
   CircleAlertIcon,
   CircleDollarSignIcon,
-  FileTextIcon,
   LandmarkIcon,
   Link2Icon,
   MapPinIcon,
@@ -468,7 +467,7 @@ function RecentOrders() {
   return (
     <Card size="sm" className="min-w-0 gap-0 overflow-hidden lg:col-span-8">
       <Card.Header className="gap-1 pb-3">
-        <Card.Title>
+        <Card.Title id="recent-orders-title">
           <Trans message="Recent orders" />
         </Card.Title>
         <Card.Description>
@@ -564,7 +563,7 @@ function RecentOrders() {
               </Table.Root>
             </div>
 
-            <ol className="divide-y md:hidden" aria-label="Recent orders">
+            <ol className="divide-y md:hidden" aria-labelledby="recent-orders-title">
               {orders.map(order => (
                 <li key={order.uuid} className="min-w-0 px-4 py-3.5">
                   <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3">
