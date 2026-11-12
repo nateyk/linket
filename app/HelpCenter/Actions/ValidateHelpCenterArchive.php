@@ -35,19 +35,23 @@ class ValidateHelpCenterArchive
 
         for ($i = 0; $i < $zip->numFiles; $i++) {
             $stat = $zip->statIndex($i);
-            $name = $stat['name'] ?? '';
+            $this->validateZipPath($stat['name'] ?? '');
             $size = $stat['size'] ?? 0;
             $totalBytes += $size;
 
-            if ($name === '' || str_contains($name, '..')) {
-                $this->reject('The ZIP archive has an unsafe file name.');
-            }
-            if (str_contains($name, '\\') || str_starts_with($name, '/')) {
-                $this->reject('The ZIP archive has an unsafe file path.');
-            }
             if ($size > 25 * 1024 * 1024 || $totalBytes > 250 * 1024 * 1024) {
                 $this->reject('The ZIP archive exceeds the allowed size.');
             }
+        }
+    }
+
+    protected function validateZipPath(string $name): void
+    {
+        if ($name === '' || str_contains($name, '..')) {
+            $this->reject('The ZIP archive has an unsafe file name.');
+        }
+        if (str_contains($name, '\\') || str_starts_with($name, '/')) {
+            $this->reject('The ZIP archive has an unsafe file path.');
         }
     }
 
