@@ -6,6 +6,11 @@ use App\Conversations\Agent\Actions\ConversationsAssigner;
 use App\Conversations\Agent\Notifications\Ticketing\ConversationCreatedNotif;
 use App\Conversations\Customer\Actions\CreateTicketAsCustomer;
 use App\Conversations\Events\ConversationCreated;
+use App\Conversations\Events\ConversationMessageCreated;
+use App\Conversations\Events\ConversationsAssignedToAgent;
+use App\Conversations\Listeners\SendReplyCreatedNotif;
+use App\Conversations\Agent\Notifications\Ticketing\Messages\Customer\CustomerRepliedToUnassignedConversationNotif;
+use App\Conversations\Models\ConversationItem;
 use App\Conversations\Events\ConversationsUpdated;
 use App\Conversations\Models\Conversation;
 use App\Models\User;
@@ -77,6 +82,12 @@ class CreatorOwnedTicketNotificationIsolationTest extends TestCase
         $this->assertFalse((new ConversationCreated($owned))->broadcastWhen());
         $this->assertTrue((new ConversationCreated($platform))->broadcastWhen());
 
+        $message = new ConversationItem();
+        $this->assertFalse((new ConversationMessageCreated($owned, $message))->broadcastWhen());
+        $this->assertTrue((new ConversationMessageCreated($platform, $message))->broadcastWhen());
+        $this->assertFalse((new ConversationsAssignedToAgent(collect([$owned])))->broadcastWhen());
+        $this->assertTrue((new ConversationsAssignedToAgent(collect([$platform])))->broadcastWhen());
+
         $updated = new ConversationsUpdated([$owned]);
         $updated->conversationsAfterUpdate = collect([$owned]);
         $this->assertFalse($updated->broadcastWhen());
@@ -84,6 +95,40 @@ class CreatorOwnedTicketNotificationIsolationTest extends TestCase
         $updated = new ConversationsUpdated([$platform]);
         $updated->conversationsAfterUpdate = collect([$platform]);
         $this->assertTrue($updated->broadcastWhen());
+    }
+
+    public function test_creator_reply_notification_is_sent_only_to_the_owner(): void
+    {
+        Notification::fake();
+        $owner = User::factory()->create();
+        $platformAgent = User::factory()->create(['type' => 'agent']);
+        $customer = User::factory()->create();
+
+        foreach ([$owner, $platformAgent] as $user) {
+            $user->notificationSubscriptions()->create([
+                'notif_id' => CustomerRepliedToUnassignedConversationNotif::NOTIF_ID,
+                'channels' => ['database'],
+            ]);
+        }
+
+        $conversation = Conversation::query()->create([
+            'user_id' => $customer->id,
+            'type' => 'ticket',
+            'support_owner_id' => $owner->id,
+        ]);
+        $message = $conversation->items()->create([
+            'type' => 'message',
+            'body' => 'Private customer reply',
+            'author' => Conversation::AUTHOR_USER,
+            'user_id' => $customer->id,
+        ]);
+
+        (new SendReplyCreatedNotif())->handle(
+            new ConversationMessageCreated($conversation, $message),
+        );
+
+        Notification::assertSentTo($owner, CustomerRepliedToUnassignedConversationNotif::class);
+        Notification::assertNotSentTo($platformAgent, CustomerRepliedToUnassignedConversationNotif::class);
     }
 
     public function test_platform_auto_assignment_does_not_mutate_creator_ticket(): void
