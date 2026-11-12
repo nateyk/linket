@@ -428,3 +428,84 @@ test('UX-35 required-field errors expose assertive alerts in all four editors wi
     contentType: 'application/json',
   });
 });
+
+
+/**
+ * UX-35 closing regression: a title error is already associated with its input.
+ * Paid price errors must have the same field-to-alert contract in every editor,
+ * and must stop being exposed once the creator fixes the value.
+ */
+test('UX-35 paid price errors are linked and clear across four editors without writes', async ({
+  page,
+}, testInfo: TestInfo) => {
+  requireIsolatedQA();
+  test.setTimeout(120_000);
+  await signInCreator(page);
+  const writes: string[] = [];
+  page.on('request', request => {
+    if (request.method() === 'POST' &&
+        new URL(request.url()).pathname === '/api/v1/items') {
+      writes.push(request.url());
+    }
+  });
+
+  const evidence: Array<{
+    type: string;
+    input: string;
+    errorId: string;
+    message: string;
+    linked: boolean;
+    cleared: boolean;
+  }> = [];
+  for (const type of ['digital', 'ebook', 'audio', 'course'] as const) {
+    await page.goto('/dashboard/items/new/' + type);
+    await expect(page.getByRole('heading', {level: 1})).toBeVisible();
+    const paid = page.locator('[role="radiogroup"][aria-label="Billing mode"] [role="radio"]').nth(1);
+    await paid.click();
+
+    const inputId = type === 'course' ? 'course-price' : 'product-price';
+    const fieldInput = page.locator('#' + inputId);
+    await expect(fieldInput).toBeVisible();
+    if (type === 'course') {
+      await page.locator('#course-title').fill('Accessible price course');
+      await page.getByRole('button', {name: 'Create course'}).click();
+      await expect(fieldInput).toBeFocused();
+    } else {
+      await fieldInput.fill('-1');
+      await fieldInput.press('Tab');
+    }
+
+    const error = fieldInput.locator('xpath=ancestor::*[@data-slot="field"][1]')
+      .locator('[data-slot="field-error"][role="alert"]');
+    const message = type === 'course'
+      ? 'Enter an amount greater than ETB 0.'
+      : 'Invalid price';
+    const errorId = inputId + '-error';
+    await expect(error).toHaveText(message);
+    await expect(error).toHaveAttribute('id', errorId);
+    await expect(fieldInput).toHaveAttribute('aria-invalid', 'true');
+    await expect(fieldInput).toHaveAttribute('aria-errormessage', errorId);
+    const linked = await fieldInput.evaluate(node => {
+      const ids = (node.getAttribute('aria-errormessage') ?? '').split(/\s+/);
+      return ids.some(id => !!id && document.getElementById(id)?.getAttribute('role') === 'alert');
+    });
+    expect(linked, type + ' invalid price references an existing alert').toBe(true);
+
+    await fieldInput.fill('10');
+    if (type !== 'course') await fieldInput.press('Tab');
+    await expect(fieldInput).toHaveAttribute('aria-invalid', 'false');
+    await expect(fieldInput).not.toHaveAttribute('aria-errormessage', errorId);
+    await expect(error).toHaveCount(0);
+    evidence.push({type, input: '#' + inputId, errorId, message, linked, cleared: true});
+  }
+  expect(writes, 'A price validation check must not create any product').toEqual([]);
+  await testInfo.attach('UX35 paid price field error associations', {
+    body: Buffer.from(JSON.stringify({
+      scope: 'Client-only validation in the four editors; synthetic creator and loopback DB',
+      expectation: 'Invalid field linked to visible role=alert and link removed when fixed',
+      screenReaderAcceptance: 'NOT RUN: NVDA/VoiceOver speech is a separate reviewer gate',
+      evidence,
+    }, null, 2)),
+    contentType: 'application/json',
+  });
+});
