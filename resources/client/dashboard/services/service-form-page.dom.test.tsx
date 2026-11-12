@@ -202,8 +202,8 @@ describe('the service form shell', () => {
     expect(screen.getByRole('heading', {name: 'Service setup', level: 2})).toBeTruthy();
     expect(steps.parentElement?.className).toContain('xl:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]');
     expect(steps.parentElement?.className).not.toContain('mx-auto');
-    expect(steps.querySelector('ol')?.className).toContain('grid-cols-2');
-    expect(steps.querySelector('ol')?.className).toContain('sm:grid-cols-4');
+    expect(steps.querySelector('ol')?.className).toContain('grid-cols-4');
+    expect(steps.querySelector('ol')?.className).not.toContain('grid-cols-2');
     expect(steps.querySelector('ol')?.className).toContain('xl:grid-cols-1');
     expect(screen.queryByText('Move between steps anytime. Use Save draft to keep your changes.')).toBeNull();
     expect(steps.querySelectorAll('li > [data-slot="separator"]')).toHaveLength(3);
@@ -211,7 +211,7 @@ describe('the service form shell', () => {
     expect(steps.querySelector('li > [data-slot="separator"]')?.className)
       .toContain('hidden xl:block');
     expect(steps.querySelector('li > span[aria-hidden="true"]')?.className)
-      .toContain('sm:block xl:hidden');
+      .toContain('h-px xl:hidden');
     expect(steps.querySelectorAll('ol > li')).toHaveLength(4);
     const selected = screen.getByRole('button', {name: 'Details, step 1 of 4'});
     expect(selected.getAttribute('data-step-state')).toBe('current');
@@ -220,7 +220,11 @@ describe('the service form shell', () => {
     expect(selected.getAttribute('data-slot')).toBe('button');
     expect(selected.className).toContain('rounded-card-xs');
     expect(selected.className).not.toContain('border-primary/40');
-    expect(selected.className).not.toContain('bg-primary/5');
+    expect(selected.className).toContain('bg-primary/5');
+    const basicsHeader = screen.getByRole('heading', {name: 'Basics'}).closest('header');
+    expect(basicsHeader?.className).not.toContain('border-b');
+    expect(basicsHeader?.className).toContain('pb-2');
+    expect(basicsHeader?.querySelector('span[aria-hidden="true"]')).toBeNull();
     // Step changes are announced once by the page-level status region.
     expect(screen.getAllByRole('status')).toHaveLength(1);
   });
@@ -265,6 +269,8 @@ describe('the service form shell', () => {
     expect(screen.getByRole('textbox', {name: 'Question 1'})).toHaveProperty(
       'value', 'What is your deadline?',
     );
+    expect(screen.getByRole('button', {name: 'Settings, step 4 of 4'})
+      .getAttribute('data-step-complete')).toBe('true');
     expect(api.post).not.toHaveBeenCalled();
     expect(api.put).not.toHaveBeenCalled();
 
@@ -320,6 +326,8 @@ describe('the service form shell', () => {
     expect(screen.getByRole('button', {name: 'Media, step 2 of 4'}).getAttribute('aria-current')).toBe('step');
     expect(screen.getByRole('button', {name: 'Details, step 1 of 4'}).getAttribute('data-step-state')).toBe('previous');
     expect(screen.getByRole('button', {name: 'Details, step 1 of 4'}).getAttribute('data-step-complete')).toBe('true');
+    expect(screen.getByRole('button', {name: 'Details, step 1 of 4'})
+      .querySelector('span[aria-hidden="true"]')?.className).toContain('bg-positive');
     expect(screen.queryByRole('textbox', {name: 'Title'})).toBeNull();
     expect(document.getElementById('description')).toBe(descriptionEditor);
     expect(screen.getByRole('heading', {name: 'Media and links'})).toBeTruthy();
