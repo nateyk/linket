@@ -274,6 +274,63 @@ class ServiceInquiriesTest extends TestCase
         );
     }
 
+    public function test_optional_answers_are_server_matched_and_snapshotted_for_owner(): void
+    {
+        Notification::fake();
+        [$creator, , $store, $service] = $this->context();
+        $service->update(['buyer_questions' => ['When do you need it?', 'What is your budget?']]);
+        $url = "/api/v1/public/stores/{$store->id}/services/{$service->slug}/inquiries";
+
+        $this->stateful()->postJson($url, [
+            'name' => 'Sara Buyer',
+            'email' => 'sara@example.test',
+            'message' => 'I need a brand identity.',
+            'answers' => ['  Before Friday ', ''],
+        ])->assertCreated();
+
+        $inquiry = ServiceInquiry::query()->latest('id')->firstOrFail();
+        $this->assertSame([[
+            'question' => 'When do you need it?',
+            'answer' => 'Before Friday',
+        ]], $inquiry->question_answers);
+
+        // An inquiry must retain the original prompt even after edits.
+        $service->update(['buyer_questions' => ['New question']]);
+        $this->stateful()->actingAs($creator)
+            ->getJson("/api/v1/services/inquiries/{$inquiry->id}")
+            ->assertOk()
+            ->assertJsonPath('data.question_answers.0.question', 'When do you need it?')
+            ->assertJsonPath('data.question_answers.0.answer', 'Before Friday');
+    }
+
+    public function test_public_answer_validation_rejects_extras_or_stale_configuration(): void
+    {
+        Notification::fake();
+        [, , $store, $service] = $this->context();
+        $url = "/api/v1/public/stores/{$store->id}/services/{$service->slug}/inquiries";
+        $base = ['name' => 'Sara', 'email' => 'sara@example.test', 'message' => 'Hi'];
+
+        $this->stateful()->postJson($url, [
+            ...$base, 'answers' => ['Injected answer'],
+        ])->assertUnprocessable()->assertJsonValidationErrors('answers');
+
+        $service->update(['buyer_questions' => ['One', 'Two']]);
+
+        $this->stateful()->postJson($url, [
+            ...$base, 'answers' => ['One', 'Two', 'Unexpected'],
+        ])->assertUnprocessable()->assertJsonValidationErrors('answers');
+
+        $this->stateful()->postJson($url, [
+            ...$base, 'answers' => [str_repeat('x', 501)],
+        ])->assertUnprocessable()->assertJsonValidationErrors('answers.0');
+
+        $this->stateful()->postJson($url, [
+            ...$base, 'answers' => ['1' => 'Skips first question'],
+        ])->assertUnprocessable()->assertJsonValidationErrors('answers');
+
+        $this->assertDatabaseCount('creator_service_inquiries', 0);
+    }
+
     private function context(string $status = 'published'): array
     {
         $token = Str::lower(Str::random(12));
