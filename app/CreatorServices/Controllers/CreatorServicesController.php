@@ -152,6 +152,8 @@ class CreatorServicesController extends Controller
             'contact_channels.*.type' => 'required|in:whatsapp,telegram,email,phone,link',
             'contact_channels.*.label' => 'nullable|string|max:60',
             'contact_channels.*.value' => 'required|string|max:300',
+            'buyer_questions' => 'sometimes|array|max:3',
+            'buyer_questions.*' => 'required|string|max:160',
             'packages' => 'nullable|array|max:6',
             'packages.*.id' => 'nullable|integer',
             'packages.*.name' => 'required|string|max:80',
