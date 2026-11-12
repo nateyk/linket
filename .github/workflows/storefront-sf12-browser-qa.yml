@@ -8,6 +8,7 @@ on:
       - 'tests/e2e/storefront-saved-appearance-sf12.spec.ts'
       - 'tests/e2e/storefront-preview-parity-sf12.spec.ts'
       - 'tests/e2e/storefront-authenticated-save-sf04.spec.ts'
+      - 'tests/e2e/storefront-interactive-contrast-sf05.spec.ts'
       - '.github/scripts/install-playwright-chromium.sh'
       - 'tests/e2e/fixtures/seed-storefront-sf12.php'
       - 'resources/client/digital-products/shared/product-card.stories.tsx'
@@ -164,7 +165,7 @@ jobs:
           [[ "$APP_ENV" == "testing" && "$DB_DATABASE" == "belink_test" ]]
           [[ "$E2E_BASE_URL" == "http://127.0.0.1:8081" ]]
           [[ "$LINKET_E2E_PUBLIC_SERVICE_URL" == http://127.0.0.1:8081/* ]]
-          npx playwright test tests/e2e/storefront-public-responsive-a11y.spec.ts tests/e2e/storefront-saved-appearance-sf12.spec.ts tests/e2e/storefront-preview-parity-sf12.spec.ts tests/e2e/storefront-authenticated-save-sf04.spec.ts \
+          npx playwright test tests/e2e/storefront-public-responsive-a11y.spec.ts tests/e2e/storefront-saved-appearance-sf12.spec.ts tests/e2e/storefront-preview-parity-sf12.spec.ts tests/e2e/storefront-authenticated-save-sf04.spec.ts tests/e2e/storefront-interactive-contrast-sf05.spec.ts \
             --project=chromium --workers=1 --retries=0 \
             --output=test-results/sf12-public --trace=retain-on-failure
 
