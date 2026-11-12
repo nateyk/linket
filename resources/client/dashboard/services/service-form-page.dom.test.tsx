@@ -254,11 +254,12 @@ describe('the service form shell', () => {
   test('loading uses an accessible editor-shaped skeleton instead of giant blocks', () => {
     api.get.mockImplementation(() => new Promise(() => {}));
     mountPage('/dashboard/services/new');
-    const loading = screen.getByRole('status', {name: 'Loading service editor'});
-    expect(loading.getAttribute('aria-busy')).toBe('true');
-    expect(loading.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(10);
-    expect(loading.querySelectorAll('.h-72, .h-48')).toHaveLength(0);
-    expect(loading.querySelector('.xl\\:grid-cols-\\[minmax\\(0\\,14rem\\)_minmax\\(0\\,1fr\\)\\]')).toBeTruthy();
+    const loading = screen.getByText('Loading service editor').closest('[role="status"]');
+    expect(loading?.getAttribute('aria-busy')).toBe('true');
+    expect(loading?.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(10);
+    expect(loading?.querySelectorAll('.h-72, .h-48')).toHaveLength(0);
+    expect(loading?.querySelector('div[aria-hidden="true"]')?.className)
+      .toContain('xl:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]');
   });
 
   test('package, FAQ and contact length guidance matches the Laravel contract', async () => {
