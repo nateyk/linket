@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\HelpCenter\Models\HcArticle;
 use App\HelpCenter\Models\HcCategory;
+use App\Core\SitemapGenerator;
 use App\Models\User;
 use Common\Files\FileEntry;
 use Common\Permissions\Models\Permission;
@@ -182,6 +183,46 @@ class HcContentVisibilitySecurityTest extends TestCase
         $this->assertContains($public->title, $titles);
         $this->assertNotContains($private->title, $titles);
         $this->assertNotContains($draft->title, $titles);
+    }
+
+    public function test_sitemap_never_indexes_private_or_draft_content_even_for_agents(): void
+    {
+        $role = $this->privateRole();
+        [$root, $section] = $this->categoryTree();
+        $public = $this->article($section, 'Sitemap public '.Str::random(8));
+        $private = $this->article($section, 'Sitemap private '.Str::random(8), roleId: $role->id);
+        $draft = $this->article($section, 'Sitemap draft '.Str::random(8), draft: true);
+        [$privateRoot, $privateSection] = $this->categoryTree(rootRoleId: $role->id);
+        $privatePlacement = $this->article($privateSection, 'Sitemap private section '.Str::random(8));
+
+        $agent = User::query()->forceCreate([
+            'name' => 'HC agent '.Str::random(6),
+            'username' => Str::lower(Str::random(10)),
+            'email' => Str::random(10).'@example.test',
+            'password' => bcrypt('password'),
+            'email_verified_at' => now(),
+            'type' => 'agent',
+        ]);
+        $this->actingAs($agent);
+        $this->assertTrue($agent->isAgent());
+
+        $generator = new class extends SitemapGenerator {
+            public function queriesForTesting(): array
+            {
+                return $this->getAppQueries();
+            }
+        };
+        [$articles, $categories] = $generator->queriesForTesting();
+        $articleIds = $articles->pluck('id')->all();
+        $categoryIds = $categories->pluck('id')->all();
+
+        $this->assertContains($public->id, $articleIds);
+        $this->assertNotContains($private->id, $articleIds);
+        $this->assertNotContains($draft->id, $articleIds);
+        $this->assertNotContains($privatePlacement->id, $articleIds);
+        $this->assertContains($root->id, $categoryIds);
+        $this->assertNotContains($privateRoot->id, $categoryIds);
+        $this->assertNotContains($privateSection->id, $categoryIds);
     }
 
     private function privateRole(): Role
