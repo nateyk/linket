@@ -80,6 +80,21 @@ async function verifyResponsiveServiceSetup(
   });
 }
 
+async function verifyStepperLineAlignment(steps: Locator, desktop: boolean) {
+  const gaps = await steps.evaluate((nav, wide) => {
+    const items = [...nav.querySelectorAll('ol > li')];
+    const centers = items.slice(0, 2).map(item => {
+      const bounds = item.querySelector('button > span')!.getBoundingClientRect();
+      return {x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2};
+    });
+    const line = items[0].querySelector(wide ? '[data-slot="separator"]' : ':scope > span')!.getBoundingClientRect();
+    return wide
+      ? [line.top - centers[0].y, line.bottom - centers[1].y]
+      : [line.left - centers[0].x, line.right - centers[1].x];
+  }, desktop);
+  gaps.forEach(gap => expect(Math.abs(gap), 'No connector gaps').toBeLessThanOrEqual(2));
+}
+
 test.describe('Service Creation — authenticated browser acceptance', () => {
   test.skip(!isIsolated, 'Requires disposable belink_test and loopback server');
   test.setTimeout(90_000);
@@ -108,6 +123,7 @@ test.describe('Service Creation — authenticated browser acceptance', () => {
       await expect(steps.getByRole('button', {name: 'Details, step 1 of 4'})).toHaveAttribute('aria-current', 'step');
 
       await verifyResponsiveServiceSetup(page, steps, viewport.width, testInfo);
+      await verifyStepperLineAlignment(steps, viewport.width >= 1280);
 
       const titleSpan = heading.locator('span').first();
       if (viewport.width <= 375) {
