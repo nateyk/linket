@@ -182,4 +182,48 @@ foreach ($appearanceVariants as $variant => $config) {
     );
 }
 
+
+/**
+ * Private save-versus-published test target, distinct from read-only SF-12
+ * stores so parallel viewport/contrast runs cannot observe a draft mutation.
+ */
+$saveParity = Store::query()->updateOrCreate(
+    ['back_half' => 'sf04-save-parity'],
+    [
+        'name' => 'Synthetic SF-04 Save Parity',
+        'user_id' => $store->user_id,
+        'workspace_id' => $store->workspace_id,
+        'builder_mode' => Store::BUILDER_MODE_CREATOR_PROFILE,
+        'profile_config' => [
+            'display_name' => 'SF-04 Creator',
+            'profile_title' => 'Authenticated save parity fixture',
+            'bio' => 'Synthetic fixture only',
+            'about_html' => '',
+        ],
+    ],
+);
+$saveParity->appearance()->updateOrCreate([], [
+    'config' => [
+        'bgConfig' => ['backgroundColor' => '#f8fafc', 'color' => '#1e293b'],
+        'btnConfig' => ['variant' => 'solid', 'color' => '#1e293b', 'textColor' => '#ffffff'],
+        'fontConfig' => ['family' => 'Inter'],
+    ],
+]);
+$saveParity->widgets()->updateOrCreate(
+    ['type' => 'shop'],
+    [
+        'active' => true,
+        'position' => 0,
+        'config' => [
+            'source' => 'digital-products',
+            'product_ids' => [$product->id],
+        ],
+    ],
+);
+$product->stores()->syncWithoutDetaching([$saveParity->id]);
+file_put_contents(
+    storage_path('app/e2e/sf04-save-parity.json'),
+    json_encode(['store_id' => $saveParity->id, 'slug' => $saveParity->back_half], JSON_THROW_ON_ERROR),
+);
+
 echo rtrim($appUrl, '/').'/'.$store->back_half.'/services/'.$service->slug.PHP_EOL;
