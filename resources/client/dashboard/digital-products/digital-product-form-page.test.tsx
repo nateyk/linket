@@ -179,7 +179,7 @@ describe('optional Storefront placement UX-21', () => {
       path.resolve('resources/client/dashboard/digital-products/digital-product-form-page.tsx'),
       'utf8',
     );
-    expect(source).toContain('Storefront placement is optional and does not block product submission.');
+    expect(source).toContain('You can sell this product directly. Create a Storefront later if you want to display it there.');
     expect(source).not.toContain('Optional. Choose where customers can find this product after approval.');
     expect(source).toContain('No Storefront selected');
     expect(source).toContain('[one :count Storefront selected|other :count Storefronts selected]');
@@ -328,9 +328,9 @@ describe('product form reassembly', () => {
     expect(source).toContain('aria-invalid');
   });
 
-  test('non-course authoring uses a wider shell with a distinct setup status band', () => {
-    // Ebook/digital/audio were cramped at max-w-3xl with progress sharing
-    // weight with the first section. Course keeps its own max-w-6xl grid.
+  test('non-course authoring uses a wider shell without redundant status band', () => {
+    // Ebook/digital/audio use the same wide shell without a second progress bar.
+    // Course keeps its own max-w-6xl grid.
     expect(source).toContain("effectiveFileType !== 'course' ? 'mx-auto w-full max-w-5xl");
     expect(source).toContain("effectiveFileType !== 'course' ? 'mx-auto w-full max-w-5xl py-4 sm:py-5' : 'mx-auto w-full max-w-6xl py-4 sm:py-5'");
     expect(source).not.toContain("effectiveFileType !== 'course' ? 'mx-auto w-full max-w-3xl");
