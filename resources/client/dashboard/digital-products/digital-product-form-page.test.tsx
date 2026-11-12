@@ -336,6 +336,34 @@ describe('product form reassembly', () => {
   });
 });
 
+describe('non-course editor visual consistency', () => {
+  const source = fs.readFileSync(
+    path.resolve('resources/client/dashboard/digital-products/digital-product-form-page.tsx'),
+    'utf8',
+  );
+
+  test('non-course setup status is flat and keeps the real completion progress', () => {
+    expect(source).toContain('data-testid="product-authoring-layout"');
+    expect(source).toContain('className="min-w-0 border-b border-border px-0 pt-1 pb-4"');
+    expect(source).toContain('<ProductFormProgress');
+    expect(source).not.toContain('className="rounded-card-sm border border-border bg-muted/40 px-4 py-3 sm:px-5"');
+  });
+
+  test('caps only non-course cover dimensions while course cover stays unchanged', () => {
+    expect(source).toContain("hidePricing ? 'aspect-video h-auto w-full max-w-lg' : 'aspect-video h-auto w-full'");
+    expect(source).toContain('hidePricing={effectiveFileType !== \'course\'}');
+    expect(source).toContain('aspect={16 / 9}');
+  });
+
+  test('uses a non-course-specific loading skeleton without replacing course loading', () => {
+    expect(source).toContain('<NonCourseEditorSkeleton />');
+    expect(source).toContain('data-testid="non-course-editor-skeleton"');
+    expect(source).toContain('<DetailsSkeleton />');
+    expect(source).toContain('<PreviewSkeleton />');
+    expect(source).toContain('Loading product editor');
+  });
+});
+
 describe('product form error focus and skeletons', () => {
   const source = fs.readFileSync(
     path.resolve(
