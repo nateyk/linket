@@ -58,6 +58,48 @@ describe('SF-12 Amharic locale uses the actual React translation path', () => {
     }
   });
 
+  it('covers all static user-facing messages in ten core journeys', () => {
+    // This checks core storefront/product/service/builder UI chrome only.
+    // Seller-authored content and unrelated admin screens are not localized here.
+    const core = [
+      'resources/client/dashboard/stores/store-editor/appearance/biolink-appearance-tab.tsx',
+      'resources/client/dashboard/stores/store-editor/creator-profile-editor.tsx',
+      'resources/client/dashboard/stores/store-editor/store-editor-page.tsx',
+      'resources/client/dashboard/stores/store-editor/live-preview.tsx',
+      'resources/client/digital-products/public/digital-product-public-pages.tsx',
+      'resources/client/digital-products/public/product-page/product-pricing-card.tsx',
+      'resources/client/services/public/public-service-page.tsx',
+      'resources/client/services/public/service-package-panel.tsx',
+      'resources/client/services/public/service-inquiry-dialog.tsx',
+      'resources/client/dashboard/services/service-form-page.tsx',
+    ];
+
+    expect(Object.keys(lines).length).toBeGreaterThanOrEqual(319);
+    for (const filename of core) {
+      const source = readFileSync(resolve(filename), 'utf8');
+      const messages = [
+        ...source.matchAll(/\bmessage\s*=\s*['"]([^'"]+)['"]/g),
+        ...source.matchAll(/\bmessage\s*:\s*['"]([^'"]+)['"]/g),
+        ...source.matchAll(/\bmessage\s*\(\s*['"]([^'"]+)['"]/g),
+      ].map(match => match[1]);
+      // A pure :title-like placeholder is user content, not UI text.
+      const missing = [...new Set(messages)].filter(key =>
+        !/^:[a-zA-Z_][a-zA-Z0-9_]*$/.test(key) &&
+        (!lines[key] || lines[key] === key),
+      );
+      expect(missing, 'Untranslated UI keys in ' + filename).toEqual([]);
+    }
+  });
+
+  it('preserves each named interpolation placeholder', () => {
+    for (const [source, translation] of Object.entries(lines)) {
+      const parameters = (value: string) =>
+        [...value.matchAll(/:[a-zA-Z_][a-zA-Z0-9_]*/g)]
+          .map(match => match[0]).sort();
+      expect(parameters(translation), source).toEqual(parameters(source));
+    }
+  });
+
   it('covers messages used by the actual storefront, product, service and builder components', () => {
     const cases: Record<string, string[]> = {
       'resources/client/short-links/renderers/biolink-renderer/creator-profile-layout.tsx': ['Products', 'Services'],
