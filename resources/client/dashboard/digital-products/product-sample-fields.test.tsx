@@ -26,7 +26,7 @@ describe('sample section by product type', () => {
 
     expect(
       screen.getByText(
-        'Short clips buyers can play before purchase. Full tracks stay private.',
+        'Full tracks stay private; previews are public.',
       ),
     ).toBeTruthy();
   });
@@ -41,7 +41,7 @@ describe('sample section by product type', () => {
       />,
     );
     expect(screen.getByText(
-      'Offer a short PDF sample before purchase. Your full product files stay private.',
+      'Full product files stay private; the sample is public.',
     )).toBeTruthy();
   });
 
@@ -52,7 +52,7 @@ describe('sample section by product type', () => {
 
     expect(
       screen.getByText(
-        'Upload a short PDF of sample pages. Buyers see this on the product page; your full ebook stays private.',
+        'Full ebook stays private; sample pages are public.',
       ),
     ).toBeTruthy();
   });
