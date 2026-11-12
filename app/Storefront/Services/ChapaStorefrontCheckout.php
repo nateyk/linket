@@ -63,14 +63,16 @@ final class ChapaStorefrontCheckout
                 'first_name' => $firstName,
                 'last_name' => $lastName,
             ], fn (mixed $value): bool => filled($value));
-            $returnUrl = url('storefront/chapa/return/'.$reference);
+            // Keep provider callbacks non-HTML; return the buyer to a human-readable page.
+            $callbackUrl = url('storefront/chapa/return/'.$reference);
+            $buyerReturnUrl = url('storefront/chapa/checkout-return/'.$reference);
             $hosted = app(ChapaV2Client::class)->createHostedPayment($gateway->secret_key, [
                 'amount_cents' => (int) $product->price_cents,
                 'currency' => 'ETB',
                 'merchant_reference' => $reference,
                 'idempotency_key' => $order->uuid,
-                'callback_url' => $returnUrl,
-                'return_url' => $returnUrl,
+                'callback_url' => $callbackUrl,
+                'return_url' => $buyerReturnUrl,
                 'customer' => $customer === [] ? null : $customer,
                 'customization' => [
                     'title' => (string) config('app.name'),

@@ -26,6 +26,31 @@ class ChapaStorefrontReturnController extends Controller
         return response()->noContent();
     }
 
+    /**
+     * Hosted Checkout browser return: show a real buyer status screen.
+     * The separate provider callback keeps its existing 204 response contract.
+     */
+    public function buyerReturn(string $txRef): Response
+    {
+        $order = StorefrontOrder::query()
+            ->where('chapa_tx_ref', $txRef)
+            ->where('payment_gateway', 'chapa')
+            ->firstOrFail();
+
+        if ($order->status !== 'paid') {
+            $this->fulfillIfVerified($order);
+        }
+
+        $confirmed = $order->fresh()->status === 'paid';
+
+        return response()->view('storefront.chapa-return', [
+            'confirmed' => $confirmed,
+        ])->withHeaders([
+            'Cache-Control' => 'private, no-store',
+            'X-Robots-Tag' => 'noindex, nofollow',
+        ]);
+    }
+
     private function fulfillIfVerified(StorefrontOrder $order): void
     {
         $order->loadMissing('product');

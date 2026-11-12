@@ -8,6 +8,8 @@ use App\Storefront\Models\CreatorPaymentMethod;
 use App\Storefront\Models\DigitalProduct;
 use App\Storefront\Models\DownloadEntitlement;
 use App\Storefront\Models\StorefrontOrder;
+use App\Storefront\Resources\PublicDigitalProductResource;
+use Illuminate\Http\Request;
 use App\Storefront\Services\CreatorVerificationAllowance;
 use App\Storefront\StorefrontCheckout;
 use Common\Billing\Models\Price;
@@ -77,7 +79,10 @@ class ChapaSellerGatewayTest extends TestCase
         Http::assertSent(fn ($request): bool => $request->url() === 'https://api.chapa.global/v2/payments/hosted'
             && $request->hasHeader('Authorization', 'Bearer seller-secret')
             && $request['amount'] === 10000
-            && $request['merchant_reference'] === $order->chapa_tx_ref);
+            && $request['merchant_reference'] === $order->chapa_tx_ref
+            && str_contains($request['callback_url'], '/storefront/chapa/return/')
+            && str_contains($request['return_url'], '/storefront/chapa/checkout-return/')
+            && $request['return_url'] !== $request['callback_url']);
     }
 
     public function testABadSecretIsNotStored(): void
@@ -119,6 +124,43 @@ class ChapaSellerGatewayTest extends TestCase
         $this->assertSame(0, StorefrontOrder::query()->where('digital_product_id', $product->id)->count());
     }
 
+    public function testChapaSellerPublicProductDoesNotRequireVerifyEtOrReceivingBanks(): void
+    {
+        [$creator, $product] = $this->seller();
+        $this->activatePro($creator);
+        $product->workspace->update(['active_payment_collector' => 'chapa']);
+        CreatorChapaGateway::query()->create([
+            'workspace_id' => $product->workspace_id,
+            'user_id' => $creator->id,
+            'public_key' => 'CHAPUBK-test-public',
+            'secret_key' => 'seller-secret',
+        ]);
+
+        // No approved bank or wallet accounts are required for the seller's own Chapa.
+        $this->assertSame(0, CreatorPaymentMethod::query()->where('user_id', $creator->id)->count());
+        $data = (new PublicDigitalProductResource($product->fresh()->load('creator')))
+            ->toArray(Request::create('/'));
+        $this->assertSame('chapa', $data['payment_mode']);
+        $this->assertNull($data['checkout_blocker']);
+        $this->assertTrue($data['can_buy']);
+        $this->assertEmpty($data['receiving_accounts']);
+        $this->assertStringNotContainsString('seller-secret', json_encode($data));
+    }
+
+    public function testChapaSelectedButSellerKeyMissingCannotOfferCheckout(): void
+    {
+        [$creator, $product] = $this->seller();
+        $this->activatePro($creator);
+        $product->workspace->update(['active_payment_collector' => 'chapa']);
+
+        $data = (new PublicDigitalProductResource($product->fresh()->load('creator')))
+            ->toArray(Request::create('/'));
+        $this->assertSame('unavailable', $data['payment_mode']);
+        $this->assertSame('chapa_not_connected', $data['checkout_blocker']);
+        $this->assertFalse($data['can_buy']);
+        $this->assertEmpty($data['receiving_accounts']);
+    }
+
     public function testReturnWithTheWrongAmountStaysUnpaid(): void
     {
         $order = $this->chapaOrderAwaitingReturn();
@@ -129,6 +171,40 @@ class ChapaSellerGatewayTest extends TestCase
 
         $this->assertSame('pending_payment', $order->fresh()->status);
         $this->assertSame(0, DownloadEntitlement::query()->where('storefront_order_id', $order->id)->count());
+    }
+
+    public function testBuyerReturnShowsPendingInformationWithoutUnlockingFailedVerification(): void
+    {
+        $order = $this->chapaOrderAwaitingReturn();
+        $this->fakeVerification($order, amount: 5000, currency: 'ETB', reference: (string) $order->chapa_tx_ref);
+
+        $this->get('/storefront/chapa/checkout-return/'.$order->chapa_tx_ref)
+            ->assertOk()
+            ->assertHeader('Cache-Control', 'no-store, private')
+            ->assertSee('Payment confirmation pending')
+            ->assertSee('Open My Purchases')
+            ->assertDontSee('buyer@example.test');
+
+        $this->assertSame('pending_payment', $order->fresh()->status);
+        $this->assertSame(0, DownloadEntitlement::query()->where('storefront_order_id', $order->id)->count());
+    }
+
+    public function testBuyerReturnConfirmsVerifiedPaymentButProviderCallbackKeepsNoContent(): void
+    {
+        $order = $this->chapaOrderAwaitingReturn();
+        $this->fakeVerification($order, amount: 10000, currency: 'ETB', reference: (string) $order->chapa_tx_ref);
+
+        $this->get('/storefront/chapa/checkout-return/'.$order->chapa_tx_ref)
+            ->assertOk()
+            ->assertSee('Payment confirmed')
+            ->assertSee('Open My Purchases')
+            ->assertDontSee('buyer@example.test');
+
+        $this->assertSame('paid', $order->fresh()->status);
+        $this->assertSame(1, DownloadEntitlement::query()->where('storefront_order_id', $order->id)->count());
+
+        $this->get('/storefront/chapa/return/'.$order->chapa_tx_ref)->assertNoContent();
+        $this->assertSame(1, DownloadEntitlement::query()->where('storefront_order_id', $order->id)->count());
     }
 
     public function testReturnWithTheWrongCurrencyStaysUnpaid(): void

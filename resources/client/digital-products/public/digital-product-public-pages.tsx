@@ -80,7 +80,7 @@ export type PublicDigitalProduct = {
   price_cents: number;
   can_buy?: boolean;
   verification_quota_exhausted?: boolean;
-  payment_mode?: 'direct' | 'free' | 'unavailable';
+  payment_mode?: 'direct' | 'chapa' | 'free' | 'unavailable';
   receiving_accounts?: Array<{id: number; provider: string; account_ending: string; account_name: string}>;
   currency: string;
   type?: string;
@@ -721,7 +721,9 @@ function BuyerDetailsDialog({
             <Dialog.Description className="text-[var(--biolink-muted-text)]">
               {product.payment_mode === 'direct'
                 ? <Trans message="You'll pay the creator directly using their bank or wallet details." />
-                : <Trans message="Checkout is temporarily unavailable." />}
+                : product.payment_mode === 'chapa'
+                  ? <Trans message="You'll complete payment securely on Chapa using the creator's own connected account." />
+                  : <Trans message="Checkout is temporarily unavailable." />}
             </Dialog.Description>
           </Dialog.Header>
           <Dialog.Body>
@@ -795,7 +797,7 @@ function BuyerDetailsDialog({
                   onChange={event => onPhoneChange(event.target.value)}
                 />
                 <Field.Description className="text-[var(--biolink-muted-text)]">
-                  {product.payment_mode === 'direct'
+                  {(product.payment_mode === 'direct' || product.payment_mode === 'chapa')
                     ? <Trans message="Used only to help with your order." />
                     : <Trans message="Checkout is temporarily unavailable." />}
                 </Field.Description>
@@ -899,7 +901,9 @@ function BuyerDetailsDialog({
                     ? 'Starting checkout...'
                     : product.payment_mode === 'direct'
                       ? 'Show payment details'
-                      : 'Checkout unavailable'
+                      : product.payment_mode === 'chapa'
+                        ? 'Continue to Chapa'
+                        : 'Checkout unavailable'
                 }
               />
             </Button>
