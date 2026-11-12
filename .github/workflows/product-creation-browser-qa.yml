@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'tests/e2e/product-creation-responsive.spec.ts'
+      - 'tests/e2e/product-creation-contrast-locales.spec.ts'
       - 'tests/e2e/buyer-journey.spec.ts'
       - 'tests/e2e/product-creation-moderation-lifecycle.spec.ts'
       - 'tests/e2e/service-creation-responsive.spec.ts'
@@ -216,7 +217,7 @@ jobs:
             --project=chromium --workers=1 --retries=0 \
             --grep-invert 'smoke: isolated creator can authenticate' --output=test-results/editors --trace=retain-on-failure
 
-      - name: Audit installed Product Creation locales and light/dark text contrast
+      - name: Audit Product Creation locales, text/focus contrast and validation announcements
         shell: bash
         env:
           PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/contrast-locales
@@ -228,7 +229,7 @@ jobs:
           # Seed its real default English catalog ONLY in disposable belink_test;
           # do not manufacture an Amharic/RTL catalog for acceptance.
           php artisan db:seed --class="Common\\Database\\Seeders\\LocalizationsTableSeeder" --force --no-interaction
-          # Supplementary measured text-pair audit; human real locale/AT gates remain.
+          # Supplementary text/focus measurements and alert semantics; human real locale/AT gates remain.
           npx playwright test tests/e2e/product-creation-contrast-locales.spec.ts \
             --project=chromium --workers=1 --retries=0 --output=test-results/contrast-locales --trace=retain-on-failure
 
