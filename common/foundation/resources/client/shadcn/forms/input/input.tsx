@@ -31,7 +31,7 @@ function Input({
     <InputPrimitive
       data-slot="input"
       className={cn(
-        'h-9 w-full min-w-0 rounded-input border border-input bg-transparent px-3 py-1 text-base transition-colors file:inline-flex file:h-7 file:cursor-pointer file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground hover:border-foreground/20 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 aria-invalid:border-destructive aria-invalid:focus-visible:outline-destructive md:text-sm dark:bg-input/30 dark:disabled:bg-input/80',
+        'h-9 w-full min-w-0 rounded-input border border-input bg-transparent px-3 py-1 text-base transition-colors file:inline-flex file:h-7 file:cursor-pointer file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground hover:border-foreground/20 focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 aria-invalid:border-destructive aria-invalid:focus-visible:outline-destructive md:text-sm dark:bg-input/30 dark:disabled:bg-input/80',
         className,
       )}
       onChange={mergedOnChange}
