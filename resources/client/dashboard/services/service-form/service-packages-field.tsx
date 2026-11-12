@@ -282,6 +282,7 @@ export function ServicePackagesField({
                 </span>
                 <Switch
                   size="default"
+                  className="focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-primary"
                   checked={Boolean(item)}
                   onCheckedChange={checked => setEnabled(index, checked)}
                   aria-label={trans({message: 'Enable :name package', values: {name: tierName}})}
