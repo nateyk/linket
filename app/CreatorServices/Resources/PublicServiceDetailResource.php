@@ -22,6 +22,7 @@ class PublicServiceDetailResource extends PublicServiceResource
             'video_url' => $this->video_url,
             'live_demo_url' => $this->live_demo_url,
             'contact_channels' => $this->contact_channels ?? [],
+            'buyer_questions' => $this->buyer_questions ?? [],
             'packages' => $this->whenLoaded('packages', fn () => $this->packages->map(fn ($package) => [
                 'id' => $package->id,
                 'name' => $package->name,
