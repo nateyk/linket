@@ -191,7 +191,7 @@ export function Component() {
           <ProductFormProgress completed={sections.filter(s => s.isComplete).length} total={sections.length} />
           <Accordion.Root variant="bordered" value={openSection ? [openSection] : []} onValueChange={value => setOpenSection(value[0] ?? null)}>
             {sections.map(section => <ProductFormSection key={section.id} {...section} hasError={section.id === 'details' && !!(errors.title || errors.price)}>{section.id === 'details' ? <div className="flex flex-col gap-4">
-              <ProductFormField label="Course title" description="Choose a clear title learners can easily understand." error={errors.title} htmlFor="course-title" required><Input id="course-title" aria-invalid={!!errors.title} value={title} maxLength={160} onChange={event => { setTitle(event.target.value); setErrors(current => ({...current, title: undefined})); }} placeholder="Complete course title" autoFocus /></ProductFormField>
+              <ProductFormField label="Course title" description="Choose a clear title learners can easily understand." error={errors.title} htmlFor="course-title" required><Input id="course-title" aria-invalid={!!errors.title} aria-errormessage={errors.title ? "course-title-error" : undefined} value={title} maxLength={160} onChange={event => { setTitle(event.target.value); setErrors(current => ({...current, title: undefined})); }} placeholder="Complete course title" autoFocus /></ProductFormField>
               <div id="course-billing" className="flex flex-col gap-2" tabIndex={-1}>
                 <p className="text-sm font-medium"><Trans message="Free or paid?" /></p>
                 <BillingModePicker
