@@ -6,6 +6,7 @@ on:
     paths:
       - 'tests/e2e/product-creation-responsive.spec.ts'
       - 'tests/e2e/product-creation-contrast-locales.spec.ts'
+      - 'tests/e2e/product-creation-focus-visible.spec.ts'
       - 'tests/e2e/buyer-journey.spec.ts'
       - 'tests/e2e/product-creation-moderation-lifecycle.spec.ts'
       - 'tests/e2e/service-creation-responsive.spec.ts'
@@ -216,6 +217,18 @@ jobs:
           npx playwright test tests/e2e/product-creation-responsive.spec.ts \
             --project=chromium --workers=1 --retries=0 \
             --grep-invert 'smoke: isolated creator can authenticate' --output=test-results/editors --trace=retain-on-failure
+
+      - name: Verify keyboard focus visibility and unobscured Preview actions
+        shell: bash
+        env:
+          PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/focus-visible
+        run: |
+          set -euo pipefail
+          [[ "$APP_ENV" == "testing" && "$DB_DATABASE" == "belink_test" ]]
+          [[ "$LINKET_ISOLATED_E2E" == "1" && "$E2E_BASE_URL" == "http://127.0.0.1:8081" ]]
+          # Real Tab, 375px light/dark; neither human AT acceptance nor deployment.
+          npx playwright test tests/e2e/product-creation-focus-visible.spec.ts \
+            --project=chromium --workers=1 --retries=0 --output=test-results/focus-visible --trace=retain-on-failure
 
       - name: Audit Product Creation locales, text/focus contrast and validation announcements
         shell: bash
