@@ -28,6 +28,8 @@ import {Alert} from '@shadcn/alert/alert';
 import {AlertDialog} from '@shadcn/alert-dialog/alert-dialog';
 import {Breadcrumb} from '@shadcn/breadcrumb/breadcrumb';
 import {Button} from '@shadcn/button/button';
+import {Dropdown} from '@shadcn/dropdown/dropdown';
+import {Progress} from '@shadcn/progress/progress';
 import {Checkbox} from '@shadcn/forms/checkbox/checkbox';
 import {
   InputGroup,
@@ -43,6 +45,7 @@ import {useTrans} from '@ui/i18n/use-trans';
 import {getBootstrapData} from '@ui/bootstrap-data/bootstrap-data-store';
 import {FormattedBytes} from '@ui/i18n/formatted-bytes';
 import {
+  ChevronDownIcon,
   Clock3Icon,
   FileArchiveIcon,
   FileIcon,
@@ -84,6 +87,7 @@ import {
 } from './product-sample-fields';
 import {ProductFormField} from './product-form-field';
 import {ProductFormProgress} from './product-form-progress';
+import {focusProductAuthoringStep, ProductAuthoringSteps, type NonCourseProductType, type ProductAuthoringStep} from './product-authoring-steps';
 import {
   ProductFormSection,
   type ProductSetupSection,
@@ -163,35 +167,63 @@ const SECTION_META: Record<
   },
 };
 
-/** Shared shell for digital / ebook / audio: status band above section cards. */
+/** Connected non-course navigation; sections remain mounted for safe uploads and autosave. */
 function NonCourseAuthoringLayout({
+  type,
+  completed,
   completedSections,
   totalSections,
   readinessHint,
   children,
 }: {
+  type: NonCourseProductType;
+  completed: Record<ProductAuthoringStep, boolean>;
   completedSections: number;
   totalSections: number;
   readinessHint: ReactNode;
   children: ReactNode;
 }) {
+  const [activeStep, setActiveStep] = useState<ProductAuthoringStep>('details');
+  const {trans} = useTrans();
+
+  const selectStep = (step: ProductAuthoringStep) => {
+    setActiveStep(step);
+    focusProductAuthoringStep(type, step);
+  };
+
   return (
     <div
-      className="flex min-w-0 flex-col gap-5"
+      className="grid min-w-0 items-start gap-4 xl:grid-cols-[minmax(0,14rem)_minmax(0,1fr)] xl:gap-6"
       data-testid="product-authoring-layout"
     >
-      <div
-        data-testid="product-setup-status"
-        className="min-w-0 border-b border-border px-0 pt-1 pb-4"
-      >
-        <ProductFormProgress
-          completed={completedSections}
-          total={totalSections}
-          className="border-b-0 pb-0"
-        />
-        {readinessHint ? <div className="mt-2">{readinessHint}</div> : null}
+      <ProductAuthoringSteps
+        type={type}
+        active={activeStep}
+        completed={completed}
+        onSelect={selectStep}
+      />
+      <div className="min-w-0">
+        <div
+          data-testid="product-setup-status"
+          className="mb-4 flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2 border-b border-border pb-3"
+        >
+          <p className="text-xs text-muted-foreground">
+            <Trans
+              message=":completed of :total required sections complete"
+              values={{completed: completedSections, total: totalSections}}
+            />
+          </p>
+          <Progress.Root
+            value={(completedSections / totalSections) * 100}
+            className="ms-auto w-28 shrink-0 sm:w-40"
+            aria-label={trans({message: 'Product setup progress'})}
+          >
+            <Progress.Track className="h-2"><Progress.Indicator /></Progress.Track>
+          </Progress.Root>
+          {readinessHint ? <div className="basis-full">{readinessHint}</div> : null}
+        </div>
+        {children}
       </div>
-      {children}
     </div>
   );
 }
@@ -703,6 +735,13 @@ function DigitalProductForm() {
 
   const progressSections: ProductSetupSection[] = ['details', 'files', 'pricing'];
   const completedSections = progressSections.filter(isSectionComplete).length;
+  const nonCourseStepsCompleted: Record<ProductAuthoringStep, boolean> = {
+    details: isSectionComplete('details'),
+    files: isSectionComplete('files'),
+    sample: samples.length > 0,
+    pricing: isSectionComplete('pricing'),
+    storefront: biolinkIds.length > 0,
+  };
   const canSubmit =
     !product || product.status === 'draft' || product.status === 'rejected';
   const missingRequirements = missingProductRequirements({
@@ -1067,6 +1106,8 @@ function DigitalProductForm() {
             )
           ) : unavailable ? null : effectiveFileType === 'digital' ? (
             <NonCourseAuthoringLayout
+              type="digital"
+              completed={nonCourseStepsCompleted}
               completedSections={completedSections}
               totalSections={progressSections.length}
               readinessHint={readinessHint}
@@ -1081,6 +1122,8 @@ function DigitalProductForm() {
             </NonCourseAuthoringLayout>
           ) : effectiveFileType === 'ebook' ? (
             <NonCourseAuthoringLayout
+              type="ebook"
+              completed={nonCourseStepsCompleted}
               completedSections={completedSections}
               totalSections={progressSections.length}
               readinessHint={readinessHint}
@@ -1095,6 +1138,8 @@ function DigitalProductForm() {
             </NonCourseAuthoringLayout>
           ) : effectiveFileType === 'audio' ? (
             <NonCourseAuthoringLayout
+              type="audio"
+              completed={nonCourseStepsCompleted}
               completedSections={completedSections}
               totalSections={progressSections.length}
               readinessHint={readinessHint}
@@ -1708,34 +1753,65 @@ function BioPagesPanel({
       <p className="text-sm text-muted-foreground">
         <Trans message="Optional. Choose where customers can find this product after approval." />
       </p>
-      <div className="divide-y" role="group" aria-label={trans({message: 'Storefront placement'})}>
-        {biolinks.map(page => (
-          <label
-            key={page.id}
-            className="flex cursor-pointer items-center gap-3 py-3 text-sm transition-colors hover:bg-muted/40"
-          >
-            <Checkbox
-              bindToHookForm={false}
-              checked={selectedIds.includes(page.id)}
-              onCheckedChange={checked =>
-                onChange(
-                  checked
-                    ? selectedIds.includes(page.id) ? selectedIds : [...selectedIds, page.id]
-                    : selectedIds.filter(id => id !== page.id),
-                )
-              }
+      <Dropdown.Root>
+        <Dropdown.Trigger
+          render={
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              className="flex min-h-11 w-full max-w-lg items-center justify-between gap-3 text-start font-normal"
             />
-            <span className="min-w-0">
-              <span className="block truncate font-medium">{page.name}</span>
-              {page.short_url && (
-                <span className="block truncate text-xs text-muted-foreground">
-                  {page.short_url}
-                </span>
-              )}
+          }
+          aria-label={trans({message: 'Choose Storefronts'})}
+        >
+          <span className="min-w-0 flex-1 truncate">
+            <Trans message="Choose Storefronts" />
+          </span>
+          {selectedIds.length > 0 && (
+            <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+              <Trans
+                message="[one :count selected|other :count selected]"
+                values={{count: selectedIds.length}}
+              />
             </span>
-          </label>
-        ))}
-      </div>
+          )}
+          <ChevronDownIcon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
+        </Dropdown.Trigger>
+        <Dropdown.Content
+          align="start"
+          className="max-h-80 w-[min(28rem,calc(100vw-2rem))] overflow-y-auto"
+        >
+          <Dropdown.Group>
+            <Dropdown.GroupLabel>
+              <Trans message="Select one or more Storefronts" />
+            </Dropdown.GroupLabel>
+            {biolinks.map(page => (
+              <Dropdown.CheckboxItem
+                key={page.id}
+                checked={selectedIds.includes(page.id)}
+                onCheckedChange={checked =>
+                  onChange(
+                    checked
+                      ? selectedIds.includes(page.id) ? selectedIds : [...selectedIds, page.id]
+                      : selectedIds.filter(id => id !== page.id),
+                  )
+                }
+                className="min-h-11"
+              >
+                <span className="min-w-0">
+                  <span className="block truncate font-medium">{page.name}</span>
+                  {page.short_url && (
+                    <span className="block truncate text-xs text-muted-foreground">
+                      {page.short_url}
+                    </span>
+                  )}
+                </span>
+              </Dropdown.CheckboxItem>
+            ))}
+          </Dropdown.Group>
+        </Dropdown.Content>
+      </Dropdown.Root>
       <p className="text-xs text-muted-foreground" role="status" aria-live="polite">
         {selectedIds.length > 0 ? (
           <Trans
