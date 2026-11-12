@@ -29,6 +29,7 @@ class CreatorService extends Model
         'cover_file_entry_id' => 'integer',
         'skills' => 'array',
         'contact_channels' => 'array',
+        'buyer_questions' => 'array',
     ];
 
     public function store(): BelongsTo

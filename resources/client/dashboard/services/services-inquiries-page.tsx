@@ -39,6 +39,7 @@ type ServiceInquiry = {
   email: string;
   phone?: string | null;
   message: string;
+  question_answers?: {question: string; answer: string}[];
   status: InquiryStatus;
   read_at?: string | null;
   created_at: string;
@@ -414,6 +415,20 @@ export function Component() {
                 <div className="rounded-card-sm bg-muted/50 p-4 text-sm leading-relaxed whitespace-pre-wrap">
                   {selected.message}
                 </div>
+
+                {!!selected.question_answers?.length && (
+                  <section className="min-w-0 space-y-3 border-t pt-4" aria-label={trans({message: 'Buyer answers'})}>
+                    <h3 className="text-sm font-semibold"><Trans message="Buyer answers" /></h3>
+                    <dl className="space-y-3">
+                      {selected.question_answers.map((item, index) => (
+                        <div key={index} className="min-w-0 space-y-1">
+                          <dt className="break-words text-sm font-medium">{item.question}</dt>
+                          <dd className="whitespace-pre-wrap break-words text-sm text-muted-foreground">{item.answer}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </section>
+                )}
 
                 <div className="flex flex-wrap items-center gap-2">
                   <Select.Root

@@ -48,6 +48,7 @@ export type ServiceFormState = {
   status: 'draft' | 'published';
   packages: ServiceFormPackage[];
   faqs: ServiceFormFaq[];
+  buyer_questions: string[];
   contact_channels: ServiceFormContactChannel[];
 };
 
@@ -65,6 +66,7 @@ export type CreatorServiceResource = {
   video_url?: string | null;
   live_demo_url?: string | null;
   contact_channels?: ServiceFormContactChannel[];
+  buyer_questions?: string[];
   cover?: {id: number; url: string} | null;
   gallery?: {id: number; file_entry_id: number; url: string}[];
   packages?: {
@@ -112,6 +114,7 @@ export type ServicePayload = {
     features: string[];
   }[];
   faqs: {question: string; answer: string}[];
+  buyer_questions: string[];
   contact_channels: ServiceFormContactChannel[];
 };
 
@@ -144,6 +147,7 @@ export function emptyServiceForm(): ServiceFormState {
     status: 'draft',
     packages: [],
     faqs: [],
+    buyer_questions: [],
     contact_channels: [],
   };
 }
@@ -193,6 +197,7 @@ export function fromServiceResource(
         question: faq.question,
         answer: faq.answer,
       })) ?? [],
+    buyer_questions: service.buyer_questions ?? [],
     contact_channels: (service.contact_channels ?? []).map(channel => ({
       type: channel.type,
       label: channel.label,
@@ -272,6 +277,13 @@ export function serviceFormClientErrors(
     }
   });
 
+  form.buyer_questions.forEach((question, index) => {
+    if (!question.trim() || question.trim().length > 160) {
+      errors[`buyer_questions.${index}`] =
+        'Write a question of 160 characters or fewer, or remove it.';
+    }
+  });
+
   form.contact_channels.forEach((channel, index) => {
     if (channel.label.trim() && !channel.value.trim()) {
       errors[`contact_channels.${index}.value`] =
@@ -325,6 +337,7 @@ export function toServicePayload(form: ServiceFormState): ServicePayload {
         question: item.question.trim(),
         answer: item.answer.trim(),
       })),
+    buyer_questions: form.buyer_questions.map(question => question.trim()),
     contact_channels: form.contact_channels
       .filter(item => item.value.trim())
       .map(item => ({

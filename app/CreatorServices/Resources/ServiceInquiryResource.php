@@ -19,6 +19,7 @@ class ServiceInquiryResource extends JsonResource
             'email' => $this->email,
             'phone' => $this->phone,
             'message' => $this->message,
+            'question_answers' => $this->question_answers ?? [],
             'status' => $this->status,
             'read_at' => $this->read_at,
             'created_at' => $this->created_at,

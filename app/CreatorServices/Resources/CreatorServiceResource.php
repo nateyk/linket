@@ -30,6 +30,7 @@ class CreatorServiceResource extends JsonResource
             'video_url' => $this->video_url,
             'live_demo_url' => $this->live_demo_url,
             'contact_channels' => $this->contact_channels ?? [],
+            'buyer_questions' => $this->buyer_questions ?? [],
             'cover' => $this->whenLoaded('cover', fn () => $this->cover ? [
                 'id' => $this->cover->id,
                 'url' => $this->cover->url,
