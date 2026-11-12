@@ -775,7 +775,7 @@ function StatusBadge({
 }) {
   if (status === 'approved' && hasPendingUpdate) {
     return (
-      <Badge variant="outline">
+      <Badge variant="secondary">
         <Trans message="Update under review" />
       </Badge>
     );
