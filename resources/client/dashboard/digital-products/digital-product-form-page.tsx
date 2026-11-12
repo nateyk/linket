@@ -1377,6 +1377,7 @@ function DetailsPanel({
         <Input
           id="product-title"
           aria-invalid={!!errors.title}
+          aria-errormessage={errors.title ? "product-title-error" : undefined}
           value={title}
           maxLength={160}
           onChange={event => onTitleChange(event.target.value)}
@@ -1489,6 +1490,7 @@ function PricingFields({
           <InputGroupInput
             id="product-price"
             aria-invalid={!!errors.price_cents}
+            aria-errormessage={errors.price_cents ? "product-price-error" : undefined}
             type="number"
             min="0"
             step="0.01"

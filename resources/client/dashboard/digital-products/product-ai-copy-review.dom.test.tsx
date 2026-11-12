@@ -457,7 +457,8 @@ it('supports keyboard discard, announces persistence and restores trigger focus'
   api.post.mockResolvedValue({data: {data: {...saved, state: 'discarded'}}});
   const {onUse} = mount();
   const textarea = await screen.findByRole('textbox');
-  expect(document.activeElement).toBe(textarea);
+  // The textbox can mount before its focus effect commits under concurrent CI.
+  await waitFor(() => expect(document.activeElement).toBe(textarea));
   await user.keyboard('{Escape}');
   await waitFor(() => expect(screen.queryByRole('textbox')).toBeNull());
   expect(screen.getByRole('status').textContent).toMatch(/discarded/);
