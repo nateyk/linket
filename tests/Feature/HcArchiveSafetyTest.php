@@ -157,6 +157,8 @@ class HcArchiveSafetyTest extends TestCase
 
         if ($manifest !== null) {
             $zip->addFromString('help-center.json', $manifest);
+        } else {
+            $zip->addFromString('readme.txt', 'archive without manifest');
         }
         if ($fileEntries !== null) {
             $zip->addFromString('file-entries.json', $fileEntries);
