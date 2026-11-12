@@ -32,6 +32,7 @@ import {
   MoreHorizontalIcon,
   PackageIcon,
   PackagePlusIcon,
+  ShoppingBagIcon,
   PencilIcon,
   SendIcon,
   StarIcon,
@@ -405,7 +406,7 @@ function ProductCard({
   const editPath = isCourse ? `/dashboard/items/${product.id}/course` : `/dashboard/items/${product.id}/edit`;
 
   return (
-    <Card.Root className="group flex h-full flex-col gap-0 overflow-hidden py-0">
+    <Card.Root className="group flex h-full flex-col gap-0 overflow-hidden py-0 ring-1 ring-foreground/10 transition-shadow hover:shadow-sm">
       <Card.Header className="relative block p-0">
         <Link
           to={editPath}
@@ -426,21 +427,21 @@ function ProductCard({
             <ProductCoverFallback />
           )}
         </Link>
+        <div className="absolute top-3 left-3">
+          <StatusBadge
+            status={product.status}
+            hasPendingUpdate={product.has_pending_update}
+          />
+        </div>
       </Card.Header>
 
-      <Card.Content className="flex flex-1 flex-col gap-2.5 p-4 pb-0">
-        <div className="flex min-w-0 flex-col gap-2">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <StatusBadge
-              status={product.status}
-              hasPendingUpdate={product.has_pending_update}
-            />
-            {isCourse && (
-              <span className="text-xs font-medium text-muted-foreground">
-                <Trans message="Course" />
-              </span>
-            )}
-          </div>
+      <Card.Content className="flex flex-1 flex-col gap-3 p-4 pb-0">
+        <div className="flex min-w-0 flex-col gap-1">
+          {isCourse && (
+            <span className="truncate text-xs font-medium text-muted-foreground">
+              <Trans message="Course" />
+            </span>
+          )}
           <Card.Title className="truncate text-sm font-semibold leading-5">
             <Link
               to={editPath}
@@ -451,6 +452,17 @@ function ProductCard({
           </Card.Title>
         </div>
 
+        <div className="text-xs font-medium text-muted-foreground">
+          {product.price_cents === 0 ? (
+            <Trans message="Free access" />
+          ) : (
+            <FormattedCurrency
+              valueInCents={product.price_cents}
+              currency={product.currency.toUpperCase()}
+            />
+          )}
+        </div>
+
         {(product.status === 'rejected' || product.status === 'pending_approval') && product.rejection_reason && (
           <div className="flex gap-2 rounded-card-sm bg-destructive/8 p-2.5 text-xs leading-4 text-destructive">
             <TriangleAlertIcon className="mt-0.5 size-3.5 shrink-0" />
@@ -459,17 +471,11 @@ function ProductCard({
         )}
       </Card.Content>
 
-      <Card.Footer className="justify-between gap-3 px-4 pt-3 pb-4">
+      <Card.Footer className="justify-between gap-3 px-4 py-4">
         <div className="flex min-w-0 flex-col gap-0.5 text-sm text-muted-foreground">
           <div className="flex min-w-0 items-center gap-2">
+            <ShoppingBagIcon className="size-4 shrink-0" aria-hidden="true" />
             <SalesLabel count={product.sales_count} />
-            <span className="size-1 rounded-full bg-muted-foreground/40" />
-            <span className="truncate font-semibold text-foreground">
-              <FormattedCurrency
-                valueInCents={product.price_cents}
-                currency={product.currency.toUpperCase()}
-              />
-            </span>
           </div>
           {product.sales_count > 0 && (
             <span className="truncate">
@@ -784,7 +790,7 @@ function StatusBadge({
       );
     case 'approved':
       return (
-        <Badge variant="positive">
+        <Badge variant="default">
           <Trans message="Live" />
         </Badge>
       );
@@ -802,7 +808,7 @@ function StatusBadge({
       );
     default:
       return (
-        <Badge variant="outline">
+        <Badge variant="secondary">
           <Trans message="Draft" />
         </Badge>
       );
