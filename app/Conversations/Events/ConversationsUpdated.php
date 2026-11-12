@@ -54,7 +54,8 @@ class ConversationsUpdated
     public function broadcastWhen(): bool
     {
         foreach ($this->conversationsAfterUpdate as $conversation) {
-            if (!$conversation->isNormalMode()) {
+            if (!$conversation->isNormalMode() ||
+                $conversation->support_owner_id !== null) {
                 return false;
             }
         }
