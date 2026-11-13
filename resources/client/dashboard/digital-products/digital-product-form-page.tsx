@@ -91,7 +91,7 @@ import {
   ProductFormSection,
   type ProductSetupSection,
 } from './product-form-section';
-import {ProductPreview} from './product-preview';
+import {ProductPreview, ProductStatus} from './product-preview';
 import {ProductAiCopyReview} from './product-ai-copy-review';
 import type {ProductType} from './product-type-picker';
 
@@ -910,6 +910,12 @@ function DigitalProductForm() {
                   <Trans message="No unsaved changes" />
                 )}
               </span>
+              {product && product.status !== 'draft' && (
+                <ProductStatus
+                  status={product.status}
+                  hasPendingUpdate={product.has_pending_update === true}
+                />
+              )}
               {product?.status === 'draft' && autoSaveState === 'failed' && dirty && (
                 <Button type="button" variant="outline" size="sm" onClick={() => actions.autoSave()}>
                   <Trans message="Retry save" />
