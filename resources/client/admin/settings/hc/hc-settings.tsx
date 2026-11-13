@@ -477,7 +477,7 @@ function LandingPageSettings() {
           <Trans message="Article grid" />
         </Item>
         <Item value="multiProduct">
-          <Trans message="Multiproduct" />
+          <Trans message="Multiple products" />
         </Item>
       </FormSelect>
       <FormTextField
@@ -500,7 +500,7 @@ function LandingPageSettings() {
             max="50"
           />
           <FormSwitch name="client.hcLanding.hide_small_categories">
-            <Trans message="Hide empty categories" />
+            <Trans message="Hide sections with fewer than 2 articles" />
           </FormSwitch>
         </div>
       )}
@@ -543,7 +543,7 @@ function DataSettings() {
       <div className="mb-4 text-sm">
         <Trans message="Import and export help center data (articles, categories, images, tags) in a .zip file for backup or migration." />
       </div>
-      <div className="mt-10 flex items-center gap-10">
+      <div className="mt-10 flex flex-wrap items-center gap-10">
         <ImportButton />
         <ExportButton />
       </div>

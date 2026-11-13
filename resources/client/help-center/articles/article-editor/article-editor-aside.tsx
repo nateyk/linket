@@ -37,7 +37,10 @@ export function ArticleEditorAside({children}: Props) {
       />
       <ArticleSectionSelector
         onSave={sections => {
-          form.setValue('sections', sections);
+          form.setValue('sections', sections, {
+            shouldDirty: true,
+            shouldValidate: true,
+          });
         }}
       />
       <TagSelector />

@@ -44,12 +44,12 @@ export function CrupdateCategoryForm({
   const {data} = useQuery(helpCenterQueries.categories.normalizedList());
   return (
     <Form id={formId} form={form} onSubmit={onSubmit}>
-      <div className="mb-24 flex items-center gap-12">
+      <div className="mb-24 flex min-w-0 flex-col gap-12 sm:flex-row sm:items-start">
         <ImageSelectorButton />
         <FormTextField
           name="name"
           label={<Trans message="Name" />}
-          className="flex-auto"
+          className="min-w-0 flex-auto"
           required
           autoFocus
         />
@@ -89,7 +89,7 @@ export function CrupdateCategoryForm({
       <FormSwitch
         name="hide_from_structure"
         description={
-          <Trans message="Will hide this category name in the help center and only show it's contents." />
+          <Trans message="Hide this category name in the Help Center while keeping its content visible." />
         }
       >
         <Trans message="Hide from structure" />
@@ -101,6 +101,7 @@ export function CrupdateCategoryForm({
 function ImageSelectorButton() {
   const selectedImage = useWatch({name: 'image'});
   const {setValue} = useFormContext();
+  const {trans} = useTrans();
 
   const renderedImage = !selectedImage ? (
     <AddPhotoAlternateIcon />
@@ -121,7 +122,10 @@ function ImageSelectorButton() {
           }
         }}
       >
-        <ButtonBase className="flex h-10.5 w-10.5 items-center justify-center rounded-input border hover:bg-hover">
+        <ButtonBase
+          aria-label={trans({message: 'Choose category icon'})}
+          className="flex h-10.5 w-10.5 items-center justify-center rounded-input border hover:bg-hover"
+        >
           {renderedImage}
         </ButtonBase>
         <ImageSelectorDialog selectedImage={selectedImage} />
@@ -143,9 +147,10 @@ function ImageSelectorDialog({selectedImage}: ImageSelectorDialogProps) {
       </DialogHeader>
       <DialogBody>
         <section className="mb-44">
-          <div className="-mx-8 grid grid-cols-8 gap-8">
+          <div className="-mx-8 grid grid-cols-4 gap-8 sm:grid-cols-8">
             {Object.entries(hcCategoryIcons).map(([name, Icon]) => (
               <IconButton
+                aria-label={name.replace(/[-_]/g, ' ')}
                 color={selectedImage === name ? 'primary' : undefined}
                 key={name}
                 size="md"
