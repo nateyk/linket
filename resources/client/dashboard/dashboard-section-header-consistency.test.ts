@@ -12,6 +12,9 @@ const store = read('resources/client/dashboard/stores/store-editor/store-editor-
 const insights = read('resources/client/dashboard/reports/insights-page.tsx');
 const overview = read('resources/client/dashboard/dashboard-home-page.tsx');
 const products = read('resources/client/dashboard/digital-products/digital-products-page.tsx');
+const links = read('resources/client/dashboard/links/link-details-page/link-details-page.tsx');
+const folders = read('resources/client/dashboard/folders/folder-details-page/folder-details-page.tsx');
+const qrCodes = read('resources/client/dashboard/qr-codes/qr-code-details-page/qr-code-details-page.tsx');
 
 describe('dashboard header visual and semantic consistency', () => {
   test('shared header keeps one 56px divider and respects muted breadcrumb typography', () => {
@@ -60,6 +63,16 @@ describe('dashboard header visual and semantic consistency', () => {
     expect(insights).toContain('<DashboardLayout.SectionTitle render={<h1 />}>{title}</DashboardLayout.SectionTitle>');
     expect(insights).toContain('className="mx-(--section-spacing) border-b"');
     expect(insights).toContain('ms-auto flex shrink-0 items-center gap-2');
+  });
+
+  test.each([
+    ['link details', links],
+    ['folder details', folders],
+    ['QR code details', qrCodes],
+  ])('%s keeps the shared header divider and aligns the following tabs', (_name, source) => {
+    expect(source).toContain('<DashboardLayout.SectionHeader>');
+    expect(source).not.toContain('SectionHeader className="border-none"');
+    expect(source).toContain('className="mx-(--section-spacing) border-b"');
   });
 
   test('Overview and My Products use the same semantic page-heading primitive', () => {
