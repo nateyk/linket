@@ -6,7 +6,7 @@ import {
   useCreateArticle,
 } from '@app/help-center/articles/requests/use-create-article';
 import {UploadType} from '@app/site-config';
-import ArticleEditorPage from '@common/article-editor/article-editor-page';
+import ArticleEditorPage from '@app/help-center/articles/article-editor/help-center-article-editor-page';
 import {useAuth} from '@common/auth/use-auth';
 import {StaticPageTitle} from '@common/seo/static-page-title';
 import {useNavigate} from '@common/ui/navigation/use-navigate';
