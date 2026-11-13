@@ -1,8 +1,12 @@
-<?php namespace App\HelpCenter\Controllers;
+<?php
+
+namespace App\HelpCenter\Controllers;
 
 use App\HelpCenter\Actions\ExportHelpCenter;
 use App\HelpCenter\Actions\ImportHelpCenter;
 use Common\Core\BaseController;
+use Illuminate\Contracts\Cache\LockTimeoutException;
+use Illuminate\Support\Facades\Cache;
 
 class HcActionsController extends BaseController
 {
@@ -15,28 +19,30 @@ class HcActionsController extends BaseController
     {
         $filename = (new ExportHelpCenter())->execute();
 
-        return response(file_get_contents($filename), 200, [
-            'Content-Type' => 'text/plain',
-            'Content-Disposition' => 'attachment; filename="hc-export.zip',
-        ]);
+        return response()
+            ->download($filename, 'hc-export.zip', [
+                'Content-Type' => 'application/zip',
+            ])
+            ->deleteFileAfterSend(true);
     }
 
     public function import()
     {
         $data = $this->validate(request(), [
-            'file' => 'required|file|mimetypes:application/zip',
+            'file' => 'required|file|mimes:zip|max:51200',
         ]);
 
         $this->blockOnDemoSite();
 
-        $path = storage_path('app/hc-import.zip');
+        try {
+            // Do not allow two concurrent replacements of the Help Center.
+            Cache::lock('hc-import-exclusive', 600)->block(10, function () use ($data) {
+                (new ImportHelpCenter())->execute($data['file']->getRealPath());
+            });
+        } catch (LockTimeoutException) {
+            abort(409, 'Another Help Center import is already in progress.');
+        }
 
-        file_put_contents(
-            $path,
-            file_get_contents($data['file']->getRealPath()),
-        );
-
-        (new ImportHelpCenter())->execute($path);
         return $this->success();
     }
 }

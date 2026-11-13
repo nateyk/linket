@@ -14,6 +14,10 @@ class SendTicketsAssignedNotif
     public function handle(ConversationsAssignedToAgent $event): void
     {
         $conversation = $event->conversations->first()->load('assignee');
+        if ($conversation->support_owner_id !== null) {
+            return;
+        }
+
         $assigner = Auth::user();
 
         // if conversation was not re-assigned at all, bail

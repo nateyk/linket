@@ -104,6 +104,15 @@ class AgentConversationsController extends BaseController
         $this->blockOnDemoSite();
         $this->authorize('destroy', Conversation::class);
 
+        // Class-level destroy permission must not bypass creator ownership.
+        abort_if(
+            Conversation::whereIn('id', $conversationIds)
+                ->whereNotNull('support_owner_id')
+                ->exists(),
+            403,
+            'Creator-owned tickets cannot be deleted from platform support.',
+        );
+
         (new DeleteMultipleConversations())->execute($conversationIds);
 
         return $this->success([], 204);
