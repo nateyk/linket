@@ -61,6 +61,32 @@ class HcArticle extends BaseModel
         return Attribute::make(set: fn($value) => $value ? $value : null);
     }
 
+    /**
+     * Do not reveal an article solely because its parent root is public
+     * when its actual section is role-restricted.
+     */
+    public function scopeHasVisiblePlacement(Builder $query, bool $forGuest = false): Builder
+    {
+        return $query->where(function (Builder $sub) use ($forGuest) {
+            $sub->whereHas('sections', fn (Builder $sections) => $sections->filterByVisibleToRole($forGuest))
+                ->orWhere(function (Builder $rootOnly) use ($forGuest) {
+                    $rootOnly->whereDoesntHave('sections')
+                        ->whereHas('categories', fn (Builder $categories) => $categories->filterByVisibleToRole($forGuest));
+                });
+        });
+    }
+
+    public function scopeVisibleToAudience(Builder $query, bool $forGuest = false): Builder
+    {
+        if (! $forGuest && auth()->user()?->isAgent()) {
+            return $query;
+        }
+
+        return $query->where('articles.draft', false)
+            ->filterByVisibleToRole($forGuest)
+            ->hasVisiblePlacement($forGuest);
+    }
+
     public function scopeCompact(Builder $query): Builder
     {
         // Qualify columns: category_article pivot also has `id`.

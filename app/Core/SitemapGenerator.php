@@ -11,8 +11,9 @@ class SitemapGenerator extends BaseSitemapGenerator
     protected function getAppQueries(): array
     {
         return [
-            HcArticle::where('draft', false)->select(['id', 'title']),
-            HcCategory::select(['id', 'name']),
+            // Sitemaps are public even when an admin triggers generation.
+            HcArticle::query()->visibleToAudience(forGuest: true)->select(['id', 'title']),
+            HcCategory::query()->filterByVisibleToRole(forGuest: true)->select(['id', 'name']),
         ];
     }
 
