@@ -302,133 +302,31 @@ describe('LivePreview follows the editor tab (A-06)', () => {
   });
 });
 
-describe('expanded desktop storefront preview (SF-04)', () => {
+describe('desktop storefront preview', () => {
   beforeEach(() => {
     location.pathname = '/dashboard/stores/demo';
     store.openSection = 'profile';
     store.profileConfig = null;
   });
 
-  test('opens a fitted preview dialog without replacing the live desktop panel', async () => {
+  test('shows one larger embedded phone without extra expansion chrome', () => {
     const {container} = render(<LivePreview />);
-    const trigger = screen.getByRole('button', {name: 'Expand preview'});
-
-    expect(container.querySelectorAll('iframe')).toHaveLength(1);
-    expect(panelOf(container).className).toContain('lg:h-full');
-    fireEvent.click(trigger);
-
-    const dialog = await screen.findByRole('dialog', {
-      name: 'Expanded live preview',
-    });
-    expect(dialog.getAttribute('aria-modal')).toBe('true');
-    expect(dialog.className).toContain('92dvh');
-    expect(screen.getByRole('button', {name: 'Close preview'})).toBeTruthy();
-    await waitFor(() =>
-      expect(document.querySelectorAll('iframe')).toHaveLength(2),
-    );
-    expect(dialog.querySelector('iframe')?.getAttribute('src')).toBe(
-      '/demo?preview=1',
-    );
-    expect(dialog.querySelector('[class*="container-type"]')).toBeTruthy();
-  });
-
-  test('Escape dismisses the dialog and returns focus to Expand preview', async () => {
-    render(<LivePreview />);
-    const trigger = screen.getByRole('button', {name: 'Expand preview'});
-    trigger.focus();
-    fireEvent.click(trigger);
-
-    const dialog = await screen.findByRole('dialog', {
-      name: 'Expanded live preview',
-    });
-    await waitFor(() =>
-      expect(dialog.contains(document.activeElement)).toBe(true),
-    );
-    fireEvent.keyDown(document.activeElement as Element, {key: 'Escape'});
-
-    await waitFor(() =>
-      expect(
-        screen.queryByRole('dialog', {name: 'Expanded live preview'}),
-      ).toBeNull(),
-    );
-    expect(document.activeElement).toBe(trigger);
-  });
-
-  test('the close control dismisses the expanded dialog', async () => {
-    render(<LivePreview />);
-    const trigger = screen.getByRole('button', {name: 'Expand preview'});
-    fireEvent.click(trigger);
-    expect(
-      await screen.findByRole('dialog', {name: 'Expanded live preview'}),
-    ).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', {name: 'Close preview'}));
-    await waitFor(() =>
-      expect(screen.queryByRole('dialog', {name: 'Expanded live preview'})).toBeNull(),
-    );
-  });
-
-  test('the expanded iframe receives unsaved draft data and the current section', async () => {
-    store.profileConfig = {bio: 'Draft bio not yet published'};
-    render(<LivePreview />);
-    fireEvent.click(screen.getByRole('button', {name: 'Expand preview'}));
-    const dialog = await screen.findByRole('dialog', {
-      name: 'Expanded live preview',
-    });
-    const frame = dialog.querySelector('iframe')!;
-    const send = vi.fn();
-    Object.defineProperty(frame, 'contentWindow', {
-      configurable: true,
-      value: {postMessage: send},
-    });
-
-    window.dispatchEvent(
-      new MessageEvent('message', {
-        origin: window.location.origin,
-        data: {type: 'linket:store-preview-ready'},
-      }),
-    );
-
-    await waitFor(() => {
-      expect(send).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: 'linket:store-preview',
-          payload: expect.objectContaining({
-            profileConfig: {bio: 'Draft bio not yet published'},
-          }),
-        }),
-        window.location.origin,
-      );
-      expect(send).toHaveBeenCalledWith(
-        {
-          type: 'linket:store-preview-tab',
-          activeTab: 'content',
-          section: 'profile',
-        },
-        window.location.origin,
-      );
-    });
-  });
-
-  test('switching to Insights closes the dialog and it does not reopen on return', async () => {
-    const {rerender} = render(<LivePreview />);
-    fireEvent.click(screen.getByRole('button', {name: 'Expand preview'}));
-    expect(
-      await screen.findByRole('dialog', {name: 'Expanded live preview'}),
-    ).toBeTruthy();
-
-    location.pathname = '/dashboard/stores/demo/insights';
-    rerender(<LivePreview />);
-    await waitFor(() =>
-      expect(screen.queryByRole('dialog', {name: 'Expanded live preview'})).toBeNull(),
-    );
-
-    location.pathname = '/dashboard/stores/demo';
-    rerender(<LivePreview />);
-    expect(screen.queryByRole('dialog', {name: 'Expanded live preview'})).toBeNull();
+    const panel = panelOf(container);
+    expect(panel.className).toContain('lg:h-full');
+    expect(panel.className).toContain('lg:px-3');
+    expect(panel.className).toContain('lg:py-4');
+    expect(panel.querySelectorAll('iframe')).toHaveLength(1);
+    expect(panel.querySelector('[class*="container-type"]')).toBeTruthy();
+    expect(screen.queryByRole('button', {name: 'Expand preview'})).toBeNull();
+    expect(screen.queryByText('Expanded live preview')).toBeNull();
+    // Preserve a screen-reader heading without a space-consuming badge.
+    const label = panel.querySelector('h2');
+    expect(label?.className).toContain('sr-only');
+    expect(label?.textContent).toBe('Live preview');
   });
 });
 
-describe('preview sheet below lg (A-19)', () => {
+describe('preview bottom drawer below lg (A-19)', () => {
   beforeEach(() => {
     location.pathname = '/dashboard/stores/demo';
     store.openSection = 'profile';
@@ -452,10 +350,23 @@ describe('preview sheet below lg (A-19)', () => {
     expect(trigger.className).not.toContain('fixed');
   });
 
-  test('the sheet is a titled modal that lazily mounts its own frame', async () => {
+  test('the mobile preview uses the shared bottom drawer and a spacious phone area', async () => {
+    render(<LivePreview />);
+    fireEvent.click(screen.getByRole('button', {name: 'Preview'}));
+    const popup = document.querySelector<HTMLElement>('[data-slot="drawer-popup"]');
+    await waitFor(() => expect(popup).toBeTruthy());
+    expect(popup?.getAttribute('data-position')).toBe('bottom');
+    expect(popup?.className).toContain('94dvh');
+    expect(popup?.className).toContain('max-h-none');
+    expect(document.querySelector('[data-slot="drawer-overlay"]')).toBeTruthy();
+    expect(document.querySelector('[data-slot="drawer-content"] iframe')).toBeTruthy();
+    expect(screen.getByRole('button', {name: 'Close preview'})).toBeTruthy();
+  });
+
+  test('the drawer is a titled modal that lazily mounts its own frame', async () => {
     render(<LivePreview />);
 
-    // One frame — the panel's — until the sheet has actually been opened.
+    // One frame — the panel's — until the drawer has actually been opened.
     expect(document.querySelectorAll('iframe').length).toBe(1);
 
     fireEvent.click(screen.getByRole('button', {name: 'Preview'}));
@@ -467,7 +378,7 @@ describe('preview sheet below lg (A-19)', () => {
     );
   });
 
-  test('Esc closes the sheet and returns focus to the Preview button', async () => {
+  test('Esc closes the drawer and returns focus to the Preview button', async () => {
     render(<LivePreview />);
     const trigger = screen.getByRole('button', {name: 'Preview'});
     // A pointer click focuses the button in a real browser; jsdom does not.
@@ -495,31 +406,31 @@ describe('preview sheet below lg (A-19)', () => {
     fireEvent.keyDown(document.activeElement as Element, {key: 'Escape'});
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
 
-    const sheetContent = document.querySelector<HTMLElement>(
-      '[data-slot="sheet-content"]',
+    const drawerContent = document.querySelector<HTMLElement>(
+      '[data-slot="drawer-content"]',
     );
-    expect(sheetContent).toBeTruthy();
-    expect(sheetContent!.hidden).toBe(true);
+    expect(drawerContent).toBeTruthy();
+    expect(screen.queryByRole('dialog')).toBeNull();
     // The lazily mounted frame is kept, not torn down and rebuilt on reopen.
     expect(document.querySelectorAll('iframe').length).toBe(2);
   });
 
-  test('the sheet frame receives debounced edits and the A-06 tab message', async () => {
+  test('the drawer frame receives debounced edits and the A-06 tab message', async () => {
     const {rerender} = render(<LivePreview />);
     fireEvent.click(screen.getByRole('button', {name: 'Preview'}));
     await screen.findByRole('dialog');
 
-    const sheetFrame = document.querySelector<HTMLElement>(
-      '[data-slot="sheet-content"] iframe',
+    const drawerFrame = document.querySelector<HTMLElement>(
+      '[data-slot="drawer-content"] iframe',
     )!;
     const send = vi.fn();
-    Object.defineProperty(sheetFrame, 'contentWindow', {
+    Object.defineProperty(drawerFrame, 'contentWindow', {
       configurable: true,
       value: {postMessage: send},
     });
     const messages = () => send.mock.calls.map(([message]) => message as {type: string});
 
-    // An edit streams into the sheet's frame after the debounce, carrying the
+    // An edit streams into the drawer's frame after the debounce, carrying the
     // edited snapshot (the mount snapshot carried the old one).
     store.profileConfig = {bio: 'typed'};
     rerender(<LivePreview />);
@@ -529,7 +440,7 @@ describe('preview sheet below lg (A-19)', () => {
       expect((snapshot as any).payload.profileConfig.bio).toBe('typed');
     });
 
-    // Switching editor tabs re-posts the section to the sheet's frame too.
+    // Switching editor tabs re-posts the section to the drawer's frame too.
     location.pathname = '/dashboard/stores/demo/about';
     rerender(<LivePreview />);
     await waitFor(() =>
@@ -541,7 +452,7 @@ describe('preview sheet below lg (A-19)', () => {
     );
   });
 
-  test('the sheet cannot outlive a switch to the insights tab', async () => {
+  test('the drawer cannot outlive a switch to the insights tab', async () => {
     const {rerender} = render(<LivePreview />);
     fireEvent.click(screen.getByRole('button', {name: 'Preview'}));
     await screen.findByRole('dialog');
@@ -551,7 +462,7 @@ describe('preview sheet below lg (A-19)', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(screen.queryByRole('button', {name: 'Preview'})).toBeNull();
 
-    // Coming back must not resurrect the sheet: its trigger was unmounted,
+    // Coming back must not resurrect the drawer: its trigger was unmounted,
     // so a reopened modal would have nowhere to return focus.
     location.pathname = '/dashboard/stores/demo';
     rerender(<LivePreview />);
