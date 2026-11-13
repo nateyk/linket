@@ -318,8 +318,9 @@ describe('product form reassembly', () => {
     expect(source).toContain('<ProductFormSection');
     expect(source).toContain('<ProductFormProgress');
     expect(source).toContain('<ProductPreview');
-    expect(source).toContain('<DashboardLayout.SectionTitle render={<h1 />}');
-    expect(source).not.toContain('<Breadcrumb');
+    expect(source).toContain('<h1 className="sr-only">{pageTitle}</h1>');
+    expect(source).toContain('<Breadcrumb.Root');
+    expect(source).toContain('<Breadcrumb.Page>{pageTitle}</Breadcrumb.Page>');
   });
 
   test('invalid fields carry accessible error state', () => {
@@ -473,28 +474,28 @@ describe('course edit redirect', () => {
   });
 });
 
-describe('product editor header', () => {
+describe('product editor compact breadcrumb header', () => {
   const source = fs.readFileSync(
-    path.resolve(
-      'resources/client/dashboard/digital-products/digital-product-form-page.tsx',
-    ),
+    path.resolve('resources/client/dashboard/digital-products/digital-product-form-page.tsx'),
     'utf8',
   );
 
-  test('has a single visible heading, without breadcrumb or status badge', () => {
-    expect(source).toContain('<DashboardLayout.SectionTitle render={<h1 />}');
-    const headerTitle = source.split('<DashboardLayout.SectionTitle render={<h1 />}')[1]?.split('</DashboardLayout.SectionTitle>')[0];
-    expect(headerTitle).toContain('{pageTitle}');
-    expect(headerTitle).not.toContain('<ProductStatus');
-    expect(source).not.toContain('<Breadcrumb');
-    expect(headerTitle).not.toContain('<ProductStatus');
-    expect(source).toContain('hasPendingUpdate={product.has_pending_update === true}');
+  test('shows All products › current page without the Back icon or a large visible H1', () => {
+    const header = source.split('</DashboardLayout.SectionHeader>')[0];
+    expect(header).toContain('<h1 className="sr-only">{pageTitle}</h1>');
+    expect(header).toContain('<Breadcrumb.Link to="/dashboard/items">');
+    expect(header).toContain('<Trans message="All products" />');
+    expect(header).toContain('<Breadcrumb.Separator />');
+    expect(header).toContain('<Breadcrumb.Page>{pageTitle}</Breadcrumb.Page>');
+    expect(header).not.toContain('ArrowLeftIcon');
+    expect(header).not.toContain('<DashboardLayout.SectionTitle');
+    expect(header).not.toContain('<ProductStatus');
   });
 
-  test('retains an accessible Back action and mobile wrapping', () => {
-    expect(source).toContain("aria-label={trans({message: 'Back to products'})}");
-    expect(source).toContain('render={<Link to="/dashboard/items" />}');
-    expect(source).toContain('className="max-lg:size-11"');
-    expect(source).toContain('max-lg:order-3');
+  test('preserves a single canonical header divider, compact mobile layout and review feedback in the body', () => {
+    expect(source).toContain('className="max-lg:h-auto max-lg:flex-wrap max-lg:py-2"');
+    expect(source).toContain('className="me-auto w-auto min-w-0 text-xl max-sm:text-sm"');
+    expect(source).toContain('hasPendingUpdate={product.has_pending_update === true}');
+    expect(source).toContain('ms-auto flex');
   });
 });
