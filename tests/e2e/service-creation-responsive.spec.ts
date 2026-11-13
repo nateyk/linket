@@ -257,7 +257,8 @@ test.describe('Service Creation — authenticated browser acceptance', () => {
 
   test('a temporary storefront API failure shows Retry without making a service', async ({page}) => {
     await signIn(page);
-    let failedOnce = false;
+    let outageActive = true;
+    let interceptedStoreRequests = 0;
     let attemptedCreates = 0;
 
     page.on('request', request => {
@@ -267,26 +268,37 @@ test.describe('Service Creation — authenticated browser acceptance', () => {
       }
     });
 
-    await page.route('**/api/v1/stores?per_page=100', async route => {
-      if (!failedOnce) {
-        failedOnce = true;
-        await route.fulfill({
-          status: 503,
-          contentType: 'application/json',
-          body: JSON.stringify({message: 'Synthetic storefront outage'}),
-        });
-      } else {
-        await route.continue();
-      }
-    });
+    // Keep the simulated outage active until the creator clicks Retry.
+    // Failing only the first request is race-prone if the page retries or
+    // remounts while initialization is still settling.
+    await page.route(
+      url => url.pathname === '/api/v1/stores'
+        && url.searchParams.get('per_page') === '100',
+      async route => {
+        interceptedStoreRequests++;
+        if (outageActive) {
+          await route.fulfill({
+            status: 503,
+            contentType: 'application/json',
+            body: JSON.stringify({message: 'Synthetic storefront outage'}),
+          });
+        } else {
+          await route.continue();
+        }
+      },
+    );
 
     await page.goto('/dashboard/services/new');
     await expect(page.getByText('Unable to load service')).toBeVisible();
     await expect(page.getByRole('button', {name: 'Try again'})).toBeVisible();
+    expect(interceptedStoreRequests).toBeGreaterThan(0);
     await expect(page.getByText('Create a storefront first')).toHaveCount(0);
+
+    outageActive = false;
     await page.getByRole('button', {name: 'Try again'}).click();
     await expect(page.getByRole('heading', {name: 'Create a service', level: 1})).toBeVisible();
     await expect(page.getByRole('button', {name: 'Preview', exact: true})).toBeVisible();
+    expect(interceptedStoreRequests).toBeGreaterThan(1);
     expect(attemptedCreates).toBe(0);
   });
 
