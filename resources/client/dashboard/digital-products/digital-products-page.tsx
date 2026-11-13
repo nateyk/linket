@@ -225,7 +225,7 @@ export function Component() {
     <DashboardLayout.MainSection>
       <DashboardLayout.SectionHeader>
         <DashboardLayout.SidebarToggle />
-        <DashboardLayout.SectionTitle>
+        <DashboardLayout.SectionTitle render={<h1 />}>
           <Trans message="My Items" />
         </DashboardLayout.SectionTitle>
         <Button onClick={() => setCreateDialogOpen(true)}>
