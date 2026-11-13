@@ -25,7 +25,7 @@ export function ArticleSectionSelector({onSave}: Props) {
   const {trans} = useTrans();
   const categories = data?.categories || [];
   const sections = categories.map(c => c.sections!).flat() || [];
-  const {watch, clearErrors} = useFormContext<CreateArticlePayload>();
+  const {watch} = useFormContext<CreateArticlePayload>();
   const selectedSections = watch('sections') || [];
   const {getFieldState} = useFormContext<CreateArticlePayload>();
   const errorMessage = getFieldState('sections').error?.message;
@@ -45,7 +45,6 @@ export function ArticleSectionSelector({onSave}: Props) {
         onClose={sections => {
           if (sections) {
             onSave(sections);
-            clearErrors('sections');
           }
         }}
       >
