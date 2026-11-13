@@ -173,7 +173,7 @@ export function BiolinkCard({biolink, onClick, onInsights}: BiolinkCardProps) {
       variant="outline"
       size="sm"
       role="listitem"
-      className="cursor-pointer border-border bg-card text-card-foreground"
+      className="border-border bg-card text-card-foreground transition-none"
       onClick={ignoreEventsFromPortal(e => {
         if (
           !(e.target as HTMLElement).closest(
@@ -214,26 +214,29 @@ export function BiolinkCard({biolink, onClick, onInsights}: BiolinkCardProps) {
           </Item.Title>
         </Item.Row>
         <Item.Row>
-          <div className="flex min-w-0 flex-1 items-center gap-2 text-sm text-muted-foreground">
-            <span className="min-w-0 flex-1 truncate">
+          <div
+            data-slot="profile-url"
+            className="inline-flex w-fit min-w-0 max-w-full items-center gap-1 text-sm text-muted-foreground"
+          >
+            <span className="min-w-0 truncate">
               {removeProtocol(biolink.short_url)}
             </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="text-muted-foreground"
+              aria-label={copyLabel}
+              title={copyLabel}
+              onClick={copyProfileLink}
+            >
+              {isCopied ? (
+                <CheckIcon aria-hidden="true" />
+              ) : (
+                <CopyIcon aria-hidden="true" />
+              )}
+            </Button>
           </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            className="text-muted-foreground"
-            aria-label={copyLabel}
-            title={copyLabel}
-            onClick={copyProfileLink}
-          >
-            {isCopied ? (
-              <CheckIcon aria-hidden="true" />
-            ) : (
-              <CopyIcon aria-hidden="true" />
-            )}
-          </Button>
         </Item.Row>
       </Item.Content>
 

@@ -67,6 +67,8 @@ describe('storefront profile card', () => {
     expect(card.className).toContain('border-border');
     expect(card.className).toContain('bg-card');
     expect(card.className).toContain('rounded-card');
+    expect(card.className).toContain('transition-none');
+    expect(card.className).not.toContain('cursor-pointer');
     // Item.Root includes shared [a]:hover styling for nested anchors.
     // Assert only on unscoped hover variants applied to the card itself.
     const cardHoverClasses = card.className
@@ -74,6 +76,13 @@ describe('storefront profile card', () => {
       .filter(className => className.startsWith('hover:'));
     expect(cardHoverClasses).toEqual([]);
     const copyButton = screen.getByRole('button', {name: 'Copy link'});
+    const urlGroup = container.querySelector('[data-slot="profile-url"]') as HTMLElement;
+    expect(urlGroup).toBeTruthy();
+    expect(urlGroup.className).toContain('inline-flex');
+    expect(urlGroup.className).toContain('w-fit');
+    expect(urlGroup.className).toContain('max-w-full');
+    expect(urlGroup.className).not.toContain('flex-1');
+    expect(copyButton.parentElement).toBe(urlGroup);
     expect(copyButton.closest('[data-slot="item-row"]')).toBeTruthy();
     const actions = container.querySelector('[data-slot="item-actions"]') as HTMLElement;
     expect(actions.contains(copyButton)).toBe(false);
@@ -95,10 +104,12 @@ describe('storefront profile card', () => {
       />,
     );
 
-    const url = container.querySelector('[data-slot="item-content"] [data-slot="item-row"]:last-child .truncate');
+    const group = container.querySelector('[data-slot="profile-url"]') as HTMLElement;
+    const url = group.querySelector('.truncate');
     expect(url?.textContent).toContain('very-long-segment-');
     expect(url?.className).toContain('min-w-0');
-    expect(screen.getByRole('button', {name: 'Copy link'})).toBeTruthy();
+    expect(group.className).toContain('max-w-full');
+    expect(screen.getByRole('button', {name: 'Copy link'}).parentElement).toBe(group);
   });
 
   it('shows the uploaded image, normalizes storage URLs, and restores the icon if loading fails', () => {
