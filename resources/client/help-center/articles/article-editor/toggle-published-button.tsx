@@ -10,9 +10,10 @@ import {useFormContext} from 'react-hook-form';
 
 interface Props {
   article: UpdateArticlePageData['article'];
+  isSaving?: boolean;
 }
 
-export function TogglePublishedButton({article}: Props) {
+export function TogglePublishedButton({article, isSaving = false}: Props) {
   const updateArticle = useUpdateArticle();
   const {formState} = useFormContext<UpdateArticlePayload>();
   const {trans} = useTrans();
@@ -23,7 +24,7 @@ export function TogglePublishedButton({article}: Props) {
       <Button
         variant="link"
         color="primary"
-        disabled={updateArticle.isPending || hasUnsavedChanges}
+        disabled={updateArticle.isPending || isSaving || hasUnsavedChanges}
         title={
           hasUnsavedChanges
             ? trans({message: 'Save changes before changing publication status'})
