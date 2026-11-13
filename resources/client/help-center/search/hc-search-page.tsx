@@ -13,7 +13,7 @@ import {Trans} from '@ui/i18n/trans';
 import {ArticleIcon} from '@ui/icons/material/Article';
 import {IllustratedMessage} from '@ui/images/illustrated-message';
 import {SvgImage} from '@ui/images/svg-image';
-import {useParams} from 'react-router';
+import {Link, useParams} from 'react-router';
 
 export function Component() {
   const navigate = useNavigate();
@@ -32,58 +32,79 @@ export function Component() {
       },
     ),
   });
+  const results = query.data.pagination.data;
+  const count =
+    'total' in query.data.pagination &&
+    typeof query.data.pagination.total === 'number'
+      ? query.data.pagination.total
+      : results.length;
 
   return (
-    <div>
+    <div className="min-h-screen bg-background">
       <Navbar menuPosition="header" color="bg">
         <HcSearchBar />
       </Navbar>
-      <main className="container mx-auto px-24 pb-48">
-        <Breadcrumb size="sm" className="mb-48 mt-34">
-          <BreadcrumbItem onSelected={() => navigate(`/hc`)}>
+      <main className="container mx-auto w-full max-w-5xl px-16 pb-64 sm:px-24">
+        <Breadcrumb size="sm" className="mb-24 mt-24 sm:mt-34">
+          <BreadcrumbItem onSelected={() => navigate('/hc')}>
             <Trans message="Help center" />
           </BreadcrumbItem>
           <BreadcrumbItem>
             <Trans message="Search" />
           </BreadcrumbItem>
         </Breadcrumb>
-        {query.data.pagination.data.length === 0 ? (
-          <IllustratedMessage
-            className="mt-48"
-            image={<SvgImage src={searchImage} />}
-            title={<Trans message="No articles match your search query" />}
-          />
+
+        <header className="mb-24 min-w-0 sm:mb-32">
+          <h1 id="hc-search-title" className="text-2xl font-semibold tracking-tight sm:text-3xl">
+            <Trans message="Search" />
+          </h1>
+          <p className="mt-8 break-words text-sm text-muted-foreground" role="status">
+            <Trans
+              message={'Showing :count results for ":query"'}
+              values={{count, query: query.data.query}}
+            />
+          </p>
+        </header>
+
+        {results.length === 0 ? (
+          <div className="rounded-panel border border-divider-lighter px-16 py-40 sm:py-48">
+            <IllustratedMessage
+              image={<SvgImage src={searchImage} />}
+              title={<Trans message="No articles match your search query" />}
+              action={
+                <Link
+                  to="/hc"
+                  className="inline-flex min-h-44 items-center rounded-panel px-16 text-sm font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                >
+                  <Trans message="Help center" />
+                </Link>
+              }
+            />
+          </div>
         ) : (
-          <div>
-            <h1 className="mb-34 text-3xl font-semibold">
-              <Trans
-                message={`Showing :count results for ":query"`}
-                values={{
-                  count: query.data.pagination.data.length,
-                  query: query.data.query,
-                }}
-              />
-            </h1>
-            {query.data?.pagination.data.map(article => (
-              <div key={article.id} className="mb-14 flex items-start gap-12">
+          <ul role="list" aria-labelledby="hc-search-title" className="space-y-12 sm:space-y-16">
+            {results.map(article => (
+              <li
+                key={article.id}
+                className="flex min-w-0 items-start gap-12 rounded-panel border border-divider-lighter bg-background p-16 transition-colors hover:bg-hover focus-within:border-primary/50 sm:gap-16 sm:p-20"
+              >
                 <ArticleIcon className="mt-4 flex-shrink-0 text-muted" />
-                <div className="flex-auto">
-                  <h2 className="mb-4 text-xl">
+                <div className="min-w-0 flex-1">
+                  <h2 className="mb-6 break-words text-base font-semibold leading-snug sm:text-lg">
                     <ArticleLink
                       article={article}
-                      onClick={() => {
-                        searchLogger.updateLastSearch({clickedArticle: true});
-                      }}
+                      className="rounded-sm text-main underline-offset-4 hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                      onClick={() => searchLogger.updateLastSearch({clickedArticle: true})}
                     />
                   </h2>
                   <ArticlePath
                     path={article.path}
-                    className="text-sm text-muted"
+                    className="break-words text-sm leading-relaxed text-muted-foreground"
                   />
                 </div>
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
         )}
       </main>
     </div>
