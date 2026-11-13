@@ -34,10 +34,10 @@ describe('course creation page', () => {
     expect(source).not.toContain("searchParams.get('price_cents')");
   });
 
-  test('renders breadcrumb and shared form primitives', () => {
-    expect(source).toContain("from '@shadcn/breadcrumb/breadcrumb'");
-    expect(source).toContain('<Breadcrumb');
-    expect(source).toContain('All products');
+  test('renders a single heading, accessible Back action and shared form primitives', () => {
+    expect(source).not.toContain('<Breadcrumb');
+    expect(source).toContain('render={<h1 />}');
+    expect(source).toContain("aria-label={trans({message: 'Back to products'})}");
     expect(source).toContain('<ProductFormField');
     expect(source).toContain('aria-invalid');
   });
