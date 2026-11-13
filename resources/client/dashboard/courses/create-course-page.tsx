@@ -155,31 +155,31 @@ export function Component() {
   // FileUploadContext — same provider wrap as the builder and the
   // digital-product form, or opening the section throws during render.
   return <FileUploadProvider><DashboardLayout.MainSection>
-    <DashboardLayout.SectionHeader className="max-lg:h-auto max-lg:flex-wrap max-lg:py-2">
+    <DashboardLayout.SectionHeader className="max-lg:h-auto max-lg:flex-wrap max-lg:py-2 max-sm:h-14 max-sm:flex-nowrap max-sm:gap-1 max-sm:px-2 max-sm:py-0">
       <DashboardLayout.SidebarToggle />
       <h1 className="sr-only"><Trans message="Create course" /></h1>
-      <Breadcrumb.Root className="me-auto w-auto min-w-0 text-xl max-sm:text-sm">
+      <Breadcrumb.Root className="me-auto w-auto min-w-0 text-xl max-sm:me-0 max-sm:w-0 max-sm:flex-1 max-sm:overflow-hidden max-sm:text-sm">
         <Breadcrumb.Item>
           <Breadcrumb.Link to="/dashboard/items">
             <Trans message="All products" />
           </Breadcrumb.Link>
         </Breadcrumb.Item>
         <Breadcrumb.Separator />
-        <Breadcrumb.Item>
-          <Breadcrumb.Page><Trans message="Create course" /></Breadcrumb.Page>
+        <Breadcrumb.Item className="max-sm:min-w-0">
+          <Breadcrumb.Page className="max-sm:block max-sm:min-w-0 max-sm:truncate"><Trans message="Create course" /></Breadcrumb.Page>
         </Breadcrumb.Item>
       </Breadcrumb.Root>
       {/* Header actions mirror the digital-product edit page: icon + label
           that collapses to icon-only below 1024px. aria-labels keep the
           collapsed buttons named. */}
-      <div className="ms-auto flex shrink-0 items-center gap-2">
+      <div className="ms-auto flex shrink-0 items-center gap-2 max-sm:ms-0 max-sm:gap-1">
         <Button type="button" variant="outline" size="sm" className="max-lg:size-11 max-lg:px-0"
           aria-label={trans({message: 'Preview'})}
           onClick={() => setPreviewOpen(true)}>
           <EyeIcon className="size-4" aria-hidden="true" />
           <span className="max-lg:hidden"><Trans message="Preview" /></span>
         </Button>
-        {creationUncertain && <Button variant="outline" size="sm" className="min-h-11" aria-label={trans({message: 'Check My Items'})} render={<Link to="/dashboard/items" />}><Trans message="Check My Items" /></Button>}<Button size="sm" className="max-lg:size-11 max-lg:px-0" type="submit" form="course-create-form" aria-label={creating ? trans({message: 'Creating course...'}) : trans({message: 'Create course'})} disabled={creating || creationUncertain}>{creating ? <Spinner data-icon="inline-start" /> : <GraduationCapIcon className="size-4" data-icon="inline-start" />}<span className="max-lg:hidden">{creating ? <Trans message="Creating course..." /> : <Trans message="Create course" />}</span></Button></div>
+        {creationUncertain && <Button variant="outline" size="sm" className="min-h-11 max-lg:size-11 max-lg:px-0" aria-label={trans({message: 'Check My Items'})} render={<Link to="/dashboard/items" />}><ListChecksIcon className="hidden size-4 max-lg:block" aria-hidden="true" /><span className="max-lg:hidden"><Trans message="Check My Items" /></span></Button>}<Button size="sm" className="max-lg:size-11 max-lg:px-0" type="submit" form="course-create-form" aria-label={creating ? trans({message: 'Creating course...'}) : trans({message: 'Create course'})} disabled={creating || creationUncertain}>{creating ? <Spinner data-icon="inline-start" /> : <GraduationCapIcon className="size-4" data-icon="inline-start" />}<span className="max-lg:hidden">{creating ? <Trans message="Creating course..." /> : <Trans message="Create course" />}</span></Button></div>
     </DashboardLayout.SectionHeader>
     <DashboardLayout.SectionContent className="overflow-y-auto"><form id="course-create-form" onSubmit={createCourse} className="mx-auto w-full max-w-3xl py-4 sm:py-5">
       {error && <Alert.Root role="alert" variant="destructive" fillStyle="subtleFill" className="mb-5"><TriangleAlertIcon /><Alert.Description>{error}</Alert.Description></Alert.Root>}

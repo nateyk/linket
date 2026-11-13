@@ -454,20 +454,20 @@ function ServiceFormPage() {
   };
 
   const renderHeader = (children: React.ReactNode) => (
-    <DashboardLayout.SectionHeader className="max-lg:h-auto max-lg:flex-wrap max-lg:py-2">
+    <DashboardLayout.SectionHeader className="max-lg:h-auto max-lg:flex-wrap max-lg:py-2 max-sm:h-14 max-sm:flex-nowrap max-sm:gap-1 max-sm:px-2 max-sm:py-0">
       <DashboardLayout.SidebarToggle />
       <h1 className="sr-only">
         {isEditing ? <Trans message="Edit service" /> : <Trans message="Create a service" />}
       </h1>
-      <Breadcrumb.Root className="me-auto w-auto min-w-0 text-xl max-sm:text-sm">
+      <Breadcrumb.Root className="me-auto w-auto min-w-0 text-xl max-sm:me-0 max-sm:w-0 max-sm:flex-1 max-sm:overflow-hidden max-sm:text-sm">
         <Breadcrumb.Item>
           <Breadcrumb.Link to="/dashboard/services">
             <Trans message="My Services" />
           </Breadcrumb.Link>
         </Breadcrumb.Item>
         <Breadcrumb.Separator />
-        <Breadcrumb.Item>
-          <Breadcrumb.Page>
+        <Breadcrumb.Item className="max-sm:min-w-0">
+          <Breadcrumb.Page className="max-sm:block max-sm:min-w-0 max-sm:truncate">
             {isEditing ? <Trans message="Edit service" /> : <Trans message="Create a service" />}
           </Breadcrumb.Page>
         </Breadcrumb.Item>
@@ -477,7 +477,7 @@ function ServiceFormPage() {
   );
 
   const renderActions = () => (
-    <div className="ms-auto flex max-w-full shrink-0 items-center gap-2">
+    <div className="ms-auto flex max-w-full shrink-0 items-center gap-2 max-sm:ms-0 max-sm:gap-1">
       <Button
         variant="outline"
         size="sm"

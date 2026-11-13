@@ -3,6 +3,7 @@ import * as React from 'react';
 
 import {Button} from '@shadcn/button/button';
 import {Dropdown} from '@shadcn/dropdown/dropdown';
+import {Trans} from '@ui/i18n/trans';
 import {cn} from '@ui/utils/cn';
 import {observeSize} from '@ui/utils/dom/observe-size';
 import {ChevronRightIcon, MoreHorizontalIcon} from 'lucide-react';
@@ -150,7 +151,8 @@ function BreadcrumbRoot({
           <Dropdown.Trigger
             render={<Button variant="ghost" size="icon" color="default" />}
           >
-            <MoreHorizontalIcon />
+            <MoreHorizontalIcon aria-hidden="true" />
+            <span className="sr-only"><Trans message="More breadcrumbs" /></span>
           </Dropdown.Trigger>
           <Dropdown.Content>
             {dropdownBreadcrumbs.map((child, index) => {

@@ -3,14 +3,15 @@ import path from 'node:path';
 import {describe, expect, test} from 'vitest';
 
 describe('large text responsive header UX-34', () => {
-  test('allows title to wrap below action row before it collapses at enlarged text sizes', () => {
+  test('keeps a single mobile breadcrumb/action row while preserving accessible icon controls', () => {
     const source = fs.readFileSync(
       path.resolve('resources/client/dashboard/digital-products/digital-product-form-page.tsx'),
       'utf8',
     );
-    expect(source).toContain('className="max-lg:h-auto max-lg:flex-wrap max-lg:py-2"');
-    expect(source).toContain('me-auto w-auto min-w-0 text-xl max-sm:text-sm');
-    expect(source).toContain('<Breadcrumb.Page>{pageTitle}</Breadcrumb.Page>');
+    expect(source).toContain('max-sm:h-14 max-sm:flex-nowrap max-sm:gap-1');
+    expect(source).toContain('max-sm:w-0 max-sm:flex-1 max-sm:overflow-hidden');
+    expect(source).toContain('<Breadcrumb.Page className="max-sm:block max-sm:min-w-0 max-sm:truncate">{pageTitle}</Breadcrumb.Page>');
+    expect(source).toContain('max-sm:ms-0 max-sm:gap-1');
     expect(source).toContain('max-lg:hidden');
     expect(source).toContain('max-lg:size-11 max-lg:px-0');
     expect(source).toContain('aria-label={trans({message: \'Preview\'})}');
@@ -320,7 +321,7 @@ describe('product form reassembly', () => {
     expect(source).toContain('<ProductPreview');
     expect(source).toContain('<h1 className="sr-only">{pageTitle}</h1>');
     expect(source).toContain('<Breadcrumb.Root');
-    expect(source).toContain('<Breadcrumb.Page>{pageTitle}</Breadcrumb.Page>');
+    expect(source).toContain('<Breadcrumb.Page className="max-sm:block max-sm:min-w-0 max-sm:truncate">{pageTitle}</Breadcrumb.Page>');
   });
 
   test('invalid fields carry accessible error state', () => {
@@ -486,15 +487,15 @@ describe('product editor compact breadcrumb header', () => {
     expect(header).toContain('<Breadcrumb.Link to="/dashboard/items">');
     expect(header).toContain('<Trans message="All products" />');
     expect(header).toContain('<Breadcrumb.Separator />');
-    expect(header).toContain('<Breadcrumb.Page>{pageTitle}</Breadcrumb.Page>');
+    expect(header).toContain('<Breadcrumb.Page className="max-sm:block max-sm:min-w-0 max-sm:truncate">{pageTitle}</Breadcrumb.Page>');
     expect(header).not.toContain('ArrowLeftIcon');
     expect(header).not.toContain('<DashboardLayout.SectionTitle');
     expect(header).not.toContain('<ProductStatus');
   });
 
   test('preserves a single canonical header divider, compact mobile layout and review feedback in the body', () => {
-    expect(source).toContain('className="max-lg:h-auto max-lg:flex-wrap max-lg:py-2"');
-    expect(source).toContain('className="me-auto w-auto min-w-0 text-xl max-sm:text-sm"');
+    expect(source).toContain('max-sm:h-14 max-sm:flex-nowrap max-sm:gap-1');
+    expect(source).toContain('max-sm:w-0 max-sm:flex-1 max-sm:overflow-hidden');
     expect(source).toContain('hasPendingUpdate={product.has_pending_update === true}');
     expect(source).toContain('ms-auto flex');
   });
