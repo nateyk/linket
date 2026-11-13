@@ -192,7 +192,6 @@ function BiolinkEditorHeader({save}: {save: StoreEditorSave}) {
         {saveStatus === 'saved' ? <Trans message="Changes saved" /> : ''}
       </span>
       <DashboardLayout.SidebarToggle />
-      <h1 className="sr-only">{biolink.name}</h1>
       {routeType === 'admin' ? <AdminBreadcrumb /> : <BiolinkSelector />}
       <MoreActionsButton />
       <ShareLinkButton
