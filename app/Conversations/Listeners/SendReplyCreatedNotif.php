@@ -25,6 +25,23 @@ class SendReplyCreatedNotif implements ShouldQueue
             return;
         }
 
+        if ($conversation->support_owner_id !== null) {
+            // Only the owner may receive a creator-ticket reply notification.
+            $ownerNotif = $replyFromAgent
+                ? AgentRepliedToUnassignedConversationNotif::class
+                : CustomerRepliedToUnassignedConversationNotif::class;
+            $owner = User::query()
+                ->whereKey($conversation->support_owner_id)
+                ->where('id', '!=', $message->user_id)
+                ->whereNeedsNotificationFor($ownerNotif::NOTIF_ID)
+                ->first();
+            if ($owner) {
+                Notification::send($owner, new $ownerNotif($conversation, $message));
+            }
+
+            return;
+        }
+
         if ($conversation->assignee_id) {
             // ticket assigned to me
             $notif1 = $replyFromAgent
