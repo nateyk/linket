@@ -21,7 +21,6 @@ interface Props {
   initialContent?: string;
   onChange?: (value: string) => void;
   title: ReactNode;
-  backButton?: ReactNode;
   saveButton: ReactNode;
   imageUploadType: keyof typeof UploadType;
   rightSidebar?: ReactNode;
@@ -40,7 +39,6 @@ function Content({
   onChange,
   saveButton,
   title,
-  backButton,
   rightSidebar,
 }: Props) {
   const {rightSidebar: rightSidebarState} = use(DashboardLayoutContext);
@@ -89,20 +87,9 @@ function Content({
       onChange={onChange}
     >
       <DashboardLayout.MainSection>
-        <DashboardLayout.SectionHeader
-          className={backButton ? 'max-lg:h-auto max-lg:flex-wrap max-lg:py-2' : undefined}
-        >
+        <DashboardLayout.SectionHeader>
           <DashboardLayout.SidebarToggle />
-          {backButton}
-          <DashboardLayout.SectionTitle
-            className={
-              backButton
-                ? 'max-lg:order-3 max-lg:basis-full max-lg:flex-none max-lg:w-full max-lg:text-xl max-lg:overflow-visible max-lg:whitespace-normal max-lg:text-clip'
-                : undefined
-            }
-          >
-            {title}
-          </DashboardLayout.SectionTitle>
+          <DashboardLayout.SectionTitle>{title}</DashboardLayout.SectionTitle>
           <HistoryButtons />
           <ModeButton />
           {saveButton}
