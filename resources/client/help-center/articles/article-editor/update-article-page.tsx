@@ -1,4 +1,5 @@
 import {ArticleEditorAside} from '@app/help-center/articles/article-editor/article-editor-aside';
+import {resetArticleSaveBaselineIfUnchanged} from '@app/help-center/articles/article-editor/reset-article-save-baseline';
 import {HcArticleEditorBreadcrumb} from '@app/help-center/articles/article-editor/hc-article-editor-breadcrumb';
 import {TogglePublishedButton} from '@app/help-center/articles/article-editor/toggle-published-button';
 import {UpdateArticlePageData} from '@app/help-center/articles/article-editor/update-article-page-data';
@@ -39,6 +40,7 @@ export function Component() {
   const form = useForm<UpdateArticlePayload>({
     defaultValues: {
       title: article.title,
+      body: article.body,
       slug: article.slug,
       visible_to_role: article.visible_to_role || ('' as any),
       managed_by_role: article.managed_by_role || ('' as any),
@@ -51,13 +53,16 @@ export function Component() {
 
   const updateArticle = useUpdateArticle(form);
   const handleSave = () => {
+    // Keep a stable copy of what this request actually submits.
+    const savedSnapshot = JSON.stringify(form.getValues());
     updateArticle.mutate(
       {
-        ...form.getValues(),
+        ...(JSON.parse(savedSnapshot) as UpdateArticlePayload),
         id: article.id,
       },
       {
         onSuccess: () => {
+          resetArticleSaveBaselineIfUnchanged(form, savedSnapshot);
           toast(trans(message('Article updated')));
         },
       },
@@ -94,7 +99,7 @@ export function Component() {
           saveButton={saveButton}
           aside={
             <ArticleEditorAside>
-              <PublicationStatus article={article} />
+              <PublicationStatus article={article} isSaving={updateArticle.isPending} />
             </ArticleEditorAside>
           }
           initialContent={article.body}
@@ -109,18 +114,19 @@ export function Component() {
 
 interface PublicationStatusProps {
   article: UpdateArticlePageData['article'];
+  isSaving: boolean;
 }
-export function PublicationStatus({article}: PublicationStatusProps) {
+export function PublicationStatus({article, isSaving}: PublicationStatusProps) {
   return (
-    <div className="mb-7 border-b pb-3.5 text-sm">
+    <div className="mb-24 border-b pb-20 text-sm">
       <div className="mb-2 font-semibold">
         <Trans message="Publication status" />
       </div>
-      <div className="flex items-center">
-        <div className="mr-2.5 flex items-center gap-2 border-r pr-2.5">
+      <div className="flex flex-wrap items-center gap-x-10 gap-y-8">
+        <div role="status" className="flex items-center gap-2 border-r pr-10">
           <div
             className={clsx(
-              'h-3 w-3 rounded-full border',
+              'h-3 w-3 shrink-0 rounded-full border',
               article.draft
                 ? 'border-border'
                 : 'border-transparent bg-positive',
@@ -132,12 +138,13 @@ export function PublicationStatus({article}: PublicationStatusProps) {
             <Trans message="Published" />
           )}
         </div>
-        <TogglePublishedButton article={article} />
+        <TogglePublishedButton article={article} isSaving={isSaving} />
       </div>
       <Link
         to={getArticleLink(article, {section: article.sections?.[0]})}
         target="_blank"
-        className="mt-4.5 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+        rel="noopener noreferrer"
+        className="mt-12 inline-flex min-h-32 items-center gap-1 rounded-input text-xs font-semibold text-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         <Trans message="Preview in Help Center" />
         <OpenInNewIcon size="xs" />

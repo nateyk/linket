@@ -358,5 +358,15 @@
   "Live": "በስራ ላይ",
   "Needs changes": "ማስተካከያ ያስፈልጋል",
   "Archived": "ተመዝግቧል",
-  "Back to products": "ወደ ምርቶች ተመለስ"
+  "Back to products": "ወደ ምርቶች ተመለስ",
+  "Reorder": "ቅደም ተከተል ቀይር",
+  "Edit article": "ጽሑፉን አርትዕ",
+  "Enabled": "ነቅቷል",
+  "Disabled": "ቦዝኗል",
+  "Select sections": "ክፍሎችን ይምረጡ",
+  "Choose category icon": "የምድብ አዶ ይምረጡ",
+  "Save changes before changing publication status": "የሕትመት ሁኔታን ከመቀየርዎ በፊት ለውጦቹን ያስቀምጡ።",
+  "Hide this category name in the Help Center while keeping its content visible.": "ይዘቱ እየታየ የምድቡን ስም በእገዛ ማዕከሉ ውስጥ ደብቅ።",
+  "Multiple products": "ብዙ ምርቶች",
+  "Hide sections with fewer than 2 articles": "ከ2 ጽሑፎች በታች ያላቸውን ክፍሎች ደብቅ"
 }
