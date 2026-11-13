@@ -188,4 +188,6 @@ if (sentryDsn && import.meta.env.PROD) {
 
 const app = <CommonProvider router={appRouter} />;
 
+// Shared stacking boundary for Base UI portal components from shadcn/Cubby UI.
+rootEl.classList.add('root');
 createRoot(rootEl, options).render(app);

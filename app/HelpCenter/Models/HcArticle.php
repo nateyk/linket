@@ -4,6 +4,7 @@ use Ai\AiAgent\Models\AiAgent;
 use Ai\AiAgent\Models\AiAgentChunk;
 use App\Core\UrlGenerator;
 use App\HelpCenter\Actions\AddIdToAllHtmlHeadings;
+use App\HelpCenter\Actions\SanitizeHelpCenterHtml;
 use App\HelpCenter\ArticleCollection;
 use App\HelpCenter\Traits\FiltersByVisibleToRole;
 use App\Models\User;
@@ -45,8 +46,15 @@ class HcArticle extends BaseModel
     protected function body(): Attribute
     {
         return Attribute::make(
-            set: fn($value) => $value
-                ? (new AddIdToAllHtmlHeadings())->execute($value)
+            // Existing imported/legacy records may predate this safeguard.
+            // Sanitize on reads as well as writes before the API renders HTML.
+            get: fn ($value) => is_string($value)
+                ? (new SanitizeHelpCenterHtml())->execute($value)
+                : $value,
+            set: fn ($value) => is_string($value)
+                ? (new AddIdToAllHtmlHeadings())->execute(
+                    (new SanitizeHelpCenterHtml())->execute($value),
+                )
                 : $value,
         );
     }
@@ -59,6 +67,32 @@ class HcArticle extends BaseModel
     protected function managedByRole(): Attribute
     {
         return Attribute::make(set: fn($value) => $value ? $value : null);
+    }
+
+    /**
+     * Do not reveal an article solely because its parent root is public
+     * when its actual section is role-restricted.
+     */
+    public function scopeHasVisiblePlacement(Builder $query, bool $forGuest = false): Builder
+    {
+        return $query->where(function (Builder $sub) use ($forGuest) {
+            $sub->whereHas('sections', fn (Builder $sections) => $sections->filterByVisibleToRole($forGuest))
+                ->orWhere(function (Builder $rootOnly) use ($forGuest) {
+                    $rootOnly->whereDoesntHave('sections')
+                        ->whereHas('categories', fn (Builder $categories) => $categories->filterByVisibleToRole($forGuest));
+                });
+        });
+    }
+
+    public function scopeVisibleToAudience(Builder $query, bool $forGuest = false): Builder
+    {
+        if (! $forGuest && auth()->user()?->isAgent()) {
+            return $query;
+        }
+
+        return $query->where('articles.draft', false)
+            ->filterByVisibleToRole($forGuest)
+            ->hasVisiblePlacement($forGuest);
     }
 
     public function scopeCompact(Builder $query): Builder

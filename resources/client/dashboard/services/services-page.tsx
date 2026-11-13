@@ -23,8 +23,9 @@ import {
   StoreIcon,
   Trash2Icon,
 } from 'lucide-react';
-import {useCallback, useEffect, useState} from 'react';
+import {useCallback, useEffect, useMemo, useState} from 'react';
 import {Link} from 'react-router';
+import {CreatorListingToolbar} from '@app/dashboard/creator-listing-toolbar';
 
 type ServiceStatus = 'draft' | 'published';
 
@@ -62,9 +63,34 @@ export function Component() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
   const [busyId, setBusyId] = useState<number>();
-  const publishedCount = services.filter(
-    service => service.status === 'published',
-  ).length;
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState('');
+  const [sort, setSort] = useState('default');
+
+  // Services are already loaded for this workspace. Filtering here avoids
+  // extra API requests and never mutates the original server response order.
+  const visibleServices = useMemo(() => {
+    const query = search.trim().toLocaleLowerCase();
+    const filtered = services.filter(service => {
+      if (status && service.status !== status) return false;
+      if (!query) return true;
+      return [
+        service.title,
+        service.category,
+        service.short_description,
+        service.store?.name,
+      ].some(value => value?.toLocaleLowerCase().includes(query));
+    });
+    if (sort === 'title') {
+      return [...filtered].sort((a, b) => a.title.localeCompare(b.title));
+    }
+    if (sort === '-inquiries') {
+      return [...filtered].sort((a, b) =>
+        b.inquiries_count - a.inquiries_count || a.title.localeCompare(b.title),
+      );
+    }
+    return filtered;
+  }, [services, search, status, sort]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -202,35 +228,52 @@ export function Component() {
             </Empty.Root>
           ) : services.length ? (
             <div className="flex flex-col gap-4">
-              <p className="text-sm text-muted-foreground">
-                <Trans
-                  message=":published published · :drafts drafts · :inquiries inquiries"
-                  values={{
-                    published: publishedCount,
-                    drafts: services.length - publishedCount,
-                    inquiries: services.reduce(
-                      (total, service) => total + service.inquiries_count,
-                      0,
-                    ),
-                  }}
-                />
-              </p>
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {services.map(service => (
-                  <ServiceCard
-                    key={service.id}
-                    service={service}
-                    busy={busyId === service.id}
-                    onToggleStatus={() =>
-                      void changeStatus(
-                        service,
-                        service.status === 'published' ? 'draft' : 'published',
-                      )
-                    }
-                    onDelete={() => remove(service)}
-                  />
-                ))}
-              </div>
+              <CreatorListingToolbar
+                search={search}
+                searchLabel={trans({message: 'Search services'})}
+                onSearchChange={setSearch}
+                status={status}
+                onStatusChange={setStatus}
+                statusOptions={[
+                  {value: 'published', label: <Trans message="Published" />},
+                  {value: 'draft', label: <Trans message="Draft" />},
+                ]}
+                sort={sort}
+                defaultSort="default"
+                onSortChange={setSort}
+                sortOptions={[
+                  {value: 'default', label: <Trans message="Default order" />},
+                  {value: 'title', label: <Trans message="Title" />},
+                  {value: '-inquiries', label: <Trans message="Most inquiries" />},
+                ]}
+                onClear={() => {
+                  setSearch('');
+                  setStatus('');
+                  setSort('default');
+                }}
+              />
+              {visibleServices.length ? (
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                  {visibleServices.map(service => (
+                    <ServiceCard
+                      key={service.id}
+                      service={service}
+                      busy={busyId === service.id}
+                      onToggleStatus={() =>
+                        void changeStatus(
+                          service,
+                          service.status === 'published' ? 'draft' : 'published',
+                        )
+                      }
+                      onDelete={() => remove(service)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="flex min-h-52 flex-col items-center justify-center gap-3 rounded-card-sm border border-dashed p-6 text-center" role="status">
+                  <p className="text-sm font-medium"><Trans message="No matching services" /></p>
+                </div>
+              )}
             </div>
           ) : (
             <Empty.Root className="rounded-card border border-dashed py-20">

@@ -25,9 +25,7 @@ class HcArticleController extends BaseController
     {
         $this->authorize('index', HcArticle::class);
 
-        $user = Auth::user();
-        $isAgent = $user?->isAgent();
-        $userRoleIds = $user?->roles?->pluck('id') ?? [];
+        $isAgent = Auth::user()?->isAgent();
 
         $builder = HcArticle::query()
             ->with(['author', 'tags'])
@@ -44,15 +42,7 @@ class HcArticleController extends BaseController
                     explode(',', request('articleIds')),
                 ),
             )
-            // Non-agents only see published articles visible to their role
-            ->when(!$isAgent, fn($q) => $q->where('draft', false))
-            ->when(
-                !$isAgent,
-                fn($q) => $q->where(function ($sub) use ($userRoleIds) {
-                    $sub->whereNull('visible_to_role')
-                        ->orWhereIn('visible_to_role', $userRoleIds);
-                }),
-            )
+            ->when(!$isAgent, fn($q) => $q->visibleToAudience())
             ->select([
                 'articles.id',
                 'articles.title',
@@ -121,24 +111,10 @@ class HcArticleController extends BaseController
 
     public function show()
     {
+        $this->authorize('index', HcArticle::class);
+        // The loader authorizes the model before returning body or editor data.
         $data = (new HcArticleLoader())->loadData(request('loader'));
         $articleId = $data['article']['id'];
-
-        $this->authorize('index', HcArticle::class);
-
-        $user = Auth::user();
-        $isAgent = $user?->isAgent();
-        $userRoleIds = $user?->roles?->pluck('id') ?? [];
-
-        if (Arr::get($data, 'article.draft') && !$isAgent) {
-            abort(403);
-        }
-
-        if (!$isAgent && Arr::get($data, 'article.visible_to_role')) {
-            if (!in_array($data['article']['visible_to_role'], $userRoleIds)) {
-                abort(403);
-            }
-        }
 
         if (
             request('loader') === 'articlePage' &&
@@ -186,6 +162,10 @@ class HcArticleController extends BaseController
     {
         $ids = explode(',', $ids);
         $this->authorize('destroy', HcArticle::class);
+        if (count($ids) > 1000 ||
+            collect($ids)->contains(fn ($id) => ! ctype_digit($id) || (int) $id < 1)) {
+            abort(422, 'Invalid article IDs.');
+        }
 
         $this->blockOnDemoSite();
 
@@ -199,9 +179,12 @@ class HcArticleController extends BaseController
         $this->authorize('update', HcArticle::class);
 
         $data = request()->validate([
-            'articleIds' => 'required|array',
-            'action' => 'required|string',
+            'articleIds' => 'required|array|min:1|max:1000',
+            'articleIds.*' => 'required|integer|min:1|distinct|exists:articles,id',
+            'action' => 'required|in:changeArticleStatus,changeVisibility',
             'data' => 'required|array',
+            'data.status' => 'required_if:action,changeArticleStatus|in:draft,published',
+            'data.roleId' => 'nullable|integer|min:1|exists:roles,id',
         ]);
 
         (new PerformArticleBatchAction())->execute(

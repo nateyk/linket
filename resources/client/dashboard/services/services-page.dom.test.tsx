@@ -104,4 +104,70 @@ describe('services list', () => {
         ?.getAttribute('href'),
     ).toBe('https://nate.test/services/branding');
   });
+
+  it('filters published and draft services and clears the compact toolbar', async () => {
+    get.mockResolvedValue({
+      data: {data: [
+        service({id: 1, title: 'Logo design', status: 'published'}),
+        service({id: 2, title: 'Website build', status: 'draft', inquiries_count: 3}),
+      ]},
+    });
+    const user = userEvent.setup();
+    render(
+      <DashboardLayoutContextProvider name="test">
+        {() => (
+          <MemoryRouter><Component /></MemoryRouter>
+        )}
+      </DashboardLayoutContextProvider>,
+    );
+    expect(await screen.findByText('Logo design')).toBeTruthy();
+    expect(screen.getByText('Website build')).toBeTruthy();
+    const filters = screen.getByRole('search', {name: 'Search services'});
+    expect(filters.querySelector('[role="status"]')).toBeNull();
+    expect(screen.queryByText(/published · .*drafts · .*inquiries/)).toBeNull();
+
+    const search = screen.getByRole('searchbox', {name: 'Search services'});
+    await user.type(search, 'website');
+    expect(screen.queryByText('Logo design')).toBeNull();
+    expect(screen.getByText('Website build')).toBeTruthy();
+
+    await user.clear(search);
+    await user.click(screen.getByRole('button', {name: 'Filter by status'}));
+    await user.click(await screen.findByRole('menuitemradio', {name: 'Draft'}));
+    await waitFor(() => expect(screen.queryByText('Logo design')).toBeNull());
+
+    await user.type(search, 'not-a-service');
+    expect(screen.getByText('No matching services')).toBeTruthy();
+    await user.click(screen.getByRole('button', {name: 'Clear filters'}));
+    expect(screen.queryByText('No matching services')).toBeNull();
+    expect(screen.getByText('Logo design')).toBeTruthy();
+    expect(screen.getByText('Website build')).toBeTruthy();
+  });
+
+  it('sorts the loaded services without issuing another search request', async () => {
+    get.mockResolvedValue({
+      data: {data: [
+        service({id: 1, title: 'Logo design', inquiries_count: 1}),
+        service({id: 2, title: 'Website build', inquiries_count: 8}),
+      ]},
+    });
+    const user = userEvent.setup();
+    render(
+      <DashboardLayoutContextProvider name="test">
+        {() => <MemoryRouter><Component /></MemoryRouter>}
+      </DashboardLayoutContextProvider>,
+    );
+    expect(await screen.findByText('Logo design')).toBeTruthy();
+    const before = get.mock.calls.length;
+    await user.click(screen.getByRole('button', {name: 'Sort by'}));
+    await user.click(await screen.findByRole('menuitemradio', {name: 'Most inquiries'}));
+    await waitFor(() => {
+      const titles = Array.from(document.querySelectorAll('[data-slot="card-title"]'))
+        .map(element => element.textContent ?? '');
+      expect(titles.findIndex(title => title.includes('Website build')))
+        .toBeLessThan(titles.findIndex(title => title.includes('Logo design')));
+    });
+    expect(get.mock.calls.length).toBe(before);
+  });
+
 });

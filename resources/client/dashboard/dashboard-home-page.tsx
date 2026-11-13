@@ -8,7 +8,7 @@ import {useWorkspaceStore} from '@common/workspace/workspace-store';
 import {StaticPageTitle} from '@common/seo/static-page-title';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {Badge} from '@shadcn/badge/badge';
-import {LinkButton} from '@shadcn/button/button';
+import {Button, LinkButton} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
 import {Chart} from '@shadcn/chart/chart';
 import {formatMoney, getSiteCurrency} from '@ui/i18n/format-money';
@@ -19,8 +19,21 @@ import {
 } from '@shadcn/chart/chart-utils';
 import {Empty} from '@shadcn/empty/empty';
 import {Progress} from '@shadcn/progress/progress';
+import {Input} from '@shadcn/forms/input/input';
+import {Select} from '@shadcn/forms/select/select';
+import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {Table} from '@shadcn/table/table';
+import {
+  type Column,
+  type ColumnDef,
+  type SortingState,
+  type VisibilityState,
+  flexRender,
+  getCoreRowModel,
+  getSortedRowModel,
+  useReactTable,
+} from '@tanstack/react-table';
 import {keepPreviousData, useQuery} from '@tanstack/react-query';
 import {DateRangeValue} from '@ui/forms/input-field/date/date-range-picker/date-range-value';
 import {DateRangePresets} from '@ui/forms/input-field/date/date-range-picker/dialog/date-range-presets';
@@ -28,21 +41,24 @@ import {FormattedCurrency} from '@ui/i18n/formatted-currency';
 import {FormattedNumber} from '@ui/i18n/formatted-number';
 import {useSelectedLocale} from '@ui/i18n/selected-locale';
 import {Trans} from '@ui/i18n/trans';
+import {useTrans} from '@ui/i18n/use-trans';
 import {
   ArrowRightIcon,
   ChartNoAxesCombinedIcon,
   CircleAlertIcon,
   CircleDollarSignIcon,
-  FileTextIcon,
   LandmarkIcon,
   Link2Icon,
   MapPinIcon,
   MousePointerClickIcon,
   ReceiptTextIcon,
+  ArrowUpDownIcon,
+  Columns3Icon,
+  SearchIcon,
   WalletCardsIcon,
   type LucideIcon,
 } from 'lucide-react';
-import {ReactNode, useCallback, useRef, useState} from 'react';
+import {ReactNode, useCallback, useMemo, useRef, useState} from 'react';
 import {Area, AreaChart, CartesianGrid, XAxis, YAxis} from 'recharts';
 import {Link} from 'react-router';
 
@@ -461,159 +477,391 @@ function TopLocations({dateRange}: {dateRange: DateRangeValue}) {
   );
 }
 
+type RecentOrderFilter = 'all' | 'verified' | 'pending' | 'review' | 'expired';
+
+/** The overview only has the latest five orders, so filtering is intentionally local. */
+function recentOrderMatchesStatus(status: string, filter: RecentOrderFilter) {
+  switch (filter) {
+    case 'all':
+      return true;
+    case 'verified':
+      return ['paid', 'completed', 'fulfilled'].includes(status);
+    case 'pending':
+      return ['pending', 'pending_payment', 'verifying'].includes(status);
+    case 'review':
+      return status === 'manual_review';
+    case 'expired':
+      return ['expired', 'failed_verification'].includes(status);
+  }
+}
+
+function RecentOrderSortHeader({
+  column,
+  children,
+}: {
+  column: Column<DashboardOrder>;
+  children: ReactNode;
+}) {
+  const direction = column.getIsSorted();
+  return (
+    <button
+      type="button"
+      className="inline-flex min-h-9 items-center gap-1 rounded-input px-1 text-start text-xs font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+      onClick={() => column.toggleSorting(direction === 'asc')}
+    >
+      {children}
+      <ArrowUpDownIcon className="size-3.5 shrink-0" aria-hidden="true" />
+    </button>
+  );
+}
+
 function RecentOrders() {
   const {data: salesData, isLoading, isError} = useDashboardSales();
-  const orders = salesData?.data.data.slice(0, 5) ?? [];
+  const {trans} = useTrans();
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<RecentOrderFilter>('all');
+  const [sorting, setSorting] = useState<SortingState>([{id: 'date', desc: true}]);
+  // Three useful columns fit the dashboard card. The other two are opt-in.
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
+    buyer: false,
+    date: false,
+  });
+
+  // TanStack Table requires referentially stable data. Creating fresh slice/filter
+  // arrays during each render makes its sorting/visibility updates re-render forever.
+  const fetchedOrders = salesData?.data.data;
+  const orders = useMemo(() => fetchedOrders?.slice(0, 5) ?? [], [fetchedOrders]);
+  const query = search.trim().toLocaleLowerCase();
+  const visibleOrders = useMemo(() => {
+    if (!query && statusFilter === 'all') return orders;
+    return orders.filter(order => {
+      if (!recentOrderMatchesStatus(order.status, statusFilter)) return false;
+      if (!query) return true;
+      return [
+        order.uuid,
+        order.product?.title,
+        order.buyer_name,
+        order.status.replaceAll('_', ' '),
+      ].some(value => value?.toLocaleLowerCase().includes(query));
+    });
+  }, [orders, query, statusFilter]);
+
+  const columns = useMemo<ColumnDef<DashboardOrder>[]>(() => [
+    {
+      id: 'product',
+      accessorFn: order => order.product?.title ?? '',
+      enableHiding: false,
+      header: ({column}) => (
+        <RecentOrderSortHeader column={column}><Trans message="Product" /></RecentOrderSortHeader>
+      ),
+      cell: ({row, table}) => {
+        const order = row.original;
+        return (
+          <div className="min-w-0">
+            <span className="block truncate font-medium" title={order.product?.title ?? undefined}>
+              {order.product?.title ?? <Trans message="Digital product" />}
+            </span>
+            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+              <span className="font-mono">#{order.uuid.slice(0, 8)}</span>
+              {!table.getColumn('buyer')?.getIsVisible() && (
+                <span className="min-w-0 truncate">
+                  {order.buyer_name || <Trans message="Guest buyer" />}
+                </span>
+              )}
+              {!table.getColumn('date')?.getIsVisible() && (
+                <span className="whitespace-nowrap"><OrderDate order={order} /></span>
+              )}
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      id: 'buyer',
+      accessorFn: order => order.buyer_name || '',
+      header: ({column}) => (
+        <RecentOrderSortHeader column={column}><Trans message="Buyer" /></RecentOrderSortHeader>
+      ),
+      cell: ({row}) => (
+        <span className="block max-w-36 truncate">
+          {row.original.buyer_name || <Trans message="Guest buyer" />}
+        </span>
+      ),
+    },
+    {
+      id: 'date',
+      accessorFn: order => order.paid_at ?? order.created_at ?? '',
+      header: ({column}) => (
+        <RecentOrderSortHeader column={column}><Trans message="Date" /></RecentOrderSortHeader>
+      ),
+      cell: ({row}) => (
+        <span className="whitespace-nowrap text-muted-foreground">
+          <OrderDate order={row.original} />
+        </span>
+      ),
+    },
+    {
+      id: 'status',
+      accessorKey: 'status',
+      enableHiding: false,
+      header: ({column}) => (
+        <RecentOrderSortHeader column={column}><Trans message="Status" /></RecentOrderSortHeader>
+      ),
+      cell: ({row}) => <OrderStatusBadge status={row.original.status} />,
+    },
+    {
+      id: 'amount',
+      accessorKey: 'gross_amount_cents',
+      enableHiding: false,
+      header: ({column}) => (
+        <RecentOrderSortHeader column={column}><Trans message="Amount" /></RecentOrderSortHeader>
+      ),
+      cell: ({row}) => (
+        <span className="whitespace-nowrap font-medium tabular-nums">
+          <FormattedCurrency
+            valueInCents={row.original.gross_amount_cents}
+            currency={row.original.currency}
+          />
+        </span>
+      ),
+    },
+  ], []);
+
+  const table = useReactTable({
+    data: visibleOrders,
+    columns,
+    getRowId: row => row.uuid,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    onSortingChange: setSorting,
+    onColumnVisibilityChange: setColumnVisibility,
+    enableSortingRemoval: false,
+    state: {sorting, columnVisibility},
+  });
+  const rows = table.getRowModel().rows;
+  const filtered = search.length > 0 || statusFilter !== 'all';
+  const statusOptions: {value: RecentOrderFilter; label: string}[] = [
+    {value: 'all', label: trans({message: 'All statuses'})},
+    {value: 'verified', label: trans({message: 'Verified'})},
+    {value: 'pending', label: trans({message: 'Awaiting payment'})},
+    {value: 'review', label: trans({message: 'Needs review'})},
+    {value: 'expired', label: trans({message: 'Failed or expired'})},
+  ];
+  const currentStatus = statusOptions.find(option => option.value === statusFilter)?.label;
 
   return (
-    <Card
-      size="sm"
-      className="min-w-0 gap-0 overflow-hidden lg:col-span-8"
-    >
-      <Card.Header className="pb-4">
-        <Card.Title>
+    <Card size="sm" className="min-w-0 gap-0 overflow-hidden lg:col-span-8">
+      <Card.Header className="gap-1 pb-3">
+        <Card.Title id="recent-orders-title">
           <Trans message="Recent orders" />
         </Card.Title>
         <Card.Description>
           <Trans message="Latest digital product purchases" />
         </Card.Description>
+        <Card.Action>
+          <LinkButton to="/dashboard/orders" variant="ghost" size="sm" className="min-h-9 gap-1.5">
+            <Trans message="See all orders" />
+            <ArrowRightIcon className="size-4" data-icon="inline-end" aria-hidden="true" />
+          </LinkButton>
+        </Card.Action>
       </Card.Header>
 
-      <Card.Content className="min-h-64 flex-1 border-t px-0">
+      <Card.Content className="min-w-0 flex-1 border-t px-0 pb-0">
         {isLoading ? (
-          <div className="flex flex-col gap-3 px-4 pt-4" aria-busy="true">
+          <div className="divide-y" aria-busy="true" aria-label={trans({message: 'Loading recent orders'})}>
             {[...Array(5)].map((_, index) => (
-              <Skeleton key={index} className="h-14 w-full" />
+              <div key={index} className="flex items-center justify-between gap-3 px-4 py-3">
+                <div className="flex min-w-0 flex-1 flex-col gap-2">
+                  <Skeleton className="h-4 w-2/3 max-w-48" />
+                  <Skeleton className="h-3 w-1/2 max-w-28" />
+                </div>
+                <Skeleton className="h-5 w-20 shrink-0 rounded-pill" />
+              </div>
             ))}
           </div>
         ) : isError ? (
-          <SalesErrorState />
+          <div className="px-4"><SalesErrorState /></div>
         ) : orders.length ? (
           <>
-            <div className="hidden min-w-0 overflow-x-auto lg:block">
-              <Table.Root>
-                <Table.Header>
-                  <Table.Row>
-                    <Table.Head className="ps-5">
-                      <Trans message="Product" />
-                    </Table.Head>
-                    <Table.Head>
-                      <Trans message="Buyer" />
-                    </Table.Head>
-                    <Table.Head>
-                      <Trans message="Date" />
-                    </Table.Head>
-                    <Table.Head>
-                      <Trans message="Status" />
-                    </Table.Head>
-                    <Table.Head className="pe-5 text-end">
-                      <Trans message="Amount" />
-                    </Table.Head>
-                  </Table.Row>
-                </Table.Header>
-                <Table.Body>
-                  {orders.map(order => (
-                    <Table.Row key={order.uuid}>
-                      <Table.Cell className="max-w-64 ps-5">
-                        <span
-                          className="block truncate font-medium"
-                          title={order.product?.title ?? undefined}
-                        >
-                          {order.product?.title ?? (
-                            <Trans message="Digital product" />
-                          )}
-                        </span>
-                        <span className="block truncate text-xs text-muted-foreground">
-                          #{order.uuid.slice(0, 8)}
-                        </span>
-                      </Table.Cell>
-                      <Table.Cell className="max-w-44">
-                        <span className="block truncate">
-                          {order.buyer_name || <Trans message="Guest buyer" />}
-                        </span>
-                      </Table.Cell>
-                      <Table.Cell className="whitespace-nowrap text-muted-foreground">
-                        <OrderDate order={order} />
-                      </Table.Cell>
-                      <Table.Cell>
-                        <OrderStatusBadge status={order.status} />
-                      </Table.Cell>
-                      <Table.Cell className="whitespace-nowrap pe-5 text-end font-medium tabular-nums">
-                        <FormattedCurrency
-                          valueInCents={order.gross_amount_cents}
-                          currency={order.currency}
-                        />
-                      </Table.Cell>
-                    </Table.Row>
-                  ))}
-                </Table.Body>
-              </Table.Root>
+            <div
+              data-slot="recent-orders-toolbar"
+              role="toolbar"
+              aria-label={trans({message: 'Filter recent orders'})}
+              className="flex min-w-0 flex-col gap-2 border-b px-4 py-3 sm:flex-row sm:items-center"
+            >
+              <div className="relative min-w-0 flex-1">
+                <SearchIcon
+                  className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                  aria-hidden="true"
+                />
+                <Input
+                  bindToHookForm={false}
+                  type="search"
+                  aria-label={trans({message: 'Search recent orders'})}
+                  placeholder={trans({message: 'Search recent orders'})}
+                  className="h-9 ps-9"
+                  value={search}
+                  onChange={event => setSearch(event.target.value)}
+                />
+              </div>
+              <div className="flex min-w-0 items-center gap-2">
+                <Select.Root
+                  value={statusFilter}
+                  onValueChange={value => setStatusFilter((value || 'all') as RecentOrderFilter)}
+                >
+                  <Select.Trigger
+                    aria-label={trans({message: 'Filter by payment status'})}
+                    className="min-w-0 flex-1 sm:w-36 sm:flex-none"
+                  >
+                    <Select.Value>{currentStatus}</Select.Value>
+                  </Select.Trigger>
+                  <Select.Content align="end">
+                    {statusOptions.map(option => (
+                      <Select.Item key={option.value} value={option.value}>
+                        {option.label}
+                      </Select.Item>
+                    ))}
+                  </Select.Content>
+                </Select.Root>
+                <div className="hidden md:block">
+                  <Dropdown.Root>
+                    <Dropdown.Trigger
+                    render={<Button type="button" variant="outline" size="sm" className="h-9 shrink-0 gap-1.5" />}
+                    aria-label={trans({message: 'Choose visible columns'})}
+                  >
+                    <Columns3Icon className="size-4" aria-hidden="true" />
+                    <span className="hidden sm:inline"><Trans message="Columns" /></span>
+                  </Dropdown.Trigger>
+                  <Dropdown.Content align="end">
+                    <Dropdown.Group>
+                      <Dropdown.GroupLabel><Trans message="Show columns" /></Dropdown.GroupLabel>
+                      {(['buyer', 'date'] as const).map(id => {
+                        const column = table.getColumn(id);
+                        return (
+                          <Dropdown.CheckboxItem
+                            key={id}
+                            checked={column?.getIsVisible() ?? false}
+                            onCheckedChange={value => column?.toggleVisibility(!!value)}
+                          >
+                            <Trans message={id === 'buyer' ? 'Buyer' : 'Date'} />
+                          </Dropdown.CheckboxItem>
+                        );
+                      })}
+                    </Dropdown.Group>
+                  </Dropdown.Content>
+                  </Dropdown.Root>
+                </div>
+              </div>
             </div>
 
-            <ol className="divide-y lg:hidden" aria-label="Recent orders">
-              {orders.map(order => (
-                <li
-                  key={order.uuid}
-                  className="grid min-w-0 grid-cols-[2.5rem_minmax(0,1fr)_auto] gap-x-3 gap-y-1 px-4 py-3.5"
+            {rows.length ? (
+              <>
+                <div className="hidden min-w-0 overflow-x-auto md:block" data-slot="recent-orders-data-table">
+                  <Table.Root className="min-w-[29rem] table-auto">
+                    <Table.Caption className="sr-only"><Trans message="Recent orders" /></Table.Caption>
+                    <Table.Header className="bg-muted/30">
+                      {table.getHeaderGroups().map(group => (
+                        <Table.Row key={group.id} className="hover:bg-transparent">
+                          {group.headers.map(header => {
+                            const sort = header.column.getIsSorted();
+                            return (
+                              <Table.Head
+                                key={header.id}
+                                scope="col"
+                                aria-sort={sort ? (sort === 'asc' ? 'ascending' : 'descending') : undefined}
+                                className={
+                                  header.column.id === 'product' ? 'min-w-40 ps-4' :
+                                    header.column.id === 'status' ? 'min-w-40' :
+                                      header.column.id === 'amount' ? 'min-w-24 pe-4 text-end' :
+                                        'min-w-28'
+                                }
+                              >
+                                {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                              </Table.Head>
+                            );
+                          })}
+                        </Table.Row>
+                      ))}
+                    </Table.Header>
+                    <Table.Body>
+                      {rows.map(row => (
+                        <Table.Row key={row.id} className="hover:bg-muted/30">
+                          {row.getVisibleCells().map(cell => (
+                            <Table.Cell
+                              key={cell.id}
+                              className={
+                                cell.column.id === 'product' ? 'ps-4 py-3 whitespace-normal' :
+                                  cell.column.id === 'status' ? 'py-3 whitespace-normal' :
+                                    cell.column.id === 'amount' ? 'pe-4 py-3 text-end' :
+                                      'py-3'
+                              }
+                            >
+                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            </Table.Cell>
+                          ))}
+                        </Table.Row>
+                      ))}
+                    </Table.Body>
+                  </Table.Root>
+                </div>
+
+                <ol className="divide-y md:hidden" aria-labelledby="recent-orders-title">
+                  {rows.map(row => {
+                    const order = row.original;
+                    return (
+                      <li key={order.uuid} className="min-w-0 px-4 py-3.5">
+                        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3">
+                          <div className="min-w-0">
+                            <p className="truncate font-medium" title={order.product?.title ?? undefined}>
+                              {order.product?.title ?? <Trans message="Digital product" />}
+                            </p>
+                            <p className="mt-1 truncate text-xs text-muted-foreground">
+                              {order.buyer_name || <Trans message="Guest buyer" />}
+                              <span aria-hidden="true"> · </span>
+                              <span>#{order.uuid.slice(0, 8)}</span>
+                            </p>
+                          </div>
+                          <span className="shrink-0 text-end font-medium tabular-nums">
+                            <FormattedCurrency valueInCents={order.gross_amount_cents} currency={order.currency} />
+                          </span>
+                        </div>
+                        <div className="mt-2 flex min-w-0 flex-wrap items-center justify-between gap-2">
+                          <OrderStatusBadge status={order.status} />
+                          <span className="text-xs text-muted-foreground"><OrderDate order={order} /></span>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ol>
+              </>
+            ) : (
+              <div className="flex min-h-36 flex-col items-center justify-center gap-2 px-4 py-6 text-center" role="status">
+                <p className="text-sm font-medium"><Trans message="No matching orders" /></p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {setSearch(''); setStatusFilter('all');}}
                 >
-                  <span className="row-span-3 flex size-10 items-center justify-center self-start rounded-card-xs bg-muted text-muted-foreground">
-                    <ReceiptTextIcon className="size-4" aria-hidden="true" />
-                  </span>
-
-                  <p className="min-w-0 truncate font-medium">
-                    {order.product?.title ?? (
-                      <Trans message="Digital product" />
-                    )}
-                  </p>
-                  <p className="shrink-0 text-end font-medium tabular-nums">
-                    <FormattedCurrency
-                      valueInCents={order.gross_amount_cents}
-                      currency={order.currency}
-                    />
-                  </p>
-
-                  <p className="min-w-0 truncate text-xs text-muted-foreground">
-                    {order.buyer_name || <Trans message="Guest buyer" />}
-                    <span aria-hidden="true"> · </span>
-                    <span>#{order.uuid.slice(0, 8)}</span>
-                  </p>
-                  <span className="text-end text-xs text-muted-foreground">
-                    <OrderDate order={order} />
-                  </span>
-
-                  <div className="col-span-2 flex min-w-0 items-center pt-1">
-                    <OrderStatusBadge status={order.status} />
-                  </div>
-                </li>
-              ))}
-            </ol>
+                  <Trans message="Clear filters" />
+                </Button>
+              </div>
+            )}
+            {filtered && rows.length > 0 && (
+              <p className="sr-only" role="status" aria-live="polite">
+                {rows.length} / {orders.length}
+              </p>
+            )}
           </>
         ) : (
           <div className="px-4">
             <OverviewEmptyState
               icon={ReceiptTextIcon}
               title={<Trans message="No orders yet" />}
-              description={
-                <Trans message="Your latest digital product orders will appear here." />
-              }
+              description={<Trans message="Your latest digital product orders will appear here." />}
             />
           </div>
         )}
       </Card.Content>
-
-      {!isLoading && !isError && orders.length > 0 ? (
-        <Card.Footer className="border-t p-0">
-          <LinkButton
-            to="/dashboard/orders"
-            variant="ghost"
-            className="h-11 w-full justify-center rounded-none"
-          >
-            <FileTextIcon aria-hidden="true" />
-            <Trans message="See all orders" />
-            <ArrowRightIcon data-icon="inline-end" aria-hidden="true" />
-          </LinkButton>
-        </Card.Footer>
-      ) : null}
     </Card>
   );
 }
@@ -701,6 +949,7 @@ function OrderStatusBadge({status}: {status: string}) {
     status === 'paid' || status === 'completed' || status === 'fulfilled';
   return (
     <Badge
+      className="h-auto max-w-full min-w-0 shrink whitespace-normal break-words py-1 text-start leading-4"
       variant={
         verified
           ? 'positive'

@@ -20,7 +20,9 @@ class SearchHcArticles
             : null;
         $tag = request('tag') ?? WidgetFlags::knowledgeScopeTag();
 
-        $builder = HcArticle::query()->filterByVisibleToRole();
+        $builder = HcArticle::query()
+            ->filterByVisibleToRole()
+            ->hasVisiblePlacement();
         $filtererName = request('scout.driver');
 
         $filters = new DatasourceFilters(Arr::get($params, 'filters'));
@@ -41,9 +43,10 @@ class SearchHcArticles
         // on mysql need to query for both article and category tags
         if ($tag) {
             if ($datasource->filtererIsMysql()) {
-                $builder
-                    ->whereRelation('tags', 'tags.name', $tag)
-                    ->orWhereRelation('categories.tags', 'tags.name', $tag);
+                $builder->where(function ($scope) use ($tag) {
+                    $scope->whereRelation('tags', 'tags.name', $tag)
+                        ->orWhereRelation('categories.tags', 'tags.name', $tag);
+                });
             } else {
                 $filters->where('tags', 'has', $tag);
             }

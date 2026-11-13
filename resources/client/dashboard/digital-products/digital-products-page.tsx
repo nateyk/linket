@@ -7,8 +7,6 @@ import {Button} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
 import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {Empty} from '@shadcn/empty/empty';
-import {Input} from '@shadcn/forms/input/input';
-import {Select} from '@shadcn/forms/select/select';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {Tooltip} from '@shadcn/tooltip/tooltip';
 import {formatMoney} from '@ui/i18n/format-money';
@@ -32,6 +30,7 @@ import {
   MoreHorizontalIcon,
   PackageIcon,
   PackagePlusIcon,
+  ShoppingBagIcon,
   PencilIcon,
   SendIcon,
   StarIcon,
@@ -41,6 +40,7 @@ import {
 } from 'lucide-react';
 import {useCallback, useEffect, useState} from 'react';
 import {Link} from 'react-router';
+import {CreatorListingToolbar} from '@app/dashboard/creator-listing-toolbar';
 import {CreateProductDialog} from './create-product-dialog';
 
 type ProductStatus =
@@ -99,7 +99,6 @@ export function Component() {
   const [sort, setSort] = useState('latest');
   const [page, setPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
-  const [total, setTotal] = useState(0);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -118,7 +117,6 @@ export function Component() {
       const payload: ProductsResponse = response.data;
       setProducts(payload.data ?? []);
       setLastPage(payload.meta?.last_page ?? 1);
-      setTotal(payload.meta?.total ?? payload.data?.length ?? 0);
     } catch (reason) {
       setError(
         getApiErrorMessage(reason) ||
@@ -240,57 +238,44 @@ export function Component() {
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-1 py-4 sm:px-0">
           {error && <ErrorNotice message={error} onRetry={() => void load()} />}
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Input
-              value={search}
-              onChange={event => {
-                setSearch(event.target.value);
-                setPage(1);
-              }}
-              placeholder={trans({message: 'Search products'})}
-              aria-label={trans({message: 'Search products'})}
-            />
-            <Select.Root
-              value={status}
-              onValueChange={value => {
-                setStatus(value ?? '');
-                setPage(1);
-              }}
-            >
-              <Select.Trigger className="w-full">
-                <Select.Value placeholder={<Trans message="All statuses" />} />
-              </Select.Trigger>
-              <Select.Content>
-                <Select.Item value=""><Trans message="All statuses" /></Select.Item>
-                <Select.Item value="draft"><Trans message="Draft" /></Select.Item>
-                <Select.Item value="pending_approval"><Trans message="In review" /></Select.Item>
-                <Select.Item value="approved"><Trans message="Live" /></Select.Item>
-                <Select.Item value="rejected"><Trans message="Needs changes" /></Select.Item>
-                <Select.Item value="archived"><Trans message="Archived" /></Select.Item>
-              </Select.Content>
-            </Select.Root>
-            <Select.Root
-              value={sort}
-              onValueChange={value => {
-                setSort(value ?? 'latest');
-                setPage(1);
-              }}
-            >
-              <Select.Trigger className="w-full">
-                <Select.Value placeholder={<Trans message="Sort by" />} />
-              </Select.Trigger>
-              <Select.Content>
-                <Select.Item value="latest"><Trans message="Newest" /></Select.Item>
-                <Select.Item value="oldest"><Trans message="Oldest" /></Select.Item>
-                <Select.Item value="title"><Trans message="Title" /></Select.Item>
-                <Select.Item value="-sales"><Trans message="Most sales" /></Select.Item>
-                <Select.Item value="-revenue"><Trans message="Highest revenue" /></Select.Item>
-              </Select.Content>
-            </Select.Root>
-            <p className="flex items-center text-sm text-muted-foreground">
-              <Trans message=":count products" values={{count: total}} />
-            </p>
-          </div>
+          <CreatorListingToolbar
+            search={search}
+            searchLabel={trans({message: 'Search products'})}
+            onSearchChange={value => {
+              setSearch(value);
+              setPage(1);
+            }}
+            status={status}
+            onStatusChange={value => {
+              setStatus(value);
+              setPage(1);
+            }}
+            statusOptions={[
+              {value: 'draft', label: <Trans message="Draft" />},
+              {value: 'pending_approval', label: <Trans message="In review" />},
+              {value: 'approved', label: <Trans message="Live" />},
+              {value: 'rejected', label: <Trans message="Needs changes" />},
+              {value: 'archived', label: <Trans message="Archived" />},
+            ]}
+            sort={sort}
+            onSortChange={value => {
+              setSort(value);
+              setPage(1);
+            }}
+            sortOptions={[
+              {value: 'latest', label: <Trans message="Newest" />},
+              {value: 'oldest', label: <Trans message="Oldest" />},
+              {value: 'title', label: <Trans message="Title" />},
+              {value: '-sales', label: <Trans message="Most sales" />},
+              {value: '-revenue', label: <Trans message="Highest revenue" />},
+            ]}
+            onClear={() => {
+              setSearch('');
+              setStatus('');
+              setSort('latest');
+              setPage(1);
+            }}
+          />
 
           {loading ? (
             <ProductSkeleton />
@@ -334,6 +319,10 @@ export function Component() {
                 </Button>
               </div>
             </>
+          ) : search.trim() || status ? (
+            <div className="flex min-h-52 flex-col items-center justify-center gap-3 rounded-card-sm border border-dashed p-6 text-center" role="status">
+              <p className="text-sm font-medium"><Trans message="No matching products" /></p>
+            </div>
           ) : (
             <EmptyProducts onNewProduct={() => setCreateDialogOpen(true)} />
           )}
@@ -405,7 +394,7 @@ function ProductCard({
   const editPath = isCourse ? `/dashboard/items/${product.id}/course` : `/dashboard/items/${product.id}/edit`;
 
   return (
-    <Card.Root className="group flex h-full flex-col gap-0 overflow-hidden py-0">
+    <Card.Root className="group flex h-full flex-col gap-0 overflow-hidden py-0 ring-1 ring-foreground/10 transition-shadow hover:shadow-sm">
       <Card.Header className="relative block p-0">
         <Link
           to={editPath}
@@ -426,21 +415,21 @@ function ProductCard({
             <ProductCoverFallback />
           )}
         </Link>
+        <div className="absolute top-3 left-3">
+          <StatusBadge
+            status={product.status}
+            hasPendingUpdate={product.has_pending_update}
+          />
+        </div>
       </Card.Header>
 
-      <Card.Content className="flex flex-1 flex-col gap-2.5 p-4 pb-0">
-        <div className="flex min-w-0 flex-col gap-2">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <StatusBadge
-              status={product.status}
-              hasPendingUpdate={product.has_pending_update}
-            />
-            {isCourse && (
-              <span className="text-xs font-medium text-muted-foreground">
-                <Trans message="Course" />
-              </span>
-            )}
-          </div>
+      <Card.Content className="flex flex-1 flex-col gap-3 p-4 pb-0">
+        <div className="flex min-w-0 flex-col gap-1">
+          {isCourse && (
+            <span className="truncate text-xs font-medium text-muted-foreground">
+              <Trans message="Course" />
+            </span>
+          )}
           <Card.Title className="truncate text-sm font-semibold leading-5">
             <Link
               to={editPath}
@@ -451,6 +440,17 @@ function ProductCard({
           </Card.Title>
         </div>
 
+        <div className="text-xs font-medium text-muted-foreground">
+          {product.price_cents === 0 ? (
+            <Trans message="Free access" />
+          ) : (
+            <FormattedCurrency
+              valueInCents={product.price_cents}
+              currency={product.currency.toUpperCase()}
+            />
+          )}
+        </div>
+
         {(product.status === 'rejected' || product.status === 'pending_approval') && product.rejection_reason && (
           <div className="flex gap-2 rounded-card-sm bg-destructive/8 p-2.5 text-xs leading-4 text-destructive">
             <TriangleAlertIcon className="mt-0.5 size-3.5 shrink-0" />
@@ -459,17 +459,11 @@ function ProductCard({
         )}
       </Card.Content>
 
-      <Card.Footer className="justify-between gap-3 px-4 pt-3 pb-4">
+      <Card.Footer className="justify-between gap-3 px-4 py-4">
         <div className="flex min-w-0 flex-col gap-0.5 text-sm text-muted-foreground">
           <div className="flex min-w-0 items-center gap-2">
+            <ShoppingBagIcon className="size-4 shrink-0" aria-hidden="true" />
             <SalesLabel count={product.sales_count} />
-            <span className="size-1 rounded-full bg-muted-foreground/40" />
-            <span className="truncate font-semibold text-foreground">
-              <FormattedCurrency
-                valueInCents={product.price_cents}
-                currency={product.currency.toUpperCase()}
-              />
-            </span>
           </div>
           {product.sales_count > 0 && (
             <span className="truncate">
@@ -769,7 +763,7 @@ function StatusBadge({
 }) {
   if (status === 'approved' && hasPendingUpdate) {
     return (
-      <Badge variant="outline">
+      <Badge variant="secondary">
         <Trans message="Update under review" />
       </Badge>
     );
@@ -784,7 +778,7 @@ function StatusBadge({
       );
     case 'approved':
       return (
-        <Badge variant="positive">
+        <Badge variant="default">
           <Trans message="Live" />
         </Badge>
       );
@@ -802,7 +796,7 @@ function StatusBadge({
       );
     default:
       return (
-        <Badge variant="outline">
+        <Badge variant="secondary">
           <Trans message="Draft" />
         </Badge>
       );

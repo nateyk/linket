@@ -10,6 +10,22 @@ class WidgetFlags
             request('xWidgetKnowledgeScopeTag');
     }
 
+    /**
+     * The widget forwards its configured Help Center category through this
+     * header. Invalid or non-positive values must not broaden the query.
+     */
+    public static function scopedHcCategoryId(): int|null
+    {
+        $id = request()->header('X-Scoped-Hc-Category-Id')
+            ?: request('scopedHcCategoryId');
+
+        $validated = filter_var($id, FILTER_VALIDATE_INT, [
+            'options' => ['min_range' => 1],
+        ]);
+
+        return $validated === false ? null : $validated;
+    }
+
     public static function aiAgentId(): int|null
     {
         $id =
