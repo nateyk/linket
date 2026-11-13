@@ -32,7 +32,7 @@
     "laravel-notification-channels/telegram": "^8.0",
     "laravel/ai": "^1.0",
     "laravel/fortify": "^1.25",
-    "laravel/framework": "^13.0",
+    "laravel/framework": "^13.40",
     "laravel/horizon": "^5.3",
     "laravel/mcp": "^1.0",
     "laravel/passport": "13.7.6",
