@@ -7,8 +7,6 @@ import {Button} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
 import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {Empty} from '@shadcn/empty/empty';
-import {Input} from '@shadcn/forms/input/input';
-import {Select} from '@shadcn/forms/select/select';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {Tooltip} from '@shadcn/tooltip/tooltip';
 import {formatMoney} from '@ui/i18n/format-money';
@@ -42,6 +40,7 @@ import {
 } from 'lucide-react';
 import {useCallback, useEffect, useState} from 'react';
 import {Link} from 'react-router';
+import {CreatorListingToolbar} from '@app/dashboard/creator-listing-toolbar';
 import {CreateProductDialog} from './create-product-dialog';
 
 type ProductStatus =
@@ -241,57 +240,45 @@ export function Component() {
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-1 py-4 sm:px-0">
           {error && <ErrorNotice message={error} onRetry={() => void load()} />}
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Input
-              value={search}
-              onChange={event => {
-                setSearch(event.target.value);
-                setPage(1);
-              }}
-              placeholder={trans({message: 'Search products'})}
-              aria-label={trans({message: 'Search products'})}
-            />
-            <Select.Root
-              value={status}
-              onValueChange={value => {
-                setStatus(value ?? '');
-                setPage(1);
-              }}
-            >
-              <Select.Trigger className="w-full">
-                <Select.Value placeholder={<Trans message="All statuses" />} />
-              </Select.Trigger>
-              <Select.Content>
-                <Select.Item value=""><Trans message="All statuses" /></Select.Item>
-                <Select.Item value="draft"><Trans message="Draft" /></Select.Item>
-                <Select.Item value="pending_approval"><Trans message="In review" /></Select.Item>
-                <Select.Item value="approved"><Trans message="Live" /></Select.Item>
-                <Select.Item value="rejected"><Trans message="Needs changes" /></Select.Item>
-                <Select.Item value="archived"><Trans message="Archived" /></Select.Item>
-              </Select.Content>
-            </Select.Root>
-            <Select.Root
-              value={sort}
-              onValueChange={value => {
-                setSort(value ?? 'latest');
-                setPage(1);
-              }}
-            >
-              <Select.Trigger className="w-full">
-                <Select.Value placeholder={<Trans message="Sort by" />} />
-              </Select.Trigger>
-              <Select.Content>
-                <Select.Item value="latest"><Trans message="Newest" /></Select.Item>
-                <Select.Item value="oldest"><Trans message="Oldest" /></Select.Item>
-                <Select.Item value="title"><Trans message="Title" /></Select.Item>
-                <Select.Item value="-sales"><Trans message="Most sales" /></Select.Item>
-                <Select.Item value="-revenue"><Trans message="Highest revenue" /></Select.Item>
-              </Select.Content>
-            </Select.Root>
-            <p className="flex items-center text-sm text-muted-foreground">
-              <Trans message=":count products" values={{count: total}} />
-            </p>
-          </div>
+          <CreatorListingToolbar
+            search={search}
+            searchLabel={trans({message: 'Search products'})}
+            onSearchChange={value => {
+              setSearch(value);
+              setPage(1);
+            }}
+            status={status}
+            onStatusChange={value => {
+              setStatus(value);
+              setPage(1);
+            }}
+            statusOptions={[
+              {value: 'draft', label: <Trans message="Draft" />},
+              {value: 'pending_approval', label: <Trans message="In review" />},
+              {value: 'approved', label: <Trans message="Live" />},
+              {value: 'rejected', label: <Trans message="Needs changes" />},
+              {value: 'archived', label: <Trans message="Archived" />},
+            ]}
+            sort={sort}
+            onSortChange={value => {
+              setSort(value);
+              setPage(1);
+            }}
+            sortOptions={[
+              {value: 'latest', label: <Trans message="Newest" />},
+              {value: 'oldest', label: <Trans message="Oldest" />},
+              {value: 'title', label: <Trans message="Title" />},
+              {value: '-sales', label: <Trans message="Most sales" />},
+              {value: '-revenue', label: <Trans message="Highest revenue" />},
+            ]}
+            onClear={() => {
+              setSearch('');
+              setStatus('');
+              setSort('latest');
+              setPage(1);
+            }}
+            summary={<Trans message=":count products" values={{count: total}} />}
+          />
 
           {loading ? (
             <ProductSkeleton />
@@ -335,6 +322,10 @@ export function Component() {
                 </Button>
               </div>
             </>
+          ) : search.trim() || status ? (
+            <div className="flex min-h-52 flex-col items-center justify-center gap-3 rounded-card-sm border border-dashed p-6 text-center" role="status">
+              <p className="text-sm font-medium"><Trans message="No matching products" /></p>
+            </div>
           ) : (
             <EmptyProducts onNewProduct={() => setCreateDialogOpen(true)} />
           )}
