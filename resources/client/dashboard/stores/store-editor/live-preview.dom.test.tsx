@@ -372,7 +372,10 @@ describe('preview bottom drawer below lg (A-19)', () => {
     fireEvent.click(screen.getByRole('button', {name: 'Preview'}));
 
     const dialog = await screen.findByRole('dialog', {name: 'Live preview'});
-    expect(dialog.getAttribute('aria-modal')).toBe('true');
+    // Base UI Drawer supplies modal focus/scroll behavior at Drawer.Root;
+    // it does not forward an aria-modal attribute from Drawer.Content.
+    expect(dialog.getAttribute('role')).toBe('dialog');
+    expect(document.querySelector('[data-slot="drawer-overlay"]')).toBeTruthy();
     await waitFor(() =>
       expect(document.querySelectorAll('iframe').length).toBe(2),
     );
