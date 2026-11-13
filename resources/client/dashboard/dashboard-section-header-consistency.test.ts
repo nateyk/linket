@@ -101,7 +101,7 @@ describe('dashboard header visual and semantic consistency', () => {
   test('Link Page editors restore Link pages › New / Edit using the article editor', () => {
     expect(articleEditor).not.toContain('backButton');
     for (const source of [newLinkPage, editLinkPage]) {
-      expect(source).toContain('<Breadcrumb.Root className="me-auto w-auto min-w-0 text-xl max-sm:me-0 max-sm:w-0 max-sm:flex-1 max-sm:overflow-hidden max-sm:text-sm">');
+      expect(source).toContain('<Breadcrumb.Root className="me-auto w-auto min-w-0 text-xl max-sm:text-sm">');
       expect(source).toContain('<Trans message="Link pages" />');
       expect(source).toContain('title={breadCrumb}');
       expect(source).not.toContain('backButton=');
