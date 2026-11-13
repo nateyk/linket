@@ -4,6 +4,7 @@ use App\CreatorServices\Controllers\PublicServicePageController;
 use App\CreatorServices\PublicCreatorServices;
 use App\Demo\Controllers\DemoLoginController;
 use App\HelpCenter\Controllers\LegacyHelpRedirectController;
+use App\HelpCenter\Controllers\SearchTermController;
 use App\Links\Controllers\FallbackRouteController;
 use App\Links\Controllers\LinkImageController;
 use App\QrCodes\Controllers\QrCodesController;
@@ -53,6 +54,10 @@ Route::get('{storeSlug}/products/{digitalProduct}', [PublicDigitalProductPageCon
 Route::get('{storeSlug}/products/{digitalProduct}/orders/{order}/success', [PublicDigitalProductPageController::class, 'success'])
     ->whereNumber('digitalProduct')
     ->name('digital-products.public.order.success');
+
+// Help Center uses sendBeacon on page leave. Keep CSRF protection active.
+Route::post('search-term', [SearchTermController::class, 'storeSearchSession'])
+    ->middleware('throttle:30,1');
 
 // Legacy Linket Help KB slugs → BeDesk HC
 Route::get('help/articles/{slug}', [LegacyHelpRedirectController::class, 'article']);
