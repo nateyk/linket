@@ -204,6 +204,7 @@ export function LivePreview() {
 
       {!isInsightsTab && (
         <Drawer.Root
+          modal
           position="bottom"
           open={drawerOpen}
           onOpenChange={open => {
@@ -231,7 +232,6 @@ export function LivePreview() {
           <Drawer.Portal keepMounted={drawerVisited}>
             <Drawer.Backdrop />
             <Drawer.Content
-              aria-modal="true"
               popupClassName="h-[min(94dvh,56rem)] max-h-none p-0"
               className="min-h-0 gap-0 overflow-hidden"
             >
