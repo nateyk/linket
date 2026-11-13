@@ -202,6 +202,9 @@ test('authenticated verified-Pro creator sees explicit workspace consent without
 
     $response = $this->get('https://linket.example.test/oauth/linket/authorize?'.http_build_query($parameters));
     $response->assertOk()->assertSee('Registered MCP Client')->assertSee('Approve connection');
+    expect($response->headers->get('Content-Security-Policy'))
+        ->toContain("form-action 'self' https://client.example.test;")
+        ->not->toContain('https://untrusted.example.test');
     [$csrf, $nonce] = mcpBrowserCredentials($response->getContent());
     expect($nonce)->toHaveLength(48);
     expect($csrf)->not->toBeEmpty();
@@ -227,6 +230,8 @@ test('HTTPS browser approve requires selected workspace and emits real Passport 
     $approve = $this->post('https://linket.example.test/oauth/linket/authorize/approve', $post);
     $approve->assertStatus(302);
     expect($approve->headers->get('Cache-Control'))->toContain('no-store');
+    expect($approve->headers->get('Content-Security-Policy'))
+        ->toContain("form-action 'self' https://client.example.test;");
     $redirect = $approve->headers->get('Location');
     expect($redirect)->toStartWith($parameters['redirect_uri'].'?');
     parse_str((string) parse_url($redirect, PHP_URL_QUERY), $query);
@@ -249,8 +254,10 @@ test('HTTPS consent denial consumes nonce and never issues a Passport grant or t
     [$csrf, $nonce] = mcpBrowserCredentials($response->getContent());
 
     $post = ['_token' => $csrf, 'nonce' => $nonce];
-    $this->post('https://linket.example.test/oauth/linket/authorize/deny', $post)
-        ->assertOk()->assertSee('Connection denied');
+    $denied = $this->post('https://linket.example.test/oauth/linket/authorize/deny', $post);
+    $denied->assertOk()->assertSee('Connection denied');
+    expect($denied->headers->get('Content-Security-Policy'))
+        ->toContain("form-action 'self';");
 
     expect(DB::table('creator_ai_mcp_connections')->count())->toBe(0);
     expect(DB::table('oauth_auth_codes')->count())->toBe(0);
