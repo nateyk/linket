@@ -8,16 +8,19 @@ import {useDatatableRouteType} from '@app/dashboard/use-datatable-route-type';
 import {StaticPageTitle} from '@common/seo/static-page-title';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {useRequiredParams} from '@common/ui/navigation/use-required-params';
-import {Breadcrumb} from '@shadcn/breadcrumb/breadcrumb';
+import {Button} from '@shadcn/button/button';
 import {useSuspenseQuery} from '@tanstack/react-query';
 import {DateRangeValue} from '@ui/forms/input-field/date/date-range-picker/date-range-value';
 import {DateRangePresets} from '@ui/forms/input-field/date/date-range-picker/dialog/date-range-presets';
-import {Trans} from '@ui/i18n/trans';
+import {useTrans} from '@ui/i18n/use-trans';
 import {removeProtocol} from '@ui/utils/urls/remove-protocol';
 import {useMemo, useState} from 'react';
+import {Link} from 'react-router';
+import {ArrowLeftIcon} from 'lucide-react';
 
 export function Component() {
   const {routeType} = useDatatableRouteType();
+  const {trans} = useTrans();
   const {domainId} = useRequiredParams(['domainId']);
   const query = useSuspenseQuery(retrieveDomainOptions(Number(domainId)));
   const domain = query.data.data;
@@ -37,24 +40,23 @@ export function Component() {
     <>
       <StaticPageTitle>{removeProtocol(domain.host)}</StaticPageTitle>
       <DashboardLayout.MainSection>
-        <DashboardLayout.SectionHeader>
+        <DashboardLayout.SectionHeader className="max-lg:h-auto max-lg:flex-wrap max-lg:py-2">
           <DashboardLayout.SidebarToggle />
-          <Breadcrumb.Root className="text-xl">
-            <Breadcrumb.Item>
-              <Breadcrumb.Link to={`/${routeType}/custom-domains`}>
-                <Trans message="Branded domains" />
-              </Breadcrumb.Link>
-            </Breadcrumb.Item>
-            <Breadcrumb.Separator />
-            <Breadcrumb.Item>
-              <Breadcrumb.Page>{removeProtocol(domain.host)}</Breadcrumb.Page>
-            </Breadcrumb.Item>
-          </Breadcrumb.Root>
+          <Button variant="ghost" size="icon-sm" className="max-lg:size-11" nativeButton={false}
+            aria-label={trans({message: 'Back to branded domains'})}
+            render={<Link to={`/${routeType}/custom-domains`} />}>
+            <ArrowLeftIcon className="rtl:rotate-180" aria-hidden="true" />
+          </Button>
+          <DashboardLayout.SectionTitle render={<h1 />} className="max-lg:order-3 max-lg:basis-full max-lg:flex-none max-lg:w-full max-lg:text-xl max-lg:overflow-visible max-lg:whitespace-normal max-lg:text-clip">
+            {removeProtocol(domain.host)}
+          </DashboardLayout.SectionTitle>
+          <div className="ms-auto flex min-w-0 items-center">
           <TrackedEventsInsightsDateAndFilterButtons
             dateRange={dateRange}
             setDateRange={setDateRange}
             filters={filters}
           />
+          </div>
         </DashboardLayout.SectionHeader>
         <DashboardLayout.SectionContent className="overflow-y-auto">
           <TrackedEventsInsights
