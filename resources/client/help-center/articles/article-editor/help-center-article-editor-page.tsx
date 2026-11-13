@@ -10,6 +10,7 @@ import {DashboardLayout as AdminDashboardLayout} from '@common/ui/dashboard/dash
 import {DashboardLayoutContext as AgentDashboardLayoutContext} from '@common/ui/dashboard-layout/dashboard-layout-context';
 import {FileUploadProvider} from '@common/uploads/uploader/file-upload-provider';
 import {Trans} from '@ui/i18n/trans';
+import {useTrans} from '@ui/i18n/use-trans';
 import {useContext, type ReactNode} from 'react';
 
 interface Props {
@@ -42,6 +43,7 @@ function AdminArticleEditorPage({
   aside,
   imageUploadType = 'articleImages',
 }: Props) {
+  const {trans} = useTrans();
   return (
     <TipTapEditorProvider
       extensions={articleEditorTipTapExtensions}
@@ -62,7 +64,7 @@ function AdminArticleEditorPage({
               </div>
               {aside && (
                 <aside
-                  aria-label="Article details"
+                  aria-label={trans({message: 'Details'})}
                   className="min-w-0 self-start overflow-hidden rounded-card border bg-card"
                 >
                   <div className="border-b px-4 py-3 text-sm font-semibold">
