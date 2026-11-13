@@ -369,16 +369,17 @@ the mobile bottom navigation anchored to the visible viewport.
   `inset` and `floating` variants drop the border and let the frame float on a muted
   ground instead.
 - **Section headers:** `DashboardLayout.SectionHeader` is the one 56px
-  (`h-14`) header bar, with `border-b`, `--section-spacing` inline padding,
-  and `SectionTitle` at 24px/600. Use `render={<h1 />}` for a single visible
-  page title. Creator forms, link editors and resource detail pages do not display
-  breadcrumbs or Draft/Published badges beside that title: use one named,
-  RTL-aware Back icon where needed and put actions on the inline end.
-  Allow the title to wrap on narrow screens without hiding action labels
-  from assistive technology. Keep the same divider in Insights, Store Editor,
-  and Links/Folders/QR details. Tabs below the header align to
-  `--section-spacing`. Avoid duplicate titles, oversized status badges,
-  redundant navigation paths, or extra header rows.
+  (`h-14`) header bar, with `border-b` and `--section-spacing` inline padding.
+  Ordinary dashboard pages use `SectionTitle` at 24px/600 with a single H1.
+  On creator/edit forms and resource details, use the existing `Breadcrumb.Root`
+  in a **single compact line**: a clickable muted parent, separator, and the
+  current page at `text-xl` (smaller on narrow screens). Do not add an extra
+  Back-arrow button or a separate large visible title in the same header.
+  Keep a screen-reader-only H1 when the page has no other document heading.
+  Link Page editors already have their editable content H1. Keep Draft/Published
+  badges out of header breadcrumbs; show necessary approval feedback in the
+  content area. Keep the header divider, inline-end actions, RTL-aware separators,
+  and tab alignment at `--section-spacing` across the related dashboard pages.
 - **Section variants:** three sanctioned frames — `default` (bordered), `inset`
   (floating content inside a padded shell), `floating` (everything on `bg-muted` with
   8px gaps). Pick one per screen; don't mix within a screen.
