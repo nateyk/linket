@@ -2,6 +2,7 @@
 
 namespace App\HelpCenter\Controllers;
 
+use App\HelpCenter\Actions\ReorderHelpCenterItems;
 use App\HelpCenter\Models\HcArticle;
 use App\HelpCenter\Models\HcCategory;
 use Common\Core\BaseController;
@@ -22,7 +23,6 @@ class HelpCenterManagerController extends BaseController
         }
 
         $categories = $query
-            ->limit(50)
             ->orderBy('position', 'asc')
             ->with('tags')
             ->get();
@@ -112,22 +112,15 @@ class HelpCenterManagerController extends BaseController
         $this->authorize('update', HcArticle::class);
 
         $data = $this->validate(request(), [
-            'parentId' => 'integer|nullable',
-            'ids' => 'required|array|min:1',
-            'ids.*' => 'integer',
+            'parentId' => 'nullable|integer|exists:categories,id',
+            'ids' => 'required|array|min:1|max:1000',
+            'ids.*' => 'required|integer|min:1|distinct|exists:categories,id',
         ]);
 
-        $queryPart = '';
-        foreach ($data['ids'] as $position => $id) {
-            $position++;
-            $queryPart .= " when id=$id then $position";
-        }
-
-        HcCategory::query()
-            ->where('parent_id', $data['parentId'] ?? null)
-            ->update([
-                'position' => DB::raw("(case $queryPart end)"),
-            ]);
+        (new ReorderHelpCenterItems())->categories(
+            $data['ids'],
+            $data['parentId'] ?? null,
+        );
 
         return $this->success();
     }
@@ -137,21 +130,11 @@ class HelpCenterManagerController extends BaseController
         $this->authorize('update', HcArticle::class);
 
         $data = $this->validate(request(), [
-            'ids' => 'required|array|min:1',
-            'ids.*' => 'integer',
+            'ids' => 'required|array|min:1|max:1000',
+            'ids.*' => 'required|integer|min:1|distinct|exists:articles,id',
         ]);
 
-        $queryPart = '';
-        foreach ($data['ids'] as $position => $id) {
-            $position++;
-            $queryPart .= " when article_id=$id then $position";
-        }
-
-        DB::table('category_article')
-            ->where('category_id', $sectionId)
-            ->update([
-                'position' => DB::raw("(case $queryPart end)"),
-            ]);
+        (new ReorderHelpCenterItems())->articles($data['ids'], $sectionId);
 
         return $this->success();
     }
