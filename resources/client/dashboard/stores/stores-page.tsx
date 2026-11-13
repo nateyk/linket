@@ -159,6 +159,9 @@ export function BiolinkCard({biolink, onClick, onInsights}: BiolinkCardProps) {
   const {trans} = useTrans();
   const avatarUrl = normalizeMediaUrl(biolink.profile_config?.avatar_url);
   const showAvatar = !!avatarUrl && failedAvatarUrl !== avatarUrl;
+  const copyLabel = isCopied
+    ? trans(message('Link copied'))
+    : trans(message('Copy link'));
 
   const copyProfileLink = () => {
     copyToClipboard();
@@ -230,11 +233,15 @@ export function BiolinkCard({biolink, onClick, onInsights}: BiolinkCardProps) {
           type="button"
           variant="ghost"
           size="icon-sm"
-          aria-label={isCopied ? trans(message('Link copied')) : trans(message('Copy link'))}
-          title={isCopied ? trans(message('Link copied')) : trans(message('Copy link'))}
+          aria-label={copyLabel}
+          title={copyLabel}
           onClick={copyProfileLink}
         >
-          {isCopied ? <CheckIcon aria-hidden="true" /> : <CopyIcon aria-hidden="true" />}
+          {isCopied ? (
+            <CheckIcon aria-hidden="true" />
+          ) : (
+            <CopyIcon aria-hidden="true" />
+          )}
         </Button>
 
         <Dropdown.Root>
@@ -256,10 +263,6 @@ export function BiolinkCard({biolink, onClick, onInsights}: BiolinkCardProps) {
             >
               <ExternalLinkIcon />
               <Trans message="Open profile" />
-            </Dropdown.Item>
-            <Dropdown.Item onClick={copyProfileLink}>
-              <CopyIcon />
-              <Trans message="Copy link" />
             </Dropdown.Item>
             <Dropdown.Item onClick={onInsights}>
               <BarChart3Icon />
