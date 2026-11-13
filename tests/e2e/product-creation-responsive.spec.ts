@@ -91,7 +91,12 @@ test.describe('product creation responsive evidence', () => {
         const breadcrumb = page.locator('[data-slot="section-header"] [data-slot="breadcrumb"]');
         const currentPage = breadcrumb.locator('[data-slot="breadcrumb-page"]');
         await expect(breadcrumb).toBeVisible();
-        await expect(breadcrumb.getByRole('link', {name: 'All products'})).toHaveAttribute('href', '/dashboard/items');
+        // At phone widths the parent link is in the accessible "…" menu.
+        await expect(
+          breadcrumb.getByRole('link', {name: 'All products'})
+            .or(breadcrumb.getByRole('button', {name: 'More breadcrumbs'}))
+            .first(),
+        ).toBeVisible();
         await expect(currentPage).toHaveText(item.heading);
         if (viewport.width <= 375) {
           const clipping = await currentPage.evaluate(node => {
@@ -100,12 +105,12 @@ test.describe('product creation responsive evidence', () => {
             const label = node.getBoundingClientRect();
             const frame = nav.getBoundingClientRect();
             return {
-              hiddenPixels: Math.max(0, node.scrollWidth - node.clientWidth),
               clippedByNav: Math.max(0, label.right - frame.right),
+              textOverflow: getComputedStyle(node).textOverflow,
             };
           });
-          expect(clipping.hiddenPixels, `${item.type} breadcrumb label is truncated at ${viewport.width}px`)
-            .toBeLessThanOrEqual(1);
+          // Ellipsis is intentional: a long title must not move the actions.
+          expect(clipping.textOverflow).toBe('ellipsis');
           expect(clipping.clippedByNav, `${item.type} breadcrumb is clipped by header at ${viewport.width}px`)
             .toBeLessThanOrEqual(1);
         }
@@ -194,25 +199,50 @@ test('connected steps scroll within the editor without shifting the dashboard pa
   }
 });
 
-test('mobile header action targets reach Linket QA minimum of 44px', async ({page}) => {
+test('mobile creator header stays on one row with 44px actions', async ({page}) => {
   test.skip(
     process.env.LINKET_ISOLATED_E2E !== '1',
     'Requires isolated test database and authenticated creator',
   );
-  await page.setViewportSize({width: 360, height: 800});
   await loginAsSeededCreator(page);
   for (const type of ['digital', 'ebook', 'audio', 'course'] as const) {
     await page.goto(`/dashboard/items/new/${type}`);
     const names = type === 'course'
       ? ['Preview', 'Create course']
       : ['Preview', 'Save draft', 'Submit for review'];
-    for (const name of names) {
-      const target = page.getByRole('button', {name, exact: true});
-      await expect(target).toBeVisible();
-      const rect = await target.boundingBox();
-      expect(rect, `${type} ${name} target must render`).not.toBeNull();
-      expect(rect!.width, `${type} ${name} width`).toBeGreaterThanOrEqual(44);
-      expect(rect!.height, `${type} ${name} height`).toBeGreaterThanOrEqual(44);
+    const header = page.locator('[data-slot="section-header"]');
+    const breadcrumb = header.locator('[data-slot="breadcrumb"]');
+
+    for (const width of [320, 360, 390]) {
+      await page.setViewportSize({width, height: 800});
+      await expect(breadcrumb).toBeVisible();
+      const headerRect = await header.boundingBox();
+      const breadcrumbRect = await breadcrumb.boundingBox();
+      expect(headerRect).not.toBeNull();
+      expect(breadcrumbRect).not.toBeNull();
+      expect(headerRect!.height, `${type} at ${width}px must use one 56px header`)
+        .toBeLessThanOrEqual(60);
+
+      for (const name of names) {
+        const target = page.getByRole('button', {name, exact: true});
+        await expect(target).toBeVisible();
+        const rect = await target.boundingBox();
+        expect(rect, `${type} ${name} target must render`).not.toBeNull();
+        expect(rect!.width, `${type} ${name} width`).toBeGreaterThanOrEqual(44);
+        expect(rect!.height, `${type} ${name} height`).toBeGreaterThanOrEqual(44);
+        expect(
+          Math.abs((rect!.y + rect!.height / 2) - (breadcrumbRect!.y + breadcrumbRect!.height / 2)),
+          `${type} ${name} stays aligned with breadcrumb at ${width}px`,
+        ).toBeLessThanOrEqual(6);
+        expect(rect!.y + rect!.height, `${type} ${name} fits header`)
+          .toBeLessThanOrEqual(headerRect!.y + headerRect!.height + 1);
+      }
+
+      const overflow = await page.evaluate(
+        () => Math.max(0, document.documentElement.scrollWidth - document.documentElement.clientWidth),
+      );
+      expect(overflow, `${type} must not horizontally overflow at ${width}px`)
+        .toBeLessThanOrEqual(1);
     }
   }
 });
