@@ -42,7 +42,7 @@ class SanitizeHelpCenterHtml
             'pre[class]', 'code[class]', 'hr',
             'table', 'thead', 'tbody', 'tfoot',
             'tr', 'th[colspan|rowspan|style]', 'td[colspan|rowspan|style]',
-            'iframe[src|width|height|frameborder|allowfullscreen]',
+            'iframe[src|width|height|frameborder]',
         ]));
 
         $config->set('URI.AllowedSchemes', [
