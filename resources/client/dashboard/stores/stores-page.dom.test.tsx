@@ -67,8 +67,12 @@ describe('storefront profile card', () => {
     expect(card.className).toContain('border-border');
     expect(card.className).toContain('bg-card');
     expect(card.className).toContain('rounded-card');
-    expect(card.className).not.toContain('hover:border');
-    expect(card.className).not.toContain('hover:bg');
+    // Item.Root includes shared [a]:hover styling for nested anchors.
+    // Assert only on unscoped hover variants applied to the card itself.
+    const cardHoverClasses = card.className
+      .split(/\s+/)
+      .filter(className => className.startsWith('hover:'));
+    expect(cardHoverClasses).toEqual([]);
     const copyButton = screen.getByRole('button', {name: 'Copy link'});
     expect(copyButton.closest('[data-slot="item-row"]')).toBeTruthy();
     const actions = container.querySelector('[data-slot="item-actions"]') as HTMLElement;
