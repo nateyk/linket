@@ -60,9 +60,17 @@ class CreateTicketAsCustomer
             $data['message'],
         );
 
-        $conversation = ConversationsAssigner::assignConversationToFirstAvailableAgent(
-            $conversation,
-        );
+        if ($conversation->support_owner_id !== null) {
+            $conversation->update([
+                'assigned_to' => Conversation::ASSIGNED_AGENT,
+                'assignee_id' => null,
+                'group_id' => null,
+            ]);
+        } else {
+            $conversation = ConversationsAssigner::assignConversationToFirstAvailableAgent(
+                $conversation,
+            );
+        }
 
         event(new ConversationCreated($conversation));
 
@@ -73,9 +81,13 @@ class CreateTicketAsCustomer
 
         $this->sendTicketReceivedEmail($conversation, $message);
 
-        // notification to agent that ticket was created
-        $users = app(User::class)
+        // Creator-owned ticket subjects and messages stay with the creator.
+        $users = User::query()
             ->whereNeedsNotificationFor(ConversationCreatedNotif::NOTIF_ID)
+            ->when(
+                $conversation->support_owner_id !== null,
+                fn ($query) => $query->whereKey($conversation->support_owner_id),
+            )
             ->get();
         Notification::send($users, new ConversationCreatedNotif($conversation));
 

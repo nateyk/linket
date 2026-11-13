@@ -31,6 +31,13 @@ class ConversationsGroupController extends BaseController
             $this->authorize('update', $conversation);
         });
 
+        abort_if(
+            $conversations->contains(fn (Conversation $conversation) =>
+                $conversation->support_owner_id !== null),
+            403,
+            'Creator-owned tickets cannot be assigned to platform groups.',
+        );
+
         $conversations = $conversations->filter(
             fn(Conversation $conversation) => $conversation->group_id !==
                 $data['groupId'],
