@@ -1,9 +1,10 @@
 import {helpCenterQueries} from '@app/help-center/help-center-queries';
 import {authGuard} from '@common/auth/guards/auth-route';
+import {auth} from '@common/auth/use-auth';
 import {shouldRevalidateDatatableLoader} from '@common/datatable/filters/utils/should-revalidate-datatable-loader';
 import {queryClient} from '@common/http/query-client';
 import {searchParamsFromUrl} from '@ui/utils/urls/search-params-from-url';
-import {Navigate, Params, RouteObject} from 'react-router';
+import {Navigate, Params, redirect, RouteObject} from 'react-router';
 
 export const updateArticlePageLoader = async (params: Params) => {
   return await queryClient.ensureQueryData(
@@ -19,10 +20,20 @@ export function createHcManagerRoutes(
   prefix: 'hc' | 'help',
   root: '/agent/hc' | '/admin/help',
 ): RouteObject[] {
+  // Admin bookmarks and agent-menu links should resolve to the same modern
+  // admin dashboard. Non-admin staff must retain the agent Help Center.
+  const canonicalizeAdminRoute = ({request}: {request: Request}) => {
+    if (prefix !== 'hc' || !auth.hasPermission('admin.access')) return null;
+    const url = new URL(request.url);
+    const relativePath = url.pathname.replace(/^\/agent\/hc(?=\/|$)/, '');
+    return redirect(`/admin/help${relativePath}${url.search}`, 302);
+  };
+
   return [
   // article datatable
   {
     path: prefix,
+    loader: canonicalizeAdminRoute,
     children: [
       {
         index: true,
@@ -85,6 +96,7 @@ export function createHcManagerRoutes(
   // help center manager
   {
     path: `${prefix}/arrange`,
+    loader: canonicalizeAdminRoute,
     children: [
       {
         index: true,
