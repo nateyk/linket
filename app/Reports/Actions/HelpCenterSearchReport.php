@@ -18,6 +18,11 @@ class HelpCenterSearchReport
     public function generate(string $type, array $params): AbstractPaginator
     {
         $orderBy = $params['orderBy'] ?? 'count';
+        if (! in_array($orderBy, [
+            'count', 'last_seen', 'clicked_article', 'resulted_in_ticket',
+        ], true)) {
+            $orderBy = 'count';
+        }
         $pagination = SearchTerm::when(
             isset($params['userId']),
             fn($query) => $query->where('user_id', $params['userId']),
