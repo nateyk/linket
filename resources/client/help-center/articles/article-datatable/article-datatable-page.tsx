@@ -160,7 +160,7 @@ function SelectedActions({selectedIds, onActionDone}: SelectedActionsProps) {
   const {aiAgentId} = useParams();
   const aiInstalled = useIsModuleInstalled('ai');
   return (
-    <div className="flex gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       <ChangeArticleStateButton
         selectedIds={selectedIds}
         onSuccess={() => onActionDone()}

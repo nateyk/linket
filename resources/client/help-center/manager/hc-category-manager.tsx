@@ -119,6 +119,7 @@ function CategoryRow({
     <HcManagerRow
       item={category}
       items={categories}
+      isReordering={reorder.isPending}
       onSortEnd={(oldIndex, newIndex) => {
         reorder.mutate({oldIndex, newIndex, parentId: parent?.id});
       }}
