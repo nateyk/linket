@@ -39,7 +39,7 @@ describe('creator product dashboard lifecycle controls', () => {
     expect(source).toContain("{value: '-revenue', label: <Trans message=\"Highest revenue\" />}");
     expect(source).toContain('setPage(1)');
     expect(source).toContain('<Trans message="No matching products" />');
-    expect(source).toContain('<Trans message="Clear filters" />');
+    expect(source).toContain('onClear={() => {');
     expect(source).not.toContain('<Select.Root');
   });
 
