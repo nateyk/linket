@@ -2,6 +2,7 @@
 
 use App\HelpCenter\Models\HcArticle;
 use App\HelpCenter\Models\HcCategory;
+use App\HelpCenter\Visibility\HcVisibility;
 use App\Models\User;
 use Common\Core\Policies\BasePolicy;
 
@@ -13,14 +14,40 @@ class HcArticlePolicy extends BasePolicy
             $this->hasPermission($user, 'articles.view');
     }
 
-    public function show(?User $user, HcArticle $hcArticle)
+    public function show(?User $user, HcArticle|HcCategory $resource)
     {
-        if ($hcArticle->draft && !$user?->isAgent()) {
+        if (! $this->index($user)) {
             return false;
         }
 
-        return $this->hasPermission($user, 'articles.update') ||
-            $this->hasPermission($user, 'articles.view');
+        if ($user?->isAgent()) {
+            return true;
+        }
+
+        if (! HcVisibility::canViewRole($user, $resource->visible_to_role)) {
+            return false;
+        }
+
+        if ($resource instanceof HcCategory) {
+            if (! $resource->parent_id) {
+                return true;
+            }
+
+            // The compact parent relation omits visible_to_role, so load the
+            // actual parent rather than authorizing against a null attribute.
+            $parent = HcCategory::query()->find($resource->parent_id);
+
+            return $parent && HcVisibility::canViewRole($user, $parent->visible_to_role);
+        }
+
+        if ($resource->draft) {
+            return false;
+        }
+
+        return HcArticle::query()
+            ->whereKey($resource->getKey())
+            ->hasVisiblePlacement()
+            ->exists();
     }
 
     public function store(User $user)
