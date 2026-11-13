@@ -1,6 +1,7 @@
 /** @vitest-environment jsdom */
 import {cleanup, fireEvent, render, screen} from '@testing-library/react';
 import type {Store} from '@app/gen/schemas/store';
+import type {ReactNode} from 'react';
 import {afterEach, describe, expect, it, vi} from 'vitest';
 import {BiolinkCard} from './stores-page';
 
@@ -10,7 +11,15 @@ const notifications = vi.hoisted(() => ({success: vi.fn()}));
 vi.mock('copy-to-clipboard', () => ({default: clipboard.copy}));
 vi.mock('@shadcn/toast/toast', () => ({toast: notifications}));
 vi.mock('@ui/i18n/trans', () => ({
-  Trans: ({message}: {message: string}) => <span>{message}</span>,
+  Trans: ({message, values}: {message: string; values?: Record<string, ReactNode>}) => (
+    <span>
+      {message
+        .split(/(:\w+)/g)
+        .map(part =>
+          part.startsWith(':') ? (values?.[part.slice(1)] ?? part) : part,
+        )}
+    </span>
+  ),
 }));
 vi.mock('@ui/i18n/use-trans', () => ({
   useTrans: () => ({
@@ -45,7 +54,47 @@ describe('storefront profile card', () => {
     expect(container.querySelector('[data-slot="item-media"] img')).toBeNull();
     expect(container.querySelector('.lucide-layout-panel-top')).toBeTruthy();
     expect(screen.getByText('4')).toBeTruthy();
-    expect(screen.getByText('clicks')).toBeTruthy();
+    expect(screen.getByText(/clicks/).textContent).toBe('4 clicks');
+  });
+
+
+  it('keeps a stable token border, puts copy beside the URL and styles clicks as a compact pill', () => {
+    const {container} = render(
+      <BiolinkCard biolink={store} onClick={vi.fn()} onInsights={vi.fn()} />,
+    );
+
+    const card = screen.getByRole('listitem');
+    expect(card.className).toContain('border-border');
+    expect(card.className).toContain('bg-card');
+    expect(card.className).toContain('rounded-card');
+    expect(card.className).not.toContain('hover:border');
+    expect(card.className).not.toContain('hover:bg');
+    const copyButton = screen.getByRole('button', {name: 'Copy link'});
+    expect(copyButton.closest('[data-slot="item-row"]')).toBeTruthy();
+    const actions = container.querySelector('[data-slot="item-actions"]') as HTMLElement;
+    expect(actions.contains(copyButton)).toBe(false);
+    expect(actions.className).toContain('sm:basis-auto');
+    const count = screen.getByText(/clicks/).closest('.rounded-full') as HTMLElement;
+    expect(count).toBeTruthy();
+    expect(count.className).toContain('border-border');
+    expect(count.className).toContain('bg-background');
+    expect(count.textContent).toBe('4 clicks');
+  });
+
+  it('does not hide the copy action when the URL needs truncation', () => {
+    const longUrl = 'https://linket.example/' + 'very-long-segment-'.repeat(20);
+    const {container} = render(
+      <BiolinkCard
+        biolink={{...store, short_url: longUrl}}
+        onClick={vi.fn()}
+        onInsights={vi.fn()}
+      />,
+    );
+
+    const url = container.querySelector('[data-slot="item-row"] .truncate');
+    expect(url?.textContent).toContain('very-long-segment-');
+    expect(url?.className).toContain('min-w-0');
+    expect(screen.getByRole('button', {name: 'Copy link'})).toBeTruthy();
   });
 
   it('shows the uploaded image, normalizes storage URLs, and restores the icon if loading fails', () => {
