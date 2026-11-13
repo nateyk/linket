@@ -16,6 +16,10 @@ const links = read('resources/client/dashboard/links/link-details-page/link-deta
 const folders = read('resources/client/dashboard/folders/folder-details-page/folder-details-page.tsx');
 const qrCodes = read('resources/client/dashboard/qr-codes/qr-code-details-page/qr-code-details-page.tsx');
 const domains = read('resources/client/dashboard/custom-domains/domain-insights-page.tsx');
+const newLinkPage = read('resources/client/dashboard/link-pages/create-link-page.tsx');
+const editLinkPage = read('resources/client/dashboard/link-pages/edit-link-page.tsx');
+const overlays = read('resources/client/dashboard/link-overlays/crupdate/crupdate-link-overlay-form.tsx');
+const articleEditor = read('common/foundation/resources/client/article-editor/article-editor.tsx');
 
 describe('dashboard header visual and semantic consistency', () => {
   test('shared header keeps one 56px divider and semantic title typography', () => {
@@ -88,6 +92,26 @@ describe('dashboard header visual and semantic consistency', () => {
   ])('%s retains tabs aligned to the shared header divider', (_name, source) => {
     expect(source).not.toContain('SectionHeader className="border-none"');
     expect(source).toContain('className="mx-(--section-spacing) border-b"');
+  });
+
+  test('link page editors use a clear header label with accessible Back navigation', () => {
+    expect(articleEditor).toContain('{backButton}');
+    for (const source of [newLinkPage, editLinkPage]) {
+      expect(source).not.toContain('<Breadcrumb');
+      expect(source).toContain("aria-label={trans({message: 'Back to link pages'})}");
+      expect(source).toContain('render={<Link to={`/${routeType}/link-pages`} />}');
+    }
+    // The editable article title is already an H1 in the document body.
+    expect(newLinkPage).toContain('title={<Trans message="New link page" />}');
+    expect(editLinkPage).toContain('title={<Trans message="Edit link page" />}');
+  });
+
+  test('link overlay editor uses the canonical divider and one H1 instead of breadcrumbs', () => {
+    expect(overlays).toContain('<DashboardLayout.SectionHeader>');
+    expect(overlays).toContain('<DashboardLayout.SectionTitle render={<h1 />}');
+    expect(overlays).toContain("aria-label={trans({message: 'Back to overlays'})}");
+    expect(overlays).not.toContain('<Breadcrumb');
+    expect(overlays).not.toContain('SectionHeader className="border-none"');
   });
 
   test('Overview and My Products use the same semantic page-heading primitive', () => {
