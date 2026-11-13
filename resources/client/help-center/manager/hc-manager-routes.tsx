@@ -15,7 +15,10 @@ export const updateArticlePageLoader = async (params: Params) => {
   );
 };
 
-export function createHcManagerRoutes(prefix: 'hc' | 'help', root: string): RouteObject[] {
+export function createHcManagerRoutes(
+  prefix: 'hc' | 'help',
+  root: '/agent/hc' | '/admin/help',
+): RouteObject[] {
   return [
   // article datatable
   {
@@ -65,13 +68,16 @@ export function createHcManagerRoutes(prefix: 'hc' | 'help', root: string): Rout
           import(
             '@app/help-center/articles/article-editor/update-article-page'
           ),
-        loader: ({params}) =>
-          Promise.allSettled([
+        loader: async ({params}) => {
+          const redirect = authGuard({permission: 'articles.update'});
+          if (redirect) return redirect;
+          return await Promise.all([
             updateArticlePageLoader(params),
             queryClient.ensureQueryData(
               helpCenterQueries.categories.normalizedList(),
             ),
-          ]),
+          ]);
+        },
       },
     ],
   },
@@ -130,7 +136,11 @@ export function createHcManagerRoutes(prefix: 'hc' | 'help', root: string): Rout
           import(
             '@app/help-center/articles/article-editor/update-article-page'
           ),
-        loader: async ({params}) => await updateArticlePageLoader(params),
+        loader: async ({params}) => {
+          const redirect = authGuard({permission: 'articles.update'});
+          if (redirect) return redirect;
+          return await updateArticlePageLoader(params);
+        },
       },
       {
         path: 'categories/:categoryId/articles/:articleId/edit',
@@ -139,13 +149,18 @@ export function createHcManagerRoutes(prefix: 'hc' | 'help', root: string): Rout
           import(
             '@app/help-center/articles/article-editor/update-article-page'
           ),
-        loader: async ({params}) => await updateArticlePageLoader(params),
+        loader: async ({params}) => {
+          const redirect = authGuard({permission: 'articles.update'});
+          if (redirect) return redirect;
+          return await updateArticlePageLoader(params);
+        },
       },
 
       // create article
       {
         path: 'sections/:sectionId/articles/new',
         handle: {customDashboardLayout: true},
+        loader: () => authGuard({permission: 'articles.update'}) ?? null,
         lazy: () =>
           import(
             '@app/help-center/articles/article-editor/create-article-page'
@@ -154,6 +169,7 @@ export function createHcManagerRoutes(prefix: 'hc' | 'help', root: string): Rout
       {
         path: 'categories/:categoryId/articles/new',
         handle: {customDashboardLayout: true},
+        loader: () => authGuard({permission: 'articles.update'}) ?? null,
         lazy: () =>
           import(
             '@app/help-center/articles/article-editor/create-article-page'
