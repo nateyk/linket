@@ -13,7 +13,7 @@ import {Trans} from '@ui/i18n/trans';
 import {useTrans} from '@ui/i18n/use-trans';
 import {toast} from '@ui/toast/toast';
 import {isAxiosError} from 'axios';
-import {EyeIcon, GraduationCapIcon, ListChecksIcon, TriangleAlertIcon} from 'lucide-react';
+import {ArrowLeftIcon, ChevronRightIcon, EyeIcon, GraduationCapIcon, ListChecksIcon, TriangleAlertIcon} from 'lucide-react';
 import {FormEvent, useRef, useState} from 'react';
 import {Link, useNavigate, useSearchParams} from 'react-router';
 import {parseEtbToCents, parseWizardPrefill, priceForBillingMode, type BillingMode} from '../digital-products/product-create-flow';
@@ -157,23 +157,34 @@ export function Component() {
   return <FileUploadProvider><DashboardLayout.MainSection>
     <DashboardLayout.SectionHeader className="max-lg:h-auto max-lg:flex-wrap max-lg:py-2">
       <DashboardLayout.SidebarToggle />
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        className="lg:hidden max-lg:size-11"
+        nativeButton={false}
+        aria-label={trans({message: 'Back to products'})}
+        render={<Link to="/dashboard/items" />}
+      >
+        <ArrowLeftIcon className="rtl:rotate-180" aria-hidden="true" />
+      </Button>
       {/* Final-fix item 1 (same root cause + fix as the edit page, see
           p2-report item 7): the breadcrumb <nav> ships `w-full`, a flex base
           size equal to the whole header row, while SectionTitle is `flex-1`
           (flex-basis 0%) — free space for the title never exists, so it
           measured 0px at ≥1280. `w-auto` hands the slack to the title;
           `max-lg:hidden` keeps the narrow row for title + icon actions
-          (navigation lives in the drawer). The current-page crumb and its
+          (mobile navigation uses the back control). The current-page crumb and its
           separator are dropped: they repeated the exact string the title
           shows (crit3-A duplicate-title note). */}
       <Breadcrumb className="w-auto max-lg:hidden"><Breadcrumb.Item><Breadcrumb.Link to="/dashboard/items"><Trans message="All products" /></Breadcrumb.Link></Breadcrumb.Item></Breadcrumb>
+      <ChevronRightIcon className="hidden size-4 shrink-0 text-muted-foreground rtl:rotate-180 lg:block" aria-hidden="true" />
       {/* Final-fix item 2: the page's single h1 — same mechanism T7 used on
           the selection page; in a tight row the TEXT truncates (min-w-0). */}
       <DashboardLayout.SectionTitle render={<h1 />} className="max-lg:order-3 max-lg:basis-full max-lg:flex-none max-lg:w-full max-lg:text-xl max-lg:overflow-visible max-lg:whitespace-normal max-lg:text-clip"><span className="min-w-0 truncate max-lg:overflow-visible max-lg:whitespace-normal max-lg:text-clip"><Trans message="Create course" /></span></DashboardLayout.SectionTitle>
       {/* Header actions mirror the digital-product edit page: icon + label
           that collapses to icon-only below 1024px. aria-labels keep the
           collapsed buttons named. */}
-      <div className="flex items-center gap-2 max-lg:ml-auto">
+      <div className="ms-auto flex shrink-0 items-center gap-2">
         <Button type="button" variant="outline" size="sm" className="max-lg:size-11 max-lg:px-0"
           aria-label={trans({message: 'Preview'})}
           onClick={() => setPreviewOpen(true)}>
