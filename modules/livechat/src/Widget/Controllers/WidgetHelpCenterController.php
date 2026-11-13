@@ -24,6 +24,9 @@ class WidgetHelpCenterController extends BaseController
     {
         $categoryId = WidgetFlags::scopedHcCategoryId();
         $articles = HcArticle::query()
+            ->where('articles.draft', false)
+            ->filterByVisibleToRole()
+            ->hasVisiblePlacement()
             ->take(4)
             ->orderBy('views', 'desc')
             ->when(
@@ -36,6 +39,7 @@ class WidgetHelpCenterController extends BaseController
                     )
                     ->where('category_article.category_id', $categoryId),
             )
+            ->select('articles.*')
             ->get()
             ->loadPath()
             ->map(

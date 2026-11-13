@@ -3,6 +3,7 @@
 namespace App\HelpCenter;
 
 use App\HelpCenter\Models\HcCategory;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\Eloquent\Collection;
 
 class ArticleCollection extends Collection
@@ -13,6 +14,10 @@ class ArticleCollection extends Collection
     ): static {
         $this->load([
             'path' => function ($q) use ($category) {
+                if (!Auth::user()?->isAgent()) {
+                    $q->filterByVisibleToRole();
+                }
+
                 return $q->when($category, function ($q) use ($category) {
                     // if there's a category filter, return path in that category,
                     // otherwise use the first available category
@@ -20,10 +25,10 @@ class ArticleCollection extends Collection
                         $category instanceof HcCategory
                             ? $category->parent_id ?? $category->id
                             : $category;
-                    $q->where('categories.id', $categoryId)->orWhere(
-                        'categories.parent_id',
-                        $categoryId,
-                    );
+                    $q->where(function ($paths) use ($categoryId) {
+                        $paths->where('categories.id', $categoryId)
+                            ->orWhere('categories.parent_id', $categoryId);
+                    });
                 });
             },
         ]);

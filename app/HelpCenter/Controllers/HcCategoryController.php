@@ -15,6 +15,9 @@ class HcCategoryController extends BaseController
     public function show()
     {
         $this->authorize('index', HcArticle::class);
+        $categoryId = request()->route('sectionId') ?? request()->route('categoryId');
+        $category = HcCategory::findOrFail($categoryId);
+        $this->authorize('show', $category);
 
         $data = (new HcCategoryLoader())->loadData(request('loader'));
 
@@ -91,10 +94,12 @@ class HcCategoryController extends BaseController
     public function sidenavContent(int $categoryId)
     {
         $this->authorize('index', HcArticle::class);
+        $this->authorize('show', HcCategory::findOrFail($categoryId));
 
         $isAgent = Auth::user()?->isAgent() ?? false;
 
         $categories = HcCategory::where('parent_id', $categoryId)
+            ->filterByVisibleToRole()
             ->orderByPosition()
             ->with([
                 'articles' => function (BelongsToMany $query) use ($isAgent) {
@@ -104,7 +109,7 @@ class HcCategoryController extends BaseController
                         'articles.slug',
                     ]);
                     if (! $isAgent) {
-                        $query->where('articles.draft', false);
+                        $query->visibleToAudience();
                     }
                 },
             ])
