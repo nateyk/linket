@@ -57,6 +57,7 @@ export function Component() {
           key={article.id}
           item={article}
           items={articles}
+          isReordering={reorder.isPending}
           onSortEnd={(oldIndex, newIndex) => {
             reorder.mutate({sectionId: sectionId!, oldIndex, newIndex});
           }}
