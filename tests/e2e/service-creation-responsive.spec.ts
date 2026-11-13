@@ -85,29 +85,28 @@ async function verifyResponsiveServiceSetup(
  * creation journey. Keep viewport-specific layout branches outside the
  * test.describe body so the workflow itself stays easy to follow.
  */
-async function verifyServiceBreadcrumb(page: Page, width: number) {
-  // The semantic H1 is screen-reader-only, not a visible heading span.
+async function verifyServiceBreadcrumb(page: Page) {
+  // The H1 is screen-reader-only. Check the actual visible breadcrumb.
   const breadcrumb = page.locator('[data-slot="section-header"] [data-slot="breadcrumb"]');
   const currentPage = breadcrumb.locator('[data-slot="breadcrumb-page"]');
   await expect(breadcrumb).toBeVisible();
   await expect(currentPage).toHaveText('Create a service');
 
-  if (width <= 375) {
-    const clipping = await currentPage.evaluate(node => {
-      const nav = node.closest('[data-slot="breadcrumb"]');
-      if (!nav) throw new Error('Missing breadcrumb navigation');
-      const frame = nav.getBoundingClientRect();
-      const label = node.getBoundingClientRect();
-      return {
-        hiddenPixels: Math.max(0, node.scrollWidth - node.clientWidth),
-        clippedByNav: Math.max(0, label.right - frame.right),
-      };
-    });
-    expect(clipping.hiddenPixels, 'Service breadcrumb text must be readable on mobile')
-      .toBeLessThanOrEqual(1);
-    expect(clipping.clippedByNav, 'Service breadcrumb must fit inside its header')
-      .toBeLessThanOrEqual(1);
-  }
+  // Check the same clipping constraints at every viewport size. This keeps
+  // mobile coverage without adding conditional branches to the QA journey.
+  const clipping = await currentPage.evaluate(node => {
+    const nav = node.closest('[data-slot="breadcrumb"]')!;
+    const frame = nav.getBoundingClientRect();
+    const label = node.getBoundingClientRect();
+    return {
+      hiddenPixels: Math.max(0, node.scrollWidth - node.clientWidth),
+      clippedByNav: Math.max(0, label.right - frame.right),
+    };
+  });
+  expect(clipping.hiddenPixels, 'Service breadcrumb text must be readable')
+    .toBeLessThanOrEqual(1);
+  expect(clipping.clippedByNav, 'Service breadcrumb must fit inside its header')
+    .toBeLessThanOrEqual(1);
 }
 
 test.describe('Service Creation — authenticated browser acceptance', () => {
@@ -139,7 +138,7 @@ test.describe('Service Creation — authenticated browser acceptance', () => {
 
       await verifyResponsiveServiceSetup(page, steps, viewport.width, testInfo);
 
-      await verifyServiceBreadcrumb(page, viewport.width);
+      await verifyServiceBreadcrumb(page);
 
       // Moving between stages is local-only and retains unsaved details.
       await page.locator('#title').fill('E2E preview draft');
