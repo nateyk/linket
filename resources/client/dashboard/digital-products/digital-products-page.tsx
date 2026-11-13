@@ -99,7 +99,6 @@ export function Component() {
   const [sort, setSort] = useState('latest');
   const [page, setPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
-  const [total, setTotal] = useState(0);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -118,7 +117,6 @@ export function Component() {
       const payload: ProductsResponse = response.data;
       setProducts(payload.data ?? []);
       setLastPage(payload.meta?.last_page ?? 1);
-      setTotal(payload.meta?.total ?? payload.data?.length ?? 0);
     } catch (reason) {
       setError(
         getApiErrorMessage(reason) ||
@@ -277,7 +275,6 @@ export function Component() {
               setSort('latest');
               setPage(1);
             }}
-            summary={<Trans message=":count products" values={{count: total}} />}
           />
 
           {loading ? (

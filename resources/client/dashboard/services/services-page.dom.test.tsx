@@ -122,6 +122,9 @@ describe('services list', () => {
     );
     expect(await screen.findByText('Logo design')).toBeTruthy();
     expect(screen.getByText('Website build')).toBeTruthy();
+    const filters = screen.getByRole('search', {name: 'Search services'});
+    expect(filters.querySelector('[role="status"]')).toBeNull();
+    expect(screen.queryByText(/published · .*drafts · .*inquiries/)).toBeNull();
 
     const search = screen.getByRole('searchbox', {name: 'Search services'});
     await user.type(search, 'website');
