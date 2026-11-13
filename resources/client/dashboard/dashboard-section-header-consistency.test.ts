@@ -15,9 +15,10 @@ const products = read('resources/client/dashboard/digital-products/digital-produ
 const links = read('resources/client/dashboard/links/link-details-page/link-details-page.tsx');
 const folders = read('resources/client/dashboard/folders/folder-details-page/folder-details-page.tsx');
 const qrCodes = read('resources/client/dashboard/qr-codes/qr-code-details-page/qr-code-details-page.tsx');
+const domains = read('resources/client/dashboard/custom-domains/domain-insights-page.tsx');
 
 describe('dashboard header visual and semantic consistency', () => {
-  test('shared header keeps one 56px divider and respects muted breadcrumb typography', () => {
+  test('shared header keeps one 56px divider and semantic title typography', () => {
     expect(shell).toContain('flex h-14 w-full min-w-0 shrink-0 items-center gap-2 border-b');
     expect(shell).not.toContain('data-[slot="breadcrumb"]:font-semibold');
     expect(shell).toContain('data-[slot="sidebar-toggle-button"]:-ms-1');
@@ -28,21 +29,24 @@ describe('dashboard header visual and semantic consistency', () => {
     ['digital product', product, 'Back to products', '/dashboard/items'],
     ['service', service, 'Back to services', '/dashboard/services'],
     ['course', course, 'Back to products', '/dashboard/items'],
-  ])('%s editor has one parent breadcrumb on desktop and a mobile back action', (_name, source, label, route) => {
-    expect(source).toContain('<Breadcrumb className="w-auto max-lg:hidden">');
-    expect(source).toContain('className="hidden size-4 shrink-0 text-muted-foreground rtl:rotate-180 lg:block"');
+  ])('%s editor has a single H1 and accessible Back action, without breadcrumbs', (_name, source, label, route) => {
+    expect(source).not.toContain('<Breadcrumb');
     expect(source).toContain(`aria-label={trans({message: '${label}'})}`);
     expect(source).toContain(`render={<Link to="${route}" />}`);
-    expect(source).toContain('className="lg:hidden max-lg:size-11"');
+    expect(source).toContain('className="max-lg:size-11"');
     expect(source).toContain('render={<h1 />}');
     expect(source).toContain('ms-auto flex');
-    expect(source).not.toContain('<Breadcrumb.Page');
   });
 
-  test('service does not duplicate desktop back navigation and matches mobile title size', () => {
-    expect(service).toContain('className="lg:hidden max-lg:size-11"');
+  test('service and product editor titles have no Draft or Published badge', () => {
+    const serviceTitle = service.split('<DashboardLayout.SectionTitle')[1]?.split('</DashboardLayout.SectionTitle>')[0];
+    const productTitle = product.split('<DashboardLayout.SectionTitle')[1]?.split('</DashboardLayout.SectionTitle>')[0];
+    expect(serviceTitle).toBeTruthy();
+    expect(productTitle).toBeTruthy();
+    expect(serviceTitle).not.toContain('<Badge');
+    expect(productTitle).not.toContain('<ProductStatus');
     expect(service).toContain('max-lg:text-xl');
-    expect(service).toContain('<Trans message="My Services" />');
+    expect(service).toContain('<Trans message="Create a service" />');
   });
 
   test('Store Editor retains its selector and actions with a dividing rule and an accessible title', () => {
@@ -66,11 +70,22 @@ describe('dashboard header visual and semantic consistency', () => {
   });
 
   test.each([
+    ['link details', links, 'Back to links'],
+    ['folder details', folders, 'Back to folders'],
+    ['QR code details', qrCodes, 'Back to QR codes'],
+    ['branded domain details', domains, 'Back to branded domains'],
+  ])('%s uses a single title, accessible Back action, and no header breadcrumbs', (_name, source, label) => {
+    expect(source).toContain('<DashboardLayout.SectionHeader className="max-lg:h-auto max-lg:flex-wrap max-lg:py-2">');
+    expect(source).toContain('<DashboardLayout.SectionTitle render={<h1 />}');
+    expect(source).toContain(`aria-label={trans({message: '${label}'})}`);
+    expect(source).not.toContain('<Breadcrumb');
+  });
+
+  test.each([
     ['link details', links],
     ['folder details', folders],
     ['QR code details', qrCodes],
-  ])('%s keeps the shared header divider and aligns the following tabs', (_name, source) => {
-    expect(source).toContain('<DashboardLayout.SectionHeader>');
+  ])('%s retains tabs aligned to the shared header divider', (_name, source) => {
     expect(source).not.toContain('SectionHeader className="border-none"');
     expect(source).toContain('className="mx-(--section-spacing) border-b"');
   });
