@@ -325,14 +325,6 @@ export function Component() {
           ) : search.trim() || status ? (
             <div className="flex min-h-52 flex-col items-center justify-center gap-3 rounded-card-sm border border-dashed p-6 text-center" role="status">
               <p className="text-sm font-medium"><Trans message="No matching products" /></p>
-              <Button variant="outline" color="default" size="sm" onClick={() => {
-                setSearch('');
-                setStatus('');
-                setSort('latest');
-                setPage(1);
-              }}>
-                <Trans message="Clear filters" />
-              </Button>
             </div>
           ) : (
             <EmptyProducts onNewProduct={() => setCreateDialogOpen(true)} />
