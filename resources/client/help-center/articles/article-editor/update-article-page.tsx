@@ -39,6 +39,7 @@ export function Component() {
   const form = useForm<UpdateArticlePayload>({
     defaultValues: {
       title: article.title,
+      body: article.body,
       slug: article.slug,
       visible_to_role: article.visible_to_role || ('' as any),
       managed_by_role: article.managed_by_role || ('' as any),
@@ -51,15 +52,19 @@ export function Component() {
 
   const updateArticle = useUpdateArticle(form);
   const handleSave = () => {
+    const savedValues = form.getValues();
+    // A later edit must not be marked as saved when this request completes.
+    const savedSnapshot = JSON.stringify(savedValues);
     updateArticle.mutate(
       {
-        ...form.getValues(),
+        ...savedValues,
         id: article.id,
       },
       {
         onSuccess: () => {
-          // A successful save is the new baseline for subsequent publish actions.
-          form.reset(form.getValues());
+          if (JSON.stringify(form.getValues()) === savedSnapshot) {
+            form.reset(JSON.parse(savedSnapshot) as UpdateArticlePayload);
+          }
           toast(trans(message('Article updated')));
         },
       },
@@ -96,7 +101,7 @@ export function Component() {
           saveButton={saveButton}
           aside={
             <ArticleEditorAside>
-              <PublicationStatus article={article} />
+              <PublicationStatus article={article} isSaving={updateArticle.isPending} />
             </ArticleEditorAside>
           }
           initialContent={article.body}
@@ -111,8 +116,9 @@ export function Component() {
 
 interface PublicationStatusProps {
   article: UpdateArticlePageData['article'];
+  isSaving: boolean;
 }
-export function PublicationStatus({article}: PublicationStatusProps) {
+export function PublicationStatus({article, isSaving}: PublicationStatusProps) {
   return (
     <div className="mb-24 border-b pb-20 text-sm">
       <div className="mb-2 font-semibold">
@@ -134,7 +140,7 @@ export function PublicationStatus({article}: PublicationStatusProps) {
             <Trans message="Published" />
           )}
         </div>
-        <TogglePublishedButton article={article} />
+        <TogglePublishedButton article={article} isSaving={isSaving} />
       </div>
       <Link
         to={getArticleLink(article, {section: article.sections?.[0]})}
