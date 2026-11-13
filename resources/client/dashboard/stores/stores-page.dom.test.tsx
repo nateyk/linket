@@ -10,7 +10,7 @@ const notifications = vi.hoisted(() => ({success: vi.fn()}));
 vi.mock('copy-to-clipboard', () => ({default: clipboard.copy}));
 vi.mock('@shadcn/toast/toast', () => ({toast: notifications}));
 vi.mock('@ui/i18n/trans', () => ({
-  Trans: ({message}: {message: string}) => message,
+  Trans: ({message}: {message: string}) => <span>{message}</span>,
 }));
 vi.mock('@ui/i18n/use-trans', () => ({
   useTrans: () => ({
@@ -19,7 +19,7 @@ vi.mock('@ui/i18n/use-trans', () => ({
   }),
 }));
 vi.mock('@ui/i18n/formatted-number', () => ({
-  FormattedNumber: ({value}: {value: number}) => String(value),
+  FormattedNumber: ({value}: {value: number}) => <span>{value}</span>,
 }));
 
 const store = {
