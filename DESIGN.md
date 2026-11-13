@@ -374,7 +374,7 @@ the mobile bottom navigation anchored to the visible viewport.
   breadcrumbs stay muted/normal-weight, while the title carries emphasis.
   Creator forms show one parent breadcrumb and a chevron on desktop, a
   named back icon on mobile, and primary actions on the inline end. Keep
-  the same divider in Insights and Store Editor. Tabs below the header
+  the same divider in Insights, Store Editor, and Links/Folders/QR details. Tabs below the header
   align to `--section-spacing`. Avoid hand-removing the divider or adding
   duplicate back paths, oversized titles, or extra header rows.
 - **Section variants:** three sanctioned frames — `default` (bordered), `inset`
