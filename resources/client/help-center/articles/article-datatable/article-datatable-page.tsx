@@ -10,6 +10,7 @@ import {useIngestArticles} from '@app/help-center/articles/requests/use-ingest-a
 import {useUningestArticles} from '@app/help-center/articles/requests/use-uningest-articles';
 import {helpCenterQueries} from '@app/help-center/help-center-queries';
 import {HcManagerTabs} from '@app/help-center/manager/layout/hc-manager-tabs';
+import {HcAdminSettingsButton} from '@app/help-center/manager/layout/hc-admin-settings-button';
 import {HcManagerEmptyMessage} from '@app/help-center/manager/layout/hc-manager-empty-message';
 import {SyncTagsButton} from '@app/help-center/sync-tags-button';
 import {VisibleToField} from '@app/help-center/visible-to-field';
@@ -109,6 +110,7 @@ export function Component() {
         title={<Trans message="Help center" />}
         showSidebarToggleButton
         border="border-none"
+        rightContent={<HcAdminSettingsButton />}
       />
       <HcManagerTabs />
       <DatatablePageWithHeaderBody>
