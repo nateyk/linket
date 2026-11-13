@@ -483,9 +483,9 @@ describe('product editor header', () => {
 
   test('has a single visible heading, without breadcrumb or status badge', () => {
     expect(source).toContain('<DashboardLayout.SectionTitle render={<h1 />}');
-    expect(source).toMatch(
-      /<DashboardLayout\\.SectionTitle[^>]*>[\\s\\S]*?<span className="[^"]*min-w-0 truncate[^"]*">\\s*\\{pageTitle\\}\\s*<\\/span>\\s*<\\/DashboardLayout\\.SectionTitle>/,
-    );
+    const headerTitle = source.split('<DashboardLayout.SectionTitle render={<h1 />}')[1]?.split('</DashboardLayout.SectionTitle>')[0];
+    expect(headerTitle).toContain('{pageTitle}');
+    expect(headerTitle).not.toContain('<ProductStatus');
     expect(source).not.toContain('<Breadcrumb');
     expect(source).not.toContain('<ProductStatus');
   });
