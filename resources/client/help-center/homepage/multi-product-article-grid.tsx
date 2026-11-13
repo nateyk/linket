@@ -1,15 +1,12 @@
-import {
-  CategoryLink,
-  getCategoryLink,
-} from '@app/help-center/categories/category-link';
+import {getCategoryLink} from '@app/help-center/categories/category-link';
 import {HcCategoryImage} from '@app/help-center/hc-category-icons';
 import {helpCenterQueries} from '@app/help-center/help-center-queries';
 import {LandingPageDataCategory} from '@app/help-center/homepage/hc-landing-page-data';
-import {useNavigate} from '@common/ui/navigation/use-navigate';
 import {useSuspenseQuery} from '@tanstack/react-query';
 import {KeyboardArrowRightIcon} from '@ui/icons/material/KeyboardArrowRight';
 import clsx from 'clsx';
 import {Fragment} from 'react';
+import {Link} from 'react-router';
 
 export function MultiProductArticleGrid() {
   const query = useSuspenseQuery(
@@ -29,12 +26,15 @@ interface CategoryRowProps {
 }
 
 function CategoryRow({category}: CategoryRowProps) {
-  const navigate = useNavigate();
+  const sections = category.sections
+    .filter(section => section.articles?.length)
+    .slice(0, 3);
+
   return (
     <Fragment>
-      <div
-        className="cursor-pointer rounded-xl border p-24 transition-shadow hover:shadow"
-        onClick={() => navigate(getCategoryLink(category))}
+      <Link
+        to={getCategoryLink(category)}
+        className="block rounded-xl border p-24 transition-colors hover:bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         <div className="flex items-center gap-10">
           {category.image && (
@@ -44,30 +44,25 @@ function CategoryRow({category}: CategoryRowProps) {
               src={category.image}
             />
           )}
-          <h2 className="overflow-hidden overflow-ellipsis whitespace-nowrap text-[21px] font-medium">
-            <CategoryLink
-              category={category}
-              onClick={e => e.stopPropagation()}
-            />
+          <h2 className="min-w-0 break-words text-[21px] font-medium">
+            {category.name}
           </h2>
         </div>
         {category.description && (
           <p className="mt-10 text-sm">{category.description}</p>
         )}
-      </div>
-      <div className="rounded-xl border">
-        {category.sections
-          ?.slice(0, 3)
-          .map((section, index) =>
-            section.articles?.[0] ? (
-              <SectionItem
-                key={section.id}
-                section={section}
-                className={index !== 2 ? 'border-b' : undefined}
-              />
-            ) : null,
-          )}
-      </div>
+      </Link>
+      {sections.length > 0 && (
+        <div className="overflow-hidden rounded-xl border">
+          {sections.map((section, index) => (
+            <SectionItem
+              key={section.id}
+              section={section}
+              className={index !== sections.length - 1 ? 'border-b' : undefined}
+            />
+          ))}
+        </div>
+      )}
     </Fragment>
   );
 }
@@ -76,22 +71,23 @@ interface ArticleRowProps {
   className?: string;
   section: LandingPageDataCategory;
 }
+
 function SectionItem({className, section}: ArticleRowProps) {
-  const navigate = useNavigate();
   return (
-    <div
+    <Link
+      to={getCategoryLink(section)}
       className={clsx(
-        'flex cursor-pointer items-center gap-12 p-12',
+        'flex items-center gap-12 p-12 transition-colors hover:bg-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary',
         className,
       )}
-      onClick={() => navigate(getCategoryLink(section))}
     >
-      <CategoryLink
-        className="block flex-auto text-sm"
-        category={section}
-        onClick={e => e.stopPropagation()}
+      <span className="block min-w-0 flex-auto break-words text-sm">
+        {section.name}
+      </span>
+      <KeyboardArrowRightIcon
+        size="sm"
+        className="ml-auto flex-shrink-0 text-muted-foreground"
       />
-      <KeyboardArrowRightIcon className="ml-auto flex-shrink-0 text-muted-foreground" />
-    </div>
+    </Link>
   );
 }
