@@ -67,14 +67,16 @@ describe('storefront profile card', () => {
     expect(card.className).toContain('border-border');
     expect(card.className).toContain('bg-card');
     expect(card.className).toContain('rounded-card');
-    expect(card.className).toContain('transition-none');
+    expect(card.className).toContain('transition-shadow');
+    expect(card.className).toContain('duration-100');
+    expect(card.className).toContain('motion-reduce:transition-none');
     expect(card.className).not.toContain('cursor-pointer');
-    // Item.Root includes shared [a]:hover styling for nested anchors.
-    // Assert only on unscoped hover variants applied to the card itself.
+    // Shared Item styles contain nested-anchor hover rules; only a subtle
+    // shadow changes on card hover, not its background or outline.
     const cardHoverClasses = card.className
       .split(/\s+/)
       .filter(className => className.startsWith('hover:'));
-    expect(cardHoverClasses).toEqual([]);
+    expect(cardHoverClasses).toEqual(['hover:shadow-sm']);
     const copyButton = screen.getByRole('button', {name: 'Copy link'});
     const urlGroup = container.querySelector('[data-slot="profile-url"]') as HTMLElement;
     expect(urlGroup).toBeTruthy();
@@ -86,12 +88,36 @@ describe('storefront profile card', () => {
     expect(copyButton.closest('[data-slot="item-row"]')).toBeTruthy();
     const actions = container.querySelector('[data-slot="item-actions"]') as HTMLElement;
     expect(actions.contains(copyButton)).toBe(false);
-    expect(actions.className).toContain('sm:basis-auto');
+    expect(actions.className).toContain('basis-full');
+    expect(actions.className).toContain('justify-end');
+    expect(actions.className).not.toContain('justify-between');
+    expect(actions.className).toContain('min-[480px]:basis-auto');
+    expect(actions.className).toContain('min-[480px]:w-auto');
+    expect(actions.className).toContain('min-[480px]:ms-auto');
+    expect(actions.className).toContain('gap-1.5');
     const count = screen.getByText(/clicks/).closest('.rounded-full') as HTMLElement;
     expect(count).toBeTruthy();
     expect(count.className).toContain('border-border');
     expect(count.className).toContain('bg-background');
     expect(count.textContent).toBe('4 clicks');
+  });
+
+
+  it('uses larger mobile icon targets while keeping copy and menu distinct', () => {
+    const {container} = render(
+      <BiolinkCard biolink={store} onClick={vi.fn()} onInsights={vi.fn()} />,
+    );
+    const copy = screen.getByRole('button', {name: 'Copy link'});
+    const menu = screen.getByRole('button', {name: 'Profile actions'});
+    const actions = container.querySelector('[data-slot="item-actions"]') as HTMLElement;
+
+    expect(copy.className).toContain('size-10');
+    expect(copy.className).toContain('sm:size-8');
+    expect(menu.className).toContain('size-10');
+    expect(menu.className).toContain('sm:size-8');
+    expect(copy.closest('[data-slot="profile-url"]')).toBeTruthy();
+    expect(actions.contains(copy)).toBe(false);
+    expect(actions.contains(menu)).toBe(true);
   });
 
   it('does not hide the copy action when the URL needs truncation', () => {
