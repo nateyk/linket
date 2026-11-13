@@ -20,8 +20,8 @@ const source = fs.readFileSync(
 describe('large text responsive Course header UX-34', () => {
   test('keeps the heading readable and icon controls named at tablet text sizes', () => {
     expect(source).toContain('className="max-lg:h-auto max-lg:flex-wrap max-lg:py-2"');
-    expect(source).toContain('max-lg:order-3 max-lg:basis-full');
-    expect(source).toContain('max-lg:overflow-visible max-lg:whitespace-normal');
+    expect(source).toContain('me-auto w-auto min-w-0 text-xl max-sm:text-sm');
+    expect(source).toContain('<h1 className="sr-only">');
     expect(source).toContain('max-lg:hidden');
     expect(source).toContain('max-lg:size-11 max-lg:px-0');
     expect(source).toContain('aria-label={trans({message: \'Preview\'})}');
@@ -34,10 +34,11 @@ describe('course creation page', () => {
     expect(source).not.toContain("searchParams.get('price_cents')");
   });
 
-  test('renders a single heading, accessible Back action and shared form primitives', () => {
-    expect(source).not.toContain('<Breadcrumb');
-    expect(source).toContain('render={<h1 />}');
-    expect(source).toContain("aria-label={trans({message: 'Back to products'})}");
+  test('renders All products › Create course and shared form primitives', () => {
+    expect(source).toContain('<Breadcrumb.Root');
+    expect(source).toContain('<Breadcrumb.Link to="/dashboard/items">');
+    expect(source).toContain('<Breadcrumb.Page><Trans message="Create course" /></Breadcrumb.Page>');
+    expect(source).not.toContain('ArrowLeftIcon');
     expect(source).toContain('<ProductFormField');
     expect(source).toContain('aria-invalid');
   });
