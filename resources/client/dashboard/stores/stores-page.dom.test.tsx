@@ -91,7 +91,7 @@ describe('storefront profile card', () => {
       />,
     );
 
-    const url = container.querySelector('[data-slot="item-row"] .truncate');
+    const url = container.querySelector('[data-slot="item-content"] [data-slot="item-row"]:last-child .truncate');
     expect(url?.textContent).toContain('very-long-segment-');
     expect(url?.className).toContain('min-w-0');
     expect(screen.getByRole('button', {name: 'Copy link'})).toBeTruthy();
