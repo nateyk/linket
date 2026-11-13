@@ -58,7 +58,9 @@ class ImportHelpCenter
         $articleIds = DB::table('articles')->pluck('id')->all();
         $categoryIds = DB::table('categories')->pluck('id')->all();
 
-        (new DeleteMultipleArticles())->execute($articleIds);
+        // The import will flush and rebuild the complete Scout index once
+        // the replacement commits. Do not remove entries mid-import.
+        (new DeleteMultipleArticles())->execute($articleIds, syncSearchIndex: false);
 
         // DELETE participates in the surrounding transaction; TRUNCATE does not
         // on MySQL. Remove old category relations before deleting categories.
