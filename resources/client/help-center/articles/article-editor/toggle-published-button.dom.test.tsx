@@ -35,14 +35,14 @@ vi.mock('@ui/i18n/use-trans', () => ({
   useTrans: () => ({trans: ({message}: {message: string}) => message}),
 }));
 
-function Harness({draft}: {draft: boolean}) {
+function Harness({draft, isSaving = false}: {draft: boolean; isSaving?: boolean}) {
   const form = useForm<UpdateArticlePayload>({
     defaultValues: {id: 42, title: 'Original'},
   });
   const article = {id: 42, draft} as UpdateArticlePageData['article'];
   return (
     <FormProvider {...form}>
-      <TogglePublishedButton article={article} />
+      <TogglePublishedButton article={article} isSaving={isSaving} />
       <button
         type="button"
         onClick={() => form.setValue('title', 'Unsaved title', {shouldDirty: true})}
@@ -68,6 +68,13 @@ describe('Help Center publication safety', () => {
     expect((screen.getByRole('button', {name: 'Publish'}) as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByRole('status').textContent).toContain('Save changes');
     expect(mutation.mutate).toHaveBeenCalledTimes(1);
+  });
+
+  it('blocks publication while an article save is still in progress', () => {
+    render(<Harness draft isSaving />);
+    expect((screen.getByRole('button', {name: 'Publish'}) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(screen.getByRole('button', {name: 'Publish'}));
+    expect(mutation.mutate).not.toHaveBeenCalled();
   });
 
   it('uses the same unsaved-change guard for unpublishing', () => {
