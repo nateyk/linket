@@ -19,6 +19,7 @@ import {
   ArrowLeftIcon,
   ArrowRightIcon,
   ChevronLeftIcon,
+  ChevronRightIcon,
   CircleAlertIcon,
   CircleHelpIcon,
   EyeIcon,
@@ -461,12 +462,12 @@ function ServiceFormPage() {
       <Button
         variant="ghost"
         size="icon-sm"
-        className="max-lg:size-11"
+        className="lg:hidden max-lg:size-11"
         nativeButton={false}
         aria-label={trans({message: 'Back to services'})}
         render={<Link to="/dashboard/services" />}
       >
-        <ArrowLeftIcon />
+        <ArrowLeftIcon className="rtl:rotate-180" aria-hidden="true" />
       </Button>
       <Breadcrumb className="w-auto max-lg:hidden">
         <Breadcrumb.Item>
@@ -475,9 +476,10 @@ function ServiceFormPage() {
           </Breadcrumb.Link>
         </Breadcrumb.Item>
       </Breadcrumb>
+      <ChevronRightIcon className="hidden size-4 shrink-0 text-muted-foreground rtl:rotate-180 lg:block" aria-hidden="true" />
       <DashboardLayout.SectionTitle
         render={<h1 />}
-        className="max-lg:order-3 max-lg:w-full max-lg:basis-full max-lg:flex-none max-lg:overflow-visible max-lg:whitespace-normal max-lg:text-clip"
+        className="max-lg:order-3 max-lg:w-full max-lg:basis-full max-lg:flex-none max-lg:text-xl max-lg:overflow-visible max-lg:whitespace-normal max-lg:text-clip"
       >
         <span className="min-w-0 truncate max-lg:overflow-visible max-lg:whitespace-normal max-lg:text-clip">
           {isEditing ? (
@@ -502,7 +504,7 @@ function ServiceFormPage() {
   );
 
   const renderActions = () => (
-    <div className="ml-auto flex max-w-full items-center gap-2">
+    <div className="ms-auto flex max-w-full shrink-0 items-center gap-2">
       <Button
         variant="outline"
         size="sm"
