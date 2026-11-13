@@ -1,5 +1,4 @@
-import {AdminDocsUrls} from '@app/admin/admin-config';
-import {DocsLink} from '@common/admin/settings/layout/settings-links';
+import {useHcManagerBasePath} from '@app/help-center/manager/hc-manager-paths';
 import {
   DatatablePageHeaderBar,
   DatatablePageScrollContainer,
@@ -7,8 +6,10 @@ import {
   DatatablePageWithHeaderLayout,
 } from '@common/datatable/page/datatable-page-with-header-layout';
 import {StaticPageTitle} from '@common/seo/static-page-title';
+import {Button} from '@ui/buttons/button';
 import {Trans} from '@ui/i18n/trans';
 import {Fragment, ReactNode} from 'react';
+import {Link} from 'react-router';
 import {HcManagerTabs} from '@app/help-center/manager/layout/hc-manager-tabs';
 
 interface Props {
@@ -17,6 +18,7 @@ interface Props {
   title: ReactNode;
 }
 export function HcManagerLayout({actionButton, children, title}: Props) {
+  const isAdmin = useHcManagerBasePath() === '/admin/help';
   return (
     <DatatablePageWithHeaderLayout>
       <StaticPageTitle>
@@ -28,12 +30,11 @@ export function HcManagerLayout({actionButton, children, title}: Props) {
         border="border-none"
         rightContent={
           <Fragment>
-            <DocsLink
-              variant="button"
-              link={AdminDocsUrls.pages.helpCenter}
-              size="xs"
-              className="max-md:hidden"
-            />
+            {isAdmin && (
+              <Button variant="outline" size="xs" elementType={Link} to="/admin/settings/hc" className="max-sm:hidden">
+                <Trans message="Settings" />
+              </Button>
+            )}
             {actionButton}
           </Fragment>
         }
