@@ -371,7 +371,7 @@ the mobile bottom navigation anchored to the visible viewport.
 - **Section headers:** `DashboardLayout.SectionHeader` is the one 56px
   (`h-14`) header bar, with `border-b`, `--section-spacing` inline padding,
   and `SectionTitle` at 24px/600. Use `render={<h1 />}` for a single visible
-  page title. Creator forms and resource detail pages do not display
+  page title. Creator forms, link editors and resource detail pages do not display
   breadcrumbs or Draft/Published badges beside that title: use one named,
   RTL-aware Back icon where needed and put actions on the inline end.
   Allow the title to wrap on narrow screens without hiding action labels
