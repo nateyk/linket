@@ -6,6 +6,7 @@ import {Button} from '@ui/buttons/button';
 import {getInputFieldClassNames} from '@ui/forms/input-field/get-input-field-class-names';
 import {Checkbox} from '@ui/forms/toggle/checkbox';
 import {Trans} from '@ui/i18n/trans';
+import {useTrans} from '@ui/i18n/use-trans';
 import {EditIcon} from '@ui/icons/material/Edit';
 import {Dialog} from '@ui/overlays/dialog/dialog';
 import {DialogBody} from '@ui/overlays/dialog/dialog-body';
@@ -21,6 +22,7 @@ interface Props {
 }
 export function ArticleSectionSelector({onSave}: Props) {
   const {data} = useQuery(helpCenterQueries.categories.normalizedList());
+  const {trans} = useTrans();
   const categories = data?.categories || [];
   const sections = categories.map(c => c.sections!).flat() || [];
   const {watch, clearErrors} = useFormContext<CreateArticlePayload>();
@@ -47,15 +49,19 @@ export function ArticleSectionSelector({onSave}: Props) {
           }
         }}
       >
-        <div className="relative cursor-pointer rounded-input border bg py-12 pl-12 pr-30 text-sm">
+        <button
+          type="button"
+          aria-label={trans({message: 'Select sections'})}
+          className="relative w-full min-w-0 cursor-pointer rounded-input border bg py-12 pl-12 pr-30 text-left text-sm transition-colors hover:bg-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        >
           {!firstSection || !firstCategory ? (
             <Trans message="Select a section" />
           ) : (
             <Fragment>
-              <div className="mb-2 overflow-hidden overflow-ellipsis whitespace-nowrap font-semibold">
+              <div className="mb-2 min-w-0 break-words font-semibold">
                 {firstCategory.name}
               </div>
-              <div className="overflow-hidden overflow-ellipsis whitespace-nowrap text-xs text-muted">
+              <div className="min-w-0 break-words text-xs text-muted">
                 {sectionCount > 1 ? (
                   <Trans
                     message=":name + :count more sections"
@@ -69,7 +75,7 @@ export function ArticleSectionSelector({onSave}: Props) {
           )}
 
           <EditIcon className="absolute right-8 top-8 text-muted" size="sm" />
-        </div>
+        </button>
         <SectionSelectorDialog />
       </DialogTrigger>
       {errorMessage && <div className={classNames.error}>{errorMessage}</div>}
