@@ -7,7 +7,6 @@ import {Button} from '@shadcn/button/button';
 import {Card} from '@shadcn/card/card';
 import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {Empty} from '@shadcn/empty/empty';
-import {Input} from '@shadcn/forms/input/input';
 import {Skeleton} from '@shadcn/skeleton/skeleton';
 import {Tooltip} from '@shadcn/tooltip/tooltip';
 import {formatMoney} from '@ui/i18n/format-money';
