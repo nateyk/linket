@@ -12,8 +12,11 @@ class LegacyHelpRedirectController extends BaseController
     public function article(string $slug)
     {
         $article = HcArticle::query()
-            ->where('slug', $slug)
-            ->orWhere('slug', "{$slug}-linket-" . request()->integer('id'))
+            ->visibleToAudience()
+            ->where(function ($query) use ($slug) {
+                $query->where('slug', $slug)
+                    ->orWhere('slug', "{$slug}-linket-" . request()->integer('id'));
+            })
             ->first();
 
         if (! $article) {
@@ -27,6 +30,7 @@ class LegacyHelpRedirectController extends BaseController
     {
         $category = HcCategory::query()
             ->whereNull('parent_id')
+            ->filterByVisibleToRole()
             ->get()
             ->first(
                 fn (HcCategory $category) => Str::slug($category->name) === $slug,
