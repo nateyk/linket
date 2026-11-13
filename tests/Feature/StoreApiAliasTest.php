@@ -56,8 +56,11 @@ it('includes actual storefront clicks in list cards', function () {
         'clicks_count' => 17,
     ]);
 
-    $this->actingAs($user)->withHeader('Referer', 'http://localhost')
+    $response = $this->actingAs($user)->withHeader('Referer', 'http://localhost')
         ->getJson('/api/v1/stores?per_page=100')
-        ->assertOk()
-        ->assertJsonFragment(['id' => $store->id, 'clicks_count' => 17]);
+        ->assertOk();
+
+    $listedStore = collect($response->json('data'))->firstWhere('id', $store->id);
+    expect($listedStore)->not->toBeNull();
+    expect($listedStore['clicks_count'])->toBe(17);
 });
