@@ -76,10 +76,8 @@ class StoreResource extends LinkeableResource
                 $this->deleted_at,
             ),
 
-            'clicks_count' => $this->when(
-                $fieldsPreset === 'show',
-                $this->clicks_count,
-            ),
+            // Profile list cards show this value, including on the default index response.
+            'clicks_count' => $this->clicks_count,
             'clicked_at' => $this->when(
                 $fieldsPreset === 'show',
                 $this->clicked_at,
