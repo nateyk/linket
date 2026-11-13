@@ -28,13 +28,13 @@ export function initSearchTermLogger() {
       navigator.sendBeacon
     ) {
       const {base_url} = getBootstrapData().settings;
-      navigator.sendBeacon(
+      const accepted = navigator.sendBeacon(
         `${base_url}/search-term?_token=${getBootstrapData().csrf_token}`,
         JSON.stringify({
           searchSession: searchSession,
         }),
       );
-      searchSession = [];
+      if (accepted) searchSession = [];
     }
   });
   isInitialized = true;
