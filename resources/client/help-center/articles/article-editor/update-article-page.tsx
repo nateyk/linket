@@ -1,4 +1,5 @@
 import {ArticleEditorAside} from '@app/help-center/articles/article-editor/article-editor-aside';
+import {resetArticleSaveBaselineIfUnchanged} from '@app/help-center/articles/article-editor/reset-article-save-baseline';
 import {HcArticleEditorBreadcrumb} from '@app/help-center/articles/article-editor/hc-article-editor-breadcrumb';
 import {TogglePublishedButton} from '@app/help-center/articles/article-editor/toggle-published-button';
 import {UpdateArticlePageData} from '@app/help-center/articles/article-editor/update-article-page-data';
@@ -52,19 +53,16 @@ export function Component() {
 
   const updateArticle = useUpdateArticle(form);
   const handleSave = () => {
-    const savedValues = form.getValues();
-    // A later edit must not be marked as saved when this request completes.
-    const savedSnapshot = JSON.stringify(savedValues);
+    // Keep a stable copy of what this request actually submits.
+    const savedSnapshot = JSON.stringify(form.getValues());
     updateArticle.mutate(
       {
-        ...savedValues,
+        ...(JSON.parse(savedSnapshot) as UpdateArticlePayload),
         id: article.id,
       },
       {
         onSuccess: () => {
-          if (JSON.stringify(form.getValues()) === savedSnapshot) {
-            form.reset(JSON.parse(savedSnapshot) as UpdateArticlePayload);
-          }
+          resetArticleSaveBaselineIfUnchanged(form, savedSnapshot);
           toast(trans(message('Article updated')));
         },
       },
