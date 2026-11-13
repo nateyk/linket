@@ -8,6 +8,7 @@ import {
   HcManagerCategoriesResponse,
 } from '@app/help-center/manager/hc-manager-data';
 import {HcManagerBreadcrumb} from '@app/help-center/manager/layout/hc-manager-breadcrumb';
+import {useHcManagerBasePath} from '@app/help-center/manager/hc-manager-paths';
 import {HcManagerEmptyMessage} from '@app/help-center/manager/layout/hc-manager-empty-message';
 import {HcManagerLayout} from '@app/help-center/manager/layout/hc-manager-layout';
 import {HcManagerRow} from '@app/help-center/manager/layout/hc-manager-row';
@@ -61,7 +62,6 @@ function ContainersManager({type, data}: ContainersManagerProps) {
             variant="flat"
             color="primary"
             size="xs"
-            className="max-md:mt-12"
           >
             {type === 'categories' ? (
               <Trans message="New category" />
@@ -106,12 +106,13 @@ function CategoryRow({
   const navigate = useNavigate();
   const deleteCategory = useDeleteCategory();
   const reorder = useReorderCategories();
+  const root = useHcManagerBasePath();
 
   const goToEditPage = () => {
     if (category.is_section) {
-      navigate(`/agent/hc/arrange/sections/${category.id}`);
+      navigate(`${root}/arrange/sections/${category.id}`);
     } else {
-      navigate(`/agent/hc/arrange/categories/${category.id}`);
+      navigate(`${root}/arrange/categories/${category.id}`);
     }
   };
 
