@@ -86,6 +86,15 @@ class HcReorderIntegrityTest extends TestCase
 
         $this->assertPivotPosition($firstSection, $first, 1);
         $this->assertPivotPosition($firstSection, $second, 2);
+
+        // A complete list is allowed, and only this section's positions move.
+        $this->asManager()->postJson(
+            "/api/v1/hc/manager/sections/{$firstSection->id}/articles/reorder",
+            ['ids' => [$second->id, $first->id]],
+        )->assertOk();
+
+        $this->assertPivotPosition($firstSection, $second, 1);
+        $this->assertPivotPosition($firstSection, $first, 2);
     }
 
     public function test_foreign_article_is_rejected_without_touching_other_section(): void
@@ -103,20 +112,6 @@ class HcReorderIntegrityTest extends TestCase
         $this->assertPivotPosition($section, $first, 1);
         $this->assertPivotPosition($section, $second, 2);
         $this->assertPivotPosition($otherSection, $foreign, 1);
-    }
-
-    public function test_valid_article_reorder_updates_only_requested_section(): void
-    {
-        [, $section] = $this->singleSection();
-        [$first, $second] = $this->articles($section);
-
-        $this->asManager()->postJson(
-            "/api/v1/hc/manager/sections/{$section->id}/articles/reorder",
-            ['ids' => [$second->id, $first->id]],
-        )->assertOk();
-
-        $this->assertPivotPosition($section, $second, 1);
-        $this->assertPivotPosition($section, $first, 2);
     }
 
     private function sections(): array
