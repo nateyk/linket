@@ -10,18 +10,17 @@ import {QrCode} from '@app/gen/schemas/qr-code';
 import {StaticPageTitle} from '@common/seo/static-page-title';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {useRequiredParams} from '@common/ui/navigation/use-required-params';
+import {Breadcrumb} from '@shadcn/breadcrumb/breadcrumb';
 import {Button} from '@shadcn/button/button';
 import {Tabs} from '@shadcn/tabs/tabs';
 import {useSuspenseQuery} from '@tanstack/react-query';
 import {Trans} from '@ui/i18n/trans';
-import {useTrans} from '@ui/i18n/use-trans';
-import {ArrowLeftIcon, DownloadIcon} from 'lucide-react';
-import {Link, Outlet, useLocation, useNavigate} from 'react-router';
+import {DownloadIcon} from 'lucide-react';
+import {Outlet, useLocation, useNavigate} from 'react-router';
 
 export function Component() {
   const {routeType} = useDatatableRouteType();
   const {qrCodeId} = useRequiredParams(['qrCodeId']);
-  const {trans} = useTrans();
   const query = useSuspenseQuery(retrieveQrCodeOptions(Number(qrCodeId)));
 
   const {pathname} = useLocation();
@@ -32,19 +31,11 @@ export function Component() {
     <>
       <StaticPageTitle>{getLinkeableName(query.data.data)}</StaticPageTitle>
       <DashboardLayout.MainSection>
-        <DashboardLayout.SectionHeader className="max-lg:h-auto max-lg:flex-wrap max-lg:py-2">
+        <DashboardLayout.SectionHeader className="max-sm:h-auto max-sm:flex-wrap max-sm:py-2">
           <DashboardLayout.SidebarToggle />
-          <Button variant="ghost" size="icon-sm" className="max-lg:size-11" nativeButton={false}
-            aria-label={trans({message: 'Back to QR codes'})}
-            render={<Link to={`/${routeType}/qr-codes`} />}>
-            <ArrowLeftIcon className="rtl:rotate-180" aria-hidden="true" />
-          </Button>
-          <DashboardLayout.SectionTitle render={<h1 />} className="max-lg:order-3 max-lg:basis-full max-lg:flex-none max-lg:w-full max-lg:text-xl max-lg:overflow-visible max-lg:whitespace-normal max-lg:text-clip">
-            <LinkeableName linkeable={query.data.data} />
-          </DashboardLayout.SectionTitle>
-          <div className="ms-auto flex shrink-0 items-center gap-2">
-            <HeaderActions qrCode={query.data.data} />
-          </div>
+          <h1 className="sr-only"><LinkeableName linkeable={query.data.data} /></h1>
+          <QrCodeBreadcrumb />
+          <HeaderActions qrCode={query.data.data} />
         </DashboardLayout.SectionHeader>
         <Tabs.Root value={selectedTab}>
           <div className="mx-(--section-spacing) border-b">
@@ -73,6 +64,28 @@ export function Component() {
         </DashboardLayout.SectionContent>
       </DashboardLayout.MainSection>
     </>
+  );
+}
+
+function QrCodeBreadcrumb() {
+  const {routeType} = useDatatableRouteType();
+  const {qrCodeId} = useRequiredParams(['qrCodeId']);
+  const query = useSuspenseQuery(retrieveQrCodeOptions(Number(qrCodeId)));
+
+  return (
+    <Breadcrumb.Root className="me-auto w-auto min-w-0 text-xl max-sm:text-sm">
+      <Breadcrumb.Item>
+        <Breadcrumb.Link to={`/${routeType}/qr-codes`}>
+          <Trans message="QR codes" />
+        </Breadcrumb.Link>
+      </Breadcrumb.Item>
+      <Breadcrumb.Separator />
+      <Breadcrumb.Item>
+        <Breadcrumb.Page>
+          <LinkeableName linkeable={query.data.data} />
+        </Breadcrumb.Page>
+      </Breadcrumb.Item>
+    </Breadcrumb.Root>
   );
 }
 
