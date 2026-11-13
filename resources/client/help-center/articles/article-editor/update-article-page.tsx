@@ -10,7 +10,7 @@ import {
 } from '@app/help-center/articles/requests/use-update-article';
 import {helpCenterQueries} from '@app/help-center/help-center-queries';
 import {UploadType} from '@app/site-config';
-import ArticleEditorPage from '@common/article-editor/article-editor-page';
+import ArticleEditorPage from '@app/help-center/articles/article-editor/help-center-article-editor-page';
 import {Button} from '@ui/buttons/button';
 import {StaticPageTitle} from '@common/seo/static-page-title';
 import {useSuspenseQuery} from '@tanstack/react-query';
