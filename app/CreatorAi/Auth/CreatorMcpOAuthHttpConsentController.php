@@ -44,7 +44,7 @@ final class CreatorMcpOAuthHttpConsentController
             'clientName' => $client->name,
             'nonce' => $pending['nonce'],
             'workspaces' => $workspaces,
-        ])->withHeaders($this->privateHeaders());
+        ])->withHeaders($this->privateHeaders($parameters['redirect_uri']));
     }
 
     public function approve(Request $request): Response
@@ -74,7 +74,7 @@ final class CreatorMcpOAuthHttpConsentController
         );
 
         return response('', 302, [
-            ...$this->privateHeaders(),
+            ...$this->privateHeaders($location),
             'Location' => $location,
         ]);
     }
@@ -91,15 +91,35 @@ final class CreatorMcpOAuthHttpConsentController
         return response('Connection denied', 200, $this->privateHeaders());
     }
 
-    /** @return array<string,string> */
-    private function privateHeaders(): array
+    /**
+     * Allow only the validated, registered OAuth callback origin after the
+     * same-origin consent POST. Chrome applies form-action to 302 redirects.
+     * Never permit arbitrary hosts or remove the other CSP restrictions.
+     *
+     * @return array<string,string>
+     */
+    private function privateHeaders(?string $redirectUri = null): array
     {
+        $formAction = "'self'";
+        if ($redirectUri !== null) {
+            $parts = parse_url($redirectUri);
+            if (
+                is_array($parts)
+                && ($parts['scheme'] ?? null) === 'https'
+                && is_string($parts['host'] ?? null)
+                && preg_match('/\A[A-Za-z0-9.-]+\z/D', $parts['host']) === 1
+            ) {
+                $formAction .= ' https://'.$parts['host']
+                    .(isset($parts['port']) ? ':'.$parts['port'] : '');
+            }
+        }
+
         return [
             'Cache-Control' => 'no-store',
             'Pragma' => 'no-cache',
             'Referrer-Policy' => 'no-referrer',
             'X-Content-Type-Options' => 'nosniff',
-            'Content-Security-Policy' => "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
+            'Content-Security-Policy' => "default-src 'none'; style-src 'unsafe-inline'; form-action {$formAction}; frame-ancestors 'none'; base-uri 'none'",
         ];
     }
 }
