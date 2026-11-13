@@ -48,7 +48,7 @@ describe('dashboard header visual and semantic consistency', () => {
   test('Store Editor retains its selector and actions with a dividing rule and an accessible title', () => {
     expect(store).toContain('<DashboardLayout.SectionHeader>');
     expect(store).not.toContain('min-h-16 gap-2 border-none');
-    expect(store).toContain('<h1 className="sr-only">{biolink.name}</h1>');
+    expect(store.match(/<h1 className="sr-only">\{biolink.name\}<\/h1>/g)).toHaveLength(1);
     expect(store).toContain('className="me-auto min-w-0 max-w-64 shrink justify-between"');
     expect(store).toContain('<BiolinkSelector />');
     expect(store).toContain('<ShareLinkButton');
