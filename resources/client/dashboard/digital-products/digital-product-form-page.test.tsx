@@ -9,8 +9,8 @@ describe('large text responsive header UX-34', () => {
       'utf8',
     );
     expect(source).toContain('className="max-lg:h-auto max-lg:flex-wrap max-lg:py-2"');
-    expect(source).toContain('max-lg:order-3 max-lg:basis-full');
-    expect(source).toContain('max-lg:overflow-visible max-lg:whitespace-normal');
+    expect(source).toContain('me-auto w-auto min-w-0 text-xl max-sm:text-sm');
+    expect(source).toContain('<Breadcrumb.Page>{pageTitle}</Breadcrumb.Page>');
     expect(source).toContain('max-lg:hidden');
     expect(source).toContain('max-lg:size-11 max-lg:px-0');
     expect(source).toContain('aria-label={trans({message: \'Preview\'})}');
