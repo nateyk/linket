@@ -1,0 +1,56 @@
+# Temporary branch-scoped lockfile regeneration; removed before merging.
+name: Temporary Laravel security lock refresh
+on:
+  push:
+    branches:
+      - fix/laravel-13-40-security-audit-20261113
+    paths:
+      - .github/workflows/temporary-security-lock-refresh.yml
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    name: Regenerate patched Composer lock
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: true
+      - name: Install PHP and Composer
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_mysql, gd, zip, bcmath, exif, redis, curl, openssl, fileinfo
+          coverage: none
+          tools: composer:v2
+      - name: Update only Laravel and necessary dependency locks
+        run: composer update laravel/framework --with-all-dependencies --minimal-changes --no-scripts --no-interaction --no-progress
+        env:
+          COMPOSER_AUDIT_ABANDONED: ignore
+      - name: Confirm the patched framework and audit production dependencies
+        run: |
+          composer show laravel/framework --locked
+          composer audit --no-dev --no-interaction --format plain
+      - name: Upload generated lockfile for review/recovery
+        uses: actions/upload-artifact@v4
+        with:
+          name: patched-composer-lock
+          path: composer.lock
+          if-no-files-found: error
+          retention-days: 1
+      - name: Commit only the regenerated lockfile to the feature branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add composer.lock
+          git diff --cached --stat
+          if git diff --cached --quiet; then
+            echo 'Lockfile already current.'
+            exit 0
+          fi
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'chore(security): regenerate Laravel 13.40 Composer lockfile'
+          git push origin HEAD:fix/laravel-13-40-security-audit-20261113
