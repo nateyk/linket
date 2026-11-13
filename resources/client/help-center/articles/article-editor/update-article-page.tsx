@@ -58,6 +58,8 @@ export function Component() {
       },
       {
         onSuccess: () => {
+          // A successful save is the new baseline for subsequent publish actions.
+          form.reset(form.getValues());
           toast(trans(message('Article updated')));
         },
       },
@@ -112,15 +114,15 @@ interface PublicationStatusProps {
 }
 export function PublicationStatus({article}: PublicationStatusProps) {
   return (
-    <div className="mb-7 border-b pb-3.5 text-sm">
+    <div className="mb-24 border-b pb-20 text-sm">
       <div className="mb-2 font-semibold">
         <Trans message="Publication status" />
       </div>
-      <div className="flex items-center">
-        <div className="mr-2.5 flex items-center gap-2 border-r pr-2.5">
+      <div className="flex flex-wrap items-center gap-x-10 gap-y-8">
+        <div role="status" className="flex items-center gap-2 border-r pr-10">
           <div
             className={clsx(
-              'h-3 w-3 rounded-full border',
+              'h-3 w-3 shrink-0 rounded-full border',
               article.draft
                 ? 'border-border'
                 : 'border-transparent bg-positive',
@@ -137,7 +139,8 @@ export function PublicationStatus({article}: PublicationStatusProps) {
       <Link
         to={getArticleLink(article, {section: article.sections?.[0]})}
         target="_blank"
-        className="mt-4.5 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+        rel="noopener noreferrer"
+        className="mt-12 inline-flex min-h-32 items-center gap-1 rounded-input text-xs font-semibold text-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         <Trans message="Preview in Help Center" />
         <OpenInNewIcon size="xs" />
