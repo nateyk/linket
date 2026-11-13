@@ -162,6 +162,10 @@ class HcArticleController extends BaseController
     {
         $ids = explode(',', $ids);
         $this->authorize('destroy', HcArticle::class);
+        if (count($ids) > 1000 ||
+            collect($ids)->contains(fn ($id) => ! ctype_digit($id) || (int) $id < 1)) {
+            abort(422, 'Invalid article IDs.');
+        }
 
         $this->blockOnDemoSite();
 
@@ -175,9 +179,12 @@ class HcArticleController extends BaseController
         $this->authorize('update', HcArticle::class);
 
         $data = request()->validate([
-            'articleIds' => 'required|array',
-            'action' => 'required|string',
+            'articleIds' => 'required|array|min:1|max:1000',
+            'articleIds.*' => 'required|integer|min:1|distinct|exists:articles,id',
+            'action' => 'required|in:changeArticleStatus,changeVisibility',
             'data' => 'required|array',
+            'data.status' => 'required_if:action,changeArticleStatus|in:draft,published',
+            'data.roleId' => 'nullable|integer|min:1|exists:roles,id',
         ]);
 
         (new PerformArticleBatchAction())->execute(
