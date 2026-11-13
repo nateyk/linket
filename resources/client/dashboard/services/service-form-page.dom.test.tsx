@@ -185,7 +185,7 @@ describe('the service form shell', () => {
     mountPage('/dashboard/services/new');
     await waitForForm();
 
-    expect(screen.getByRole('link', {name: 'My Services'})).toBeTruthy();
+    expect(screen.getByRole('button', {name: 'Back to services'})).toBeTruthy();
     expect(
       screen.getByRole('heading', {level: 1, name: /Create a service/}),
     ).toBeTruthy();

@@ -168,21 +168,15 @@ describe('page shell: one h1, and a title that owns the header row', () => {
     expect(h1s[0].textContent).toBe('Create course');
   });
 
-  test('breadcrumb stops claiming the row and never repeats the title', () => {
+  test('the single title and named Back control replace breadcrumbs', () => {
     mount();
 
-    const nav = document.querySelector('[data-slot="breadcrumb"]');
-    expect(nav).not.toBeNull();
-    // `w-auto` overrides the base `w-full` (tailwind-merge) so the slack goes
-    // to the SectionTitle; `max-lg:hidden` keeps the enlarged-text layout usable.
-    expect(nav!.className).toContain('w-auto');
-    expect(nav!.className).toContain('max-lg:hidden');
-    // only the parent link remains — no current-page crumb duplicating the h1
-    expect(nav!.textContent).toBe('All products');
+    expect(document.querySelector('[data-slot="breadcrumb"]')).toBeNull();
+    expect(document.querySelectorAll('[data-slot="section-title"]')).toHaveLength(1);
+    const back = screen.getByRole('button', {name: 'Back to products'});
+    expect(back.getAttribute('href')).toBe('/dashboard/items');
     expect(document.querySelector('[data-slot="breadcrumb-page"]')).toBeNull();
-    expect(
-      document.querySelector('[data-slot="breadcrumb-separator"]'),
-    ).toBeNull();
+    expect(document.querySelector('[data-slot="breadcrumb-separator"]')).toBeNull();
   });
 
   test('progress bar keeps its screen-reader label', () => {

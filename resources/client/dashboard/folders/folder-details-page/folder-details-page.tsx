@@ -5,18 +5,18 @@ import {useDatatableRouteType} from '@app/dashboard/use-datatable-route-type';
 import {StaticPageTitle} from '@common/seo/static-page-title';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {useRequiredParams} from '@common/ui/navigation/use-required-params';
-import {Breadcrumb} from '@shadcn/breadcrumb/breadcrumb';
 import {Button} from '@shadcn/button/button';
 import {Dialog} from '@shadcn/dialog/dialog';
 import {Tabs} from '@shadcn/tabs/tabs';
 import {useSuspenseQuery} from '@tanstack/react-query';
 import {Trans} from '@ui/i18n/trans';
-import clsx from 'clsx';
-import {PlusIcon} from 'lucide-react';
-import {Outlet, useLocation, useNavigate} from 'react-router';
+import {useTrans} from '@ui/i18n/use-trans';
+import {ArrowLeftIcon, PlusIcon} from 'lucide-react';
+import {Link, Outlet, useLocation, useNavigate} from 'react-router';
 
 export function Component() {
   const navigate = useNavigate();
+  const {trans} = useTrans();
   const {routeType} = useDatatableRouteType();
   const {folderId} = useRequiredParams(['folderId']);
   const {pathname} = useLocation();
@@ -28,22 +28,6 @@ export function Component() {
       ? 'insights'
       : 'settings';
   const baseUrl = `/${routeType}/folders/${folderId}`;
-
-  const breadcrumb = (
-    <Breadcrumb.Root
-      className={clsx('text-xl', query.isLoading && 'invisible')}
-    >
-      <Breadcrumb.Item>
-        <Breadcrumb.Link to={`/${routeType}/folders`}>
-          <Trans message="Folders" />
-        </Breadcrumb.Link>
-      </Breadcrumb.Item>
-      <Breadcrumb.Separator />
-      <Breadcrumb.Item>
-        <Breadcrumb.Page>{query.data.data.name}</Breadcrumb.Page>
-      </Breadcrumb.Item>
-    </Breadcrumb.Root>
-  );
 
   const headerActions = (
     <>
@@ -68,10 +52,19 @@ export function Component() {
     <>
       <StaticPageTitle>{title}</StaticPageTitle>
       <DashboardLayout.MainSection>
-        <DashboardLayout.SectionHeader>
+        <DashboardLayout.SectionHeader className="max-lg:h-auto max-lg:flex-wrap max-lg:py-2">
           <DashboardLayout.SidebarToggle />
-          {breadcrumb}
-          {headerActions}
+          <Button variant="ghost" size="icon-sm" className="max-lg:size-11" nativeButton={false}
+            aria-label={trans({message: 'Back to folders'})}
+            render={<Link to={`/${routeType}/folders`} />}>
+            <ArrowLeftIcon className="rtl:rotate-180" aria-hidden="true" />
+          </Button>
+          <DashboardLayout.SectionTitle render={<h1 />} className="max-lg:order-3 max-lg:basis-full max-lg:flex-none max-lg:w-full max-lg:text-xl max-lg:overflow-visible max-lg:whitespace-normal max-lg:text-clip">
+            {title}
+          </DashboardLayout.SectionTitle>
+          <div className="ms-auto flex shrink-0 items-center gap-2">
+            {headerActions}
+          </div>
         </DashboardLayout.SectionHeader>
         <Tabs.Root value={selectedTab}>
           <div className="mx-(--section-spacing) border-b">

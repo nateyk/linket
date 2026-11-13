@@ -4,7 +4,6 @@ import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {Accordion} from '@shadcn/accordion/accordion';
 import {Alert} from '@shadcn/alert/alert';
 import {Badge} from '@shadcn/badge/badge';
-import {Breadcrumb} from '@shadcn/breadcrumb/breadcrumb';
 import {Button} from '@shadcn/button/button';
 import {InputGroup, InputGroupAddon, InputGroupInput, InputGroupText} from '@shadcn/forms/input-group/input-group';
 import {Input} from '@shadcn/forms/input/input';
@@ -13,7 +12,7 @@ import {Trans} from '@ui/i18n/trans';
 import {useTrans} from '@ui/i18n/use-trans';
 import {toast} from '@ui/toast/toast';
 import {isAxiosError} from 'axios';
-import {ArrowLeftIcon, ChevronRightIcon, EyeIcon, GraduationCapIcon, ListChecksIcon, TriangleAlertIcon} from 'lucide-react';
+import {ArrowLeftIcon, EyeIcon, GraduationCapIcon, ListChecksIcon, TriangleAlertIcon} from 'lucide-react';
 import {FormEvent, useRef, useState} from 'react';
 import {Link, useNavigate, useSearchParams} from 'react-router';
 import {parseEtbToCents, parseWizardPrefill, priceForBillingMode, type BillingMode} from '../digital-products/product-create-flow';
@@ -160,26 +159,13 @@ export function Component() {
       <Button
         variant="ghost"
         size="icon-sm"
-        className="lg:hidden max-lg:size-11"
+        className="max-lg:size-11"
         nativeButton={false}
         aria-label={trans({message: 'Back to products'})}
         render={<Link to="/dashboard/items" />}
       >
         <ArrowLeftIcon className="rtl:rotate-180" aria-hidden="true" />
       </Button>
-      {/* Final-fix item 1 (same root cause + fix as the edit page, see
-          p2-report item 7): the breadcrumb <nav> ships `w-full`, a flex base
-          size equal to the whole header row, while SectionTitle is `flex-1`
-          (flex-basis 0%) — free space for the title never exists, so it
-          measured 0px at ≥1280. `w-auto` hands the slack to the title;
-          `max-lg:hidden` keeps the narrow row for title + icon actions
-          (mobile navigation uses the back control). The current-page crumb and its
-          separator are dropped: they repeated the exact string the title
-          shows (crit3-A duplicate-title note). */}
-      <Breadcrumb className="w-auto max-lg:hidden"><Breadcrumb.Item><Breadcrumb.Link to="/dashboard/items"><Trans message="All products" /></Breadcrumb.Link></Breadcrumb.Item></Breadcrumb>
-      <ChevronRightIcon className="hidden size-4 shrink-0 text-muted-foreground rtl:rotate-180 lg:block" aria-hidden="true" />
-      {/* Final-fix item 2: the page's single h1 — same mechanism T7 used on
-          the selection page; in a tight row the TEXT truncates (min-w-0). */}
       <DashboardLayout.SectionTitle render={<h1 />} className="max-lg:order-3 max-lg:basis-full max-lg:flex-none max-lg:w-full max-lg:text-xl max-lg:overflow-visible max-lg:whitespace-normal max-lg:text-clip"><span className="min-w-0 truncate max-lg:overflow-visible max-lg:whitespace-normal max-lg:text-clip"><Trans message="Create course" /></span></DashboardLayout.SectionTitle>
       {/* Header actions mirror the digital-product edit page: icon + label
           that collapses to icon-only below 1024px. aria-labels keep the
