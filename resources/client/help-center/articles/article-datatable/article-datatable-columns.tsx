@@ -8,6 +8,7 @@ import {Chip} from '@ui/forms/input-field/chip-field/chip';
 import {ChipList} from '@ui/forms/input-field/chip-field/chip-list';
 import {FormattedDate} from '@ui/i18n/formatted-date';
 import {Trans} from '@ui/i18n/trans';
+import {useTrans} from '@ui/i18n/use-trans';
 import {CheckIcon} from '@ui/icons/material/Check';
 import {CloseIcon} from '@ui/icons/material/Close';
 import {EditIcon} from '@ui/icons/material/Edit';
@@ -42,25 +43,37 @@ export const ArticleDatatableColumns: ColumnConfig<ArticleDatatableItem>[] = [
   {
     key: 'draft',
     allowsSorting: true,
-    width: 'w-25 flex-shrink-0',
-    header: () => <Trans message="Published" />,
+    width: 'w-32 flex-shrink-0',
+    header: () => <Trans message="Status" />,
     body: article =>
       !article.draft ? (
-        <CheckIcon size="md" className="text-positive" />
+        <span className="inline-flex items-center gap-6 rounded-full bg-positive/10 px-8 py-4 text-xs font-medium text-positive">
+          <CheckIcon size="xs" aria-hidden="true" />
+          <Trans message="Published" />
+        </span>
       ) : (
-        <CloseIcon size="md" className="text-muted" />
+        <span className="inline-flex items-center gap-6 rounded-full bg-chip px-8 py-4 text-xs font-medium text-muted-foreground">
+          <CloseIcon size="xs" aria-hidden="true" />
+          <Trans message="Draft" />
+        </span>
       ),
   },
   {
     key: 'used_by_ai_agent',
     allowsSorting: true,
-    width: 'w-25 flex-shrink-0',
+    width: 'w-32 flex-shrink-0',
     header: () => <Trans message="AI agent" />,
     body: article =>
       article.used_by_ai_agent ? (
-        <CheckIcon size="md" className="text-positive" />
+        <span className="inline-flex items-center gap-6 text-xs font-medium text-positive">
+          <CheckIcon size="xs" aria-hidden="true" />
+          <Trans message="Enabled" />
+        </span>
       ) : (
-        <CloseIcon size="md" className="text-muted" />
+        <span className="inline-flex items-center gap-6 text-xs text-muted-foreground">
+          <CloseIcon size="xs" aria-hidden="true" />
+          <Trans message="Disabled" />
+        </span>
       ),
   },
   {
@@ -81,15 +94,24 @@ export const ArticleDatatableColumns: ColumnConfig<ArticleDatatableItem>[] = [
     hideHeader: true,
     align: 'end',
     visibleInMode: 'all',
-    body: article => (
-      <div className="text-muted">
-        <IconButton size="md" elementType={Link} to={`${article.id}/edit`}>
-          <EditIcon />
-        </IconButton>
-      </div>
-    ),
+    body: article => <EditArticleAction article={article} />,
   },
 ];
+
+function EditArticleAction({article}: {article: ArticleDatatableItem}) {
+  const {trans} = useTrans();
+  return (
+    <IconButton
+      size="md"
+      elementType={Link}
+      to={`${article.id}/edit`}
+      aria-label={trans({message: 'Edit article'})}
+      className="text-muted-foreground"
+    >
+      <EditIcon />
+    </IconButton>
+  );
+}
 
 interface ArticleColumnProps {
   article: ArticleDatatableItem;
@@ -109,7 +131,7 @@ function ArticleColumn({article}: ArticleColumnProps) {
         <Link
           to={`${article.id}/edit`}
           className={clsx(
-            'hover:text-primary hover:underline',
+            'rounded-sm hover:text-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
             isCollapsedMode
               ? 'whitespace-normal'
               : 'overflow-hidden overflow-ellipsis whitespace-nowrap font-medium',

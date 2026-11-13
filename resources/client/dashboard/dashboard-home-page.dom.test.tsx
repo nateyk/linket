@@ -232,7 +232,9 @@ it('keeps the overview responsive when filters, sorting and columns change repea
   });
   expect(screen.getByRole('table', {name: 'Recent orders'}).querySelectorAll('tbody tr')).toHaveLength(1);
   expect(screen.getByRole('link', {name: 'See all orders'})).toBeTruthy();
-});
+// The repeated interactive dropdown changes can exceed the default 5s
+// under shared CI runner load. Keep the assertions and give this one test room.
+}, 15_000);
 
 it('uses a distinct analytics query key when switching workspaces', async () => {
   const client = new QueryClient({defaultOptions: {queries: {retry: false}}});

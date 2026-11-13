@@ -1,6 +1,6 @@
-import {useReorderCategories} from '@app/help-center/manager/requests/use-reorder-categories';
 import {IconButton} from '@ui/buttons/icon-button';
 import {Trans} from '@ui/i18n/trans';
+import {useTrans} from '@ui/i18n/use-trans';
 import {DragIndicatorIcon} from '@ui/icons/material/DragIndicator';
 import {MoreVertIcon} from '@ui/icons/material/MoreVert';
 import {DragPreview} from '@ui/interactions/dnd/drag-preview';
@@ -25,6 +25,7 @@ interface Props<T extends DraggableId> {
   onView: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  isReordering?: boolean;
 }
 export function HcManagerRow<T extends DraggableId>({
   item,
@@ -34,18 +35,19 @@ export function HcManagerRow<T extends DraggableId>({
   onView,
   onEdit,
   onDelete,
+  isReordering = false,
   children,
   description,
   icon,
 }: Props<T>) {
-  const domRef = useRef<HTMLTableRowElement>(null);
+  const domRef = useRef<HTMLDivElement>(null);
   const previewRef = useRef<DragPreviewRenderer>(null);
   const isTouchDevice = useIsTouchDevice();
-  const reorder = useReorderCategories();
+  const {trans} = useTrans();
 
   const {sortableProps, dragHandleRef} = useSortable({
     ref: domRef,
-    disabled: isTouchDevice ?? false,
+    disabled: !!isTouchDevice || isReordering,
     item,
     items,
     type: 'hcManagerSort',
@@ -55,16 +57,17 @@ export function HcManagerRow<T extends DraggableId>({
 
   return (
     <div
-      className="mb-3 flex cursor-pointer items-center gap-1.5 rounded-card border p-3 transition-colors hover:border-primary"
+      className="mb-3 flex min-w-0 cursor-pointer items-center gap-1.5 rounded-card border p-3 transition-colors hover:border-primary focus-within:border-primary/50"
       onClick={createEventHandler(() => onClick())}
       ref={domRef}
       {...sortableProps}
     >
       {!isTouchDevice && (
         <IconButton
-          className="text-muted-foreground"
+          className="shrink-0 text-muted-foreground"
+          aria-label={trans({message: 'Reorder'})}
           ref={dragHandleRef as unknown as RefObject<HTMLButtonElement>}
-          disabled={reorder.isPending}
+          disabled={isReordering}
           onClick={e => {
             e.preventDefault();
             e.stopPropagation();
@@ -73,10 +76,21 @@ export function HcManagerRow<T extends DraggableId>({
           <DragIndicatorIcon />
         </IconButton>
       )}
-      <div className="flex items-center gap-3">
+      <div className="flex min-w-0 flex-1 items-center gap-3">
         {icon}
-        <div className="flex-auto">
-          <h3 className="text-sm font-semibold">{children}</h3>
+        <div className="min-w-0 flex-auto">
+          <h3 className="min-w-0 text-sm font-semibold">
+            <button
+              type="button"
+              className="block min-w-0 max-w-full break-words rounded-input text-left hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              onClick={e => {
+                e.stopPropagation();
+                onClick();
+              }}
+            >
+              {children}
+            </button>
+          </h3>
           {description && (
             <div className="text-sm text-muted-foreground">{description}</div>
           )}
@@ -84,7 +98,8 @@ export function HcManagerRow<T extends DraggableId>({
       </div>
       <MenuTrigger>
         <IconButton
-          className="ml-auto text-muted-foreground"
+          aria-label={trans({message: 'More actions'})}
+          className="ml-auto shrink-0 text-muted-foreground"
           onClick={e => {
             e.preventDefault();
             e.stopPropagation();
@@ -99,8 +114,11 @@ export function HcManagerRow<T extends DraggableId>({
           <MenuItem
             value="sendToTop"
             onSelected={() => {
-              onSortEnd(items.indexOf(item), 0);
-              document.documentElement.scrollTop = 0;
+              const index = items.indexOf(item);
+              if (index > 0) {
+                onSortEnd(index, 0);
+                document.documentElement.scrollTop = 0;
+              }
             }}
           >
             <Trans message="Send to top" />
