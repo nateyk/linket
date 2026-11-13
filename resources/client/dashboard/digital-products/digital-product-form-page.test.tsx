@@ -487,7 +487,8 @@ describe('product editor header', () => {
     expect(headerTitle).toContain('{pageTitle}');
     expect(headerTitle).not.toContain('<ProductStatus');
     expect(source).not.toContain('<Breadcrumb');
-    expect(source).not.toContain('<ProductStatus');
+    expect(headerTitle).not.toContain('<ProductStatus');
+    expect(source).toContain('hasPendingUpdate={product.has_pending_update === true}');
   });
 
   test('retains an accessible Back action and mobile wrapping', () => {
