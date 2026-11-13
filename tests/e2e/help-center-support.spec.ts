@@ -181,9 +181,10 @@ test.describe('isolated Help Center + support', () => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth))
       .toBeLessThanOrEqual(390);
 
-    // Agent route remains available for helpdesk staff.
+    // Admin bookmarks are normalized to the shared admin shell, while
+    // non-admin agents can still use the legacy Help Center route.
     await page.goto(fixture.routes.agent_hc_arrange);
-    await expect(page).not.toHaveURL(/\/login/);
+    await expect(page).toHaveURL(/\/admin\/help\/arrange/);
     await expect(
       page
         .getByText(/E2E Getting Started|categories|articles|arrange/i)
