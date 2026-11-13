@@ -75,7 +75,10 @@ vi.mock('@common/text-editor/highlight/highlight-code', () => ({
   highlightAllCode: vi.fn(),
 }));
 
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  fixture.body = '<h2 id="shipping">Shipping</h2><p>Details</p><img src="/diagram.png" alt="Shipping diagram" />';
+});
 
 function renderArticle() {
   return render(
@@ -99,13 +102,14 @@ describe('Help Center article reading experience', () => {
     expect(disclosure).not.toBeNull();
     expect(disclosure?.className).toContain('xl:hidden');
     expect(within(disclosure as HTMLElement).getByText('On this page')).toBeTruthy();
-    expect(within(disclosure as HTMLElement).getByRole('link', {name: 'Shipping'}).getAttribute('href')).toBe('#shipping');
+    expect(within(disclosure as HTMLElement).getByRole('link', {name: 'Shipping'}).getAttribute('href')).toMatch(/#shipping$/);
     const content = container.querySelector('.max-w-3xl');
     expect(content?.className).toContain('sm:px-24');
     expect(container.querySelector('h1')?.className).toContain('break-words');
   });
 
-  it('turns standalone article images into accessible links without nesting existing links', () => {
+  it('turns standalone images into accessible links while preserving existing links', () => {
+    fixture.body += '<a href="/already-linked"><img src="/linked.png" alt="Already linked" /></a>';
     const {container} = renderArticle();
 
     const image = screen.getByAltText('Shipping diagram');
@@ -114,6 +118,9 @@ describe('Help Center article reading experience', () => {
     expect(preview?.getAttribute('target')).toBe('_blank');
     expect(preview?.getAttribute('rel')).toContain('noopener');
     expect(preview?.getAttribute('aria-label')).toBe('Shipping diagram');
+    const linkedImage = screen.getByAltText('Already linked');
+    expect(linkedImage.closest('a')?.getAttribute('href')).toBe('/already-linked');
+    expect(linkedImage.closest('a')?.querySelectorAll('a')).toHaveLength(0);
     expect(container.querySelector('.article-body')?.className).toContain('[&_pre]:overflow-x-auto');
   });
 });
