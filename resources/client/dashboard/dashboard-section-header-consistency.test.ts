@@ -34,10 +34,12 @@ describe('dashboard header visual and semantic consistency', () => {
     ['service', service, '/dashboard/services'],
     ['course', course, '/dashboard/items'],
   ])('%s editor uses parent › current-page breadcrumbs instead of a Back icon + large title', (_name, source, route) => {
-    expect(source).toContain('<Breadcrumb.Root className="me-auto w-auto min-w-0 text-xl max-sm:text-sm">');
+    expect(source).toContain('<Breadcrumb.Root className="me-auto w-auto min-w-0 text-xl max-sm:me-0 max-sm:w-0 max-sm:flex-1 max-sm:overflow-hidden max-sm:text-sm">');
     expect(source).toContain(`<Breadcrumb.Link to="${route}">`);
     expect(source).toContain('<Breadcrumb.Separator />');
-    expect(source).toContain('<Breadcrumb.Page>');
+    expect(source).toContain('<Breadcrumb.Page className="max-sm:block max-sm:min-w-0 max-sm:truncate">');
+    expect(source).toContain('max-sm:h-14 max-sm:flex-nowrap max-sm:gap-1 max-sm:px-2 max-sm:py-0');
+    expect(source).toContain('max-sm:ms-0 max-sm:gap-1');
     expect(source).toContain('<h1 className="sr-only">');
     expect(source).not.toContain('<DashboardLayout.SectionTitle');
     expect(source).not.toContain('aria-label={trans({message: \'Back to');
@@ -99,7 +101,7 @@ describe('dashboard header visual and semantic consistency', () => {
   test('Link Page editors restore Link pages › New / Edit using the article editor', () => {
     expect(articleEditor).not.toContain('backButton');
     for (const source of [newLinkPage, editLinkPage]) {
-      expect(source).toContain('<Breadcrumb.Root className="me-auto w-auto min-w-0 text-xl max-sm:text-sm">');
+      expect(source).toContain('<Breadcrumb.Root className="me-auto w-auto min-w-0 text-xl max-sm:me-0 max-sm:w-0 max-sm:flex-1 max-sm:overflow-hidden max-sm:text-sm">');
       expect(source).toContain('<Trans message="Link pages" />');
       expect(source).toContain('title={breadCrumb}');
       expect(source).not.toContain('backButton=');
