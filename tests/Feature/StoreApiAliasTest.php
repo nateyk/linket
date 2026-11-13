@@ -45,3 +45,22 @@ it('does not reuse another signed-in user’s workspace cache', function () {
     $this->actingAs($second);
     expect(ActiveWorkspace::getAll()->pluck('id')->all())->toContain($secondWorkspace->id)->not->toContain($firstWorkspace->id);
 });
+
+it('includes actual storefront clicks in list cards', function () {
+    $user = User::factory()->create();
+    $workspace = $user->workspaces()->first() ?? \Common\Workspaces\Models\Workspace::factory()->create(['owner_id' => $user->id]);
+    $workspace->members()->firstOrCreate(['user_id' => $user->id], ['is_owner' => true]);
+    $store = Store::factory()->create([
+        'workspace_id' => $workspace->id,
+        'user_id' => $user->id,
+        'clicks_count' => 17,
+    ]);
+
+    $response = $this->actingAs($user)->withHeader('Referer', 'http://localhost')
+        ->getJson('/api/v1/stores?per_page=100')
+        ->assertOk();
+
+    $listedStore = collect($response->json('data'))->firstWhere('id', $store->id);
+    expect($listedStore)->not->toBeNull();
+    expect($listedStore['clicks_count'])->toBe(17);
+});

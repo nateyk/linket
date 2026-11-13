@@ -5,6 +5,7 @@ import {Biolink} from '@app/gen/schemas/biolink';
 import {Store} from '@app/gen/schemas/store';
 type StoreBiolink = Biolink | Store;
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
+import {Avatar} from '@shadcn/avatar/avatar';
 import {Button} from '@shadcn/button/button';
 import {Dialog} from '@shadcn/dialog/dialog';
 import {Dropdown} from '@shadcn/dropdown/dropdown';
@@ -18,10 +19,11 @@ import {FormattedNumber} from '@ui/i18n/formatted-number';
 import {Trans} from '@ui/i18n/trans';
 import useClipboard from '@ui/utils/hooks/use-clipboard';
 import {toast} from '@shadcn/toast/toast';
-import {ignoreEventsFromPortal} from '@ui/utils/dom/ignore-events-from-portal';
+import {normalizeMediaUrl} from '@common/uploads/normalize-media-url';
 import {removeProtocol} from '@ui/utils/urls/remove-protocol';
 import {
   BarChart3Icon,
+  CheckIcon,
   CopyIcon,
   EllipsisVerticalIcon,
   ExternalLinkIcon,
@@ -149,7 +151,10 @@ type BiolinkCardProps = {
 };
 
 function BiolinkCard({biolink, onClick, onInsights}: BiolinkCardProps) {
-  const [, copyToClipboard] = useClipboard(biolink.short_url);
+  const [isCopied, copyToClipboard] = useClipboard(biolink.short_url);
+  const avatarUrl = normalizeMediaUrl(
+    biolink.profile_config?.avatar_url || biolink.user?.image || '',
+  );
 
   const copyProfileLink = () => {
     copyToClipboard();
@@ -160,50 +165,87 @@ function BiolinkCard({biolink, onClick, onInsights}: BiolinkCardProps) {
     <Item.Root
       variant="outline"
       size="sm"
-      role="button"
-      tabIndex={0}
-      className="cursor-pointer bg-card transition-[border-color,background-color] hover:border-foreground/20 hover:bg-muted/30"
-      onKeyDown={event => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          onClick();
-        }
-      }}
-      onClick={ignoreEventsFromPortal(e => {
-        if (
-          !(e.target as HTMLElement).closest(
-            'a, button, input, [role="checkbox"]',
-          )
-        ) {
-          onClick();
-        }
-      })}
+      role="listitem"
+      className="relative cursor-pointer bg-card transition-[border-color,background-color] hover:border-foreground/20 hover:bg-muted/30"
     >
+      {/* One accessible edit target covers the card without nesting interactive controls. */}
+      <button
+        type="button"
+        onClick={onClick}
+        className="absolute inset-0 z-0 rounded-card outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+      >
+        <span className="sr-only">
+          <Trans message="Edit profile" />: {biolink.name}
+        </span>
+      </button>
+
       <Item.Media
         align="center"
-        className="size-10 rounded-card-sm border bg-muted/40 text-muted-foreground"
+        className="size-10 overflow-hidden rounded-card-sm border bg-muted/40 text-muted-foreground"
       >
-        <LayoutPanelTop />
+        <Avatar.Root className="size-full rounded-card-sm after:hidden">
+          {avatarUrl && (
+            <Avatar.Image
+              src={avatarUrl}
+              alt=""
+              className="rounded-card-sm"
+            />
+          )}
+          <Avatar.Fallback className="rounded-card-sm bg-transparent text-muted-foreground">
+            <LayoutPanelTop className="size-5" aria-hidden="true" />
+          </Avatar.Fallback>
+        </Avatar.Root>
       </Item.Media>
+
       <Item.Content className="gap-0">
         <Item.Row>
           <Item.Title className="font-semibold">{biolink.name}</Item.Title>
         </Item.Row>
         <Item.Row>
-          <div className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
-            <span className="block truncate">
-              {removeProtocol(biolink.short_url)}
-            </span>
-          </div>
+          <span className="block min-w-0 truncate text-sm text-muted-foreground">
+            {removeProtocol(biolink.short_url)}
+          </span>
+          <Tooltip.Root>
+            <Tooltip.Trigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  className="relative z-10 size-7"
+                  onClick={copyProfileLink}
+                  aria-label={isCopied ? 'Link copied' : 'Copy profile link'}
+                />
+              }
+            >
+              {isCopied ? <CheckIcon /> : <CopyIcon />}
+            </Tooltip.Trigger>
+            <Tooltip.Content>
+              {isCopied ? (
+                <Trans message="Copied to clipboard" />
+              ) : (
+                <Trans message="Copy profile link" />
+              )}
+            </Tooltip.Content>
+          </Tooltip.Root>
         </Item.Row>
       </Item.Content>
 
-      <Item.Actions className="basis-full gap-2 border-t pt-2.5 sm:ms-6 sm:basis-auto sm:border-0 sm:pt-0">
-        <span className="me-auto flex items-center gap-1.5 text-xs whitespace-nowrap text-muted-foreground sm:me-2">
+      <Item.Actions className="relative z-10 basis-full gap-2 border-t pt-2.5 sm:ms-6 sm:basis-auto sm:border-0 sm:pt-0">
+        <Button
+          variant="outline"
+          color="default"
+          size="xs"
+          onClick={onInsights}
+          className="me-auto gap-1.5 sm:me-2"
+        >
           <MousePointerClick />
-          <FormattedNumber value={biolink.clicks_count ?? 0} />
-          <Trans message="clicks" />
-        </span>
+          <Trans
+            message=":count clicks"
+            values={{
+              count: <FormattedNumber value={biolink.clicks_count ?? 0} />,
+            }}
+          />
+        </Button>
 
         <Dropdown.Root>
           <Dropdown.Trigger

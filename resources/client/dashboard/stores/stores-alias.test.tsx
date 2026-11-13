@@ -74,6 +74,43 @@ describe('stores alias (Task 4)', () => {
   });
 
 
+  test('profile cards use separate accessible edit and quick-action targets', () => {
+    const content = fs.readFileSync(
+      path.resolve('resources/client/dashboard/stores/stores-page.tsx'),
+      'utf8',
+    );
+    expect(content).toContain('role="listitem"');
+    expect(content).not.toContain('role="button"');
+    expect(content).toContain('className="absolute inset-0 z-0 rounded-card');
+    expect(content).toContain('className="relative z-10 size-7"');
+    expect(content).toContain('aria-label="Profile actions"');
+    expect(content).toContain('onClick={onInsights}');
+  });
+
+  test('profile cards show saved avatars with an icon fallback', () => {
+    const content = fs.readFileSync(
+      path.resolve('resources/client/dashboard/stores/stores-page.tsx'),
+      'utf8',
+    );
+    expect(content).toContain('normalizeMediaUrl(');
+    expect(content).toContain('biolink.profile_config?.avatar_url || biolink.user?.image');
+    expect(content).toContain('<Avatar.Image');
+    expect(content).toContain('<Avatar.Fallback');
+    expect(content).toContain('<LayoutPanelTop className="size-5"');
+  });
+
+  test('profile cards offer visible copy with transient feedback and clickable insights', () => {
+    const content = fs.readFileSync(
+      path.resolve('resources/client/dashboard/stores/stores-page.tsx'),
+      'utf8',
+    );
+    expect(content).toContain('const [isCopied, copyToClipboard]');
+    expect(content).toContain("aria-label={isCopied ? 'Link copied' : 'Copy profile link'}");
+    expect(content).toContain('isCopied ? <CheckIcon /> : <CopyIcon />');
+    expect(content).toContain('message=":count clicks"');
+    expect(content).toContain('<Button\n          variant="outline"\n          color="default"\n          size="xs"\n          onClick={onInsights}');
+  });
+
   test('internal nav uses /stores (store-editor-page)', () => {
     const content = fs.readFileSync(path.resolve('resources/client/dashboard/stores/store-editor/store-editor-page.tsx'), 'utf8');
     expect(content).toContain('/stores/');
