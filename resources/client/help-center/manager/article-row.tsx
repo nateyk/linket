@@ -24,6 +24,7 @@ export function ArticleRow({article, articles, category}: ArticleRowProps) {
       key={article.id}
       item={article}
       items={articles}
+      isReordering={reorder.isPending}
       onSortEnd={(oldIndex, newIndex) => {
         reorder.mutate({sectionId: category.id, oldIndex, newIndex});
       }}
