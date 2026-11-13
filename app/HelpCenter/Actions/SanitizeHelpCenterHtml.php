@@ -31,6 +31,7 @@ class SanitizeHelpCenterHtml
         $config = HTMLPurifier_Config::createDefault();
         $config->set('Core.Encoding', 'UTF-8');
         $config->set('Cache.SerializerPath', null);
+        $config->set('Attr.EnableID', true); // Preserve safe heading anchors.
         $config->set('HTML.Allowed', implode(',', [
             'p[style|class]', 'br', 'span[style|class]', 'div[style|class]',
             'b', 'strong', 'em', 'i', 'u', 's', 'strike', 'sub', 'sup',
