@@ -31,7 +31,9 @@ class ConversationsAssignedToAgent implements ShouldBroadcast
 
     public function broadcastWhen(): bool
     {
-        return $this->conversations->every(fn($c) => $c->isNormalMode());
+        return $this->conversations->every(
+            fn ($c) => $c->isNormalMode() && $c->support_owner_id === null,
+        );
     }
 
     public function broadcastWith(): array

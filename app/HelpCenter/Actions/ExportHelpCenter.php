@@ -15,12 +15,16 @@ class ExportHelpCenter
 
     public function execute()
     {
-        $filename = storage_path('app/hc-export.zip');
-        @unlink($filename);
+        // Never share a fixed export path across concurrent admin downloads.
+        $filename = tempnam(storage_path('app'), 'hc-export-');
+        if ($filename === false) {
+            throw new \RuntimeException('Could not create a Help Center export file.');
+        }
 
         $this->zip = new ZipArchive();
-        if ($this->zip->open($filename, ZipArchive::CREATE) !== true) {
-            return null;
+        if ($this->zip->open($filename, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+            @unlink($filename);
+            throw new \RuntimeException('Could not open the Help Center export ZIP.');
         }
 
         $data = HcCategory::rootOnly()
@@ -51,9 +55,12 @@ class ExportHelpCenter
                 });
             });
 
-        $this->zip->addFromString('help-center.json', json_encode($data));
+        $this->zip->addFromString('help-center.json', json_encode($data, JSON_THROW_ON_ERROR));
 
-        $this->zip->close();
+        if (! $this->zip->close()) {
+            @unlink($filename);
+            throw new \RuntimeException('Could not finish the Help Center export ZIP.');
+        }
 
         return $filename;
     }

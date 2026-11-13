@@ -31,7 +31,8 @@ class ConversationCreated implements ShouldBroadcast
 
     public function broadcastWhen(): bool
     {
-        return $this->conversation->isNormalMode();
+        return $this->conversation->isNormalMode() &&
+            $this->conversation->support_owner_id === null;
     }
 
     public function broadcastWith(): array
