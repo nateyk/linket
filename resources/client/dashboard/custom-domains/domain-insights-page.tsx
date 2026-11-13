@@ -51,11 +51,11 @@ export function Component() {
             {removeProtocol(domain.host)}
           </DashboardLayout.SectionTitle>
           <div className="ms-auto flex min-w-0 items-center">
-          <TrackedEventsInsightsDateAndFilterButtons
-            dateRange={dateRange}
-            setDateRange={setDateRange}
-            filters={filters}
-          />
+            <TrackedEventsInsightsDateAndFilterButtons
+              dateRange={dateRange}
+              setDateRange={setDateRange}
+              filters={filters}
+            />
           </div>
         </DashboardLayout.SectionHeader>
         <DashboardLayout.SectionContent className="overflow-y-auto">
