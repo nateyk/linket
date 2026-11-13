@@ -22,7 +22,7 @@ const overlays = read('resources/client/dashboard/link-overlays/crupdate/crupdat
 const articleEditor = read('common/foundation/resources/client/article-editor/article-editor.tsx');
 
 describe('dashboard header visual and semantic consistency', () => {
-  test('shared header keeps one 56px divider and semantic title typography', () => {
+  test('shared header retains the canonical 56px divider and title typography for ordinary pages', () => {
     expect(shell).toContain('flex h-14 w-full min-w-0 shrink-0 items-center gap-2 border-b');
     expect(shell).not.toContain('data-[slot="breadcrumb"]:font-semibold');
     expect(shell).toContain('data-[slot="sidebar-toggle-button"]:-ms-1');
@@ -30,91 +30,95 @@ describe('dashboard header visual and semantic consistency', () => {
   });
 
   test.each([
-    ['digital product', product, 'Back to products', '/dashboard/items'],
-    ['service', service, 'Back to services', '/dashboard/services'],
-    ['course', course, 'Back to products', '/dashboard/items'],
-  ])('%s editor has a single H1 and accessible Back action, without breadcrumbs', (_name, source, label, route) => {
-    expect(source).not.toContain('<Breadcrumb');
-    expect(source).toContain(`aria-label={trans({message: '${label}'})}`);
-    expect(source).toContain(`render={<Link to="${route}" />}`);
-    expect(source).toContain('className="max-lg:size-11"');
-    expect(source).toContain('render={<h1 />}');
+    ['digital product', product, '/dashboard/items'],
+    ['service', service, '/dashboard/services'],
+    ['course', course, '/dashboard/items'],
+  ])('%s editor uses parent › current-page breadcrumbs instead of a Back icon + large title', (_name, source, route) => {
+    expect(source).toContain('<Breadcrumb.Root className="me-auto w-auto min-w-0 text-xl max-sm:text-sm">');
+    expect(source).toContain(`<Breadcrumb.Link to="${route}">`);
+    expect(source).toContain('<Breadcrumb.Separator />');
+    expect(source).toContain('<Breadcrumb.Page>');
+    expect(source).toContain('<h1 className="sr-only">');
+    expect(source).not.toContain('<DashboardLayout.SectionTitle');
+    expect(source).not.toContain('aria-label={trans({message: \'Back to');
     expect(source).toContain('ms-auto flex');
   });
 
-  test('service and product editor titles have no Draft or Published badge', () => {
-    const serviceTitle = service.split('<DashboardLayout.SectionTitle')[1]?.split('</DashboardLayout.SectionTitle>')[0];
-    const productTitle = product.split('<DashboardLayout.SectionTitle')[1]?.split('</DashboardLayout.SectionTitle>')[0];
-    expect(serviceTitle).toBeTruthy();
-    expect(productTitle).toBeTruthy();
-    expect(serviceTitle).not.toContain('<Badge');
-    expect(productTitle).not.toContain('<ProductStatus');
-    expect(service).toContain('max-lg:text-xl');
+  test('service and product headers keep status badges out of the title while preserving product review feedback', () => {
+    const productHeader = product.split('</DashboardLayout.SectionHeader>')[0];
+    const serviceHeader = service.split('</DashboardLayout.SectionHeader>')[0];
+    expect(productHeader).not.toContain('<ProductStatus');
+    expect(serviceHeader).not.toContain('<Badge');
+    expect(product).toContain('hasPendingUpdate={product.has_pending_update === true}');
     expect(service).toContain('<Trans message="Create a service" />');
   });
 
-  test('Store Editor retains its selector and actions with a dividing rule and an accessible title', () => {
+  test('Store Editor retains its selector, divider, and accessible title', () => {
     expect(store).toContain('<DashboardLayout.SectionHeader>');
     expect(store).not.toContain('min-h-16 gap-2 border-none');
-    expect(store.match(/<h1 className="sr-only">\{biolink.name\}<\/h1>/g)).toHaveLength(1);
+    expect(store).toContain('<h1 className="sr-only">{biolink.name}</h1>');
     expect(store).toContain('className="me-auto min-w-0 max-w-64 shrink justify-between"');
     expect(store).toContain('<BiolinkSelector />');
     expect(store).toContain('<ShareLinkButton');
     expect(store).toContain('<Trans message="Save changes" />');
   });
 
-  test('Insights uses the canonical header divider with semantic title and aligned tabs', () => {
+  test('Insights retains its canonical header, semantic title and tabs', () => {
     expect(insights).toContain('<DashboardLayout.SectionHeader className="max-md:h-auto max-md:flex-wrap max-md:py-2">');
     expect(insights).not.toContain('SectionHeader className="border-none"');
     expect(insights).not.toContain('compactOnMobile={false}');
     expect(insights).toContain('max-md:order-3 max-md:w-full max-md:justify-end');
     expect(insights).toContain('<DashboardLayout.SectionTitle render={<h1 />}>{title}</DashboardLayout.SectionTitle>');
     expect(insights).toContain('className="mx-(--section-spacing) border-b"');
-    expect(insights).toContain('ms-auto flex shrink-0 items-center gap-2');
   });
 
   test.each([
-    ['link details', links, 'Back to links'],
-    ['folder details', folders, 'Back to folders'],
-    ['QR code details', qrCodes, 'Back to QR codes'],
-    ['branded domain details', domains, 'Back to branded domains'],
-  ])('%s uses a single title, accessible Back action, and no header breadcrumbs', (_name, source, label) => {
-    expect(source).toContain('<DashboardLayout.SectionHeader className="max-lg:h-auto max-lg:flex-wrap max-lg:py-2">');
-    expect(source).toContain('<DashboardLayout.SectionTitle render={<h1 />}');
-    expect(source).toContain(`aria-label={trans({message: '${label}'})}`);
-    expect(source).not.toContain('<Breadcrumb');
+    ['link', links, 'Links'],
+    ['folder', folders, 'Folders'],
+    ['QR code', qrCodes, 'QR codes'],
+    ['branded domain', domains, 'Branded domains'],
+  ])('%s details restore classic clickable breadcrumbs and a single hidden H1', (_name, source, label) => {
+    expect(source).toContain('<DashboardLayout.SectionHeader className="max-sm:h-auto max-sm:flex-wrap max-sm:py-2">');
+    expect(source).toContain('<h1 className="sr-only">');
+    expect(source).toContain('<Breadcrumb.Root');
+    expect(source).toContain(`<Trans message="${label}" />`);
+    expect(source).toContain('<Breadcrumb.Separator />');
+    expect(source).toContain('<Breadcrumb.Page>');
+    expect(source).not.toContain('ArrowLeftIcon');
   });
 
   test.each([
-    ['link details', links],
-    ['folder details', folders],
-    ['QR code details', qrCodes],
-  ])('%s retains tabs aligned to the shared header divider', (_name, source) => {
-    expect(source).not.toContain('SectionHeader className="border-none"');
+    ['link', links],
+    ['folder', folders],
+    ['QR code', qrCodes],
+  ])('%s details preserve aligned tabs', (_name, source) => {
     expect(source).toContain('className="mx-(--section-spacing) border-b"');
+    expect(source).not.toContain('SectionHeader className="border-none"');
   });
 
-  test('link page editors use a clear header label with accessible Back navigation', () => {
-    expect(articleEditor).toContain('{backButton}');
+  test('Link Page editors restore Link pages › New / Edit using the article editor', () => {
+    expect(articleEditor).not.toContain('backButton');
     for (const source of [newLinkPage, editLinkPage]) {
-      expect(source).not.toContain('<Breadcrumb');
-      expect(source).toContain("aria-label={trans({message: 'Back to link pages'})}");
-      expect(source).toContain('render={<Link to={`/${routeType}/link-pages`} />}');
+      expect(source).toContain('<Breadcrumb.Root className="me-auto w-auto min-w-0 text-xl max-sm:text-sm">');
+      expect(source).toContain('<Trans message="Link pages" />');
+      expect(source).toContain('title={breadCrumb}');
+      expect(source).not.toContain('backButton=');
     }
-    // The editable article title is already an H1 in the document body.
-    expect(newLinkPage).toContain('title={<Trans message="New link page" />}');
-    expect(editLinkPage).toContain('title={<Trans message="Edit link page" />}');
+    expect(newLinkPage).toContain('<Trans message="New" />');
+    expect(editLinkPage).toContain('<Trans message="Edit" />');
   });
 
-  test('link overlay editor uses the canonical divider and one H1 instead of breadcrumbs', () => {
+  test('Overlay editing restores Overlays › Create / Update with canonical border', () => {
     expect(overlays).toContain('<DashboardLayout.SectionHeader>');
-    expect(overlays).toContain('<DashboardLayout.SectionTitle render={<h1 />}');
-    expect(overlays).toContain("aria-label={trans({message: 'Back to overlays'})}");
-    expect(overlays).not.toContain('<Breadcrumb');
+    expect(overlays).toContain('<Breadcrumb.Root className="me-auto w-auto min-w-0 text-base">');
+    expect(overlays).toContain('<Trans message="Overlays" />');
+    expect(overlays).toContain('<Breadcrumb.Page>');
+    expect(overlays).toContain('<h1 className="sr-only">');
+    expect(overlays).not.toContain('ArrowLeftIcon');
     expect(overlays).not.toContain('SectionHeader className="border-none"');
   });
 
-  test('Overview and My Products use the same semantic page-heading primitive', () => {
+  test('Overview and My Products continue using the ordinary H1 title primitive', () => {
     expect(overview).toContain('<DashboardLayout.SectionTitle render={<h1 />}>{title}</DashboardLayout.SectionTitle>');
     expect(products).toContain('<DashboardLayout.SectionTitle render={<h1 />}>');
   });

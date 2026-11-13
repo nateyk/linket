@@ -4,6 +4,7 @@ import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {Accordion} from '@shadcn/accordion/accordion';
 import {Alert} from '@shadcn/alert/alert';
 import {Badge} from '@shadcn/badge/badge';
+import {Breadcrumb} from '@shadcn/breadcrumb/breadcrumb';
 import {Button} from '@shadcn/button/button';
 import {InputGroup, InputGroupAddon, InputGroupInput, InputGroupText} from '@shadcn/forms/input-group/input-group';
 import {Input} from '@shadcn/forms/input/input';
@@ -12,7 +13,7 @@ import {Trans} from '@ui/i18n/trans';
 import {useTrans} from '@ui/i18n/use-trans';
 import {toast} from '@ui/toast/toast';
 import {isAxiosError} from 'axios';
-import {ArrowLeftIcon, EyeIcon, GraduationCapIcon, ListChecksIcon, TriangleAlertIcon} from 'lucide-react';
+import {EyeIcon, GraduationCapIcon, ListChecksIcon, TriangleAlertIcon} from 'lucide-react';
 import {FormEvent, useRef, useState} from 'react';
 import {Link, useNavigate, useSearchParams} from 'react-router';
 import {parseEtbToCents, parseWizardPrefill, priceForBillingMode, type BillingMode} from '../digital-products/product-create-flow';
@@ -156,17 +157,18 @@ export function Component() {
   return <FileUploadProvider><DashboardLayout.MainSection>
     <DashboardLayout.SectionHeader className="max-lg:h-auto max-lg:flex-wrap max-lg:py-2">
       <DashboardLayout.SidebarToggle />
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        className="max-lg:size-11"
-        nativeButton={false}
-        aria-label={trans({message: 'Back to products'})}
-        render={<Link to="/dashboard/items" />}
-      >
-        <ArrowLeftIcon className="rtl:rotate-180" aria-hidden="true" />
-      </Button>
-      <DashboardLayout.SectionTitle render={<h1 />} className="max-lg:order-3 max-lg:basis-full max-lg:flex-none max-lg:w-full max-lg:text-xl max-lg:overflow-visible max-lg:whitespace-normal max-lg:text-clip"><span className="min-w-0 truncate max-lg:overflow-visible max-lg:whitespace-normal max-lg:text-clip"><Trans message="Create course" /></span></DashboardLayout.SectionTitle>
+      <h1 className="sr-only"><Trans message="Create course" /></h1>
+      <Breadcrumb.Root className="me-auto w-auto min-w-0 text-xl max-sm:text-sm">
+        <Breadcrumb.Item>
+          <Breadcrumb.Link to="/dashboard/items">
+            <Trans message="All products" />
+          </Breadcrumb.Link>
+        </Breadcrumb.Item>
+        <Breadcrumb.Separator />
+        <Breadcrumb.Item>
+          <Breadcrumb.Page><Trans message="Create course" /></Breadcrumb.Page>
+        </Breadcrumb.Item>
+      </Breadcrumb.Root>
       {/* Header actions mirror the digital-product edit page: icon + label
           that collapses to icon-only below 1024px. aria-labels keep the
           collapsed buttons named. */}

@@ -1,3 +1,4 @@
+import {retrieveFolderOptions} from '@app/dashboard/folders/folders-queries';
 import {LinkActionsButton} from '@app/dashboard/links/links-datatable-page/link-actions-button';
 import {retrieveLinkOptions} from '@app/dashboard/links/links-queries';
 import {ShareLinkButton} from '@app/dashboard/links/sharing/share-link-button';
@@ -10,19 +11,17 @@ import {Link} from '@app/gen/schemas/link';
 import {StaticPageTitle} from '@common/seo/static-page-title';
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {useRequiredParams} from '@common/ui/navigation/use-required-params';
-import {Button} from '@shadcn/button/button';
+import {Breadcrumb} from '@shadcn/breadcrumb/breadcrumb';
 import {Tabs} from '@shadcn/tabs/tabs';
 import {useSuspenseQuery} from '@tanstack/react-query';
 import {Trans} from '@ui/i18n/trans';
-import {useTrans} from '@ui/i18n/use-trans';
-import {ArrowLeftIcon} from 'lucide-react';
-import {Link as RouterLink, Outlet, useLocation, useNavigate, useParams} from 'react-router';
+import {cn} from '@ui/utils/cn';
+import {Outlet, useLocation, useNavigate, useParams} from 'react-router';
 
 export function Component() {
   const {routeType} = useDatatableRouteType();
   const {linkId} = useRequiredParams(['linkId']);
   const {folderId} = useParams();
-  const {trans} = useTrans();
   const query = useSuspenseQuery(retrieveLinkOptions(Number(linkId)));
 
   const {pathname} = useLocation();
@@ -36,16 +35,10 @@ export function Component() {
     <>
       <StaticPageTitle>{getLinkeableName(query.data.data)}</StaticPageTitle>
       <DashboardLayout.MainSection>
-        <DashboardLayout.SectionHeader className="max-lg:h-auto max-lg:flex-wrap max-lg:py-2">
+        <DashboardLayout.SectionHeader className="max-sm:h-auto max-sm:flex-wrap max-sm:py-2">
           <DashboardLayout.SidebarToggle />
-          <Button variant="ghost" size="icon-sm" className="max-lg:size-11" nativeButton={false}
-            aria-label={trans({message: 'Back to links'})}
-            render={<RouterLink to={folderId ? `/${routeType}/folders/${folderId}/links` : `/${routeType}/links`} />}>
-            <ArrowLeftIcon className="rtl:rotate-180" aria-hidden="true" />
-          </Button>
-          <DashboardLayout.SectionTitle render={<h1 />} className="max-lg:order-3 max-lg:basis-full max-lg:flex-none max-lg:w-full max-lg:text-xl max-lg:overflow-visible max-lg:whitespace-normal max-lg:text-clip">
-            <LinkeableName linkeable={query.data.data} />
-          </DashboardLayout.SectionTitle>
+          <h1 className="sr-only"><LinkeableName linkeable={query.data.data} /></h1>
+          {folderId ? <FolderBreadcrumb /> : <LinkBreadcrumb />}
           <HeaderActions link={query.data.data} />
         </DashboardLayout.SectionHeader>
         <Tabs.Root value={selectedTab}>
@@ -78,6 +71,65 @@ export function Component() {
   );
 }
 
+function FolderBreadcrumb() {
+  const {routeType} = useDatatableRouteType();
+  const {folderId, linkId} = useRequiredParams(['folderId', 'linkId']);
+  const folderQuery = useSuspenseQuery(retrieveFolderOptions(Number(folderId)));
+  const linkQuery = useSuspenseQuery(retrieveLinkOptions(Number(linkId)));
+
+  return (
+    <Breadcrumb.Root
+      className={cn('me-auto w-auto min-w-0 text-xl max-sm:text-sm', folderQuery.isLoading && 'invisible')}
+    >
+      <Breadcrumb.Item>
+        <Breadcrumb.Link to={`/${routeType}/folders`}>
+          <Trans message="Folders" />
+        </Breadcrumb.Link>
+      </Breadcrumb.Item>
+      <Breadcrumb.Separator />
+      <Breadcrumb.Item>
+        <Breadcrumb.Link to={`/${routeType}/folders/${folderId}`}>
+          {folderQuery.data.data.name}
+        </Breadcrumb.Link>
+      </Breadcrumb.Item>
+      <Breadcrumb.Separator />
+      <Breadcrumb.Item>
+        <Breadcrumb.Link to={`/${routeType}/folders/${folderId}/links`}>
+          <Trans message="Links" />
+        </Breadcrumb.Link>
+      </Breadcrumb.Item>
+      <Breadcrumb.Separator />
+      <Breadcrumb.Item>
+        <Breadcrumb.Page>
+          <LinkeableName linkeable={linkQuery.data.data} />
+        </Breadcrumb.Page>
+      </Breadcrumb.Item>
+    </Breadcrumb.Root>
+  );
+}
+
+function LinkBreadcrumb() {
+  const {routeType} = useDatatableRouteType();
+  const {linkId} = useRequiredParams(['linkId']);
+  const linkQuery = useSuspenseQuery(retrieveLinkOptions(Number(linkId)));
+
+  return (
+    <Breadcrumb.Root className="me-auto w-auto min-w-0 text-xl max-sm:text-sm">
+      <Breadcrumb.Item>
+        <Breadcrumb.Link to={`/${routeType}/links`}>
+          <Trans message="Links" />
+        </Breadcrumb.Link>
+      </Breadcrumb.Item>
+      <Breadcrumb.Separator />
+      <Breadcrumb.Item>
+        <Breadcrumb.Page>
+          <LinkeableName linkeable={linkQuery.data.data} />
+        </Breadcrumb.Page>
+      </Breadcrumb.Item>
+    </Breadcrumb.Root>
+  );
+}
+
 type HeaderActionsProps = {
   link: Link;
 };
@@ -85,7 +137,7 @@ function HeaderActions({link}: HeaderActionsProps) {
   const {routeType} = useDatatableRouteType();
   const navigate = useNavigate();
   return (
-    <div className="ms-auto flex shrink-0 items-center gap-2.5">
+    <div className="flex shrink-0 items-center gap-2.5">
       <LinkActionsButton
         variant="outline"
         link={link}

@@ -6,18 +6,15 @@ import {ArticleEditor} from '@common/article-editor/article-editor';
 import {onFormQueryError} from '@common/http/errors/on-form-query-error';
 import {StaticPageTitle} from '@common/seo/static-page-title';
 import {useNavigate} from '@common/ui/navigation/use-navigate';
+import {Breadcrumb} from '@shadcn/breadcrumb/breadcrumb';
 import {Button} from '@shadcn/button/button';
 import {toast} from '@shadcn/toast/toast';
 import {useMutation} from '@tanstack/react-query';
 import {Trans} from '@ui/i18n/trans';
-import {useTrans} from '@ui/i18n/use-trans';
-import {ArrowLeftIcon} from 'lucide-react';
-import {Link} from 'react-router';
 import {FormProvider, useForm} from 'react-hook-form';
 
 export function Component() {
   const {routeType} = useDatatableRouteType();
-  const {trans} = useTrans();
   const navigate = useNavigate();
 
   const createPage = useMutation(createLinkPageOptions());
@@ -44,6 +41,21 @@ export function Component() {
     </Button>
   );
 
+  const breadCrumb = (
+    <Breadcrumb.Root className="me-auto w-auto min-w-0 text-xl max-sm:text-sm">
+      <Breadcrumb.Item>
+        <Breadcrumb.Link to={`/${routeType}/link-pages`}>
+          <Trans message="Link pages" />
+        </Breadcrumb.Link>
+      </Breadcrumb.Item>
+      <Breadcrumb.Separator />
+      <Breadcrumb.Item>
+        <Breadcrumb.Page>
+          <Trans message="New" />
+        </Breadcrumb.Page>
+      </Breadcrumb.Item>
+    </Breadcrumb.Root>
+  );
 
   return (
     <>
@@ -54,14 +66,7 @@ export function Component() {
         <ArticleEditor
           imageUploadType={UploadType.articleImages}
           saveButton={saveButton}
-          title={<Trans message="New link page" />}
-          backButton={
-            <Button variant="ghost" size="icon-sm" className="max-lg:size-11" nativeButton={false}
-              aria-label={trans({message: 'Back to link pages'})}
-              render={<Link to={`/${routeType}/link-pages`} />}>
-              <ArrowLeftIcon className="rtl:rotate-180" aria-hidden="true" />
-            </Button>
-          }
+          title={breadCrumb}
           onChange={value => {
             form.setValue('body', value, {shouldDirty: true});
           }}

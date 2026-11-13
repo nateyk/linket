@@ -3,6 +3,7 @@ import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {FileUploadProvider} from '@common/uploads/uploader/file-upload-provider';
 import {Alert} from '@shadcn/alert/alert';
 import {AlertDialog} from '@shadcn/alert-dialog/alert-dialog';
+import {Breadcrumb} from '@shadcn/breadcrumb/breadcrumb';
 import {Button} from '@shadcn/button/button';
 import {Dialog} from '@shadcn/dialog/dialog';
 import {Input} from '@shadcn/forms/input/input';
@@ -14,7 +15,6 @@ import {Trans} from '@ui/i18n/trans';
 import {useTrans} from '@ui/i18n/use-trans';
 import {toast} from '@ui/toast/toast';
 import {
-  ArrowLeftIcon,
   ArrowRightIcon,
   ChevronLeftIcon,
   CircleAlertIcon,
@@ -456,28 +456,22 @@ function ServiceFormPage() {
   const renderHeader = (children: React.ReactNode) => (
     <DashboardLayout.SectionHeader className="max-lg:h-auto max-lg:flex-wrap max-lg:py-2">
       <DashboardLayout.SidebarToggle />
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        className="max-lg:size-11"
-        nativeButton={false}
-        aria-label={trans({message: 'Back to services'})}
-        render={<Link to="/dashboard/services" />}
-      >
-        <ArrowLeftIcon className="rtl:rotate-180" aria-hidden="true" />
-      </Button>
-      <DashboardLayout.SectionTitle
-        render={<h1 />}
-        className="max-lg:order-3 max-lg:w-full max-lg:basis-full max-lg:flex-none max-lg:text-xl max-lg:overflow-visible max-lg:whitespace-normal max-lg:text-clip"
-      >
-        <span className="min-w-0 truncate max-lg:overflow-visible max-lg:whitespace-normal max-lg:text-clip">
-          {isEditing ? (
-            <Trans message="Edit service" />
-          ) : (
-            <Trans message="Create a service" />
-          )}
-        </span>
-      </DashboardLayout.SectionTitle>
+      <h1 className="sr-only">
+        {isEditing ? <Trans message="Edit service" /> : <Trans message="Create a service" />}
+      </h1>
+      <Breadcrumb.Root className="me-auto w-auto min-w-0 text-xl max-sm:text-sm">
+        <Breadcrumb.Item>
+          <Breadcrumb.Link to="/dashboard/services">
+            <Trans message="My Services" />
+          </Breadcrumb.Link>
+        </Breadcrumb.Item>
+        <Breadcrumb.Separator />
+        <Breadcrumb.Item>
+          <Breadcrumb.Page>
+            {isEditing ? <Trans message="Edit service" /> : <Trans message="Create a service" />}
+          </Breadcrumb.Page>
+        </Breadcrumb.Item>
+      </Breadcrumb.Root>
       {children}
     </DashboardLayout.SectionHeader>
   );

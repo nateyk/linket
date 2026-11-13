@@ -86,36 +86,28 @@ test.describe('product creation responsive evidence', () => {
         await expect(heading).toBeVisible();
         await expect(page.getByRole('heading', {name: item.section})).toBeVisible();
 
-        // A page can avoid horizontal scroll yet leave its only title clipped
-        // by header actions. Verify the full title fits at narrow widths.
+        // The creator header is a compact breadcrumb, not a separate large
+        // visible H1. Measure the actual current-page crumb and its container.
+        const breadcrumb = page.locator('[data-slot="section-header"] [data-slot="breadcrumb"]');
+        const currentPage = breadcrumb.locator('[data-slot="breadcrumb-page"]');
+        await expect(breadcrumb).toBeVisible();
+        await expect(breadcrumb.getByRole('link', {name: 'All products'})).toHaveAttribute('href', '/dashboard/items');
+        await expect(currentPage).toHaveText(item.heading);
         if (viewport.width <= 375) {
-          const clippedTextPixels = await heading.locator('span').first().evaluate(
-            span => Math.max(0, span.scrollWidth - span.clientWidth),
-          );
-          expect(clippedTextPixels, `${item.type} title is truncated at ${viewport.width}px`)
-            .toBeLessThanOrEqual(1);
-          // Also guard the parent heading: scrollWidth of the child alone
-          // did not detect an ellipsis visible in the 320px screenshot.
-          const titleStyles = await heading.evaluate(node => {
-            const text = node.querySelector('span');
-            if (!text) throw new Error('Missing product title span');
-            const parent = getComputedStyle(node);
-            const child = getComputedStyle(text);
+          const clipping = await currentPage.evaluate(node => {
+            const nav = node.closest('[data-slot="breadcrumb"]');
+            if (!nav) throw new Error('Missing breadcrumb container');
+            const label = node.getBoundingClientRect();
+            const frame = nav.getBoundingClientRect();
             return {
-              parentWhiteSpace: parent.whiteSpace,
-              childWhiteSpace: child.whiteSpace,
-              parentOverflow: parent.overflow,
-              childOverflow: child.overflow,
-              parentTextOverflow: parent.textOverflow,
-              childTextOverflow: child.textOverflow,
+              hiddenPixels: Math.max(0, node.scrollWidth - node.clientWidth),
+              clippedByNav: Math.max(0, label.right - frame.right),
             };
           });
-          expect(titleStyles.parentWhiteSpace).not.toBe('nowrap');
-          expect(titleStyles.childWhiteSpace).not.toBe('nowrap');
-          expect(titleStyles.parentOverflow).toBe('visible');
-          expect(titleStyles.childOverflow).toBe('visible');
-          expect(titleStyles.parentTextOverflow).toBe('clip');
-          expect(titleStyles.childTextOverflow).toBe('clip');
+          expect(clipping.hiddenPixels, `${item.type} breadcrumb label is truncated at ${viewport.width}px`)
+            .toBeLessThanOrEqual(1);
+          expect(clipping.clippedByNav, `${item.type} breadcrumb is clipped by header at ${viewport.width}px`)
+            .toBeLessThanOrEqual(1);
         }
 
         const overflow = await page.evaluate(() =>

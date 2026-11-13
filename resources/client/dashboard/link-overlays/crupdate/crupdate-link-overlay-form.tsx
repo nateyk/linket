@@ -13,6 +13,7 @@ import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
 import {DashboardLayoutContext} from '@common/ui/dashboard/dashboard-layout-context';
 import {ImageSelector} from '@common/uploads/components/image-selector';
 import {FileUploadProvider} from '@common/uploads/uploader/file-upload-provider';
+import {Breadcrumb} from '@shadcn/breadcrumb/breadcrumb';
 import {Button} from '@shadcn/button/button';
 import {Field} from '@shadcn/forms/field';
 import {HookForm} from '@shadcn/forms/form/hook-form';
@@ -23,12 +24,11 @@ import {Popover} from '@shadcn/popover/popover';
 import {Tabs} from '@shadcn/tabs/tabs';
 import {ColorPickerPopover} from '@ui/color-picker/color-picker-popover';
 import {Trans} from '@ui/i18n/trans';
-import {useTrans} from '@ui/i18n/use-trans';
 import {cn} from '@ui/utils/cn';
-import {ArrowLeftIcon, ChevronRightIcon, DropletIcon} from 'lucide-react';
+import {ChevronRightIcon, DropletIcon} from 'lucide-react';
 import {ReactElement, use} from 'react';
 import {useFormContext, UseFormReturn, useWatch} from 'react-hook-form';
-import {Link, useParams} from 'react-router';
+import {useParams} from 'react-router';
 import {OverlayWebsiteBackground} from './overlay-website-background';
 
 interface CrupdateLinkOverlayFormProps {
@@ -42,7 +42,6 @@ export function CrupdateLinkOverlayForm({
   onSubmit,
 }: CrupdateLinkOverlayFormProps) {
   const {routeType} = useDatatableRouteType();
-  const {trans} = useTrans();
   const {isMobileMode} = use(DashboardLayoutContext);
   const {overlayId} = useParams();
 
@@ -55,14 +54,22 @@ export function CrupdateLinkOverlayForm({
         <DirtyFormSaveDrawer isLoading={isLoading} />
         <DashboardLayout.SectionHeader>
           <DashboardLayout.SidebarToggle />
-          <Button variant="ghost" size="icon-sm" nativeButton={false}
-            aria-label={trans({message: 'Back to overlays'})}
-            render={<Link to={`/${routeType}/link-overlays`} />}>
-            <ArrowLeftIcon className="rtl:rotate-180" aria-hidden="true" />
-          </Button>
-          <DashboardLayout.SectionTitle render={<h1 />} className="min-w-0 text-xl">
-            {overlayId ? <Trans message="Edit overlay" /> : <Trans message="Create overlay" />}
-          </DashboardLayout.SectionTitle>
+          <h1 className="sr-only">
+            {overlayId ? <Trans message="Update overlay" /> : <Trans message="Create overlay" />}
+          </h1>
+          <Breadcrumb.Root className="me-auto w-auto min-w-0 text-base">
+            <Breadcrumb.Item>
+              <Breadcrumb.Link to={`/${routeType}/link-overlays`}>
+                <Trans message="Overlays" />
+              </Breadcrumb.Link>
+            </Breadcrumb.Item>
+            <Breadcrumb.Separator />
+            <Breadcrumb.Item>
+              <Breadcrumb.Page>
+                {overlayId ? <Trans message="Update" /> : <Trans message="Create" />}
+              </Breadcrumb.Page>
+            </Breadcrumb.Item>
+          </Breadcrumb.Root>
         </DashboardLayout.SectionHeader>
         <DashboardLayout.SectionContent className="compact-scrollbar px-5 pt-1 pb-5">
           <Tabs.Root defaultValue="general" className="max-w-full flex-1">

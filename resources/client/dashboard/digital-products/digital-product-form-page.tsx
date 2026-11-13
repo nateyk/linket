@@ -26,6 +26,7 @@ import {
 } from '@shadcn/attachment/attachment';
 import {Alert} from '@shadcn/alert/alert';
 import {AlertDialog} from '@shadcn/alert-dialog/alert-dialog';
+import {Breadcrumb} from '@shadcn/breadcrumb/breadcrumb';
 import {Button} from '@shadcn/button/button';
 import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {Checkbox} from '@shadcn/forms/checkbox/checkbox';
@@ -43,7 +44,6 @@ import {useTrans} from '@ui/i18n/use-trans';
 import {getBootstrapData} from '@ui/bootstrap-data/bootstrap-data-store';
 import {FormattedBytes} from '@ui/i18n/formatted-bytes';
 import {
-  ArrowLeftIcon,
   ChevronDownIcon,
   Clock3Icon,
   FileArchiveIcon,
@@ -798,21 +798,18 @@ function DigitalProductForm() {
     <DashboardLayout.MainSection>
       <DashboardLayout.SectionHeader className="max-lg:h-auto max-lg:flex-wrap max-lg:py-2">
         <DashboardLayout.SidebarToggle />
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          className="max-lg:size-11"
-          nativeButton={false}
-          aria-label={trans({message: 'Back to products'})}
-          render={<Link to="/dashboard/items" />}
-        >
-          <ArrowLeftIcon className="rtl:rotate-180" aria-hidden="true" />
-        </Button>
-        <DashboardLayout.SectionTitle render={<h1 />} className="max-lg:order-3 max-lg:basis-full max-lg:flex-none max-lg:w-full max-lg:text-xl max-lg:overflow-visible max-lg:whitespace-normal max-lg:text-clip">
-          <span className="min-w-0 truncate max-lg:overflow-visible max-lg:whitespace-normal max-lg:text-clip">
-            {pageTitle}
-          </span>
-        </DashboardLayout.SectionTitle>
+        <h1 className="sr-only">{pageTitle}</h1>
+        <Breadcrumb.Root className="me-auto w-auto min-w-0 text-xl max-sm:text-sm">
+          <Breadcrumb.Item>
+            <Breadcrumb.Link to="/dashboard/items">
+              <Trans message="All products" />
+            </Breadcrumb.Link>
+          </Breadcrumb.Item>
+          <Breadcrumb.Separator />
+          <Breadcrumb.Item>
+            <Breadcrumb.Page>{pageTitle}</Breadcrumb.Page>
+          </Breadcrumb.Item>
+        </Breadcrumb.Root>
         <div className="ms-auto flex shrink-0 items-center gap-2">
           {effectiveFileType !== 'course' && (
             <Button
