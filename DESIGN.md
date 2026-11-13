@@ -370,13 +370,15 @@ the mobile bottom navigation anchored to the visible viewport.
   ground instead.
 - **Section headers:** `DashboardLayout.SectionHeader` is the one 56px
   (`h-14`) header bar, with `border-b`, `--section-spacing` inline padding,
-  and `SectionTitle` at 24px/600. Use `render={<h1 />}` for page titles;
-  breadcrumbs stay muted/normal-weight, while the title carries emphasis.
-  Creator forms show one parent breadcrumb and a chevron on desktop, a
-  named back icon on mobile, and primary actions on the inline end. Keep
-  the same divider in Insights, Store Editor, and Links/Folders/QR details. Tabs below the header
-  align to `--section-spacing`. Avoid hand-removing the divider or adding
-  duplicate back paths, oversized titles, or extra header rows.
+  and `SectionTitle` at 24px/600. Use `render={<h1 />}` for a single visible
+  page title. Creator forms and resource detail pages do not display
+  breadcrumbs or Draft/Published badges beside that title: use one named,
+  RTL-aware Back icon where needed and put actions on the inline end.
+  Allow the title to wrap on narrow screens without hiding action labels
+  from assistive technology. Keep the same divider in Insights, Store Editor,
+  and Links/Folders/QR details. Tabs below the header align to
+  `--section-spacing`. Avoid duplicate titles, oversized status badges,
+  redundant navigation paths, or extra header rows.
 - **Section variants:** three sanctioned frames — `default` (bordered), `inset`
   (floating content inside a padded shell), `floating` (everything on `bg-muted` with
   8px gaps). Pick one per screen; don't mix within a screen.
