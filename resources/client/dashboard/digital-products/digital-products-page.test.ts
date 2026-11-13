@@ -33,6 +33,7 @@ describe('creator product dashboard lifecycle controls', () => {
 
   test('uses the compact shared toolbar and preserves server-backed filter queries', () => {
     expect(source).toContain('<CreatorListingToolbar');
+    expect(source).not.toContain('summary={<Trans message=":count products"');
     expect(source).toContain("searchLabel={trans({message: 'Search products'})}");
     expect(source).toContain("statusOptions={[");
     expect(source).toContain("{value: 'pending_approval', label: <Trans message=\"In review\" />}");

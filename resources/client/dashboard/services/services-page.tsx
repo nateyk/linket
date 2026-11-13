@@ -66,9 +66,6 @@ export function Component() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
   const [sort, setSort] = useState('default');
-  const publishedCount = services.filter(
-    service => service.status === 'published',
-  ).length;
 
   // Services are already loaded for this workspace. Filtering here avoids
   // extra API requests and never mutates the original server response order.
@@ -254,19 +251,6 @@ export function Component() {
                   setStatus('');
                   setSort('default');
                 }}
-                summary={
-                  <Trans
-                    message=":published published · :drafts drafts · :inquiries inquiries"
-                    values={{
-                      published: publishedCount,
-                      drafts: services.length - publishedCount,
-                      inquiries: services.reduce(
-                        (total, service) => total + service.inquiries_count,
-                        0,
-                      ),
-                    }}
-                  />
-                }
               />
               {visibleServices.length ? (
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">

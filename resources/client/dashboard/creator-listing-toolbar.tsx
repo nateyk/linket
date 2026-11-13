@@ -22,7 +22,6 @@ type Props = {
   onSortChange?: (value: string) => void;
   sortOptions?: CreatorFilterOption[];
   defaultSort?: string;
-  summary?: ReactNode;
   onClear: () => void;
 };
 
@@ -41,7 +40,6 @@ export function CreatorListingToolbar({
   onSortChange,
   sortOptions,
   defaultSort = 'latest',
-  summary,
   onClear,
 }: Props) {
   const {trans} = useTrans();
@@ -54,9 +52,9 @@ export function CreatorListingToolbar({
       data-slot="creator-listing-toolbar"
       role="search"
       aria-label={searchLabel}
-      className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center"
+      className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2.5"
     >
-      <div className="relative w-full min-w-0 sm:max-w-xs sm:flex-1">
+      <div className="relative w-full min-w-0 sm:w-72 sm:max-w-xs sm:flex-none">
         <SearchIcon
           className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
           aria-hidden="true"
@@ -152,11 +150,6 @@ export function CreatorListingToolbar({
           </Button>
         )}
       </div>
-      {summary && (
-        <div className="min-w-0 text-sm text-muted-foreground sm:ms-auto" role="status">
-          {summary}
-        </div>
-      )}
     </div>
   );
 }
