@@ -5,17 +5,21 @@ import type {CreateArticlePayload} from '@app/help-center/articles/requests/use-
 import {FormProvider, useForm} from 'react-hook-form';
 import {afterEach, describe, expect, it, vi} from 'vitest';
 
-vi.mock('@tanstack/react-query', () => ({
-  useQuery: () => ({
-    data: {
-      categories: [{
-        id: 4,
-        name: 'መመሪያዎች — Getting started',
-        sections: [{id: 11, name: 'Long section title for narrow layouts', parent_id: 4}],
-      }],
-    },
-  }),
-}));
+vi.mock('@tanstack/react-query', async importOriginal => {
+  const actual = await importOriginal<typeof import('@tanstack/react-query')>();
+  return {
+    ...actual,
+    useQuery: () => ({
+      data: {
+        categories: [{
+          id: 4,
+          name: 'መመሪያዎች — Getting started',
+          sections: [{id: 11, name: 'Long section title for narrow layouts', parent_id: 4}],
+        }],
+      },
+    }),
+  };
+});
 vi.mock('@ui/overlays/dialog/dialog-trigger', () => ({
   DialogTrigger: ({children}: {children: React.ReactNode[]}) => <>{children[0]}</>,
 }));
