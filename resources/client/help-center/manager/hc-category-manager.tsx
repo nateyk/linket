@@ -74,7 +74,7 @@ function ContainersManager({type, data}: ContainersManagerProps) {
       }
     >
       {!data.category ? (
-        <p className="mb-20 text-sm text-muted-foreground">
+        <p className="mb-6 text-sm text-muted-foreground">
           <Trans message="Arrange help center categories, sections and articles." />
         </p>
       ) : null}
