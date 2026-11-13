@@ -35,13 +35,13 @@ export function Component() {
     <>
       <StaticPageTitle>{getLinkeableName(query.data.data)}</StaticPageTitle>
       <DashboardLayout.MainSection>
-        <DashboardLayout.SectionHeader className="border-none">
+        <DashboardLayout.SectionHeader>
           <DashboardLayout.SidebarToggle />
           {folderId ? <FolderBreadcrumb /> : <LinkBreadcrumb />}
           <HeaderActions link={query.data.data} />
         </DashboardLayout.SectionHeader>
         <Tabs.Root value={selectedTab}>
-          <div className="mx-5 border-b">
+          <div className="mx-(--section-spacing) border-b">
             <Tabs.List variant="line">
               <Tabs.LinkTab
                 className="min-w-24"
