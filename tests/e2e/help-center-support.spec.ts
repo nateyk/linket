@@ -165,6 +165,23 @@ test.describe('isolated Help Center + support', () => {
       page.getByRole('heading', {name: /help center/i}).first(),
     ).toBeVisible({timeout: 30000});
 
+    await page.goto('/admin/help');
+    await expect(page).toHaveURL(/\/admin\/help\/arrange/);
+    await expect(page.locator('[data-slot="sidebar"]')).toBeVisible();
+    await expect(
+      page.locator('[data-slot="sidebar"]').getByRole('link', {name: 'Help center'}),
+    ).toHaveAttribute('aria-current', 'page');
+    await page.getByRole('tab', {name: 'All articles'}).click();
+    await expect(page).toHaveURL(/\/admin\/help\/articles/);
+    await page.getByRole('tab', {name: 'Structure'}).click();
+    await expect(page).toHaveURL(/\/admin\/help\/arrange/);
+
+    await page.setViewportSize({width: 390, height: 844});
+    await expect(page.locator('[data-slot="dashboard-section"]')).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth))
+      .toBeLessThanOrEqual(390);
+
+    // Agent route remains available for helpdesk staff.
     await page.goto(fixture.routes.agent_hc_arrange);
     await expect(page).not.toHaveURL(/\/login/);
     await expect(
