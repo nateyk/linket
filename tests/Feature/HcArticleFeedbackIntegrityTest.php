@@ -174,7 +174,10 @@ class HcArticleFeedbackIntegrityTest extends TestCase
 
     private function stateful(): static
     {
-        return $this->withSession(['_token' => 'hc-feedback-csrf'])
+        // JSON requests omit cookies in Laravel's HTTP test client unless
+        // credentials are enabled, unlike same-origin browser fetches.
+        return $this->withCredentials()
+            ->withSession(['_token' => 'hc-feedback-csrf'])
             ->withHeader('Referer', config('app.url'))
             ->withHeader('X-CSRF-TOKEN', 'hc-feedback-csrf');
     }
