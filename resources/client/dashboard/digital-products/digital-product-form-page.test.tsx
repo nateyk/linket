@@ -321,7 +321,7 @@ describe('product form reassembly', () => {
     expect(source).toContain('<ProductPreview');
     expect(source).toContain('<h1 className="sr-only">{pageTitle}</h1>');
     expect(source).toContain('<Breadcrumb.Root');
-    expect(source).toContain('<Breadcrumb.Page>{pageTitle}</Breadcrumb.Page>');
+    expect(source).toContain('<Breadcrumb.Page className="max-sm:block max-sm:min-w-0 max-sm:truncate">{pageTitle}</Breadcrumb.Page>');
   });
 
   test('invalid fields carry accessible error state', () => {
