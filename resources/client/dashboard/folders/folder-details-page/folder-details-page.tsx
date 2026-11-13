@@ -68,13 +68,13 @@ export function Component() {
     <>
       <StaticPageTitle>{title}</StaticPageTitle>
       <DashboardLayout.MainSection>
-        <DashboardLayout.SectionHeader className="border-none">
+        <DashboardLayout.SectionHeader>
           <DashboardLayout.SidebarToggle />
           {breadcrumb}
           {headerActions}
         </DashboardLayout.SectionHeader>
         <Tabs.Root value={selectedTab}>
-          <div className="mx-6 border-b">
+          <div className="mx-(--section-spacing) border-b">
             <Tabs.List variant="line">
               <Tabs.LinkTab
                 className="min-w-25"
