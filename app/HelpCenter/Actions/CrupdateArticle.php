@@ -76,30 +76,37 @@ class CrupdateArticle
             $article->title = __('Untitled');
         }
 
-        // attach newly created article to ai agent
-        if (Modules::aiInstalled()) {
-            if (empty($originalData)) {
-                $aiAgent = null;
-                // if specific ai agent id is provided
-                if ($specifiedAiAgentId = Arr::get($data, 'aiAgentId')) {
-                    $aiAgent = AiAgent::find($specifiedAiAgentId);
-                    // or if there is only a single AI agent enabled
-                } else {
-                    $aiAgents = AiAgent::where('enabled', true)->get(['id']);
-                    if ($aiAgents->count() === 1) {
-                        $aiAgent = $aiAgents->first();
-                    }
-                }
+        // Create the database row before linking it to any AI agent.
+        // Otherwise a new article has a null id in the polymorphic pivot.
+        $article->save();
 
-                if ($aiAgent) {
-                    $aiAgent->articles()->syncWithoutDetaching($article->id);
-                }
-            }
-
-            $this->maybeMarkForIngesting($article, $originalData);
+        if (! Modules::aiInstalled()) {
+            return;
         }
 
-        $article->save();
+        if (empty($originalData)) {
+            $aiAgent = $this->resolveAgentForNewArticle($data);
+            if ($aiAgent) {
+                $aiAgent->articles()->syncWithoutDetaching([$article->id]);
+            }
+        }
+
+        // AI associations must already exist for ingestion eligibility.
+        $this->maybeMarkForIngesting($article, $originalData);
+        if ($article->isDirty()) {
+            $article->save();
+        }
+    }
+
+    protected function resolveAgentForNewArticle(array $data): ?AiAgent
+    {
+        if ($agentId = Arr::get($data, 'aiAgentId')) {
+            return AiAgent::find($agentId);
+        }
+
+        $agents = AiAgent::where('enabled', true)->limit(2)->get(['id']);
+
+        return $agents->count() === 1 ? $agents->first() : null;
     }
 
     protected function maybeMarkForIngesting(
