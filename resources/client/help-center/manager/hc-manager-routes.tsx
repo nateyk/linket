@@ -15,14 +15,15 @@ export const updateArticlePageLoader = async (params: Params) => {
   );
 };
 
-export const hcManagerRoutes: RouteObject[] = [
+export function createHcManagerRoutes(prefix: 'hc' | 'help', root: string): RouteObject[] {
+  return [
   // article datatable
   {
-    path: 'hc',
+    path: prefix,
     children: [
       {
         index: true,
-        element: <Navigate to="/agent/hc/arrange" replace />,
+        element: <Navigate to={`${root}/arrange`} replace />,
       },
       {
         path: 'articles',
@@ -77,7 +78,7 @@ export const hcManagerRoutes: RouteObject[] = [
 
   // help center manager
   {
-    path: 'hc/arrange',
+    path: `${prefix}/arrange`,
     children: [
       {
         index: true,
@@ -160,4 +161,10 @@ export const hcManagerRoutes: RouteObject[] = [
       },
     ],
   },
-];
+  ];
+}
+
+// Agents keep their existing Help Center routes and permissions.
+export const hcManagerRoutes = createHcManagerRoutes('hc', '/agent/hc');
+// Admins use the same pages inside the shared modern admin dashboard shell.
+export const adminHcManagerRoutes = createHcManagerRoutes('help', '/admin/help');
