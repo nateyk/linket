@@ -4,19 +4,16 @@ namespace App\HelpCenter\Actions;
 
 use App\HelpCenter\Models\HcArticle;
 use App\HelpCenter\Models\HcCategory;
-use Common\Files\Actions\StoreFile;
 use Common\Files\FileEntry;
-use Common\Files\FileEntryPayload;
-use Common\Files\Uploads\Uploads;
 use Common\Search\ImportRecordsIntoScout;
 use Common\Tags\Tag;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
+use RuntimeException;
 use ZipArchive;
 
 class ImportHelpCenter
@@ -24,165 +21,162 @@ class ImportHelpCenter
     public function execute(string $path): void
     {
         $zip = new ZipArchive();
-        $zip->open($path);
-
-        $files = [];
-        for ($i = 0; $i < $zip->numFiles; $i++) {
-            $stat = $zip->statIndex($i);
-            $files[] = $stat;
+        if ($zip->open($path) !== true) {
+            throw ValidationException::withMessages([
+                'file' => 'The uploaded file is not a valid ZIP archive.',
+            ]);
         }
-
-        $helpCenter = json_decode($zip->getFromName('help-center.json'), true);
-
-        // delete old help center data and truncate tables
-        (new DeleteMultipleArticles())->execute(
-            DB::table('articles')->pluck('id')->toArray(),
-        );
-        DB::table('articles')->truncate();
-        DB::table('categories')->truncate();
-        DB::table('category_article')->truncate();
-
-        HcArticle::disableSearchSyncing();
 
         try {
-            Artisan::call('scout:flush ' . HcArticle::class);
-        } catch (\Exception) {
+            // Finish every archive check before changing any existing content.
+            $manifest = (new ValidateHelpCenterArchive())->execute($zip);
+
+            HcArticle::disableSearchSyncing();
+            try {
+                DB::transaction(function () use ($manifest, $zip) {
+                    $this->replaceHelpCenter($manifest['categories']);
+                    $this->storeHcImages($zip, $manifest['files']);
+                });
+            } finally {
+                HcArticle::enableSearchSyncing();
+            }
+
+            // Search changes run only after the replacement has committed.
+            try {
+                Artisan::call('scout:flush '.HcArticle::class);
+            } catch (\Throwable $e) {
+                report($e);
+            }
+            (new ImportRecordsIntoScout())->execute(HcArticle::class);
+        } finally {
+            $zip->close();
         }
-
-        // unguard models (we will restore article/category model ids from json)
-        HcCategory::unguard();
-        HcArticle::unguard();
-        Tag::unguard();
-        FileEntry::unguard();
-
-        foreach ($helpCenter as $categoryData) {
-            // create categories
-            $category = HcCategory::create([
-                ...Arr::except($categoryData, [
-                    'sections',
-                    'model_type',
-                    'is_section',
-                    'hidden',
-                ]),
-                'created_at' => $categoryData['created_at'] ?? now(),
-                'updated_at' => $categoryData['updated_at'] ?? now(),
-            ]);
-
-            // create sections
-            collect($categoryData['sections'])->each(function (
-                $sectionData,
-            ) use ($category) {
-                $sectionData['parent_id'] = $category->id;
-                $section = HcCategory::create([
-                    ...Arr::except($sectionData, [
-                        'articles',
-                        'model_type',
-                        'is_section',
-                        'hidden',
-                    ]),
-                    'created_at' => $sectionData['created_at'] ?? now(),
-                    'updated_at' => $sectionData['updated_at'] ?? now(),
-                ]);
-
-                // create articles
-                foreach ($sectionData['articles'] as $articleData) {
-                    $article = HcArticle::firstOrCreate([
-                        ...Arr::except($articleData, [
-                            'tags',
-                            'model_type',
-                            'article_id',
-                            'category_id',
-                            'position',
-                            'extra_data',
-                        ]),
-                        'created_at' => $articleData['created_at'] ?? now(),
-                        'updated_at' => $articleData['updated_at'] ?? now(),
-                        'author_id' => Arr::get($articleData, 'author_id')
-                            ? $articleData['author_id']
-                            : Auth::id(),
-                    ]);
-                    $article
-                        ->categories()
-                        ->syncWithoutDetaching([$section->id, $category->id]);
-
-                    // create tags
-                    foreach ($articleData['tags'] as $tagData) {
-                        $attrs = [
-                            'name' => $tagData['name'],
-                        ];
-                        $tag = Tag::where('name', $tagData['name'])->first();
-                        if (!$tag) {
-                            $tag = Tag::create($attrs);
-                        }
-
-                        try {
-                            $article->tags()->attach($tag->id);
-                        } catch (\Exception) {
-                        }
-                    }
-                }
-            });
-        }
-
-        $this->storeHcImages($zip);
-
-        Cache::flush();
-        (new ImportRecordsIntoScout())->execute(HcArticle::class);
-        $zip->close();
     }
 
-    protected function storeHcImages(ZipArchive $zip)
+    protected function replaceHelpCenter(array $categories): void
     {
-        $fileEntries = json_decode(
-            $zip->getFromName('file-entries.json'),
-            true,
+        $articleIds = DB::table('articles')->pluck('id')->all();
+        $categoryIds = DB::table('categories')->pluck('id')->all();
+
+        (new DeleteMultipleArticles())->execute($articleIds);
+
+        // DELETE participates in the surrounding transaction; TRUNCATE does not
+        // on MySQL. Remove old category relations before deleting categories.
+        DB::table('category_article')->delete();
+        DB::table('taggables')
+            ->where('taggable_type', HcCategory::MODEL_TYPE)
+            ->whereIn('taggable_id', $categoryIds)
+            ->delete();
+        DB::table('file_entry_models')
+            ->where('model_type', HcCategory::MODEL_TYPE)
+            ->whereIn('model_id', $categoryIds)
+            ->delete();
+        DB::table('categories')->delete();
+
+        Model::unguarded(function () use ($categories) {
+            foreach ($categories as $categoryData) {
+                $this->importCategory($categoryData);
+            }
+        });
+    }
+
+    protected function importCategory(array $data): void
+    {
+        $category = HcCategory::create([
+            ...Arr::except($data, [
+                'sections', 'model_type', 'is_section', 'hidden',
+            ]),
+            'created_at' => $data['created_at'] ?? now(),
+            'updated_at' => $data['updated_at'] ?? now(),
+        ]);
+
+        foreach ($data['sections'] as $sectionData) {
+            $section = HcCategory::create([
+                ...Arr::except($sectionData, [
+                    'articles', 'model_type', 'is_section', 'hidden',
+                ]),
+                'parent_id' => $category->id,
+                'created_at' => $sectionData['created_at'] ?? now(),
+                'updated_at' => $sectionData['updated_at'] ?? now(),
+            ]);
+
+            foreach ($sectionData['articles'] as $articleData) {
+                $this->importArticle($articleData, $category, $section);
+            }
+        }
+    }
+
+    protected function importArticle(
+        array $data,
+        HcCategory $category,
+        HcCategory $section,
+    ): void {
+        $attributes = Arr::except($data, [
+            'tags', 'model_type', 'article_id', 'category_id',
+            'position', 'extra_data',
+        ]);
+
+        $article = HcArticle::firstOrCreate(
+            ['id' => $data['id']],
+            [
+                ...$attributes,
+                'created_at' => $data['created_at'] ?? now(),
+                'updated_at' => $data['updated_at'] ?? now(),
+                'author_id' => $data['author_id'] ?? Auth::id(),
+            ],
         );
 
-        foreach ($fileEntries['article_entries'] as $articleId => $entryIds) {
-            foreach ($entryIds as $entryId) {
-                $entryData = is_array($entryId)
-                    ? $entryId
-                    : Arr::first(
-                        $fileEntries['entries'],
-                        fn($entry) => $entry['id'] === $entryId,
-                    );
-                $fileEntry = FileEntry::firstOrCreate(
-                    ['file_name' => $entryData['file_name']],
-                    Arr::except($entryData, ['id', 'url', 'hash']),
-                );
-                $article = HcArticle::find($articleId);
-                $article->inlineImages()->attach($fileEntry->id);
+        $article->categories()->syncWithoutDetaching([
+            $section->id, $category->id,
+        ]);
 
-                $fileEntry
-                    ->getDisk()
-                    ->put(
-                        $fileEntry->getStoragePath(),
-                        $zip->getFromName('images/' . $fileEntry->file_name),
-                    );
+        foreach ($data['tags'] as $tagData) {
+            $tag = Tag::firstOrCreate(['name' => $tagData['name']]);
+            $article->tags()->syncWithoutDetaching([$tag->id]);
+        }
+    }
+
+    protected function storeHcImages(ZipArchive $zip, array $manifest): void
+    {
+        foreach ($manifest['article_entries'] as $articleId => $entryIds) {
+            $article = HcArticle::findOrFail($articleId);
+            foreach ($entryIds as $entryId) {
+                $entry = $this->restoreImageEntry($zip, $entryId, $manifest['entries']);
+                $article->inlineImages()->syncWithoutDetaching([$entry->id]);
             }
         }
 
-        foreach ($fileEntries['category_entries'] as $categoryId => $entryIds) {
+        foreach ($manifest['category_entries'] as $categoryId => $entryIds) {
+            $category = HcCategory::findOrFail($categoryId);
             foreach ($entryIds as $entryId) {
-                $entryData = is_array($entryId)
-                    ? $entryId
-                    : Arr::first(
-                        $fileEntries['entries'],
-                        fn($entry) => $entry['id'] === $entryId,
-                    );
-                $fileEntry = FileEntry::firstOrCreate(
-                    ['file_name' => $entryData['file_name']],
-                    Arr::except($entryData, ['id', 'url', 'hash']),
-                );
-                $category = HcCategory::find($categoryId);
-                $category->images()->attach($fileEntry->id);
-                $fileEntry
-                    ->getDisk()
-                    ->put(
-                        $fileEntry->getStoragePath(),
-                        $zip->getFromName('images/' . $fileEntry->file_name),
-                    );
+                $entry = $this->restoreImageEntry($zip, $entryId, $manifest['entries']);
+                $category->images()->syncWithoutDetaching([$entry->id]);
             }
         }
+    }
+
+    protected function restoreImageEntry(ZipArchive $zip, mixed $reference, array $entries): FileEntry
+    {
+        $data = is_array($reference)
+            ? $reference
+            : collect($entries)->firstWhere('id', $reference);
+
+        $entry = FileEntry::firstOrCreate(
+            ['file_name' => $data['file_name']],
+            Arr::except($data, ['id', 'url', 'hash']),
+        );
+
+        // Older exporters use the full storage path inside the ZIP, not merely
+        // the file name. Accept both layouts without extracting unsafe paths.
+        $contents = $zip->getFromName('images/'.trim($entry->getStoragePath(), '/'));
+        if ($contents === false) {
+            $contents = $zip->getFromName('images/'.$entry->file_name);
+        }
+
+        if ($contents === false || ! $entry->getDisk()->put($entry->getStoragePath(), $contents)) {
+            throw new RuntimeException('Could not restore an image from the Help Center archive.');
+        }
+
+        return $entry;
     }
 }
