@@ -90,7 +90,7 @@ export function Component() {
                     <Trans message=":count profiles" values={{count: items.length}} />
                   )}
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="hidden text-xs text-muted-foreground sm:block">
                   <Trans message="Select a profile to edit it" />
                 </p>
               </div>
@@ -173,7 +173,7 @@ export function BiolinkCard({biolink, onClick, onInsights}: BiolinkCardProps) {
       variant="outline"
       size="sm"
       role="listitem"
-      className="border-border bg-card text-card-foreground transition-none"
+      className="gap-x-3 gap-y-2 border-border bg-card text-card-foreground transition-shadow duration-100 hover:shadow-sm motion-reduce:transition-none min-[480px]:gap-x-3.5"
       onClick={ignoreEventsFromPortal(e => {
         if (
           !(e.target as HTMLElement).closest(
@@ -225,7 +225,7 @@ export function BiolinkCard({biolink, onClick, onInsights}: BiolinkCardProps) {
               type="button"
               variant="ghost"
               size="icon-sm"
-              className="text-muted-foreground"
+              className="size-10 text-muted-foreground sm:size-8"
               aria-label={copyLabel}
               title={copyLabel}
               onClick={copyProfileLink}
@@ -240,7 +240,7 @@ export function BiolinkCard({biolink, onClick, onInsights}: BiolinkCardProps) {
         </Item.Row>
       </Item.Content>
 
-      <Item.Actions className="w-full basis-full justify-between gap-2 sm:ms-auto sm:w-auto sm:basis-auto sm:justify-end md:ml-0">
+      <Item.Actions className="w-full basis-full justify-end gap-1.5 min-[480px]:ms-auto min-[480px]:w-auto min-[480px]:basis-auto min-[480px]:gap-2 md:ml-0">
         <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground">
           <MousePointerClick className="size-3.5 text-muted-foreground" aria-hidden="true" />
           <Trans
@@ -251,7 +251,7 @@ export function BiolinkCard({biolink, onClick, onInsights}: BiolinkCardProps) {
 
         <Dropdown.Root>
           <Dropdown.Trigger
-            render={<Button variant="ghost" size="icon-sm" />}
+            render={<Button variant="ghost" size="icon-sm" className="size-10 sm:size-8" />}
             aria-label={trans(message('Profile actions'))}
           >
             <EllipsisVerticalIcon />
