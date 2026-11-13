@@ -17,6 +17,7 @@ class ConversationsAssigner
         bool $addEvent = false,
     ): Collection {
         $conversations = Conversation::query()
+            ->platformSupport()
             ->whereNotClosed()
             ->whereAssignedToHuman()
             ->whereNull('assignee_id')
@@ -46,6 +47,18 @@ class ConversationsAssigner
             $conversations[0] instanceof Conversation
                 ? $conversations
                 : Conversation::whereIn('id', $conversations)->get();
+        // Keep this check flat so it cannot change the assignment flow.
+        $invalidAssignment = $original->first(
+            fn (Conversation $conversation) =>
+                $conversation->support_owner_id !== null &&
+                $conversation->support_owner_id !== $agentId,
+        );
+        abort_if(
+            $invalidAssignment !== null,
+            403,
+            'Creator-owned tickets cannot be assigned to another agent.',
+        );
+
         $updatedEvent = new ConversationsUpdated($original);
         $updated = $original;
 
@@ -103,6 +116,10 @@ class ConversationsAssigner
         array|null $except = [],
         bool $addEvent = false,
     ): Conversation {
+        if ($conversation->support_owner_id !== null) {
+            return $conversation;
+        }
+
         $group = $conversation->group ?? Group::findDefault();
 
         $allAgents = User::whereAgent()
