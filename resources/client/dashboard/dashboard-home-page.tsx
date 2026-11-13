@@ -101,7 +101,7 @@ export function Component() {
       <DashboardLayout.MainSection>
         <DashboardLayout.SectionHeader>
           <DashboardLayout.SidebarToggle />
-          <DashboardLayout.SectionTitle>{title}</DashboardLayout.SectionTitle>
+          <DashboardLayout.SectionTitle render={<h1 />}>{title}</DashboardLayout.SectionTitle>
         </DashboardLayout.SectionHeader>
         <DashboardLayout.SectionContent className="overflow-y-auto">
           <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 py-4">
