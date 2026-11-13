@@ -183,7 +183,7 @@ export function BiolinkCard({biolink, onClick, onInsights}: BiolinkCardProps) {
     >
       <Item.Media
         align="center"
-        className="size-10 rounded-card-sm border bg-muted/40 text-muted-foreground"
+        className="size-10 overflow-hidden rounded-card-sm border bg-muted/40 text-muted-foreground"
       >
         {showAvatar ? (
           <img
