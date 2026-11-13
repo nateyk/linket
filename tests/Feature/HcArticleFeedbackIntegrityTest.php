@@ -34,7 +34,7 @@ class HcArticleFeedbackIntegrityTest extends TestCase
 
         $token = bin2hex(random_bytes(32));
         $first = $this->stateful()
-            ->withUnencryptedCookie('hc_feedback_visitor', $token)
+            ->withCookie('hc_feedback_visitor', $token)
             ->postJson("/api/v1/hc/articles/{$article->id}/feedback", [
                 'wasHelpful' => true,
             ])->assertOk();
@@ -44,10 +44,9 @@ class HcArticleFeedbackIntegrityTest extends TestCase
         $this->assertNotNull($cookie);
         $this->assertTrue($cookie->isHttpOnly());
 
-        // The test client does not replay encrypted response cookies like a
-        // browser. Supply the already-known raw token through Laravel's
-        // unencrypted-cookie helper on both requests instead.
-        $this->withUnencryptedCookie('hc_feedback_visitor', $token)
+        // withCookie encrypts the supplied raw value for the test request.
+        // Replaying the encrypted response value would double-encrypt it.
+        $this->withCookie('hc_feedback_visitor', $token)
             ->postJson("/api/v1/hc/articles/{$article->id}/feedback", [
                 'wasHelpful' => false,
                 'comment' => 'This could be clearer.',
