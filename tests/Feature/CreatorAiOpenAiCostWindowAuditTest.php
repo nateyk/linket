@@ -134,3 +134,44 @@ test('cost audit rejects foreign project values, incomplete buckets and recent w
     expect(fn () => app(CreatorAiOpenAiCostWindowAudit::class)->report('2026-02-31'))
         ->toThrow(RuntimeException::class);
 });
+
+test('read-only cost audit retains separate provider line-item evidence and never settles a reserved request', function () {
+    creatorAiAuditConfig();
+    $day = creatorAiAuditDay();
+    creatorAiAuditLocalRequest($day);
+
+    creatorAiAuditWindow($day, [
+        [
+            'object' => 'organization.costs.result',
+            'project_id' => 'proj_linket_audit_synthetic',
+            'line_item' => 'gpt-4o-mini, input_tokens',
+            'amount' => ['currency' => 'usd', 'value' => 0.0002],
+        ],
+        [
+            'object' => 'organization.costs.result',
+            'project_id' => 'proj_linket_audit_synthetic',
+            'line_item' => 'gpt-4o-mini, output_tokens',
+            'amount' => ['currency' => 'usd', 'value' => 0.0004],
+        ],
+    ], [[
+        'object' => 'organization.usage.completions.result',
+        'project_id' => 'proj_linket_audit_synthetic',
+        'num_model_requests' => 1,
+        'input_tokens' => 200,
+        'output_tokens' => 100,
+    ]]);
+
+    $report = app(CreatorAiOpenAiCostWindowAudit::class)->report($day);
+    expect($report['provider_cost_microusd'])->toBe(600)
+        ->and($report['provider_cost_line_items'])->toBe([
+            ['line_item' => 'gpt-4o-mini, input_tokens', 'amount_microusd' => 200],
+            ['line_item' => 'gpt-4o-mini, output_tokens', 'amount_microusd' => 400],
+        ])
+        ->and($report['cost_line_items_classified'])->toBeTrue()
+        ->and($report['status'])->toBe('aggregate_matches_pending_invoice_review')
+        ->and(DB::table('creator_ai_generation_attempts')->first()->status)->toBe('reserved');
+    Http::assertSent(fn ($request) =>
+        str_contains($request->url(), '/organization/costs')
+        && str_contains($request->url(), 'line_item')
+    );
+});

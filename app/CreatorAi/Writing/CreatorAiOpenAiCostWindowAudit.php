@@ -13,7 +13,8 @@ use RuntimeException;
  * Private, READ-ONLY independent OpenAI organization cost and usage audit.
  *
  * A dedicated OpenAI project is mandatory. The official API reports DAILY
- * aggregate cost, NOT an independently attested charge for each generation.
+ * aggregate cost, even when grouped by billable line item; it does NOT
+ * independently attest a charge for each individual creator generation.
  * This class makes no budget changes, does not mark attempts completed, and
  * never treats successful HTTP calls as proof of request-level settlement.
  *
@@ -22,7 +23,7 @@ use RuntimeException;
 final class CreatorAiOpenAiCostWindowAudit
 {
     /**
-     * @return array{day:string,project_id:string,provider_cost_microusd:int,provider_request_count:int,provider_input_tokens:int,provider_output_tokens:int,local_request_count:int,local_checkpoint_count:int,local_input_tokens:int,local_output_tokens:int,coverage_matches:bool,cost_document_sha256:string,usage_document_sha256:string,status:string}
+     * @return array{day:string,project_id:string,provider_cost_microusd:int,provider_cost_line_items:list<array{line_item:string|null,amount_microusd:int}>,cost_line_items_classified:bool,provider_request_count:int,provider_input_tokens:int,provider_output_tokens:int,local_request_count:int,local_checkpoint_count:int,local_input_tokens:int,local_output_tokens:int,coverage_matches:bool,cost_document_sha256:string,usage_document_sha256:string,status:string}
      */
     public function report(string $day): array
     {
@@ -60,10 +61,17 @@ final class CreatorAiOpenAiCostWindowAudit
             'limit' => 1,
         ];
         // These are separate provider-owned endpoints, not Linket counters.
-        $costs = $this->readBuckets('organization/costs', $params, $key, $project);
+        // Project alone hides non-generation charges. Preserve source-defined
+        // daily line items separately; never infer a creator's per-request
+        // cost from them, even if the aggregate usage counts match.
+        $costParams = $params;
+        $costParams['group_by'] = ['project_id', 'line_item'];
+        $costs = $this->readBuckets('organization/costs', $costParams, $key, $project);
         $usage = $this->readBuckets('organization/usage/completions', $params, $key, $project);
 
         $costMicro = 0;
+        $costLineItems = [];
+        $classified = count($costs['results']) > 0;
         foreach ($costs['results'] as $item) {
             if (($item['object'] ?? null) !== 'organization.costs.result'
                 || ! is_array($item['amount'] ?? null)
@@ -81,6 +89,18 @@ final class CreatorAiOpenAiCostWindowAudit
                 throw new RuntimeException('OpenAI cost overflow.');
             }
             $costMicro += $lineMicrousd;
+            $lineItem = $item['line_item'] ?? null;
+            if ($lineItem !== null && (! is_string($lineItem) || strlen($lineItem) > 256
+                || $lineItem === '' || preg_match('/[\x00-\x1F\x7F]/', $lineItem))) {
+                throw new RuntimeException('Malformed OpenAI cost line item.');
+            }
+            if ($lineItem === null) {
+                $classified = false;
+            }
+            $costLineItems[] = [
+                'line_item' => $lineItem,
+                'amount_microusd' => $lineMicrousd,
+            ];
         }
 
         $requestCount = 0;
@@ -130,6 +150,8 @@ final class CreatorAiOpenAiCostWindowAudit
             'day' => $day,
             'project_id' => $project,
             'provider_cost_microusd' => $costMicro,
+            'provider_cost_line_items' => $costLineItems,
+            'cost_line_items_classified' => $classified,
             'provider_request_count' => $requestCount,
             'provider_input_tokens' => $inputTokens,
             'provider_output_tokens' => $outputTokens,
