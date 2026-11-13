@@ -32,14 +32,13 @@ export function Component() {
     <>
       <StaticPageTitle>{title}</StaticPageTitle>
       <DashboardLayout.MainSection>
-        <DashboardLayout.SectionHeader>
+        <DashboardLayout.SectionHeader className="max-md:h-auto max-md:flex-wrap max-md:py-2">
           <DashboardLayout.SidebarToggle />
           <DashboardLayout.SectionTitle render={<h1 />}>{title}</DashboardLayout.SectionTitle>
-          <div className="ms-auto flex shrink-0 items-center gap-2">
+          <div className="ms-auto flex shrink-0 items-center gap-2 max-md:order-3 max-md:w-full max-md:justify-end">
             <ReportDateSelector
               value={dateRange}
               onChange={setDateRange}
-              compactOnMobile={false}
             />
             <AddFilterButton
               filters={trackedEventsFilters}
