@@ -31,7 +31,7 @@ export function Component() {
 
   const breadcrumb = (
     <Breadcrumb.Root
-      className={clsx('text-xl', query.isLoading && 'invisible')}
+      className={clsx('me-auto w-auto min-w-0 text-xl max-sm:text-sm', query.isLoading && 'invisible')}
     >
       <Breadcrumb.Item>
         <Breadcrumb.Link to={`/${routeType}/folders`}>
@@ -68,8 +68,9 @@ export function Component() {
     <>
       <StaticPageTitle>{title}</StaticPageTitle>
       <DashboardLayout.MainSection>
-        <DashboardLayout.SectionHeader>
+        <DashboardLayout.SectionHeader className="max-sm:h-auto max-sm:flex-wrap max-sm:py-2">
           <DashboardLayout.SidebarToggle />
+          <h1 className="sr-only">{title}</h1>
           {breadcrumb}
           {headerActions}
         </DashboardLayout.SectionHeader>

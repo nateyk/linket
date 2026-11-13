@@ -89,6 +89,12 @@ describe('product preview wiring', () => {
     expect(source).toContain('hasPendingUpdate={product.has_pending_update === true}');
     expect(source).toContain('product.has_pending_update === true');
     expect(source).toContain('This product remains approved while an update is under review.');
+    // Keep approval feedback available to creators, but outside the H1 header.
+    const header = source.split('</DashboardLayout.SectionHeader>')[0] ?? '';
+    const body = source.split('<DashboardLayout.SectionContent')[1] ?? '';
+    expect(header).not.toContain('<ProductStatus');
+    expect(body).toContain('<ProductStatus');
+    expect(body).toContain("product.status !== 'draft'");
   });
 
   test('status tones use semantic warning tokens, not raw amber', () => {

@@ -37,9 +37,10 @@ export function Component() {
     <>
       <StaticPageTitle>{removeProtocol(domain.host)}</StaticPageTitle>
       <DashboardLayout.MainSection>
-        <DashboardLayout.SectionHeader>
+        <DashboardLayout.SectionHeader className="max-sm:h-auto max-sm:flex-wrap max-sm:py-2">
           <DashboardLayout.SidebarToggle />
-          <Breadcrumb.Root className="text-xl">
+          <h1 className="sr-only">{removeProtocol(domain.host)}</h1>
+          <Breadcrumb.Root className="me-auto w-auto min-w-0 text-xl max-sm:text-sm">
             <Breadcrumb.Item>
               <Breadcrumb.Link to={`/${routeType}/custom-domains`}>
                 <Trans message="Branded domains" />

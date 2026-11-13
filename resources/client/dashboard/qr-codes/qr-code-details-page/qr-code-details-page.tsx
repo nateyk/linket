@@ -31,8 +31,9 @@ export function Component() {
     <>
       <StaticPageTitle>{getLinkeableName(query.data.data)}</StaticPageTitle>
       <DashboardLayout.MainSection>
-        <DashboardLayout.SectionHeader>
+        <DashboardLayout.SectionHeader className="max-sm:h-auto max-sm:flex-wrap max-sm:py-2">
           <DashboardLayout.SidebarToggle />
+          <h1 className="sr-only"><LinkeableName linkeable={query.data.data} /></h1>
           <QrCodeBreadcrumb />
           <HeaderActions qrCode={query.data.data} />
         </DashboardLayout.SectionHeader>
@@ -72,7 +73,7 @@ function QrCodeBreadcrumb() {
   const query = useSuspenseQuery(retrieveQrCodeOptions(Number(qrCodeId)));
 
   return (
-    <Breadcrumb.Root className="text-xl">
+    <Breadcrumb.Root className="me-auto w-auto min-w-0 text-xl max-sm:text-sm">
       <Breadcrumb.Item>
         <Breadcrumb.Link to={`/${routeType}/qr-codes`}>
           <Trans message="QR codes" />

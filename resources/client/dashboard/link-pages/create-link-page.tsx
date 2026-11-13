@@ -42,7 +42,7 @@ export function Component() {
   );
 
   const breadCrumb = (
-    <Breadcrumb.Root className="text-xl">
+    <Breadcrumb.Root className="me-auto w-auto min-w-0 text-xl max-sm:text-sm">
       <Breadcrumb.Item>
         <Breadcrumb.Link to={`/${routeType}/link-pages`}>
           <Trans message="Link pages" />

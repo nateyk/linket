@@ -154,11 +154,7 @@ describe('paid course price gate', () => {
   });
 });
 
-// Final-fix items 1 & 2 (the course page's copy of the defect P2 fixed on
-// the edit page, see p2-report item 7): in SectionHeader the breadcrumb <nav>
-// ships `w-full` — a flex base size equal to the whole row — while
-// SectionTitle is `flex-1` (flex-basis 0%), so the title measured 0px at
-// ≥1280, and the header carried no heading at all (headings started at h3).
+// Keep the single accessible heading without adding a second visible title.
 describe('page shell: one h1, and a title that owns the header row', () => {
   test('renders exactly one h1 naming the page', () => {
     mount();
@@ -168,21 +164,20 @@ describe('page shell: one h1, and a title that owns the header row', () => {
     expect(h1s[0].textContent).toBe('Create course');
   });
 
-  test('breadcrumb stops claiming the row and never repeats the title', () => {
+  test('one breadcrumb displays All products › Create course with no extra Back button', () => {
     mount();
 
     const nav = document.querySelector('[data-slot="breadcrumb"]');
     expect(nav).not.toBeNull();
-    // `w-auto` overrides the base `w-full` (tailwind-merge) so the slack goes
-    // to the SectionTitle; `max-lg:hidden` keeps the enlarged-text layout usable.
+    // jsdom has no dimensions: overflow collapsing may hide the parent link.
+    // Verify the current crumb here; its parent link is asserted in the
+    // source-level contract and exercised by authenticated browser QA.
+    expect(nav!.textContent).toContain('Create course');
     expect(nav!.className).toContain('w-auto');
-    expect(nav!.className).toContain('max-lg:hidden');
-    // only the parent link remains — no current-page crumb duplicating the h1
-    expect(nav!.textContent).toBe('All products');
-    expect(document.querySelector('[data-slot="breadcrumb-page"]')).toBeNull();
-    expect(
-      document.querySelector('[data-slot="breadcrumb-separator"]'),
-    ).toBeNull();
+    expect(document.querySelector('[data-slot="breadcrumb-page"]')?.textContent).toBe('Create course');
+    expect(document.querySelectorAll('[data-slot="breadcrumb-separator"]').length).toBeLessThanOrEqual(1);
+    expect(screen.queryByRole('button', {name: 'Back to products'})).toBeNull();
+    expect(document.querySelector('[data-slot="section-title"]')).toBeNull();
   });
 
   test('progress bar keeps its screen-reader label', () => {

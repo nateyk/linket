@@ -369,14 +369,17 @@ the mobile bottom navigation anchored to the visible viewport.
   `inset` and `floating` variants drop the border and let the frame float on a muted
   ground instead.
 - **Section headers:** `DashboardLayout.SectionHeader` is the one 56px
-  (`h-14`) header bar, with `border-b`, `--section-spacing` inline padding,
-  and `SectionTitle` at 24px/600. Use `render={<h1 />}` for page titles;
-  breadcrumbs stay muted/normal-weight, while the title carries emphasis.
-  Creator forms show one parent breadcrumb and a chevron on desktop, a
-  named back icon on mobile, and primary actions on the inline end. Keep
-  the same divider in Insights, Store Editor, and Links/Folders/QR details. Tabs below the header
-  align to `--section-spacing`. Avoid hand-removing the divider or adding
-  duplicate back paths, oversized titles, or extra header rows.
+  (`h-14`) header bar, with `border-b` and `--section-spacing` inline padding.
+  Ordinary dashboard pages use `SectionTitle` at 24px/600 with a single H1.
+  On creator/edit forms and resource details, use the existing `Breadcrumb.Root`
+  in a **single compact line**: a clickable muted parent, separator, and the
+  current page at `text-xl` (smaller on narrow screens). Do not add an extra
+  Back-arrow button or a separate large visible title in the same header.
+  Keep a screen-reader-only H1 when the page has no other document heading.
+  Link Page editors already have their editable content H1. Keep Draft/Published
+  badges out of header breadcrumbs; show necessary approval feedback in the
+  content area. Keep the header divider, inline-end actions, RTL-aware separators,
+  and tab alignment at `--section-spacing` across the related dashboard pages.
 - **Section variants:** three sanctioned frames — `default` (bordered), `inset`
   (floating content inside a padded shell), `floating` (everything on `bg-muted` with
   8px gaps). Pick one per screen; don't mix within a screen.

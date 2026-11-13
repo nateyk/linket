@@ -9,8 +9,8 @@ describe('large text responsive header UX-34', () => {
       'utf8',
     );
     expect(source).toContain('className="max-lg:h-auto max-lg:flex-wrap max-lg:py-2"');
-    expect(source).toContain('max-lg:order-3 max-lg:basis-full');
-    expect(source).toContain('max-lg:overflow-visible max-lg:whitespace-normal');
+    expect(source).toContain('me-auto w-auto min-w-0 text-xl max-sm:text-sm');
+    expect(source).toContain('<Breadcrumb.Page>{pageTitle}</Breadcrumb.Page>');
     expect(source).toContain('max-lg:hidden');
     expect(source).toContain('max-lg:size-11 max-lg:px-0');
     expect(source).toContain('aria-label={trans({message: \'Preview\'})}');
@@ -314,13 +314,13 @@ describe('product form reassembly', () => {
     expect(source).toContain('useProductCreation');
   });
 
-  test('renders sections, progress, preview, and breadcrumb through primitives', () => {
+  test('renders sections, progress, preview, and a single page title', () => {
     expect(source).toContain('<ProductFormSection');
     expect(source).toContain('<ProductFormProgress');
     expect(source).toContain('<ProductPreview');
-    expect(source).toContain("from '@shadcn/breadcrumb/breadcrumb'");
-    expect(source).toContain('<Breadcrumb');
-    expect(source).toContain('All products');
+    expect(source).toContain('<h1 className="sr-only">{pageTitle}</h1>');
+    expect(source).toContain('<Breadcrumb.Root');
+    expect(source).toContain('<Breadcrumb.Page>{pageTitle}</Breadcrumb.Page>');
   });
 
   test('invalid fields carry accessible error state', () => {
@@ -474,51 +474,28 @@ describe('course edit redirect', () => {
   });
 });
 
-describe('P2 header: the page title owns the row', () => {
-  // crit3-A/3-B: `DashboardLayout.SectionTitle` measured width 0 at
-  // 1280/1440/1920 (`[844,72,0,36]` @1280, overflow:hidden), so the page
-  // title AND the Approved badge never rendered. Root cause is the flex
-  // chain in SectionHeader: the breadcrumb <nav> ships `w-full`, i.e. a flex
-  // base size of the ENTIRE header row, while SectionTitle is
-  // `flex-1` (flex-basis 0%) — there is never positive free space left for
-  // the title, so it collapses to 0 and its overflow clips the badge behind
-  // the action row. The breadcrumb has to stop claiming the row, and the
-  // duplicated current-page crumb (same string as the title) goes with it.
+describe('product editor compact breadcrumb header', () => {
   const source = fs.readFileSync(
-    path.resolve(
-      'resources/client/dashboard/digital-products/digital-product-form-page.tsx',
-    ),
+    path.resolve('resources/client/dashboard/digital-products/digital-product-form-page.tsx'),
     'utf8',
   );
 
-  test('breadcrumb is width-constrained instead of claiming the whole header', () => {
-    expect(source).toMatch(
-      /<Breadcrumb[^>]*className="[^"]*\bw-auto\b[^"]*"/,
-    );
-    // Below 1024px, including 200% enlarged text, the breadcrumb steps
-    // aside while the one h1 wraps and icon controls retain their names.
-    expect(source).toMatch(
-      /<Breadcrumb[^>]*className="[^"]*max-lg:hidden[^"]*"/,
-    );
+  test('shows All products › current page without the Back icon or a large visible H1', () => {
+    const header = source.split('</DashboardLayout.SectionHeader>')[0];
+    expect(header).toContain('<h1 className="sr-only">{pageTitle}</h1>');
+    expect(header).toContain('<Breadcrumb.Link to="/dashboard/items">');
+    expect(header).toContain('<Trans message="All products" />');
+    expect(header).toContain('<Breadcrumb.Separator />');
+    expect(header).toContain('<Breadcrumb.Page>{pageTitle}</Breadcrumb.Page>');
+    expect(header).not.toContain('ArrowLeftIcon');
+    expect(header).not.toContain('<DashboardLayout.SectionTitle');
+    expect(header).not.toContain('<ProductStatus');
   });
 
-  test('the page title is not printed twice in the header', () => {
-    // Fixing the 0px title without this would put "Edit digital product" on
-    // screen twice (breadcrumb crumb + SectionTitle), per crit3-A note.
-    expect(source).not.toContain('<Breadcrumb.Page');
-    expect(source).not.toContain('<Breadcrumb.Separator');
-    // ...but the title itself (and its status badge) stays, and in a tight
-    // row the TEXT truncates (min-w-0) so the badge keeps its 36px.
-    expect(source).toMatch(
-      /<DashboardLayout\.SectionTitle[^>]*>[\s\S]*?<span className="[^"]*min-w-0 truncate[^"]*">\s*\{pageTitle\}\s*<\/span>\s*\{product && <ProductStatus/,
-    );
-  });
-
-  test('the title is rendered as the page heading via SectionTitle', () => {
-    // Final-fix item 2: the same `render={<h1 />}` mechanism T7 used on the
-    // selection page, so the edit page ships exactly one h1 instead of none.
-    expect(source).toMatch(
-      /<DashboardLayout\.SectionTitle render=\{<h1 \/>\}[^>]*>/,
-    );
+  test('preserves a single canonical header divider, compact mobile layout and review feedback in the body', () => {
+    expect(source).toContain('className="max-lg:h-auto max-lg:flex-wrap max-lg:py-2"');
+    expect(source).toContain('className="me-auto w-auto min-w-0 text-xl max-sm:text-sm"');
+    expect(source).toContain('hasPendingUpdate={product.has_pending_update === true}');
+    expect(source).toContain('ms-auto flex');
   });
 });

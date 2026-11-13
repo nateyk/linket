@@ -52,27 +52,24 @@ export function CrupdateLinkOverlayForm({
         className={cn(!isMobileMode ? 'w-72' : 'w-full')}
       >
         <DirtyFormSaveDrawer isLoading={isLoading} />
-        <DashboardLayout.SectionHeader className="border-none">
-          <DashboardLayout.SectionTitle>
-            <DashboardLayout.SidebarToggle />
-            <Breadcrumb.Root className="text-base">
-              <Breadcrumb.Item>
-                <Breadcrumb.Link to={`/${routeType}/link-overlays`}>
-                  <Trans message="Overlays" />
-                </Breadcrumb.Link>
-              </Breadcrumb.Item>
-              <Breadcrumb.Separator />
-              <Breadcrumb.Item>
-                <Breadcrumb.Page>
-                  {overlayId ? (
-                    <Trans message="Update" />
-                  ) : (
-                    <Trans message="Create" />
-                  )}
-                </Breadcrumb.Page>
-              </Breadcrumb.Item>
-            </Breadcrumb.Root>
-          </DashboardLayout.SectionTitle>
+        <DashboardLayout.SectionHeader>
+          <DashboardLayout.SidebarToggle />
+          <h1 className="sr-only">
+            {overlayId ? <Trans message="Update overlay" /> : <Trans message="Create overlay" />}
+          </h1>
+          <Breadcrumb.Root className="me-auto w-auto min-w-0 text-base">
+            <Breadcrumb.Item>
+              <Breadcrumb.Link to={`/${routeType}/link-overlays`}>
+                <Trans message="Overlays" />
+              </Breadcrumb.Link>
+            </Breadcrumb.Item>
+            <Breadcrumb.Separator />
+            <Breadcrumb.Item>
+              <Breadcrumb.Page>
+                {overlayId ? <Trans message="Update" /> : <Trans message="Create" />}
+              </Breadcrumb.Page>
+            </Breadcrumb.Item>
+          </Breadcrumb.Root>
         </DashboardLayout.SectionHeader>
         <DashboardLayout.SectionContent className="compact-scrollbar px-5 pt-1 pb-5">
           <Tabs.Root defaultValue="general" className="max-w-full flex-1">

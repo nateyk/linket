@@ -44,9 +44,7 @@ import {useTrans} from '@ui/i18n/use-trans';
 import {getBootstrapData} from '@ui/bootstrap-data/bootstrap-data-store';
 import {FormattedBytes} from '@ui/i18n/formatted-bytes';
 import {
-  ArrowLeftIcon,
   ChevronDownIcon,
-  ChevronRightIcon,
   Clock3Icon,
   FileArchiveIcon,
   FileIcon,
@@ -800,46 +798,18 @@ function DigitalProductForm() {
     <DashboardLayout.MainSection>
       <DashboardLayout.SectionHeader className="max-lg:h-auto max-lg:flex-wrap max-lg:py-2">
         <DashboardLayout.SidebarToggle />
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          className="lg:hidden max-lg:size-11"
-          nativeButton={false}
-          aria-label={trans({message: 'Back to products'})}
-          render={<Link to="/dashboard/items" />}
-        >
-          <ArrowLeftIcon className="rtl:rotate-180" aria-hidden="true" />
-        </Button>
-        {/* P2 (crit3-A/3-B): the SectionTitle (page title + status badge)
-            measured width 0 at 1280/1440/1920. Root cause is the flex
-            chain in SectionHeader: the breadcrumb <nav> ships `w-full`,
-            i.e. a flex base size equal to the whole row, while the title
-            is `flex-1` (flex-basis 0%) — free space for it never exists,
-            so it collapses and `overflow:hidden` clips the badge behind
-            the action row. `w-auto` gives the slack to the title;
-            `max-lg:hidden` keeps the narrow row for title + icon actions
-            (mobile navigation uses a compact back control). The current-page crumb
-            is dropped on purpose: it repeated the exact string the title
-            now shows again (crit3-A, duplicate-title note). */}
-        <Breadcrumb className="w-auto max-lg:hidden">
+        <h1 className="sr-only">{pageTitle}</h1>
+        <Breadcrumb.Root className="me-auto w-auto min-w-0 text-xl max-sm:text-sm">
           <Breadcrumb.Item>
             <Breadcrumb.Link to="/dashboard/items">
               <Trans message="All products" />
             </Breadcrumb.Link>
           </Breadcrumb.Item>
-        </Breadcrumb>
-        <ChevronRightIcon className="hidden size-4 shrink-0 text-muted-foreground rtl:rotate-180 lg:block" aria-hidden="true" />
-        <DashboardLayout.SectionTitle render={<h1 />} className="max-lg:order-3 max-lg:basis-full max-lg:flex-none max-lg:w-full max-lg:text-xl max-lg:overflow-visible max-lg:whitespace-normal max-lg:text-clip">
-          {/* P2: in a tight row the TEXT is what truncates (min-w-0), so
-              the status badge — the one product-specific fact the chrome
-              carries — keeps its 36px without clipping.
-              Final-fix item 2: `render={<h1 />}` makes this the page's one
-              and only heading (T7's mechanism on the selection page). */}
-          <span className="min-w-0 truncate max-lg:overflow-visible max-lg:whitespace-normal max-lg:text-clip">
-            {pageTitle}
-          </span>
-          {product && <ProductStatus status={product.status} hasPendingUpdate={product.has_pending_update === true} />}
-        </DashboardLayout.SectionTitle>
+          <Breadcrumb.Separator />
+          <Breadcrumb.Item>
+            <Breadcrumb.Page>{pageTitle}</Breadcrumb.Page>
+          </Breadcrumb.Item>
+        </Breadcrumb.Root>
         <div className="ms-auto flex shrink-0 items-center gap-2">
           {effectiveFileType !== 'course' && (
             <Button
@@ -937,6 +907,12 @@ function DigitalProductForm() {
                   <Trans message="No unsaved changes" />
                 )}
               </span>
+              {product && product.status !== 'draft' && (
+                <ProductStatus
+                  status={product.status}
+                  hasPendingUpdate={product.has_pending_update === true}
+                />
+              )}
               {product?.status === 'draft' && autoSaveState === 'failed' && dirty && (
                 <Button type="button" variant="outline" size="sm" onClick={() => actions.autoSave()}>
                   <Trans message="Retry save" />

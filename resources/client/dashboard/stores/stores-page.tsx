@@ -5,6 +5,7 @@ import {Biolink} from '@app/gen/schemas/biolink';
 import {Store} from '@app/gen/schemas/store';
 type StoreBiolink = Biolink | Store;
 import {DashboardLayout} from '@common/ui/dashboard/dashboard-layout';
+import {normalizeMediaUrl} from '@common/uploads/normalize-media-url';
 import {Button} from '@shadcn/button/button';
 import {Dialog} from '@shadcn/dialog/dialog';
 import {Dropdown} from '@shadcn/dropdown/dropdown';
@@ -16,12 +17,15 @@ import {Tooltip} from '@shadcn/tooltip/tooltip';
 import {useSuspenseQuery} from '@tanstack/react-query';
 import {FormattedNumber} from '@ui/i18n/formatted-number';
 import {Trans} from '@ui/i18n/trans';
+import {message} from '@ui/i18n/message';
+import {useTrans} from '@ui/i18n/use-trans';
 import useClipboard from '@ui/utils/hooks/use-clipboard';
 import {toast} from '@shadcn/toast/toast';
 import {ignoreEventsFromPortal} from '@ui/utils/dom/ignore-events-from-portal';
 import {removeProtocol} from '@ui/utils/urls/remove-protocol';
 import {
   BarChart3Icon,
+  CheckIcon,
   CopyIcon,
   EllipsisVerticalIcon,
   ExternalLinkIcon,
@@ -31,6 +35,7 @@ import {
   PencilIcon,
   PlusIcon,
 } from 'lucide-react';
+import {useState} from 'react';
 import {useNavigate} from 'react-router';
 
 export function Component() {
@@ -148,8 +153,15 @@ type BiolinkCardProps = {
   onInsights: () => void;
 };
 
-function BiolinkCard({biolink, onClick, onInsights}: BiolinkCardProps) {
-  const [, copyToClipboard] = useClipboard(biolink.short_url);
+export function BiolinkCard({biolink, onClick, onInsights}: BiolinkCardProps) {
+  const [isCopied, copyToClipboard] = useClipboard(biolink.short_url);
+  const [failedAvatarUrl, setFailedAvatarUrl] = useState<string | null>(null);
+  const {trans} = useTrans();
+  const avatarUrl = normalizeMediaUrl(biolink.profile_config?.avatar_url);
+  const showAvatar = !!avatarUrl && failedAvatarUrl !== avatarUrl;
+  const copyLabel = isCopied
+    ? trans(message('Link copied'))
+    : trans(message('Copy link'));
 
   const copyProfileLink = () => {
     copyToClipboard();
@@ -160,15 +172,8 @@ function BiolinkCard({biolink, onClick, onInsights}: BiolinkCardProps) {
     <Item.Root
       variant="outline"
       size="sm"
-      role="button"
-      tabIndex={0}
-      className="cursor-pointer bg-card transition-[border-color,background-color] hover:border-foreground/20 hover:bg-muted/30"
-      onKeyDown={event => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          onClick();
-        }
-      }}
+      role="listitem"
+      className="cursor-pointer border-border bg-card text-card-foreground"
       onClick={ignoreEventsFromPortal(e => {
         if (
           !(e.target as HTMLElement).closest(
@@ -181,34 +186,70 @@ function BiolinkCard({biolink, onClick, onInsights}: BiolinkCardProps) {
     >
       <Item.Media
         align="center"
-        className="size-10 rounded-card-sm border bg-muted/40 text-muted-foreground"
+        className="size-10 overflow-hidden rounded-card-sm border bg-muted/40 text-muted-foreground"
       >
-        <LayoutPanelTop />
+        {showAvatar ? (
+          <img
+            src={avatarUrl}
+            alt=""
+            loading="lazy"
+            className="size-full object-cover"
+            onError={() => setFailedAvatarUrl(avatarUrl)}
+          />
+        ) : (
+          <LayoutPanelTop aria-hidden="true" />
+        )}
       </Item.Media>
       <Item.Content className="gap-0">
         <Item.Row>
-          <Item.Title className="font-semibold">{biolink.name}</Item.Title>
+          <Item.Title>
+            <button
+              type="button"
+              onClick={onClick}
+              aria-label={trans(message('Edit :name', {values: {name: biolink.name}}))}
+              className="block max-w-full truncate rounded-sm text-left font-semibold underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              {biolink.name}
+            </button>
+          </Item.Title>
         </Item.Row>
         <Item.Row>
-          <div className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
-            <span className="block truncate">
+          <div className="flex min-w-0 flex-1 items-center gap-2 text-sm text-muted-foreground">
+            <span className="min-w-0 flex-1 truncate">
               {removeProtocol(biolink.short_url)}
             </span>
           </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className="text-muted-foreground"
+            aria-label={copyLabel}
+            title={copyLabel}
+            onClick={copyProfileLink}
+          >
+            {isCopied ? (
+              <CheckIcon aria-hidden="true" />
+            ) : (
+              <CopyIcon aria-hidden="true" />
+            )}
+          </Button>
         </Item.Row>
       </Item.Content>
 
-      <Item.Actions className="basis-full gap-2 border-t pt-2.5 sm:ms-6 sm:basis-auto sm:border-0 sm:pt-0">
-        <span className="me-auto flex items-center gap-1.5 text-xs whitespace-nowrap text-muted-foreground sm:me-2">
-          <MousePointerClick />
-          <FormattedNumber value={biolink.clicks_count ?? 0} />
-          <Trans message="clicks" />
+      <Item.Actions className="w-full basis-full justify-between gap-2 sm:ms-auto sm:w-auto sm:basis-auto sm:justify-end md:ml-0">
+        <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground">
+          <MousePointerClick className="size-3.5 text-muted-foreground" aria-hidden="true" />
+          <Trans
+            message=":count clicks"
+            values={{count: <FormattedNumber value={biolink.clicks_count ?? 0} />}}
+          />
         </span>
 
         <Dropdown.Root>
           <Dropdown.Trigger
             render={<Button variant="ghost" size="icon-sm" />}
-            aria-label="Profile actions"
+            aria-label={trans(message('Profile actions'))}
           >
             <EllipsisVerticalIcon />
           </Dropdown.Trigger>
@@ -224,10 +265,6 @@ function BiolinkCard({biolink, onClick, onInsights}: BiolinkCardProps) {
             >
               <ExternalLinkIcon />
               <Trans message="Open profile" />
-            </Dropdown.Item>
-            <Dropdown.Item onClick={copyProfileLink}>
-              <CopyIcon />
-              <Trans message="Copy link" />
             </Dropdown.Item>
             <Dropdown.Item onClick={onInsights}>
               <BarChart3Icon />

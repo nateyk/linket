@@ -35,8 +35,9 @@ export function Component() {
     <>
       <StaticPageTitle>{getLinkeableName(query.data.data)}</StaticPageTitle>
       <DashboardLayout.MainSection>
-        <DashboardLayout.SectionHeader>
+        <DashboardLayout.SectionHeader className="max-sm:h-auto max-sm:flex-wrap max-sm:py-2">
           <DashboardLayout.SidebarToggle />
+          <h1 className="sr-only"><LinkeableName linkeable={query.data.data} /></h1>
           {folderId ? <FolderBreadcrumb /> : <LinkBreadcrumb />}
           <HeaderActions link={query.data.data} />
         </DashboardLayout.SectionHeader>
@@ -78,7 +79,7 @@ function FolderBreadcrumb() {
 
   return (
     <Breadcrumb.Root
-      className={cn('text-xl', folderQuery.isLoading && 'invisible')}
+      className={cn('me-auto w-auto min-w-0 text-xl max-sm:text-sm', folderQuery.isLoading && 'invisible')}
     >
       <Breadcrumb.Item>
         <Breadcrumb.Link to={`/${routeType}/folders`}>
@@ -113,7 +114,7 @@ function LinkBreadcrumb() {
   const linkQuery = useSuspenseQuery(retrieveLinkOptions(Number(linkId)));
 
   return (
-    <Breadcrumb.Root className="text-xl">
+    <Breadcrumb.Root className="me-auto w-auto min-w-0 text-xl max-sm:text-sm">
       <Breadcrumb.Item>
         <Breadcrumb.Link to={`/${routeType}/links`}>
           <Trans message="Links" />
