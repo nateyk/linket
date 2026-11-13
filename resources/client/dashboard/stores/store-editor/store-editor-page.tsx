@@ -184,7 +184,7 @@ function BiolinkEditorHeader({save}: {save: StoreEditorSave}) {
     (isAppearanceTab && appearanceIsDirty) || (isProfileTab && profileIsDirty);
 
   return (
-    <DashboardLayout.SectionHeader className="min-h-16 gap-2 border-none px-4 sm:px-6">
+    <DashboardLayout.SectionHeader>
       {/* Quiet success announcement alongside the toast: the region exists
           up front and only its text changes, so screen readers catch it
           without the announcement being tied to a toast's lifetime (A-07). */}
@@ -192,6 +192,7 @@ function BiolinkEditorHeader({save}: {save: StoreEditorSave}) {
         {saveStatus === 'saved' ? <Trans message="Changes saved" /> : ''}
       </span>
       <DashboardLayout.SidebarToggle />
+      <h1 className="sr-only">{biolink.name}</h1>
       {routeType === 'admin' ? <AdminBreadcrumb /> : <BiolinkSelector />}
       <MoreActionsButton />
       <ShareLinkButton
@@ -436,7 +437,7 @@ function BiolinkSelector() {
             // header wider.
             <Button
               variant="outline"
-              className="mr-auto min-w-0 max-w-64 shrink justify-between"
+              className="me-auto min-w-0 max-w-64 shrink justify-between"
             />
           }
         >
