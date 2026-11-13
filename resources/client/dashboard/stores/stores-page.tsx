@@ -173,7 +173,7 @@ export function BiolinkCard({biolink, onClick, onInsights}: BiolinkCardProps) {
       variant="outline"
       size="sm"
       role="listitem"
-      className="cursor-pointer bg-card transition-[border-color,background-color] hover:border-foreground/20 hover:bg-muted/30"
+      className="cursor-pointer border-border bg-card text-card-foreground"
       onClick={ignoreEventsFromPortal(e => {
         if (
           !(e.target as HTMLElement).closest(
@@ -214,35 +214,37 @@ export function BiolinkCard({biolink, onClick, onInsights}: BiolinkCardProps) {
           </Item.Title>
         </Item.Row>
         <Item.Row>
-          <div className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
-            <span className="block truncate">
+          <div className="flex min-w-0 flex-1 items-center gap-2 text-sm text-muted-foreground">
+            <span className="min-w-0 flex-1 truncate">
               {removeProtocol(biolink.short_url)}
             </span>
           </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className="text-muted-foreground"
+            aria-label={copyLabel}
+            title={copyLabel}
+            onClick={copyProfileLink}
+          >
+            {isCopied ? (
+              <CheckIcon aria-hidden="true" />
+            ) : (
+              <CopyIcon aria-hidden="true" />
+            )}
+          </Button>
         </Item.Row>
       </Item.Content>
 
-      <Item.Actions className="basis-full gap-2 border-t pt-2.5 sm:ms-6 sm:basis-auto sm:border-0 sm:pt-0">
-        <span className="me-auto flex items-center gap-1.5 text-xs whitespace-nowrap text-muted-foreground sm:me-2">
-          <MousePointerClick aria-hidden="true" />
-          <FormattedNumber value={biolink.clicks_count ?? 0} />
-          <Trans message="clicks" />
+      <Item.Actions className="w-full basis-full justify-between gap-2 sm:ms-auto sm:w-auto sm:basis-auto sm:justify-end md:ml-0">
+        <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground">
+          <MousePointerClick className="size-3.5 text-muted-foreground" aria-hidden="true" />
+          <Trans
+            message=":count clicks"
+            values={{count: <FormattedNumber value={biolink.clicks_count ?? 0} />}}
+          />
         </span>
-
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          aria-label={copyLabel}
-          title={copyLabel}
-          onClick={copyProfileLink}
-        >
-          {isCopied ? (
-            <CheckIcon aria-hidden="true" />
-          ) : (
-            <CopyIcon aria-hidden="true" />
-          )}
-        </Button>
 
         <Dropdown.Root>
           <Dropdown.Trigger
