@@ -19,6 +19,7 @@ import {AlignLeftIcon} from '@ui/icons/lucide/align-left';
 import {EditIcon} from '@ui/icons/material/Edit';
 import {useSettings} from '@ui/settings/use-settings';
 import clsx from 'clsx';
+import {ChevronDownIcon} from 'lucide-react';
 import {useEffect, useId, useRef, useState} from 'react';
 import {Link, useLocation, useParams} from 'react-router';
 
@@ -116,13 +117,14 @@ function MobileTableOfContents({nav}: RightSidenavProps) {
   }
 
   return (
-    <details className="mb-28 rounded-panel border border-divider-lighter bg-alt/30 px-16 py-12 xl:hidden">
+    <details className="group mb-28 rounded-panel border border-divider-lighter bg-alt/30 px-16 py-12 xl:hidden">
       <summary
         id={titleId}
         className="flex min-h-44 cursor-pointer items-center gap-8 rounded-panel text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         <AlignLeftIcon size="xs" aria-hidden="true" />
         <Trans message="On this page" />
+        <ChevronDownIcon aria-hidden="true" className="ml-auto size-4 transition-transform group-open:rotate-180" />
       </summary>
       <nav aria-labelledby={titleId} className="mt-12 border-t pt-12">
         <ol role="list" className="space-y-4">
@@ -247,7 +249,9 @@ function ArticleBody({body}: ArticleBodyProps) {
         'inline-block max-w-full rounded-panel focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary';
       link.setAttribute(
         'aria-label',
-        image.alt.trim() || trans(message('Open image in new tab')),
+        image.alt.trim()
+          ? `${image.alt.trim()} — ${trans(message('Open image in new tab'))}`
+          : trans(message('Open image in new tab')),
       );
       image.replaceWith(link);
       link.appendChild(image);

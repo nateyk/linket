@@ -117,7 +117,8 @@ describe('Help Center article reading experience', () => {
     expect(preview?.getAttribute('href')).toContain('/diagram.png');
     expect(preview?.getAttribute('target')).toBe('_blank');
     expect(preview?.getAttribute('rel')).toContain('noopener');
-    expect(preview?.getAttribute('aria-label')).toBe('Shipping diagram');
+    expect(preview?.getAttribute('aria-label')).toContain('Shipping diagram');
+    expect(preview?.getAttribute('aria-label')).toContain('Open image in new tab');
     const linkedImage = screen.getByAltText('Already linked');
     expect(linkedImage.closest('a')?.getAttribute('href')).toBe('/already-linked');
     expect(linkedImage.closest('a')?.querySelectorAll('a')).toHaveLength(0);
