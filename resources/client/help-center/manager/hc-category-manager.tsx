@@ -198,6 +198,9 @@ function NoResultsMessage() {
   return (
     <HcManagerEmptyMessage
       title={<Trans message="There are no categories yet" />}
+      description={
+        <Trans message="Create a category to organize articles into sections." />
+      }
     />
   );
 }
