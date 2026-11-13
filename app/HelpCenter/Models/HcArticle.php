@@ -4,6 +4,7 @@ use Ai\AiAgent\Models\AiAgent;
 use Ai\AiAgent\Models\AiAgentChunk;
 use App\Core\UrlGenerator;
 use App\HelpCenter\Actions\AddIdToAllHtmlHeadings;
+use App\HelpCenter\Actions\SanitizeHelpCenterHtml;
 use App\HelpCenter\ArticleCollection;
 use App\HelpCenter\Traits\FiltersByVisibleToRole;
 use App\Models\User;
@@ -45,8 +46,15 @@ class HcArticle extends BaseModel
     protected function body(): Attribute
     {
         return Attribute::make(
-            set: fn($value) => $value
-                ? (new AddIdToAllHtmlHeadings())->execute($value)
+            // Existing imported/legacy records may predate this safeguard.
+            // Sanitize on reads as well as writes before the API renders HTML.
+            get: fn ($value) => is_string($value)
+                ? (new SanitizeHelpCenterHtml())->execute($value)
+                : $value,
+            set: fn ($value) => is_string($value)
+                ? (new AddIdToAllHtmlHeadings())->execute(
+                    (new SanitizeHelpCenterHtml())->execute($value),
+                )
                 : $value,
         );
     }
