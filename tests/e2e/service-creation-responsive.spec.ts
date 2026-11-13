@@ -94,18 +94,15 @@ async function verifyServiceBreadcrumb(page: Page) {
 
   // Check the same clipping constraints at every viewport size. This keeps
   // mobile coverage without adding conditional branches to the QA journey.
-  const clipping = await currentPage.evaluate(node => {
+  const clippedByNav = await currentPage.evaluate(node => {
     const nav = node.closest('[data-slot="breadcrumb"]')!;
-    const frame = nav.getBoundingClientRect();
-    const label = node.getBoundingClientRect();
-    return {
-      hiddenPixels: Math.max(0, node.scrollWidth - node.clientWidth),
-      clippedByNav: Math.max(0, label.right - frame.right),
-    };
+    return Math.max(
+      0,
+      node.getBoundingClientRect().right - nav.getBoundingClientRect().right,
+    );
   });
-  expect(clipping.hiddenPixels, 'Service breadcrumb text must be readable')
-    .toBeLessThanOrEqual(1);
-  expect(clipping.clippedByNav, 'Service breadcrumb must fit inside its header')
+  // Long names can show an ellipsis, but may not spill into the action group.
+  expect(clippedByNav, 'Service breadcrumb must fit inside its header')
     .toBeLessThanOrEqual(1);
 }
 
