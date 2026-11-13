@@ -53,8 +53,10 @@ describe('dashboard header visual and semantic consistency', () => {
   });
 
   test('Insights uses the canonical header divider with semantic title and aligned tabs', () => {
-    expect(insights).toContain('<DashboardLayout.SectionHeader>');
+    expect(insights).toContain('<DashboardLayout.SectionHeader className="max-md:h-auto max-md:flex-wrap max-md:py-2">');
     expect(insights).not.toContain('SectionHeader className="border-none"');
+    expect(insights).not.toContain('compactOnMobile={false}');
+    expect(insights).toContain('max-md:order-3 max-md:w-full max-md:justify-end');
     expect(insights).toContain('<DashboardLayout.SectionTitle render={<h1 />}>{title}</DashboardLayout.SectionTitle>');
     expect(insights).toContain('className="mx-(--section-spacing) border-b"');
     expect(insights).toContain('ms-auto flex shrink-0 items-center gap-2');
