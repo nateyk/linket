@@ -32,10 +32,10 @@ export function Component() {
     <>
       <StaticPageTitle>{title}</StaticPageTitle>
       <DashboardLayout.MainSection>
-        <DashboardLayout.SectionHeader className="border-none">
+        <DashboardLayout.SectionHeader>
           <DashboardLayout.SidebarToggle />
-          <DashboardLayout.SectionTitle>{title}</DashboardLayout.SectionTitle>
-          <div className="flex items-center gap-2.5">
+          <DashboardLayout.SectionTitle render={<h1 />}>{title}</DashboardLayout.SectionTitle>
+          <div className="ms-auto flex shrink-0 items-center gap-2">
             <ReportDateSelector
               value={dateRange}
               onChange={setDateRange}
@@ -49,7 +49,7 @@ export function Component() {
           </div>
         </DashboardLayout.SectionHeader>
         <Tabs.Root value={selectedTab}>
-          <div className="mx-5 border-b">
+          <div className="mx-(--section-spacing) border-b">
             <Tabs.List variant="line">
               <Tabs.LinkTab
                 className="min-w-31"
