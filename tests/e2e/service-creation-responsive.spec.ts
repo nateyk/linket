@@ -109,18 +109,27 @@ test.describe('Service Creation — authenticated browser acceptance', () => {
 
       await verifyResponsiveServiceSetup(page, steps, viewport.width, testInfo);
 
-      const titleSpan = heading.locator('span').first();
+      // The visible header text now belongs to the compact breadcrumb. The
+      // semantic H1 remains screen-reader-only, so it has no visible span.
+      const breadcrumb = page.locator('[data-slot="section-header"] [data-slot="breadcrumb"]');
+      const currentPage = breadcrumb.locator('[data-slot="breadcrumb-page"]');
+      await expect(breadcrumb).toBeVisible();
+      await expect(currentPage).toHaveText('Create a service');
       if (viewport.width <= 375) {
-        const style = await titleSpan.evaluate(node => {
-          const css = getComputedStyle(node);
+        const clipping = await currentPage.evaluate(node => {
+          const nav = node.closest('[data-slot="breadcrumb"]');
+          if (!nav) throw new Error('Missing breadcrumb navigation');
+          const frame = nav.getBoundingClientRect();
+          const label = node.getBoundingClientRect();
           return {
-            clipped: node.scrollWidth > node.clientWidth + 1,
-            textOverflow: css.textOverflow,
-            whiteSpace: css.whiteSpace,
+            hiddenPixels: Math.max(0, node.scrollWidth - node.clientWidth),
+            clippedByNav: Math.max(0, label.right - frame.right),
           };
         });
-        expect(style.clipped, 'New service heading must not truncate on mobile').toBe(false);
-        expect(style.whiteSpace).not.toBe('nowrap');
+        expect(clipping.hiddenPixels, 'Service breadcrumb text must be readable on mobile')
+          .toBeLessThanOrEqual(1);
+        expect(clipping.clippedByNav, 'Service breadcrumb must fit inside its header')
+          .toBeLessThanOrEqual(1);
       }
 
       // Moving between stages is local-only and retains unsaved details.
