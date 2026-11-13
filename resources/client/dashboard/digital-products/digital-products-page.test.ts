@@ -31,6 +31,18 @@ describe('creator product dashboard lifecycle controls', () => {
     expect(source).toContain('<Trans message="Next" />');
   });
 
+  test('uses the compact shared toolbar and preserves server-backed filter queries', () => {
+    expect(source).toContain('<CreatorListingToolbar');
+    expect(source).toContain("searchLabel={trans({message: 'Search products'})}");
+    expect(source).toContain("statusOptions={[");
+    expect(source).toContain("{value: 'pending_approval', label: <Trans message=\"In review\" />}");
+    expect(source).toContain("{value: '-revenue', label: <Trans message=\"Highest revenue\" />}");
+    expect(source).toContain('setPage(1)');
+    expect(source).toContain('<Trans message="No matching products" />');
+    expect(source).toContain('onClear={() => {');
+    expect(source).not.toContain('<Select.Root');
+  });
+
   test('exposes duplicate, archive, restore and sales-safe delete actions', () => {
     expect(source).toContain('/duplicate');
     expect(source).toContain('/archive');
