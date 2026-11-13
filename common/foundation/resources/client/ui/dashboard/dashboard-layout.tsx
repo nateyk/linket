@@ -139,7 +139,7 @@ function SectionHeader({className, ...props}: ComponentProps<'div'>) {
     <div
       data-slot="section-header"
       className={cn(
-        'flex h-14 w-full shrink-0 items-center gap-2 border-b px-(--section-spacing) **:data-[slot="breadcrumb"]:font-semibold **:data-[slot="sidebar-toggle-button"]:-ml-1',
+        'flex h-14 w-full min-w-0 shrink-0 items-center gap-2 border-b px-(--section-spacing) **:data-[slot="sidebar-toggle-button"]:-ms-1',
         className,
       )}
       {...props}
