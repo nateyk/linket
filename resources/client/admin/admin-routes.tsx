@@ -11,6 +11,7 @@ import {adminBillingRoutes} from '@common/admin/subscriptions/admin-billing-rout
 import {adminLocalizationsRoutes} from '@common/admin/translations/admin-localizations-routes';
 import {adminUsersRoutes} from '@common/admin/users/admin-users-routes';
 import {adminQueries} from '@app/admin/admin-queries';
+import {adminHcManagerRoutes} from '@app/help-center/manager/hc-manager-routes';
 import {authGuard} from '@common/auth/guards/auth-route';
 import {shouldRevalidateDatatableLoader} from '@common/datatable/filters/utils/should-revalidate-datatable-loader';
 import {queryClient} from '@common/http/query-client';
@@ -66,11 +67,8 @@ export const adminRoutes: RouteObject[] = [
       ...Object.values(adminFileEntriesRoutes),
       ...Object.values(adminLogsRoutes),
 
-      // Legacy admin Help Center → BeDesk HC manager in agent app
-      {
-        path: 'help',
-        loader: () => redirect('/agent/hc/arrange', 301),
-      },
+      // Keep Help Center under the admin sidebar instead of redirecting to the agent shell.
+      ...adminHcManagerRoutes,
 
       // Phase 2 — attributes + triggers (BeDesk-native admin)
       {
