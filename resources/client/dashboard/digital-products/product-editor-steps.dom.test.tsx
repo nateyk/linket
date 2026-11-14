@@ -50,8 +50,8 @@ test('inactive steps are truly inert, including optional preview uploads', () =>
   const view = render(<EbookEditor {...fields} activeStep="details" />);
   const sample = view.container.querySelector('#ebook-public-sample')!.closest('section')!;
   expect(sample.hidden).toBe(true);
-  expect(sample.inert).toBe(true);
+  expect(sample.hasAttribute('inert')).toBe(true);
   view.rerender(<EbookEditor {...fields} activeStep="files" />);
   expect(sample.hidden).toBe(false);
-  expect(sample.inert).toBe(false);
+  expect(sample.hasAttribute('inert')).toBe(false);
 });
