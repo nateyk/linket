@@ -62,31 +62,9 @@ fi
 SH, 0700);
         $this->write('bin/mysqldump', "#!/usr/bin/env bash\nprintf '%s\\n' '-- synthetic isolated backup'\n", 0700);
         $this->write('bin/curl', "#!/usr/bin/env bash\nexit 0\n", 0700);
-        $this->write('fake-artisan.php', <<<'PHP'
-<?php
-$root = getenv('FIXTURE_ROOT');
-$command = $argv[2] ?? '';
-$private = $root.'/shared/storage/oauth-private.key';
-clearstatcache();
-file_put_contents($root.'/commands.jsonl', json_encode([
-    'command' => $command,
-    'release' => basename(getcwd()),
-    'private_mode' => is_file($private) ? fileperms($private) & 0777 : null,
-])."\n", FILE_APPEND);
-if ($command === 'migrate' && getenv('FAIL_MIGRATE')) { exit(1); }
-if ($command === 'optimize') {
-    require getcwd().'/vendor/autoload.php';
-    Dotenv\Dotenv::create(Illuminate\Support\Env::getRepository(), $root.'/shared')->load();
-    $config = ['passport' => [
-        'private_key' => Illuminate\Support\Env::get('PASSPORT_PRIVATE_KEY'),
-        'public_key' => Illuminate\Support\Env::get('PASSPORT_PUBLIC_KEY'),
-    ]];
-    file_put_contents(getcwd().'/bootstrap/cache/config.php', '<?php return '.var_export($config, true).';');
-    if (getenv('UNSAFE_CACHE')) { chmod(getcwd().'/bootstrap/cache/config.php', 0644); }
-    if (getenv('UNSAFE_KEY')) { chmod($private, 0644); }
-}
-if ($command === 'deploy:health' && in_array('--post', $argv, true) && getenv('FAIL_POST')) { exit(1); }
-PHP);
+        // Run the same synthetic Artisan CLI in an isolated file instead of
+        // embedding control flow inside this deployment fixture constructor.
+        $this->write('fake-artisan.php', file_get_contents(__DIR__.'/Fixtures/fake-artisan.php'));
         $artifact = $this->root.'/linket-aaaaaaa-20261104-120000.tar.gz';
         (new Process(['tar', '-czf', $artifact, '-C', $this->root.'/source', '.']))->mustRun();
         file_put_contents($artifact.'.sha256', hash_file('sha256', $artifact).'  '.basename($artifact)."\n");

@@ -260,14 +260,20 @@ if [[ $MIGRATE_RC -eq 0 ]]; then
   # the live app never serves stale cached values after a migration.
   (cd "$RELEASE_DIR" && $PHP_BIN artisan cache:clear --no-interaction 2>&1 | tail -n 3)
 
-  # Run UploadBackendsSeeder to ensure all upload types have backends configured
+  # Use the real Composer-autoloaded namespace (matches CI). A failed
+  # seeder is a deployment failure; never let a subsequent command mask it.
   log "Running UploadBackendsSeeder to configure upload type backends"
-  (cd "$RELEASE_DIR" && $PHP_BIN artisan db:seed --class=UploadBackendsSeeder --force --no-interaction 2>&1 | tail -n 10)
-  log "Ensuring the ChatGPT verified Pro test creator when configured"
-  (cd "$RELEASE_DIR" && $PHP_BIN artisan creator-ai:seed-test-pro --no-interaction)
-  SEED_RC=$?
-  if [[ $SEED_RC -ne 0 ]]; then
-    MIGRATE_RC=$SEED_RC
+  (cd "$RELEASE_DIR" && "$PHP_BIN" artisan db:seed --class='Common\Database\Seeders\UploadBackendsSeeder' --force --no-interaction 2>&1 | tail -n 10)
+  UPLOAD_SEED_RC=$?
+  if [[ $UPLOAD_SEED_RC -ne 0 ]]; then
+    MIGRATE_RC=$UPLOAD_SEED_RC
+  else
+    log "Ensuring the ChatGPT verified Pro test creator when configured"
+    (cd "$RELEASE_DIR" && "$PHP_BIN" artisan creator-ai:seed-test-pro --no-interaction)
+    SEED_RC=$?
+    if [[ $SEED_RC -ne 0 ]]; then
+      MIGRATE_RC=$SEED_RC
+    fi
   fi
   # Clear settings cache again after seeder updates settings
   (cd "$RELEASE_DIR" && $PHP_BIN artisan cache:forget settings.public 2>&1 | tail -n 3 || true)
@@ -287,7 +293,17 @@ log "Building optimized caches in new release"
 (cd "$RELEASE_DIR" && $PHP_BIN artisan event:cache 2>&1 | tail -n 20 || true)
 # view cache is included in optimize, but also explicit:
 (cd "$RELEASE_DIR" && $PHP_BIN artisan view:cache 2>&1 | tail -n 5 || true)
-(cd "$RELEASE_DIR" && $PHP_BIN artisan route:list 2>&1 | head -n 5) # smoke route load
+# Consume the entire command before printing a short preview. Piping a live
+# artisan process to head under pipefail can kill it with a broken pipe (255/141).
+ROUTE_LIST_LOG="$(mktemp)"
+if (cd "$RELEASE_DIR" && "$PHP_BIN" artisan route:list >"$ROUTE_LIST_LOG" 2>&1); then
+  head -n 5 "$ROUTE_LIST_LOG"
+else
+  tail -n 40 "$ROUTE_LIST_LOG" >&2
+  rm -f "$ROUTE_LIST_LOG"
+  fail "Route listing smoke check failed before activation"
+fi
+rm -f "$ROUTE_LIST_LOG"
 # Verify canonical public storage symlink (persistent, created above)
 if [[ -L "$RELEASE_DIR/public/storage" ]]; then
   target=$(readlink "$RELEASE_DIR/public/storage" 2>&1)
