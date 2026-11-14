@@ -380,6 +380,16 @@ the mobile bottom navigation anchored to the visible viewport.
   badges out of header breadcrumbs; show necessary approval feedback in the
   content area. Keep the header divider, inline-end actions, RTL-aware separators,
   and tab alignment at `--section-spacing` across the related dashboard pages.
+- **Creator form sections:** Digital, E-book, Audio and Service editors use quiet
+  `rounded-card-sm border-border bg-card` panels with 16px inset padding on
+  phones and 20px from `sm` upward. Section H2 headings use 16px/600 with a
+  subtle inset `border-b` divider and a 16px gap before fields. Icons or
+  contextual help are allowed where useful, not as duplicate titles.
+  Field labels use 14px/500/20 with an aligned `text-destructive` required
+  marker; controls, guidance and inline validation keep an 8px rhythm.
+  Keep guidance visible when a field is invalid so creators can correct it.
+  Preserve the dedicated Course Builder layout instead of applying these
+  creation-form panels to it.
 - **Section variants:** three sanctioned frames — `default` (bordered), `inset`
   (floating content inside a padded shell), `floating` (everything on `bg-muted` with
   8px gaps). Pick one per screen; don't mix within a screen.
