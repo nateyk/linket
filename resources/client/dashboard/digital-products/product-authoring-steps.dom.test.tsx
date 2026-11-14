@@ -13,12 +13,11 @@ import {
 const completed: Record<ProductAuthoringStep, boolean> = {
   details: true,
   files: true,
-  sample: false,
   pricing: true,
   storefront: false,
 };
 
-test('all five steps form one mobile row and a vertical desktop rail', () => {
+test('four steps group optional samples with buyer files in one row and a vertical desktop rail', () => {
   const onSelect = vi.fn();
   render(
     <ProductAuthoringSteps
@@ -29,16 +28,16 @@ test('all five steps form one mobile row and a vertical desktop rail', () => {
     />,
   );
   const nav = screen.getByRole('navigation', {name: 'Product creation steps'});
-  expect(within(nav).getAllByRole('listitem')).toHaveLength(5);
-  expect(nav.querySelector('ol')?.className).toContain('grid-cols-5');
+  expect(within(nav).getAllByRole('listitem')).toHaveLength(4);
+  expect(nav.querySelector('ol')?.className).toContain('grid-cols-4');
   expect(nav.querySelector('ol')?.className).toContain('xl:grid-cols-1');
-  expect(nav.querySelectorAll('[data-slot="separator"]')).toHaveLength(4);
+  expect(nav.querySelectorAll('[data-slot="separator"]')).toHaveLength(3);
   expect(nav.querySelector('li > span[aria-hidden="true"]')?.className).toContain('start-1/2 -end-1/2');
-  expect(PRODUCT_AUTHORING_STEP_ORDER).toEqual(['details', 'files', 'sample', 'pricing', 'storefront']);
-  expect(within(nav).queryByText('Step 2 of 5')).toBeNull();
+  expect(PRODUCT_AUTHORING_STEP_ORDER).toEqual(['details', 'files', 'pricing', 'storefront']);
+  expect(within(nav).queryByText('Step 2 of 4')).toBeNull();
   expect(within(nav).queryByText('Product setup')).toBeNull();
 
-  const selected = within(nav).getByRole('button', {name: 'Files, step 2 of 5'});
+  const selected = within(nav).getByRole('button', {name: 'Files & sample, step 2 of 4'});
   expect(selected.getAttribute('aria-current')).toBe('step');
   expect(selected.getAttribute('aria-controls')).toBe('ebook-private-files');
   expect(selected.getAttribute('data-step-complete')).toBe('true');
@@ -46,19 +45,19 @@ test('all five steps form one mobile row and a vertical desktop rail', () => {
   // The current step retains the primary focus cue even when complete.
   expect(selected.querySelector('span[aria-hidden="true"]')?.className).toContain('bg-primary');
   expect(selected.className).toContain('bg-primary/5');
-  const previous = within(nav).getByRole('button', {name: 'Details, step 1 of 5'});
+  const previous = within(nav).getByRole('button', {name: 'Details, step 1 of 4'});
   expect(previous.querySelector('span[aria-hidden="true"]')?.className).toContain('bg-positive');
   expect(previous.getAttribute('data-step-state')).toBe('previous');
-  expect(within(nav).getAllByText('Private files buyers receive.')).toHaveLength(1);
+  expect(within(nav).getAllByText('Upload buyer files and an optional public sample.')).toHaveLength(1);
   expect(nav.querySelector('[data-slot="creator-step-description"]')?.className).toContain('xl:block');
-  expect(within(nav).getByRole('button', {name: 'Sample, step 3 of 5'}).getAttribute('data-step-complete')).toBe('false');
+  expect(within(nav).getByRole('button', {name: 'Price, step 3 of 4'}).getAttribute('data-step-complete')).toBe('false');
 });
 
 test('keyboard activation chooses a destination without removing another section', async () => {
   const user = userEvent.setup();
   const onSelect = vi.fn();
   render(<ProductAuthoringSteps type="audio" active="details" completed={completed} onSelect={onSelect} />);
-  const target = screen.getByRole('button', {name: 'Storefront, step 5 of 5'});
+  const target = screen.getByRole('button', {name: 'Storefront, step 4 of 4'});
   target.focus();
   await user.keyboard('{Enter}');
   expect(onSelect).toHaveBeenCalledWith('storefront');
