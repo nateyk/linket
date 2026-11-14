@@ -33,6 +33,23 @@ const TARGET_IDS: Record<NonCourseProductType, Record<ProductAuthoringStep, stri
 };
 
 /**
+ * Select the visible panel owning the first server validation error.
+ * Public samples belong to Files & sample; price fields belong to Price.
+ */
+export function productAuthoringStepForErrors(
+  errors: Record<string, string>,
+): ProductAuthoringStep {
+  const first = Object.keys(errors)[0];
+  if (first === 'file_ids' || first === 'sample_file_ids' || first === 'sample_titles') {
+    return 'files';
+  }
+  if (first === 'price_cents' || first === 'currency' || first === 'billing_mode') {
+    return 'pricing';
+  }
+  return 'details';
+}
+
+/**
  * Product creation shares the Service stepper without imposing wizard behavior.
  * Every Product section stays mounted while navigation scrolls and focuses the
  * chosen heading, keeping uploads, unsaved values and validation intact.
