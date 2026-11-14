@@ -4,12 +4,15 @@ interface ProductEditorSectionProps {
   id: string;
   title: ReactNode;
   children: ReactNode;
+  active?: boolean;
 }
 
 /** Quiet section chrome for Digital, E-book and Audio; Course Builder is separate. */
-export function ProductEditorSection({id, title, children}: ProductEditorSectionProps) {
+export function ProductEditorSection({id, title, children, active = true}: ProductEditorSectionProps) {
   return (
     <section
+      hidden={!active}
+      inert={!active}
       role="region"
       aria-labelledby={id}
       data-slot="product-editor-section"

@@ -401,6 +401,16 @@ the mobile bottom navigation anchored to the visible viewport.
   focus, validation and save behavior. Keep Service's compact setup counter
   and Product's existing scroll-to-section semantics. Do not add a second
   Next/Back action row or apply this layout to the Course Builder.
+- **Dynamic creator steps:** Digital Product, E-book and Audio editors use four
+  shared stages — Details, Files & sample, Price, and optional Storefront.
+  File downloads are required to publish, while the sample/preview attachment
+  is optional within the Files stage, not a fifth required navigation step.
+  Reveal only the active stage's card(s); keep the other editor panels mounted
+  with `hidden` and `inert` so uploads, editor selections and drafts survive
+  navigation. Show Previous/Continue below the stage, and send validation
+  focus to the correct visible card. Service creation already uses this
+  stage-by-stage behavior (Details, Media, Packages, Settings), with its
+  existing scroll and error recovery. Course Builder is unchanged.
 - **Section variants:** three sanctioned frames — `default` (bordered), `inset`
   (floating content inside a padded shell), `floating` (everything on `bg-muted` with
   8px gaps). Pick one per screen; don't mix within a screen.
