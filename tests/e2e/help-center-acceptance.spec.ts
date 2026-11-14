@@ -121,16 +121,19 @@ async function verifyGuestPublishingAndRemoval(
 
     // Check the API separately so a search-index failure cannot be hidden by
     // a browser query/router issue. Keep the actual UI assertion afterwards.
-    await expect.poll(async () => {
-      const response = await guest.request.get('/api/v1/search/articles', {
-        params: {query: title, perPage: '30'},
-      });
-      if (!response.ok()) return -1;
-      const result = await response.json() as {
-        pagination: {data: Array<{id: number; title: string}>};
-      };
-      return result.pagination.data.some(article => article.title === title) ? 1 : 0;
-    }, {timeout: 30_000, intervals: [1000, 2000, 4000]}).toBe(1);
+    const searchResponse = await guest.request.get('/api/v1/search/articles', {
+      headers: {Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest'},
+      params: {query: title, perPage: '30'},
+    });
+    const searchBody = await searchResponse.text();
+    expect(
+      searchResponse.ok(),
+      `Guest search API HTTP ${searchResponse.status()}: ${searchBody.slice(0, 600)}`,
+    ).toBeTruthy();
+    const found = JSON.parse(searchBody) as {
+      pagination: {data: Array<{id: number; title: string}>};
+    };
+    expect(found.pagination.data.map(article => article.title)).toContain(title);
 
     await guest.goto(searchUrl);
     await expect(guest.getByRole('link', {name: title, exact: true})).toBeVisible();
