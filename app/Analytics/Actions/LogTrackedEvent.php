@@ -59,9 +59,6 @@ class LogTrackedEvent
                     'clicked_at' => now(),
                 ]);
 
-                // The atomic DB expression remains in the in-memory model.
-                // Reload the real value before the public page is serialized.
-                $linkeable->refresh();
             }
 
             if ($linkeable->folder_id) {
