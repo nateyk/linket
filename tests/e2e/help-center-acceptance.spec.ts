@@ -115,6 +115,11 @@ test.describe('isolated Help Center product acceptance', () => {
     await page.reload();
     await expect(editor).toContainText(revisedBody);
 
+    await page.setViewportSize({width: 390, height: 844});
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+    await expect(page.getByRole('button', {name: 'Publish'})).toBeVisible();
+    await page.setViewportSize({width: 1280, height: 900});
+
     const published = articleResponse(page, 'PUT');
     await page.getByRole('button', {name: 'Publish'}).click();
     await published;
@@ -150,7 +155,13 @@ test.describe('isolated Help Center product acceptance', () => {
       await guest.reload();
       await expect(guest.getByText(revisedBody)).toHaveCount(0);
       await guest.goto(`/hc/search/${encodeURIComponent(title)}`);
-      await expect(guest.getByRole('link', {name: title, exact: true})).toHaveCount(0);
+      await expect.poll(
+        async () => {
+          await guest.reload();
+          return guest.getByRole('link', {name: title, exact: true}).count();
+        },
+        {timeout: 30_000, intervals: [1000, 2000, 4000]},
+      ).toBe(0);
     } finally {
       await guestContext.close();
     }
@@ -182,6 +193,8 @@ test.describe('isolated Help Center product acceptance', () => {
     await page.goto('/agent/hc/arrange');
     await expect(page).toHaveURL(/\/agent\/hc\/arrange/);
     await expect(page.getByRole('button', {name: 'New category'})).toBeVisible();
+    await page.goto('/admin/help/arrange');
+    await expect(page.getByRole('button', {name: 'New category'})).toHaveCount(0);
 
     const buyerContext = await browser.newContext();
     try {
