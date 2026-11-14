@@ -1,5 +1,6 @@
 import {Trans} from '@ui/i18n/trans';
 import type {ReactNode} from 'react';
+import type {ProductAuthoringStep} from './product-authoring-steps';
 import {ProductEditorSection} from './product-editor-section';
 
 /**
@@ -16,6 +17,7 @@ export interface DigitalProductEditorProps {
   sample: ReactNode;
   pricing: ReactNode;
   storefront: ReactNode;
+  activeStep?: ProductAuthoringStep;
 }
 
 export function DigitalProductEditor({
@@ -24,10 +26,12 @@ export function DigitalProductEditor({
   sample,
   pricing,
   storefront,
+  activeStep,
 }: DigitalProductEditorProps) {
   return (
     <div className="flex min-w-0 flex-col gap-3 sm:gap-4" data-testid="digital-product-editor">
       <ProductEditorSection
+        active={activeStep === undefined || activeStep === 'details'}
         id="digital-product-details"
         title={<Trans message="Product details" />}
       >
@@ -35,6 +39,7 @@ export function DigitalProductEditor({
       </ProductEditorSection>
 
       <ProductEditorSection
+        active={activeStep === undefined || activeStep === 'files'}
         id="digital-product-files"
         title={<Trans message="Files buyers receive" />}
       >
@@ -42,6 +47,7 @@ export function DigitalProductEditor({
       </ProductEditorSection>
 
       <ProductEditorSection
+        active={activeStep === undefined || activeStep === 'files'}
         id="digital-product-sample"
         title={<Trans message="Sample PDF (optional)" />}
       >
@@ -49,6 +55,7 @@ export function DigitalProductEditor({
       </ProductEditorSection>
 
       <ProductEditorSection
+        active={activeStep === undefined || activeStep === 'pricing'}
         id="digital-product-pricing"
         title={<Trans message="Price" />}
       >
@@ -56,6 +63,7 @@ export function DigitalProductEditor({
       </ProductEditorSection>
 
       <ProductEditorSection
+        active={activeStep === undefined || activeStep === 'storefront'}
         id="digital-product-storefront"
         title={<Trans message="Storefront placement (optional)" />}
       >

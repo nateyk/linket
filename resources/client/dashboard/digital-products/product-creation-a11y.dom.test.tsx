@@ -887,19 +887,23 @@ describe('T4 heading hierarchy: sections are h2 under the page h1', () => {
       </QueryClientProvider>,
     );
 
-    // The section list mounts after the product GET resolves.
+    // All five sections remain mounted, but only the active stage is visible
+    // and included in the accessibility tree.
     const sections = await screen.findAllByRole('heading', {level: 2});
-    expect(sections).toHaveLength(5);
+    expect(sections).toHaveLength(1);
+    expect(sections[0].textContent).toContain('Product details');
+    expect(document.querySelectorAll('[data-slot="product-editor-section"]')).toHaveLength(5);
 
     const {h1} = expectHeadingHierarchy();
     expect(h1.textContent).toContain('Edit digital product');
-    expect(sections.map(h => h.textContent)).toEqual([
-      expect.stringContaining('Product details'),
+    const filesStep = screen.getByRole('button', {name: 'Files & sample, step 2 of 4'});
+    fireEvent.click(filesStep);
+    expect(screen.getAllByRole('heading', {level: 2}).map(h => h.textContent)).toEqual([
       expect.stringContaining('Files buyers receive'),
       expect.stringContaining('Sample PDF'),
-      expect.stringContaining('Price'),
-      expect.stringContaining('Storefront placement'),
     ]);
+    expect(screen.queryByRole('heading', {name: 'Product details'})).toBeNull();
+
   });
 });
 
