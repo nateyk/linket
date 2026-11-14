@@ -1,5 +1,4 @@
-import {AdminDocsUrls} from '@app/admin/admin-config';
-import {DocsLink} from '@common/admin/settings/layout/settings-links';
+import {HcAdminSettingsButton} from '@app/help-center/manager/layout/hc-admin-settings-button';
 import {
   DatatablePageHeaderBar,
   DatatablePageScrollContainer,
@@ -28,12 +27,7 @@ export function HcManagerLayout({actionButton, children, title}: Props) {
         border="border-none"
         rightContent={
           <Fragment>
-            <DocsLink
-              variant="button"
-              link={AdminDocsUrls.pages.helpCenter}
-              size="xs"
-              className="max-md:hidden"
-            />
+            <HcAdminSettingsButton />
             {actionButton}
           </Fragment>
         }

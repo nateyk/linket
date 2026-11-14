@@ -1,25 +1,23 @@
-import {IllustratedMessage} from '@ui/images/illustrated-message';
-import {ErrorIcon} from '@ui/icons/material/Error';
-import React, {ReactNode} from 'react';
+import {Empty} from '@shadcn/empty/empty';
+import {BookOpenIcon} from 'lucide-react';
+import type {ReactNode} from 'react';
 
 interface Props {
   title?: ReactNode;
   description?: ReactNode;
 }
+
+/** Use the same neutral empty-state pattern as the admin dashboard. */
 export function HcManagerEmptyMessage({title, description}: Props) {
   return (
-    <IllustratedMessage
-      className="mx-auto mt-40 max-w-112.5"
-      image={
-        <div>
-          <ErrorIcon size="lg" />
-        </div>
-      }
-      size="sm"
-      imageHeight="h-auto"
-      imageMargin="mb-12"
-      title={title}
-      description={description}
-    />
+    <Empty.Root className="min-h-56 border-0 p-6">
+      <Empty.Header>
+        <Empty.Media variant="icon">
+          <BookOpenIcon aria-hidden="true" />
+        </Empty.Media>
+        {title && <Empty.Title>{title}</Empty.Title>}
+        {description && <Empty.Description>{description}</Empty.Description>}
+      </Empty.Header>
+    </Empty.Root>
   );
 }

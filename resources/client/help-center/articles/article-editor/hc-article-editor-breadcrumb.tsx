@@ -1,4 +1,5 @@
 import {helpCenterQueries} from '@app/help-center/help-center-queries';
+import {useHcManagerBasePath} from '@app/help-center/manager/hc-manager-paths';
 import {useQuery} from '@tanstack/react-query';
 import {Breadcrumb} from '@ui/breadcrumbs/breadcrumb';
 import {
@@ -15,6 +16,7 @@ interface Props {
 }
 export function HcArticleEditorBreadcrumb({children}: Props) {
   const breadcrumbRoot = useHcArticleBreadcrumbRoot();
+  const root = useHcManagerBasePath();
   const {sectionId, categoryId} = useParams();
   const {data} = useQuery({
     ...helpCenterQueries.categories.normalizedList(),
@@ -29,16 +31,16 @@ export function HcArticleEditorBreadcrumb({children}: Props) {
     if (category && section) {
       return (
         <Breadcrumb size="xl">
-          <BreadcrumbItem to="/agent/hc/arrange">
+          <BreadcrumbItem to={`${root}/arrange`}>
             <Trans message="Help center" />
           </BreadcrumbItem>
           <BreadcrumbItem
-            to={`/agent/hc/arrange/categories/${category.id}`}
+            to={`${root}/arrange/categories/${category.id}`}
           >
             {category.name}
           </BreadcrumbItem>
           <BreadcrumbItem
-            to={`/agent/hc/arrange/sections/${section.id}`}
+            to={`${root}/arrange/sections/${section.id}`}
           >
             {section.name}
           </BreadcrumbItem>
@@ -51,11 +53,11 @@ export function HcArticleEditorBreadcrumb({children}: Props) {
   return (
     <Breadcrumb size="xl">
       {breadcrumbRoot && (
-        <BreadcrumbItem to="/agent/hc/arrange">
+        <BreadcrumbItem to={`${root}/arrange`}>
           <Trans {...breadcrumbRoot} />
         </BreadcrumbItem>
       )}
-      <BreadcrumbItem to="/agent/hc/articles">
+      <BreadcrumbItem to={`${root}/articles`}>
         <Trans message="Articles" />
       </BreadcrumbItem>
       {children}

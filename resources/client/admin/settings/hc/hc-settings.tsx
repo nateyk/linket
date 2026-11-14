@@ -1,4 +1,3 @@
-import {AdminDocsUrls} from '@app/admin/admin-config';
 import {useImportHcDataFromZip} from '@app/admin/settings/hc/use-import-hc-data-from-zip';
 import {AttributesManager} from '@app/attributes/rendering/attributes-manager';
 import {helpdeskQueries} from '@app/dashboard/helpdesk-queries';
@@ -13,6 +12,7 @@ import {useAdminSettings} from '@common/admin/settings/use-admin-settings';
 import {SimpleBackgroundPositionSelector} from '@common/background-selector/image-background-tab/simple-background-position-selector';
 import {ImageSelector} from '@common/uploads/components/image-selector';
 import {Accordion} from '@shadcn/accordion/accordion';
+import {Button as DashboardButton} from '@shadcn/button/button';
 import {Button} from '@ui/buttons/button';
 import {LinkStyle} from '@ui/buttons/external-link';
 import {FormTextField} from '@ui/forms/input-field/text-field/text-field';
@@ -33,6 +33,7 @@ import {useSettings} from '@ui/settings/use-settings';
 import {downloadFileFromUrl} from '@ui/utils/files/download-file-from-url';
 import {openUploadWindow} from '@ui/utils/files/open-upload-window';
 import {Fragment, useState} from 'react';
+import {BookOpenIcon} from 'lucide-react';
 import {
   useFieldArray,
   useForm,
@@ -157,9 +158,22 @@ export function Component() {
       title={<Trans message="Help center" />}
       defaultRoute={routes.home.route}
       availableRoutes={routes}
-      docsLink={AdminDocsUrls.settings.helpCenter}
     >
       <SettingsWithPreview.Content>
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-muted-foreground">
+            <Trans message="Manage Help Center articles and categories separately from appearance settings." />
+          </p>
+          <DashboardButton
+            size="sm"
+            variant="outline"
+            nativeButton={false}
+            render={<Link to="/admin/help" />}
+          >
+            <BookOpenIcon data-icon="inline-start" />
+            <Trans message="Manage content" />
+          </DashboardButton>
+        </div>
         <SettingsWithPreview.Form form={form}>
           <Sections />
         </SettingsWithPreview.Form>

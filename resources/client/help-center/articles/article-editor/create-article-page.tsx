@@ -1,11 +1,12 @@
 import {ArticleEditorAside} from '@app/help-center/articles/article-editor/article-editor-aside';
+import {useHcManagerBasePath} from '@app/help-center/manager/hc-manager-paths';
 import {HcArticleEditorBreadcrumb} from '@app/help-center/articles/article-editor/hc-article-editor-breadcrumb';
 import {
   CreateArticlePayload,
   useCreateArticle,
 } from '@app/help-center/articles/requests/use-create-article';
 import {UploadType} from '@app/site-config';
-import ArticleEditorPage from '@common/article-editor/article-editor-page';
+import ArticleEditorPage from '@app/help-center/articles/article-editor/help-center-article-editor-page';
 import {useAuth} from '@common/auth/use-auth';
 import {StaticPageTitle} from '@common/seo/static-page-title';
 import {useNavigate} from '@common/ui/navigation/use-navigate';
@@ -24,6 +25,7 @@ export function Component() {
   const {aiAgentId} = useParams();
   const {sectionId} = useParams();
   const navigate = useNavigate();
+  const root = useHcManagerBasePath();
   const {trans} = useTrans();
   const {user} = useAuth();
   const form = useForm<CreateArticlePayload>({
@@ -50,7 +52,7 @@ export function Component() {
       {
         onSuccess: response => {
           toast(trans(message('Article created')));
-          navigate(`/agent/hc/articles/${response.article.id}/edit`, {
+          navigate(`${root}/articles/${response.article.id}/edit`, {
             replace: true,
           });
         },
