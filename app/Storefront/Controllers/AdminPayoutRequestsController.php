@@ -130,8 +130,7 @@ class AdminPayoutRequestsController extends Controller
     public function destroy(PayoutRequest $payoutRequest)
     {
         Gate::authorize('admin.access');
-        $payoutRequest->delete();
 
-        return response()->json(['message' => __('Deleted Successfully')]);
+        abort(403, __('Payout requests cannot be deleted to preserve financial audit records.'));
     }
 }
