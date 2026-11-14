@@ -58,6 +58,10 @@ class LogTrackedEvent
                     'clicks_count' => DB::raw('clicks_count + 1'),
                     'clicked_at' => now(),
                 ]);
+
+                // The atomic DB expression remains in the in-memory model.
+                // Reload the real value before the public page is serialized.
+                $linkeable->refresh();
             }
 
             if ($linkeable->folder_id) {

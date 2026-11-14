@@ -32,6 +32,7 @@ export type Store = {
   /** @nullable */
   deleted_at?: string | null;
   clicks_count?: number;
+  unique_visitors_count?: number;
   /** @nullable */
   clicked_at?: string | null;
   links_count?: number;

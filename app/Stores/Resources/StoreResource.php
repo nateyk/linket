@@ -76,9 +76,11 @@ class StoreResource extends LinkeableResource
                 $this->deleted_at,
             ),
 
-            'clicks_count' => $this->when(
-                $fieldsPreset === 'show',
-                $this->clicks_count,
+            // Both the dashboard listing and detail page need the real lifetime count.
+            'clicks_count' => (int) $this->clicks_count,
+            'unique_visitors_count' => $this->when(
+                isset($this->resource->unique_visitors_count),
+                (int) ($this->resource->unique_visitors_count ?? 0),
             ),
             'clicked_at' => $this->when(
                 $fieldsPreset === 'show',

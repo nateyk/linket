@@ -5,6 +5,7 @@ namespace App\Biolinks\Controllers;
 use App\Biolinks\Actions\CrupdateBiolink;
 use App\Biolinks\Actions\DeleteBiolinks;
 use App\Biolinks\Models\Biolink;
+use App\Stores\Actions\LoadStoreVisitStats;
 use App\Biolinks\BiolinksQueryBuilder;
 use App\Biolinks\Requests\CrupdateBiolinkRequest;
 use App\Biolinks\Resources\BiolinkResource;
@@ -42,6 +43,8 @@ class BiolinksController extends Controller
 
         $pagination = (new BiolinksQueryBuilder($data))->paginate();
 
+        app(LoadStoreVisitStats::class)->forPage($pagination);
+
         return BiolinkResource::collection($pagination);
     }
 
@@ -57,6 +60,7 @@ class BiolinksController extends Controller
         Gate::authorize('show', $biolink);
 
         $biolink->loadContent();
+        app(LoadStoreVisitStats::class)->forStore($biolink);
 
         return new BiolinkResource($biolink, fieldsPreset: 'show');
     }
