@@ -3,6 +3,7 @@
 namespace App\Payments;
 
 use App\Payments\Chapa\ChapaV2Client;
+use App\Payments\Chapa\LinketChapaManager;
 use App\Payments\Models\PaymentTransaction;
 use Common\Settings\Settings;
 use Illuminate\Http\Request;
@@ -93,12 +94,14 @@ class ChapaGateway
         $secret = $this->webhookSecret();
         $signature = $request->header('x-chapa-signature');
 
-        return filled($secret)
-            && is_string($signature)
-            && hash_equals(
-                hash_hmac('sha256', $request->getContent(), $secret),
-                $signature,
-            );
+        if (blank($secret) || !is_string($signature)) {
+            return false;
+        }
+
+        return app(LinketChapaManager::class)
+            ->clientForSecret($this->platformSecret(), $secret)
+            ->webhooks()
+            ->verify($request->getContent(), $signature);
     }
 
     public function verify(PaymentTransaction $transaction): array
@@ -145,15 +148,12 @@ class ChapaGateway
 
     public function platformSecret(): string
     {
-        $stored = app(Settings::class)->get('billing.chapa.secret_key');
-
-        return filled($stored) ? (string) $stored : (string) config('services.chapa.secret');
+        return app(LinketChapaManager::class)->platformSecret();
     }
 
     public function webhookSecret(): ?string
     {
-        return app(Settings::class)->get('billing.chapa.webhook_secret')
-            ?: config('services.chapa.webhook_secret');
+        return app(LinketChapaManager::class)->webhookSecret();
     }
 
     private function splitBuyerName(?string $name): array
