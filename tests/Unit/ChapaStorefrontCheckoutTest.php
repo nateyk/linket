@@ -45,6 +45,7 @@ class ChapaStorefrontCheckoutTest extends TestCase
             $table->string('currency', 12)->default('ETB');
             $table->unsignedBigInteger('gross_amount_cents')->default(0);
             $table->integer('commission_bps')->default(0);
+            $table->unsignedBigInteger('commission_plan_id')->nullable();
             $table->float('platform_fee_percent')->default(0);
             $table->unsignedBigInteger('platform_fee_cents')->default(0);
             $table->unsignedBigInteger('creator_earnings_cents')->default(0);
@@ -103,13 +104,11 @@ class ChapaStorefrontCheckoutTest extends TestCase
         $manager->method('isEnabled')->willReturn(true);
         $manager->method('platformClient')->willReturn($this->mockChapaClient());
 
-        $checkout = new ChapaStorefrontCheckout(
-            $manager,
-            null,
-            new AccountMonetizationStatus(),
-            new StorefrontPaymentReferenceGenerator(fn (): bool => false),
-            fn (User $u): bool => $isPro,
-        );
+        $checkout = (new ChapaStorefrontCheckout(
+            chapaManager: $manager,
+            referenceGenerator: new StorefrontPaymentReferenceGenerator(fn (): bool => false),
+            monetizationStatus: new AccountMonetizationStatus(),
+        ))->withProChecker(fn (User $u): bool => $isPro);
 
         $creator = new User(['id' => $isPro ? 20 : 10, 'name' => 'Creator']);
         $product = new DigitalProduct([
@@ -152,7 +151,10 @@ class ChapaStorefrontCheckoutTest extends TestCase
     {
         $manager = $this->createMock(LinketChapaManager::class);
         $manager->method('isEnabled')->willReturn(true);
-        $checkout = new ChapaStorefrontCheckout($manager, null, new AccountMonetizationStatus());
+        $checkout = new ChapaStorefrontCheckout(
+            chapaManager: $manager,
+            monetizationStatus: new AccountMonetizationStatus(),
+        );
 
         $creator = new User(['id' => 30]);
         $product = new DigitalProduct([

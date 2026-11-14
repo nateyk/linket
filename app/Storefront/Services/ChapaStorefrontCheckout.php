@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Payments\Chapa\ChapaV2Client;
 use App\Payments\Chapa\LinketChapaManager;
 use App\Stores\Models\Store;
+use App\Storefront\Commission\CommissionPolicy;
 use App\Storefront\Models\CreatorChapaGateway;
 use App\Storefront\Models\DigitalProduct;
 use App\Storefront\Models\StorefrontOrder;
@@ -19,13 +20,23 @@ use Illuminate\Support\Str;
 
 final class ChapaStorefrontCheckout
 {
+    private ?\Closure $isProChecker = null;
+
     public function __construct(
         private readonly ?LinketChapaManager $chapaManager = null,
+        private readonly ?StorefrontPaymentReferenceGenerator $referenceGenerator = null,
+        private readonly ?CommissionPolicy $commissionPolicy = null,
         private readonly ?CreatorVerificationAllowance $allowance = null,
         private readonly ?AccountMonetizationStatus $monetizationStatus = null,
-        private readonly ?StorefrontPaymentReferenceGenerator $referenceGenerator = null,
-        private readonly ?\Closure $isProChecker = null,
     ) {
+    }
+
+    public function withProChecker(\Closure $isProChecker): self
+    {
+        $clone = clone $this;
+        $clone->isProChecker = $isProChecker;
+
+        return $clone;
     }
 
     /** @param array<string, mixed> $buyer */
@@ -170,7 +181,9 @@ final class ChapaStorefrontCheckout
         User $creator,
         array $details,
     ): StorefrontOrder {
+        $commission = $this->commission()->calculate($creator, (int) $product->price_cents);
         $buyer = $details['buyer'];
+
         $order = StorefrontOrder::query()->create([
             'uuid' => (string) Str::uuid(),
             'monetization_policy' => $details['policy'],
@@ -183,10 +196,11 @@ final class ChapaStorefrontCheckout
             'buyer_email' => $buyer['email'] ?? null,
             'currency' => 'ETB',
             'gross_amount_cents' => $product->price_cents,
-            'commission_bps' => 0,
-            'platform_fee_percent' => 0,
-            'platform_fee_cents' => 0,
-            'creator_earnings_cents' => $product->price_cents,
+            'commission_bps' => $commission->commissionBps,
+            'commission_plan_id' => $commission->planId,
+            'platform_fee_percent' => $commission->platformFeePercent,
+            'platform_fee_cents' => $commission->platformFeeCents,
+            'creator_earnings_cents' => $commission->creatorEarningsCents,
             'status' => 'pending_payment',
             'payment_gateway' => 'chapa',
             'chapa_tx_ref' => $details['reference'],
@@ -279,5 +293,10 @@ final class ChapaStorefrontCheckout
     private function refGenerator(): StorefrontPaymentReferenceGenerator
     {
         return $this->referenceGenerator ?? app(StorefrontPaymentReferenceGenerator::class);
+    }
+
+    private function commission(): CommissionPolicy
+    {
+        return $this->commissionPolicy ?? app(CommissionPolicy::class);
     }
 }
