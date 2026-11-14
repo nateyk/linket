@@ -103,7 +103,7 @@ export function focusProductAuthoringStep(
   if (editorScroll) {
     const offset = heading.getBoundingClientRect().top -
       editorScroll.getBoundingClientRect().top;
-    editorScroll.scrollTo({
+    editorScroll.scrollTo?.({
       top: editorScroll.scrollTop + offset - 16,
       behavior: 'auto',
     });
