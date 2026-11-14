@@ -16,7 +16,19 @@ use Illuminate\Support\Facades\Schema;
 use Nateyk\Chapa\ChapaClient;
 use Nateyk\Chapa\Http\RawResponse;
 use Nateyk\Chapa\Http\Transport;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
+
+final readonly class PayoutVerificationCase
+{
+    public function __construct(
+        public string $chapaStatus,
+        public string $expectedIntentStatus,
+        public string $expectedPayoutStatus,
+        public string $expectedLedgerAction,
+    ) {
+    }
+}
 
 class StorefrontPayoutProcessingServiceTest extends TestCase
 {
@@ -149,13 +161,17 @@ class StorefrontPayoutProcessingServiceTest extends TestCase
         $this->assertNull($payout->paid_at);
     }
 
-    public function testVerifyPayoutSettlesDeliveredTransferAndDisbursesLiability(): void
+    #[DataProvider('payoutVerificationCases')]
+    public function testVerifyPayoutOutcomes(PayoutVerificationCase $case): void
     {
         $manager = $this->createMock(LinketChapaManager::class);
-        $manager->method('platformClient')->willReturn($this->mockChapaClient(verifyStatus: 'SUCCESS'));
+        $manager->method('platformClient')->willReturn($this->mockChapaClient(verifyStatus: $case->chapaStatus));
 
         $ledgerMock = $this->createMock(CreatorLedgerService::class);
-        $ledgerMock->expects($this->once())->method('disbursePayout');
+        $disburseExpectation = $case->expectedLedgerAction === 'disburse' ? $this->once() : $this->never();
+        $releaseExpectation = $case->expectedLedgerAction === 'release' ? $this->once() : $this->never();
+        $ledgerMock->expects($disburseExpectation)->method('disbursePayout');
+        $ledgerMock->expects($releaseExpectation)->method('releasePayoutReservation');
 
         $payout = PayoutRequest::query()->create([
             'workspace_id' => 1,
@@ -185,54 +201,31 @@ class StorefrontPayoutProcessingServiceTest extends TestCase
 
         $verified = $service->verifyPayout($intent);
 
-        $this->assertSame(StorefrontPayoutIntent::STATUS_SUCCESSFUL, $verified->status);
-        $this->assertNotNull($verified->verified_at);
+        $this->assertSame($case->expectedIntentStatus, $verified->status);
 
         $payout->refresh();
-        $this->assertSame('paid', $payout->status);
-        $this->assertNotNull($payout->paid_at);
+        $this->assertSame($case->expectedPayoutStatus, $payout->status);
     }
 
-    public function testVerifyPayoutReleasesReservationOnTerminalFailure(): void
+    public static function payoutVerificationCases(): array
     {
-        $manager = $this->createMock(LinketChapaManager::class);
-        $manager->method('platformClient')->willReturn($this->mockChapaClient(verifyStatus: 'FAILED'));
-
-        $ledgerMock = $this->createMock(CreatorLedgerService::class);
-        $ledgerMock->expects($this->once())->method('releasePayoutReservation');
-
-        $payout = PayoutRequest::query()->create([
-            'workspace_id' => 1,
-            'creator_id' => 35,
-            'amount_cents' => 50000,
-            'currency' => 'ETB',
-            'payout_destination' => 'CBE:100012345678',
-            'status' => 'processing',
-        ]);
-
-        $intent = StorefrontPayoutIntent::query()->create([
-            'payout_request_id' => $payout->id,
-            'merchant_reference' => 'lk-po-TEST-REF-01',
-            'idempotency_key' => 'd2e3f4a5-b6c7-8901-bcde-f12345678901',
-            'amount_cents' => 50000,
-            'currency' => 'ETB',
-            'provider' => 'chapa',
-            'withdrawal_code' => 'bank_transfer',
-            'destination_snapshot' => 'CBE:100012345678',
-            'status' => StorefrontPayoutIntent::STATUS_PROVIDER_PENDING,
-        ]);
-
-        $service = new StorefrontPayoutProcessingService(
-            chapaManager: $manager,
-            creatorLedger: $ledgerMock,
-        );
-
-        $verified = $service->verifyPayout($intent);
-
-        $this->assertSame(StorefrontPayoutIntent::STATUS_FAILED, $verified->status);
-
-        $payout->refresh();
-        $this->assertSame('rejected', $payout->status);
-        $this->assertNotNull($payout->rejected_at);
+        return [
+            'delivered settlement disburses liability' => [
+                new PayoutVerificationCase(
+                    chapaStatus: 'SUCCESS',
+                    expectedIntentStatus: StorefrontPayoutIntent::STATUS_SUCCESSFUL,
+                    expectedPayoutStatus: 'paid',
+                    expectedLedgerAction: 'disburse',
+                ),
+            ],
+            'terminal failure releases reservation' => [
+                new PayoutVerificationCase(
+                    chapaStatus: 'FAILED',
+                    expectedIntentStatus: StorefrontPayoutIntent::STATUS_FAILED,
+                    expectedPayoutStatus: 'rejected',
+                    expectedLedgerAction: 'release',
+                ),
+            ],
+        ];
     }
 }

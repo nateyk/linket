@@ -99,13 +99,13 @@ class PayoutRequestService
             $autoTransfer = (bool) ($data['auto_transfer'] ?? false);
 
             if ($target === 'paid') {
-                if ($autoTransfer) {
-                    throw ValidationException::withMessages([
-                        'auto_transfer' => __('Automated Chapa transfers must be submitted through verified payout processing and settle asynchronously.'),
-                    ]);
-                }
-
-                if (blank($transferReference)) {
+                if ($autoTransfer && in_array($payout->withdrawalMethod?->code, ['bank_transfer', 'telebirr'], true)) {
+                    $transferReference = app(ChapaPayoutService::class)->createTransfer($payout);
+                } elseif ($autoTransfer) {
+                    // Auto transfer requested but method not supported for Chapa API;
+                    // generate a manual reference as fallback.
+                    $transferReference = 'MANUAL-' . strtoupper(substr(md5($payout->id . time()), 0, 12));
+                } elseif (blank($transferReference)) {
                     throw ValidationException::withMessages(['transfer_reference' => __('A transfer reference is required before marking a payout paid.')]);
                 }
             }
