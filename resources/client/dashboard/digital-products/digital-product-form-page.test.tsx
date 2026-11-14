@@ -346,6 +346,17 @@ describe('non-course editor visual consistency', () => {
     'utf8',
   );
 
+  test('shows one creator step at a time and preserves both optional samples and uploaded file controls', () => {
+    expect(source).toContain('activeStep={activeNonCourseStep}');
+    expect(source).toContain('onSelect={selectNonCourseStep}');
+    expect(source).toContain('const previous = PRODUCT_AUTHORING_STEP_ORDER[index - 1]');
+    expect(source).toContain('const next = PRODUCT_AUTHORING_STEP_ORDER[index + 1]');
+    expect(source).toContain('<Trans message="Previous step" />');
+    expect(source).toContain('<Trans message="Continue" />');
+    expect(source).toContain('productAuthoringStepForErrors(validationErrors)');
+    expect(source).not.toContain('sample: samples.length > 0');
+  });
+
   test('non-course uses one step indicator without repeating progress status', () => {
     expect(source).toContain('data-testid="product-authoring-layout"');
     expect(source).toContain('<ProductAuthoringSteps');
