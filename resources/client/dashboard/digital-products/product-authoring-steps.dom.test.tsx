@@ -43,7 +43,14 @@ test('all five steps form one mobile row and a vertical desktop rail', () => {
   expect(selected.getAttribute('aria-controls')).toBe('ebook-private-files');
   expect(selected.getAttribute('data-step-complete')).toBe('true');
   expect(selected.getAttribute('aria-description')).toBe('Complete');
-  expect(selected.querySelector('span[aria-hidden="true"]')?.className).toContain('bg-positive');
+  // The current step retains the primary focus cue even when complete.
+  expect(selected.querySelector('span[aria-hidden="true"]')?.className).toContain('bg-primary');
+  expect(selected.className).toContain('bg-primary/5');
+  const previous = within(nav).getByRole('button', {name: 'Details, step 1 of 5'});
+  expect(previous.querySelector('span[aria-hidden="true"]')?.className).toContain('bg-positive');
+  expect(previous.getAttribute('data-step-state')).toBe('previous');
+  expect(within(nav).getAllByText('Private files buyers receive.')).toHaveLength(1);
+  expect(nav.querySelector('[data-slot="creator-step-description"]')?.className).toContain('xl:block');
   expect(within(nav).getByRole('button', {name: 'Sample, step 3 of 5'}).getAttribute('data-step-complete')).toBe('false');
 });
 

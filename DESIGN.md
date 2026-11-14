@@ -390,6 +390,17 @@ the mobile bottom navigation anchored to the visible viewport.
   Keep guidance visible when a field is invalid so creators can correct it.
   Preserve the dedicated Course Builder layout instead of applying these
   creation-form panels to it.
+- **Creator setup steps:** Product (Digital, E-book and Audio) and Service
+  creation use the same connected `CreatorSteps` navigation component from
+  `resources/client/dashboard/shared/creator-steps.tsx`. Use one horizontal
+  list on small screens and a descriptive vertical rail at `xl`. The active
+  stage takes the primary indicator even when its fields are complete; earlier
+  completed stages use the success indicator. Native buttons carry
+  `aria-current="step"`, translated step names and position, and accessible
+  completion feedback. A step click only navigates: the page still owns
+  focus, validation and save behavior. Keep Service's compact setup counter
+  and Product's existing scroll-to-section semantics. Do not add a second
+  Next/Back action row or apply this layout to the Course Builder.
 - **Section variants:** three sanctioned frames — `default` (bordered), `inset`
   (floating content inside a padded shell), `floating` (everything on `bg-muted` with
   8px gaps). Pick one per screen; don't mix within a screen.
