@@ -64,6 +64,14 @@ test('keyboard activation chooses a destination without removing another section
   expect(target.getAttribute('aria-controls')).toBe('audio-storefront');
 });
 
+test('server validation selects Files for a private file or optional sample, and Price for billing', async () => {
+  const {productAuthoringStepForErrors} = await import('./product-authoring-steps');
+  expect(productAuthoringStepForErrors({file_ids: 'Please upload a file'})).toBe('files');
+  expect(productAuthoringStepForErrors({sample_file_ids: 'Invalid preview'})).toBe('files');
+  expect(productAuthoringStepForErrors({price_cents: 'Invalid price'})).toBe('pricing');
+  expect(productAuthoringStepForErrors({title: 'Required'})).toBe('details');
+});
+
 test.each([
   ['digital', 'digital-product-storefront'],
   ['ebook', 'ebook-storefront'],
