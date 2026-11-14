@@ -319,16 +319,16 @@ test('Storefront dropdown preserves multi-selection and uses no inline checkboxe
   expect(trigger.textContent).toContain('1 selected');
   expect(screen.queryByRole('checkbox', {name: /Main Store/})).toBeNull();
   await user.click(trigger);
-  expect(screen.getByRole('menuitemcheckbox', {name: /Main Store/}).getAttribute('aria-checked')).toBe('true');
-  await user.click(screen.getByRole('menuitemcheckbox', {name: /Books Store/}));
+  expect((await screen.findByRole('menuitemcheckbox', {name: /Main Store/})).getAttribute('aria-checked')).toBe('true');
+  await user.click(await screen.findByRole('menuitemcheckbox', {name: /Books Store/}));
   expect(await screen.findByText('2 selected')).toBeTruthy();
 
   // The dropdown does not replace the existing array-based placement model.
   if (!screen.queryByRole('menuitemcheckbox', {name: /Main Store/})) {
     await user.click(trigger);
   }
-  expect(screen.getByRole('menuitemcheckbox', {name: /Main Store/}).getAttribute('aria-checked')).toBe('true');
-  expect(screen.getByRole('menuitemcheckbox', {name: /Books Store/}).getAttribute('aria-checked')).toBe('true');
+  expect((await screen.findByRole('menuitemcheckbox', {name: /Main Store/})).getAttribute('aria-checked')).toBe('true');
+  expect((await screen.findByRole('menuitemcheckbox', {name: /Books Store/})).getAttribute('aria-checked')).toBe('true');
 });
 
 test('a successful empty Storefront lookup is not misrepresented as an outage', async () => {
