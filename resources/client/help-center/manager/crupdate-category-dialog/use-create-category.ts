@@ -1,4 +1,5 @@
 import {helpCenterQueries} from '@app/help-center/help-center-queries';
+import {useHcManagerBasePath} from '@app/help-center/manager/hc-manager-paths';
 import {onFormQueryError} from '@common/http/errors/on-form-query-error';
 import {BackendResponse} from '@common/http/backend-response/backend-response';
 import {apiClient, queryClient} from '@common/http/query-client';
@@ -31,6 +32,7 @@ export interface CreateCategoryPayload {
 export function useCreateCategory(form: UseFormReturn<CreateCategoryPayload>) {
   const {trans} = useTrans();
   const navigate = useNavigate();
+  const root = useHcManagerBasePath();
   return useMutation({
     mutationFn: (payload: CreateCategoryPayload) =>
       apiClient.post<Response>('hc/categories', payload).then(r => r.data),
@@ -40,8 +42,8 @@ export function useCreateCategory(form: UseFormReturn<CreateCategoryPayload>) {
       });
       navigate(
         r.category.is_section
-          ? `/agent/hc/arrange/sections/${r.category.id}`
-          : `/agent/hc/arrange/categories/${r.category.id}`,
+          ? `${root}/arrange/sections/${r.category.id}`
+          : `${root}/arrange/categories/${r.category.id}`,
       );
       toast(
         trans(

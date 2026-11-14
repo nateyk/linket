@@ -368,5 +368,12 @@
   "Save changes before changing publication status": "የሕትመት ሁኔታን ከመቀየርዎ በፊት ለውጦቹን ያስቀምጡ።",
   "Hide this category name in the Help Center while keeping its content visible.": "ይዘቱ እየታየ የምድቡን ስም በእገዛ ማዕከሉ ውስጥ ደብቅ።",
   "Multiple products": "ብዙ ምርቶች",
-  "Hide sections with fewer than 2 articles": "ከ2 ጽሑፎች በታች ያላቸውን ክፍሎች ደብቅ"
+  "Hide sections with fewer than 2 articles": "ከ2 ጽሑፎች በታች ያላቸውን ክፍሎች ደብቅ",
+  "Create a category to organize articles into sections.": "ጽሑፎችን በክፍሎች ለማደራጀት ምድብ ይፍጠሩ።",
+  "Create an article to start building your Help Center.": "የእገዛ ማዕከልዎን መገንባት ለመጀመር ጽሑፍ ይፍጠሩ።",
+  "Try adjusting your search or filters.": "ፍለጋዎን ወይም ማጣሪያዎችን ያስተካክሉ።",
+  "Manage Help Center articles and categories separately from appearance settings.": "የእገዛ ማዕከሉን ጽሑፎችና ምድቦች ከመልክ ቅንብሮች ለይተው ያስተዳድሩ።",
+  "Manage content": "ይዘት አስተዳድር",
+  "Help center settings": "የእገዛ ማዕከል ቅንብሮች",
+  "Details": "ዝርዝሮች"
 }

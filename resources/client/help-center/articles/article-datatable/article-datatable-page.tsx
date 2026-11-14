@@ -10,6 +10,8 @@ import {useIngestArticles} from '@app/help-center/articles/requests/use-ingest-a
 import {useUningestArticles} from '@app/help-center/articles/requests/use-uningest-articles';
 import {helpCenterQueries} from '@app/help-center/help-center-queries';
 import {HcManagerTabs} from '@app/help-center/manager/layout/hc-manager-tabs';
+import {HcAdminSettingsButton} from '@app/help-center/manager/layout/hc-admin-settings-button';
+import {HcManagerEmptyMessage} from '@app/help-center/manager/layout/hc-manager-empty-message';
 import {SyncTagsButton} from '@app/help-center/sync-tags-button';
 import {VisibleToField} from '@app/help-center/visible-to-field';
 import {GlobalLoadingProgress} from '@common/core/global-loading-progress';
@@ -17,7 +19,6 @@ import {DataTableAddItemButton} from '@common/datatable/data-table-add-item-butt
 import {DataTableHeader} from '@common/datatable/data-table-header';
 import {DataTablePaginationFooter} from '@common/datatable/data-table-pagination-footer';
 import {useDatatableSearchParams} from '@common/datatable/filters/utils/use-datatable-search-params';
-import {DataTableEmptyStateMessage} from '@common/datatable/page/data-table-emty-state-message';
 import {DatatableFilters} from '@common/datatable/page/datatable-filters';
 import {
   DatatablePageHeaderBar,
@@ -51,7 +52,6 @@ import {useIsModuleInstalled} from '@app/use-is-module-installed';
 import {Fragment, useMemo, useState} from 'react';
 import {useForm} from 'react-hook-form';
 import {Link, useParams} from 'react-router';
-import onlineArticlesImg from './online-articles.svg';
 
 export function Component() {
   const {aiAgentId} = useParams();
@@ -110,6 +110,7 @@ export function Component() {
         title={<Trans message="Help center" />}
         showSidebarToggleButton
         border="border-none"
+        rightContent={<HcAdminSettingsButton />}
       />
       <HcManagerTabs />
       <DatatablePageWithHeaderBody>
@@ -134,11 +135,21 @@ export function Component() {
             onSelectionChange={setSelectedIds}
           />
           {query.isEmpty && (
-            <DataTableEmptyStateMessage
-              isFiltering={isFiltering}
-              image={onlineArticlesImg}
-              title={<Trans message="No articles have been created yet" />}
-              filteringTitle={<Trans message="No matching articles" />}
+            <HcManagerEmptyMessage
+              title={
+                isFiltering ? (
+                  <Trans message="No matching articles" />
+                ) : (
+                  <Trans message="No articles have been created yet" />
+                )
+              }
+              description={
+                isFiltering ? (
+                  <Trans message="Try adjusting your search or filters." />
+                ) : (
+                  <Trans message="Create an article to start building your Help Center." />
+                )
+              }
             />
           )}
           <DataTablePaginationFooter
