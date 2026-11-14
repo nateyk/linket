@@ -45,6 +45,8 @@ import {getBootstrapData} from '@ui/bootstrap-data/bootstrap-data-store';
 import {FormattedBytes} from '@ui/i18n/formatted-bytes';
 import {
   ChevronDownIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
   Clock3Icon,
   FileArchiveIcon,
   FileIcon,
@@ -61,6 +63,7 @@ import {
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -86,7 +89,7 @@ import {
 } from './product-sample-fields';
 import {ProductFormField} from './product-form-field';
 import {ProductFormProgress} from './product-form-progress';
-import {focusProductAuthoringStep, ProductAuthoringSteps, type NonCourseProductType, type ProductAuthoringStep} from './product-authoring-steps';
+import {focusProductAuthoringStep, ProductAuthoringSteps, PRODUCT_AUTHORING_STEP_ORDER, productAuthoringStepForErrors, type NonCourseProductType, type ProductAuthoringStep} from './product-authoring-steps';
 import {
   ProductFormSection,
   type ProductSetupSection,
@@ -165,29 +168,57 @@ const SECTION_META: Record<
   },
 };
 
-/** The connected steps are the only non-course progress indicator. */
+/** Only the active stage is displayed; the editors keep their hidden panels mounted. */
 function NonCourseAuthoringLayout({
   type,
   completed,
+  activeStep,
+  onSelect,
   children,
 }: {
   type: NonCourseProductType;
   completed: Record<ProductAuthoringStep, boolean>;
+  activeStep: ProductAuthoringStep;
+  onSelect: (step: ProductAuthoringStep) => void;
   children: ReactNode;
 }) {
-  const [activeStep, setActiveStep] = useState<ProductAuthoringStep>('details');
-  const selectStep = (step: ProductAuthoringStep) => {
-    setActiveStep(step);
-    focusProductAuthoringStep(type, step);
-  };
+  const index = PRODUCT_AUTHORING_STEP_ORDER.indexOf(activeStep);
+  const previous = PRODUCT_AUTHORING_STEP_ORDER[index - 1];
+  const next = PRODUCT_AUTHORING_STEP_ORDER[index + 1];
 
   return (
     <div
       className="grid min-w-0 items-start gap-3 xl:grid-cols-[minmax(0,14rem)_minmax(0,1fr)] xl:gap-6"
       data-testid="product-authoring-layout"
     >
-      <ProductAuthoringSteps type={type} active={activeStep} completed={completed} onSelect={selectStep} />
-      <div className="min-w-0">{children}</div>
+      <ProductAuthoringSteps type={type} active={activeStep} completed={completed} onSelect={onSelect} />
+      <div className="min-w-0 space-y-4">
+        {children}
+        <div className="flex items-center justify-between gap-3 border-t pt-4">
+          {previous ? (
+            <Button type="button" size="sm" variant="outline" className="min-h-11"
+              onClick={() => onSelect(previous)}>
+              <ChevronLeftIcon className="size-4 rtl:rotate-180" aria-hidden="true" />
+              <Trans message="Previous step" />
+            </Button>
+          ) : (
+            <span className="text-xs text-muted-foreground">
+              <Trans message="Continue through each step, then save your draft." />
+            </span>
+          )}
+          {next ? (
+            <Button type="button" size="sm" className="ms-auto min-h-11"
+              onClick={() => onSelect(next)}>
+              <Trans message="Continue" />
+              <ChevronRightIcon className="size-4 rtl:rotate-180" aria-hidden="true" />
+            </Button>
+          ) : (
+            <span className="ms-auto text-xs text-muted-foreground">
+              <Trans message="Ready to save or submit for review" />
+            </span>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -261,6 +292,24 @@ function DigitalProductForm() {
   const [openSection, setOpenSection] = useState<ProductSetupSection | null>(
     'details',
   );
+  const [activeNonCourseStep, setActiveNonCourseStep] = useState<ProductAuthoringStep>(
+    () => productAuthoringStepForErrors(routeRecovery?.productSubmissionErrors ?? {}),
+  );
+  const pendingNonCourseStep = useRef<ProductAuthoringStep | null>(null);
+  const pendingNonCourseErrorField = useRef<string | null>(null);
+
+  const selectNonCourseStep = useCallback((step: ProductAuthoringStep, focusField?: string) => {
+    if (step === activeNonCourseStep) {
+      const target = focusField;
+      requestAnimationFrame(() => {
+        if (target) document.getElementById(target)?.focus({preventScroll: false});
+      });
+      return;
+    }
+    pendingNonCourseStep.current = step;
+    pendingNonCourseErrorField.current = focusField ?? null;
+    setActiveNonCourseStep(step);
+  }, [activeNonCourseStep]);
 
   // Auto-save only runs for drafts: the approved→draft revert is promised to
   // the user as an explicit Save action (the warning banner below), so
@@ -330,6 +379,18 @@ function DigitalProductForm() {
     | 'ebook'
     | 'audio'
     | 'course';
+  useLayoutEffect(() => {
+    if (pendingNonCourseStep.current !== activeNonCourseStep) return;
+    pendingNonCourseStep.current = null;
+    const invalidField = pendingNonCourseErrorField.current;
+    pendingNonCourseErrorField.current = null;
+    if (invalidField) {
+      requestAnimationFrame(() => document.getElementById(invalidField)?.focus({preventScroll: false}));
+    } else if (effectiveFileType !== 'course') {
+      focusProductAuthoringStep(effectiveFileType, activeNonCourseStep);
+    }
+  }, [activeNonCourseStep, effectiveFileType]);
+
   const fileCapability =
     getBootstrapData()?.product_file_formats?.[effectiveFileType];
   // Fallback for stale bootstrap payloads: the server-provided upload MIME
@@ -702,7 +763,6 @@ function DigitalProductForm() {
   const nonCourseStepsCompleted: Record<ProductAuthoringStep, boolean> = {
     details: isSectionComplete('details'),
     files: isSectionComplete('files'),
-    sample: samples.length > 0,
     pricing: isSectionComplete('pricing'),
     storefront: biolinkIds.length > 0,
   };
@@ -1043,8 +1103,11 @@ function DigitalProductForm() {
             <NonCourseAuthoringLayout
               type="digital"
               completed={nonCourseStepsCompleted}
+              activeStep={activeNonCourseStep}
+              onSelect={selectNonCourseStep}
             >
               <DigitalProductEditor
+                activeStep={activeNonCourseStep}
                 details={detailsFields}
                 files={privateFileFields}
                 sample={sampleFields}
@@ -1056,8 +1119,11 @@ function DigitalProductForm() {
             <NonCourseAuthoringLayout
               type="ebook"
               completed={nonCourseStepsCompleted}
+              activeStep={activeNonCourseStep}
+              onSelect={selectNonCourseStep}
             >
               <EbookEditor
+                activeStep={activeNonCourseStep}
                 details={detailsFields}
                 files={privateFileFields}
                 sample={sampleFields}
@@ -1069,8 +1135,11 @@ function DigitalProductForm() {
             <NonCourseAuthoringLayout
               type="audio"
               completed={nonCourseStepsCompleted}
+              activeStep={activeNonCourseStep}
+              onSelect={selectNonCourseStep}
             >
               <AudioEditor
+                activeStep={activeNonCourseStep}
                 details={detailsFields}
                 files={privateFileFields}
                 sample={sampleFields}
