@@ -5,6 +5,7 @@ import {expect, test, type Page} from '@playwright/test';
 type Fixture = {
   database: string;
   admin: {email: string; password: string};
+  a11y_accounts: Record<'dialog' | 'navigation' | 'responsive', {email: string; password: string}>;
   published_article: {title: string; url: string};
   category: {name: string};
 };
@@ -63,7 +64,7 @@ test.describe('Help Center accessibility acceptance (isolated browser)', () => {
     page,
   }) => {
     test.setTimeout(90_000);
-    await login(page, fixture().admin);
+    await login(page, fixture().a11y_accounts.dialog);
     await page.goto('/admin/help/arrange');
     const trigger = page.getByRole('button', {name: 'New category'});
     await trigger.focus();
@@ -80,7 +81,7 @@ test.describe('Help Center accessibility acceptance (isolated browser)', () => {
 
   test('admin tabs and category actions are keyboard reachable', async ({page}) => {
     test.setTimeout(90_000);
-    await login(page, fixture().admin);
+    await login(page, fixture().a11y_accounts.navigation);
     await page.goto('/admin/help/arrange');
     const articles = page.getByRole('tab', {name: 'All articles'});
     await articles.focus();
@@ -101,7 +102,7 @@ test.describe('Help Center accessibility acceptance (isolated browser)', () => {
     page,
   }, testInfo) => {
     test.setTimeout(90_000);
-    await login(page, fixture().admin);
+    await login(page, fixture().a11y_accounts.responsive);
     await page.goto('/admin/help/arrange');
     for (const width of [320, 390, 640]) {
       await expectNoHorizontalOverflow(page, width);
