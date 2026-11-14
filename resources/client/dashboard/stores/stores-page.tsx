@@ -241,13 +241,28 @@ export function BiolinkCard({biolink, onClick, onInsights}: BiolinkCardProps) {
       </Item.Content>
 
       <Item.Actions className="w-full basis-full justify-end gap-1.5 min-[480px]:ms-auto min-[480px]:w-auto min-[480px]:basis-auto min-[480px]:gap-2 md:ml-0">
-        <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground">
-          <MousePointerClick className="size-3.5 text-muted-foreground" aria-hidden="true" />
-          <Trans
-            message=":count clicks"
-            values={{count: <FormattedNumber value={biolink.clicks_count ?? 0} />}}
-          />
-        </span>
+        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+          <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground">
+            <MousePointerClick className="size-3.5 text-muted-foreground" aria-hidden="true" />
+            <Trans
+              message=":count clicks"
+              values={{count: <FormattedNumber value={biolink.clicks_count ?? 0} />}}
+            />
+          </span>
+          {typeof biolink.unique_visitors_count === 'number' && (
+            <span
+              className="inline-flex shrink-0 items-center whitespace-nowrap rounded-full border border-border bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground"
+              title={trans(message('Distinct visitor IP addresses; shared IPs count as one.'))}
+            >
+              <Trans
+                message=":count unique IPs"
+                values={{
+                  count: <FormattedNumber value={biolink.unique_visitors_count} />,
+                }}
+              />
+            </span>
+          )}
+        </div>
 
         <Dropdown.Root>
           <Dropdown.Trigger
