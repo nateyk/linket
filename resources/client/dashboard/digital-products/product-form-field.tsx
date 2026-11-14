@@ -25,10 +25,14 @@ export function ProductFormField({
   onChange,
 }: ProductFormFieldProps) {
   return (
-    <Field.Root invalid={!!error} onBlur={onBlur} onChange={onChange}>
-      <Field.Label htmlFor={htmlFor}>
+    <Field.Root invalid={!!error} className="min-w-0 gap-2" onBlur={onBlur} onChange={onChange}>
+      <Field.Label htmlFor={htmlFor} className="min-w-0 text-sm font-medium leading-5">
         <Trans message={label} />
-        {required && <span aria-hidden="true"> *</span>}
+        {required && (
+          <span aria-hidden="true" className="text-destructive">
+            {' '}*
+          </span>
+        )}
       </Field.Label>
       {children}
       {description && (
@@ -36,7 +40,11 @@ export function ProductFormField({
           <Trans message={description} />
         </Field.Description>
       )}
-      {error && <Field.Error id={htmlFor ? `${htmlFor}-error` : undefined}>{error}</Field.Error>}
+      {error && (
+        <Field.Error id={htmlFor ? `${htmlFor}-error` : undefined}>
+          {error}
+        </Field.Error>
+      )}
     </Field.Root>
   );
 }
