@@ -198,7 +198,7 @@ test.describe('isolated Help Center product acceptance', () => {
     await dialog.getByRole('textbox', {name: 'Name'}).fill(categoryName);
     await dialog.getByRole('button', {name: 'Create', exact: true}).click();
     await expect(page).toHaveURL(/\/admin\/help\/arrange\/categories\/\d+/, {timeout: 30_000});
-    await expect(page.getByText(categoryName).first()).toBeVisible();
+    await expect(page.getByText(categoryName).filter({visible: true}).first()).toBeVisible();
     await expect(page.locator('[data-slot="sidebar"]')).toBeVisible();
 
     await page.getByRole('button', {name: 'New section'}).click();
