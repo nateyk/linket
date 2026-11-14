@@ -170,7 +170,7 @@ test.describe('isolated Help Center + support', () => {
     await expect(page.locator('[data-slot="sidebar"]')).toBeVisible();
     await expect(
       page.locator('[data-slot="sidebar"]').getByRole('link', {name: 'Help center'}),
-    ).toHaveAttribute('aria-current', 'page');
+    ).toHaveAttribute('href', '/admin/help');
     await page.getByRole('tab', {name: 'All articles'}).click();
     await expect(page).toHaveURL(/\/admin\/help\/articles/);
     await page.getByRole('tab', {name: 'Structure'}).click();
