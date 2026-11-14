@@ -37,8 +37,8 @@ export function ServiceFormField({
       invalid={!!error}
       className="min-w-0 gap-2 [&_input:focus-visible:not([aria-invalid=true])]:outline-primary [&_textarea:focus-visible:not([aria-invalid=true])]:outline-primary [&_[data-slot=input-group]:has([data-slot=input-group-control]:focus-visible:not([aria-invalid=true]))]:outline-primary"
     >
-      <div className="flex items-baseline justify-between gap-3">
-        <Field.Label htmlFor={name} className="text-sm font-medium">
+      <div className="flex min-w-0 items-baseline justify-between gap-3">
+        <Field.Label htmlFor={name} className="min-w-0 flex-1 text-sm font-medium leading-5">
           {label}
           {required && (
             <span aria-hidden="true" className="text-destructive">
@@ -50,15 +50,15 @@ export function ServiceFormField({
         {trailing && <span className="shrink-0">{trailing}</span>}
       </div>
       {children}
-      {(description || counter) && !error && (
+      {(description || counter) && (
         <Field.Description
           className={cn(
             description &&
               counter &&
-              'flex items-start justify-between gap-3 text-xs leading-4',
+              'flex items-start justify-between gap-3 text-sm leading-5',
           )}
         >
-          {description && <span>{description}</span>}
+          {description && <span className="min-w-0 flex-1">{description}</span>}
           {counter && (
             <span className="tabular-nums whitespace-nowrap text-muted-foreground">
               {counter.current}/{counter.max}
