@@ -37,6 +37,21 @@ test('smoke: isolated creator can authenticate and open product picker', async (
   await expect(page.getByRole('heading', {name: 'What are you selling?'})).toBeVisible();
 });
 
+async function verifyProductStageVisibility(
+  page: Page,
+  type: 'digital' | 'ebook' | 'audio' | 'course',
+  section: string,
+) {
+  if (type === 'course') {
+    await expect(page.getByRole('heading', {name: section})).toBeVisible();
+    return;
+  }
+  await expect(page.getByRole('heading', {name: section})).toHaveCount(0);
+  await page.getByRole('button', {name: 'Files & sample, step 2 of 4'}).click();
+  await expect(page.getByRole('heading', {name: section})).toBeVisible();
+  await page.getByRole('button', {name: 'Details, step 1 of 4'}).click();
+}
+
 test.describe('product creation responsive evidence', () => {
   test.skip(
     process.env.LINKET_ISOLATED_E2E !== '1',
@@ -84,14 +99,7 @@ test.describe('product creation responsive evidence', () => {
         await page.goto(`/dashboard/items/new/${item.type}`);
         const heading = page.getByRole('heading', {name: item.heading, level: 1});
         await expect(heading).toBeVisible();
-        if (item.type === 'course') {
-          await expect(page.getByRole('heading', {name: item.section})).toBeVisible();
-        } else {
-          await expect(page.getByRole('heading', {name: item.section})).toHaveCount(0);
-          await page.getByRole('button', {name: 'Files & sample, step 2 of 4'}).click();
-          await expect(page.getByRole('heading', {name: item.section})).toBeVisible();
-          await page.getByRole('button', {name: 'Details, step 1 of 4'}).click();
-        }
+        await verifyProductStageVisibility(page, item.type, item.section);
 
         // The creator header is a compact breadcrumb, not a separate large
         // visible H1. Measure the actual current-page crumb and its container.
