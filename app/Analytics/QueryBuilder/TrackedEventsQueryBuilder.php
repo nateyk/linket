@@ -3,6 +3,7 @@
 namespace App\Analytics\QueryBuilder;
 
 use App\Biolinks\Models\Biolink;
+use App\Stores\Models\Store;
 use App\Links\Models\Link;
 use App\QrCodes\Models\QrCode;
 use App\Analytics\Models\TrackedEvent;
@@ -89,7 +90,12 @@ class TrackedEventsQueryBuilder extends BaseQueryBuilder
                 ->where('linkeable_type', Link::MODEL_TYPE),
             'biolink_id' => $this->builder
                 ->where('linkeable_id', $filter->value)
-                ->where('linkeable_type', Biolink::MODEL_TYPE),
+                ->whereIn('linkeable_type', [
+                    Biolink::MODEL_TYPE,
+                    Store::MODEL_TYPE,
+                    Biolink::class,
+                    Store::class,
+                ]),
             'qr_code_id' => $this->builder
                 ->where('linkeable_id', $filter->value)
                 ->where('linkeable_type', QrCode::MODEL_TYPE),
