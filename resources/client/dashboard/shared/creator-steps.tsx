@@ -99,7 +99,7 @@ export function CreatorSteps<Id extends string>({
                 variant="ghost"
                 color="default"
                 size="lg"
-                data-slot="creator-step-trigger"
+                data-creator-step="trigger"
                 data-step-state={current ? 'current' : previous ? 'previous' : 'upcoming'}
                 data-step-complete={done ? 'true' : 'false'}
                 aria-current={current ? 'step' : undefined}
