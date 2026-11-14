@@ -70,12 +70,14 @@ class CreatorLedgerService
             'order',
             $order->id,
             'funds_available',
-            AccountCodes::CREATOR_HELD,
-            AccountCodes::CREATOR_AVAILABLE,
-            $order->creator_earnings_cents,
-            $order->currency ?: config('storefront.currency', 'ETB'),
-            ['creator_id' => $order->creator_id, 'workspace_id' => $order->product?->workspace_id],
-            "Escrow hold released to available balance for order #{$order->id}",
+            [
+                'from' => AccountCodes::CREATOR_HELD,
+                'to' => AccountCodes::CREATOR_AVAILABLE,
+                'amount_cents' => $order->creator_earnings_cents,
+                'currency' => $order->currency ?: config('storefront.currency', 'ETB'),
+                'context' => ['creator_id' => $order->creator_id, 'workspace_id' => $order->product?->workspace_id],
+                'description' => "Escrow hold released to available balance for order #{$order->id}",
+            ],
         );
     }
 
@@ -97,12 +99,14 @@ class CreatorLedgerService
             'payout',
             $payout->id,
             'withdrawal_reserved',
-            AccountCodes::CREATOR_AVAILABLE,
-            AccountCodes::CREATOR_RESERVED,
-            $payout->amount_cents,
-            $currency,
-            ['creator_id' => $payout->creator_id, 'workspace_id' => $payout->workspace_id],
-            "Withdrawal reservation for payout request #{$payout->id}",
+            [
+                'from' => AccountCodes::CREATOR_AVAILABLE,
+                'to' => AccountCodes::CREATOR_RESERVED,
+                'amount_cents' => $payout->amount_cents,
+                'currency' => $currency,
+                'context' => ['creator_id' => $payout->creator_id, 'workspace_id' => $payout->workspace_id],
+                'description' => "Withdrawal reservation for payout request #{$payout->id}",
+            ],
         );
     }
 
@@ -111,18 +115,18 @@ class CreatorLedgerService
      */
     public function releasePayoutReservation(PayoutRequest $payout): StorefrontJournalEntry
     {
-        $currency = $payout->currency ?: config('storefront.currency', 'ETB');
-
         return $this->postTwoLegTransfer(
             'payout',
             $payout->id,
             'withdrawal_released',
-            AccountCodes::CREATOR_RESERVED,
-            AccountCodes::CREATOR_AVAILABLE,
-            $payout->amount_cents,
-            $currency,
-            ['creator_id' => $payout->creator_id, 'workspace_id' => $payout->workspace_id],
-            "Withdrawal reservation released for payout request #{$payout->id}",
+            [
+                'from' => AccountCodes::CREATOR_RESERVED,
+                'to' => AccountCodes::CREATOR_AVAILABLE,
+                'amount_cents' => $payout->amount_cents,
+                'currency' => $payout->currency ?: config('storefront.currency', 'ETB'),
+                'context' => ['creator_id' => $payout->creator_id, 'workspace_id' => $payout->workspace_id],
+                'description' => "Withdrawal reservation released for payout request #{$payout->id}",
+            ],
         );
     }
 
@@ -131,18 +135,18 @@ class CreatorLedgerService
      */
     public function disbursePayout(PayoutRequest $payout): StorefrontJournalEntry
     {
-        $currency = $payout->currency ?: config('storefront.currency', 'ETB');
-
         return $this->postTwoLegTransfer(
             'payout',
             $payout->id,
             'withdrawal_disbursed',
-            AccountCodes::CREATOR_RESERVED,
-            AccountCodes::PLATFORM_BANK_DISBURSED,
-            $payout->amount_cents,
-            $currency,
-            ['creator_id' => $payout->creator_id, 'workspace_id' => $payout->workspace_id],
-            "Withdrawal disbursed for payout request #{$payout->id}",
+            [
+                'from' => AccountCodes::CREATOR_RESERVED,
+                'to' => AccountCodes::PLATFORM_BANK_DISBURSED,
+                'amount_cents' => $payout->amount_cents,
+                'currency' => $payout->currency ?: config('storefront.currency', 'ETB'),
+                'context' => ['creator_id' => $payout->creator_id, 'workspace_id' => $payout->workspace_id],
+                'description' => "Withdrawal disbursed for payout request #{$payout->id}",
+            ],
         );
     }
 
@@ -153,13 +157,12 @@ class CreatorLedgerService
         string $sourceType,
         int $sourceId,
         string $eventType,
-        string $fromAccount,
-        string $toAccount,
-        int $amountCents,
-        string $currency,
-        array $context,
-        string $description,
+        array $config,
     ): StorefrontJournalEntry {
+        $currency = $config['currency'];
+        $context = $config['context'] ?? [];
+        $amountCents = $config['amount_cents'];
+
         $entryData = new JournalEntryData(
             sourceType: $sourceType,
             sourceId: $sourceId,
@@ -168,14 +171,14 @@ class CreatorLedgerService
             attributes: [
                 'creator_id' => $context['creator_id'] ?? null,
                 'workspace_id' => $context['workspace_id'] ?? null,
-                'description' => $description,
+                'description' => $config['description'] ?? '',
                 'occurred_at' => now(),
             ],
         );
 
         $lines = [
-            new JournalLineData($fromAccount, $amountCents, 0, $currency, $context),
-            new JournalLineData($toAccount, 0, $amountCents, $currency, $context),
+            new JournalLineData($config['from'], $amountCents, 0, $currency, $context),
+            new JournalLineData($config['to'], 0, $amountCents, $currency, $context),
         ];
 
         return $this->postingService->post($entryData, $lines);
@@ -197,7 +200,6 @@ class CreatorLedgerService
         $refundId = $options['refund_id'] ?? null;
         $creatorId = $order->creator_id;
         $workspaceId = $order->product?->workspace_id;
-        $context = ['creator_id' => $creatorId, 'workspace_id' => $workspaceId];
 
         $entryData = new JournalEntryData(
             sourceType: 'refund',
@@ -218,27 +220,26 @@ class CreatorLedgerService
         );
 
         $lines = $this->buildRefundLines(
-            $creatorId,
-            $workspaceId,
-            $currency,
+            $order,
             $refundAmountCents,
             $creatorReversalCents,
-            $feeReversalCents,
-            $context
+            $feeReversalCents
         );
 
         return $this->postingService->post($entryData, $lines);
     }
 
     private function buildRefundLines(
-        int $creatorId,
-        ?int $workspaceId,
-        string $currency,
+        StorefrontOrder $order,
         int $refundAmountCents,
         int $creatorReversalCents,
         int $feeReversalCents,
-        array $context,
     ): array {
+        $currency = $order->currency ?: config('storefront.currency', 'ETB');
+        $creatorId = $order->creator_id;
+        $workspaceId = $order->product?->workspace_id;
+        $context = ['creator_id' => $creatorId, 'workspace_id' => $workspaceId];
+
         $balances = $this->getBalances($creatorId, $currency, $workspaceId);
         $fromHeld = min($creatorReversalCents, $balances['held']);
         $remaining = $creatorReversalCents - $fromHeld;

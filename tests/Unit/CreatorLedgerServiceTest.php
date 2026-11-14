@@ -103,13 +103,8 @@ class CreatorLedgerServiceTest extends TestCase
     }
 
     #[DataProvider('payoutLifecycleProvider')]
-    public function testPayoutLifecycleTransitions(
-        string $method,
-        string $expectedEventType,
-        string $expectedFromAccount,
-        string $expectedToAccount,
-        array $extraArgs,
-    ): void {
+    public function testPayoutLifecycleTransitions(array $spec): void
+    {
         $postingServiceMock = $this->createMock(JournalPostingService::class);
         $postingServiceMock->expects($this->once())
             ->method('post')
@@ -117,13 +112,13 @@ class CreatorLedgerServiceTest extends TestCase
                 $this->callback(fn (JournalEntryData $entry) =>
                     $entry->sourceType === 'payout'
                     && $entry->sourceId === 5
-                    && $entry->eventType === $expectedEventType
+                    && $entry->eventType === $spec['event']
                 ),
-                $this->callback(function (array $lines) use ($expectedFromAccount, $expectedToAccount) {
-                    $this->assertSame($expectedFromAccount, $lines[0]->accountCode);
+                $this->callback(function (array $lines) use ($spec) {
+                    $this->assertSame($spec['from'], $lines[0]->accountCode);
                     $this->assertSame(50000, $lines[0]->debitCents);
 
-                    $this->assertSame($expectedToAccount, $lines[1]->accountCode);
+                    $this->assertSame($spec['to'], $lines[1]->accountCode);
                     $this->assertSame(50000, $lines[1]->creditCents);
 
                     return true;
@@ -140,6 +135,8 @@ class CreatorLedgerServiceTest extends TestCase
         ]);
         $payout->id = 5;
 
+        $method = $spec['method'];
+        $extraArgs = $spec['args'] ?? [];
         $result = $service->$method($payout, ...$extraArgs);
         $this->assertInstanceOf(StorefrontJournalEntry::class, $result);
     }
@@ -147,9 +144,27 @@ class CreatorLedgerServiceTest extends TestCase
     public static function payoutLifecycleProvider(): array
     {
         return [
-            'reserve' => ['reserveForPayout', 'withdrawal_reserved', AccountCodes::CREATOR_AVAILABLE, AccountCodes::CREATOR_RESERVED, [50000]],
-            'release' => ['releasePayoutReservation', 'withdrawal_released', AccountCodes::CREATOR_RESERVED, AccountCodes::CREATOR_AVAILABLE, []],
-            'disburse' => ['disbursePayout', 'withdrawal_disbursed', AccountCodes::CREATOR_RESERVED, AccountCodes::PLATFORM_BANK_DISBURSED, []],
+            'reserve' => [[
+                'method' => 'reserveForPayout',
+                'event' => 'withdrawal_reserved',
+                'from' => AccountCodes::CREATOR_AVAILABLE,
+                'to' => AccountCodes::CREATOR_RESERVED,
+                'args' => [50000],
+            ]],
+            'release' => [[
+                'method' => 'releasePayoutReservation',
+                'event' => 'withdrawal_released',
+                'from' => AccountCodes::CREATOR_RESERVED,
+                'to' => AccountCodes::CREATOR_AVAILABLE,
+                'args' => [],
+            ]],
+            'disburse' => [[
+                'method' => 'disbursePayout',
+                'event' => 'withdrawal_disbursed',
+                'from' => AccountCodes::CREATOR_RESERVED,
+                'to' => AccountCodes::PLATFORM_BANK_DISBURSED,
+                'args' => [],
+            ]],
         ];
     }
 
