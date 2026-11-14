@@ -7,7 +7,6 @@ use App\Storefront\Models\PayoutRequest;
 use App\Storefront\Models\StorefrontJournalEntry;
 use App\Storefront\Models\StorefrontJournalLine;
 use App\Storefront\Models\StorefrontOrder;
-use Illuminate\Support\Facades\DB;
 
 class CreatorLedgerService
 {
@@ -28,48 +27,30 @@ class CreatorLedgerService
 
         $order->loadMissing('product');
         $currency = $order->currency ?: config('storefront.currency', 'ETB');
+        $context = ['creator_id' => $order->creator_id, 'workspace_id' => $order->product?->workspace_id];
 
         $entryData = new JournalEntryData(
             sourceType: 'order',
             sourceId: $order->id,
             eventType: 'sale_settled',
             currency: $currency,
-            creatorId: $order->creator_id,
-            workspaceId: $order->product?->workspace_id,
-            description: "Platform verified marketplace sale #{$order->id}",
-            occurredAt: $order->paid_at ?? now(),
-            metadata: [
-                'order_id' => $order->id,
-                'uuid' => $order->uuid,
-                'commission_bps' => $order->commission_bps,
+            attributes: [
+                'creator_id' => $order->creator_id,
+                'workspace_id' => $order->product?->workspace_id,
+                'description' => "Platform verified marketplace sale #{$order->id}",
+                'occurred_at' => $order->paid_at ?? now(),
+                'metadata' => [
+                    'order_id' => $order->id,
+                    'uuid' => $order->uuid,
+                    'commission_bps' => $order->commission_bps,
+                ],
             ],
         );
 
         $lines = [
-            new JournalLineData(
-                accountCode: AccountCodes::PLATFORM_CHAPA_CLEARING,
-                debitCents: $order->gross_amount_cents,
-                creditCents: 0,
-                currency: $currency,
-                creatorId: $order->creator_id,
-                workspaceId: $order->product?->workspace_id,
-            ),
-            new JournalLineData(
-                accountCode: AccountCodes::CREATOR_HELD,
-                debitCents: 0,
-                creditCents: $order->creator_earnings_cents,
-                currency: $currency,
-                creatorId: $order->creator_id,
-                workspaceId: $order->product?->workspace_id,
-            ),
-            new JournalLineData(
-                accountCode: AccountCodes::PLATFORM_COMMISSION,
-                debitCents: 0,
-                creditCents: $order->platform_fee_cents,
-                currency: $currency,
-                creatorId: $order->creator_id,
-                workspaceId: $order->product?->workspace_id,
-            ),
+            new JournalLineData(AccountCodes::PLATFORM_CHAPA_CLEARING, $order->gross_amount_cents, 0, $currency, $context),
+            new JournalLineData(AccountCodes::CREATOR_HELD, 0, $order->creator_earnings_cents, $currency, $context),
+            new JournalLineData(AccountCodes::PLATFORM_COMMISSION, 0, $order->platform_fee_cents, $currency, $context),
         ];
 
         return $this->postingService->post($entryData, $lines);
@@ -85,39 +66,17 @@ class CreatorLedgerService
         }
 
         $order->loadMissing('product');
-        $currency = $order->currency ?: config('storefront.currency', 'ETB');
-
-        $entryData = new JournalEntryData(
-            sourceType: 'order',
-            sourceId: $order->id,
-            eventType: 'funds_available',
-            currency: $currency,
-            creatorId: $order->creator_id,
-            workspaceId: $order->product?->workspace_id,
-            description: "Escrow hold released to available balance for order #{$order->id}",
-            occurredAt: now(),
+        return $this->postTwoLegTransfer(
+            'order',
+            $order->id,
+            'funds_available',
+            AccountCodes::CREATOR_HELD,
+            AccountCodes::CREATOR_AVAILABLE,
+            $order->creator_earnings_cents,
+            $order->currency ?: config('storefront.currency', 'ETB'),
+            ['creator_id' => $order->creator_id, 'workspace_id' => $order->product?->workspace_id],
+            "Escrow hold released to available balance for order #{$order->id}",
         );
-
-        $lines = [
-            new JournalLineData(
-                accountCode: AccountCodes::CREATOR_HELD,
-                debitCents: $order->creator_earnings_cents,
-                creditCents: 0,
-                currency: $currency,
-                creatorId: $order->creator_id,
-                workspaceId: $order->product?->workspace_id,
-            ),
-            new JournalLineData(
-                accountCode: AccountCodes::CREATOR_AVAILABLE,
-                debitCents: 0,
-                creditCents: $order->creator_earnings_cents,
-                currency: $currency,
-                creatorId: $order->creator_id,
-                workspaceId: $order->product?->workspace_id,
-            ),
-        ];
-
-        return $this->postingService->post($entryData, $lines);
     }
 
     /**
@@ -134,37 +93,17 @@ class CreatorLedgerService
             );
         }
 
-        $entryData = new JournalEntryData(
-            sourceType: 'payout',
-            sourceId: $payout->id,
-            eventType: 'withdrawal_reserved',
-            currency: $currency,
-            creatorId: $payout->creator_id,
-            workspaceId: $payout->workspace_id,
-            description: "Withdrawal reservation for payout request #{$payout->id}",
-            occurredAt: now(),
+        return $this->postTwoLegTransfer(
+            'payout',
+            $payout->id,
+            'withdrawal_reserved',
+            AccountCodes::CREATOR_AVAILABLE,
+            AccountCodes::CREATOR_RESERVED,
+            $payout->amount_cents,
+            $currency,
+            ['creator_id' => $payout->creator_id, 'workspace_id' => $payout->workspace_id],
+            "Withdrawal reservation for payout request #{$payout->id}",
         );
-
-        $lines = [
-            new JournalLineData(
-                accountCode: AccountCodes::CREATOR_AVAILABLE,
-                debitCents: $payout->amount_cents,
-                creditCents: 0,
-                currency: $currency,
-                creatorId: $payout->creator_id,
-                workspaceId: $payout->workspace_id,
-            ),
-            new JournalLineData(
-                accountCode: AccountCodes::CREATOR_RESERVED,
-                debitCents: 0,
-                creditCents: $payout->amount_cents,
-                currency: $currency,
-                creatorId: $payout->creator_id,
-                workspaceId: $payout->workspace_id,
-            ),
-        ];
-
-        return $this->postingService->post($entryData, $lines);
     }
 
     /**
@@ -174,37 +113,17 @@ class CreatorLedgerService
     {
         $currency = $payout->currency ?: config('storefront.currency', 'ETB');
 
-        $entryData = new JournalEntryData(
-            sourceType: 'payout',
-            sourceId: $payout->id,
-            eventType: 'withdrawal_released',
-            currency: $currency,
-            creatorId: $payout->creator_id,
-            workspaceId: $payout->workspace_id,
-            description: "Withdrawal reservation released for payout request #{$payout->id}",
-            occurredAt: now(),
+        return $this->postTwoLegTransfer(
+            'payout',
+            $payout->id,
+            'withdrawal_released',
+            AccountCodes::CREATOR_RESERVED,
+            AccountCodes::CREATOR_AVAILABLE,
+            $payout->amount_cents,
+            $currency,
+            ['creator_id' => $payout->creator_id, 'workspace_id' => $payout->workspace_id],
+            "Withdrawal reservation released for payout request #{$payout->id}",
         );
-
-        $lines = [
-            new JournalLineData(
-                accountCode: AccountCodes::CREATOR_RESERVED,
-                debitCents: $payout->amount_cents,
-                creditCents: 0,
-                currency: $currency,
-                creatorId: $payout->creator_id,
-                workspaceId: $payout->workspace_id,
-            ),
-            new JournalLineData(
-                accountCode: AccountCodes::CREATOR_AVAILABLE,
-                debitCents: 0,
-                creditCents: $payout->amount_cents,
-                currency: $currency,
-                creatorId: $payout->creator_id,
-                workspaceId: $payout->workspace_id,
-            ),
-        ];
-
-        return $this->postingService->post($entryData, $lines);
     }
 
     /**
@@ -214,34 +133,49 @@ class CreatorLedgerService
     {
         $currency = $payout->currency ?: config('storefront.currency', 'ETB');
 
+        return $this->postTwoLegTransfer(
+            'payout',
+            $payout->id,
+            'withdrawal_disbursed',
+            AccountCodes::CREATOR_RESERVED,
+            AccountCodes::PLATFORM_BANK_DISBURSED,
+            $payout->amount_cents,
+            $currency,
+            ['creator_id' => $payout->creator_id, 'workspace_id' => $payout->workspace_id],
+            "Withdrawal disbursed for payout request #{$payout->id}",
+        );
+    }
+
+    /**
+     * Helper to execute balanced two-leg transfers between liability/asset accounts.
+     */
+    private function postTwoLegTransfer(
+        string $sourceType,
+        int $sourceId,
+        string $eventType,
+        string $fromAccount,
+        string $toAccount,
+        int $amountCents,
+        string $currency,
+        array $context,
+        string $description,
+    ): StorefrontJournalEntry {
         $entryData = new JournalEntryData(
-            sourceType: 'payout',
-            sourceId: $payout->id,
-            eventType: 'withdrawal_disbursed',
+            sourceType: $sourceType,
+            sourceId: $sourceId,
+            eventType: $eventType,
             currency: $currency,
-            creatorId: $payout->creator_id,
-            workspaceId: $payout->workspace_id,
-            description: "Withdrawal disbursed for payout request #{$payout->id}",
-            occurredAt: now(),
+            attributes: [
+                'creator_id' => $context['creator_id'] ?? null,
+                'workspace_id' => $context['workspace_id'] ?? null,
+                'description' => $description,
+                'occurred_at' => now(),
+            ],
         );
 
         $lines = [
-            new JournalLineData(
-                accountCode: AccountCodes::CREATOR_RESERVED,
-                debitCents: $payout->amount_cents,
-                creditCents: 0,
-                currency: $currency,
-                creatorId: $payout->creator_id,
-                workspaceId: $payout->workspace_id,
-            ),
-            new JournalLineData(
-                accountCode: AccountCodes::PLATFORM_BANK_DISBURSED,
-                debitCents: 0,
-                creditCents: $payout->amount_cents,
-                currency: $currency,
-                creatorId: $payout->creator_id,
-                workspaceId: $payout->workspace_id,
-            ),
+            new JournalLineData($fromAccount, $amountCents, 0, $currency, $context),
+            new JournalLineData($toAccount, 0, $amountCents, $currency, $context),
         ];
 
         return $this->postingService->post($entryData, $lines);
@@ -256,101 +190,77 @@ class CreatorLedgerService
         StorefrontOrder $order,
         int $refundAmountCents,
         int $creatorReversalCents,
-        int $feeReversalCents,
-        ?int $refundId = null,
+        array $options = [],
     ): StorefrontJournalEntry {
         $currency = $order->currency ?: config('storefront.currency', 'ETB');
+        $feeReversalCents = (int) ($options['fee_reversal_cents'] ?? 0);
+        $refundId = $options['refund_id'] ?? null;
         $creatorId = $order->creator_id;
         $workspaceId = $order->product?->workspace_id;
-
-        $balances = $this->getBalances($creatorId, $currency, $workspaceId);
-        $held = $balances['held'];
-        $available = $balances['available'];
-
-        // Determine where to deduct creator reversal from
-        $fromHeld = min($creatorReversalCents, $held);
-        $remaining = $creatorReversalCents - $fromHeld;
-
-        $fromAvailable = min($remaining, $available);
-        $deficit = $remaining - $fromAvailable;
+        $context = ['creator_id' => $creatorId, 'workspace_id' => $workspaceId];
 
         $entryData = new JournalEntryData(
             sourceType: 'refund',
             sourceId: $refundId ?? $order->id,
             eventType: 'refund_executed',
             currency: $currency,
-            creatorId: $creatorId,
-            workspaceId: $workspaceId,
-            description: "Refund recorded for order #{$order->id}",
-            occurredAt: now(),
-            metadata: [
-                'order_id' => $order->id,
-                'refund_id' => $refundId,
-                'gross_refund_cents' => $refundAmountCents,
+            attributes: [
+                'creator_id' => $creatorId,
+                'workspace_id' => $workspaceId,
+                'description' => "Refund recorded for order #{$order->id}",
+                'occurred_at' => now(),
+                'metadata' => [
+                    'order_id' => $order->id,
+                    'refund_id' => $refundId,
+                    'gross_refund_cents' => $refundAmountCents,
+                ],
             ],
         );
 
-        $lines = [];
-
-        // Reverse platform commission
-        if ($feeReversalCents > 0) {
-            $lines[] = new JournalLineData(
-                accountCode: AccountCodes::PLATFORM_COMMISSION,
-                debitCents: $feeReversalCents,
-                creditCents: 0,
-                currency: $currency,
-                creatorId: $creatorId,
-                workspaceId: $workspaceId,
-            );
-        }
-
-        // Reverse creator share from held
-        if ($fromHeld > 0) {
-            $lines[] = new JournalLineData(
-                accountCode: AccountCodes::CREATOR_HELD,
-                debitCents: $fromHeld,
-                creditCents: 0,
-                currency: $currency,
-                creatorId: $creatorId,
-                workspaceId: $workspaceId,
-            );
-        }
-
-        // Reverse creator share from available
-        if ($fromAvailable > 0) {
-            $lines[] = new JournalLineData(
-                accountCode: AccountCodes::CREATOR_AVAILABLE,
-                debitCents: $fromAvailable,
-                creditCents: 0,
-                currency: $currency,
-                creatorId: $creatorId,
-                workspaceId: $workspaceId,
-            );
-        }
-
-        // If creator balance cannot cover reversal, record deficit receivable
-        if ($deficit > 0) {
-            $lines[] = new JournalLineData(
-                accountCode: AccountCodes::CREATOR_DEFICIT_RECEIVABLE,
-                debitCents: $deficit,
-                creditCents: 0,
-                currency: $currency,
-                creatorId: $creatorId,
-                workspaceId: $workspaceId,
-            );
-        }
-
-        // Credit clearing account for gross refund
-        $lines[] = new JournalLineData(
-            accountCode: AccountCodes::PLATFORM_CHAPA_CLEARING,
-            debitCents: 0,
-            creditCents: $refundAmountCents,
-            currency: $currency,
-            creatorId: $creatorId,
-            workspaceId: $workspaceId,
+        $lines = $this->buildRefundLines(
+            $creatorId,
+            $workspaceId,
+            $currency,
+            $refundAmountCents,
+            $creatorReversalCents,
+            $feeReversalCents,
+            $context
         );
 
         return $this->postingService->post($entryData, $lines);
+    }
+
+    private function buildRefundLines(
+        int $creatorId,
+        ?int $workspaceId,
+        string $currency,
+        int $refundAmountCents,
+        int $creatorReversalCents,
+        int $feeReversalCents,
+        array $context,
+    ): array {
+        $balances = $this->getBalances($creatorId, $currency, $workspaceId);
+        $fromHeld = min($creatorReversalCents, $balances['held']);
+        $remaining = $creatorReversalCents - $fromHeld;
+        $fromAvailable = min($remaining, $balances['available']);
+        $deficit = $remaining - $fromAvailable;
+
+        $lines = [];
+        if ($feeReversalCents > 0) {
+            $lines[] = new JournalLineData(AccountCodes::PLATFORM_COMMISSION, $feeReversalCents, 0, $currency, $context);
+        }
+        if ($fromHeld > 0) {
+            $lines[] = new JournalLineData(AccountCodes::CREATOR_HELD, $fromHeld, 0, $currency, $context);
+        }
+        if ($fromAvailable > 0) {
+            $lines[] = new JournalLineData(AccountCodes::CREATOR_AVAILABLE, $fromAvailable, 0, $currency, $context);
+        }
+        if ($deficit > 0) {
+            $lines[] = new JournalLineData(AccountCodes::CREATOR_DEFICIT_RECEIVABLE, $deficit, 0, $currency, $context);
+        }
+        $lines[] = new JournalLineData(AccountCodes::PLATFORM_CHAPA_CLEARING, 0, $refundAmountCents, $currency, $context);
+
+        return $lines;
     }
 
     /**
@@ -372,29 +282,27 @@ class CreatorLedgerService
 
         $lines = $query->get(['account_code', 'debit_cents', 'credit_cents']);
 
-        $heldCredits = (int) $lines->where('account_code', AccountCodes::CREATOR_HELD)->sum('credit_cents');
-        $heldDebits = (int) $lines->where('account_code', AccountCodes::CREATOR_HELD)->sum('debit_cents');
-        $held = max(0, $heldCredits - $heldDebits);
-
-        $availableCredits = (int) $lines->where('account_code', AccountCodes::CREATOR_AVAILABLE)->sum('credit_cents');
-        $availableDebits = (int) $lines->where('account_code', AccountCodes::CREATOR_AVAILABLE)->sum('debit_cents');
-        $available = max(0, $availableCredits - $availableDebits);
-
-        $reservedCredits = (int) $lines->where('account_code', AccountCodes::CREATOR_RESERVED)->sum('credit_cents');
-        $reservedDebits = (int) $lines->where('account_code', AccountCodes::CREATOR_RESERVED)->sum('debit_cents');
-        $reserved = max(0, $reservedCredits - $reservedDebits);
-
-        $deficitDebits = (int) $lines->where('account_code', AccountCodes::CREATOR_DEFICIT_RECEIVABLE)->sum('debit_cents');
-        $deficitCredits = (int) $lines->where('account_code', AccountCodes::CREATOR_DEFICIT_RECEIVABLE)->sum('credit_cents');
-        $deficit = max(0, $deficitDebits - $deficitCredits);
-
         return [
-            'held' => $held,
-            'available' => $available,
-            'reserved' => $reserved,
-            'deficit' => $deficit,
+            'held' => $this->calculateBalance($lines, AccountCodes::CREATOR_HELD),
+            'available' => $this->calculateBalance($lines, AccountCodes::CREATOR_AVAILABLE),
+            'reserved' => $this->calculateBalance($lines, AccountCodes::CREATOR_RESERVED),
+            'deficit' => $this->calculateAssetBalance($lines, AccountCodes::CREATOR_DEFICIT_RECEIVABLE),
             'currency' => $currency,
         ];
+    }
+
+    private function calculateBalance($lines, string $accountCode): int
+    {
+        $credits = (int) $lines->where('account_code', $accountCode)->sum('credit_cents');
+        $debits = (int) $lines->where('account_code', $accountCode)->sum('debit_cents');
+        return max(0, $credits - $debits);
+    }
+
+    private function calculateAssetBalance($lines, string $accountCode): int
+    {
+        $debits = (int) $lines->where('account_code', $accountCode)->sum('debit_cents');
+        $credits = (int) $lines->where('account_code', $accountCode)->sum('credit_cents');
+        return max(0, $debits - $credits);
     }
 
     public function getAvailableBalance(int $creatorId, string $currency, ?int $workspaceId = null, bool $lock = false): int

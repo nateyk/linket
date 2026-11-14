@@ -67,8 +67,10 @@ class DigitalProductRefundService
                         $order,
                         $amount,
                         $creatorReversal,
-                        $feeReversal,
-                        $refund->id,
+                        [
+                            'fee_reversal_cents' => $feeReversal,
+                            'refund_id' => $refund->id,
+                        ],
                     );
                 } catch (\Throwable $e) {
                     \Illuminate\Support\Facades\Log::warning('store.refund.ledger_failed', ['refund_id' => $refund->id, 'error' => $e->getMessage()]);

@@ -33,9 +33,11 @@ class JournalPostingServiceTest extends TestCase
             sourceId: 1,
             eventType: 'sale_settled',
             currency: 'ETB',
-            creatorId: 10,
-            workspaceId: 2,
-            description: 'Test sale',
+            attributes: [
+                'creator_id' => 10,
+                'workspace_id' => 2,
+                'description' => 'Test sale',
+            ],
         );
 
         $lines = [

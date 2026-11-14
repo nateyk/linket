@@ -10,6 +10,7 @@ use App\Storefront\Ledger\JournalPostingService;
 use App\Storefront\Models\PayoutRequest;
 use App\Storefront\Models\StorefrontJournalEntry;
 use App\Storefront\Models\StorefrontOrder;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class CreatorLedgerServiceTest extends TestCase
@@ -26,16 +27,14 @@ class CreatorLedgerServiceTest extends TestCase
             'status' => 'paid',
         ]);
 
-        $result = $service->recordPlatformSale($creatorChapaOrder);
-        $this->assertNull($result);
+        $this->assertNull($service->recordPlatformSale($creatorChapaOrder));
 
         $verifyEtOrder = new StorefrontOrder([
             'collection_owner' => StorefrontOrder::COLLECTION_OWNER_VERIFY_ET_CREATOR,
             'status' => 'paid',
         ]);
 
-        $result = $service->recordPlatformSale($verifyEtOrder);
-        $this->assertNull($result);
+        $this->assertNull($service->recordPlatformSale($verifyEtOrder));
     }
 
     public function testRecordsPlatformSaleWithBalancedLines(): void
@@ -103,23 +102,28 @@ class CreatorLedgerServiceTest extends TestCase
         $service->reserveForPayout($payout, availableBalance: 50000);
     }
 
-    public function testReserveForPayoutPostsWhenBalanceSufficient(): void
-    {
+    #[DataProvider('payoutLifecycleProvider')]
+    public function testPayoutLifecycleTransitions(
+        string $method,
+        string $expectedEventType,
+        string $expectedFromAccount,
+        string $expectedToAccount,
+        array $extraArgs,
+    ): void {
         $postingServiceMock = $this->createMock(JournalPostingService::class);
         $postingServiceMock->expects($this->once())
             ->method('post')
             ->with(
-                $this->callback(function (JournalEntryData $entry) {
-                    return $entry->sourceType === 'payout'
-                        && $entry->sourceId === 5
-                        && $entry->eventType === 'withdrawal_reserved';
-                }),
-                $this->callback(function (array $lines) {
-                    $this->assertCount(2, $lines);
-                    $this->assertSame(AccountCodes::CREATOR_AVAILABLE, $lines[0]->accountCode);
+                $this->callback(fn (JournalEntryData $entry) =>
+                    $entry->sourceType === 'payout'
+                    && $entry->sourceId === 5
+                    && $entry->eventType === $expectedEventType
+                ),
+                $this->callback(function (array $lines) use ($expectedFromAccount, $expectedToAccount) {
+                    $this->assertSame($expectedFromAccount, $lines[0]->accountCode);
                     $this->assertSame(50000, $lines[0]->debitCents);
 
-                    $this->assertSame(AccountCodes::CREATOR_RESERVED, $lines[1]->accountCode);
+                    $this->assertSame($expectedToAccount, $lines[1]->accountCode);
                     $this->assertSame(50000, $lines[1]->creditCents);
 
                     return true;
@@ -136,80 +140,17 @@ class CreatorLedgerServiceTest extends TestCase
         ]);
         $payout->id = 5;
 
-        $result = $service->reserveForPayout($payout, availableBalance: 50000);
+        $result = $service->$method($payout, ...$extraArgs);
         $this->assertInstanceOf(StorefrontJournalEntry::class, $result);
     }
 
-    public function testReleasePayoutReservationPostsCompensatingEntry(): void
+    public static function payoutLifecycleProvider(): array
     {
-        $postingServiceMock = $this->createMock(JournalPostingService::class);
-        $postingServiceMock->expects($this->once())
-            ->method('post')
-            ->with(
-                $this->callback(function (JournalEntryData $entry) {
-                    return $entry->sourceType === 'payout'
-                        && $entry->sourceId === 5
-                        && $entry->eventType === 'withdrawal_released';
-                }),
-                $this->callback(function (array $lines) {
-                    $this->assertSame(AccountCodes::CREATOR_RESERVED, $lines[0]->accountCode);
-                    $this->assertSame(50000, $lines[0]->debitCents);
-
-                    $this->assertSame(AccountCodes::CREATOR_AVAILABLE, $lines[1]->accountCode);
-                    $this->assertSame(50000, $lines[1]->creditCents);
-
-                    return true;
-                })
-            )
-            ->willReturn(new StorefrontJournalEntry());
-
-        $service = new CreatorLedgerService($postingServiceMock);
-
-        $payout = new PayoutRequest([
-            'creator_id' => 42,
-            'amount_cents' => 50000,
-            'currency' => 'ETB',
-        ]);
-        $payout->id = 5;
-
-        $result = $service->releasePayoutReservation($payout);
-        $this->assertInstanceOf(StorefrontJournalEntry::class, $result);
-    }
-
-    public function testDisbursePayoutPostsDisbursement(): void
-    {
-        $postingServiceMock = $this->createMock(JournalPostingService::class);
-        $postingServiceMock->expects($this->once())
-            ->method('post')
-            ->with(
-                $this->callback(function (JournalEntryData $entry) {
-                    return $entry->sourceType === 'payout'
-                        && $entry->sourceId === 5
-                        && $entry->eventType === 'withdrawal_disbursed';
-                }),
-                $this->callback(function (array $lines) {
-                    $this->assertSame(AccountCodes::CREATOR_RESERVED, $lines[0]->accountCode);
-                    $this->assertSame(50000, $lines[0]->debitCents);
-
-                    $this->assertSame(AccountCodes::PLATFORM_BANK_DISBURSED, $lines[1]->accountCode);
-                    $this->assertSame(50000, $lines[1]->creditCents);
-
-                    return true;
-                })
-            )
-            ->willReturn(new StorefrontJournalEntry());
-
-        $service = new CreatorLedgerService($postingServiceMock);
-
-        $payout = new PayoutRequest([
-            'creator_id' => 42,
-            'amount_cents' => 50000,
-            'currency' => 'ETB',
-        ]);
-        $payout->id = 5;
-
-        $result = $service->disbursePayout($payout);
-        $this->assertInstanceOf(StorefrontJournalEntry::class, $result);
+        return [
+            'reserve' => ['reserveForPayout', 'withdrawal_reserved', AccountCodes::CREATOR_AVAILABLE, AccountCodes::CREATOR_RESERVED, [50000]],
+            'release' => ['releasePayoutReservation', 'withdrawal_released', AccountCodes::CREATOR_RESERVED, AccountCodes::CREATOR_AVAILABLE, []],
+            'disburse' => ['disbursePayout', 'withdrawal_disbursed', AccountCodes::CREATOR_RESERVED, AccountCodes::PLATFORM_BANK_DISBURSED, []],
+        ];
     }
 
     public function testRecordRefundRoutesShortageToDeficitReceivableWhenBalanceZero(): void
@@ -225,15 +166,12 @@ class CreatorLedgerServiceTest extends TestCase
                 }),
                 $this->callback(function (array $lines) {
                     $this->assertCount(3, $lines);
-                    // 1. Platform fee reversal: Dr 4010
                     $this->assertSame(AccountCodes::PLATFORM_COMMISSION, $lines[0]->accountCode);
                     $this->assertSame(1000, $lines[0]->debitCents);
 
-                    // 2. Creator reversal with 0 balance: Dr 1030 (Deficit Receivable)
                     $this->assertSame(AccountCodes::CREATOR_DEFICIT_RECEIVABLE, $lines[1]->accountCode);
                     $this->assertSame(9000, $lines[1]->debitCents);
 
-                    // 3. Platform clearing: Cr 1010
                     $this->assertSame(AccountCodes::PLATFORM_CHAPA_CLEARING, $lines[2]->accountCode);
                     $this->assertSame(10000, $lines[2]->creditCents);
 
@@ -242,7 +180,6 @@ class CreatorLedgerServiceTest extends TestCase
             )
             ->willReturn(new StorefrontJournalEntry());
 
-        // Subclass to return 0 held and 0 available balances
         $service = new class($postingServiceMock) extends CreatorLedgerService {
             public function getBalances(int $creatorId, string $currency, ?int $workspaceId = null, bool $lock = false): array
             {
@@ -259,7 +196,7 @@ class CreatorLedgerServiceTest extends TestCase
             'platform_fee_cents' => 1000,
         ]);
 
-        $result = $service->recordRefund($order, 10000, 9000, 1000, 99);
+        $result = $service->recordRefund($order, 10000, 9000, ['fee_reversal_cents' => 1000, 'refund_id' => 99]);
         $this->assertInstanceOf(StorefrontJournalEntry::class, $result);
     }
 }
