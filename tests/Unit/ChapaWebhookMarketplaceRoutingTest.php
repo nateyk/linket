@@ -110,19 +110,22 @@ class ChapaWebhookMarketplaceRoutingTest extends TestCase
         ];
     }
 
-    public function testMarketplacePaymentWebhookProcessesSuccessfully(): void
-    {
+    #[DataProvider('webhookFulfillmentCases')]
+    public function testMarketplaceWebhookFulfillment(
+        string $orderStatus,
+        string $attemptStatus,
+        bool $shouldVerify,
+        string $expectedMessage,
+    ): void {
         $this->mockChapaGateway(true);
         $this->mockDeliveryLogger();
 
-        $ref = 'lk-marketplace123';
-        $order = $this->createOrderAndAttempt($ref, 'pending_payment', StorefrontPaymentAttempt::STATUS_PENDING);
+        $ref = 'lk-webhook-test';
+        $order = $this->createOrderAndAttempt($ref, $orderStatus, $attemptStatus);
 
         $verifier = $this->createMock(StorefrontPaymentVerificationService::class);
-        $verifier->expects($this->once())
-            ->method('verifyAndFulfill')
-            ->with($ref)
-            ->willReturn($order);
+        $expectation = $shouldVerify ? $verifier->expects($this->once()) : $verifier->expects($this->never());
+        $expectation->method('verifyAndFulfill')->with($ref)->willReturn($order);
         $this->app->instance(StorefrontPaymentVerificationService::class, $verifier);
 
         $controller = new ChapaWebhookController();
@@ -130,27 +133,25 @@ class ChapaWebhookMarketplaceRoutingTest extends TestCase
 
         $response = $controller->handle($request);
         $this->assertSame(200, $response->getStatusCode());
-        $this->assertSame('Payment processed.', $response->getData()->message);
+        $this->assertSame($expectedMessage, $response->getData()->message);
     }
 
-    public function testMarketplacePaymentWebhookDuplicateReturnsAlreadyProcessed(): void
+    public static function webhookFulfillmentCases(): array
     {
-        $this->mockChapaGateway(true);
-        $this->mockDeliveryLogger();
-
-        $ref = 'lk-duplicate123';
-        $this->createOrderAndAttempt($ref, 'paid', StorefrontPaymentAttempt::STATUS_SUCCESSFUL);
-
-        $verifier = $this->createMock(StorefrontPaymentVerificationService::class);
-        $verifier->expects($this->never())->method('verifyAndFulfill');
-        $this->app->instance(StorefrontPaymentVerificationService::class, $verifier);
-
-        $controller = new ChapaWebhookController();
-        $request = Request::create('/billing/chapa/webhook', 'POST', ['tx_ref' => $ref]);
-
-        $response = $controller->handle($request);
-        $this->assertSame(200, $response->getStatusCode());
-        $this->assertSame('Already processed.', $response->getData()->message);
+        return [
+            'initial pending attempt fulfills' => [
+                'pending_payment',
+                StorefrontPaymentAttempt::STATUS_PENDING,
+                true,
+                'Payment processed.',
+            ],
+            'duplicate attempt already processed' => [
+                'paid',
+                StorefrontPaymentAttempt::STATUS_SUCCESSFUL,
+                false,
+                'Already processed.',
+            ],
+        ];
     }
 
     #[DataProvider('returnOutcomeCases')]
