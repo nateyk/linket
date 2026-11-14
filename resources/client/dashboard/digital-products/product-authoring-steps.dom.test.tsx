@@ -50,7 +50,7 @@ test('four steps group optional samples with buyer files in one row and a vertic
   expect(previous.getAttribute('data-step-state')).toBe('previous');
   expect(within(nav).getAllByText('Upload buyer files and an optional public sample.')).toHaveLength(1);
   expect(nav.querySelector('[data-slot="creator-step-description"]')?.className).toContain('xl:block');
-  expect(within(nav).getByRole('button', {name: 'Price, step 3 of 4'}).getAttribute('data-step-complete')).toBe('false');
+  expect(within(nav).getByRole('button', {name: 'Storefront, step 4 of 4'}).getAttribute('data-step-complete')).toBe('false');
 });
 
 test('keyboard activation chooses a destination without removing another section', async () => {
