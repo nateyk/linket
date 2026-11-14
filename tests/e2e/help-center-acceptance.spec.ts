@@ -122,7 +122,13 @@ async function verifyGuestPublishingAndRemoval(
     // Check the API separately so a search-index failure cannot be hidden by
     // a browser query/router issue. Keep the actual UI assertion afterwards.
     const searchResponse = await guest.request.get('/api/v1/search/articles', {
-      headers: {Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest'},
+      headers: {
+        Accept: 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        // Direct Playwright APIRequestContext calls do not add the browser's
+        // Referer; Linket correctly rejects non-frontend API access with 401.
+        Referer: guest.url(),
+      },
       params: {query: title, perPage: '30'},
     });
     const searchBody = await searchResponse.text();
