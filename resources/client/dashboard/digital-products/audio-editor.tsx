@@ -17,35 +17,35 @@ export function AudioEditor({details, files, sample, pricing, storefront, active
   return (
     <div className="flex min-w-0 flex-col gap-3 sm:gap-4" data-testid="audio-editor">
       <ProductEditorSection
-        active={activeStep === undefined || activeStep === 'details,details'}
+        active={activeStep === undefined || activeStep === 'details'}
         id="audio-information"
         title={<Trans message="Audio information" />}
       >
         {details}
       </ProductEditorSection>
       <ProductEditorSection
-        active={activeStep === undefined || activeStep === 'files,files'}
+        active={activeStep === undefined || activeStep === 'files'}
         id="audio-private-files"
         title={<Trans message="Full audio files" />}
       >
         {files}
       </ProductEditorSection>
       <ProductEditorSection
-        active={activeStep === undefined || activeStep === 'sample,files'}
+        active={activeStep === undefined || activeStep === 'files'}
         id="audio-public-clips"
         title={<Trans message="Preview clips (optional)" />}
       >
         {sample}
       </ProductEditorSection>
       <ProductEditorSection
-        active={activeStep === undefined || activeStep === 'pricing,pricing'}
+        active={activeStep === undefined || activeStep === 'pricing'}
         id="audio-pricing"
         title={<Trans message="Price" />}
       >
         {pricing}
       </ProductEditorSection>
       <ProductEditorSection
-        active={activeStep === undefined || activeStep === 'storefront,storefront'}
+        active={activeStep === undefined || activeStep === 'storefront'}
         id="audio-storefront"
         title={<Trans message="Storefront placement (optional)" />}
       >
