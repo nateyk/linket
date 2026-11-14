@@ -19,8 +19,11 @@ test('a failed upload-backend seeder stops deployment before creator seed, cache
     expect($result->isSuccessful())->toBeFalse()
         ->and($result->getOutput())->toContain('MIGRATE FAILED')
         ->and(readlink($fixture->root.'/current'))->toBe($fixture->root.'/releases/previous')
-        ->and($commands)->toContain('migrate', 'db:seed')
-        ->not->toContain('creator-ai:seed-test-pro', 'optimize', 'route:list');
+        ->and($commands)->toContain('migrate')
+        ->and($commands)->toContain('db:seed')
+        ->and($commands)->not->toContain('creator-ai:seed-test-pro')
+        ->and($commands)->not->toContain('optimize')
+        ->and($commands)->not->toContain('route:list');
 });
 
 test('a long route list is consumed before shortening its displayed output', function () {
