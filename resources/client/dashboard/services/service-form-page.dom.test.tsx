@@ -226,7 +226,11 @@ describe('the service form shell', () => {
     expect(selected.getAttribute('data-slot')).toBe('button');
     expect(selected.className).toContain('rounded-card-xs');
     expect(selected.className).not.toContain('border-primary/40');
-    expect(selected.className).not.toContain('bg-primary/5');
+    expect(selected.className).toContain('bg-primary/5');
+    expect(steps.querySelector('[data-slot="creator-step-title"]')).not.toBeNull();
+    expect(steps.querySelector('[data-slot="creator-step-description"]')?.className)
+      .toContain('xl:block');
+    expect(steps.querySelectorAll('[data-slot="creator-step-connector"]')).toHaveLength(3);
     const basicsHeader = screen.getByRole('heading', {name: 'Basics'}).closest('header');
     expect(basicsHeader?.className).toContain('border-b');
     expect(basicsHeader?.className).toContain('border-border');
