@@ -5,6 +5,8 @@ namespace App\Storefront\Controllers;
 use App\Payments\Chapa\ChapaV2Client;
 use App\Storefront\Models\CreatorChapaGateway;
 use App\Storefront\Models\StorefrontOrder;
+use App\Storefront\Models\StorefrontPaymentAttempt;
+use App\Storefront\Services\StorefrontPaymentVerificationService;
 use App\Storefront\StorefrontWebhookHandler;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
@@ -14,6 +16,15 @@ class ChapaStorefrontReturnController extends Controller
 {
     public function handle(string $txRef): Response
     {
+        $attempt = StorefrontPaymentAttempt::query()
+            ->where('merchant_reference', $txRef)
+            ->first();
+
+        if ($attempt) {
+            $this->fulfillPlatformAttempt($attempt, $txRef);
+            return response()->noContent();
+        }
+
         $order = StorefrontOrder::query()
             ->where('chapa_tx_ref', $txRef)
             ->where('payment_gateway', 'chapa')
@@ -24,6 +35,22 @@ class ChapaStorefrontReturnController extends Controller
         }
 
         return response()->noContent();
+    }
+
+    private function fulfillPlatformAttempt(StorefrontPaymentAttempt $attempt, string $txRef): void
+    {
+        if ($attempt->isSuccessful() && $attempt->order?->status === 'paid') {
+            return;
+        }
+
+        try {
+            app(StorefrontPaymentVerificationService::class)->verifyAndFulfill($txRef);
+        } catch (\Throwable $exception) {
+            Log::info('Platform Chapa return is awaiting payment confirmation.', [
+                'tx_ref' => $txRef,
+                'error' => $exception->getMessage(),
+            ]);
+        }
     }
 
     private function fulfillIfVerified(StorefrontOrder $order): void
