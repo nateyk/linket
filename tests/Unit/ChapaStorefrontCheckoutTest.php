@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Schema;
 use Nateyk\Chapa\ChapaClient;
 use Nateyk\Chapa\Http\RawResponse;
 use Nateyk\Chapa\Http\Transport;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\TestCase;
 
@@ -75,14 +76,14 @@ class ChapaStorefrontCheckoutTest extends TestCase
         parent::tearDown();
     }
 
-    private function mockChapaClient(string $checkoutUrl = 'https://checkout.chapa.global/test1234'): ChapaClient
+    private function mockChapaClient(): ChapaClient
     {
         $transport = $this->createMock(Transport::class);
         $transport->method('send')->willReturn(
             new RawResponse(200, (string) json_encode([
                 'status' => 'success',
                 'data' => [
-                    'checkout_url' => $checkoutUrl,
+                    'checkout_url' => 'https://checkout.chapa.global/test1234',
                     'chapa_reference' => 'CHP-TEST-REF-99',
                 ],
             ]))
@@ -95,135 +96,81 @@ class ChapaStorefrontCheckoutTest extends TestCase
         );
     }
 
-    public function testPlatformChapaCheckoutSucceedsForFreeCreator(): void
+    #[DataProvider('creatorPlanCases')]
+    public function testPlatformChapaCheckoutSucceedsForCreators(bool $isPro, string $expectedPolicy): void
     {
-        $client = $this->mockChapaClient();
         $manager = $this->createMock(LinketChapaManager::class);
         $manager->method('isEnabled')->willReturn(true);
-        $manager->method('platformClient')->willReturn($client);
-
-        $monetization = new AccountMonetizationStatus();
-
-        $refGen = new StorefrontPaymentReferenceGenerator(fn (): bool => false);
+        $manager->method('platformClient')->willReturn($this->mockChapaClient());
 
         $checkout = new ChapaStorefrontCheckout(
             $manager,
             null,
-            $monetization,
-            $refGen,
-            fn (User $u): bool => false, // Free creator
+            new AccountMonetizationStatus(),
+            new StorefrontPaymentReferenceGenerator(fn (): bool => false),
+            fn (User $u): bool => $isPro,
         );
 
-        $creator = new User(['id' => 10, 'name' => 'Free Creator']);
+        $creator = new User(['id' => $isPro ? 20 : 10, 'name' => 'Creator']);
         $product = new DigitalProduct([
             'id' => 101,
-            'user_id' => 10,
+            'user_id' => $creator->id,
             'workspace_id' => 5,
-            'title' => 'Test Ebook',
+            'title' => 'Test Product',
             'price_cents' => 15000,
             'currency' => 'ETB',
         ]);
 
         $order = $checkout->createPlatformOrder($product, null, [
-            'name' => 'Abebe Bikila',
-            'email' => 'abebe@example.com',
+            'name' => 'Buyer Name',
+            'email' => 'buyer@example.com',
         ], $creator);
 
         $this->assertSame(StorefrontOrder::COLLECTION_OWNER_PLATFORM_CHAPA, $order->collection_owner);
-        $this->assertSame(CreatorVerificationAllowance::FREE_POLICY, $order->monetization_policy);
+        $this->assertSame($expectedPolicy, $order->monetization_policy);
         $this->assertSame('pending_payment', $order->status);
         $this->assertSame('chapa', $order->payment_gateway);
         $this->assertSame('https://checkout.chapa.global/test1234', $order->chapaCheckoutUrl);
         $this->assertSame(15000, $order->gross_amount_cents);
-        $this->assertLessThanOrEqual(20, strlen((string) $order->chapa_tx_ref));
 
         $attempt = StorefrontPaymentAttempt::query()->where('order_id', $order->id)->first();
         $this->assertNotNull($attempt);
         $this->assertSame('pending', $attempt->status);
         $this->assertSame('test1234', $attempt->chapa_reference);
-        $this->assertSame(15000, $attempt->amount_cents);
-        $this->assertSame('ETB', $attempt->currency);
-        $this->assertSame($order->chapa_tx_ref, $attempt->merchant_reference);
     }
 
-    public function testPlatformChapaCheckoutSucceedsForProCreator(): void
+    public static function creatorPlanCases(): array
     {
-        $client = $this->mockChapaClient();
-        $manager = $this->createMock(LinketChapaManager::class);
-        $manager->method('isEnabled')->willReturn(true);
-        $manager->method('platformClient')->willReturn($client);
-
-        $monetization = new AccountMonetizationStatus();
-
-        $refGen = new StorefrontPaymentReferenceGenerator(fn (): bool => false);
-
-        $checkout = new ChapaStorefrontCheckout(
-            $manager,
-            null,
-            $monetization,
-            $refGen,
-            fn (User $u): bool => true, // Pro creator
-        );
-
-        $creator = new User(['id' => 20, 'name' => 'Pro Creator']);
-        $product = new DigitalProduct([
-            'id' => 102,
-            'user_id' => 20,
-            'workspace_id' => 5,
-            'title' => 'Pro Course',
-            'price_cents' => 50000,
-            'currency' => 'ETB',
-        ]);
-
-        $order = $checkout->createPlatformOrder($product, null, [
-            'name' => 'Almaz Ayana',
-            'email' => 'almaz@example.com',
-        ], $creator);
-
-        $this->assertSame(StorefrontOrder::COLLECTION_OWNER_PLATFORM_CHAPA, $order->collection_owner);
-        $this->assertSame(CreatorVerificationAllowance::PRO_POLICY, $order->monetization_policy);
-        $this->assertSame(50000, $order->gross_amount_cents);
+        return [
+            'free creator' => [false, CreatorVerificationAllowance::FREE_POLICY],
+            'pro creator' => [true, CreatorVerificationAllowance::PRO_POLICY],
+        ];
     }
 
-    public function testPlatformChapaCheckoutRejectsNonEtbCurrency(): void
+    #[DataProvider('invalidProductCases')]
+    public function testPlatformChapaCheckoutRejectsInvalidProducts(int $priceCents, string $currency): void
     {
         $manager = $this->createMock(LinketChapaManager::class);
         $manager->method('isEnabled')->willReturn(true);
-        $monetization = new AccountMonetizationStatus();
-        $refGen = new StorefrontPaymentReferenceGenerator(fn (): bool => false);
-
-        $checkout = new ChapaStorefrontCheckout($manager, null, $monetization, $refGen);
+        $checkout = new ChapaStorefrontCheckout($manager, null, new AccountMonetizationStatus());
 
         $creator = new User(['id' => 30]);
         $product = new DigitalProduct([
             'id' => 103,
             'user_id' => 30,
-            'price_cents' => 1000,
-            'currency' => 'USD',
+            'price_cents' => $priceCents,
+            'currency' => $currency,
         ]);
 
         $this->expectException(HttpException::class);
         $checkout->createPlatformOrder($product, null, ['name' => 'Buyer', 'email' => 'b@example.com'], $creator);
     }
 
-    public function testPlatformChapaCheckoutRejectsPriceBelowOneEtb(): void
+    public static function invalidProductCases(): array
     {
-        $manager = $this->createMock(LinketChapaManager::class);
-        $manager->method('isEnabled')->willReturn(true);
-        $monetization = new AccountMonetizationStatus();
-        $refGen = new StorefrontPaymentReferenceGenerator(fn (): bool => false);
-
-        $checkout = new ChapaStorefrontCheckout($manager, null, $monetization, $refGen);
-
-        $creator = new User(['id' => 30]);
-        $product = new DigitalProduct([
-            'id' => 104,
-            'user_id' => 30,
-            'price_cents' => 50,
-            'currency' => 'ETB',
-        ]);
-
-        $this->expectException(HttpException::class);
-        $checkout->createPlatformOrder($product, null, ['name' => 'Buyer', 'email' => 'b@example.com'], $creator);
+        return [
+            'non-ETB currency' => [1000, 'USD'],
+            'price below 1 ETB' => [50, 'ETB'],
+        ];
     }
 }

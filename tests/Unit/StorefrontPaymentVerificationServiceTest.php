@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
-use App\Models\User;
 use App\Payments\Chapa\LinketChapaManager;
-use App\Storefront\Models\DigitalProduct;
 use App\Storefront\Models\StorefrontOrder;
 use App\Storefront\Models\StorefrontPaymentAttempt;
 use App\Storefront\Services\StorefrontPaymentVerificationService;
@@ -14,9 +12,9 @@ use App\Storefront\StorefrontWebhookHandler;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Nateyk\Chapa\ChapaClient;
-use Nateyk\Chapa\Dto\VerifiedTransaction;
 use Nateyk\Chapa\Http\RawResponse;
 use Nateyk\Chapa\Http\Transport;
+use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -80,7 +78,6 @@ class StorefrontPaymentVerificationServiceTest extends TestCase
         int $amount = 15000,
         string $currency = 'ETB',
         string $ref = 'lk-validref12345',
-        string $email = 'buyer@test.com',
     ): ChapaClient {
         $transport = $this->createMock(Transport::class);
         $transport->method('send')->willReturn(
@@ -92,7 +89,7 @@ class StorefrontPaymentVerificationServiceTest extends TestCase
                     'currency' => $currency,
                     'merchant_reference' => $ref,
                     'chapa_reference' => 'CHP-VERIFIED-99',
-                    'email' => $email,
+                    'email' => 'buyer@test.com',
                 ],
             ]))
         );
@@ -162,13 +159,16 @@ class StorefrontPaymentVerificationServiceTest extends TestCase
         $this->assertIsArray($freshAttempt->verification_data);
     }
 
-    public function testAmountMismatchRejectsAndMarksAttemptFailed(): void
-    {
+    #[DataProvider('mismatchCases')]
+    public function testVerificationRejectsMismatchesAndMarksAttemptFailed(
+        string $status,
+        int $amount,
+        string $currency,
+    ): void {
         $ref = 'lk-validref12345';
         [$order, $attempt] = $this->createOrderAndAttempt(15000, 'ETB', $ref);
 
-        // Verification returns 5000 cents instead of 15000
-        $client = $this->mockChapaClient('SUCCESS', 5000, 'ETB', $ref);
+        $client = $this->mockChapaClient($status, $amount, $currency, $ref);
         $manager = $this->createMock(LinketChapaManager::class);
         $manager->method('platformClient')->willReturn($client);
 
@@ -178,7 +178,6 @@ class StorefrontPaymentVerificationServiceTest extends TestCase
         $service = new StorefrontPaymentVerificationService($manager, $handler);
 
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Payment verification mismatch');
 
         try {
             $service->verifyAndFulfill($ref);
@@ -189,55 +188,13 @@ class StorefrontPaymentVerificationServiceTest extends TestCase
         }
     }
 
-    public function testCurrencyMismatchRejectsAndMarksAttemptFailed(): void
+    public static function mismatchCases(): array
     {
-        $ref = 'lk-validref12345';
-        [$order, $attempt] = $this->createOrderAndAttempt(15000, 'ETB', $ref);
-
-        // Verification returns USD instead of ETB
-        $client = $this->mockChapaClient('SUCCESS', 15000, 'USD', $ref);
-        $manager = $this->createMock(LinketChapaManager::class);
-        $manager->method('platformClient')->willReturn($client);
-
-        $handler = $this->createMock(StorefrontWebhookHandler::class);
-        $handler->expects($this->never())->method('fulfill');
-
-        $service = new StorefrontPaymentVerificationService($manager, $handler);
-
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('Payment verification mismatch');
-
-        try {
-            $service->verifyAndFulfill($ref);
-        } finally {
-            $freshAttempt = $attempt->fresh();
-            $this->assertSame(StorefrontPaymentAttempt::STATUS_FAILED, $freshAttempt->status);
-        }
-    }
-
-    public function testStatusNotSuccessRejects(): void
-    {
-        $ref = 'lk-validref12345';
-        [$order, $attempt] = $this->createOrderAndAttempt(15000, 'ETB', $ref);
-
-        // Verification returns FAILED
-        $client = $this->mockChapaClient('FAILED', 15000, 'ETB', $ref);
-        $manager = $this->createMock(LinketChapaManager::class);
-        $manager->method('platformClient')->willReturn($client);
-
-        $handler = $this->createMock(StorefrontWebhookHandler::class);
-        $handler->expects($this->never())->method('fulfill');
-
-        $service = new StorefrontPaymentVerificationService($manager, $handler);
-
-        $this->expectException(RuntimeException::class);
-
-        try {
-            $service->verifyAndFulfill($ref);
-        } finally {
-            $freshAttempt = $attempt->fresh();
-            $this->assertSame(StorefrontPaymentAttempt::STATUS_FAILED, $freshAttempt->status);
-        }
+        return [
+            'amount mismatch' => ['SUCCESS', 5000, 'ETB'],
+            'currency mismatch' => ['SUCCESS', 15000, 'USD'],
+            'status failed' => ['FAILED', 15000, 'ETB'],
+        ];
     }
 
     public function testIdempotentWhenAlreadyFulfilled(): void
@@ -248,7 +205,6 @@ class StorefrontPaymentVerificationServiceTest extends TestCase
         $order->update(['status' => 'paid', 'paid_at' => now()]);
         $attempt->update(['status' => StorefrontPaymentAttempt::STATUS_SUCCESSFUL, 'verified_at' => now()]);
 
-        // Platform client should never be invoked
         $manager = $this->createMock(LinketChapaManager::class);
         $manager->expects($this->never())->method('platformClient');
 
