@@ -58,6 +58,7 @@ class LogTrackedEvent
                     'clicks_count' => DB::raw('clicks_count + 1'),
                     'clicked_at' => now(),
                 ]);
+
             }
 
             if ($linkeable->folder_id) {

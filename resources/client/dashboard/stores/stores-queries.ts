@@ -59,6 +59,9 @@ export const listStoresOptions = (
   return queryOptions({
     queryKey: [...storesBaseKey, params],
     queryFn: () => listStores(params as any),
+    // Public profile visits can happen in another tab; refresh counts on return.
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: 'always',
   });
 };
 

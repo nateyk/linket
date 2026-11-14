@@ -80,9 +80,16 @@ class BiolinkResource extends LinkeableResource
                 $this->deleted_at,
             ),
 
+            // Dashboard controllers attach visit stats to list/detail models.
+            // Public profile pages never load them, even with a fields_preset
+            // query parameter, so their prerender data stays unchanged.
             'clicks_count' => $this->when(
-                $fieldsPreset === 'show',
-                $this->clicks_count,
+                isset($this->resource->unique_visitors_count),
+                fn(): int => (int) $this->clicks_count,
+            ),
+            'unique_visitors_count' => $this->when(
+                isset($this->resource->unique_visitors_count),
+                (int) ($this->resource->unique_visitors_count ?? 0),
             ),
             'clicked_at' => $this->when(
                 $fieldsPreset === 'show',

@@ -4,6 +4,7 @@ namespace App\Stores\Controllers;
 
 use App\Biolinks\BiolinksQueryBuilder;
 use App\Stores\Models\Store;
+use App\Stores\Actions\LoadStoreVisitStats;
 use App\Stores\Requests\CrupdateStoreRequest;
 use App\Stores\Resources\StoreResource;
 use App\Biolinks\Actions\CrupdateBiolink;
@@ -42,6 +43,8 @@ class StoresController extends Controller
 
         $pagination = (new BiolinksQueryBuilder($data))->paginate();
 
+        app(LoadStoreVisitStats::class)->forPage($pagination);
+
         return StoreResource::collection($pagination);
     }
 
@@ -62,6 +65,7 @@ class StoresController extends Controller
         Gate::authorize('show', $storeModel);
 
         $storeModel->loadContent();
+        app(LoadStoreVisitStats::class)->forStore($storeModel);
 
         return new StoreResource($storeModel, fieldsPreset: 'show');
     }
@@ -175,6 +179,8 @@ class StoresController extends Controller
         ]);
 
         $pagination = (new BiolinksQueryBuilder($data))->paginate();
+
+        app(LoadStoreVisitStats::class)->forPage($pagination);
 
         return StoreResource::collection($pagination);
     }

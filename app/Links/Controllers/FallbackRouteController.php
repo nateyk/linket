@@ -90,7 +90,9 @@ class FallbackRouteController extends Controller
             abort(403);
         }
 
-        if (!$this->isOwnerPreview($linkeable)) {
+        // QR image requests and the '+' dashboard shortcut are not visits
+        // to the public profile. Likewise, editor owner previews are excluded.
+        if ($route === null && !$this->isOwnerPreview($linkeable)) {
             (new LogTrackedEvent())->execute($linkeable);
         }
 
