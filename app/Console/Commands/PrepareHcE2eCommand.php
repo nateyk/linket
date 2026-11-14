@@ -75,6 +75,20 @@ class PrepareHcE2eCommand extends Command
                 'admin',
             ]);
 
+            $agent = $this->upsertUser(
+                email: 'e2e-hc-agent@example.test',
+                name: 'E2E HC Agent',
+                password: 'E2eHcAgent!23',
+                type: 'agent',
+            );
+            $this->attachAgentsRole($agent);
+            // This fixture intentionally has content permissions, not admin access.
+            $this->grantPermissions($agent, [
+                'articles.view',
+                'articles.create',
+                'articles.update',
+            ]);
+
             $freeCreator = $this->upsertUser(
                 email: 'e2e-hc-free@example.test',
                 name: 'E2E Free Creator',
@@ -115,6 +129,10 @@ class PrepareHcE2eCommand extends Command
                 'admin' => [
                     'email' => $admin->email,
                     'password' => 'E2eHcAdmin!23',
+                ],
+                'agent' => [
+                    'email' => $agent->email,
+                    'password' => 'E2eHcAgent!23',
                 ],
                 'free_creator' => [
                     'email' => $freeCreator->email,
@@ -161,6 +179,8 @@ class PrepareHcE2eCommand extends Command
                     'new_ticket' => '/hc/tickets/new',
                     'admin_hc_settings' => '/admin/settings/hc',
                     'agent_hc_arrange' => '/agent/hc/arrange',
+                    'admin_hc_arrange' => '/admin/help/arrange',
+                    'admin_hc_articles' => '/admin/help/articles',
                     'agent_inbox' => '/agent/conversations',
                 ],
             ];
