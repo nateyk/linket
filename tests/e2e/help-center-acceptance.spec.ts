@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import {expect, test, type Page} from '@playwright/test';
+import {expect, test, type Browser, type Page} from '@playwright/test';
 
 type Credentials = {email: string; password: string};
 type HcFixture = {
@@ -57,6 +57,107 @@ function articleResponse(page: Page, operation: 'create' | 'update') {
   });
 }
 
+async function createDraftArticle(
+  page: Page,
+  sectionId: number,
+  title: string,
+  body: string,
+): Promise<number> {
+  await page.goto('/admin/help/arrange/sections/' + sectionId);
+  await page.getByRole('link', {name: 'New article'}).click();
+  await expect(page).toHaveURL(new RegExp('/admin/help/arrange/sections/' + sectionId + '/articles/new'));
+  await page.getByRole('heading', {name: 'Title'}).click();
+  await page.getByPlaceholder('Title').fill(title);
+  await page.locator('.tiptap[contenteditable="true"]').fill(body);
+
+  const created = articleResponse(page, 'create');
+  await page.getByRole('button', {name: 'Create', exact: true}).click();
+  const response = await (await created).json() as {article: {id: number}};
+  const id = response.article.id;
+  expect(id).toBeGreaterThan(0);
+  await expect(page).toHaveURL(new RegExp('/admin/help/articles/' + id + '/edit'));
+  await expect(page.getByRole('button', {name: 'Publish'})).toBeEnabled();
+  return id;
+}
+
+async function saveDraftAndCheckMobileEditor(page: Page, body: string): Promise<void> {
+  const editor = page.locator('.tiptap[contenteditable="true"]');
+  await editor.fill(body);
+  const saved = articleResponse(page, 'update');
+  await page.getByRole('button', {name: 'Save', exact: true}).click();
+  await saved;
+  await page.reload();
+  await expect(editor).toContainText(body);
+
+  await page.setViewportSize({width: 390, height: 844});
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  await expect(page.getByRole('button', {name: 'Publish'})).toBeVisible();
+  await page.setViewportSize({width: 1280, height: 900});
+}
+
+async function verifyGuestPublishingAndRemoval(
+  page: Page,
+  browser: Browser,
+  title: string,
+  body: string,
+): Promise<void> {
+  const published = articleResponse(page, 'update');
+  await page.getByRole('button', {name: 'Publish'}).click();
+  await published;
+  await expect(page.getByRole('button', {name: 'Unpublish'})).toBeVisible();
+
+  const href = await page.getByRole('link', {name: 'Preview in Help Center'}).getAttribute('href');
+  expect(href).toBeTruthy();
+  const publicUrl = new URL(href!, page.url()).toString();
+  const guestContext = await browser.newContext({
+    baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:5173',
+  });
+  try {
+    const guest = await guestContext.newPage();
+    await guest.goto(publicUrl);
+    await expect(guest.getByRole('heading', {name: title}).first()).toBeVisible({timeout: 30_000});
+    await expect(guest.getByText(body).first()).toBeVisible();
+    const searchUrl = '/hc/search/' + encodeURIComponent(title);
+
+    await expect.poll(async () => {
+      await guest.goto(searchUrl);
+      return guest.getByRole('link', {name: title, exact: true}).count();
+    }, {timeout: 30_000, intervals: [1000, 2000, 4000]}).toBeGreaterThan(0);
+
+    await guest.goto(publicUrl);
+    const unpublished = articleResponse(page, 'update');
+    await page.getByRole('button', {name: 'Unpublish'}).click();
+    await unpublished;
+    await expect(page.getByRole('button', {name: 'Publish'})).toBeVisible();
+
+    await guest.reload();
+    await expect(guest.getByText(body)).toHaveCount(0);
+    await guest.goto(searchUrl);
+    await expect.poll(async () => {
+      await guest.reload();
+      return guest.getByRole('link', {name: title, exact: true}).count();
+    }, {timeout: 30_000, intervals: [1000, 2000, 4000]}).toBe(0);
+  } finally {
+    await guestContext.close();
+  }
+}
+
+async function deleteArticleFromSection(
+  page: Page,
+  sectionId: number,
+  title: string,
+): Promise<void> {
+  await page.goto('/admin/help/arrange/sections/' + sectionId);
+  const articleRow = page.locator('div.cursor-pointer').filter({
+    has: page.getByRole('button', {name: title, exact: true}),
+  }).first();
+  await expect(articleRow).toBeVisible();
+  await articleRow.getByRole('button', {name: 'More actions'}).click();
+  await page.getByRole('menuitem', {name: 'Delete'}).click();
+  await page.getByRole('alertdialog').getByRole('button', {name: 'Delete'}).click();
+  await expect(page.getByRole('button', {name: title, exact: true})).toHaveCount(0);
+}
+
 test.describe('isolated Help Center product acceptance', () => {
   // This suite is intentionally never run against production or a shared DB.
   test.skip(
@@ -95,94 +196,14 @@ test.describe('isolated Help Center product acceptance', () => {
     test.setTimeout(180_000);
     const {admin, section} = fixture();
     const title = uniqueName('Article');
-    const firstBody = `Initial article body for ${title}`;
-    const revisedBody = `Revised article body for ${title}`;
+    const initialBody = 'Initial article body for ' + title;
+    const revisedBody = 'Revised article body for ' + title;
+
     await login(page, admin);
-    await page.goto(`/admin/help/arrange/sections/${section.id}`);
-
-    await page.getByRole('link', {name: 'New article'}).click();
-    await expect(page).toHaveURL(new RegExp(`/admin/help/arrange/sections/${section.id}/articles/new`));
-    await page.getByRole('heading', {name: 'Title'}).click();
-    await page.getByPlaceholder('Title').fill(title);
-    const editor = page.locator('.tiptap[contenteditable="true"]');
-    await expect(editor).toBeVisible();
-    await editor.fill(firstBody);
-
-    const created = articleResponse(page, 'create');
-    await page.getByRole('button', {name: 'Create', exact: true}).click();
-    const createdJson = await (await created).json() as {article: {id: number}};
-    const articleId = createdJson.article.id;
-    expect(articleId).toBeGreaterThan(0);
-    await expect(page).toHaveURL(new RegExp(`/admin/help/articles/${articleId}/edit`));
-    await expect(page.getByRole('button', {name: 'Publish'})).toBeEnabled();
-
-    await editor.fill(revisedBody);
-    const saved = articleResponse(page, 'update');
-    await page.getByRole('button', {name: 'Save', exact: true}).click();
-    await saved;
-    await page.reload();
-    await expect(editor).toContainText(revisedBody);
-
-    await page.setViewportSize({width: 390, height: 844});
-    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
-    await expect(page.getByRole('button', {name: 'Publish'})).toBeVisible();
-    await page.setViewportSize({width: 1280, height: 900});
-
-    const published = articleResponse(page, 'update');
-    await page.getByRole('button', {name: 'Publish'}).click();
-    await published;
-    await expect(page.getByRole('button', {name: 'Unpublish'})).toBeVisible();
-
-    const href = await page.getByRole('link', {name: 'Preview in Help Center'}).getAttribute('href');
-    expect(href).toBeTruthy();
-    // A brand-new browser context is a real guest, not the logged-in admin.
-    const guestContext = await browser.newContext({baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:5173'});
-    try {
-      const guest = await guestContext.newPage();
-      const publicUrl = new URL(href!, page.url()).toString();
-      await guest.goto(publicUrl);
-      await expect(guest.getByRole('heading', {name: title}).first()).toBeVisible({timeout: 30_000});
-      await expect(guest.getByText(revisedBody).first()).toBeVisible();
-
-      // Validate the real public search index after publishing, with bounded
-      // retries to allow the backend search driver to synchronize.
-      await expect.poll(
-        async () => {
-          await guest.goto(`/hc/search/${encodeURIComponent(title)}`);
-          return guest.getByRole('link', {name: title, exact: true}).count();
-        },
-        {timeout: 30_000, intervals: [1000, 2000, 4000]},
-      ).toBeGreaterThan(0);
-      await guest.goto(publicUrl);
-
-      const unpublished = articleResponse(page, 'update');
-      await page.getByRole('button', {name: 'Unpublish'}).click();
-      await unpublished;
-      await expect(page.getByRole('button', {name: 'Publish'})).toBeVisible();
-
-      await guest.reload();
-      await expect(guest.getByText(revisedBody)).toHaveCount(0);
-      await guest.goto(`/hc/search/${encodeURIComponent(title)}`);
-      await expect.poll(
-        async () => {
-          await guest.reload();
-          return guest.getByRole('link', {name: title, exact: true}).count();
-        },
-        {timeout: 30_000, intervals: [1000, 2000, 4000]},
-      ).toBe(0);
-    } finally {
-      await guestContext.close();
-    }
-
-    await page.goto(`/admin/help/arrange/sections/${section.id}`);
-    const articleRow = page.locator('div.cursor-pointer').filter({
-      has: page.getByRole('button', {name: title, exact: true}),
-    }).first();
-    await expect(articleRow).toBeVisible();
-    await articleRow.getByRole('button', {name: 'More actions'}).click();
-    await page.getByRole('menuitem', {name: 'Delete'}).click();
-    await page.getByRole('alertdialog').getByRole('button', {name: 'Delete'}).click();
-    await expect(page.getByRole('button', {name: title, exact: true})).toHaveCount(0);
+    await createDraftArticle(page, section.id, title, initialBody);
+    await saveDraftAndCheckMobileEditor(page, revisedBody);
+    await verifyGuestPublishingAndRemoval(page, browser, title, revisedBody);
+    await deleteArticleFromSection(page, section.id, title);
   });
 
   test('published search is public while drafts remain private', async ({page}) => {
