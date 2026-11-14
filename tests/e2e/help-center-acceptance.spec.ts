@@ -119,10 +119,30 @@ async function verifyGuestPublishingAndRemoval(
     await expect(guest.getByText(body).first()).toBeVisible();
     const searchUrl = '/hc/search/' + encodeURIComponent(title);
 
-    await expect.poll(async () => {
-      await guest.goto(searchUrl);
-      return guest.getByRole('link', {name: title, exact: true}).count();
-    }, {timeout: 30_000, intervals: [1000, 2000, 4000]}).toBeGreaterThan(0);
+    // Check the API separately so a search-index failure cannot be hidden by
+    // a browser query/router issue. Keep the actual UI assertion afterwards.
+    const searchResponse = await guest.request.get('/api/v1/search/articles', {
+      headers: {
+        Accept: 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        // Direct Playwright APIRequestContext calls do not add the browser's
+        // Referer; Linket correctly rejects non-frontend API access with 401.
+        Referer: guest.url(),
+      },
+      params: {query: title, perPage: '30'},
+    });
+    const searchBody = await searchResponse.text();
+    expect(
+      searchResponse.ok(),
+      `Guest search API HTTP ${searchResponse.status()}: ${searchBody.slice(0, 600)}`,
+    ).toBeTruthy();
+    const found = JSON.parse(searchBody) as {
+      pagination: {data: Array<{id: number; title: string}>};
+    };
+    expect(found.pagination.data.map(article => article.title)).toContain(title);
+
+    await guest.goto(searchUrl);
+    await expect(guest.getByRole('link', {name: title, exact: true})).toBeVisible();
 
     await guest.goto(publicUrl);
     const unpublished = articleResponse(page, 'update');
@@ -178,7 +198,7 @@ test.describe('isolated Help Center product acceptance', () => {
     await dialog.getByRole('textbox', {name: 'Name'}).fill(categoryName);
     await dialog.getByRole('button', {name: 'Create', exact: true}).click();
     await expect(page).toHaveURL(/\/admin\/help\/arrange\/categories\/\d+/, {timeout: 30_000});
-    await expect(page.getByText(categoryName).first()).toBeVisible();
+    await expect(page.getByText(categoryName).filter({visible: true}).first()).toBeVisible();
     await expect(page.locator('[data-slot="sidebar"]')).toBeVisible();
 
     await page.getByRole('button', {name: 'New section'}).click();
@@ -186,10 +206,22 @@ test.describe('isolated Help Center product acceptance', () => {
     await dialog.getByRole('textbox', {name: 'Name'}).fill(sectionName);
     await dialog.getByRole('button', {name: 'Create', exact: true}).click();
     await expect(page).toHaveURL(/\/admin\/help\/arrange\/sections\/\d+/, {timeout: 30_000});
-    await expect(page.getByText(sectionName).first()).toBeVisible();
+    await expect(page.getByText(sectionName).filter({visible: true}).first()).toBeVisible();
 
-    await page.setViewportSize({width: 390, height: 844});
-    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+    for (const width of [390, 320]) {
+      await page.setViewportSize({width, height: 844});
+      const overflow = await page.evaluate(() => ({
+        width: document.documentElement.scrollWidth,
+        offenders: [...document.querySelectorAll('body *')]
+          .filter(element => element.getBoundingClientRect().right > innerWidth + 1)
+          .slice(0, 8)
+          .map(element => ({tag: element.tagName, className: String(element.className).slice(0, 100)})),
+      }));
+      expect(overflow.width, JSON.stringify(overflow.offenders)).toBeLessThanOrEqual(width);
+      await expect(page.getByRole('link', {name: 'Back'})).toBeVisible();
+    }
+    await page.getByRole('link', {name: 'Back'}).click();
+    await expect(page).toHaveURL(/\/admin\/help\/arrange\/categories\/\d+/);
   });
 
   test('admin creates, edits, publishes, unpublishes and deletes an article', async ({page, browser}) => {

@@ -29,7 +29,7 @@ class HcCategoryController extends BaseController
 
     public function store(ModifyHcCategory $request)
     {
-        $this->authorize('create', HcCategory::class);
+        $this->authorize('store', HcCategory::class);
 
         $last = HcCategory::orderBy('position', 'desc')->first();
 

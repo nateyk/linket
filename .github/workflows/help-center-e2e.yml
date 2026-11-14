@@ -1,0 +1,157 @@
+name: Isolated Help Center browser acceptance
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/help-center-e2e.yml'
+      - 'app/Console/Commands/PrepareHcE2eCommand.php'
+      - 'app/HelpCenter/**'
+      - 'app/Conversations/Agent/Controllers/HelpDeskAutocompleteController.php'
+      - 'routes/support.php'
+      - 'resources/defaults/default-settings.php'
+      - 'database/migrations/*help_center*'
+      - 'common/foundation/resources/client/ui/dashboard/dashboard-layout.tsx'
+      - 'resources/client/help-center/**'
+      - 'tests/e2e/help-center-*.spec.ts'
+      - 'scripts/run-isolated-hc-e2e.sh'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hc-e2e-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  acceptance:
+    name: Help Center isolated Chromium acceptance (PHP 8.4 / MySQL 8)
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: belink_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - name: Checkout exact PR commit
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Setup PHP 8.4
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_mysql, gd, zip, bcmath, exif, redis, curl, openssl, fileinfo
+          coverage: none
+          tools: composer:v2
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24.19.0'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Create isolated, disposable application environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp env.example .env
+          sed -i 's/^INSTALLED=.*/INSTALLED=true/' .env
+          grep -q '^INSTALLED=true' .env || echo 'INSTALLED=true' >> .env
+          cat >> .env <<'EOF'
+          APP_ENV=testing
+          APP_DEBUG=false
+          APP_URL=http://127.0.0.1:8000
+          DB_CONNECTION=mysql
+          DB_HOST=127.0.0.1
+          DB_PORT=3306
+          DB_DATABASE=belink_test
+          DB_USERNAME=root
+          DB_PASSWORD=root
+          SESSION_DRIVER=file
+          CACHE_STORE=file
+          QUEUE_CONNECTION=sync
+          SCOUT_DRIVER=mysql
+          SCOUT_MYSQL_MODE=extended
+          MAIL_MAILER=array
+          EOF
+          test "$(grep '^DB_DATABASE=' .env | tail -1)" = 'DB_DATABASE=belink_test'
+
+      - name: Install locked PHP dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+        env:
+          COMPOSER_AUDIT_ABANDONED: ignore
+
+      - name: Install locked frontend dependencies
+        run: npm ci --prefer-offline --no-audit --no-fund
+
+      - name: Install and verify headless Chromium
+        run: bash .github/scripts/install-playwright-chromium.sh
+
+      - name: Initialize isolated application and fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+          php artisan key:generate --force
+          php artisan config:clear
+          php artisan migrate --force --no-interaction
+          php artisan db:seed --force --no-interaction
+          php artisan db:seed --class="Common\\Database\\Seeders\\UploadBackendsSeeder" --force --no-interaction
+          php artisan linket:prepare-hc-e2e --no-interaction
+          test -s storage/app/e2e/hc-fixture.json
+          php -r '$f=json_decode(file_get_contents("storage/app/e2e/hc-fixture.json"), true); if (!str_contains(strtolower($f["database"] ?? ""), "test")) exit(1);'
+
+      - name: Build frontend and start Laravel on loopback only
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run build
+          test -s public/build/manifest.json
+          php artisan serve --host=127.0.0.1 --port=8000 > /tmp/linket-hc-server.log 2>&1 &
+          echo "$!" > /tmp/linket-hc-server.pid
+          for i in {1..40}; do
+            code="$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8000/help || true)"
+            if [[ "$code" =~ ^(200|301|302)$ ]]; then
+              echo "Help Center responded HTTP $code"
+              exit 0
+            fi
+            sleep 2
+          done
+          cat /tmp/linket-hc-server.log
+          exit 1
+
+      - name: Execute actual Help Center and accessibility browser journeys
+        env:
+          APP_ENV: testing
+          LINKET_ISOLATED_E2E: '1'
+          E2E_NO_SERVER: '1'
+          E2E_BASE_URL: http://127.0.0.1:8000
+          CI: 'true'
+        run: |
+          npx playwright test tests/e2e/help-center-support.spec.ts tests/e2e/help-center-acceptance.spec.ts tests/e2e/help-center-accessibility.spec.ts --project=chromium --workers=1 --retries=0 --reporter=line
+
+      - name: Upload failure traces, screenshots, and app logs
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: help-center-browser-evidence
+          path: |
+            test-results/
+            playwright-report/
+            storage/logs/
+            /tmp/linket-hc-server.log
+          if-no-files-found: ignore
+          retention-days: 5
