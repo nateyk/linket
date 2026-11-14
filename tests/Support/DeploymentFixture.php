@@ -86,7 +86,7 @@ if ($command === 'route:list') {
     if (getenv('LONG_ROUTE_LIST')) {
         // Exceed the pipe buffer to detect accidental truncation with head.
         for ($i = 0; $i < 2000; $i++) {
-            if (fwrite(STDOUT, str_repeat('r', 1000)."\\n") === false) {
+            if (fwrite(STDOUT, str_repeat('r', 1000)."\n") === false) {
                 exit(24);
             }
         }
