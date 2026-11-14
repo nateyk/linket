@@ -74,6 +74,24 @@ file_put_contents($root.'/commands.jsonl', json_encode([
     'private_mode' => is_file($private) ? fileperms($private) & 0777 : null,
 ])."\n", FILE_APPEND);
 if ($command === 'migrate' && getenv('FAIL_MIGRATE')) { exit(1); }
+if ($command === 'db:seed') {
+    if (!in_array('--class=Common\\Database\\Seeders\\UploadBackendsSeeder', $argv, true)) {
+        fwrite(STDERR, "Unexpected upload-backend seeder class\\n");
+        exit(21);
+    }
+    if (getenv('FAIL_UPLOAD_SEED')) { exit(22); }
+}
+if ($command === 'route:list') {
+    if (getenv('FAIL_ROUTE_LIST')) { exit(23); }
+    if (getenv('LONG_ROUTE_LIST')) {
+        // Exceed the pipe buffer to detect accidental truncation with head.
+        for ($i = 0; $i < 2000; $i++) {
+            if (fwrite(STDOUT, str_repeat('r', 1000)."\\n") === false) {
+                exit(24);
+            }
+        }
+    }
+}
 if ($command === 'optimize') {
     require getcwd().'/vendor/autoload.php';
     Dotenv\Dotenv::create(Illuminate\Support\Env::getRepository(), $root.'/shared')->load();
