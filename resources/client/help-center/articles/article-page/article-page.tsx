@@ -71,7 +71,7 @@ export function Component() {
                 aria-label={trans(message('Edit article'))}
                 className="shrink-0 text-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                 elementType={Link}
-                to={getEditArticleLink(query.data.article)}
+                to={getEditArticleLink(query.data.article, {isAdmin: hasPermission('admin.access')})}
               >
                 <EditIcon />
               </IconButton>

@@ -61,12 +61,12 @@ export function getArticleLink(
   return link;
 }
 
-export function getEditArticleLink(article: {
-  id: number;
-  path?: ArticlePathItem[];
-}) {
-  if (article.path?.length === 2) {
-    return `/admin/hc/arrange/sections/${article.path[1].id}/articles/${article.id}/edit`;
-  }
-  return `/admin/hc/articles/${article.id}/edit`;
+export function getEditArticleLink(
+  article: {id: number},
+  {isAdmin = false}: {isAdmin?: boolean} = {},
+): string {
+  // Only the canonical admin and agent Help Center routes exist. Avoid
+  // linking public article editors back to the removed /admin/hc path.
+  const root = isAdmin ? '/admin/help' : '/agent/hc';
+  return `${root}/articles/${article.id}/edit`;
 }
