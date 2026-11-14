@@ -8,57 +8,19 @@ return new class extends Migration
     public function up(): void
     {
         $row = DB::table('settings')->where('name', 'menus')->first();
-        if (! $row) {
+        $original = json_decode($row?->value ?? '', true);
+        if (! is_array($original)) {
             return;
         }
 
-        $menus = json_decode($row->value ?? '', true);
-        if (! is_array($menus)) {
-            return;
+        $menus = $original;
+        foreach ($menus as $index => $menu) {
+            if (is_array($menu)) {
+                $menus[$index] = $this->canonicalizeAdminMenu($menu);
+            }
         }
 
-        $changed = false;
-        foreach ($menus as &$menu) {
-            if (! in_array('admin-sidebar', $menu['positions'] ?? [], true)) {
-                continue;
-            }
-
-            $seenHelp = false;
-            $items = [];
-            foreach ($menu['items'] ?? [] as $item) {
-                $isHelp = ($item['id'] ?? null) === 'admin-help-center'
-                    || (($item['label'] ?? null) === 'Help center'
-                        && in_array($item['action'] ?? null, [
-                            '/admin/help',
-                            '/admin/settings/hc',
-                            '/admin/settings/help',
-                        ], true));
-
-                if ($isHelp) {
-                    if ($seenHelp) {
-                        $changed = true;
-
-                        continue;
-                    }
-
-                    $seenHelp = true;
-                    if (($item['action'] ?? '') !== '/admin/help'
-                        || ($item['permissions'] ?? []) !== ['articles.update']) {
-                        $changed = true;
-                    }
-                    $item['action'] = '/admin/help';
-                    $item['permissions'] = ['articles.update'];
-                }
-
-                $item['order'] = count($items);
-                $items[] = $item;
-            }
-
-            $menu['items'] = $items;
-        }
-        unset($menu);
-
-        if ($changed) {
+        if ($menus !== $original) {
             DB::table('settings')->where('name', 'menus')->update([
                 'value' => json_encode($menus, JSON_UNESCAPED_SLASHES),
                 'updated_at' => now(),
@@ -66,9 +28,57 @@ return new class extends Migration
         }
     }
 
+    private function canonicalizeAdminMenu(array $menu): array
+    {
+        if (! in_array('admin-sidebar', $menu['positions'] ?? [], true)) {
+            return $menu;
+        }
+
+        $seenHelp = false;
+        $items = [];
+        foreach ($menu['items'] ?? [] as $item) {
+            if ($this->isHelpCenterEntry($item)) {
+                if ($seenHelp) {
+                    continue;
+                }
+                $item = $this->canonicalHelpCenterEntry($item);
+                $seenHelp = true;
+            }
+
+            $item['order'] = count($items);
+            $items[] = $item;
+        }
+
+        $menu['items'] = $items;
+
+        return $menu;
+    }
+
+    private function isHelpCenterEntry(array $item): bool
+    {
+        if (($item['id'] ?? null) === 'admin-help-center') {
+            return true;
+        }
+
+        return ($item['label'] ?? null) === 'Help center'
+            && in_array($item['action'] ?? null, [
+                '/admin/help',
+                '/admin/settings/hc',
+                '/admin/settings/help',
+            ], true);
+    }
+
+    private function canonicalHelpCenterEntry(array $item): array
+    {
+        $item['action'] = '/admin/help';
+        $item['permissions'] = ['articles.update'];
+
+        return $item;
+    }
+
     public function down(): void
     {
-        // Deliberately do not restore a broken navigation URL on rollback.
-        // The settings page continues to exist at /admin/settings/hc.
+        // Do not restore broken navigation; appearance settings remain at
+        // /admin/settings/hc, accessible from Help Center management.
     }
 };
