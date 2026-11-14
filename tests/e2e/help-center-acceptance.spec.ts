@@ -10,7 +10,7 @@ type HcFixture = {
   buyer: Credentials;
   category: {id: number; name: string};
   section: {id: number; name: string};
-  published_article: {title: string; url: string};
+  published_article: {id: number; title: string; url: string};
   draft_article: {id: number; title: string; url: string};
 };
 
@@ -136,7 +136,7 @@ test.describe('isolated Help Center product acceptance', () => {
     const href = await page.getByRole('link', {name: 'Preview in Help Center'}).getAttribute('href');
     expect(href).toBeTruthy();
     // A brand-new browser context is a real guest, not the logged-in admin.
-    const guestContext = await browser.newContext();
+    const guestContext = await browser.newContext({baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:5173'});
     try {
       const guest = await guestContext.newPage();
       const publicUrl = new URL(href!, page.url()).toString();
@@ -204,7 +204,7 @@ test.describe('isolated Help Center product acceptance', () => {
     await page.goto('/admin/help/arrange');
     await expect(page.getByRole('button', {name: 'New category'})).toHaveCount(0);
 
-    const buyerContext = await browser.newContext();
+    const buyerContext = await browser.newContext({baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:5173'});
     try {
       const buyerPage = await buyerContext.newPage();
       await login(buyerPage, buyer);
