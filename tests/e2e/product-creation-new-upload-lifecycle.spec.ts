@@ -203,9 +203,11 @@ async function createUploadedProduct(
   })).toBeVisible();
   await page.locator('#product-title').fill(title);
   if (scenario.billing === 'paid') {
+    await page.getByRole('button', {name: 'Price, step 3 of 4'}).click();
     await page.locator('#product-price, input[type="number"]').first()
       .fill((scenario.cents / 100).toFixed(2));
   }
+  await page.getByRole('button', {name: 'Files & sample, step 2 of 4'}).click();
   await uploadPrivateFile(page, scenario);
 
   const creates: string[] = [];
@@ -239,7 +241,9 @@ async function editAndSubmitNewProduct(
   const {id, scenario, title} = item;
   await page.reload();
   await expect(page.locator('#product-title')).toHaveValue(title);
+  await page.getByRole('button', {name: 'Files & sample, step 2 of 4'}).click();
   await expect(page.getByRole('button', {name: 'Remove ' + scenario.name})).toBeVisible();
+  await page.getByRole('button', {name: 'Details, step 1 of 4'}).click();
 
   const updatedTitle = title + ' revised';
   await page.locator('#product-title').fill(updatedTitle);
