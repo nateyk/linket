@@ -4,7 +4,6 @@ import {useTrans} from '@ui/i18n/use-trans';
 export const PRODUCT_AUTHORING_STEP_ORDER = [
   'details',
   'files',
-  'sample',
   'pricing',
   'storefront',
 ] as const;
@@ -16,21 +15,18 @@ const TARGET_IDS: Record<NonCourseProductType, Record<ProductAuthoringStep, stri
   digital: {
     details: 'digital-product-details',
     files: 'digital-product-files',
-    sample: 'digital-product-sample',
     pricing: 'digital-product-pricing',
     storefront: 'digital-product-storefront',
   },
   ebook: {
     details: 'ebook-information',
     files: 'ebook-private-files',
-    sample: 'ebook-public-sample',
     pricing: 'ebook-pricing',
     storefront: 'ebook-storefront',
   },
   audio: {
     details: 'audio-information',
     files: 'audio-private-files',
-    sample: 'audio-public-clips',
     pricing: 'audio-pricing',
     storefront: 'audio-storefront',
   },
@@ -55,8 +51,7 @@ export function ProductAuthoringSteps({
   const {trans} = useTrans();
   const steps = [
     {id: 'details', title: trans({message: 'Details'}), description: trans({message: 'Title, description and cover.'})},
-    {id: 'files', title: trans({message: 'Files'}), description: trans({message: 'Private files buyers receive.'})},
-    {id: 'sample', title: trans({message: 'Sample'}), description: trans({message: 'Optional public preview.'})},
+    {id: 'files', title: trans({message: 'Files & sample'}), description: trans({message: 'Upload buyer files and an optional public sample.'})},
     {id: 'pricing', title: trans({message: 'Price'}), description: trans({message: 'Free access or paid price.'})},
     {id: 'storefront', title: trans({message: 'Storefront'}), description: trans({message: 'Optional Storefront placement.'})},
   ] as const;
@@ -65,7 +60,7 @@ export function ProductAuthoringSteps({
     <CreatorSteps
       ariaLabel={trans({message: 'Product creation steps'})}
       testId="product-authoring-steps"
-      columns="grid-cols-5"
+      columns="grid-cols-4"
       steps={steps}
       active={active}
       completed={completed}
