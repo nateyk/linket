@@ -61,6 +61,22 @@ class DigitalProductRefundService
                 'metadata' => ['refund_id' => $refund->id],
             ]);
 
+            if ($order->isPlatformCollected()) {
+                try {
+                    app(\App\Storefront\Ledger\CreatorLedgerService::class)->recordRefund(
+                        $order,
+                        new \App\Storefront\Ledger\RefundBreakdown(
+                            grossCents: $amount,
+                            creatorCents: $creatorReversal,
+                            feeCents: $feeReversal,
+                            refundId: $refund->id,
+                        ),
+                    );
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning('store.refund.ledger_failed', ['refund_id' => $refund->id, 'error' => $e->getMessage()]);
+                }
+            }
+
             // NOTE (2026-09-12, audit decision): only full refunds revoke access.
             // Partial refunds and subscription lapses intentionally do NOT revoke
             // enrollment/download access — handled manually via support for now.
