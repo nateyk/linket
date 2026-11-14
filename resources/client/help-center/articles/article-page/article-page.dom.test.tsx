@@ -96,7 +96,7 @@ describe('Help Center article reading experience', () => {
 
     expect(screen.getAllByRole('heading', {level: 1})).toHaveLength(1);
     expect(screen.getByRole('heading', {level: 1}).textContent).toBe(fixture.title);
-    expect(screen.getByRole('link', {name: 'Edit article'}).getAttribute('href')).toContain('/admin/hc/articles/50/edit');
+    expect(screen.getByRole('link', {name: 'Edit article'}).getAttribute('href')).toContain('/admin/help/articles/50/edit');
 
     const disclosure = container.querySelector('details');
     expect(disclosure).not.toBeNull();

@@ -52,7 +52,7 @@ set +e
 LINKET_ISOLATED_E2E=1 \
 E2E_NO_SERVER=1 \
 E2E_BASE_URL="http://127.0.0.1:${PROXY_PORT}" \
-npx playwright test tests/e2e/help-center-support.spec.ts --project=chromium --workers=1
+npx playwright test tests/e2e/help-center-support.spec.ts tests/e2e/help-center-acceptance.spec.ts --project=chromium --workers=1
 status=$?
 set -e
 exit "$status"
