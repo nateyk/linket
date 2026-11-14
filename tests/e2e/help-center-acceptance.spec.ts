@@ -41,12 +41,20 @@ function uniqueName(subject: string): string {
   return `E2E ${subject} ${Date.now()} ${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function articleResponse(page: Page, method: 'POST' | 'PUT') {
-  return page.waitForResponse(response =>
-    /\/api\/v1\/hc\/articles(?:\/\d+)?(?:\?|$)/.test(response.url()) &&
-    response.request().method() === method &&
-    response.ok(),
-  );
+function articleResponse(page: Page, operation: 'create' | 'update') {
+  return page.waitForResponse(response => {
+    const url = new URL(response.url());
+    const request = response.request();
+    if (request.method() !== 'POST' || !response.ok()) return false;
+    // The shared Axios client tunnels PUT as POST with an override header.
+    if (operation === 'update') {
+      return /\/api\/v1\/hc\/articles\/\d+$/.test(url.pathname) &&
+        (url.searchParams.get('_method') === 'PUT' ||
+          request.headers()['x-http-method-override'] === 'PUT');
+    }
+    return /\/api\/v1\/hc\/articles$/.test(url.pathname) &&
+      !url.searchParams.has('_method');
+  });
 }
 
 test.describe('isolated Help Center product acceptance', () => {
@@ -100,7 +108,7 @@ test.describe('isolated Help Center product acceptance', () => {
     await expect(editor).toBeVisible();
     await editor.fill(firstBody);
 
-    const created = articleResponse(page, 'POST');
+    const created = articleResponse(page, 'create');
     await page.getByRole('button', {name: 'Create', exact: true}).click();
     const createdJson = await (await created).json() as {article: {id: number}};
     const articleId = createdJson.article.id;
@@ -109,7 +117,7 @@ test.describe('isolated Help Center product acceptance', () => {
     await expect(page.getByRole('button', {name: 'Publish'})).toBeEnabled();
 
     await editor.fill(revisedBody);
-    const saved = articleResponse(page, 'PUT');
+    const saved = articleResponse(page, 'update');
     await page.getByRole('button', {name: 'Save', exact: true}).click();
     await saved;
     await page.reload();
@@ -120,7 +128,7 @@ test.describe('isolated Help Center product acceptance', () => {
     await expect(page.getByRole('button', {name: 'Publish'})).toBeVisible();
     await page.setViewportSize({width: 1280, height: 900});
 
-    const published = articleResponse(page, 'PUT');
+    const published = articleResponse(page, 'update');
     await page.getByRole('button', {name: 'Publish'}).click();
     await published;
     await expect(page.getByRole('button', {name: 'Unpublish'})).toBeVisible();
@@ -147,7 +155,7 @@ test.describe('isolated Help Center product acceptance', () => {
       ).toBeGreaterThan(0);
       await guest.goto(publicUrl);
 
-      const unpublished = articleResponse(page, 'PUT');
+      const unpublished = articleResponse(page, 'update');
       await page.getByRole('button', {name: 'Unpublish'}).click();
       await unpublished;
       await expect(page.getByRole('button', {name: 'Publish'})).toBeVisible();
