@@ -17,35 +17,35 @@ export function EbookEditor({details, files, sample, pricing, storefront, active
   return (
     <div className="flex min-w-0 flex-col gap-3 sm:gap-4" data-testid="ebook-editor">
       <ProductEditorSection
-        active={activeStep === undefined || activeStep === 'details,details'}
+        active={activeStep === undefined || activeStep === 'details'}
         id="ebook-information"
         title={<Trans message="Book information" />}
       >
         {details}
       </ProductEditorSection>
       <ProductEditorSection
-        active={activeStep === undefined || activeStep === 'files,files'}
+        active={activeStep === undefined || activeStep === 'files'}
         id="ebook-private-files"
         title={<Trans message="Book files" />}
       >
         {files}
       </ProductEditorSection>
       <ProductEditorSection
-        active={activeStep === undefined || activeStep === 'sample,files'}
+        active={activeStep === undefined || activeStep === 'files'}
         id="ebook-public-sample"
         title={<Trans message="Sample pages (optional)" />}
       >
         {sample}
       </ProductEditorSection>
       <ProductEditorSection
-        active={activeStep === undefined || activeStep === 'pricing,pricing'}
+        active={activeStep === undefined || activeStep === 'pricing'}
         id="ebook-pricing"
         title={<Trans message="Price" />}
       >
         {pricing}
       </ProductEditorSection>
       <ProductEditorSection
-        active={activeStep === undefined || activeStep === 'storefront,storefront'}
+        active={activeStep === undefined || activeStep === 'storefront'}
         id="ebook-storefront"
         title={<Trans message="Storefront placement (optional)" />}
       >
