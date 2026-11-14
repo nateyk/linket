@@ -21,24 +21,25 @@ class DigitalProductFinance
 
     public function creditOrder(StorefrontOrder $order): ?DigitalProductEarningsLedger
     {
-        // FIN-01: Only platform-collected orders may create platform liabilities.
-        // Historical seller-collected orders (creator_chapa, verify_et_creator)
+        // FIN-01: Historical seller-collected orders (creator_chapa, verify_et_creator)
         // were collected into creator-owned accounts and must never create platform liabilities.
-        if (!$order->isPlatformCollected()) {
+        if ($order->isCreatorCollected() || ((int) $order->gross_amount_cents > 0 && !$order->isPlatformCollected())) {
             return null;
         }
 
-        $this->creatorLedger()->recordPlatformSale($order);
+        if ($order->isPlatformCollected() && (int) $order->gross_amount_cents > 0) {
+            $this->creatorLedger()->recordPlatformSale($order);
+        }
 
         $order->loadMissing('product');
         $workspaceId = $order->product?->workspace_id ?? 0;
 
         return $this->record(
             $workspaceId,
-            $order->creator_id,
+            (int) ($order->creator_id ?? $order->product?->user_id ?? 0),
             "sale:{$order->id}",
             'sale',
-            $order->creator_earnings_cents,
+            (int) $order->creator_earnings_cents,
             $order->currency ?: config('storefront.currency', 'ETB'),
             [
                 'storefront_order_id' => $order->id,

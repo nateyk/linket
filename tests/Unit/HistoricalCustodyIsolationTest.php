@@ -20,10 +20,12 @@ class HistoricalCustodyIsolationTest extends TestCase
 
         $order = new StorefrontOrder([
             'id' => 999,
+            'creator_id' => 42,
             'collection_owner' => StorefrontOrder::COLLECTION_OWNER_CREATOR_CHAPA,
             'payment_gateway' => 'chapa',
             'status' => 'paid',
             'currency' => 'ETB',
+            'gross_amount_cents' => 50000,
             'creator_earnings_cents' => 50000,
         ]);
 
@@ -40,10 +42,12 @@ class HistoricalCustodyIsolationTest extends TestCase
 
         $order = new StorefrontOrder([
             'id' => 888,
+            'creator_id' => 42,
             'collection_owner' => StorefrontOrder::COLLECTION_OWNER_VERIFY_ET_CREATOR,
             'payment_gateway' => 'verify_et',
             'status' => 'paid',
             'currency' => 'ETB',
+            'gross_amount_cents' => 30000,
             'creator_earnings_cents' => 30000,
         ]);
 
@@ -78,6 +82,45 @@ class HistoricalCustodyIsolationTest extends TestCase
             'platform_fee_cents' => 1000,
         ]);
         $order->id = 123;
+        $order->creator_id = 42;
+        $order->setRelation('product', $product);
+
+        $result = $finance->creditOrder($order);
+        $this->assertInstanceOf(DigitalProductEarningsLedger::class, $result);
+    }
+
+    public function testFreeOrderRecordsLedgerWithoutCreatingPlatformLiabilities(): void
+    {
+        $creatorLedgerMock = $this->createMock(CreatorLedgerService::class);
+        $creatorLedgerMock->expects($this->never())->method('recordPlatformSale');
+
+        $finance = $this->getMockBuilder(DigitalProductFinance::class)
+            ->setConstructorArgs([$creatorLedgerMock])
+            ->onlyMethods(['record'])
+            ->getMock();
+
+        $finance->expects($this->once())
+            ->method('record')
+            ->with(
+                1,
+                42,
+                'sale:777',
+                'sale',
+                0,
+                'ETB',
+            )
+            ->willReturn(new DigitalProductEarningsLedger());
+
+        $product = new DigitalProduct(['workspace_id' => 1]);
+        $order = new StorefrontOrder([
+            'collection_owner' => StorefrontOrder::COLLECTION_OWNER_FREE,
+            'currency' => 'ETB',
+            'gross_amount_cents' => 0,
+            'creator_earnings_cents' => 0,
+            'platform_fee_cents' => 0,
+            'status' => 'paid',
+        ]);
+        $order->id = 777;
         $order->creator_id = 42;
         $order->setRelation('product', $product);
 

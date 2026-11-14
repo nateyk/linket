@@ -30,6 +30,7 @@ class StorefrontOrder extends StorefrontModel
     public const COLLECTION_OWNER_PLATFORM_CHAPA = 'platform_chapa';
     public const COLLECTION_OWNER_CREATOR_CHAPA = 'creator_chapa';
     public const COLLECTION_OWNER_VERIFY_ET_CREATOR = 'verify_et_creator';
+    public const COLLECTION_OWNER_FREE = 'free';
 
     protected $guarded = [];
     protected $hidden = ['payment_account_snapshot', 'payment_access_token_hash'];
