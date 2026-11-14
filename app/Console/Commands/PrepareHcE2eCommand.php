@@ -313,11 +313,14 @@ class PrepareHcE2eCommand extends Command
      */
     private function seedHelpCenter(User $author): array
     {
-        $category = HcCategory::query()->firstOrCreate(
+        $category = HcCategory::query()->updateOrCreate(
             ['name' => 'E2E Getting Started'],
             [
                 'description' => 'Synthetic HC category for isolated E2E',
-                'position' => 1,
+                // The default article-grid landing displays only the first
+                // root. Place the synthetic fixture first in disposable DBs
+                // so actual public landing journeys exercise it.
+                'position' => -1,
             ],
         );
 
