@@ -6,6 +6,12 @@ on:
     paths:
       - '.github/workflows/help-center-e2e.yml'
       - 'app/Console/Commands/PrepareHcE2eCommand.php'
+      - 'app/HelpCenter/**'
+      - 'app/Conversations/Agent/Controllers/HelpDeskAutocompleteController.php'
+      - 'routes/support.php'
+      - 'resources/defaults/default-settings.php'
+      - 'database/migrations/*help_center*'
+      - 'common/foundation/resources/client/ui/dashboard/dashboard-layout.tsx'
       - 'resources/client/help-center/**'
       - 'tests/e2e/help-center-*.spec.ts'
       - 'scripts/run-isolated-hc-e2e.sh'
