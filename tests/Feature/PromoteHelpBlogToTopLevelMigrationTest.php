@@ -147,9 +147,9 @@ test('defaults ship HC settings and top-level blog actions', function () {
     $admin = collect($menus)->firstWhere('positions.0', 'admin-sidebar');
     $actions = collect($admin['items'])->pluck('action')->all();
 
-    expect($actions)->toContain('/admin/settings/hc');
+    expect($actions)->toContain('/admin/help');
     expect($actions)->toContain('/admin/blog');
-    expect($actions)->not->toContain('/admin/help');
+    expect($actions)->not->toContain('/admin/settings/hc');
     expect($actions)->not->toContain('/admin/settings/help');
     expect($actions)->not->toContain('/admin/settings/blog');
 });
