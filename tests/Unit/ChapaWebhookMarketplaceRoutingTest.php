@@ -19,6 +19,28 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Tests\TestCase;
 
+final readonly class WebhookRejectionCase
+{
+    /** @param array<string, mixed> $payload */
+    public function __construct(
+        public bool $validSig,
+        public array $payload,
+        public int $expectedStatus,
+    ) {
+    }
+}
+
+final readonly class WebhookFulfillmentCase
+{
+    public function __construct(
+        public string $orderStatus,
+        public string $attemptStatus,
+        public bool $shouldVerify,
+        public string $expectedMessage,
+    ) {
+    }
+}
+
 class ChapaWebhookMarketplaceRoutingTest extends TestCase
 {
     protected function setUp(): void
@@ -68,11 +90,38 @@ class ChapaWebhookMarketplaceRoutingTest extends TestCase
         $this->app->instance(ChapaWebhookDeliveryLogger::class, $logger);
     }
 
-    private function createOrderAndAttempt(string $ref, string $orderStatus, string $attemptStatus): StorefrontOrder
+    #[DataProvider('rejectionCases')]
+    public function testWebhookRejections(WebhookRejectionCase $case): void
     {
+        $this->mockChapaGateway($case->validSig);
+        $this->mockDeliveryLogger();
+
+        $controller = new ChapaWebhookController();
+        $request = Request::create('/billing/chapa/webhook', 'POST', $case->payload);
+
+        $response = $controller->handle($request);
+        $this->assertSame($case->expectedStatus, $response->getStatusCode());
+    }
+
+    public static function rejectionCases(): array
+    {
+        return [
+            'invalid signature' => [new WebhookRejectionCase(false, ['tx_ref' => 'lk-test'], 403)],
+            'missing tx_ref' => [new WebhookRejectionCase(true, [], 422)],
+            'unknown tx_ref' => [new WebhookRejectionCase(true, ['tx_ref' => 'lk-unknown123'], 404)],
+        ];
+    }
+
+    #[DataProvider('webhookFulfillmentCases')]
+    public function testMarketplaceWebhookFulfillment(WebhookFulfillmentCase $case): void
+    {
+        $this->mockChapaGateway(true);
+        $this->mockDeliveryLogger();
+
+        $ref = 'lk-webhook-test';
         $order = StorefrontOrder::query()->create([
             'uuid' => 'order-uuid-'.$ref,
-            'status' => $orderStatus,
+            'status' => $case->orderStatus,
             'chapa_tx_ref' => $ref,
         ]);
 
@@ -82,49 +131,11 @@ class ChapaWebhookMarketplaceRoutingTest extends TestCase
             'idempotency_key' => 'idemp-'.$ref,
             'amount_cents' => 15000,
             'currency' => 'ETB',
-            'status' => $attemptStatus,
+            'status' => $case->attemptStatus,
         ]);
 
-        return $order;
-    }
-
-    #[DataProvider('rejectionCases')]
-    public function testWebhookRejections(bool $validSig, array $payload, int $expectedStatus): void
-    {
-        $this->mockChapaGateway($validSig);
-        $this->mockDeliveryLogger();
-
-        $controller = new ChapaWebhookController();
-        $request = Request::create('/billing/chapa/webhook', 'POST', $payload);
-
-        $response = $controller->handle($request);
-        $this->assertSame($expectedStatus, $response->getStatusCode());
-    }
-
-    public static function rejectionCases(): array
-    {
-        return [
-            'invalid signature' => [false, ['tx_ref' => 'lk-test'], 403],
-            'missing tx_ref' => [true, [], 422],
-            'unknown tx_ref' => [true, ['tx_ref' => 'lk-unknown123'], 404],
-        ];
-    }
-
-    #[DataProvider('webhookFulfillmentCases')]
-    public function testMarketplaceWebhookFulfillment(
-        string $orderStatus,
-        string $attemptStatus,
-        bool $shouldVerify,
-        string $expectedMessage,
-    ): void {
-        $this->mockChapaGateway(true);
-        $this->mockDeliveryLogger();
-
-        $ref = 'lk-webhook-test';
-        $order = $this->createOrderAndAttempt($ref, $orderStatus, $attemptStatus);
-
         $verifier = $this->createMock(StorefrontPaymentVerificationService::class);
-        $expectation = $shouldVerify ? $verifier->expects($this->once()) : $verifier->expects($this->never());
+        $expectation = $case->shouldVerify ? $verifier->expects($this->once()) : $verifier->expects($this->never());
         $expectation->method('verifyAndFulfill')->with($ref)->willReturn($order);
         $this->app->instance(StorefrontPaymentVerificationService::class, $verifier);
 
@@ -133,23 +144,27 @@ class ChapaWebhookMarketplaceRoutingTest extends TestCase
 
         $response = $controller->handle($request);
         $this->assertSame(200, $response->getStatusCode());
-        $this->assertSame($expectedMessage, $response->getData()->message);
+        $this->assertSame($case->expectedMessage, $response->getData()->message);
     }
 
     public static function webhookFulfillmentCases(): array
     {
         return [
             'initial pending attempt fulfills' => [
-                'pending_payment',
-                StorefrontPaymentAttempt::STATUS_PENDING,
-                true,
-                'Payment processed.',
+                new WebhookFulfillmentCase(
+                    'pending_payment',
+                    StorefrontPaymentAttempt::STATUS_PENDING,
+                    true,
+                    'Payment processed.',
+                ),
             ],
             'duplicate attempt already processed' => [
-                'paid',
-                StorefrontPaymentAttempt::STATUS_SUCCESSFUL,
-                false,
-                'Already processed.',
+                new WebhookFulfillmentCase(
+                    'paid',
+                    StorefrontPaymentAttempt::STATUS_SUCCESSFUL,
+                    false,
+                    'Already processed.',
+                ),
             ],
         ];
     }
@@ -158,7 +173,20 @@ class ChapaWebhookMarketplaceRoutingTest extends TestCase
     public function testMarketplaceReturnOutcomes(bool $throwsException): void
     {
         $ref = 'lk-return-'.($throwsException ? 'fail' : 'ok');
-        $order = $this->createOrderAndAttempt($ref, 'pending_payment', StorefrontPaymentAttempt::STATUS_PENDING);
+        $order = StorefrontOrder::query()->create([
+            'uuid' => 'order-uuid-'.$ref,
+            'status' => 'pending_payment',
+            'chapa_tx_ref' => $ref,
+        ]);
+
+        StorefrontPaymentAttempt::query()->create([
+            'order_id' => $order->id,
+            'merchant_reference' => $ref,
+            'idempotency_key' => 'idemp-'.$ref,
+            'amount_cents' => 15000,
+            'currency' => 'ETB',
+            'status' => StorefrontPaymentAttempt::STATUS_PENDING,
+        ]);
 
         $verifier = $this->createMock(StorefrontPaymentVerificationService::class);
         $expectation = $verifier->expects($this->once())->method('verifyAndFulfill')->with($ref);
