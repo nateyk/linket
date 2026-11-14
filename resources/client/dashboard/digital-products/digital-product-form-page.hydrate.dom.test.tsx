@@ -285,6 +285,7 @@ test('Storefront outage remains recoverable and does not discard existing placem
   h.storefrontFail = true;
   mount();
   await loadProduct({...serverProduct, biolink_ids: [42]});
+  await user.click(screen.getByRole('button', {name: 'Storefront, step 4 of 4'}));
 
   expect(await screen.findByText(/Unable to load Storefronts\. Your product can still be saved or submitted\./)).toBeTruthy();
   expect(screen.queryByText(/Create a Storefront later if you want to display it there/)).toBeNull();
@@ -312,6 +313,7 @@ test('Storefront dropdown preserves multi-selection and uses no inline checkboxe
   ];
   mount();
   await loadProduct({...serverProduct, status: 'draft', biolink_ids: [42]});
+  await user.click(screen.getByRole('button', {name: 'Storefront, step 4 of 4'}));
 
   const trigger = await screen.findByRole('button', {name: 'Choose Storefronts'});
   expect(trigger.textContent).toContain('1 selected');
