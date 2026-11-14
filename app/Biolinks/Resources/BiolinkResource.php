@@ -80,7 +80,14 @@ class BiolinkResource extends LinkeableResource
                 $this->deleted_at,
             ),
 
-            'clicks_count' => (int) $this->clicks_count,
+            // Visitor totals are dashboard metrics, not public profile content.
+            // Show them in API list/detail responses where LoadStoreVisitStats
+            // attaches its aggregate, without changing the public loader data.
+            'clicks_count' => $this->when(
+                $fieldsPreset === 'show' ||
+                    isset($this->resource->unique_visitors_count),
+                fn(): int => (int) $this->clicks_count,
+            ),
             'unique_visitors_count' => $this->when(
                 isset($this->resource->unique_visitors_count),
                 (int) ($this->resource->unique_visitors_count ?? 0),
