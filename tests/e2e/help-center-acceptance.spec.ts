@@ -15,6 +15,13 @@ type HcFixture = {
 };
 
 function fixture(): HcFixture {
+  // The suite mutates data. Never allow an arbitrary remote URL to be targeted
+  // even when a fixture file exists on the developer's machine.
+  const host = new URL(process.env.E2E_BASE_URL ?? 'http://localhost:5173').hostname;
+  expect(
+    ['127.0.0.1', 'localhost', 'linket.ddev.site'].includes(host),
+    `Refusing destructive E2E tests against non-local host: ${host}`,
+  ).toBe(true);
   const filename = path.resolve('storage/app/e2e/hc-fixture.json');
   expect(fs.existsSync(filename), 'Run linket:prepare-hc-e2e against the disposable test database').toBe(true);
   const data = JSON.parse(fs.readFileSync(filename, 'utf8')) as HcFixture;
@@ -119,9 +126,21 @@ test.describe('isolated Help Center product acceptance', () => {
     const guestContext = await browser.newContext();
     try {
       const guest = await guestContext.newPage();
-      await guest.goto(new URL(href!, page.url()).toString());
+      const publicUrl = new URL(href!, page.url()).toString();
+      await guest.goto(publicUrl);
       await expect(guest.getByRole('heading', {name: title}).first()).toBeVisible({timeout: 30_000});
       await expect(guest.getByText(revisedBody).first()).toBeVisible();
+
+      // Validate the real public search index after publishing, with bounded
+      // retries to allow the backend search driver to synchronize.
+      await expect.poll(
+        async () => {
+          await guest.goto(`/hc/search/${encodeURIComponent(title)}`);
+          return guest.getByRole('link', {name: title, exact: true}).count();
+        },
+        {timeout: 30_000, intervals: [1000, 2000, 4000]},
+      ).toBeGreaterThan(0);
+      await guest.goto(publicUrl);
 
       const unpublished = articleResponse(page, 'PUT');
       await page.getByRole('button', {name: 'Unpublish'}).click();
@@ -130,6 +149,8 @@ test.describe('isolated Help Center product acceptance', () => {
 
       await guest.reload();
       await expect(guest.getByText(revisedBody)).toHaveCount(0);
+      await guest.goto(`/hc/search/${encodeURIComponent(title)}`);
+      await expect(guest.getByRole('link', {name: title, exact: true})).toHaveCount(0);
     } finally {
       await guestContext.close();
     }
@@ -154,7 +175,7 @@ test.describe('isolated Help Center product acceptance', () => {
     await expect(page.getByText(draft.title)).toHaveCount(0);
   });
 
-  test('an agent can manage content without switching into the admin shell; buyer cannot edit', async ({page}) => {
+  test('an agent can manage content without switching into the admin shell; buyer cannot edit', async ({page, browser}) => {
     test.setTimeout(120_000);
     const {agent, buyer, draft_article: draft} = fixture();
     await login(page, agent);
@@ -162,11 +183,16 @@ test.describe('isolated Help Center product acceptance', () => {
     await expect(page).toHaveURL(/\/agent\/hc\/arrange/);
     await expect(page.getByRole('button', {name: 'New category'})).toBeVisible();
 
-    await page.context().clearCookies();
-    await login(page, buyer);
-    await page.goto(`/agent/hc/articles/${draft.id}/edit`);
-    // The route guard must prevent displaying an editor with draft content.
-    await expect(page.getByRole('button', {name: 'Save', exact: true})).toHaveCount(0);
-    await expect(page.getByText('This draft must stay unpublished for public users.')).toHaveCount(0);
+    const buyerContext = await browser.newContext();
+    try {
+      const buyerPage = await buyerContext.newPage();
+      await login(buyerPage, buyer);
+      await buyerPage.goto(`/agent/hc/articles/${draft.id}/edit`);
+      // The route guard must prevent displaying an editor with draft content.
+      await expect(buyerPage.getByRole('button', {name: 'Save', exact: true})).toHaveCount(0);
+      await expect(buyerPage.getByText('This draft must stay unpublished for public users.')).toHaveCount(0);
+    } finally {
+      await buyerContext.close();
+    }
   });
 });
