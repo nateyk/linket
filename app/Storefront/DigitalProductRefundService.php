@@ -65,12 +65,12 @@ class DigitalProductRefundService
                 try {
                     app(\App\Storefront\Ledger\CreatorLedgerService::class)->recordRefund(
                         $order,
-                        $amount,
-                        $creatorReversal,
-                        [
-                            'fee_reversal_cents' => $feeReversal,
-                            'refund_id' => $refund->id,
-                        ],
+                        new \App\Storefront\Ledger\RefundBreakdown(
+                            grossCents: $amount,
+                            creatorCents: $creatorReversal,
+                            feeCents: $feeReversal,
+                            refundId: $refund->id,
+                        ),
                     );
                 } catch (\Throwable $e) {
                     \Illuminate\Support\Facades\Log::warning('store.refund.ledger_failed', ['refund_id' => $refund->id, 'error' => $e->getMessage()]);

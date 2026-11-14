@@ -196,10 +196,9 @@ class CreatorLedgerServiceTest extends TestCase
             ->willReturn(new StorefrontJournalEntry());
 
         $service = new class($postingServiceMock) extends CreatorLedgerService {
-            public function getBalances(\App\Storefront\Ledger\BalanceQuery|int $query, ?string $currency = null, ?int $workspaceId = null, bool $lock = false): array
+            public function getBalances(\App\Storefront\Ledger\BalanceQuery $query): array
             {
-                $curr = $query instanceof \App\Storefront\Ledger\BalanceQuery ? $query->currency : ($currency ?? 'ETB');
-                return ['held' => 0, 'available' => 0, 'reserved' => 0, 'deficit' => 0, 'currency' => $curr];
+                return ['held' => 0, 'available' => 0, 'reserved' => 0, 'deficit' => 0, 'currency' => $query->currency];
             }
         };
 
@@ -212,7 +211,14 @@ class CreatorLedgerServiceTest extends TestCase
             'platform_fee_cents' => 1000,
         ]);
 
-        $result = $service->recordRefund($order, 10000, 9000, ['fee_reversal_cents' => 1000, 'refund_id' => 99]);
+        $breakdown = new \App\Storefront\Ledger\RefundBreakdown(
+            grossCents: 10000,
+            creatorCents: 9000,
+            feeCents: 1000,
+            refundId: 99,
+        );
+
+        $result = $service->recordRefund($order, $breakdown);
         $this->assertInstanceOf(StorefrontJournalEntry::class, $result);
     }
 }
