@@ -38,6 +38,22 @@ async function signInCreator(page: Page) {
   await expect(page).toHaveURL(/\/dashboard(?:\/|$)/, {timeout: 15000});
 }
 
+/**
+ * Non-course creators expose one stage at a time. Billing is only visible
+ * after navigating to Price; Course keeps its separate setup layout.
+ * Opening the actual stage also protects the focus/contrast tests against
+ * accidentally measuring controls hidden behind inert panels.
+ */
+async function openPriceStage(page: Page, type: 'digital' | 'ebook' | 'audio' | 'course') {
+  if (type === 'course') return;
+  const steps = page.getByRole('navigation', {name: 'Product creation steps'});
+  const priceStep = steps.getByRole('button', {name: 'Price, step 3 of 4'});
+  await expect(priceStep).toBeVisible();
+  await priceStep.click();
+  await expect(priceStep).toHaveAttribute('aria-current', 'step');
+  await expect(page.getByRole('region', {name: 'Price'})).toBeVisible();
+}
+
 async function installedLocaleEvidence(page: Page) {
   return page.evaluate(() => {
     const raw = (window as Window & {bootstrapData?: unknown}).bootstrapData;
@@ -329,8 +345,10 @@ test('UX-35 keyboard focus outlines meet 3:1 on all four editors in both themes'
       evidence[theme + '-' + type].push(await measureFocusedOutline(
         page, type === 'course' ? '#course-title' : '#product-title',
       ));
+      await openPriceStage(page, type);
       const billing = '[role="radiogroup"][aria-label="Billing mode"] [role="radio"]';
       await expect(page.locator(billing)).toHaveCount(2);
+      await expect(page.locator(billing).first()).toBeVisible();
       for (const index of [0, 1]) {
         evidence[theme + '-' + type].push(await measureFocusedOutline(
           page, billing, {index, outlineOnParentLabel: true},
@@ -460,7 +478,9 @@ test('UX-35 paid price errors are linked and clear across four editors without w
   for (const type of ['digital', 'ebook', 'audio', 'course'] as const) {
     await page.goto('/dashboard/items/new/' + type);
     await expect(page.getByRole('heading', {level: 1})).toBeVisible();
+    await openPriceStage(page, type);
     const paid = page.locator('[role="radiogroup"][aria-label="Billing mode"] [role="radio"]').nth(1);
+    await expect(paid).toBeVisible();
     await paid.click();
 
     const inputId = type === 'course' ? 'course-price' : 'product-price';
