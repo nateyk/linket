@@ -57,7 +57,7 @@ class HcBrowserWorkflowRegressionTest extends TestCase
 
     public function test_role_autocomplete_uses_existing_role_model(): void
     {
-        $agent = $this->agentWithPermissions(['conversations.view']);
+        $agent = $this->agentWithPermissions(['conversations.update']);
 
         $this->stateful()->actingAs($agent)
             ->getJson('/api/v1/helpdesk/normalized-models/roles')
