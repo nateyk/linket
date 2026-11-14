@@ -36,6 +36,7 @@ const store = {
   name: 'Nate Anon',
   short_url: 'https://linket.example/novalife',
   clicks_count: 4,
+  unique_visitors_count: 2,
   profile_config: {},
 } as Store;
 
@@ -55,8 +56,22 @@ describe('storefront profile card', () => {
     expect(container.querySelector('.lucide-layout-panel-top')).toBeTruthy();
     expect(screen.getByText('4')).toBeTruthy();
     expect(screen.getByText(/clicks/).textContent).toBe('4 clicks');
+    expect(screen.getByText(/unique IPs/).textContent).toBe('2 unique IPs');
   });
 
+
+  it('does not present an unknown unique-IP count as zero', () => {
+    render(
+      <BiolinkCard
+        biolink={{...store, unique_visitors_count: undefined}}
+        onClick={vi.fn()}
+        onInsights={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText(/clicks/).textContent).toBe('4 clicks');
+    expect(screen.queryByText(/unique IPs/)).toBeNull();
+  });
 
   it('keeps a stable token border, puts copy beside the URL and styles clicks as a compact pill', () => {
     const {container} = render(
