@@ -209,7 +209,14 @@ test.describe('isolated Help Center product acceptance', () => {
     await expect(page.getByText(sectionName).first()).toBeVisible();
 
     await page.setViewportSize({width: 390, height: 844});
-    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+    const overflow = await page.evaluate(() => ({
+      width: document.documentElement.scrollWidth,
+      offenders: [...document.querySelectorAll('body *')]
+        .filter(element => element.getBoundingClientRect().right > innerWidth + 1)
+        .slice(0, 8)
+        .map(element => ({tag: element.tagName, className: String(element.className).slice(0, 100)})),
+    }));
+    expect(overflow.width, JSON.stringify(overflow.offenders)).toBeLessThanOrEqual(390);
   });
 
   test('admin creates, edits, publishes, unpublishes and deletes an article', async ({page, browser}) => {
