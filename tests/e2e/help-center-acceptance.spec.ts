@@ -208,15 +208,20 @@ test.describe('isolated Help Center product acceptance', () => {
     await expect(page).toHaveURL(/\/admin\/help\/arrange\/sections\/\d+/, {timeout: 30_000});
     await expect(page.getByText(sectionName).first()).toBeVisible();
 
-    await page.setViewportSize({width: 390, height: 844});
-    const overflow = await page.evaluate(() => ({
-      width: document.documentElement.scrollWidth,
-      offenders: [...document.querySelectorAll('body *')]
-        .filter(element => element.getBoundingClientRect().right > innerWidth + 1)
-        .slice(0, 8)
-        .map(element => ({tag: element.tagName, className: String(element.className).slice(0, 100)})),
-    }));
-    expect(overflow.width, JSON.stringify(overflow.offenders)).toBeLessThanOrEqual(390);
+    for (const width of [390, 320]) {
+      await page.setViewportSize({width, height: 844});
+      const overflow = await page.evaluate(() => ({
+        width: document.documentElement.scrollWidth,
+        offenders: [...document.querySelectorAll('body *')]
+          .filter(element => element.getBoundingClientRect().right > innerWidth + 1)
+          .slice(0, 8)
+          .map(element => ({tag: element.tagName, className: String(element.className).slice(0, 100)})),
+      }));
+      expect(overflow.width, JSON.stringify(overflow.offenders)).toBeLessThanOrEqual(width);
+      await expect(page.getByRole('link', {name: 'Back'})).toBeVisible();
+    }
+    await page.getByRole('link', {name: 'Back'}).click();
+    await expect(page).toHaveURL(/\/admin\/help\/arrange\/categories\/\d+/);
   });
 
   test('admin creates, edits, publishes, unpublishes and deletes an article', async ({page, browser}) => {
