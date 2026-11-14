@@ -194,6 +194,35 @@ test.describe('isolated Help Center product acceptance', () => {
     await expect(page.getByText(draft.title)).toHaveCount(0);
   });
 
+  test('public article edit links open the correct admin and agent dashboards', async ({page, browser}) => {
+    test.setTimeout(120_000);
+    const {admin, agent, published_article: published} = fixture();
+
+    await login(page, admin);
+    await page.goto(published.url);
+    const adminEdit = page.getByRole('link', {name: 'Edit article'});
+    await expect(adminEdit).toHaveAttribute('href', `/admin/help/articles/${published.id}/edit`);
+    await adminEdit.click();
+    await expect(page).toHaveURL(new RegExp(`/admin/help/articles/${published.id}/edit`));
+    await expect(page.getByRole('button', {name: 'Save', exact: true})).toBeVisible();
+
+    const agentContext = await browser.newContext({
+      baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:5173',
+    });
+    try {
+      const agentPage = await agentContext.newPage();
+      await login(agentPage, agent);
+      await agentPage.goto(published.url);
+      const agentEdit = agentPage.getByRole('link', {name: 'Edit article'});
+      await expect(agentEdit).toHaveAttribute('href', `/agent/hc/articles/${published.id}/edit`);
+      await agentEdit.click();
+      await expect(agentPage).toHaveURL(new RegExp(`/agent/hc/articles/${published.id}/edit`));
+      await expect(agentPage.getByRole('button', {name: 'Save', exact: true})).toBeVisible();
+    } finally {
+      await agentContext.close();
+    }
+  });
+
   test('an agent can manage content without switching into the admin shell; buyer cannot edit', async ({page, browser}) => {
     test.setTimeout(120_000);
     const {agent, buyer, draft_article: draft} = fixture();
