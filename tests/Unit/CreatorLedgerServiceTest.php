@@ -196,9 +196,10 @@ class CreatorLedgerServiceTest extends TestCase
             ->willReturn(new StorefrontJournalEntry());
 
         $service = new class($postingServiceMock) extends CreatorLedgerService {
-            public function getBalances(int $creatorId, string $currency, ?int $workspaceId = null, bool $lock = false): array
+            public function getBalances(\App\Storefront\Ledger\BalanceQuery|int $query, ?string $currency = null, ?int $workspaceId = null, bool $lock = false): array
             {
-                return ['held' => 0, 'available' => 0, 'reserved' => 0, 'deficit' => 0, 'currency' => $currency];
+                $curr = $query instanceof \App\Storefront\Ledger\BalanceQuery ? $query->currency : ($currency ?? 'ETB');
+                return ['held' => 0, 'available' => 0, 'reserved' => 0, 'deficit' => 0, 'currency' => $curr];
             }
         };
 

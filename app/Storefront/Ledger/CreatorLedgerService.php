@@ -7,6 +7,7 @@ use App\Storefront\Models\PayoutRequest;
 use App\Storefront\Models\StorefrontJournalEntry;
 use App\Storefront\Models\StorefrontJournalLine;
 use App\Storefront\Models\StorefrontOrder;
+use Illuminate\Support\Collection;
 
 class CreatorLedgerService
 {
@@ -95,18 +96,12 @@ class CreatorLedgerService
             );
         }
 
-        return $this->postTwoLegTransfer(
-            'payout',
-            $payout->id,
+        return $this->postPayoutTransfer(
+            $payout,
             'withdrawal_reserved',
-            [
-                'from' => AccountCodes::CREATOR_AVAILABLE,
-                'to' => AccountCodes::CREATOR_RESERVED,
-                'amount_cents' => $payout->amount_cents,
-                'currency' => $currency,
-                'context' => ['creator_id' => $payout->creator_id, 'workspace_id' => $payout->workspace_id],
-                'description' => "Withdrawal reservation for payout request #{$payout->id}",
-            ],
+            AccountCodes::CREATOR_AVAILABLE,
+            AccountCodes::CREATOR_RESERVED,
+            "Withdrawal reservation for payout request #{$payout->id}",
         );
     }
 
@@ -115,18 +110,12 @@ class CreatorLedgerService
      */
     public function releasePayoutReservation(PayoutRequest $payout): StorefrontJournalEntry
     {
-        return $this->postTwoLegTransfer(
-            'payout',
-            $payout->id,
+        return $this->postPayoutTransfer(
+            $payout,
             'withdrawal_released',
-            [
-                'from' => AccountCodes::CREATOR_RESERVED,
-                'to' => AccountCodes::CREATOR_AVAILABLE,
-                'amount_cents' => $payout->amount_cents,
-                'currency' => $payout->currency ?: config('storefront.currency', 'ETB'),
-                'context' => ['creator_id' => $payout->creator_id, 'workspace_id' => $payout->workspace_id],
-                'description' => "Withdrawal reservation released for payout request #{$payout->id}",
-            ],
+            AccountCodes::CREATOR_RESERVED,
+            AccountCodes::CREATOR_AVAILABLE,
+            "Withdrawal reservation released for payout request #{$payout->id}",
         );
     }
 
@@ -135,19 +124,30 @@ class CreatorLedgerService
      */
     public function disbursePayout(PayoutRequest $payout): StorefrontJournalEntry
     {
-        return $this->postTwoLegTransfer(
-            'payout',
-            $payout->id,
+        return $this->postPayoutTransfer(
+            $payout,
             'withdrawal_disbursed',
-            [
-                'from' => AccountCodes::CREATOR_RESERVED,
-                'to' => AccountCodes::PLATFORM_BANK_DISBURSED,
-                'amount_cents' => $payout->amount_cents,
-                'currency' => $payout->currency ?: config('storefront.currency', 'ETB'),
-                'context' => ['creator_id' => $payout->creator_id, 'workspace_id' => $payout->workspace_id],
-                'description' => "Withdrawal disbursed for payout request #{$payout->id}",
-            ],
+            AccountCodes::CREATOR_RESERVED,
+            AccountCodes::PLATFORM_BANK_DISBURSED,
+            "Withdrawal disbursed for payout request #{$payout->id}",
         );
+    }
+
+    private function postPayoutTransfer(
+        PayoutRequest $payout,
+        string $eventType,
+        string $fromAccount,
+        string $toAccount,
+        string $description,
+    ): StorefrontJournalEntry {
+        return $this->postTwoLegTransfer('payout', $payout->id, $eventType, [
+            'from' => $fromAccount,
+            'to' => $toAccount,
+            'amount_cents' => $payout->amount_cents,
+            'currency' => $payout->currency ?: config('storefront.currency', 'ETB'),
+            'context' => ['creator_id' => $payout->creator_id, 'workspace_id' => $payout->workspace_id],
+            'description' => $description,
+        ]);
     }
 
     /**
@@ -267,47 +267,51 @@ class CreatorLedgerService
     /**
      * Returns balances for a creator and currency strictly from double-entry journal lines.
      */
-    public function getBalances(int $creatorId, string $currency, ?int $workspaceId = null, bool $lock = false): array
+    public function getBalances(BalanceQuery|int $query, ?string $currency = null, ?int $workspaceId = null, bool $lock = false): array
     {
-        $query = StorefrontJournalLine::query()
-            ->where('creator_id', $creatorId)
-            ->where('currency', $currency);
+        $filter = $query instanceof BalanceQuery
+            ? $query
+            : new BalanceQuery($query, $currency ?? config('storefront.currency', 'ETB'), $workspaceId, $lock);
 
-        if ($workspaceId !== null) {
-            $query->where('workspace_id', $workspaceId);
+        $dbQuery = StorefrontJournalLine::query()
+            ->where('creator_id', $filter->creatorId)
+            ->where('currency', $filter->currency);
+
+        if ($filter->workspaceId !== null) {
+            $dbQuery->where('workspace_id', $filter->workspaceId);
         }
 
-        if ($lock) {
-            $query->lockForUpdate();
+        if ($filter->lock) {
+            $dbQuery->lockForUpdate();
         }
 
-        $lines = $query->get(['account_code', 'debit_cents', 'credit_cents']);
+        $lines = $dbQuery->get(['account_code', 'debit_cents', 'credit_cents']);
 
         return [
             'held' => $this->calculateBalance($lines, AccountCodes::CREATOR_HELD),
             'available' => $this->calculateBalance($lines, AccountCodes::CREATOR_AVAILABLE),
             'reserved' => $this->calculateBalance($lines, AccountCodes::CREATOR_RESERVED),
             'deficit' => $this->calculateAssetBalance($lines, AccountCodes::CREATOR_DEFICIT_RECEIVABLE),
-            'currency' => $currency,
+            'currency' => $filter->currency,
         ];
     }
 
-    private function calculateBalance($lines, string $accountCode): int
+    private function calculateBalance(Collection $lines, string $accountCode): int
     {
         $credits = (int) $lines->where('account_code', $accountCode)->sum('credit_cents');
         $debits = (int) $lines->where('account_code', $accountCode)->sum('debit_cents');
         return max(0, $credits - $debits);
     }
 
-    private function calculateAssetBalance($lines, string $accountCode): int
+    private function calculateAssetBalance(Collection $lines, string $accountCode): int
     {
         $debits = (int) $lines->where('account_code', $accountCode)->sum('debit_cents');
         $credits = (int) $lines->where('account_code', $accountCode)->sum('credit_cents');
         return max(0, $debits - $credits);
     }
 
-    public function getAvailableBalance(int $creatorId, string $currency, ?int $workspaceId = null, bool $lock = false): int
+    public function getAvailableBalance(BalanceQuery|int $query, ?string $currency = null, ?int $workspaceId = null, bool $lock = false): int
     {
-        return $this->getBalances($creatorId, $currency, $workspaceId, $lock)['available'];
+        return $this->getBalances($query, $currency, $workspaceId, $lock)['available'];
     }
 }
