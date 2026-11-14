@@ -60,6 +60,13 @@ class PayoutRequestService
                 'payout_request_id' => $payout->id,
                 'description' => __('Payout request reserved'),
             ]);
+
+            try {
+                app(\App\Storefront\Ledger\CreatorLedgerService::class)->reserveForPayout($payout, $available);
+            } catch (\Throwable $e) {
+                Log::warning('store.payout.ledger_reserve_failed', ['payout_id' => $payout->id, 'error' => $e->getMessage()]);
+            }
+
             $this->activity($payout, $creatorId, 'requested');
             Log::info('store.payout.requested', [
                 'workspace_id' => $workspaceId,
@@ -115,6 +122,20 @@ class PayoutRequestService
                     'payout_request_id' => $payout->id,
                     'description' => __('Payout reservation released'),
                 ]);
+
+                try {
+                    app(\App\Storefront\Ledger\CreatorLedgerService::class)->releasePayoutReservation($payout);
+                } catch (\Throwable $e) {
+                    Log::warning('store.payout.ledger_release_failed', ['payout_id' => $payout->id, 'error' => $e->getMessage()]);
+                }
+            }
+
+            if ($target === 'paid') {
+                try {
+                    app(\App\Storefront\Ledger\CreatorLedgerService::class)->disbursePayout($payout);
+                } catch (\Throwable $e) {
+                    Log::warning('store.payout.ledger_disburse_failed', ['payout_id' => $payout->id, 'error' => $e->getMessage()]);
+                }
             }
             $this->activity($payout, $actorId, $target, $data['reason'] ?? $data['note'] ?? null);
             Log::info('store.payout.transition', [
