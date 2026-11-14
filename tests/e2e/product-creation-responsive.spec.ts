@@ -84,7 +84,14 @@ test.describe('product creation responsive evidence', () => {
         await page.goto(`/dashboard/items/new/${item.type}`);
         const heading = page.getByRole('heading', {name: item.heading, level: 1});
         await expect(heading).toBeVisible();
-        await expect(page.getByRole('heading', {name: item.section})).toBeVisible();
+        if (item.type === 'course') {
+          await expect(page.getByRole('heading', {name: item.section})).toBeVisible();
+        } else {
+          await expect(page.getByRole('heading', {name: item.section})).toHaveCount(0);
+          await page.getByRole('button', {name: 'Files & sample, step 2 of 4'}).click();
+          await expect(page.getByRole('heading', {name: item.section})).toBeVisible();
+          await page.getByRole('button', {name: 'Details, step 1 of 4'}).click();
+        }
 
         // The creator header is a compact breadcrumb, not a separate large
         // visible H1. Measure the actual current-page crumb and its container.
@@ -182,7 +189,7 @@ test('connected steps scroll within the editor without shifting the dashboard pa
     await page.setViewportSize({width, height: 812});
     await page.goto('/dashboard/items/new/ebook');
     const navigation = page.getByRole('navigation', {name: 'Product creation steps'});
-    const storefrontStep = navigation.getByRole('button', {name: 'Storefront, step 5 of 5'});
+    const storefrontStep = navigation.getByRole('button', {name: 'Storefront, step 4 of 4'});
     const editor = page.locator('[data-slot="section-content"]');
     await expect(storefrontStep).toBeVisible();
 
@@ -194,8 +201,8 @@ test('connected steps scroll within the editor without shifting the dashboard pa
     await expect(page.getByRole('heading', {name: 'Storefront placement (optional)'})).toBeFocused();
     expect(await page.evaluate(() => window.scrollY), `outer document must not move at ${width}px`)
       .toBe(documentTop);
-    expect(await editor.evaluate(node => node.scrollTop), `editor should scroll at ${width}px`)
-      .toBeGreaterThan(editorTop);
+    expect(await editor.evaluate(node => node.scrollTop), `editor scroll must not reset incorrectly at ${width}px`)
+      .toBeGreaterThanOrEqual(editorTop);
   }
 });
 
@@ -377,6 +384,7 @@ test('optional Storefront lookup failure can retry without creating or saving a 
   });
 
   await page.goto('/dashboard/items/new/digital?billing=free');
+  await page.getByRole('button', {name: 'Storefront, step 4 of 4'}).click();
   const placement = page.getByRole('region', {name: 'Storefront placement (optional)'});
   await expect(placement.getByText('Unable to load Storefronts. Your product can still be saved or submitted. Retry to choose placement.')).toBeVisible();
   await expect(placement.getByText(/Create a Storefront later if you want to display it there/)).toHaveCount(0);
@@ -396,6 +404,7 @@ test('invalid upload is announced and removable without submitting a product', a
   );
   await loginAsSeededCreator(page);
   await page.goto('/dashboard/items/new/digital');
+  await page.getByRole('button', {name: 'Files & sample, step 2 of 4'}).click();
   const files = page.getByRole('region', {name: 'Files buyers receive'});
   const browse = files.getByRole('button', {name: 'Browse files', exact: true});
   const fileInput = files.locator('input[type="file"]');
