@@ -16,10 +16,18 @@ export function HcManagerBreadcrumb({category, section}: Props) {
       </BreadcrumbItem>
       {category && (
         <BreadcrumbItem to={`${root}/arrange/categories/${category.id}`}>
-          {category.name}
+          <span className="block max-w-24 truncate sm:max-w-64 md:max-w-xs" title={category.name}>
+            {category.name}
+          </span>
         </BreadcrumbItem>
       )}
-      {section && <BreadcrumbItem>{section.name}</BreadcrumbItem>}
+      {section && (
+        <BreadcrumbItem>
+          <span className="block max-w-24 truncate sm:max-w-64 md:max-w-xs" title={section.name}>
+            {section.name}
+          </span>
+        </BreadcrumbItem>
+      )}
     </Breadcrumb>
   );
 }
