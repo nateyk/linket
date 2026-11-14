@@ -44,17 +44,17 @@ export function ServiceFormSection({
       id={`service-step-${id}`}
       aria-labelledby={`service-step-${id}-heading`}
       className={cn(
-        'min-w-0 overflow-hidden rounded-card border bg-card',
+        'min-w-0 overflow-hidden rounded-card-sm border border-border bg-card',
         hasError && 'border-destructive/60',
       )}
     >
-      <header className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 px-4 pt-3 pb-1 sm:px-5 sm:pt-4">
+      <header className="mx-4 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 border-b border-border pt-3 pb-3 sm:mx-5 sm:pt-4">
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
           <Icon aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
           <h2
             id={`service-step-${id}-heading`}
             tabIndex={-1}
-            className="min-w-0 text-base leading-6 font-semibold focus-visible:outline-2 focus-visible:outline-primary"
+            className="min-w-0 text-base leading-6 font-semibold focus-visible:outline-2 focus-visible:outline-ring"
           >
             {title}
           </h2>
@@ -80,7 +80,7 @@ export function ServiceFormSection({
           </Popover.Root>
         </div>
       </header>
-      <div className="min-w-0 px-4 pt-2 pb-4 sm:px-5 sm:pt-2 sm:pb-5">{children}</div>
+      <div className="min-w-0 px-4 pt-4 pb-4 sm:px-5 sm:pt-4 sm:pb-5">{children}</div>
     </section>
   );
 }

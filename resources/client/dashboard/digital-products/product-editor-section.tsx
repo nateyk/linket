@@ -13,12 +13,12 @@ export function ProductEditorSection({id, title, children}: ProductEditorSection
       role="region"
       aria-labelledby={id}
       data-slot="product-editor-section"
-      className="min-w-0 rounded-card-sm border border-border bg-card p-3 sm:p-4"
+      className="min-w-0 rounded-card-sm border border-border bg-card p-4 sm:p-5"
     >
       <h2
         id={id}
         tabIndex={-1}
-        className="mb-3 min-w-0 scroll-mt-24 text-base font-semibold leading-6 text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+        className="mb-4 min-w-0 scroll-mt-24 border-b border-border pb-3 text-base font-semibold leading-6 text-foreground focus-visible:outline-2 focus-visible:outline-ring"
       >
         {title}
       </h2>

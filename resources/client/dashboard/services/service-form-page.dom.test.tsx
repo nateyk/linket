@@ -228,14 +228,19 @@ describe('the service form shell', () => {
     expect(selected.className).not.toContain('border-primary/40');
     expect(selected.className).not.toContain('bg-primary/5');
     const basicsHeader = screen.getByRole('heading', {name: 'Basics'}).closest('header');
-    expect(basicsHeader?.className).not.toContain('border-b');
-    expect(basicsHeader?.className).toContain('pb-1');
+    expect(basicsHeader?.className).toContain('border-b');
+    expect(basicsHeader?.className).toContain('border-border');
+    expect(basicsHeader?.className).toContain('pb-3');
+    expect(basicsHeader?.parentElement?.className).toContain('rounded-card-sm');
+    expect(basicsHeader?.nextElementSibling?.className).toContain('pt-4');
     expect(basicsHeader?.querySelector('span[aria-hidden="true"]')).toBeNull();
     expect(screen.queryByText('Name the offer and describe it in one clear line.')).toBeNull();
     expect(screen.getByRole('button', {name: 'About Basics'})).toBeTruthy();
     const titleField = titleInput().closest('[data-slot="field"]');
     expect(titleField?.className).toContain('focus-visible:not([aria-invalid=true])');
     expect(titleField?.className).toContain('outline-primary');
+    expect(titleField?.className).toContain('gap-2');
+    expect(screen.getByText('A clear name, for example Logo design.')).toBeTruthy();
     // Step changes are announced once by the page-level status region.
     expect(screen.getAllByRole('status')).toHaveLength(1);
   });
@@ -790,6 +795,8 @@ describe('saving', () => {
     await user.click(screen.getByRole('button', {name: 'Publish service'}));
 
     expect(screen.getByText('A title is required.')).toBeTruthy();
+    // Errors should not hide the guidance required to correct the field.
+    expect(screen.getByText('A clear name, for example Logo design.')).toBeTruthy();
     expect(api.post).not.toHaveBeenCalled();
   });
 });

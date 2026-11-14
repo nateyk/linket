@@ -475,6 +475,29 @@ describe('course edit redirect', () => {
   });
 });
 
+describe('shared Product and Service form field hierarchy', () => {
+  const productField = fs.readFileSync(
+    path.resolve('resources/client/dashboard/digital-products/product-form-field.tsx'),
+    'utf8',
+  );
+  const serviceField = fs.readFileSync(
+    path.resolve('resources/client/dashboard/services/service-form/service-form-field.tsx'),
+    'utf8',
+  );
+
+  test('both field types use the same compact label and required-state typography', () => {
+    for (const source of [productField, serviceField]) {
+      expect(source).toContain('min-w-0');
+      expect(source).toContain('text-sm font-medium leading-5');
+      expect(source).toContain('className="text-destructive"');
+      expect(source).toContain('<Field.Description');
+      expect(source).toContain('<Field.Error');
+    }
+    expect(productField).toContain('className="min-w-0 gap-2"');
+    expect(serviceField).not.toContain('(description || counter) && !error');
+  });
+});
+
 describe('product editor compact breadcrumb header', () => {
   const source = fs.readFileSync(
     path.resolve('resources/client/dashboard/digital-products/digital-product-form-page.tsx'),

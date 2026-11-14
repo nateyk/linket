@@ -25,6 +25,18 @@ describe('dedicated E-book editor', () => {
     expect(screen.queryByRole('tablist')).toBeNull();
   });
 
+  test('uses the common creator panel padding and an inset heading divider', () => {
+    render(<EbookEditor {...slots} />);
+    const section = screen.getByRole('region', {name: 'Book information'});
+    expect(section.getAttribute('data-slot')).toBe('product-editor-section');
+    expect(section.className).toContain('rounded-card-sm');
+    expect(section.className).toContain('p-4 sm:p-5');
+    const heading = within(section).getByRole('heading', {level: 2});
+    expect(heading.className).toContain('border-b');
+    expect(heading.className).toContain('pb-3');
+    expect(heading.className).toContain('mb-4');
+  });
+
   test('supports PDF or EPUB without repeating instructions in a help popover', () => {
     render(<EbookEditor {...slots} />);
     const bookFiles = screen.getByRole('region', {name: 'Book files'});
