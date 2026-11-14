@@ -147,4 +147,6 @@ class StorefrontOrder extends StorefrontModel
     public function creatorPaymentMethod(): BelongsTo { return $this->belongsTo(CreatorPaymentMethod::class); }
     public function directPaymentVerifications(): MorphMany { return $this->morphMany(\App\Payments\Models\DirectPaymentVerification::class, 'payable'); }
     public function latestDirectPaymentVerification(): MorphOne { return $this->morphOne(\App\Payments\Models\DirectPaymentVerification::class, 'payable')->latestOfMany(); }
+    public function paymentAttempts(): HasMany { return $this->hasMany(StorefrontPaymentAttempt::class, 'order_id'); }
+    public function latestPaymentAttempt(): HasOne { return $this->hasOne(StorefrontPaymentAttempt::class, 'order_id')->latestOfMany(); }
 }

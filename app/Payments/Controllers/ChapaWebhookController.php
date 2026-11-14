@@ -7,13 +7,16 @@ use App\Payments\ChapaWebhookDeliveryLogger;
 use App\Payments\ChapaPaymentFulfillment;
 use App\Payments\Models\PaymentTransaction;
 use App\Payments\PaymentVerificationException;
+use App\Storefront\Models\StorefrontPaymentAttempt;
+use App\Storefront\Services\StorefrontPaymentVerificationService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Log;
 
 class ChapaWebhookController extends Controller
 {
-    public function handle(Request $request)
+    public function handle(Request $request): JsonResponse
     {
         $deliveryLogger = app(ChapaWebhookDeliveryLogger::class);
         $signatureIsValid = app(ChapaGateway::class)->signatureIsValid($request);
@@ -31,10 +34,24 @@ class ChapaWebhookController extends Controller
         }
 
         $transaction = PaymentTransaction::query()->where('tx_ref', $txRef)->first();
-        if (!$transaction) {
-            $deliveryLogger->record($txRef, true, 'rejected', 'unknown_tx_ref');
-            return response()->json(['message' => 'Unknown transaction.'], 404);
+        if ($transaction) {
+            return $this->handleSubscriptionPayment($transaction, $txRef, $deliveryLogger);
         }
+
+        $attempt = StorefrontPaymentAttempt::query()->where('merchant_reference', $txRef)->first();
+        if ($attempt) {
+            return $this->handleMarketplacePayment($attempt, $txRef, $deliveryLogger);
+        }
+
+        $deliveryLogger->record($txRef, true, 'rejected', 'unknown_tx_ref');
+        return response()->json(['message' => 'Unknown transaction.'], 404);
+    }
+
+    private function handleSubscriptionPayment(
+        PaymentTransaction $transaction,
+        string $txRef,
+        ChapaWebhookDeliveryLogger $deliveryLogger,
+    ): JsonResponse {
         if ($transaction->status === 'paid') {
             $deliveryLogger->record($txRef, true, 'duplicate');
             return response()->json(['message' => 'Already processed.']);
@@ -53,6 +70,29 @@ class ChapaWebhookController extends Controller
         } catch (\Throwable $e) {
             $deliveryLogger->record($txRef, true, 'failed', 'verification_error');
             Log::warning('Chapa payment verification failed.', ['tx_ref' => $txRef, 'message' => $e->getMessage()]);
+            return response()->json(['message' => 'Payment verification failed.'], 422);
+        }
+
+        $deliveryLogger->record($txRef, true, 'fulfilled');
+
+        return response()->json(['message' => 'Payment processed.']);
+    }
+
+    private function handleMarketplacePayment(
+        StorefrontPaymentAttempt $attempt,
+        string $txRef,
+        ChapaWebhookDeliveryLogger $deliveryLogger,
+    ): JsonResponse {
+        if ($attempt->isSuccessful()) {
+            $deliveryLogger->record($txRef, true, 'duplicate');
+            return response()->json(['message' => 'Already processed.']);
+        }
+
+        try {
+            app(StorefrontPaymentVerificationService::class)->verifyAndFulfill($txRef);
+        } catch (\Throwable $e) {
+            $deliveryLogger->record($txRef, true, 'failed', 'verification_error');
+            Log::warning('Chapa marketplace payment verification failed.', ['tx_ref' => $txRef, 'message' => $e->getMessage()]);
             return response()->json(['message' => 'Payment verification failed.'], 422);
         }
 
