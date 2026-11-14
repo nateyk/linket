@@ -19,7 +19,7 @@ test.each([
   ['audio', AudioEditor, 'Audio information', 'Full audio files', 'Preview clips (optional)'],
 ] as const)('%s shows only one stage while keeping form state mounted', (_type, Editor, details, files, sample) => {
   const view = render(<Editor {...fields} activeStep="details" />);
-  const name = screen.getByRole('textbox', {name: 'Product name'});
+  const name = screen.getByRole('textbox', {name: 'Product name'}) as HTMLInputElement;
   fireEvent.change(name, {target: {value: 'My edited product'}});
   expect(screen.getByRole('region', {name: details})).toBeTruthy();
   expect(screen.queryByRole('region', {name: files})).toBeNull();
