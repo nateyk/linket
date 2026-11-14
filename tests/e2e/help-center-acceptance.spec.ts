@@ -206,7 +206,7 @@ test.describe('isolated Help Center product acceptance', () => {
     await dialog.getByRole('textbox', {name: 'Name'}).fill(sectionName);
     await dialog.getByRole('button', {name: 'Create', exact: true}).click();
     await expect(page).toHaveURL(/\/admin\/help\/arrange\/sections\/\d+/, {timeout: 30_000});
-    await expect(page.getByText(sectionName).first()).toBeVisible();
+    await expect(page.getByText(sectionName).filter({visible: true}).first()).toBeVisible();
 
     for (const width of [390, 320]) {
       await page.setViewportSize({width, height: 844});
