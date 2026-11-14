@@ -31,7 +31,7 @@ export function DigitalProductEditor({
   return (
     <div className="flex min-w-0 flex-col gap-3 sm:gap-4" data-testid="digital-product-editor">
       <ProductEditorSection
-        active={activeStep === undefined || activeStep === 'details,details'}
+        active={activeStep === undefined || activeStep === 'details'}
         id="digital-product-details"
         title={<Trans message="Product details" />}
       >
@@ -39,7 +39,7 @@ export function DigitalProductEditor({
       </ProductEditorSection>
 
       <ProductEditorSection
-        active={activeStep === undefined || activeStep === 'files,files'}
+        active={activeStep === undefined || activeStep === 'files'}
         id="digital-product-files"
         title={<Trans message="Files buyers receive" />}
       >
@@ -47,7 +47,7 @@ export function DigitalProductEditor({
       </ProductEditorSection>
 
       <ProductEditorSection
-        active={activeStep === undefined || activeStep === 'sample,files'}
+        active={activeStep === undefined || activeStep === 'files'}
         id="digital-product-sample"
         title={<Trans message="Sample PDF (optional)" />}
       >
@@ -55,7 +55,7 @@ export function DigitalProductEditor({
       </ProductEditorSection>
 
       <ProductEditorSection
-        active={activeStep === undefined || activeStep === 'pricing,pricing'}
+        active={activeStep === undefined || activeStep === 'pricing'}
         id="digital-product-pricing"
         title={<Trans message="Price" />}
       >
@@ -63,7 +63,7 @@ export function DigitalProductEditor({
       </ProductEditorSection>
 
       <ProductEditorSection
-        active={activeStep === undefined || activeStep === 'storefront,storefront'}
+        active={activeStep === undefined || activeStep === 'storefront'}
         id="digital-product-storefront"
         title={<Trans message="Storefront placement (optional)" />}
       >
