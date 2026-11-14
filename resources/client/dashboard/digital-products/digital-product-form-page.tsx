@@ -525,11 +525,20 @@ function DigitalProductForm() {
         (effectiveBilling === 'paid' && priceCents <= 0) ||
         (!isCourse && !files.length)
       ) {
-        setOpenSection(
-          !title.trim() || !effectiveBilling || !Number.isFinite(priceCents) || priceCents < 0 || (effectiveBilling === 'paid' && priceCents <= 0)
-            ? 'details'
-            : 'files',
-        );
+        if (isCourse) {
+          setOpenSection(
+            !title.trim() || !effectiveBilling || !Number.isFinite(priceCents) ||
+            priceCents < 0 || (effectiveBilling === 'paid' && priceCents <= 0)
+              ? 'details'
+              : 'files',
+          );
+        } else {
+          selectNonCourseStep(
+            !title.trim() ? 'details' :
+              !effectiveBilling || !Number.isFinite(priceCents) || priceCents < 0 ||
+              (effectiveBilling === 'paid' && priceCents <= 0) ? 'pricing' : 'files',
+          );
+        }
         setError(
           !effectiveBilling
             ? 'Choose Free access or Paid before saving.'
@@ -546,7 +555,8 @@ function DigitalProductForm() {
         product.currency.toLowerCase() !== 'etb' &&
         !convertToEtb
       ) {
-        setOpenSection('details');
+        if (isCourse) setOpenSection('details');
+        else selectNonCourseStep('pricing');
         setError(
           'Enter the correct ETB price and confirm the currency conversion before saving this product.',
         );
@@ -653,18 +663,18 @@ function DigitalProductForm() {
 
         if (Object.keys(validationErrors).length) {
           setFieldErrors(validationErrors);
-          setOpenSection(
-            validationErrors.sample_file_ids || validationErrors.sample_titles
-              ? 'previews'
-              : validationErrors.file_ids
-                ? 'files'
-                : 'details',
-          );
           const focusId = firstInvalidFieldId(validationErrors);
-          if (focusId) {
-            requestAnimationFrame(() => {
-              document.getElementById(focusId)?.focus({preventScroll: false});
-            });
+          if (isCourse) {
+            setOpenSection(
+              validationErrors.sample_file_ids || validationErrors.sample_titles
+                ? 'previews'
+                : validationErrors.file_ids ? 'files' : 'details',
+            );
+            if (focusId) {
+              requestAnimationFrame(() => document.getElementById(focusId)?.focus({preventScroll: false}));
+            }
+          } else {
+            selectNonCourseStep(productAuthoringStepForErrors(validationErrors), focusId ?? undefined);
           }
         }
       } finally {
@@ -688,6 +698,7 @@ function DigitalProductForm() {
       files,
       samples,
       navigate,
+      selectNonCourseStep,
       effectiveBilling,
       price,
       product,
