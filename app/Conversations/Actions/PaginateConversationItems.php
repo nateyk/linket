@@ -6,19 +6,21 @@ use App\Conversations\Models\Conversation;
 use App\Conversations\Models\ConversationItem;
 use App\Conversations\Traits\BuildsConversationResources;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\Auth;
 
 class PaginateConversationItems
 {
     use BuildsConversationResources;
 
-    public function execute(Conversation $conversation): array
+    public function execute(
+        Conversation $conversation,
+        bool $includePrivateNotes = false,
+    ): array
     {
         $paginator = $conversation
             ->items()
             ->with(['user.secondaryEmail', 'attachments'])
             ->when(
-                !Auth::user()->isAgent(),
+                ! $includePrivateNotes,
                 fn(Builder $builder) => $builder->where(
                     'type',
                     '!=',

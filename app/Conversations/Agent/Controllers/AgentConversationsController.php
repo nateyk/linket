@@ -29,7 +29,9 @@ class AgentConversationsController extends BaseController
     {
         $conversation = Conversation::findOrFail($id);
 
-        $this->authorize('show', $conversation);
+        // The agent payload includes customer metadata and internal fields.
+        // Ticket ownership alone must not grant access to this endpoint.
+        $this->authorize('update', $conversation);
 
         $response = (new FullConversationLoader())->loadData($conversation);
 

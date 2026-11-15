@@ -4,9 +4,11 @@ use Ai\Summary\CreateConversationSummary;
 use App\Conversations\Agent\Actions\ConversationsAssigner;
 use App\Conversations\Messages\CreateConversationMessage;
 use App\Conversations\Models\Conversation;
+use App\Models\User;
 use Common\Core\BaseController;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 
 class ConversationsAssigneeController extends BaseController
 {
@@ -28,6 +30,20 @@ class ConversationsAssigneeController extends BaseController
         $conversations->every(function (Conversation $conversation) {
             $this->authorize('update', $conversation);
         });
+
+        $target = User::find($data['userId']);
+        $isOperator = $target && Gate::forUser($target)->allows('update', Conversation::class);
+        $isCreatorOwner = $target && $conversations->isNotEmpty() &&
+            $conversations->every(
+                fn (Conversation $conversation) =>
+                    $conversation->support_owner_id !== null &&
+                    $conversation->support_owner_id === $target->id,
+            );
+        abort_unless(
+            $isOperator || $isCreatorOwner,
+            422,
+            'Assignee must be an authorized support operator.',
+        );
 
         $conversations = $conversations->filter(
             fn(Conversation $conversation) => $conversation->assignee_id !==
