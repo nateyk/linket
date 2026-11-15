@@ -1,8 +1,10 @@
 <?php
 
+use App\Conversations\Models\Conversation;
 use App\Models\User;
 use Common\Permissions\Models\Permission;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
 uses(DatabaseTransactions::class);
@@ -55,6 +57,46 @@ test('agent can load ai agent report overview', function () {
             'aiAgentInvolvment',
             'aiAgentInvolvmentOverTime',
         ]);
+});
+
+test('only users with reports.view can access ticket and agent reports', function () {
+    $user = User::factory()->create();
+
+    statefulReports()
+        ->actingAs($user)
+        ->getJson('/api/v1/reports/conversations/ticket')
+        ->assertForbidden();
+
+    statefulReports()
+        ->actingAs($user)
+        ->getJson('/api/v1/reports/agents')
+        ->assertForbidden();
+});
+
+test('platform ticket totals exclude creator-owned support tickets', function () {
+    $agent = createReportsAgent();
+    $customer = User::factory()->create();
+    $creator = User::factory()->create();
+
+    foreach ([null, $creator->id] as $supportOwnerId) {
+        Conversation::query()->create([
+            'user_id' => $customer->id,
+            'support_owner_id' => $supportOwnerId,
+            'subject' => 'Report scope validation',
+            'type' => 'ticket',
+            'assigned_to' => Conversation::ASSIGNED_AGENT,
+            'status_category' => Conversation::STATUS_OPEN,
+        ]);
+    }
+
+    // Reports cache by date range. Use fresh data for this isolation test.
+    Cache::flush();
+
+    statefulReports()
+        ->actingAs($agent)
+        ->getJson('/api/v1/reports/conversations/ticket')
+        ->assertOk()
+        ->assertJsonPath('newConversations.datasets.0.total', 1);
 });
 
 test('guest cannot load helpdesk reports', function () {
