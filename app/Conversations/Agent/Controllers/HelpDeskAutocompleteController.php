@@ -7,7 +7,7 @@ use App\HelpCenter\Models\HcArticle;
 use App\HelpCenter\Models\HcCategory;
 use App\Models\User;
 use App\Team\Models\Group;
-use Common\Auth\Roles\Role;
+use Common\Roles\Models\Role;
 use Common\Core\BaseController;
 use Common\Tags\Tag;
 use Envato\Models\EnvatoItem;

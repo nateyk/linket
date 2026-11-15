@@ -24,6 +24,7 @@ import {Trans} from '@ui/i18n/trans';
 import {ConfirmationDialog} from '@ui/overlays/dialog/confirmation-dialog';
 import {DialogTrigger} from '@ui/overlays/dialog/dialog-trigger';
 import {closeDialog, openDialog} from '@ui/overlays/store/dialog-store';
+import {PlusIcon} from 'lucide-react';
 import {useParams} from 'react-router';
 
 export function CategoriesManager() {
@@ -62,12 +63,16 @@ function ContainersManager({type, data}: ContainersManagerProps) {
             variant="flat"
             color="primary"
             size="xs"
+            className="size-8 min-w-8 shrink-0 px-0 sm:h-auto sm:w-auto sm:px-3"
           >
-            {type === 'categories' ? (
-              <Trans message="New category" />
-            ) : (
-              <Trans message="New section" />
-            )}
+            <PlusIcon className="size-4" aria-hidden="true" />
+            <span className="sr-only sm:not-sr-only">
+              {type === 'categories' ? (
+                <Trans message="New category" />
+              ) : (
+                <Trans message="New section" />
+              )}
+            </span>
           </Button>
           <CreateCategoryDialog />
         </DialogTrigger>
