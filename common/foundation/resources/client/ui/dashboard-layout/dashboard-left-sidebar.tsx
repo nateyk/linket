@@ -164,7 +164,7 @@ export const DashboardLeftSidebarItem = forwardRef<
         )}
       >
         {cloneElement(icon, {size: null, className: 'size-4'})}
-        {!isCompact && label}
+        {isCompact ? <span className="sr-only">{label}</span> : label}
         {otherChildren}
       </Element>
     );

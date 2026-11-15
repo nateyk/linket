@@ -21,6 +21,7 @@ import {
   NewspaperIcon,
   ListTreeIcon,
   LifeBuoyIcon,
+  MessagesSquareIcon,
 } from 'lucide-react';
 import {ComponentProps, ReactElement} from 'react';
 
@@ -34,6 +35,7 @@ export const AdminSidebarIcons: Record<
   '/admin/settings/general': <SettingsIcon />,
   '/admin/settings/hc': <LifeBuoyIcon />,
   '/admin/help': <LifeBuoyIcon />,
+  '/admin/support': <MessagesSquareIcon />,
   '/admin/subscriptions': <CircleDollarSignIcon />,
   '/admin/plans': <SquareStackIcon />,
   '/admin/users': <UserIcon />,
