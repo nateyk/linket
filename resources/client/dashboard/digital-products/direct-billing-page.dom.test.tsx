@@ -301,8 +301,9 @@ it('shows summary and orders, and sends status, search and page filters to the s
   render(<Component />);
 
   expect((await screen.findAllByText('Workbook')).length).toBeGreaterThan(0);
-  expect(screen.getByText('25000 ETB')).toBeTruthy();
+  expect(screen.getAllByText('25000 ETB').length).toBeGreaterThan(0);
   expect(screen.getByText('Verified sales')).toBeTruthy();
+  expect(screen.getByText('Creator earnings')).toBeTruthy();
   expect(screen.getByRole('list', {name: 'Orders'})).toBeTruthy();
   expect(screen.getByText('Track buyer payments and delivery. Only verified payments count as sales.')).toBeTruthy();
 
@@ -577,4 +578,37 @@ it('surfaces order loading errors', async () => {
   const alert = await screen.findByRole('alert');
   expect(alert.textContent).toContain('Unable to load orders');
   expect(screen.getByRole('button', {name: 'Try again'})).toBeTruthy();
+});
+
+it('clearly breaks down free downloads from paid orders in summary', async () => {
+  api.get.mockImplementation(((url: string) => {
+    if (url === '/api/v1/storefront/direct-orders') {
+      return Promise.resolve({
+        data: {
+          summary: {
+            verified_sales_count: 3,
+            verified_revenue_cents: 0,
+            paid_orders_count: 0,
+            free_orders_count: 3,
+            creator_earnings_cents: 0,
+            platform_fee_cents: 0,
+            pending_count: 0,
+            manual_review_count: 0,
+            rejected_count: 0,
+            status_counts: {paid: 3},
+            currency: 'ETB',
+          },
+          data: {data: [], current_page: 1, last_page: 1, total: 3, per_page: 15},
+        },
+      });
+    }
+    return Promise.resolve({data: {}});
+  }) as never);
+
+  render(<Component />);
+
+  expect(await screen.findByText('Verified sales')).toBeTruthy();
+  expect(screen.getByText('3 free orders (0 paid)')).toBeTruthy();
+  expect(screen.getByText('Creator earnings')).toBeTruthy();
+  expect(screen.getByText('Net platform earnings')).toBeTruthy();
 });

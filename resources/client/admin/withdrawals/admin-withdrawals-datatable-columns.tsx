@@ -1,20 +1,12 @@
-import {apiClient} from '@common/http/query-client';
-import {showHttpErrorToast} from '@common/http/errors/show-http-error-toast';
-import {AlertDialog} from '@shadcn/alert-dialog/alert-dialog';
 import {Badge} from '@shadcn/badge/badge';
 import {Button} from '@shadcn/button/button';
-import {Dropdown} from '@shadcn/dropdown/dropdown';
 import {SortableHeader} from '@shadcn/table/utils/sortable-header';
-import {toast} from '@shadcn/toast/toast';
-import {useMutation, useQueryClient} from '@tanstack/react-query';
 import {ColumnDef} from '@tanstack/react-table';
 import {FormattedDate} from '@ui/i18n/formatted-date';
 import {formatMoney} from '@ui/i18n/format-money';
 import {Trans} from '@ui/i18n/trans';
-import {EllipsisIcon, EyeIcon, TrashIcon} from 'lucide-react';
-import {useState} from 'react';
+import {EyeIcon} from 'lucide-react';
 import {Link} from 'react-router';
-import {adminWithdrawalsBaseKey} from './admin-withdrawals-queries';
 
 export type PayoutStatus =
   | 'requested'
@@ -135,80 +127,18 @@ export const adminWithdrawalsColumns: ColumnDef<Payout>[] = [
 ];
 
 export function WithdrawalActionsButton({payout}: {payout: Payout}) {
-  const queryClient = useQueryClient();
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-
-  const deletePayout = useMutation({
-    mutationFn: () =>
-      apiClient.delete(`/api/v1/admin/withdrawals/${payout.id}`),
-    onSuccess: () => {
-      setDeleteDialogOpen(false);
-      queryClient.invalidateQueries({queryKey: adminWithdrawalsBaseKey});
-      toast.success(<Trans message="Withdrawal request deleted." />);
-    },
-    onError: error => showHttpErrorToast(error),
-  });
-
   return (
-    <>
-      <div className="flex justify-end text-muted-foreground">
-        <Dropdown.Root>
-          <Dropdown.Trigger render={<Button variant="ghost" size="icon-sm" />}>
-            <EllipsisIcon />
-          </Dropdown.Trigger>
-          <Dropdown.Content align="end">
-            <Dropdown.Item
-              render={
-                <Link to={`/admin/withdrawals/${payout.id}/review`} />
-              }
-            >
-              <EyeIcon />
-              <Trans message="Review" />
-            </Dropdown.Item>
-            <Dropdown.Item
-              variant="destructive"
-              onClick={() => setDeleteDialogOpen(true)}
-            >
-              <TrashIcon />
-              <Trans message="Delete" />
-            </Dropdown.Item>
-          </Dropdown.Content>
-        </Dropdown.Root>
-      </div>
-      <AlertDialog.Root
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
+    <div className="flex justify-end">
+      <Button
+        variant="outline"
+        size="xs"
+        nativeButton={false}
+        render={<Link to={`/admin/withdrawals/${payout.id}/review`} />}
       >
-        <AlertDialog.Portal>
-          <AlertDialog.Backdrop />
-          <AlertDialog.Content>
-            <AlertDialog.Header>
-              <AlertDialog.Title>
-                <Trans message="Delete withdrawal request" />
-              </AlertDialog.Title>
-              <AlertDialog.Description>
-                <Trans
-                  message="Are you sure you want to delete withdrawal request #:id? This action cannot be undone."
-                  values={{id: payout.id}}
-                />
-              </AlertDialog.Description>
-            </AlertDialog.Header>
-            <AlertDialog.Footer>
-              <AlertDialog.Cancel>
-                <Trans message="Cancel" />
-              </AlertDialog.Cancel>
-              <AlertDialog.Action
-                color="danger"
-                disabled={deletePayout.isPending}
-                onClick={() => deletePayout.mutate()}
-              >
-                <Trans message="Delete" />
-              </AlertDialog.Action>
-            </AlertDialog.Footer>
-          </AlertDialog.Content>
-        </AlertDialog.Portal>
-      </AlertDialog.Root>
-    </>
+        <EyeIcon className="size-3.5" />
+        <Trans message="Review" />
+      </Button>
+    </div>
   );
 }
 
