@@ -24,8 +24,9 @@ import {
 } from 'lucide-react';
 import {useCallback, useEffect, useState} from 'react';
 import {Link} from 'react-router';
+import {CurrencySettingsCard} from './currency-settings-card';
 
-type Tab = 'chapa' | 'payout-methods' | 'commission' | 'reconciliation';
+type Tab = 'chapa' | 'currency' | 'payout-methods' | 'commission' | 'reconciliation';
 
 type GatewayConfig = {
   gateway: string;
@@ -77,10 +78,10 @@ export function Component() {
             <Trans message="Financial settings & operations" />
           </DashboardLayout.SectionTitle>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            <Trans message="Manage platform payments, withdrawal rules, commission policies, and ledger reconciliation." />
+            <Trans message="Manage platform payments, currency formatting, withdrawal rules, commission policies, and ledger reconciliation." />
           </p>
         </div>
-        <Button variant="outline" nativeButton={false} render={<Link to="/admin/withdrawals" />}>
+        <Button variant="outline" render={<Link to="/admin/withdrawals" />}>
           <CreditCardIcon />
           <Trans message="Withdrawals dashboard" />
         </Button>
@@ -93,6 +94,10 @@ export function Component() {
                 <Tabs.Tab value="chapa" className="flex-none">
                   <CreditCardIcon className="size-4" />
                   <Trans message="Platform Chapa v2" />
+                </Tabs.Tab>
+                <Tabs.Tab value="currency" className="flex-none">
+                  <CoinsIcon className="size-4" />
+                  <Trans message="Default currency" />
                 </Tabs.Tab>
                 <Tabs.Tab value="payout-methods" className="flex-none">
                   <CoinsIcon className="size-4" />
@@ -111,6 +116,9 @@ export function Component() {
 
             <Tabs.Panel value="chapa">
               <ChapaPlatformGatewayTab />
+            </Tabs.Panel>
+            <Tabs.Panel value="currency">
+              <CurrencySettingsCard />
             </Tabs.Panel>
             <Tabs.Panel value="payout-methods">
               <PayoutMethodsTab />
@@ -297,7 +305,7 @@ function PayoutMethodsTab() {
               <Trans message="Banks and mobile wallets available for creator withdrawals with configured limits." />
             </Card.Description>
           </div>
-          <Button variant="outline" size="sm" nativeButton={false} render={<Link to="/admin/financial/withdrawal-methods" />}>
+          <Button variant="outline" size="sm" render={<Link to="/admin/financial/withdrawal-methods" />}>
             <Trans message="Creator receiving accounts" />
           </Button>
         </div>
@@ -523,3 +531,10 @@ function TabLoadingSpinner() {
     </div>
   );
 }
+
+export {
+  ChapaPlatformGatewayTab,
+  CommissionPoliciesTab,
+  PayoutMethodsTab,
+  ReconciliationAuditTab,
+};

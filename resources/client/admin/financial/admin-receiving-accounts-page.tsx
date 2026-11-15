@@ -16,7 +16,6 @@ export function Component() {
           variant="outline"
           size="sm"
           className="ms-auto hidden shrink-0 sm:inline-flex"
-          nativeButton={false}
           render={<Link to="/admin/financial/withdrawal-methods/legacy" />}
         >
           <Trans message="Legacy payout methods" />
@@ -32,7 +31,6 @@ export function Component() {
               variant="outline"
               size="sm"
               className="inline-flex shrink-0 sm:hidden"
-              nativeButton={false}
               render={<Link to="/admin/financial/withdrawal-methods/legacy" />}
             >
               <Trans message="Legacy payout methods" />

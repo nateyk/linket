@@ -146,6 +146,7 @@ export const adminRoutes: RouteObject[] = [
       commonAdminSettingsRoutes(
         [
           {path: 'payment-gateways', loader: () => redirect('/admin/financial/payment-gateways')},
+          {path: 'financial', loader: () => redirect('/admin/financial/general')},
           {
             path: 'search',
             lazy: () =>
@@ -262,27 +263,42 @@ export const adminRoutes: RouteObject[] = [
       },
       {
         path: 'financial',
-        lazy: () => import('@app/admin/financial/admin-financial-settings-page'),
-      },
-      {
-        path: 'financial/payment-gateways',
-        lazy: () => import('@app/admin/digital-products/admin-direct-payment-methods-page'),
-      },
-      {
-        path: 'financial/withdrawal-methods',
-        lazy: () => import('@app/admin/financial/admin-receiving-accounts-page'),
-      },
-      {
-        path: 'financial/withdrawal-methods/legacy',
-        lazy: () => import('@app/admin/financial/admin-withdrawal-methods-page'),
-      },
-      {
-        path: 'financial/withdrawal-methods/create',
-        lazy: () => import('@app/admin/financial/admin-withdrawal-method-create-page'),
-      },
-      {
-        path: 'financial/withdrawal-methods/:methodId/edit',
-        lazy: () => import('@app/admin/financial/admin-withdrawal-method-edit-page'),
+        lazy: () => import('@app/admin/financial/admin-financial-layout'),
+        children: [
+          {
+            index: true,
+            loader: () => redirect('general'),
+            element: <Fragment />,
+          },
+          {
+            path: 'general',
+            lazy: () => import('@app/admin/financial/admin-financial-settings-page'),
+          },
+          {
+            path: 'payment-gateways',
+            lazy: () => import('@app/admin/digital-products/admin-direct-payment-methods-page'),
+          },
+          {
+            path: 'withdrawal-methods',
+            lazy: () => import('@app/admin/financial/admin-receiving-accounts-page'),
+          },
+          {
+            path: 'withdrawal-methods/legacy',
+            lazy: () => import('@app/admin/financial/admin-withdrawal-methods-page'),
+          },
+          {
+            path: 'withdrawal-methods/create',
+            lazy: () => import('@app/admin/financial/admin-withdrawal-method-create-page'),
+          },
+          {
+            path: 'withdrawal-methods/:methodId/edit',
+            lazy: () => import('@app/admin/financial/admin-withdrawal-method-edit-page'),
+          },
+          {
+            path: 'reconciliation',
+            lazy: () => import('@app/admin/financial/admin-financial-reconciliation-page'),
+          },
+        ],
       },
       {
         path: 'items/delivery-history',
