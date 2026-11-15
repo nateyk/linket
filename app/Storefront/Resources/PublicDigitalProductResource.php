@@ -16,44 +16,17 @@ class PublicDigitalProductResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
-        // Compute course-specific aggregates when loaded. Prefer the eager
-        // withCount values (no per-product queries); fall back to direct
-        // queries for callers that load the course relation without counts.
         $isCourse = ($this->type ?? 'digital') === 'course';
-        $course = $this->whenLoaded('course', fn() => $this->course);
-        $chaptersCount = null;
-        $lessonsCount = null;
-        if ($isCourse && $this->relationLoaded('course') && $this->course) {
-            $chaptersCount = $this->course->chapters_count
-                ?? $this->course->chapters()->count();
-            $lessonsCount = $this->course->lessons_count
-                ?? \App\Courses\Models\Lesson::where('course_id', $this->course->id)->where('status', 'published')->count();
-        }
-        $courseId = $isCourse && $this->relationLoaded('course') && $this->course ? $this->course->id : null;
+        [$chaptersCount, $lessonsCount, $courseId] = $this->resolveCourseDetails($isCourse);
+
+        $chapaEnabled = app(\App\Payments\Chapa\LinketChapaManager::class)->isEnabled();
         $availability = app(\App\Storefront\Services\CheckoutAvailability::class);
-        $blocker = $this->price_cents > 0 ? $availability->creatorBlocker($this->creator) : null;
         $accounts = VerifyEtSettings::get('enabled')
-            ? $availability->eligibleAccounts($this->user_id, $this->workspace_id) : collect();
-        if ($this->price_cents > 0 && ! $blocker && strtoupper($this->currency) !== 'ETB') {
-            $blocker = 'unsupported_currency';
-        }
-        if ($this->price_cents > 0 && ! $blocker && $accounts->isEmpty()) {
-            $blocker = 'no_eligible_receiving_account';
-        }
-        $catalog = \App\Storefront\Models\DirectPaymentMethod::query()->get()->keyBy('code');
-        $receivingAccounts = $accounts->map(fn (CreatorPaymentMethod $method) => [
-            'id' => $method->id,
-            'provider' => $method->provider,
-            'bank_name' => $catalog->get($method->provider)?->display_name ?? strtoupper($method->provider),
-            'account_ending' => substr($method->account_number, -4),
-            'account_name' => $method->account_name_raw,
-            'instructions' => match (strtolower($method->provider)) {
-                'cbe' => __('Transfer the exact amount to Commercial Bank of Ethiopia. Submit your CBE Receipt ID (or older FT reference with 8-digit suffix).'),
-                'telebirr' => __('Transfer the exact amount via Telebirr. Submit your 10-character transaction number.'),
-                'boa' => __('Transfer the exact amount to Bank of Abyssinia. Submit your reference and 5-digit transaction account suffix.'),
-                default => __('Transfer the exact amount to the account shown, then submit your transaction reference.'),
-            },
-        ])->values();
+            ? $availability->eligibleAccounts($this->user_id, $this->workspace_id)
+            : collect();
+
+        $blocker = $this->resolveCheckoutBlocker($availability, $chapaEnabled, $accounts);
+        $receivingAccounts = $this->formatReceivingAccounts($accounts);
 
         return [
             'id' => $this->id,
@@ -65,7 +38,7 @@ class PublicDigitalProductResource extends JsonResource
             'can_buy' => app(\App\Storefront\Services\AccountMonetizationStatus::class)->canSell($this->creator) && ! $blocker,
             'checkout_blocker' => $blocker,
             'verification_quota_exhausted' => $blocker === 'verification_quota_exhausted',
-            'payment_mode' => $this->price_cents === 0 ? 'free' : (VerifyEtSettings::get('enabled') ? 'direct' : 'unavailable'),
+            'payment_mode' => $this->price_cents === 0 ? 'free' : ($chapaEnabled || VerifyEtSettings::get('enabled') ? 'direct' : 'unavailable'),
             'receiving_accounts' => $receivingAccounts,
             'type' => $this->type ?? 'digital',
             'is_course' => $isCourse,
@@ -84,6 +57,70 @@ class PublicDigitalProductResource extends JsonResource
             ]),
             'samples' => $this->publicSamples(),
         ];
+    }
+
+    /** @return array{0: ?int, 1: ?int, 2: ?int} */
+    private function resolveCourseDetails(bool $isCourse): array
+    {
+        if (! $isCourse || ! $this->relationLoaded('course') || ! $this->course) {
+            return [null, null, null];
+        }
+
+        $chaptersCount = $this->course->chapters_count
+            ?? $this->course->chapters()->count();
+        $lessonsCount = $this->course->lessons_count
+            ?? \App\Courses\Models\Lesson::where('course_id', $this->course->id)->where('status', 'published')->count();
+
+        return [$chaptersCount, $lessonsCount, $this->course->id];
+    }
+
+    private function resolveCheckoutBlocker(
+        \App\Storefront\Services\CheckoutAvailability $availability,
+        bool $chapaEnabled,
+        \Illuminate\Support\Collection $accounts,
+    ): ?string {
+        if ($this->price_cents <= 0) {
+            return null;
+        }
+
+        $blocker = $availability->creatorBlocker($this->creator);
+        if ($blocker !== null) {
+            return $blocker;
+        }
+
+        if (strtoupper($this->currency) !== 'ETB') {
+            return 'unsupported_currency';
+        }
+
+        if (! $chapaEnabled && $accounts->isEmpty()) {
+            return 'no_eligible_receiving_account';
+        }
+
+        return null;
+    }
+
+    /** @param \Illuminate\Support\Collection<int, CreatorPaymentMethod> $accounts */
+    private function formatReceivingAccounts(\Illuminate\Support\Collection $accounts): \Illuminate\Support\Collection
+    {
+        if ($accounts->isEmpty()) {
+            return collect();
+        }
+
+        $catalog = \App\Storefront\Models\DirectPaymentMethod::query()->get()->keyBy('code');
+
+        return $accounts->map(fn (CreatorPaymentMethod $method) => [
+            'id' => $method->id,
+            'provider' => $method->provider,
+            'bank_name' => $catalog->get($method->provider)?->display_name ?? strtoupper($method->provider),
+            'account_ending' => substr($method->account_number, -4),
+            'account_name' => $method->account_name_raw,
+            'instructions' => match (strtolower($method->provider)) {
+                'cbe' => __('Transfer the exact amount to Commercial Bank of Ethiopia. Submit your CBE Receipt ID (or older FT reference with 8-digit suffix).'),
+                'telebirr' => __('Transfer the exact amount via Telebirr. Submit your 10-character transaction number.'),
+                'boa' => __('Transfer the exact amount to Bank of Abyssinia. Submit your reference and 5-digit transaction account suffix.'),
+                default => __('Transfer the exact amount to the account shown, then submit your transaction reference.'),
+            },
+        ])->values();
     }
 
     /**
