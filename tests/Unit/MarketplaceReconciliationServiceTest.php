@@ -115,11 +115,8 @@ class MarketplaceReconciliationServiceTest extends TestCase
         $this->seedCreator($creatorId, 'creator101@test.com');
         $ledger = new CreatorLedgerService(new JournalPostingService());
 
-        $maturedOrder = $this->seedPlatformOrder($creatorId, 100000, 10000, Carbon::now()->subDays(10));
-        $ledger->recordPlatformSale($maturedOrder);
-
-        $immatureOrder = $this->seedPlatformOrder($creatorId, 50000, 5000, Carbon::now()->subDays(2));
-        $ledger->recordPlatformSale($immatureOrder);
+        $this->seedSaleWithLedger($creatorId, 100000, 10000, Carbon::now()->subDays(10), $ledger);
+        $this->seedSaleWithLedger($creatorId, 50000, 5000, Carbon::now()->subDays(2), $ledger);
 
         $service = new MarketplaceReconciliationService(creatorLedger: $ledger);
         $maturedCount = $service->releaseMaturedEscrow();
@@ -152,7 +149,7 @@ class MarketplaceReconciliationServiceTest extends TestCase
             'created_at' => Carbon::now()->subMinutes(30),
         ]);
 
-        $chapaClient = $this->createMockPaymentClient($merchantRef, 200000, 'SUCCESS');
+        $chapaClient = $this->createMockChapaClient($merchantRef, 200000);
         $chapaManager = $this->createMock(LinketChapaManager::class);
         $chapaManager->method('platformClient')->willReturn($chapaClient);
 
@@ -174,8 +171,7 @@ class MarketplaceReconciliationServiceTest extends TestCase
         $this->seedCreator($creatorId, 'creator103@test.com');
         $ledger = new CreatorLedgerService(new JournalPostingService());
 
-        $order = $this->seedPlatformOrder($creatorId, 150000, 0, Carbon::now()->subDays(10));
-        $ledger->recordPlatformSale($order);
+        $order = $this->seedSaleWithLedger($creatorId, 150000, 0, Carbon::now()->subDays(10), $ledger);
         $ledger->releaseHeldToAvailable($order);
 
         $payout = PayoutRequest::create([
@@ -203,7 +199,7 @@ class MarketplaceReconciliationServiceTest extends TestCase
             'created_at' => Carbon::now()->subMinutes(10),
         ]);
 
-        $chapaClient = $this->createMockPayoutClient('lk-po-settled-103', 150000, 'SUCCESS');
+        $chapaClient = $this->createMockChapaClient('lk-po-settled-103', 150000, isPayout: true);
         $chapaManager = $this->createMock(LinketChapaManager::class);
         $chapaManager->method('platformClient')->willReturn($chapaClient);
 
@@ -250,8 +246,7 @@ class MarketplaceReconciliationServiceTest extends TestCase
         $this->seedCreator($creatorId, 'creator105@test.com');
         $ledger = new CreatorLedgerService(new JournalPostingService());
 
-        $order = $this->seedPlatformOrder($creatorId, 120000, 12000, Carbon::now()->subDays(5));
-        $ledger->recordPlatformSale($order);
+        $this->seedSaleWithLedger($creatorId, 120000, 12000, Carbon::now()->subDays(5), $ledger);
 
         $service = new MarketplaceReconciliationService(creatorLedger: $ledger);
         $audit = $service->auditLedgerIntegrity();
@@ -285,8 +280,7 @@ class MarketplaceReconciliationServiceTest extends TestCase
         $this->seedCreator($creatorId, 'creator106@test.com');
         $ledger = new CreatorLedgerService(new JournalPostingService());
 
-        $order = $this->seedPlatformOrder($creatorId, 100000, 10000, Carbon::now()->subDays(10));
-        $ledger->recordPlatformSale($order);
+        $this->seedSaleWithLedger($creatorId, 100000, 10000, Carbon::now()->subDays(10), $ledger);
 
         $this->artisan('marketplace:reconcile')
             ->expectsOutput('Starting Marketplace Financial Reconciliation...')
@@ -321,40 +315,29 @@ class MarketplaceReconciliationServiceTest extends TestCase
         ]);
     }
 
-    private function createMockPaymentClient(string $paymentRef, int $paymentAmount, string $paymentStatus = 'SUCCESS'): ChapaClient
+    private function seedSaleWithLedger(int $creatorId, int $gross, int $fee, ?Carbon $paidAt, CreatorLedgerService $ledger): StorefrontOrder
     {
-        $transport = $this->createMock(Transport::class);
-        $transport->method('send')->willReturnCallback(function (string $method, string $url) use ($paymentRef, $paymentStatus, $paymentAmount) {
-            return new RawResponse(200, (string) json_encode([
-                'status' => 'success',
-                'data' => [
-                    'status' => $paymentStatus,
-                    'chapa_reference' => 'CHP-PAY-12345',
-                    'amount' => $paymentAmount,
-                    'currency' => 'ETB',
-                    'merchant_reference' => $paymentRef,
-                    'email' => 'buyer@test.com',
-                ],
-            ]));
-        });
-
-        return new ChapaClient(privateKey: 'sec-test', webhookSecret: 'wh-secret', transport: $transport);
+        $order = $this->seedPlatformOrder($creatorId, $gross, $fee, $paidAt);
+        $ledger->recordPlatformSale($order);
+        return $order;
     }
 
-    private function createMockPayoutClient(string $payoutRef, int $payoutAmount, string $payoutStatus = 'SUCCESS'): ChapaClient
+    private function createMockChapaClient(string $ref, int $amount, bool $isPayout = false): ChapaClient
     {
         $transport = $this->createMock(Transport::class);
-        $transport->method('send')->willReturnCallback(function (string $method, string $url) use ($payoutRef, $payoutStatus, $payoutAmount) {
-            return new RawResponse(200, (string) json_encode([
-                'status' => 'success',
-                'data' => [
-                    'status' => $payoutStatus,
-                    'chapa_reference' => 'CHP-PO-12345',
-                    'merchant_reference' => $payoutRef,
-                    'amount' => $payoutAmount,
-                    'currency' => 'ETB',
-                ],
-            ]));
+        $transport->method('send')->willReturnCallback(function (string $method, string $url) use ($ref, $amount, $isPayout) {
+            $data = [
+                'status' => 'SUCCESS',
+                'chapa_reference' => $isPayout ? 'CHP-PO-12345' : 'CHP-PAY-12345',
+                'merchant_reference' => $ref,
+                'amount' => $amount,
+                'currency' => 'ETB',
+            ];
+            if (!$isPayout) {
+                $data['email'] = 'buyer@test.com';
+            }
+
+            return new RawResponse(200, (string) json_encode(['status' => 'success', 'data' => $data]));
         });
 
         return new ChapaClient(privateKey: 'sec-test', webhookSecret: 'wh-secret', transport: $transport);

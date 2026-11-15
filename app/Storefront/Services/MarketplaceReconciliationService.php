@@ -8,11 +8,13 @@ use App\Payments\Chapa\LinketChapaManager;
 use App\Storefront\Ledger\AccountCodes;
 use App\Storefront\Ledger\BalanceQuery;
 use App\Storefront\Ledger\CreatorLedgerService;
+use App\Storefront\Models\StorefrontJournalEntry;
 use App\Storefront\Models\StorefrontJournalLine;
 use App\Storefront\Models\StorefrontOrder;
 use App\Storefront\Models\StorefrontPaymentAttempt;
 use App\Storefront\Models\StorefrontPayoutIntent;
 use Carbon\Carbon;
+use Closure;
 use Illuminate\Support\Facades\Log;
 
 class MarketplaceReconciliationService
@@ -54,26 +56,47 @@ class MarketplaceReconciliationService
     {
         $holdDays = (int) config('store.payout_hold_days', 7);
         $threshold = Carbon::now()->subDays($holdDays);
-        $maturedCount = 0;
 
-        $orders = StorefrontOrder::query()
+        return $this->processUnjournaledOrders(
+            'funds_available',
+            fn (StorefrontOrder $order): ?StorefrontJournalEntry => $this->creatorLedger()->releaseHeldToAvailable($order),
+            $threshold,
+        );
+    }
+
+    /**
+     * Finds paid platform orders missing from the ledger and creates journal entries.
+     */
+    public function reconcileMissingJournalEntries(): int
+    {
+        return $this->processUnjournaledOrders(
+            'sale_settled',
+            fn (StorefrontOrder $order): ?StorefrontJournalEntry => $this->creatorLedger()->recordPlatformSale($order),
+        );
+    }
+
+    /**
+     * @param Closure(StorefrontOrder): ?StorefrontJournalEntry $action
+     */
+    private function processUnjournaledOrders(string $eventType, Closure $action, ?Carbon $paidBefore = null): int
+    {
+        $query = StorefrontOrder::query()
             ->where('collection_owner', StorefrontOrder::COLLECTION_OWNER_PLATFORM_CHAPA)
             ->where('status', 'paid')
-            ->where('paid_at', '<=', $threshold)
-            ->where('creator_earnings_cents', '>', 0)
-            ->whereDoesntHave('journalEntries', function ($query): void {
-                $query->where('event_type', 'funds_available');
-            })
-            ->get();
+            ->whereDoesntHave('journalEntries', fn ($q) => $q->where('event_type', $eventType));
 
-        foreach ($orders as $order) {
-            $entry = $this->creatorLedger()->releaseHeldToAvailable($order);
-            if ($entry !== null) {
-                $maturedCount++;
+        if ($paidBefore !== null) {
+            $query->where('paid_at', '<=', $paidBefore)->where('creator_earnings_cents', '>', 0);
+        }
+
+        $count = 0;
+        foreach ($query->get() as $order) {
+            if ($action($order) !== null) {
+                $count++;
             }
         }
 
-        return $maturedCount;
+        return $count;
     }
 
     /**
@@ -168,31 +191,6 @@ class MarketplaceReconciliationService
     }
 
     /**
-     * Finds paid platform orders missing from the ledger and creates journal entries.
-     */
-    public function reconcileMissingJournalEntries(): int
-    {
-        $fixedCount = 0;
-
-        $orders = StorefrontOrder::query()
-            ->where('collection_owner', StorefrontOrder::COLLECTION_OWNER_PLATFORM_CHAPA)
-            ->where('status', 'paid')
-            ->whereDoesntHave('journalEntries', function ($query): void {
-                $query->where('event_type', 'sale_settled');
-            })
-            ->get();
-
-        foreach ($orders as $order) {
-            $entry = $this->creatorLedger()->recordPlatformSale($order);
-            if ($entry !== null) {
-                $fixedCount++;
-            }
-        }
-
-        return $fixedCount;
-    }
-
-    /**
      * Audits double-entry ledger invariants across all accounts and creators.
      */
     public function auditLedgerIntegrity(): LedgerAuditResult
@@ -205,7 +203,7 @@ class MarketplaceReconciliationService
         $result->clearingBalanceCents = $this->calculateNetClearing();
         $result->totalCreatorLiabilitiesCents = $this->calculateTotalCreatorLiabilities();
         $result->platformCommissionCents = $this->calculateNetCommission();
-        $result->totalDisbursedCents = $this->sumAccountCredits(AccountCodes::PLATFORM_BANK_DISBURSED);
+        $result->totalDisbursedCents = $this->sumAccount(AccountCodes::PLATFORM_BANK_DISBURSED, 'credit_cents');
 
         if (!$result->isBalanced) {
             $result->issues[] = "CRITICAL: Global ledger unbalanced. Total debits ({$result->totalDebitsCents}) != total credits ({$result->totalCreditsCents}).";
@@ -218,24 +216,24 @@ class MarketplaceReconciliationService
 
     private function calculateNetClearing(): int
     {
-        $debits = $this->sumAccountDebits(AccountCodes::PLATFORM_CHAPA_CLEARING);
-        $credits = $this->sumAccountCredits(AccountCodes::PLATFORM_CHAPA_CLEARING);
+        $debits = $this->sumAccount(AccountCodes::PLATFORM_CHAPA_CLEARING, 'debit_cents');
+        $credits = $this->sumAccount(AccountCodes::PLATFORM_CHAPA_CLEARING, 'credit_cents');
         return max(0, $debits - $credits);
     }
 
     private function calculateTotalCreatorLiabilities(): int
     {
-        $held = $this->sumAccountCredits(AccountCodes::CREATOR_HELD) - $this->sumAccountDebits(AccountCodes::CREATOR_HELD);
-        $available = $this->sumAccountCredits(AccountCodes::CREATOR_AVAILABLE) - $this->sumAccountDebits(AccountCodes::CREATOR_AVAILABLE);
-        $reserved = $this->sumAccountCredits(AccountCodes::CREATOR_RESERVED) - $this->sumAccountDebits(AccountCodes::CREATOR_RESERVED);
+        $held = $this->sumAccount(AccountCodes::CREATOR_HELD, 'credit_cents') - $this->sumAccount(AccountCodes::CREATOR_HELD, 'debit_cents');
+        $available = $this->sumAccount(AccountCodes::CREATOR_AVAILABLE, 'credit_cents') - $this->sumAccount(AccountCodes::CREATOR_AVAILABLE, 'debit_cents');
+        $reserved = $this->sumAccount(AccountCodes::CREATOR_RESERVED, 'credit_cents') - $this->sumAccount(AccountCodes::CREATOR_RESERVED, 'debit_cents');
 
         return max(0, $held) + max(0, $available) + max(0, $reserved);
     }
 
     private function calculateNetCommission(): int
     {
-        $credits = $this->sumAccountCredits(AccountCodes::PLATFORM_COMMISSION);
-        $debits = $this->sumAccountDebits(AccountCodes::PLATFORM_COMMISSION);
+        $credits = $this->sumAccount(AccountCodes::PLATFORM_COMMISSION, 'credit_cents');
+        $debits = $this->sumAccount(AccountCodes::PLATFORM_COMMISSION, 'debit_cents');
         return max(0, $credits - $debits);
     }
 
@@ -255,14 +253,9 @@ class MarketplaceReconciliationService
         }
     }
 
-    private function sumAccountDebits(string $accountCode): int
+    private function sumAccount(string $accountCode, string $column): int
     {
-        return (int) StorefrontJournalLine::query()->where('account_code', $accountCode)->sum('debit_cents');
-    }
-
-    private function sumAccountCredits(string $accountCode): int
-    {
-        return (int) StorefrontJournalLine::query()->where('account_code', $accountCode)->sum('credit_cents');
+        return (int) StorefrontJournalLine::query()->where('account_code', $accountCode)->sum($column);
     }
 
     private function manager(): LinketChapaManager
