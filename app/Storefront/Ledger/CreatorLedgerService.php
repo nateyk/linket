@@ -65,7 +65,7 @@ class CreatorLedgerService
      */
     public function releaseHeldToAvailable(StorefrontOrder $order): ?StorefrontJournalEntry
     {
-        if (!$order->isPlatformCollected()) {
+        if (!$order->isPlatformCollected() || (int) $order->creator_earnings_cents <= 0) {
             return null;
         }
 
