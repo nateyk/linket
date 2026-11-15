@@ -4,6 +4,8 @@ namespace App\Storefront\Controllers;
 
 use App\Payments\Models\PaymentTransaction;
 use App\Storefront\DigitalProductRefundService;
+use App\Storefront\Models\StorefrontOrder;
+use App\Storefront\Services\PlatformOrderRefundRequest;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Gate;
@@ -22,5 +24,37 @@ class AdminDigitalProductRefundsController extends Controller
         $refund = app(DigitalProductRefundService::class)->record($paymentTransaction, $request->user()->id, $data);
 
         return ['data' => ['id' => $refund->id, 'amount_cents' => $refund->amount_cents, 'reason' => $refund->reason, 'refunded_at' => $refund->refunded_at]];
+    }
+
+    public function storePlatformOrder(Request $request, StorefrontOrder $order): array
+    {
+        Gate::authorize('admin.access');
+        $data = $request->validate([
+            'amount_cents' => ['required', 'integer', 'min:100'],
+            'reason' => ['required', 'string', 'max:400'],
+            'external_reference' => ['nullable', 'string', 'max:190'],
+        ]);
+
+        $refundRequest = PlatformOrderRefundRequest::forOrder(
+            $order,
+            (int) $data['amount_cents'],
+            (string) $data['reason'],
+            (int) $request->user()->id,
+        )->withExternalReference($data['external_reference'] ?? null);
+
+        $refund = app(DigitalProductRefundService::class)->refundPlatformOrder($refundRequest);
+
+        return [
+            'data' => [
+                'id' => $refund->id,
+                'storefront_order_id' => $refund->storefront_order_id,
+                'amount_cents' => $refund->amount_cents,
+                'status' => $refund->status,
+                'reason' => $refund->reason,
+                'external_reference' => $refund->external_reference,
+                'chapa_refund_reference' => $refund->chapa_refund_reference,
+                'refunded_at' => $refund->refunded_at,
+            ],
+        ];
     }
 }

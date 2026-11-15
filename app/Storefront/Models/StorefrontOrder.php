@@ -54,6 +54,11 @@ class StorefrontOrder extends StorefrontModel
         return in_array($this->status, ['paid', 'completed', 'fulfilled'], true);
     }
 
+    public function isPaid(): bool
+    {
+        return $this->isCompleted();
+    }
+
     public function isPending(): bool
     {
         return in_array($this->status, ['pending', 'pending_payment'], true);
