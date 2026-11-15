@@ -123,6 +123,92 @@ class TicketAclStaffNotesAndAttachmentsTest extends TestCase
         $this->assertStringContainsString('SECRET staff note', json_encode($agentPayload));
     }
 
+    public function test_customer_cannot_read_agent_only_details_or_internal_message_feed(): void
+    {
+        $customer = User::factory()->create();
+        $agent = $this->createPlatformAgent();
+        $this->grantPermission($customer, 'conversations.create');
+
+        $ticket = Conversation::query()->create([
+            'user_id' => $customer->id,
+            'subject' => 'Restricted agent detail',
+            'type' => 'ticket',
+            'assigned_to' => Conversation::ASSIGNED_AGENT,
+            'status_category' => Conversation::STATUS_OPEN,
+            'assignee_id' => $agent->id,
+        ]);
+        ConversationItem::query()->create([
+            'conversation_id' => $ticket->id,
+            'user_id' => $agent->id,
+            'type' => ConversationItem::NOTE_TYPE,
+            'body' => 'Internal risk assessment: never show to a customer',
+        ]);
+
+        $this->stateful()
+            ->actingAs($customer)
+            ->getJson("/api/v1/helpdesk/agent/conversations/{$ticket->id}")
+            ->assertForbidden();
+
+        $this->stateful()
+            ->actingAs($customer)
+            ->getJson("/api/v1/helpdesk/agent/conversations/{$ticket->id}/messages")
+            ->assertForbidden();
+
+        $this->stateful()
+            ->actingAs($agent)
+            ->getJson("/api/v1/helpdesk/agent/conversations/{$ticket->id}")
+            ->assertOk();
+
+        $agentMessages = $this->stateful()
+            ->actingAs($agent)
+            ->getJson("/api/v1/helpdesk/agent/conversations/{$ticket->id}/messages")
+            ->assertOk()
+            ->json();
+        $this->assertStringContainsString('Internal risk assessment', json_encode($agentMessages));
+
+        $customerMessages = $this->stateful()
+            ->actingAs($customer)
+            ->getJson("/api/v1/helpdesk/customer/conversations/{$ticket->id}/messages")
+            ->assertOk()
+            ->json();
+        $this->assertStringNotContainsString('Internal risk assessment', json_encode($customerMessages));
+    }
+
+    public function test_customer_cannot_assign_or_change_ticket_status_as_agent(): void
+    {
+        $customer = User::factory()->create();
+        $agent = $this->createPlatformAgent();
+        $this->grantPermission($customer, 'conversations.create');
+
+        $ticket = Conversation::query()->create([
+            'user_id' => $customer->id,
+            'subject' => 'Unauthorized workflow attempt',
+            'type' => 'ticket',
+            'assigned_to' => Conversation::ASSIGNED_AGENT,
+            'status_category' => Conversation::STATUS_OPEN,
+        ]);
+
+        $this->stateful()
+            ->actingAs($customer)
+            ->postJson('/api/v1/helpdesk/agent/conversations/assignee/change', [
+                'conversationIds' => [$ticket->id],
+                'userId' => $agent->id,
+            ])
+            ->assertForbidden();
+
+        $this->stateful()
+            ->actingAs($customer)
+            ->postJson('/api/v1/helpdesk/agent/conversations/status/change', [
+                'conversationIds' => [$ticket->id],
+                'statusName' => 'closed',
+            ])
+            ->assertForbidden();
+
+        $ticket->refresh();
+        $this->assertNull($ticket->assignee_id);
+        $this->assertSame(Conversation::STATUS_OPEN, $ticket->status_category);
+    }
+
     public function test_platform_agent_can_assign_reply_and_close_ticket(): void
     {
         $customer = User::factory()->create();
