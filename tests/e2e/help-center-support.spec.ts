@@ -178,7 +178,26 @@ test.describe('isolated Help Center + support', () => {
 
     await page.setViewportSize({width: 390, height: 844});
     await expect(page.locator('[data-slot="dashboard-section"]')).toBeVisible();
-    expect(await page.evaluate(() => document.documentElement.scrollWidth))
+    const overflow = await page.evaluate(() => ({
+      viewport: document.documentElement.clientWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+      offenders: [...document.querySelectorAll('body *')]
+        .filter(element => {
+          const rect = element.getBoundingClientRect();
+          const css = getComputedStyle(element);
+          return rect.width > 0 && rect.right > innerWidth + 1 &&
+            css.display !== 'none' && css.visibility !== 'hidden';
+        })
+        .slice(0, 15)
+        .map(element => ({
+          tag: element.tagName,
+          slot: element.getAttribute('data-slot'),
+          className: typeof element.className === 'string' ? element.className.slice(0, 140) : '',
+          width: Math.round(element.getBoundingClientRect().width),
+          right: Math.round(element.getBoundingClientRect().right),
+        })),
+    }));
+    expect(overflow.scrollWidth, JSON.stringify(overflow))
       .toBeLessThanOrEqual(390);
 
     // Admin bookmarks are normalized to the shared admin shell, while
