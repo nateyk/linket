@@ -179,8 +179,25 @@ test.describe('isolated real-browser support lifecycle', () => {
       const privateNoteResponse = await privateNotePromise;
       expect((await privateNoteResponse.json()).message.type).toBe('note');
       await admin.goto('/agent/conversations/' + ticketId);
-      await expect(admin.locator('#feed-container').getByText(note))
-        .toBeVisible({timeout: 15_000});
+      const renderedNote = admin.locator('#feed-container').getByText(note);
+      try {
+        await expect(renderedNote).toBeVisible({timeout: 5_000});
+      } catch {
+        const ancestry = await renderedNote.evaluate(element => {
+          const records: Array<Record<string, string | number>> = [];
+          for (let el: Element | null = element, depth = 0; el && depth < 12; el = el.parentElement, depth++) {
+            const style = window.getComputedStyle(el);
+            const rect = el.getBoundingClientRect();
+            records.push({
+              tag: el.tagName, className: typeof el.className === 'string' ? el.className.slice(0, 180) : '',
+              display: style.display, visibility: style.visibility,
+              opacity: style.opacity, width: rect.width, height: rect.height,
+            });
+          }
+          return records;
+        });
+        throw new Error('Agent private note is hidden in feed: ' + JSON.stringify(ancestry));
+      }
 
       await buyer.reload();
       await expect(buyer.getByText(reply).first()).toBeVisible({timeout: 30_000});
