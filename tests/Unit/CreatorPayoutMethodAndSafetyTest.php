@@ -279,7 +279,8 @@ class CreatorPayoutMethodAndSafetyTest extends TestCase
     private function createDatabaseSchema(): void
     {
         $this->createAuthSchema();
-        $this->createPayoutSchema();
+        $this->createPayoutDestinationSchema();
+        $this->createPayoutRequestSchema();
     }
 
     private function createAuthSchema(): void
@@ -326,7 +327,7 @@ class CreatorPayoutMethodAndSafetyTest extends TestCase
         });
     }
 
-    private function createPayoutSchema(): void
+    private function createPayoutDestinationSchema(): void
     {
         Schema::create('digital_product_withdrawal_methods', function (Blueprint $t): void {
             $t->id();
@@ -357,6 +358,10 @@ class CreatorPayoutMethodAndSafetyTest extends TestCase
             $t->json('metadata')->nullable();
             $t->timestamps();
         });
+    }
+
+    private function createPayoutRequestSchema(): void
+    {
         Schema::create('payout_requests', function (Blueprint $t): void {
             $t->id();
             $t->unsignedBigInteger('workspace_id')->default(1);
