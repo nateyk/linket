@@ -72,6 +72,7 @@ class PrepareHcE2eCommand extends Command
                 'conversations.update',
                 'conversations.view',
                 'tickets.update',
+                'reports.view',
                 'admin',
             ]);
 
