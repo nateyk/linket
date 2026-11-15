@@ -174,6 +174,8 @@ class HelpdeskReports
         // load replies of all given conversations
         $replies = DB::table('conversation_items')
             ->select('id', 'conversation_id', 'user_id', 'created_at')
+            // Notes and internal events are not customer-facing replies.
+            ->where('type', 'message')
             ->whereIn('conversation_id', $conversationIds)
             ->orderBy('created_at', 'desc')
             ->limit(1000)
