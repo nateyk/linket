@@ -131,7 +131,7 @@ test('help center migration is a no-op without an admin sidebar menu', function 
     expect(storedActions())->not->toContain('/admin/settings/help');
 });
 
-test('fresh installs ship the Help center settings sidebar entry', function () {
+test('fresh installs expose Support and Help Center in the admin sidebar', function () {
     $defaults = (new LoadDefaultSettings())->execute();
     $menus = json_decode(
         collect($defaults)->firstWhere('name', 'menus')['value'],
@@ -145,6 +145,9 @@ test('fresh installs ship the Help center settings sidebar entry', function () {
     expect($actions)->toContain('/admin/help');
     expect($actions)->not->toContain('/admin/settings/hc');
     expect($actions)->not->toContain('/admin/settings/help');
-    expect(array_search('/admin/help', $actions->all()))
+    expect($actions)->toContain('/admin/support');
+    expect(array_search('/admin/support', $actions->all()))
         ->toBe(array_search('/admin/settings', $actions->all()) + 1);
+    expect(array_search('/admin/help', $actions->all()))
+        ->toBe(array_search('/admin/support', $actions->all()) + 1);
 });

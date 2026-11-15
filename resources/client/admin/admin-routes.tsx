@@ -67,6 +67,14 @@ export const adminRoutes: RouteObject[] = [
       ...Object.values(adminFileEntriesRoutes),
       ...Object.values(adminLogsRoutes),
 
+      // Central support entry uses the native admin sidebar. The full
+      // conversation composer remains in the dedicated agent inbox layout.
+      {
+        path: 'support',
+        loader: () => authGuard({permission: 'admin.access'}) ?? null,
+        lazy: () => import('@app/admin/support/admin-support-management-page'),
+      },
+
       // Keep Help Center under the admin sidebar instead of redirecting to the agent shell.
       ...adminHcManagerRoutes,
 
