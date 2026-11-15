@@ -88,7 +88,6 @@ export function Component() {
             variant="outline"
             size="sm"
             className="hidden sm:inline-flex"
-            nativeButton={false}
             render={<Link to="/admin/financial/withdrawal-methods" />}
           >
             <Trans message="Receiving accounts" />
@@ -97,7 +96,6 @@ export function Component() {
             variant="outline"
             size="sm"
             className="hidden md:inline-flex"
-            nativeButton={false}
             render={<Link to="/admin/withdrawals" />}
           >
             <ArrowLeftIcon />
@@ -106,7 +104,6 @@ export function Component() {
           <Button
             color="primary"
             size="sm"
-            nativeButton={false}
             render={<Link to="/admin/financial/withdrawal-methods/create" />}
           >
             <PlusIcon />
@@ -125,7 +122,6 @@ export function Component() {
             <Button
               variant="outline"
               size="sm"
-              nativeButton={false}
               render={<Link to="/admin/financial/withdrawal-methods" />}
             >
               <Trans message="Receiving accounts" />
@@ -133,7 +129,6 @@ export function Component() {
             <Button
               variant="outline"
               size="sm"
-              nativeButton={false}
               render={<Link to="/admin/withdrawals" />}
             >
               <ArrowLeftIcon />

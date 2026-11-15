@@ -194,6 +194,9 @@ class StorefrontPaymentVerificationServiceTest extends TestCase
             'amount mismatch' => ['SUCCESS', 5000, 'ETB'],
             'currency mismatch' => ['SUCCESS', 15000, 'USD'],
             'status failed' => ['FAILED', 15000, 'ETB'],
+            // Chapa test-mode statuses that must NOT fulfill the order
+            'status pending' => ['PENDING', 15000, 'ETB'],
+            'status reversed' => ['REVERSED', 15000, 'ETB'],
         ];
     }
 

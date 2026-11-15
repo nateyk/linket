@@ -60,7 +60,6 @@ export function Component() {
         </DashboardLayout.SectionTitle>
         <Button
           variant="outline"
-          nativeButton={false}
           render={<Link to="/admin/financial/withdrawal-methods/legacy" />}
         >
           <ArrowLeftIcon />
