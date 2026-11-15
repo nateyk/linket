@@ -20,6 +20,7 @@ export function Component() {
         </div>
         <Button
           variant="outline"
+          nativeButton={false}
           className="hidden sm:inline-flex"
           render={<Link to="/admin/withdrawals" />}
         >

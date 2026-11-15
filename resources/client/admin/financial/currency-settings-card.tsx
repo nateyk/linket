@@ -13,7 +13,9 @@ import {Trans} from '@ui/i18n/trans';
 import {CheckCircle2Icon, CircleAlertIcon, CoinsIcon} from 'lucide-react';
 import {FormEvent, useEffect, useMemo, useState} from 'react';
 
-const positionOptions = [
+type CurrencyPosition = 'after' | 'before';
+
+const positionOptions: {label: string; value: CurrencyPosition}[] = [
   {label: 'After amount (234.00 Br)', value: 'after'},
   {label: 'Before amount (Br 234.00)', value: 'before'},
 ];
@@ -34,14 +36,14 @@ export function CurrencySettingsCard() {
     billingSettings?.currency_symbol ||
     'Br';
 
-  const initialPosition =
-    adminSettings?.client?.billing?.currency_symbol_position ||
-    billingSettings?.currency_symbol_position ||
-    'after';
+  const initialPosition: CurrencyPosition =
+    adminSettings?.client?.billing?.currency_symbol_position === 'before'
+      ? 'before'
+      : 'after';
 
   const [currency, setCurrency] = useState(initialCurrency);
   const [currencySymbol, setCurrencySymbol] = useState(initialSymbol);
-  const [currencyPosition, setCurrencyPosition] = useState<string>(initialPosition);
+  const [currencyPosition, setCurrencyPosition] = useState<CurrencyPosition>(initialPosition);
   const [isInitialized, setIsInitialized] = useState(false);
   const [statusMsg, setStatusMsg] = useState<{type: 'error' | 'success'; text: string}>();
 
@@ -55,7 +57,11 @@ export function CurrencySettingsCard() {
         setCurrencySymbol(adminSettings.client.billing.currency_symbol);
       }
       if (adminSettings.client.billing.currency_symbol_position) {
-        setCurrencyPosition(adminSettings.client.billing.currency_symbol_position);
+        setCurrencyPosition(
+          adminSettings.client.billing.currency_symbol_position === 'before'
+            ? 'before'
+            : 'after',
+        );
       }
       setIsInitialized(true);
     }
@@ -208,7 +214,7 @@ export function CurrencySettingsCard() {
               <Select.Root
                 items={positionOptions}
                 value={currencyPosition}
-                onValueChange={val => setCurrencyPosition(val as string)}
+                onValueChange={val => setCurrencyPosition(val as CurrencyPosition)}
                 disabled={settingsLoading || updateSettings.isPending}
               >
                 <Select.Trigger id="currency-position" className="w-full">
