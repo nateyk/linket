@@ -39,11 +39,29 @@ function matchResponse(page: Page, pathname: string, method: string) {
 }
 
 async function reportSnapshot(page: Page): Promise<Report> {
-  const response = matchResponse(page, '/api/v1/reports/conversations/ticket', 'GET');
+  // Query the same authenticated endpoint the real report screen uses, but
+  // assert failures directly instead of silently waiting for an OK response.
+  const report = await page.request.get('/api/v1/reports/conversations/ticket', {
+    headers: {
+      Accept: 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
+      Referer: page.url(),
+    },
+  });
+  const body = await report.text();
+  expect(
+    report.ok(),
+    'Support report HTTP ' + report.status() + ': ' + body.slice(0, 700),
+  ).toBe(true);
+
   await page.goto('/agent/reports/tickets');
-  await expect(page.getByText('New Conversations').first()).toBeVisible({timeout: 30_000});
+  await expect(page).toHaveURL(/\/agent\/reports\/tickets/);
+  await expect(
+    page.getByText('New Conversations').first(),
+    'Support report UI not loaded: ' + (await page.locator('body').innerText()).slice(0, 800),
+  ).toBeVisible({timeout: 15_000});
   await expect(page.getByText('Total agent replies').first()).toBeVisible();
-  return (await (await response).json()) as Report;
+  return JSON.parse(body) as Report;
 }
 
 async function selectTicketStatus(page: Page, label: 'Open' | 'Resolved'): Promise<void> {
@@ -158,8 +176,7 @@ test.describe('isolated real-browser support lifecycle', () => {
         'Agent report must count public replies but not internal notes',
       ).toBe(before.agents.datasets[0].totalAgentReplies + 1);
     } finally {
-      await adminContext.close();
-      await buyerContext.close();
+      await Promise.allSettled([adminContext.close(), buyerContext.close()]);
     }
   });
 });
