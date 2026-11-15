@@ -531,7 +531,7 @@ export const dashboardRoutes: RouteObject[] = [
       {
         path: 'sales-payouts',
         loader: ({request}) =>
-          redirect(`/dashboard/withdrawals${new URL(request.url).search}`, 308),
+          redirect(`/dashboard/orders${new URL(request.url).search}`, 308),
       },
       {
         path: 'legacy-payouts',
