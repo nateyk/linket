@@ -63,12 +63,23 @@ vi.mock('@shadcn/forms/select/select', () => ({
   },
 }));
 vi.mock('@shadcn/forms/checkbox/checkbox', () => ({
-  Checkbox: ({checked, onChange, ...props}: {checked?: boolean; onChange?: (e: {target: {checked: boolean}}) => void}) => (
+  Checkbox: ({
+    checked,
+    onCheckedChange,
+    id,
+    disabled,
+  }: {
+    checked?: boolean;
+    onCheckedChange?: (checked: boolean) => void;
+    id?: string;
+    disabled?: boolean;
+  }) => (
     <input
       type="checkbox"
+      id={id}
       checked={checked}
-      onChange={e => onChange?.({target: {checked: e.target.checked}})}
-      {...props}
+      disabled={disabled}
+      onChange={e => onCheckedChange?.(e.target.checked)}
     />
   ),
 }));

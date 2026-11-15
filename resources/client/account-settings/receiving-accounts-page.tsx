@@ -553,7 +553,8 @@ export function Component() {
                     id="payout-is-default"
                     checked={isDefault}
                     disabled={busy}
-                    onChange={event => setIsDefault(event.target.checked)}
+                    bindToHookForm={false}
+                    onCheckedChange={checked => setIsDefault(Boolean(checked))}
                   />
                   <label htmlFor="payout-is-default" className="cursor-pointer text-sm font-medium">
                     <Trans message="Set as default payout destination" />
