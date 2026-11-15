@@ -60,7 +60,17 @@ class MarketplaceReconciliationService
 
         return $this->processUnjournaledOrders(
             'funds_available',
-            fn (StorefrontOrder $order): ?StorefrontJournalEntry => $this->creatorLedger()->releaseHeldToAvailable($order),
+            function (StorefrontOrder $order): ?StorefrontJournalEntry {
+                $entry = $this->creatorLedger()->releaseHeldToAvailable($order);
+                if ($entry !== null) {
+                    $currency = $order->currency ?: (string) config('storefront.currency', 'ETB');
+                    $this->creatorLedger()->settleDeficitFromAvailable(
+                        BalanceQuery::for($order->creator_id, $currency, $order->product?->workspace_id)
+                    );
+                }
+
+                return $entry;
+            },
             $threshold,
         );
     }
