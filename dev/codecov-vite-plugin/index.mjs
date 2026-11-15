@@ -37,20 +37,20 @@ function moduleDisplayName(modulePath, cwd) {
   return `.${path.sep}${relativeModulePath}`;
 }
 
-function rememberModule(modules, modulePath, moduleInfo, uniqueId, cwd, useOriginalSize) {
-  const name = moduleDisplayName(modulePath, cwd);
-  const existing = modules.get(name);
+function rememberModule(context, modulePath, moduleInfo, uniqueId) {
+  const name = moduleDisplayName(modulePath, context.cwd);
+  const existing = context.modules.get(name);
   if (existing) {
     existing.chunkUniqueIds.push(uniqueId);
     return;
   }
-  const size = useOriginalSize ? moduleInfo.originalLength : moduleInfo.renderedLength;
-  modules.set(name, {name, size, chunkUniqueIds: [uniqueId]});
+  const size = context.useOriginalSize ? moduleInfo.originalLength : moduleInfo.renderedLength;
+  context.modules.set(name, {name, size, chunkUniqueIds: [uniqueId]});
 }
 
-function rememberChunkModules(item, modules, uniqueId, cwd, useOriginalSize) {
+function rememberChunkModules(context, item, uniqueId) {
   for (const [modulePath, moduleInfo] of Object.entries(item?.modules ?? {})) {
-    rememberModule(modules, modulePath, moduleInfo, uniqueId, cwd, useOriginalSize);
+    rememberModule(context, modulePath, moduleInfo, uniqueId);
   }
 }
 
@@ -106,13 +106,7 @@ async function collectChunk(item, context) {
   const fileName = item?.fileName ?? '';
   const uniqueId = `${context.counter}-${item?.name ?? ''}`;
   rememberChunk(context.chunks, item, fileName, uniqueId);
-  rememberChunkModules(
-    item,
-    context.modules,
-    uniqueId,
-    context.cwd,
-    context.useOriginalSize,
-  );
+  rememberChunkModules(context, item, uniqueId);
   context.counter += 1;
 }
 
