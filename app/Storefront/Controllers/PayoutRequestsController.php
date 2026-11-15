@@ -99,8 +99,9 @@ class PayoutRequestsController extends Controller
         Gate::authorize('admin.access');
 
         $data = $request->validate([
-            'transfer_reference' => 'required|string|max:190',
+            'transfer_reference' => 'required_without:auto_transfer|string|max:190',
             'note' => 'nullable|string|max:2000',
+            'auto_transfer' => 'sometimes|boolean',
         ]);
 
         $updated = app(PayoutRequestService::class)->transition(

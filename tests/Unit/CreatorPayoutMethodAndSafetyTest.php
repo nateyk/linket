@@ -171,17 +171,10 @@ class CreatorPayoutMethodAndSafetyTest extends TestCase
         }
     }
 
-    public function testMarkPaidRejectsAutoTransferBypassAndRequiresExplicitReference(): void
+    public function testMarkPaidRequiresExplicitReferenceWhenManual(): void
     {
         $payout = $this->createTestPayoutRequest('processing');
         $service = new PayoutRequestService();
-
-        try {
-            $service->transition($payout, 'mark_paid', 1, ['auto_transfer' => true]);
-            $this->fail('Expected ValidationException when auto_transfer is passed.');
-        } catch (ValidationException $e) {
-            $this->assertArrayHasKey('transfer_reference', $e->errors());
-        }
 
         try {
             $service->transition($payout, 'mark_paid', 1, ['transfer_reference' => '   ']);

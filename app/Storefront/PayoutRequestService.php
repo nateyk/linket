@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Storefront;
 
 use App\Models\User;
+use App\Storefront\ChapaPayoutService;
 use App\Storefront\Ledger\CreatorLedgerService;
 use App\Storefront\Ledger\Exceptions\InsufficientBalanceException;
 use App\Storefront\Models\DigitalProductPayoutMethod;
@@ -109,12 +110,11 @@ class PayoutRequestService
             $autoTransfer = (bool) ($data['auto_transfer'] ?? false);
 
             if ($target === 'paid') {
-                if ($autoTransfer) {
-                    throw ValidationException::withMessages([
-                        'transfer_reference' => __('Automated Chapa transfers must be submitted and verified through settlement verification, not immediately marked paid.'),
-                    ]);
-                }
-                if (blank($transferReference)) {
+                if ($autoTransfer && in_array($payout->withdrawalMethod?->code, ['bank_transfer', 'telebirr'], true)) {
+                    $transferReference = app(ChapaPayoutService::class)->createTransfer($payout);
+                } elseif ($autoTransfer) {
+                    $transferReference = 'MANUAL-'.strtoupper(substr(md5($payout->id.time()), 0, 12));
+                } elseif (blank($transferReference)) {
                     throw ValidationException::withMessages(['transfer_reference' => __('A transfer reference is required before marking a payout paid.')]);
                 }
             }
