@@ -335,6 +335,12 @@ Route::group(['prefix' => 'v1'], function () {
         Route::post('items/payout-requests', [PayoutRequestsController::class, 'store']);
         Route::post('items/payout-requests/{payoutRequest}/cancel', [PayoutRequestsController::class, 'cancel']);
         Route::get('items/withdrawal-methods', [DigitalProductWithdrawalMethodsController::class, 'index']);
+        Route::get('items/payout-methods', [DigitalProductPayoutMethodController::class, 'index']);
+        Route::post('items/payout-methods', [DigitalProductPayoutMethodController::class, 'store']);
+        Route::get('items/payout-methods/{payoutMethod}', [DigitalProductPayoutMethodController::class, 'showMethod'])->whereNumber('payoutMethod');
+        Route::put('items/payout-methods/{payoutMethod}', [DigitalProductPayoutMethodController::class, 'updateMethod'])->whereNumber('payoutMethod');
+        Route::delete('items/payout-methods/{payoutMethod}', [DigitalProductPayoutMethodController::class, 'destroy'])->whereNumber('payoutMethod');
+        Route::post('items/payout-methods/{payoutMethod}/default', [DigitalProductPayoutMethodController::class, 'setDefault'])->whereNumber('payoutMethod');
         Route::get('items/payout-method', [DigitalProductPayoutMethodController::class, 'show']);
         Route::put('items/payout-method', [DigitalProductPayoutMethodController::class, 'update']);
         Route::apiResource('items', DigitalProductsController::class)->parameters(['items' => 'digitalProduct']);
@@ -356,6 +362,7 @@ Route::group(['prefix' => 'v1'], function () {
         Route::post('admin/items/payout-requests/{payoutRequest}/processing', [PayoutRequestsController::class, 'startProcessing']);
         Route::post('admin/items/payout-requests/{payoutRequest}/reject', [PayoutRequestsController::class, 'reject']);
         Route::post('admin/items/payout-requests/{payoutRequest}/reveal-destination', [PayoutRequestsController::class, 'revealDestination']);
+        Route::post('admin/items/payout-requests/{payoutRequest}/submit-chapa', [PayoutRequestsController::class, 'submitChapaPayout']);
         Route::post('admin/items/payout-requests/{payoutRequest}/mark-paid', [PayoutRequestsController::class, 'markPaid']);
         Route::get('admin/items/withdrawal-methods', [DigitalProductWithdrawalMethodsController::class, 'adminIndex']);
         Route::post('admin/items/withdrawal-methods', [DigitalProductWithdrawalMethodsController::class, 'store']);

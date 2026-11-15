@@ -35,7 +35,7 @@ it('derives setup completion from stores, product files, and usable receiving ac
   expect(screen.getByText('Create storefront')).toBeTruthy();
   expect(screen.getByText('Add digital product')).toBeTruthy();
   expect(screen.getByText('Upload product file')).toBeTruthy();
-  expect(screen.getByText('Configure receiving account')).toBeTruthy();
+  expect(screen.getByText('Configure payout account')).toBeTruthy();
   expect(screen.getByText('Get product approved')).toBeTruthy();
   expect(screen.getByText('Publish product in storefront')).toBeTruthy();
   expect(screen.getByText('Make your first sale')).toBeTruthy();

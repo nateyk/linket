@@ -1,12 +1,16 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Storefront\Controllers;
 
 use App\Storefront\Models\DigitalProductWithdrawalMethod;
 use App\Storefront\Models\PayoutRequest;
-use App\Storefront\Resources\AdminPayoutRequestResource;
 use App\Storefront\PayoutRequestService;
+use App\Storefront\Resources\AdminPayoutRequestResource;
+use App\Storefront\Services\StorefrontPayoutProcessingService;
 use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Gate;
@@ -21,8 +25,8 @@ class AdminPayoutRequestsController extends Controller
         $withdrawalMethods = DigitalProductWithdrawalMethod::all();
 
         $payouts = PayoutRequest::query()
-            ->with(['creator', 'withdrawalMethod', 'activities.actor'])
-            ->latest();
+            ->with(['creator', 'withdrawalMethod', 'activities.actor', 'latestPayoutIntent', 'payoutMethod'])
+            ->latest('id');
 
         if (request()->filled('search')) {
             $searchTerm = '%' . request('search') . '%';
@@ -36,12 +40,12 @@ class AdminPayoutRequestsController extends Controller
         }
 
         if (request()->filled('date_from')) {
-            $dateFrom = Carbon::parse(request('date_from'))->startOfDay();
+            $dateFrom = Carbon::parse((string) request('date_from'))->startOfDay();
             $payouts->where('created_at', '>=', $dateFrom);
         }
 
         if (request()->filled('date_to')) {
-            $dateTo = Carbon::parse(request('date_to'))->endOfDay();
+            $dateTo = Carbon::parse((string) request('date_to'))->endOfDay();
             $payouts->where('created_at', '<=', $dateTo);
         }
 
@@ -59,21 +63,33 @@ class AdminPayoutRequestsController extends Controller
 
         $filteredPayouts = $payouts->get();
 
-        $counters['requested']['total'] = $filteredPayouts->where('status', 'requested')->count();
-        $counters['requested']['amount'] = $filteredPayouts->where('status', 'requested')->sum('amount_cents');
-        $counters['processing']['total'] = $filteredPayouts->where('status', 'processing')->count();
-        $counters['processing']['amount'] = $filteredPayouts->where('status', 'processing')->sum('amount_cents');
-        $counters['paid']['total'] = $filteredPayouts->where('status', 'paid')->count();
-        $counters['paid']['amount'] = $filteredPayouts->where('status', 'paid')->sum('amount_cents');
-        $counters['rejected']['total'] = $filteredPayouts->where('status', 'rejected')->count();
-        $counters['rejected']['amount'] = $filteredPayouts->where('status', 'rejected')->sum('amount_cents');
-        $counters['cancelled']['total'] = $filteredPayouts->where('status', 'cancelled')->count();
-        $counters['cancelled']['amount'] = $filteredPayouts->where('status', 'cancelled')->sum('amount_cents');
+        $counters = [
+            'requested' => [
+                'total' => $filteredPayouts->where('status', 'requested')->count(),
+                'amount' => $filteredPayouts->where('status', 'requested')->sum('amount_cents'),
+            ],
+            'processing' => [
+                'total' => $filteredPayouts->where('status', 'processing')->count(),
+                'amount' => $filteredPayouts->where('status', 'processing')->sum('amount_cents'),
+            ],
+            'paid' => [
+                'total' => $filteredPayouts->where('status', 'paid')->count(),
+                'amount' => $filteredPayouts->where('status', 'paid')->sum('amount_cents'),
+            ],
+            'rejected' => [
+                'total' => $filteredPayouts->where('status', 'rejected')->count(),
+                'amount' => $filteredPayouts->where('status', 'rejected')->sum('amount_cents'),
+            ],
+            'cancelled' => [
+                'total' => $filteredPayouts->where('status', 'cancelled')->count(),
+                'amount' => $filteredPayouts->where('status', 'cancelled')->sum('amount_cents'),
+            ],
+        ];
 
-        $payouts = $payouts->paginate((int) request('perPage', 50));
-        $payouts->appends(request()->only(['search', 'date_from', 'date_to', 'creator', 'status', 'withdrawal_method']));
+        $paginated = $payouts->paginate((int) request('perPage', 50));
+        $paginated->appends(request()->only(['search', 'date_from', 'date_to', 'creator', 'status', 'withdrawal_method']));
 
-        return AdminPayoutRequestResource::collection($payouts)->additional([
+        return AdminPayoutRequestResource::collection($paginated)->additional([
             'meta' => [
                 'counters' => $counters,
                 'withdrawal_methods' => $withdrawalMethods,
@@ -81,11 +97,13 @@ class AdminPayoutRequestsController extends Controller
         ]);
     }
 
-    public function review(PayoutRequest $payoutRequest)
+    public function review(PayoutRequest $payoutRequest): AdminPayoutRequestResource
     {
         Gate::authorize('admin.access');
 
-        return new AdminPayoutRequestResource($payoutRequest->load(['creator', 'withdrawalMethod', 'activities.actor', 'payoutMethod']));
+        return new AdminPayoutRequestResource(
+            $payoutRequest->load(['creator', 'withdrawalMethod', 'activities.actor', 'latestPayoutIntent', 'payoutMethod'])
+        );
     }
 
     public function update(Request $request, PayoutRequest $payoutRequest)
@@ -96,7 +114,7 @@ class AdminPayoutRequestsController extends Controller
             'status' => ['required', 'string', 'in:requested,processing,paid,rejected,cancelled'],
         ]);
 
-        if ($request->status == $payoutRequest->status) {
+        if ($request->status === $payoutRequest->status) {
             return response()->json(['message' => __('The status is not changed')], 422);
         }
 
@@ -124,7 +142,47 @@ class AdminPayoutRequestsController extends Controller
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        return new AdminPayoutRequestResource($payoutRequest->fresh(['creator', 'withdrawalMethod', 'activities.actor']));
+        return new AdminPayoutRequestResource($payoutRequest->fresh(['creator', 'withdrawalMethod', 'activities.actor', 'latestPayoutIntent', 'payoutMethod']));
+    }
+
+    public function submitTransfer(Request $request, PayoutRequest $payoutRequest): JsonResponse
+    {
+        Gate::authorize('admin.access');
+
+        try {
+            $intent = app(PayoutRequestService::class)->submitChapaPayout($payoutRequest, $request->user()->id);
+
+            return response()->json([
+                'message' => __('Payout transfer submitted to Chapa.'),
+                'data' => new AdminPayoutRequestResource($payoutRequest->fresh(['creator', 'withdrawalMethod', 'activities.actor', 'latestPayoutIntent', 'payoutMethod'])),
+                'intent_id' => $intent->id,
+                'merchant_reference' => $intent->merchant_reference,
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
+    }
+
+    public function verifySettlement(Request $request, PayoutRequest $payoutRequest): JsonResponse
+    {
+        Gate::authorize('admin.access');
+
+        $intent = $payoutRequest->latestPayoutIntent;
+        if (!$intent) {
+            return response()->json(['message' => __('No payout transfer found to verify.')], 422);
+        }
+
+        try {
+            $intent = app(StorefrontPayoutProcessingService::class)->verifyPayout($intent);
+
+            return response()->json([
+                'message' => __('Payout settlement checked.'),
+                'data' => new AdminPayoutRequestResource($payoutRequest->fresh(['creator', 'withdrawalMethod', 'activities.actor', 'latestPayoutIntent', 'payoutMethod'])),
+                'intent_status' => $intent->status,
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        }
     }
 
     public function destroy(PayoutRequest $payoutRequest)

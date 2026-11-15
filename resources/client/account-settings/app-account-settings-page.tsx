@@ -158,7 +158,7 @@ function AccountSettingsSidebar() {
               </Sidebar.MenuItem>
               <Sidebar.MenuItem>
                 <Sidebar.MenuButton render={<NavLink to="/account-settings/receiving-accounts" />} icon={<WalletCardsIcon />}>
-                  <Trans message="Receiving accounts" />
+                  <Trans message="Payout accounts" />
                 </Sidebar.MenuButton>
               </Sidebar.MenuItem>
               <Sidebar.MenuItem>

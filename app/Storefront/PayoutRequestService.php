@@ -1,40 +1,50 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Storefront;
 
 use App\Models\User;
+use App\Storefront\ChapaPayoutService;
+use App\Storefront\Ledger\CreatorLedgerService;
+use App\Storefront\Ledger\Exceptions\InsufficientBalanceException;
 use App\Storefront\Models\DigitalProductPayoutMethod;
 use App\Storefront\Models\PayoutRequest;
-use App\Storefront\Models\DigitalProductWithdrawalMethod;
-use App\Storefront\ChapaPayoutService;
+use App\Storefront\Models\StorefrontPayoutIntent;
+use App\Storefront\Services\StorefrontPayoutProcessingService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class PayoutRequestService
 {
-    public function create(int $creatorId, int $workspaceId, int $amountCents): PayoutRequest
+    public function create(int $creatorId, int $workspaceId, int $amountCents, ?int $payoutMethodId = null): PayoutRequest
     {
         if (settings('kyc.enabled', false)) {
             $creator = User::query()->find($creatorId);
             abort_unless($creator && $creator->isKycVerified(), 422, __('Complete identity verification before requesting a payout.'));
         }
 
-        return DB::transaction(function () use ($creatorId, $workspaceId, $amountCents): PayoutRequest {
-            $account = DigitalProductPayoutMethod::query()
+        return DB::transaction(function () use ($creatorId, $workspaceId, $amountCents, $payoutMethodId): PayoutRequest {
+            $accountQuery = DigitalProductPayoutMethod::query()
                 ->with('withdrawalMethod')
-                ->where('workspace_id', $workspaceId)
                 ->where('creator_id', $creatorId)
-                ->lockForUpdate()
-                ->first();
+                ->where('is_active', true);
+
+            $account = $payoutMethodId
+                ? $accountQuery->where('id', $payoutMethodId)->lockForUpdate()->first()
+                : $accountQuery->orderByDesc('is_default')->latest('id')->lockForUpdate()->first();
+
             $method = $account?->withdrawalMethod;
             if (!$account || !$method?->is_active) {
                 throw ValidationException::withMessages(['withdrawal_method' => __('Choose an active withdrawal method before requesting a payout.')]);
             }
+
             if ($amountCents < $method->minimum_amount_cents || ($method->maximum_amount_cents && $amountCents > $method->maximum_amount_cents)) {
                 throw ValidationException::withMessages(['amount_cents' => __('This amount is outside the selected withdrawal method limits.')]);
             }
-            if (PayoutRequest::query()->where('workspace_id', $workspaceId)->where('creator_id', $creatorId)->whereIn('status', ['requested', 'processing'])->lockForUpdate()->exists()) {
+
+            if (PayoutRequest::query()->where('creator_id', $creatorId)->whereIn('status', ['requested', 'processing'])->lockForUpdate()->exists()) {
                 throw ValidationException::withMessages(['amount_cents' => __('You already have a payout being reviewed.')]);
             }
 
@@ -43,7 +53,7 @@ class PayoutRequestService
                 throw ValidationException::withMessages(['amount_cents' => __('The requested payout exceeds your available balance.')]);
             }
 
-            $payout = PayoutRequest::create([
+            $payout = PayoutRequest::query()->create([
                 'workspace_id' => $workspaceId,
                 'creator_id' => $creatorId,
                 'digital_product_payout_method_id' => $account->id,
@@ -51,7 +61,7 @@ class PayoutRequestService
                 'payout_method_label' => $account->display_label,
                 'withdrawal_method_name' => $method->name,
                 'payout_destination' => $account->destination,
-                'currency' => config('storefront.currency'),
+                'currency' => config('storefront.currency', 'ETB'),
                 'amount_cents' => $amountCents,
                 'status' => 'requested',
             ]);
@@ -62,9 +72,9 @@ class PayoutRequestService
             ]);
 
             try {
-                app(\App\Storefront\Ledger\CreatorLedgerService::class)->reserveForPayout($payout, $available);
-            } catch (\Throwable $e) {
-                Log::warning('store.payout.ledger_reserve_failed', ['payout_id' => $payout->id, 'error' => $e->getMessage()]);
+                app(CreatorLedgerService::class)->reserveForPayout($payout, $available);
+            } catch (InsufficientBalanceException) {
+                throw ValidationException::withMessages(['amount_cents' => __('The requested payout exceeds your verified available balance.')]);
             }
 
             $this->activity($payout, $creatorId, 'requested');
@@ -91,6 +101,7 @@ class PayoutRequestService
                 'cancel' => 'cancelled',
                 default => throw ValidationException::withMessages(['action' => __('Unsupported payout action.')]),
             };
+
             if (!self::canTransition($payout->status, $target)) {
                 throw ValidationException::withMessages(['status' => __('This payout can no longer be changed.')]);
             }
@@ -102,19 +113,26 @@ class PayoutRequestService
                 if ($autoTransfer && in_array($payout->withdrawalMethod?->code, ['bank_transfer', 'telebirr'], true)) {
                     $transferReference = app(ChapaPayoutService::class)->createTransfer($payout);
                 } elseif ($autoTransfer) {
-                    // Auto transfer requested but method not supported for Chapa API;
-                    // generate a manual reference as fallback.
-                    $transferReference = 'MANUAL-' . strtoupper(substr(md5($payout->id . time()), 0, 12));
+                    $transferReference = 'MANUAL-'.strtoupper(substr(md5($payout->id.time()), 0, 12));
                 } elseif (blank($transferReference)) {
                     throw ValidationException::withMessages(['transfer_reference' => __('A transfer reference is required before marking a payout paid.')]);
                 }
             }
 
             $updates = ['status' => $target];
-            if ($target === 'processing') $updates += ['processed_by' => $actorId, 'processing_at' => now(), 'admin_notes' => $data['note'] ?? null];
-            if ($target === 'paid') $updates += ['processed_by' => $actorId, 'paid_at' => now(), 'transfer_reference' => $transferReference, 'admin_notes' => $data['note'] ?? $payout->admin_notes];
-            if ($target === 'rejected') $updates += ['processed_by' => $actorId, 'rejected_at' => now(), 'rejection_reason' => $data['reason'] ?? __('Payout request rejected.')];
-            if ($target === 'cancelled') $updates += ['cancelled_at' => now()];
+            if ($target === 'processing') {
+                $updates += ['processed_by' => $actorId, 'processing_at' => now(), 'admin_notes' => $data['note'] ?? null];
+            }
+            if ($target === 'paid') {
+                $updates += ['processed_by' => $actorId, 'paid_at' => now(), 'transfer_reference' => $transferReference, 'admin_notes' => $data['note'] ?? $payout->admin_notes];
+            }
+            if ($target === 'rejected') {
+                $updates += ['processed_by' => $actorId, 'rejected_at' => now(), 'rejection_reason' => $data['reason'] ?? __('Payout request rejected.')];
+            }
+            if ($target === 'cancelled') {
+                $updates += ['cancelled_at' => now()];
+            }
+
             $payout->update($updates);
 
             if (in_array($target, ['rejected', 'cancelled'], true)) {
@@ -123,20 +141,13 @@ class PayoutRequestService
                     'description' => __('Payout reservation released'),
                 ]);
 
-                try {
-                    app(\App\Storefront\Ledger\CreatorLedgerService::class)->releasePayoutReservation($payout);
-                } catch (\Throwable $e) {
-                    Log::warning('store.payout.ledger_release_failed', ['payout_id' => $payout->id, 'error' => $e->getMessage()]);
-                }
+                app(CreatorLedgerService::class)->releasePayoutReservation($payout);
             }
 
             if ($target === 'paid') {
-                try {
-                    app(\App\Storefront\Ledger\CreatorLedgerService::class)->disbursePayout($payout);
-                } catch (\Throwable $e) {
-                    Log::warning('store.payout.ledger_disburse_failed', ['payout_id' => $payout->id, 'error' => $e->getMessage()]);
-                }
+                app(CreatorLedgerService::class)->disbursePayout($payout);
             }
+
             $this->activity($payout, $actorId, $target, $data['reason'] ?? $data['note'] ?? null);
             Log::info('store.payout.transition', [
                 'workspace_id' => $payout->workspace_id,
@@ -149,6 +160,21 @@ class PayoutRequestService
 
             return $payout->fresh(['creator', 'withdrawalMethod', 'activities.actor']);
         });
+    }
+
+    public function submitChapaPayout(PayoutRequest $payout, int $actorId): StorefrontPayoutIntent
+    {
+        if (!in_array($payout->status, ['requested', 'processing'], true)) {
+            throw ValidationException::withMessages(['status' => __('Payout must be requested or processing to submit to Chapa.')]);
+        }
+
+        $processingService = app(StorefrontPayoutProcessingService::class);
+        $intent = $processingService->prepareIntent($payout, $payout->withdrawalMethod?->code ?? 'bank_transfer');
+        $intent = $processingService->submitPayout($intent);
+
+        $this->activity($payout, $actorId, 'chapa_transfer_submitted', "Submitted transfer via Chapa ({$intent->merchant_reference})");
+
+        return $intent;
     }
 
     public static function canTransition(string $from, string $to): bool
@@ -170,7 +196,7 @@ class PayoutRequestService
             'actor_id' => $adminId,
         ]);
 
-        return $payout->payout_destination;
+        return (string) $payout->payout_destination;
     }
 
     private function activity(PayoutRequest $payout, ?int $actorId, string $action, ?string $note = null): void
