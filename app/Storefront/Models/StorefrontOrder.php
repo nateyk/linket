@@ -27,6 +27,11 @@ class StorefrontOrder extends StorefrontModel
 
     public const MAX_VERIFICATION_ATTEMPTS = 5;
 
+    public const COLLECTION_OWNER_PLATFORM_CHAPA = 'platform_chapa';
+    public const COLLECTION_OWNER_CREATOR_CHAPA = 'creator_chapa';
+    public const COLLECTION_OWNER_VERIFY_ET_CREATOR = 'verify_et_creator';
+    public const COLLECTION_OWNER_FREE = 'free';
+
     protected $guarded = [];
     protected $hidden = ['payment_account_snapshot', 'payment_access_token_hash'];
     protected $casts = [
@@ -79,6 +84,19 @@ class StorefrontOrder extends StorefrontModel
         return ($this->delivery_status ?? '') === self::DELIVERY_DELIVERING;
     }
 
+    public function isPlatformCollected(): bool
+    {
+        return ($this->collection_owner ?? '') === self::COLLECTION_OWNER_PLATFORM_CHAPA;
+    }
+
+    public function isCreatorCollected(): bool
+    {
+        return in_array($this->collection_owner ?? '', [
+            self::COLLECTION_OWNER_CREATOR_CHAPA,
+            self::COLLECTION_OWNER_VERIFY_ET_CREATOR,
+        ], true);
+    }
+
     public function maxAttemptsExceeded(): bool
     {
         return (int) ($this->verification_attempts ?? 0) >= self::MAX_VERIFICATION_ATTEMPTS;
@@ -129,4 +147,6 @@ class StorefrontOrder extends StorefrontModel
     public function creatorPaymentMethod(): BelongsTo { return $this->belongsTo(CreatorPaymentMethod::class); }
     public function directPaymentVerifications(): MorphMany { return $this->morphMany(\App\Payments\Models\DirectPaymentVerification::class, 'payable'); }
     public function latestDirectPaymentVerification(): MorphOne { return $this->morphOne(\App\Payments\Models\DirectPaymentVerification::class, 'payable')->latestOfMany(); }
+    public function paymentAttempts(): HasMany { return $this->hasMany(StorefrontPaymentAttempt::class, 'order_id'); }
+    public function latestPaymentAttempt(): HasOne { return $this->hasOne(StorefrontPaymentAttempt::class, 'order_id')->latestOfMany(); }
 }

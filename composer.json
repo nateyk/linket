@@ -13,7 +13,7 @@
     "adbario/php-dot-notation": "^3.3",
     "axisofstevil/stop-words": "^1.0",
     "bacon/bacon-qr-code": "^3.0",
-    "chapa/chapa-laravel": "dev-main",
+    "nateyk/chapa-laravel": "dev-main#978533b87f3e78509048de004f409032cdb685a0",
     "cocur/slugify": "^4.5",
     "codebyray/laravel-review-rateable": "2.1.4",
     "dedoc/scramble": "^0.13.22",
@@ -99,39 +99,8 @@
   },
   "repositories": [
     {
-      "type": "package",
-      "package": {
-        "name": "chapa/chapa-laravel",
-        "version": "dev-main",
-        "source": {
-          "type": "git",
-          "url": "https://github.com/Chapa-Et/chapa-laravel.git",
-          "reference": "0fca70b1edbf15aa89c9de41b86a821fbf2bec3d"
-        },
-        "require": {
-          "php": "^8.3",
-          "guzzlehttp/guzzle": "^7.0",
-          "illuminate/support": "^12.0|^13.0"
-        },
-        "autoload": {
-          "classmap": [
-            "src/Chapa.php"
-          ],
-          "psr-4": {
-            "Chapa\\Chapa\\": "src/"
-          }
-        },
-        "extra": {
-          "laravel": {
-            "providers": [
-              "Chapa\\Chapa\\ChapaServiceProvider"
-            ],
-            "aliases": {
-              "Chapa": "Chapa\\Chapa\\Facades\\Chapa"
-            }
-          }
-        }
-      }
+      "type": "vcs",
+      "url": "https://github.com/nateyk/chapa-laravel.git"
     }
   ],
   "config": {

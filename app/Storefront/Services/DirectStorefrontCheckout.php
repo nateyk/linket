@@ -9,6 +9,7 @@ use App\Storefront\Models\DigitalProduct;
 use App\Storefront\Models\StorefrontOrder;
 use App\Storefront\VisitorAttributes;
 use App\Entitlements\Entitlements;
+use App\Storefront\Commission\CommissionPolicy;
 use Illuminate\Support\Str;
 
 final class DirectStorefrontCheckout
@@ -34,8 +35,7 @@ final class DirectStorefrontCheckout
         }
 
         $accessToken = Str::random(64);
-        $plan = app(Entitlements::class)->planFor($product->creator);
-        $commissionBps = 0;
+        $commission = app(CommissionPolicy::class)->calculate($product->creator, (int) $product->price_cents);
         $order = StorefrontOrder::query()->create([
             'uuid' => (string) Str::uuid(),
             'monetization_policy' => $isPro ? CreatorVerificationAllowance::PRO_POLICY : CreatorVerificationAllowance::FREE_POLICY,
@@ -47,11 +47,11 @@ final class DirectStorefrontCheckout
             'buyer_email' => $buyer['email'] ?? null,
             'currency' => 'ETB',
             'gross_amount_cents' => $product->price_cents,
-            'commission_bps' => $commissionBps,
-            'commission_plan_id' => $plan?->id,
-            'platform_fee_percent' => $commissionBps / 100,
-            'platform_fee_cents' => 0,
-            'creator_earnings_cents' => $product->price_cents,
+            'commission_bps' => $commission->commissionBps,
+            'commission_plan_id' => $commission->planId,
+            'platform_fee_percent' => $commission->platformFeePercent,
+            'platform_fee_cents' => $commission->platformFeeCents,
+            'creator_earnings_cents' => $commission->creatorEarningsCents,
             'status' => 'pending_payment',
             'delivery_status' => $product->price_cents === 0 ? StorefrontOrder::DELIVERY_DELIVERED : StorefrontOrder::DELIVERY_AWAITING_PAYMENT,
             'verification_attempts' => 0,

@@ -61,6 +61,7 @@ class StorefrontCheckout
             'buyer_user_id' => $buyerUserId,
             'buyer_name' => $buyer['name'] ?? null,
             'buyer_email' => $buyer['email'] ?? null,
+            'collection_owner' => StorefrontOrder::COLLECTION_OWNER_FREE,
             'currency' => $product->currency,
             'gross_amount_cents' => $gross,
             'monetization_policy' => $allowance->isPro($product->creator)

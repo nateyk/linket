@@ -155,12 +155,21 @@ final class ChapaV2Client
             throw new RuntimeException('Invalid Chapa amount.');
         }
 
-        return (int) bcmul($amount, '100', 0);
+        $parts = explode('.', $amount, 2);
+        $whole = (int) $parts[0];
+        $cents = isset($parts[1]) ? (int) str_pad($parts[1], 2, '0', STR_PAD_RIGHT) : 0;
+
+        return ($whole * 100) + $cents;
     }
 
     public static function majorFromCents(int $cents): string
     {
-        return bcdiv((string) $cents, '100', 2);
+        $sign = $cents < 0 ? '-' : '';
+        $abs = abs($cents);
+        $whole = intdiv($abs, 100);
+        $rem = $abs % 100;
+
+        return sprintf('%s%d.%02d', $sign, $whole, $rem);
     }
 
     private function send(string $secret, ?string $idempotencyKey = null): PendingRequest
