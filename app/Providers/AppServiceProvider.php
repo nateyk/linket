@@ -297,6 +297,7 @@ class AppServiceProvider extends ServiceProvider
             \App\Payments\Commands\ProcessDirectSubscriptionRenewals::class,
             \App\Storefront\Commands\GenerateCommissionInvoices::class,
             \App\Storefront\Commands\EnforceCommissionRestrictions::class,
+            \App\Storefront\Commands\ReconcileMarketplaceFinancesCommand::class,
         ]);
 
         $this->app->singleton(Agent::class, function () {

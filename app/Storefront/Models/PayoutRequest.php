@@ -6,6 +6,7 @@ use App\Models\User;
 use Common\Workspaces\Traits\BelongsToWorkspace;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class PayoutRequest extends StorefrontModel
 {
@@ -38,4 +39,6 @@ class PayoutRequest extends StorefrontModel
     public function withdrawalMethod(): BelongsTo { return $this->belongsTo(DigitalProductWithdrawalMethod::class); }
     public function activities(): HasMany { return $this->hasMany(DigitalProductPayoutRequestActivity::class); }
     public function destinationReveals(): HasMany { return $this->hasMany(DigitalProductPayoutDestinationReveal::class); }
+    public function payoutIntents(): HasMany { return $this->hasMany(StorefrontPayoutIntent::class, 'payout_request_id'); }
+    public function latestPayoutIntent(): HasOne { return $this->hasOne(StorefrontPayoutIntent::class, 'payout_request_id')->latestOfMany(); }
 }
