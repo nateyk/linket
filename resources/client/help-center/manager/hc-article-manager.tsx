@@ -14,6 +14,7 @@ import {Button} from '@ui/buttons/button';
 import {Trans} from '@ui/i18n/trans';
 import {ConfirmationDialog} from '@ui/overlays/dialog/confirmation-dialog';
 import {closeDialog, openDialog} from '@ui/overlays/store/dialog-store';
+import {PlusIcon} from 'lucide-react';
 import {Link} from 'react-router';
 
 export function Component() {
@@ -39,8 +40,12 @@ export function Component() {
           color="primary"
           elementType={Link}
           to="articles/new"
+          className="size-8 min-w-8 shrink-0 px-0 sm:h-auto sm:w-auto sm:px-3"
         >
-          <Trans message="New article" />
+          <PlusIcon className="size-4" aria-hidden="true" />
+          <span className="sr-only sm:not-sr-only">
+            <Trans message="New article" />
+          </span>
         </Button>
       }
     >
