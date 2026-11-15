@@ -62,7 +62,7 @@ class HelpdeskReports
         );
 
         return cache()->remember(
-            "{$this->modelType}-{$preset}-{$dateRange->start->timestamp}-{$dateRange->end->timestamp}",
+            "helpdesk-platform-v2-{$this->modelType}-{$preset}-{$dateRange->start->timestamp}-{$dateRange->end->timestamp}",
             now()->addMinutes(settings('cache.report_minutes', 60)),
             fn() => $this->generateReport($preset, $dateRange),
         );
@@ -77,7 +77,9 @@ class HelpdeskReports
 
         $builders = $this->getBuilders($preset, $dateRange);
 
+        // Platform reports must never aggregate creator-owned support tickets.
         DB::table('conversations')
+            ->whereNull('support_owner_id')
             ->select([
                 'id',
                 'user_id',
@@ -172,6 +174,8 @@ class HelpdeskReports
         // load replies of all given conversations
         $replies = DB::table('conversation_items')
             ->select('id', 'conversation_id', 'user_id', 'created_at')
+            // Notes and internal events are not customer-facing replies.
+            ->where('type', 'message')
             ->whereIn('conversation_id', $conversationIds)
             ->orderBy('created_at', 'desc')
             ->limit(1000)
