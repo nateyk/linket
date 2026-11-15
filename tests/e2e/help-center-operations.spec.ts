@@ -84,6 +84,7 @@ async function selectTicketStatus(page: Page, label: 'Open' | 'Resolved'): Promi
 }
 
 test.describe('isolated real-browser support lifecycle', () => {
+  test.use({actionTimeout: 15_000, navigationTimeout: 30_000});
   test.skip(
     process.env.LINKET_ISOLATED_E2E !== '1',
     'Only run with disposable db_test and a loopback browser host',
