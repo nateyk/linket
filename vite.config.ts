@@ -111,6 +111,13 @@ export default defineConfig({
     },
   },
   test: {
+    // Codecov reads coverage/lcov.info. Coverage stays off unless
+    // `vitest --coverage` is passed, so `npm test` is unchanged.
+    coverage: {
+      provider: 'v8',
+      reporter: ['text-summary', 'lcov'],
+      reportsDirectory: './coverage',
+    },
     projects: (() => {
       const storybookProject = storybookBrowserTestProject();
 
