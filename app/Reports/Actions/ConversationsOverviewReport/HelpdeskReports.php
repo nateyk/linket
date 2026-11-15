@@ -62,7 +62,7 @@ class HelpdeskReports
         );
 
         return cache()->remember(
-            "{$this->modelType}-{$preset}-{$dateRange->start->timestamp}-{$dateRange->end->timestamp}",
+            "helpdesk-platform-v2-{$this->modelType}-{$preset}-{$dateRange->start->timestamp}-{$dateRange->end->timestamp}",
             now()->addMinutes(settings('cache.report_minutes', 60)),
             fn() => $this->generateReport($preset, $dateRange),
         );
