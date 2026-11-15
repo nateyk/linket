@@ -304,6 +304,8 @@ class AppServiceProvider extends ServiceProvider
             return new Agent();
         });
 
+        $this->app->singleton(\App\Payments\Chapa\LinketChapaManager::class);
+
         Event::listen(Login::class, AttachWorkspaceToUser::class);
         Event::listen(Login::class, \App\Courses\Listeners\ClaimCourseEnrollmentsOnLogin::class);
         Event::listen(Registered::class, AttachWorkspaceToUser::class);

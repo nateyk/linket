@@ -2,6 +2,7 @@
 
 namespace App\Storefront\Services;
 
+use App\Payments\Chapa\LinketChapaManager;
 use App\Payments\VerifyEt\VerifyEtSettings;
 use App\Models\User;
 use App\Storefront\Models\CreatorPaymentMethod;
@@ -12,13 +13,15 @@ final class CheckoutAvailability
 {
     public function creatorBlocker(User $creator): ?string
     {
-        if (! VerifyEtSettings::get('enabled')) {
+        $chapaEnabled = app(LinketChapaManager::class)->isEnabled();
+
+        if (! VerifyEtSettings::get('enabled') && ! $chapaEnabled) {
             return 'verification_unavailable';
         }
         if (! app(AccountMonetizationStatus::class)->canSell($creator)) {
             return 'creator_restricted';
         }
-        if (! app(CreatorVerificationAllowance::class)->summary($creator)['can_start_checkout']) {
+        if (! $chapaEnabled && ! app(CreatorVerificationAllowance::class)->summary($creator)['can_start_checkout']) {
             return 'verification_quota_exhausted';
         }
 
