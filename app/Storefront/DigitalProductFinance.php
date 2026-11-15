@@ -65,8 +65,6 @@ class DigitalProductFinance
         $now = now();
         $held = (int) $entries->filter(fn(DigitalProductEarningsLedger $entry) => $entry->available_at?->isFuture())->sum('amount_cents');
         $available = (int) $entries->filter(fn(DigitalProductEarningsLedger $entry) => !$entry->available_at || !$entry->available_at->isFuture())->sum('amount_cents');
-        $reserved = abs((int) $entries->where('entry_type', 'payout_reserved')->sum('amount_cents'))
-            - (int) $entries->where('entry_type', 'payout_released')->sum('amount_cents');
         $lifetime = (int) $entries->whereIn('entry_type', ['sale', 'admin_adjustment'])->sum('amount_cents');
         $netEarnings = (int) $entries->whereIn('entry_type', ['sale', 'refund', 'admin_adjustment'])->sum('amount_cents');
 
@@ -77,11 +75,11 @@ class DigitalProductFinance
             ->where('collection_owner', StorefrontOrder::COLLECTION_OWNER_PLATFORM_CHAPA)
             ->whereHas('product', fn($query) => $query->where('workspace_id', $workspaceId));
 
-        $paidOut = (int) \App\Storefront\Models\PayoutRequest::query()
+        $payouts = \App\Storefront\Models\PayoutRequest::query()
             ->where('workspace_id', $workspaceId)
-            ->where('creator_id', $creatorId)
-            ->where('status', 'paid')
-            ->sum('amount_cents');
+            ->where('creator_id', $creatorId);
+        $reserved = (int) (clone $payouts)->whereIn('status', ['requested', 'processing'])->sum('amount_cents');
+        $paidOut = (int) $payouts->where('status', 'paid')->sum('amount_cents');
 
         return [
             'held_earnings_cents' => max(0, $held),

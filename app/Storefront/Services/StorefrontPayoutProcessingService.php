@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Nateyk\Chapa\Dto\PayoutStatus;
+use Nateyk\Chapa\Dto\VerifiedTransaction;
 use RuntimeException;
 
 final class StorefrontPayoutProcessingService
@@ -67,7 +68,7 @@ final class StorefrontPayoutProcessingService
         $account = $this->resolveAccountPayload($intent);
         $payload = [
             'amount' => (int) $intent->amount_cents,
-            'currency' => (string) $intent->currency,
+            'currency' => strtoupper((string) $intent->currency),
             'merchant_reference' => $intent->merchant_reference,
             'account' => $account,
             'reason' => "Payout #{$intent->payout_request_id}",
@@ -117,7 +118,7 @@ final class StorefrontPayoutProcessingService
     {
         $verified = $this->manager()->platformClient()->payouts()->verifyTyped($intent->merchant_reference);
 
-        if ($verified->matchesPayout($intent->amount_cents, $intent->currency, $intent->merchant_reference)) {
+        if ($verified->matchesPayout($intent->amount_cents, strtoupper($intent->currency), $intent->merchant_reference)) {
             return DB::transaction(function () use ($intent, $verified): StorefrontPayoutIntent {
                 $intent->update([
                     'status' => StorefrontPayoutIntent::STATUS_SUCCESSFUL,
@@ -139,27 +140,36 @@ final class StorefrontPayoutProcessingService
         }
 
         if ($verified->payoutStatus() === PayoutStatus::FAILED || $verified->payoutStatus() === PayoutStatus::REVERSED) {
-            return DB::transaction(function () use ($intent, $verified): StorefrontPayoutIntent {
-                $intent->update([
-                    'status' => StorefrontPayoutIntent::STATUS_FAILED,
-                    'verified_at' => now(),
-                    'verification_data' => $verified->raw,
-                ]);
-
-                $payout = $intent->payoutRequest()->lockForUpdate()->firstOrFail();
-                $payout->update([
-                    'status' => 'rejected',
-                    'rejected_at' => now(),
-                    'rejection_reason' => 'Transfer failed at Chapa settlement.',
-                ]);
-
-                $this->ledger()->releasePayoutReservation($payout);
-
-                return $intent->fresh();
-            });
+            return $this->rejectVerifiedPayout($intent, $verified);
         }
 
         return $intent;
+    }
+
+    private function rejectVerifiedPayout(StorefrontPayoutIntent $intent, VerifiedTransaction $verified): StorefrontPayoutIntent
+    {
+        return DB::transaction(function () use ($intent, $verified): StorefrontPayoutIntent {
+            $intent = StorefrontPayoutIntent::query()->whereKey($intent->id)->lockForUpdate()->firstOrFail();
+            $payout = $intent->payoutRequest()->lockForUpdate()->firstOrFail();
+            if ($payout->status === 'paid') {
+                throw new RuntimeException('A settled payout requires manual reconciliation before its balance can change.');
+            }
+
+            $intent->update([
+                'status' => StorefrontPayoutIntent::STATUS_FAILED,
+                'verified_at' => now(),
+                'verification_data' => $verified->raw,
+            ]);
+            $payout->update([
+                'status' => 'rejected',
+                'rejected_at' => now(),
+                'rejection_reason' => 'Transfer failed at Chapa settlement.',
+            ]);
+
+            $this->ledger()->releasePayoutReservation($payout);
+
+            return $intent->fresh();
+        });
     }
 
     /**
