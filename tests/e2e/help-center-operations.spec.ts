@@ -54,13 +54,26 @@ async function reportSnapshot(page: Page): Promise<Report> {
     'Support report HTTP ' + report.status() + ': ' + body.slice(0, 700),
   ).toBe(true);
 
-  await page.goto('/agent/reports/tickets');
+  const browserErrors: string[] = [];
+  page.on('pageerror', error => browserErrors.push(error.message));
+  page.on('console', message => {
+    if (message.type() === 'error') browserErrors.push(message.text());
+  });
+  const pageResponse = await page.goto('/agent/reports/tickets');
   await expect(page).toHaveURL(/\/agent\/reports\/tickets/);
-  await expect(
-    page.getByText('New Conversations').first(),
-    'Support report UI not loaded: ' + (await page.locator('body').innerText()).slice(0, 800),
-  ).toBeVisible({timeout: 15_000});
-  await expect(page.getByText('Total agent replies').first()).toBeVisible();
+  try {
+    await expect(page.getByText('New Conversations').first())
+      .toBeVisible({timeout: 10_000});
+    await expect(page.getByText('Total agent replies').first()).toBeVisible();
+  } catch {
+    const text = (await page.locator('body').innerText()).slice(0, 1400);
+    throw new Error(
+      'Report page HTTP ' + pageResponse?.status() +
+      ' URL ' + page.url() +
+      ' body=' + JSON.stringify(text) +
+      ' browserErrors=' + JSON.stringify(browserErrors.slice(0, 7)),
+    );
+  }
   return JSON.parse(body) as Report;
 }
 
