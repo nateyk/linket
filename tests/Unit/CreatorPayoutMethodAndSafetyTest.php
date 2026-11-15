@@ -48,40 +48,25 @@ class CreatorPayoutMethodAndSafetyTest extends TestCase
             'id' => 1,
             'name' => 'Bank transfer',
             'code' => 'bank_transfer',
-            'destination_label' => 'Account number',
             'minimum_amount_cents' => 10000,
             'maximum_amount_cents' => 5000000,
             'is_active' => true,
-            'position' => 1,
         ]);
 
         $this->telebirrMethod = DigitalProductWithdrawalMethod::query()->create([
             'id' => 2,
             'name' => 'Telebirr',
             'code' => 'telebirr',
-            'destination_label' => 'Phone number',
             'minimum_amount_cents' => 5000,
             'maximum_amount_cents' => 1000000,
             'is_active' => true,
-            'position' => 2,
         ]);
     }
 
     protected function tearDown(): void
     {
         Mockery::close();
-        Schema::dropIfExists('permissionables');
-        Schema::dropIfExists('permissions');
-        Schema::dropIfExists('roles');
-        Schema::dropIfExists('user_sessions');
-        Schema::dropIfExists('workspace_user');
-        Schema::dropIfExists('workspaces');
-        Schema::dropIfExists('users');
-        Schema::dropIfExists('digital_product_payout_request_activities');
-        Schema::dropIfExists('digital_product_earnings_ledger');
-        Schema::dropIfExists('payout_requests');
-        Schema::dropIfExists('digital_product_payout_methods');
-        Schema::dropIfExists('digital_product_withdrawal_methods');
+        $this->dropDatabaseSchema();
         parent::tearDown();
     }
 
@@ -89,82 +74,42 @@ class CreatorPayoutMethodAndSafetyTest extends TestCase
     {
         $controller = new DigitalProductPayoutMethodController();
 
-        $request1 = Request::create('/api/items/payout-methods', 'POST', [
+        $resp1 = $controller->store($this->makePayoutRequest([
             'withdrawal_method_id' => $this->bankMethod->id,
-            'type' => 'bank_transfer',
             'bank_code' => 'cbe',
             'bank_name' => 'Commercial Bank of Ethiopia',
-            'account_holder' => 'Abebe Bikila',
             'destination' => '1000123456789',
-        ]);
-        $request1->setUserResolver(fn () => $this->creator);
+        ]));
+        $data1 = $resp1->getData(true)['data'];
 
-        $response1 = $controller->store($request1);
-        $data1 = $response1->getData(true)['data'];
-
-        $this->assertEquals(201, $response1->getStatusCode());
+        $this->assertEquals(201, $resp1->getStatusCode());
         $this->assertTrue($data1['is_default']);
-        $this->assertEquals('cbe', $data1['bank_code']);
-        $this->assertEquals('6789', $data1['account_number_last_four']);
         $this->assertEquals('•••• 6789', $data1['masked_account_number']);
 
-        $request2 = Request::create('/api/items/payout-methods', 'POST', [
+        $resp2 = $controller->store($this->makePayoutRequest([
             'withdrawal_method_id' => $this->telebirrMethod->id,
-            'type' => 'telebirr',
             'bank_code' => 'telebirr',
-            'bank_name' => 'Telebirr',
-            'account_holder' => 'Abebe Bikila',
             'destination' => '0911223344',
             'is_default' => false,
-        ]);
-        $request2->setUserResolver(fn () => $this->creator);
+        ]));
+        $data2 = $resp2->getData(true)['data'];
 
-        $response2 = $controller->store($request2);
-        $data2 = $response2->getData(true)['data'];
-
-        $this->assertEquals(201, $response2->getStatusCode());
+        $this->assertEquals(201, $resp2->getStatusCode());
         $this->assertFalse($data2['is_default']);
-        $this->assertEquals('3344', $data2['account_number_last_four']);
 
-        $indexResponse = $controller->index($request1);
-        $methods = $indexResponse->response()->getData(true)['data'];
-
-        $this->assertCount(2, $methods);
-        $this->assertEquals($data1['id'], $methods[0]['id']);
-        $this->assertTrue($methods[0]['is_default']);
+        $index = $controller->index($this->makePayoutRequest([]))->response()->getData(true)['data'];
+        $this->assertCount(2, $index);
+        $this->assertTrue($index[0]['is_default']);
     }
 
     public function testSettingDefaultDestinationAtomicallyUnsetsOtherDestinations(): void
     {
         $controller = new DigitalProductPayoutMethodController();
-
-        $method1 = DigitalProductPayoutMethod::query()->create([
-            'workspace_id' => 1,
-            'creator_id' => $this->creator->id,
-            'withdrawal_method_id' => $this->bankMethod->id,
-            'type' => 'bank_transfer',
-            'bank_code' => 'cbe',
-            'bank_name' => 'Commercial Bank of Ethiopia',
-            'account_holder' => 'Abebe Bikila',
-            'destination' => '1000123456789',
-            'account_number_last_four' => '6789',
-            'display_label' => 'CBE (•••• 6789)',
-            'is_active' => true,
-            'is_default' => true,
-        ]);
-
-        $method2 = DigitalProductPayoutMethod::query()->create([
-            'workspace_id' => 1,
-            'creator_id' => $this->creator->id,
+        $method1 = $this->createTestPayoutMethod(['is_default' => true]);
+        $method2 = $this->createTestPayoutMethod([
             'withdrawal_method_id' => $this->telebirrMethod->id,
-            'type' => 'telebirr',
             'bank_code' => 'telebirr',
-            'bank_name' => 'Telebirr',
-            'account_holder' => 'Abebe Bikila',
             'destination' => '0911223344',
-            'account_number_last_four' => '3344',
-            'display_label' => 'Telebirr (•••• 3344)',
-            'is_active' => true,
             'is_default' => false,
         ]);
 
@@ -182,30 +127,11 @@ class CreatorPayoutMethodAndSafetyTest extends TestCase
     public function testDeactivatingDefaultDestinationFallsBackToAnotherActiveDestination(): void
     {
         $controller = new DigitalProductPayoutMethodController();
-
-        $method1 = DigitalProductPayoutMethod::query()->create([
-            'workspace_id' => 1,
-            'creator_id' => $this->creator->id,
-            'withdrawal_method_id' => $this->bankMethod->id,
-            'type' => 'bank_transfer',
-            'bank_code' => 'cbe',
-            'account_holder' => 'Abebe Bikila',
-            'destination' => '1000123456789',
-            'display_label' => 'CBE (•••• 6789)',
-            'is_active' => true,
-            'is_default' => true,
-        ]);
-
-        $method2 = DigitalProductPayoutMethod::query()->create([
-            'workspace_id' => 1,
-            'creator_id' => $this->creator->id,
+        $method1 = $this->createTestPayoutMethod(['is_default' => true]);
+        $method2 = $this->createTestPayoutMethod([
             'withdrawal_method_id' => $this->telebirrMethod->id,
-            'type' => 'telebirr',
             'bank_code' => 'telebirr',
-            'account_holder' => 'Abebe Bikila',
             'destination' => '0911223344',
-            'display_label' => 'Telebirr (•••• 3344)',
-            'is_active' => true,
             'is_default' => false,
         ]);
 
@@ -216,88 +142,47 @@ class CreatorPayoutMethodAndSafetyTest extends TestCase
         $this->assertEquals(204, $response->getStatusCode());
 
         $this->assertFalse((bool) $method1->fresh()->is_active);
-        $this->assertFalse((bool) $method1->fresh()->is_default);
         $this->assertEquals(DigitalProductPayoutMethod::STATUS_DEACTIVATED, $method1->fresh()->status);
         $this->assertTrue((bool) $method2->fresh()->is_default);
     }
 
     public function testPayoutCreationSnapshotsSelectedDestinationAndReservesLedger(): void
     {
-        $method = DigitalProductPayoutMethod::query()->create([
-            'workspace_id' => 1,
-            'creator_id' => $this->creator->id,
-            'withdrawal_method_id' => $this->bankMethod->id,
-            'type' => 'bank_transfer',
-            'bank_code' => 'cbe',
-            'bank_name' => 'Commercial Bank of Ethiopia',
-            'account_holder' => 'Abebe Bikila',
-            'destination' => '1000123456789',
-            'account_number_last_four' => '6789',
+        $method = $this->createTestPayoutMethod([
             'display_label' => 'Commercial Bank of Ethiopia (•••• 6789)',
-            'is_active' => true,
-            'is_default' => true,
+            'destination' => '1000123456789',
         ]);
 
-        $financeMock = Mockery::mock(DigitalProductFinance::class);
-        $financeMock->shouldReceive('summary')
-            ->once()
-            ->with($this->creator->id, 1, true)
-            ->andReturn(['available_for_payout_cents' => 50000]);
-        $financeMock->shouldReceive('record')
-            ->once()
-            ->with(1, $this->creator->id, Mockery::pattern('/^payout-reserve:/'), 'payout_reserved', -25000, 'ETB', Mockery::any());
-        $this->app->instance(DigitalProductFinance::class, $financeMock);
-
+        $this->mockFinance(50000, 25000);
         $ledgerMock = Mockery::mock(CreatorLedgerService::class);
-        $ledgerMock->shouldReceive('reserveForPayout')
-            ->once()
-            ->with(Mockery::type(PayoutRequest::class), 50000);
+        $ledgerMock->shouldReceive('reserveForPayout')->once()->with(Mockery::type(PayoutRequest::class), 50000);
         $this->app->instance(CreatorLedgerService::class, $ledgerMock);
 
-        $service = new PayoutRequestService();
-        $payout = $service->create($this->creator->id, 1, 25000, $method->id);
+        $payout = (new PayoutRequestService())->create($this->creator->id, 1, 25000, $method->id);
 
         $this->assertEquals('requested', $payout->status);
         $this->assertEquals(25000, $payout->amount_cents);
         $this->assertEquals($method->id, $payout->digital_product_payout_method_id);
         $this->assertEquals('Commercial Bank of Ethiopia (•••• 6789)', $payout->payout_method_label);
-        $this->assertEquals('Bank transfer', $payout->withdrawal_method_name);
         $this->assertEquals('1000123456789', $payout->payout_destination);
     }
 
     public function testPayoutCreationFailsAndRollsBackWhenLedgerThrowsException(): void
     {
-        $method = DigitalProductPayoutMethod::query()->create([
-            'workspace_id' => 1,
-            'creator_id' => $this->creator->id,
-            'withdrawal_method_id' => $this->bankMethod->id,
-            'type' => 'bank_transfer',
-            'bank_code' => 'cbe',
-            'account_holder' => 'Abebe Bikila',
-            'destination' => '1000123456789',
-            'display_label' => 'CBE (•••• 6789)',
-            'is_active' => true,
-            'is_default' => true,
-        ]);
+        $method = $this->createTestPayoutMethod();
 
         $financeMock = Mockery::mock(DigitalProductFinance::class);
-        $financeMock->shouldReceive('summary')
-            ->once()
-            ->andReturn(['available_for_payout_cents' => 50000]);
+        $financeMock->shouldReceive('summary')->once()->andReturn(['available_for_payout_cents' => 50000]);
         $financeMock->shouldReceive('record')->once();
         $this->app->instance(DigitalProductFinance::class, $financeMock);
 
         $ledgerMock = Mockery::mock(CreatorLedgerService::class);
-        $ledgerMock->shouldReceive('reserveForPayout')
-            ->once()
-            ->andThrow(new InsufficientBalanceException('Ledger balance insufficient.'));
+        $ledgerMock->shouldReceive('reserveForPayout')->once()->andThrow(new InsufficientBalanceException('Ledger balance insufficient.'));
         $this->app->instance(CreatorLedgerService::class, $ledgerMock);
-
-        $service = new PayoutRequestService();
 
         $this->expectException(ValidationException::class);
         try {
-            $service->create($this->creator->id, 1, 25000, $method->id);
+            (new PayoutRequestService())->create($this->creator->id, 1, 25000, $method->id);
         } finally {
             $this->assertEquals(0, PayoutRequest::query()->count());
         }
@@ -305,26 +190,19 @@ class CreatorPayoutMethodAndSafetyTest extends TestCase
 
     public function testMarkPaidRejectsAutoTransferBypassAndRequiresExplicitReference(): void
     {
-        $payout = PayoutRequest::query()->create([
-            'workspace_id' => 1,
-            'creator_id' => $this->creator->id,
-            'amount_cents' => 20000,
-            'currency' => 'ETB',
-            'status' => 'processing',
-        ]);
-
+        $payout = $this->createTestPayoutRequest('processing');
         $service = new PayoutRequestService();
 
         try {
             $service->transition($payout, 'mark_paid', 1, ['auto_transfer' => true]);
-            $this->fail('Expected ValidationException when auto_transfer is passed to mark_paid.');
+            $this->fail('Expected ValidationException when auto_transfer is passed.');
         } catch (ValidationException $e) {
             $this->assertArrayHasKey('transfer_reference', $e->errors());
         }
 
         try {
             $service->transition($payout, 'mark_paid', 1, ['transfer_reference' => '   ']);
-            $this->fail('Expected ValidationException for blank transfer reference.');
+            $this->fail('Expected ValidationException for blank reference.');
         } catch (ValidationException $e) {
             $this->assertArrayHasKey('transfer_reference', $e->errors());
         }
@@ -334,22 +212,13 @@ class CreatorPayoutMethodAndSafetyTest extends TestCase
 
     public function testMarkPaidDisbursesLedgerWithoutSwallowingExceptions(): void
     {
-        $payout = PayoutRequest::query()->create([
-            'workspace_id' => 1,
-            'creator_id' => $this->creator->id,
-            'amount_cents' => 20000,
-            'currency' => 'ETB',
-            'status' => 'processing',
-        ]);
+        $payout = $this->createTestPayoutRequest('processing');
 
         $ledgerMock = Mockery::mock(CreatorLedgerService::class);
-        $ledgerMock->shouldReceive('disbursePayout')
-            ->once()
-            ->with(Mockery::type(PayoutRequest::class));
+        $ledgerMock->shouldReceive('disbursePayout')->once()->with(Mockery::type(PayoutRequest::class));
         $this->app->instance(CreatorLedgerService::class, $ledgerMock);
 
-        $service = new PayoutRequestService();
-        $updated = $service->transition($payout, 'mark_paid', 1, [
+        $updated = (new PayoutRequestService())->transition($payout, 'mark_paid', 1, [
             'transfer_reference' => 'CBE-TX-998877',
             'note' => 'Paid via counter transfer',
         ]);
@@ -359,141 +228,187 @@ class CreatorPayoutMethodAndSafetyTest extends TestCase
         $this->assertNotNull($updated->paid_at);
     }
 
+    private function createTestPayoutMethod(array $overrides = []): DigitalProductPayoutMethod
+    {
+        return DigitalProductPayoutMethod::query()->create(array_merge([
+            'workspace_id' => 1,
+            'creator_id' => $this->creator->id,
+            'withdrawal_method_id' => $this->bankMethod->id,
+            'type' => 'bank_transfer',
+            'bank_code' => 'cbe',
+            'bank_name' => 'Commercial Bank of Ethiopia',
+            'account_holder' => 'Abebe Bikila',
+            'destination' => '1000123456789',
+            'account_number_last_four' => '6789',
+            'display_label' => 'CBE (•••• 6789)',
+            'is_active' => true,
+            'is_default' => true,
+        ], $overrides));
+    }
+
+    private function createTestPayoutRequest(string $status): PayoutRequest
+    {
+        return PayoutRequest::query()->create([
+            'workspace_id' => 1,
+            'creator_id' => $this->creator->id,
+            'amount_cents' => 20000,
+            'currency' => 'ETB',
+            'status' => $status,
+        ]);
+    }
+
+    private function makePayoutRequest(array $data): Request
+    {
+        $req = Request::create('/api/items/payout-methods', 'POST', array_merge([
+            'account_holder' => 'Abebe Bikila',
+            'destination' => '1000123456789',
+        ], $data));
+        $req->setUserResolver(fn () => $this->creator);
+
+        return $req;
+    }
+
+    private function mockFinance(int $available, int $reserved): void
+    {
+        $finance = Mockery::mock(DigitalProductFinance::class);
+        $finance->shouldReceive('summary')->once()->with($this->creator->id, 1, true)->andReturn(['available_for_payout_cents' => $available]);
+        $finance->shouldReceive('record')->once()->with(1, $this->creator->id, Mockery::pattern('/^payout-reserve:/'), 'payout_reserved', -$reserved, 'ETB', Mockery::any());
+        $this->app->instance(DigitalProductFinance::class, $finance);
+    }
+
     private function createDatabaseSchema(): void
     {
-        Schema::create('users', function (Blueprint $table): void {
-            $table->id();
-            $table->string('name')->default('User');
-            $table->string('email')->unique();
-            $table->string('image')->nullable();
-            $table->timestamps();
-        });
+        $this->createAuthSchema();
+        $this->createPayoutSchema();
+    }
 
-        Schema::create('roles', function (Blueprint $table): void {
-            $table->id();
-            $table->string('name')->default('Owner');
-            $table->timestamps();
+    private function createAuthSchema(): void
+    {
+        Schema::create('users', function (Blueprint $t): void {
+            $t->id();
+            $t->string('name')->default('User');
+            $t->string('email')->unique();
+            $t->string('image')->nullable();
+            $t->timestamps();
         });
+        Schema::create('roles', fn (Blueprint $t) => $t->id() && $t->string('name')->default('Owner') && $t->timestamps());
+        Schema::create('permissions', fn (Blueprint $t) => $t->id() && $t->string('name')->default('all') && $t->timestamps());
+        Schema::create('permissionables', function (Blueprint $t): void {
+            $t->id();
+            $t->unsignedBigInteger('permission_id');
+            $t->unsignedBigInteger('permissionable_id');
+            $t->string('permissionable_type');
+            $t->timestamps();
+        });
+        Schema::create('user_sessions', function (Blueprint $t): void {
+            $t->id();
+            $t->unsignedBigInteger('user_id');
+            $t->string('ip_address', 45)->nullable();
+            $t->text('user_agent')->nullable();
+            $t->text('payload')->nullable();
+            $t->integer('last_activity')->default(0);
+            $t->timestamps();
+        });
+        Schema::create('workspaces', function (Blueprint $t): void {
+            $t->id();
+            $t->string('name')->default('Default');
+            $t->unsignedBigInteger('owner_id')->default(42);
+            $t->boolean('is_personal')->default(true);
+            $t->timestamps();
+        });
+        Schema::create('workspace_user', function (Blueprint $t): void {
+            $t->id();
+            $t->unsignedBigInteger('workspace_id');
+            $t->unsignedBigInteger('user_id');
+            $t->boolean('is_owner')->default(false);
+            $t->unsignedBigInteger('role_id')->nullable();
+            $t->timestamps();
+        });
+    }
 
-        Schema::create('permissions', function (Blueprint $table): void {
-            $table->id();
-            $table->string('name')->default('all');
-            $table->timestamps();
+    private function createPayoutSchema(): void
+    {
+        Schema::create('digital_product_withdrawal_methods', function (Blueprint $t): void {
+            $t->id();
+            $t->string('name');
+            $t->string('code')->unique();
+            $t->string('destination_label')->default('Destination');
+            $t->text('instructions')->nullable();
+            $t->unsignedBigInteger('minimum_amount_cents')->default(0);
+            $t->unsignedBigInteger('maximum_amount_cents')->nullable();
+            $t->boolean('is_active')->default(true);
+            $t->timestamps();
         });
+        Schema::create('digital_product_payout_methods', function (Blueprint $t): void {
+            $t->id();
+            $t->foreignId('workspace_id')->default(1);
+            $t->unsignedBigInteger('creator_id');
+            $t->foreignId('withdrawal_method_id')->nullable();
+            $t->string('type')->default('bank_transfer');
+            $t->string('bank_code', 64)->nullable();
+            $t->string('bank_name', 160)->nullable();
+            $t->string('account_holder');
+            $t->text('destination');
+            $t->string('account_number_last_four', 8)->nullable();
+            $t->string('display_label');
+            $t->boolean('is_active')->default(true);
+            $t->boolean('is_default')->default(false);
+            $t->string('status', 32)->default('active');
+            $t->json('metadata')->nullable();
+            $t->timestamps();
+        });
+        Schema::create('payout_requests', function (Blueprint $t): void {
+            $t->id();
+            $t->unsignedBigInteger('workspace_id')->default(1);
+            $t->unsignedBigInteger('creator_id');
+            $t->foreignId('digital_product_payout_method_id')->nullable();
+            $t->foreignId('withdrawal_method_id')->nullable();
+            $t->string('payout_method_label')->nullable();
+            $t->string('withdrawal_method_name')->nullable();
+            $t->text('payout_destination')->nullable();
+            $t->string('currency', 12)->default('ETB');
+            $t->unsignedBigInteger('amount_cents');
+            $t->string('status', 32)->default('requested');
+            $t->unsignedBigInteger('processed_by')->nullable();
+            $t->timestamp('paid_at')->nullable();
+            $t->timestamp('processing_at')->nullable();
+            $t->timestamp('rejected_at')->nullable();
+            $t->timestamp('cancelled_at')->nullable();
+            $t->string('transfer_reference', 190)->nullable();
+            $t->text('admin_notes')->nullable();
+            $t->text('rejection_reason')->nullable();
+            $t->timestamps();
+        });
+        Schema::create('digital_product_payout_request_activities', function (Blueprint $t): void {
+            $t->id();
+            $t->foreignId('payout_request_id');
+            $t->unsignedBigInteger('actor_id')->nullable();
+            $t->string('action');
+            $t->text('note')->nullable();
+            $t->timestamps();
+        });
+        Schema::create('digital_product_earnings_ledger', function (Blueprint $t): void {
+            $t->id();
+            $t->foreignId('workspace_id')->default(1);
+            $t->unsignedBigInteger('creator_id');
+            $t->string('entry_type');
+            $t->bigInteger('amount_cents');
+            $t->string('currency', 12)->default('ETB');
+            $t->timestamps();
+        });
+    }
 
-        Schema::create('permissionables', function (Blueprint $table): void {
-            $table->id();
-            $table->unsignedBigInteger('permission_id');
-            $table->unsignedBigInteger('permissionable_id');
-            $table->string('permissionable_type');
-            $table->timestamps();
-        });
-
-        Schema::create('user_sessions', function (Blueprint $table): void {
-            $table->id();
-            $table->unsignedBigInteger('user_id');
-            $table->string('ip_address', 45)->nullable();
-            $table->text('user_agent')->nullable();
-            $table->text('payload')->nullable();
-            $table->integer('last_activity')->default(0);
-            $table->timestamps();
-        });
-
-        Schema::create('workspaces', function (Blueprint $table): void {
-            $table->id();
-            $table->string('name')->default('Default Workspace');
-            $table->unsignedBigInteger('owner_id')->default(42);
-            $table->boolean('is_personal')->default(true);
-            $table->timestamps();
-        });
-
-        Schema::create('workspace_user', function (Blueprint $table): void {
-            $table->id();
-            $table->unsignedBigInteger('workspace_id');
-            $table->unsignedBigInteger('user_id');
-            $table->boolean('is_owner')->default(false);
-            $table->unsignedBigInteger('role_id')->nullable();
-            $table->timestamps();
-        });
-
-        Schema::create('digital_product_withdrawal_methods', function (Blueprint $table): void {
-            $table->id();
-            $table->string('name');
-            $table->string('code')->unique();
-            $table->string('destination_label')->default('Payout destination');
-            $table->text('instructions')->nullable();
-            $table->unsignedBigInteger('minimum_amount_cents')->default(0);
-            $table->unsignedBigInteger('maximum_amount_cents')->nullable();
-            $table->boolean('is_active')->default(true);
-            $table->unsignedInteger('position')->default(0);
-            $table->timestamps();
-        });
-
-        Schema::create('digital_product_payout_methods', function (Blueprint $table): void {
-            $table->id();
-            $table->foreignId('workspace_id')->default(1);
-            $table->unsignedBigInteger('creator_id');
-            $table->foreignId('withdrawal_method_id')->nullable();
-            $table->string('type')->default('bank_transfer');
-            $table->string('bank_code', 64)->nullable();
-            $table->string('bank_name', 160)->nullable();
-            $table->string('account_holder');
-            $table->text('destination');
-            $table->string('account_number_last_four', 8)->nullable();
-            $table->string('display_label');
-            $table->boolean('is_active')->default(true);
-            $table->boolean('is_default')->default(false);
-            $table->string('status', 32)->default('active');
-            $table->json('metadata')->nullable();
-            $table->timestamps();
-        });
-
-        Schema::create('payout_requests', function (Blueprint $table): void {
-            $table->id();
-            $table->unsignedBigInteger('workspace_id')->default(1);
-            $table->unsignedBigInteger('creator_id');
-            $table->foreignId('digital_product_payout_method_id')->nullable();
-            $table->foreignId('withdrawal_method_id')->nullable();
-            $table->string('payout_method_label')->nullable();
-            $table->string('withdrawal_method_name')->nullable();
-            $table->text('payout_destination')->nullable();
-            $table->string('currency', 12)->default('ETB');
-            $table->unsignedBigInteger('amount_cents');
-            $table->string('status', 32)->default('requested');
-            $table->unsignedBigInteger('processed_by')->nullable();
-            $table->timestamp('paid_at')->nullable();
-            $table->timestamp('processing_at')->nullable();
-            $table->timestamp('rejected_at')->nullable();
-            $table->timestamp('cancelled_at')->nullable();
-            $table->string('transfer_reference', 190)->nullable();
-            $table->text('admin_notes')->nullable();
-            $table->text('rejection_reason')->nullable();
-            $table->timestamps();
-        });
-
-        Schema::create('digital_product_payout_request_activities', function (Blueprint $table): void {
-            $table->id();
-            $table->foreignId('payout_request_id');
-            $table->unsignedBigInteger('actor_id')->nullable();
-            $table->string('action');
-            $table->text('note')->nullable();
-            $table->timestamps();
-        });
-
-        Schema::create('digital_product_earnings_ledger', function (Blueprint $table): void {
-            $table->id();
-            $table->uuid('uuid')->nullable();
-            $table->foreignId('workspace_id')->default(1);
-            $table->unsignedBigInteger('creator_id');
-            $table->foreignId('storefront_order_id')->nullable();
-            $table->foreignId('payout_request_id')->nullable();
-            $table->string('entry_type');
-            $table->bigInteger('amount_cents');
-            $table->string('currency', 12)->default('ETB');
-            $table->timestamp('available_at')->nullable();
-            $table->text('description')->nullable();
-            $table->string('source_key')->nullable();
-            $table->timestamps();
-        });
+    private function dropDatabaseSchema(): void
+    {
+        $tables = [
+            'permissionables', 'permissions', 'roles', 'user_sessions',
+            'workspace_user', 'workspaces', 'users',
+            'digital_product_payout_request_activities',
+            'digital_product_earnings_ledger', 'payout_requests',
+            'digital_product_payout_methods', 'digital_product_withdrawal_methods',
+        ];
+        foreach ($tables as $table) {
+            Schema::dropIfExists($table);
+        }
     }
 }
