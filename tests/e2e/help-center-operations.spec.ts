@@ -144,7 +144,19 @@ test.describe('isolated real-browser support lifecycle', () => {
       await detail.getByRole('button').click();
       const transfer = admin.getByRole('dialog', {name: /transfer conversation/i});
       await expect(transfer).toBeVisible();
-      await transfer.getByText('E2E HC Admin', {exact: true}).click();
+      try {
+        await transfer.getByText('E2E HC Admin', {exact: true}).click({timeout: 8_000});
+      } catch {
+        const agentsResponse = await admin.request.get('/api/v1/helpdesk/compact-agents', {
+          headers: {Referer: admin.url(), Accept: 'application/json'},
+        });
+        throw new Error(
+          'Transfer dialog has no expected agent: dialog=' +
+            JSON.stringify((await transfer.innerText()).slice(0, 1100)) +
+            ' agents=' + agentsResponse.status() + ':' +
+            (await agentsResponse.text()).slice(0, 1000),
+        );
+      }
       const assignedPromise = matchResponse(admin, '/api/v1/helpdesk/agent/conversations/assignee/change', 'POST');
       await transfer.getByRole('button', {name: 'Transfer', exact: true}).click();
       await assignedPromise;
