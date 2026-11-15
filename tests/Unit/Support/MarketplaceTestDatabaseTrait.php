@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Payments\Chapa\LinketChapaManager;
 use App\Storefront\Ledger\CreatorLedgerService;
 use App\Storefront\Models\DownloadEntitlement;
+use App\Storefront\Models\PayoutRequest;
 use App\Storefront\Models\StorefrontOrder;
 use App\Storefront\Models\StorefrontPaymentAttempt;
 use Carbon\Carbon;
@@ -238,6 +239,28 @@ trait MarketplaceTestDatabaseTrait
         $ledger->recordPlatformSale($order);
 
         return $order;
+    }
+
+    protected function createEntitlement(StorefrontOrder $order): DownloadEntitlement
+    {
+        return DownloadEntitlement::query()->create([
+            'storefront_order_id' => $order->id,
+            'file_entry_id' => 1,
+            'token' => (string) Str::uuid(),
+        ]);
+    }
+
+    protected function disburseEarnings(User $creator, CreatorLedgerService $ledger, int $cents): void
+    {
+        $payout = PayoutRequest::query()->create([
+            'workspace_id' => 1,
+            'creator_id' => $creator->id,
+            'amount_cents' => $cents,
+            'currency' => 'ETB',
+            'status' => 'paid',
+        ]);
+        $ledger->reserveForPayout($payout);
+        $ledger->disbursePayout($payout);
     }
 
     protected function bindMockChapaClient(MarketplaceMockConfig $config): void

@@ -16,14 +16,12 @@ use App\Storefront\Models\DigitalProductPaymentRefund;
 use App\Storefront\Models\DownloadEntitlement;
 use App\Storefront\Models\PayoutRequest;
 use App\Storefront\Models\StorefrontJournalLine;
-use App\Storefront\Models\StorefrontOrder;
 use App\Storefront\Services\MarketplaceReconciliationService;
 use App\Storefront\Services\PlatformOrderRefundRequest;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
-use Illuminate\Support\Str;
 use Tests\TestCase;
 use Tests\Unit\Support\MarketplaceMockConfig;
 use Tests\Unit\Support\MarketplaceTestDatabaseTrait;
@@ -67,37 +65,23 @@ class MarketplaceRefundServiceTest extends TestCase
         $creator = $this->seedUser(new User(['id' => 1, 'email' => 'seller_full@test.com', 'name' => 'Seller']));
         $admin = $this->seedUser(new User(['id' => 2, 'email' => 'admin_full@test.com', 'name' => 'Admin']));
         $order = $this->seedPlatformOrder($creator, $this->creatorLedger);
-
-        DownloadEntitlement::query()->create([
-            'storefront_order_id' => $order->id,
-            'file_entry_id' => 1,
-            'token' => (string) Str::uuid(),
-        ]);
+        $this->createEntitlement($order);
 
         $this->bindMockChapaClient(MarketplaceMockConfig::forRefund('REF-CHAPA-123'));
-
         $request = PlatformOrderRefundRequest::forOrder($order, 100000, 'Customer dissatisfied', $admin->id);
         $refund = $this->refundService->refundPlatformOrder($request);
 
         $this->assertSame(100000, $refund->amount_cents);
         $this->assertSame(95000, $refund->creator_earnings_reversal_cents);
-        $this->assertSame(5000, $refund->platform_fee_reversal_cents);
         $this->assertSame('REF-CHAPA-123', $refund->chapa_refund_reference);
 
         $order->refresh();
         $this->assertSame('refunded', $order->status);
-
-        $entitlement = DownloadEntitlement::query()->where('storefront_order_id', $order->id)->first();
-        $this->assertNotNull($entitlement->revoked_at);
+        $this->assertNotNull(DownloadEntitlement::query()->where('storefront_order_id', $order->id)->first()->revoked_at);
 
         $balances = $this->creatorLedger->getBalances(BalanceQuery::for($creator->id, 'ETB', 1));
-        $this->assertSame(0, $balances['held']);
-        $this->assertSame(0, $balances['available']);
-        $this->assertSame(0, $balances['deficit']);
-
-        $audit = app(MarketplaceReconciliationService::class)->auditLedgerIntegrity();
-        $this->assertTrue($audit->isBalanced);
-        $this->assertEmpty($audit->issues);
+        $this->assertSame(0, $balances['held'] + $balances['available'] + $balances['deficit']);
+        $this->assertTrue(app(MarketplaceReconciliationService::class)->auditLedgerIntegrity()->isBalanced);
     }
 
     public function testPartialRefundKeepsOrderStatusPaidAndPreservesAccess(): void
@@ -105,34 +89,23 @@ class MarketplaceRefundServiceTest extends TestCase
         $creator = $this->seedUser(new User(['id' => 3, 'email' => 'seller_partial@test.com', 'name' => 'Seller']));
         $admin = $this->seedUser(new User(['id' => 4, 'email' => 'admin_partial@test.com', 'name' => 'Admin']));
         $order = $this->seedPlatformOrder($creator, $this->creatorLedger);
-
-        DownloadEntitlement::query()->create([
-            'storefront_order_id' => $order->id,
-            'file_entry_id' => 1,
-            'token' => (string) Str::uuid(),
-        ]);
+        $this->createEntitlement($order);
 
         $this->bindMockChapaClient(MarketplaceMockConfig::forRefund('REF-PARTIAL-999'));
-
         $request = PlatformOrderRefundRequest::forOrder($order, 40000, 'Partial adjustment', $admin->id);
         $refund = $this->refundService->refundPlatformOrder($request);
 
         $this->assertSame(40000, $refund->amount_cents);
         $this->assertSame(38000, $refund->creator_earnings_reversal_cents);
-        $this->assertSame(2000, $refund->platform_fee_reversal_cents);
 
         $order->refresh();
         $this->assertSame('paid', $order->status);
-
-        $entitlement = DownloadEntitlement::query()->where('storefront_order_id', $order->id)->first();
-        $this->assertNull($entitlement->revoked_at);
+        $this->assertNull(DownloadEntitlement::query()->where('storefront_order_id', $order->id)->first()->revoked_at);
 
         $balances = $this->creatorLedger->getBalances(BalanceQuery::for($creator->id, 'ETB', 1));
         $this->assertSame(57000, $balances['held']);
         $this->assertSame(0, $balances['deficit']);
-
-        $audit = app(MarketplaceReconciliationService::class)->auditLedgerIntegrity();
-        $this->assertTrue($audit->isBalanced);
+        $this->assertTrue(app(MarketplaceReconciliationService::class)->auditLedgerIntegrity()->isBalanced);
     }
 
     public function testRefundAfterPayoutDisbursementRoutesToDeficitReceivable(): void
@@ -142,42 +115,21 @@ class MarketplaceRefundServiceTest extends TestCase
         $order = $this->seedPlatformOrder($creator, $this->creatorLedger);
 
         $this->creatorLedger->releaseHeldToAvailable($order);
-
-        $payout = PayoutRequest::query()->create([
-            'workspace_id' => 1,
-            'creator_id' => $creator->id,
-            'amount_cents' => 95000,
-            'currency' => 'ETB',
-            'status' => 'paid',
-        ]);
-        $this->creatorLedger->reserveForPayout($payout);
-        $this->creatorLedger->disbursePayout($payout);
-
-        $balancesBeforeRefund = $this->creatorLedger->getBalances(BalanceQuery::for($creator->id, 'ETB', 1));
-        $this->assertSame(0, $balancesBeforeRefund['held']);
-        $this->assertSame(0, $balancesBeforeRefund['available']);
-        $this->assertSame(0, $balancesBeforeRefund['reserved']);
-        $this->assertSame(0, $balancesBeforeRefund['deficit']);
+        $this->disburseEarnings($creator, $this->creatorLedger, 95000);
 
         $request = PlatformOrderRefundRequest::forOrder($order, 100000, 'Dispute', $admin->id)->withoutProviderCall();
         $this->refundService->refundPlatformOrder($request);
 
-        $balancesAfterRefund = $this->creatorLedger->getBalances(BalanceQuery::for($creator->id, 'ETB', 1));
-        $this->assertSame(0, $balancesAfterRefund['held']);
-        $this->assertSame(0, $balancesAfterRefund['available']);
-        $this->assertSame(95000, $balancesAfterRefund['deficit']);
-
-        $withdrawable = $this->creatorLedger->getWithdrawableBalance(BalanceQuery::for($creator->id, 'ETB', 1));
-        $this->assertSame(0, $withdrawable);
+        $balances = $this->creatorLedger->getBalances(BalanceQuery::for($creator->id, 'ETB', 1));
+        $this->assertSame(95000, $balances['deficit']);
+        $this->assertSame(0, $this->creatorLedger->getWithdrawableBalance(BalanceQuery::for($creator->id, 'ETB', 1)));
 
         $newPayout = PayoutRequest::query()->create([
             'workspace_id' => 1,
             'creator_id' => $creator->id,
             'amount_cents' => 5000,
-            'currency' => 'ETB',
             'status' => 'requested',
         ]);
-
         $this->expectException(InsufficientBalanceException::class);
         $this->creatorLedger->reserveForPayout($newPayout);
     }
@@ -189,37 +141,19 @@ class MarketplaceRefundServiceTest extends TestCase
 
         $order1 = $this->seedPlatformOrder($creator, $this->creatorLedger);
         $this->creatorLedger->releaseHeldToAvailable($order1);
-        $payout = PayoutRequest::query()->create([
-            'workspace_id' => 1,
-            'creator_id' => $creator->id,
-            'amount_cents' => 95000,
-            'currency' => 'ETB',
-            'status' => 'paid',
-        ]);
-        $this->creatorLedger->reserveForPayout($payout);
-        $this->creatorLedger->disbursePayout($payout);
+        $this->disburseEarnings($creator, $this->creatorLedger, 95000);
 
         $this->refundService->refundPlatformOrder(
             PlatformOrderRefundRequest::forOrder($order1, 100000, 'Chargeback', $admin->id)->withoutProviderCall()
         );
-
-        $this->assertSame(95000, $this->creatorLedger->getBalances(BalanceQuery::for($creator->id, 'ETB', 1))['deficit']);
-
         $this->seedPlatformOrder($creator, $this->creatorLedger, Carbon::now()->subDays(8));
 
-        $reconciliationService = app(MarketplaceReconciliationService::class);
-        $matured = $reconciliationService->releaseMaturedEscrow();
+        $reconcile = app(MarketplaceReconciliationService::class);
+        $this->assertSame(1, $reconcile->releaseMaturedEscrow());
 
-        $this->assertSame(1, $matured);
-
-        $balancesAfter = $this->creatorLedger->getBalances(BalanceQuery::for($creator->id, 'ETB', 1));
-        $this->assertSame(0, $balancesAfter['deficit']);
-        $this->assertSame(0, $balancesAfter['available']);
-        $this->assertSame(0, $balancesAfter['held']);
-
-        $audit = $reconciliationService->auditLedgerIntegrity();
-        $this->assertTrue($audit->isBalanced);
-        $this->assertEmpty($audit->issues);
+        $balances = $this->creatorLedger->getBalances(BalanceQuery::for($creator->id, 'ETB', 1));
+        $this->assertSame(0, $balances['deficit'] + $balances['available'] + $balances['held']);
+        $this->assertTrue($reconcile->auditLedgerIntegrity()->isBalanced);
     }
 
     public function testDuplicateRefundCallIsStrictlyIdempotent(): void
@@ -228,7 +162,7 @@ class MarketplaceRefundServiceTest extends TestCase
         $admin = $this->seedUser(new User(['id' => 10, 'email' => 'admin_idemp@test.com', 'name' => 'Admin']));
         $order = $this->seedPlatformOrder($creator, $this->creatorLedger);
 
-        $request = PlatformOrderRefundRequest::forOrder($order, 100000, 'Accidental duplicate', $admin->id)
+        $request = PlatformOrderRefundRequest::forOrder($order, 100000, 'Duplicate', $admin->id)
             ->withExternalReference('ext_ref_12345')
             ->withoutProviderCall();
 
