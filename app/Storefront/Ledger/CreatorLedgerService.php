@@ -51,8 +51,11 @@ class CreatorLedgerService
         $lines = [
             new JournalLineData(AccountCodes::PLATFORM_CHAPA_CLEARING, $order->gross_amount_cents, 0, $currency, $context),
             new JournalLineData(AccountCodes::CREATOR_HELD, 0, $order->creator_earnings_cents, $currency, $context),
-            new JournalLineData(AccountCodes::PLATFORM_COMMISSION, 0, $order->platform_fee_cents, $currency, $context),
         ];
+
+        if ($order->platform_fee_cents > 0) {
+            $lines[] = new JournalLineData(AccountCodes::PLATFORM_COMMISSION, 0, $order->platform_fee_cents, $currency, $context);
+        }
 
         return $this->postingService->post($entryData, $lines);
     }
