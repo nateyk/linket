@@ -54,6 +54,11 @@ class StorefrontOrder extends StorefrontModel
         return in_array($this->status, ['paid', 'completed', 'fulfilled'], true);
     }
 
+    public function isPaid(): bool
+    {
+        return $this->isCompleted();
+    }
+
     public function isPending(): bool
     {
         return in_array($this->status, ['pending', 'pending_payment'], true);
@@ -149,4 +154,5 @@ class StorefrontOrder extends StorefrontModel
     public function latestDirectPaymentVerification(): MorphOne { return $this->morphOne(\App\Payments\Models\DirectPaymentVerification::class, 'payable')->latestOfMany(); }
     public function paymentAttempts(): HasMany { return $this->hasMany(StorefrontPaymentAttempt::class, 'order_id'); }
     public function latestPaymentAttempt(): HasOne { return $this->hasOne(StorefrontPaymentAttempt::class, 'order_id')->latestOfMany(); }
+    public function journalEntries(): HasMany { return $this->hasMany(StorefrontJournalEntry::class, 'source_id')->where('source_type', 'order'); }
 }

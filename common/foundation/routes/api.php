@@ -71,6 +71,7 @@ use App\Payments\Controllers\AdminPlanManagementController;
 use App\Storefront\Controllers\DigitalProductPayoutMethodController;
 use App\Storefront\Controllers\DigitalProductWithdrawalMethodsController;
 use App\Storefront\Controllers\AdminDigitalProductRefundsController;
+use App\Storefront\Controllers\AdminMarketplaceFinanceController;
 use App\Storefront\Controllers\PublicDigitalProductSampleController;
 use App\Storefront\Controllers\PublicDigitalProductsController;
 use App\Payments\Controllers\AdminPaymentTransactionsController;
@@ -366,6 +367,9 @@ Route::group(['prefix' => 'v1'], function () {
         Route::post('admin/items/reviews/{productReview}/unhide', [AdminProductReviewsController::class, 'unhide']);
         Route::delete('admin/items/reviews/{productReview}', [AdminProductReviewsController::class, 'destroy']);
         Route::post('admin/payment-transactions/{paymentTransaction}/refunds', [AdminDigitalProductRefundsController::class, 'store']);
+        Route::post('admin/storefront-orders/{order}/refunds', [AdminDigitalProductRefundsController::class, 'storePlatformOrder']);
+        Route::get('admin/marketplace/financial-summary', [AdminMarketplaceFinanceController::class, 'summary']);
+        Route::post('admin/marketplace/reconcile', [AdminMarketplaceFinanceController::class, 'reconcile']);
         Route::get('admin/payment-health', [AdminPaymentHealthController::class, 'index']);
         Route::post('admin/payment-health/test-email', [AdminPaymentHealthController::class, 'sendTestEmail']);
 

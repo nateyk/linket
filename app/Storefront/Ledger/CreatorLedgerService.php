@@ -65,7 +65,7 @@ class CreatorLedgerService
      */
     public function releaseHeldToAvailable(StorefrontOrder $order): ?StorefrontJournalEntry
     {
-        if (!$order->isPlatformCollected()) {
+        if (!$order->isPlatformCollected() || (int) $order->creator_earnings_cents <= 0) {
             return null;
         }
 
@@ -101,7 +101,7 @@ class CreatorLedgerService
     public function reserveForPayout(PayoutRequest $payout, ?int $availableBalance = null): StorefrontJournalEntry
     {
         $currency = $payout->currency ?: config('storefront.currency', 'ETB');
-        $available = $availableBalance ?? $this->getAvailableBalance(BalanceQuery::for($payout->creator_id, $currency, $payout->workspace_id));
+        $available = $availableBalance ?? $this->getWithdrawableBalance(BalanceQuery::for($payout->creator_id, $currency, $payout->workspace_id));
 
         if ($payout->amount_cents > $available) {
             throw new InsufficientBalanceException(
@@ -303,5 +303,46 @@ class CreatorLedgerService
     public function getAvailableBalance(BalanceQuery $query): int
     {
         return $this->getBalances($query)['available'];
+    }
+
+    public function getWithdrawableBalance(BalanceQuery $query): int
+    {
+        $balances = $this->getBalances($query);
+
+        return max(0, $balances['available'] - $balances['deficit']);
+    }
+
+    /**
+     * Offsets outstanding creator deficit receivable using matured available balance.
+     */
+    public function settleDeficitFromAvailable(BalanceQuery $query): ?StorefrontJournalEntry
+    {
+        $balances = $this->getBalances($query);
+        $recoverable = min($balances['available'], $balances['deficit']);
+
+        if ($recoverable <= 0) {
+            return null;
+        }
+
+        $context = ['creator_id' => $query->creatorId, 'workspace_id' => $query->workspaceId];
+        $entryData = new JournalEntryData(
+            sourceType: 'creator_settlement',
+            sourceId: $query->creatorId,
+            eventType: 'deficit_recovered',
+            currency: $query->currency,
+            attributes: [
+                'creator_id' => $query->creatorId,
+                'workspace_id' => $query->workspaceId,
+                'description' => "Recovered {$recoverable} {$query->currency} creator deficit from available earnings",
+                'occurred_at' => now(),
+            ],
+        );
+
+        $lines = [
+            new JournalLineData(AccountCodes::CREATOR_AVAILABLE, $recoverable, 0, $query->currency, $context),
+            new JournalLineData(AccountCodes::CREATOR_DEFICIT_RECEIVABLE, 0, $recoverable, $query->currency, $context),
+        ];
+
+        return $this->postingService->post($entryData, $lines);
     }
 }
