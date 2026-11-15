@@ -22,6 +22,7 @@ import {
   ListTreeIcon,
   LifeBuoyIcon,
   MessagesSquareIcon,
+  ScaleIcon,
 } from 'lucide-react';
 import {ComponentProps, ReactElement} from 'react';
 
@@ -55,6 +56,8 @@ export const AdminSidebarIcons: Record<
   '/admin/financial/payment-gateways': <LandmarkIcon />,
   '/admin/financial/withdrawal-methods': <CoinsIcon />,
   '/admin/financial': <LandmarkIcon />,
+  '/admin/financial/general': <LandmarkIcon />,
+  '/admin/financial/reconciliation': <ScaleIcon />,
 };
 
 for (const [key, value] of Object.entries(sharedDashboardIcons)) {

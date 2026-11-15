@@ -12,6 +12,7 @@ import {HookForm} from '@shadcn/forms/form/hook-form';
 import {Field} from '@shadcn/forms/field';
 import {Trans} from '@ui/i18n/trans';
 import {useForm} from 'react-hook-form';
+import {Link} from 'react-router';
 
 export function Component() {
   const {data} = useAdminSettings();
@@ -70,7 +71,17 @@ function CurrencySection() {
       className="mb-6"
       title={<Trans message="Currency" />}
       description={
-        <Trans message="Site-wide currency used for Chapa payments, payouts, and price displays. Amounts are shown as 234.00 Br (symbol after the amount) by default." />
+        <div className="space-y-1">
+          <div>
+            <Trans message="Site-wide currency used for Chapa payments, payouts, and price displays. Amounts are shown as 234.00 Br (symbol after the amount) by default." />
+          </div>
+          <div className="text-xs text-muted-foreground">
+            <Trans message="Currency defaults can also be managed directly in" />{' '}
+            <Link to="/admin/financial/general" className="text-primary underline">
+              <Trans message="Financial General Settings" />
+            </Link>.
+          </div>
+        </div>
       }
     >
       <FormTextField
