@@ -46,6 +46,10 @@ type Pagination = {
 type Summary = {
   verified_sales_count: number;
   verified_revenue_cents: number;
+  paid_orders_count?: number;
+  free_orders_count?: number;
+  creator_earnings_cents?: number;
+  platform_fee_cents?: number;
   pending_count: number;
   manual_review_count: number;
   rejected_count: number;
@@ -259,7 +263,6 @@ export function Component() {
     orderTo,
     orderPage,
     orderPerPage,
-    refreshKey,
   ]);
 
   const loadTransactions = useCallback(async () => {
@@ -301,7 +304,6 @@ export function Component() {
     transactionTo,
     transactionPage,
     transactionPerPage,
-    refreshKey,
   ]);
 
   const loadManualOrders = useCallback(async () => {
@@ -327,19 +329,19 @@ export function Component() {
     } finally {
       if (sequence === manualRequest.current) setManualLoading(false);
     }
-  }, [tab, manualPage, manualPerPage, refreshKey]);
+  }, [tab, manualPage, manualPerPage]);
 
   useEffect(() => {
     void loadOrders();
-  }, [loadOrders]);
+  }, [loadOrders, refreshKey]);
 
   useEffect(() => {
     void loadTransactions();
-  }, [loadTransactions]);
+  }, [loadTransactions, refreshKey]);
 
   useEffect(() => {
     void loadManualOrders();
-  }, [loadManualOrders]);
+  }, [loadManualOrders, refreshKey]);
 
   const refresh = () => setRefreshKey(key => key + 1);
 
@@ -577,6 +579,37 @@ export function Component() {
 }
 
 function SummaryCards({summary}: {summary?: Summary}) {
+  const getVerifiedDetail = () => {
+    if (!summary) return null;
+    if (summary.free_orders_count !== undefined && summary.paid_orders_count !== undefined) {
+      if (summary.free_orders_count > 0 && summary.paid_orders_count === 0) {
+        return (
+          <Trans
+            message=":freeCount free orders (0 paid)"
+            values={{freeCount: summary.free_orders_count}}
+          />
+        );
+      }
+      if (summary.free_orders_count > 0 && summary.paid_orders_count > 0) {
+        return (
+          <Trans
+            message=":paidCount paid, :freeCount free"
+            values={{
+              paidCount: summary.paid_orders_count,
+              freeCount: summary.free_orders_count,
+            }}
+          />
+        );
+      }
+    }
+    return (
+      <Trans
+        message=":count verified orders"
+        values={{count: summary.verified_sales_count}}
+      />
+    );
+  };
+
   return (
     <Card.Root size="sm" className="gap-0 rounded-card-sm py-0">
       <Card.Content className="grid grid-cols-2 p-0 sm:grid-cols-4">
@@ -593,26 +626,59 @@ function SummaryCards({summary}: {summary?: Summary}) {
               '—'
             )
           }
-          detail={
-            summary ? (
-              <Trans
-                message=":count verified orders"
-                values={{count: summary.verified_sales_count}}
-              />
-            ) : null
-          }
+          detail={getVerifiedDetail()}
         />
         <SummaryMetric
           className="border-b sm:border-e sm:border-b-0"
-          label={<Trans message="Pending orders" />}
-          value={summary?.pending_count ?? '—'}
-          detail={<Trans message="Awaiting verification" />}
+          label={<Trans message="Creator earnings" />}
+          value={
+            summary ? (
+              <FormattedCurrency
+                valueInCents={
+                  summary.creator_earnings_cents !== undefined
+                    ? summary.creator_earnings_cents
+                    : summary.verified_revenue_cents
+                }
+                currency={summary.currency}
+              />
+            ) : (
+              '—'
+            )
+          }
+          detail={
+            summary?.platform_fee_cents ? (
+              <Trans
+                message="Net after :fee fee"
+                values={{
+                  fee: `${(summary.platform_fee_cents / 100).toFixed(2)} ${summary.currency}`,
+                }}
+              />
+            ) : (
+              <Trans message="Net platform earnings" />
+            )
+          }
         />
         <SummaryMetric
           className="border-e"
-          label={<Trans message="Manual review" />}
-          value={summary?.manual_review_count ?? '—'}
-          detail={<Trans message="Support review" />}
+          label={<Trans message="Pending & Review" />}
+          value={
+            summary
+              ? summary.pending_count + summary.manual_review_count
+              : '—'
+          }
+          detail={
+            summary?.manual_review_count ? (
+              <Trans
+                message=":pending pending, :review review"
+                values={{
+                  pending: summary.pending_count,
+                  review: summary.manual_review_count,
+                }}
+              />
+            ) : (
+              <Trans message="Awaiting verification" />
+            )
+          }
           tone={summary?.manual_review_count ? 'warning' : undefined}
         />
         <SummaryMetric

@@ -285,6 +285,10 @@ final class CreatorOrdersController extends Controller
         return [
             'verified_sales_count' => (clone $base)->whereIn('status', self::VERIFIED_ORDER_STATUSES)->count(),
             'verified_revenue_cents' => (int) (clone $base)->where('currency', 'ETB')->whereIn('status', self::VERIFIED_ORDER_STATUSES)->sum('gross_amount_cents'),
+            'paid_orders_count' => (clone $base)->whereIn('status', self::VERIFIED_ORDER_STATUSES)->where('gross_amount_cents', '>', 0)->count(),
+            'free_orders_count' => (clone $base)->whereIn('status', self::VERIFIED_ORDER_STATUSES)->where('gross_amount_cents', '<=', 0)->count(),
+            'creator_earnings_cents' => (int) (clone $base)->where('currency', 'ETB')->whereIn('status', self::VERIFIED_ORDER_STATUSES)->sum('creator_earnings_cents'),
+            'platform_fee_cents' => (int) (clone $base)->where('currency', 'ETB')->whereIn('status', self::VERIFIED_ORDER_STATUSES)->sum('platform_fee_cents'),
             'pending_count' => (clone $base)->whereIn('status', ['pending_payment', 'verifying'])->count(),
             'manual_review_count' => (clone $base)->where('status', 'manual_review')->count(),
             'rejected_count' => (clone $base)->where('status', 'failed_verification')->count(),
