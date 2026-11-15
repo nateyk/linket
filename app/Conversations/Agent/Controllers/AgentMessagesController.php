@@ -17,7 +17,10 @@ class AgentMessagesController extends BaseController
         // use the customer messages endpoint, which filters staff notes.
         $this->authorize('update', $conversation);
 
-        $pagination = (new PaginateConversationItems())->execute($conversation);
+        $pagination = (new PaginateConversationItems())->execute(
+            $conversation,
+            includePrivateNotes: true,
+        );
 
         return $this->success([
             'pagination' => $pagination,
