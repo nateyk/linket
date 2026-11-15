@@ -351,9 +351,9 @@ return [
                     [
                         'label' => 'Help center',
                         'id' => 'admin-help-center',
-                        'action' => '/admin/settings/hc',
+                        'action' => '/admin/help',
                         'type' => 'route',
-                        'permissions' => ['settings.update'],
+                        'permissions' => ['articles.update'],
                     ],
                     [
                         'label' => 'Blog',

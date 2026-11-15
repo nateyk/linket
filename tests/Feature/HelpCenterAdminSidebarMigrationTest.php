@@ -141,10 +141,10 @@ test('fresh installs ship the Help center settings sidebar entry', function () {
     $admin = collect($menus)->firstWhere('positions.0', 'admin-sidebar');
     $actions = collect($admin['items'])->pluck('action');
 
-    // Linket Common\Help was retired; support HC settings live under Settings.
-    expect($actions)->toContain('/admin/settings/hc');
-    expect($actions)->not->toContain('/admin/help');
+    // The sidebar opens Help Center content; settings are linked from that page.
+    expect($actions)->toContain('/admin/help');
+    expect($actions)->not->toContain('/admin/settings/hc');
     expect($actions)->not->toContain('/admin/settings/help');
-    expect(array_search('/admin/settings/hc', $actions->all()))
+    expect(array_search('/admin/help', $actions->all()))
         ->toBe(array_search('/admin/settings', $actions->all()) + 1);
 });

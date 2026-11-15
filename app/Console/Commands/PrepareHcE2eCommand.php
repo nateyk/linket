@@ -89,6 +89,27 @@ class PrepareHcE2eCommand extends Command
                 'articles.update',
             ]);
 
+            // Separate identities avoid Fortify's five-logins-per-minute
+            // rate limit when multiple browser acceptance cases run quickly.
+            $a11yAccounts = [];
+            foreach (['dialog', 'navigation', 'responsive'] as $scenario) {
+                $login = 'e2e-hc-a11y-'.$scenario.'@example.test';
+                $user = $this->upsertUser(
+                    email: $login,
+                    name: 'E2E HC A11y '.ucfirst($scenario),
+                    password: 'E2eHcA11y!23',
+                    type: 'agent',
+                );
+                $this->attachAgentsRole($user);
+                $this->grantPermissions($user, [
+                    'articles.view', 'articles.update', 'conversations.update', 'admin',
+                ]);
+                $a11yAccounts[$scenario] = [
+                    'email' => $user->email,
+                    'password' => 'E2eHcA11y!23',
+                ];
+            }
+
             $freeCreator = $this->upsertUser(
                 email: 'e2e-hc-free@example.test',
                 name: 'E2E Free Creator',
@@ -130,6 +151,7 @@ class PrepareHcE2eCommand extends Command
                     'email' => $admin->email,
                     'password' => 'E2eHcAdmin!23',
                 ],
+                'a11y_accounts' => $a11yAccounts,
                 'agent' => [
                     'email' => $agent->email,
                     'password' => 'E2eHcAgent!23',
@@ -313,11 +335,14 @@ class PrepareHcE2eCommand extends Command
      */
     private function seedHelpCenter(User $author): array
     {
-        $category = HcCategory::query()->firstOrCreate(
+        $category = HcCategory::query()->updateOrCreate(
             ['name' => 'E2E Getting Started'],
             [
                 'description' => 'Synthetic HC category for isolated E2E',
-                'position' => 1,
+                // The default article-grid landing displays only the first
+                // root. Place the synthetic fixture first in disposable DBs
+                // so actual public landing journeys exercise it.
+                'position' => -1,
             ],
         );
 

@@ -158,7 +158,7 @@ function SectionTitle({
       {
         className: cn(
           // DESIGN.md page title (24/600/32) for the dashboard chrome heading.
-          'flex flex-1 items-center gap-1 truncate text-2xl leading-8 font-semibold tracking-tight',
+          'flex min-w-0 flex-1 items-center gap-1 truncate text-2xl leading-8 font-semibold tracking-tight',
           className,
         ),
       },
