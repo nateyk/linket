@@ -112,7 +112,18 @@ test.describe('isolated real-browser support lifecycle', () => {
       const note = 'Internal review only for ' + subject;
 
       const subjectInput = buyer.locator('input[name="subject"]');
-      await expect(subjectInput).toBeVisible({timeout: 12_000});
+      try {
+        await expect(subjectInput).toBeVisible({timeout: 12_000});
+      } catch {
+        const config = await buyer.request.get('/api/v1/helpdesk/customer-new-ticket-page-config', {
+          headers: {Referer: buyer.url(), Accept: 'application/json'},
+        });
+        throw new Error(
+          'Ticket subject missing: page=' + buyer.url() +
+          ' body=' + JSON.stringify((await buyer.locator('body').innerText()).slice(0, 1100)) +
+          ' config=' + config.status() + ':' + (await config.text()).slice(0, 1000),
+        );
+      }
       await subjectInput.fill(subject);
       await buyer.locator('.tiptap[contenteditable="true"]').fill('I need help with this order.');
       const createdPromise = matchResponse(buyer, '/api/v1/helpdesk/customer/tickets', 'POST');
