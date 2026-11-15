@@ -65,6 +65,14 @@ class AdminPayoutRequestResource extends JsonResource
                 'account_holder' => $this->payoutMethod?->account_holder,
                 'display_label' => $this->payoutMethod?->display_label,
             ]),
+            'latest_payout_intent' => $this->whenLoaded('latestPayoutIntent', fn() => [
+                'id' => $this->latestPayoutIntent?->id,
+                'merchant_reference' => $this->latestPayoutIntent?->merchant_reference,
+                'status' => $this->latestPayoutIntent?->status,
+                'chapa_reference' => $this->latestPayoutIntent?->chapa_reference,
+                'verified_at' => $this->latestPayoutIntent?->verified_at,
+                'last_error' => $this->latestPayoutIntent?->last_error,
+            ]),
         ];
     }
 }

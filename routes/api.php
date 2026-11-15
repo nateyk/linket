@@ -295,6 +295,8 @@ Route::group(['prefix' => 'v1'], function() {
         Route::get('admin/withdrawals', [AdminPayoutRequestsController::class, 'index'])->name('admin.withdrawals.index');
         Route::get('admin/withdrawals/{payoutRequest}/review', [AdminPayoutRequestsController::class, 'review'])->name('admin.withdrawals.review');
         Route::post('admin/withdrawals/{payoutRequest}/review', [AdminPayoutRequestsController::class, 'update'])->name('admin.withdrawals.update');
+        Route::post('admin/withdrawals/{payoutRequest}/submit-transfer', [AdminPayoutRequestsController::class, 'submitTransfer'])->name('admin.withdrawals.submit-transfer');
+        Route::post('admin/withdrawals/{payoutRequest}/verify-settlement', [AdminPayoutRequestsController::class, 'verifySettlement'])->name('admin.withdrawals.verify-settlement');
         Route::delete('admin/withdrawals/{payoutRequest}', [AdminPayoutRequestsController::class, 'destroy'])->name('admin.withdrawals.destroy');
 
         // ADMIN WITHDRAWAL METHODS
