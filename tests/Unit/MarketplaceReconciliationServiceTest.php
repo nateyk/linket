@@ -153,7 +153,7 @@ class MarketplaceReconciliationServiceTest extends TestCase
             'created_at' => Carbon::now()->subMinutes(30),
         ]);
 
-        $chapaClient = $this->createMockChapaClient(MockChapaConfig::forPayment($merchantRef, 200000));
+        $chapaClient = $this->createMockChapaClient(ReconciliationChapaMockConfig::forPayment($merchantRef, 200000));
         $chapaManager = $this->createMock(LinketChapaManager::class);
         $chapaManager->method('platformClient')->willReturn($chapaClient);
 
@@ -204,7 +204,7 @@ class MarketplaceReconciliationServiceTest extends TestCase
             'created_at' => Carbon::now()->subMinutes(10),
         ]);
 
-        $chapaClient = $this->createMockChapaClient(MockChapaConfig::forPayout('lk-po-settled-103', 135000));
+        $chapaClient = $this->createMockChapaClient(ReconciliationChapaMockConfig::forPayout('lk-po-settled-103', 135000));
         $chapaManager = $this->createMock(LinketChapaManager::class);
         $chapaManager->method('platformClient')->willReturn($chapaClient);
 
@@ -323,7 +323,7 @@ class MarketplaceReconciliationServiceTest extends TestCase
         ]);
     }
 
-    private function createMockChapaClient(MockChapaConfig $config): ChapaClient
+    private function createMockChapaClient(ReconciliationChapaMockConfig $config): ChapaClient
     {
         $transport = $this->createMock(Transport::class);
         $transport->method('send')->willReturnCallback(function (string $method, string $url) use ($config) {
@@ -345,7 +345,7 @@ class MarketplaceReconciliationServiceTest extends TestCase
     }
 }
 
-final class MockChapaConfig
+final class ReconciliationChapaMockConfig
 {
     public string $status = 'SUCCESS';
     public string $reference = 'ref';
