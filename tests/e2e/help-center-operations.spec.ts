@@ -162,6 +162,10 @@ test.describe('isolated real-browser support lifecycle', () => {
       await assignedPromise;
       await expect(admin.getByText(/^e2e-hc-agent-/).first()).toBeVisible();
 
+      // Leave the ticket open after the reply; status changes are tested below.
+      await admin.getByRole('button', {name: 'Resolved', exact: true}).last().click();
+      await admin.getByText('Open', {exact: true}).last().click();
+
       // Submit a real public reply using the Tiptap editor and action button.
       await admin.locator('.tiptap[contenteditable="true"]').last().fill(reply);
       const publicReplyPromise = matchResponse(admin, agentTicketApi + '/messages', 'POST');
