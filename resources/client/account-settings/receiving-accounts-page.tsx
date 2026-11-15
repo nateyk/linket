@@ -315,7 +315,7 @@ function ReceivingAccountsInfo() {
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content align="start" className="max-w-xs">
-          <Trans message="Accounts customers can pay directly at checkout." />
+          <Trans message="Bank and mobile money accounts used to receive your payouts." />
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>
@@ -546,7 +546,7 @@ export function Component() {
                 <Trans message="No receiving accounts yet" />
               </Empty.Title>
               <Empty.Description>
-                <Trans message="Add a bank or wallet account in this workspace to receive customer payments." />
+                <Trans message="Add a bank or wallet account to receive your payouts." />
               </Empty.Description>
             </Empty.Header>
           </Empty.Root>

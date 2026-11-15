@@ -90,13 +90,13 @@ it('moves the checkout explanation behind the compact info control', async () =>
   render(<Component />);
 
   expect(
-    screen.queryByText('Accounts customers can pay directly at checkout.'),
+    screen.queryByText('Bank and mobile money accounts used to receive your payouts.'),
   ).toBeNull();
   fireEvent.click(
     await screen.findByRole('button', {name: 'About receiving accounts'}),
   );
   expect(
-    await screen.findByText('Accounts customers can pay directly at checkout.'),
+    await screen.findByText('Bank and mobile money accounts used to receive your payouts.'),
   ).toBeTruthy();
 });
 
@@ -104,7 +104,7 @@ it('shows an empty state and only offers enabled providers', async () => {
   api.get.mockResolvedValue({data: {data: [], available_methods: [{code: 'cbe', name: 'CBE'}]}});
   render(<Component />);
   expect(await screen.findByText('No receiving accounts yet')).toBeTruthy();
-  expect(screen.getByText('Add a bank or wallet account in this workspace to receive customer payments.')).toBeTruthy();
+  expect(screen.getByText('Add a bank or wallet account to receive your payouts.')).toBeTruthy();
   fireEvent.click(screen.getByRole('button', {name: 'Add receiving account'}));
   expect(screen.getByRole('option', {name: /CBE/})).toBeTruthy();
   expect(screen.queryByRole('option', {name: /Telebirr/})).toBeNull();

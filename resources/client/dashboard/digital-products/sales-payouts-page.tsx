@@ -53,6 +53,7 @@ type Order = {
 type PayoutStatus =
   | 'requested'
   | 'processing'
+  | 'provider_pending'
   | 'paid'
   | 'rejected'
   | 'cancelled';
@@ -77,7 +78,8 @@ type PayoutMethod = {
 
 const statusLabels: Record<PayoutStatus, string> = {
   requested: 'Requested',
-  processing: 'Processing',
+  processing: 'Processing Settlement',
+  provider_pending: 'Processing Settlement',
   paid: 'Paid',
   rejected: 'Rejected',
   cancelled: 'Cancelled',
@@ -205,13 +207,22 @@ export function Component() {
             </div>
           )}
 
-          <section className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <section className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <StatCard
               icon={LandmarkIcon}
               tone="text-amber-600 bg-amber-500/10 dark:text-amber-400"
               label="Available balance"
               scope="Ready to withdraw"
               valueInCents={available}
+              currency={currency}
+              loading={loading}
+            />
+            <StatCard
+              icon={Clock3Icon}
+              tone="text-blue-600 bg-blue-500/10 dark:text-blue-400"
+              label="Settling funds"
+              scope="Clearing period"
+              valueInCents={summary?.held_earnings_cents ?? 0}
               currency={currency}
               loading={loading}
             />
@@ -321,8 +332,8 @@ function InfoTrigger() {
         <CircleQuestionMarkIcon />
       </Popover.Trigger>
       <Popover.Portal>
-        <Popover.Content>
-          <Trans message="Track your digital product sales and withdraw your creator earnings. Payouts are sent to your configured withdrawal method." />
+        <Popover.Content className="max-w-xs text-sm">
+          <Trans message="Track your digital product sales and withdraw creator earnings. Recent sales clear after a short holding period to protect against chargebacks, after which they become available for withdrawal." />
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>
@@ -510,15 +521,19 @@ function StatusBadge({status}: {status: PayoutStatus}) {
   > = {
     requested: {variant: 'outline', Icon: Clock3Icon},
     processing: {variant: 'outline', Icon: RefreshCwIcon},
+    provider_pending: {variant: 'outline', Icon: RefreshCwIcon},
     paid: {variant: 'positive', Icon: CheckCircleIcon},
     rejected: {variant: 'destructive', Icon: TriangleAlertIcon},
     cancelled: {variant: 'destructive', Icon: BanIcon},
   };
-  const {variant, Icon} = config[status];
+  const {variant, Icon} = config[status] ?? {
+    variant: 'outline',
+    Icon: Clock3Icon,
+  };
   return (
     <Badge variant={variant}>
       <Icon aria-hidden="true" />
-      <Trans message={statusLabels[status]} />
+      <Trans message={statusLabels[status] ?? status} />
     </Badge>
   );
 }
