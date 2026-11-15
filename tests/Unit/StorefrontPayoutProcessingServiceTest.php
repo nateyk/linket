@@ -126,7 +126,7 @@ class StorefrontPayoutProcessingServiceTest extends TestCase
         $this->assertSame(1, StorefrontPayoutIntent::query()->where('payout_request_id', $payout->id)->count());
     }
 
-    public function testSubmitPayoutSetsProviderPendingWithoutExtinguishingLiability(): void
+    public function testSubmitPayoutWithLowercaseCurrencySetsProviderPendingWithoutExtinguishingLiability(): void
     {
         $manager = $this->createMock(LinketChapaManager::class);
         $manager->method('platformClient')->willReturn($this->mockChapaClient(createStatus: 'PENDING'));
@@ -138,7 +138,7 @@ class StorefrontPayoutProcessingServiceTest extends TestCase
             'workspace_id' => 1,
             'creator_id' => 20,
             'amount_cents' => 50000,
-            'currency' => 'ETB',
+            'currency' => 'etb',
             'payout_destination' => 'CBE:100012345678',
             'status' => 'processing',
         ]);
@@ -187,7 +187,8 @@ class StorefrontPayoutProcessingServiceTest extends TestCase
             'merchant_reference' => 'lk-po-TEST-REF-01',
             'idempotency_key' => 'c1d2e3f4-a5b6-7890-abcd-ef1234567890',
             'amount_cents' => 50000,
-            'currency' => 'ETB',
+            // Existing intents may use the lowercase storefront currency.
+            'currency' => 'etb',
             'provider' => 'chapa',
             'withdrawal_code' => 'bank_transfer',
             'destination_snapshot' => 'CBE:100012345678',

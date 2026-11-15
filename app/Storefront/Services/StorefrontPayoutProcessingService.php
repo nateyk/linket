@@ -67,7 +67,7 @@ final class StorefrontPayoutProcessingService
         $account = $this->resolveAccountPayload($intent);
         $payload = [
             'amount' => (int) $intent->amount_cents,
-            'currency' => (string) $intent->currency,
+            'currency' => strtoupper((string) $intent->currency),
             'merchant_reference' => $intent->merchant_reference,
             'account' => $account,
             'reason' => "Payout #{$intent->payout_request_id}",
@@ -117,7 +117,7 @@ final class StorefrontPayoutProcessingService
     {
         $verified = $this->manager()->platformClient()->payouts()->verifyTyped($intent->merchant_reference);
 
-        if ($verified->matchesPayout($intent->amount_cents, $intent->currency, $intent->merchant_reference)) {
+        if ($verified->matchesPayout($intent->amount_cents, strtoupper($intent->currency), $intent->merchant_reference)) {
             return DB::transaction(function () use ($intent, $verified): StorefrontPayoutIntent {
                 $intent->update([
                     'status' => StorefrontPayoutIntent::STATUS_SUCCESSFUL,
