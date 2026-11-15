@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
+use App\Models\User;
 use App\Payments\Chapa\LinketChapaManager;
 use App\Storefront\Ledger\AccountCodes;
 use App\Storefront\Ledger\BalanceQuery;
@@ -111,19 +112,22 @@ class MarketplaceReconciliationServiceTest extends TestCase
 
     public function testReleaseMaturedEscrowMaturesEligibleOrdersOnly(): void
     {
-        $creatorId = 101;
-        $this->seedCreator($creatorId, 'creator101@test.com');
+        $creator = new User(['id' => 101, 'name' => 'Creator 101', 'email' => 'creator101@test.com']);
+        $this->seedCreator($creator);
         $ledger = new CreatorLedgerService(new JournalPostingService());
 
-        $this->seedSaleWithLedger($creatorId, 100000, 10000, Carbon::now()->subDays(10), $ledger);
-        $this->seedSaleWithLedger($creatorId, 50000, 5000, Carbon::now()->subDays(2), $ledger);
+        $maturedOrder = $this->seedPlatformOrder($creator, 100000, Carbon::now()->subDays(10));
+        $ledger->recordPlatformSale($maturedOrder);
+
+        $immatureOrder = $this->seedPlatformOrder($creator, 50000, Carbon::now()->subDays(2));
+        $ledger->recordPlatformSale($immatureOrder);
 
         $service = new MarketplaceReconciliationService(creatorLedger: $ledger);
         $maturedCount = $service->releaseMaturedEscrow();
 
         $this->assertSame(1, $maturedCount);
 
-        $balances = $ledger->getBalances(BalanceQuery::for($creatorId, 'ETB'));
+        $balances = $ledger->getBalances(BalanceQuery::for((int) $creator->id, 'ETB'));
         $this->assertSame(90000, $balances['available']);
         $this->assertSame(45000, $balances['held']);
         $this->assertSame(0, $service->releaseMaturedEscrow());
@@ -131,10 +135,10 @@ class MarketplaceReconciliationServiceTest extends TestCase
 
     public function testReconcilePendingPaymentAttemptsFulfillsVerifiedOrders(): void
     {
-        $creatorId = 102;
-        $this->seedCreator($creatorId, 'creator102@test.com');
+        $creator = new User(['id' => 102, 'name' => 'Creator 102', 'email' => 'creator102@test.com']);
+        $this->seedCreator($creator);
 
-        $order = $this->seedPlatformOrder($creatorId, 200000, 20000, null);
+        $order = $this->seedPlatformOrder($creator, 200000);
         $merchantRef = 'lk-pay-stale-99';
 
         $attempt = StorefrontPaymentAttempt::create([
@@ -149,7 +153,7 @@ class MarketplaceReconciliationServiceTest extends TestCase
             'created_at' => Carbon::now()->subMinutes(30),
         ]);
 
-        $chapaClient = $this->createMockChapaClient($merchantRef, 200000);
+        $chapaClient = $this->createMockChapaClient(MockChapaConfig::forPayment($merchantRef, 200000));
         $chapaManager = $this->createMock(LinketChapaManager::class);
         $chapaManager->method('platformClient')->willReturn($chapaClient);
 
@@ -167,28 +171,29 @@ class MarketplaceReconciliationServiceTest extends TestCase
 
     public function testReconcilePendingPayoutIntentsDisbursesSettledTransfers(): void
     {
-        $creatorId = 103;
-        $this->seedCreator($creatorId, 'creator103@test.com');
+        $creator = new User(['id' => 103, 'name' => 'Creator 103', 'email' => 'creator103@test.com']);
+        $this->seedCreator($creator);
         $ledger = new CreatorLedgerService(new JournalPostingService());
 
-        $order = $this->seedSaleWithLedger($creatorId, 150000, 0, Carbon::now()->subDays(10), $ledger);
+        $order = $this->seedPlatformOrder($creator, 150000, Carbon::now()->subDays(10));
+        $ledger->recordPlatformSale($order);
         $ledger->releaseHeldToAvailable($order);
 
         $payout = PayoutRequest::create([
             'workspace_id' => 1,
-            'creator_id' => $creatorId,
-            'amount_cents' => 150000,
+            'creator_id' => $creator->id,
+            'amount_cents' => 135000,
             'currency' => 'ETB',
             'status' => 'processing',
             'payout_destination' => 'CBE:1000103103',
         ]);
-        $ledger->reserveForPayout($payout, 150000);
+        $ledger->reserveForPayout($payout, 135000);
 
         $intent = StorefrontPayoutIntent::create([
             'payout_request_id' => $payout->id,
             'merchant_reference' => 'lk-po-settled-103',
             'idempotency_key' => (string) Str::uuid(),
-            'amount_cents' => 150000,
+            'amount_cents' => 135000,
             'currency' => 'ETB',
             'provider' => 'chapa',
             'withdrawal_code' => 'bank_transfer',
@@ -199,7 +204,7 @@ class MarketplaceReconciliationServiceTest extends TestCase
             'created_at' => Carbon::now()->subMinutes(10),
         ]);
 
-        $chapaClient = $this->createMockChapaClient('lk-po-settled-103', 150000, isPayout: true);
+        $chapaClient = $this->createMockChapaClient(MockChapaConfig::forPayout('lk-po-settled-103', 135000));
         $chapaManager = $this->createMock(LinketChapaManager::class);
         $chapaManager->method('platformClient')->willReturn($chapaClient);
 
@@ -214,18 +219,18 @@ class MarketplaceReconciliationServiceTest extends TestCase
         $this->assertSame(StorefrontPayoutIntent::STATUS_SUCCESSFUL, $intent->fresh()->status);
         $this->assertSame('paid', $payout->fresh()->status);
 
-        $balances = $ledger->getBalances(BalanceQuery::for($creatorId, 'ETB'));
+        $balances = $ledger->getBalances(BalanceQuery::for((int) $creator->id, 'ETB'));
         $this->assertSame(0, $balances['reserved']);
         $this->assertSame(0, $balances['available']);
     }
 
     public function testReconcileMissingJournalEntriesRepairsPaidOrders(): void
     {
-        $creatorId = 104;
-        $this->seedCreator($creatorId, 'creator104@test.com');
+        $creator = new User(['id' => 104, 'name' => 'Creator 104', 'email' => 'creator104@test.com']);
+        $this->seedCreator($creator);
         $ledger = new CreatorLedgerService(new JournalPostingService());
 
-        $order = $this->seedPlatformOrder($creatorId, 80000, 8000, Carbon::now()->subDays(1));
+        $order = $this->seedPlatformOrder($creator, 80000, Carbon::now()->subDays(1));
 
         $service = new MarketplaceReconciliationService(creatorLedger: $ledger);
         $this->assertSame(1, $service->reconcileMissingJournalEntries());
@@ -236,17 +241,18 @@ class MarketplaceReconciliationServiceTest extends TestCase
             'event_type' => 'sale_settled',
         ]);
 
-        $balances = $ledger->getBalances(BalanceQuery::for($creatorId, 'ETB'));
+        $balances = $ledger->getBalances(BalanceQuery::for((int) $creator->id, 'ETB'));
         $this->assertSame(72000, $balances['held']);
     }
 
     public function testAuditLedgerIntegrityDetectsBalancedAndUnbalancedLedger(): void
     {
-        $creatorId = 105;
-        $this->seedCreator($creatorId, 'creator105@test.com');
+        $creator = new User(['id' => 105, 'name' => 'Creator 105', 'email' => 'creator105@test.com']);
+        $this->seedCreator($creator);
         $ledger = new CreatorLedgerService(new JournalPostingService());
 
-        $this->seedSaleWithLedger($creatorId, 120000, 12000, Carbon::now()->subDays(5), $ledger);
+        $order = $this->seedPlatformOrder($creator, 120000, Carbon::now()->subDays(5));
+        $ledger->recordPlatformSale($order);
 
         $service = new MarketplaceReconciliationService(creatorLedger: $ledger);
         $audit = $service->auditLedgerIntegrity();
@@ -261,7 +267,7 @@ class MarketplaceReconciliationServiceTest extends TestCase
         StorefrontJournalLine::create([
             'journal_entry_id' => 1,
             'account_code' => AccountCodes::PLATFORM_CHAPA_CLEARING,
-            'creator_id' => $creatorId,
+            'creator_id' => $creator->id,
             'workspace_id' => 1,
             'currency' => 'ETB',
             'debit_cents' => 9999,
@@ -276,36 +282,38 @@ class MarketplaceReconciliationServiceTest extends TestCase
 
     public function testArtisanCommandExecutesReconciliationSuccessfully(): void
     {
-        $creatorId = 106;
-        $this->seedCreator($creatorId, 'creator106@test.com');
+        $creator = new User(['id' => 106, 'name' => 'Creator 106', 'email' => 'creator106@test.com']);
+        $this->seedCreator($creator);
         $ledger = new CreatorLedgerService(new JournalPostingService());
 
-        $this->seedSaleWithLedger($creatorId, 100000, 10000, Carbon::now()->subDays(10), $ledger);
+        $order = $this->seedPlatformOrder($creator, 100000, Carbon::now()->subDays(10));
+        $ledger->recordPlatformSale($order);
 
         $this->artisan('marketplace:reconcile')
             ->expectsOutput('Starting Marketplace Financial Reconciliation...')
             ->assertExitCode(0);
 
-        $balances = $ledger->getBalances(BalanceQuery::for($creatorId, 'ETB'));
+        $balances = $ledger->getBalances(BalanceQuery::for((int) $creator->id, 'ETB'));
         $this->assertSame(90000, $balances['available']);
     }
 
-    private function seedCreator(int $id, string $email): void
+    private function seedCreator(User $creator): void
     {
         DB::table('users')->insert([
-            'id' => $id,
-            'name' => 'Creator User',
-            'email' => $email,
+            'id' => $creator->id,
+            'name' => $creator->name,
+            'email' => $creator->email,
         ]);
     }
 
-    private function seedPlatformOrder(int $creatorId, int $gross, int $fee, ?Carbon $paidAt = null): StorefrontOrder
+    private function seedPlatformOrder(User $creator, int $gross, ?Carbon $paidAt = null): StorefrontOrder
     {
+        $fee = (int) round($gross * 0.10);
         return StorefrontOrder::create([
             'uuid' => (string) Str::uuid(),
             'monetization_policy' => 'marketplace_v2',
             'collection_owner' => StorefrontOrder::COLLECTION_OWNER_PLATFORM_CHAPA,
-            'creator_id' => $creatorId,
+            'creator_id' => $creator->id,
             'currency' => 'ETB',
             'gross_amount_cents' => $gross,
             'platform_fee_cents' => $fee,
@@ -315,25 +323,18 @@ class MarketplaceReconciliationServiceTest extends TestCase
         ]);
     }
 
-    private function seedSaleWithLedger(int $creatorId, int $gross, int $fee, ?Carbon $paidAt, CreatorLedgerService $ledger): StorefrontOrder
-    {
-        $order = $this->seedPlatformOrder($creatorId, $gross, $fee, $paidAt);
-        $ledger->recordPlatformSale($order);
-        return $order;
-    }
-
-    private function createMockChapaClient(string $ref, int $amount, bool $isPayout = false): ChapaClient
+    private function createMockChapaClient(MockChapaConfig $config): ChapaClient
     {
         $transport = $this->createMock(Transport::class);
-        $transport->method('send')->willReturnCallback(function (string $method, string $url) use ($ref, $amount, $isPayout) {
+        $transport->method('send')->willReturnCallback(function (string $method, string $url) use ($config) {
             $data = [
-                'status' => 'SUCCESS',
-                'chapa_reference' => $isPayout ? 'CHP-PO-12345' : 'CHP-PAY-12345',
-                'merchant_reference' => $ref,
-                'amount' => $amount,
+                'status' => $config->status,
+                'chapa_reference' => $config->isPayout ? 'CHP-PO-12345' : 'CHP-PAY-12345',
+                'merchant_reference' => $config->reference,
+                'amount' => $config->amount,
                 'currency' => 'ETB',
             ];
-            if (!$isPayout) {
+            if (!$config->isPayout) {
                 $data['email'] = 'buyer@test.com';
             }
 
@@ -341,5 +342,33 @@ class MarketplaceReconciliationServiceTest extends TestCase
         });
 
         return new ChapaClient(privateKey: 'sec-test', webhookSecret: 'wh-secret', transport: $transport);
+    }
+}
+
+final class MockChapaConfig
+{
+    public string $status = 'SUCCESS';
+    public string $reference = 'ref';
+    public int $amount = 100000;
+    public bool $isPayout = false;
+
+    public static function forPayment(string $ref, int $amount, string $status = 'SUCCESS'): self
+    {
+        $cfg = new self();
+        $cfg->reference = $ref;
+        $cfg->amount = $amount;
+        $cfg->status = $status;
+        $cfg->isPayout = false;
+        return $cfg;
+    }
+
+    public static function forPayout(string $ref, int $amount, string $status = 'SUCCESS'): self
+    {
+        $cfg = new self();
+        $cfg->reference = $ref;
+        $cfg->amount = $amount;
+        $cfg->status = $status;
+        $cfg->isPayout = true;
+        return $cfg;
     }
 }

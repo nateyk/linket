@@ -15,6 +15,7 @@ use App\Storefront\Models\StorefrontPaymentAttempt;
 use App\Storefront\Models\StorefrontPayoutIntent;
 use Carbon\Carbon;
 use Closure;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Log;
 
 class MarketplaceReconciliationService
@@ -104,21 +105,44 @@ class MarketplaceReconciliationService
      */
     public function reconcilePendingPaymentAttempts(int $staleMinutes = 15): int
     {
+        return $this->reconcileStaleRecords(
+            StorefrontPaymentAttempt::query()->where('status', StorefrontPaymentAttempt::STATUS_PENDING),
+            $staleMinutes,
+            fn (StorefrontPaymentAttempt $attempt): bool => $this->reconcileSinglePaymentAttempt($attempt),
+        );
+    }
+
+    /**
+     * Reconciles pending payout intents via Chapa API.
+     */
+    public function reconcilePendingPayoutIntents(int $staleMinutes = 5): int
+    {
+        return $this->reconcileStaleRecords(
+            StorefrontPayoutIntent::query()->whereIn('status', [
+                StorefrontPayoutIntent::STATUS_SUBMITTED,
+                StorefrontPayoutIntent::STATUS_PROVIDER_PENDING,
+            ]),
+            $staleMinutes,
+            fn (StorefrontPayoutIntent $intent): bool => $this->reconcileSinglePayoutIntent($intent),
+        );
+    }
+
+    /**
+     * @param Builder $query
+     * @param Closure(mixed): bool $processor
+     */
+    private function reconcileStaleRecords(Builder $query, int $staleMinutes, Closure $processor): int
+    {
         $threshold = Carbon::now()->subMinutes($staleMinutes);
-        $reconciledCount = 0;
+        $count = 0;
 
-        $attempts = StorefrontPaymentAttempt::query()
-            ->where('status', StorefrontPaymentAttempt::STATUS_PENDING)
-            ->where('created_at', '<=', $threshold)
-            ->get();
-
-        foreach ($attempts as $attempt) {
-            if ($this->reconcileSinglePaymentAttempt($attempt)) {
-                $reconciledCount++;
+        foreach ($query->where('created_at', '<=', $threshold)->get() as $record) {
+            if ($processor($record)) {
+                $count++;
             }
         }
 
-        return $reconciledCount;
+        return $count;
     }
 
     private function reconcileSinglePaymentAttempt(StorefrontPaymentAttempt $attempt): bool
@@ -148,31 +172,6 @@ class MarketplaceReconciliationService
         }
 
         return false;
-    }
-
-    /**
-     * Reconciles pending payout intents via Chapa API.
-     */
-    public function reconcilePendingPayoutIntents(int $staleMinutes = 5): int
-    {
-        $threshold = Carbon::now()->subMinutes($staleMinutes);
-        $reconciledCount = 0;
-
-        $intents = StorefrontPayoutIntent::query()
-            ->whereIn('status', [
-                StorefrontPayoutIntent::STATUS_SUBMITTED,
-                StorefrontPayoutIntent::STATUS_PROVIDER_PENDING,
-            ])
-            ->where('created_at', '<=', $threshold)
-            ->get();
-
-        foreach ($intents as $intent) {
-            if ($this->reconcileSinglePayoutIntent($intent)) {
-                $reconciledCount++;
-            }
-        }
-
-        return $reconciledCount;
     }
 
     private function reconcileSinglePayoutIntent(StorefrontPayoutIntent $intent): bool
@@ -237,13 +236,24 @@ class MarketplaceReconciliationService
         return max(0, $credits - $debits);
     }
 
+    private function hasNegativeBalance(array $balances): bool
+    {
+        if ($balances['held'] < 0) {
+            return true;
+        }
+        if ($balances['available'] < 0) {
+            return true;
+        }
+        return $balances['reserved'] < 0;
+    }
+
     private function auditCreatorBalances(LedgerAuditResult $result): void
     {
         $creatorIds = StorefrontJournalLine::query()->whereNotNull('creator_id')->distinct()->pluck('creator_id');
 
         foreach ($creatorIds as $creatorId) {
             $balances = $this->creatorLedger()->getBalances(BalanceQuery::for((int) $creatorId, 'ETB'));
-            if ($balances['held'] < 0 || $balances['available'] < 0 || $balances['reserved'] < 0) {
+            if ($this->hasNegativeBalance($balances)) {
                 $result->negativeBalancesFound[] = [
                     'creator_id' => $creatorId,
                     'balances' => $balances,
