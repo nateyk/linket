@@ -178,7 +178,9 @@ test.describe('isolated real-browser support lifecycle', () => {
       await admin.getByRole('button', {name: 'Add note'}).click();
       const privateNoteResponse = await privateNotePromise;
       expect((await privateNoteResponse.json()).message.type).toBe('note');
-      await expect(admin.getByText(note).first()).toBeVisible({timeout: 30_000});
+      await admin.goto('/agent/conversations/' + ticketId);
+      await expect(admin.locator('#feed-container').getByText(note))
+        .toBeVisible({timeout: 15_000});
 
       await buyer.reload();
       await expect(buyer.getByText(reply).first()).toBeVisible({timeout: 30_000});
