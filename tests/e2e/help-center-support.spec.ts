@@ -212,6 +212,9 @@ test.describe('isolated Help Center + support', () => {
 
     // Administrators can discover and open support workflows directly from
     // the native admin sidebar, then return from the dedicated agent inbox.
+    // The admin sidebar is an off-canvas drawer at mobile width. Assert its
+    // discoverable link on desktop before checking the support hub on mobile.
+    await page.setViewportSize({width: 1280, height: 900});
     await page.goto('/admin/support');
     await expect(page.getByText('Inbox and conversations')).toBeVisible();
     const allConversations = page.getByRole('link', {name: /All conversations/});
@@ -222,8 +225,10 @@ test.describe('isolated Help Center + support', () => {
     await expect(
       page.locator('[data-slot="sidebar"]').getByRole('link', {name: 'Support'}),
     ).toHaveAttribute('href', '/admin/support');
+    await page.setViewportSize({width: 390, height: 844});
     expect(await page.evaluate(() => document.documentElement.scrollWidth))
       .toBeLessThanOrEqual(390);
+    await page.setViewportSize({width: 1280, height: 900});
 
     await allConversations.click();
     await expect(page).toHaveURL(/\/agent\/conversations/);
