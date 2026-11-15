@@ -110,7 +110,9 @@ test.describe('isolated real-browser support lifecycle', () => {
       const reply = 'Public response to ' + subject;
       const note = 'Internal review only for ' + subject;
 
-      await buyer.getByRole('textbox', {name: /subject/i}).fill(subject);
+      const subjectInput = buyer.locator('input[name="subject"]');
+      await expect(subjectInput).toBeVisible({timeout: 12_000});
+      await subjectInput.fill(subject);
       await buyer.locator('.tiptap[contenteditable="true"]').fill('I need help with this order.');
       const createdPromise = matchResponse(buyer, '/api/v1/helpdesk/customer/tickets', 'POST');
       await buyer.locator('form button[type="submit"]').last().click();
