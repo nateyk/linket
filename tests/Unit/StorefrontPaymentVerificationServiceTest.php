@@ -7,6 +7,7 @@ namespace Tests\Unit;
 use App\Payments\Chapa\LinketChapaManager;
 use App\Storefront\Models\StorefrontOrder;
 use App\Storefront\Models\StorefrontPaymentAttempt;
+use App\Storefront\Services\MarketplaceReconciliationService;
 use App\Storefront\Services\StorefrontPaymentVerificationService;
 use App\Storefront\StorefrontWebhookHandler;
 use Illuminate\Database\Schema\Blueprint;
@@ -194,10 +195,59 @@ class StorefrontPaymentVerificationServiceTest extends TestCase
             'amount mismatch' => ['SUCCESS', 5000, 'ETB'],
             'currency mismatch' => ['SUCCESS', 15000, 'USD'],
             'status failed' => ['FAILED', 15000, 'ETB'],
-            // Chapa test-mode statuses that must NOT fulfill the order
-            'status pending' => ['PENDING', 15000, 'ETB'],
             'status reversed' => ['REVERSED', 15000, 'ETB'],
         ];
+    }
+
+    public function testPendingVerificationCanBeFulfilledByScheduledReconciliation(): void
+    {
+        $ref = 'lk-validref12345';
+        [$order, $attempt] = $this->createOrderAndAttempt(ref: $ref);
+        $pending = $this->mockChapaClient(status: 'PENDING', ref: $ref);
+        $success = $this->mockChapaClient(ref: $ref);
+        $manager = $this->createMock(LinketChapaManager::class);
+        $manager->method('platformClient')->willReturn($pending, $success, $success);
+        $handler = $this->createMock(StorefrontWebhookHandler::class);
+        $handler->expects($this->once())->method('fulfill')
+            ->willReturnCallback(static function (StorefrontOrder $paidOrder): void {
+                $paidOrder->update(['status' => StorefrontOrder::STATUS_COMPLETED, 'paid_at' => now()]);
+            });
+        $verification = new StorefrontPaymentVerificationService($manager, $handler);
+
+        try {
+            $verification->verifyAndFulfill($ref);
+            $this->fail('Pending verification must not report fulfillment.');
+        } catch (RuntimeException) {
+            $this->assertSame(StorefrontOrder::STATUS_PENDING, $order->fresh()->status);
+            $this->assertSame(StorefrontPaymentAttempt::STATUS_PENDING, $attempt->fresh()->status);
+        }
+
+        $reconciliation = new MarketplaceReconciliationService($manager, $verification);
+        $this->assertSame(1, $reconciliation->reconcilePendingPaymentAttempts(staleMinutes: 0));
+        $this->assertSame(StorefrontOrder::STATUS_COMPLETED, $order->fresh()->status);
+        $this->assertSame(StorefrontPaymentAttempt::STATUS_SUCCESSFUL, $attempt->fresh()->status);
+    }
+
+    public function testScheduledReconciliationRecoversPreviouslyMisclassifiedPendingVerification(): void
+    {
+        $ref = 'lk-validref12345';
+        [, $attempt] = $this->createOrderAndAttempt(ref: $ref);
+        $attempt->update([
+            'status' => StorefrontPaymentAttempt::STATUS_FAILED,
+            'verification_data' => ['status' => 'PENDING'],
+            'error_message' => 'Verification mismatch: status=PENDING, amount=15000, currency=ETB',
+        ]);
+        $success = $this->mockChapaClient(ref: $ref);
+        $manager = $this->createMock(LinketChapaManager::class);
+        $manager->method('platformClient')->willReturn($success);
+        $handler = $this->createMock(StorefrontWebhookHandler::class);
+        $handler->expects($this->once())->method('fulfill');
+        $verification = new StorefrontPaymentVerificationService($manager, $handler);
+        $reconciliation = new MarketplaceReconciliationService($manager, $verification);
+
+        $this->assertSame(1, $reconciliation->reconcilePendingPaymentAttempts(staleMinutes: 0));
+        $this->assertSame(StorefrontPaymentAttempt::STATUS_SUCCESSFUL, $attempt->fresh()->status);
+        $this->assertNull($attempt->fresh()->error_message);
     }
 
     public function testIdempotentWhenAlreadyFulfilled(): void
