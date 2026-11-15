@@ -102,7 +102,7 @@ class CreatorPayoutMethodAndSafetyTest extends TestCase
         $this->assertTrue($index[0]['is_default']);
     }
 
-    public function testSettingDefaultDestinationAtomicallyUnsetsOtherDestinations(): void
+    public function testDefaultDestinationLifecycleAndFallback(): void
     {
         $controller = new DigitalProductPayoutMethodController();
         $method1 = $this->createTestPayoutMethod(['is_default' => true]);
@@ -113,37 +113,20 @@ class CreatorPayoutMethodAndSafetyTest extends TestCase
             'is_default' => false,
         ]);
 
-        $request = Request::create("/api/items/payout-methods/{$method2->id}/default", 'POST');
-        $request->setUserResolver(fn () => $this->creator);
-
-        $response = $controller->setDefault($request, $method2);
-        $data = $response->response()->getData(true)['data'];
-
-        $this->assertTrue($data['is_default']);
+        $setDefaultReq = Request::create("/api/items/payout-methods/{$method2->id}/default", 'POST');
+        $setDefaultReq->setUserResolver(fn () => $this->creator);
+        $response = $controller->setDefault($setDefaultReq, $method2);
+        $this->assertTrue($response->response()->getData(true)['data']['is_default']);
         $this->assertFalse((bool) $method1->fresh()->is_default);
         $this->assertTrue((bool) $method2->fresh()->is_default);
-    }
 
-    public function testDeactivatingDefaultDestinationFallsBackToAnotherActiveDestination(): void
-    {
-        $controller = new DigitalProductPayoutMethodController();
-        $method1 = $this->createTestPayoutMethod(['is_default' => true]);
-        $method2 = $this->createTestPayoutMethod([
-            'withdrawal_method_id' => $this->telebirrMethod->id,
-            'bank_code' => 'telebirr',
-            'destination' => '0911223344',
-            'is_default' => false,
-        ]);
-
-        $request = Request::create("/api/items/payout-methods/{$method1->id}", 'DELETE');
-        $request->setUserResolver(fn () => $this->creator);
-
-        $response = $controller->destroy($request, $method1);
-        $this->assertEquals(204, $response->getStatusCode());
-
-        $this->assertFalse((bool) $method1->fresh()->is_active);
-        $this->assertEquals(DigitalProductPayoutMethod::STATUS_DEACTIVATED, $method1->fresh()->status);
-        $this->assertTrue((bool) $method2->fresh()->is_default);
+        $deleteReq = Request::create("/api/items/payout-methods/{$method2->id}", 'DELETE');
+        $deleteReq->setUserResolver(fn () => $this->creator);
+        $destroyResp = $controller->destroy($deleteReq, $method2);
+        $this->assertEquals(204, $destroyResp->getStatusCode());
+        $this->assertFalse((bool) $method2->fresh()->is_active);
+        $this->assertEquals(DigitalProductPayoutMethod::STATUS_DEACTIVATED, $method2->fresh()->status);
+        $this->assertTrue((bool) $method1->fresh()->is_default);
     }
 
     public function testPayoutCreationSnapshotsSelectedDestinationAndReservesLedger(): void
