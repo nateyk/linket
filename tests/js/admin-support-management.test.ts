@@ -1,3 +1,5 @@
+/** @vitest-environment jsdom */
+
 import {adminRoutes} from '@app/admin/admin-routes';
 import {getVisibleSupportDestinations} from '@app/admin/support/admin-support-management-page';
 import {describe, expect, it} from 'vitest';
