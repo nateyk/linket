@@ -321,6 +321,8 @@ jobs:
 
       - name: Build production Vite assets
         run: npm run build
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Verify Vite build output
         shell: bash

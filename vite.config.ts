@@ -4,6 +4,7 @@ import {fileURLToPath} from 'node:url';
 import replace from '@rollup/plugin-replace';
 import react from '@vitejs/plugin-react';
 import laravel from 'laravel-vite-plugin';
+import {codecovVitePlugin} from '@codecov/vite-plugin';
 import {Plugin} from 'vite';
 import {defineConfig} from 'vitest/config';
 
@@ -155,6 +156,13 @@ export default defineConfig({
       preventAssignment: true,
       __SENTRY_DEBUG__: false,
       "import { URL } from 'url'": false,
+    }),
+    // Last so it sees the final bundle. Upload runs only when CI sets CODECOV_TOKEN.
+    codecovVitePlugin({
+      enableBundleAnalysis: process.env.CODECOV_TOKEN !== undefined,
+      bundleName: 'linket',
+      uploadToken: process.env.CODECOV_TOKEN,
+      gitService: 'github',
     }),
   ],
 });
