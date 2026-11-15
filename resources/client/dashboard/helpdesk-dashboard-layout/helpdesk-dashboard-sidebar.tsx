@@ -20,6 +20,7 @@ import {
   ChartColumnBigIcon,
   InboxIcon,
   LibraryIcon,
+  LayoutDashboardIcon,
   MessageSquareTextIcon,
   MousePointerClickIcon,
   SettingsIcon,
@@ -79,17 +80,31 @@ export function HelpdeskDashboardSidebar(props: DashboardSidenavChildrenProps) {
     </Fragment>
   );
 
-  const afterMenu = canOpenSettings ? (
-    <DashboardLeftSidebarItem
-      elementType={Link}
-      target="_blank"
-      to="/admin/settings/general"
-      isCompact={isCompactMode}
-    >
-      <SettingsIcon />
-      <Trans message="Settings" />
-    </DashboardLeftSidebarItem>
-  ) : null;
+  const afterMenu = (
+    <Fragment>
+      {hasPermission('admin.access') && (
+        <DashboardLeftSidebarItem
+          elementType={Link}
+          to="/admin/support"
+          isCompact={isCompactMode}
+        >
+          <LayoutDashboardIcon className="size-4" aria-hidden="true" />
+          <Trans message="Admin dashboard" />
+        </DashboardLeftSidebarItem>
+      )}
+      {canOpenSettings && (
+        <DashboardLeftSidebarItem
+          elementType={Link}
+          target="_blank"
+          to="/admin/settings/general"
+          isCompact={isCompactMode}
+        >
+          <SettingsIcon />
+          <Trans message="Settings" />
+        </DashboardLeftSidebarItem>
+      )}
+    </Fragment>
+  );
 
   return (
     <DashboardLeftSidebar
