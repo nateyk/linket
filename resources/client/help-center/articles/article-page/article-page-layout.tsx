@@ -44,9 +44,9 @@ export function ArticlePageLayout({
         {leftSidenav}
       </DashboardSidenav>
       <DashboardContent isScrollable={false}>
-        <div className="mx-auto min-w-0 w-full max-w-3xl px-16 py-24 sm:px-24 md:py-48 lg:px-32 xl:px-48">
+        <main className="mx-auto min-w-0 w-full max-w-3xl px-16 py-24 sm:px-24 md:py-48 lg:px-32 xl:px-48">
           {children}
-        </div>
+        </main>
       </DashboardContent>
       {rightSidenav}
     </DashboardLayout>
