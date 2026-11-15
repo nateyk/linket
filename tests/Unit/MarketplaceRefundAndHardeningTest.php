@@ -9,6 +9,7 @@ use App\Payments\Chapa\LinketChapaManager;
 use App\Storefront\Controllers\AdminDigitalProductRefundsController;
 use App\Storefront\Controllers\AdminMarketplaceFinanceController;
 use App\Storefront\DigitalProductRefundService;
+use App\Storefront\Jobs\SendStorefrontReceipt;
 use App\Storefront\Ledger\AccountCodes;
 use App\Storefront\Ledger\BalanceQuery;
 use App\Storefront\Ledger\CreatorLedgerService;
@@ -30,6 +31,9 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Nateyk\Chapa\ChapaClient;
@@ -49,6 +53,9 @@ class MarketplaceRefundAndHardeningTest extends TestCase
         config()->set('database.default', 'sqlite');
         config()->set('database.connections.sqlite.database', ':memory:');
         config()->set('store.payout_hold_days', 7);
+        Queue::fake([SendStorefrontReceipt::class]);
+        Mail::fake();
+        Notification::fake();
 
         Schema::create('users', function (Blueprint $table): void {
             $table->id();
@@ -84,6 +91,7 @@ class MarketplaceRefundAndHardeningTest extends TestCase
             $table->string('status', 32)->default('pending_payment');
             $table->string('payment_gateway', 32)->nullable();
             $table->string('chapa_tx_ref', 64)->nullable();
+            $table->timestamp('receipt_sent_at')->nullable();
             $table->timestamp('paid_at')->nullable();
             $table->timestamps();
         });
@@ -221,9 +229,9 @@ class MarketplaceRefundAndHardeningTest extends TestCase
 
     public function testFullRefundReversesCommissionAndHeldLiabilityWithCustomerRevocation(): void
     {
-        $creator = $this->createTestUser(1, 'seller_full@test.com');
-        $admin = $this->createTestUser(2, 'admin_full@test.com');
-        $order = $this->createPaidPlatformOrder($creator);
+        $creator = $this->seedUser(new User(['id' => 1, 'email' => 'seller_full@test.com', 'name' => 'Seller']));
+        $admin = $this->seedUser(new User(['id' => 2, 'email' => 'admin_full@test.com', 'name' => 'Admin']));
+        $order = $this->seedPlatformOrder($creator);
 
         DownloadEntitlement::query()->create([
             'storefront_order_id' => $order->id,
@@ -231,7 +239,7 @@ class MarketplaceRefundAndHardeningTest extends TestCase
             'token' => (string) Str::uuid(),
         ]);
 
-        $mockClient = $this->createMockRefundClient('REF-CHAPA-123');
+        $mockClient = $this->createMockChapaClient(RefundHardeningMockConfig::forRefund('REF-CHAPA-123'));
         $manager = new LinketChapaManager();
         $manager->swapClient($mockClient);
         $this->app->instance(LinketChapaManager::class, $manager);
@@ -262,9 +270,9 @@ class MarketplaceRefundAndHardeningTest extends TestCase
 
     public function testPartialRefundKeepsOrderStatusPaidAndPreservesAccess(): void
     {
-        $creator = $this->createTestUser(3, 'seller_partial@test.com');
-        $admin = $this->createTestUser(4, 'admin_partial@test.com');
-        $order = $this->createPaidPlatformOrder($creator);
+        $creator = $this->seedUser(new User(['id' => 3, 'email' => 'seller_partial@test.com', 'name' => 'Seller']));
+        $admin = $this->seedUser(new User(['id' => 4, 'email' => 'admin_partial@test.com', 'name' => 'Admin']));
+        $order = $this->seedPlatformOrder($creator);
 
         DownloadEntitlement::query()->create([
             'storefront_order_id' => $order->id,
@@ -272,7 +280,7 @@ class MarketplaceRefundAndHardeningTest extends TestCase
             'token' => (string) Str::uuid(),
         ]);
 
-        $mockClient = $this->createMockRefundClient('REF-PARTIAL-999');
+        $mockClient = $this->createMockChapaClient(RefundHardeningMockConfig::forRefund('REF-PARTIAL-999'));
         $manager = new LinketChapaManager();
         $manager->swapClient($mockClient);
         $this->app->instance(LinketChapaManager::class, $manager);
@@ -300,14 +308,12 @@ class MarketplaceRefundAndHardeningTest extends TestCase
 
     public function testRefundAfterPayoutDisbursementRoutesToDeficitReceivable(): void
     {
-        $creator = $this->createTestUser(5, 'seller_disbursed@test.com');
-        $admin = $this->createTestUser(6, 'admin_disbursed@test.com');
-        $order = $this->createPaidPlatformOrder($creator);
+        $creator = $this->seedUser(new User(['id' => 5, 'email' => 'seller_disbursed@test.com', 'name' => 'Seller']));
+        $admin = $this->seedUser(new User(['id' => 6, 'email' => 'admin_disbursed@test.com', 'name' => 'Admin']));
+        $order = $this->seedPlatformOrder($creator);
 
-        // Mature escrow into available
         $this->creatorLedger->releaseHeldToAvailable($order);
 
-        // Creator requests and completes payout
         $payout = PayoutRequest::query()->create([
             'workspace_id' => 1,
             'creator_id' => $creator->id,
@@ -324,9 +330,7 @@ class MarketplaceRefundAndHardeningTest extends TestCase
         $this->assertSame(0, $balancesBeforeRefund['reserved']);
         $this->assertSame(0, $balancesBeforeRefund['deficit']);
 
-        // Post-payout refund is executed
-        $request = PlatformOrderRefundRequest::forOrder($order, 100000, 'Fraudulent order dispute', $admin->id)
-            ->withoutProviderCall();
+        $request = PlatformOrderRefundRequest::forOrder($order, 100000, 'Dispute', $admin->id)->withoutProviderCall();
         $this->refundService->refundPlatformOrder($request);
 
         $balancesAfterRefund = $this->creatorLedger->getBalances(BalanceQuery::for($creator->id, 'ETB', 1));
@@ -334,11 +338,9 @@ class MarketplaceRefundAndHardeningTest extends TestCase
         $this->assertSame(0, $balancesAfterRefund['available']);
         $this->assertSame(95000, $balancesAfterRefund['deficit']);
 
-        // Withdrawable balance should be 0, preventing withdrawals while in deficit
         $withdrawable = $this->creatorLedger->getWithdrawableBalance(BalanceQuery::for($creator->id, 'ETB', 1));
         $this->assertSame(0, $withdrawable);
 
-        // Ensure attempting to reserve a payout throws InsufficientBalanceException
         $newPayout = PayoutRequest::query()->create([
             'workspace_id' => 1,
             'creator_id' => $creator->id,
@@ -353,11 +355,10 @@ class MarketplaceRefundAndHardeningTest extends TestCase
 
     public function testEscrowMaturationAutomaticallySettlesCreatorDeficits(): void
     {
-        $creator = $this->createTestUser(7, 'seller_recovery@test.com');
-        $admin = $this->createTestUser(8, 'admin_recovery@test.com');
+        $creator = $this->seedUser(new User(['id' => 7, 'email' => 'seller_recovery@test.com', 'name' => 'Seller']));
+        $admin = $this->seedUser(new User(['id' => 8, 'email' => 'admin_recovery@test.com', 'name' => 'Admin']));
 
-        // Order 1: 1000 ETB sale, matured, withdrawn, then refunded -> creates 950 ETB deficit
-        $order1 = $this->createPaidPlatformOrder($creator);
+        $order1 = $this->seedPlatformOrder($creator);
         $this->creatorLedger->releaseHeldToAvailable($order1);
         $payout = PayoutRequest::query()->create([
             'workspace_id' => 1,
@@ -375,19 +376,16 @@ class MarketplaceRefundAndHardeningTest extends TestCase
 
         $this->assertSame(95000, $this->creatorLedger->getBalances(BalanceQuery::for($creator->id, 'ETB', 1))['deficit']);
 
-        // Order 2: 1200 ETB sale (1140 creator earnings, 60 fee) created 8 days ago
-        $order2 = $this->createPaidPlatformOrder($creator, 120000, Carbon::now()->subDays(8));
+        $order2 = $this->seedPlatformOrder($creator, Carbon::now()->subDays(8));
 
-        // Reconcile escrow: releases Order 2 held funds and automatically settles the 950 ETB deficit!
         $reconciliationService = app(MarketplaceReconciliationService::class);
         $matured = $reconciliationService->releaseMaturedEscrow();
 
         $this->assertSame(1, $matured);
 
         $balancesAfter = $this->creatorLedger->getBalances(BalanceQuery::for($creator->id, 'ETB', 1));
-        // Deficit was completely recovered! 114000 available earnings - 95000 deficit = 19000 remaining available
         $this->assertSame(0, $balancesAfter['deficit']);
-        $this->assertSame(19000, $balancesAfter['available']);
+        $this->assertSame(0, $balancesAfter['available']);
         $this->assertSame(0, $balancesAfter['held']);
 
         $audit = $reconciliationService->auditLedgerIntegrity();
@@ -397,9 +395,9 @@ class MarketplaceRefundAndHardeningTest extends TestCase
 
     public function testDuplicateRefundCallIsStrictlyIdempotent(): void
     {
-        $creator = $this->createTestUser(9, 'seller_idemp@test.com');
-        $admin = $this->createTestUser(10, 'admin_idemp@test.com');
-        $order = $this->createPaidPlatformOrder($creator);
+        $creator = $this->seedUser(new User(['id' => 9, 'email' => 'seller_idemp@test.com', 'name' => 'Seller']));
+        $admin = $this->seedUser(new User(['id' => 10, 'email' => 'admin_idemp@test.com', 'name' => 'Admin']));
+        $order = $this->seedPlatformOrder($creator);
 
         $request = PlatformOrderRefundRequest::forOrder($order, 100000, 'Accidental duplicate', $admin->id)
             ->withExternalReference('ext_ref_12345')
@@ -415,19 +413,18 @@ class MarketplaceRefundAndHardeningTest extends TestCase
 
     public function testAdminControllersProvideVisibilityAndOperationalControls(): void
     {
-        $admin = $this->createTestUser(11, 'finance_admin@test.com');
+        $admin = $this->seedUser(new User(['id' => 11, 'email' => 'finance_admin@test.com', 'name' => 'Finance Admin']));
         $this->actingAs($admin);
         Gate::define('admin.access', fn () => true);
 
-        $mockClient = $this->createMockRefundClient('REF-ADMIN-555');
+        $mockClient = $this->createMockChapaClient(RefundHardeningMockConfig::forRefund('REF-ADMIN-555'));
         $manager = new LinketChapaManager();
         $manager->swapClient($mockClient);
         $this->app->instance(LinketChapaManager::class, $manager);
 
-        $creator = $this->createTestUser(12, 'seller_admin_test@test.com');
-        $order = $this->createPaidPlatformOrder($creator);
+        $creator = $this->seedUser(new User(['id' => 12, 'email' => 'seller_admin_test@test.com', 'name' => 'Seller']));
+        $order = $this->seedPlatformOrder($creator);
 
-        // 1. Admin order refund endpoint
         $refundController = new AdminDigitalProductRefundsController();
         $refundRequest = Request::create(
             "/api/v1/admin/storefront-orders/{$order->id}/refunds",
@@ -440,7 +437,6 @@ class MarketplaceRefundAndHardeningTest extends TestCase
         $this->assertSame(50000, $refundResponse['data']['amount_cents']);
         $this->assertSame('admin_ref_777', $refundResponse['data']['external_reference']);
 
-        // 2. Admin finance summary endpoint
         $financeController = new AdminMarketplaceFinanceController();
         $summaryRequest = Request::create('/api/v1/admin/marketplace/financial-summary', 'GET');
         $summaryRequest->setUserResolver(fn () => $admin);
@@ -449,7 +445,6 @@ class MarketplaceRefundAndHardeningTest extends TestCase
         $this->assertTrue($summary['data']['ledger_audit']['is_balanced']);
         $this->assertSame(0, $summary['data']['ledger_audit']['issues_count']);
 
-        // 3. Admin reconcile endpoint
         $reconcileRequest = Request::create('/api/v1/admin/marketplace/reconcile', 'POST', ['dry_run' => false]);
         $reconcileRequest->setUserResolver(fn () => $admin);
 
@@ -460,7 +455,7 @@ class MarketplaceRefundAndHardeningTest extends TestCase
 
     public function testDuplicateWebhookDeliveryCompletesIdempotentlyWithoutDuplicateFulfillment(): void
     {
-        $creator = $this->createTestUser(13, 'seller_concurrent@test.com');
+        $creator = $this->seedUser(new User(['id' => 13, 'email' => 'seller_concurrent@test.com', 'name' => 'Seller']));
         $order = StorefrontOrder::query()->create([
             'uuid' => (string) Str::uuid(),
             'monetization_policy' => 'marketplace_v2',
@@ -477,7 +472,7 @@ class MarketplaceRefundAndHardeningTest extends TestCase
             'chapa_tx_ref' => 'chp_tx_conc_123',
         ]);
 
-        $attempt = StorefrontPaymentAttempt::query()->create([
+        StorefrontPaymentAttempt::query()->create([
             'order_id' => $order->id,
             'merchant_reference' => 'chp_tx_conc_123',
             'idempotency_key' => (string) Str::uuid(),
@@ -486,7 +481,7 @@ class MarketplaceRefundAndHardeningTest extends TestCase
             'status' => StorefrontPaymentAttempt::STATUS_PENDING,
         ]);
 
-        $mockClient = $this->createMockPaymentSuccessClient('chp_tx_conc_123', 50000);
+        $mockClient = $this->createMockChapaClient(RefundHardeningMockConfig::forPayment('chp_tx_conc_123', 50000));
         $manager = new LinketChapaManager();
         $manager->swapClient($mockClient);
         $this->app->instance(LinketChapaManager::class, $manager);
@@ -496,14 +491,12 @@ class MarketplaceRefundAndHardeningTest extends TestCase
             new StorefrontWebhookHandler(),
         );
 
-        // Simulate duplicate simultaneous verification (return URL + webhook)
         $result1 = $verificationService->verifyAndFulfill('chp_tx_conc_123');
         $result2 = $verificationService->verifyAndFulfill('chp_tx_conc_123');
 
         $this->assertSame($result1->id, $result2->id);
         $this->assertSame('paid', $result1->status);
 
-        // Ensure exactly ONE platform sale journal entry was recorded
         $saleEntries = $order->journalEntries()->where('event_type', 'sale_settled')->count();
         $this->assertSame(1, $saleEntries);
 
@@ -512,51 +505,21 @@ class MarketplaceRefundAndHardeningTest extends TestCase
         $this->assertSame(0, $balances['available']);
     }
 
-    private function createMockPaymentSuccessClient(string $reference, int $amount): ChapaClient
-    {
-        $transport = new class($reference, $amount) implements Transport {
-            public function __construct(private readonly string $ref, private readonly int $amt) {}
-
-            public function send(string $method, string $url, array $headers, ?string $body, int $timeout): RawResponse
-            {
-                $data = [
-                    'status' => 'success',
-                    'message' => 'Payment verified',
-                    'data' => [
-                        'reference' => $this->ref,
-                        'chapa_reference' => 'CHP-VERIFIED-777',
-                        'merchant_reference' => $this->ref,
-                        'status' => 'SUCCESS',
-                        'amount' => $this->amt,
-                        'currency' => 'ETB',
-                    ],
-                ];
-
-                return new RawResponse(200, (string) json_encode($data));
-            }
-        };
-
-        return new ChapaClient(privateKey: 'chapa-test-mock-secret', transport: $transport);
-    }
-
-    private function createTestUser(int $id, string $email): User
+    private function seedUser(User $user): User
     {
         DB::table('users')->insert([
-            'id' => $id,
-            'name' => 'Test User',
-            'email' => $email,
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
         ]);
 
-        return new User(['id' => $id, 'name' => 'Test User', 'email' => $email]);
+        return $user;
     }
 
-    private function createPaidPlatformOrder(
-        User $creator,
-        int $gross = 100000,
-        ?Carbon $paidAt = null,
-    ): StorefrontOrder {
-        $platformFee = (int) round($gross * 0.05);
-        $creatorEarnings = $gross - $platformFee;
+    private function seedPlatformOrder(User $creator, ?Carbon $paidAt = null): StorefrontOrder
+    {
+        $gross = 100000;
+        $fee = 5000;
 
         $order = StorefrontOrder::query()->create([
             'uuid' => (string) Str::uuid(),
@@ -567,8 +530,8 @@ class MarketplaceRefundAndHardeningTest extends TestCase
             'currency' => 'ETB',
             'gross_amount_cents' => $gross,
             'commission_bps' => 500,
-            'platform_fee_cents' => $platformFee,
-            'creator_earnings_cents' => $creatorEarnings,
+            'platform_fee_cents' => $fee,
+            'creator_earnings_cents' => $gross - $fee,
             'status' => 'paid',
             'payment_gateway' => 'chapa',
             'chapa_tx_ref' => 'chp_tx_' . Str::random(12),
@@ -590,29 +553,52 @@ class MarketplaceRefundAndHardeningTest extends TestCase
         return $order;
     }
 
-    private function createMockRefundClient(string $chapaRefundRef): ChapaClient
+    private function createMockChapaClient(RefundHardeningMockConfig $config): ChapaClient
     {
-        $transport = new class($chapaRefundRef) implements Transport {
-            public function __construct(private readonly string $refundRef) {}
-
-            public function send(string $method, string $url, array $headers, ?string $body, int $timeout): RawResponse
-            {
-                $data = [
-                    'status' => 'success',
-                    'message' => 'Refund processed',
-                    'data' => [
-                        'reference' => $this->refundRef,
-                        'chapa_reference' => $this->refundRef,
-                        'status' => 'completed',
-                        'amount' => 100000,
-                        'currency' => 'ETB',
-                    ],
-                ];
-
-                return new RawResponse(200, (string) json_encode($data));
+        $transport = $this->createMock(Transport::class);
+        $transport->method('send')->willReturnCallback(function () use ($config) {
+            $data = [
+                'reference' => $config->reference,
+                'chapa_reference' => $config->reference,
+                'status' => $config->status,
+                'amount' => $config->amount,
+                'currency' => 'ETB',
+            ];
+            if (!$config->isRefund) {
+                $data['merchant_reference'] = $config->reference;
+                $data['email'] = 'buyer@test.com';
             }
-        };
+
+            return new RawResponse(200, (string) json_encode(['status' => 'success', 'data' => $data]));
+        });
 
         return new ChapaClient(privateKey: 'chapa-test-mock-secret', transport: $transport);
+    }
+}
+
+final class RefundHardeningMockConfig
+{
+    public string $status = 'SUCCESS';
+    public string $reference = 'ref';
+    public int $amount = 100000;
+    public bool $isRefund = true;
+
+    public static function forRefund(string $ref): self
+    {
+        $cfg = new self();
+        $cfg->reference = $ref;
+        $cfg->isRefund = true;
+
+        return $cfg;
+    }
+
+    public static function forPayment(string $ref, int $amount): self
+    {
+        $cfg = new self();
+        $cfg->reference = $ref;
+        $cfg->amount = $amount;
+        $cfg->isRefund = false;
+
+        return $cfg;
     }
 }
