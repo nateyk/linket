@@ -76,7 +76,7 @@ describe('admin Support hub DOM authorization', () => {
       within(inbox).getByRole('link', {name: /All conversations/}).getAttribute('href'),
     ).toBe('/agent/conversations?viewId=all');
     expect(
-      screen.getByRole('link', {name: /Open inbox/}).getAttribute('href'),
+      screen.getByRole('button', {name: /Open inbox/}).getAttribute('href'),
     ).toBe('/agent/conversations?viewId=all');
     expect(screen.getByRole('link', {name: /Saved replies/})).toBeTruthy();
     expect(screen.queryByRole('link', {name: /Support reports/})).toBeNull();
@@ -93,7 +93,7 @@ describe('admin Support hub DOM authorization', () => {
       within(management).getByRole('link', {name: /Support reports/}).getAttribute('href'),
     ).toBe('/agent/reports');
     expect(screen.queryByRole('navigation', {name: 'Inbox and conversations'})).toBeNull();
-    expect(screen.queryByRole('link', {name: /Open inbox/})).toBeNull();
+    expect(screen.queryByRole('button', {name: /Open inbox/})).toBeNull();
   });
 
   it('shows the complete management navigation when every permission is granted', () => {
