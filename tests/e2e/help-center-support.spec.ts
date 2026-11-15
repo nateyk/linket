@@ -209,5 +209,26 @@ test.describe('isolated Help Center + support', () => {
         .getByText(/E2E Getting Started|categories|articles|arrange/i)
         .first(),
     ).toBeVisible({timeout: 30000});
+
+    // Administrators can discover and open support workflows directly from
+    // the native admin sidebar, then return from the dedicated agent inbox.
+    await page.goto('/admin/support');
+    await expect(page.getByText('Inbox and conversations')).toBeVisible();
+    const allConversations = page.getByRole('link', {name: /All conversations/});
+    await expect(allConversations).toHaveAttribute(
+      'href',
+      '/agent/conversations?viewId=all',
+    );
+    await expect(
+      page.locator('[data-slot="sidebar"]').getByRole('link', {name: 'Support'}),
+    ).toHaveAttribute('href', '/admin/support');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth))
+      .toBeLessThanOrEqual(390);
+
+    await allConversations.click();
+    await expect(page).toHaveURL(/\/agent\/conversations/);
+    await expect(page.getByRole('link', {name: 'Admin dashboard'})).toBeVisible();
+    await page.getByRole('link', {name: 'Admin dashboard'}).click();
+    await expect(page).toHaveURL('/admin/support');
   });
 });
