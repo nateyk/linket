@@ -14,7 +14,7 @@ import {DashboardSidenavChildrenProps} from '@common/ui/dashboard-layout/dashboa
 import {Badge} from '@ui/badge/badge';
 import {Trans} from '@ui/i18n/trans';
 import {NotificationsIcon} from '@ui/icons/material/Notifications';
-import {LayoutDashboardIcon} from 'lucide-react';
+import {SettingsIcon} from '@ui/icons/material/Settings';
 import {DialogTrigger} from '@ui/overlays/dialog/dialog-trigger';
 import {Fragment, useCallback} from 'react';
 import {Link} from 'react-router';
@@ -33,7 +33,6 @@ const defaultIcons = {
 
 export function HelpdeskDashboardSidebar(props: DashboardSidenavChildrenProps) {
   const {isCompactMode = false} = props;
-  const {hasPermission} = useAuth();
 
   const customMenuRender = useCallback(
     (item: MenuItemConfig, menuItemProps: MenuItemProps) => (
@@ -54,16 +53,15 @@ export function HelpdeskDashboardSidebar(props: DashboardSidenavChildrenProps) {
 
   const bottomContent = (
     <Fragment>
-      {hasPermission('admin.access') && (
-        <DashboardLeftSidebarItem
-          elementType={Link}
-          to="/admin/support"
-          isCompact={isCompactMode}
-        >
-          <LayoutDashboardIcon className="size-4" aria-hidden="true" />
-          <Trans message="Admin dashboard" />
-        </DashboardLeftSidebarItem>
-      )}
+      <DashboardLeftSidebarItem
+        elementType={Link}
+        target="_blank"
+        to="/admin/settings/general"
+        isCompact={isCompactMode}
+      >
+        <SettingsIcon />
+        <Trans message="Settings" />
+      </DashboardLeftSidebarItem>
       <NotificationsItem isCompact={isCompactMode} />
       <AdminSidebarAuthUserItem
         isCompact={isCompactMode}
