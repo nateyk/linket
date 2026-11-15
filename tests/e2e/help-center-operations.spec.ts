@@ -145,13 +145,13 @@ test.describe('isolated real-browser support lifecycle', () => {
       const transfer = admin.getByRole('dialog', {name: /transfer conversation/i});
       await expect(transfer).toBeVisible();
       try {
-        await transfer.getByText('E2E HC Admin', {exact: true}).click({timeout: 8_000});
+        await transfer.getByText(/^e2e-hc-agent-/).click({timeout: 8_000});
       } catch {
         const agentsResponse = await admin.request.get('/api/v1/helpdesk/compact-agents', {
           headers: {Referer: admin.url(), Accept: 'application/json'},
         });
         throw new Error(
-          'Transfer dialog has no expected agent: dialog=' +
+          'Transfer dialog has no seeded support agent: dialog=' +
             JSON.stringify((await transfer.innerText()).slice(0, 1100)) +
             ' agents=' + agentsResponse.status() + ':' +
             (await agentsResponse.text()).slice(0, 1000),
@@ -160,7 +160,7 @@ test.describe('isolated real-browser support lifecycle', () => {
       const assignedPromise = matchResponse(admin, '/api/v1/helpdesk/agent/conversations/assignee/change', 'POST');
       await transfer.getByRole('button', {name: 'Transfer', exact: true}).click();
       await assignedPromise;
-      await expect(admin.getByText('E2E HC Admin').first()).toBeVisible();
+      await expect(admin.getByText(/^e2e-hc-agent-/).first()).toBeVisible();
 
       // Submit a real public reply using the Tiptap editor and action button.
       await admin.locator('.tiptap[contenteditable="true"]').last().fill(reply);
