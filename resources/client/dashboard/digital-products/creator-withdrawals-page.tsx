@@ -417,9 +417,9 @@ function WithdrawalHistoryTable({
           </Table.Body>
         </Table>
       </Card.Content>
-      {pagination && pagination.total > pagination.per_page && (
+      {pagination && (pagination.links?.next != null || pagination.links?.prev != null) && (
         <Card.Footer className="justify-end border-t pt-3">
-          <BackendPagination pagination={pagination} onPageChange={onPageChange} />
+          <BackendPagination response={pagination} onPageChange={onPageChange} />
         </Card.Footer>
       )}
     </Card>
