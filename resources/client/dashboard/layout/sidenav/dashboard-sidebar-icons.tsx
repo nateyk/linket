@@ -1,4 +1,5 @@
 import {
+  BanknoteArrowUpIcon,
   BriefcaseBusinessIcon,
   ChartColumnBigIcon,
   FolderIcon,
@@ -41,6 +42,7 @@ export const dashboardSidebarIcons: Record<
   '/dashboard/items': <PackageIcon />,
   '/dashboard/services': <BriefcaseBusinessIcon />,
   '/dashboard/orders': <ShoppingBagIcon />,
+  '/dashboard/withdrawals': <BanknoteArrowUpIcon />,
   '/dashboard/sales-payouts': <ShoppingBagIcon />,
   '/dashboard/sales-payments': <ShoppingBagIcon />,
 };

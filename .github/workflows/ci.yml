@@ -285,10 +285,25 @@ jobs:
       - name: Install Playwright Chromium and system libraries
         run: bash .github/scripts/install-playwright-chromium.sh
 
-      - name: Run frontend tests (Vitest + Storybook browser)
-        run: npm test
+      # Unit coverage only. The Storybook browser project does not emit
+      # the lcov report Codecov uploads.
+      - name: Run unit tests with coverage
+        run: npm run test:coverage
         env:
           LARAVEL_BYPASS_ENV_CHECK: '1'
+
+      - name: Run Storybook browser tests
+        run: npx vitest run --project storybook
+        env:
+          LARAVEL_BYPASS_ENV_CHECK: '1'
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage/lcov.info
+          disable_search: true
+          fail_ci_if_error: true
 
       - name: Audit production npm dependencies
         run: npm audit --omit=dev --audit-level=moderate

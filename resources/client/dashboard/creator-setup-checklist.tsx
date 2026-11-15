@@ -149,7 +149,7 @@ export function CreatorSetupChecklist() {
         : '/dashboard/items/new',
     },
     {
-      label: 'Configure receiving account',
+      label: 'Configure payout account',
       done: query.data.accounts.some(
         account =>
           (account.account_configured ??

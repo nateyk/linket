@@ -253,6 +253,10 @@ export const adminRoutes: RouteObject[] = [
         lazy: () => import('@app/admin/withdrawals/admin-withdrawal-review-page'),
       },
       {
+        path: 'financial',
+        lazy: () => import('@app/admin/financial/admin-financial-settings-page'),
+      },
+      {
         path: 'financial/payment-gateways',
         lazy: () => import('@app/admin/digital-products/admin-direct-payment-methods-page'),
       },

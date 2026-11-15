@@ -519,6 +519,11 @@ export const dashboardRoutes: RouteObject[] = [
           import('@app/dashboard/digital-products/direct-billing-page'),
       },
       {
+        path: 'withdrawals',
+        lazy: () =>
+          import('@app/dashboard/digital-products/creator-withdrawals-page'),
+      },
+      {
         path: 'sales-payments',
         loader: ({request}) =>
           redirect(`/dashboard/orders${new URL(request.url).search}`, 308),

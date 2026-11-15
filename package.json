@@ -7,6 +7,7 @@
     "extract": "node ./resources/scripts/extract-translations.js --write",
     "lint": "oxlint",
     "test": "vitest run",
+    "test:coverage": "vitest run --project unit --coverage",
     "test:telegram": "vitest run resources/client/account-settings/integrations-page.dom.test.tsx resources/client/admin/settings/integrations-settings.dom.test.tsx",
     "test:e2e": "playwright test"
   },
@@ -134,6 +135,7 @@
     "@vitejs/plugin-react": "^6.0.1",
     "@vitejs/plugin-react-swc": "^4.3.0",
     "@vitest/browser-playwright": "^4.1.12",
+    "@vitest/coverage-v8": "^4.1.12",
     "archiver": "^7.0.1",
     "autoprefixer": "^10.4.21",
     "babel-loader": "^10.0.0",
