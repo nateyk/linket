@@ -57,148 +57,9 @@ class MarketplaceRefundAndHardeningTest extends TestCase
         Mail::fake();
         Notification::fake();
 
-        Schema::create('users', function (Blueprint $table): void {
-            $table->id();
-            $table->string('name')->default('Creator');
-            $table->string('email')->unique();
-            $table->timestamps();
-        });
-
-        Schema::create('user_sessions', function (Blueprint $table): void {
-            $table->id();
-            $table->unsignedBigInteger('user_id');
-            $table->timestamps();
-        });
-
-        Schema::create('storefront_orders', function (Blueprint $table): void {
-            $table->id();
-            $table->uuid('uuid');
-            $table->string('monetization_policy')->nullable();
-            $table->string('collection_owner')->nullable();
-            $table->unsignedBigInteger('digital_product_id')->nullable();
-            $table->unsignedBigInteger('biolink_id')->nullable();
-            $table->unsignedBigInteger('creator_id')->nullable();
-            $table->unsignedBigInteger('buyer_user_id')->nullable();
-            $table->string('buyer_name')->nullable();
-            $table->string('buyer_email')->nullable();
-            $table->string('currency', 12)->default('ETB');
-            $table->unsignedBigInteger('gross_amount_cents')->default(0);
-            $table->integer('commission_bps')->default(0);
-            $table->unsignedBigInteger('commission_plan_id')->nullable();
-            $table->float('platform_fee_percent')->default(0);
-            $table->unsignedBigInteger('platform_fee_cents')->default(0);
-            $table->unsignedBigInteger('creator_earnings_cents')->default(0);
-            $table->string('status', 32)->default('pending_payment');
-            $table->string('payment_gateway', 32)->nullable();
-            $table->string('chapa_tx_ref', 64)->nullable();
-            $table->timestamp('receipt_sent_at')->nullable();
-            $table->timestamp('paid_at')->nullable();
-            $table->timestamps();
-        });
-
-        Schema::create('digital_products', function (Blueprint $table): void {
-            $table->id();
-            $table->unsignedBigInteger('workspace_id')->default(1);
-            $table->unsignedBigInteger('user_id')->default(1);
-            $table->string('name')->default('Digital Asset');
-            $table->string('type', 32)->default('digital');
-            $table->softDeletes();
-            $table->timestamps();
-        });
-
-        Schema::create('file_entries', function (Blueprint $table): void {
-            $table->id();
-            $table->string('name')->default('File');
-            $table->softDeletes();
-            $table->timestamps();
-        });
-
-        Schema::create('digital_product_files', function (Blueprint $table): void {
-            $table->id();
-            $table->unsignedBigInteger('digital_product_id');
-            $table->unsignedBigInteger('file_entry_id');
-            $table->timestamps();
-        });
-
-        DB::table('digital_products')->insert([
-            'id' => 1,
-            'workspace_id' => 1,
-            'user_id' => 1,
-            'name' => 'Digital Asset',
-            'type' => 'digital',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
-        Schema::create('download_entitlements', function (Blueprint $table): void {
-            $table->id();
-            $table->unsignedBigInteger('storefront_order_id');
-            $table->unsignedBigInteger('file_entry_id')->default(1);
-            $table->uuid('token');
-            $table->unsignedInteger('download_limit')->default(5);
-            $table->timestamp('expires_at')->nullable();
-            $table->timestamp('revoked_at')->nullable();
-            $table->timestamps();
-        });
-
-        Schema::create('reviews', function (Blueprint $table): void {
-            $table->id();
-            $table->unsignedBigInteger('storefront_order_id');
-            $table->timestamps();
-        });
-
-        Schema::create('digital_product_earnings_ledger', function (Blueprint $table): void {
-            $table->id();
-            $table->uuid('uuid')->nullable();
-            $table->string('source_key')->nullable();
-            $table->unsignedBigInteger('workspace_id')->nullable();
-            $table->unsignedBigInteger('creator_id')->nullable();
-            $table->unsignedBigInteger('storefront_order_id')->nullable();
-            $table->unsignedBigInteger('payout_request_id')->nullable();
-            $table->string('entry_type');
-            $table->bigInteger('amount_cents');
-            $table->string('currency', 12);
-            $table->timestamp('available_at')->nullable();
-            $table->string('description')->nullable();
-            $table->text('metadata')->nullable();
-            $table->timestamps();
-        });
-
-        Schema::create('digital_product_payment_refunds', function (Blueprint $table): void {
-            $table->id();
-            $table->unsignedBigInteger('payment_transaction_id')->nullable();
-            $table->unsignedBigInteger('storefront_order_id');
-            $table->unsignedInteger('recorded_by');
-            $table->unsignedBigInteger('amount_cents');
-            $table->unsignedBigInteger('creator_earnings_reversal_cents');
-            $table->unsignedBigInteger('platform_fee_reversal_cents');
-            $table->string('currency', 12);
-            $table->string('external_reference')->nullable();
-            $table->string('chapa_refund_reference', 190)->nullable();
-            $table->string('status', 32)->default('completed');
-            $table->text('reason');
-            $table->timestamp('refunded_at');
-            $table->timestamps();
-        });
-
-        Schema::create('payout_requests', function (Blueprint $table): void {
-            $table->id();
-            $table->unsignedBigInteger('workspace_id')->default(1);
-            $table->unsignedBigInteger('creator_id');
-            $table->unsignedBigInteger('amount_cents');
-            $table->string('currency', 12)->default('ETB');
-            $table->string('status', 32)->default('requested');
-            $table->text('payout_destination')->nullable();
-            $table->string('transfer_reference', 64)->nullable();
-            $table->timestamp('paid_at')->nullable();
-            $table->timestamp('rejected_at')->nullable();
-            $table->text('rejection_reason')->nullable();
-            $table->timestamps();
-        });
-
-        (new (require database_path('migrations/2026_11_14_200000_create_storefront_journal_tables.php')))->up();
-        (new (require database_path('migrations/2026_11_14_210000_create_storefront_payment_attempts_table.php')))->up();
-        (new (require database_path('migrations/2026_11_14_220000_create_storefront_payout_intents_table.php')))->up();
+        $this->createCoreTables();
+        $this->createStorefrontTables();
+        $this->createLedgerTables();
 
         $this->creatorLedger = new CreatorLedgerService(new JournalPostingService());
         $this->refundService = new DigitalProductRefundService();
@@ -208,22 +69,7 @@ class MarketplaceRefundAndHardeningTest extends TestCase
 
     protected function tearDown(): void
     {
-        Schema::dropIfExists('storefront_payout_intents');
-        Schema::dropIfExists('storefront_payment_attempts');
-        Schema::dropIfExists('storefront_journal_lines');
-        Schema::dropIfExists('storefront_journal_entries');
-        Schema::dropIfExists('payout_requests');
-        Schema::dropIfExists('digital_product_payment_refunds');
-        Schema::dropIfExists('digital_product_earnings_ledger');
-        Schema::dropIfExists('reviews');
-        Schema::dropIfExists('download_entitlements');
-        Schema::dropIfExists('digital_product_files');
-        Schema::dropIfExists('file_entries');
-        Schema::dropIfExists('digital_products');
-        Schema::dropIfExists('storefront_orders');
-        Schema::dropIfExists('user_sessions');
-        Schema::dropIfExists('users');
-
+        $this->dropAllTables();
         parent::tearDown();
     }
 
@@ -232,17 +78,9 @@ class MarketplaceRefundAndHardeningTest extends TestCase
         $creator = $this->seedUser(new User(['id' => 1, 'email' => 'seller_full@test.com', 'name' => 'Seller']));
         $admin = $this->seedUser(new User(['id' => 2, 'email' => 'admin_full@test.com', 'name' => 'Admin']));
         $order = $this->seedPlatformOrder($creator);
+        $this->createEntitlement($order);
 
-        DownloadEntitlement::query()->create([
-            'storefront_order_id' => $order->id,
-            'file_entry_id' => 1,
-            'token' => (string) Str::uuid(),
-        ]);
-
-        $mockClient = $this->createMockChapaClient(RefundHardeningMockConfig::forRefund('REF-CHAPA-123'));
-        $manager = new LinketChapaManager();
-        $manager->swapClient($mockClient);
-        $this->app->instance(LinketChapaManager::class, $manager);
+        $this->bindMockChapaClient(RefundHardeningMockConfig::forRefund('REF-CHAPA-123'));
 
         $request = PlatformOrderRefundRequest::forOrder($order, 100000, 'Customer dissatisfied', $admin->id);
         $refund = $this->refundService->refundPlatformOrder($request);
@@ -273,17 +111,9 @@ class MarketplaceRefundAndHardeningTest extends TestCase
         $creator = $this->seedUser(new User(['id' => 3, 'email' => 'seller_partial@test.com', 'name' => 'Seller']));
         $admin = $this->seedUser(new User(['id' => 4, 'email' => 'admin_partial@test.com', 'name' => 'Admin']));
         $order = $this->seedPlatformOrder($creator);
+        $this->createEntitlement($order);
 
-        DownloadEntitlement::query()->create([
-            'storefront_order_id' => $order->id,
-            'file_entry_id' => 1,
-            'token' => (string) Str::uuid(),
-        ]);
-
-        $mockClient = $this->createMockChapaClient(RefundHardeningMockConfig::forRefund('REF-PARTIAL-999'));
-        $manager = new LinketChapaManager();
-        $manager->swapClient($mockClient);
-        $this->app->instance(LinketChapaManager::class, $manager);
+        $this->bindMockChapaClient(RefundHardeningMockConfig::forRefund('REF-PARTIAL-999'));
 
         $request = PlatformOrderRefundRequest::forOrder($order, 40000, 'Partial adjustment', $admin->id);
         $refund = $this->refundService->refundPlatformOrder($request);
@@ -411,16 +241,13 @@ class MarketplaceRefundAndHardeningTest extends TestCase
         $this->assertSame(1, StorefrontJournalLine::query()->where('account_code', AccountCodes::PLATFORM_COMMISSION)->where('debit_cents', 5000)->count());
     }
 
-    public function testAdminControllersProvideVisibilityAndOperationalControls(): void
+    public function testAdminOrderRefundEndpointExecutesRefund(): void
     {
         $admin = $this->seedUser(new User(['id' => 11, 'email' => 'finance_admin@test.com', 'name' => 'Finance Admin']));
         $this->actingAs($admin);
         Gate::define('admin.access', fn () => true);
 
-        $mockClient = $this->createMockChapaClient(RefundHardeningMockConfig::forRefund('REF-ADMIN-555'));
-        $manager = new LinketChapaManager();
-        $manager->swapClient($mockClient);
-        $this->app->instance(LinketChapaManager::class, $manager);
+        $this->bindMockChapaClient(RefundHardeningMockConfig::forRefund('REF-ADMIN-555'));
 
         $creator = $this->seedUser(new User(['id' => 12, 'email' => 'seller_admin_test@test.com', 'name' => 'Seller']));
         $order = $this->seedPlatformOrder($creator);
@@ -436,6 +263,13 @@ class MarketplaceRefundAndHardeningTest extends TestCase
         $refundResponse = $refundController->storePlatformOrder($refundRequest, $order);
         $this->assertSame(50000, $refundResponse['data']['amount_cents']);
         $this->assertSame('admin_ref_777', $refundResponse['data']['external_reference']);
+    }
+
+    public function testAdminFinancialSummaryProvidesAuditAndPendingCounts(): void
+    {
+        $admin = $this->seedUser(new User(['id' => 13, 'email' => 'finance_summary_admin@test.com', 'name' => 'Finance Admin']));
+        $this->actingAs($admin);
+        Gate::define('admin.access', fn () => true);
 
         $financeController = new AdminMarketplaceFinanceController();
         $summaryRequest = Request::create('/api/v1/admin/marketplace/financial-summary', 'GET');
@@ -444,7 +278,15 @@ class MarketplaceRefundAndHardeningTest extends TestCase
         $summary = $financeController->summary($summaryRequest);
         $this->assertTrue($summary['data']['ledger_audit']['is_balanced']);
         $this->assertSame(0, $summary['data']['ledger_audit']['issues_count']);
+    }
 
+    public function testAdminReconcileEndpointExecutesReconciliation(): void
+    {
+        $admin = $this->seedUser(new User(['id' => 14, 'email' => 'finance_reconcile_admin@test.com', 'name' => 'Finance Admin']));
+        $this->actingAs($admin);
+        Gate::define('admin.access', fn () => true);
+
+        $financeController = new AdminMarketplaceFinanceController();
         $reconcileRequest = Request::create('/api/v1/admin/marketplace/reconcile', 'POST', ['dry_run' => false]);
         $reconcileRequest->setUserResolver(fn () => $admin);
 
@@ -455,7 +297,7 @@ class MarketplaceRefundAndHardeningTest extends TestCase
 
     public function testDuplicateWebhookDeliveryCompletesIdempotentlyWithoutDuplicateFulfillment(): void
     {
-        $creator = $this->seedUser(new User(['id' => 13, 'email' => 'seller_concurrent@test.com', 'name' => 'Seller']));
+        $creator = $this->seedUser(new User(['id' => 15, 'email' => 'seller_concurrent@test.com', 'name' => 'Seller']));
         $order = StorefrontOrder::query()->create([
             'uuid' => (string) Str::uuid(),
             'monetization_policy' => 'marketplace_v2',
@@ -481,13 +323,10 @@ class MarketplaceRefundAndHardeningTest extends TestCase
             'status' => StorefrontPaymentAttempt::STATUS_PENDING,
         ]);
 
-        $mockClient = $this->createMockChapaClient(RefundHardeningMockConfig::forPayment('chp_tx_conc_123', 50000));
-        $manager = new LinketChapaManager();
-        $manager->swapClient($mockClient);
-        $this->app->instance(LinketChapaManager::class, $manager);
+        $this->bindMockChapaClient(RefundHardeningMockConfig::forPayment('chp_tx_conc_123', 50000));
 
         $verificationService = new StorefrontPaymentVerificationService(
-            $manager,
+            app(LinketChapaManager::class),
             new StorefrontWebhookHandler(),
         );
 
@@ -503,6 +342,177 @@ class MarketplaceRefundAndHardeningTest extends TestCase
         $balances = $this->creatorLedger->getBalances(BalanceQuery::for($creator->id, 'ETB', 1));
         $this->assertSame(47500, $balances['held']);
         $this->assertSame(0, $balances['available']);
+    }
+
+    private function createCoreTables(): void
+    {
+        Schema::create('users', function (Blueprint $table): void {
+            $table->id();
+            $table->string('name')->default('Creator');
+            $table->string('email')->unique();
+            $table->timestamps();
+        });
+
+        Schema::create('user_sessions', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('user_id');
+            $table->timestamps();
+        });
+
+        Schema::create('digital_products', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('workspace_id')->default(1);
+            $table->unsignedBigInteger('user_id')->default(1);
+            $table->string('name')->default('Digital Asset');
+            $table->string('type', 32)->default('digital');
+            $table->softDeletes();
+            $table->timestamps();
+        });
+
+        Schema::create('file_entries', function (Blueprint $table): void {
+            $table->id();
+            $table->string('name')->default('File');
+            $table->softDeletes();
+            $table->timestamps();
+        });
+
+        Schema::create('digital_product_files', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('digital_product_id');
+            $table->unsignedBigInteger('file_entry_id');
+            $table->timestamps();
+        });
+
+        DB::table('digital_products')->insert([
+            'id' => 1,
+            'workspace_id' => 1,
+            'user_id' => 1,
+            'name' => 'Digital Asset',
+            'type' => 'digital',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
+
+    private function createStorefrontTables(): void
+    {
+        Schema::create('storefront_orders', function (Blueprint $table): void {
+            $table->id();
+            $table->uuid('uuid');
+            $table->string('monetization_policy')->nullable();
+            $table->string('collection_owner')->nullable();
+            $table->unsignedBigInteger('digital_product_id')->nullable();
+            $table->unsignedBigInteger('biolink_id')->nullable();
+            $table->unsignedBigInteger('creator_id')->nullable();
+            $table->unsignedBigInteger('buyer_user_id')->nullable();
+            $table->string('buyer_name')->nullable();
+            $table->string('buyer_email')->nullable();
+            $table->string('currency', 12)->default('ETB');
+            $table->unsignedBigInteger('gross_amount_cents')->default(0);
+            $table->integer('commission_bps')->default(0);
+            $table->unsignedBigInteger('commission_plan_id')->nullable();
+            $table->float('platform_fee_percent')->default(0);
+            $table->unsignedBigInteger('platform_fee_cents')->default(0);
+            $table->unsignedBigInteger('creator_earnings_cents')->default(0);
+            $table->string('status', 32)->default('pending_payment');
+            $table->string('payment_gateway', 32)->nullable();
+            $table->string('chapa_tx_ref', 64)->nullable();
+            $table->timestamp('receipt_sent_at')->nullable();
+            $table->timestamp('paid_at')->nullable();
+            $table->timestamps();
+        });
+
+        Schema::create('download_entitlements', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('storefront_order_id');
+            $table->unsignedBigInteger('file_entry_id')->default(1);
+            $table->uuid('token');
+            $table->unsignedInteger('download_limit')->default(5);
+            $table->timestamp('expires_at')->nullable();
+            $table->timestamp('revoked_at')->nullable();
+            $table->timestamps();
+        });
+
+        Schema::create('reviews', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('storefront_order_id');
+            $table->timestamps();
+        });
+    }
+
+    private function createLedgerTables(): void
+    {
+        Schema::create('digital_product_earnings_ledger', function (Blueprint $table): void {
+            $table->id();
+            $table->uuid('uuid')->nullable();
+            $table->string('source_key')->nullable();
+            $table->unsignedBigInteger('workspace_id')->nullable();
+            $table->unsignedBigInteger('creator_id')->nullable();
+            $table->unsignedBigInteger('storefront_order_id')->nullable();
+            $table->unsignedBigInteger('payout_request_id')->nullable();
+            $table->string('entry_type');
+            $table->bigInteger('amount_cents');
+            $table->string('currency', 12);
+            $table->timestamp('available_at')->nullable();
+            $table->string('description')->nullable();
+            $table->text('metadata')->nullable();
+            $table->timestamps();
+        });
+
+        Schema::create('digital_product_payment_refunds', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('payment_transaction_id')->nullable();
+            $table->unsignedBigInteger('storefront_order_id');
+            $table->unsignedInteger('recorded_by');
+            $table->unsignedBigInteger('amount_cents');
+            $table->unsignedBigInteger('creator_earnings_reversal_cents');
+            $table->unsignedBigInteger('platform_fee_reversal_cents');
+            $table->string('currency', 12);
+            $table->string('external_reference')->nullable();
+            $table->string('chapa_refund_reference', 190)->nullable();
+            $table->string('status', 32)->default('completed');
+            $table->text('reason');
+            $table->timestamp('refunded_at');
+            $table->timestamps();
+        });
+
+        Schema::create('payout_requests', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('workspace_id')->default(1);
+            $table->unsignedBigInteger('creator_id');
+            $table->unsignedBigInteger('amount_cents');
+            $table->string('currency', 12)->default('ETB');
+            $table->string('status', 32)->default('requested');
+            $table->text('payout_destination')->nullable();
+            $table->string('transfer_reference', 64)->nullable();
+            $table->timestamp('paid_at')->nullable();
+            $table->timestamp('rejected_at')->nullable();
+            $table->text('rejection_reason')->nullable();
+            $table->timestamps();
+        });
+
+        (new (require database_path('migrations/2026_11_14_200000_create_storefront_journal_tables.php')))->up();
+        (new (require database_path('migrations/2026_11_14_210000_create_storefront_payment_attempts_table.php')))->up();
+        (new (require database_path('migrations/2026_11_14_220000_create_storefront_payout_intents_table.php')))->up();
+    }
+
+    private function dropAllTables(): void
+    {
+        Schema::dropIfExists('storefront_payout_intents');
+        Schema::dropIfExists('storefront_payment_attempts');
+        Schema::dropIfExists('storefront_journal_lines');
+        Schema::dropIfExists('storefront_journal_entries');
+        Schema::dropIfExists('payout_requests');
+        Schema::dropIfExists('digital_product_payment_refunds');
+        Schema::dropIfExists('digital_product_earnings_ledger');
+        Schema::dropIfExists('reviews');
+        Schema::dropIfExists('download_entitlements');
+        Schema::dropIfExists('digital_product_files');
+        Schema::dropIfExists('file_entries');
+        Schema::dropIfExists('digital_products');
+        Schema::dropIfExists('storefront_orders');
+        Schema::dropIfExists('user_sessions');
+        Schema::dropIfExists('users');
     }
 
     private function seedUser(User $user): User
@@ -551,6 +561,23 @@ class MarketplaceRefundAndHardeningTest extends TestCase
         $this->creatorLedger->recordPlatformSale($order);
 
         return $order;
+    }
+
+    private function createEntitlement(StorefrontOrder $order): DownloadEntitlement
+    {
+        return DownloadEntitlement::query()->create([
+            'storefront_order_id' => $order->id,
+            'file_entry_id' => 1,
+            'token' => (string) Str::uuid(),
+        ]);
+    }
+
+    private function bindMockChapaClient(RefundHardeningMockConfig $config): void
+    {
+        $mockClient = $this->createMockChapaClient($config);
+        $manager = new LinketChapaManager();
+        $manager->swapClient($mockClient);
+        $this->app->instance(LinketChapaManager::class, $manager);
     }
 
     private function createMockChapaClient(RefundHardeningMockConfig $config): ChapaClient
