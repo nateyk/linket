@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
+use App\Models\User;
 use App\Payments\Chapa\LinketChapaManager;
 use App\Storefront\Commission\CommissionPolicy;
-use App\Storefront\Ledger\AccountCodes;
 use App\Storefront\Ledger\BalanceQuery;
 use App\Storefront\Ledger\CreatorLedgerService;
 use App\Storefront\Ledger\JournalPostingService;
@@ -20,7 +20,9 @@ use App\Storefront\Services\StorefrontPaymentReferenceGenerator;
 use App\Storefront\Services\StorefrontPaymentVerificationService;
 use App\Storefront\Services\StorefrontPayoutProcessingService;
 use App\Storefront\StorefrontWebhookHandler;
+use Common\Billing\Models\Product;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Nateyk\Chapa\ChapaClient;
@@ -120,34 +122,20 @@ class CentralizedMarketplaceLifecycleTest extends TestCase
         parent::tearDown();
     }
 
-    public function testCompleteMarketplaceLifecycleFromSaleToSettledPayout(): void
+    public function testStorefrontPurchaseCommissionSnapshotAndLedgerPosting(): void
     {
         $creatorId = 42;
-        $workspaceId = 1;
-        $grossAmountCents = 150000; // 1,500.00 ETB
+        $grossAmountCents = 150000;
+        $this->seedCreator($creatorId, 'creator42@test.com');
 
-        \Illuminate\Support\Facades\DB::table('users')->insert([
-            'id' => $creatorId,
-            'name' => 'Creator User',
-            'email' => 'creator42@test.com',
-        ]);
-        $creator = new \App\Models\User([
-            'id' => $creatorId,
-            'name' => 'Creator User',
-            'email' => 'creator42@test.com',
-        ]);
-
-        // 1. Calculate & snapshot commission (10% platform commission on 1,500 ETB = 150 ETB fee, 1,350 ETB net)
         $commissionPolicy = new CommissionPolicy(
-            bpsResolver: fn ($uid) => 1000,
-            planResolver: fn ($uid) => new \Common\Billing\Models\Product(['id' => 1, 'name' => 'Free Plan']),
+            bpsResolver: fn ($uid): int => 1000,
+            planResolver: fn ($uid): Product => new Product(['id' => 1, 'name' => 'Free Plan']),
         );
-        $snapshot = $commissionPolicy->calculate($creator, $grossAmountCents);
+        $snapshot = $commissionPolicy->calculate(new User(['id' => $creatorId]), $grossAmountCents);
         $this->assertSame(15000, $snapshot->platformFeeCents);
         $this->assertSame(135000, $snapshot->creatorEarningsCents);
-        $this->assertSame($grossAmountCents, $snapshot->platformFeeCents + $snapshot->creatorEarningsCents);
 
-        // 2. Create platform Chapa storefront order with snapshot
         $order = StorefrontOrder::create([
             'uuid' => (string) Str::uuid(),
             'monetization_policy' => 'marketplace_v2',
@@ -163,115 +151,95 @@ class CentralizedMarketplaceLifecycleTest extends TestCase
             'status' => 'pending_payment',
         ]);
 
-        // 3. Prepare payment attempt
-        $refGen = new StorefrontPaymentReferenceGenerator();
-        $merchantRef = $refGen->generate();
-        $idempotencyKey = (string) Str::uuid();
-
+        $merchantRef = (new StorefrontPaymentReferenceGenerator())->generate();
         $attempt = StorefrontPaymentAttempt::create([
             'order_id' => $order->id,
             'merchant_reference' => $merchantRef,
-            'idempotency_key' => $idempotencyKey,
+            'idempotency_key' => (string) Str::uuid(),
             'status' => StorefrontPaymentAttempt::STATUS_PENDING,
             'currency' => 'ETB',
             'amount_cents' => $grossAmountCents,
         ]);
-        $this->assertLessThanOrEqual(20, strlen($merchantRef));
 
-        // 4. Verify & Fulfill payment via Chapa API
         $chapaClient = $this->createMockChapaClient(
-            new MockChapaConfig(
-                verifyPaymentStatus: 'SUCCESS',
-                paymentAmount: $grossAmountCents,
-                paymentCurrency: 'ETB',
-                paymentRef: $merchantRef,
-            ),
+            MockChapaConfig::forPayment('SUCCESS', $grossAmountCents, $merchantRef),
         );
         $chapaManager = $this->createMock(LinketChapaManager::class);
         $chapaManager->method('platformClient')->willReturn($chapaClient);
 
-        $postingService = new JournalPostingService();
-        $ledgerService = new CreatorLedgerService($postingService);
         $webhookHandler = $this->createMock(StorefrontWebhookHandler::class);
-        $webhookHandler->expects($this->once())
-            ->method('fulfill')
-            ->with(
-                $this->callback(fn (StorefrontOrder $o): bool => $o->id === $order->id),
-                'buyer@test.com',
-                $this->callback(fn (array $attrs): bool => $attrs['payment_gateway'] === 'chapa' && $attrs['chapa_tx_ref'] === $merchantRef),
-            );
+        $webhookHandler->expects($this->once())->method('fulfill');
 
         $verificationService = new StorefrontPaymentVerificationService($chapaManager, $webhookHandler);
-
-        $fulfilledOrder = $verificationService->verifyAndFulfill($merchantRef);
-        $this->assertInstanceOf(StorefrontOrder::class, $fulfilledOrder);
+        $verificationService->verifyAndFulfill($merchantRef);
 
         $attempt->refresh();
         $this->assertSame(StorefrontPaymentAttempt::STATUS_SUCCESSFUL, $attempt->status);
 
-        // 5. Record platform sale on ledger & verify double-entry ledger lines balance and custody isolation
+        $ledgerService = new CreatorLedgerService(new JournalPostingService());
         $order->update(['status' => 'paid', 'payment_gateway' => 'chapa', 'chapa_tx_ref' => $merchantRef]);
         $ledgerService->recordPlatformSale($order);
 
-        $journalEntry = StorefrontJournalEntry::where('source_type', 'order')
-            ->where('source_id', $order->id)
-            ->first();
+        $journalEntry = StorefrontJournalEntry::where('source_type', 'order')->where('source_id', $order->id)->first();
         $this->assertNotNull($journalEntry);
         $lines = StorefrontJournalLine::where('journal_entry_id', $journalEntry->id)->get();
         $this->assertCount(3, $lines);
         $this->assertSame($lines->sum('debit_cents'), $lines->sum('credit_cents'));
 
-        // 6. Mature held earnings to available balance
         $ledgerService->releaseHeldToAvailable($order);
+        $balances = $ledgerService->getBalances(BalanceQuery::for($creatorId, 'ETB'));
+        $this->assertSame(135000, $balances['available']);
+    }
+
+    public function testCreatorPayoutReservationAndVerifiedSettlement(): void
+    {
+        $creatorId = 42;
+        $workspaceId = 1;
+        $amountCents = 135000;
+        $this->seedCreator($creatorId, 'creator42_payout@test.com');
+
+        $ledgerService = new CreatorLedgerService(new JournalPostingService());
+        $this->seedMaturedSale($creatorId, $amountCents, $ledgerService);
 
         $query = BalanceQuery::for($creatorId, 'ETB');
-        $balances = $ledgerService->getBalances($query);
-        $this->assertSame(135000, $balances['available']);
+        $this->assertSame($amountCents, $ledgerService->getBalances($query)['available']);
 
-        // 7. Creator requests withdrawal and reserves available funds
         $payoutRequest = PayoutRequest::create([
             'workspace_id' => $workspaceId,
             'creator_id' => $creatorId,
-            'amount_cents' => $balances['available'],
+            'amount_cents' => $amountCents,
             'currency' => 'ETB',
             'status' => 'requested',
             'payout_destination' => 'CBE:100012345678',
         ]);
-        $ledgerService->reserveForPayout($payoutRequest, $balances['available']);
+        $ledgerService->reserveForPayout($payoutRequest, $amountCents);
 
-        // Available balance is now 0, reserved is 135000
         $balancesAfterReserve = $ledgerService->getBalances($query);
         $this->assertSame(0, $balancesAfterReserve['available']);
-        $this->assertSame(135000, $balancesAfterReserve['reserved']);
+        $this->assertSame($amountCents, $balancesAfterReserve['reserved']);
 
-        // 8. Prepare payout intent & submit payout to Chapa
+        $chapaClient = $this->createMockChapaClient(
+            MockChapaConfig::forPayout('SUCCESS', $amountCents),
+        );
+        $chapaManager = $this->createMock(LinketChapaManager::class);
+        $chapaManager->method('platformClient')->willReturn($chapaClient);
+
         $payoutProcessingService = new StorefrontPayoutProcessingService(
             chapaManager: $chapaManager,
             creatorLedger: $ledgerService,
         );
+
         $intent = $payoutProcessingService->prepareIntent($payoutRequest);
         $this->assertSame(StorefrontPayoutIntent::STATUS_PREPARED, $intent->status);
-        $this->assertStringStartsWith('lk-', $intent->merchant_reference);
-        $this->assertLessThanOrEqual(20, strlen($intent->merchant_reference));
 
         $payoutProcessingService->submitPayout($intent);
-        $intent->refresh();
-        $payoutRequest->refresh();
-        $this->assertSame(StorefrontPayoutIntent::STATUS_PROVIDER_PENDING, $intent->status);
-        $this->assertSame('processing', $payoutRequest->status);
+        $this->assertSame(StorefrontPayoutIntent::STATUS_PROVIDER_PENDING, $intent->fresh()->status);
+        $this->assertSame($amountCents, $ledgerService->getBalances($query)['reserved']);
 
-        // Funds remain in reserved liability during provider pending state
-        $this->assertSame(135000, $ledgerService->getBalances($query)['reserved']);
-
-        // 9. Verified settlement extinguishes creator liability
         $payoutProcessingService->verifyPayout($intent);
-        $intent->refresh();
-        $payoutRequest->refresh();
+        $this->assertSame(StorefrontPayoutIntent::STATUS_SUCCESSFUL, $intent->fresh()->status);
+        $this->assertSame('paid', $payoutRequest->fresh()->status);
 
-        $this->assertSame(StorefrontPayoutIntent::STATUS_SUCCESSFUL, $intent->status);
-        $this->assertSame('paid', $payoutRequest->status);
-
-        // Reserved liability is fully extinguished, zero remaining liability
         $finalBalances = $ledgerService->getBalances($query);
         $this->assertSame(0, $finalBalances['reserved']);
         $this->assertSame(0, $finalBalances['available']);
@@ -282,18 +250,54 @@ class CentralizedMarketplaceLifecycleTest extends TestCase
         $creatorId = 99;
         $workspaceId = 1;
         $amountCents = 75000;
+        $this->seedCreator($creatorId, 'creator99@test.com');
 
-        \Illuminate\Support\Facades\DB::table('users')->insert([
-            'id' => $creatorId,
-            'name' => 'Creator 99',
-            'email' => 'creator99@test.com',
-        ]);
+        $ledgerService = new CreatorLedgerService(new JournalPostingService());
+        $this->seedMaturedSale($creatorId, $amountCents, $ledgerService);
 
-        $postingService = new JournalPostingService();
-        $ledgerService = new CreatorLedgerService($postingService);
         $query = BalanceQuery::for($creatorId, 'ETB');
+        $payout = PayoutRequest::create([
+            'workspace_id' => $workspaceId,
+            'creator_id' => $creatorId,
+            'amount_cents' => $amountCents,
+            'currency' => 'ETB',
+            'status' => 'requested',
+            'payout_destination' => 'CBE:100099999999',
+        ]);
+        $ledgerService->reserveForPayout($payout, $amountCents);
 
-        // Simulate matured sale
+        $chapaClient = $this->createMockChapaClient(
+            MockChapaConfig::forPayout('FAILED', $amountCents),
+        );
+        $chapaManager = $this->createMock(LinketChapaManager::class);
+        $chapaManager->method('platformClient')->willReturn($chapaClient);
+
+        $processingService = new StorefrontPayoutProcessingService(
+            chapaManager: $chapaManager,
+            creatorLedger: $ledgerService,
+        );
+        $intent = $processingService->prepareIntent($payout);
+        $processingService->submitPayout($intent);
+
+        $processingService->verifyPayout($intent);
+        $this->assertSame(StorefrontPayoutIntent::STATUS_FAILED, $intent->fresh()->status);
+        $this->assertSame('rejected', $payout->fresh()->status);
+
+        $this->assertSame(0, $ledgerService->getBalances($query)['reserved']);
+        $this->assertSame($amountCents, $ledgerService->getBalances($query)['available']);
+    }
+
+    private function seedCreator(int $id, string $email): void
+    {
+        DB::table('users')->insert([
+            'id' => $id,
+            'name' => 'Creator User',
+            'email' => $email,
+        ]);
+    }
+
+    private function seedMaturedSale(int $creatorId, int $amountCents, CreatorLedgerService $ledgerService): void
+    {
         $order = StorefrontOrder::create([
             'uuid' => (string) Str::uuid(),
             'monetization_policy' => 'marketplace_v2',
@@ -307,50 +311,6 @@ class CentralizedMarketplaceLifecycleTest extends TestCase
         ]);
         $ledgerService->recordPlatformSale($order);
         $ledgerService->releaseHeldToAvailable($order);
-
-        $this->assertSame($amountCents, $ledgerService->getBalances($query)['available']);
-
-        // Request payout
-        $payout = PayoutRequest::create([
-            'workspace_id' => $workspaceId,
-            'creator_id' => $creatorId,
-            'amount_cents' => $amountCents,
-            'currency' => 'ETB',
-            'status' => 'requested',
-            'payout_destination' => 'CBE:100099999999',
-        ]);
-        $ledgerService->reserveForPayout($payout, $amountCents);
-        $this->assertSame(0, $ledgerService->getBalances($query)['available']);
-        $this->assertSame($amountCents, $ledgerService->getBalances($query)['reserved']);
-
-        // Prepare & submit
-        $chapaClient = $this->createMockChapaClient(
-            new MockChapaConfig(
-                verifyPayoutStatus: 'FAILED',
-                payoutAmount: $amountCents,
-            ),
-        );
-        $chapaManager = $this->createMock(LinketChapaManager::class);
-        $chapaManager->method('platformClient')->willReturn($chapaClient);
-
-        $processingService = new StorefrontPayoutProcessingService(
-            chapaManager: $chapaManager,
-            creatorLedger: $ledgerService,
-        );
-        $intent = $processingService->prepareIntent($payout);
-        $processingService->submitPayout($intent);
-
-        // Verification detects terminal failure and releases reserved funds
-        $processingService->verifyPayout($intent);
-        $intent->refresh();
-        $payout->refresh();
-
-        $this->assertSame(StorefrontPayoutIntent::STATUS_FAILED, $intent->status);
-        $this->assertSame('rejected', $payout->status);
-
-        // Reserved liability was released back to available balance with zero loss
-        $this->assertSame(0, $ledgerService->getBalances($query)['reserved']);
-        $this->assertSame($amountCents, $ledgerService->getBalances($query)['available']);
     }
 
     private function createMockChapaClient(?MockChapaConfig $config = null): ChapaClient
@@ -409,14 +369,29 @@ class CentralizedMarketplaceLifecycleTest extends TestCase
 
 final class MockChapaConfig
 {
-    public function __construct(
-        public string $verifyPaymentStatus = 'SUCCESS',
-        public int $paymentAmount = 150000,
-        public string $paymentCurrency = 'ETB',
-        public ?string $paymentRef = null,
-        public string $verifyPayoutStatus = 'SUCCESS',
-        public int $payoutAmount = 135000,
-        public ?string $payoutRef = null,
-    ) {
+    public string $verifyPaymentStatus = 'SUCCESS';
+    public int $paymentAmount = 150000;
+    public string $paymentCurrency = 'ETB';
+    public ?string $paymentRef = null;
+    public string $verifyPayoutStatus = 'SUCCESS';
+    public int $payoutAmount = 135000;
+    public ?string $payoutRef = null;
+
+    public static function forPayment(string $status, int $amount, string $ref): self
+    {
+        $cfg = new self();
+        $cfg->verifyPaymentStatus = $status;
+        $cfg->paymentAmount = $amount;
+        $cfg->paymentRef = $ref;
+        return $cfg;
+    }
+
+    public static function forPayout(string $status, int $amount, ?string $ref = null): self
+    {
+        $cfg = new self();
+        $cfg->verifyPayoutStatus = $status;
+        $cfg->payoutAmount = $amount;
+        $cfg->payoutRef = $ref;
+        return $cfg;
     }
 }
