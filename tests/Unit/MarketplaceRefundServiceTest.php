@@ -62,39 +62,33 @@ class MarketplaceRefundServiceTest extends TestCase
     }
 
     #[DataProvider('refundScenarioProvider')]
-    public function testPlatformOrderRefundScenarios(
-        int $refundAmountCents,
-        int $expectedEarningsReversal,
-        int $expectedFeeReversal,
-        string $expectedOrderStatus,
-        bool $expectAccessRevoked,
-        int $expectedRemainingHeld,
-    ): void {
+    public function testPlatformOrderRefundScenarios(array $scenario): void
+    {
         $creator = $this->seedUser(new User(['id' => rand(100, 999), 'email' => 'seller_' . uniqid() . '@test.com', 'name' => 'Seller']));
         $admin = $this->seedUser(new User(['id' => rand(1000, 1999), 'email' => 'admin_' . uniqid() . '@test.com', 'name' => 'Admin']));
         $order = $this->seedPlatformOrder($creator, $this->creatorLedger);
         $this->createEntitlement($order);
 
-        $this->bindMockChapaClient(MarketplaceMockConfig::forRefund('REF-CHAPA-' . $refundAmountCents));
-        $request = PlatformOrderRefundRequest::forOrder($order, $refundAmountCents, 'Customer dispute', $admin->id);
+        $this->bindMockChapaClient(MarketplaceMockConfig::forRefund('REF-CHAPA-' . $scenario['refund_amount']));
+        $request = PlatformOrderRefundRequest::forOrder($order, $scenario['refund_amount'], 'Customer dispute', $admin->id);
         $refund = $this->refundService->refundPlatformOrder($request);
 
-        $this->assertSame($refundAmountCents, $refund->amount_cents);
-        $this->assertSame($expectedEarningsReversal, $refund->creator_earnings_reversal_cents);
-        $this->assertSame($expectedFeeReversal, $refund->platform_fee_reversal_cents);
+        $this->assertSame($scenario['refund_amount'], $refund->amount_cents);
+        $this->assertSame($scenario['earnings_reversal'], $refund->creator_earnings_reversal_cents);
+        $this->assertSame($scenario['fee_reversal'], $refund->platform_fee_reversal_cents);
 
         $order->refresh();
-        $this->assertSame($expectedOrderStatus, $order->status);
+        $this->assertSame($scenario['status'], $order->status);
 
         $revokedAt = DownloadEntitlement::query()->where('storefront_order_id', $order->id)->value('revoked_at');
-        if ($expectAccessRevoked) {
+        if ($scenario['revoke']) {
             $this->assertNotNull($revokedAt);
         } else {
             $this->assertNull($revokedAt);
         }
 
         $balances = $this->creatorLedger->getBalances(BalanceQuery::for($creator->id, 'ETB', 1));
-        $this->assertSame($expectedRemainingHeld, $balances['held']);
+        $this->assertSame($scenario['remaining_held'], $balances['held']);
         $this->assertSame(0, $balances['deficit']);
         $this->assertTrue(app(MarketplaceReconciliationService::class)->auditLedgerIntegrity()->isBalanced);
     }
@@ -102,12 +96,22 @@ class MarketplaceRefundServiceTest extends TestCase
     public static function refundScenarioProvider(): array
     {
         return [
-            'full refund reverses commission and held liability with customer revocation' => [
-                100000, 95000, 5000, 'refunded', true, 0,
-            ],
-            'partial refund keeps order status paid and preserves customer access' => [
-                40000, 38000, 2000, 'paid', false, 57000,
-            ],
+            'full refund reverses commission and held liability with customer revocation' => [[
+                'refund_amount' => 100000,
+                'earnings_reversal' => 95000,
+                'fee_reversal' => 5000,
+                'status' => 'refunded',
+                'revoke' => true,
+                'remaining_held' => 0,
+            ]],
+            'partial refund keeps order status paid and preserves customer access' => [[
+                'refund_amount' => 40000,
+                'earnings_reversal' => 38000,
+                'fee_reversal' => 2000,
+                'status' => 'paid',
+                'revoke' => false,
+                'remaining_held' => 57000,
+            ]],
         ];
     }
 
