@@ -46,9 +46,9 @@ async function reportSnapshot(page: Page): Promise<Report> {
   return (await (await response).json()) as Report;
 }
 
-async function selectTicketStatus(page: Page, label: 'Open' | 'Closed'): Promise<void> {
+async function selectTicketStatus(page: Page, label: 'Open' | 'Resolved'): Promise<void> {
   // The toolbar contains the status menu; the composer has a second status control.
-  await page.getByRole('button', {name: /^(Open|Closed)$/}).first().click();
+  await page.getByRole('button', {name: /^(Open|Resolved)$/}).first().click();
   await page.getByText(label, {exact: true}).last().click();
 }
 
@@ -128,7 +128,7 @@ test.describe('isolated real-browser support lifecycle', () => {
       await expect(buyer.getByText(note)).toHaveCount(0);
 
       let statusPromise = matchResponse(admin, '/api/v1/helpdesk/agent/conversations/status/change', 'POST');
-      await selectTicketStatus(admin, 'Closed');
+      await selectTicketStatus(admin, 'Resolved');
       await statusPromise;
       await expect.poll(async () => {
         const r = await admin.request.get(agentTicketApi, {
