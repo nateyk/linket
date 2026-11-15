@@ -14,6 +14,7 @@
     </exclude>
   </groups>
   <php>
+    <ini name="memory_limit" value="1024M"/>
     <env name="APP_ENV" value="testing"/>
     <env name="CACHE_DRIVER" value="array"/>
     <env name="CACHE_STORE" value="array" force="true"/>
