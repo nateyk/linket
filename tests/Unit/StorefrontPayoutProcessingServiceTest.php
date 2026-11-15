@@ -208,6 +208,42 @@ class StorefrontPayoutProcessingServiceTest extends TestCase
         $this->assertSame($case->expectedPayoutStatus, $payout->status);
     }
 
+    public function testReversalOfSettledPayoutRequiresReviewBeforeChangingLedger(): void
+    {
+        $manager = $this->createMock(LinketChapaManager::class);
+        $manager->method('platformClient')->willReturn($this->mockChapaClient(verifyStatus: 'REVERSED'));
+        $ledger = $this->createMock(CreatorLedgerService::class);
+        $ledger->expects($this->never())->method('releasePayoutReservation');
+        $payout = PayoutRequest::query()->create([
+            'workspace_id' => 1,
+            'creator_id' => 30,
+            'amount_cents' => 50000,
+            'currency' => 'ETB',
+            'status' => 'paid',
+            'paid_at' => now(),
+        ]);
+        $intent = StorefrontPayoutIntent::query()->create([
+            'payout_request_id' => $payout->id,
+            'merchant_reference' => 'lk-po-TEST-REF-01',
+            'idempotency_key' => 'c1d2e3f4-a5b6-7890-abcd-ef1234567890',
+            'amount_cents' => 50000,
+            'currency' => 'ETB',
+            'provider' => 'chapa',
+            'withdrawal_code' => 'bank_transfer',
+            'destination_snapshot' => 'CBE:100012345678',
+            'status' => StorefrontPayoutIntent::STATUS_SUCCESSFUL,
+        ]);
+        $service = new StorefrontPayoutProcessingService(chapaManager: $manager, creatorLedger: $ledger);
+
+        $this->expectExceptionMessage('A settled payout requires manual reconciliation');
+        try {
+            $service->verifyPayout($intent);
+        } finally {
+            $this->assertSame('paid', $payout->fresh()->status);
+            $this->assertSame(StorefrontPayoutIntent::STATUS_SUCCESSFUL, $intent->fresh()->status);
+        }
+    }
+
     public static function payoutVerificationCases(): array
     {
         return [
