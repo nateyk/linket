@@ -349,6 +349,13 @@ return [
                         'permissions' => ['settings.update'],
                     ],
                     [
+                        'label' => 'Support',
+                        'id' => 'admin-support-management',
+                        'action' => '/admin/support',
+                        'type' => 'route',
+                        'permissions' => ['admin.access'],
+                    ],
+                    [
                         'label' => 'Help center',
                         'id' => 'admin-help-center',
                         'action' => '/admin/help',
