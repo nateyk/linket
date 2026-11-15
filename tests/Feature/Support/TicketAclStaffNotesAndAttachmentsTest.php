@@ -209,6 +209,31 @@ class TicketAclStaffNotesAndAttachmentsTest extends TestCase
         $this->assertSame(Conversation::STATUS_OPEN, $ticket->status_category);
     }
 
+    public function test_agent_cannot_assign_a_platform_ticket_to_an_ordinary_customer(): void
+    {
+        $agent = $this->createPlatformAgent();
+        $customer = User::factory()->create();
+        $unprivileged = User::factory()->create();
+
+        $ticket = Conversation::query()->create([
+            'user_id' => $customer->id,
+            'subject' => 'Agent assignment validation',
+            'type' => 'ticket',
+            'assigned_to' => Conversation::ASSIGNED_AGENT,
+            'status_category' => Conversation::STATUS_OPEN,
+        ]);
+
+        $this->stateful()
+            ->actingAs($agent)
+            ->postJson('/api/v1/helpdesk/agent/conversations/assignee/change', [
+                'conversationIds' => [$ticket->id],
+                'userId' => $unprivileged->id,
+            ])
+            ->assertUnprocessable();
+
+        $this->assertNull($ticket->fresh()->assignee_id);
+    }
+
     public function test_platform_agent_can_assign_reply_and_close_ticket(): void
     {
         $customer = User::factory()->create();
@@ -252,6 +277,14 @@ class TicketAclStaffNotesAndAttachmentsTest extends TestCase
                 'statusName' => 'closed',
             ])
             ->assertSuccessful();
+
+        $closed = Conversation::findOrFail($ticketId);
+        $this->assertSame($agent->id, $closed->assignee_id);
+        $this->assertSame(Conversation::STATUS_CLOSED, $closed->status_category);
+        $this->assertNotNull($closed->closed_at);
+        $this->assertTrue(
+            $closed->items()->where('type', 'message')->where('body', '<p>We are looking into this.</p>')->exists(),
+        );
 
         $this->stateful()
             ->actingAs($customer)
