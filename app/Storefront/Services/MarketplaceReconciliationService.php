@@ -90,30 +90,41 @@ class MarketplaceReconciliationService
             ->get();
 
         foreach ($attempts as $attempt) {
-            try {
-                $verified = $this->manager()->platformClient()->payments()->verifyTyped($attempt->merchant_reference);
-
-                if ($verified->matchesPayment($attempt->amount_cents, $attempt->currency, $attempt->merchant_reference)) {
-                    $this->verificationService()->verifyAndFulfill($attempt->merchant_reference);
-                    $reconciledCount++;
-                } elseif ($verified->status === 'FAILED') {
-                    $attempt->update([
-                        'status' => StorefrontPaymentAttempt::STATUS_FAILED,
-                        'error_message' => 'Payment verification confirmed failed by Chapa API during reconciliation.',
-                        'verification_data' => $verified->raw,
-                    ]);
-                    $reconciledCount++;
-                }
-            } catch (\Throwable $e) {
-                Log::warning('marketplace.reconciliation.payment_attempt_failed', [
-                    'attempt_id' => $attempt->id,
-                    'reference' => $attempt->merchant_reference,
-                    'error' => $e->getMessage(),
-                ]);
+            if ($this->reconcileSinglePaymentAttempt($attempt)) {
+                $reconciledCount++;
             }
         }
 
         return $reconciledCount;
+    }
+
+    private function reconcileSinglePaymentAttempt(StorefrontPaymentAttempt $attempt): bool
+    {
+        try {
+            $verified = $this->manager()->platformClient()->payments()->verifyTyped($attempt->merchant_reference);
+
+            if ($verified->matchesPayment($attempt->amount_cents, $attempt->currency, $attempt->merchant_reference)) {
+                $this->verificationService()->verifyAndFulfill($attempt->merchant_reference);
+                return true;
+            }
+
+            if ($verified->status === 'FAILED') {
+                $attempt->update([
+                    'status' => StorefrontPaymentAttempt::STATUS_FAILED,
+                    'error_message' => 'Payment verification confirmed failed by Chapa API.',
+                    'verification_data' => $verified->raw,
+                ]);
+                return true;
+            }
+        } catch (\Throwable $e) {
+            Log::warning('marketplace.reconciliation.payment_attempt_failed', [
+                'attempt_id' => $attempt->id,
+                'reference' => $attempt->merchant_reference,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return false;
     }
 
     /**
@@ -133,21 +144,27 @@ class MarketplaceReconciliationService
             ->get();
 
         foreach ($intents as $intent) {
-            try {
-                $fresh = $this->payoutProcessingService()->verifyPayout($intent);
-                if ($fresh->isSuccessful() || $fresh->isFailed()) {
-                    $reconciledCount++;
-                }
-            } catch (\Throwable $e) {
-                Log::warning('marketplace.reconciliation.payout_intent_failed', [
-                    'intent_id' => $intent->id,
-                    'reference' => $intent->merchant_reference,
-                    'error' => $e->getMessage(),
-                ]);
+            if ($this->reconcileSinglePayoutIntent($intent)) {
+                $reconciledCount++;
             }
         }
 
         return $reconciledCount;
+    }
+
+    private function reconcileSinglePayoutIntent(StorefrontPayoutIntent $intent): bool
+    {
+        try {
+            $fresh = $this->payoutProcessingService()->verifyPayout($intent);
+            return $fresh->isSuccessful() || $fresh->isFailed();
+        } catch (\Throwable $e) {
+            Log::warning('marketplace.reconciliation.payout_intent_failed', [
+                'intent_id' => $intent->id,
+                'reference' => $intent->merchant_reference,
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
     }
 
     /**
@@ -185,50 +202,57 @@ class MarketplaceReconciliationService
         $result->totalCreditsCents = (int) StorefrontJournalLine::query()->sum('credit_cents');
         $result->isBalanced = ($result->totalDebitsCents === $result->totalCreditsCents);
 
-        $clearingDebits = $this->sumAccountDebits(AccountCodes::PLATFORM_CHAPA_CLEARING);
-        $clearingCredits = $this->sumAccountCredits(AccountCodes::PLATFORM_CHAPA_CLEARING);
-        $result->clearingBalanceCents = max(0, $clearingDebits - $clearingCredits);
-
-        $totalHeld = $this->sumAccountCredits(AccountCodes::CREATOR_HELD) - $this->sumAccountDebits(AccountCodes::CREATOR_HELD);
-        $totalAvailable = $this->sumAccountCredits(AccountCodes::CREATOR_AVAILABLE) - $this->sumAccountDebits(AccountCodes::CREATOR_AVAILABLE);
-        $totalReserved = $this->sumAccountCredits(AccountCodes::CREATOR_RESERVED) - $this->sumAccountDebits(AccountCodes::CREATOR_RESERVED);
-        $result->totalCreatorLiabilitiesCents = max(0, $totalHeld) + max(0, $totalAvailable) + max(0, $totalReserved);
-
-        $commissionCredits = $this->sumAccountCredits(AccountCodes::PLATFORM_COMMISSION);
-        $commissionDebits = $this->sumAccountDebits(AccountCodes::PLATFORM_COMMISSION);
-        $result->platformCommissionCents = max(0, $commissionCredits - $commissionDebits);
-
+        $result->clearingBalanceCents = $this->calculateNetClearing();
+        $result->totalCreatorLiabilitiesCents = $this->calculateTotalCreatorLiabilities();
+        $result->platformCommissionCents = $this->calculateNetCommission();
         $result->totalDisbursedCents = $this->sumAccountCredits(AccountCodes::PLATFORM_BANK_DISBURSED);
 
         if (!$result->isBalanced) {
             $result->issues[] = "CRITICAL: Global ledger unbalanced. Total debits ({$result->totalDebitsCents}) != total credits ({$result->totalCreditsCents}).";
         }
 
-        $result->negativeBalancesFound = $this->auditCreatorBalances($result);
+        $this->auditCreatorBalances($result);
 
         return $result;
     }
 
-    /**
-     * @return array<int, array{creator_id: int|string, balances: array<string, mixed>}>
-     */
-    private function auditCreatorBalances(LedgerAuditResult $result): array
+    private function calculateNetClearing(): int
+    {
+        $debits = $this->sumAccountDebits(AccountCodes::PLATFORM_CHAPA_CLEARING);
+        $credits = $this->sumAccountCredits(AccountCodes::PLATFORM_CHAPA_CLEARING);
+        return max(0, $debits - $credits);
+    }
+
+    private function calculateTotalCreatorLiabilities(): int
+    {
+        $held = $this->sumAccountCredits(AccountCodes::CREATOR_HELD) - $this->sumAccountDebits(AccountCodes::CREATOR_HELD);
+        $available = $this->sumAccountCredits(AccountCodes::CREATOR_AVAILABLE) - $this->sumAccountDebits(AccountCodes::CREATOR_AVAILABLE);
+        $reserved = $this->sumAccountCredits(AccountCodes::CREATOR_RESERVED) - $this->sumAccountDebits(AccountCodes::CREATOR_RESERVED);
+
+        return max(0, $held) + max(0, $available) + max(0, $reserved);
+    }
+
+    private function calculateNetCommission(): int
+    {
+        $credits = $this->sumAccountCredits(AccountCodes::PLATFORM_COMMISSION);
+        $debits = $this->sumAccountDebits(AccountCodes::PLATFORM_COMMISSION);
+        return max(0, $credits - $debits);
+    }
+
+    private function auditCreatorBalances(LedgerAuditResult $result): void
     {
         $creatorIds = StorefrontJournalLine::query()->whereNotNull('creator_id')->distinct()->pluck('creator_id');
-        $negativeBalances = [];
 
         foreach ($creatorIds as $creatorId) {
             $balances = $this->creatorLedger()->getBalances(BalanceQuery::for((int) $creatorId, 'ETB'));
             if ($balances['held'] < 0 || $balances['available'] < 0 || $balances['reserved'] < 0) {
-                $negativeBalances[] = [
+                $result->negativeBalancesFound[] = [
                     'creator_id' => $creatorId,
                     'balances' => $balances,
                 ];
                 $result->issues[] = "CRITICAL: Creator #{$creatorId} has negative balance: " . (string) json_encode($balances);
             }
         }
-
-        return $negativeBalances;
     }
 
     private function sumAccountDebits(string $accountCode): int
