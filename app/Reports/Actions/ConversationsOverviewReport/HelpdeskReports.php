@@ -77,7 +77,9 @@ class HelpdeskReports
 
         $builders = $this->getBuilders($preset, $dateRange);
 
+        // Platform reports must never aggregate creator-owned support tickets.
         DB::table('conversations')
+            ->whereNull('support_owner_id')
             ->select([
                 'id',
                 'user_id',
