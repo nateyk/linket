@@ -19,6 +19,8 @@ class PayoutRequest extends StorefrontModel
         'payout_method_label',
         'withdrawal_method_name',
         'payout_destination',
+        'account_holder_snapshot',
+        'bank_code_snapshot',
         'currency',
         'amount_cents',
         'status',
