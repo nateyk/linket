@@ -1,5 +1,4 @@
-import fs from 'node:fs';
-import path from 'node:path';
+import {loadIsolatedHcFixture, loginToHc} from './help-center-isolated-helpers';
 import {expect, test, type Browser, type Page} from '@playwright/test';
 
 type Account = {email: string; password: string};
@@ -8,27 +7,6 @@ type Report = {
   newConversations: {datasets: Array<{total: number}>};
   agents: {datasets: Array<{totalAgentReplies: number}>};
 };
-
-function isolatedFixture(): Fixture {
-  const hostname = new URL(process.env.E2E_BASE_URL ?? 'http://localhost:5173').hostname;
-  expect(
-    ['localhost', '127.0.0.1', 'linket.ddev.site'].includes(hostname),
-    'Refusing to mutate a nonlocal support environment',
-  ).toBe(true);
-  const fixturePath = path.resolve('storage/app/e2e/hc-fixture.json');
-  expect(fs.existsSync(fixturePath), 'Missing disposable HC fixture').toBe(true);
-  const fixture = JSON.parse(fs.readFileSync(fixturePath, 'utf8')) as Fixture;
-  expect(fixture.database.toLowerCase()).toContain('test');
-  return fixture;
-}
-
-async function login(page: Page, account: Account): Promise<void> {
-  await page.goto('/login');
-  await page.getByRole('textbox', {name: 'Email Address'}).fill(account.email);
-  await page.getByRole('textbox', {name: 'Password'}).fill(account.password);
-  await page.getByRole('button', {name: 'Login'}).click();
-  await expect(page).not.toHaveURL(/\/login$/, {timeout: 45_000});
-}
 
 function matchResponse(page: Page, pathname: string, method: string) {
   return page.waitForResponse(response =>
@@ -217,16 +195,16 @@ test.describe('isolated real-browser support lifecycle', () => {
     browser,
   }: {browser: Browser}) => {
     test.setTimeout(180_000);
-    const fixture = isolatedFixture();
+    const fixture = loadIsolatedHcFixture<Fixture>();
     const baseURL = process.env.E2E_BASE_URL ?? 'http://127.0.0.1:8000';
     const adminContext = await browser.newContext({baseURL, viewport: {width: 1365, height: 900}});
     const buyerContext = await browser.newContext({baseURL, viewport: {width: 390, height: 844}});
     try {
       const admin = await adminContext.newPage();
       const buyer = await buyerContext.newPage();
-      await login(admin, fixture.admin);
+      await loginToHc(admin, fixture.admin);
       const before = await reportSnapshot(admin);
-      await login(buyer, fixture.buyer);
+      await loginToHc(buyer, fixture.buyer);
       const ticket = await createBuyerTicket(buyer);
       await assignTicket(admin, ticket.ticketId);
       await submitPublicReply(admin, ticket.ticketId, ticket.reply);
