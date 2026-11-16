@@ -101,6 +101,21 @@ class ChapaV2ClientTest extends TestCase
 
         $this->assertTrue($client->secretAuthenticates('good-secret'));
         $this->assertFalse($client->secretAuthenticates('bad-secret'));
+        $this->assertTrue(ChapaV2Client::isLegacyKey('CHAPUBK_TEST-example'));
+        $this->assertTrue(ChapaV2Client::isLegacyKey('CHASECK-example'));
+        $this->assertFalse(ChapaV2Client::isLegacyKey('CHAPA_TEST_example'));
+    }
+
+    public function testItReportsAChapaEnvironmentMismatch(): void
+    {
+        Http::fake([
+            'https://api.chapa.global/v2/payments/methods' => Http::response([
+                'status' => 'error',
+                'error' => ['code' => 'INVALID_VALUE'],
+            ], 403),
+        ]);
+
+        $this->assertSame('environment_mismatch', (new ChapaV2Client())->secretStatus('CHAPA_LIVE_examplesecret'));
     }
 
     public function testItConvertsMajorCurrencyAmountsToIntegerCents(): void
